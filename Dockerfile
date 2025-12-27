@@ -13,8 +13,9 @@ COPY main.py .
 COPY static/ ./static/
 COPY templates/ ./templates/
 
-# 复制redis配置目录
-COPY redis/ ./redis/
+# 确保redis目录存在并复制内容
+RUN mkdir -p redis && \
+    cp redis/redis_password.txt redis/ 2>/dev/null || echo "👾 没有找到redis密码文件，将在启动时自动生成"
 
 # 复制启动脚本
 COPY start.sh .
