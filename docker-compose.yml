@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  web:
+    build: .
+    ports:
+      - "8080:8000"
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      # 从文件读取Redis密码并设置为环境变量
+      - REDIS_PASSWORD=$(cat redis/redis_password.txt 2>/dev/null || echo "")
+    depends_on:
+      - redis
+    volumes:
+      - ./redis/redis_password.txt:/app/redis_password.txt:ro
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    command: redis-server --requirefile /data/redis_password.txt
+    volumes:
+      - redis_data:/data
+      - ./redis/redis_password.txt:/data/redis_password.txt:ro
+    restart: unless-stopped
+
+volumes:
+  redis_data:

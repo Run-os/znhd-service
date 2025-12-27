@@ -168,12 +168,26 @@ async def get_current_user(session_token: Optional[str] = Cookie(None, alias="se
 @app.on_event("startup")
 async def startup_event():
     global redis_client
-    # 连接 Redis - Zeabur 会自动注入 REDIS_URI
-    redis_url = os.getenv("REDIS_URI", "redis://localhost:6379")
+    
+    # 构建 Redis 连接 URL
+    redis_url = os.getenv("REDIS_URI", "")
+    redis_password = os.getenv("REDIS_PASSWORD", "")
+    redis_host = os.getenv("REDIS_HOST", "localhost")
+    redis_port = os.getenv("REDIS_PORT", "6379")
+    
+    # 如果没有 REDIS_URI，则根据环境变量构建
+    if not redis_url:
+        if redis_password:
+            redis_url = f"redis://:{redis_password}@{redis_host}:{redis_port}/0"
+        else:
+            redis_url = f"redis://{redis_host}:{redis_port}/0"
+    
     try:
         redis_client = await redis.from_url(redis_url, decode_responses=True)
         await redis_client.ping()
-        logger.info(f"Redis connected successfully to {redis_url}")
+        # 隐藏密码显示
+        safe_url = redis_url.replace(f":{redis_password}@", ":***@") if redis_password else redis_url
+        logger.info(f"[SUCCESS] Redis connected successfully to {safe_url}")
     except Exception as e:
         logger.error(f"Redis connection failed: {e}")
         raise

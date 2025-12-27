@@ -13,8 +13,15 @@ COPY main.py .
 COPY static/ ./static/
 COPY templates/ ./templates/
 
+# 复制redis配置目录
+COPY redis/ ./redis/
+
+# 复制启动脚本
+COPY start.sh .
+RUN chmod +x start.sh
+
 # 暴露端口
-EXPOSE 8000
+EXPOSE 8080
 
 # 启动应用
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["./start.sh"]

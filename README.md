@@ -42,13 +42,34 @@ pip install -r requirements.txt
 uvicorn main:app --reload
 ```
 
-### Docker 部署
+### Docker Compose 部署（推荐）
+
+```bash
+cd webhook-service
+
+# 1. 设置Redis密码
+mkdir -p redis
+echo "your_secure_password" > redis/redis_password.txt
+
+# 2. 启动服务
+docker-compose up -d
+
+# 查看日志
+docker-compose logs -f
+```
+
+### Docker 部署（独立Redis）
 
 ```bash
 cd webhook-service
 docker build -t webhook-service .
+
+# 启动Redis
+docker run -d --name redis -p 6379:6379 redis:7-alpine
+
+# 启动应用
 docker run -p 8000:8000 \
-  -e REDIS_URI=redis://host:6379 \
+  -e REDIS_URI=redis://:your_password@host:6379 \
   -e ADMIN_PASSWORD=your_password \
   webhook-service
 ```
