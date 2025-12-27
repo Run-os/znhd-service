@@ -384,6 +384,189 @@ async def websocket_endpoint(websocket: WebSocket, token: str = Query(...)):
         manager.disconnect(client_token, websocket)
 
 
+@app.get("/message")
+async def message_page(request: Request, token: str = Query(...)):
+    """消息页面 - 用于显示消息内容"""
+    # 检查 token 是否有效
+    client_token = await get_client_token(token)
+    
+    if not client_token:
+        return HTMLResponse("""
+        <!DOCTYPE html>
+        <html lang="zh-CN">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>消息推送服务</title>
+            <style>
+                body {
+                    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                    max-width: 600px;
+                    margin: 50px auto;
+                    padding: 20px;
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    min-height: 100vh;
+                }
+                .container {
+                    background: white;
+                    border-radius: 16px;
+                    padding: 40px;
+                    box-shadow: 0 20px 70px rgba(0, 0, 0, 0.25);
+                    text-align: center;
+                }
+                h1 { color: #333; margin-bottom: 20px; }
+                .error { color: #ef4444; background: #fee2e2; padding: 20px; border-radius: 8px; }
+                a {
+                    display: inline-block;
+                    margin-top: 20px;
+                    padding: 12px 24px;
+                    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+                    color: white;
+                    text-decoration: none;
+                    border-radius: 8px;
+                    font-weight: 600;
+                }
+                a:hover { transform: translateY(-2px); }
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <h1>📤 消息推送服务</h1>
+                <div class="error">
+                    <h2>无效的 Token</h2>
+                    <p>该 token 不存在或已过期</p>
+                </div>
+                <a href="/">打开前端界面</a>
+            </div>
+        </body>
+        </html>
+        """, status_code=400)
+    
+    # 返回消息页面（内容由前端 JavaScript 填充）
+    html_content = """
+    <!DOCTYPE html>
+    <html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>消息推送服务</title>
+        <style>
+            * { margin: 0; padding: 0; box-sizing: border-box; }
+            body {
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                min-height: 100vh;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                padding: 20px;
+            }
+            .container {
+                background: white;
+                border-radius: 16px;
+                padding: 40px;
+                box-shadow: 0 20px 70px rgba(0, 0, 0, 0.25);
+                max-width: 600px;
+                width: 100%;
+            }
+            h1 { color: #333; margin-bottom: 20px; text-align: center; }
+            .info { background: #f0f9ff; border-left: 4px solid #3b82f6; padding: 15px; margin: 20px 0; border-radius: 0 8px 8px 0; }
+            .connection-status { text-align: center; padding: 20px; margin: 20px 0; border-radius: 8px; }
+            .connected { background: #dcfce7; color: #166534; }
+            .disconnected { background: #fee2e2; color: #991b1b; }
+            #message-content {
+                background: #f8fafc;
+                padding: 20px;
+                border-radius: 8px;
+                margin: 20px 0;
+                min-height: 100px;
+                white-space: pre-wrap;
+                word-break: break-all;
+            }
+            .timestamp { color: #64748b; font-size: 14px; text-align: center; margin-top: 10px; }
+            a {
+                display: inline-block;
+                margin-top: 20px;
+                padding: 12px 24px;
+                background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+                color: white;
+                text-decoration: none;
+                border-radius: 8px;
+                font-weight: 600;
+            }
+            a:hover { transform: translateY(-2px); }
+            .btn-group { text-align: center; margin-top: 20px; }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>📤 消息推送服务</h1>
+            <div id="connection-status" class="connection-status disconnected">
+                正在连接 WebSocket...
+            </div>
+            <div id="message-content">
+                等待接收消息...
+            </div>
+            <div id="timestamp" class="timestamp"></div>
+            <div class="btn-group">
+                <a href="/">打开前端界面</a>
+            </div>
+        </div>
+        <script>
+            const token = "{token}";
+            const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = wsProtocol + '//' + window.location.host + '/stream?token=' + token;
+            
+            const statusDiv = document.getElementById('connection-status');
+            const contentDiv = document.getElementById('message-content');
+            const timestampDiv = document.getElementById('timestamp');
+            
+            function connectWebSocket() {
+                const ws = new WebSocket(wsUrl);
+                
+                ws.onopen = function() {
+                    statusDiv.className = 'connection-status connected';
+                    statusDiv.textContent = '✓ WebSocket 已连接 - 正在等待消息...';
+                    console.log('WebSocket connected');
+                };
+                
+                ws.onmessage = function(event) {
+                    try {
+                        const data = JSON.parse(event.data);
+                        if (data.type === 'message') {
+                            contentDiv.textContent = data.message;
+                            timestampDiv.textContent = '接收时间: ' + new Date().toLocaleString('zh-CN');
+                            
+                            statusDiv.className = 'connection-status connected';
+                            statusDiv.textContent = '✓ 新消息已接收';
+                        }
+                    } catch (e) {
+                        contentDiv.textContent = event.data;
+                        timestampDiv.textContent = '接收时间: ' + new Date().toLocaleString('zh-CN');
+                    }
+                };
+                
+                ws.onclose = function() {
+                    statusDiv.className = 'connection-status disconnected';
+                    statusDiv.textContent = '✗ 连接已断开 - 5秒后重新连接...';
+                    console.log('WebSocket disconnected, reconnecting...');
+                    setTimeout(connectWebSocket, 5000);
+                };
+                
+                ws.onerror = function(error) {
+                    console.error('WebSocket error:', error);
+                };
+            }
+            
+            connectWebSocket();
+        </script>
+    </body>
+    </html>
+    """.format(token=token, client_token=client_token)
+    
+    return HTMLResponse(content=html_content)
+
+
 @app.post("/message")
 async def send_message(message: Message, token: str = Query(...)):
     """接收 POST 请求并推送到对应的 WebSocket 客户端"""
