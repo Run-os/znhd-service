@@ -40,12 +40,13 @@ echo "⚠️  密码已保存到: $REDIS_PASSWORD_FILE"
 echo "⚠️  请妥善保管此密码！"
 echo "========================================="
 
-# 导出密码环境变量供Python使用
+# 导出环境变量供Python使用
 export REDIS_PASSWORD="$REDIS_PASSWORD"
+export REDIS_HOST="redis"
 
 # 等待Redis启动
 echo "⏳ 等待 Redis 启动..."
-sleep 3
+sleep 5
 
 # 启动应用
 exec uvicorn main:app --host 0.0.0.0 --port 8080
