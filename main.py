@@ -16,6 +16,7 @@ import secrets
 import hashlib
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import Response
+import httpx
 
 # 配置日志
 logging.basicConfig(level=logging.INFO)
@@ -200,21 +201,79 @@ async def weekly_cleanup():
             logger.error(f"Cleanup error: {e}")
 
 
+async def get_client_ip(request: Request) -> str:
+    """获取客户端真实IP地址"""
+    # 尝试从各种请求头获取真实IP
+    forwarded = request.headers.get("X-Forwarded-For")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    
+    real_ip = request.headers.get("X-Real-IP")
+    if real_ip:
+        return real_ip
+    
+    # 如果没有代理，直接获取
+    if request.client:
+        return request.client.host
+    
+    return "unknown"
+
+
+async def get_ip_geolocation(ip: str) -> dict:
+    """获取IP对应的地理位置信息"""
+    if ip == "unknown" or ip.startswith("127.") or ip.startswith("::1"):
+        return {"country": "本地", "region": "本地", "city": "本地"}
+    
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            response = await client.get(f"http://ip-api.com/json/{ip}?lang=zh-CN")
+            if response.status_code == 200:
+                data = response.json()
+                if data.get("status") == "success":
+                    return {
+                        "country": data.get("country", ""),
+                        "region": data.get("regionName", ""),
+                        "city": data.get("city", "")
+                    }
+    except Exception as e:
+        logger.error(f"获取IP地理位置失败: {e}")
+    
+    return {"country": "未知", "region": "未知", "city": "未知"}
+
+
+async def get_geo_info(request: Request) -> dict:
+    """获取客户端IP和地理位置信息"""
+    ip = get_client_ip(request)
+    geo = await get_ip_geolocation(ip)
+    return {"ip": ip, **geo}
+
+
 # 根据clientToken创建appToken并存储到Redis
-async def create_token_pair(client_token: str) -> str:
+async def create_token_pair(client_token: str, geo_info: dict = None) -> str:
     """创建 clientToken 和对应的 appToken"""
     # appToken 为 clientToken 的 base64 编码
     app_token = base64.b64encode(client_token.encode()).decode()
 
     # 存储到 Redis
     if redis_client:
-        await redis_client.set(f"client:{client_token}", json.dumps({
+        token_data = {
             "app_token": app_token,
             "created_at": datetime.now().isoformat()
-        }))
+        }
+        
+        # 如果提供了地理位置信息，添加到数据中
+        if geo_info:
+            token_data["ip"] = geo_info.get("ip", "")
+            token_data["location"] = {
+                "country": geo_info.get("country", ""),
+                "region": geo_info.get("region", ""),
+                "city": geo_info.get("city", "")
+            }
+        
+        await redis_client.set(f"client:{client_token}", json.dumps(token_data, ensure_ascii=False))
         await redis_client.set(f"app:{app_token}", client_token)
         logger.info(
-            f"Created token pair - client: {client_token}, app: {app_token}")
+            f"Created token pair - client: {client_token}, app: {app_token}, IP: {geo_info.get('ip') if geo_info else 'unknown'}")
 
     return app_token
 
@@ -225,23 +284,7 @@ async def get_client_token(app_token: str) -> str:
         client_token = await redis_client.get(f"app:{app_token}")
         if client_token:
             return client_token
-
-    # 如果 Redis 中没有，尝试从 appToken 反向解码得到 clientToken
-    try:
-        client_token = base64.b64decode(app_token.encode()).decode()
-        # 自动创建 token 对
-        if redis_client:
-            await redis_client.set(f"client:{client_token}", json.dumps({
-                "app_token": app_token,
-                "created_at": datetime.now().isoformat()
-            }))
-            await redis_client.set(f"app:{app_token}", client_token)
-            logger.info(
-                f"自动创建的 token 对 - client: {client_token}, app: {app_token}")
-        return client_token
-    except Exception as e:
-        logger.error(f"无法解码 appToken: {e}")
-        return None
+    return None
 
 
 async def token_exists(client_token: str) -> bool:
@@ -274,15 +317,20 @@ async def admin_page(request: Request, session_token: Optional[str] = Cookie(Non
 
 
 @app.websocket("/stream")
-async def websocket_endpoint(websocket: WebSocket, token: str = Query(...)):
+async def websocket_endpoint(websocket: WebSocket, token: str = Query(...), request: Request = None):
     """WebSocket 连接端点"""
     client_token = token
 
     # 检查 token 是否存在，不存在则创建
     if not await token_exists(client_token):
-        app_token = await create_token_pair(client_token)
+        # 获取IP和地理位置信息
+        geo_info = None
+        if request:
+            geo_info = await get_geo_info(request)
+        
+        app_token = await create_token_pair(client_token, geo_info)
         logger.info(
-            f"New client token created: {client_token}, app token: {app_token}")
+            f"New client token created: {client_token}, app token: {app_token}, IP: {geo_info.get('ip') if geo_info else 'unknown'}")
 
     await manager.connect(client_token, websocket)
 
@@ -370,7 +418,7 @@ async def health_check():
 
 
 @app.get("/tokens/{client_token}")
-async def get_token_info(client_token: str):
+async def get_token_info(client_token: str, request: Request = None):
     """获取 token 信息（调试用）"""
     if not await token_exists(client_token):
         raise HTTPException(status_code=404, detail="Token not found")
@@ -378,10 +426,25 @@ async def get_token_info(client_token: str):
     if redis_client:
         data = await redis_client.get(f"client:{client_token}")
         token_data = json.loads(data)
+        
+        # 如果没有IP信息，尝试更新
+        if "ip" not in token_data and request:
+            geo_info = await get_geo_info(request)
+            token_data["ip"] = geo_info.get("ip", "")
+            token_data["location"] = {
+                "country": geo_info.get("country", ""),
+                "region": geo_info.get("region", ""),
+                "city": geo_info.get("city", "")
+            }
+            # 更新Redis中的数据
+            await redis_client.set(f"client:{client_token}", json.dumps(token_data, ensure_ascii=False))
+        
         return {
             "client_token": client_token,
             "app_token": token_data["app_token"],
             "created_at": token_data["created_at"],
+            "ip": token_data.get("ip", ""),
+            "location": token_data.get("location", {}),
             "has_connection": client_token in manager.active_connections
         }
 
@@ -503,7 +566,9 @@ async def api_redis_tokens(session_token: Optional[str] = Cookie(None)):
             tokens.append({
                 "app_token": app_token,
                 "client_token": client_token,
-                "created_at": token_data.get("created_at", "")
+                "created_at": token_data.get("created_at", ""),
+                "ip": token_data.get("ip", ""),
+                "location": token_data.get("location", {})
             })
         
         return {"data": tokens, "total": len(tokens)}
