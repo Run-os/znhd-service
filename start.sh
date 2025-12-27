@@ -7,16 +7,26 @@ echo "========================================="
 echo "🚀 启动服务..."
 echo "========================================="
 
-# 检查是否已有 Zeabur Redis URI
+# 检查 Zeabur Redis URI (Zeabur 注入的格式通常是 redis://:password@host:port)
 if [ -n "$REDIS_URI" ]; then
     echo "✅ [SUCCESS] 使用 Zeabur Redis"
+    echo "REDIS_URI: $REDIS_URI"
     echo "========================================="
     # Zeabur 环境不需要等待本地 Redis
     # 启动应用
     exec uvicorn main:app --host 0.0.0.0 --port 8080
 fi
 
+# 检查 Zeabur 其他可能的 Redis 变量格式
+if [ -n "$REDIS_HOST" ] && [ "$REDIS_HOST" != "redis" ]; then
+    echo "✅ [SUCCESS] 使用 Zeabur Redis (HOST: $REDIS_HOST)"
+    echo "========================================="
+    exec uvicorn main:app --host 0.0.0.0 --port 8080
+fi
+
 # 本地/Docker 环境
+echo "📦 本地/Docker 环境初始化..."
+
 # 检查密码文件是否存在
 if [ -f "$REDIS_PASSWORD_FILE" ]; then
     # 读取现有密码
