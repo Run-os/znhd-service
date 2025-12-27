@@ -1,0 +1,106 @@
+# Redis Token 数据整合显示方案
+
+## 现状分析
+
+当前 Redis 数据结构：
+- `client:{client_token}` → `{"app_token": "...", "created_at": "..."}`
+- `app:{app_token}` → `{client_token}`
+
+当前 API [`/api/admin/redis/all`](main.py:462) 和 [`/api/admin/redis/keys`](main.py:483) 返回的是原始的 key-value 对，前端简单显示每条记录。
+
+## 目标效果
+
+```
+app：enZvM3dlMDJvOQ==
+{"app_token": "enZvM3dlMDJvOQ==", "client_token": "zvo3we02o9","created_at": "2025-12-24T05:33:16.881364"}
+```
+
+## 实现方案
+
+### 1. 后端修改 ([`main.py`](main.py))
+
+新增整合数据的 API 端点：
+
+```python
+@app.get("/api/admin/redis/tokens")
+async def api_redis_tokens(session_token: Optional[str] = Cookie(None)):
+    """获取整合后的 token 列表"""
+    if not verify_session(session_token):
+        raise HTTPException(status_code=401, detail="未授权")
+    
+    if not redis_client:
+        return {"error": "Redis未连接", "data": []}
+    
+    try:
+        # 获取所有 client:* 键
+        client_keys = await redis_client.keys("client:*")
+        tokens = []
+        
+        for key in client_keys:
+            client_token = key.replace("client:", "")
+            value = await redis_client.get(key)
+            token_data = json.loads(value)
+            app_token = token_data.get("app_token", "")
+            
+            tokens.append({
+                "app_token": app_token,
+                "client_token": client_token,
+                "created_at": token_data.get("created_at", "")
+            })
+        
+        return {"data": tokens, "total": len(tokens)}
+    except Exception as e:
+        logger.error(f"获取整合Token数据失败: {e}")
+        return {"error": str(e), "data": []}
+```
+
+### 2. 前端修改 ([`templates/admin.html`](templates/admin.html))
+
+1. 添加"整合视图"按钮
+2. 修改 `displayResults` 函数，识别 token 类型并整合显示
+3. 添加新的显示样式
+
+```javascript
+// 新增整合视图按钮事件
+const integratedViewBtn = document.createElement('button');
+integratedViewBtn.className = 'btn btn-primary';
+integratedViewBtn.textContent = '整合视图';
+integratedViewBtn.addEventListener('click', () => loadIntegratedTokens());
+
+async function loadIntegratedTokens() {
+    resultsContainer.innerHTML = '<div class="empty-state">加载中...</div>';
+    try {
+        const response = await fetch('/api/admin/redis/tokens');
+        if (response.ok) {
+            const data = await response.json();
+            displayIntegratedResults(data.data || []);
+        }
+    } catch (error) {
+        resultsContainer.innerHTML = '<div class="empty-state">查询出错</div>';
+    }
+}
+
+function displayIntegratedResults(tokens) {
+    if (!tokens || tokens.length === 0) {
+        resultsContainer.innerHTML = '<div class="empty-state">没有找到数据</div>';
+        resultCount.textContent = '';
+        return;
+    }
+    resultCount.textContent = `共 ${tokens.length} 条记录`;
+    resultsContainer.innerHTML = tokens.map(token => `
+        <div class="data-item">
+            <div class="data-key">app：${escapeHtml(token.app_token)}</div>
+            <div class="data-value">${escapeHtml(JSON.stringify({
+                app_token: token.app_token,
+                client_token: token.client_token,
+                created_at: token.created_at
+            }, null, 2))}</div>
+        </div>
+    `).join('');
+}
+```
+
+## 任务清单
+
+- [ ] 修改 [`main.py`](main.py) - 新增 `/api/admin/redis/tokens` 整合 API
+- [ ] 修改 [`templates/admin.html`](templates/admin.html) - 添加整合视图功能和样式

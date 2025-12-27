@@ -480,6 +480,38 @@ async def api_redis_all(session_token: Optional[str] = Cookie(None)):
         return {"error": str(e), "data": []}
 
 
+@app.get("/api/admin/redis/tokens")
+async def api_redis_tokens(session_token: Optional[str] = Cookie(None)):
+    """获取整合后的 token 列表"""
+    if not verify_session(session_token):
+        raise HTTPException(status_code=401, detail="未授权")
+    
+    if not redis_client:
+        return {"error": "Redis未连接", "data": []}
+    
+    try:
+        # 获取所有 client:* 键
+        client_keys = await redis_client.keys("client:*")
+        tokens = []
+        
+        for key in client_keys:
+            client_token = key.replace("client:", "")
+            value = await redis_client.get(key)
+            token_data = json.loads(value)
+            app_token = token_data.get("app_token", "")
+            
+            tokens.append({
+                "app_token": app_token,
+                "client_token": client_token,
+                "created_at": token_data.get("created_at", "")
+            })
+        
+        return {"data": tokens, "total": len(tokens)}
+    except Exception as e:
+        logger.error(f"获取整合Token数据失败: {e}")
+        return {"error": str(e), "data": []}
+
+
 @app.get("/api/admin/redis/keys")
 async def api_redis_keys(
     pattern: str = "*",

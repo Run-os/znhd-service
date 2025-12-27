@@ -73,6 +73,7 @@
             justify-content: space-between;
             align-items: center;
             margin-bottom: 35px;
+            gap: 20px;
         }
 
         h1 {
@@ -85,29 +86,36 @@
 
         /* 登录按钮样式 */
         .login-btn {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
+            background: transparent;
+            color: #667eea;
             border: none;
-            border-radius: 8px;
+            border-radius: 4px;
+            /* 减小圆角半径 */
             padding: 10px 20px;
-            font-size: 14px;
+            /* 减小内边距 */
+            font-size: 16px;
+            /* 减小字体大小 */
             font-weight: 600;
             cursor: pointer;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
             display: flex;
             align-items: center;
-            gap: 6px;
+            gap: 4px;
+            flex-shrink: 0;
+            justify-content: flex-end;
+            /* 使按钮内容靠右对齐 */
+            margin-left: auto;
+            /* 将按钮推向容器的右侧 */
         }
 
         .login-btn:hover {
+            background: rgba(102, 126, 234, 0.1);
             transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
         }
 
         .login-btn svg {
-            width: 16px;
-            height: 16px;
+            width: 20px;
+            height: 20px;
         }
 
         .form-group {
