@@ -645,11 +645,12 @@
 
         function parseUrlParams() {
             const currentUrl = window.location.href;
-            const urlMatch = currentUrl.match(/url=([^&]+)/);
-            if (urlMatch && urlMatch[1]) {
-                const decodedUrl = decodeURIComponent(urlMatch[1]);
-                targetUrlInput.value = decodedUrl;
-                addLog(`已从URL参数加载目标地址: ${decodedUrl}`, 'info');
+            const tokenMatch = currentUrl.match(/[?&]token=([^&]+)/);
+            if (tokenMatch && tokenMatch[1]) {
+                const token = tokenMatch[1];
+                const apiUrl = `/message?token=${token}`;
+                targetUrlInput.value = apiUrl;
+                addLog(`已从URL参数加载目标地址: ${apiUrl}`, 'info');
             }
         }
 
@@ -836,18 +837,25 @@
         function copyInterfaceLink() {
             const targetUrl = targetUrlInput.value.trim();
             if (!targetUrl) { addLog('错误: 请先输入目标地址', 'error'); return; }
-            const currentHost = window.location.origin;
-            const interfaceLink = `${currentHost}/?url=${encodeURIComponent(targetUrl)}`;
-            navigator.clipboard.writeText(interfaceLink).then(() => {
-                addLog(`已复制接口链接到剪贴板`, 'success');
-                copyBtn.classList.add('copied');
-                const originalText = copyBtn.textContent;
-                copyBtn.textContent = '✓ 已复制';
-                setTimeout(() => {
-                    copyBtn.classList.remove('copied');
-                    copyBtn.textContent = originalText;
-                }, 2000);
-            }).catch(err => { addLog(`复制失败: ${err.message}`, 'error'); });
+
+            const tokenMatch = targetUrl.match(/[?&]token=([^&]+)/);
+            if (tokenMatch && tokenMatch[1]) {
+                const token = tokenMatch[1];
+                const currentHost = window.location.origin;
+                const interfaceLink = `${currentHost}/?token=${token}`;
+                navigator.clipboard.writeText(interfaceLink).then(() => {
+                    addLog(`已复制接口链接到剪贴板`, 'success');
+                    copyBtn.classList.add('copied');
+                    const originalText = copyBtn.textContent;
+                    copyBtn.textContent = '✓ 已复制';
+                    setTimeout(() => {
+                        copyBtn.classList.remove('copied');
+                        copyBtn.textContent = originalText;
+                    }, 2000);
+                }).catch(err => { addLog(`复制失败: ${err.message}`, 'error'); });
+            } else {
+                addLog('错误: 目标地址中未找到token参数', 'error');
+            }
         }
 
         // 事件监听
