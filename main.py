@@ -103,14 +103,14 @@ class ConnectionManager:
             self.active_connections[client_token] = set()
         self.active_connections[client_token].add(websocket)
         logger.info(
-            f"Client {client_token} connected. Total connections: {len(self.active_connections[client_token])}")
+            f"客户端 {client_token} 已连接. 总连接数: {len(self.active_connections[client_token])}")
 
     def disconnect(self, client_token: str, websocket: WebSocket):
         if client_token in self.active_connections:
             self.active_connections[client_token].discard(websocket)
             if not self.active_connections[client_token]:
                 del self.active_connections[client_token]
-        logger.info(f"Client {client_token} disconnected")
+        logger.info(f"客户端 {client_token} 已断开连接")
 
     async def send_message(self, client_token: str, message: dict):
         if client_token in self.active_connections:
@@ -119,7 +119,7 @@ class ConnectionManager:
                 try:
                     await connection.send_json(message)
                 except Exception as e:
-                    logger.error(f"Error sending message: {e}")
+                    logger.error(f"客户端 {client_token} 发送消息时出错: {e}")
                     disconnected.add(connection)
 
             # 清理断开的连接
@@ -273,7 +273,7 @@ async def create_token_pair(client_token: str, geo_info: dict = None) -> str:
         await redis_client.set(f"client:{client_token}", json.dumps(token_data, ensure_ascii=False))
         await redis_client.set(f"app:{app_token}", client_token)
         logger.info(
-            f"Created token pair - client: {client_token}, app: {app_token}, IP: {geo_info.get('ip') if geo_info else 'unknown'}")
+            f"已创建 token 对 - client: {client_token}, app: {app_token}, IP: {geo_info.get('ip') if geo_info else 'unknown'}")
 
     return app_token
 
@@ -317,7 +317,7 @@ async def admin_page(request: Request, session_token: Optional[str] = Cookie(Non
 
 
 @app.websocket("/stream")
-async def websocket_endpoint(websocket: WebSocket, token: str = Query(...), request: Request = None):
+async def websocket_endpoint(websocket: WebSocket, token: str = Query(...)):
     """WebSocket 连接端点"""
     client_token = token
 
@@ -325,12 +325,25 @@ async def websocket_endpoint(websocket: WebSocket, token: str = Query(...), requ
     if not await token_exists(client_token):
         # 获取IP和地理位置信息
         geo_info = None
-        if request:
-            geo_info = await get_geo_info(request)
+        try:
+            # 直接从 WebSocket 获取客户端 IP
+            client_host = websocket.client.host if websocket.client else "unknown"
+            geo_info = {
+                "ip": client_host,
+                "country": "查询中...",
+                "region": "查询中...",
+                "city": "查询中..."
+            }
+            # 异步查询地理位置
+            geo_info = await get_ip_geolocation(client_host)
+            geo_info["ip"] = client_host
+        except Exception as e:
+            logger.error(f"获取IP地理位置失败: {e}")
+            geo_info = {"ip": "unknown", "country": "未知", "region": "未知", "city": "未知"}
         
         app_token = await create_token_pair(client_token, geo_info)
         logger.info(
-            f"New client token created: {client_token}, app token: {app_token}, IP: {geo_info.get('ip') if geo_info else 'unknown'}")
+            f"新的 client token 已创建: {client_token}, app token: {app_token}, IP: {geo_info.get('ip') if geo_info else 'unknown'}")
 
     await manager.connect(client_token, websocket)
 
@@ -339,13 +352,13 @@ async def websocket_endpoint(websocket: WebSocket, token: str = Query(...), requ
         while True:
             data = await websocket.receive_text()
             # 可以处理客户端发送的消息（心跳等）
-            logger.info(f"Received from {client_token}: {data}")
+            logger.info(f"已接收来自 {client_token} 的消息: {data}")
 
     except WebSocketDisconnect:
         manager.disconnect(client_token, websocket)
-        logger.info(f"Client {client_token} disconnected")
+        logger.info(f"客户端 {client_token} 已断开连接")
     except Exception as e:
-        logger.error(f"WebSocket error: {e}")
+        logger.error(f"WebSocket 错误: {e}")
         manager.disconnect(client_token, websocket)
 
 

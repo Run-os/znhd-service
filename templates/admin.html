@@ -320,7 +320,6 @@
                 <div class="query-actions">
                     <button class="btn btn-primary" id="searchBtn">🔍 搜索/整合</button>
                     <button class="btn btn-secondary" id="loadAllBtn">加载全部</button>
-                    <button class="btn btn-secondary" id="refreshBtn">刷新统计</button>
                 </div>
             </div>
         </div>
@@ -340,7 +339,6 @@
         const searchPattern = document.getElementById('searchPattern');
         const searchBtn = document.getElementById('searchBtn');
         const loadAllBtn = document.getElementById('loadAllBtn');
-        const refreshBtn = document.getElementById('refreshBtn');
         const logoutBtn = document.getElementById('logoutBtn');
         const resultsContainer = document.getElementById('resultsContainer');
         const resultCount = document.getElementById('resultCount');
@@ -423,8 +421,10 @@
 
         // 事件监听
         searchBtn.addEventListener('click', handleSearchOrIntegrated);
-        loadAllBtn.addEventListener('click', () => searchKeys('*'));
-        refreshBtn.addEventListener('click', loadStats);
+        loadAllBtn.addEventListener('click', async () => {
+            await loadStats();  // 加载全部前更新统计
+            searchKeys('*');
+        });
 
         searchPattern.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {
@@ -432,11 +432,13 @@
             }
         });
 
-        function handleSearchOrIntegrated() {
+        async function handleSearchOrIntegrated() {
             const pattern = searchPattern.value.trim();
             if (pattern) {
+                await loadStats();  // 搜索前更新统计
                 searchKeys(pattern);
             } else {
+                await loadStats();  // 整合前更新统计
                 loadIntegratedTokens();
             }
         }
