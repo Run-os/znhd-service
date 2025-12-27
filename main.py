@@ -580,6 +580,18 @@ async def api_redis_tokens(session_token: Optional[str] = Cookie(None)):
             token_data = json.loads(value)
             app_token = token_data.get("app_token", "")
             
+            # 如果缺少IP信息或IP为空，尝试获取并更新
+            current_ip = token_data.get("ip", "")
+            if not current_ip or current_ip in ["unknown", "未知", ""]:
+                geo_info = await get_ip_geolocation("unknown")
+                token_data["ip"] = "未知"
+                token_data["location"] = {
+                    "country": geo_info.get("country", "未知"),
+                    "region": geo_info.get("region", "未知"),
+                    "city": geo_info.get("city", "未知")
+                }
+                await redis_client.set(key, json.dumps(token_data, ensure_ascii=False))
+            
             tokens.append({
                 "app_token": app_token,
                 "client_token": client_token,
