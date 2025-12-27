@@ -648,7 +648,8 @@
             const tokenMatch = currentUrl.match(/[?&]token=([^&]+)/);
             if (tokenMatch && tokenMatch[1]) {
                 const token = tokenMatch[1];
-                const apiUrl = `${window.location.origin}/?token=${token}`;
+                // 使用正确的 POST 端点 /message 而不是 /
+                const apiUrl = `${window.location.origin}/message?token=${token}`;
                 targetUrlInput.value = apiUrl;
                 addLog(`已从URL参数加载目标地址: ${apiUrl}`, 'info');
             }
