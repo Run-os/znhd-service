@@ -843,7 +843,7 @@
             if (tokenMatch && tokenMatch[1]) {
                 const token = tokenMatch[1];
                 const currentHost = window.location.origin;
-                const interfaceLink = `${currentHost}/?token=${token}`;
+                const interfaceLink = `${currentHost}/?url=${currentHost}/message?token=${token}`;
                 navigator.clipboard.writeText(interfaceLink).then(() => {
                     addLog(`已复制接口链接到剪贴板`, 'success');
                     copyBtn.classList.add('copied');
