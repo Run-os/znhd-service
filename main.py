@@ -190,7 +190,11 @@ async def startup_event():
         logger.info(f"[SUCCESS] Redis connected successfully to {safe_url}")
     except Exception as e:
         logger.error(f"Redis connection failed: {e}")
-        raise
+        # Zeabur 环境如果 Redis 暂时不可用，不退出，后续请求会失败但应用继续运行
+        if os.getenv("REDIS_URI"):
+            logger.warning("Zeabur Redis not ready yet, continuing without Redis...")
+        else:
+            raise
 
     # 启动定时清理任务
     asyncio.create_task(weekly_cleanup())
