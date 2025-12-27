@@ -4,26 +4,26 @@ services:
   web:
     build: .
     ports:
-      - "8080:8000"
+      - "8080:8080"
     environment:
+      # 使用本地 Redis 服务
       - REDIS_HOST=redis
       - REDIS_PORT=6379
-      # 从文件读取Redis密码并设置为环境变量
-      - REDIS_PASSWORD=$(cat redis/redis_password.txt 2>/dev/null || echo "")
+      # 如果没有 REDIS_URI（Zeabur 没有内置 Redis addon 时），使用本地
+      - REDIS_URI=
     depends_on:
       - redis
     volumes:
-      - ./redis/redis_password.txt:/app/redis_password.txt:ro
+      - redis_data:/data
     restart: unless-stopped
 
   redis:
     image: redis:7-alpine
     ports:
       - "6379:6379"
-    command: redis-server --requirefile /data/redis_password.txt
+    command: redis-server --requirepass ${REDIS_PASSWORD:-changeme123} --appendonly yes
     volumes:
       - redis_data:/data
-      - ./redis/redis_password.txt:/data/redis_password.txt:ro
     restart: unless-stopped
 
 volumes:
