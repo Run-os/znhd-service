@@ -295,6 +295,10 @@ async def token_exists(client_token: str) -> bool:
     return False
 
 
+# 挂载静态文件目录
+app.mount("/static", StaticFiles(directory="static"), "static")
+
+
 @app.get("/", response_class=HTMLResponse)
 async def root(request: Request):
     """主页 - 返回静态HTML页面"""
