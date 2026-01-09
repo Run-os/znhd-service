@@ -724,6 +724,7 @@
 
                 addLog(`选择了图片: ${imageFile.name} (${imageFile.type || '未知类型'})`, 'info');
                 originalImageFile = imageFile;
+                compressedImageFile = null; // 选择新图片时清空压缩文件缓存
                 let processedFile = imageFile;
 
                 const isHeic = imageFile.type === 'image/heic' || imageFile.type === 'image/heif' ||
