@@ -1,4 +1,4 @@
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Query, Request, Depends, Cookie
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Query, Request, Depends, Cookie, UploadFile, File
 from fastapi.responses import JSONResponse, HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -120,6 +120,40 @@ class ConnectionManager:
                     await connection.send_json(message)
                 except Exception as e:
                     logger.error(f"客户端 {client_token} 发送消息时出错: {e}")
+                    disconnected.add(connection)
+
+            # 清理断开的连接
+            for conn in disconnected:
+                self.disconnect(client_token, conn)
+
+    async def send_binary(self, client_token: str, data: bytes, metadata: dict = None):
+        """发送二进制数据（如图片）给客户端"""
+        if client_token in self.active_connections:
+            disconnected = set()
+            for connection in self.active_connections[client_token]:
+                try:
+                    # 先发送元数据
+                    await connection.send_json({
+                        "type": "binary_start",
+                        "data_type": metadata.get("data_type", "image"),
+                        "filename": metadata.get("filename", ""),
+                        "size": len(data),
+                        "content_type": metadata.get("content_type", "image/jpeg"),
+                        "transfer_id": metadata.get("transfer_id", "")
+                    })
+                    # 分块发送二进制数据
+                    chunk_size = 64 * 1024  # 64KB 每块
+                    for i in range(0, len(data), chunk_size):
+                        chunk = data[i:i + chunk_size]
+                        await connection.send_bytes(chunk)
+                    # 发送完成标记
+                    await connection.send_json({
+                        "type": "binary_end",
+                        "transfer_id": metadata.get("transfer_id", ""),
+                        "size": len(data)
+                    })
+                except Exception as e:
+                    logger.error(f"客户端 {client_token} 发送二进制数据时出错: {e}")
                     disconnected.add(connection)
 
             # 清理断开的连接
@@ -654,6 +688,82 @@ async def send_message(message: Message, token: str = Query(...)):
             "status": "success",
             "message": "信息已发送",
             "client_token": client_token,
+            "connections": len(manager.active_connections.get(client_token, []))
+        }
+    )
+
+
+@app.post("/message/image")
+async def send_image(
+    token: str = Query(...),
+    title: str = Query("图片消息"),
+    priority: int = Query(2),
+    message: str = Query(""),
+    file: UploadFile = File(...)
+):
+    """
+    接收图片二进制数据并通过 WebSocket 推送给客户端
+    使用 multipart/form-data 上传图片，性能更好
+    """
+    app_token = token
+
+    # 通过 appToken 获取 clientToken
+    client_token = await get_client_token(app_token)
+
+    if not client_token:
+        raise HTTPException(status_code=400, detail="Invalid app token format")
+
+    # 读取图片二进制数据
+    image_data = await file.read()
+    filename = file.filename or "image.jpg"
+    content_type = file.content_type or "image/jpeg"
+
+    logger.info(f"收到图片: {filename}, 大小: {len(image_data)} bytes")
+
+    # 生成传输 ID 用于追踪
+    transfer_id = f"{datetime.now().strftime('%Y%m%d%H%M%S')}_{secrets.token_hex(8)}"
+
+    # 检查是否有活跃的连接
+    if client_token not in manager.active_connections or not manager.active_connections[client_token]:
+        logger.warning(
+            f"没有活跃的 WebSocket 连接 for client {client_token}, 图片未发送")
+        return JSONResponse(
+            status_code=200,
+            content={
+                "status": "no_connection",
+                "message": "图片已接收，但没有活跃的 WebSocket 连接",
+                "client_token": client_token,
+                "filename": filename,
+                "size": len(image_data)
+            }
+        )
+
+    # 通过 WebSocket 发送二进制数据
+    await manager.send_binary(
+        client_token,
+        image_data,
+        {
+            "data_type": "image",
+            "filename": filename,
+            "content_type": content_type,
+            "transfer_id": transfer_id,
+            "title": title,
+            "message": message,
+            "priority": priority
+        }
+    )
+
+    logger.info(f"图片已发送到客户端 {client_token}: {filename}")
+
+    return JSONResponse(
+        status_code=200,
+        content={
+            "status": "success",
+            "message": "图片已发送",
+            "client_token": client_token,
+            "filename": filename,
+            "size": len(image_data),
+            "transfer_id": transfer_id,
             "connections": len(manager.active_connections.get(client_token, []))
         }
     )

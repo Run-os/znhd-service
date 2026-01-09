@@ -801,26 +801,13 @@
             sendBtn.innerHTML = '<span class="spinner"></span><span class="status-text">发送中...</span>';
 
             try {
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 10000);
-
-                const requestBody = { message: messageContent, priority: 2, title: 'znhd-同步' };
-                if (selectedImageBase64) {
-                    requestBody.extras = { 'client::display': { contentType: 'text/markdown' } };
-                    requestBody.message = `${selectedImageBase64}`;
-                    addLog('正在发送包含图片的消息...', 'info');
+                // 如果有图片，优先使用二进制传输
+                if (selectedImageBase64 && originalImageFile) {
+                    await sendWithBinaryImage(targetUrl, messageContent);
+                } else {
+                    // 没有图片，使用原来的 JSON 方式
+                    await sendJsonRequest(targetUrl, messageContent);
                 }
-
-                const response = await fetch(targetUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(requestBody),
-                    signal: controller.signal
-                });
-
-                clearTimeout(timeoutId);
-                const statusText = response.status === 200 ? 'OK' : `HTTP ${response.status}`;
-                addLog(`成功: POST to ${targetUrl} - ${statusText}`, 'success');
             } catch (error) {
                 let errorMessage = '未知错误';
                 if (error.name === 'AbortError') errorMessage = '请求超时 (10秒)';
@@ -832,6 +819,82 @@
                 sendBtn.disabled = false;
                 sendBtn.innerHTML = '发送请求';
             }
+        }
+
+        // 发送图片使用 multipart/form-data 二进制传输（兼容原接口）
+        async function sendWithBinaryImage(targetUrl, messageContent) {
+            const tokenMatch = targetUrl.match(/[?&]token=([^&]+)/);
+            if (!tokenMatch) {
+                throw new Error('目标地址中未找到token参数');
+            }
+            const token = tokenMatch[1];
+
+            addLog('正在通过二进制方式发送图片...', 'info');
+
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 60000); // 图片上传超时60秒
+
+            try {
+                const formData = new FormData();
+                formData.append('file', originalImageFile);
+                formData.append('title', 'znhd-同步');
+                formData.append('priority', '2');
+                formData.append('message', messageContent);
+
+                const response = await fetch(`${window.location.origin}/message/image?token=${token}`, {
+                    method: 'POST',
+                    body: formData,
+                    signal: controller.signal
+                });
+
+                clearTimeout(timeoutId);
+
+                // 检查 HTTP 状态码
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`HTTP ${response.status}: ${errorText.substring(0, 100)}`);
+                }
+
+                // 解析 JSON 响应
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    const responseText = await response.text();
+                    throw new Error(`服务器返回非JSON响应: ${responseText.substring(0, 100)}`);
+                }
+
+                const result = await response.json();
+
+                if (result.status === 'success') {
+                    addLog(`成功: 二进制图片传输完成 - ${result.filename} (${(result.size / 1024).toFixed(2)}KB)`, 'success');
+                } else {
+                    addLog(`警告: 图片已接收但客户端未连接 - ${result.message}`, 'info');
+                }
+            } catch (error) {
+                clearTimeout(timeoutId);
+                if (error.name === 'AbortError') {
+                    throw new Error('图片上传超时 (60秒)');
+                }
+                throw error;
+            }
+        }
+
+        // 发送纯文本请求（保持兼容性）
+        async function sendJsonRequest(targetUrl, messageContent) {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+            const requestBody = { message: messageContent, priority: 2, title: 'znhd-同步' };
+
+            const response = await fetch(targetUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(requestBody),
+                signal: controller.signal
+            });
+
+            clearTimeout(timeoutId);
+            const statusText = response.status === 200 ? 'OK' : `HTTP ${response.status}`;
+            addLog(`成功: POST to ${targetUrl} - ${statusText}`, 'success');
         }
 
         function clearLogs() {
