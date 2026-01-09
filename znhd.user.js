@@ -13,7 +13,7 @@
 // @grant       GM_setClipboard
 // @grant       GM_notification
 // @connect     *
-// @homepage    https://github.com/Run-os/znhd-service
+// @homepage    https://scriptcat.org/zh-CN/script-show-page/3650
 // @require     https://scriptcat.org/lib/1167/1.0.0/%E8%84%9A%E6%9C%AC%E7%8C%ABUI%E5%BA%93.js?sha384-jXdR3hCwnDJf53Ue6XHAi6tApeudgS/wXnMYBD/ZJcgge8Xnzu/s7bkEf2tPi2KS
 // ==/UserScript==
 
