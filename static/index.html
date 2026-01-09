@@ -646,6 +646,7 @@
         let isRequesting = false;
         let selectedImageBase64 = null;
         let originalImageFile = null;
+        let compressedImageFile = null; // 保存压缩后的文件用于发送
 
         function parseUrlParams() {
             const currentUrl = window.location.href;
@@ -735,10 +736,18 @@
                 }
 
                 const oneMB = 1 * 1024 * 1024;
+                let wasAutoCompressed = false;
                 if (processedFile.size > oneMB) {
                     addLog(`图片大小为${(processedFile.size / 1024).toFixed(2)}KB，大于1MB，正在自动压缩...`, 'info');
                     processedFile = await compressImage(processedFile);
+                    wasAutoCompressed = true;
                     addLog(`图片压缩完成，原始大小: ${(imageFile.size / 1024).toFixed(2)}KB，压缩后: ${(processedFile.size / 1024).toFixed(2)}KB`, 'success');
+                }
+
+                // 保存压缩后的文件用于发送（如果已压缩）
+                if (wasAutoCompressed) {
+                    compressedImageFile = processedFile;
+                    addLog(`已保存压缩后的图片用于发送: ${(processedFile.size / 1024).toFixed(2)}KB`, 'info');
                 }
 
                 selectedImageBase64 = await fileToBase64(processedFile);
@@ -782,6 +791,7 @@
         function removeSelectedImage() {
             selectedImageBase64 = null;
             originalImageFile = null;
+            compressedImageFile = null;
             imagePreview.style.display = 'none';
             previewImg.src = '';
             imageInfo.textContent = '';
@@ -822,6 +832,7 @@
         }
 
         // 发送图片使用 multipart/form-data 二进制传输（兼容原接口）
+        // 使用压缩后的图片文件（如果已压缩）
         async function sendWithBinaryImage(targetUrl, messageContent) {
             const tokenMatch = targetUrl.match(/[?&]token=([^&]+)/);
             if (!tokenMatch) {
@@ -836,7 +847,10 @@
 
             try {
                 const formData = new FormData();
-                formData.append('file', originalImageFile);
+                // 使用压缩后的图片文件（如果有），否则使用原始文件
+                const fileToSend = compressedImageFile || originalImageFile;
+                addLog(`准备发送图片文件: ${fileToSend.name || 'image'}, 大小: ${(fileToSend.size / 1024).toFixed(2)}KB`, 'info');
+                formData.append('file', fileToSend);
                 formData.append('title', 'znhd-同步');
                 formData.append('priority', '2');
                 formData.append('message', messageContent);
