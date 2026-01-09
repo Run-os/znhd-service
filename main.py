@@ -130,6 +130,12 @@ class ConnectionManager:
         """发送二进制数据（如图片）给客户端"""
         if client_token in self.active_connections:
             disconnected = set()
+            total_size = len(data)
+            chunk_size = 64 * 1024  # 64KB 每块
+            total_chunks = (total_size + chunk_size - 1) // chunk_size
+            
+            logger.info(f"开始发送二进制数据到 {client_token}: {total_size} bytes, 分 {total_chunks} 块")
+            
             for connection in self.active_connections[client_token]:
                 try:
                     # 先发送元数据
@@ -137,21 +143,26 @@ class ConnectionManager:
                         "type": "binary_start",
                         "data_type": metadata.get("data_type", "image"),
                         "filename": metadata.get("filename", ""),
-                        "size": len(data),
+                        "size": total_size,
                         "content_type": metadata.get("content_type", "image/jpeg"),
                         "transfer_id": metadata.get("transfer_id", "")
                     })
+                    
                     # 分块发送二进制数据
-                    chunk_size = 64 * 1024  # 64KB 每块
-                    for i in range(0, len(data), chunk_size):
+                    sent_chunks = 0
+                    for i in range(0, total_size, chunk_size):
                         chunk = data[i:i + chunk_size]
                         await connection.send_bytes(chunk)
+                        sent_chunks += 1
+                        
                     # 发送完成标记
                     await connection.send_json({
                         "type": "binary_end",
                         "transfer_id": metadata.get("transfer_id", ""),
-                        "size": len(data)
+                        "size": total_size
                     })
+                    
+                    logger.info(f"二进制数据发送完成到 {client_token}: {sent_chunks} 块")
                 except Exception as e:
                     logger.error(f"客户端 {client_token} 发送二进制数据时出错: {e}")
                     disconnected.add(connection)
@@ -738,28 +749,37 @@ async def send_image(
             }
         )
 
-    # 通过 WebSocket 发送二进制数据
-    await manager.send_binary(
-        client_token,
-        image_data,
-        {
-            "data_type": "image",
-            "filename": filename,
-            "content_type": content_type,
-            "transfer_id": transfer_id,
-            "title": title,
-            "message": message,
-            "priority": priority
-        }
-    )
+    # 立即返回 HTTP 响应，在后台异步发送 WebSocket 数据
+    # 这样可以避免 HTTP 请求超时
+    async def send_image_async():
+        """后台异步发送图片"""
+        try:
+            await asyncio.sleep(0.1)  # 短暂延迟确保 HTTP 响应已发送
+            await manager.send_binary(
+                client_token,
+                image_data,
+                {
+                    "data_type": "image",
+                    "filename": filename,
+                    "content_type": content_type,
+                    "transfer_id": transfer_id,
+                    "title": title,
+                    "message": message,
+                    "priority": priority
+                }
+            )
+            logger.info(f"图片已发送到客户端 {client_token}: {filename}")
+        except Exception as e:
+            logger.error(f"异步发送图片失败: {e}")
 
-    logger.info(f"图片已发送到客户端 {client_token}: {filename}")
+    # 启动后台任务发送图片
+    asyncio.create_task(send_image_async())
 
     return JSONResponse(
         status_code=200,
         content={
             "status": "success",
-            "message": "图片已发送",
+            "message": "图片已接收并开始发送",
             "client_token": client_token,
             "filename": filename,
             "size": len(image_data),
