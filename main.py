@@ -282,9 +282,19 @@ async def get_client_ip(request: Request) -> str:
     return "unknown"
 
 
+def is_private_ip(ip: str) -> bool:
+    """检测是否为私有IP地址"""
+    import ipaddress
+    try:
+        addr = ipaddress.ip_address(ip)
+        return addr.is_private
+    except:
+        return False
+
+
 async def get_ip_geolocation(ip: str) -> dict:
     """获取IP对应的地理位置信息"""
-    if ip == "unknown" or ip.startswith("127.") or ip.startswith("::1"):
+    if ip == "unknown" or is_private_ip(ip):
         return {"country": "本地", "region": "本地", "city": "本地"}
     
     try:
@@ -362,7 +372,25 @@ async def websocket_endpoint(websocket: WebSocket, token: str = Query(...)):
     # 获取IP和地理位置信息
     geo_info = None
     try:
-        client_host = websocket.client.host if websocket.client else "unknown"
+        # 优先从请求头获取真实客户端IP（支持代理层）
+        client_host = "unknown"
+        
+        # 从WebSocket scope的headers中获取
+        headers_dict = dict(websocket.scope.get("headers", []))
+        
+        # 尝试从X-Forwarded-For获取
+        forwarded_for = headers_dict.get(b"x-forwarded-for", b"").decode()
+        if forwarded_for:
+            client_host = forwarded_for.split(",")[0].strip()
+        else:
+            # 尝试从X-Real-IP获取
+            real_ip = headers_dict.get(b"x-real-ip", b"").decode()
+            if real_ip:
+                client_host = real_ip
+            else:
+                # 兜底使用websocket.client.host
+                client_host = websocket.client.host if websocket.client else "unknown"
+        
         geo_info = await get_ip_geolocation(client_host)
         geo_info["ip"] = client_host
     except Exception as e:
@@ -959,12 +987,12 @@ async def api_redis_tokens(session_token: Optional[str] = Cookie(None)):
             # 如果缺少IP信息或IP为空，尝试获取并更新
             current_ip = token_data.get("ip", "")
             if not current_ip or current_ip in ["unknown", "未知", ""]:
-                geo_info = await get_ip_geolocation("unknown")
+                # 不再尝试获取地理位置，直接标记为未知
                 token_data["ip"] = "未知"
                 token_data["location"] = {
-                    "country": geo_info.get("country", "未知"),
-                    "region": geo_info.get("region", "未知"),
-                    "city": geo_info.get("city", "未知")
+                    "country": "未知",
+                    "region": "未知",
+                    "city": "未知"
                 }
                 await redis_client.set(key, json.dumps(token_data, ensure_ascii=False))
             

@@ -483,7 +483,7 @@ function DM() {
                                         whiteSpace: "pre-line"
                                     }
                                 },
-                                "1. 配置好webhookUrl，webhookToken（即clientToken），postToken（即appToken）后，点击运行状态按钮启动webhook推送监听\n2. 🔘[使用教程]里面可查看脚本详细介绍\n3. 🔘[生成配置]可以生成一个随机的测试配置，供临时使用。注意：该配置仅供测试使用，如果需要长期使用，请自建webhook服务\n",
+                                "1. 配置好webhookUrl，webhookToken（即clientToken），postToken（即appToken）后，点击运行状态按钮启动webhook推送监听\n2. 🔘[使用教程]里面可查看脚本详细介绍\n3. 🔘[生成配置]根据设备指纹生成唯一标识，用于设备识别和消息推送\n",
                             ),
                             CAT_UI.Divider("webhook设置"),  // 带文本的分隔线
                             CAT_UI.Checkbox("如果配置为空，自动生成配置", {
