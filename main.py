@@ -311,36 +311,7 @@ async def get_geo_info(request: Request) -> dict:
     return {"ip": ip, **geo}
 
 
-# 根据clientToken创建appToken并存储到Redis
-async def create_token_pair(client_token: str, geo_info: dict = None) -> str:
-    """创建 clientToken 和对应的 appToken"""
-    # appToken 为 clientToken 的 base64 编码
-    app_token = base64.b64encode(client_token.encode()).decode()
-
-    # 存储到 Redis
-    if redis_client:
-        token_data = {
-            "app_token": app_token,
-            "created_at": datetime.now().isoformat()
-        }
-        
-        # 如果提供了地理位置信息，添加到数据中
-        if geo_info:
-            token_data["ip"] = geo_info.get("ip", "")
-            token_data["location"] = {
-                "country": geo_info.get("country", ""),
-                "region": geo_info.get("region", ""),
-                "city": geo_info.get("city", "")
-            }
-        
-        await redis_client.set(f"client:{client_token}", json.dumps(token_data, ensure_ascii=False))
-        await redis_client.set(f"app:{app_token}", client_token)
-        logger.info(
-            f"已创建 token 对 - client: {client_token}, app: {app_token}, IP: {geo_info.get('ip') if geo_info else 'unknown'}")
-
-    return app_token
-
-
+# 通过 appToken 获取 clientToken（用于消息推送）
 async def get_client_token(app_token: str) -> str:
     """通过 appToken 获取 clientToken"""
     if redis_client:
@@ -348,14 +319,6 @@ async def get_client_token(app_token: str) -> str:
         if client_token:
             return client_token
     return None
-
-
-async def token_exists(client_token: str) -> bool:
-    """检查 clientToken 是否存在"""
-    if redis_client:
-        exists = await redis_client.exists(f"client:{client_token}")
-        return bool(exists)
-    return False
 
 
 # 挂载静态文件目录
@@ -385,32 +348,73 @@ async def admin_page(request: Request, session_token: Optional[str] = Cookie(Non
 
 @app.websocket("/stream")
 async def websocket_endpoint(websocket: WebSocket, token: str = Query(...)):
-    """WebSocket 连接端点"""
-    client_token = token
-
-    # 检查 token 是否存在，不存在则创建
-    if not await token_exists(client_token):
-        # 获取IP和地理位置信息
-        geo_info = None
-        try:
-            # 直接从 WebSocket 获取客户端 IP
-            client_host = websocket.client.host if websocket.client else "unknown"
-            geo_info = {
-                "ip": client_host,
-                "country": "查询中...",
-                "region": "查询中...",
-                "city": "查询中..."
+    """WebSocket 连接端点 - 指纹验证"""
+    fingerprint = token  # webhookToken直接作为指纹
+    
+    # 检查是否在黑名单中
+    if redis_client:
+        blocked = await redis_client.get(f"fingerprint:blocked:{fingerprint}")
+        if blocked:
+            logger.warning(f"拒绝封禁设备的连接: {fingerprint[:20]}...")
+            await websocket.close(code=4000, reason="设备已被封禁")
+            return
+    
+    # 获取IP和地理位置信息
+    geo_info = None
+    try:
+        client_host = websocket.client.host if websocket.client else "unknown"
+        geo_info = await get_ip_geolocation(client_host)
+        geo_info["ip"] = client_host
+    except Exception as e:
+        logger.error(f"获取IP地理位置失败: {e}")
+        geo_info = {"ip": "unknown", "country": "未知", "region": "未知", "city": "未知"}
+    
+    # 指纹注册/更新
+    if redis_client:
+        fp_data = await redis_client.get(f"fingerprint:{fingerprint}")
+        if not fp_data:
+            # 新设备，注册指纹
+            fp_data_new = {
+                "fingerprint": fingerprint,
+                "created_at": datetime.now().isoformat(),
+                "last_seen": datetime.now().isoformat(),
+                "ip": geo_info.get("ip", ""),
+                "location": f"{geo_info.get('country', '')} {geo_info.get('region', '')} {geo_info.get('city', '')}"
             }
-            # 异步查询地理位置
-            geo_info = await get_ip_geolocation(client_host)
-            geo_info["ip"] = client_host
-        except Exception as e:
-            logger.error(f"获取IP地理位置失败: {e}")
-            geo_info = {"ip": "unknown", "country": "未知", "region": "未知", "city": "未知"}
-        
-        app_token = await create_token_pair(client_token, geo_info)
-        logger.info(
-            f"新的 client token 已创建: {client_token}, app token: {app_token}, IP: {geo_info.get('ip') if geo_info else 'unknown'}")
+            await redis_client.set(
+                f"fingerprint:{fingerprint}",
+                json.dumps(fp_data_new, ensure_ascii=False),
+                ex=30*24*60*60  # 30天过期
+            )
+            logger.info(f"新设备指纹已注册: {fingerprint[:20]}...")
+        else:
+            # 更新最后活跃时间
+            data = json.loads(fp_data)
+            data["last_seen"] = datetime.now().isoformat()
+            data["ip"] = geo_info.get("ip", "")
+            await redis_client.set(
+                f"fingerprint:{fingerprint}",
+                json.dumps(data, ensure_ascii=False)
+            )
+    
+    # 生成app_token
+    client_token = fingerprint
+    app_token = base64.b64encode(client_token.encode()).decode()
+    
+    # 存储到Redis
+    if redis_client:
+        token_data = {
+            "app_token": app_token,
+            "created_at": datetime.now().isoformat(),
+            "ip": geo_info.get("ip", ""),
+            "location": {
+                "country": geo_info.get("country", ""),
+                "region": geo_info.get("region", ""),
+                "city": geo_info.get("city", "")
+            }
+        }
+        await redis_client.set(f"client:{client_token}", json.dumps(token_data, ensure_ascii=False))
+        await redis_client.set(f"app:{app_token}", client_token)
 
     await manager.connect(client_token, websocket)
 
@@ -418,12 +422,11 @@ async def websocket_endpoint(websocket: WebSocket, token: str = Query(...)):
         # 保持连接
         while True:
             data = await websocket.receive_text()
-            # 可以处理客户端发送的消息（心跳等）
-            logger.info(f"已接收来自 {client_token} 的消息: {data}")
+            logger.info(f"已接收来自 {client_token[:20]}... 的消息: {data}")
 
     except WebSocketDisconnect:
         manager.disconnect(client_token, websocket)
-        logger.info(f"客户端 {client_token} 已断开连接")
+        logger.info(f"客户端 {client_token[:20]}... 已断开连接")
     except Exception as e:
         logger.error(f"WebSocket 错误: {e}")
         manager.disconnect(client_token, websocket)
@@ -1001,3 +1004,94 @@ async def api_redis_keys(
     except Exception as e:
         logger.error(f"查询Redis失败: {e}")
         return {"error": str(e), "data": []}
+
+
+# ==================== 指纹管理 API ====================
+
+@app.get("/api/fingerprint/list")
+async def list_fingerprints(session_token: Optional[str] = Cookie(None)):
+    """获取所有已注册的设备指纹"""
+    if not verify_session(session_token):
+        raise HTTPException(status_code=401, detail="未授权")
+    
+    if not redis_client:
+        return {"error": "Redis未连接", "data": []}
+    
+    try:
+        # 获取所有 fingerprint:* 键
+        keys = await redis_client.keys("fingerprint:*")
+        fingerprints = []
+        
+        for key in keys:
+            # 跳过黑名单键
+            if ":blocked:" in key:
+                continue
+            
+            value = await redis_client.get(key)
+            data = json.loads(value)
+            fingerprints.append({
+                "fingerprint": data.get("fingerprint", ""),
+                "created_at": data.get("created_at", ""),
+                "last_seen": data.get("last_seen", ""),
+                "ip": data.get("ip", ""),
+                "location": data.get("location", ""),
+                "has_connection": data.get("fingerprint", "") in manager.active_connections
+            })
+        
+        return {"data": fingerprints, "total": len(fingerprints)}
+    except Exception as e:
+        logger.error(f"获取指纹列表失败: {e}")
+        return {"error": str(e), "data": []}
+
+
+@app.post("/api/fingerprint/block")
+async def block_fingerprint(
+    fingerprint: str = Query(...),
+    reason: str = Query("管理员封禁"),
+    session_token: Optional[str] = Cookie(None)
+):
+    """封禁设备指纹"""
+    if not verify_session(session_token):
+        raise HTTPException(status_code=401, detail="未授权")
+    
+    if not redis_client:
+        raise HTTPException(status_code=500, detail="Redis未连接")
+    
+    # 封禁指纹
+    await redis_client.set(
+        f"fingerprint:blocked:{fingerprint}",
+        reason,
+        ex=365*24*60*60  # 1年过期
+    )
+    
+    # 关闭该设备的现有连接
+    if fingerprint in manager.active_connections:
+        for conn in list(manager.active_connections[fingerprint]):
+            try:
+                await conn.close(code=4001, reason="设备已被封禁")
+            except Exception:
+                pass
+        del manager.active_connections[fingerprint]
+    
+    logger.info(f"设备已被封禁: {fingerprint[:20]}...")
+    
+    return {"success": True, "message": "设备已封禁"}
+
+
+@app.post("/api/fingerprint/unblock")
+async def unblock_fingerprint(
+    fingerprint: str = Query(...),
+    session_token: Optional[str] = Cookie(None)
+):
+    """解除设备指纹封禁"""
+    if not verify_session(session_token):
+        raise HTTPException(status_code=401, detail="未授权")
+    
+    if not redis_client:
+        raise HTTPException(status_code=500, detail="Redis未连接")
+    
+    await redis_client.delete(f"fingerprint:blocked:{fingerprint}")
+    
+    logger.info(f"设备已解封: {fingerprint[:20]}...")
+    
+    return {"success": True, "message": "设备已解封"}

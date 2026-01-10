@@ -125,6 +125,54 @@
             border-color: #ef4444;
         }
 
+        .btn-success {
+            border-color: #22c55e;
+            color: #22c55e;
+        }
+
+        .btn-success:hover {
+            background: #f0fdf4;
+            border-color: #22c55e;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 5px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #e2e8f0;
+            padding-bottom: 10px;
+        }
+
+        .tab {
+            padding: 10px 20px;
+            border: none;
+            background: transparent;
+            font-size: 14px;
+            font-weight: 500;
+            color: #64748b;
+            cursor: pointer;
+            border-radius: 6px 6px 0 0;
+            transition: all 0.2s;
+        }
+
+        .tab:hover {
+            background: #f1f5f9;
+            color: #333;
+        }
+
+        .tab.active {
+            background: #667eea;
+            color: white;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
         .stats-container {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -247,6 +295,59 @@
             word-break: break-all;
         }
 
+        .fingerprint-item {
+            padding: 15px;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .fingerprint-item:last-child {
+            border-bottom: none;
+        }
+
+        .fingerprint-info {
+            flex: 1;
+        }
+
+        .fingerprint-id {
+            font-weight: 600;
+            color: #667eea;
+            font-family: monospace;
+            margin-bottom: 5px;
+            word-break: break-all;
+        }
+
+        .fingerprint-meta {
+            font-size: 12px;
+            color: #64748b;
+        }
+
+        .fingerprint-actions {
+            display: flex;
+            gap: 8px;
+            margin-left: 15px;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 11px;
+            font-weight: 500;
+        }
+
+        .status-online {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .status-offline {
+            background: #f1f5f9;
+            color: #64748b;
+        }
+
         .spinner {
             display: inline-block;
             width: 16px;
@@ -264,6 +365,52 @@
             }
         }
 
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            max-width: 400px;
+            width: 90%;
+        }
+
+        .modal-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 15px;
+        }
+
+        .modal-input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            font-size: 14px;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
         @media (max-width: 768px) {
             .header {
                 flex-direction: column;
@@ -276,6 +423,16 @@
 
             .query-controls input {
                 min-width: 100%;
+            }
+
+            .fingerprint-item {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .fingerprint-actions {
+                margin-left: 0;
+                margin-top: 10px;
             }
         }
     </style>
@@ -291,46 +448,88 @@
             </div>
         </div>
 
-        <div class="stats-container" id="statsContainer">
-            <div class="stat-card">
-                <div class="stat-value" id="totalKeys">-</div>
-                <div class="stat-label">总键数</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value" id="clientKeys">-</div>
-                <div class="stat-label">客户端Token</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value" id="appKeys">-</div>
-                <div class="stat-label">应用Token</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value" id="activeConnections">-</div>
-                <div class="stat-label">活跃连接</div>
-            </div>
+        <div class="tabs">
+            <button class="tab active" data-tab="tokens">Token 管理</button>
+            <button class="tab" data-tab="fingerprints">设备指纹</button>
         </div>
 
-        <div class="query-section">
-            <div class="query-header">
-                <h2>🔍 数据查询</h2>
+        <!-- Token 管理标签页 -->
+        <div class="tab-content active" id="tokens-tab">
+            <div class="stats-container" id="statsContainer">
+                <div class="stat-card">
+                    <div class="stat-value" id="totalKeys">-</div>
+                    <div class="stat-label">总键数</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="clientKeys">-</div>
+                    <div class="stat-label">客户端Token</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="appKeys">-</div>
+                    <div class="stat-label">应用Token</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="activeConnections">-</div>
+                    <div class="stat-label">活跃连接</div>
+                </div>
             </div>
-            <div class="query-controls">
-                <input type="text" id="searchPattern" placeholder="在整合数据中搜索 (如: app token、IP、地理位置)"
-                    style="max-width: 400px;">
-                <div class="query-actions">
-                    <button class="btn btn-secondary" id="loadAllBtn">🌟 加载数据</button>
-                    <button class="btn btn-primary" id="searchBtn">🔍 搜索</button>
+
+            <div class="query-section">
+                <div class="query-header">
+                    <h2>🔍 数据查询</h2>
+                </div>
+                <div class="query-controls">
+                    <input type="text" id="searchPattern" placeholder="在整合数据中搜索 (如: app token、IP、地理位置)"
+                        style="max-width: 400px;">
+                    <div class="query-actions">
+                        <button class="btn btn-secondary" id="loadAllBtn">🌟 加载数据</button>
+                        <button class="btn btn-primary" id="searchBtn">🔍 搜索</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="results-section">
+                <div class="results-header">
+                    <h2>📋 查询结果</h2>
+                    <span id="resultCount" class="result-count"></span>
+                </div>
+                <div class="results-container" id="resultsContainer">
+                    <div class="empty-state">点击"加载全部"或输入搜索模式查询数据</div>
                 </div>
             </div>
         </div>
 
-        <div class="results-section">
-            <div class="results-header">
-                <h2>📋 查询结果</h2>
-                <span id="resultCount" class="result-count"></span>
+        <!-- 设备指纹标签页 -->
+        <div class="tab-content" id="fingerprints-tab">
+            <div class="query-section">
+                <div class="query-header">
+                    <h2>📱 设备指纹管理</h2>
+                </div>
+                <div class="query-controls">
+                    <button class="btn btn-primary" id="loadFingerprintsBtn">🔄 刷新列表</button>
+                </div>
             </div>
-            <div class="results-container" id="resultsContainer">
-                <div class="empty-state">点击"加载全部"或输入搜索模式查询数据</div>
+
+            <div class="results-section">
+                <div class="results-header">
+                    <h2>📋 设备列表</h2>
+                    <span id="fingerprintCount" class="result-count"></span>
+                </div>
+                <div class="results-container" id="fingerprintsContainer">
+                    <div class="empty-state">点击"刷新列表"加载设备指纹数据</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 封禁确认弹窗 -->
+    <div class="modal" id="blockModal">
+        <div class="modal-content">
+            <div class="modal-title">封禁设备</div>
+            <input type="text" class="modal-input" id="blockReason" placeholder="封禁原因（可选）">
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="closeModal()">取消</button>
+                <button class="btn btn-danger" id="confirmBlockBtn">确认封禁</button>
             </div>
         </div>
     </div>
@@ -339,17 +538,23 @@
         const searchPattern = document.getElementById('searchPattern');
         const searchBtn = document.getElementById('searchBtn');
         const loadAllBtn = document.getElementById('loadAllBtn');
+        const loadFingerprintsBtn = document.getElementById('loadFingerprintsBtn');
         const logoutBtn = document.getElementById('logoutBtn');
         const resultsContainer = document.getElementById('resultsContainer');
+        const fingerprintsContainer = document.getElementById('fingerprintsContainer');
         const resultCount = document.getElementById('resultCount');
+        const fingerprintCount = document.getElementById('fingerprintCount');
 
         // 存储整合后的数据
         let integratedTokens = [];
+        let fingerprints = [];
+        let currentBlockFingerprint = null;
 
         // 页面加载时检查认证状态并加载统计
         document.addEventListener('DOMContentLoaded', async () => {
             await checkAuth();
             await loadStats();
+            setupTabs();
         });
 
         async function checkAuth() {
@@ -361,6 +566,21 @@
             } catch (error) {
                 window.location.href = '/login';
             }
+        }
+
+        function setupTabs() {
+            const tabs = document.querySelectorAll('.tab');
+            tabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    tabs.forEach(t => t.classList.remove('active'));
+                    tab.classList.add('active');
+
+                    document.querySelectorAll('.tab-content').forEach(content => {
+                        content.classList.remove('active');
+                    });
+                    document.getElementById(`${tab.dataset.tab}-tab`).classList.add('active');
+                });
+            });
         }
 
         async function loadStats() {
@@ -378,56 +598,105 @@
             }
         }
 
-        async function searchKeys(pattern) {
-            resultsContainer.innerHTML = '<div class="empty-state">加载中...</div>';
+        async function loadFingerprints() {
+            fingerprintsContainer.innerHTML = '<div class="empty-state">加载中...</div>';
             try {
-                const url = pattern ? `/api/admin/redis/keys?pattern=${encodeURIComponent(pattern)}` : '/api/admin/redis/all';
-                const response = await fetch(url);
+                const response = await fetch('/api/fingerprint/list');
                 if (response.ok) {
                     const data = await response.json();
-                    displayResults(data.data || []);
+                    fingerprints = data.data || [];
+                    displayFingerprints(fingerprints);
                 } else if (response.status === 401) {
                     window.location.href = '/login';
                 } else {
-                    resultsContainer.innerHTML = '<div class="empty-state">查询失败</div>';
+                    fingerprintsContainer.innerHTML = '<div class="empty-state">加载失败</div>';
+                    fingerprints = [];
                 }
             } catch (error) {
-                resultsContainer.innerHTML = '<div class="empty-state">查询出错: ' + error.message + '</div>';
+                fingerprintsContainer.innerHTML = '<div class="empty-state">加载出错: ' + error.message + '</div>';
+                fingerprints = [];
             }
         }
 
-        function displayResults(data) {
+        function displayFingerprints(data) {
             if (!data || data.length === 0) {
-                resultsContainer.innerHTML = '<div class="empty-state">没有找到数据</div>';
-                resultCount.textContent = '';
+                fingerprintsContainer.innerHTML = '<div class="empty-state">没有找到设备指纹</div>';
+                fingerprintCount.textContent = '';
                 return;
             }
-            resultCount.textContent = `共 ${data.length} 条记录`;
-            resultsContainer.innerHTML = data.map(item => `
-                <div class="data-item">
-                    <div class="data-key">${escapeHtml(item.key)}</div>
-                    <div class="data-value">${escapeHtml(formatValue(item.value))}</div>
+            fingerprintCount.textContent = `共 ${data.length} 个设备`;
+            fingerprintsContainer.innerHTML = data.map(fp => `
+                <div class="fingerprint-item">
+                    <div class="fingerprint-info">
+                        <div class="fingerprint-id">${escapeHtml(fp.fingerprint)}</div>
+                        <div class="fingerprint-meta">
+                            创建时间: ${formatDate(fp.created_at)} | 
+                            最后活跃: ${formatDate(fp.last_seen)}<br>
+                            IP: ${escapeHtml(fp.ip || '未知')} | 
+                            位置: ${escapeHtml(fp.location || '未知')}<br>
+                            <span class="status-badge ${fp.has_connection ? 'status-online' : 'status-offline'}">
+                                ${fp.has_connection ? '● 在线' : '○ 离线'}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="fingerprint-actions">
+                        <button class="btn btn-danger" onclick="showBlockModal('${escapeHtml(fp.fingerprint)}')">封禁</button>
+                    </div>
                 </div>
             `).join('');
         }
 
-        function formatValue(value) {
-            if (typeof value === 'object') return JSON.stringify(value, null, 2);
-            return String(value);
+        function formatDate(dateStr) {
+            if (!dateStr) return '未知';
+            try {
+                const date = new Date(dateStr);
+                return date.toLocaleString('zh-CN');
+            } catch (e) {
+                return dateStr;
+            }
         }
 
-        function escapeHtml(text) {
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
+        function showBlockModal(fingerprint) {
+            currentBlockFingerprint = fingerprint;
+            document.getElementById('blockModal').classList.add('active');
+            document.getElementById('blockReason').value = '';
+            document.getElementById('blockReason').focus();
         }
+
+        function closeModal() {
+            document.getElementById('blockModal').classList.remove('active');
+            currentBlockFingerprint = null;
+        }
+
+        document.getElementById('confirmBlockBtn').addEventListener('click', async () => {
+            if (!currentBlockFingerprint) return;
+
+            const reason = document.getElementById('blockReason').value || '管理员封禁';
+
+            try {
+                const response = await fetch(`/api/fingerprint/block?fingerprint=${encodeURIComponent(currentBlockFingerprint)}&reason=${encodeURIComponent(reason)}`, {
+                    method: 'POST'
+                });
+
+                if (response.ok) {
+                    closeModal();
+                    await loadFingerprints();
+                    await loadStats();
+                } else {
+                    alert('封禁失败');
+                }
+            } catch (error) {
+                alert('封禁失败: ' + error.message);
+            }
+        });
 
         // 事件监听
         searchBtn.addEventListener('click', searchIntegratedTokens);
         loadAllBtn.addEventListener('click', async () => {
-            await loadStats();  // 加载全部前更新统计
+            await loadStats();
             await loadIntegratedTokens();
         });
+        loadFingerprintsBtn.addEventListener('click', loadFingerprints);
 
         searchPattern.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {
@@ -459,7 +728,6 @@
             const keyword = searchPattern.value.trim().toLowerCase();
 
             if (keyword) {
-                // 在整合数据中搜索
                 const filtered = integratedTokens.filter(token => {
                     return (
                         (token.app_token && token.app_token.toLowerCase().includes(keyword)) ||
@@ -472,7 +740,6 @@
                 });
                 displayIntegratedResults(filtered);
             } else {
-                // 显示所有整合数据
                 displayIntegratedResults(integratedTokens);
             }
         }
@@ -496,6 +763,13 @@
             }, null, 2))}</div>
                 </div>
             `).join('');
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = String(text);
+            return div.innerHTML;
         }
 
         logoutBtn.addEventListener('click', async () => {

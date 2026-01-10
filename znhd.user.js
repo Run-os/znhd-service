@@ -15,6 +15,7 @@
 // @connect     *
 // @homepage    https://scriptcat.org/zh-CN/script-show-page/3650
 // @require     https://scriptcat.org/lib/1167/1.0.0/%E8%84%9A%E6%9C%AC%E7%8C%ABUI%E5%BA%93.js?sha384-jXdR3hCwnDJf53Ue6XHAi6tApeudgS/wXnMYBD/ZJcgge8Xnzu/s7bkEf2tPi2KS
+// @require     https://cdn.jsdelivr.net/npm/@fingerprintjs/fingerprintjs@5/dist/fp.min.js
 // ==/UserScript==
 
 // ==========配置==========
@@ -176,13 +177,36 @@ function DM() {
         }
     }, []);
 
+    // ========== 指纹管理 ==========
+    const FINGERPRINT_KEY = 'scriptCat_Fingerprint';
+
+    // 初始化 FingerprintJS
+    async function initFingerprint() {
+        const fp = await FingerprintJS.load();
+        const result = await fp.get();
+        return result.visitorId;
+    }
+
+    // 获取或生成设备指纹
+    async function getOrCreateFingerprint() {
+        // 尝试从存储获取
+        const saved = localStorage.getItem(FINGERPRINT_KEY);
+        if (saved) return saved;
+
+        // 获取新指纹
+        const fingerprint = await initFingerprint();
+        localStorage.setItem(FINGERPRINT_KEY, fingerprint);
+        return fingerprint;
+    }
+
     // 统一的生成webhook配置函数
-    function generateNewWebhookConfig() {
+    async function generateNewWebhookConfig() {
         const newWebhookUrl = "https://znhd-service.zeabur.app";
-        const newWebhookToken = Math.random().toString(36).substring(2, 15);
+        const fingerprint = await getOrCreateFingerprint();
+        const newWebhookToken = fingerprint;
         const newPostToken = btoa(newWebhookToken);
         patchAllvalue({ webhookUrl: newWebhookUrl, webhookToken: newWebhookToken, postToken: newPostToken });
-        addLog('webhook配置为空，已自动生成配置', 'info');
+        addLog('webhook配置已基于设备指纹生成', 'info');
     }
 
     // webhook 配置变化时自动应用最新连接状态

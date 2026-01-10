@@ -6,8 +6,10 @@
 
 - **WebSocket 推送**：实时消息推送服务
 - **POST 请求工具**：集成的前端界面，支持发送消息和图片
-- **管理后台**：登录认证 + Redis 数据查询
+- **管理后台**：登录认证 + Redis 数据查询 + 设备指纹管理
 - **自动 Token 管理**：自动创建和管理 token 对
+- **设备指纹识别**：基于 FingerprintJS 的设备指纹验证
+- **设备封禁**：支持封禁/解封设备
 - **每周自动清理**：定期清理过期数据
 
 ## 目录结构
@@ -124,9 +126,55 @@ curl -X POST "http://your-domain/message?token=your-app-token" \
 | GET  | `/api/admin/redis/all`            | 获取所有数据    |
 | GET  | `/api/admin/redis/keys?pattern=*` | 按模式查询      |
 
+### 指纹管理 API（需认证）
+
+| 方法 | 路径                       | 说明             |
+|------|----------------------------|------------------|
+| GET  | `/api/fingerprint/list`    | 获取设备指纹列表 |
+| POST | `/api/fingerprint/block`   | 封禁设备         |
+| POST | `/api/fingerprint/unblock` | 解封设备         |
+
 ### 其他 API
 
 | 方法 | 路径                     | 说明            |
 |------|--------------------------|-----------------|
 | GET  | `/health`                | 健康检查        |
 | GET  | `/tokens/{client_token}` | 获取 token 信息 |
+
+## 设备指纹说明
+
+### 概述
+
+服务集成 FingerprintJS v5 实现设备指纹识别，用于生成唯一的 `webhookToken` 和设备验证。
+
+### 工作流程
+
+1. 客户端脚本启动时加载 FingerprintJS
+2. 获取设备指纹并直接作为 `webhookToken`
+3. 连接 WebSocket 时自动注册/更新指纹
+4. 服务器验证指纹合法性，支持封禁设备
+
+### Redis 数据结构
+
+```
+# 指纹存储
+key: fingerprint:{fingerprint}
+value: JSON {
+    "fingerprint": "设备指纹",
+    "created_at": "创建时间",
+    "last_seen": "最后活跃时间",
+    "ip": "IP地址",
+    "location": "地理位置"
+}
+
+# 设备黑名单
+key: fingerprint:blocked:{fingerprint}
+value: "封禁原因"
+```
+
+### 管理后台
+
+管理后台提供设备指纹管理功能：
+- 查看所有已注册设备列表
+- 查看设备详细信息（IP、位置、创建时间、活跃状态）
+- 封禁/解封设备
