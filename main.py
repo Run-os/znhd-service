@@ -297,20 +297,40 @@ async def get_ip_geolocation(ip: str) -> dict:
     if ip == "unknown" or is_private_ip(ip):
         return {"country": "本地", "region": "本地", "city": "本地"}
     
-    try:
-        async with httpx.AsyncClient(timeout=5.0) as client:
-            response = await client.get(f"http://ip-api.com/json/{ip}?lang=zh-CN")
-            if response.status_code == 200:
-                data = response.json()
-                if data.get("status") == "success":
-                    return {
-                        "country": data.get("country", ""),
-                        "region": data.get("regionName", ""),
-                        "city": data.get("city", "")
-                    }
-    except Exception as e:
-        logger.error(f"获取IP地理位置失败: {e}")
+    # 多个备用API
+    apis = [
+        ("http://ip-api.com/json/{ip}?lang=zh-CN", "ip-api.com"),
+        ("https://ipinfo.io/{ip}/json", "ipinfo.io"),
+    ]
     
+    for api_url, api_name in apis:
+        try:
+            url = api_url.replace("{ip}", ip)
+            async with httpx.AsyncClient(timeout=5.0) as client:
+                response = await client.get(url)
+                if response.status_code == 200:
+                    data = response.json()
+                    
+                    if api_name == "ip-api.com":
+                        if data.get("status") == "success":
+                            return {
+                                "country": data.get("country", ""),
+                                "region": data.get("regionName", ""),
+                                "city": data.get("city", "")
+                            }
+                    elif api_name == "ipinfo.io":
+                        # ipinfo.io 返回格式不同
+                        if "country" in data or "region" in data or "city" in data:
+                            return {
+                                "country": data.get("country", ""),
+                                "region": data.get("region", ""),
+                                "city": data.get("city", "")
+                            }
+        except Exception as e:
+            logger.warning(f"从 {api_name} 获取IP地理位置失败: {e}")
+            continue
+    
+    logger.error(f"所有API获取IP地理位置失败: {ip}")
     return {"country": "未知", "region": "未知", "city": "未知"}
 
 
