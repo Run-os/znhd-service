@@ -2,7 +2,7 @@
 // @name        征纳互动人数和在线监控
 // @namespace   https://scriptcat.org/
 // @description 实施监控征纳互动等待人数和在线状态，支持语音播报、webhook推送文本和图片、自定义常用语
-// @version     26.1.10
+// @version     26.1.11
 // @author      runos
 // @match       https://znhd.hunan.chinatax.gov.cn:8443/*
 // @match       https://example.com/*
