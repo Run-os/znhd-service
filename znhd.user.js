@@ -2,7 +2,7 @@
 // @name        征纳互动人数和在线监控
 // @namespace   https://scriptcat.org/
 // @description 实施监控征纳互动等待人数和在线状态，支持语音播报、webhook推送文本和图片、自定义常用语
-// @version     26.1.11
+// @version     26.1.12
 // @author      runos
 // @match       https://znhd.hunan.chinatax.gov.cn:8443/*
 // @match       https://example.com/*
@@ -742,11 +742,12 @@ function checkCount() {
         addLog('当前不在工作时间，已停止脚本', 'warning');
         return;
     }
+    
     try {
         // 获取等待人数 - 使用更灵活的选择器
         if (!domCache.ocurrentElement) {
             // 尝试多种选择器来找到人数元素
-            domCache.ocurrentElement = document.querySelector('.count:nth-child(2)')
+            domCache.ocurrentElement = document.querySelector('.count:nth-child(2)');
         }
 
         const ocurrentElement = domCache.ocurrentElement;
@@ -763,27 +764,28 @@ function checkCount() {
             return;
         }
 
+        // 更新人数状态日志和语音提示
         if (currentCount === 0) {
             addLog('当前等待人数为0', 'success');
-        } else if (currentCount < 10) { // 使用具体数字替代length比较
+        } else if (currentCount < 10) {
             addLog(`当前等待人数: ${currentCount}`, 'info');
             speak("征纳互动有人来了");
+        } else {
+            // 添加更多人数的情况处理
+            addLog(`当前等待人数: ${currentCount}`, 'info');
         }
 
-        // 检查掉线状态 - 使用更灵活的选择器
-        if (!domCache.offlineElement) {
-            domCache.offlineElement = document.querySelector('.t-dialog__body__icon:nth-child(2)') ||
-                document.querySelector('.t-dialog__body__icon') ||
-                document.querySelector('[class*="dialog"][class*="icon"]');
-        }
-
-        const offlineElement = domCache.offlineElement;
-        if (offlineElement && offlineElement.textContent.trim().includes('掉线')) {
-            addLog('征纳互动已掉线', 'warning');
+        // 检查掉线状态 - 提前返回以避免不必要的处理
+        const offlineEl = document.querySelector('.t-dialog__body__icon');
+        if (offlineEl?.textContent.includes('掉线')) {
+            addLog('征纳互动已掉线', 'error'); // 使用error类型突出严重性
             speak("征纳互动已掉线");
+            return true; // 明确返回true表示检测到掉线
         }
+        
     } catch (error) {
-        addLog(`检测错误: ${error.message}`, 'warning');
+        addLog(`检测错误: ${error.message}`, 'error'); // 使用error级别记录错误
+        console.error('checkCount函数执行出错:', error); // 添加控制台错误日志
     }
 }
 
@@ -799,33 +801,95 @@ function appendToTinyMCE(text2append = 'xxxxx') {
     // 如果上面没拿到，再随便拿一个
     const editor = ed || editors[0];
 
-    /* 2. 真正干活 */
+    // 检查输入框是否为空
+    let isInputEmpty = true;
+    if (editor) {
+        const body = editor.getBody();
+        isInputEmpty = !body.textContent.trim();
+    } else {
+        const iframe = document.querySelector('.input-box iframe.tox-edit-area__iframe') ||
+            document.querySelector('iframe.tox-edit-area__iframe') ||
+            document.querySelector('iframe[class*="tox"]');
+        if (iframe) {
+            try {
+                const body = iframe.contentDocument.querySelector('body#tinymce') ||
+                    iframe.contentDocument.body;
+                isInputEmpty = !body.textContent.trim();
+            } catch (e) {
+                console.warn('无法访问iframe内容', e);
+            }
+        }
+    }
+
+    /* 2. 使用<br>换行处理 */
+    // HTML转义函数
+    const escapeHtml = (text) => {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    };
+
+    // 转义文本并将换行符替换为<br>
+    const escapedText = escapeHtml(text2append);
+    let processedContent = escapedText.replace(/\n/g, '<br>');
+
+    // 如果输入框不为空，在内容前添加<br>实现换行
+    if (!isInputEmpty) {
+        processedContent = '<br>' + processedContent;
+    }
+
+    /* 3. 真正干活 */
     if (editor) {
         const body = editor.getBody();          // 等同于 iframe.body
-        const oldHtml = body.innerHTML;
-        body.innerHTML += text2append;          // 追加（支持富文本）
+
+        if (isInputEmpty) {
+            // 输入框为空时直接设置内容（不加额外换行）
+            editor.setContent(processedContent);
+        } else {
+            // 输入框不为空时使用处理后的内容
+            editor.execCommand('mceInsertContent', false, processedContent);
+        }
+
         editor.save();                          // 同步回 textarea
         editor.setDirty(true);                  // 标记脏
         editor.selection.select(body, true);    // 把光标放末尾
         editor.selection.collapse(false);
     } else {
-        /* 3. 兜底：直接改 DOM + 触发事件 */
-        const iframe = document.querySelector('.input-box iframe.tox-edit-area__iframe');
-        if (!iframe) { console.error('❌ 找不到 TinyMCE iframe'); return ''; }
-        const body = iframe.contentDocument.querySelector('body#tinymce');
-        if (!body) { console.error('❌ 找不到 body#tinymce'); return ''; }
+        /* 4. 兜底：直接改 DOM + 触发事件 */
+        const iframe = document.querySelector('iframe.tox-edit-area__iframe') ||
+            document.querySelector('iframe[class*="tox"]');
+        if (!iframe) {
+            console.error('❌ 找不到 TinyMCE iframe');
+            return '';
+        }
 
-        body.textContent += text2append;
-        ['input', 'change', 'keyup'].forEach(ev =>
-            body.dispatchEvent(new Event(ev, { bubbles: true }))
-        );
+        try {
+            const body = iframe.contentDocument.body;
+            if (!body) {
+                console.error('❌ 找不到 body');
+                return '';
+            }
+
+            if (isInputEmpty) {
+                body.innerHTML = processedContent;
+            } else {
+                body.insertAdjacentHTML('beforeend', processedContent);
+            }
+
+            // 触发单个 input 事件即可
+            body.dispatchEvent(new Event('input', { bubbles: true }));
+        } catch (e) {
+            console.error('❌ 无法访问 iframe 内容', e);
+            return '';
+        }
     }
 
     const finalText = editor ? editor.getContent({ format: 'text' })
         : document.querySelector('body#tinymce')?.textContent ?? '';
-    console.log('✅ 已追加并同步：', finalText);
+    console.log('✅ 已使用<br>换行追加并同步：', finalText);
     return finalText;
 }
+
 
 // 语音播报函数
 const speechQueue = [];
