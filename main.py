@@ -257,7 +257,14 @@ async def weekly_cleanup():
         try:
             # 等待 7 天
             await asyncio.sleep(7 * 24 * 60 * 60)
-            if redis_client:
+            # 每次检查 Redis 连接状态
+            if redis_client is not None:
+                try:
+                    await redis_client.ping()
+                except Exception:
+                    redis_client = None
+                    logger.warning("Redis connection lost in cleanup task")
+                    continue
                 await redis_client.flushdb()
                 logger.info("Weekly cleanup completed")
         except Exception as e:
@@ -442,7 +449,8 @@ async def websocket_endpoint(websocket: WebSocket, token: str = Query(...)):
             data["ip"] = geo_info.get("ip", "")
             await redis_client.set(
                 f"fingerprint:{fingerprint}",
-                json.dumps(data, ensure_ascii=False)
+                json.dumps(data, ensure_ascii=False),
+                ex=30*24*60*60  # 保持30天过期时间
             )
     
     # 生成app_token
@@ -461,8 +469,9 @@ async def websocket_endpoint(websocket: WebSocket, token: str = Query(...)):
                 "city": geo_info.get("city", "")
             }
         }
-        await redis_client.set(f"client:{client_token}", json.dumps(token_data, ensure_ascii=False))
-        await redis_client.set(f"app:{app_token}", client_token)
+        # client:token 30天过期，app:token 7天过期
+        await redis_client.set(f"client:{client_token}", json.dumps(token_data, ensure_ascii=False), ex=30*24*60*60)
+        await redis_client.set(f"app:{app_token}", client_token, ex=7*24*60*60)
 
     await manager.connect(client_token, websocket)
 
@@ -858,6 +867,15 @@ async def health_check():
     }
 
 
+# 添加 token_exists 辅助函数
+async def token_exists(client_token: str) -> bool:
+    """检查 token 是否存在"""
+    if not redis_client:
+        return False
+    data = await redis_client.get(f"client:{client_token}")
+    return data is not None
+
+
 @app.get("/tokens/{client_token}")
 async def get_token_info(client_token: str, request: Request = None):
     """获取 token 信息（调试用）"""
@@ -1050,8 +1068,26 @@ async def api_redis_keys(
             data.append({"key": key, "value": value})
         return {"data": data, "total": len(keys)}
     except Exception as e:
-        logger.error(f"查询Redis失败: {e}")
-        return {"error": str(e), "data": []}
+       logger.error(f"查询Redis失败: {e}")
+       return {"error": str(e), "data": []}
+
+
+@app.post("/api/admin/redis/clear")
+async def api_redis_clear(session_token: Optional[str] = Cookie(None)):
+    """清空数据库（所有数据）"""
+    if not verify_session(session_token):
+        raise HTTPException(status_code=401, detail="未授权")
+    
+    if not redis_client:
+        raise HTTPException(status_code=500, detail="Redis未连接")
+    
+    try:
+        await redis_client.flushdb()
+        logger.info("数据库已手动清空")
+        return {"success": True, "message": "数据库已清空"}
+    except Exception as e:
+        logger.error(f"清空数据库失败: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 # ==================== 指纹管理 API ====================

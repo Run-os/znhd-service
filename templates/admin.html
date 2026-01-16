@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>管理后台 - Redis 数据查询</title>
+    <title>管理后台 - 设备指纹管理</title>
     <style>
         * {
             margin: 0;
@@ -133,44 +133,6 @@
         .btn-success:hover {
             background: #f0fdf4;
             border-color: #22c55e;
-        }
-
-        .tabs {
-            display: flex;
-            gap: 5px;
-            margin-bottom: 20px;
-            border-bottom: 2px solid #e2e8f0;
-            padding-bottom: 10px;
-        }
-
-        .tab {
-            padding: 10px 20px;
-            border: none;
-            background: transparent;
-            font-size: 14px;
-            font-weight: 500;
-            color: #64748b;
-            cursor: pointer;
-            border-radius: 6px 6px 0 0;
-            transition: all 0.2s;
-        }
-
-        .tab:hover {
-            background: #f1f5f9;
-            color: #333;
-        }
-
-        .tab.active {
-            background: #667eea;
-            color: white;
-        }
-
-        .tab-content {
-            display: none;
-        }
-
-        .tab-content.active {
-            display: block;
         }
 
         .stats-container {
@@ -441,83 +403,71 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>🗄️ Redis 数据管理</h1>
+            <h1>🗄️ 设备指纹管理</h1>
             <div class="header-actions">
+                <button class="btn btn-danger" id="clearDbBtn">🗑️ 清空数据库</button>
                 <button class="btn btn-secondary" onclick="window.location.href='/'">返回主页</button>
                 <button class="btn btn-danger" id="logoutBtn">退出登录</button>
             </div>
         </div>
 
-        <div class="tabs">
-            <button class="tab active" data-tab="tokens">Token 管理</button>
-            <button class="tab" data-tab="fingerprints">设备指纹</button>
+        <!-- 统计信息 -->
+        <div class="stats-container" id="statsContainer">
+            <div class="stat-card">
+                <div class="stat-value" id="totalKeys">-</div>
+                <div class="stat-label">总键数</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="clientKeys">-</div>
+                <div class="stat-label">客户端Token</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="appKeys">-</div>
+                <div class="stat-label">应用Token</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="activeConnections">-</div>
+                <div class="stat-label">活跃连接</div>
+            </div>
         </div>
 
-        <!-- Token 管理标签页 -->
-        <div class="tab-content active" id="tokens-tab">
-            <div class="stats-container" id="statsContainer">
-                <div class="stat-card">
-                    <div class="stat-value" id="totalKeys">-</div>
-                    <div class="stat-label">总键数</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-value" id="clientKeys">-</div>
-                    <div class="stat-label">客户端Token</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-value" id="appKeys">-</div>
-                    <div class="stat-label">应用Token</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-value" id="activeConnections">-</div>
-                    <div class="stat-label">活跃连接</div>
-                </div>
+        <!-- 查询控制区 -->
+        <div class="query-section">
+            <div class="query-header">
+                <h2>🔍 数据查询</h2>
             </div>
-
-            <div class="query-section">
-                <div class="query-header">
-                    <h2>🔍 数据查询</h2>
-                </div>
-                <div class="query-controls">
-                    <input type="text" id="searchPattern" placeholder="在整合数据中搜索 (如: app token、IP、地理位置)"
-                        style="max-width: 400px;">
-                    <div class="query-actions">
-                        <button class="btn btn-secondary" id="loadAllBtn">🌟 加载数据</button>
-                        <button class="btn btn-primary" id="searchBtn">🔍 搜索</button>
-                    </div>
-                </div>
-            </div>
-
-            <div class="results-section">
-                <div class="results-header">
-                    <h2>📋 查询结果</h2>
-                    <span id="resultCount" class="result-count"></span>
-                </div>
-                <div class="results-container" id="resultsContainer">
-                    <div class="empty-state">点击"加载全部"或输入搜索模式查询数据</div>
+            <div class="query-controls">
+                <input type="text" id="searchPattern" placeholder="在设备指纹中搜索 (如: IP、地理位置)" style="max-width: 400px;">
+                <div class="query-actions">
+                    <button class="btn btn-secondary" id="loadAllBtn">🌟 加载数据</button>
+                    <button class="btn btn-primary" id="searchBtn">🔍 搜索</button>
                 </div>
             </div>
         </div>
 
-        <!-- 设备指纹标签页 -->
-        <div class="tab-content" id="fingerprints-tab">
-            <div class="query-section">
-                <div class="query-header">
-                    <h2>📱 设备指纹管理</h2>
-                </div>
-                <div class="query-controls">
-                    <button class="btn btn-primary" id="loadFingerprintsBtn">🔄 刷新列表</button>
-                </div>
+        <!-- 查询结果 -->
+        <div class="results-section">
+            <div class="results-header">
+                <h2>📋 设备列表</h2>
+                <span id="resultCount" class="result-count"></span>
             </div>
+            <div class="results-container" id="resultsContainer">
+                <div class="empty-state">点击"加载数据"或输入搜索关键词查询设备指纹</div>
+            </div>
+        </div>
+    </div>
 
-            <div class="results-section">
-                <div class="results-header">
-                    <h2>📋 设备列表</h2>
-                    <span id="fingerprintCount" class="result-count"></span>
-                </div>
-                <div class="results-container" id="fingerprintsContainer">
-                    <div class="empty-state">点击"刷新列表"加载设备指纹数据</div>
-                </div>
+    <!-- 清空数据库确认弹窗 -->
+    <div class="modal" id="clearDbModal">
+        <div class="modal-content">
+            <div class="modal-title">⚠️ 警告：清空数据库</div>
+            <p style="margin-bottom: 15px; color: #ef4444;">
+                此操作将删除数据库中的所有数据，包括所有 Token 和设备指纹，且无法恢复！
+            </p>
+            <input type="text" class="modal-input" id="clearDbConfirm" placeholder="输入 '确认清空' 以继续">
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="closeClearDbModal()">取消</button>
+                <button class="btn btn-danger" id="confirmClearDbBtn">确认清空</button>
             </div>
         </div>
     </div>
@@ -538,15 +488,12 @@
         const searchPattern = document.getElementById('searchPattern');
         const searchBtn = document.getElementById('searchBtn');
         const loadAllBtn = document.getElementById('loadAllBtn');
-        const loadFingerprintsBtn = document.getElementById('loadFingerprintsBtn');
+        const clearDbBtn = document.getElementById('clearDbBtn');
         const logoutBtn = document.getElementById('logoutBtn');
         const resultsContainer = document.getElementById('resultsContainer');
-        const fingerprintsContainer = document.getElementById('fingerprintsContainer');
         const resultCount = document.getElementById('resultCount');
-        const fingerprintCount = document.getElementById('fingerprintCount');
 
-        // 存储整合后的数据
-        let integratedTokens = [];
+        // 存储设备指纹数据
         let fingerprints = [];
         let currentBlockFingerprint = null;
 
@@ -554,7 +501,8 @@
         document.addEventListener('DOMContentLoaded', async () => {
             await checkAuth();
             await loadStats();
-            setupTabs();
+            // 默认加载设备指纹数据
+            loadFingerprints();
         });
 
         async function checkAuth() {
@@ -566,21 +514,6 @@
             } catch (error) {
                 window.location.href = '/login';
             }
-        }
-
-        function setupTabs() {
-            const tabs = document.querySelectorAll('.tab');
-            tabs.forEach(tab => {
-                tab.addEventListener('click', () => {
-                    tabs.forEach(t => t.classList.remove('active'));
-                    tab.classList.add('active');
-
-                    document.querySelectorAll('.tab-content').forEach(content => {
-                        content.classList.remove('active');
-                    });
-                    document.getElementById(`${tab.dataset.tab}-tab`).classList.add('active');
-                });
-            });
         }
 
         async function loadStats() {
@@ -599,7 +532,7 @@
         }
 
         async function loadFingerprints() {
-            fingerprintsContainer.innerHTML = '<div class="empty-state">加载中...</div>';
+            resultsContainer.innerHTML = '<div class="empty-state">加载中...</div>';
             try {
                 const response = await fetch('/api/fingerprint/list');
                 if (response.ok) {
@@ -609,23 +542,23 @@
                 } else if (response.status === 401) {
                     window.location.href = '/login';
                 } else {
-                    fingerprintsContainer.innerHTML = '<div class="empty-state">加载失败</div>';
+                    resultsContainer.innerHTML = '<div class="empty-state">加载失败</div>';
                     fingerprints = [];
                 }
             } catch (error) {
-                fingerprintsContainer.innerHTML = '<div class="empty-state">加载出错: ' + error.message + '</div>';
+                resultsContainer.innerHTML = '<div class="empty-state">加载出错: ' + error.message + '</div>';
                 fingerprints = [];
             }
         }
 
         function displayFingerprints(data) {
             if (!data || data.length === 0) {
-                fingerprintsContainer.innerHTML = '<div class="empty-state">没有找到设备指纹</div>';
-                fingerprintCount.textContent = '';
+                resultsContainer.innerHTML = '<div class="empty-state">没有找到设备指纹</div>';
+                resultCount.textContent = '';
                 return;
             }
-            fingerprintCount.textContent = `共 ${data.length} 个设备`;
-            fingerprintsContainer.innerHTML = data.map(fp => `
+            resultCount.textContent = `共 ${data.length} 个设备`;
+            resultsContainer.innerHTML = data.map(fp => `
                 <div class="fingerprint-item">
                     <div class="fingerprint-info">
                         <div class="fingerprint-id">${escapeHtml(fp.fingerprint)}</div>
@@ -691,78 +624,34 @@
         });
 
         // 事件监听
-        searchBtn.addEventListener('click', searchIntegratedTokens);
+        searchBtn.addEventListener('click', searchFingerprints);
         loadAllBtn.addEventListener('click', async () => {
             await loadStats();
-            await loadIntegratedTokens();
+            await loadFingerprints();
         });
-        loadFingerprintsBtn.addEventListener('click', loadFingerprints);
 
         searchPattern.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {
-                searchIntegratedTokens();
+                searchFingerprints();
             }
         });
 
-        async function loadIntegratedTokens() {
-            resultsContainer.innerHTML = '<div class="empty-state">加载中...</div>';
-            try {
-                const response = await fetch('/api/admin/redis/tokens');
-                if (response.ok) {
-                    const data = await response.json();
-                    integratedTokens = data.data || [];
-                    displayIntegratedResults(integratedTokens);
-                } else if (response.status === 401) {
-                    window.location.href = '/login';
-                } else {
-                    resultsContainer.innerHTML = '<div class="empty-state">查询失败</div>';
-                    integratedTokens = [];
-                }
-            } catch (error) {
-                resultsContainer.innerHTML = '<div class="empty-state">查询出错: ' + error.message + '</div>';
-                integratedTokens = [];
-            }
-        }
-
-        function searchIntegratedTokens() {
+        function searchFingerprints() {
             const keyword = searchPattern.value.trim().toLowerCase();
 
             if (keyword) {
-                const filtered = integratedTokens.filter(token => {
+                const filtered = fingerprints.filter(fp => {
+                    const locationStr = fp.location || '';
                     return (
-                        (token.app_token && token.app_token.toLowerCase().includes(keyword)) ||
-                        (token.client_token && token.client_token.toLowerCase().includes(keyword)) ||
-                        (token.ip && token.ip.toLowerCase().includes(keyword)) ||
-                        (token.location && token.location.country && token.location.country.toLowerCase().includes(keyword)) ||
-                        (token.location && token.location.region && token.location.region.toLowerCase().includes(keyword)) ||
-                        (token.location && token.location.city && token.location.city.toLowerCase().includes(keyword))
+                        (fp.fingerprint && fp.fingerprint.toLowerCase().includes(keyword)) ||
+                        (fp.ip && fp.ip.toLowerCase().includes(keyword)) ||
+                        (locationStr.toLowerCase().includes(keyword))
                     );
                 });
-                displayIntegratedResults(filtered);
+                displayFingerprints(filtered);
             } else {
-                displayIntegratedResults(integratedTokens);
+                displayFingerprints(fingerprints);
             }
-        }
-
-        function displayIntegratedResults(tokens) {
-            if (!tokens || tokens.length === 0) {
-                resultsContainer.innerHTML = '<div class="empty-state">没有找到数据</div>';
-                resultCount.textContent = '';
-                return;
-            }
-            resultCount.textContent = `共 ${tokens.length} 条记录`;
-            resultsContainer.innerHTML = tokens.map(token => `
-                <div class="data-item">
-                    <div class="data-key">app：${escapeHtml(token.app_token)}</div>
-                    <div class="data-value">${escapeHtml(JSON.stringify({
-                app_token: token.app_token,
-                client_token: token.client_token,
-                created_at: token.created_at,
-                ip: token.ip || '未知',
-                location: token.location || {}
-            }, null, 2))}</div>
-                </div>
-            `).join('');
         }
 
         function escapeHtml(text) {
@@ -771,6 +660,43 @@
             div.textContent = String(text);
             return div.innerHTML;
         }
+
+        // 清空数据库功能
+        clearDbBtn.addEventListener('click', () => {
+            document.getElementById('clearDbModal').classList.add('active');
+            document.getElementById('clearDbConfirm').value = '';
+            document.getElementById('clearDbConfirm').focus();
+        });
+
+        function closeClearDbModal() {
+            document.getElementById('clearDbModal').classList.remove('active');
+        }
+
+        document.getElementById('confirmClearDbBtn').addEventListener('click', async () => {
+            const confirmText = document.getElementById('clearDbConfirm').value.trim();
+            if (confirmText !== '确认清空') {
+                alert('请输入正确的确认文字：确认清空');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/admin/redis/clear', {
+                    method: 'POST'
+                });
+
+                if (response.ok) {
+                    closeClearDbModal();
+                    alert('数据库已清空');
+                    await loadStats();
+                    await loadFingerprints();
+                } else {
+                    const data = await response.json();
+                    alert('清空失败: ' + (data.detail || '未知错误'));
+                }
+            } catch (error) {
+                alert('清空失败: ' + error.message);
+            }
+        });
 
         logoutBtn.addEventListener('click', async () => {
             try {

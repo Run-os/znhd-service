@@ -182,9 +182,19 @@ function DM() {
 
     // 初始化 FingerprintJS
     async function initFingerprint() {
-        const fp = await FingerprintJS.load();
-        const result = await fp.get();
-        return result.visitorId;
+        try {
+            // 检查 FingerprintJS 是否可用
+            if (typeof FingerprintJS === 'undefined') {
+                throw new Error('FingerprintJS 未加载');
+            }
+            const fp = await FingerprintJS.load();
+            const result = await fp.get();
+            return result.visitorId;
+        } catch (error) {
+            console.error('FingerprintJS 初始化失败:', error);
+            // 生成一个基于时间和随机数的备选指纹
+            return 'fallback_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+        }
     }
 
     // 获取或生成设备指纹
@@ -736,18 +746,33 @@ const domCache = {
     offlineElement: null
 };
 
+// 检测DOM元素是否仍然存在于文档中
+function isElementInDocument(element) {
+    return element && element.isConnected;
+}
+
 // 修改主要检测函数
 function checkCount() {
     if (!isWorkingHours()) {
         addLog('当前不在工作时间，已停止脚本', 'warning');
         return;
     }
-    
+
     try {
         // 获取等待人数 - 使用更灵活的选择器
+        // 检查缓存的元素是否还存在，不存在则重新查找
+        if (!isElementInDocument(domCache.ocurrentElement)) {
+            domCache.ocurrentElement = null;
+        }
         if (!domCache.ocurrentElement) {
-            // 尝试多种选择器来找到人数元素
             domCache.ocurrentElement = document.querySelector('.count:nth-child(2)');
+        }
+
+        if (!isElementInDocument(domCache.offlineElement)) {
+            domCache.offlineElement = null;
+        }
+        if (!domCache.offlineElement) {
+            domCache.offlineElement = document.querySelector('.t-dialog__body__icon');
         }
 
         const ocurrentElement = domCache.ocurrentElement;
@@ -775,14 +800,12 @@ function checkCount() {
             addLog(`当前等待人数: ${currentCount}`, 'info');
         }
 
-        // 检查掉线状态 - 提前返回以避免不必要的处理
-        const offlineEl = document.querySelector('.t-dialog__body__icon');
+        const offlineEl = domCache.offlineElement;
         if (offlineEl?.textContent.includes('掉线')) {
-            addLog('征纳互动已掉线', 'error'); // 使用error类型突出严重性
+            addLog('征纳互动已掉线', 'error');
             speak("征纳互动已掉线");
-            return true; // 明确返回true表示检测到掉线
+            return;  // 移除返回值
         }
-        
     } catch (error) {
         addLog(`检测错误: ${error.message}`, 'error'); // 使用error级别记录错误
         console.error('checkCount函数执行出错:', error); // 添加控制台错误日志
@@ -869,13 +892,11 @@ function appendToTinyMCE(text2append = 'xxxxx') {
                 console.error('❌ 找不到 body');
                 return '';
             }
-
             if (isInputEmpty) {
                 body.innerHTML = processedContent;
             } else {
                 body.insertAdjacentHTML('beforeend', processedContent);
             }
-
             // 触发单个 input 事件即可
             body.dispatchEvent(new Event('input', { bubbles: true }));
         } catch (e) {
@@ -942,19 +963,32 @@ function processSpeechQueue() {
 
 
 
+// 全局定时器引用，用于清理
+let monitoringInterval = null;
+
 // 页面加载完成后启动监控
 function startMonitoring() {
     // 立即执行一次检查
     checkCount();
     // 启动定时检查
-    setInterval(checkCount, CONFIG.CHECK_INTERVAL);
+    monitoringInterval = setInterval(checkCount, CONFIG.CHECK_INTERVAL);
 }
+
+// 页面关闭时清理定时器
+window.addEventListener('beforeunload', () => {
+    if (monitoringInterval) {
+        clearInterval(monitoringInterval);
+        monitoringInterval = null;
+    }
+});
 
 
 // ========== webhook WebSocket 推送集成 ==========
 let webhookWS = null;
 let webhookReconnectTimer = null;
 const webhook_RECONNECT_INTERVAL = 3000;
+const webhook_MAX_RECONNECT_ATTEMPTS = 10; // 最大重连次数
+let webhookReconnectAttempts = 0; // 当前重连次数
 let webhookEnabled = false; // 控制是否允许重连
 let webhookConfigKey = '';
 
@@ -1214,8 +1248,12 @@ function connectwebhookWebSocket(webhookUrl, webhookToken) {
         addLog('webhook WebSocket 发生错误，将尝试重连', 'warning');
         // 错误发生后尝试重连
         webhookWS = null;
-        if (webhookEnabled && !webhookReconnectTimer) {
+        if (webhookEnabled && !webhookReconnectTimer && webhookReconnectAttempts < webhook_MAX_RECONNECT_ATTEMPTS) {
+            webhookReconnectAttempts++;
+            addLog(`WebSocket 重连尝试 ${webhookReconnectAttempts}/${webhook_MAX_RECONNECT_ATTEMPTS}`, 'warning');
             webhookReconnectTimer = setTimeout(() => connectwebhookWebSocket(webhookUrl, webhookToken), webhook_RECONNECT_INTERVAL);
+        } else if (webhookReconnectAttempts >= webhook_MAX_RECONNECT_ATTEMPTS) {
+            addLog('WebSocket 重连次数已达上限，请手动重新连接', 'error');
         }
     };
     webhookWS.onclose = (event) => {
@@ -1224,7 +1262,13 @@ function connectwebhookWebSocket(webhookUrl, webhookToken) {
         webhookWS = null;
         if (!webhookEnabled) { return; }
         if (webhookReconnectTimer) clearTimeout(webhookReconnectTimer);
-        webhookReconnectTimer = setTimeout(() => connectwebhookWebSocket(webhookUrl, webhookToken), webhook_RECONNECT_INTERVAL);
+        if (webhookReconnectAttempts < webhook_MAX_RECONNECT_ATTEMPTS) {
+            webhookReconnectAttempts++;
+            addLog(`WebSocket 重连尝试 ${webhookReconnectAttempts}/${webhook_MAX_RECONNECT_ATTEMPTS}`, 'warning');
+            webhookReconnectTimer = setTimeout(() => connectwebhookWebSocket(webhookUrl, webhookToken), webhook_RECONNECT_INTERVAL);
+        } else {
+            addLog('WebSocket 重连次数已达上限，请手动重新连接', 'error');
+        }
     };
 }
 
@@ -1233,6 +1277,7 @@ function initwebhookCatDevice(enabled, webhookUrl, webhookToken) {
     if (!enabled) {
         webhookEnabled = false;
         webhookConfigKey = '';
+        webhookReconnectAttempts = 0; // 重置重连计数
         if (webhookWS) {
             try { webhookWS.close(1000, '手动关闭'); } catch (e) { }
             webhookWS = null;
@@ -1247,6 +1292,7 @@ function initwebhookCatDevice(enabled, webhookUrl, webhookToken) {
     if (!webhookUrl || !webhookToken) {
         webhookEnabled = false;
         webhookConfigKey = '';
+        webhookReconnectAttempts = 0; // 重置重连计数
         CAT_UI.Message.warning('未配置 webhook webhookUrl 或 webhookToken，未启动推送监听');
         if (webhookWS) {
             try { webhookWS.close(1000, '配置缺失，停止推送'); } catch (e) { }
@@ -1259,6 +1305,8 @@ function initwebhookCatDevice(enabled, webhookUrl, webhookToken) {
         return;
     }
 
+    // 重置重连计数
+    webhookReconnectAttempts = 0;
     connectwebhookWebSocket(webhookUrl, webhookToken);
 }
 
