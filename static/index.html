@@ -736,10 +736,10 @@
                     addLog('HEIC/HEIF图片解码完成', 'success');
                 }
 
-                const oneMB = 1 * 1024 * 1024;
+                const compressionSize = 3 * 1024 * 1024;
                 let wasAutoCompressed = false;
-                if (processedFile.size > oneMB) {
-                    addLog(`图片大小为${(processedFile.size / 1024).toFixed(2)}KB，大于1MB，正在自动压缩...`, 'info');
+                if (processedFile.size > compressionSize) {
+                    addLog(`图片大小为${(processedFile.size / 1024).toFixed(2)}KB，大于${(compressionSize / 1024).toFixed(2)}MB，正在自动压缩...`, 'info');
                     processedFile = await compressImage(processedFile);
                     wasAutoCompressed = true;
                     addLog(`图片压缩完成，原始大小: ${(imageFile.size / 1024).toFixed(2)}KB，压缩后: ${(processedFile.size / 1024).toFixed(2)}KB`, 'success');
