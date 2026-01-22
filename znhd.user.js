@@ -2,7 +2,7 @@
 // @name        征纳互动人数和在线监控
 // @namespace   https://scriptcat.org/
 // @description 实施监控征纳互动等待人数和在线状态，支持语音播报、webhook推送文本和图片、自定义常用语
-// @version     26.1.12
+// @version     26.1.22
 // @author      runos
 // @match       https://znhd.hunan.chinatax.gov.cn:8443/*
 // @match       https://example.com/*
@@ -30,6 +30,7 @@ const CONFIG = {
         AFTERNOON: { START: 13.5, END: 18 }
     },
     didaUrl: 'https://cdn.jsdelivr.net/gh/Run-os/UserScript/znhd/dida.mp3',
+    cyyUrl: 'https://cdn.jsdelivr.net/gh/Run-os/Runos-Box@refs/heads/main/znhd/%E5%B8%B8%E7%94%A8%E8%AF%AD.json'
 };
 
 // ==========日志管理==========
@@ -236,7 +237,7 @@ function DM() {
         setPhrasesLoading(true);
         GM_xmlhttpRequest({
             method: 'GET',
-            url: "https://file.122050.xyz/directlink/1/znhdText.json",
+            url: CONFIG.cyyUrl,
             onload: function (response) {
                 try {
                     const data = JSON.parse(response.responseText);
@@ -637,7 +638,7 @@ function DM() {
                                         wordBreak: "break-all"
                                     }
                                 },
-                                "数据源: https://file.122050.xyz/directlink/1/znhdText.json"
+                                `数据源: ${decodeURIComponent(CONFIG.cyyUrl)}`
                             ),
                             // 重新加载按钮
                             CAT_UI.Button("重新加载常用语", {
