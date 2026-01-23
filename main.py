@@ -483,12 +483,24 @@ async def get_geo_info(request: Request) -> dict:
 
 
 # 通过 appToken 获取 clientToken（用于消息推送）
-async def get_client_token(app_token: str) -> str:
+async def get_client_token(app_token: str, trace_id: str = "") -> str:
     """通过 appToken 获取 clientToken"""
     if redis_client:
-        client_token = await redis_client.get(f"app:{app_token}")
-        if client_token:
-            return client_token
+        redis_start = now_china()
+        try:
+            client_token = await asyncio.wait_for(
+                redis_client.get(f"app:{app_token}"),
+                timeout=2.0  # 2秒超时
+            )
+            elapsed = (now_china() - redis_start).total_seconds()
+            if elapsed > 0.1:  # 超过100ms记录警告
+                log_event("WARNING", "REDIS", f"⚠️ Redis读取慢: {elapsed:.3f}秒, trace: {trace_id[:20]}", trace_id)
+            if client_token:
+                return client_token
+        except asyncio.TimeoutError:
+            log_event("ERROR", "REDIS", f"❌ Redis读取超时: trace: {trace_id[:20]}", trace_id)
+        except Exception as e:
+            log_event("ERROR", "REDIS", f"❌ Redis读取错误: {e}, trace: {trace_id[:20]}", trace_id)
     return None
 
 
@@ -910,22 +922,29 @@ async def send_image(
     接收图片二进制数据并通过 WebSocket 推送给客户端
     使用 multipart/form-data 上传图片，性能更好
     """
+    request_start = now_china()
+    log_event("INFO", "BINARY", f"📨 HTTP请求开始: {file.filename if file else 'unknown'}", "")
+    
     app_token = token
 
     # 通过 appToken 获取 clientToken
-    client_token = await get_client_token(app_token)
+    client_token = await get_client_token(app_token, "send_image")
 
     if not client_token:
         raise HTTPException(status_code=400, detail="Invalid app token format")
 
     # 读取图片二进制数据
+    read_start = now_china()
     image_data = await file.read()
+    read_elapsed = (now_china() - read_start).total_seconds()
+    
     filename = file.filename or "image.jpg"
     content_type = file.content_type or "image/jpeg"
 
     # 添加分割线
     log_event("INFO", "BINARY", "=" * 50, "")
     log_event("INFO", "BINARY", f"📥 收到图片: {filename}, 大小: {format_size(len(image_data))}", "")
+    log_event("DEBUG", "BINARY", f"   图片读取耗时: {read_elapsed:.3f}秒, HTTP请求总耗时: {(now_china() - request_start).total_seconds():.3f}秒", "")
 
     # 生成传输 ID 用于追踪
     transfer_id = f"{now_china().strftime('%Y%m%d%H%M%S')}_{secrets.token_hex(8)}"
@@ -949,7 +968,8 @@ async def send_image(
     async def send_image_async():
         """后台异步发送图片"""
         try:
-            await asyncio.sleep(0.1)  # 短暂延迟确保 HTTP 响应已发送
+            # 不再等待，立即发送
+            ws_start = now_china()
             await manager.send_binary(
                 client_token,
                 image_data,
@@ -963,12 +983,17 @@ async def send_image(
                     "priority": priority
                 }
             )
-            logger.info(f"图片已发送到客户端 {client_token}: {filename}")
+            elapsed = (now_china() - ws_start).total_seconds()
+            log_event("INFO", "BINARY", f"✅ WebSocket发送完成, 耗时: {elapsed:.3f}秒", transfer_id)
         except Exception as e:
-            logger.error(f"异步发送图片失败: {e}")
+            log_event("ERROR", "BINARY", f"异步发送图片失败: {e}", transfer_id)
 
     # 启动后台任务发送图片
+    http_end_time = now_china()
     asyncio.create_task(send_image_async())
+    
+    http_elapsed = (http_end_time - request_start).total_seconds()
+    log_event("DEBUG", "BINARY", f"   HTTP响应返回耗时: {http_elapsed:.3f}秒, 后台任务已启动", transfer_id)
 
     return JSONResponse(
         status_code=200,
