@@ -40,7 +40,7 @@
             backdrop-filter: blur(10px);
             border-radius: 16px;
             box-shadow: 0 20px 70px rgba(0, 0, 0, 0.25);
-            max-width: 1200px;
+            max-width: 1400px;
             margin: 0 auto;
             padding: 30px;
             animation: containerEnter 0.8s ease-out;
@@ -135,35 +135,84 @@
             border-color: #22c55e;
         }
 
+        .btn-warning {
+            border-color: #f59e0b;
+            color: #f59e0b;
+        }
+
+        .btn-warning:hover {
+            background: #fffbeb;
+            border-color: #f59e0b;
+        }
+
         .stats-container {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 20px;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
             margin-bottom: 30px;
         }
 
         .stat-card {
             background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
             border-radius: 12px;
-            padding: 20px;
+            padding: 15px;
             text-align: center;
             border: 1px solid #e2e8f0;
         }
 
         .stat-value {
-            font-size: 32px;
+            font-size: 28px;
             font-weight: 700;
             color: #667eea;
         }
 
         .stat-label {
-            font-size: 14px;
+            font-size: 12px;
             color: #64748b;
             margin-top: 5px;
         }
 
+        /* Tab 样式 */
+        .tabs {
+            display: flex;
+            gap: 5px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #e2e8f0;
+            padding-bottom: 10px;
+        }
+
+        .tab-btn {
+            padding: 10px 20px;
+            border: none;
+            background: transparent;
+            color: #64748b;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            border-radius: 6px 6px 0 0;
+            transition: all 0.2s;
+        }
+
+        .tab-btn:hover {
+            background: #f1f5f9;
+        }
+
+        .tab-btn.active {
+            background: #667eea;
+            color: white;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
         .query-section,
-        .results-section {
+        .results-section,
+        .logs-section {
             background: #f8fafc;
             border-radius: 12px;
             padding: 20px;
@@ -172,7 +221,8 @@
         }
 
         .query-header h2,
-        .results-header h2 {
+        .results-header h2,
+        .logs-header h2 {
             font-size: 18px;
             color: #333;
             margin-bottom: 15px;
@@ -186,16 +236,17 @@
             align-items: center;
         }
 
-        .query-controls input {
-            flex: 1;
-            min-width: 200px;
-            padding: 10px 14px;
+        .query-controls input,
+        .query-controls select {
+            padding: 8px 12px;
             border: 1px solid #e2e8f0;
             border-radius: 6px;
             font-size: 13px;
+            min-width: 150px;
         }
 
-        .query-controls input:focus {
+        .query-controls input:focus,
+        .query-controls select:focus {
             outline: none;
             border-color: #667eea;
         }
@@ -206,10 +257,12 @@
             flex-shrink: 0;
         }
 
-        .results-header {
+        .results-header,
+        .logs-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
+            margin-bottom: 15px;
         }
 
         .result-count {
@@ -217,7 +270,8 @@
             color: #64748b;
         }
 
-        .results-container {
+        .results-container,
+        .logs-container {
             max-height: 500px;
             overflow-y: auto;
             background: white;
@@ -229,32 +283,6 @@
             padding: 40px;
             text-align: center;
             color: #94a3b8;
-        }
-
-        .data-item {
-            padding: 15px;
-            border-bottom: 1px solid #e2e8f0;
-        }
-
-        .data-item:last-child {
-            border-bottom: none;
-        }
-
-        .data-key {
-            font-weight: 600;
-            color: #667eea;
-            font-family: monospace;
-            margin-bottom: 8px;
-        }
-
-        .data-value {
-            background: #f1f5f9;
-            padding: 10px;
-            border-radius: 6px;
-            font-family: monospace;
-            font-size: 13px;
-            white-space: pre-wrap;
-            word-break: break-all;
         }
 
         .fingerprint-item {
@@ -310,21 +338,102 @@
             color: #64748b;
         }
 
-        .spinner {
-            display: inline-block;
-            width: 16px;
-            height: 16px;
-            border: 2px solid rgba(255, 255, 255, 0.3);
-            border-top-color: white;
-            border-radius: 50%;
-            animation: spin 0.8s linear infinite;
-            margin-right: 8px;
+        /* 日志条目样式 */
+        .log-item {
+            padding: 10px 15px;
+            border-bottom: 1px solid #e2e8f0;
+            font-family: monospace;
+            font-size: 12px;
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
         }
 
-        @keyframes spin {
-            to {
-                transform: rotate(360deg);
-            }
+        .log-item:last-child {
+            border-bottom: none;
+        }
+
+        .log-item:hover {
+            background: #f8fafc;
+        }
+
+        .log-time {
+            color: #64748b;
+            white-space: nowrap;
+            font-size: 11px;
+        }
+
+        .log-level {
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+            min-width: 50px;
+            text-align: center;
+        }
+
+        .log-level.INFO {
+            background: #dbeafe;
+            color: #1d4ed8;
+        }
+
+        .log-level.WARNING {
+            background: #fef3c7;
+            color: #d97706;
+        }
+
+        .log-level.ERROR {
+            background: #fee2e2;
+            color: #dc2626;
+        }
+
+        .log-level.DEBUG {
+            background: #f1f5f9;
+            color: #64748b;
+        }
+
+        .log-category {
+            padding: 2px 6px;
+            border-radius: 4px;
+            background: #ede9fe;
+            color: #7c3aed;
+            font-size: 10px;
+            font-weight: 600;
+            min-width: 70px;
+            text-align: center;
+        }
+
+        .log-message {
+            flex: 1;
+            word-break: break-all;
+            color: #334155;
+        }
+
+        .log-transfer-id {
+            color: #94a3b8;
+            font-size: 10px;
+        }
+
+        .log-stats {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+
+        .log-stat-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 12px;
+        }
+
+        .log-stat-badge {
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 11px;
+            font-weight: 600;
         }
 
         .modal {
@@ -373,6 +482,57 @@
             justify-content: flex-end;
         }
 
+        .auto-refresh {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-left: 20px;
+        }
+
+        .toggle-switch {
+            position: relative;
+            width: 40px;
+            height: 20px;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #cbd5e1;
+            border-radius: 20px;
+            transition: 0.3s;
+        }
+
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 14px;
+            width: 14px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            border-radius: 50%;
+            transition: 0.3s;
+        }
+
+        .toggle-switch input:checked+.toggle-slider {
+            background-color: #667eea;
+        }
+
+        .toggle-switch input:checked+.toggle-slider:before {
+            transform: translateX(20px);
+        }
+
         @media (max-width: 768px) {
             .header {
                 flex-direction: column;
@@ -383,7 +543,8 @@
                 flex-direction: column;
             }
 
-            .query-controls input {
+            .query-controls input,
+            .query-controls select {
                 min-width: 100%;
             }
 
@@ -396,6 +557,14 @@
                 margin-left: 0;
                 margin-top: 10px;
             }
+
+            .tabs {
+                overflow-x: auto;
+            }
+
+            .log-item {
+                flex-wrap: wrap;
+            }
         }
     </style>
 </head>
@@ -403,7 +572,7 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>🗄️ 设备指纹管理</h1>
+            <h1>🗄️ 管理后台</h1>
             <div class="header-actions">
                 <button class="btn btn-danger" id="clearDbBtn">🗑️ 清空数据库</button>
                 <button class="btn btn-secondary" onclick="window.location.href='/'">返回主页</button>
@@ -429,30 +598,91 @@
                 <div class="stat-value" id="activeConnections">-</div>
                 <div class="stat-label">活跃连接</div>
             </div>
+            <div class="stat-card">
+                <div class="stat-value" id="totalLogs">-</div>
+                <div class="stat-label">日志条数</div>
+            </div>
         </div>
 
-        <!-- 查询控制区 -->
-        <div class="query-section">
-            <div class="query-header">
-                <h2>🔍 数据查询</h2>
+        <!-- Tab 导航 -->
+        <div class="tabs">
+            <button class="tab-btn active" data-tab="devices">📱 设备管理</button>
+            <button class="tab-btn" data-tab="logs">📋 服务日志</button>
+        </div>
+
+        <!-- 设备管理 Tab -->
+        <div class="tab-content active" id="tab-devices">
+            <!-- 查询控制区 -->
+            <div class="query-section">
+                <div class="query-header">
+                    <h2>🔍 数据查询</h2>
+                </div>
+                <div class="query-controls">
+                    <input type="text" id="searchPattern" placeholder="在设备指纹中搜索 (如: IP、地理位置)">
+                    <div class="query-actions">
+                        <button class="btn btn-secondary" id="loadAllBtn">🌟 加载数据</button>
+                        <button class="btn btn-primary" id="searchBtn">🔍 搜索</button>
+                    </div>
+                </div>
             </div>
-            <div class="query-controls">
-                <input type="text" id="searchPattern" placeholder="在设备指纹中搜索 (如: IP、地理位置)" style="max-width: 400px;">
-                <div class="query-actions">
-                    <button class="btn btn-secondary" id="loadAllBtn">🌟 加载数据</button>
-                    <button class="btn btn-primary" id="searchBtn">🔍 搜索</button>
+
+            <!-- 查询结果 -->
+            <div class="results-section">
+                <div class="results-header">
+                    <h2>📋 设备列表</h2>
+                    <span id="resultCount" class="result-count"></span>
+                </div>
+                <div class="results-container" id="resultsContainer">
+                    <div class="empty-state">点击"加载数据"或输入搜索关键词查询设备指纹</div>
                 </div>
             </div>
         </div>
 
-        <!-- 查询结果 -->
-        <div class="results-section">
-            <div class="results-header">
-                <h2>📋 设备列表</h2>
-                <span id="resultCount" class="result-count"></span>
-            </div>
-            <div class="results-container" id="resultsContainer">
-                <div class="empty-state">点击"加载数据"或输入搜索关键词查询设备指纹</div>
+        <!-- 日志查看 Tab -->
+        <div class="tab-content" id="tab-logs">
+            <div class="logs-section">
+                <div class="logs-header">
+                    <h2>📋 服务日志</h2>
+                    <div style="display: flex; align-items: center; gap: 15px;">
+                        <div class="auto-refresh">
+                            <span style="font-size: 13px; color: #64748b;">自动刷新</span>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="autoRefresh" checked>
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                        <button class="btn btn-warning" id="clearLogsBtn">🗑️ 清空日志</button>
+                        <button class="btn btn-secondary" id="refreshLogsBtn">🔄 刷新</button>
+                    </div>
+                </div>
+
+                <!-- 日志统计 -->
+                <div class="log-stats" id="logStats"></div>
+
+                <!-- 日志筛选 -->
+                <div class="query-controls" style="margin-bottom: 15px;">
+                    <select id="logLevelFilter">
+                        <option value="">全部级别</option>
+                        <option value="INFO">INFO</option>
+                        <option value="WARNING">WARNING</option>
+                        <option value="ERROR">ERROR</option>
+                        <option value="DEBUG">DEBUG</option>
+                    </select>
+                    <select id="logCategoryFilter">
+                        <option value="">全部分类</option>
+                        <option value="BINARY">BINARY</option>
+                        <option value="WEBSOCKET">WEBSOCKET</option>
+                        <option value="MESSAGE">MESSAGE</option>
+                        <option value="AUTH">AUTH</option>
+                        <option value="SYSTEM">SYSTEM</option>
+                    </select>
+                    <input type="text" id="logSearch" placeholder="搜索日志内容...">
+                </div>
+
+                <!-- 日志列表 -->
+                <div class="logs-container" id="logsContainer">
+                    <div class="empty-state">加载日志中...</div>
+                </div>
             </div>
         </div>
     </div>
@@ -485,6 +715,7 @@
     </div>
 
     <script>
+        // 全局变量
         const searchPattern = document.getElementById('searchPattern');
         const searchBtn = document.getElementById('searchBtn');
         const loadAllBtn = document.getElementById('loadAllBtn');
@@ -493,44 +724,106 @@
         const resultsContainer = document.getElementById('resultsContainer');
         const resultCount = document.getElementById('resultCount');
 
-        // 存储设备指纹数据
+        // 日志相关变量
+        const logsContainer = document.getElementById('logsContainer');
+        const logStats = document.getElementById('logStats');
+        const logLevelFilter = document.getElementById('logLevelFilter');
+        const logCategoryFilter = document.getElementById('logCategoryFilter');
+        const logSearch = document.getElementById('logSearch');
+        const autoRefresh = document.getElementById('autoRefresh');
+        const refreshLogsBtn = document.getElementById('refreshLogsBtn');
+        const clearLogsBtn = document.getElementById('clearLogsBtn');
+
         let fingerprints = [];
         let currentBlockFingerprint = null;
+        let logs = [];
+        let autoRefreshInterval = null;
 
-        // 页面加载时检查认证状态并加载统计
+        // 页面加载
         document.addEventListener('DOMContentLoaded', async () => {
             await checkAuth();
             await loadStats();
-            // 默认加载设备指纹数据
-            loadFingerprints();
+            await loadFingerprints();
+            await loadLogs();
+            initTabs();
+            initAutoRefresh();
         });
 
+        // Tab 切换
+        function initTabs() {
+            const tabBtns = document.querySelectorAll('.tab-btn');
+            tabBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    tabBtns.forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                    document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+                });
+            });
+        }
+
+        // 自动刷新
+        function initAutoRefresh() {
+            autoRefresh.addEventListener('change', () => {
+                if (autoRefresh.checked) {
+                    startAutoRefresh();
+                } else {
+                    stopAutoRefresh();
+                }
+            });
+            if (autoRefresh.checked) startAutoRefresh();
+        }
+
+        function startAutoRefresh() {
+            if (autoRefreshInterval) clearInterval(autoRefreshInterval);
+            autoRefreshInterval = setInterval(async () => {
+                await loadLogs();
+                await loadStats();
+            }, 5000);
+        }
+
+        function stopAutoRefresh() {
+            if (autoRefreshInterval) {
+                clearInterval(autoRefreshInterval);
+                autoRefreshInterval = null;
+            }
+        }
+
+        // 认证检查
         async function checkAuth() {
             try {
                 const response = await fetch('/api/auth/check');
-                if (!response.ok) {
-                    window.location.href = '/login';
-                }
+                if (!response.ok) window.location.href = '/login';
             } catch (error) {
                 window.location.href = '/login';
             }
         }
 
+        // 加载统计
         async function loadStats() {
             try {
-                const response = await fetch('/api/admin/redis/stats');
-                if (response.ok) {
-                    const data = await response.json();
+                // Redis 统计
+                const redisRes = await fetch('/api/admin/redis/stats');
+                if (redisRes.ok) {
+                    const data = await redisRes.json();
                     document.getElementById('totalKeys').textContent = data.total_keys || 0;
                     document.getElementById('clientKeys').textContent = data.client_keys || 0;
                     document.getElementById('appKeys').textContent = data.app_keys || 0;
                     document.getElementById('activeConnections').textContent = data.active_connections || 0;
+                }
+
+                // 日志统计
+                const logsRes = await fetch('/api/admin/logs/stats');
+                if (logsRes.ok) {
+                    const logData = await logsRes.json();
+                    document.getElementById('totalLogs').textContent = logData.total || 0;
                 }
             } catch (error) {
                 console.error('加载统计失败:', error);
             }
         }
 
+        // 加载设备指纹
         async function loadFingerprints() {
             resultsContainer.innerHTML = '<div class="empty-state">加载中...</div>';
             try {
@@ -548,6 +841,86 @@
             } catch (error) {
                 resultsContainer.innerHTML = '<div class="empty-state">加载出错: ' + error.message + '</div>';
                 fingerprints = [];
+            }
+        }
+
+        // 加载日志
+        async function loadLogs() {
+            try {
+                const params = new URLSearchParams();
+                if (logLevelFilter.value) params.append('level', logLevelFilter.value);
+                if (logCategoryFilter.value) params.append('category', logCategoryFilter.value);
+                params.append('limit', '200');
+
+                const response = await fetch('/api/admin/logs?' + params.toString());
+                if (response.ok) {
+                    const data = await response.json();
+                    logs = data.logs || [];
+                    displayLogs(logs);
+                    await loadLogStats();
+                }
+            } catch (error) {
+                console.error('加载日志失败:', error);
+                logsContainer.innerHTML = '<div class="empty-state">加载日志失败: ' + error.message + '</div>';
+            }
+        }
+
+        // 加载日志统计
+        async function loadLogStats() {
+            try {
+                const response = await fetch('/api/admin/logs/stats');
+                if (response.ok) {
+                    const data = await response.json();
+
+                    // 按级别统计
+                    let levelHtml = '<span style="color: #64748b;">级别: </span>';
+                    const levelColors = { 'INFO': '#3b82f6', 'WARNING': '#f59e0b', 'ERROR': '#ef4444', 'DEBUG': '#64748b' };
+                    for (const [level, count] of Object.entries(data.by_level || {})) {
+                        levelHtml += `<span class="log-stat-badge" style="background: ${levelColors[level] || '#64748b'}; color: white;">${level}: ${count}</span> `;
+                    }
+
+                    // 按分类统计
+                    let categoryHtml = '<span style="color: #64748b; margin-left: 20px;">分类: </span>';
+                    for (const [cat, count] of Object.entries(data.by_category || {})) {
+                        categoryHtml += `<span class="log-stat-badge" style="background: #7c3aed; color: white;">${cat}: ${count}</span> `;
+                    }
+
+                    logStats.innerHTML = levelHtml + categoryHtml;
+                }
+            } catch (error) {
+                console.error('加载日志统计失败:', error);
+            }
+        }
+
+        // 显示日志
+        function displayLogs(logList) {
+            if (!logList || logList.length === 0) {
+                logsContainer.innerHTML = '<div class="empty-state">暂无日志</div>';
+                return;
+            }
+
+            logsContainer.innerHTML = logList.map(log => {
+                const time = formatLogTime(log.timestamp);
+                return `
+                    <div class="log-item">
+                        <span class="log-time">${time}</span>
+                        <span class="log-level ${log.level}">${log.level}</span>
+                        <span class="log-category">${log.category}</span>
+                        <span class="log-message">${escapeHtml(log.message)}</span>
+                        ${log.transfer_id ? `<span class="log-transfer-id">[${log.transfer_id.substring(0, 8)}...]</span>` : ''}
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function formatLogTime(timestamp) {
+            if (!timestamp) return '--:--:--';
+            try {
+                const date = new Date(timestamp);
+                return date.toLocaleTimeString('zh-CN', { hour12: false }) + '.' +
+                    date.getMilliseconds().toString().padStart(3, '0');
+            } catch (e) {
+                return timestamp;
             }
         }
 
@@ -603,14 +976,9 @@
 
         document.getElementById('confirmBlockBtn').addEventListener('click', async () => {
             if (!currentBlockFingerprint) return;
-
             const reason = document.getElementById('blockReason').value || '管理员封禁';
-
             try {
-                const response = await fetch(`/api/fingerprint/block?fingerprint=${encodeURIComponent(currentBlockFingerprint)}&reason=${encodeURIComponent(reason)}`, {
-                    method: 'POST'
-                });
-
+                const response = await fetch(`/api/fingerprint/block?fingerprint=${encodeURIComponent(currentBlockFingerprint)}&reason=${encodeURIComponent(reason)}`, { method: 'POST' });
                 if (response.ok) {
                     closeModal();
                     await loadFingerprints();
@@ -629,16 +997,51 @@
             await loadStats();
             await loadFingerprints();
         });
-
         searchPattern.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') {
-                searchFingerprints();
+            if (e.key === 'Enter') searchFingerprints();
+        });
+
+        // 日志筛选
+        logLevelFilter.addEventListener('change', loadLogs);
+        logCategoryFilter.addEventListener('change', loadLogs);
+        logSearch.addEventListener('input', () => {
+            const keyword = logSearch.value.toLowerCase();
+            if (keyword) {
+                const filtered = logs.filter(log =>
+                    log.message.toLowerCase().includes(keyword) ||
+                    log.transfer_id.toLowerCase().includes(keyword)
+                );
+                displayLogs(filtered);
+            } else {
+                displayLogs(logs);
+            }
+        });
+
+        refreshLogsBtn.addEventListener('click', async () => {
+            refreshLogsBtn.innerHTML = '<span class="spinner"></span>刷新中...';
+            await loadLogs();
+            await loadStats();
+            refreshLogsBtn.textContent = '🔄 刷新';
+        });
+
+        clearLogsBtn.addEventListener('click', async () => {
+            if (!confirm('确定要清空所有日志吗？')) return;
+            try {
+                const response = await fetch('/api/admin/logs', { method: 'DELETE' });
+                if (response.ok) {
+                    alert('日志已清空');
+                    await loadLogs();
+                    await loadStats();
+                } else {
+                    alert('清空失败');
+                }
+            } catch (error) {
+                alert('清空失败: ' + error.message);
             }
         });
 
         function searchFingerprints() {
             const keyword = searchPattern.value.trim().toLowerCase();
-
             if (keyword) {
                 const filtered = fingerprints.filter(fp => {
                     const locationStr = fp.location || '';
@@ -678,12 +1081,8 @@
                 alert('请输入正确的确认文字：确认清空');
                 return;
             }
-
             try {
-                const response = await fetch('/api/admin/redis/clear', {
-                    method: 'POST'
-                });
-
+                const response = await fetch('/api/admin/redis/clear', { method: 'POST' });
                 if (response.ok) {
                     closeClearDbModal();
                     alert('数据库已清空');
@@ -699,9 +1098,8 @@
         });
 
         logoutBtn.addEventListener('click', async () => {
-            try {
-                await fetch('/api/logout', { method: 'POST' });
-            } catch (e) { }
+            stopAutoRefresh();
+            try { await fetch('/api/logout', { method: 'POST' }); } catch (e) { }
             window.location.href = '/login';
         });
     </script>

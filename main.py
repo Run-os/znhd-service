@@ -102,15 +102,14 @@ class ConnectionManager:
         if client_token not in self.active_connections:
             self.active_connections[client_token] = set()
         self.active_connections[client_token].add(websocket)
-        logger.info(
-            f"客户端 {client_token} 已连接. 总连接数: {len(self.active_connections[client_token])}")
+        log_event("INFO", "WEBSOCKET", f"客户端已连接, 总连接数: {len(self.active_connections[client_token])}", client_token[:20])
 
     def disconnect(self, client_token: str, websocket: WebSocket):
         if client_token in self.active_connections:
             self.active_connections[client_token].discard(websocket)
             if not self.active_connections[client_token]:
                 del self.active_connections[client_token]
-        logger.info(f"客户端 {client_token} 已断开连接")
+        log_event("INFO", "WEBSOCKET", f"客户端已断开连接", client_token[:20])
 
     async def send_message(self, client_token: str, message: dict):
         if client_token in self.active_connections:
@@ -134,8 +133,10 @@ class ConnectionManager:
             chunk_size = 64 * 1024  # 64KB 每块
             total_chunks = (total_size + chunk_size - 1) // chunk_size
             transfer_id = metadata.get("transfer_id", "") if metadata else ""
+            filename = metadata.get("filename", "") if metadata else ""
             
-            logger.info(f"[BINARY] 开始发送二进制数据: transfer_id={transfer_id}, size={total_size} bytes, chunks={total_chunks}")
+            # 记录日志
+            log_event("INFO", "BINARY", f"开始发送图片: {filename}, 大小: {total_size} bytes, 分{total_chunks}块", transfer_id)
             
             for connection in self.active_connections[client_token]:
                 try:
@@ -143,12 +144,12 @@ class ConnectionManager:
                     metadata_msg = {
                         "type": "binary_start",
                         "data_type": metadata.get("data_type", "image"),
-                        "filename": metadata.get("filename", ""),
+                        "filename": filename,
                         "size": total_size,
                         "content_type": metadata.get("content_type", "image/jpeg"),
                         "transfer_id": transfer_id
                     }
-                    logger.info(f"[BINARY] 发送 binary_start: {metadata_msg}")
+                    log_event("DEBUG", "BINARY", f"发送 binary_start: {filename}", transfer_id)
                     await connection.send_json(metadata_msg)
                     
                     # 分块发送二进制数据
@@ -159,8 +160,7 @@ class ConnectionManager:
                         await connection.send_bytes(chunk)
                         sent_chunks += 1
                         sent_bytes += len(chunk)
-                        logger.debug(f"[BINARY] 发送块 {sent_chunks}/{total_chunks}, 大小 {len(chunk)} bytes, 累计 {sent_bytes}/{total_size}")
-                        
+                    
                     # 发送完成标记
                     end_msg = {
                         "type": "binary_end",
@@ -168,12 +168,12 @@ class ConnectionManager:
                         "size": total_size,
                         "chunks": sent_chunks
                     }
-                    logger.info(f"[BINARY] 发送 binary_end: {end_msg}")
+                    log_event("DEBUG", "BINARY", f"发送 binary_end: {filename}, 块数:{sent_chunks}", transfer_id)
                     await connection.send_json(end_msg)
                     
-                    logger.info(f"[BINARY] 二进制数据发送完成: transfer_id={transfer_id}, chunks={sent_chunks}, size={sent_bytes}")
+                    log_event("INFO", "BINARY", f"图片发送完成: {filename}, 块数:{sent_chunks}, 大小:{sent_bytes}bytes", transfer_id)
                 except Exception as e:
-                    logger.error(f"[BINARY] 客户端 {client_token} 发送二进制数据时出错: {e}")
+                    log_event("ERROR", "BINARY", f"发送失败到 {client_token[:20]}...: {str(e)}", transfer_id)
                     disconnected.add(connection)
 
             # 清理断开的连接
@@ -182,6 +182,109 @@ class ConnectionManager:
 
 
 manager = ConnectionManager()
+
+# ==================== 日志队列（环形缓冲区）====================
+
+MAX_LOGS = 1000  # 最大日志条数
+
+
+class LogEntry:
+    """日志条目"""
+    def __init__(self, level: str, category: str, message: str, transfer_id: str = ""):
+        self.id = secrets.token_hex(8)
+        self.timestamp = datetime.now().isoformat()
+        self.level = level  # INFO, WARNING, ERROR, DEBUG
+        self.category = category  # BINARY, WEBSOCKET, MESSAGE, AUTH, REDIS, SYSTEM
+        self.message = message
+        self.transfer_id = transfer_id
+    
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "timestamp": self.timestamp,
+            "level": self.level,
+            "category": self.category,
+            "message": self.message,
+            "transfer_id": self.transfer_id
+        }
+
+
+class LogQueue:
+    """日志队列（环形缓冲区）"""
+    def __init__(self, max_size=MAX_LOGS):
+        self.max_size = max_size
+        self.logs = []
+        self.lock = asyncio.Lock()
+    
+    async def add(self, level: str, category: str, message: str, transfer_id: str = ""):
+        """添加日志"""
+        async with self.lock:
+            entry = LogEntry(level, category, message, transfer_id)
+            self.logs.append(entry)
+            # 超过最大容量时删除最旧的日志
+            if len(self.logs) > self.max_size:
+                self.logs.pop(0)
+    
+    async def get(self, level: str = None, category: str = None,
+                  since: str = None, limit: int = 100):
+        """获取日志（支持过滤）"""
+        async with self.lock:
+            filtered = self.logs.copy()
+            
+            # 按级别过滤
+            if level:
+                filtered = [log for log in filtered if log.level == level]
+            
+            # 按分类过滤
+            if category:
+                filtered = [log for log in filtered if log.category == category]
+            
+            # 按时间过滤
+            if since:
+                since_dt = datetime.fromisoformat(since)
+                filtered = [log for log in filtered if datetime.fromisoformat(log.timestamp) > since_dt]
+            
+            # 按时间倒序排列
+            filtered.sort(key=lambda x: x.timestamp, reverse=True)
+            
+            # 限制数量
+            return [log.to_dict() for log in filtered[:limit]]
+    
+    async def get_stats(self):
+        """获取日志统计"""
+        async with self.lock:
+            by_level = {}
+            by_category = {}
+            for log in self.logs:
+                by_level[log.level] = by_level.get(log.level, 0) + 1
+                by_category[log.category] = by_category.get(log.category, 0) + 1
+            return {
+                "total": len(self.logs),
+                "by_level": by_level,
+                "by_category": by_category
+            }
+    
+    async def clear(self):
+        """清空日志"""
+        async with self.lock:
+            self.logs.clear()
+
+
+log_queue = LogQueue()
+
+
+def log_event(level: str, category: str, message: str, transfer_id: str = ""):
+    """记录日志的便捷函数"""
+    # 同时输出到标准日志
+    if level == "ERROR":
+        logger.error(f"[{category}] {message}")
+    elif level == "WARNING":
+        logger.warning(f"[{category}] {message}")
+    else:
+        logger.info(f"[{category}] {message}")
+    
+    # 添加到日志队列
+    asyncio.create_task(log_queue.add(level, category, message, transfer_id))
 
 # 请求体模型
 
@@ -798,15 +901,14 @@ async def send_image(
     filename = file.filename or "image.jpg"
     content_type = file.content_type or "image/jpeg"
 
-    logger.info(f"收到图片: {filename}, 大小: {len(image_data)} bytes")
+    log_event("INFO", "BINARY", f"收到图片: {filename}, 大小: {len(image_data)} bytes", "")
 
     # 生成传输 ID 用于追踪
     transfer_id = f"{datetime.now().strftime('%Y%m%d%H%M%S')}_{secrets.token_hex(8)}"
 
     # 检查是否有活跃的连接
     if client_token not in manager.active_connections or not manager.active_connections[client_token]:
-        logger.warning(
-            f"没有活跃的 WebSocket 连接 for client {client_token}, 图片未发送")
+        log_event("WARNING", "BINARY", f"没有活跃连接, 图片未发送: {filename}", transfer_id)
         return JSONResponse(
             status_code=200,
             content={
@@ -1188,3 +1290,46 @@ async def unblock_fingerprint(
     logger.info(f"设备已解封: {fingerprint[:20]}...")
     
     return {"success": True, "message": "设备已解封"}
+
+
+# ==================== 日志查看 API ====================
+
+@app.get("/api/admin/logs")
+async def get_logs(
+    level: str = Query(None),
+    category: str = Query(None),
+    since: str = Query(None),
+    limit: int = Query(100, le=500),
+    session_token: Optional[str] = Cookie(None)
+):
+    """获取日志列表"""
+    if not verify_session(session_token):
+        raise HTTPException(status_code=401, detail="未授权")
+    
+    logs = await log_queue.get(level=level, category=category, since=since, limit=limit)
+    return {
+        "logs": logs,
+        "total": len(logs),
+        "has_more": len(logs) == limit
+    }
+
+
+@app.get("/api/admin/logs/stats")
+async def get_logs_stats(session_token: Optional[str] = Cookie(None)):
+    """获取日志统计"""
+    if not verify_session(session_token):
+        raise HTTPException(status_code=401, detail="未授权")
+    
+    stats = await log_queue.get_stats()
+    return stats
+
+
+@app.delete("/api/admin/logs")
+async def clear_logs(session_token: Optional[str] = Cookie(None)):
+    """清空日志"""
+    if not verify_session(session_token):
+        raise HTTPException(status_code=401, detail="未授权")
+    
+    await log_queue.clear()
+    log_event("INFO", "SYSTEM", "日志已清空", "")
+    return {"success": True, "message": "日志已清空"}
