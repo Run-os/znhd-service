@@ -663,7 +663,7 @@
                 // 使用正确的 POST 端点 /message 而不是 /
                 const apiUrl = `${window.location.origin}/message?token=${token}`;
                 targetUrlInput.value = apiUrl;
-                addLog(`已从URL参数加载目标地址: ${apiUrl}`, 'info');
+                addLog(`🔗 已从URL参数加载目标地址: ${apiUrl}`, 'info');
             }
         }
 
@@ -725,11 +725,11 @@
                 const isImageByExt = /\.(jpg|jpeg|png|gif|bmp|webp|heic|heif|svg)$/.test(fileName);
 
                 if (!isImageByType && !isImageByExt) {
-                    addLog('错误: 请选择图片文件', 'error');
+                    addLog('❌ 错误: 请选择图片文件', 'error');
                     return;
                 }
 
-                addLog(`选择了图片: ${imageFile.name} (${imageFile.type || '未知类型'})`, 'info');
+                addLog(`🖼️ 选择了图片: ${imageFile.name} (${imageFile.type || '未知类型'})`, 'info');
                 originalImageFile = imageFile;
                 compressedImageFile = null; // 选择新图片时清空压缩文件缓存
                 let processedFile = imageFile;
@@ -738,9 +738,9 @@
                     fileName.endsWith('.heic') || fileName.endsWith('.heif');
 
                 if (isHeic) {
-                    addLog('检测到HEIC/HEIF图片，正在解码...', 'info');
+                    addLog('🔄 检测到HEIC/HEIF图片，正在解码...', 'info');
                     processedFile = await decodeHeicToBlob(imageFile);
-                    addLog('HEIC/HEIF图片解码完成', 'success');
+                    addLog('✅ HEIC/HEIF图片解码完成', 'success');
                 }
 
                 const compressionSize = 3 * 1024 * 1024; // 3MB
@@ -762,9 +762,9 @@
                 previewImg.src = selectedImageBase64;
                 imagePreview.style.display = 'block';
                 imageInfo.textContent = `大小: ${formatSize(processedFile.size)}`;
-                addLog(`成功处理图片: ${imageFile.name}`, 'success');
+                addLog(`✅ 成功处理图片: ${imageFile.name}`, 'success');
             } catch (error) {
-                addLog(`图片处理失败: ${error.message}`, 'error');
+                addLog(`❌ 图片处理失败: ${error.message}`, 'error');
                 selectedImageBase64 = null;
                 originalImageFile = null;
                 imagePreview.style.display = 'none';
@@ -773,26 +773,26 @@
 
         async function manualCompressImage() {
             if (!originalImageFile) {
-                addLog('请先选择一张图片', 'error');
+                addLog('❌ 请先选择一张图片', 'error');
                 return;
             }
             try {
-                addLog('开始手动压缩图片...', 'info');
+                addLog('🗜️ 开始手动压缩图片...', 'info');
                 let fileToCompress = originalImageFile;
                 const fileName = originalImageFile.name.toLowerCase();
                 const isHeic = originalImageFile.type === 'image/heic' || originalImageFile.type === 'image/heif' ||
                     fileName.endsWith('.heic') || fileName.endsWith('.heif');
                 if (isHeic) {
-                    addLog('HEIC图片需要先解码再压缩...', 'info');
+                    addLog('🔄 HEIC图片需要先解码再压缩...', 'info');
                     fileToCompress = await decodeHeicToBlob(originalImageFile);
                 }
                 const compressedFile = await compressImage(fileToCompress, { quality: 0.5 });
                 selectedImageBase64 = await fileToBase64(compressedFile);
                 previewImg.src = selectedImageBase64;
                 imageInfo.textContent = `大小: ${formatSize(compressedFile.size)}`;
-                addLog(`手动压缩完成，原始大小: ${formatSize(originalImageFile.size)}，压缩后: ${formatSize(compressedFile.size)}`, 'success');
+                addLog(`✅ 手动压缩完成，原始大小: ${formatSize(originalImageFile.size)}，压缩后: ${formatSize(compressedFile.size)}`, 'success');
             } catch (error) {
-                addLog(`压缩失败: ${error.message}`, 'error');
+                addLog(`❌ 压缩失败: ${error.message}`, 'error');
             }
         }
 
@@ -803,16 +803,16 @@
             imagePreview.style.display = 'none';
             previewImg.src = '';
             imageInfo.textContent = '';
-            addLog('已移除选择的图片', 'info');
+            addLog('🗑️ 已移除选择的图片', 'info');
         }
 
         async function sendPostRequest() {
             const targetUrl = targetUrlInput.value.trim();
             const messageContent = messageContentInput.value.trim();
 
-            if (!targetUrl) { addLog('错误: 请输入目标地址', 'error'); return; }
-            if (!messageContent && !selectedImageBase64) { addLog('错误: 请输入消息内容', 'error'); return; }
-            if (isRequesting) { addLog('错误: 请求正在进行中，请稍候', 'error'); return; }
+            if (!targetUrl) { addLog('❌ 错误: 请输入目标地址', 'error'); return; }
+            if (!messageContent && !selectedImageBase64) { addLog('❌ 错误: 请输入消息内容', 'error'); return; }
+            if (isRequesting) { addLog('⏳ 错误: 请求正在进行中，请稍候', 'error'); return; }
 
             isRequesting = true;
             sendBtn.disabled = true;
@@ -848,7 +848,7 @@
             }
             const token = tokenMatch[1];
 
-            addLog('正在通过二进制方式发送图片...', 'info');
+            addLog('📤 正在通过二进制方式发送图片...', 'info');
 
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 60000); // 图片上传超时60秒
@@ -887,14 +887,14 @@
                 const result = await response.json();
 
                 if (result.status === 'success') {
-                    addLog(`成功: 二进制图片传输完成 - ${result.filename} (${formatSize(result.size)})`, 'success');
+                    addLog(`✅ 成功: 二进制图片传输完成 - ${result.filename} (${formatSize(result.size)})`, 'success');
                 } else {
-                    addLog(`警告: 图片已接收但客户端未连接 - ${result.message}`, 'info');
+                    addLog(`⚠️ 警告: 图片已接收但客户端未连接 - ${result.message}`, 'info');
                 }
             } catch (error) {
                 clearTimeout(timeoutId);
                 if (error.name === 'AbortError') {
-                    throw new Error('图片上传超时 (60秒)');
+                    throw new Error('⏱️ 图片上传超时 (60秒)');
                 }
                 throw error;
             }
@@ -921,12 +921,12 @@
 
         function clearLogs() {
             logContainer.innerHTML = '';
-            addLog('日志已清空', 'info');
+            addLog('🧹 日志已清空', 'info');
         }
 
         function copyInterfaceLink() {
             const targetUrl = targetUrlInput.value.trim();
-            if (!targetUrl) { addLog('错误: 请先输入目标地址', 'error'); return; }
+            if (!targetUrl) { addLog('❌ 错误: 请先输入目标地址', 'error'); return; }
 
             const tokenMatch = targetUrl.match(/[?&]token=([^&]+)/);
             if (tokenMatch && tokenMatch[1]) {
@@ -934,7 +934,7 @@
                 const currentHost = window.location.origin;
                 const interfaceLink = `${currentHost}/?url=${currentHost}/message?token=${token}`;
                 navigator.clipboard.writeText(interfaceLink).then(() => {
-                    addLog(`已复制接口链接到剪贴板`, 'success');
+                    addLog(`📋 已复制接口链接到剪贴板`, 'success');
                     copyBtn.classList.add('copied');
                     const originalText = copyBtn.textContent;
                     copyBtn.textContent = '✓ 已复制';
@@ -942,9 +942,9 @@
                         copyBtn.classList.remove('copied');
                         copyBtn.textContent = originalText;
                     }, 2000);
-                }).catch(err => { addLog(`复制失败: ${err.message}`, 'error'); });
+                }).catch(err => { addLog(`❌ 复制失败: ${err.message}`, 'error'); });
             } else {
-                addLog('错误: 目标地址中未找到token参数', 'error');
+                addLog('❌ 错误: 目标地址中未找到token参数', 'error');
             }
         }
 

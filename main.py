@@ -102,14 +102,14 @@ class ConnectionManager:
         if client_token not in self.active_connections:
             self.active_connections[client_token] = set()
         self.active_connections[client_token].add(websocket)
-        log_event("INFO", "WEBSOCKET", f"客户端已连接, 总连接数: {len(self.active_connections[client_token])}", client_token[:20])
+        log_event("INFO", "WEBSOCKET", f"🔌 客户端已连接, 总连接数: {len(self.active_connections[client_token])}", client_token[:20])
 
     def disconnect(self, client_token: str, websocket: WebSocket):
         if client_token in self.active_connections:
             self.active_connections[client_token].discard(websocket)
             if not self.active_connections[client_token]:
                 del self.active_connections[client_token]
-        log_event("INFO", "WEBSOCKET", f"客户端已断开连接", client_token[:20])
+        log_event("INFO", "WEBSOCKET", f"❌ 客户端已断开连接", client_token[:20])
 
     async def send_message(self, client_token: str, message: dict):
         if client_token in self.active_connections:
@@ -176,7 +176,7 @@ class ConnectionManager:
                     log_event("INFO", "BINARY", f"✅ 图片发送完成: {filename}, 块数:{sent_chunks}, 大小:{format_size(sent_bytes)}", transfer_id)
                     log_event("INFO", "BINARY", "=" * 50, transfer_id)
                 except Exception as e:
-                    log_event("ERROR", "BINARY", f"发送失败到 {client_token[:20]}...: {str(e)}", transfer_id)
+                    log_event("ERROR", "BINARY", f"❌ 发送失败到 {client_token[:20]}...: {str(e)}", transfer_id)
                     disconnected.add(connection)
 
             # 清理断开的连接
@@ -923,7 +923,7 @@ async def send_image(
 
     # 检查是否有活跃的连接
     if client_token not in manager.active_connections or not manager.active_connections[client_token]:
-        log_event("WARNING", "BINARY", f"没有活跃连接, 图片未发送: {filename}", transfer_id)
+        log_event("WARNING", "BINARY", f"⚠️ 没有活跃连接, 图片未发送: {filename}", transfer_id)
         return JSONResponse(
             status_code=200,
             content={
@@ -1346,5 +1346,5 @@ async def clear_logs(session_token: Optional[str] = Cookie(None)):
         raise HTTPException(status_code=401, detail="未授权")
     
     await log_queue.clear()
-    log_event("INFO", "SYSTEM", "日志已清空", "")
+    log_event("INFO", "SYSTEM", "🧹 日志已清空", "")
     return {"success": True, "message": "日志已清空"}
