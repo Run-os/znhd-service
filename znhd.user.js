@@ -1024,6 +1024,13 @@ function safeCopyText(text) {
     }
 }
 
+// 格式化字节大小为易读单位
+function formatSize(bytes) {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(2) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+}
+
 function isBase64ImageString(text) {
     if (typeof text !== 'string') { return false; }
     const trimmed = text.trim();
@@ -1164,7 +1171,7 @@ function connectwebhookWebSocket(webhookUrl, webhookToken) {
                     // 收集二进制数据块
                     binaryTransfer.dataChunks.push(event.data);
                     binaryTransfer.receivedSize += event.data.size;
-                    console.log(`[webhook] 收到二进制数据块 ${binaryTransfer.dataChunks.length}, 已接收 ${binaryTransfer.receivedSize}/${binaryTransfer.totalSize} bytes, 进度: ${((binaryTransfer.receivedSize / binaryTransfer.totalSize) * 100).toFixed(1)}%`);
+                    console.log(`[webhook] 收到二进制数据块 ${binaryTransfer.dataChunks.length}, 已接收 ${formatSize(binaryTransfer.receivedSize)}/${formatSize(binaryTransfer.totalSize)}, 进度: ${((binaryTransfer.receivedSize / binaryTransfer.totalSize) * 100).toFixed(1)}%`);
                 } else {
                     console.log('[webhook] ⚠️ 收到意外的二进制数据，没有活跃的传输任务，Blob大小:', event.data.size);
                 }
@@ -1182,7 +1189,7 @@ function connectwebhookWebSocket(webhookUrl, webhookToken) {
                 if (binaryTransfer && binaryTransfer.dataChunks.length > 0) {
                     console.log(`[webhook] ⚠️ 检测到未完成的传输 ${binaryTransfer.transfer_id}，被新传输 ${transfer_id} 覆盖`);
                 }
-                console.log(`[webhook] 开始接收二进制图片: ${filename}, 大小: ${size} bytes, content_type: ${content_type}`);
+                console.log(`[webhook] 开始接收二进制图片: ${filename}, 大小: ${formatSize(size)}, content_type: ${content_type}`);
                 binaryTransfer = {
                     transfer_id: transfer_id,
                     filename: filename,
@@ -1207,17 +1214,17 @@ function connectwebhookWebSocket(webhookUrl, webhookToken) {
                 }
 
                 const elapsed = Date.now() - binaryTransfer.startTime;
-                console.log(`[webhook] 二进制图片接收完成, 耗时: ${elapsed}ms, 共 ${binaryTransfer.dataChunks.length} 个数据块, 实际接收 ${binaryTransfer.receivedSize}/${binaryTransfer.totalSize} bytes`);
+                console.log(`[webhook] 二进制图片接收完成, 耗时: ${elapsed}ms, 共 ${binaryTransfer.dataChunks.length} 个数据块, 实际接收 ${formatSize(binaryTransfer.receivedSize)}/${formatSize(binaryTransfer.totalSize)}`);
 
                 // 检查数据完整性
                 if (binaryTransfer.receivedSize !== binaryTransfer.totalSize) {
-                    console.log(`[webhook] ⚠️ 数据不完整: 期望 ${binaryTransfer.totalSize} bytes, 实际收到 ${binaryTransfer.receivedSize} bytes, 丢失 ${binaryTransfer.totalSize - binaryTransfer.receivedSize} bytes`);
+                    console.log(`[webhook] ⚠️ 数据不完整: 期望 ${formatSize(binaryTransfer.totalSize)}, 实际收到 ${formatSize(binaryTransfer.receivedSize)}, 丢失 ${formatSize(binaryTransfer.totalSize - binaryTransfer.receivedSize)}`);
                 }
 
                 // 合并所有数据块
                 if (binaryTransfer.dataChunks.length > 0) {
                     const blob = new Blob(binaryTransfer.dataChunks, { type: binaryTransfer.content_type });
-                    console.log(`[webhook] 合并后的Blob大小: ${blob.size} bytes, 类型: ${blob.type}`);
+                    console.log(`[webhook] 合并后的Blob大小: ${formatSize(blob.size)}, 类型: ${blob.type}`);
 
                     // 转换为 Base64 并复制到剪贴板
                     const base64 = await blobToBase64(blob);
@@ -1225,8 +1232,8 @@ function connectwebhookWebSocket(webhookUrl, webhookToken) {
                     const copied = await copyBase64ImageToClipboard(base64);
 
                     if (copied) {
-                        CAT_UI.Message.success(`webhook消息：图片已复制到剪贴板 (${binaryTransfer.filename}, ${(binaryTransfer.totalSize / 1024).toFixed(2)}KB)`, 'success');
-                        addLog(`webhook消息：图片已复制到剪贴板 - ${binaryTransfer.filename} (${(binaryTransfer.totalSize / 1024).toFixed(2)}KB)`, 'success');
+                        CAT_UI.Message.success(`webhook消息：图片已复制到剪贴板 (${binaryTransfer.filename}, ${formatSize(binaryTransfer.totalSize)})`, 'success');
+                        addLog(`webhook消息：图片已复制到剪贴板 - ${binaryTransfer.filename} (${formatSize(binaryTransfer.totalSize)})`, 'success');
                     } else {
                         CAT_UI.Message.warning('webhook消息：图片复制失败', 'warning');
                         addLog(`webhook消息：图片复制失败 - ${binaryTransfer.filename}`, 'warning');

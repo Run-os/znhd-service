@@ -136,7 +136,7 @@ class ConnectionManager:
             filename = metadata.get("filename", "") if metadata else ""
             
             # 记录日志
-            log_event("INFO", "BINARY", f"开始发送图片: {filename}, 大小: {total_size} bytes, 分{total_chunks}块", transfer_id)
+            log_event("INFO", "BINARY", f"开始发送图片: {filename}, 大小: {format_size(total_size)}, 分{total_chunks}块", transfer_id)
             
             for connection in self.active_connections[client_token]:
                 try:
@@ -171,7 +171,7 @@ class ConnectionManager:
                     log_event("DEBUG", "BINARY", f"发送 binary_end: {filename}, 块数:{sent_chunks}", transfer_id)
                     await connection.send_json(end_msg)
                     
-                    log_event("INFO", "BINARY", f"图片发送完成: {filename}, 块数:{sent_chunks}, 大小:{sent_bytes}bytes", transfer_id)
+                    log_event("INFO", "BINARY", f"图片发送完成: {filename}, 块数:{sent_chunks}, 大小:{format_size(sent_bytes)}", transfer_id)
                 except Exception as e:
                     log_event("ERROR", "BINARY", f"发送失败到 {client_token[:20]}...: {str(e)}", transfer_id)
                     disconnected.add(connection)
@@ -271,6 +271,16 @@ class LogQueue:
 
 
 log_queue = LogQueue()
+
+
+def format_size(size_bytes: int) -> str:
+    """将字节转换为易读的单位（MB）"""
+    if size_bytes < 1024:
+        return f"{size_bytes} B"
+    elif size_bytes < 1024 * 1024:
+        return f"{size_bytes / 1024:.2f} KB"
+    else:
+        return f"{size_bytes / (1024 * 1024):.2f} MB"
 
 
 def log_event(level: str, category: str, message: str, transfer_id: str = ""):
@@ -901,7 +911,7 @@ async def send_image(
     filename = file.filename or "image.jpg"
     content_type = file.content_type or "image/jpeg"
 
-    log_event("INFO", "BINARY", f"收到图片: {filename}, 大小: {len(image_data)} bytes", "")
+    log_event("INFO", "BINARY", f"收到图片: {filename}, 大小: {format_size(len(image_data))}", "")
 
     # 生成传输 ID 用于追踪
     transfer_id = f"{datetime.now().strftime('%Y%m%d%H%M%S')}_{secrets.token_hex(8)}"
