@@ -7,7 +7,7 @@ import redis.asyncio as redis
 import base64
 import json
 import asyncio
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Dict, Set, Optional
 import logging
 import os
@@ -17,6 +17,14 @@ import hashlib
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import Response
 import httpx
+import pytz
+
+# 配置时区为中国时区
+CHINA_TZ = pytz.timezone('Asia/Shanghai')
+
+def now_china():
+    """获取中国时区的当前时间"""
+    return datetime.now(CHINA_TZ)
 
 # 配置日志
 logging.basicConfig(level=logging.INFO)
@@ -136,7 +144,7 @@ class ConnectionManager:
             filename = metadata.get("filename", "") if metadata else ""
             
             # 添加分割线
-            log_event("INFO", "BINARY", "=" * 50, transfer_id)
+            # log_event("INFO", "BINARY", "=" * 50, transfer_id)
             # 记录日志
             log_event("INFO", "BINARY", f"📤 开始发送图片: {filename}, 大小: {format_size(total_size)}, 分{total_chunks}块", transfer_id)
             
@@ -174,7 +182,7 @@ class ConnectionManager:
                     await connection.send_json(end_msg)
                     
                     log_event("INFO", "BINARY", f"✅ 图片发送完成: {filename}, 块数:{sent_chunks}, 大小:{format_size(sent_bytes)}", transfer_id)
-                    log_event("INFO", "BINARY", "=" * 50, transfer_id)
+                    # log_event("INFO", "BINARY", "=" * 50, transfer_id)
                 except Exception as e:
                     log_event("ERROR", "BINARY", f"❌ 发送失败到 {client_token[:20]}...: {str(e)}", transfer_id)
                     disconnected.add(connection)
@@ -195,7 +203,8 @@ class LogEntry:
     """日志条目"""
     def __init__(self, level: str, category: str, message: str, transfer_id: str = ""):
         self.id = secrets.token_hex(8)
-        self.timestamp = datetime.now().isoformat()
+        # 使用中国时区时间戳
+        self.timestamp = now_china().isoformat()
         self.level = level  # INFO, WARNING, ERROR, DEBUG
         self.category = category  # BINARY, WEBSOCKET, MESSAGE, AUTH, REDIS, SYSTEM
         self.message = message
@@ -322,7 +331,7 @@ def verify_session(session_token: Optional[str]) -> bool:
     """验证会话是否有效"""
     if not session_token or session_token not in active_sessions:
         return False
-    if datetime.now() > active_sessions[session_token]:
+    if now_china() > active_sessions[session_token]:
         del active_sessions[session_token]
         return False
     return True
@@ -556,8 +565,8 @@ async def websocket_endpoint(websocket: WebSocket, token: str = Query(...)):
             # 新设备，注册指纹
             fp_data_new = {
                 "fingerprint": fingerprint,
-                "created_at": datetime.now().isoformat(),
-                "last_seen": datetime.now().isoformat(),
+                "created_at": now_china().isoformat(),
+                "last_seen": now_china().isoformat(),
                 "ip": geo_info.get("ip", ""),
                 "location": f"{geo_info.get('country', '')} {geo_info.get('region', '')} {geo_info.get('city', '')}"
             }
@@ -570,7 +579,7 @@ async def websocket_endpoint(websocket: WebSocket, token: str = Query(...)):
         else:
             # 更新最后活跃时间
             data = json.loads(fp_data)
-            data["last_seen"] = datetime.now().isoformat()
+            data["last_seen"] = now_china().isoformat()
             data["ip"] = geo_info.get("ip", "")
             await redis_client.set(
                 f"fingerprint:{fingerprint}",
@@ -586,7 +595,7 @@ async def websocket_endpoint(websocket: WebSocket, token: str = Query(...)):
     if redis_client:
         token_data = {
             "app_token": app_token,
-            "created_at": datetime.now().isoformat(),
+            "created_at": now_china().isoformat(),
             "ip": geo_info.get("ip", ""),
             "location": {
                 "country": geo_info.get("country", ""),
@@ -856,7 +865,7 @@ async def send_message(message: Message, token: str = Query(...)):
         "title": message.title,
         "message": message.message,
         "priority": message.priority,
-        "timestamp": datetime.now().isoformat()
+        "timestamp": now_china().isoformat()
     }
 
     # 检查是否有活跃的连接
@@ -919,7 +928,7 @@ async def send_image(
     log_event("INFO", "BINARY", f"📥 收到图片: {filename}, 大小: {format_size(len(image_data))}", "")
 
     # 生成传输 ID 用于追踪
-    transfer_id = f"{datetime.now().strftime('%Y%m%d%H%M%S')}_{secrets.token_hex(8)}"
+    transfer_id = f"{now_china().strftime('%Y%m%d%H%M%S')}_{secrets.token_hex(8)}"
 
     # 检查是否有活跃的连接
     if client_token not in manager.active_connections or not manager.active_connections[client_token]:
@@ -1042,7 +1051,7 @@ async def api_login(login_request: LoginRequest):
     if login_request.password == ADMIN_PASSWORD:
         session_token = create_session_token()
         # 会话有效期24小时
-        active_sessions[session_token] = datetime.now() + timedelta(hours=24)
+        active_sessions[session_token] = now_china() + timedelta(hours=24)
         response = JSONResponse(content={"success": True, "message": "登录成功"})
         response.set_cookie(
             key="session_token",
