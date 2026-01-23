@@ -645,6 +645,11 @@
             return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
         }
 
+        // 性能日志（控制台输出）
+        function logPerf(msg) {
+            console.log(`[性能] ${new Date().toISOString()} - ${msg}`);
+        }
+
         clearMessageBtn.addEventListener('click', () => {
             messageContentInput.value = '';
             messageContentInput.focus();
@@ -863,11 +868,18 @@
                 formData.append('priority', '2');
                 formData.append('message', messageContent);
 
+                const requestStart = Date.now();
+                addLog(`🚀 开始HTTP请求: ${window.location.origin}/message/image?token=${token.substring(0, 10)}...`, 'info');
+
                 const response = await fetch(`${window.location.origin}/message/image?token=${token}`, {
                     method: 'POST',
                     body: formData,
                     signal: controller.signal
                 });
+
+                const requestElapsed = Date.now() - requestStart;
+                addLog(`✅ HTTP响应完成, 总耗时: ${(requestElapsed / 1000).toFixed(3)}秒`, 'success');
+                logPerf(`HTTP请求总耗时: ${requestElapsed}ms`);
 
                 clearTimeout(timeoutId);
 
