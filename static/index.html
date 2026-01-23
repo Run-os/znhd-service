@@ -638,6 +638,13 @@
         const compressImageBtn = document.getElementById('compressImageBtn');
         const imageInfo = document.getElementById('imageInfo');
 
+        // 格式化字节大小为易读单位
+        function formatSize(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(2) + ' KB';
+            return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+        }
+
         clearMessageBtn.addEventListener('click', () => {
             messageContentInput.value = '';
             messageContentInput.focus();
@@ -736,25 +743,25 @@
                     addLog('HEIC/HEIF图片解码完成', 'success');
                 }
 
-                const compressionSize = 3 * 1024 * 1024;
+                const compressionSize = 3 * 1024 * 1024; // 3MB
                 let wasAutoCompressed = false;
                 if (processedFile.size > compressionSize) {
-                    addLog(`图片大小为${(processedFile.size / 1024).toFixed(2)}KB，大于${(compressionSize / 1024).toFixed(2)}MB，正在自动压缩...`, 'info');
+                    addLog(`图片大小为${formatSize(processedFile.size)}，大于3MB，正在自动压缩...`, 'info');
                     processedFile = await compressImage(processedFile);
                     wasAutoCompressed = true;
-                    addLog(`图片压缩完成，原始大小: ${(imageFile.size / 1024).toFixed(2)}KB，压缩后: ${(processedFile.size / 1024).toFixed(2)}KB`, 'success');
+                    addLog(`图片压缩完成，原始大小: ${formatSize(imageFile.size)}，压缩后: ${formatSize(processedFile.size)}`, 'success');
                 }
 
                 // 保存压缩后的文件用于发送（如果已压缩）
                 if (wasAutoCompressed) {
                     compressedImageFile = processedFile;
-                    addLog(`已保存压缩后的图片用于发送: ${(processedFile.size / 1024).toFixed(2)}KB`, 'info');
+                    addLog(`已保存压缩后的图片用于发送: ${formatSize(processedFile.size)}`, 'info');
                 }
 
                 selectedImageBase64 = await fileToBase64(processedFile);
                 previewImg.src = selectedImageBase64;
                 imagePreview.style.display = 'block';
-                imageInfo.textContent = `大小: ${(processedFile.size / 1024).toFixed(2)}KB`;
+                imageInfo.textContent = `大小: ${formatSize(processedFile.size)}`;
                 addLog(`成功处理图片: ${imageFile.name}`, 'success');
             } catch (error) {
                 addLog(`图片处理失败: ${error.message}`, 'error');
@@ -782,8 +789,8 @@
                 const compressedFile = await compressImage(fileToCompress, { quality: 0.5 });
                 selectedImageBase64 = await fileToBase64(compressedFile);
                 previewImg.src = selectedImageBase64;
-                imageInfo.textContent = `大小: ${(compressedFile.size / 1024).toFixed(2)}KB`;
-                addLog(`手动压缩完成，原始大小: ${(originalImageFile.size / 1024).toFixed(2)}KB，压缩后: ${(compressedFile.size / 1024).toFixed(2)}KB`, 'success');
+                imageInfo.textContent = `大小: ${formatSize(compressedFile.size)}`;
+                addLog(`手动压缩完成，原始大小: ${formatSize(originalImageFile.size)}，压缩后: ${formatSize(compressedFile.size)}`, 'success');
             } catch (error) {
                 addLog(`压缩失败: ${error.message}`, 'error');
             }
@@ -850,7 +857,7 @@
                 const formData = new FormData();
                 // 使用压缩后的图片文件（如果有），否则使用原始文件
                 const fileToSend = compressedImageFile || originalImageFile;
-                addLog(`准备发送图片文件: ${fileToSend.name || 'image'}, 大小: ${(fileToSend.size / 1024).toFixed(2)}KB`, 'info');
+                addLog(`准备发送图片文件: ${fileToSend.name || 'image'}, 大小: ${formatSize(fileToSend.size)}`, 'info');
                 formData.append('file', fileToSend);
                 formData.append('title', 'znhd-同步');
                 formData.append('priority', '2');
@@ -880,7 +887,7 @@
                 const result = await response.json();
 
                 if (result.status === 'success') {
-                    addLog(`成功: 二进制图片传输完成 - ${result.filename} (${(result.size / 1024).toFixed(2)}KB)`, 'success');
+                    addLog(`成功: 二进制图片传输完成 - ${result.filename} (${formatSize(result.size)})`, 'success');
                 } else {
                     addLog(`警告: 图片已接收但客户端未连接 - ${result.message}`, 'info');
                 }
