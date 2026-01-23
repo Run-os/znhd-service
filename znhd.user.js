@@ -1164,9 +1164,9 @@ function connectwebhookWebSocket(webhookUrl, webhookToken) {
                     // 收集二进制数据块
                     binaryTransfer.dataChunks.push(event.data);
                     binaryTransfer.receivedSize += event.data.size;
-                    console.log(`[webhook] 收到二进制数据块 ${binaryTransfer.dataChunks.length}, 已接收 ${binaryTransfer.receivedSize}/${binaryTransfer.totalSize} bytes`);
+                    console.log(`[webhook] 收到二进制数据块 ${binaryTransfer.dataChunks.length}, 已接收 ${binaryTransfer.receivedSize}/${binaryTransfer.totalSize} bytes, 进度: ${((binaryTransfer.receivedSize / binaryTransfer.totalSize) * 100).toFixed(1)}%`);
                 } else {
-                    console.log('[webhook] 收到意外的二进制数据，没有活跃的传输任务');
+                    console.log('[webhook] ⚠️ 收到意外的二进制数据，没有活跃的传输任务，Blob大小:', event.data.size);
                 }
                 return;
             }
@@ -1178,7 +1178,11 @@ function connectwebhookWebSocket(webhookUrl, webhookToken) {
 
             // 处理二进制传输开始
             if (type === 'binary_start' && data_type === 'image') {
-                console.log(`[webhook] 开始接收二进制图片: ${filename}, 大小: ${size} bytes`);
+                // 检查是否有未完成的传输
+                if (binaryTransfer && binaryTransfer.dataChunks.length > 0) {
+                    console.log(`[webhook] ⚠️ 检测到未完成的传输 ${binaryTransfer.transfer_id}，被新传输 ${transfer_id} 覆盖`);
+                }
+                console.log(`[webhook] 开始接收二进制图片: ${filename}, 大小: ${size} bytes, content_type: ${content_type}`);
                 binaryTransfer = {
                     transfer_id: transfer_id,
                     filename: filename,
@@ -1192,17 +1196,32 @@ function connectwebhookWebSocket(webhookUrl, webhookToken) {
             }
 
             // 处理二进制传输结束
-            if (type === 'binary_end' && binaryTransfer && binaryTransfer.transfer_id === transfer_id) {
+            if (type === 'binary_end') {
+                if (!binaryTransfer) {
+                    console.log(`[webhook] ⚠️ 收到 binary_end 但没有活跃的传输任务，transfer_id: ${transfer_id}`);
+                    return;
+                }
+                if (binaryTransfer.transfer_id !== transfer_id) {
+                    console.log(`[webhook] ⚠️ transfer_id 不匹配: 期望 ${binaryTransfer.transfer_id}, 收到 ${transfer_id}`);
+                    return;
+                }
+
                 const elapsed = Date.now() - binaryTransfer.startTime;
                 console.log(`[webhook] 二进制图片接收完成, 耗时: ${elapsed}ms, 共 ${binaryTransfer.dataChunks.length} 个数据块, 实际接收 ${binaryTransfer.receivedSize}/${binaryTransfer.totalSize} bytes`);
+
+                // 检查数据完整性
+                if (binaryTransfer.receivedSize !== binaryTransfer.totalSize) {
+                    console.log(`[webhook] ⚠️ 数据不完整: 期望 ${binaryTransfer.totalSize} bytes, 实际收到 ${binaryTransfer.receivedSize} bytes, 丢失 ${binaryTransfer.totalSize - binaryTransfer.receivedSize} bytes`);
+                }
 
                 // 合并所有数据块
                 if (binaryTransfer.dataChunks.length > 0) {
                     const blob = new Blob(binaryTransfer.dataChunks, { type: binaryTransfer.content_type });
-                    console.log(`[webhook] 合并后的Blob大小: ${blob.size} bytes`);
+                    console.log(`[webhook] 合并后的Blob大小: ${blob.size} bytes, 类型: ${blob.type}`);
 
                     // 转换为 Base64 并复制到剪贴板
                     const base64 = await blobToBase64(blob);
+                    console.log(`[webhook] Base64长度: ${base64.length}, 前缀: ${base64.substring(0, 50)}...`);
                     const copied = await copyBase64ImageToClipboard(base64);
 
                     if (copied) {

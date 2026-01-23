@@ -133,38 +133,47 @@ class ConnectionManager:
             total_size = len(data)
             chunk_size = 64 * 1024  # 64KB 每块
             total_chunks = (total_size + chunk_size - 1) // chunk_size
+            transfer_id = metadata.get("transfer_id", "") if metadata else ""
             
-            logger.info(f"开始发送二进制数据到 {client_token}: {total_size} bytes, 分 {total_chunks} 块")
+            logger.info(f"[BINARY] 开始发送二进制数据: transfer_id={transfer_id}, size={total_size} bytes, chunks={total_chunks}")
             
             for connection in self.active_connections[client_token]:
                 try:
                     # 先发送元数据
-                    await connection.send_json({
+                    metadata_msg = {
                         "type": "binary_start",
                         "data_type": metadata.get("data_type", "image"),
                         "filename": metadata.get("filename", ""),
                         "size": total_size,
                         "content_type": metadata.get("content_type", "image/jpeg"),
-                        "transfer_id": metadata.get("transfer_id", "")
-                    })
+                        "transfer_id": transfer_id
+                    }
+                    logger.info(f"[BINARY] 发送 binary_start: {metadata_msg}")
+                    await connection.send_json(metadata_msg)
                     
                     # 分块发送二进制数据
                     sent_chunks = 0
+                    sent_bytes = 0
                     for i in range(0, total_size, chunk_size):
                         chunk = data[i:i + chunk_size]
                         await connection.send_bytes(chunk)
                         sent_chunks += 1
+                        sent_bytes += len(chunk)
+                        logger.debug(f"[BINARY] 发送块 {sent_chunks}/{total_chunks}, 大小 {len(chunk)} bytes, 累计 {sent_bytes}/{total_size}")
                         
                     # 发送完成标记
-                    await connection.send_json({
+                    end_msg = {
                         "type": "binary_end",
-                        "transfer_id": metadata.get("transfer_id", ""),
-                        "size": total_size
-                    })
+                        "transfer_id": transfer_id,
+                        "size": total_size,
+                        "chunks": sent_chunks
+                    }
+                    logger.info(f"[BINARY] 发送 binary_end: {end_msg}")
+                    await connection.send_json(end_msg)
                     
-                    logger.info(f"二进制数据发送完成到 {client_token}: {sent_chunks} 块")
+                    logger.info(f"[BINARY] 二进制数据发送完成: transfer_id={transfer_id}, chunks={sent_chunks}, size={sent_bytes}")
                 except Exception as e:
-                    logger.error(f"客户端 {client_token} 发送二进制数据时出错: {e}")
+                    logger.error(f"[BINARY] 客户端 {client_token} 发送二进制数据时出错: {e}")
                     disconnected.add(connection)
 
             # 清理断开的连接
