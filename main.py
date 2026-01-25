@@ -923,6 +923,8 @@ async def send_image(
     使用 multipart/form-data 上传图片，性能更好
     """
     request_start = now_china()
+    # 添加分割线
+    log_event("INFO", "BINARY", "=" * 50, "")
     log_event("INFO", "BINARY", f"📨 HTTP请求开始: {file.filename if file else 'unknown'}", "")
     
     app_token = token
@@ -941,8 +943,7 @@ async def send_image(
     filename = file.filename or "image.jpg"
     content_type = file.content_type or "image/jpeg"
 
-    # 添加分割线
-    log_event("INFO", "BINARY", "=" * 50, "")
+    
     log_event("INFO", "BINARY", f"📥 收到图片: {filename}, 大小: {format_size(len(image_data))}", "")
     log_event("DEBUG", "BINARY", f"   图片读取耗时: {read_elapsed:.3f}秒, HTTP请求总耗时: {(now_china() - request_start).total_seconds():.3f}秒", "")
 

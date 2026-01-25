@@ -30,7 +30,8 @@ const CONFIG = {
         AFTERNOON: { START: 13.5, END: 18 }
     },
     didaUrl: 'https://cdn.jsdelivr.net/gh/Run-os/UserScript/znhd/dida.mp3',
-    cyyUrl: 'https://cdn.jsdelivr.net/gh/Run-os/Runos-Box@refs/heads/main/znhd/%E5%B8%B8%E7%94%A8%E8%AF%AD.json'
+    cyyUrl: 'https://cdn.jsdelivr.net/gh/Run-os/Runos-Box@refs/heads/main/znhd/%E5%B8%B8%E7%94%A8%E8%AF%AD.json',
+    zskUrl: ''
 };
 
 // ==========日志管理==========
@@ -427,13 +428,24 @@ function DM() {
                                 }
                             }, 5000);
                         }
-                    }
-                    ),
+                    }),
                 ],
+
                 {
                     direction: "horizontal", // 横向排列（默认值，可省略）
                     size: "middle", // 元素间间距（可选：small/middle/large，默认middle）
                 }
+            ),
+
+            CAT_UI.Space(
+                [
+                    CAT_UI.Button("问AI", {
+                        type: "primary",
+                        onClick() {
+                            askAI();
+                        },
+                    })
+                ]
             ),
             //抽屉
             CAT_UI.Space(
@@ -710,6 +722,14 @@ CAT_UI.createPanel({
                 CAT_UI.Text("征纳互动监控", {
                     style: { fontSize: "16px" },
                 }),
+                // 获取并显示版本号
+                CAT_UI.Text(`v${GM_info.script.version}`, {
+                    style: {
+                        fontSize: "12px",
+                        color: "#999",
+                        marginLeft: "8px"
+                    },
+                }),
             ],
             { style: { marginLeft: "5px" } }
         ),
@@ -962,6 +982,128 @@ function processSpeechQueue() {
     window.speechSynthesis.speak(utterance);
 }
 
+
+
+// ========== AI 问答功能 ==========
+
+/**
+ * 从页面获取对话消息
+ */
+function getConversationMessages() {
+    const messages = [];
+    let i = 1;
+
+    while (true) {
+        const rowId = `#row_${i}`;
+        const rowElement = document.querySelector(rowId);
+
+        if (!rowElement) break;
+
+        // 获取我方回答 (#row_X p)
+        const answerElement = rowElement.querySelector('p');
+        if (answerElement && answerElement.textContent.trim()) {
+            messages.push({
+                role: "assistant",
+                content: answerElement.textContent.trim()
+            });
+        }
+
+        // 获取对方提问 (#row_X .text)
+        const questionElement = rowElement.querySelector('.text');
+        if (questionElement && questionElement.textContent.trim()) {
+            messages.push({
+                role: "user",
+                content: questionElement.textContent.trim()
+            });
+        }
+
+        // 获取图片 (#row_X .show-img)
+        const imgElement = rowElement.querySelector('.show-img');
+        if (imgElement && imgElement.src) {
+            messages.push({
+                role: "user",
+                content: imgElement.src
+            });
+        }
+
+        i++;
+    }
+
+    return messages;
+}
+
+/**
+ * 问AI主函数
+ */
+async function askAI() {
+    try {
+        CAT_UI.Message.info('正在获取对话并请求AI...');
+
+        // 1. 获取对话消息
+        const messages = getConversationMessages();
+
+        if (messages.length === 0) {
+            CAT_UI.Message.warning('未找到对话消息');
+            return;
+        }
+
+        console.log('获取到对话消息:', messages.length, '条');
+
+        // 2. 构建请求体
+        const openAIRequest = {
+            model: "MiniMax-M2.1",
+            messages: messages,
+            temperature: 0.7
+        };
+
+        // 3. 获取AI服务URL
+        const url = CONFIG.zskUrl;
+
+        console.log('正在请求AI:', url);
+
+        // 4. 发送POST请求
+        const response = await GM_xmlhttpRequest({
+            method: 'POST',
+            url: url,
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            data: JSON.stringify(openAIRequest),
+            timeout: 60000  // 60秒超时
+        });
+
+        // 5. 解析响应
+        if (response.status !== 200) {
+            throw new Error(`请求失败，状态码: ${response.status}`);
+        }
+
+        const responseData = JSON.parse(response.responseText);
+        console.log('AI响应:', responseData);
+
+        // 提取AI回复内容
+        let aiContent = '';
+        if (responseData.choices && responseData.choices.length > 0) {
+            aiContent = responseData.choices[0].message.content;
+        } else if (responseData.content) {
+            aiContent = responseData.content;
+        } else if (responseData.result) {
+            aiContent = responseData.result;
+        } else {
+            aiContent = JSON.stringify(responseData);
+        }
+
+        // 6. 使用appendToTinyMCE填入结果
+        appendToTinyMCE(aiContent);
+
+        CAT_UI.Message.success('AI回答已填入输入框');
+        addLog(`AI问答成功，回复内容长度: ${aiContent.length}`, 'success');
+
+    } catch (error) {
+        console.error('AI问答失败:', error);
+        CAT_UI.Message.error('AI问答失败: ' + error.message);
+        addLog(`AI问答失败: ${error.message}`, 'error');
+    }
+}
 
 
 // 全局定时器引用，用于清理
