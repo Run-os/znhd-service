@@ -2,7 +2,7 @@
 // @name        征纳互动人数和在线监控
 // @namespace   https://scriptcat.org/
 // @description 实施监控征纳互动等待人数和在线状态，支持语音播报、webhook推送文本和图片、自定义常用语
-// @version     26.1.22
+// @version     26.1.25
 // @author      runos
 // @match       https://znhd.hunan.chinatax.gov.cn:8443/*
 // @match       https://example.com/*
@@ -31,7 +31,10 @@ const CONFIG = {
     },
     didaUrl: 'https://cdn.jsdelivr.net/gh/Run-os/UserScript/znhd/dida.mp3',
     cyyUrl: 'https://cdn.jsdelivr.net/gh/Run-os/Runos-Box@refs/heads/main/znhd/%E5%B8%B8%E7%94%A8%E8%AF%AD.json',
-    zskUrl: ''
+    // AI服务默认URL，允许通过设置面板修改
+    defaultZskUrl: 'https://maxkb.122050.xyz/chat/api/019bd40c-cd3b-7150-b3c0-a913c0e24287',
+    // 代理服务器地址（用于绕过CORS限制）
+    proxyUrl: 'https://znhd-service.zeabur.app/api/proxy/ai'
 };
 
 // ==========日志管理==========
@@ -82,6 +85,8 @@ const DEFAULTS = {
     webhookToken: "",
     postToken: "",
     isChecked: false,
+    zskUrl: "",
+    zskToken: "",
 };
 
 // 从localStorage加载Allvalue数据
@@ -126,7 +131,7 @@ function DM() {
     const patchAllvalue = (kv) => updateAllvalue({ ...Allvalue, ...kv });
 
     // 解构状态变量，方便后续使用
-    const { voiceEnabled, getwebhookStatus, webhookUrl, webhookToken, postToken, isChecked } = Allvalue;
+    const { voiceEnabled, getwebhookStatus, webhookUrl, webhookToken, postToken, isChecked, zskUrl, zskToken } = Allvalue;
 
     const voiceEnabledText = voiceEnabled ? "🔊 语音" : "🔇 静音";
     const getwebhookStatusText = getwebhookStatus ? "▶️ 运行中" : "⏸️ 已停止";
@@ -573,6 +578,48 @@ function DM() {
                                         value: postToken,
                                         onChange(val) {
                                             patchAllvalue({ postToken: val });
+                                        },
+                                        style: { flex: 1, marginBottom: "8px" }   // 占满剩余空间并加底部间距
+                                    }),
+                                ]
+                            ),
+
+                            CAT_UI.Divider("AI问答设置"),  // 带文本的分隔线
+                            CAT_UI.createElement(
+                                "div",
+                                {
+                                    style: {
+                                        display: "flex",          // 弹性布局
+                                        justifyContent: "space-between",  // 水平方向两端对齐
+                                        alignItems: "center",     // 垂直方向居中对齐
+                                    },
+                                },
+                                [   // 子元素数组
+                                    CAT_UI.Text("AI服务URL："),  // 文本提示
+                                    CAT_UI.Input({          // 输入框
+                                        value: zskUrl || CONFIG.defaultZskUrl,
+                                        onChange(val) {
+                                            patchAllvalue({ zskUrl: val });
+                                        },
+                                        style: { flex: 1, marginBottom: "8px" }   // 占满剩余空间并加底部间距
+                                    }),
+                                ]
+                            ),
+                            CAT_UI.createElement(
+                                "div",
+                                {
+                                    style: {
+                                        display: "flex",          // 弹性布局
+                                        justifyContent: "space-between",  // 水平方向两端对齐
+                                        alignItems: "center",     // 垂直方向居中对齐
+                                    },
+                                },
+                                [   // 子元素数组
+                                    CAT_UI.Text("AI服务Token："),  // 文本提示
+                                    CAT_UI.Input({          // 输入框
+                                        value: zskToken,
+                                        onChange(val) {
+                                            patchAllvalue({ zskToken: val });
                                         },
                                         style: { flex: 1, marginBottom: "8px" }   // 占满剩余空间并加底部间距
                                     }),
@@ -1056,28 +1103,72 @@ async function askAI() {
             temperature: 0.7
         };
 
-        // 3. 获取AI服务URL
-        const url = CONFIG.zskUrl;
+        // 3. 获取AI服务URL和Token
+        // 从localStorage加载最新配置
+        const savedData = loadAllvalue();
+        // 优先使用用户配置的URL，如果没有配置则使用默认URL
+        const zskUrl = savedData.zskUrl || CONFIG.defaultZskUrl;
+        const zskToken = savedData.zskToken || '';
 
-        console.log('正在请求AI:', url);
+        console.log('正在请求AI（通过代理）:', zskUrl);
+        console.log('用户配置的zskUrl:', savedData.zskUrl);
+        console.log('默认zskUrl:', CONFIG.defaultZskUrl);
 
-        // 4. 发送POST请求
+        // 4. 构建代理请求
+        const requestHeaders = {
+            'Content-Type': 'application/json'
+        };
+        if (zskToken) {
+            requestHeaders['Authorization'] = `Bearer ${zskToken}`;
+        }
+
+        const proxyRequest = {
+            url: zskUrl,
+            method: 'POST',
+            headers: requestHeaders,
+            body: openAIRequest
+        };
+
+        // 5. 通过代理发送请求（绕过CORS限制）
         const response = await GM_xmlhttpRequest({
             method: 'POST',
-            url: url,
+            url: CONFIG.proxyUrl,
             headers: {
                 'Content-Type': 'application/json'
             },
-            data: JSON.stringify(openAIRequest),
+            data: JSON.stringify(proxyRequest),
             timeout: 60000  // 60秒超时
         });
 
-        // 5. 解析响应
+        // 6. 解析代理响应
+        if (!response) {
+            throw new Error('代理请求无响应');
+        }
         if (response.status !== 200) {
-            throw new Error(`请求失败，状态码: ${response.status}`);
+            throw new Error(`代理请求失败，状态码: ${response.status}`);
         }
 
-        const responseData = JSON.parse(response.responseText);
+        const proxyResponseData = JSON.parse(response.responseText);
+        console.log('代理响应:', proxyResponseData);
+
+        // 检查代理层返回的错误
+        if (proxyResponseData.status_code && proxyResponseData.status_code >= 400) {
+            throw new Error(`AI服务返回错误，状态码: ${proxyResponseData.status_code}`);
+        }
+
+        // 从代理响应中提取实际AI服务返回的内容
+        let responseText = proxyResponseData.content;
+        if (typeof responseText === 'string') {
+            // content 可能是字符串形式的JSON
+            try {
+                responseText = JSON.parse(responseText);
+            } catch (e) {
+                // 如果解析失败，保持字符串
+            }
+        }
+
+        // 如果 content 已经是解析后的对象，直接使用
+        const responseData = typeof responseText === 'object' ? responseText : JSON.parse(responseText || '{}');
         console.log('AI响应:', responseData);
 
         // 提取AI回复内容
