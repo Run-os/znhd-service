@@ -13,6 +13,8 @@
 // @grant       GM_setClipboard
 // @grant       GM_notification
 // @connect     *
+// @connect     znhd-service.zeabur.app
+// @connect     maxkb.122050.xyz
 // @homepage    https://scriptcat.org/zh-CN/script-show-page/3650
 // @require     https://scriptcat.org/lib/1167/1.0.0/%E8%84%9A%E6%9C%AC%E7%8C%ABUI%E5%BA%93.js?sha384-jXdR3hCwnDJf53Ue6XHAi6tApeudgS/wXnMYBD/ZJcgge8Xnzu/s7bkEf2tPi2KS
 // @require     https://cdn.jsdelivr.net/npm/@fingerprintjs/fingerprintjs@5/dist/fp.min.js
@@ -30,11 +32,7 @@ const CONFIG = {
         AFTERNOON: { START: 13.5, END: 18 }
     },
     didaUrl: 'https://cdn.jsdelivr.net/gh/Run-os/UserScript/znhd/dida.mp3',
-    cyyUrl: 'https://cdn.jsdelivr.net/gh/Run-os/Runos-Box@refs/heads/main/znhd/%E5%B8%B8%E7%94%A8%E8%AF%AD.json',
-    // AI服务默认URL，允许通过设置面板修改
-    defaultZskUrl: 'https://maxkb.122050.xyz/chat/api/019bd40c-cd3b-7150-b3c0-a913c0e24287',
-    // 代理服务器地址（用于绕过CORS限制）
-    proxyUrl: 'https://znhd-service.zeabur.app/api/proxy/ai'
+    cyyUrl: 'https://cdn.jsdelivr.net/gh/Run-os/Runos-Box@refs/heads/main/znhd/%E5%B8%B8%E7%94%A8%E8%AF%AD.json'
 };
 
 // ==========日志管理==========
@@ -597,7 +595,7 @@ function DM() {
                                 [   // 子元素数组
                                     CAT_UI.Text("AI服务URL："),  // 文本提示
                                     CAT_UI.Input({          // 输入框
-                                        value: zskUrl || CONFIG.defaultZskUrl,
+                                        value: zskUrl,
                                         onChange(val) {
                                             patchAllvalue({ zskUrl: val });
                                         },
@@ -1106,15 +1104,21 @@ async function askAI() {
         // 3. 获取AI服务URL和Token
         // 从localStorage加载最新配置
         const savedData = loadAllvalue();
-        // 优先使用用户配置的URL，如果没有配置则使用默认URL
-        const zskUrl = savedData.zskUrl || CONFIG.defaultZskUrl;
+        const zskUrl = savedData.zskUrl || '';
         const zskToken = savedData.zskToken || '';
 
-        console.log('正在请求AI（通过代理）:', zskUrl);
-        console.log('用户配置的zskUrl:', savedData.zskUrl);
-        console.log('默认zskUrl:', CONFIG.defaultZskUrl);
+        if (!zskUrl) {
+            CAT_UI.Message.error('请先在设置中配置AI服务URL');
+            return;
+        }
 
-        // 4. 构建代理请求
+        const url = zskUrl;
+
+        console.log('正在请求AI:', url);
+        console.log('用户配置的zskUrl:', savedData.zskUrl);
+        console.log('最终使用的URL:', url);
+
+        // 4. 发送POST请求（如果有Token则添加到请求头）
         const requestHeaders = {
             'Content-Type': 'application/json'
         };
@@ -1122,53 +1126,30 @@ async function askAI() {
             requestHeaders['Authorization'] = `Bearer ${zskToken}`;
         }
 
-        const proxyRequest = {
-            url: zskUrl,
-            method: 'POST',
-            headers: requestHeaders,
-            body: openAIRequest
-        };
-
-        // 5. 通过代理发送请求（绕过CORS限制）
         const response = await GM_xmlhttpRequest({
             method: 'POST',
-            url: CONFIG.proxyUrl,
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            data: JSON.stringify(proxyRequest),
+            url: url,
+            headers: requestHeaders,
+            data: JSON.stringify(openAIRequest),
             timeout: 60000  // 60秒超时
         });
 
-        // 6. 解析代理响应
+        // 5. 解析响应
+        // 检查响应状态
         if (!response) {
-            throw new Error('代理请求无响应');
+            throw new Error('请求无响应');
+        }
+        if (response.status === undefined || response.status === 0) {
+            // 可能是跨域问题、网络失败或CORS阻止
+            const errorDetail = response.error ? `错误详情: ${response.error}` : '';
+            const statusText = response.statusText ? `状态文本: ${response.statusText}` : '';
+            throw new Error(`请求失败${errorDetail ? '，' + errorDetail : ''}${statusText ? '，' + statusText : ''}。请检查：1) 网络连接；2) 服务URL是否正确；3) 是否存在跨域限制`);
         }
         if (response.status !== 200) {
-            throw new Error(`代理请求失败，状态码: ${response.status}`);
+            throw new Error(`请求失败，状态码: ${response.status}`);
         }
 
-        const proxyResponseData = JSON.parse(response.responseText);
-        console.log('代理响应:', proxyResponseData);
-
-        // 检查代理层返回的错误
-        if (proxyResponseData.status_code && proxyResponseData.status_code >= 400) {
-            throw new Error(`AI服务返回错误，状态码: ${proxyResponseData.status_code}`);
-        }
-
-        // 从代理响应中提取实际AI服务返回的内容
-        let responseText = proxyResponseData.content;
-        if (typeof responseText === 'string') {
-            // content 可能是字符串形式的JSON
-            try {
-                responseText = JSON.parse(responseText);
-            } catch (e) {
-                // 如果解析失败，保持字符串
-            }
-        }
-
-        // 如果 content 已经是解析后的对象，直接使用
-        const responseData = typeof responseText === 'object' ? responseText : JSON.parse(responseText || '{}');
+        const responseData = JSON.parse(response.responseText);
         console.log('AI响应:', responseData);
 
         // 提取AI回复内容
