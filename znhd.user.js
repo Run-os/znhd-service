@@ -14,7 +14,7 @@
 // @grant       GM_notification
 // @connect     *
 // @connect     znhd-service.zeabur.app
-// @connect     maxkb.122050.xyz
+// @connect     122050.xyz
 // @homepage    https://scriptcat.org/zh-CN/script-show-page/3650
 // @require     https://scriptcat.org/lib/1167/1.0.0/%E8%84%9A%E6%9C%AC%E7%8C%ABUI%E5%BA%93.js?sha384-jXdR3hCwnDJf53Ue6XHAi6tApeudgS/wXnMYBD/ZJcgge8Xnzu/s7bkEf2tPi2KS
 // @require     https://cdn.jsdelivr.net/npm/@fingerprintjs/fingerprintjs@5/dist/fp.min.js
@@ -32,7 +32,7 @@ const CONFIG = {
         AFTERNOON: { START: 13.5, END: 18 }
     },
     didaUrl: 'https://cdn.jsdelivr.net/gh/Run-os/UserScript/znhd/dida.mp3',
-    cyyUrl: 'https://cdn.jsdelivr.net/gh/Run-os/Runos-Box@refs/heads/main/znhd/%E5%B8%B8%E7%94%A8%E8%AF%AD.json'
+    commonPhrasesUrl: 'https://cdn.jsdelivr.net/gh/Run-os/Runos-Box@refs/heads/main/znhd/%E5%B8%B8%E7%94%A8%E8%AF%AD.json'
 };
 
 // ==========日志管理==========
@@ -241,7 +241,7 @@ function DM() {
         setPhrasesLoading(true);
         GM_xmlhttpRequest({
             method: 'GET',
-            url: CONFIG.cyyUrl,
+            url: CONFIG.commonPhrasesUrl,
             onload: function (response) {
                 try {
                     const data = JSON.parse(response.responseText);
@@ -494,6 +494,17 @@ function DM() {
                                             , color: "#1890ff", fontWeight: "bold"
                                         }
                                     }),
+                                    CAT_UI.Button("[AI测试]", {
+                                        type: "link",
+                                        onClick: () => {
+                                            testAI();
+                                        },
+                                        style: {
+                                            padding: "0 8px"
+                                            //蓝色字体
+                                            , color: "#1890ff", fontWeight: "bold"
+                                        }
+                                    }),
                                 ],
                                 { direction: "horizontal", size: "small" }
                             ),
@@ -695,7 +706,7 @@ function DM() {
                                         wordBreak: "break-all"
                                     }
                                 },
-                                `数据源: ${decodeURIComponent(CONFIG.cyyUrl)}`
+                                `数据源: ${decodeURIComponent(CONFIG.commonPhrasesUrl)}`
                             ),
                             // 重新加载按钮
                             CAT_UI.Button("重新加载常用语", {
@@ -1112,7 +1123,7 @@ async function askAI() {
             return;
         }
 
-        const url = zskUrl;
+        const url = zskUrl.replace(/\/$/, '') + '/chat/completions';
 
         console.log('正在请求AI:', url);
         console.log('用户配置的zskUrl:', savedData.zskUrl);
@@ -1174,6 +1185,117 @@ async function askAI() {
         console.error('AI问答失败:', error);
         CAT_UI.Message.error('AI问答失败: ' + error.message);
         addLog(`AI问答失败: ${error.message}`, 'error');
+    }
+}
+
+/**
+ * AI测试函数 - 使用固定问题测试AI服务
+ */
+async function testAI() {
+    try {
+        CAT_UI.Message.info('正在测试AI服务...');
+
+        // 获取AI服务配置
+        const savedData = loadAllvalue();
+        const zskUrl = savedData.zskUrl || '';
+        const zskToken = savedData.zskToken || '';
+
+        if (!zskUrl) {
+            CAT_UI.Message.error('请先在设置中配置AI服务URL');
+            return;
+        }
+
+        // 使用固定测试问题
+        const testQuestion = '小规模纳税人如何申报增值税';
+        console.log('========== AI测试开始 ==========');
+        console.log('测试问题:', testQuestion);
+        console.log('AI服务URL:', zskUrl);
+        console.log('Token配置:', zskToken ? '已配置' : '未配置');
+
+        // 构建请求体 - 使用单个用户消息
+        const openAIRequest = {
+            model: "MiniMax-M2.1",
+            messages: [
+                {
+                    role: "user",
+                    content: testQuestion
+                }
+            ],
+            temperature: 0.7
+        };
+
+        // 发送POST请求
+        const requestHeaders = {
+            'Content-Type': 'application/json'
+        };
+        if (zskToken) {
+            requestHeaders['Authorization'] = `Bearer ${zskToken}`;
+        }
+
+        const response = await new Promise((resolve, reject) => {
+            GM_xmlhttpRequest({
+                method: 'POST',
+                url: zskUrl.replace(/\/$/, '') + '/chat/completions',
+                headers: requestHeaders,
+                data: JSON.stringify(openAIRequest),
+                timeout: 60000,  // 60秒超时
+                onload: function (res) {
+                    console.log('GM_xmlhttpRequest onload:', res.status, res.responseText);
+                    resolve(res);
+                },
+                onerror: function (error) {
+                    console.error('GM_xmlhttpRequest onerror:', error);
+                    reject(new Error(`网络请求失败: ${error.error || '未知错误'}`));
+                },
+                ontimeout: function () {
+                    console.error('GM_xmlhttpRequest ontimeout');
+                    reject(new Error('请求超时'));
+                },
+                onabort: function () {
+                    console.error('GM_xmlhttpRequest onabort');
+                    reject(new Error('请求被中止'));
+                }
+            });
+        });
+
+        // 解析响应
+        console.log('响应状态码:', response.status);
+        console.log('响应内容:', response.responseText);
+
+        if (response.status === undefined || response.status === 0) {
+            throw new Error(`请求失败，状态码: ${response.status}`);
+        }
+        if (response.status !== 200) {
+            throw new Error(`请求失败，状态码: ${response.status}`);
+        }
+
+        const responseData = JSON.parse(response.responseText);
+        console.log('AI响应JSON:', responseData);
+
+        // 提取AI回复内容
+        let aiContent = '';
+        if (responseData.choices && responseData.choices.length > 0) {
+            aiContent = responseData.choices[0].message.content;
+        } else if (responseData.content) {
+            aiContent = responseData.content;
+        } else if (responseData.result) {
+            aiContent = responseData.result;
+        } else {
+            aiContent = JSON.stringify(responseData);
+        }
+
+        console.log('========== AI测试结果 ==========');
+        console.log('AI回复内容:', aiContent);
+        console.log('回复长度:', aiContent.length, '字符');
+        console.log('================================');
+
+        CAT_UI.Message.success('AI测试完成，请查看控制台输出结果');
+
+    } catch (error) {
+        console.error('========== AI测试失败 ==========');
+        console.error('错误信息:', error.message);
+        console.error('================================');
+        CAT_UI.Message.error('AI测试失败: ' + error.message);
     }
 }
 
