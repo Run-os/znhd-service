@@ -791,7 +791,7 @@
                     addLog('🔄 HEIC图片需要先解码再压缩...', 'info');
                     fileToCompress = await decodeHeicToBlob(originalImageFile);
                 }
-                const compressedFile = await compressImage(fileToCompress, { quality: 0.5 });
+                const compressedFile = await compressImage(fileToCompress, { quality: 0.8 });
                 selectedImageBase64 = await fileToBase64(compressedFile);
                 previewImg.src = selectedImageBase64;
                 imageInfo.textContent = `大小: ${formatSize(compressedFile.size)}`;
