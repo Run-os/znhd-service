@@ -791,6 +791,7 @@
                     addLog('🔄 HEIC图片需要先解码再压缩...', 'info');
                     fileToCompress = await decodeHeicToBlob(originalImageFile);
                 }
+                // 压缩图片效果，可选范围：0-1，1是最高质量
                 const compressedFile = await compressImage(fileToCompress, { quality: 0.8 });
                 selectedImageBase64 = await fileToBase64(compressedFile);
                 previewImg.src = selectedImageBase64;
