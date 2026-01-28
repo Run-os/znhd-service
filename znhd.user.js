@@ -1137,19 +1137,35 @@ async function askAI() {
             requestHeaders['Authorization'] = `Bearer ${zskToken}`;
         }
 
-        const response = await GM_xmlhttpRequest({
-            method: 'POST',
-            url: url,
-            headers: requestHeaders,
-            data: JSON.stringify(openAIRequest),
-            timeout: 60000  // 60秒超时
+        // 5. 发送请求（使用Promise包装GM_xmlhttpRequest）
+        const response = await new Promise((resolve, reject) => {
+            GM_xmlhttpRequest({
+                method: 'POST',
+                url: url,
+                headers: requestHeaders,
+                data: JSON.stringify(openAIRequest),
+                timeout: 60000,  // 60秒超时
+                onload: function (res) {
+                    console.log('GM_xmlhttpRequest onload:', res.status, res.responseText);
+                    resolve(res);
+                },
+                onerror: function (error) {
+                    console.error('GM_xmlhttpRequest onerror:', error);
+                    reject(new Error(`网络请求失败: ${error.error || '未知错误'}`));
+                },
+                ontimeout: function () {
+                    console.error('GM_xmlhttpRequest ontimeout');
+                    reject(new Error('请求超时'));
+                },
+                onabort: function () {
+                    console.error('GM_xmlhttpRequest onabort');
+                    reject(new Error('请求被中止'));
+                }
+            });
         });
 
-        // 5. 解析响应
+        // 6. 解析响应
         // 检查响应状态
-        if (!response) {
-            throw new Error('请求无响应');
-        }
         if (response.status === undefined || response.status === 0) {
             // 可能是跨域问题、网络失败或CORS阻止
             const errorDetail = response.error ? `错误详情: ${response.error}` : '';
@@ -1175,7 +1191,7 @@ async function askAI() {
             aiContent = JSON.stringify(responseData);
         }
 
-        // 6. 使用appendToTinyMCE填入结果
+        // 7. 使用appendToTinyMCE填入结果
         appendToTinyMCE(aiContent);
 
         CAT_UI.Message.success('AI回答已填入输入框');
