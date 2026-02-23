@@ -19,7 +19,6 @@
 // @connect     122050.xyz
 // @connect     drop.122050.xyz
 // @homepageURL    https://scriptcat.org/zh-CN/script-show-page/3650
-// @homepageURL    https://scriptcat.org/zh-CN/script-show-page/3650
 // @require     https://scriptcat.org/lib/1167/1.0.0/%E8%84%9A%E6%9C%AC%E7%8C%ABUI%E5%BA%93.js?sha384-jXdR3hCwnDJf53Ue6XHAi6tApeudgS/wXnMYBD/ZJcgge8Xnzu/s7bkEf2tPi2KS
 // @require     https://cdn.jsdelivr.net/npm/@fingerprintjs/fingerprintjs@5/dist/fp.min.js
 // @require     https://fastly.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js
@@ -37,7 +36,7 @@ const CONFIG = {
         MORNING: { START: 9, END: 12 },
         AFTERNOON: { START: 13.5, END: 18 }
     },
-    didaUrl: 'https://cdn.jsdelivr.net/gh/Run-os/UserScript/%E5%B7%A5%E4%BD%9C%E7%9B%B8%E5%85%B3/znhd/dida.mp3',
+    didaUrl: 'https://gitee.com/runos/znhd-service/raw/master/dida.mp3',
     commonPhrasesUrl: 'https://gitee.com/runos/znhd-service/raw/master/%E5%B8%B8%E7%94%A8%E8%AF%AD.json',
     // 麒麟传送相关配置（局域网P2P服务）
     qilinConfig: {
