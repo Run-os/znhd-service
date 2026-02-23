@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>局域网P2P传输 - 网页客户端</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <h1>📡 局域网P2P传输</h1>
+            <div class="connection-status">
+                <span class="status-indicator" id="statusIndicator"></span>
+                <span id="statusText">未连接</span>
+            </div>
+        </header>
+
+        <!-- 设备信息 -->
+        <section class="device-info">
+            <h2>设备信息</h2>
+            <div class="info-card">
+                <div class="info-row">
+                    <span class="label">设备ID：</span>
+                    <span class="value" id="deviceId">--</span>
+                    <button class="copy-btn" id="copyIdBtn" title="复制ID">📋</button>
+                </div>
+                <div class="info-row">
+                    <span class="label">IP地址：</span>
+                    <span class="value" id="deviceIp">--</span>
+                </div>
+                <div class="info-row">
+                    <span class="label">网络类型：</span>
+                    <span class="value" id="networkType">--</span>
+                </div>
+                <div class="info-row">
+                    <span class="label">配对状态：</span>
+                    <span class="value" id="pairStatus">未配对</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- 配对请求通知 -->
+        <section class="pair-request" id="pairRequestSection" style="display: none;">
+            <div class="notification">
+                <h3>📢 配对请求</h3>
+                <p id="pairRequestInfo">--</p>
+                <div class="button-group">
+                    <button class="btn btn-success" id="acceptPairBtn">接受</button>
+                    <button class="btn btn-danger" id="rejectPairBtn">拒绝</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- 可用设备列表 -->
+        <section class="available-devices" id="availableDevicesSection">
+            <h2>可用设备</h2>
+            <div id="devicesList" class="devices-list">
+                <p class="empty">暂无可用设备</p>
+            </div>
+        </section>
+
+        <!-- P2P传输区域 -->
+        <section class="transfer-area" id="transferArea" style="display: none;">
+            <h2>P2P 传输</h2>
+            <div class="partner-info">
+                <p>已配对设备：<strong id="partnerInfo">--</strong></p>
+                <button class="btn btn-danger" id="disconnectBtn">断开连接</button>
+            </div>
+
+            <!-- 连接状态 -->
+            <div class="p2p-status" id="p2pStatus">
+                <span class="status-indicator" id="p2pIndicator"></span>
+                <span id="p2pStatusText">正在建立连接...</span>
+            </div>
+
+            <!-- 发送区域 -->
+            <div class="send-section">
+                <h3>发送数据</h3>
+
+                <!-- 文本发送 -->
+                <div class="input-group">
+                    <label for="textInput">文本内容：</label>
+                    <textarea id="textInput" rows="4" placeholder="输入要发送的文本..."></textarea>
+                    <button class="btn btn-primary" id="sendTextBtn">发送文本</button>
+                </div>
+
+                <!-- 文件发送 -->
+                <div class="input-group">
+                    <label for="fileInput">选择文件：</label>
+                    <input type="file" id="fileInput">
+                    <button class="btn btn-primary" id="sendFileBtn">发送文件</button>
+                </div>
+            </div>
+
+            <!-- 接收区域 -->
+            <div class="receive-section">
+                <h3>接收数据</h3>
+                <div id="receivedData" class="received-data">
+                    <p class="empty">暂无接收数据</p>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+
+</html>
