@@ -724,7 +724,6 @@ function safeCopyText(text) {
     if (typeof GM_setClipboard === 'function') {
         try {
             GM_setClipboard(text);
-            CAT_UI.Message.info(text);
             addLog('[复制] 已复制到剪贴板 (GM_setClipboard)', 'success', true);
             playDidaSound();
             return;
@@ -736,7 +735,6 @@ function safeCopyText(text) {
     // 2) 浏览器异步 clipboard API
     if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
         navigator.clipboard.writeText(text).then(() => {
-            CAT_UI.Message.info(text);
             addLog('[复制] 已复制到剪贴板 (navigator.clipboard)', 'success', true);
             playDidaSound();
         }).catch(err => {
