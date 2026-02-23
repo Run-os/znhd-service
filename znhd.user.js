@@ -896,6 +896,17 @@ window.addEventListener('beforeunload', () => {
 });
 
 
+// 播放提示音函数
+function playDidaSound() {
+    if (!CONFIG.didaUrl) return;
+    try {
+        const player = new Audio();
+        player.src = CONFIG.didaUrl;
+        player.volume = 0.5;
+        player.play().catch(() => { });
+    } catch (e) { }
+}
+
 // 安全复制工具：仅在页面聚焦且支持 clipboard 时尝试复制
 function safeCopyText(text) {
     if (!text) return;
@@ -905,9 +916,7 @@ function safeCopyText(text) {
             GM_setClipboard(text);
             CAT_UI.Message.info(text);
             addLog('[复制] 已复制到剪贴板 (GM_setClipboard)', 'success', true);
-            const player = new Audio();
-            player.src = CONFIG.didaUrl;
-            player.play();
+            playDidaSound();
             return;
         } catch (e) {
             addLog('[复制] GM_setClipboard 失败: ' + e.message, 'error', true);
@@ -919,9 +928,7 @@ function safeCopyText(text) {
         navigator.clipboard.writeText(text).then(() => {
             CAT_UI.Message.info(text);
             addLog('[复制] 已复制到剪贴板 (navigator.clipboard)', 'success', true);
-            const player = new Audio();
-            player.src = CONFIG.didaUrl;
-            player.play();
+            playDidaSound();
         }).catch(err => {
             addLog('[复制] 复制到剪贴板失败: ' + err.message, 'error', true);
         });
@@ -987,9 +994,7 @@ async function copyBase64ImageToClipboard(text) {
         if (navigator.clipboard && typeof navigator.clipboard.write === 'function' && typeof window.ClipboardItem === 'function') {
             try {
                 await navigator.clipboard.write([new ClipboardItem({ [mime]: pngBlob })]);
-                const player = new Audio();
-                player.src = CONFIG.didaUrl;
-                player.play();
+                playDidaSound();
                 addLog('图片已复制到剪贴板', 'success');
                 return true;
             } catch (clipErr) {
@@ -1002,9 +1007,7 @@ async function copyBase64ImageToClipboard(text) {
             try {
                 const b64DataUrl = await blobToBase64(pngBlob);
                 GM_setClipboard(b64DataUrl, { type: 'image', mimetype: mime });
-                const player = new Audio();
-                player.src = CONFIG.didaUrl;
-                player.play();
+                playDidaSound();
                 addLog('图片已复制到剪贴板 (GM_setClipboard)', 'success');
                 return true;
             } catch (gmErr) {
@@ -1307,9 +1310,7 @@ class P2PTransferClient {
         const success = await safeCopyText(text);
         if (success) {
             CAT_UI.Message.success('收到文本，已复制到剪贴板');
-            const player = new Audio();
-            player.src = CONFIG.didaUrl;
-            player.play();
+            playDidaSound();
         }
     }
 
