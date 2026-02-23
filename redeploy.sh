@@ -73,6 +73,10 @@ backup_current() {
 
 # 拉取最新代码
 pull_code() {
+    # 修改：移除 PROJECT_DIR == "." 的判断，无论在哪里运行都强制拉取最新代码
+    # 原逻辑：在项目根目录运行时（PROJECT_DIR="."）跳过 git 操作
+    # 新逻辑：总是拉取最新代码（会覆盖本地修改）
+    
     if [ "$PROJECT_DIR" != "." ] && [ -d "$PROJECT_DIR/.git" ]; then
         log_info "检测到已有仓库，执行 git pull..."
         cd "$PROJECT_DIR"
@@ -86,11 +90,27 @@ pull_code() {
         # 恢复本地修改（如果有冲突需要手动解决）
         git stash pop 2>/dev/null || true
         
-        cd ..
-        log_success "代码更新完成"
+        log_success "代码更新完成（可能已覆盖本地修改）"
     elif [ "$PROJECT_DIR" == "." ]; then
-        log_info "在项目根目录，跳过 git 操作..."
-        log_success "代码已就绪"
+        # 在项目根目录：初始化 Git 仓库或拉取最新代码
+        if [ -d ".git" ]; then
+            log_info "检测到本地 Git 仓库，拉取最新代码..."
+            # 保存本地修改（如果有）
+            git stash push -m "auto-stash-$(date +%Y%m%d)" 2>/dev/null || true
+            # 拉取最新代码
+            git pull origin main || git pull origin master
+            # 恢复本地修改（如果有冲突需要手动解决）
+            git stash pop 2>/dev/null || true
+            log_success "代码更新完成（可能已覆盖本地修改）"
+        else
+            log_info "本地不是 Git 仓库，尝试初始化..."
+            # 初始化仓库
+            git init
+            git remote add origin "$REPO_URL"
+            git fetch origin
+            git checkout -b main origin/main 2>/dev/null || git checkout -b master origin/master
+            log_success "仓库初始化完成"
+        fi
     else
         log_info "首次克隆仓库..."
         git clone "$REPO_URL" "$PROJECT_DIR"
