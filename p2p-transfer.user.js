@@ -51,6 +51,8 @@
     let fileChunkSize = 16384;  // 文件分块大小（16KB）
     let currentFileTransfer = null;  // 当前文件传输状态
     let uiVisible = false;  // UI是否可见
+    let heartbeatTimer = null;  // 心跳定时器
+    const HEARTBEAT_INTERVAL = 25000; // 心跳间隔（毫秒），小于服务器超时时间
 
     // ========================================
     // UI 元素引用
@@ -83,6 +85,28 @@
     }
 
     // ========================================
+    // 心跳机制
+    // ========================================
+    function startHeartbeat() {
+        // 清除已有的心跳定时器
+        stopHeartbeat();
+
+        // 定时发送心跳
+        heartbeatTimer = setInterval(() => {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                sendToServer({ type: 'ping' });
+            }
+        }, HEARTBEAT_INTERVAL);
+    }
+
+    function stopHeartbeat() {
+        if (heartbeatTimer) {
+            clearInterval(heartbeatTimer);
+            heartbeatTimer = null;
+        }
+    }
+
+    // ========================================
     // WebSocket 连接管理
     // ========================================
     function initWebSocket() {
@@ -95,6 +119,8 @@
             ws.onopen = () => {
                 updateConnectionStatus(true);
                 console.log('[P2P] WebSocket 连接成功');
+                // 启动心跳
+                startHeartbeat();
                 //// shownotification('已连接到信令服务器', 'success');
             };
 
@@ -105,6 +131,8 @@
 
             ws.onclose = () => {
                 updateConnectionStatus(false);
+                // 停止心跳
+                stopHeartbeat();
                 console.log('[P2P] WebSocket 连接断开');
                 // 3秒后尝试重连
                 setTimeout(initWebSocket, 3000);
@@ -130,6 +158,11 @@
             case 'client-list':
                 handleClientList(message);
                 break;
+            case 'client-disconnected':
+                // 收到服务器发来的客户端断开通知，不需要特殊处理
+                // 设备列表会在下次收到client-list时自动更新
+                console.log('[P2P] 收到客户端断开通知:', message.clientId);
+                break;
             case 'pair-request':
                 handlePairRequest(message);
                 break;
@@ -147,6 +180,10 @@
                 break;
             case 'partner-disconnected':
                 handlePartnerDisconnected(message);
+                break;
+            case 'pong':
+                // 收到服务器pong响应，心跳正常
+                console.log('[P2P] 收到心跳响应');
                 break;
             default:
                 console.warn('[P2P] 未知消息类型:', message.type);

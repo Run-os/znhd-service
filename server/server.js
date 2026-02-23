@@ -171,7 +171,7 @@ function handleMessage(clientId, message) {
     switch (message.type) {
         case 'ping':
             client.lastPing = Date.now();
-            sendToClient(ws, { type: 'pong' });
+            sendToClient(client.ws, { type: 'pong' });
             break;
             
         case 'update-type':

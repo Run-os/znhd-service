@@ -15,6 +15,8 @@ let config = null; // WebRTC 配置
 let currentPartnerId = null; // 当前配对设备ID
 let isInitiator = false; // 是否为发起方
 let fileChunkSize = 16384; // 文件分块大小（16KB）
+let heartbeatTimer = null; // 心跳定时器
+const HEARTBEAT_INTERVAL = 25000; // 心跳间隔（毫秒），小于服务器超时时间
 
 // DOM 元素
 const elements = {
@@ -61,7 +63,10 @@ function initWebSocket() {
         ws.onopen = () => {
             updateConnectionStatus(true);
             console.log('WebSocket 连接成功');
-            
+
+            // 启动心跳
+            startHeartbeat();
+
             // 发送客户端类型
             sendToServer({
                 type: 'update-type',
@@ -86,6 +91,8 @@ function initWebSocket() {
 
         ws.onclose = () => {
             updateConnectionStatus(false);
+            // 停止心跳
+            stopHeartbeat();
             console.log('WebSocket 连接断开');
             // 3秒后尝试重连
             setTimeout(initWebSocket, 3000);
@@ -111,6 +118,11 @@ function handleMessage(message) {
         case 'client-list':
             handleClientList(message);
             break;
+        case 'client-disconnected':
+            // 收到服务器发来的客户端断开通知，不需要特殊处理
+            // 设备列表会在下次收到client-list时自动更新
+            console.log('[P2P] 收到客户端断开通知:', message.clientId);
+            break;
         case 'pair-request':
             handlePairRequest(message);
             break;
@@ -128,6 +140,10 @@ function handleMessage(message) {
             break;
         case 'partner-disconnected':
             handlePartnerDisconnected(message);
+            break;
+        case 'pong':
+            // 收到服务器pong响应，心跳正常
+            console.log('[P2P] 收到心跳响应');
             break;
         default:
             console.warn('未知消息类型:', message.type);
@@ -984,6 +1000,28 @@ function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
+}
+
+// ========================================
+// 心跳机制
+// ========================================
+function startHeartbeat() {
+    // 清除已有的心跳定时器
+    stopHeartbeat();
+
+    // 定时发送心跳
+    heartbeatTimer = setInterval(() => {
+        if (ws && ws.readyState === WebSocket.OPEN) {
+            sendToServer({ type: 'ping' });
+        }
+    }, HEARTBEAT_INTERVAL);
+}
+
+function stopHeartbeat() {
+    if (heartbeatTimer) {
+        clearInterval(heartbeatTimer);
+        heartbeatTimer = null;
+    }
 }
 
 // 获取当前客户端列表（临时存储）
