@@ -1,7 +1,7 @@
 # 局域网P2P传输工具 - 信令服务器 Docker 镜像
 
 # 替换为国内镜像源（如阿里云）
-FROM registry.aliyuncs.com/acs/node:18-alpine
+FROM registry.cn-hangzhou.aliyuncs.com/nodejs/node:18-alpine
 
 # 设置工作目录
 WORKDIR /app
