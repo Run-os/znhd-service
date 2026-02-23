@@ -1,6 +1,6 @@
 # 局域网P2P传输工具 - 信令服务器 Docker 镜像
 
-# 替换为国内镜像源（如阿里云）
+# 替换为国内镜像源
 FROM swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/node:18-alpine
 
 # 设置工作目录

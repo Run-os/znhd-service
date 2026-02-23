@@ -121,7 +121,7 @@
 
     // 处理服务器消息
     function handleMessage(message) {
-        console.log('[P2P] 收到消息:', message.type);
+        console.log('[P2P] 收到消息:', message.type, message);
 
         switch (message.type) {
             case 'welcome':
@@ -290,6 +290,8 @@
 
     // 处理配对请求
     function handlePairRequest(message) {
+        console.log('[P2P] 收到配对请求:', message);
+
         pendingPairRequest = message.requesterId;
 
         const pairRequestSection = document.getElementById('p2p-pair-request');
@@ -302,6 +304,8 @@
             const deviceItems = devicesList.querySelectorAll('.p2p-device-item');
             availableDeviceCount = deviceItems.length;
         }
+
+        console.log('[P2P] 可用设备数量:', availableDeviceCount);
 
         // 自动接收配对：单设备场景
         if (availableDeviceCount === 1) {
@@ -376,6 +380,8 @@
 
     // 处理配对成功
     function handlePairSuccess(message) {
+        console.log('[P2P] 配对成功:', message);
+
         // 清除配对超时
         clearPairRequestTimeout();
 
@@ -398,13 +404,12 @@
 
         // 发起方创建 PeerConnection
         if (isInitiator) {
+            console.log('[P2P] 作为发起方，创建PeerConnection');
             createPeerConnection();
         }
 
         showToast('配对成功！正在建立P2P连接...', 'success');
         showNotification('P2P配对成功', 'success');
-
-        console.log('[P2P] 配对成功:', message);
 
         // 已配对状态自动隐藏窗口，防止其他设备发起新的配对请求
         setTimeout(() => {
@@ -418,8 +423,11 @@
 
     // 处理配对拒绝
     function handlePairRejected(message) {
+        console.warn('[P2P] 配对被拒绝:', message);
+
         currentPartnerId = null;
         isInitiator = false;
+        pendingPairRequest = null;
 
         // 清除配对超时
         clearPairRequestTimeout();
@@ -432,14 +440,15 @@
         const errorMsg = message.message || '配对请求被拒绝';
         showToast(errorMsg, 'error');
         showNotification(errorMsg, 'warning');
-
-        console.warn('[P2P] 配对被拒绝:', errorMsg);
     }
 
     // 处理配对错误
     function handlePairError(message) {
+        console.error('[P2P] 配对错误:', message);
+
         currentPartnerId = null;
         isInitiator = false;
+        pendingPairRequest = null;
 
         // 清除配对超时
         clearPairRequestTimeout();
@@ -451,8 +460,6 @@
         const errorMsg = message.message || '配对失败';
         showToast(errorMsg, 'error');
         showNotification(errorMsg, 'warning');
-
-        console.error('[P2P] 配对错误:', errorMsg);
     }
 
     // 处理配对设备断开
@@ -617,6 +624,7 @@
         console.log('[P2P] 收到 WebRTC 信令:', message.signal.type);
 
         if (!peerConnection) {
+            console.log('[P2P] PeerConnection 不存在，创建新的');
             createPeerConnection();
         }
 
