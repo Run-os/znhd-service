@@ -114,22 +114,12 @@ show_version() {
         if [ "$PROJECT_DIR" != "." ]; then
             cd ..
         fi
-        log_info "最新版本: $latest_tag"
-        log_info "最新提交: $latest_commit"
+        log_info "✅ 最新提交: $latest_commit"
     else
         log_info "无法获取版本信息，未检测到 Git 仓库"
     fi
 }
 
-# 显示更新日志
-show_git_log() {
-    log_info "最新提交记录："
-    if [ "$PROJECT_DIR" != "." ] && [ -d "$PROJECT_DIR/.git" ]; then
-        cd "$PROJECT_DIR"
-        git log --oneline -3
-        cd ..
-    fi
-}
 
 # 检查 docker-compose 文件
 check_compose_file() {
@@ -256,7 +246,6 @@ main() {
     backup_current
     pull_code
     show_version
-    show_git_log
     check_compose_file
     stop_services
     rebuild_and_start "$1"  # 传递参数决定是否使用 --no-cache
