@@ -1167,7 +1167,7 @@
         const disconnectPairBtn = document.getElementById('p2p-disconnect-pair');
 
         if (pairStatus) {
-            pairStatus.textContent = currentPartnerId ? `已配对: ${currentPartnerId}` : '未配对';
+            pairStatus.textContent = currentPartnerId ? `${currentPartnerId}` : '未配对';
         }
 
         // 显示/隐藏"断开配对"按钮
