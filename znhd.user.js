@@ -220,8 +220,9 @@ function DM() {
         [
             CAT_UI.Space(
                 [
+                    CAT_UI.Text("P2P状态: "),
                     CAT_UI.Button(
-                        p2pStatus.currentPartner 
+                        p2pStatus.currentPartner
                             ? (p2pStatus.deviceId || 'P2P')
                             : '未连接',
                         {
@@ -1078,9 +1079,9 @@ class P2PTransferClient {
         if (this.ws && (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING)) {
             return;
         }
-        
+
         this.reconnecting = false;
-        
+
         try {
             console.log('[P2P] 尝试连接WebSocket...');
             this.ws = new WebSocket(this.getWebSocketURL());
@@ -1098,12 +1099,12 @@ class P2PTransferClient {
                 this.reconnecting = false;
                 this.wsConnected = false;
                 this.stopHeartbeat();
-                
+
                 // 仅当之前已连接时才清理配对（区分主动断开和异常断开）
                 if (this.deviceId) {
                     this.cleanupAfterDisconnect();
                 }
-                
+
                 this.updateStatus();
                 this.reconnecting = true;
                 setTimeout(() => this.connectWebSocket(), 5000);
