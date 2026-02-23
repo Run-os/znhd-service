@@ -174,42 +174,42 @@ function handleMessage(clientId, message) {
             sendToClient(ws, { type: 'pong' });
             break;
             
-            case 'update-type':
-                client.type = message.clientType;
-                broadcastClientList();
-                break;
+        case 'update-type':
+            client.type = message.clientType;
+            broadcastClientList();
+            break;
 
         case 'register':
-                if (message.deviceId) {
-                    // 检查是否已有相同ID的客户端在线
-                    const existingClient = Array.from(clients.values()).find(c => c.id === message.deviceId && c.id !== clientId);
-                    if (existingClient) {
-                        // 已有相同ID的客户端，关闭旧连接
-                        console.log(`[${new Date().toISOString()}] 相同ID ${message.deviceId} 已存在，关闭旧连接`);
-                        existingClient.ws.close();
-                    }
-                    
-                    // 更新客户端ID
-                    clients.delete(clientId);
-                    clientId = message.deviceId;
-                    client.id = message.deviceId;
-                    client.deviceName = message.deviceName;
-                    client.lastPing = Date.now();
-                    clients.set(clientId, client);
-                    
-                    console.log(`[${new Date().toISOString()}] 客户端注册: ${clientId}, 设备名: ${message.deviceName}`);
-                    
-                    // 发送确认
-                    sendToClient(ws, {
-                        type: 'welcome',
-                        id: clientId,
-                        ip: client.ip,
-                        isPrivate: client.isPrivate
-                    });
-                    
-                    broadcastClientList();
+            if (message.deviceId) {
+                // 检查是否已有相同ID的客户端在线
+                const existingClient = Array.from(clients.values()).find(c => c.id === message.deviceId && c.id !== clientId);
+                if (existingClient) {
+                    // 已有相同ID的客户端，关闭旧连接
+                    console.log(`[${new Date().toISOString()}] 相同ID ${message.deviceId} 已存在，关闭旧连接`);
+                    existingClient.ws.close();
                 }
-                break;
+                
+                // 更新客户端ID
+                clients.delete(clientId);
+                clientId = message.deviceId;
+                client.id = message.deviceId;
+                client.deviceName = message.deviceName;
+                client.lastPing = Date.now();
+                clients.set(clientId, client);
+                
+                console.log(`[${new Date().toISOString()}] 客户端注册: ${clientId}, 设备名: ${message.deviceName}`);
+                
+                // 发送确认
+                sendToClient(ws, {
+                    type: 'welcome',
+                    id: clientId,
+                    ip: client.ip,
+                    isPrivate: client.isPrivate
+                });
+                
+                broadcastClientList();
+            }
+            break;
 
         case 'pair-request':
             handlePairRequest(clientId, message);

@@ -149,7 +149,8 @@ function DM() {
         deviceId: null,
         deviceName: null,
         peers: [],
-        currentPartner: null
+        currentPartner: null,
+        dataChannelReady: false
     });
     // P2P抽屉显示状态
     const [p2pDrawerVisible, setP2pDrawerVisible] = CAT_UI.useState(false);
@@ -1080,7 +1081,12 @@ class P2PTransferClient {
                 console.log('[P2P] WebSocket已连接');
                 this.reconnecting = false;
                 this.wsConnected = true;
-                this.send({ type: 'register', deviceId: this.deviceId, deviceName: this.deviceName });
+                // 仅在已有有效deviceId时发送register
+                if (this.deviceId) {
+                    this.send({ type: 'register', deviceId: this.deviceId, deviceName: this.deviceName });
+                }
+                // 发送客户端类型
+                this.send({ type: 'update-type', clientType: 'userscript' });
                 this.startHeartbeat();
                 this.updateStatus();
             };
@@ -1091,14 +1097,15 @@ class P2PTransferClient {
                 this.wsConnected = false;
                 this.stopHeartbeat();
 
-                // 仅当之前已连接时才清理配对（区分主动断开和异常断开）
-                if (this.deviceId) {
-                    this.cleanupAfterDisconnect();
-                }
+                // 不清理配对连接（WebRTC是独立连接，WebSocket断开不代表P2P断开）
+                // 重连后可以继续使用原有配对
 
                 this.updateStatus();
                 this.reconnecting = true;
-                setTimeout(() => this.connectWebSocket(), 5000);
+                setTimeout(() => {
+                    this.reconnecting = false;
+                    this.connectWebSocket();
+                }, 5000);
             };
             this.ws.onerror = (error) => {
                 console.error('[P2P] WebSocket错误:', error);
@@ -1106,7 +1113,10 @@ class P2PTransferClient {
         } catch (error) {
             console.error('[P2P] WebSocket连接失败:', error);
             this.reconnecting = true;
-            setTimeout(() => this.connectWebSocket(), 5000);
+            setTimeout(() => {
+                this.reconnecting = false;
+                this.connectWebSocket();
+            }, 5000);
         }
     }
 
@@ -1141,7 +1151,7 @@ class P2PTransferClient {
                 }
                 break;
             case 'client-list':
-                this.peers = message.clients.filter(c => c.id !== this.deviceId);
+                this.peers = message.clients.filter(c => c.id !== this.deviceId && this.deviceId);
                 this.updateStatus();
                 break;
             case 'pong':

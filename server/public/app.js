@@ -62,6 +62,12 @@ function initWebSocket() {
             updateConnectionStatus(true);
             console.log('WebSocket 连接成功');
             
+            // 发送客户端类型
+            sendToServer({
+                type: 'update-type',
+                clientType: 'web'
+            });
+            
             // 如果已有设备ID，重连时发送register保持ID
             if (myId) {
                 console.log('[P2P] 重连时注册设备ID:', myId);
