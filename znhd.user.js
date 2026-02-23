@@ -36,8 +36,8 @@ const CONFIG = {
         MORNING: { START: 9, END: 12 },
         AFTERNOON: { START: 13.5, END: 18 }
     },
-    didaUrl: 'https://gitee.com/runos/znhd-service/raw/master/dida.mp3',
-    commonPhrasesUrl: 'https://gitee.com/runos/znhd-service/raw/master/%E5%B8%B8%E7%94%A8%E8%AF%AD.json',
+    didaUrl: 'https://gitee.com/runos/znhd-service/raw/master/public/dida.mp3',
+    commonPhrasesUrl: 'https://gitee.com/runos/znhd-service/raw/master/public/%E5%B8%B8%E7%94%A8%E8%AF%AD.json',
     // 麒麟传送相关配置（局域网P2P服务）
     qilinConfig: {
         host: 'qilindrop.cn',
