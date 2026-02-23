@@ -231,7 +231,7 @@ function handlePairRequest(requesterId, message) {
         return;
     }
 
-    console.log(`[${new Date().toISOString()}] 配对请求: ${requesterId} -> ${targetId}`);
+    console.log(`[${new Date().toISOString()}] 配对请求: ${requesterId} -> ${message.targetId}`);
 
     // 转发配对请求给目标
     sendToClient(target.ws, {
@@ -253,7 +253,7 @@ function handlePairAccept(targetId, message) {
     target.pairedWith = requester.id;
     requester.pairedWith = target.id;
 
-    console.log(`[${new Date().toISOString()}] 配对成功: ${requesterId} <-> ${targetId}`);
+    console.log(`[${new Date().toISOString()}] 配对成功: ${message.requesterId} <-> ${targetId}`);
 
     // 通知双方配对成功
     sendToClient(target.ws, {

@@ -95,7 +95,7 @@
             ws.onopen = () => {
                 updateConnectionStatus(true);
                 console.log('[P2P] WebSocket 连接成功');
-                showNotification('已连接到信令服务器', 'success');
+                //showNotification('已连接到信令服务器', 'success');
             };
 
             ws.onmessage = (event) => {
