@@ -924,7 +924,13 @@
         toggleButton.id = 'p2p-toggle-btn';
         toggleButton.innerHTML = '📡';
         toggleButton.title = '局域网P2P传输';
-        toggleButton.onclick = togglePanel;
+        // 使用 mousedown 事件，与 handleGlobalClick 保持一致，避免事件冲突
+        toggleButton.addEventListener('mousedown', (event) => {
+            // 阻止事件传播，防止触发 handleGlobalClick
+            event.stopPropagation();
+            event.stopImmediatePropagation();
+            togglePanel();
+        }, true);
         document.body.appendChild(toggleButton);
     }
 
@@ -932,6 +938,9 @@
     function createPanel() {
         panel = document.createElement('div');
         panel.id = 'p2p-panel';
+        // 默认隐藏面板
+        panel.classList.add('p2p-hidden');
+        uiVisible = false;
         panel.innerHTML = `
             <div class="p2p-panel-header">
                 <span class="p2p-panel-title">📡 局域网P2P传输</span>
