@@ -18,14 +18,15 @@
                     <span class="label">设备ID：</span>
                     <span class="value" id="deviceId">--</span>
                     <button class="copy-btn" id="copyIdBtn" title="复制ID">📋</button>
-                    <span class="label" style="margin-left: 15px;">配对：</span>
-                    <span class="value" id="pairStatus">未配对</span>
-                    <button class="btn btn-danger" id="disconnectPairBtn" style="display: none; margin-left: 10px;">断开配对</button>
-                    <!-- 将连接状态移至此处，位于设备信息区域右侧 -->
                     <div class="connection-status-inline" style="margin-left: auto;">
                         <span class="status-indicator" id="statusIndicator"></span>
                         <span id="statusText">未连接</span>
                     </div>
+                </div>
+                <div class="info-row">
+                    <span class="label">配对：</span>
+                    <span class="value" id="pairStatus">未配对</span>
+                    <button class="btn btn-danger" id="disconnectPairBtn" style="display: none; margin-left: 10px;">断开配对</button>
                 </div>
             </div>
         </section>

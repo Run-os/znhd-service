@@ -993,14 +993,15 @@
                             <span class="p2p-label">ID：</span>
                             <span id="p2p-device-id">--</span>
                             <button class="p2p-copy-btn" id="p2p-copy-id" title="复制ID">📋</button>
-                            <span class="p2p-label" style="margin-left: 15px;">配对：</span>
-                            <span id="p2p-pair-status">未配对</span>
-                            <button class="p2p-btn p2p-btn-danger p2p-disconnect-btn" id="p2p-disconnect-pair" style="display: none; margin-left: 10px;">断开配对</button>
-                            <!-- 将连接状态移至此处，位于设备信息区域右侧 -->
                             <div class="p2p-status-bar-inline" style="margin-left: auto;">
                                 <span id="p2p-status-indicator" class="p2p-status-indicator"></span>
                                 <span id="p2p-status-text">未连接</span>
                             </div>
+                        </div>
+                        <div class="p2p-info-row">
+                            <span class="p2p-label">配对：</span>
+                            <span id="p2p-pair-status">未配对</span>
+                            <button class="p2p-btn p2p-btn-danger p2p-disconnect-btn" id="p2p-disconnect-pair" style="display: none; margin-left: 10px;">断开配对</button>
                         </div>
                     </div>
                 </div>
