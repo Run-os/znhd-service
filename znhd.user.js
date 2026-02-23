@@ -21,16 +21,13 @@
 // @homepageURL    https://scriptcat.org/zh-CN/script-show-page/3650
 // @require     https://scriptcat.org/lib/1167/1.0.0/%E8%84%9A%E6%9C%AC%E7%8C%ABUI%E5%BA%93.js?sha384-jXdR3hCwnDJf53Ue6XHAi6tApeudgS/wXnMYBD/ZJcgge8Xnzu/s7bkEf2tPi2KS
 // @require     https://cdn.jsdelivr.net/npm/@fingerprintjs/fingerprintjs@5/dist/fp.min.js
-// @require     https://fastly.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js
 // ==/UserScript==
 
 
 // ==========配置==========
 // 配置对象，集中管理可配置项
 const CONFIG = {
-    // 检查间隔（毫秒）
     CHECK_INTERVAL: 3000,
-    // 最大日志条目数
     MAX_LOG_ENTRIES: 20,
     WORKING_HOURS: {
         MORNING: { START: 9, END: 12 },
@@ -38,95 +35,10 @@ const CONFIG = {
     },
     didaUrl: 'https://gitee.com/runos/znhd-service/raw/master/public/dida.mp3',
     commonPhrasesUrl: 'https://gitee.com/runos/znhd-service/raw/master/public/%E5%B8%B8%E7%94%A8%E8%AF%AD.json',
-    // 麒麟传送相关配置（局域网P2P服务）
-    qilinConfig: {
-        host: 'qilindrop.cn',
-        //可选：qilindrop.cn || node-snapdrop.onrender.com || drop.122050.xyz
+    p2pConfig: {
+        signalingServer: 'drop.122050.xyz',
     }
 };
-
-// ==========麒麟传送二维码显示函数==========
-function showQilinQRCode() {
-    // 生成二维码URL（使用qilinConfig.host）
-    const host = CONFIG.qilinConfig.host;
-    const protocol = window.location.protocol === 'https:' ? 'https:' : 'http:';
-    const qrUrl = `${protocol}//${host}`;
-
-    // 创建遮罩层
-    const overlay = document.createElement('div');
-    overlay.id = 'temp-qr-overlay';
-    overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:99999;display:flex;align-items:center;justify-content:center;';
-
-    // 创建内容容器
-    const content = document.createElement('div');
-    content.id = 'temp-qr-content';
-    content.style.cssText = 'background:white;padding:20px;border-radius:8px;text-align:center;max-width:320px;position:relative;cursor:default;';
-
-    // 添加关闭按钮
-    const closeBtn = document.createElement('span');
-    closeBtn.innerHTML = '×';
-    closeBtn.style.cssText = 'position:absolute;top:8px;right:12px;font-size:24px;cursor:pointer;color:#999;line-height:1;';
-    closeBtn.title = '点击关闭';
-    closeBtn.addEventListener('click', function (e) {
-        e.stopPropagation();
-        document.body.removeChild(overlay);
-    });
-    content.appendChild(closeBtn);
-
-    // 添加标题
-    const title = document.createElement('h3');
-    title.textContent = '麒麟传送连接二维码';
-    title.style.cssText = 'margin:0 0 15px;font-size:16px;color:#333;';
-    content.appendChild(title);
-
-    // 二维码和URL
-    const qrDiv = document.createElement('div');
-    qrDiv.id = 'temp-qrcode';
-    content.appendChild(qrDiv);
-
-    const urlText = document.createElement('p');
-    urlText.style.cssText = 'margin:15px 0 0;font-size:13px;color:#666;word-break:break-all;';
-    urlText.textContent = qrUrl;
-    content.appendChild(urlText);
-
-    // 5秒后关闭提示
-    const tip = document.createElement('p');
-    tip.style.cssText = 'margin:15px 0 0;font-size:12px;color:#999;';
-    tip.textContent = '5秒后自动关闭';
-    content.appendChild(tip);
-
-    // 点击遮罩层关闭
-    overlay.addEventListener('click', function (e) {
-        if (e.target === overlay) {
-            document.body.removeChild(overlay);
-        }
-    });
-
-    overlay.appendChild(content);
-    document.body.appendChild(overlay);
-
-    // 生成二维码
-    if (typeof QRCode !== 'undefined') {
-        new QRCode(qrDiv, {
-            text: qrUrl,
-            width: 200,
-            height: 200,
-            colorDark: "#000000",
-            colorLight: "#ffffff",
-            correctLevel: QRCode.CorrectLevel.H
-        });
-        addLog(`[P2P] 显示连接二维码: ${qrUrl}`, 'info', true);
-    } else {
-        content.innerHTML += '<p style="color:red;">二维码库未加载</p>';
-    }
-
-    // 5秒后自动关闭
-    setTimeout(() => {
-        if (document.body.contains(overlay)) {
-            document.body.removeChild(overlay);
-        }
-    }, 5000);
-}
 
 // ==========日志管理==========
 // 全局日志状态管理
@@ -172,11 +84,6 @@ const STORAGE_KEY = 'scriptCat_Allvalue';
 const DEFAULTS = {
     voiceEnabled: true,
     isChecked: false,
-    // qilindrop相关默认值
-    qilindropEnabled: true,          // 启用qilindrop局域网传输
-    autoCopyEnabled: true,           // 自动复制图片/文本到剪贴板
-    autoDownloadEnabled: true,       // 自动下载其他文件
-    iframeEnabled: true,            // 启用iframe嵌入
 };
 
 // 从localStorage加载Allvalue数据
@@ -235,32 +142,32 @@ function DM() {
     const [phrasesData, setPhrasesData] = CAT_UI.useState({});
     // 常用语加载状态
     const [phrasesLoading, setPhrasesLoading] = CAT_UI.useState(false);
-    // 麒麟传送连接状态
-    const [qilinStatus, setQilinStatus] = CAT_UI.useState({ connected: false, peerCount: 0 });
+    // P2P连接状态
+    const [p2pStatus, setP2pStatus] = CAT_UI.useState({
+        connected: false,
+        wsConnected: false,
+        deviceId: null,
+        deviceName: null,
+        peers: [],
+        currentPartner: null
+    });
+    // P2P抽屉显示状态
+    const [p2pDrawerVisible, setP2pDrawerVisible] = CAT_UI.useState(false);
+    // P2P发送文本
+    const [p2pText, setP2pText] = CAT_UI.useState('');
 
-    // 监听麒麟传送连接状态变化
+    // P2P状态监听
     CAT_UI.useEffect(() => {
-        const handleStatusChange = (event) => {
-            // 获取最新状态
-            const status = window.qilinClient ? window.qilinClient.getStatus() : null;
-            setQilinStatus({
-                connected: event.detail.connected,
-                peerCount: event.detail.peerCount || 0,
-                displayName: status?.displayName || ''
-            });
+        const handleP2PStatus = (event) => {
+            setP2pStatus(event.detail);
         };
-        window.addEventListener('qilinConnectionStatusChange', handleStatusChange);
-        // 初始状态
-        if (window.qilinClient) {
-            const status = window.qilinClient.getStatus();
-            setQilinStatus({
-                connected: status.connected,
-                peerCount: status.peers.length,
-                displayName: status.displayName || ''
-            });
+        window.addEventListener('p2pStatusChange', handleP2PStatus);
+        if (window.p2pTransferClient) {
+            const status = window.p2pTransferClient.getStatus();
+            setP2pStatus(status);
         }
         return () => {
-            window.removeEventListener('qilinConnectionStatusChange', handleStatusChange);
+            window.removeEventListener('p2pStatusChange', handleP2PStatus);
         };
     }, []);
 
@@ -313,26 +220,25 @@ function DM() {
         [
             CAT_UI.Space(
                 [
-                    CAT_UI.Text("麒麟传送: "),
                     CAT_UI.Button(
-                        qilinStatus.connected
-                            ? `已连接(${qilinStatus.displayName || '未知'})`
+                        p2pStatus.currentPartner 
+                            ? (p2pStatus.deviceId || 'P2P')
                             : '未连接',
                         {
                             type: "primary",
-                            onClick: () => showQilinQRCode(),
+                            onClick: () => setP2pDrawerVisible(true),
                             style: {
                                 fontWeight: "bold",
-                                backgroundColor: qilinStatus.connected ? "#52c41a" : "#ff4d4f",
-                                borderColor: qilinStatus.connected ? "#52c41a" : "#ff4d4f"
+                                backgroundColor: p2pStatus.wsConnected ? "#52c41a" : "#8c8c8c",
+                                borderColor: p2pStatus.wsConnected ? "#52c41a" : "#8c8c8c"
                             }
                         }
                     ),
                 ],
                 {
-                    direction: "horizontal", // 横向排列（默认值，可省略）
-                    size: "middle", // 元素间间距（可选：small/middle/large，默认middle）
-                    style: { marginBottom: "8px" } // 可选：给这一行加底部间距，避免与下方元素拥挤
+                    direction: "horizontal",
+                    size: "middle",
+                    style: { marginBottom: "8px" }
                 }
             ),
 
@@ -441,22 +347,6 @@ function DM() {
 
                             CAT_UI.Divider("其他设置"),  // 带文本的分隔线
 
-                            CAT_UI.Checkbox("自动复制图片/文本到剪贴板", {
-                                checked: Allvalue.autoCopyEnabled !== false,
-                                onChange(checked) {
-                                    patchAllvalue({ autoCopyEnabled: checked });
-                                    addLog(`自动复制: ${checked}`, 'info');
-                                }
-                            }),
-
-                            CAT_UI.Checkbox("自动下载其他文件", {
-                                checked: Allvalue.autoDownloadEnabled !== false,
-                                onChange(checked) {
-                                    patchAllvalue({ autoDownloadEnabled: checked });
-                                    addLog(`自动下载: ${checked}`, 'info');
-                                }
-                            }),
-                            // 日志显示区域
                             CAT_UI.Divider("日志内容"),  // 日志标题分隔线
                             CAT_UI.createElement(
                                 "div",
@@ -572,6 +462,132 @@ function DM() {
                             zIndex: 10001,  // 比设置抽屉层级高一点
                             onOk: () => { setCommonPhrasesVisible(false); },
                             onCancel: () => { setCommonPhrasesVisible(false); },
+                        }
+                    ),
+                    // P2P传输抽屉组件
+                    CAT_UI.Drawer(
+                        CAT_UI.createElement("div", { style: { textAlign: "left" } }, [
+                            CAT_UI.Divider("连接状态"),
+                            CAT_UI.createElement("div", { style: { marginBottom: "16px" } }, [
+                                CAT_UI.Space([
+                                    CAT_UI.Text("设备ID: "),
+                                    CAT_UI.Text(p2pStatus.deviceId || '--', { style: { fontWeight: "bold" } }),
+                                    CAT_UI.Button("复制", {
+                                        type: "link",
+                                        onClick: () => {
+                                            if (p2pStatus.deviceId) {
+                                                safeCopyText(p2pStatus.deviceId);
+                                                CAT_UI.Message.success('已复制设备ID');
+                                            }
+                                        }
+                                    })
+                                ], { direction: "horizontal" })
+                            ]),
+                            CAT_UI.Space([
+                                CAT_UI.Text("配对: "),
+                                p2pStatus.currentPartner ? [
+                                    CAT_UI.Text(
+                                        p2pStatus.dataChannelReady
+                                            ? p2pStatus.currentPartner
+                                            : "连接中...",
+                                        {
+                                            style: {
+                                                fontWeight: "bold",
+                                                color: p2pStatus.dataChannelReady ? "#52c41a" : "#faad14"
+                                            }
+                                        }
+                                    ),
+                                    CAT_UI.Button("断开连接", {
+                                        type: "danger",
+                                        size: "small",
+                                        onClick: () => {
+                                            if (window.p2pTransferClient) {
+                                                window.p2pTransferClient.disconnect();
+                                            }
+                                        }
+                                    })
+                                ] : [
+                                    CAT_UI.Text("未连接", {
+                                        style: { color: "#ff4d4f" }
+                                    })
+                                ],
+                            ], { direction: "horizontal", style: { marginBottom: "16px" } }),
+
+                            CAT_UI.Divider("可用设备"),
+                            p2pStatus.peers?.length > 0 ?
+                                CAT_UI.Space(
+                                    p2pStatus.peers.map(peer =>
+                                        CAT_UI.createElement("div", {
+                                            style: {
+                                                padding: "10px",
+                                                background: "#f5f5f5",
+                                                borderRadius: "4px",
+                                                marginBottom: "8px",
+                                                display: "flex",
+                                                justifyContent: "space-between",
+                                                alignItems: "center"
+                                            }
+                                        }, [
+                                            CAT_UI.Text(peer.name || peer.id),
+                                            CAT_UI.Button("配对", {
+                                                type: "primary",
+                                                size: "small",
+                                                onClick: () => {
+                                                    if (window.p2pTransferClient) {
+                                                        window.p2pTransferClient.requestPair(peer.id);
+                                                    }
+                                                },
+                                                disabled: !!p2pStatus.currentPartner
+                                            })
+                                        ])
+                                    ),
+                                    { direction: "vertical", style: { width: "100%" } }
+                                ) :
+                                CAT_UI.createElement("div", {
+                                    style: { textAlign: "center", padding: "20px", color: "#999" }
+                                }, "暂无可用设备"),
+
+                            p2pStatus.currentPartner ? [
+                                CAT_UI.createElement("div", { style: { marginBottom: "12px" } }, [
+                                    CAT_UI.createElement("textarea", {
+                                        rows: 3,
+                                        placeholder: p2pStatus.dataChannelReady ? "输入要发送的文本..." : "等待P2P连接建立...",
+                                        disabled: !p2pStatus.dataChannelReady,
+                                        value: p2pText,
+                                        onChange: (e) => setP2pText(e.target.value),
+                                        style: {
+                                            width: "100%",
+                                            padding: "8px",
+                                            border: "1px solid #d9d9d9",
+                                            borderRadius: "4px",
+                                            fontSize: "13px",
+                                            resize: "vertical",
+                                            backgroundColor: p2pStatus.dataChannelReady ? "#fff" : "#f5f5f5"
+                                        }
+                                    }),
+                                    CAT_UI.Button("发送文本", {
+                                        type: "primary",
+                                        disabled: !p2pStatus.dataChannelReady,
+                                        style: { marginTop: "8px", width: "100%" },
+                                        onClick: () => {
+                                            if (window.p2pTransferClient && p2pText.trim()) {
+                                                window.p2pTransferClient.sendText(p2pText);
+                                                setP2pText('');
+                                            }
+                                        }
+                                    })
+                                ]),
+                            ] : null,
+                        ]),
+                        {
+                            title: "P2P局域网传输",
+                            visible: p2pDrawerVisible,
+                            width: 400,
+                            focusLock: true,
+                            autoFocus: false,
+                            zIndex: 10002,
+                            onOk: () => { setP2pDrawerVisible(false); },
+                            onCancel: () => { setP2pDrawerVisible(false); },
                         }
                     ),
                 ],
@@ -886,6 +902,7 @@ function safeCopyText(text) {
     if (typeof GM_setClipboard === 'function') {
         try {
             GM_setClipboard(text);
+            CAT_UI.Message.info(text);
             addLog('[复制] 已复制到剪贴板 (GM_setClipboard)', 'success', true);
             const player = new Audio();
             player.src = CONFIG.didaUrl;
@@ -899,6 +916,7 @@ function safeCopyText(text) {
     // 2) 浏览器异步 clipboard API
     if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
         navigator.clipboard.writeText(text).then(() => {
+            CAT_UI.Message.info(text);
             addLog('[复制] 已复制到剪贴板 (navigator.clipboard)', 'success', true);
             const player = new Audio();
             player.src = CONFIG.didaUrl;
@@ -1002,802 +1020,390 @@ async function copyBase64ImageToClipboard(text) {
     }
 }
 
-// ========== qilindrop 局域网传输功能 ==========
-
-// 存储键名
-const DEVICE_NAME_KEY = 'qilindrop_deviceName';
-
-// 获取设备名（优先使用自定义，否则生成默认）
-function getDeviceName() {
-    const saved = localStorage.getItem(DEVICE_NAME_KEY);
-    if (saved && saved.trim()) {
-        return saved.trim();
-    }
-    // 生成随机设备名
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-    let result = 'ZNHD-';
-    for (let i = 0; i < 6; i++) {
-        result += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    localStorage.setItem(DEVICE_NAME_KEY, result);
-    return result;
-}
-
-// ========== 麒麟传送（P2P局域网传输） ==========
-let qilinClient = null;
-
-// 麒麟传送工具函数
-function formatSize(bytes) {
-    if (bytes < 1024) return bytes + ' B';
-    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(2) + ' KB';
-    if (bytes < 1024 * 1024 * 1024) return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
-    return (bytes / (1024 * 1024 * 1024)).toFixed(2) + ' GB';
-}
-
-// 麒麟传送音效函数
-function qilinPlaySound() {
-    if (!CONFIG.didaUrl) return;
-    try {
-        const audio = new Audio(CONFIG.didaUrl);
-        audio.volume = 0.5;
-        audio.play().catch(err => {
-            // 静默处理自动播放限制等常见错误
-        });
-    } catch (err) {
-        // 静默处理
-    }
-}
-
-// 麒麟传送安全复制文本函数
-async function qilinSafeCopyText(text) {
-    if (!text) return false;
-    if (typeof GM_setClipboard === 'function') {
-        try {
-            GM_setClipboard(text);
-            addLog('[P2P] 文本已复制 (GM_setClipboard)', 'success', true);
-            qilinPlaySound();
-            return true;
-        } catch (e) {
-            addLog('[P2P] GM_setClipboard 失败: ' + e.message, 'error', true);
-        }
-    }
-    if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
-        try {
-            await navigator.clipboard.writeText(text);
-            addLog('[P2P] 文本已复制 (navigator.clipboard)', 'success', true);
-            qilinPlaySound();
-            return true;
-        } catch (err) {
-            addLog('[P2P] navigator.clipboard 失败: ' + err.message, 'error', true);
-        }
-    }
-    try {
-        const textarea = document.createElement('textarea');
-        textarea.value = text;
-        textarea.style.position = 'fixed';
-        textarea.style.opacity = '0';
-        document.body.appendChild(textarea);
-        textarea.select();
-        const success = document.execCommand('copy');
-        document.body.removeChild(textarea);
-        if (success) {
-            addLog('[P2P] 文本已复制 (execCommand)', 'success', true);
-            qilinPlaySound();
-            return true;
-        }
-    } catch (err) {
-        addLog('[P2P] execCommand 失败: ' + err.message, 'error', true);
-    }
-    return false;
-}
-
-// 麒麟传送复制图片到剪贴板函数
-async function qilinCopyImageToClipboard(blob, originalFilename = '') {
-    try {
-        const pngBlob = await convertImageBlobToPng(blob);
-        const mime = 'image/png';
-        if (navigator.clipboard && typeof navigator.clipboard.write === 'function' && typeof window.ClipboardItem === 'function') {
-            try {
-                await navigator.clipboard.write([new ClipboardItem({ [mime]: pngBlob })]);
-                addLog('[P2P] 图片已复制 (Clipboard API)', 'success', true);
-                qilinPlaySound();
-                return true;
-            } catch (clipErr) {
-                addLog('[P2P] Clipboard API 失败: ' + clipErr.message, 'error', true);
-            }
-        }
-        if (typeof GM_setClipboard === 'function') {
-            try {
-                const dataUrl = await blobToBase64(pngBlob);
-                GM_setClipboard(dataUrl, { type: 'image', mimetype: mime });
-                addLog('[P2P] 图片已复制 (GM_setClipboard)', 'success', true);
-                qilinPlaySound();
-                return true;
-            } catch (gmErr) {
-                addLog('[P2P] GM_setClipboard 图片失败: ' + gmErr.message, 'error', true);
-            }
-        }
-        addLog('[P2P] 当前环境不支持图片剪贴板，降级为下载', 'warning', true);
-        return false;
-    } catch (err) {
-        addLog('[P2P] 复制图片失败: ' + err.message, 'error', true);
-        return false;
-    }
-}
-
-// 麒麟传送复制Base64图片到剪贴板函数
-async function qilinCopyBase64ImageToClipboard(text) {
-    try {
-        const dataUrl = buildDataUrlFromBase64(text.trim());
-        const res = await fetch(dataUrl);
-        const blob = await res.blob();
-        return await qilinCopyImageToClipboard(blob);
-    } catch (err) {
-        addLog('[P2P] 复制 Base64 图片失败: ' + err.message, 'error', true);
-        return false;
-    }
-}
-
-// 麒麟传送客户端类
-class QilinDropClient {
+// ========== P2P局域网传输功能 ==========
+class P2PTransferClient {
     constructor() {
-        this.socket = null;
-        this.peerId = null;
-        this.connected = false;
-        this.peers = new Map();
-        this.rtcPeers = new Map();
-        this.currentFile = null;
-        this.displayName = null;  // 保存显示名称
+        this.ws = null;
+        this.deviceId = null;
+        this.deviceName = null;
+        this.wsConnected = false;
+        this.peers = [];
+        this.currentPartner = null;
+        this.isInitiator = false;
+        this.peerConnection = null;
+        this.dataChannel = null;
+        this.fileChunkSize = 16384;
+        this.currentFileTransfer = null;
+        this.heartbeatTimer = null;
+        this.reconnecting = false;
         this.init();
     }
 
-    async init() {
-        this.peerId = await this.getPeerId();
-        addLog('[P2P] 设备ID: ' + this.peerId, 'info', true);
-        this.connect();
+    init() {
+        this.deviceId = this.generateDeviceId();
+        this.deviceName = this.getDeviceName();
+        this.connectWebSocket();
     }
 
-    generateUUID() {
-        let uuid = '';
-        for (let ii = 0; ii < 32; ii++) {
-            switch (ii) {
-                case 8:
-                case 20:
-                    uuid += '-';
-                    uuid += (Math.random() * 16 | 0).toString(16);
-                    break;
-                case 12:
-                    uuid += '-';
-                    uuid += '4';
-                    break;
-                case 16:
-                    uuid += '-';
-                    uuid += (Math.random() * 4 | 8).toString(16);
-                    break;
-                default:
-                    uuid += (Math.random() * 16 | 0).toString(16);
-            }
+    generateDeviceId() {
+        let id = GM_getValue('p2p_device_id');
+        if (!id) {
+            id = Math.random().toString(36).substring(2, 10).toUpperCase();
+            GM_setValue('p2p_device_id', id);
         }
-        return uuid;
+        return id;
     }
 
-    async getPeerId() {
-        let peerId = GM_getValue('qilin_peer_id');
-        if (!peerId) {
-            peerId = this.generateUUID();
-            GM_setValue('qilin_peer_id', peerId);
+    getDeviceName() {
+        const saved = localStorage.getItem('p2p_device_name');
+        if (saved && saved.trim()) return saved.trim();
+        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+        let result = 'ZNHD-';
+        for (let i = 0; i < 6; i++) {
+            result += chars.charAt(Math.floor(Math.random() * chars.length));
         }
-        return peerId;
+        localStorage.setItem('p2p_device_name', result);
+        return result;
     }
 
     getWebSocketURL() {
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const port = CONFIG.qilinConfig.port ? `:${CONFIG.qilinConfig.port}` : '';
-        const isRtcSupported = !!(window.RTCPeerConnection || window.mozRTCPeerConnection || window.webkitRTCPeerConnection);
-        const nortc = isRtcSupported ? '' : '/nortc';
-        return `${protocol}//${CONFIG.qilinConfig.host}${port}${nortc}`;
+        return `${protocol}//${CONFIG.p2pConfig.signalingServer}/ws`;
     }
 
-    connect() {
-        addLog('[P2P] 正在连接服务器...', 'info', true);
-        try {
-            this.socket = new WebSocket(this.getWebSocketURL());
-            this.socket.binaryType = 'arraybuffer';
-            this.socket.onopen = () => {
-                addLog('[P2P] WebSocket 已连接', 'success', true);
-                this.connected = true;
-                this.updateConnectionStatus();
-                this.showNotification('已连接到麒麟传送', 'success');
-            };
-            this.socket.onmessage = (e) => this.handleMessage(e.data);
-            this.socket.onclose = () => {
-                addLog('[P2P] 连接已断开', 'warning', true);
-                this.connected = false;
-                this.updateConnectionStatus();
-                this.peers.clear();
-                this.rtcPeers.forEach(peer => {
-                    if (peer.conn) peer.conn.close();
-                });
-                this.rtcPeers.clear();
-                this.showNotification('连接已断开，5秒后重连...', 'warning');
-                setTimeout(() => this.connect(), 5000);
-            };
-            this.socket.onerror = (error) => {
-                addLog('[P2P] 连接错误: ' + error.message, 'error', true);
-            };
-        } catch (error) {
-            addLog('[P2P] 无法连接: ' + error.message, 'error', true);
-            this.showNotification(`连接失败: ${error.message}`, 'error');
-        }
-    }
-
-    updateConnectionStatus() {
-        // 触发UI更新
-        window.dispatchEvent(new CustomEvent('qilinConnectionStatusChange', {
-            detail: { connected: this.connected, peerCount: this.peers.size }
-        }));
-    }
-
-    handleMessage(data) {
-        if (data instanceof ArrayBuffer) {
-            this.handleFileChunk(data);
+    connectWebSocket() {
+        if (this.reconnecting) {
             return;
         }
-        try {
-            const message = JSON.parse(data);
-            switch (message.type) {
-                case 'peers':
-                    this.handlePeers(message.peers);
-                    break;
-                case 'peer-joined':
-                    this.handlePeerJoined(message.peer);
-                    break;
-                case 'peer-left':
-                    this.handlePeerLeft(message.peerId);
-                    break;
-                case 'signal':
-                    this.handleSignal(message);
-                    break;
-                case 'ping':
-                    this.send({ type: 'pong' });
-                    break;
-                case 'display-name':
-                    this.handleDisplayName(message);
-                    break;
-            }
-        } catch (error) {
-            addLog('[P2P] 消息解析错误: ' + error.message, 'error', true);
-        }
-    }
-
-    handlePeers(peers) {
-        addLog(`[P2P] 发现 ${peers.length} 个在线设备`, 'info', true);
-        this.peers.clear();
-        peers.forEach(peer => {
-            this.peers.set(peer.id, peer);
-            //addLog(`  - ${peer.name.displayName} (${peer.name.deviceName})`, 'info', true);
-            if (peer.rtcSupported && window.RTCPeerConnection) {
-                // 检查是否已经存在连接，避免重复创建
-                if (!this.rtcPeers.has(peer.id)) {
-                    this.createRTCConnection(peer.id, peer, true);
-                }
-            }
-        });
-        this.updateConnectionStatus();
-        if (peers.length > 0) {
-            this.showNotification(`发现 ${peers.length} 个设备`, 'success');
-        }
-    }
-
-    handlePeerJoined(peer) {
-        addLog(`[P2P] 设备加入: ${peer.name.displayName}`, 'info', true);
-        this.peers.set(peer.id, peer);
-        this.updateConnectionStatus();
-        this.showNotification(`${peer.name.displayName} 加入`, 'info');
-        if (peer.rtcSupported && window.RTCPeerConnection) {
-            // 检查是否已经存在连接，避免重复创建
-            if (!this.rtcPeers.has(peer.id)) {
-                this.createRTCConnection(peer.id, peer, true);
-            }
-        }
-    }
-
-    handlePeerLeft(peerId) {
-        const peer = this.peers.get(peerId);
-        if (peer) {
-            addLog(`[P2P] 设备离开: ${peer.name.displayName}`, 'warning', true);
-            this.showNotification(`${peer.name.displayName} 离开`, 'warning');
-        }
-        this.peers.delete(peerId);
-        this.updateConnectionStatus();
-        const rtcPeer = this.rtcPeers.get(peerId);
-        if (rtcPeer) {
-            if (rtcPeer.conn) rtcPeer.conn.close();
-            this.rtcPeers.delete(peerId);
-        }
-    }
-
-    createRTCConnection(peerId, peer, isCaller = false) {
-        // 避免快速重复创建连接（用于重建时的防抖）
-        const recentRecreate = this._recentRecreateMap?.get(peerId);
-        if (recentRecreate && Date.now() - recentRecreate < 3000) {
-            addLog(`[P2P] 3秒内跳过重建连接: ${peer.name.displayName}`, 'warning', true);
-            return null;
-        }
-        // 记录重建时间
-        if (!this._recentRecreateMap) this._recentRecreateMap = new Map();
-        this._recentRecreateMap.set(peerId, Date.now());
-
-        // 检查是否存在旧连接，如果存在则先关闭
-        const existingPeer = this.rtcPeers.get(peerId);
-        if (existingPeer) {
-            addLog(`[P2P] 关闭旧 RTC 连接: ${peer.name.displayName}`, 'warning', true);
-            if (existingPeer.conn) {
-                existingPeer.conn.close();
-            }
-            if (existingPeer.channel) {
-                existingPeer.channel.close();
-            }
-            this.rtcPeers.delete(peerId);
-        }
-        const config = {
-            sdpSemantics: 'unified-plan',
-            iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
-        };
-        const conn = new RTCPeerConnection(config);
-        let channel = null;
-        conn.onconnectionstatechange = () => {
-            switch (conn.connectionState) {
-                case 'connected':
-                    this.showNotification(`已连接: ${peer.name.displayName}`, 'success');
-                    break;
-                case 'disconnected':
-                case 'failed':
-                    setTimeout(() => {
-                        if (this.peers.has(peerId)) {
-                            this.rtcPeers.delete(peerId);
-                            this.createRTCConnection(peerId, peer, isCaller);
-                        }
-                    }, 3000);
-                    break;
-                case 'closed':
-                    addLog(`[P2P] 连接关闭，3秒后尝试重连: ${peer.name.displayName}`, 'warning', true);
-                    setTimeout(() => {
-                        if (this.peers.has(peerId)) {
-                            this.rtcPeers.delete(peerId);
-                            this.createRTCConnection(peerId, peer, isCaller);
-                        }
-                    }, 3000);
-                    break;
-            }
-        };
-        conn.onicecandidate = (event) => {
-            if (event.candidate) {
-                this.sendSignal(peerId, { ice: event.candidate });
-            }
-        };
-        const setupChannel = (ch) => {
-            channel = ch;
-            channel.binaryType = 'arraybuffer';
-            channel.onopen = () => {
-                addLog(`[P2P] 数据通道已打开: ${peer.name.displayName}`, 'success', true);
-            };
-            channel.onmessage = (e) => {
-                // 只在开始和结束时输出简洁日志
-                if (e.data instanceof ArrayBuffer) {
-                    // 文件块 - 只在接收完成后输出
-                    this.handlePeerMessage(peerId, e.data);
-                } else {
-                    // JSON 消息
-                    try {
-                        const msg = JSON.parse(e.data);
-                        if (msg.type === 'header' || msg.type === 'transfer-complete') {
-                            addLog(`[P2P] ${msg.type}: ${msg.name || ''}`, 'info', true);
-                        }
-                    } catch (err) { }
-                    this.handlePeerMessage(peerId, e.data);
-                }
-            };
-            channel.onclose = () => {
-                addLog(`[P2P] 数据通道已关闭: ${peer.name.displayName}`, 'warning', true);
-            };
-        };
-        if (isCaller) {
-            channel = conn.createDataChannel('data-channel', { ordered: true, reliable: true });
-            setupChannel(channel);
-            conn.createOffer().then(offer => conn.setLocalDescription(offer))
-                .then(() => { this.sendSignal(peerId, { sdp: conn.localDescription }); })
-                .catch(error => {
-                    addLog('[P2P] 创建 offer 失败: ' + error.message, 'error', true);
-                    // 失败后清理连接
-                    this.rtcPeers.delete(peerId);
-                });
-        } else {
-            conn.ondatachannel = (event) => {
-                addLog(`[P2P] 收到数据通道: ${peer.name.displayName}`, 'info', true);
-                setupChannel(event.channel);
-            };
-        }
-        const rtcPeer = { conn, channel, peer, isCaller };
-        this.rtcPeers.set(peerId, rtcPeer);
-        return rtcPeer;
-    }
-
-    handleSignal(signal) {
-        const senderId = signal.sender;
-        let rtcPeer = this.rtcPeers.get(senderId);
-        if (!rtcPeer) {
-            const peer = this.peers.get(senderId);
-            if (!peer) {
-                addLog(`[P2P] 收到信令但未找到对应设备: ${senderId}`, 'warning', true);
-                return;
-            }
-            rtcPeer = this.createRTCConnection(senderId, peer, false);
-        }
-        const conn = rtcPeer.conn;
-        if (signal.sdp) {
-            const currentState = conn.signalingState;
-            // 检查 SDP 顺序是否匹配
-            if (signal.sdp.type === 'answer' && currentState !== 'have-local-offer') {
-                addLog(`[P2P] SDP 状态不匹配，忽略 answer（当前: ${currentState}）`, 'warning', true);
-                // 检查是否在3秒重建期内，是则跳过
-                const recentRecreate = this._recentRecreateMap?.get(senderId);
-                if (recentRecreate && Date.now() - recentRecreate < 3000) {
-                    addLog('[P2P] 3秒内跳过重建', 'warning', true);
-                    return;
-                }
-                // 尝试重建连接
-                this.rtcPeers.delete(senderId);
-                const peer = this.peers.get(senderId);
-                if (peer) {
-                    this.createRTCConnection(senderId, peer, false);
-                }
-                return;
-            }
-            if (signal.sdp.type === 'offer') {
-                // 优化：当收到新的offer时，如果当前状态不是stable，先关闭旧连接再创建新连接
-                if (currentState !== 'stable' && currentState !== 'have-remote-answer') {
-                    addLog(`[P2P] SDP 状态不匹配，重建连接（当前: ${currentState}）`, 'warning', true);
-                    // 检查是否在3秒重建期内，是则跳过
-                    const recentRecreate = this._recentRecreateMap?.get(senderId);
-                    if (recentRecreate && Date.now() - recentRecreate < 3000) {
-                        addLog('[P2P] 3秒内跳过重建', 'warning', true);
-                        return;
-                    }
-                    // 尝试重建连接
-                    this.rtcPeers.delete(senderId);
-                    const peer = this.peers.get(senderId);
-                    if (peer) {
-                        const newPeer = this.createRTCConnection(senderId, peer, false);
-                        // 立即处理新连接的offer
-                        if (newPeer && newPeer.conn) {
-                            newPeer.conn.setRemoteDescription(new RTCSessionDescription(signal.sdp))
-                                .then(() => {
-                                    return newPeer.conn.createAnswer();
-                                })
-                                .then(answer => {
-                                    return newPeer.conn.setLocalDescription(answer);
-                                })
-                                .then(() => {
-                                    this.sendSignal(senderId, { sdp: newPeer.conn.localDescription });
-                                })
-                                .catch(error => { addLog('[P2P] SDP 处理失败: ' + error.message, 'error', true); });
-                        }
-                    }
-                    return;
-                }
-            }
-            conn.setRemoteDescription(new RTCSessionDescription(signal.sdp))
-                .then(() => {
-                    if (signal.sdp.type === 'offer') {
-                        return conn.createAnswer();
-                    }
-                })
-                .then(answer => {
-                    if (answer) {
-                        return conn.setLocalDescription(answer);
-                    }
-                })
-                .then(() => {
-                    if (signal.sdp.type === 'offer') {
-                        this.sendSignal(senderId, { sdp: conn.localDescription });
-                    }
-                })
-                .catch(error => { addLog('[P2P] SDP 处理失败: ' + error.message, 'error', true); });
-        } else if (signal.ice) {
-            // 检查连接状态是否准备好接收 ICE candidate
-            if (conn.remoteDescription && conn.iceConnectionState !== 'closed') {
-                conn.addIceCandidate(new RTCIceCandidate(signal.ice))
-                    .catch(error => { addLog('[P2P] ICE 添加失败（可能状态不一致）: ' + error.message, 'warning', true); });
-            }
-        }
-    }
-
-    sendSignal(peerId, signal) {
-        signal.type = 'signal';
-        signal.to = peerId;
-        this.send(signal);
-    }
-
-    handlePeerMessage(peerId, data) {
-        if (data instanceof ArrayBuffer) {
-            this.handleFileChunk(data, peerId);
+        if (this.ws && (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING)) {
             return;
         }
+        
+        this.reconnecting = false;
+        
         try {
-            const message = JSON.parse(data);
-            switch (message.type) {
-                case 'text':
-                    this.handleTextReceived(message);
-                    break;
-                case 'header':
-                    this.handleFileHeader(message, peerId);
-                    break;
-                case 'partition':
-                    this.sendToPeer(peerId, { type: 'partition-received', offset: message.offset });
-                    break;
-                case 'progress':
-                    addLog(`[P2P] 对方接收进度: ${(message.progress * 100).toFixed(1)}%`, 'info', true);
-                    break;
-                case 'transfer-complete':
-                    addLog('[P2P] 对方接收完成', 'success', true);
-                    break;
-            }
-        } catch (error) {
-            addLog('[P2P] 对等消息解析错误: ' + error.message, 'error', true);
-        }
-    }
-
-    sendToPeer(peerId, message) {
-        const rtcPeer = this.rtcPeers.get(peerId);
-        if (rtcPeer && rtcPeer.channel && rtcPeer.channel.readyState === 'open') {
-            rtcPeer.channel.send(JSON.stringify(message));
-            return true;
-        }
-        return false;
-    }
-
-    handleDisplayName(message) {
-        const displayName = message.message?.displayName || message.displayName;
-        const deviceName = message.message?.deviceName || message.deviceName;
-        // 保存显示名称
-        this.displayName = displayName;
-        // 保存设备名称到配置
-        CONFIG.qilinConfig.deviceName = deviceName;
-        addLog(`[P2P] 本机设备名: ${displayName} (${deviceName})`, 'success', true);
-        this.showNotification(`已连接: ${displayName}`, 'success');
-        // 触发状态更新事件，让UI刷新
-        this.updateConnectionStatus();
-    }
-
-    async handleTextReceived(message) {
-        try {
-            const text = decodeURIComponent(atob(message.text));
-            addLog('[P2P] 收到文本: ' + text, 'info', true);
-            if (isBase64ImageString(text)) {
-                const success = await qilinCopyBase64ImageToClipboard(text);
-                if (success) {
-                    this.showNotification('🖼️ 图片已复制到剪贴板', 'success');
-                } else {
-                    this.showNotification('⚠️ 图片复制失败，已作为文本处理', 'warning');
-                    await this.copyText(text);
-                }
-            } else {
-                await this.copyText(text);
-            }
-        } catch (error) {
-            addLog('[P2P] 文本处理错误: ' + error.message, 'error', true);
-            this.showNotification('文本处理失败', 'error');
-        }
-    }
-
-    async copyText(text) {
-        const success = await qilinSafeCopyText(text);
-        if (success) {
-            this.showNotification('📋 文本已复制到剪贴板', 'success');
-        } else {
-            this.showNotification('⚠️ 复制失败，请手动复制', 'warning');
-            prompt('[P2P] 请手动复制:', text);
-        }
-    }
-
-    handleFileHeader(message, peerId) {
-        addLog('[P2P] 收到文件头: ' + message.name + ' 来自: ' + peerId, 'info', true);
-        this.currentFile = {
-            name: message.name,
-            mime: message.mime,
-            size: message.size,
-            chunks: [],
-            receivedBytes: 0,
-            senderId: peerId
-        };
-        const type = message.mime.startsWith('image/') ? '图片' : '文件';
-        const size = formatSize(message.size);
-        this.showNotification(`正在接收${type}: ${message.name} (${size})`, 'info');
-    }
-
-    handleFileChunk(chunk, peerId) {
-        if (!this.currentFile) {
-            addLog('[P2P] 收到文件块但没有文件头（来自: ' + peerId + '）', 'warning', true);
-            return;
-        }
-        this.currentFile.chunks.push(chunk);
-        this.currentFile.receivedBytes += chunk.byteLength;
-        const progress = (this.currentFile.receivedBytes / this.currentFile.size * 100).toFixed(1);
-        if (Math.floor(progress) % 20 === 0) {
-            addLog(`[P2P] 接收进度: ${progress}%`, 'info', true);
-        }
-        if (this.currentFile.receivedBytes >= this.currentFile.size) {
-            this.completeFileDownload();
-        }
-    }
-
-    async completeFileDownload() {
-        try {
-            const fileInfo = {
-                name: this.currentFile.name,
-                mime: this.currentFile.mime,
-                chunks: this.currentFile.chunks,
-                senderId: this.currentFile.senderId
+            console.log('[P2P] 尝试连接WebSocket...');
+            this.ws = new WebSocket(this.getWebSocketURL());
+            this.ws.onopen = () => {
+                console.log('[P2P] WebSocket已连接');
+                this.reconnecting = false;
+                this.wsConnected = true;
+                this.send({ type: 'register', deviceId: this.deviceId, deviceName: this.deviceName });
+                this.startHeartbeat();
+                this.updateStatus();
             };
-            this.currentFile = null;
-            const blob = new Blob(fileInfo.chunks, { type: fileInfo.mime });
-            const url = URL.createObjectURL(blob);
-            if (fileInfo.mime.startsWith('image/')) {
-                await this.handleImageFile(blob, url, fileInfo.name);
-            } else {
-                this.downloadFile(url, fileInfo.name);
-            }
-            this.showNotification(`✅ 接收完成: ${fileInfo.name}`, 'success');
-
-            // ✅ 向发送端发送传输完成确认（解决第二次无法传输问题）
-            if (fileInfo.senderId) {
-                this.sendToPeer(fileInfo.senderId, { type: 'transfer-complete' });
-                addLog('[P2P] 已发送传输完成确认给发送端', 'success', true);
-            }
+            this.ws.onmessage = (e) => this.handleMessage(JSON.parse(e.data));
+            this.ws.onclose = () => {
+                console.log('[P2P] WebSocket断开');
+                this.reconnecting = false;
+                this.wsConnected = false;
+                this.stopHeartbeat();
+                
+                // 仅当之前已连接时才清理配对（区分主动断开和异常断开）
+                if (this.deviceId) {
+                    this.cleanupAfterDisconnect();
+                }
+                
+                this.updateStatus();
+                this.reconnecting = true;
+                setTimeout(() => this.connectWebSocket(), 5000);
+            };
+            this.ws.onerror = (error) => {
+                console.error('[P2P] WebSocket错误:', error);
+            };
         } catch (error) {
-            addLog('[P2P] 文件处理错误: ' + error.message, 'error', true);
-            this.showNotification('文件处理失败', 'error');
-            this.currentFile = null;
+            console.error('[P2P] WebSocket连接失败:', error);
+            this.reconnecting = true;
+            setTimeout(() => this.connectWebSocket(), 5000);
         }
-    }
-
-    async handleImageFile(blob, url, filename) {
-        addLog('[P2P] 处理图片文件...', 'info', true);
-        const success = await qilinCopyImageToClipboard(blob, filename?.name || filename);
-        if (success) {
-            this.showNotification('🖼️ 图片已复制到剪贴板', 'success');
-            setTimeout(() => URL.revokeObjectURL(url), 100);
-        } else {
-            addLog('[P2P] 无法复制图片，改为下载', 'warning', true);
-            this.downloadFile(url, filename?.name || filename);
-        }
-    }
-
-    downloadFile(url, filename) {
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = filename;
-        a.style.display = 'none';
-        document.body.appendChild(a);
-        a.click();
-        setTimeout(() => {
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-        }, 100);
-        qilinPlaySound();
-        this.showNotification(`📥 文件已下载: ${filename}`, 'success');
     }
 
     send(message) {
-        if (!this.connected || !this.socket) {
-            addLog('[P2P] 未连接，无法发送', 'warning', true);
-            return;
+        if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+            this.ws.send(JSON.stringify(message));
         }
-        this.socket.send(JSON.stringify(message));
     }
 
-    showNotification(message, type = 'info') {
-        const colors = {
-            success: '#4CAF50',
-            error: '#f44336',
-            warning: '#ff9800',
-            info: '#2196F3'
-        };
-        const notification = document.createElement('div');
-        notification.style.cssText = `
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: ${colors[type]};
-            color: white;
-            padding: 15px 20px;
-            border-radius: 4px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-            z-index: 999999;
-            font-size: 14px;
-            max-width: 300px;
-            animation: slideIn 0.3s ease-out;
-            font-family: Arial, sans-serif;
-        `;
-        notification.textContent = message;
-        const show = () => {
-            document.body.appendChild(notification);
-            setTimeout(() => {
-                notification.style.animation = 'slideOut 0.3s ease-out';
-                setTimeout(() => notification.remove(), 300);
-            }, 3000);
-        };
-        if (document.body) {
-            show();
-        } else {
-            document.addEventListener('DOMContentLoaded', show);
+    startHeartbeat() {
+        this.stopHeartbeat();
+        this.heartbeatTimer = setInterval(() => {
+            if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+                this.send({ type: 'ping' });
+            }
+        }, 30000);
+    }
+
+    stopHeartbeat() {
+        if (this.heartbeatTimer) {
+            clearInterval(this.heartbeatTimer);
+            this.heartbeatTimer = null;
         }
+    }
+
+    handleMessage(message) {
+        switch (message.type) {
+            case 'welcome':
+                if (message.id) {
+                    this.deviceId = message.id;
+                    this.updateStatus();
+                }
+                break;
+            case 'client-list':
+                this.peers = message.clients.filter(c => c.id !== this.deviceId);
+                this.updateStatus();
+                break;
+            case 'pong':
+                break;
+            case 'pair-request':
+                this.handlePairRequest(message);
+                break;
+            case 'pair-success':
+                this.currentPartner = message.partnerId;
+                this.isInitiator = true;
+                this.createPeerConnection();
+                this.updateStatus();
+                break;
+            case 'pair-accept':
+                this.currentPartner = message.requesterId;
+                this.isInitiator = false;
+                this.createPeerConnection();
+                this.updateStatus();
+                break;
+            case 'pair-rejected':
+            case 'pair-error':
+                CAT_UI.Message.warning(message.message || '配对请求被拒绝');
+                this.updateStatus();
+                break;
+            case 'webrtc-signal':
+                this.handleWebRTCSignal(message.signal);
+                break;
+            case 'partner-disconnected':
+                this.disconnectPeer();
+                CAT_UI.Message.warning('对方已断开连接');
+                break;
+            case 'client-disconnected':
+                if (message.clientId === this.currentPartner) {
+                    this.cleanupAfterDisconnect();
+                }
+                break;
+        }
+    }
+
+    handlePairRequest(message) {
+        if (this.peers.length === 1) {
+            this.send({ type: 'pair-accept', requesterId: message.requesterId });
+        } else {
+            CAT_UI.Message.info(`收到来自 ${message.requesterId} 的配对请求`);
+            this.send({ type: 'pair-accept', requesterId: message.requesterId });
+        }
+    }
+
+    requestPair(targetId) {
+        if (this.currentPartner) {
+            CAT_UI.Message.warning('当前已配对，请先断开');
+            return;
+        }
+        this.send({ type: 'pair-request', targetId: targetId });
+        CAT_UI.Message.info('已发送配对请求');
+    }
+
+    createPeerConnection() {
+        const config = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
+        this.peerConnection = new RTCPeerConnection(config);
+
+        this.peerConnection.onicecandidate = (event) => {
+            if (event.candidate) {
+                this.send({ type: 'webrtc-signal', targetId: this.currentPartner, signal: { type: 'ice-candidate', candidate: event.candidate } });
+            }
+        };
+
+        this.peerConnection.onconnectionstatechange = () => {
+            if (this.peerConnection.connectionState === 'connected') {
+                CAT_UI.Message.success('P2P连接已建立');
+            }
+        };
+
+        if (this.isInitiator) {
+            this.dataChannel = this.peerConnection.createDataChannel('data', { ordered: true });
+            this.setupDataChannel();
+            this.peerConnection.createOffer().then(offer => this.peerConnection.setLocalDescription(offer))
+                .then(() => {
+                    this.send({ type: 'webrtc-signal', targetId: this.currentPartner, signal: { type: 'offer', sdp: this.peerConnection.localDescription } });
+                });
+        } else {
+            this.peerConnection.ondatachannel = (event) => {
+                this.dataChannel = event.channel;
+                this.setupDataChannel();
+            };
+        }
+    }
+
+    setupDataChannel() {
+        this.dataChannel.onopen = () => {
+            console.log('[P2P] 数据通道已打开');
+            CAT_UI.Message.success('数据通道已打开');
+            this.updateStatus();
+        };
+        this.dataChannel.onmessage = (e) => this.handleDataMessage(e.data);
+        this.dataChannel.onclose = () => {
+            console.log('[P2P] 数据通道已关闭');
+            CAT_UI.Message.warning('数据通道已关闭');
+            this.updateStatus();
+        };
+    }
+
+    handleWebRTCSignal(signal) {
+        if (!this.peerConnection) {
+            this.createPeerConnection();
+        }
+
+        if (signal.type === 'offer') {
+            this.peerConnection.setRemoteDescription(new RTCSessionDescription(signal.sdp))
+                .then(() => this.peerConnection.createAnswer())
+                .then(answer => this.peerConnection.setLocalDescription(answer))
+                .then(() => {
+                    this.send({ type: 'webrtc-signal', targetId: this.currentPartner, signal: { type: 'answer', sdp: this.peerConnection.localDescription } });
+                });
+        } else if (signal.type === 'answer') {
+            if (this.peerConnection.signalingState === 'have-local-offer') {
+                this.peerConnection.setRemoteDescription(new RTCSessionDescription(signal.sdp));
+            }
+        } else if (signal.type === 'ice-candidate') {
+            if (this.peerConnection.remoteDescription) {
+                this.peerConnection.addIceCandidate(new RTCIceCandidate(signal.candidate));
+            }
+        }
+    }
+
+    handleDataMessage(data) {
+        if (typeof data === 'string') {
+            try {
+                const message = JSON.parse(data);
+                if (message.type === 'text') {
+                    this.handleReceivedText(message.content);
+                } else if (message.type === 'file-header') {
+                    this.currentFileTransfer = {
+                        name: message.name,
+                        size: message.size,
+                        chunks: [],
+                        receivedBytes: 0
+                    };
+                    CAT_UI.Message.info(`开始接收文件: ${message.name}`);
+                }
+            } catch (e) { }
+        } else if (data instanceof ArrayBuffer) {
+            if (this.currentFileTransfer) {
+                this.currentFileTransfer.chunks.push(new Uint8Array(data));
+                this.currentFileTransfer.receivedBytes += data.byteLength;
+                if (this.currentFileTransfer.receivedBytes >= this.currentFileTransfer.size) {
+                    this.saveReceivedFile();
+                }
+            }
+        }
+    }
+
+    async handleReceivedText(text) {
+        const success = await safeCopyText(text);
+        if (success) {
+            CAT_UI.Message.success('收到文本，已复制到剪贴板');
+            const player = new Audio();
+            player.src = CONFIG.didaUrl;
+            player.play();
+        }
+    }
+
+    saveReceivedFile() {
+        const blob = new Blob(this.currentFileTransfer.chunks);
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = this.currentFileTransfer.name;
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+        CAT_UI.Message.success(`文件已下载: ${this.currentFileTransfer.name}`);
+        this.currentFileTransfer = null;
+    }
+
+    sendText(text) {
+        if (!this.currentPartner) {
+            CAT_UI.Message.warning('未配对设备');
+            return;
+        }
+        if (!this.peerConnection) {
+            CAT_UI.Message.warning('P2P连接正在建立中，请稍候');
+            return;
+        }
+        if (this.dataChannel && this.dataChannel.readyState === 'open') {
+            this.dataChannel.send(JSON.stringify({ type: 'text', content: text }));
+            CAT_UI.Message.success('文本已发送');
+        } else {
+            CAT_UI.Message.warning('数据通道未就绪，请稍候再试');
+        }
+    }
+
+    disconnect() {
+        this.disconnectPeer();
+        this.send({ type: 'disconnect' });
+        CAT_UI.Message.info('已断开连接');
+    }
+
+    disconnectPeer() {
+        if (this.dataChannel) {
+            this.dataChannel.close();
+            this.dataChannel = null;
+        }
+        if (this.peerConnection) {
+            this.peerConnection.close();
+            this.peerConnection = null;
+        }
+        this.currentPartner = null;
+        this.isInitiator = false;
+        this.updateStatus();
+    }
+
+    cleanupAfterDisconnect() {
+        console.log('[P2P] 清理配对连接');
+        if (this.dataChannel) {
+            this.dataChannel.close();
+            this.dataChannel = null;
+        }
+        if (this.peerConnection) {
+            this.peerConnection.close();
+            this.peerConnection = null;
+        }
+        this.currentPartner = null;
+        this.isInitiator = false;
+        this.updateStatus();
+    }
+
+    updateStatus() {
+        const status = this.getStatus();
+        window.dispatchEvent(new CustomEvent('p2pStatusChange', { detail: status }));
     }
 
     getStatus() {
-        const rtcStatus = [];
-        this.rtcPeers.forEach((peer, id) => {
-            rtcStatus.push({
-                name: peer.peer.name.displayName,
-                connectionState: peer.conn.connectionState,
-                signalingState: peer.conn.signalingState,
-                iceState: peer.conn.iceConnectionState,
-                channelState: peer.channel?.readyState || 'none'
-            });
-        });
         return {
-            connected: this.connected,
-            peerId: this.peerId,
-            displayName: this.displayName,
-            deviceName: CONFIG.qilinConfig.deviceName,
-            peers: Array.from(this.peers.values()).map(p => p.name.displayName),
-            rtcConnections: this.rtcPeers.size,
-            rtcStatus,
-            currentFile: this.currentFile ? {
-                name: this.currentFile.name,
-                size: formatSize(this.currentFile.size),
-                progress: `${(this.currentFile.receivedBytes / this.currentFile.size * 100).toFixed(1)}%`
-            } : null
+            connected: this.wsConnected && !!this.currentPartner,
+            wsConnected: this.wsConnected,
+            deviceId: this.deviceId,
+            deviceName: this.deviceName,
+            peers: this.peers,
+            currentPartner: this.currentPartner,
+            dataChannelReady: !!(this.dataChannel && this.dataChannel.readyState === 'open')
         };
     }
 }
 
-// 初始化麒麟传送
-function initQilinDrop() {
-    // 添加CSS动画样式
-    const style = document.createElement('style');
-    style.textContent = `
-        @keyframes slideIn {
-            from { transform: translateX(400px); opacity: 0; }
-            to { transform: translateX(0); opacity: 1; }
-        }
-        @keyframes slideOut {
-            from { transform: translateX(0); opacity: 1; }
-            to { transform: translateX(400px); opacity: 0; }
-        }
-    `;
-    if (document.head) {
-        document.head.appendChild(style);
-    }
+let p2pTransferClient = null;
 
-    qilinClient = new QilinDropClient();
-    unsafeWindow.qilinClient = qilinClient;
-    window.qilinClient = qilinClient;  // 同时设置到window，供CAT_UI面板访问
-    addLog('[P2P] 🦄 麒麟传送助手已启动', 'success', true);
-}
-
-// 获取麒麟传送状态
-function getQilinStatus() {
-    if (qilinClient) {
-        return qilinClient.getStatus();
-    }
-    return { connected: false, peerId: null, peers: [], rtcConnections: 0 };
+function initP2PTransfer() {
+    p2pTransferClient = new P2PTransferClient();
+    window.p2pTransferClient = p2pTransferClient;
+    addLog('[P2P] P2P传输功能已启动', 'success', true);
 }
 
 // ========== 页面启动 ==========
-// 麒麟传送初始化（立即启动，无需等待DOM）
-initQilinDrop();
+initP2PTransfer();
 
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', startMonitoring);

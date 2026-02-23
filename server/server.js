@@ -5,8 +5,11 @@ const WebSocket = require('ws');
 const PORT = process.env.PORT || 3000;
 
 // 存储连接的客户端
-// 结构: { id: { ws, type, ip, pairedWith } }
+// 结构: { id: { ws, type, ip, pairedWith, lastPing } }
 const clients = new Map();
+
+// 心跳间隔（毫秒）
+const PING_INTERVAL = 30000;
 
 // 生成唯一ID
 function generateId() {
@@ -96,7 +99,8 @@ wss.on('connection', (ws, req) => {
         type: 'unknown',
         ip: realIp,
         pairedWith: null,
-        isPrivate: isPrivateIP(realIp)
+        isPrivate: isPrivateIP(realIp),
+        lastPing: Date.now()
     });
 
     console.log(`[${new Date().toISOString()}] 新连接: ${clientId}, IP: ${realIp}, 私有: ${clients.get(clientId).isPrivate}`);
@@ -125,6 +129,17 @@ wss.on('connection', (ws, req) => {
     // 处理连接关闭
     ws.on('close', () => {
         const client = clients.get(clientId);
+        
+        // 广播客户端断开消息
+        clients.forEach((c) => {
+            if (c.id !== clientId) {
+                sendToClient(c.ws, {
+                    type: 'client-disconnected',
+                    clientId: clientId
+                });
+            }
+        });
+        
         if (client && client.pairedWith) {
             // 通知配对客户端
             const partner = clients.get(client.pairedWith);
@@ -153,6 +168,11 @@ function handleMessage(clientId, message) {
     if (!client) return;
 
     switch (message.type) {
+        case 'ping':
+            client.lastPing = Date.now();
+            sendToClient(ws, { type: 'pong' });
+            break;
+            
         case 'update-type':
             client.type = message.clientType;
             broadcastClientList();
@@ -348,14 +368,54 @@ function broadcastClientList() {
         type: 'client-list',
         clients: clientList
     };
-
+    
     // 发送给所有客户端
     clients.forEach((client) => {
         sendToClient(client.ws, message);
     });
 }
 
+// 心跳检查：定期检查客户端是否还活着
+function startHeartbeatCheck() {
+    setInterval(() => {
+        const now = Date.now();
+        clients.forEach((client, id) => {
+            if (now - client.lastPing > PING_INTERVAL * 2) {
+                console.log(`[${new Date().toISOString()}] 客户端超时断开: ${id}`);
+                
+                // 通知其他客户端
+                clients.forEach((c) => {
+                    if (c.id !== id) {
+                        sendToClient(c.ws, {
+                            type: 'client-disconnected',
+                            clientId: id
+                        });
+                    }
+                });
+                
+                // 通知配对客户端
+                if (client.pairedWith) {
+                    const partner = clients.get(client.pairedWith);
+                    if (partner) {
+                        sendToClient(partner.ws, {
+                            type: 'partner-disconnected',
+                            reason: '连接超时'
+                        });
+                        partner.pairedWith = null;
+                    }
+                }
+                
+                client.ws.close();
+                clients.delete(id);
+                broadcastClientList();
+            }
+        });
+    }, PING_INTERVAL);
+}
+
 // 启动服务器
+startHeartbeatCheck();
+
 server.listen(PORT, '0.0.0.0', () => {
     console.log(`========================================`);
     console.log(`  P2P 传输信令服务器`);
