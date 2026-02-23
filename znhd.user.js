@@ -115,7 +115,7 @@ function showQilinQRCode() {
             colorLight: "#ffffff",
             correctLevel: QRCode.CorrectLevel.H
         });
-        addLog(`[麒麟传送] 显示连接二维码: ${qrUrl}`, 'info', true);
+        addLog(`[P2P] 显示连接二维码: ${qrUrl}`, 'info', true);
     } else {
         content.innerHTML += '<p style="color:red;">二维码库未加载</p>';
     }
@@ -1054,21 +1054,21 @@ async function qilinSafeCopyText(text) {
     if (typeof GM_setClipboard === 'function') {
         try {
             GM_setClipboard(text);
-            addLog('[麒麟传送] 文本已复制 (GM_setClipboard)', 'success', true);
+            addLog('[P2P] 文本已复制 (GM_setClipboard)', 'success', true);
             qilinPlaySound();
             return true;
         } catch (e) {
-            addLog('[麒麟传送] GM_setClipboard 失败: ' + e.message, 'error', true);
+            addLog('[P2P] GM_setClipboard 失败: ' + e.message, 'error', true);
         }
     }
     if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
         try {
             await navigator.clipboard.writeText(text);
-            addLog('[麒麟传送] 文本已复制 (navigator.clipboard)', 'success', true);
+            addLog('[P2P] 文本已复制 (navigator.clipboard)', 'success', true);
             qilinPlaySound();
             return true;
         } catch (err) {
-            addLog('[麒麟传送] navigator.clipboard 失败: ' + err.message, 'error', true);
+            addLog('[P2P] navigator.clipboard 失败: ' + err.message, 'error', true);
         }
     }
     try {
@@ -1081,12 +1081,12 @@ async function qilinSafeCopyText(text) {
         const success = document.execCommand('copy');
         document.body.removeChild(textarea);
         if (success) {
-            addLog('[麒麟传送] 文本已复制 (execCommand)', 'success', true);
+            addLog('[P2P] 文本已复制 (execCommand)', 'success', true);
             qilinPlaySound();
             return true;
         }
     } catch (err) {
-        addLog('[麒麟传送] execCommand 失败: ' + err.message, 'error', true);
+        addLog('[P2P] execCommand 失败: ' + err.message, 'error', true);
     }
     return false;
 }
@@ -1099,28 +1099,28 @@ async function qilinCopyImageToClipboard(blob, originalFilename = '') {
         if (navigator.clipboard && typeof navigator.clipboard.write === 'function' && typeof window.ClipboardItem === 'function') {
             try {
                 await navigator.clipboard.write([new ClipboardItem({ [mime]: pngBlob })]);
-                addLog('[麒麟传送] 图片已复制 (Clipboard API)', 'success', true);
+                addLog('[P2P] 图片已复制 (Clipboard API)', 'success', true);
                 qilinPlaySound();
                 return true;
             } catch (clipErr) {
-                addLog('[麒麟传送] Clipboard API 失败: ' + clipErr.message, 'error', true);
+                addLog('[P2P] Clipboard API 失败: ' + clipErr.message, 'error', true);
             }
         }
         if (typeof GM_setClipboard === 'function') {
             try {
                 const dataUrl = await blobToBase64(pngBlob);
                 GM_setClipboard(dataUrl, { type: 'image', mimetype: mime });
-                addLog('[麒麟传送] 图片已复制 (GM_setClipboard)', 'success', true);
+                addLog('[P2P] 图片已复制 (GM_setClipboard)', 'success', true);
                 qilinPlaySound();
                 return true;
             } catch (gmErr) {
-                addLog('[麒麟传送] GM_setClipboard 图片失败: ' + gmErr.message, 'error', true);
+                addLog('[P2P] GM_setClipboard 图片失败: ' + gmErr.message, 'error', true);
             }
         }
-        addLog('[麒麟传送] 当前环境不支持图片剪贴板，降级为下载', 'warning', true);
+        addLog('[P2P] 当前环境不支持图片剪贴板，降级为下载', 'warning', true);
         return false;
     } catch (err) {
-        addLog('[麒麟传送] 复制图片失败: ' + err.message, 'error', true);
+        addLog('[P2P] 复制图片失败: ' + err.message, 'error', true);
         return false;
     }
 }
@@ -1133,7 +1133,7 @@ async function qilinCopyBase64ImageToClipboard(text) {
         const blob = await res.blob();
         return await qilinCopyImageToClipboard(blob);
     } catch (err) {
-        addLog('[麒麟传送] 复制 Base64 图片失败: ' + err.message, 'error', true);
+        addLog('[P2P] 复制 Base64 图片失败: ' + err.message, 'error', true);
         return false;
     }
 }
@@ -1153,7 +1153,7 @@ class QilinDropClient {
 
     async init() {
         this.peerId = await this.getPeerId();
-        addLog('[麒麟传送] 设备ID: ' + this.peerId, 'info', true);
+        addLog('[P2P] 设备ID: ' + this.peerId, 'info', true);
         this.connect();
     }
 
@@ -1199,19 +1199,19 @@ class QilinDropClient {
     }
 
     connect() {
-        addLog('[麒麟传送] 正在连接服务器...', 'info', true);
+        addLog('[P2P] 正在连接服务器...', 'info', true);
         try {
             this.socket = new WebSocket(this.getWebSocketURL());
             this.socket.binaryType = 'arraybuffer';
             this.socket.onopen = () => {
-                addLog('[麒麟传送] WebSocket 已连接', 'success', true);
+                addLog('[P2P] WebSocket 已连接', 'success', true);
                 this.connected = true;
                 this.updateConnectionStatus();
                 this.showNotification('已连接到麒麟传送', 'success');
             };
             this.socket.onmessage = (e) => this.handleMessage(e.data);
             this.socket.onclose = () => {
-                addLog('[麒麟传送] 连接已断开', 'warning', true);
+                addLog('[P2P] 连接已断开', 'warning', true);
                 this.connected = false;
                 this.updateConnectionStatus();
                 this.peers.clear();
@@ -1223,10 +1223,10 @@ class QilinDropClient {
                 setTimeout(() => this.connect(), 5000);
             };
             this.socket.onerror = (error) => {
-                addLog('[麒麟传送] 连接错误: ' + error.message, 'error', true);
+                addLog('[P2P] 连接错误: ' + error.message, 'error', true);
             };
         } catch (error) {
-            addLog('[麒麟传送] 无法连接: ' + error.message, 'error', true);
+            addLog('[P2P] 无法连接: ' + error.message, 'error', true);
             this.showNotification(`连接失败: ${error.message}`, 'error');
         }
     }
@@ -1266,12 +1266,12 @@ class QilinDropClient {
                     break;
             }
         } catch (error) {
-            addLog('[麒麟传送] 消息解析错误: ' + error.message, 'error', true);
+            addLog('[P2P] 消息解析错误: ' + error.message, 'error', true);
         }
     }
 
     handlePeers(peers) {
-        addLog(`[麒麟传送] 发现 ${peers.length} 个在线设备`, 'info', true);
+        addLog(`[P2P] 发现 ${peers.length} 个在线设备`, 'info', true);
         this.peers.clear();
         peers.forEach(peer => {
             this.peers.set(peer.id, peer);
@@ -1290,7 +1290,7 @@ class QilinDropClient {
     }
 
     handlePeerJoined(peer) {
-        addLog(`[麒麟传送] 设备加入: ${peer.name.displayName}`, 'info', true);
+        addLog(`[P2P] 设备加入: ${peer.name.displayName}`, 'info', true);
         this.peers.set(peer.id, peer);
         this.updateConnectionStatus();
         this.showNotification(`${peer.name.displayName} 加入`, 'info');
@@ -1305,7 +1305,7 @@ class QilinDropClient {
     handlePeerLeft(peerId) {
         const peer = this.peers.get(peerId);
         if (peer) {
-            addLog(`[麒麟传送] 设备离开: ${peer.name.displayName}`, 'warning', true);
+            addLog(`[P2P] 设备离开: ${peer.name.displayName}`, 'warning', true);
             this.showNotification(`${peer.name.displayName} 离开`, 'warning');
         }
         this.peers.delete(peerId);
@@ -1321,7 +1321,7 @@ class QilinDropClient {
         // 避免快速重复创建连接（用于重建时的防抖）
         const recentRecreate = this._recentRecreateMap?.get(peerId);
         if (recentRecreate && Date.now() - recentRecreate < 3000) {
-            addLog(`[麒麟传送] 3秒内跳过重建连接: ${peer.name.displayName}`, 'warning', true);
+            addLog(`[P2P] 3秒内跳过重建连接: ${peer.name.displayName}`, 'warning', true);
             return null;
         }
         // 记录重建时间
@@ -1331,7 +1331,7 @@ class QilinDropClient {
         // 检查是否存在旧连接，如果存在则先关闭
         const existingPeer = this.rtcPeers.get(peerId);
         if (existingPeer) {
-            addLog(`[麒麟传送] 关闭旧 RTC 连接: ${peer.name.displayName}`, 'warning', true);
+            addLog(`[P2P] 关闭旧 RTC 连接: ${peer.name.displayName}`, 'warning', true);
             if (existingPeer.conn) {
                 existingPeer.conn.close();
             }
@@ -1361,7 +1361,7 @@ class QilinDropClient {
                     }, 3000);
                     break;
                 case 'closed':
-                    addLog(`[麒麟传送] 连接关闭，3秒后尝试重连: ${peer.name.displayName}`, 'warning', true);
+                    addLog(`[P2P] 连接关闭，3秒后尝试重连: ${peer.name.displayName}`, 'warning', true);
                     setTimeout(() => {
                         if (this.peers.has(peerId)) {
                             this.rtcPeers.delete(peerId);
@@ -1380,7 +1380,7 @@ class QilinDropClient {
             channel = ch;
             channel.binaryType = 'arraybuffer';
             channel.onopen = () => {
-                addLog(`[麒麟传送] 数据通道已打开: ${peer.name.displayName}`, 'success', true);
+                addLog(`[P2P] 数据通道已打开: ${peer.name.displayName}`, 'success', true);
             };
             channel.onmessage = (e) => {
                 // 只在开始和结束时输出简洁日志
@@ -1392,14 +1392,14 @@ class QilinDropClient {
                     try {
                         const msg = JSON.parse(e.data);
                         if (msg.type === 'header' || msg.type === 'transfer-complete') {
-                            addLog(`[麒麟传送] ${msg.type}: ${msg.name || ''}`, 'info', true);
+                            addLog(`[P2P] ${msg.type}: ${msg.name || ''}`, 'info', true);
                         }
                     } catch (err) { }
                     this.handlePeerMessage(peerId, e.data);
                 }
             };
             channel.onclose = () => {
-                addLog(`[麒麟传送] 数据通道已关闭: ${peer.name.displayName}`, 'warning', true);
+                addLog(`[P2P] 数据通道已关闭: ${peer.name.displayName}`, 'warning', true);
             };
         };
         if (isCaller) {
@@ -1408,13 +1408,13 @@ class QilinDropClient {
             conn.createOffer().then(offer => conn.setLocalDescription(offer))
                 .then(() => { this.sendSignal(peerId, { sdp: conn.localDescription }); })
                 .catch(error => {
-                    addLog('[麒麟传送] 创建 offer 失败: ' + error.message, 'error', true);
+                    addLog('[P2P] 创建 offer 失败: ' + error.message, 'error', true);
                     // 失败后清理连接
                     this.rtcPeers.delete(peerId);
                 });
         } else {
             conn.ondatachannel = (event) => {
-                addLog(`[麒麟传送] 收到数据通道: ${peer.name.displayName}`, 'info', true);
+                addLog(`[P2P] 收到数据通道: ${peer.name.displayName}`, 'info', true);
                 setupChannel(event.channel);
             };
         }
@@ -1429,7 +1429,7 @@ class QilinDropClient {
         if (!rtcPeer) {
             const peer = this.peers.get(senderId);
             if (!peer) {
-                addLog(`[麒麟传送] 收到信令但未找到对应设备: ${senderId}`, 'warning', true);
+                addLog(`[P2P] 收到信令但未找到对应设备: ${senderId}`, 'warning', true);
                 return;
             }
             rtcPeer = this.createRTCConnection(senderId, peer, false);
@@ -1439,11 +1439,11 @@ class QilinDropClient {
             const currentState = conn.signalingState;
             // 检查 SDP 顺序是否匹配
             if (signal.sdp.type === 'answer' && currentState !== 'have-local-offer') {
-                addLog(`[麒麟传送] SDP 状态不匹配，忽略 answer（当前: ${currentState}）`, 'warning', true);
+                addLog(`[P2P] SDP 状态不匹配，忽略 answer（当前: ${currentState}）`, 'warning', true);
                 // 检查是否在3秒重建期内，是则跳过
                 const recentRecreate = this._recentRecreateMap?.get(senderId);
                 if (recentRecreate && Date.now() - recentRecreate < 3000) {
-                    addLog('[麒麟传送] 3秒内跳过重建', 'warning', true);
+                    addLog('[P2P] 3秒内跳过重建', 'warning', true);
                     return;
                 }
                 // 尝试重建连接
@@ -1457,11 +1457,11 @@ class QilinDropClient {
             if (signal.sdp.type === 'offer') {
                 // 优化：当收到新的offer时，如果当前状态不是stable，先关闭旧连接再创建新连接
                 if (currentState !== 'stable' && currentState !== 'have-remote-answer') {
-                    addLog(`[麒麟传送] SDP 状态不匹配，重建连接（当前: ${currentState}）`, 'warning', true);
+                    addLog(`[P2P] SDP 状态不匹配，重建连接（当前: ${currentState}）`, 'warning', true);
                     // 检查是否在3秒重建期内，是则跳过
                     const recentRecreate = this._recentRecreateMap?.get(senderId);
                     if (recentRecreate && Date.now() - recentRecreate < 3000) {
-                        addLog('[麒麟传送] 3秒内跳过重建', 'warning', true);
+                        addLog('[P2P] 3秒内跳过重建', 'warning', true);
                         return;
                     }
                     // 尝试重建连接
@@ -1481,7 +1481,7 @@ class QilinDropClient {
                                 .then(() => {
                                     this.sendSignal(senderId, { sdp: newPeer.conn.localDescription });
                                 })
-                                .catch(error => { addLog('[麒麟传送] SDP 处理失败: ' + error.message, 'error', true); });
+                                .catch(error => { addLog('[P2P] SDP 处理失败: ' + error.message, 'error', true); });
                         }
                     }
                     return;
@@ -1503,12 +1503,12 @@ class QilinDropClient {
                         this.sendSignal(senderId, { sdp: conn.localDescription });
                     }
                 })
-                .catch(error => { addLog('[麒麟传送] SDP 处理失败: ' + error.message, 'error', true); });
+                .catch(error => { addLog('[P2P] SDP 处理失败: ' + error.message, 'error', true); });
         } else if (signal.ice) {
             // 检查连接状态是否准备好接收 ICE candidate
             if (conn.remoteDescription && conn.iceConnectionState !== 'closed') {
                 conn.addIceCandidate(new RTCIceCandidate(signal.ice))
-                    .catch(error => { addLog('[麒麟传送] ICE 添加失败（可能状态不一致）: ' + error.message, 'warning', true); });
+                    .catch(error => { addLog('[P2P] ICE 添加失败（可能状态不一致）: ' + error.message, 'warning', true); });
             }
         }
     }
@@ -1537,14 +1537,14 @@ class QilinDropClient {
                     this.sendToPeer(peerId, { type: 'partition-received', offset: message.offset });
                     break;
                 case 'progress':
-                    addLog(`[麒麟传送] 对方接收进度: ${(message.progress * 100).toFixed(1)}%`, 'info', true);
+                    addLog(`[P2P] 对方接收进度: ${(message.progress * 100).toFixed(1)}%`, 'info', true);
                     break;
                 case 'transfer-complete':
-                    addLog('[麒麟传送] 对方接收完成', 'success', true);
+                    addLog('[P2P] 对方接收完成', 'success', true);
                     break;
             }
         } catch (error) {
-            addLog('[麒麟传送] 对等消息解析错误: ' + error.message, 'error', true);
+            addLog('[P2P] 对等消息解析错误: ' + error.message, 'error', true);
         }
     }
 
@@ -1564,7 +1564,7 @@ class QilinDropClient {
         this.displayName = displayName;
         // 保存设备名称到配置
         CONFIG.qilinConfig.deviceName = deviceName;
-        addLog(`[麒麟传送] 本机设备名: ${displayName} (${deviceName})`, 'success', true);
+        addLog(`[P2P] 本机设备名: ${displayName} (${deviceName})`, 'success', true);
         this.showNotification(`已连接: ${displayName}`, 'success');
         // 触发状态更新事件，让UI刷新
         this.updateConnectionStatus();
@@ -1573,7 +1573,7 @@ class QilinDropClient {
     async handleTextReceived(message) {
         try {
             const text = decodeURIComponent(atob(message.text));
-            addLog('[麒麟传送] 收到文本: ' + text, 'info', true);
+            addLog('[P2P] 收到文本: ' + text, 'info', true);
             if (isBase64ImageString(text)) {
                 const success = await qilinCopyBase64ImageToClipboard(text);
                 if (success) {
@@ -1586,7 +1586,7 @@ class QilinDropClient {
                 await this.copyText(text);
             }
         } catch (error) {
-            addLog('[麒麟传送] 文本处理错误: ' + error.message, 'error', true);
+            addLog('[P2P] 文本处理错误: ' + error.message, 'error', true);
             this.showNotification('文本处理失败', 'error');
         }
     }
@@ -1597,12 +1597,12 @@ class QilinDropClient {
             this.showNotification('📋 文本已复制到剪贴板', 'success');
         } else {
             this.showNotification('⚠️ 复制失败，请手动复制', 'warning');
-            prompt('[麒麟传送] 请手动复制:', text);
+            prompt('[P2P] 请手动复制:', text);
         }
     }
 
     handleFileHeader(message, peerId) {
-        addLog('[麒麟传送] 收到文件头: ' + message.name + ' 来自: ' + peerId, 'info', true);
+        addLog('[P2P] 收到文件头: ' + message.name + ' 来自: ' + peerId, 'info', true);
         this.currentFile = {
             name: message.name,
             mime: message.mime,
@@ -1618,14 +1618,14 @@ class QilinDropClient {
 
     handleFileChunk(chunk, peerId) {
         if (!this.currentFile) {
-            addLog('[麒麟传送] 收到文件块但没有文件头（来自: ' + peerId + '）', 'warning', true);
+            addLog('[P2P] 收到文件块但没有文件头（来自: ' + peerId + '）', 'warning', true);
             return;
         }
         this.currentFile.chunks.push(chunk);
         this.currentFile.receivedBytes += chunk.byteLength;
         const progress = (this.currentFile.receivedBytes / this.currentFile.size * 100).toFixed(1);
         if (Math.floor(progress) % 20 === 0) {
-            addLog(`[麒麟传送] 接收进度: ${progress}%`, 'info', true);
+            addLog(`[P2P] 接收进度: ${progress}%`, 'info', true);
         }
         if (this.currentFile.receivedBytes >= this.currentFile.size) {
             this.completeFileDownload();
@@ -1653,23 +1653,23 @@ class QilinDropClient {
             // ✅ 向发送端发送传输完成确认（解决第二次无法传输问题）
             if (fileInfo.senderId) {
                 this.sendToPeer(fileInfo.senderId, { type: 'transfer-complete' });
-                addLog('[麒麟传送] 已发送传输完成确认给发送端', 'success', true);
+                addLog('[P2P] 已发送传输完成确认给发送端', 'success', true);
             }
         } catch (error) {
-            addLog('[麒麟传送] 文件处理错误: ' + error.message, 'error', true);
+            addLog('[P2P] 文件处理错误: ' + error.message, 'error', true);
             this.showNotification('文件处理失败', 'error');
             this.currentFile = null;
         }
     }
 
     async handleImageFile(blob, url, filename) {
-        addLog('[麒麟传送] 处理图片文件...', 'info', true);
+        addLog('[P2P] 处理图片文件...', 'info', true);
         const success = await qilinCopyImageToClipboard(blob, filename?.name || filename);
         if (success) {
             this.showNotification('🖼️ 图片已复制到剪贴板', 'success');
             setTimeout(() => URL.revokeObjectURL(url), 100);
         } else {
-            addLog('[麒麟传送] 无法复制图片，改为下载', 'warning', true);
+            addLog('[P2P] 无法复制图片，改为下载', 'warning', true);
             this.downloadFile(url, filename?.name || filename);
         }
     }
@@ -1691,7 +1691,7 @@ class QilinDropClient {
 
     send(message) {
         if (!this.connected || !this.socket) {
-            addLog('[麒麟传送] 未连接，无法发送', 'warning', true);
+            addLog('[P2P] 未连接，无法发送', 'warning', true);
             return;
         }
         this.socket.send(JSON.stringify(message));
@@ -1784,7 +1784,7 @@ function initQilinDrop() {
     qilinClient = new QilinDropClient();
     unsafeWindow.qilinClient = qilinClient;
     window.qilinClient = qilinClient;  // 同时设置到window，供CAT_UI面板访问
-    addLog('[麒麟传送] 🦄 麒麟传送助手已启动', 'success', true);
+    addLog('[P2P] 🦄 麒麟传送助手已启动', 'success', true);
 }
 
 // 获取麒麟传送状态
