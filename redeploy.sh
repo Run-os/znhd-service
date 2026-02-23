@@ -98,6 +98,20 @@ pull_code() {
     fi
 }
 
+# 显示最新版本信息
+show_version() {
+    if [ "$PROJECT_DIR" != "." ] && [ -d "$PROJECT_DIR/.git" ]; then
+        cd "$PROJECT_DIR"
+        local latest_tag=$(git describe --tags --abrev=0 2>/dev/null || echo "无标签")
+        local latest_commit=$(git log -1 --pretty=format:"%h - %s (%ci)")
+        cd ..
+        log_info "最新版本: $latest_tag"
+        log_info "最新提交: $latest_commit"
+    else
+        log_info "无法获取版本信息，未检测到 Git 仓库"
+    fi
+}
+
 # 显示更新日志
 show_git_log() {
     log_info "最新提交记录："
