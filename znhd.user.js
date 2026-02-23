@@ -21,6 +21,7 @@
 // @homepageURL    https://scriptcat.org/zh-CN/script-show-page/3650
 // @require     https://scriptcat.org/lib/1167/1.0.0/%E8%84%9A%E6%9C%AC%E7%8C%ABUI%E5%BA%93.js?sha384-jXdR3hCwnDJf53Ue6XHAi6tApeudgS/wXnMYBD/ZJcgge8Xnzu/s7bkEf2tPi2KS
 // @require     https://cdn.jsdelivr.net/npm/@fingerprintjs/fingerprintjs@5/dist/fp.min.js
+// @require     https://cdn.jsdelivr.net/npm/js-yaml@4.1.0/dist/js-yaml.min.js
 // ==/UserScript==
 
 
@@ -34,7 +35,7 @@ const CONFIG = {
         AFTERNOON: { START: 13.5, END: 18 }
     },
     didaUrl: 'https://gitee.com/runos/znhd-service/raw/master/public/dida.mp3',
-    commonPhrasesUrl: 'https://gitee.com/runos/znhd-service/raw/master/public/%E5%B8%B8%E7%94%A8%E8%AF%AD.json'
+    commonPhrasesUrl: 'https://gitee.com/runos/znhd-service/raw/master/public/commonPhrases.yaml'
 };
 
 // ==========日志管理==========
@@ -157,12 +158,12 @@ function DM() {
             url: CONFIG.commonPhrasesUrl,
             onload: function (response) {
                 try {
-                    const data = JSON.parse(response.responseText);
+                    const data = jsyaml.load(response.responseText);
                     setPhrasesData(data);
                     CAT_UI.Message.success('常用语加载成功');
                 } catch (error) {
-                    addLog('JSON 解析失败: ' + error.message, 'error', true);
-                    CAT_UI.Message.error('JSON 解析失败: ' + error.message);
+                    addLog('YAML 解析失败: ' + error.message, 'error', true);
+                    CAT_UI.Message.error('YAML 解析失败: ' + error.message);
                     setPhrasesData({});
                 } finally {
                     setPhrasesLoading(false);
