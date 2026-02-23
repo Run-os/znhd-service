@@ -182,7 +182,6 @@ let pendingPairRequest = null;
 
 // 请求配对
 function requestPair(targetId) {
-    currentPartnerId = targetId;
     isInitiator = true;
 
     sendToServer({

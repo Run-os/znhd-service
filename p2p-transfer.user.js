@@ -4,7 +4,7 @@
 // @description  实现局域网内设备间的文本、文件快捷互传。通过WebRTC在局域网内直接传输，数据流不经过公网服务器。
 // @version      1.0.0
 // @author       runos
-// @match        *://*/*
+// @match        https://example.com/*
 // @icon         data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">📡</text></svg>
 // @grant        GM_addStyle
 // @grant        GM_notification
@@ -26,9 +26,8 @@
     // ========================================
     const CONFIG = {
         // 信令服务器地址（部署到公网的服务器）
-        // 请修改为您的公网服务器地址
-        signalingServer: 'qilindrop.cn',  // 示例，请替换为实际服务器IP或域名
-        port: '3000',
+        // 请修改为您的公网服务器域名或IP
+        signalingServer: 'drop.122050.xyz',  // 示例，请替换为实际服务器域名
 
         // UI配置
         ui: {
@@ -85,8 +84,7 @@
     // ========================================
     function initWebSocket() {
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const host = CONFIG.signalingServer + (CONFIG.port ? `:${CONFIG.port}` : '');
-        const wsUrl = `${protocol}//${host}/ws`;
+        const wsUrl = `${protocol}//${CONFIG.signalingServer}/ws`;
 
         try {
             ws = new WebSocket(wsUrl);
@@ -180,23 +178,28 @@
         if (!devicesList) return;
 
         if (!currentPartnerId && clients.length > 0) {
-            let html = '';
+            devicesList.innerHTML = '';
             clients.forEach(client => {
                 // 不显示自己
                 if (client.id === myId) return;
 
-                html += `
-                    <div class="p2p-device-item">
-                        <div class="p2p-device-info">
-                            <span class="p2p-device-type">${client.type === 'userscript' ? '🦊' : '🌐'}</span>
-                            <span class="p2p-device-id">${client.id}</span>
-                        </div>
-                        <div class="p2p-device-ip">${client.ip}</div>
-                        <button class="p2p-btn p2p-btn-primary" onclick="window.p2pRequestPair('${client.id}')">配对</button>
+                const deviceItem = document.createElement('div');
+                deviceItem.className = 'p2p-device-item';
+                deviceItem.innerHTML = `
+                    <div class="p2p-device-info">
+                        <span class="p2p-device-type">${client.type === 'userscript' ? '🦊' : '🌐'}</span>
+                        <span class="p2p-device-id">${client.id}</span>
                     </div>
+                    <div class="p2p-device-ip">${client.ip}</div>
+                    <button class="p2p-btn p2p-btn-primary" data-client-id="${client.id}">配对</button>
                 `;
+                devicesList.appendChild(deviceItem);
             });
-            devicesList.innerHTML = html || '<p class="p2p-empty">暂无可用设备</p>';
+
+            // 绑定事件
+            devicesList.querySelectorAll('button').forEach(btn => {
+                btn.onclick = () => window.p2pRequestPair(btn.dataset.clientId);
+            });
         } else if (currentPartnerId) {
             devicesList.innerHTML = '<p class="p2p-empty">已配对，列表已隐藏</p>';
         } else {
@@ -211,7 +214,6 @@
 
     // 请求配对（暴露给全局）
     window.p2pRequestPair = function (targetId) {
-        currentPartnerId = targetId;
         isInitiator = true;
 
         sendToServer({
@@ -833,7 +835,7 @@
         panel.innerHTML = `
             <div class="p2p-panel-header">
                 <span class="p2p-panel-title">📡 局域网P2P传输</span>
-                <button class="p2p-close-btn" onclick="window.p2pClosePanel()">×</button>
+                <button class="p2p-close-btn" id="p2p-close-panel">×</button>
             </div>
             <div class="p2p-panel-body">
                 <!-- 连接状态 -->
@@ -849,7 +851,7 @@
                         <div class="p2p-info-row">
                             <span class="p2p-label">ID：</span>
                             <span id="p2p-device-id">--</span>
-                            <button class="p2p-copy-btn" onclick="window.p2pCopyId()" title="复制ID">📋</button>
+                            <button class="p2p-copy-btn" id="p2p-copy-id" title="复制ID">📋</button>
                         </div>
                         <div class="p2p-info-row">
                             <span class="p2p-label">IP：</span>
@@ -871,8 +873,8 @@
                     <div class="p2p-notification">
                         <p id="p2p-pair-request-info">--</p>
                         <div class="p2p-button-group">
-                            <button class="p2p-btn p2p-btn-success" onclick="window.p2pAcceptPair()">接受</button>
-                            <button class="p2p-btn p2p-btn-danger" onclick="window.p2pRejectPair()">拒绝</button>
+                            <button class="p2p-btn p2p-btn-success" id="p2p-accept-pair">接受</button>
+                            <button class="p2p-btn p2p-btn-danger" id="p2p-reject-pair">拒绝</button>
                         </div>
                     </div>
                 </div>
@@ -890,7 +892,7 @@
                     <h3>P2P 传输</h3>
                     <div class="p2p-partner-info">
                         <p>配对设备：<strong id="p2p-partner-info">--</strong></p>
-                        <button class="p2p-btn p2p-btn-danger" onclick="window.p2pDisconnect()">断开</button>
+                        <button class="p2p-btn p2p-btn-danger" id="p2p-disconnect">断开</button>
                     </div>
                     
                     <div class="p2p-p2p-status">
@@ -903,11 +905,11 @@
                         <h4>发送数据</h4>
                         <div class="p2p-input-group">
                             <textarea id="p2p-text-input" rows="3" placeholder="输入要发送的文本..."></textarea>
-                            <button class="p2p-btn p2p-btn-primary" onclick="window.p2pSendText()">发送文本</button>
+                            <button class="p2p-btn p2p-btn-primary" id="p2p-send-text">发送文本</button>
                         </div>
                         <div class="p2p-input-group">
                             <input type="file" id="p2p-file-input">
-                            <button class="p2p-btn p2p-btn-primary" onclick="window.p2pSendFile()">发送文件</button>
+                            <button class="p2p-btn p2p-btn-primary" id="p2p-send-file">发送文件</button>
                         </div>
                     </div>
                     
@@ -922,6 +924,15 @@
             </div>
         `;
         document.body.appendChild(panel);
+
+        // 绑定事件监听器
+        document.getElementById('p2p-close-panel').onclick = () => window.p2pClosePanel();
+        document.getElementById('p2p-copy-id').onclick = () => window.p2pCopyId();
+        document.getElementById('p2p-accept-pair').onclick = () => window.p2pAcceptPair();
+        document.getElementById('p2p-reject-pair').onclick = () => window.p2pRejectPair();
+        document.getElementById('p2p-disconnect').onclick = () => window.p2pDisconnect();
+        document.getElementById('p2p-send-text').onclick = () => window.p2pSendText();
+        document.getElementById('p2p-send-file').onclick = () => window.p2pSendFile();
     }
 
     // 切换面板显示
