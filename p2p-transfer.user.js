@@ -294,7 +294,25 @@
 
         const pairRequestSection = document.getElementById('p2p-pair-request');
         const pairRequestInfo = document.getElementById('p2p-pair-request-info');
+        const devicesList = document.getElementById('p2p-devices-list');
 
+        // 检查可用设备数量（排除自己和当前配对伙伴）
+        let availableDeviceCount = 0;
+        if (devicesList) {
+            const deviceItems = devicesList.querySelectorAll('.p2p-device-item');
+            availableDeviceCount = deviceItems.length;
+        }
+
+        // 自动接收配对：单设备场景
+        if (availableDeviceCount === 1) {
+            console.log('[P2P] 检测到唯一可用设备，自动接受配对:', message.requesterId);
+            // 直接调用接受配对逻辑
+            window.p2pAcceptPair();
+            showToast('检测到唯一可用设备，已自动完成配对', 'success');
+            return;
+        }
+
+        // 多设备场景，显示配对请求UI
         if (pairRequestSection && pairRequestInfo) {
             pairRequestInfo.textContent =
                 `设备 ${message.requesterId} (${message.requesterType === 'userscript' ? '油猴脚本' : '网页'}) 请求与您配对`;
@@ -387,6 +405,15 @@
         showNotification('P2P配对成功', 'success');
 
         console.log('[P2P] 配对成功:', message);
+
+        // 已配对状态自动隐藏窗口，防止其他设备发起新的配对请求
+        setTimeout(() => {
+            if (panel && uiVisible) {
+                panel.classList.add('p2p-hidden');
+                uiVisible = false;
+                console.log('[P2P] 配对成功，自动隐藏面板');
+            }
+        }, 1500);  // 延迟1.5秒隐藏，让用户看到配对成功的提示
     }
 
     // 处理配对拒绝
@@ -443,6 +470,10 @@
             });
             disconnectPeerConnection();
             showToast('已断开连接', 'info');
+        } else if (currentPartnerId) {
+            // 仅断开 P2P 连接，不发送服务器消息（如 WebSocket 未连接）
+            disconnectPeerConnection();
+            showToast('已断开连接', 'info');
         }
     };
 
@@ -471,6 +502,13 @@
 
         const receivedData = document.getElementById('p2p-received-data');
         if (receivedData) receivedData.innerHTML = '<p class="p2p-empty">暂无接收数据</p>';
+
+        // 断开后恢复面板显示，允许重新发起/接收配对请求
+        if (panel && !uiVisible) {
+            panel.classList.remove('p2p-hidden');
+            uiVisible = true;
+            console.log('[P2P] 断开连接，自动显示面板');
+        }
     }
 
     // ========================================
@@ -942,18 +980,9 @@
         panel.classList.add('p2p-hidden');
         uiVisible = false;
         panel.innerHTML = `
-            <div class="p2p-panel-header">
-                <span class="p2p-panel-title">📡 局域网P2P传输</span>
-                <button class="p2p-close-btn" id="p2p-close-panel">×</button>
-            </div>
+            <!-- 删除标题栏，简化界面 -->
             <div class="p2p-panel-body">
-                <!-- 连接状态 -->
-                <div class="p2p-status-bar">
-                    <span id="p2p-status-indicator" class="p2p-status-indicator"></span>
-                    <span id="p2p-status-text">未连接</span>
-                </div>
-                
-                <!-- 设备信息 -->
+                <!-- 设备信息区域：包含设备ID、配对状态和连接状态 -->
                 <div class="p2p-section">
                     <h3>设备信息</h3>
                     <div class="p2p-info-card">
@@ -962,17 +991,17 @@
                             <span id="p2p-device-id">--</span>
                             <button class="p2p-copy-btn" id="p2p-copy-id" title="复制ID">📋</button>
                         </div>
-                        <div class="p2p-info-row">
-                            <span class="p2p-label">IP：</span>
-                            <span id="p2p-device-ip">--</span>
-                        </div>
-                        <div class="p2p-info-row">
-                            <span class="p2p-label">网络：</span>
-                            <span id="p2p-network-type">--</span>
-                        </div>
+                        <!-- 删除IP地址显示项 -->
+                        <!-- 删除网络类型显示项 -->
                         <div class="p2p-info-row">
                             <span class="p2p-label">配对：</span>
                             <span id="p2p-pair-status">未配对</span>
+                            <button class="p2p-btn p2p-btn-danger p2p-disconnect-btn" id="p2p-disconnect-pair" style="display: none; margin-left: auto;">断开配对</button>
+                            <!-- 将连接状态移至此处，位于设备信息区域右侧 -->
+                            <div class="p2p-status-bar-inline">
+                                <span id="p2p-status-indicator" class="p2p-status-indicator"></span>
+                                <span id="p2p-status-text">未连接</span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1035,13 +1064,14 @@
         document.body.appendChild(panel);
 
         // 绑定事件监听器
-        document.getElementById('p2p-close-panel').onclick = () => window.p2pClosePanel();
+        // 删除标题栏关闭按钮的事件绑定，因标题栏已删除
         document.getElementById('p2p-copy-id').onclick = () => window.p2pCopyId();
         document.getElementById('p2p-accept-pair').onclick = () => window.p2pAcceptPair();
         document.getElementById('p2p-reject-pair').onclick = () => window.p2pRejectPair();
         document.getElementById('p2p-disconnect').onclick = () => window.p2pDisconnect();
         document.getElementById('p2p-send-text').onclick = () => window.p2pSendText();
         document.getElementById('p2p-send-file').onclick = () => window.p2pSendFile();
+        document.getElementById('p2p-disconnect-pair').onclick = () => window.p2pDisconnect();
     }
 
     // 切换面板显示
@@ -1110,17 +1140,17 @@
     };
 
     // 更新设备信息
+    // 更新设备信息（仅保留设备ID）
     function updateDeviceInfo() {
         const deviceId = document.getElementById('p2p-device-id');
-        const deviceIp = document.getElementById('p2p-device-ip');
-        const networkType = document.getElementById('p2p-network-type');
 
-        if (deviceId) deviceId.textContent = myId || '--';
-        if (deviceIp) deviceIp.textContent = myIp || '--';
-        if (networkType) {
-            networkType.textContent = isPrivate ? '内网' : '公网';
-            networkType.style.color = isPrivate ? '#52c41a' : '#ff4d4f';
+        // 更新设备ID
+        if (deviceId) {
+            deviceId.textContent = myId || '--';
         }
+
+        // 删除IP地址显示项，不再更新
+        // 删除网络类型显示项，不再更新
     }
 
     // 更新连接状态
@@ -1142,8 +1172,19 @@
     // 更新配对状态
     function updatePairStatus() {
         const pairStatus = document.getElementById('p2p-pair-status');
+        const disconnectPairBtn = document.getElementById('p2p-disconnect-pair');
+
         if (pairStatus) {
             pairStatus.textContent = currentPartnerId ? `已配对: ${currentPartnerId}` : '未配对';
+        }
+
+        // 显示/隐藏"断开配对"按钮
+        if (disconnectPairBtn) {
+            if (currentPartnerId) {
+                disconnectPairBtn.style.display = 'block';
+            } else {
+                disconnectPairBtn.style.display = 'none';
+            }
         }
     }
 
@@ -1251,7 +1292,7 @@
                 flex: 1;
             }
             
-            /* 状态栏 */
+            /* 状态栏 - 原样式保留，用于向后兼容 */
             .p2p-status-bar {
                 display: flex;
                 align-items: center;
@@ -1260,6 +1301,23 @@
                 background: #f5f5f5;
                 border-radius: 8px;
                 margin-bottom: 16px;
+            }
+            
+            /* 行内状态栏 - 新增，用于设备信息区域右侧显示连接状态 */
+            .p2p-status-bar-inline {
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                margin-left: auto;
+                padding: 4px 8px;
+                background: #f5f5f5;
+                border-radius: 4px;
+                font-size: 12px;
+            }
+            
+            .p2p-status-bar-inline #p2p-status-text {
+                font-size: 12px;
+                color: #666;
             }
             
             .p2p-status-indicator {
@@ -1385,6 +1443,19 @@
             .p2p-btn-danger {
                 background: #ff4d4f;
                 color: white;
+            }
+            
+            .p2p-disconnect-btn {
+                padding: 4px 12px;
+                font-size: 12px;
+                border-radius: 4px;
+                border: none;
+                cursor: pointer;
+                transition: opacity 0.2s;
+            }
+            
+            .p2p-disconnect-btn:hover {
+                opacity: 0.8;
             }
             
             /* 设备列表 */

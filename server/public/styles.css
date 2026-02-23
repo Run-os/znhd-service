@@ -48,12 +48,30 @@ header h1 {
     margin-bottom: 10px;
 }
 
+/* 原有连接状态样式保留，用于向后兼容 */
 .connection-status {
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 8px;
     font-size: 14px;
+}
+
+/* 行内连接状态 - 新增，用于设备信息区域右侧显示连接状态 */
+.connection-status-inline {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-left: auto;
+    padding: 4px 8px;
+    background: var(--bg-primary);
+    border-radius: 4px;
+    font-size: 12px;
+}
+
+.connection-status-inline #statusText {
+    font-size: 12px;
+    color: var(--text-secondary);
 }
 
 .status-indicator {

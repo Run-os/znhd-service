@@ -119,15 +119,15 @@ function handleMessage(message) {
 }
 
 // 处理欢迎消息
+// 处理欢迎消息
 function handleWelcome(message) {
     myId = message.id;
     myIp = message.ip;
     isPrivate = message.isPrivate;
 
     elements.deviceId.textContent = myId;
-    elements.deviceIp.textContent = myIp;
-    elements.networkType.textContent = isPrivate ? '内网' : '公网';
-    elements.networkType.style.color = isPrivate ? '#52c41a' : '#ff4d4f';
+    // 删除IP地址显示项，不再更新
+    // 删除网络类型显示项，不再更新
 
     // 通知服务器当前客户端类型
     sendToServer({
@@ -159,8 +159,7 @@ function renderClientList(clients) {
                             <span class="device-type-badge ${client.type}">${client.type === 'userscript' ? '油猴脚本' : '网页'}</span>
                             ${client.id}
                         </h4>
-                        <p>IP: ${client.ip}</p>
-                        <p>网络: ${client.isPrivate ? '内网' : '公网'}</p>
+                        <!-- 删除IP和网络信息显示 -->
                     </div>
                     <button class="btn btn-primary" onclick="requestPair('${client.id}')">请求配对</button>
                 </div>
@@ -196,6 +195,20 @@ function requestPair(targetId) {
 function handlePairRequest(message) {
     pendingPairRequest = message.requesterId;
 
+    // 检查可用设备数量（排除自己和当前配对伙伴）
+    const deviceItems = elements.devicesList.querySelectorAll('.device-item');
+    const availableDeviceCount = deviceItems.length;
+
+    // 自动接收配对：单设备场景
+    if (availableDeviceCount === 1) {
+        console.log('[P2P] 检测到唯一可用设备，自动接受配对:', message.requesterId);
+        // 直接调用接受配对逻辑
+        elements.acceptPairBtn.click();
+        showToast('检测到唯一可用设备，已自动完成配对', 'success');
+        return;
+    }
+
+    // 多设备场景，显示配对请求UI
     elements.pairRequestInfo.textContent =
         `设备 ${message.requesterId} (${message.requesterType === 'userscript' ? '油猴脚本' : '网页'}) 请求与您配对`;
     elements.pairRequestSection.style.display = 'block';

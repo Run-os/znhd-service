@@ -10,15 +10,7 @@
 
 <body>
     <div class="container">
-        <header>
-            <h1>📡 局域网P2P传输</h1>
-            <div class="connection-status">
-                <span class="status-indicator" id="statusIndicator"></span>
-                <span id="statusText">未连接</span>
-            </div>
-        </header>
-
-        <!-- 设备信息 -->
+        <!-- 设备信息区域：包含设备ID、配对状态和连接状态 -->
         <section class="device-info">
             <h2>设备信息</h2>
             <div class="info-card">
@@ -27,17 +19,16 @@
                     <span class="value" id="deviceId">--</span>
                     <button class="copy-btn" id="copyIdBtn" title="复制ID">📋</button>
                 </div>
-                <div class="info-row">
-                    <span class="label">IP地址：</span>
-                    <span class="value" id="deviceIp">--</span>
-                </div>
-                <div class="info-row">
-                    <span class="label">网络类型：</span>
-                    <span class="value" id="networkType">--</span>
-                </div>
+                <!-- 删除IP地址显示项 -->
+                <!-- 删除网络类型显示项 -->
                 <div class="info-row">
                     <span class="label">配对状态：</span>
                     <span class="value" id="pairStatus">未配对</span>
+                    <!-- 将连接状态移至此处，位于设备信息区域右侧 -->
+                    <div class="connection-status-inline">
+                        <span class="status-indicator" id="statusIndicator"></span>
+                        <span id="statusText">未连接</span>
+                    </div>
                 </div>
             </div>
         </section>
