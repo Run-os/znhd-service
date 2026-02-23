@@ -95,7 +95,7 @@
             ws.onopen = () => {
                 updateConnectionStatus(true);
                 console.log('[P2P] WebSocket 连接成功');
-                //showNotification('已连接到信令服务器', 'success');
+                //// shownotification('已连接到信令服务器', 'success');
             };
 
             ws.onmessage = (event) => {
@@ -327,7 +327,7 @@
             if (devicesSection) devicesSection.style.display = 'none';
         }
 
-        showNotification('收到配对请求', 'info');
+        // shownotification('收到配对请求', 'info');
     }
 
     // 接受配对
@@ -404,7 +404,7 @@
         }
 
         showToast('配对成功！正在建立P2P连接...', 'success');
-        showNotification('P2P配对成功', 'success');
+        // shownotification('P2P配对成功', 'success');
 
         // 已配对状态自动隐藏窗口，防止其他设备发起新的配对请求
         setTimeout(() => {
@@ -434,7 +434,7 @@
         // 根据消息显示不同提示
         const errorMsg = message.message || '配对请求被拒绝';
         showToast(errorMsg, 'error');
-        showNotification(errorMsg, 'warning');
+        // shownotification(errorMsg, 'warning');
     }
 
     // 处理配对错误
@@ -454,14 +454,14 @@
 
         const errorMsg = message.message || '配对失败';
         showToast(errorMsg, 'error');
-        showNotification(errorMsg, 'warning');
+        // shownotification(errorMsg, 'warning');
     }
 
     // 处理配对设备断开
     function handlePartnerDisconnected(message) {
         disconnectPeerConnection();
         showToast(message.reason || '对方已断开连接', 'warning');
-        showNotification('对方已断开连接', 'warning');
+        // shownotification('对方已断开连接', 'warning');
     }
 
     // 断开连接
@@ -845,7 +845,7 @@
                             isSelf: false
                         });
                         showToast('收到新文本', 'info');
-                        showNotification('收到新文本消息', 'info');
+                        // shownotification('收到新文本消息', 'info');
                         break;
 
                     case 'file-header':
@@ -914,7 +914,7 @@
             isSelf: false
         });
 
-        showNotification(`文件接收完成: ${fileTransfer.name}`, 'success');
+        // shownotification(`文件接收完成: ${fileTransfer.name}`, 'success');
     }
 
     // 添加接收项目到界面
@@ -1001,7 +1001,7 @@
                         <div class="p2p-info-row">
                             <span class="p2p-label">配对：</span>
                             <span id="p2p-pair-status">未配对</span>
-                            <button class="p2p-btn p2p-btn-danger p2p-disconnect-btn" id="p2p-disconnect-pair" style="display: none; margin-left: 10px;">断开配对</button>
+                            <button class="p2p-btn p2p-btn-danger p2p-disconnect-btn" id="p2p-disconnect-pair" style="display: none; margin-left: auto;">断开配对</button>
                         </div>
                     </div>
                 </div>
@@ -1028,7 +1028,6 @@
                 <!-- P2P传输区域 -->
                 <div id="p2p-transfer-section" class="p2p-section" style="display: none;">
                     <h3>P2P 传输</h3>
-                    <button class="p2p-btn p2p-btn-danger" id="p2p-disconnect" style="margin-bottom: 15px;">断开连接</button>
                     
                     <!-- 发送区域 -->
                     <div class="p2p-send-section">
@@ -1060,7 +1059,6 @@
         document.getElementById('p2p-copy-id').onclick = () => window.p2pCopyId();
         document.getElementById('p2p-accept-pair').onclick = () => window.p2pAcceptPair();
         document.getElementById('p2p-reject-pair').onclick = () => window.p2pRejectPair();
-        document.getElementById('p2p-disconnect').onclick = () => window.p2pDisconnect();
         document.getElementById('p2p-send-text').onclick = () => window.p2pSendText();
         document.getElementById('p2p-send-file').onclick = () => window.p2pSendFile();
         document.getElementById('p2p-disconnect-pair').onclick = () => window.p2pDisconnect();
@@ -1719,42 +1717,42 @@
     }
 
     // 显示通知
-    function showNotification(text, type = 'info') {
+    function // shownotification(text, type = 'info') {
         if (typeof GM_notification !== 'undefined') {
-            GM_notification({
-                text: text,
-                highlight: type === 'error',
-                timeout: 3000
-            });
-        }
+        GM_notification({
+            text: text,
+            highlight: type === 'error',
+            timeout: 3000
+        });
     }
+}
 
     // 生成文件ID
     function generateFileId() {
-        return Date.now().toString(36) + Math.random().toString(36).substring(2);
-    }
+    return Date.now().toString(36) + Math.random().toString(36).substring(2);
+}
 
-    // 格式化文件大小
-    function formatFileSize(bytes) {
-        if (bytes < 1024) return bytes + ' B';
-        if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(2) + ' KB';
-        return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
-    }
+// 格式化文件大小
+function formatFileSize(bytes) {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(2) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+}
 
-    // 转义 HTML
-    function escapeHtml(text) {
-        const div = document.createElement('div');
-        div.textContent = text;
-        return div.innerHTML;
-    }
+// 转义 HTML
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
 
-    // ========================================
-    // 启动
-    // ========================================
-    // 等待页面加载完成
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', init);
-    } else {
-        init();
-    }
-})();
+// ========================================
+// 启动
+// ========================================
+// 等待页面加载完成
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+} else {
+    init();
+}
+}) ();

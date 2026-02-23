@@ -32,7 +32,6 @@ const elements = {
     devicesList: document.getElementById('devicesList'),
     transferArea: document.getElementById('transferArea'),
     partnerInfo: document.getElementById('partnerInfo'),
-    disconnectBtn: document.getElementById('disconnectBtn'),
     disconnectPairBtn: document.getElementById('disconnectPairBtn'),
     p2pStatus: document.getElementById('p2pStatus'),
     p2pIndicator: document.getElementById('p2pIndicator'),
@@ -356,7 +355,7 @@ function handlePairSuccess(message) {
     clearPairRequestTimeout();
 
     currentPartnerId = message.partnerId;
-    elements.pairStatus.textContent = `已配对: ${message.partnerId}`;
+    elements.pairStatus.textContent = `${message.partnerId}`;
     elements.transferArea.style.display = 'block';
     elements.availableDevicesSection.style.display = 'none';
     elements.pairRequestSection.style.display = 'none';
@@ -416,17 +415,6 @@ function handlePartnerDisconnected(message) {
     disconnectPeerConnection();
     showToast(message.reason || '对方已断开连接', 'warning');
 }
-
-// 断开连接（P2P传输区域）
-elements.disconnectBtn.addEventListener('click', () => {
-    if (ws && currentPartnerId) {
-        sendToServer({
-            type: 'disconnect'
-        });
-        disconnectPeerConnection();
-        showToast('已断开连接', 'info');
-    }
-});
 
 // 断开配对（设备信息区域）
 elements.disconnectPairBtn.addEventListener('click', () => {
