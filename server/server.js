@@ -129,18 +129,21 @@ wss.on('connection', (ws, req) => {
     // 处理连接关闭
     ws.on('close', () => {
         const client = clients.get(clientId);
+        // 使用注册后的自定义ID（如有）或原始ID
+        const displayId = client && client.id ? client.id : clientId;
         const clientIdValue = clientId; // 保存当前ID值
-        
-        // 广播客户端断开消息
+
+        // 广播客户端断开消息（使用注册后的ID）
         clients.forEach((c) => {
-            if (c.id !== clientIdValue) {
+            const cDisplayId = c && c.id ? c.id : c.ws._peersId;
+            if (cDisplayId !== displayId) {
                 sendToClient(c.ws, {
                     type: 'client-disconnected',
-                    clientId: clientIdValue
+                    clientId: displayId
                 });
             }
         });
-        
+
         if (client && client.pairedWith) {
             // 通知配对客户端
             const partner = clients.get(client.pairedWith);
@@ -153,7 +156,7 @@ wss.on('connection', (ws, req) => {
             }
         }
         clients.delete(clientIdValue);
-        console.log(`[${new Date().toISOString()}] 连接断开: ${clientId}`);
+        console.log(`[${new Date().toISOString()}] 连接断开: ${displayId}`);
         broadcastClientList();
     });
 
@@ -414,18 +417,21 @@ function startHeartbeatCheck() {
         const now = Date.now();
         clients.forEach((client, id) => {
             if (now - client.lastPing > PING_INTERVAL * 2) {
-                console.log(`[${new Date().toISOString()}] 客户端超时断开: ${id}`);
-                
-                // 通知其他客户端
+                // 使用注册后的自定义ID（如有）或原始ID
+                const displayId = client.id || id;
+                console.log(`[${new Date().toISOString()}] 客户端超时断开: ${displayId}`);
+
+                // 通知其他客户端（使用注册后的ID）
                 clients.forEach((c) => {
-                    if (c.id !== id) {
+                    const cDisplayId = c.id || id; // 这里简化处理
+                    if (cDisplayId !== displayId) {
                         sendToClient(c.ws, {
                             type: 'client-disconnected',
-                            clientId: id
+                            clientId: displayId
                         });
                     }
                 });
-                
+
                 // 通知配对客户端
                 if (client.pairedWith) {
                     const partner = clients.get(client.pairedWith);
@@ -437,7 +443,7 @@ function startHeartbeatCheck() {
                         partner.pairedWith = null;
                     }
                 }
-                
+
                 client.ws.close();
                 clients.delete(id);
                 broadcastClientList();
