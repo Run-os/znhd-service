@@ -1717,42 +1717,42 @@
     }
 
     // 显示通知
-    function // shownotification(text, type = 'info') {
+    function shownotification(text, type = 'info') {
         if (typeof GM_notification !== 'undefined') {
-        GM_notification({
-            text: text,
-            highlight: type === 'error',
-            timeout: 3000
-        });
+            GM_notification({
+                text: text,
+                highlight: type === 'error',
+                timeout: 3000
+            });
+        }
     }
-}
 
     // 生成文件ID
     function generateFileId() {
-    return Date.now().toString(36) + Math.random().toString(36).substring(2);
-}
+        return Date.now().toString(36) + Math.random().toString(36).substring(2);
+    }
 
-// 格式化文件大小
-function formatFileSize(bytes) {
-    if (bytes < 1024) return bytes + ' B';
-    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(2) + ' KB';
-    return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
-}
+    // 格式化文件大小
+    function formatFileSize(bytes) {
+        if (bytes < 1024) return bytes + ' B';
+        if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(2) + ' KB';
+        return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+    }
 
-// 转义 HTML
-function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-}
+    // 转义 HTML
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
 
-// ========================================
-// 启动
-// ========================================
-// 等待页面加载完成
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
-} else {
-    init();
-}
-}) ();
+    // ========================================
+    // 启动
+    // ========================================
+    // 等待页面加载完成
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        init();
+    }
+})();
