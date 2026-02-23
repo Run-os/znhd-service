@@ -75,6 +75,9 @@
         // 初始化 WebSocket 连接
         initWebSocket();
 
+        // 设置全局点击监听：点击窗口外部区域自动隐藏
+        setupOutsideClickListener();
+
         console.log('[P2P] 局域网P2P传输工具已初始化');
         console.log('[P2P] 数据流安全说明：所有文件和文本数据仅通过 WebRTC 在局域网内直接传输，不会经过公网服务器');
     }
@@ -211,9 +214,67 @@
     // 配对管理
     // ========================================
     let pendingPairRequest = null;
+    let pairRequestTimeout = null;  // 配对请求超时定时器
+
+    // ========================================
+    // 配对超时处理
+    // ========================================
+    function clearPairRequestTimeout() {
+        if (pairRequestTimeout) {
+            clearTimeout(pairRequestTimeout);
+            pairRequestTimeout = null;
+        }
+    }
+
+    function setPairRequestTimeout() {
+        // 30秒后自动取消配对请求
+        clearPairRequestTimeout();
+        pairRequestTimeout = setTimeout(() => {
+            if (pendingPairRequest && !currentPartnerId) {
+                console.warn('[P2P] 配对请求超时');
+                showToast('配对请求超时，对方未响应', 'warning');
+                cancelPairRequest();
+            }
+        }, 30000);  // 30秒超时
+    }
+
+    function cancelPairRequest() {
+        clearPairRequestTimeout();
+        pendingPairRequest = null;
+
+        const pairRequestSection = document.getElementById('p2p-pair-request');
+        const devicesSection = document.getElementById('p2p-devices-section');
+
+        if (pairRequestSection) pairRequestSection.style.display = 'none';
+        if (devicesSection) devicesSection.style.display = 'block';
+    }
 
     // 请求配对（暴露给全局）
     window.p2pRequestPair = function (targetId) {
+        // 防止重复请求
+        if (currentPartnerId) {
+            showToast('当前已配对，请先断开连接', 'warning');
+            return;
+        }
+
+        // 防止重复请求同一设备
+        if (pendingPairRequest === targetId) {
+            showToast('已发送配对请求，请等待对方响应', 'info');
+            return;
+        }
+
+        // 检查 WebSocket 连接状态
+        if (!ws || ws.readyState !== WebSocket.OPEN) {
+            showToast('连接服务器中，请稍后再试', 'warning');
+            return;
+        }
+
+        // 检查目标ID是否有效
+        if (!targetId || targetId === myId) {
+            showToast('无效的设备ID', 'error');
+            return;
+        }
+
         isInitiator = true;
 
         sendToServer({
@@ -221,7 +282,10 @@
             targetId: targetId
         });
 
-        showToast('已发送配对请求', 'success');
+        showToast('已发送配对请求，请等待对方接受（30秒超时）', 'info');
+
+        // 设置配对超时
+        setPairRequestTimeout();
     };
 
     // 处理配对请求
@@ -246,48 +310,57 @@
 
     // 接受配对
     window.p2pAcceptPair = function () {
-        if (pendingPairRequest) {
-            currentPartnerId = pendingPairRequest;
-            isInitiator = false;
-
-            sendToServer({
-                type: 'pair-accept',
-                requesterId: pendingPairRequest
-            });
-
-            const pairRequestSection = document.getElementById('p2p-pair-request');
-            if (pairRequestSection) pairRequestSection.style.display = 'none';
-
-            showToast('已接受配对请求', 'success');
-
-            // 接受方创建 PeerConnection 并等待信令
-            createPeerConnection();
+        if (!pendingPairRequest) {
+            showToast('没有待处理的配对请求', 'warning');
+            return;
         }
+
+        currentPartnerId = pendingPairRequest;
+        isInitiator = false;
+
+        // 清除超时
+        clearPairRequestTimeout();
+
+        sendToServer({
+            type: 'pair-accept',
+            requesterId: pendingPairRequest
+        });
+
+        const pairRequestSection = document.getElementById('p2p-pair-request');
+        if (pairRequestSection) pairRequestSection.style.display = 'none';
+
+        showToast('已接受配对请求，正在建立P2P连接...', 'success');
+
+        // 接受方创建 PeerConnection 并等待信令
+        createPeerConnection();
     };
 
     // 拒绝配对
     window.p2pRejectPair = function () {
-        if (pendingPairRequest) {
-            sendToServer({
-                type: 'pair-reject',
-                requesterId: pendingPairRequest,
-                message: '配对请求被拒绝'
-            });
-
-            pendingPairRequest = null;
-
-            const pairRequestSection = document.getElementById('p2p-pair-request');
-            if (pairRequestSection) pairRequestSection.style.display = 'none';
-
-            const devicesSection = document.getElementById('p2p-devices-section');
-            if (devicesSection) devicesSection.style.display = 'block';
-
-            showToast('已拒绝配对请求', 'warning');
+        if (!pendingPairRequest) {
+            showToast('没有待处理的配对请求', 'warning');
+            return;
         }
+
+        // 清除超时
+        clearPairRequestTimeout();
+
+        sendToServer({
+            type: 'pair-reject',
+            requesterId: pendingPairRequest,
+            message: '配对请求被拒绝'
+        });
+
+        cancelPairRequest();
+
+        showToast('已拒绝配对请求', 'warning');
     };
 
     // 处理配对成功
     function handlePairSuccess(message) {
+        // 清除配对超时
+        clearPairRequestTimeout();
+
         currentPartnerId = message.partnerId;
 
         updatePairStatus();
@@ -310,22 +383,49 @@
             createPeerConnection();
         }
 
-        showToast('配对成功！', 'success');
+        showToast('配对成功！正在建立P2P连接...', 'success');
         showNotification('P2P配对成功', 'success');
+
+        console.log('[P2P] 配对成功:', message);
     }
 
     // 处理配对拒绝
     function handlePairRejected(message) {
         currentPartnerId = null;
         isInitiator = false;
-        showToast(message.message || '配对请求被拒绝', 'error');
+
+        // 清除配对超时
+        clearPairRequestTimeout();
+
+        // 显示可用设备列表
+        const devicesSection = document.getElementById('p2p-devices-section');
+        if (devicesSection) devicesSection.style.display = 'block';
+
+        // 根据消息显示不同提示
+        const errorMsg = message.message || '配对请求被拒绝';
+        showToast(errorMsg, 'error');
+        showNotification(errorMsg, 'warning');
+
+        console.warn('[P2P] 配对被拒绝:', errorMsg);
     }
 
     // 处理配对错误
     function handlePairError(message) {
         currentPartnerId = null;
         isInitiator = false;
-        showToast(message.message || '配对失败', 'error');
+
+        // 清除配对超时
+        clearPairRequestTimeout();
+
+        // 显示可用设备列表
+        const devicesSection = document.getElementById('p2p-devices-section');
+        if (devicesSection) devicesSection.style.display = 'block';
+
+        const errorMsg = message.message || '配对失败';
+        showToast(errorMsg, 'error');
+        showNotification(errorMsg, 'warning');
+
+        console.error('[P2P] 配对错误:', errorMsg);
     }
 
     // 处理配对设备断开
@@ -955,6 +1055,43 @@
         }
     };
 
+    // ========================================
+    // 全局点击事件：点击窗口外部区域自动隐藏
+    // ========================================
+    function setupOutsideClickListener() {
+        // 使用 mousedown 事件，比 click 响应更快
+        document.addEventListener('mousedown', handleGlobalClick, true);
+    }
+
+    // 处理全局点击事件
+    function handleGlobalClick(event) {
+        if (!panel) return;
+
+        // 如果面板不可见，不需要处理
+        if (!uiVisible) return;
+
+        // 检查点击目标是否在面板内
+        // event.target 是实际被点击的元素
+        const clickedElement = event.target;
+
+        // 检查点击元素是否在面板 DOM 树内
+        if (panel.contains(clickedElement)) {
+            // 点击在面板内部，不隐藏
+            return;
+        }
+
+        // 检查点击是否是悬浮按钮
+        if (clickedElement === toggleButton || toggleButton.contains(clickedElement)) {
+            // 点击悬浮按钮，不隐藏
+            return;
+        }
+
+        // 点击在面板外部，隐藏面板
+        console.log('[P2P] 点击面板外部，隐藏面板');
+        panel.classList.add('p2p-hidden');
+        uiVisible = false;
+    }
+
     // 复制设备ID
     window.p2pCopyId = function () {
         if (myId) {
@@ -1469,8 +1606,28 @@
 
     // 发送消息到服务器
     function sendToServer(message) {
-        if (ws && ws.readyState === WebSocket.OPEN) {
+        if (!ws) {
+            console.error('[P2P] WebSocket未连接，无法发送消息:', message);
+            showToast('WebSocket未连接，请检查网络', 'error');
+            return false;
+        }
+
+        if (ws.readyState !== WebSocket.OPEN) {
+            const stateNames = ['CONNECTING', 'OPEN', 'CLOSING', 'CLOSED'];
+            console.error('[P2P] WebSocket未就绪，当前状态:', stateNames[ws.readyState] || ws.readyState);
+            console.error('[P2P] 尝试发送的消息:', message);
+            showToast(`WebSocket未就绪 (${stateNames[ws.readyState] || ws.readyState})`, 'error');
+            return false;
+        }
+
+        try {
             ws.send(JSON.stringify(message));
+            console.log('[P2P] 消息已发送:', message);
+            return true;
+        } catch (error) {
+            console.error('[P2P] 发送消息失败:', error, message);
+            showToast('发送消息失败', 'error');
+            return false;
         }
     }
 
