@@ -1044,29 +1044,17 @@ class P2PTransferClient {
     }
 
     init() {
-        this.deviceId = this.generateDeviceId();
+        this.deviceId = null;
         this.deviceName = this.getDeviceName();
         this.connectWebSocket();
     }
 
-    generateDeviceId() {
-        let id = GM_getValue('p2p_device_id');
-        if (!id) {
-            id = Math.random().toString(36).substring(2, 10).toUpperCase();
-            GM_setValue('p2p_device_id', id);
-        }
-        return id;
-    }
-
     getDeviceName() {
-        const saved = localStorage.getItem('p2p_device_name');
-        if (saved && saved.trim()) return saved.trim();
         const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
         let result = 'ZNHD-';
         for (let i = 0; i < 6; i++) {
             result += chars.charAt(Math.floor(Math.random() * chars.length));
         }
-        localStorage.setItem('p2p_device_name', result);
         return result;
     }
 

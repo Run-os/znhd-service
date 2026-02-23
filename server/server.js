@@ -129,13 +129,14 @@ wss.on('connection', (ws, req) => {
     // 处理连接关闭
     ws.on('close', () => {
         const client = clients.get(clientId);
+        const clientIdValue = clientId; // 保存当前ID值
         
         // 广播客户端断开消息
         clients.forEach((c) => {
-            if (c.id !== clientId) {
+            if (c.id !== clientIdValue) {
                 sendToClient(c.ws, {
                     type: 'client-disconnected',
-                    clientId: clientId
+                    clientId: clientIdValue
                 });
             }
         });
@@ -151,7 +152,7 @@ wss.on('connection', (ws, req) => {
                 partner.pairedWith = null;
             }
         }
-        clients.delete(clientId);
+        clients.delete(clientIdValue);
         console.log(`[${new Date().toISOString()}] 连接断开: ${clientId}`);
         broadcastClientList();
     });
