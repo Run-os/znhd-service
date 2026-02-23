@@ -397,11 +397,6 @@
         if (devicesSection) devicesSection.style.display = 'none';
         if (pairRequestSection) pairRequestSection.style.display = 'none';
 
-        const partnerInfo = document.getElementById('p2p-partner-info');
-        if (partnerInfo) {
-            partnerInfo.textContent = `${message.partnerId} (${message.partnerType === 'userscript' ? '🦊' : '🌐'})`;
-        }
-
         // 发起方创建 PeerConnection
         if (isInitiator) {
             console.log('[P2P] 作为发起方，创建PeerConnection');
@@ -998,15 +993,11 @@
                             <span class="p2p-label">ID：</span>
                             <span id="p2p-device-id">--</span>
                             <button class="p2p-copy-btn" id="p2p-copy-id" title="复制ID">📋</button>
-                        </div>
-                        <!-- 删除IP地址显示项 -->
-                        <!-- 删除网络类型显示项 -->
-                        <div class="p2p-info-row">
-                            <span class="p2p-label">配对：</span>
+                            <span class="p2p-label" style="margin-left: 15px;">配对：</span>
                             <span id="p2p-pair-status">未配对</span>
-                            <button class="p2p-btn p2p-btn-danger p2p-disconnect-btn" id="p2p-disconnect-pair" style="display: none; margin-left: auto;">断开配对</button>
+                            <button class="p2p-btn p2p-btn-danger p2p-disconnect-btn" id="p2p-disconnect-pair" style="display: none; margin-left: 10px;">断开配对</button>
                             <!-- 将连接状态移至此处，位于设备信息区域右侧 -->
-                            <div class="p2p-status-bar-inline">
+                            <div class="p2p-status-bar-inline" style="margin-left: auto;">
                                 <span id="p2p-status-indicator" class="p2p-status-indicator"></span>
                                 <span id="p2p-status-text">未连接</span>
                             </div>
@@ -1036,15 +1027,7 @@
                 <!-- P2P传输区域 -->
                 <div id="p2p-transfer-section" class="p2p-section" style="display: none;">
                     <h3>P2P 传输</h3>
-                    <div class="p2p-partner-info">
-                        <p>配对设备：<strong id="p2p-partner-info">--</strong></p>
-                        <button class="p2p-btn p2p-btn-danger" id="p2p-disconnect">断开</button>
-                    </div>
-                    
-                    <div class="p2p-p2p-status">
-                        <span id="p2p-p2p-indicator" class="p2p-status-indicator"></span>
-                        <span id="p2p-p2p-status-text">未建立连接</span>
-                    </div>
+                    <button class="p2p-btn p2p-btn-danger" id="p2p-disconnect" style="margin-bottom: 15px;">断开连接</button>
                     
                     <!-- 发送区域 -->
                     <div class="p2p-send-section">

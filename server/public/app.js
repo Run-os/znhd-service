@@ -33,6 +33,7 @@ const elements = {
     transferArea: document.getElementById('transferArea'),
     partnerInfo: document.getElementById('partnerInfo'),
     disconnectBtn: document.getElementById('disconnectBtn'),
+    disconnectPairBtn: document.getElementById('disconnectPairBtn'),
     p2pStatus: document.getElementById('p2pStatus'),
     p2pIndicator: document.getElementById('p2pIndicator'),
     p2pStatusText: document.getElementById('p2pStatusText'),
@@ -359,8 +360,7 @@ function handlePairSuccess(message) {
     elements.transferArea.style.display = 'block';
     elements.availableDevicesSection.style.display = 'none';
     elements.pairRequestSection.style.display = 'none';
-
-    elements.partnerInfo.textContent = `${message.partnerId} (${message.partnerType === 'userscript' ? '油猴脚本' : '网页'})`;
+    elements.disconnectPairBtn.style.display = 'inline-block';
 
     // 发起方创建 PeerConnection
     if (isInitiator) {
@@ -417,7 +417,7 @@ function handlePartnerDisconnected(message) {
     showToast(message.reason || '对方已断开连接', 'warning');
 }
 
-// 断开连接
+// 断开连接（P2P传输区域）
 elements.disconnectBtn.addEventListener('click', () => {
     if (ws && currentPartnerId) {
         sendToServer({
@@ -425,6 +425,18 @@ elements.disconnectBtn.addEventListener('click', () => {
         });
         disconnectPeerConnection();
         showToast('已断开连接', 'info');
+    }
+});
+
+// 断开配对（设备信息区域）
+elements.disconnectPairBtn.addEventListener('click', () => {
+    if (ws && currentPartnerId) {
+        sendToServer({
+            type: 'disconnect'
+        });
+        disconnectPeerConnection();
+        elements.disconnectPairBtn.style.display = 'none';
+        showToast('已断开配对', 'info');
     }
 });
 
@@ -444,6 +456,7 @@ function disconnectPeerConnection() {
     elements.transferArea.style.display = 'none';
     elements.availableDevicesSection.style.display = 'block';
     elements.pairStatus.textContent = '未配对';
+    elements.disconnectPairBtn.style.display = 'none';
     updateP2PStatus(false);
     elements.receivedData.innerHTML = '<p class="empty">暂无接收数据</p>';
 }

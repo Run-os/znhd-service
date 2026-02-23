@@ -18,14 +18,11 @@
                     <span class="label">设备ID：</span>
                     <span class="value" id="deviceId">--</span>
                     <button class="copy-btn" id="copyIdBtn" title="复制ID">📋</button>
-                </div>
-                <!-- 删除IP地址显示项 -->
-                <!-- 删除网络类型显示项 -->
-                <div class="info-row">
-                    <span class="label">配对状态：</span>
+                    <span class="label" style="margin-left: 15px;">配对：</span>
                     <span class="value" id="pairStatus">未配对</span>
+                    <button class="btn btn-danger" id="disconnectPairBtn" style="display: none; margin-left: 10px;">断开配对</button>
                     <!-- 将连接状态移至此处，位于设备信息区域右侧 -->
-                    <div class="connection-status-inline">
+                    <div class="connection-status-inline" style="margin-left: auto;">
                         <span class="status-indicator" id="statusIndicator"></span>
                         <span id="statusText">未连接</span>
                     </div>
@@ -56,16 +53,7 @@
         <!-- P2P传输区域 -->
         <section class="transfer-area" id="transferArea" style="display: none;">
             <h2>P2P 传输</h2>
-            <div class="partner-info">
-                <p>已配对设备：<strong id="partnerInfo">--</strong></p>
-                <button class="btn btn-danger" id="disconnectBtn">断开连接</button>
-            </div>
-
-            <!-- 连接状态 -->
-            <div class="p2p-status" id="p2pStatus">
-                <span class="status-indicator" id="p2pIndicator"></span>
-                <span id="p2pStatusText">正在建立连接...</span>
-            </div>
+            <button class="btn btn-danger" id="disconnectBtn" style="margin-bottom: 15px;">断开连接</button>
 
             <!-- 发送区域 -->
             <div class="send-section">
