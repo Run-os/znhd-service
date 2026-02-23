@@ -40,7 +40,7 @@ const CONFIG = {
     commonPhrasesUrl: 'https://gitee.com/runos/znhd-service/raw/master/%E5%B8%B8%E7%94%A8%E8%AF%AD.json',
     // 麒麟传送相关配置（局域网P2P服务）
     qilinConfig: {
-        host: 'drop.122050.xyz',
+        host: 'qilindrop.cn',
         //可选：qilindrop.cn || node-snapdrop.onrender.com || drop.122050.xyz
     }
 };
@@ -651,7 +651,7 @@ function isElementInDocument(element) {
 // 修改主要检测函数
 function checkCount() {
     if (!isWorkingHours()) {
-        addLog('当前不在工作时间，已停止脚本', 'warning');
+        //addLog('当前不在工作时间，已停止脚本', 'warning');
         return;
     }
 
@@ -1277,7 +1277,10 @@ class QilinDropClient {
             this.peers.set(peer.id, peer);
             //addLog(`  - ${peer.name.displayName} (${peer.name.deviceName})`, 'info', true);
             if (peer.rtcSupported && window.RTCPeerConnection) {
-                this.createRTCConnection(peer.id, peer, true);
+                // 检查是否已经存在连接，避免重复创建
+                if (!this.rtcPeers.has(peer.id)) {
+                    this.createRTCConnection(peer.id, peer, true);
+                }
             }
         });
         this.updateConnectionStatus();
@@ -1292,7 +1295,10 @@ class QilinDropClient {
         this.updateConnectionStatus();
         this.showNotification(`${peer.name.displayName} 加入`, 'info');
         if (peer.rtcSupported && window.RTCPeerConnection) {
-            this.createRTCConnection(peer.id, peer, true);
+            // 检查是否已经存在连接，避免重复创建
+            if (!this.rtcPeers.has(peer.id)) {
+                this.createRTCConnection(peer.id, peer, true);
+            }
         }
     }
 
@@ -1401,7 +1407,11 @@ class QilinDropClient {
             setupChannel(channel);
             conn.createOffer().then(offer => conn.setLocalDescription(offer))
                 .then(() => { this.sendSignal(peerId, { sdp: conn.localDescription }); })
-                .catch(error => { addLog('[麒麟传送] 创建 offer 失败: ' + error.message, 'error', true); });
+                .catch(error => {
+                    addLog('[麒麟传送] 创建 offer 失败: ' + error.message, 'error', true);
+                    // 失败后清理连接
+                    this.rtcPeers.delete(peerId);
+                });
         } else {
             conn.ondatachannel = (event) => {
                 addLog(`[麒麟传送] 收到数据通道: ${peer.name.displayName}`, 'info', true);
@@ -1444,21 +1454,38 @@ class QilinDropClient {
                 }
                 return;
             }
-            if (signal.sdp.type === 'offer' && currentState !== 'stable' && currentState !== 'have-remote-answer') {
-                addLog(`[麒麟传送] SDP 状态不匹配，忽略 offer（当前: ${currentState}）`, 'warning', true);
-                // 检查是否在3秒重建期内，是则跳过
-                const recentRecreate = this._recentRecreateMap?.get(senderId);
-                if (recentRecreate && Date.now() - recentRecreate < 3000) {
-                    addLog('[麒麟传送] 3秒内跳过重建', 'warning', true);
+            if (signal.sdp.type === 'offer') {
+                // 优化：当收到新的offer时，如果当前状态不是stable，先关闭旧连接再创建新连接
+                if (currentState !== 'stable' && currentState !== 'have-remote-answer') {
+                    addLog(`[麒麟传送] SDP 状态不匹配，重建连接（当前: ${currentState}）`, 'warning', true);
+                    // 检查是否在3秒重建期内，是则跳过
+                    const recentRecreate = this._recentRecreateMap?.get(senderId);
+                    if (recentRecreate && Date.now() - recentRecreate < 3000) {
+                        addLog('[麒麟传送] 3秒内跳过重建', 'warning', true);
+                        return;
+                    }
+                    // 尝试重建连接
+                    this.rtcPeers.delete(senderId);
+                    const peer = this.peers.get(senderId);
+                    if (peer) {
+                        const newPeer = this.createRTCConnection(senderId, peer, false);
+                        // 立即处理新连接的offer
+                        if (newPeer && newPeer.conn) {
+                            newPeer.conn.setRemoteDescription(new RTCSessionDescription(signal.sdp))
+                                .then(() => {
+                                    return newPeer.conn.createAnswer();
+                                })
+                                .then(answer => {
+                                    return newPeer.conn.setLocalDescription(answer);
+                                })
+                                .then(() => {
+                                    this.sendSignal(senderId, { sdp: newPeer.conn.localDescription });
+                                })
+                                .catch(error => { addLog('[麒麟传送] SDP 处理失败: ' + error.message, 'error', true); });
+                        }
+                    }
                     return;
                 }
-                // 尝试重建连接
-                this.rtcPeers.delete(senderId);
-                const peer = this.peers.get(senderId);
-                if (peer) {
-                    this.createRTCConnection(senderId, peer, false);
-                }
-                return;
             }
             conn.setRemoteDescription(new RTCSessionDescription(signal.sdp))
                 .then(() => {
