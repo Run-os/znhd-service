@@ -2,7 +2,7 @@
 // @name        征纳互动人数和在线监控v2
 // @namespace   https://scriptcat.org/
 // @description 实施监控征纳互动等待人数和在线状态，支持语音播报、自定义常用语
-// @version     26.2.07
+// @version     26.2.23
 // @author      runos
 // @match       https://znhd.hunan.chinatax.gov.cn:8443/*
 // @match       https://example.com/*
@@ -38,7 +38,7 @@ const CONFIG = {
         AFTERNOON: { START: 13.5, END: 18 }
     },
     didaUrl: 'https://cdn.jsdelivr.net/gh/Run-os/UserScript/%E5%B7%A5%E4%BD%9C%E7%9B%B8%E5%85%B3/znhd/dida.mp3',
-    commonPhrasesUrl: 'https://cdn.jsdelivr.net/gh/Run-os/Runos-Box@refs/heads/main/znhd/%E5%B8%B8%E7%94%A8%E8%AF%AD.json',
+    commonPhrasesUrl: 'https://gitee.com/runos/other/raw/master/znhd/%E5%B8%B8%E7%94%A8%E8%AF%AD.json',
     // 麒麟传送相关配置（局域网P2P服务）
     qilinConfig: {
         host: 'drop.122050.xyz',
