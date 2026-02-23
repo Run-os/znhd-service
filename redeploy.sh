@@ -100,11 +100,20 @@ pull_code() {
 
 # 显示最新版本信息
 show_version() {
-    if [ "$PROJECT_DIR" != "." ] && [ -d "$PROJECT_DIR/.git" ]; then
-        cd "$PROJECT_DIR"
+    # 修复条件判断：使用 OR（||）而不是 AND（&&）
+    # 原逻辑：PROJECT_DIR != "." && PROJECT_DIR/.git 存在
+    # 问题：当在项目根目录运行时（PROJECT_DIR="."），第一个条件为 false，整个判断失败
+    # 新逻辑：PROJECT_DIR != "." 且 PROJECT_DIR/.git 存在，或者当前目录有 .git
+    if { [ "$PROJECT_DIR" != "." ] && [ -d "$PROJECT_DIR/.git" ]; } || [ -d ".git" ]; then
+        if [ "$PROJECT_DIR" != "." ]; then
+            cd "$PROJECT_DIR"
+        fi
         local latest_tag=$(git describe --tags --abrev=0 2>/dev/null || echo "无标签")
-        local latest_commit=$(git log -1 --pretty=format:"%h - %s (%ci)")
-        cd ..
+        # 修复：%ci 不是有效的 Git 占位符，改为 %cn（提交者名称）
+        local latest_commit=$(git log -1 --pretty=format:"%h - %s (%cn)")
+        if [ "$PROJECT_DIR" != "." ]; then
+            cd ..
+        fi
         log_info "最新版本: $latest_tag"
         log_info "最新提交: $latest_commit"
     else
