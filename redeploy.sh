@@ -246,6 +246,7 @@ main() {
     # 执行部署流程
     backup_current
     pull_code
+    show_version
     show_git_log
     check_compose_file
     stop_services
