@@ -2,7 +2,7 @@
 // @name        征纳互动人数和在线监控v2
 // @namespace   https://scriptcat.org/
 // @description 实施监控征纳互动等待人数和在线状态，支持语音播报、自定义常用语
-// @version     26.2.23
+// @version     26.2.24
 // @author      runos
 // @match       https://znhd.hunan.chinatax.gov.cn:8443/*
 // @match       https://example.com/*
@@ -477,59 +477,53 @@ function isElementInDocument(element) {
 
 // 修改主要检测函数
 function checkCount() {
-    if (!isWorkingHours()) {
-        //addLog('当前不在工作时间，已停止脚本', 'warning');
-        return;
-    }
+    if (!isWorkingHours()) return;
 
     try {
-        // 获取等待人数 - 使用更灵活的选择器
-        // 检查缓存的元素是否还存在，不存在则重新查找
-        if (!isElementInDocument(domCache.ocurrentElement)) {
-            domCache.ocurrentElement = null;
-        }
+        // 清理缓存中已失效的元素
+        if (!isElementInDocument(domCache.ocurrentElement)) domCache.ocurrentElement = null;
+        if (!isElementInDocument(domCache.offlineElement)) domCache.offlineElement = null;
+
+        // 重新查找元素
         if (!domCache.ocurrentElement) {
             domCache.ocurrentElement = document.querySelector('.count:nth-child(2)');
         }
-
-        if (!isElementInDocument(domCache.offlineElement)) {
-            domCache.offlineElement = null;
-        }
         if (!domCache.offlineElement) {
-            domCache.offlineElement = document.querySelector('.t-dialog__body__icon');
+            // 关键修复：使用 nth-of-type(2) 选择第2个 icon 元素
+            domCache.offlineElement = document.querySelector('.t-dialog__body__icon:nth-of-type(2)');
         }
 
         const ocurrentElement = domCache.ocurrentElement;
         if (!ocurrentElement) {
             addLog('找不到人数元素', 'warning');
-            speak("找不到人数元素");
             return;
         }
 
         const currentCount = parseInt(ocurrentElement.textContent.trim());
-        // 检查currentCount是否为有效数字
         if (isNaN(currentCount)) {
-            addLog(`无法解析等待人数，元素内容: "${ocurrentElement.textContent.trim()}"`, 'warning');
+            addLog(`无法解析等待人数: "${ocurrentElement.textContent.trim()}"`, 'warning');
             return;
         }
 
-        // 更新人数状态日志和语音提示
+        // 人数状态处理
         if (currentCount === 0) {
             addLog('当前等待人数为0', 'success');
         } else if (currentCount < 10) {
             addLog(`当前等待人数: ${currentCount}`, 'info');
             speak("征纳互动有人来了");
         } else {
-            // 添加更多人数的情况处理
             addLog(`当前等待人数: ${currentCount}`, 'info');
         }
 
+        // 离线检测 - 关键修复
         const offlineEl = domCache.offlineElement;
-        if (offlineEl?.textContent.includes('掉线')) {
+        if (offlineEl && offlineEl.textContent.includes('掉线')) {
             addLog('征纳互动已掉线', 'error');
             speak("征纳互动已掉线");
-            return;  // 移除返回值
+            // 可选：清除缓存，下次重新查找
+            domCache.offlineElement = null;
         }
+
     } catch (error) {
         addLog(`检测错误: ${error.message}`, 'error', true);
     }
