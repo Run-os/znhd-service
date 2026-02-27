@@ -444,8 +444,8 @@ CAT_UI.createPanel({
 
     // 面板初始位置
     point: {
-        x: window.screen.width - 500,  // 距离右侧400px
-        y: 20  // 距离顶部20px
+        x: window.screen.width * 0.55, 
+        y: window.screen.height * 0.01 
     },
 
 });
