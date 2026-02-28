@@ -140,6 +140,8 @@ function DM() {
     const [phrasesData, setPhrasesData] = CAT_UI.useState({});
     // 常用语加载状态
     const [phrasesLoading, setPhrasesLoading] = CAT_UI.useState(false);
+    // 常用语搜索关键字状态管理
+    const [searchKeyword, setSearchKeyword] = CAT_UI.useState("");
 
 
     // 设置日志回调函数
@@ -361,30 +363,48 @@ function DM() {
                                 onClick: loadPhrasesData,
                                 style: { marginBottom: "16px", width: "100%" }
                             }),
-                            CAT_UI.Divider("常用语列表"),
+                            // 搜索框
+                            CAT_UI.Input({
+                                placeholder: "搜索常用语(按键名称或内容)",
+                                value: searchKeyword,
+                                onChange: setSearchKeyword,
+                                allowClear: true,
+                                style: { marginBottom: "16px", width: "100%" }
+                            }),
                             // 动态生成常用语按钮
                             phrasesLoading ?
                                 CAT_UI.createElement("div", { style: { textAlign: "center", padding: "20px" } }, "加载中...") :
                                 (Object.keys(phrasesData).length === 0 ?
                                     CAT_UI.createElement("div", { style: { textAlign: "center", padding: "20px", color: "#999" } }, "暂无常用语数据，请点击上方按钮加载") :
-                                    CAT_UI.Space(
-                                        Object.entries(phrasesData).map(([key, value]) =>
-                                            CAT_UI.Button(key, {
-                                                type: "default",
-                                                onClick() {
-                                                    safeCopyText(value);
-                                                    //CAT_UI.Message.success("已复制: " + key);
-                                                    setCommonPhrasesVisible(false);
-                                                    // 2. 把 value 追加到 TinyMCE 已有内容后面
-                                                    appendToTinyMCE(value);
-                                                    addLog(`添加文本: ${value}`, 'success');
-                                                    CAT_UI.Message.success("添加文本: " + value);
-                                                },
-                                                style: { marginBottom: "8px", width: "100%" }
-                                            })
-                                        ),
-                                        { direction: "vertical", style: { width: "100%" } }
-                                    )
+                                    (() => {
+                                        // 根据搜索关键字过滤常用语
+                                        const keyword = searchKeyword.trim().toLowerCase();
+                                        const filteredEntries = keyword ?
+                                            Object.entries(phrasesData).filter(([key, value]) =>
+                                                key.toLowerCase().includes(keyword) ||
+                                                value.toLowerCase().includes(keyword)
+                                            ) :
+                                            Object.entries(phrasesData);
+
+                                        return filteredEntries.length === 0 ?
+                                            CAT_UI.createElement("div", { style: { textAlign: "center", padding: "20px", color: "#999" } }, "没有匹配的常用语") :
+                                            CAT_UI.Space(
+                                                filteredEntries.map(([key, value]) =>
+                                                    CAT_UI.Button(key, {
+                                                        type: "default",
+                                                        onClick() {
+                                                            safeCopyText(value);
+                                                            setCommonPhrasesVisible(false);
+                                                            appendToTinyMCE(value);
+                                                            addLog(`添加文本: ${value}`, 'success');
+                                                            CAT_UI.Message.success("添加文本: " + value);
+                                                        },
+                                                        style: { marginBottom: "8px", width: "100%" }
+                                                    })
+                                                ),
+                                                { direction: "vertical", style: { width: "100%" } }
+                                            );
+                                    })()
                                 ),
                             CAT_UI.Divider(""),
                         ]),
@@ -444,8 +464,8 @@ CAT_UI.createPanel({
 
     // 面板初始位置
     point: {
-        x: window.screen.width * 0.55, 
-        y: window.screen.height * 0.01 
+        x: window.screen.width * 0.55,
+        y: window.screen.height * 0.01
     },
 
 });
@@ -507,17 +527,17 @@ function checkCount() {
             addLog('当前等待人数为0', 'success');
         } else {
             speak("征纳互动有人来了");
-            addLog(`当前等待人数: ${currentCount}`, 'info');  
-        } 
+            addLog(`当前等待人数: ${currentCount}`, 'info');
+        }
 
         // ========== 关键修复：离线检测 ==========
         // 每次重新查询，不缓存（弹窗元素动态创建/销毁）
-        const offlineEl = document.querySelector('.t-dialog__body__icon:nth-child(2)') || 
-                         document.querySelector('.t-dialog__body__icon:nth-of-type(2)');
-        
+        const offlineEl = document.querySelector('.t-dialog__body__icon:nth-child(2)') ||
+            document.querySelector('.t-dialog__body__icon:nth-of-type(2)');
+
         if (offlineEl) {
             const text = (offlineEl.innerText || offlineEl.textContent || '').trim();
-            
+
             if (text.includes('掉线')) {
                 addLog(`掉线提示：${text}`, 'error');
                 speak("征纳互动已掉线");
