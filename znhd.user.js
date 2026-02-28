@@ -267,6 +267,17 @@ function DM() {
                                             , color: "#1890ff", fontWeight: "bold"
                                         }
                                     }),
+                                    CAT_UI.Button("[更新脚本]", {
+                                        type: "link",
+                                        onClick: () => {
+                                            window.open('https://gitee.com/runos/znhd-service/raw/master/znhd.user.js', '_blank');
+                                        },
+                                        style: {
+                                            padding: "0 8px"
+                                            //蓝色字体
+                                            , color: "#1890ff", fontWeight: "bold"
+                                        }
+                                    }),
                                 ],
                                 { direction: "horizontal", size: "small" }
                             ),
