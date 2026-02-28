@@ -464,10 +464,10 @@ function isWorkingHours() {
         (currentHour >= CONFIG.WORKING_HOURS.AFTERNOON.START && currentHour <= CONFIG.WORKING_HOURS.AFTERNOON.END);
 }
 
-// 缓存DOM元素引用
+// 缓存DOM元素引用（只缓存稳定元素）
 const domCache = {
-    ocurrentElement: null,
-    offlineElement: null
+    ocurrentElement: null
+    // 注意：offlineElement 不缓存，每次重新查询
 };
 
 // 检测DOM元素是否仍然存在于文档中
@@ -480,17 +480,14 @@ function checkCount() {
     if (!isWorkingHours()) return;
 
     try {
-        // 清理缓存中已失效的元素
-        if (!isElementInDocument(domCache.ocurrentElement)) domCache.ocurrentElement = null;
-        if (!isElementInDocument(domCache.offlineElement)) domCache.offlineElement = null;
+        // 清理缓存中已失效的人数元素
+        if (!isElementInDocument(domCache.ocurrentElement)) {
+            domCache.ocurrentElement = null;
+        }
 
-        // 重新查找元素
+        // 重新查找人数元素（相对稳定，可以缓存）
         if (!domCache.ocurrentElement) {
             domCache.ocurrentElement = document.querySelector('.count:nth-child(2)');
-        }
-        if (!domCache.offlineElement) {
-            // 关键修复：使用 nth-of-type(2) 选择第2个 icon 元素
-            domCache.offlineElement = document.querySelector('.t-dialog__body__icon:nth-of-type(2)');
         }
 
         const ocurrentElement = domCache.ocurrentElement;
@@ -508,20 +505,23 @@ function checkCount() {
         // 人数状态处理
         if (currentCount === 0) {
             addLog('当前等待人数为0', 'success');
-        } else if (currentCount < 10) {
-            addLog(`当前等待人数: ${currentCount}`, 'info');
-            speak("征纳互动有人来了");
         } else {
-            addLog(`当前等待人数: ${currentCount}`, 'info');
-        }
+            speak("征纳互动有人来了");
+            addLog(`当前等待人数: ${currentCount}`, 'info');  
+        } 
 
-        // 离线检测 - 关键修复
-        const offlineEl = domCache.offlineElement;
-        if (offlineEl && offlineEl.textContent.includes('掉线')) {
-            addLog('征纳互动已掉线', 'error');
-            speak("征纳互动已掉线");
-            // 可选：清除缓存，下次重新查找
-            domCache.offlineElement = null;
+        // ========== 关键修复：离线检测 ==========
+        // 每次重新查询，不缓存（弹窗元素动态创建/销毁）
+        const offlineEl = document.querySelector('.t-dialog__body__icon:nth-child(2)') || 
+                         document.querySelector('.t-dialog__body__icon:nth-of-type(2)');
+        
+        if (offlineEl) {
+            const text = (offlineEl.innerText || offlineEl.textContent || '').trim();
+            
+            if (text.includes('掉线')) {
+                addLog(`掉线提示：${text}`, 'error');
+                speak("征纳互动已掉线");
+            }
         }
 
     } catch (error) {
