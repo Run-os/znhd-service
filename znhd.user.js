@@ -1,27 +1,29 @@
 // ==UserScript==
-// @name        征纳互动人数和在线监控v2
-// @namespace   https://scriptcat.org/
-// @description 实施监控征纳互动等待人数和在线状态，支持语音播报、自定义常用语
-// @version     26.2.26
-// @author      runos
-// @match       https://znhd.hunan.chinatax.gov.cn:8443/*
-// @match       https://example.com/*
-// @icon        https://znhd.hunan.chinatax.gov.cn:8443/favicon.ico
-// @grant       GM_addStyle
-// @grant       unsafeWindow
-// @grant       GM_xmlhttpRequest
-// @grant       GM_setClipboard
-// @grant       GM_notification
-// @grant       GM_getValue
-// @grant       GM_setValue
-// @connect     *
-// @connect     znhd-service.zeabur.app
-// @connect     122050.xyz
-// @connect     drop.122050.xyz
+// @name           征纳互动人数和在线监控v2
+// @namespace      https://scriptcat.org/
+// @description    实施监控征纳互动等待人数和在线状态，支持语音播报、自定义常用语
+// @version        26.2.26
+// @author         runos
+// @match          https://znhd.hunan.chinatax.gov.cn:8443/*
+// @match          https://example.com/*
+// @icon           https://znhd.hunan.chinatax.gov.cn:8443/favicon.ico
+// @grant          GM_addStyle
+// @grant          unsafeWindow
+// @grant          GM_xmlhttpRequest
+// @grant          GM_setClipboard
+// @grant          GM_notification
+// @grant          GM_getValue
+// @grant          GM_setValue
+// @connect        *
+// @connect        znhd-service.zeabur.app
+// @connect        122050.xyz
+// @connect        drop.122050.xyz
 // @homepageURL    https://scriptcat.org/zh-CN/script-show-page/3650
-// @require     https://scriptcat.org/lib/1167/1.0.0/%E8%84%9A%E6%9C%AC%E7%8C%ABUI%E5%BA%93.js?sha384-jXdR3hCwnDJf53Ue6XHAi6tApeudgS/wXnMYBD/ZJcgge8Xnzu/s7bkEf2tPi2KS
-// @require     https://cdn.jsdelivr.net/npm/@fingerprintjs/fingerprintjs@5/dist/fp.min.js
-// @require     https://cdn.jsdelivr.net/npm/js-yaml@4.1.0/dist/js-yaml.min.js
+// @updateURL      https://gitee.com/runos/znhd-service/raw/master/znhd.user.js
+// @downloadURL    https://gitee.com/runos/znhd-service/raw/master/znhd.user.js
+// @require        https://scriptcat.org/lib/1167/1.0.0/%E8%84%9A%E6%9C%AC%E7%8C%ABUI%E5%BA%93.js?sha384-jXdR3hCwnDJf53Ue6XHAi6tApeudgS/wXnMYBD/ZJcgge8Xnzu/s7bkEf2tPi2KS
+// @require        https://cdn.jsdelivr.net/npm/@fingerprintjs/fingerprintjs@5/dist/fp.min.js
+// @require        https://cdn.jsdelivr.net/npm/js-yaml@4.1.0/dist/js-yaml.min.js
 // ==/UserScript==
 
 
