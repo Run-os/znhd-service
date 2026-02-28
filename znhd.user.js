@@ -270,7 +270,7 @@ function DM() {
                                     CAT_UI.Button("[更新脚本]", {
                                         type: "link",
                                         onClick: () => {
-                                            window.open('https://gitee.com/runos/znhd-service/raw/master/znhd.user.js', '_blank');
+                                            window.open(GM_info.scriptUpdateURL || GM_info.script.updateURL, '_blank');
                                         },
                                         style: {
                                             padding: "0 8px"
