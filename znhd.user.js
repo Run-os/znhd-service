@@ -2,7 +2,7 @@
 // @name           征纳互动人数和在线监控v2
 // @namespace      https://scriptcat.org/
 // @description    实时监控征纳互动等待人数和在线状态，支持语音播报、自定义常用语
-// @version        26.7.18-v3
+// @version        26.7.19-v1
 // @author         runos
 // @match          https://znhd.hunan.chinatax.gov.cn:8443/*
 // @match          https://example.com/*
@@ -44,6 +44,14 @@
     let lastLogMessage = null;
 
     // 添加日志条目函数
+    /**
+     * 添加一条日志条目，输出到设置面板的日志窗口（通过回调写入 React 状态）。
+     * 内置重复内容过滤：与上一条日志文本完全相同则忽略，避免刷屏。
+     * @param {string} message - 日志正文
+     * @param {('info'|'warning'|'success'|'error')} [type='info'] - 日志类型，决定着色
+     * @param {boolean} [logenabled=false] - 是否同时输出到浏览器控制台（console.log）
+     * @returns {void}
+     */
     function addLog(message, type = 'info', logenabled = false) {
         const timestamp = new Date().toTimeString().slice(0, 8);
 
@@ -79,6 +87,9 @@
     const STORAGE_KEY = 'scriptCat_Allvalue';
     // 面板位置单独存储（与设置数据解耦，避免拖拽频繁写入设置）
     const PANEL_POINT_KEY = 'scriptCat_PanelPoint';
+    // 常用语缓存（2 小时内且 URL 未变则跳过网络请求，直接复用本地数据）
+    const PHRASES_CACHE_KEY = 'scriptCat_PhrasesCache';
+    const PHRASES_CACHE_TTL = 2 * 60 * 60 * 1000; // 缓存有效期：2 小时（毫秒）
     const DEFAULTS = {
         voiceEnabled: true,
         // 监控时间段（单位：小时，可含小数，如 13.5 表示 13:30）
@@ -93,6 +104,10 @@
     };
 
     // 读取面板保存的位置（无记录返回 null，由调用方兜底默认坐标）
+    /**
+     * 从 localStorage 读取上次保存的面板位置。
+     * @returns {({x:number,y:number}|null)} 命中且坐标合法时返回 {x,y}，否则返回 null（由调用方兜底默认坐标）
+     */
     function loadPanelPoint() {
         try {
             const saved = localStorage.getItem(PANEL_POINT_KEY);
@@ -110,6 +125,11 @@
 
     // 保存面板位置（带防抖，避免拖拽过程中高频写 localStorage）
     let _savePointTimer = null;
+    /**
+     * 保存面板位置到 localStorage（带 requestAnimationFrame 防抖，避免拖拽中高频写入）。
+     * @param {{x:number,y:number}} point - 面板视口坐标
+     * @returns {void}
+     */
     function savePanelPoint(point) {
         if (!point || typeof point.x !== 'number' || typeof point.y !== 'number') return;
         if (_savePointTimer) return; // 已计划在下一帧保存，跳过重复
@@ -126,7 +146,51 @@
         });
     }
 
+    // 读取常用语本地缓存（2 小时有效期内且 URL 一致则命中）
+    /**
+     * 从 localStorage 读取常用语本地缓存（含加载时间戳、数据源 URL 与数据本体）。
+     * @returns {({time:number,url:string,data:object}|null)} 命中且结构合法时返回缓存对象，否则返回 null
+     */
+    function loadPhrasesCache() {
+        try {
+            const saved = localStorage.getItem(PHRASES_CACHE_KEY);
+            if (saved) {
+                const parsed = JSON.parse(saved);
+                if (parsed && typeof parsed.time === 'number' && typeof parsed.url === 'string' && parsed.data) {
+                    return parsed;
+                }
+            }
+        } catch (error) {
+            addLog('读取常用语缓存失败: ' + error.message, 'error', true);
+        }
+        return null;
+    }
+
+    // 保存常用语本地缓存（记录加载时间戳、数据源 URL 与数据本体）
+    /**
+     * 将常用语数据连同加载时间戳与数据源 URL 写入 localStorage 缓存。
+     * @param {string} url - 数据源地址（用于后续判断缓存是否仍有效）
+     * @param {object} data - 解析后的常用语数据（键值对）
+     * @returns {void}
+     */
+    function savePhrasesCache(url, data) {
+        try {
+            localStorage.setItem(PHRASES_CACHE_KEY, JSON.stringify({
+                time: Date.now(),
+                url: url,
+                data: data
+            }));
+        } catch (error) {
+            addLog('保存常用语缓存失败: ' + error.message, 'error', true);
+        }
+    }
+
     // 从localStorage加载Allvalue数据
+    /**
+     * 从 localStorage 加载全部用户配置，并与 DEFAULTS 合并（已存储值覆盖默认值）。
+     * 解析失败时回退到 DEFAULTS，保证调用方始终拿到完整配置对象。
+     * @returns {object} 合并后的配置对象（含 voiceEnabled / workingHours / commonPhrasesUrl 等）
+     */
     function loadAllvalue() {
         try {
             const saved = localStorage.getItem(STORAGE_KEY);
@@ -142,6 +206,11 @@
     }
 
     // 保存Allvalue数据到localStorage
+    /**
+     * 将全部用户配置写入 localStorage，并记录成功/失败日志。
+     * @param {object} data - 待保存的配置对象
+     * @returns {void}
+     */
     function saveAllvalue(data) {
         try {
             localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
@@ -165,12 +234,23 @@
     // ==========工具函数==========
     // HTML 转义函数（复用单个 div 元素，避免重复创建）
     const _escapeHelper = document.createElement('div');
+    /**
+     * 对文本做 HTML 转义，防止常用语内容中的特殊字符破坏页面结构。复用单个隐藏 div 元素，避免重复创建。
+     * @param {string} text - 待转义文本
+     * @returns {string} 转义后的 HTML 安全字符串
+     */
     function escapeHtml(text) {
         _escapeHelper.textContent = text;
         return _escapeHelper.innerHTML;
     }
 
     // 十进制小时(如 13.5) 与 "HH:mm" 字符串互转，供时间选择器使用
+    /**
+     * 将十进制小时（如 13.5）转换为 "HH:mm" 字符串，供时间选择器显示。
+     * 非法输入或越界值会被收敛到 [00:00, 24:00]。
+     * @param {number} h - 十进制小时
+     * @returns {string} "HH:mm" 格式字符串
+     */
     function hoursToHHmm(h) {
         if (typeof h !== 'number' || isNaN(h)) return '00:00';
         let total = Math.round(h * 60);
@@ -180,6 +260,12 @@
         const M = total % 60;
         return String(H).padStart(2, '0') + ':' + String(M).padStart(2, '0');
     }
+    /**
+     * 将 "HH:mm" 字符串解析为十进制小时（如 "13:30" -> 13.5），供时间选择器回写。
+     * 格式非法或数值越界时返回 null。
+     * @param {string} str - "HH:mm" 格式字符串
+     * @returns {(number|null)} 成功返回十进制小时，失败返回 null
+     */
     function hhmmToHours(str) {
         if (typeof str !== 'string') return null;
         const m = /^(\d{1,2}):(\d{2})$/.exec(str.trim());
@@ -192,6 +278,12 @@
 
     // ==========UI部分==========
     // 日志面板组件
+    /**
+     * 日志面板组件：按类型着色渲染日志条目列表。
+     * @param {object} props - 组件属性
+     * @param {Array<{timestamp:string,message:string,type:string}>} props.logEntries - 日志条目数组
+     * @returns {object} CAT_UI React 元素
+     */
     function LogPanel({ logEntries }) {
         // 根据日志类型定义颜色
         const colorMap = {
@@ -237,6 +329,18 @@
     }
 
     // 设置抽屉组件
+    /**
+     * 设置抽屉组件：提供监控时间段配置、常用语数据源地址配置、脚本链接与日志查看。
+     * @param {object} props - 组件属性
+     * @param {boolean} props.visible - 抽屉是否可见
+     * @param {Function} props.setVisible - 设置可见性的回调
+     * @param {Array} props.logEntries - 日志条目
+     * @param {object} props.workingHours - 当前监控时间段
+     * @param {Function} props.onChangeWorkingHours - 时间段变更回调（入参为完整 workingHours 对象）
+     * @param {string} props.commonPhrasesUrl - 当前常用语数据源地址
+     * @param {Function} props.onChangeCommonPhrasesUrl - 数据源地址变更回调（入参为 URL 字符串）
+     * @returns {object} CAT_UI React 元素
+     */
     function SettingsDrawer({ visible, setVisible, logEntries, workingHours, onChangeWorkingHours, commonPhrasesUrl, onChangeCommonPhrasesUrl }) {
         // 当前监控时间段（兜底默认值，避免未配置时报错）
         const wh = workingHours || { morningStart: 9, morningEnd: 12, afternoonStart: 13.5, afternoonEnd: 18 };
@@ -382,6 +486,22 @@
     }
 
     // 常用语抽屉组件
+    /**
+     * 常用语抽屉组件：展示数据源、重新加载按钮、搜索框与常用语按钮列表。
+     * 点击常用语会复制文本并追加到 TinyMCE 编辑器。
+     * @param {object} props - 组件属性
+     * @param {boolean} props.visible - 抽屉是否可见
+     * @param {Function} props.setVisible - 设置可见性的回调
+     * @param {object} props.phrasesData - 常用语数据（键值对）
+     * @param {Function} props.setPhrasesData - 数据状态设置回调
+     * @param {boolean} props.phrasesLoading - 是否加载中
+     * @param {Function} props.setPhrasesLoading - 加载状态设置回调
+     * @param {string} props.searchKeyword - 搜索关键字
+     * @param {Function} props.setSearchKeyword - 搜索关键字设置回调
+     * @param {Function} props.loadPhrasesData - 加载常用语函数（force 参数控制是否强制刷新）
+     * @param {string} props.commonPhrasesUrl - 当前数据源地址
+     * @returns {object} CAT_UI React 元素
+     */
     function CommonPhrasesDrawer({
         visible,
         setVisible,
@@ -413,7 +533,7 @@
                 CAT_UI.Button("重新加载常用语", {
                     type: "primary",
                     loading: phrasesLoading,
-                    onClick: loadPhrasesData,
+                    onClick: () => loadPhrasesData(true),
                     style: { marginBottom: "16px", width: "100%" }
                 }),
                 // 搜索框
@@ -475,6 +595,11 @@
     }
 
     // 主抽屉/模态框组件
+    /**
+     * 主面板组件（DM = Dashboard/Main）：组装语音开关、设置与常用语入口及两个抽屉，
+     * 管理面板内全部状态（配置、日志、常用语数据等）。
+     * @returns {object} CAT_UI React 元素
+     */
     function DM() {
         // 使用加载的数据初始化Allvalue
         const [Allvalue, setAllvalue] = CAT_UI.useState(loadAllvalue());
@@ -534,7 +659,20 @@
         }, []);
 
         // 加载常用语数据的函数
-        const loadPhrasesData = () => {
+        // force=true 时强制刷新（忽略缓存），如点击「重新加载」按钮；否则命中有效缓存则跳过网络请求
+        const loadPhrasesData = (force) => {
+            // 非强制刷新：命中 2 小时内的有效缓存（URL 一致）则直接复用本地数据，不发请求
+            if (!force) {
+                const cache = loadPhrasesCache();
+                if (cache && cache.url === cachedCommonPhrasesUrl &&
+                    (Date.now() - cache.time) < PHRASES_CACHE_TTL) {
+                    setPhrasesData(cache.data);
+                    const mins = Math.round((Date.now() - cache.time) / 60000);
+                    addLog('常用语使用本地缓存（' + mins + ' 分钟前加载），已跳过网络请求', 'info');
+                    CAT_UI.Message.success('常用语已加载（本地缓存）');
+                    return;
+                }
+            }
             setPhrasesLoading(true);
             GM_xmlhttpRequest({
                 method: 'GET',
@@ -543,6 +681,7 @@
                     try {
                         const data = jsyaml.load(response.responseText);
                         setPhrasesData(data);
+                        savePhrasesCache(cachedCommonPhrasesUrl, data);
                         addLog('常用语加载成功，共 ' + Object.keys(data || {}).length + ' 条', 'success');
                         CAT_UI.Message.success('常用语加载成功');
                     } catch (error) {
@@ -732,6 +871,10 @@
         const PDBG = false; // 诊断开关：验证通过后可改 false
 
         // 收集页面上所有带 open shadowRoot 的宿主元素
+        /**
+         * 收集页面上所有带有 open shadowRoot 的宿主元素（用于穿透 Shadow DOM 定位面板）。
+         * @returns {Array<Element>} 带有 shadowRoot 的 DOM 元素数组
+         */
         function getShadowHosts() {
             const hosts = [];
             document.querySelectorAll('*').forEach(el => { if (el.shadowRoot) hosts.push(el); });
@@ -739,6 +882,10 @@
         }
 
         // 穿透 Shadow DOM 定位面板主体（shadow 内含本脚本标题、且带内联 left/top 的 div）
+        /**
+         * 穿透 Shadow DOM 定位面板主体：在带 shadowRoot 的宿主中查找含本脚本标题、且带内联 left/top 的 div。
+         * @returns {(Element|null)} 找到返回面板主体元素，否则返回 null
+         */
         function findPanelRoot() {
             for (const host of getShadowHosts()) {
                 const sr = host.shadowRoot;
@@ -754,6 +901,11 @@
         }
 
         // 在面板内找当前带 transform: translate 的拖拽层（react-draggable 施加）
+        /**
+         * 在面板子树中查找当前被 react-draggable 施加 transform: translate 的拖拽层。
+         * @param {Element} root - 面板根元素
+         * @returns {(Element|null)} 找到返回拖拽层元素，否则返回 null
+         */
         function findDraggableNode(root) {
             const all = root.querySelectorAll('*');
             for (const el of all) {
@@ -765,6 +917,11 @@
 
         // 读取面板当前真实视口坐标：优先取被拖拽的层（transform 后位置随之变化），
         // 否则取面板主体本身。getBoundingClientRect 与 createPanel 的 point 同坐标系。
+        /**
+         * 读取面板当前真实视口坐标：优先取被拖拽层（transform 后位置随之变化），否则取面板主体本身。
+         * @param {Element} root - 面板根元素
+         * @returns {{x:number,y:number}} 面板左上角的视口坐标（四舍五入）
+         */
         function getCurrentPoint(root) {
             const el = findDraggableNode(root) || root;
             const r = el.getBoundingClientRect();
@@ -778,6 +935,12 @@
         const MIN_VISIBLE = 48;
         const HANDLE_MIN = 40; // 标题栏（可抓取区）至少保留的高度
 
+        /**
+         * 将面板坐标约束在视口内，保证顶部标题栏（唯一可抓取区）始终可见、水平方向至少保留部分在视口内。
+         * @param {{x:number,y:number}} pt - 待约束的坐标
+         * @param {{w?:number,h?:number}} [size] - 面板尺寸（缺省按 320 宽估算）
+         * @returns {{x:number,y:number}} 约束后的安全坐标
+         */
         function clampPoint(pt, size) {
             const vw = window.innerWidth;
             const vh = window.innerHeight;
@@ -793,6 +956,11 @@
         }
 
         // 读取面板当前尺寸与可见矩形（用于精确计算边界）
+        /**
+         * 读取面板当前尺寸与可见矩形（用于精确计算边界）。
+         * @param {Element} root - 面板根元素
+         * @returns {{el:Element,rect:DOMRect,w:number,h:number}} 拖拽层元素、视口矩形及宽高
+         */
         function getPanelRect(root) {
             const el = findDraggableNode(root) || root;
             const r = el.getBoundingClientRect();
@@ -801,6 +969,11 @@
 
         // 计算当前点 -> 裁剪到视口内 -> 保存；若越界则同时把拖拽层 transform 拉回边界，
         // 确保「视觉上」也始终留在可视范围（不止是存档安全）。
+        /**
+         * 计算当前面板坐标，裁剪到视口内后保存；若越界则同步把拖拽层 transform 拉回边界。
+         * @param {Element} root - 面板根元素
+         * @returns {{x:number,y:number}} 约束并保存后的坐标
+         */
         function persistAndClamp(root) {
             const info = getPanelRect(root);
             const pt = { x: info.rect.left, y: info.rect.top };
@@ -823,6 +996,11 @@
             return clamped;
         }
 
+        /**
+         * 对面板根元素安装位置跟踪：用 MutationObserver 监听 style 变化 + mousedown/move/up 双保险，实时裁剪并保存位置。
+         * @param {Element} root - 面板根元素
+         * @returns {void}
+         */
         function applyTracking(root) {
             // 监听整棵子树的 style 变化（transform 可能加在任意内部层）
             const observer = new MutationObserver(() => {
@@ -869,12 +1047,20 @@
 
     // ==========监控部分==========
     // 工具函数：获取当前小时（支持小数）
+    /**
+     * 获取当前时间的十进制小时（如 13:30 -> 13.5），供工作时间判断。
+     * @returns {number} 当前十进制小时
+     */
     function getCurrentHour() {
         const now = new Date();
         return now.getHours() + now.getMinutes() / 60;
     }
 
     // 检查是否在工作时间内（读取用户可配置的时间段缓存）
+    /**
+     * 判断当前是否处于用户配置的监控工作时间段内（读取缓存，无配置则视为工作时间内）。
+     * @returns {boolean} 在工作时间内返回 true，否则 false
+     */
     function isWorkingHours() {
         const wh = cachedWorkingHours;
         // 兜底：若未配置则视为工作时间内，避免完全停止监控
@@ -891,6 +1077,11 @@
     };
 
     // 检测DOM元素是否仍然存在于文档中
+    /**
+     * 检测 DOM 元素是否仍连接在文档中（用于清理失效的缓存元素引用）。
+     * @param {Element} element - 待检测元素
+     * @returns {boolean} 仍连接返回 true，否则 false
+     */
     function isElementInDocument(element) {
         return element && element.isConnected;
     }
@@ -902,6 +1093,11 @@
     let lastWorkingState = null;
 
     // 修改主要检测函数
+    /**
+     * 主检测函数：每次轮询执行。判断工作时间、读取等待人数（状态变化时记录/播报），
+     * 并检测掉线弹窗（发现时记录并语音告警）。
+     * @returns {void}
+     */
     function checkCount() {
         // 工作时间状态变化时记录日志（进入/离开），仅在翻转时输出，避免刷屏
         const inWork = isWorkingHours();
@@ -967,9 +1163,11 @@
     }
 
     /**
-     * 向【页面里第一个 TinyMCE】追加文本并立即生效
-     * @param {string} text2append  要追加的文本
-     * @returns {string}            追加后的完整纯文本
+     * 向页面中第一个 TinyMCE 编辑器追加文本并立即生效。
+     * 优先使用 TinyMCE API，失败时降级为直接操作 iframe DOM 并派发 input 事件；
+     * 输入框非空时在内容前补 <br> 实现换行。
+     * @param {string} [text2append='xxxxx'] - 要追加的文本
+     * @returns {string} 追加后的编辑器完整纯文本
      */
     function appendToTinyMCE(text2append = 'xxxxx') {
         /* 1. 拿到编辑器实例（动态匹配，不依赖 id） */
@@ -1064,6 +1262,11 @@
     let isSpeaking = false;
     let speechTimer = null;
 
+    /**
+     * 语音播报：将文本加入语音队列并触发播放（受语音开关与浏览器能力限制）。
+     * @param {string} text - 要播报的文本
+     * @returns {void}
+     */
     function speak(text) {
         // 直接读取缓存的语音状态，避免每次读取 localStorage
         if (!cachedVoiceEnabled || !('speechSynthesis' in window)) { return; }
@@ -1078,6 +1281,10 @@
     }
 
     // 处理语音队列
+    /**
+     * 从语音队列中取出一条依次播放，带超时保护（防止 onend/onerror 不触发导致队列卡死）。
+     * @returns {void}
+     */
     function processSpeechQueue() {
         if (isSpeaking || speechQueue.length === 0) { return; }
 
@@ -1131,6 +1338,10 @@
     let monitoringInterval = null;
 
     // 页面加载完成后启动监控
+    /**
+     * 启动监控：立即执行一次检测，并按 CHECK_INTERVAL 定时轮询 checkCount。
+     * @returns {void}
+     */
     function startMonitoring() {
         // 立即执行一次检查
         checkCount();
@@ -1155,6 +1366,10 @@
     let didaAudioPlayer = null;
 
     // 播放提示音函数
+    /**
+     * 播放提示音（dida.mp3）。复用 Audio 实例，避免重复解码。
+     * @returns {void}
+     */
     function playDidaSound() {
         if (!CONFIG.didaUrl) return;
         try {
@@ -1171,6 +1386,12 @@
     }
 
     // 安全复制工具：仅在页面聚焦且支持 clipboard 时尝试复制
+    /**
+     * 安全复制文本到剪贴板：优先 GM_setClipboard（无需焦点），降级到 navigator.clipboard；
+     * 成功复制后播放提示音。失败时记录日志，不抛出。
+     * @param {string} text - 待复制文本（空值直接返回）
+     * @returns {void}
+     */
     function safeCopyText(text) {
         if (!text) return;
         // 1) 优先使用 GM_setClipboard（无需焦点）
