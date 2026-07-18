@@ -40,6 +40,11 @@
   （v1→v2→v3…）；若**跨天**（日期变了）则日期部分更新为当天、版本号**重置为 v1**。
 - 此约定优先级高：所有改动都要带版本号递增，不可遗漏。
 
+## 文档同步约定（硬性约定）
+- 对 `znhd.user.js` 做代码改动后，**必须同步更新 `ReadMe.md`**：核心特性、配置说明（`CONFIG`/`DEFAULTS`
+  要与实际代码一致，不能描述已删除/迁移的字段）、功能详解、更新日志（在顶部补新版本条目）、版本号示例。
+- 维护历史中 ReadMe 曾多次滞后（CONFIG 还写着旧 `WORKING_HOURS`、版本号停在 v26.2.26），改动后务必核对。
+
 ## 已落地的功能改进
 - 工作时间可配置：DEFAULTS.workingHours（morningStart/End, afternoonStart/End），缓存 cachedWorkingHours，
   isWorkingHours() 读缓存（无配置兜底 true）；SettingsDrawer 用原生 input[type=time] 选取。
