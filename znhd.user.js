@@ -16,8 +16,6 @@
 // @grant          GM_setValue
 // @connect        *
 // @connect        znhd-service.zeabur.app
-// @connect        122050.xyz
-// @connect        drop.122050.xyz
 // @homepageURL    https://scriptcat.org/zh-CN/script-show-page/3650
 // @updateURL      https://gitee.com/runos/znhd-service/raw/master/znhd.user.js
 // @downloadURL    https://gitee.com/runos/znhd-service/raw/master/znhd.user.js
