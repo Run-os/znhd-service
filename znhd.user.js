@@ -88,7 +88,6 @@
     const PANEL_POINT_KEY = 'scriptCat_PanelPoint';
     const DEFAULTS = {
         voiceEnabled: true,
-        isChecked: false,
     };
 
     // 读取面板保存的位置（无记录返回 null，由调用方兜底默认坐标）
@@ -377,7 +376,7 @@
         const patchAllvalue = (kv) => updateAllvalue({ ...Allvalue, ...kv });
 
         // 解构状态变量，方便后续使用
-        const { voiceEnabled, isChecked } = Allvalue;
+        const { voiceEnabled } = Allvalue;
 
         const voiceEnabledText = voiceEnabled ? "🔊 语音" : "🔇 静音";
 
@@ -703,7 +702,7 @@
                 return;
             }
 
-            const currentCount = parseInt(ocurrentElement.textContent.trim());
+            const currentCount = parseInt(ocurrentElement.textContent.trim(), 10);
             if (isNaN(currentCount)) {
                 addLog(`无法解析等待人数: "${ocurrentElement.textContent.trim()}"`, 'warning');
                 return;
