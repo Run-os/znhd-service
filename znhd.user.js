@@ -2,7 +2,7 @@
 // @name           征纳互动人数和在线监控v2
 // @namespace      https://scriptcat.org/
 // @description    实时监控征纳互动等待人数和在线状态，支持语音播报、自定义常用语
-// @version        26.2.27
+// @version        26.2.27-v1
 // @author         runos
 // @match          https://znhd.hunan.chinatax.gov.cn:8443/*
 // @match          https://example.com/*
@@ -527,44 +527,37 @@
     try {
         CAT_UI.createPanel({
             header: {
-            title: CAT_UI.Space(
-                [
-                    CAT_UI.Icon.ScriptCat({
-                        style: { width: "24px", verticalAlign: "middle" },
-                        draggable: "false",
-                    }),
-                    CAT_UI.Text("征纳互动监控", {
-                        style: { fontSize: "16px" },
-                    }),
-                    // 获取并显示版本号
-                    CAT_UI.Text(`v${GM_info.script.version}`, {
-                        style: {
-                            fontSize: "12px",
-                            color: "#999",
-                            marginLeft: "8px"
-                        },
-                    }),
-                ],
-                { style: { marginLeft: "5px" } }
-            ),
-            style: {
-                borderBottom: "1px solid var(--color-neutral-3)"
+                title: CAT_UI.Space(
+                    [
+                        CAT_UI.Icon.ScriptCat({
+                            style: { width: "24px", verticalAlign: "middle" },
+                            draggable: "false",
+                        }),
+                        CAT_UI.Text("征纳互动监控", {
+                            style: { fontSize: "16px" },
+                        }),
+                        // 获取并显示版本号
+                        CAT_UI.Text(`v${GM_info.script.version}`, {
+                            style: {
+                                fontSize: "12px",
+                                color: "#999",
+                                marginLeft: "8px"
+                            },
+                        }),
+                    ],
+                    { style: { marginLeft: "5px" } }
+                ),
+                style: {
+                    borderBottom: "1px solid var(--color-neutral-3)"
+                },
             },
-        },
-        render: DM,
+            render: DM,
 
-        // 面板初始位置：优先使用上次保存的位置，否则用默认坐标
-        point: loadPanelPoint() || {
-            x: window.screen.width * 0.55,
-            y: window.screen.height * 0.01
-        },
-
-        // 拖拽时实时保存位置（data.x / data.y 即面板在视口中的坐标）
-        onDrag: function (e, data) {
-            if (data && typeof data.x === 'number' && typeof data.y === 'number') {
-                savePanelPoint({ x: data.x, y: data.y });
-            }
-        },
+            // 面板初始位置：优先使用上次保存的位置，否则用默认坐标
+            point: loadPanelPoint() || {
+                x: window.screen.width * 0.55,
+                y: window.screen.height * 0.01
+            },
         });
     } catch (error) {
         // UI 面板创建失败时，至少不连累监控逻辑（两者同处一个 IIFE）
@@ -573,6 +566,93 @@
             addLog('面板创建失败: ' + (error && error.message), 'error', true);
         }
     }
+
+    // ==========面板位置保存==========
+    // 关键事实（已核对 CAT_UI 源码）：
+    //  1) createPanel 不提供 onDrag 回调，位置恢复只能靠 point 选项（已在上面用 loadPanelPoint 实现）。
+    //  2) 面板渲染在 Shadow DOM 内（attachShadow open），普通 document 选择器穿不透，必须走 shadowRoot。
+    //  3) 面板由 react-draggable 实现拖拽，拖拽时改写内部层的 transform: translate(x,y)。
+    // 本模块只负责「保存」：定位 shadow 内的面板 → 监听拖拽 → 用 getBoundingClientRect 存真实视口坐标。
+    // 下次加载时 createPanel 的 point 即读取该存档，形成闭环。
+    (function setupPanelPositionTracking() {
+        const PDBG = true; // 诊断开关：验证通过后可改 false
+
+        // 收集页面上所有带 open shadowRoot 的宿主元素
+        function getShadowHosts() {
+            const hosts = [];
+            document.querySelectorAll('*').forEach(el => { if (el.shadowRoot) hosts.push(el); });
+            return hosts;
+        }
+
+        // 穿透 Shadow DOM 定位面板主体（shadow 内含本脚本标题、且带内联 left/top 的 div）
+        function findPanelRoot() {
+            for (const host of getShadowHosts()) {
+                const sr = host.shadowRoot;
+                if (!sr || !sr.textContent || !sr.textContent.includes('征纳互动监控')) continue;
+                const divs = sr.querySelectorAll('div');
+                for (const el of divs) {
+                    if (el.style && el.style.left && el.style.top) return el;
+                }
+                const container = sr.querySelector('.container');
+                if (container) return container;
+            }
+            return null;
+        }
+
+        // 在面板内找当前带 transform: translate 的拖拽层（react-draggable 施加）
+        function findDraggableNode(root) {
+            const all = root.querySelectorAll('*');
+            for (const el of all) {
+                const t = el.style && el.style.transform || '';
+                if (t.indexOf('translate') !== -1) return el;
+            }
+            return null;
+        }
+
+        // 读取面板当前真实视口坐标：优先取被拖拽的层（transform 后位置随之变化），
+        // 否则取面板主体本身。getBoundingClientRect 与 createPanel 的 point 同坐标系。
+        function getCurrentPoint(root) {
+            const el = findDraggableNode(root) || root;
+            const r = el.getBoundingClientRect();
+            return { x: Math.round(r.left), y: Math.round(r.top) };
+        }
+
+        function applyTracking(root) {
+            // 监听整棵子树的 style 变化（transform 可能加在任意内部层）
+            const observer = new MutationObserver(() => {
+                const pt = getCurrentPoint(root);
+                if (PDBG) console.log('[面板位置] 检测到移动，保存坐标:', pt);
+                savePanelPoint(pt);
+            });
+            observer.observe(root, { attributes: true, attributeFilter: ['style'], subtree: true });
+
+            // 双保险：拖拽过程（mousedown→mousemove→mouseup）中实时保存最终位置
+            root.addEventListener('mousedown', () => {
+                const onMove = () => savePanelPoint(getCurrentPoint(root));
+                const onUp = () => {
+                    savePanelPoint(getCurrentPoint(root));
+                    document.removeEventListener('mousemove', onMove);
+                    document.removeEventListener('mouseup', onUp);
+                };
+                document.addEventListener('mousemove', onMove);
+                document.addEventListener('mouseup', onUp);
+            });
+        }
+
+        let tries = 0;
+        const timer = setInterval(() => {
+            tries++;
+            const root = findPanelRoot();
+            if (root) {
+                clearInterval(timer);
+                if (PDBG) console.log('[面板位置] 已定位面板(Shadow DOM)，初始坐标:', getCurrentPoint(root));
+                applyTracking(root);
+            } else if (tries > 80) {
+                clearInterval(timer);
+                if (PDBG) console.warn('[面板位置] 未找到面板(已尝试穿透 Shadow DOM)，放弃位置跟踪');
+            }
+        }, 150);
+    })();
 
     // ==========监控部分==========
     // 工具函数：获取当前小时（支持小数）
