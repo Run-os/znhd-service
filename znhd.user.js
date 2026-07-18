@@ -84,10 +84,46 @@
     // ==========存储管理==========
     // 存储键名
     const STORAGE_KEY = 'scriptCat_Allvalue';
+    // 面板位置单独存储（与设置数据解耦，避免拖拽频繁写入设置）
+    const PANEL_POINT_KEY = 'scriptCat_PanelPoint';
     const DEFAULTS = {
         voiceEnabled: true,
         isChecked: false,
     };
+
+    // 读取面板保存的位置（无记录返回 null，由调用方兜底默认坐标）
+    function loadPanelPoint() {
+        try {
+            const saved = localStorage.getItem(PANEL_POINT_KEY);
+            if (saved) {
+                const p = JSON.parse(saved);
+                if (typeof p.x === 'number' && typeof p.y === 'number') {
+                    return p;
+                }
+            }
+        } catch (error) {
+            addLog('读取面板位置失败: ' + error.message, 'error', true);
+        }
+        return null;
+    }
+
+    // 保存面板位置（带防抖，避免拖拽过程中高频写 localStorage）
+    let _savePointTimer = null;
+    function savePanelPoint(point) {
+        if (!point || typeof point.x !== 'number' || typeof point.y !== 'number') return;
+        if (_savePointTimer) return; // 已计划在下一帧保存，跳过重复
+        _savePointTimer = requestAnimationFrame(() => {
+            _savePointTimer = null;
+            try {
+                localStorage.setItem(PANEL_POINT_KEY, JSON.stringify({
+                    x: Math.round(point.x),
+                    y: Math.round(point.y)
+                }));
+            } catch (error) {
+                addLog('保存面板位置失败: ' + error.message, 'error', true);
+            }
+        });
+    }
 
     // 从localStorage加载Allvalue数据
     function loadAllvalue() {
@@ -488,8 +524,9 @@
         );
     }
 
-    CAT_UI.createPanel({
-        header: {
+    try {
+        CAT_UI.createPanel({
+            header: {
             title: CAT_UI.Space(
                 [
                     CAT_UI.Icon.ScriptCat({
@@ -516,12 +553,26 @@
         },
         render: DM,
 
-        // 面板初始位置
-        point: {
+        // 面板初始位置：优先使用上次保存的位置，否则用默认坐标
+        point: loadPanelPoint() || {
             x: window.screen.width * 0.55,
             y: window.screen.height * 0.01
         },
-    });
+
+        // 拖拽时实时保存位置（data.x / data.y 即面板在视口中的坐标）
+        onDrag: function (e, data) {
+            if (data && typeof data.x === 'number' && typeof data.y === 'number') {
+                savePanelPoint({ x: data.x, y: data.y });
+            }
+        },
+        });
+    } catch (error) {
+        // UI 面板创建失败时，至少不连累监控逻辑（两者同处一个 IIFE）
+        console.error('[监控] 面板创建失败:', error);
+        if (typeof addLog === 'function') {
+            addLog('面板创建失败: ' + (error && error.message), 'error', true);
+        }
+    }
 
     // ==========监控部分==========
     // 工具函数：获取当前小时（支持小数）
