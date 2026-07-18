@@ -33,6 +33,13 @@
   监听子树 style 变化 + mousedown/mousemove/mouseup 双保险保存；`point` 加载时恢复。
 - 边界约束 `clampPoint`：可抓取区=顶部标题栏，故 minY=0（顶边不超出视口上方），maxY=vh-40；水平 MIN_VISIBLE=48。
 
+## 版本号规范（硬性约定，必须遵守）
+- 油猴脚本头 `@version` 格式：`YY.M.D-vN`（如 `26.7.18-v1`）。前半 `YY.M.D` = 修改日期（2位年.月.日），
+  后半 `vN` = **当天累计的第 N 次更新**。
+- 规则：对 `znhd.user.js` 的**任何代码改动（功能/修复/调整）都必须同步把版本号递增**
+  （v1→v2→v3…）；若**跨天**（日期变了）则日期部分更新为当天、版本号**重置为 v1**。
+- 此约定优先级高：所有改动都要带版本号递增，不可遗漏。
+
 ## 已落地的功能改进
 - 工作时间可配置：DEFAULTS.workingHours（morningStart/End, afternoonStart/End），缓存 cachedWorkingHours，
   isWorkingHours() 读缓存（无配置兜底 true）；SettingsDrawer 用原生 input[type=time] 选取。
