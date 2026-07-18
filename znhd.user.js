@@ -34,10 +34,6 @@
     const CONFIG = {
         CHECK_INTERVAL: 3000,
         MAX_LOG_ENTRIES: 20,
-        WORKING_HOURS: {
-            MORNING: { START: 9, END: 12 },
-            AFTERNOON: { START: 13.5, END: 18 }
-        },
         didaUrl: 'https://gitee.com/runos/znhd-service/raw/master/public/dida.mp3',
         commonPhrasesUrl: 'https://gitee.com/runos/znhd-service/raw/master/public/commonPhrases.yaml',
         // 语音播报超时保护（毫秒），防止 onend/onerror 不触发导致队列卡死
@@ -88,6 +84,13 @@
     const PANEL_POINT_KEY = 'scriptCat_PanelPoint';
     const DEFAULTS = {
         voiceEnabled: true,
+        // 监控时间段（单位：小时，可含小数，如 13.5 表示 13:30）
+        workingHours: {
+            morningStart: 9,
+            morningEnd: 12,
+            afternoonStart: 13.5,
+            afternoonEnd: 18
+        }
     };
 
     // 读取面板保存的位置（无记录返回 null，由调用方兜底默认坐标）
@@ -154,12 +157,35 @@
     // 缓存语音启用状态，避免每次播报都读取 localStorage
     let cachedVoiceEnabled = loadAllvalue().voiceEnabled;
 
+    // 缓存监控时间段，避免每次轮询都读取 localStorage
+    let cachedWorkingHours = loadAllvalue().workingHours;
+
     // ==========工具函数==========
     // HTML 转义函数（复用单个 div 元素，避免重复创建）
     const _escapeHelper = document.createElement('div');
     function escapeHtml(text) {
         _escapeHelper.textContent = text;
         return _escapeHelper.innerHTML;
+    }
+
+    // 十进制小时(如 13.5) 与 "HH:mm" 字符串互转，供时间选择器使用
+    function hoursToHHmm(h) {
+        if (typeof h !== 'number' || isNaN(h)) return '00:00';
+        let total = Math.round(h * 60);
+        if (total < 0) total = 0;
+        if (total > 24 * 60) total = 24 * 60;
+        const H = Math.floor(total / 60) % 24;
+        const M = total % 60;
+        return String(H).padStart(2, '0') + ':' + String(M).padStart(2, '0');
+    }
+    function hhmmToHours(str) {
+        if (typeof str !== 'string') return null;
+        const m = /^(\d{1,2}):(\d{2})$/.exec(str.trim());
+        if (!m) return null;
+        const H = parseInt(m[1], 10);
+        const M = parseInt(m[2], 10);
+        if (H < 0 || H > 23 || M < 0 || M > 59) return null;
+        return H + M / 60;
     }
 
     // ==========UI部分==========
@@ -209,7 +235,33 @@
     }
 
     // 设置抽屉组件
-    function SettingsDrawer({ visible, setVisible, logEntries }) {
+    function SettingsDrawer({ visible, setVisible, logEntries, workingHours, onChangeWorkingHours }) {
+        // 当前监控时间段（兜底默认值，避免未配置时报错）
+        const wh = workingHours || { morningStart: 9, morningEnd: 12, afternoonStart: 13.5, afternoonEnd: 18 };
+        // 更新单个时间段字段（入参为十进制小时）
+        const updateWh = (field, dec) => {
+            if (typeof dec !== 'number' || isNaN(dec)) return;
+            onChangeWorkingHours({ ...wh, [field]: dec });
+        };
+        // 时间选择器 onChange 兼容：CAT_UI 未导出 TimePicker，此处用原生 <input type="time">，
+        // 其 onChange 回传原生事件（val.target.value 为 "HH:mm"）；同时兼容 arco 的 (val, str) 形式
+        const onTimeChange = (field) => (val, str) => {
+            let s;
+            if (val && val.target && typeof val.target.value === 'string') {
+                s = val.target.value;                 // 原生 <input type="time">
+            } else if (typeof str === 'string') {
+                s = str;                              // arco (dayjsValue, timeString)
+            } else if (val && typeof val.format === 'function') {
+                s = val.format('HH:mm');
+            } else if (typeof val === 'string') {
+                s = val;
+            } else {
+                s = '';
+            }
+            const dec = hhmmToHours(s);
+            if (dec !== null) updateWh(field, dec);
+        };
+
         return CAT_UI.Drawer(
             CAT_UI.createElement("div", { style: { textAlign: "left" } }, [
                 CAT_UI.Space(
@@ -252,6 +304,33 @@
                     "1. 🔘[使用教程]里面可查看脚本详细介绍\n",
                 ),
                 CAT_UI.Divider("其他设置"),
+                // 监控时间段配置（使用时间选择器）
+                CAT_UI.Text("监控时间段（点击选择时间）", {
+                    style: { display: "block", marginBottom: "8px", fontWeight: "bold" }
+                }),
+                CAT_UI.Space(
+                    [
+                        CAT_UI.Text("上午"),
+                        CAT_UI.Input({ type: "time", value: hoursToHHmm(wh.morningStart), onChange: onTimeChange('morningStart'), style: { width: "110px" } }),
+                        CAT_UI.Text("至"),
+                        CAT_UI.Input({ type: "time", value: hoursToHHmm(wh.morningEnd), onChange: onTimeChange('morningEnd'), style: { width: "110px" } }),
+                    ],
+                    { direction: "horizontal", size: "small", style: { marginBottom: "8px", flexWrap: "wrap" } }
+                ),
+                CAT_UI.Space(
+                    [
+                        CAT_UI.Text("下午"),
+                        CAT_UI.Input({ type: "time", value: hoursToHHmm(wh.afternoonStart), onChange: onTimeChange('afternoonStart'), style: { width: "110px" } }),
+                        CAT_UI.Text("至"),
+                        CAT_UI.Input({ type: "time", value: hoursToHHmm(wh.afternoonEnd), onChange: onTimeChange('afternoonEnd'), style: { width: "110px" } }),
+                    ],
+                    { direction: "horizontal", size: "small", style: { marginBottom: "8px", flexWrap: "wrap" } }
+                ),
+                CAT_UI.createElement(
+                    "p",
+                    { style: { margin: "0 0 8px", color: "#999", fontSize: "12px", lineHeight: "1.5" } },
+                    "提示：将「下午开始」设为与「上午结束」相同（如都设为 12:00），即可午休时段也监控。"
+                ),
                 CAT_UI.Divider("日志内容"),
                 CAT_UI.createElement(LogPanel, { logEntries }),
             ]),
@@ -320,8 +399,8 @@
                             const keyword = searchKeyword.trim().toLowerCase();
                             const filteredEntries = keyword ?
                                 Object.entries(phrasesData).filter(([key, value]) =>
-                                    key.toLowerCase().includes(keyword) ||
-                                    value.toLowerCase().includes(keyword)
+                                    String(key).toLowerCase().includes(keyword) ||
+                                    String(value).toLowerCase().includes(keyword)
                                 ) :
                                 Object.entries(phrasesData);
 
@@ -372,6 +451,8 @@
             saveAllvalue(newValue);
             // 同步更新语音状态缓存
             cachedVoiceEnabled = newValue.voiceEnabled;
+            // 同步更新监控时间段缓存
+            cachedWorkingHours = newValue.workingHours;
         };
         const patchAllvalue = (kv) => updateAllvalue({ ...Allvalue, ...kv });
 
@@ -401,6 +482,20 @@
             };
         }, []);
 
+        // 脚本启动日志：首次挂载时输出一次到设置面板日志窗口
+        CAT_UI.useEffect(() => {
+            addLog('脚本已启动，版本 v' + (GM_info.script.version || '?'), 'success');
+            const wh = Allvalue.workingHours || cachedWorkingHours;
+            if (wh) {
+                addLog('监控时间段：上午 ' + hoursToHHmm(wh.morningStart) + '-' + hoursToHHmm(wh.morningEnd) +
+                    '，下午 ' + hoursToHHmm(wh.afternoonStart) + '-' + hoursToHHmm(wh.afternoonEnd), 'info');
+            }
+            addLog('语音播报：' + (cachedVoiceEnabled ? '已开启' : '已静音'), 'info');
+            const savedPoint = loadPanelPoint();
+            addLog(savedPoint ? ('面板位置：已恢复上次位置 (' + Math.round(savedPoint.x) + ', ' + Math.round(savedPoint.y) + ')')
+                : '面板位置：使用默认位置', 'info');
+        }, []);
+
         // 加载常用语数据的函数
         const loadPhrasesData = () => {
             setPhrasesLoading(true);
@@ -411,6 +506,7 @@
                     try {
                         const data = jsyaml.load(response.responseText);
                         setPhrasesData(data);
+                        addLog('常用语加载成功，共 ' + Object.keys(data || {}).length + ' 条', 'success');
                         CAT_UI.Message.success('常用语加载成功');
                     } catch (error) {
                         addLog('YAML 解析失败: ' + error.message, 'error', true);
@@ -451,6 +547,7 @@
                             onClick: () => {
                                 const newVoiceEnabled = !voiceEnabled;
                                 patchAllvalue({ voiceEnabled: newVoiceEnabled });
+                                addLog('语音播报已' + (newVoiceEnabled ? '开启' : '静音'), 'info');
 
                                 // 启用语音时，初始化语音合成（解决浏览器not-allowed限制）
                                 if (newVoiceEnabled && 'speechSynthesis' in window) {
@@ -499,7 +596,13 @@
                         CAT_UI.createElement(SettingsDrawer, {
                             visible,
                             setVisible,
-                            logEntries
+                            logEntries,
+                            workingHours: Allvalue.workingHours,
+                            onChangeWorkingHours: (wh) => {
+                                patchAllvalue({ workingHours: wh });
+                                addLog('监控时间段已更新：上午 ' + hoursToHHmm(wh.morningStart) + '-' + hoursToHHmm(wh.morningEnd) +
+                                    '，下午 ' + hoursToHHmm(wh.afternoonStart) + '-' + hoursToHHmm(wh.afternoonEnd), 'info');
+                            }
                         }),
                         CAT_UI.createElement(CommonPhrasesDrawer, {
                             visible: commonPhrasesVisible,
@@ -719,11 +822,14 @@
         return now.getHours() + now.getMinutes() / 60;
     }
 
-    // 检查是否在工作时间内
+    // 检查是否在工作时间内（读取用户可配置的时间段缓存）
     function isWorkingHours() {
+        const wh = cachedWorkingHours;
+        // 兜底：若未配置则视为工作时间内，避免完全停止监控
+        if (!wh) return true;
         const currentHour = getCurrentHour();
-        return (currentHour >= CONFIG.WORKING_HOURS.MORNING.START && currentHour <= CONFIG.WORKING_HOURS.MORNING.END) ||
-            (currentHour >= CONFIG.WORKING_HOURS.AFTERNOON.START && currentHour <= CONFIG.WORKING_HOURS.AFTERNOON.END);
+        return (currentHour >= wh.morningStart && currentHour <= wh.morningEnd) ||
+            (currentHour >= wh.afternoonStart && currentHour <= wh.afternoonEnd);
     }
 
     // 缓存DOM元素引用（只缓存稳定元素）
@@ -740,9 +846,18 @@
     // 记录上一次的等待人数，用于检测状态变化
     let lastWaitCount = null;
 
+    // 记录上一次的工作时间状态，用于检测「进入/离开工作时间」的变化（仅在翻转时记日志）
+    let lastWorkingState = null;
+
     // 修改主要检测函数
     function checkCount() {
-        if (!isWorkingHours()) return;
+        // 工作时间状态变化时记录日志（进入/离开），仅在翻转时输出，避免刷屏
+        const inWork = isWorkingHours();
+        if (inWork !== lastWorkingState) {
+            lastWorkingState = inWork;
+            addLog(inWork ? '已进入工作时间，开始监控征纳互动' : '已离开工作时间，暂停监控', inWork ? 'success' : 'info');
+        }
+        if (!inWork) return;
 
         try {
             // 清理缓存中已失效的人数元素
