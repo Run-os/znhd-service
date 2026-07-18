@@ -2,7 +2,7 @@
 // @name           征纳互动人数和在线监控v2
 // @namespace      https://scriptcat.org/
 // @description    实时监控征纳互动等待人数和在线状态，支持语音播报、自定义常用语
-// @version        26.7.18-v2
+// @version        26.7.18-v3
 // @author         runos
 // @match          https://znhd.hunan.chinatax.gov.cn:8443/*
 // @match          https://example.com/*
@@ -35,7 +35,6 @@
         CHECK_INTERVAL: 3000,
         MAX_LOG_ENTRIES: 20,
         didaUrl: 'https://gitee.com/runos/znhd-service/raw/master/public/dida.mp3',
-        commonPhrasesUrl: 'https://gitee.com/runos/znhd-service/raw/master/public/commonPhrases.yaml',
         // 语音播报超时保护（毫秒），防止 onend/onerror 不触发导致队列卡死
         SPEECH_TIMEOUT: 15000,
     };
@@ -90,7 +89,9 @@
             morningEnd: 12,
             afternoonStart: 13.5,
             afternoonEnd: 18
-        }
+        },
+        // 常用语数据源（可配置；留空或非法时回退此默认地址）
+        commonPhrasesUrl: 'https://gitee.com/runos/znhd-service/raw/master/public/commonPhrases.yaml'
     };
 
     // 读取面板保存的位置（无记录返回 null，由调用方兜底默认坐标）
@@ -153,12 +154,15 @@
         }
     }
 
-    // ==========语音状态缓存==========
+    // ==========状态缓存==========
+    // 一次性读取初始配置，避免重复解析 localStorage
+    const _initAllvalue = loadAllvalue();
     // 缓存语音启用状态，避免每次播报都读取 localStorage
-    let cachedVoiceEnabled = loadAllvalue().voiceEnabled;
-
+    let cachedVoiceEnabled = _initAllvalue.voiceEnabled;
     // 缓存监控时间段，避免每次轮询都读取 localStorage
-    let cachedWorkingHours = loadAllvalue().workingHours;
+    let cachedWorkingHours = _initAllvalue.workingHours;
+    // 缓存常用语数据源地址，避免每次请求都读取 localStorage
+    let cachedCommonPhrasesUrl = _initAllvalue.commonPhrasesUrl;
 
     // ==========工具函数==========
     // HTML 转义函数（复用单个 div 元素，避免重复创建）
@@ -235,7 +239,7 @@
     }
 
     // 设置抽屉组件
-    function SettingsDrawer({ visible, setVisible, logEntries, workingHours, onChangeWorkingHours }) {
+    function SettingsDrawer({ visible, setVisible, logEntries, workingHours, onChangeWorkingHours, commonPhrasesUrl, onChangeCommonPhrasesUrl }) {
         // 当前监控时间段（兜底默认值，避免未配置时报错）
         const wh = workingHours || { morningStart: 9, morningEnd: 12, afternoonStart: 13.5, afternoonEnd: 18 };
         // 更新单个时间段字段（入参为十进制小时）
@@ -260,6 +264,22 @@
             }
             const dec = hhmmToHours(s);
             if (dec !== null) updateWh(field, dec);
+        };
+
+        // 常用语数据源地址变更处理：留空恢复默认；需以 http(s):// 开头
+        const DEFAULT_PHRASES_URL = DEFAULTS.commonPhrasesUrl;
+        const onUrlChange = (val) => {
+            let url = (typeof val === 'string') ? val : (val && val.target ? val.target.value : '');
+            url = (url || '').trim();
+            if (!url) {
+                onChangeCommonPhrasesUrl(DEFAULT_PHRASES_URL);
+                return;
+            }
+            if (!/^https?:\/\//i.test(url)) {
+                CAT_UI.Message.warning('数据源地址需以 http(s):// 开头');
+                return;
+            }
+            onChangeCommonPhrasesUrl(url);
         };
 
         return CAT_UI.Drawer(
@@ -331,6 +351,22 @@
                     { style: { margin: "0 0 8px", color: "#999", fontSize: "12px", lineHeight: "1.5" } },
                     "提示：将「下午开始」设为与「上午结束」相同（如都设为 12:00），即可午休时段也监控。"
                 ),
+                CAT_UI.Divider("常用语数据源"),
+                CAT_UI.Text("常用语数据地址（可自定义远程 YAML）", {
+                    style: { display: "block", marginBottom: "8px", fontWeight: "bold" }
+                }),
+                CAT_UI.Input({
+                    placeholder: "https://.../commonPhrases.yaml",
+                    value: commonPhrasesUrl || DEFAULTS.commonPhrasesUrl,
+                    onChange: onUrlChange,
+                    allowClear: true,
+                    style: { marginBottom: "8px", width: "100%" }
+                }),
+                CAT_UI.createElement(
+                    "p",
+                    { style: { margin: "0 0 8px", color: "#999", fontSize: "12px", lineHeight: "1.5" } },
+                    "修改后请在「常用语」面板点「重新加载常用语」生效；留空则恢复默认地址。"
+                ),
                 CAT_UI.Divider("日志内容"),
                 CAT_UI.createElement(LogPanel, { logEntries }),
             ]),
@@ -357,7 +393,8 @@
         setPhrasesLoading,
         searchKeyword,
         setSearchKeyword,
-        loadPhrasesData
+        loadPhrasesData,
+        commonPhrasesUrl
     }) {
         return CAT_UI.Drawer(
             CAT_UI.createElement("div", { style: { textAlign: "left" } }, [
@@ -372,7 +409,7 @@
                             wordBreak: "break-all"
                         }
                     },
-                    `数据源: ${decodeURIComponent(CONFIG.commonPhrasesUrl)}`
+                    `数据源: ${decodeURIComponent(commonPhrasesUrl || DEFAULTS.commonPhrasesUrl)}`
                 ),
                 // 重新加载按钮
                 CAT_UI.Button("重新加载常用语", {
@@ -453,6 +490,8 @@
             cachedVoiceEnabled = newValue.voiceEnabled;
             // 同步更新监控时间段缓存
             cachedWorkingHours = newValue.workingHours;
+            // 同步更新常用语数据源缓存
+            cachedCommonPhrasesUrl = newValue.commonPhrasesUrl;
         };
         const patchAllvalue = (kv) => updateAllvalue({ ...Allvalue, ...kv });
 
@@ -501,7 +540,7 @@
             setPhrasesLoading(true);
             GM_xmlhttpRequest({
                 method: 'GET',
-                url: CONFIG.commonPhrasesUrl,
+                url: cachedCommonPhrasesUrl,
                 onload: function (response) {
                     try {
                         const data = jsyaml.load(response.responseText);
@@ -602,6 +641,11 @@
                                 patchAllvalue({ workingHours: wh });
                                 addLog('监控时间段已更新：上午 ' + hoursToHHmm(wh.morningStart) + '-' + hoursToHHmm(wh.morningEnd) +
                                     '，下午 ' + hoursToHHmm(wh.afternoonStart) + '-' + hoursToHHmm(wh.afternoonEnd), 'info');
+                            },
+                            commonPhrasesUrl: Allvalue.commonPhrasesUrl,
+                            onChangeCommonPhrasesUrl: (url) => {
+                                patchAllvalue({ commonPhrasesUrl: url });
+                                addLog('常用语数据源已更新: ' + url, 'info');
                             }
                         }),
                         CAT_UI.createElement(CommonPhrasesDrawer, {
@@ -613,7 +657,8 @@
                             setPhrasesLoading,
                             searchKeyword,
                             setSearchKeyword,
-                            loadPhrasesData
+                            loadPhrasesData,
+                            commonPhrasesUrl: Allvalue.commonPhrasesUrl
                         }),
                     ],
                     {
