@@ -574,7 +574,7 @@
     // 本模块只负责「保存」：定位 shadow 内的面板 → 监听拖拽 → 用 getBoundingClientRect 存真实视口坐标。
     // 下次加载时 createPanel 的 point 即读取该存档，形成闭环。
     (function setupPanelPositionTracking() {
-        const PDBG = true; // 诊断开关：验证通过后可改 false
+        const PDBG = false; // 诊断开关：验证通过后可改 false
 
         // 收集页面上所有带 open shadowRoot 的宿主元素
         function getShadowHosts() {
@@ -616,20 +616,71 @@
             return { x: Math.round(r.left), y: Math.round(r.top) };
         }
 
+        // 边界约束：面板只有顶部标题栏可拖动，必须保证该「可抓取区域」始终可见，
+        // 否则拖出后就无法再抓回来。
+        //  - 水平方向：至少保留 MIN_VISIBLE 像素在视口内（标题栏为整条宽度，露出一段即可抓取）。
+        //  - 垂直方向：顶边不允许移出视口上方(minY=0)；且至少保留 HANDLE_MIN 高的标题栏在视口内(maxY)。
+        const MIN_VISIBLE = 48;
+        const HANDLE_MIN = 40; // 标题栏（可抓取区）至少保留的高度
+
+        function clampPoint(pt, size) {
+            const vw = window.innerWidth;
+            const vh = window.innerHeight;
+            const w = (size && size.w) ? size.w : 320;
+            const minX = -(w - MIN_VISIBLE);
+            const maxX = vw - MIN_VISIBLE;
+            const minY = 0;            // 顶边不超出视口上方，标题栏始终可见
+            const maxY = vh - HANDLE_MIN; // 至少保留一条标题栏高度在视口内，可抓取
+            return {
+                x: Math.min(Math.max(pt.x, minX), maxX),
+                y: Math.min(Math.max(pt.y, minY), maxY)
+            };
+        }
+
+        // 读取面板当前尺寸与可见矩形（用于精确计算边界）
+        function getPanelRect(root) {
+            const el = findDraggableNode(root) || root;
+            const r = el.getBoundingClientRect();
+            return { el: el, rect: r, w: r.width, h: r.height };
+        }
+
+        // 计算当前点 -> 裁剪到视口内 -> 保存；若越界则同时把拖拽层 transform 拉回边界，
+        // 确保「视觉上」也始终留在可视范围（不止是存档安全）。
+        function persistAndClamp(root) {
+            const info = getPanelRect(root);
+            const pt = { x: info.rect.left, y: info.rect.top };
+            const clamped = clampPoint(pt, { w: info.w, h: info.h });
+            if (clamped.x !== pt.x || clamped.y !== pt.y) {
+                const dx = clamped.x - pt.x;
+                const dy = clamped.y - pt.y;
+                const el = info.el;
+                const t = el.style.transform || '';
+                const m = /translate\(\s*([-\d.]+)px\s*,\s*([-\d.]+)px\s*\)/.exec(t);
+                if (m) {
+                    const nx = (parseFloat(m[1]) + dx).toFixed(1);
+                    const ny = (parseFloat(m[2]) + dy).toFixed(1);
+                    el.style.transform = t.replace(/translate\([^)]*\)/, 'translate(' + nx + 'px, ' + ny + 'px)');
+                } else if (t.indexOf('translate') === -1) {
+                    el.style.transform = (t ? t + ' ' : '') + 'translate(' + dx.toFixed(1) + 'px, ' + dy.toFixed(1) + 'px)';
+                }
+            }
+            savePanelPoint(clamped);
+            return clamped;
+        }
+
         function applyTracking(root) {
             // 监听整棵子树的 style 变化（transform 可能加在任意内部层）
             const observer = new MutationObserver(() => {
-                const pt = getCurrentPoint(root);
+                const pt = persistAndClamp(root);
                 if (PDBG) console.log('[面板位置] 检测到移动，保存坐标:', pt);
-                savePanelPoint(pt);
             });
             observer.observe(root, { attributes: true, attributeFilter: ['style'], subtree: true });
 
-            // 双保险：拖拽过程（mousedown→mousemove→mouseup）中实时保存最终位置
+            // 双保险：拖拽过程（mousedown→mousemove→mouseup）中实时裁剪并保存最终位置
             root.addEventListener('mousedown', () => {
-                const onMove = () => savePanelPoint(getCurrentPoint(root));
+                const onMove = () => persistAndClamp(root);
                 const onUp = () => {
-                    savePanelPoint(getCurrentPoint(root));
+                    persistAndClamp(root);
                     document.removeEventListener('mousemove', onMove);
                     document.removeEventListener('mouseup', onUp);
                 };
@@ -644,8 +695,16 @@
             const root = findPanelRoot();
             if (root) {
                 clearInterval(timer);
-                if (PDBG) console.log('[面板位置] 已定位面板(Shadow DOM)，初始坐标:', getCurrentPoint(root));
+                // 加载即裁剪：若存档位置（或默认位置）已越界，立即拉回并写回根容器 left/top
+                const info = getPanelRect(root);
+                const clamped = clampPoint({ x: info.rect.left, y: info.rect.top }, { w: info.w, h: info.h });
+                root.style.left = Math.round(clamped.x) + 'px';
+                root.style.top = Math.round(clamped.y) + 'px';
+                savePanelPoint(clamped);
+                if (PDBG) console.log('[面板位置] 已定位面板(Shadow DOM)，初始坐标:', clamped);
                 applyTracking(root);
+                // 视口尺寸变化时重新裁剪，防止面板被挤出可视范围
+                window.addEventListener('resize', () => persistAndClamp(root));
             } else if (tries > 80) {
                 clearInterval(timer);
                 if (PDBG) console.warn('[面板位置] 未找到面板(已尝试穿透 Shadow DOM)，放弃位置跟踪');
