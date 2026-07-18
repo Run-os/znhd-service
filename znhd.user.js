@@ -631,9 +631,18 @@
             header: {
                 title: CAT_UI.Space(
                     [
-                        CAT_UI.Icon.ScriptCat({
-                            style: { width: "24px", verticalAlign: "middle" },
-                            draggable: "false",
+                        CAT_UI.createElement("div", {
+                            style: {
+                                width: "24px",
+                                height: "24px",
+                                verticalAlign: "middle",
+                                borderRadius: "4px",
+                                display: "inline-block",
+                                backgroundImage: 'url("https://znhd.hunan.chinatax.gov.cn:8443/favicon.ico")',
+                                backgroundSize: "contain",
+                                backgroundRepeat: "no-repeat",
+                                backgroundPosition: "center"
+                            },
                         }),
                         CAT_UI.Text("征纳互动监控", {
                             style: { fontSize: "16px" },

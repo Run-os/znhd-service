@@ -4,18 +4,28 @@
 - `znhd.user.js`：征纳互动（税务）人数/在线监控油猴脚本，运行在 ScriptCat 扩展下，UI 依赖外部库
   CAT_UI（`@require` 自 scriptcat.org/lib/1167/1.0.0/脚本猫UI库.js）。库源码已备份在 `TMP/cat_ui_lib.tmp.js`。
 
-## CAT_UI 库关键事实（极易踩坑）
-- **公开导出只有这 18 个**：createPanel, createElement(el), useEffect, useState, useRef, Router,
-  Draggable, Icon, Typography, Input, Button, Checkbox, Select, Space, Divider, Drawer, Table。
-- 库内部虽有 arco 的 TimePicker/DatePicker 等组件，但**未挂到 CAT_UI 公开接口**，直接 `CAT_UI.TimePicker`
-  会 `TypeError: is not a function`。需要时间选择器时用原生 `CAT_UI.createElement('input', { type:"time" })`。
+## CAT_UI 库关键事实（极易踩坑，已多次验证）
+- `window.CAT_UI = Object.assign(class{...}, { 整个 arco 组件库 })`：名义上导出了 arco 几十个组件
+  （Affix/Alert/Image/Input/DatePicker/TimePicker/...），但**运行时其中大量组件是 undefined**，
+  只有脚本实际用过的子集可靠（createPanel, createElement, useEffect, useState, useRef, Drawer,
+  Icon, Typography, Space, Text, Input, Button, Divider, Select, Switch, Message，以及 LogPanel 用的
+  裸 createElement('div'/'p') 等）。
+- ⚠️ **用任何 CAT_UI 组件前必须运行时验证**，绝不能只 grep 库文本里出现过的名字！
+  已实测 `TypeError: is not a function` 的：`CAT_UI.TimePicker`、`CAT_UI.Image`（arco 里虽有，但挂到
+  CAT_UI 上时是 undefined）。`grep` 到 `Image: LY` / `TimePicker` 字样 ≠ 公开可用。
+- 时间选择器：`CAT_UI.TimePicker` 不可用 → 用 `CAT_UI.Input({ type:"time" })`（arco Input 透传 type，
+  带浏览器时间选择器，且在 Drawer 内稳定，不会被懒挂载崩溃）。
+- 自定义图标（如网站 favicon）：`CAT_UI.Image` 不可用；且 CAT_UI 面板用的 React 渲染器**白名单不含 `img`**
+  标签**（div/p/span 等可用，img 会触发 React error #137 "Element type is invalid: got img"）。
+  正确做法：用 `CAT_UI.createElement('div', { style:{ width/height, backgroundImage:'url(...)"',
+  backgroundSize:'contain', backgroundRepeat:'no-repeat', backgroundPosition:'center' } })` 显示图片。
 - `createPanel` 的 options **不提供 onDrag 回调**（只认 point/header/render/onMin/onReady/style 等）。
   面板拖拽由内部 react-draggable 改写**内部层**的 `transform: translate`，根容器 left/top 不变。
 - 面板渲染在 **Shadow DOM**（`attachShadow({mode:"open"})`，自定义元素 <cat-ui-plan> 挂 document.body），
   普通 `document.querySelectorAll` 穿不透，需遍历 `.shadowRoot`。
 - **arco Drawer 懒挂载 children**（visible=false 时不挂载内容）；若 Drawer 内容在挂载时抛错，会连带
-  整棵面板 React 树崩溃（面板消失）。**Drawer 内不要直接放裸原生 DOM 元素**（如 createElement('input')），
-  要用 CAT_UI.* 封装组件；需要原生 input 时用 `CAT_UI.Input({ type:"time" })`（type 会被透传，带时间选择器）。
+  整棵面板 React 树崩溃（面板消失）。设置类 Drawer 优先用 CAT_UI.* 封装组件；需要原生 input 时用
+  `CAT_UI.Input({ type:... })` 形式（已在设置抽屉的时间选择验证稳定）。
 
 ## 面板位置持久化方案（已验证可用）
 - 存储键 `scriptCat_PanelPoint`（与设置数据分离）；`Point` 选项 `point: loadPanelPoint()`。
