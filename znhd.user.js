@@ -2,7 +2,7 @@
 // @name           征纳互动人数和在线监控v2
 // @namespace      https://scriptcat.org/
 // @description    实时监控征纳互动等待人数和在线状态，支持语音播报、自定义常用语
-// @version        26.7.19-v1
+// @version        26.7.19-v2
 // @author         runos
 // @match          https://znhd.hunan.chinatax.gov.cn:8443/*
 // @match          https://example.com/*
@@ -35,6 +35,10 @@
         didaUrl: 'https://gitee.com/runos/znhd-service/raw/master/public/dida.mp3',
         // 语音播报超时保护（毫秒），防止 onend/onerror 不触发导致队列卡死
         SPEECH_TIMEOUT: 15000,
+        // 语音队列最大长度，超过时丢弃最早（最旧）的消息，防止内存堆积
+        MAX_SPEECH_QUEUE: 10,
+        // 语音队列消息有效期（毫秒），超过该时长的陈旧消息在入队/播放前被剔除，避免播报过时内容
+        SPEECH_QUEUE_TTL: 30000,
     };
 
     // ==========日志管理==========
@@ -731,6 +735,9 @@
                                     const testUtterance = new SpeechSynthesisUtterance('');
                                     window.speechSynthesis.speak(testUtterance);
                                     CAT_UI.Message.success('语音功能已启用');
+                                } else if (!newVoiceEnabled) {
+                                    // 关闭语音：立即清空队列，防止旧消息堆积、再次开启时集中涌出
+                                    clearSpeechQueue();
                                 }
                             },
                             // 动态样式：根据静音状态切换颜色
@@ -1258,12 +1265,49 @@
 
 
     // 语音播报函数
+    // 语音队列：元素为 { utterance, enqueuedAt }，enqueuedAt 用于过期清理；
+    // 队列长度受 CONFIG.MAX_SPEECH_QUEUE 限制，超出时丢弃最早（最旧）的消息。
     const speechQueue = [];
     let isSpeaking = false;
     let speechTimer = null;
 
     /**
+     * 清空语音队列并中止当前播报，重置播放状态与超时定时器。
+     * 主要用于语音开关关闭时，避免旧消息堆积、再次开启时集中涌出。
+     * @returns {void}
+     */
+    function clearSpeechQueue() {
+        speechQueue.length = 0;
+        isSpeaking = false;
+        if (speechTimer) {
+            clearTimeout(speechTimer);
+            speechTimer = null;
+        }
+        if ('speechSynthesis' in window) {
+            try { window.speechSynthesis.cancel(); } catch (e) { /* 忽略中止异常 */ }
+        }
+    }
+
+    /**
+     * 移除队列中已过期的语音消息（入队时间距今超过 CONFIG.SPEECH_QUEUE_TTL）。
+     * @returns {number} 被移除的过期消息条数
+     */
+    function pruneExpiredSpeechItems() {
+        if (speechQueue.length === 0) return 0;
+        const now = Date.now();
+        const before = speechQueue.length;
+        for (let i = speechQueue.length - 1; i >= 0; i--) {
+            if (now - speechQueue[i].enqueuedAt > CONFIG.SPEECH_QUEUE_TTL) {
+                speechQueue.splice(i, 1);
+            }
+        }
+        return before - speechQueue.length;
+    }
+
+    /**
      * 语音播报：将文本加入语音队列并触发播放（受语音开关与浏览器能力限制）。
+     * 入队时执行长度上限与过期清理：队列超过 CONFIG.MAX_SPEECH_QUEUE 时丢弃最早（最旧）消息，
+     * 超过 CONFIG.SPEECH_QUEUE_TTL 的过期消息也会被剔除，避免播报过时内容。
      * @param {string} text - 要播报的文本
      * @returns {void}
      */
@@ -1275,21 +1319,41 @@
         utterance.lang = 'zh-CN';
         utterance.rate = 1.0;
 
-        // 添加到队列
-        speechQueue.push(utterance);
+        // 添加到队列，记录入队时间用于过期判断
+        speechQueue.push({ utterance, enqueuedAt: Date.now() });
+
+        // 长度上限：超过则丢弃最早（最旧）的消息，保留最新内容
+        while (speechQueue.length > CONFIG.MAX_SPEECH_QUEUE) {
+            speechQueue.shift();
+            addLog('语音队列已满，丢弃最早的一条旧消息', 'warning', true);
+        }
+
+        // 过期清理：剔除超过有效期的陈旧消息
+        const expired = pruneExpiredSpeechItems();
+        if (expired > 0) {
+            addLog(`语音队列已清理 ${expired} 条过期消息`, 'warning', true);
+        }
+
         processSpeechQueue();
     }
 
     // 处理语音队列
     /**
-     * 从语音队列中取出一条依次播放，带超时保护（防止 onend/onerror 不触发导致队列卡死）。
+     * 从语音队列中取出一条依次播放，带超时保护（防止 onend/onerror 不触发导致队列卡死）；
+     * 播放前先剔除过期消息，避免播报过时内容。
      * @returns {void}
      */
     function processSpeechQueue() {
-        if (isSpeaking || speechQueue.length === 0) { return; }
+        if (isSpeaking) { return; }
+
+        // 先清理过期消息，避免播报过时内容
+        pruneExpiredSpeechItems();
+
+        if (speechQueue.length === 0) { return; }
 
         isSpeaking = true;
-        const utterance = speechQueue.shift();
+        const item = speechQueue.shift();
+        const utterance = item.utterance;
 
         // 清理上一次的超时定时器
         if (speechTimer) { clearTimeout(speechTimer); }

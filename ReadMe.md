@@ -194,6 +194,12 @@ const DEFAULTS = {
 
 ## 更新日志
 
+### v26.7.19-v2
+- 语音队列增加长度上限（`CONFIG.MAX_SPEECH_QUEUE=10`）：连续产生大量播报时，超出部分丢弃最早（最旧）的消息，避免内存堆积
+- 新增过期清理：队列消息超过 `CONFIG.SPEECH_QUEUE_TTL=30s` 视为过期，`speak()` 入队与 `processSpeechQueue()` 播放前均会剔除，避免播报过时内容
+- 新增 `clearSpeechQueue()`：语音开关从开启切换为关闭时立即清空队列（并 `speechSynthesis.cancel()` 中止当前播报），防止旧消息堆积、再次开启时集中涌出
+- 队列元素结构调整：由直接存 `SpeechSynthesisUtterance` 改为 `{ utterance, enqueuedAt }`，`enqueuedAt` 用于过期判断；语法校验通过
+
 ### v26.7.19-v1
 - 为脚本内全部 32 个具名公开函数补全 JSDoc 注释：统一包含 `@description` 用途说明、`@param`（含名称/类型/说明，可选参数用 `[name]` 语法）、`@returns`（类型与说明）
 - 覆盖范围：日志/存储管理、工具函数（时间/HTML 转义）、四个 UI 组件（LogPanel/SettingsDrawer/CommonPhrasesDrawer/DM）、面板位置跟踪模块、监控检测（checkCount/isWorkingHours 等）、语音播报（speak/processSpeechQueue）、复制与提示音（safeCopyText/playDidaSound）等
