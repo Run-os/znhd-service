@@ -2,7 +2,7 @@
 // @name           征纳互动人数和在线监控v2
 // @namespace      https://scriptcat.org/
 // @description    实时监控征纳互动等待人数和在线状态，支持语音播报、自定义常用语
-// @version        26.7.19-v2
+// @version        26.7.26-v2
 // @author         runos
 // @match          https://znhd.hunan.chinatax.gov.cn:8443/*
 // @match          https://example.com/*
@@ -22,6 +22,7 @@
 // @require        https://scriptcat.org/lib/1167/1.0.0/%E8%84%9A%E6%9C%AC%E7%8C%ABUI%E5%BA%93.js?sha384-jXdR3hCwnDJf53Ue6XHAi6tApeudgS/wXnMYBD/ZJcgge8Xnzu/s7bkEf2tPi2KS
 // @require        https://cdn.jsdelivr.net/npm/@fingerprintjs/fingerprintjs@5/dist/fp.min.js
 // @require        https://cdn.jsdelivr.net/npm/js-yaml@4.1.0/dist/js-yaml.min.js
+// @require        https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js
 // ==/UserScript==
 
 (function () {
@@ -104,7 +105,9 @@
             afternoonEnd: 18
         },
         // 常用语数据源（可配置；留空或非法时回退此默认地址）
-        commonPhrasesUrl: 'https://gitee.com/runos/znhd-service/raw/master/public/commonPhrases.yaml'
+        commonPhrasesUrl: 'https://gitee.com/runos/znhd-service/raw/master/public/commonPhrases.yaml',
+        // 手机图片→电脑剪贴板 中继服务器地址（需为公网可访问的 http(s):// 地址，末尾不带 /）
+        relayServer: ''
     };
 
     // 读取面板保存的位置（无记录返回 null，由调用方兜底默认坐标）
@@ -345,7 +348,7 @@
      * @param {Function} props.onChangeCommonPhrasesUrl - 数据源地址变更回调（入参为 URL 字符串）
      * @returns {object} CAT_UI React 元素
      */
-    function SettingsDrawer({ visible, setVisible, logEntries, workingHours, onChangeWorkingHours, commonPhrasesUrl, onChangeCommonPhrasesUrl }) {
+    function SettingsDrawer({ visible, setVisible, logEntries, workingHours, onChangeWorkingHours, commonPhrasesUrl, onChangeCommonPhrasesUrl, relayServer, onChangeRelayServer }) {
         // 当前监控时间段（兜底默认值，避免未配置时报错）
         const wh = workingHours || { morningStart: 9, morningEnd: 12, afternoonStart: 13.5, afternoonEnd: 18 };
         // 更新单个时间段字段（入参为十进制小时）
@@ -472,6 +475,30 @@
                     "p",
                     { style: { margin: "0 0 8px", color: "#999", fontSize: "12px", lineHeight: "1.5" } },
                     "修改后请在「常用语」面板点「重新加载常用语」生效；留空则恢复默认地址。"
+                ),
+                CAT_UI.Divider("中继服务器（手机传图）"),
+                CAT_UI.Text("中继服务器地址（公网可访问的 http(s):// 地址，末尾不带 /）", {
+                    style: { display: "block", marginBottom: "8px", fontWeight: "bold" }
+                }),
+                CAT_UI.Input({
+                    placeholder: "https://你的服务器:端口",
+                    value: relayServer || '',
+                    onChange: (val) => {
+                        let url = (typeof val === 'string') ? val : (val && val.target ? val.target.value : '');
+                        url = (url || '').trim();
+                        if (url && !/^https?:\/\//i.test(url)) {
+                            CAT_UI.Message.warning('服务器地址需以 http(s):// 开头');
+                            return;
+                        }
+                        onChangeRelayServer(url);
+                    },
+                    allowClear: true,
+                    style: { marginBottom: "8px", width: "100%" }
+                }),
+                CAT_UI.createElement(
+                    "p",
+                    { style: { margin: "0 0 8px", color: "#999", fontSize: "12px", lineHeight: "1.5" } },
+                    "用于「手机传图到电脑」：手机上传的图片经此服务器转发到本机剪贴板。需自行部署配套 relay-server（见项目说明）。"
                 ),
                 CAT_UI.Divider("日志内容"),
                 CAT_UI.createElement(LogPanel, { logEntries }),
@@ -631,6 +658,8 @@
         const [visible, setVisible] = CAT_UI.useState(false);
         // 常用语抽屉显示状态管理
         const [commonPhrasesVisible, setCommonPhrasesVisible] = CAT_UI.useState(false);
+        // 手机传图抽屉显示状态
+        const [phoneVisible, setPhoneVisible] = CAT_UI.useState(false);
         // 日志条目状态管理
         const [logEntries, setLogEntries] = CAT_UI.useState([]);
         // 常用语数据状态管理
@@ -766,6 +795,10 @@
                                 setCommonPhrasesVisible(true);
                             },
                         }),
+                        CAT_UI.Button("手机传图", {
+                            type: "primary",
+                            onClick: () => setPhoneVisible(true),
+                        }),
                     ],
                     {
                         direction: "horizontal",
@@ -790,6 +823,11 @@
                             onChangeCommonPhrasesUrl: (url) => {
                                 patchAllvalue({ commonPhrasesUrl: url });
                                 addLog('常用语数据源已更新: ' + url, 'info');
+                            },
+                            relayServer: Allvalue.relayServer || '',
+                            onChangeRelayServer: (url) => {
+                                patchAllvalue({ relayServer: url });
+                                addLog('中继服务器已更新: ' + (url || '（空）'), 'info');
                             }
                         }),
                         CAT_UI.createElement(CommonPhrasesDrawer, {
@@ -803,6 +841,15 @@
                             setSearchKeyword,
                             loadPhrasesData,
                             commonPhrasesUrl: Allvalue.commonPhrasesUrl
+                        }),
+                        CAT_UI.createElement(PhoneImageDrawer, {
+                            visible: phoneVisible,
+                            setVisible: setPhoneVisible,
+                            relayServer: Allvalue.relayServer || '',
+                            onChangeRelayServer: (url) => {
+                                patchAllvalue({ relayServer: url });
+                                addLog('中继服务器已更新: ' + (url || '（空）'), 'info');
+                            }
                         }),
                     ],
                     {
@@ -1480,6 +1527,308 @@
             });
             return;
         }
+    }
+
+    // ========== 手机图片 → 电脑剪贴板 ==========
+    // 每台电脑/每个脚本安装实例一个稳定 deviceId（持久化，刷新不变），
+    // 拼出上传链接 <relayServer>/u/<deviceId>；手机打开该链接上传，电脑端长轮询取走。
+    const DEVICE_ID_KEY = 'znhd_device_id';
+    /**
+     * 取得本机稳定设备 ID：首次运行用 crypto.randomUUID() 生成并持久化（GM_setValue），
+     * 之后刷新/重开都读同一值。用于区分不同电脑（A、B 各自不同链接）。
+     * @returns {string} 设备 UUID 字符串
+     */
+    function getDeviceId() {
+        let id = '';
+        try { id = (typeof GM_getValue === 'function') ? (GM_getValue(DEVICE_ID_KEY, '') || '') : ''; } catch (e) { id = ''; }
+        if (!id) {
+            try {
+                id = (window.crypto && crypto.randomUUID) ? crypto.randomUUID()
+                    : ('d' + Date.now().toString(16) + Math.random().toString(16).slice(2));
+            } catch (e) { id = 'd' + Date.now().toString(16) + Math.random().toString(16).slice(2); }
+            try { if (typeof GM_setValue === 'function') GM_setValue(DEVICE_ID_KEY, id); } catch (e) { /* 忽略 */ }
+        }
+        return id;
+    }
+
+    /**
+     * 将 base64 字符串还原为 Blob（用于把中继返回的图片字节写剪贴板）。
+     * @param {string} b64 - base64 文本
+     * @param {string} mime - MIME 类型
+     * @returns {Blob} 图片 Blob
+     */
+    function base64ToBlob(b64, mime) {
+        const bin = atob(b64);
+        const len = bin.length;
+        const arr = new Uint8Array(len);
+        for (let i = 0; i < len; i++) arr[i] = bin.charCodeAt(i);
+        return new Blob([arr], { type: mime || 'image/jpeg' });
+    }
+
+    /**
+     * 将图片 Blob 写入系统剪贴板（需由一次用户点击触发，满足浏览器安全策略）。
+     * @param {Blob} blob - 图片 Blob
+     * @returns {Promise<boolean>} 成功返回 true，失败返回 false
+     */
+    function copyImageToClipboard(blob) {
+        return new Promise((resolve) => {
+            try {
+                if (navigator.clipboard && navigator.clipboard.write && typeof ClipboardItem !== 'undefined') {
+                    const type = (blob && blob.type) ? blob.type : 'image/png';
+                    navigator.clipboard.write([new ClipboardItem({ [type]: blob })])
+                        .then(() => resolve(true))
+                        .catch(err => { addLog('[复制] clipboard.write 失败: ' + err.message, 'error', true); resolve(false); });
+                    return;
+                }
+            } catch (e) { addLog('[复制] clipboard 异常: ' + e.message, 'error', true); }
+            resolve(false);
+        });
+    }
+
+    /**
+     * 用客户端 qrcodejs 库把文本（即上传链接）即时生成为 PNG dataURL，无需服务器参与。
+     * qrcodejs 暴露全局 QRCode：new QRCode(div,{text,width,height}) 同步把二维码绘入 div 内的 canvas；
+     * 读取其内部 canvas.toDataURL('image/png') 即得图片 dataURL。
+     * CAT_UI 的 React 渲染器白名单不放行 <img>/<canvas>，故此处只产出 dataURL 字符串，
+     * 由调用方用 backgroundImage div 显示（与收到图片预览同一招）。
+     * 库未就绪（QRCode 未定义）时回退为空串（此时仍可手动复制链接文本）。
+     * @param {string} text - 待编码文本（上传链接）
+     * @returns {Promise<string>} PNG dataURL，失败返回 ''
+     */
+    function genQrDataUrl(text) {
+        return new Promise((resolve) => {
+            try {
+                if (typeof QRCode === 'undefined' || typeof QRCode !== 'function') {
+                    addLog('[二维码] qrcodejs 未加载，请手动复制链接', 'error', true);
+                    resolve(''); return;
+                }
+                const holder = document.createElement('div');
+                holder.style.position = 'absolute';
+                holder.style.left = '-99999px';
+                holder.style.top = '-99999px';
+                document.body.appendChild(holder);
+                new QRCode(holder, {
+                    text: text,
+                    width: 240,
+                    height: 240,
+                    colorDark: '#000000',
+                    colorLight: '#ffffff',
+                    correctLevel: QRCode.CorrectLevel.M
+                });
+                // qrcodejs 同步把二维码绘入 canvas；延迟一拍确保绘制完成再读取
+                setTimeout(() => {
+                    try {
+                        const canvas = holder.querySelector('canvas');
+                        const url = canvas ? canvas.toDataURL('image/png') : '';
+                        if (holder.parentNode) holder.parentNode.removeChild(holder);
+                        if (url) resolve(url);
+                        else { addLog('[二维码] 画布读取失败，请手动复制链接', 'error', true); resolve(''); }
+                    } catch (e) {
+                        if (holder.parentNode) holder.parentNode.removeChild(holder);
+                        addLog('[二维码] 读取失败: ' + e.message, 'error', true);
+                        resolve('');
+                    }
+                }, 0);
+            } catch (e) {
+                addLog('[二维码] 生成异常: ' + e.message, 'error', true);
+                resolve('');
+            }
+        });
+    }
+
+    /**
+     * 启动「手机传图」长轮询接收循环（直到 stop() 调用）。
+     * 通过 GM_xmlhttpRequest 轮询中继服务器 /recv/<uuid>（绕过税务页面 CSP 对 connect-src 的限制）。
+     * 收到图片时回调 onImage；状态变化回调 onStatus；网络异常自动重连。
+     * @param {object} opt - { server, uuid, onStatus, onImage }
+     * @returns {Function} stop() 停止接收
+     */
+    function startPhoneReceive(opt) {
+        const server = (opt.server || '').trim().replace(/\/+$/, '');
+        const uuid = opt.uuid;
+        let stopped = false;
+        let lastXhr = null;
+        function poll() {
+            if (stopped) return;
+            if (opt.onStatus) opt.onStatus('正在等待手机上传…');
+            const url = server + '/recv/' + encodeURIComponent(uuid) + '?maxwait=25000';
+            try {
+                lastXhr = GM_xmlhttpRequest({
+                    method: 'GET',
+                    url: url,
+                    timeout: 30000,
+                    onload: function (resp) {
+                        if (stopped) return;
+                        let data = null;
+                        try { data = JSON.parse(resp.responseText); } catch (e) { data = null; }
+                        if (data && data.empty) { poll(); return; }
+                        if (data && data.data) {
+                            const blob = base64ToBlob(data.data, data.mime || 'image/jpeg');
+                            const previewUrl = 'data:' + (data.mime || 'image/jpeg') + ';base64,' + data.data;
+                            if (opt.onStatus) opt.onStatus('收到图片：' + (data.name || 'image'));
+                            if (opt.onImage) opt.onImage({ blob: blob, previewUrl: previewUrl, name: data.name, mime: data.mime });
+                            poll(); // 继续接收下一张
+                            return;
+                        }
+                        setTimeout(poll, 1000); // 解析失败稍后重试
+                    },
+                    onerror: function () {
+                        if (stopped) return;
+                        if (opt.onStatus) opt.onStatus('连接中断，正在重连…');
+                        setTimeout(poll, 2000);
+                    },
+                    ontimeout: function () {
+                        if (stopped) return;
+                        poll(); // 超时继续轮询
+                    }
+                });
+            } catch (e) {
+                if (stopped) return;
+                if (opt.onStatus) opt.onStatus('请求异常，正在重连…');
+                setTimeout(poll, 2000);
+            }
+        }
+        poll();
+        return function stop() {
+            stopped = true;
+            try { if (lastXhr && typeof lastXhr.abort === 'function') lastXhr.abort(); } catch (e) { /* 忽略 */ }
+        };
+    }
+
+    // 手机传图抽屉：展示本机上传链接 + 二维码，开始/停止接收，收到后预览并可复制到剪贴板
+    /**
+     * 手机传图抽屉组件：展示本机专属上传链接与二维码；点击「开始接收」后长轮询中继服务器，
+     * 手机上传的图片到达时预览，并提供一个「复制到剪贴板」按钮（点击这一手势才会真正写入剪贴板）。
+     * @param {object} props - 组件属性
+     * @param {boolean} props.visible - 抽屉是否可见
+     * @param {Function} props.setVisible - 设置可见性的回调
+     * @param {string} props.relayServer - 当前中继服务器地址
+     * @param {Function} props.onChangeRelayServer - 中继地址变更回调
+     * @returns {object} CAT_UI React 元素
+     */
+    function PhoneImageDrawer({ visible, setVisible, relayServer, onChangeRelayServer }) {
+        const deviceId = getDeviceId();
+        const [qrUrl, setQrUrl] = CAT_UI.useState('');
+        const [link, setLink] = CAT_UI.useState('');
+        const [receiving, setReceiving] = CAT_UI.useState(false);
+        const [status, setStatus] = CAT_UI.useState('');
+        const [previewUrl, setPreviewUrl] = CAT_UI.useState('');
+        const [lastBlob, setLastBlob] = CAT_UI.useState(null);
+        const [lastName, setLastName] = CAT_UI.useState('');
+        const [stopFn, setStopFn] = CAT_UI.useState(null);
+
+        // 计算链接 + 二维码（仅在打开抽屉或地址变化时）
+        CAT_UI.useEffect(() => {
+            const s = (relayServer || '').trim();
+            if (!s) { setLink(''); setQrUrl(''); return; }
+            const lk = s.replace(/\/+$/, '') + '/u/' + deviceId;
+            setLink(lk);
+            genQrDataUrl(lk).then(u => setQrUrl(u)).catch(e => { addLog('[二维码] 失败: ' + e.message, 'error', true); });
+        }, [relayServer, visible]);
+
+        // 抽屉关闭时停止接收
+        CAT_UI.useEffect(() => {
+            if (!visible && stopFn) { stopFn(); setStopFn(null); setReceiving(false); }
+        }, [visible, stopFn]);
+
+        const startReceive = () => {
+            const s = (relayServer || '').trim();
+            if (!s) { CAT_UI.Message.warning('请先在「设置」中填写中继服务器地址'); return; }
+            setReceiving(true);
+            setStatus('正在等待手机上传…');
+            const stop = startPhoneReceive({
+                server: s, uuid: deviceId,
+                onStatus: setStatus,
+                onImage: (img) => {
+                    setPreviewUrl(img.previewUrl);
+                    setLastBlob(img.blob);
+                    setLastName(img.name || 'image');
+                    CAT_UI.Message.success('收到图片，请点「复制到剪贴板」');
+                }
+            });
+            setStopFn(() => stop);
+        };
+        const stopReceive = () => {
+            if (stopFn) { stopFn(); setStopFn(null); }
+            setReceiving(false);
+            setStatus('已停止接收');
+        };
+        const doCopy = () => {
+            if (!lastBlob) return;
+            copyImageToClipboard(lastBlob).then(ok => {
+                if (ok) {
+                    CAT_UI.Message.success('图片已复制到剪贴板，去 Ctrl+V 吧');
+                    addLog('图片已复制到剪贴板: ' + (lastName || ''), 'success');
+                } else {
+                    CAT_UI.Message.error('复制失败，请长按图片手动保存');
+                }
+            });
+        };
+        const copyLink = () => { if (link) safeCopyText(link); };
+
+        return CAT_UI.Drawer(
+            CAT_UI.createElement('div', { style: { textAlign: 'left' } }, [
+                CAT_UI.createElement('p', {
+                    style: { color: '#666', fontSize: '13px', lineHeight: '1.6', margin: '0 0 12px' }
+                }, '手机扫码或在浏览器打开下方链接，选图后会自动发到本机。收到后点「复制到剪贴板」即可在征纳互动 Ctrl+V 粘贴。'),
+                CAT_UI.Divider('本机上传链接'),
+                link ?
+                    CAT_UI.createElement('div', {}, [
+                        CAT_UI.createElement('div', {
+                            style: { fontSize: '12px', color: '#999', wordBreak: 'break-all', marginBottom: '8px' }
+                        }, link),
+                        CAT_UI.Button('复制链接', {
+                            type: 'link',
+                            onClick: copyLink,
+                            style: { padding: '0 8px', color: '#1890ff', fontWeight: 'bold' }
+                        }),
+                    ]) :
+                    CAT_UI.createElement('p', { style: { color: '#e4393c', fontSize: '13px', margin: '0' } }, '尚未配置中继服务器，请到「设置」填写。'),
+                qrUrl ?
+                    CAT_UI.createElement('div', {
+                        style: {
+                            width: '200px', height: '200px', marginTop: '12px', marginBottom: '8px',
+                            backgroundImage: 'url("' + qrUrl + '")',
+                            backgroundSize: 'contain', backgroundRepeat: 'no-repeat', backgroundPosition: 'center',
+                            border: '1px solid #eee', borderRadius: '8px'
+                        }
+                    }) :
+                    CAT_UI.createElement('div', { style: { color: '#999', fontSize: '12px', marginTop: '12px' } }, '二维码生成中…（若长时间不出，请手动复制上方链接）'),
+                CAT_UI.Divider('接收'),
+                CAT_UI.Space([
+                    receiving ?
+                        CAT_UI.Button('停止接收', { type: 'default', onClick: stopReceive }) :
+                        CAT_UI.Button('开始接收', { type: 'primary', onClick: startReceive }),
+                ], { direction: 'horizontal', size: 'middle' }),
+                CAT_UI.createElement('div', { style: { marginTop: '8px', fontSize: '13px', color: '#666' } }, status || ''),
+                previewUrl ?
+                    CAT_UI.createElement('div', {}, [
+                        CAT_UI.createElement('div', {
+                            style: {
+                                width: '100%', maxHeight: '240px', marginTop: '12px',
+                                backgroundImage: 'url("' + previewUrl + '")',
+                                backgroundSize: 'contain', backgroundRepeat: 'no-repeat', backgroundPosition: 'center',
+                                backgroundColor: '#f5f5f5', borderRadius: '8px', minHeight: '120px'
+                            }
+                        }),
+                        CAT_UI.Button('复制到剪贴板', {
+                            type: 'primary',
+                            onClick: doCopy,
+                            style: { marginTop: '12px', width: '100%' }
+                        }),
+                    ]) : null,
+            ]),
+            {
+                title: '手机传图到电脑',
+                visible,
+                width: 420,
+                focusLock: true,
+                autoFocus: false,
+                zIndex: 10002,
+                onOk: () => { setVisible(false); },
+                onCancel: () => { setVisible(false); },
+            }
+        );
     }
 
     // ========== 页面启动 ==========

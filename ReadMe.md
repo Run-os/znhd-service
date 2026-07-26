@@ -11,6 +11,7 @@
 - **语音播报**：基于 Web Speech API，支持一键开关，带语音队列管理避免播报冲突
 - **常用语管理**：从远程 YAML 配置文件加载常用语，数据源地址可在设置面板自定义，支持关键字搜索过滤，一键复制并填入 TinyMCE 编辑器；内置 2 小时本地缓存，相同数据源在有效期内打开抽屉不再重复请求
 - **工作时间限定**：仅在工作时间段（默认上午 9:00-12:00，下午 13:30-18:00，可在设置面板调整）内执行监控，非工作时间自动暂停
+- **手机传图到电脑（图片→剪贴板）**：手机扫码或打开本机专属链接，选图（前端自动压缩）后图片经中继服务器转发到本机，点「复制到剪贴板」即可在征纳互动 Ctrl+V 粘贴；每台电脑有稳定独立的设备 ID，A、B 各自链接互不影响
 - **操作日志**：面板内嵌日志查看器，按类型（信息/警告/成功/错误）着色显示
 - **提示音反馈**：复制常用语时播放提示音，提供操作确认
 
@@ -23,6 +24,9 @@ znhd-service/
 │   ├── 常用语.json              # 常用语配置文件（JSON 格式，已废弃）
 │   └── dida.mp3                 # 操作提示音文件
 ├── ReadMe.md                    # 项目说明文档
+├── relay-server/                 # 手机传图配套中继服务（Node，需自行部署到公网）
+│   ├── server.js               # 中继服务器：手机上传页 + 长轮询取图（纯 Node 内置 http，零依赖）
+│   └── package.json          # 零依赖，运行：node server.js
 └── znhd.user.js                 # 油猴脚本主文件
 ```
 
@@ -101,6 +105,21 @@ znhd-service/
   - 🔴 错误（error）
 - 自动过滤连续重复日志，避免刷屏
 
+### 手机传图到电脑（图片→剪贴板）
+
+适用场景：坐席在手机上有纳税人发来的图片（如身份证、资料截图），想快速发到电脑剪贴板，直接在征纳互动聊天框 Ctrl+V 粘贴。
+
+**工作流程**：
+1. 每台电脑首次运行脚本时用 `crypto.randomUUID()` 生成并持久化一个**稳定设备 ID**（存在 `GM_setValue`，刷新/重开不变）；
+2. 面板「手机传图」抽屉展示本机专属上传链接 `https://<中继服务器>/u/<设备ID>` 及对应二维码（**二维码由脚本端 qrcodejs 本地生成，无需服务器参与**）；
+3. 手机浏览器打开该链接（或直接扫二维码）→ 选图/拍照 → 手机端用 canvas 自动压缩（最大边 1600px、JPEG 质量 0.75）→ 上传到中继服务器；
+4. 电脑端脚本用 `GM_xmlhttpRequest` **长轮询**中继服务器的 `/recv/<设备ID>` 取回图片（长轮询而非 WebSocket，是为了绕过征纳互动页面的 CSP 对 connect-src 的限制）；
+5. 收到图片后在抽屉内预览，点击「复制到剪贴板」→ 浏览器把图片写入系统剪贴板（此步必须由一次点击触发，满足浏览器安全策略）→ 去征纳互动 Ctrl+V 即可。
+
+**按用户隔离**：设备 ID 是每台电脑随机生成、几乎不可猜测的 UUID，因此 A 的电脑、B 的电脑各自持有不同链接与二维码，图片只进对应那台电脑，互不串。
+
+**前置条件**：须自行部署配套 `relay-server`（见上方项目结构）。在「设置 → 中继服务器」填写该服务的公网地址（如 `https://你的服务器:端口`，末尾不带 `/`）后，抽屉内的链接与二维码才会生成。
+
 ## 配置说明
 
 ### 脚本内部配置
@@ -125,7 +144,8 @@ const DEFAULTS = {
         morningStart: 9, morningEnd: 12,
         afternoonStart: 13.5, afternoonEnd: 18
     },
-    commonPhrasesUrl: 'https://gitee.com/runos/znhd-service/raw/master/public/commonPhrases.yaml'
+    commonPhrasesUrl: 'https://gitee.com/runos/znhd-service/raw/master/public/commonPhrases.yaml',
+    relayServer: ''        // 手机传图中继服务器公网地址（如 https://你的服务器:端口），留空则功能不可用
 };
 ```
 
@@ -157,6 +177,7 @@ const DEFAULTS = {
 | [FingerprintJS](https://github.com/fingerprintjs/fingerprintjs)                   | 浏览器指纹识别                                                                                        |
 | [Web Speech API](https://developer.mozilla.org/en-US/docs/Web/API/Web_Speech_API) | 语音合成播报                                                                                          |
 | [GM API](https://www.tampermonkey.net/documentation.php)                          | `GM_xmlhttpRequest`、`GM_setClipboard`、`GM_notification`、`GM_getValue`/`GM_setValue` 等油猴扩展 API |
+| [relay-server](relay-server/server.js:1)                                            | 手机传图配套中继服务：纯 Node 内置 `http`（零依赖），手机上传页内联、电脑端长轮询取图；需部署到公网 |
 
 ## 浏览器兼容性
 
@@ -186,6 +207,12 @@ const DEFAULTS = {
 2. 确认征纳互动平台页面已完全加载
 3. 打开设置抽屉查看日志面板，了解详细状态
 
+### 手机传图功能用不了
+1. 确认已在「设置 → 中继服务器」填写公网可访问的服务器地址（如 `https://你的服务器:端口`，末尾不带 `/`）
+2. 中继服务器需自行部署：进入 `relay-server/` 目录执行 `node server.js`（纯 Node 内置模块、零依赖，默认端口 3000，可用 `PORT` 环境变量修改）
+3. 该服务器必须能从手机浏览器公网访问；仅本机 `localhost` 时手机无法连上
+4. 打开「手机传图」抽屉后，用手机扫二维码或打开链接上传，电脑端点「开始接收」，收到后点「复制到剪贴板」
+
 ### 常用语点击后未填入编辑器
 
 1. 确认页面中存在 TinyMCE 编辑器（输入区域）
@@ -193,6 +220,18 @@ const DEFAULTS = {
 3. 脚本会自动降级处理：优先使用 TinyMCE API，失败后直接操作 DOM
 
 ## 更新日志
+
+### v26.7.26-v2
+- 「手机传图」二维码改为**脚本端本地生成**：引入客户端库 qrcodejs（`@require`），抽屉内用 `new QRCode` 渲染后读取 `canvas.toDataURL()` 显示，二维码本地秒出、不再依赖服务器
+- 中继服务器 `relay-server` 移除 `/qr` 端点与 `qrcode` 依赖，现为**纯 Node 内置 http、零依赖**，仅保留手机上传页、`/recv` 长轮询取图、`/health`
+- `@version` 按 `YY.M.D-vN` 规范递增为 `26.7.26-v2`
+
+### v26.7.26-v1
+- 新增「手机传图到电脑」功能：手机图片经中继服务器转发到本机剪贴板（在征纳互动聊天框 Ctrl+V 粘贴）
+- 每台电脑生成稳定设备 ID（`GM_setValue` 持久化），拼出独立上传链接 `/u/<ID>` 与二维码，实现 A/B 按用户隔离
+- 中继服务器 `relay-server/server.js`（纯 Node 内置模块 + qrcode）：托管手机上传页（前端 canvas 压缩）、`/recv/<ID>` 长轮询取图、`/qr` 服务端生成二维码
+- 电脑端用 `GM_xmlhttpRequest` 长轮询取图（绕过税务页面 CSP 对 connect-src 的限制），收到后「复制到剪贴板」按钮触发 `navigator.clipboard.write` 写图片
+- 设置面板新增「中继服务器」地址配置项；`@version` 按 `YY.M.D-vN` 规范递增为 `26.7.26-v1`
 
 ### v26.7.19-v2
 - 语音队列增加长度上限（`CONFIG.MAX_SPEECH_QUEUE=10`）：连续产生大量播报时，超出部分丢弃最早（最旧）的消息，避免内存堆积
