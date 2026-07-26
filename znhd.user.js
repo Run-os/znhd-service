@@ -2,7 +2,7 @@
 // @name           征纳互动人数和在线监控v2
 // @namespace      https://scriptcat.org/
 // @description    实时监控征纳互动等待人数和在线状态，支持语音播报、自定义常用语
-// @version        26.7.26-v22
+// @version        26.7.26-v24
 // @author         runos
 // @match          https://znhd.hunan.chinatax.gov.cn:8443/*
 // @match          https://example.com/*
@@ -1700,17 +1700,12 @@
                 }
             });
         };
-        // 右下角版本标记：一眼确认当前弹窗加载的是哪个版本（排查"改了却没生效"）
-        const ver = document.createElement('div');
-        ver.textContent = 'znhd v26.7.26-v22';
-        ver.style.cssText = 'position:absolute!important;bottom:6px!important;right:10px!important;font-size:10px!important;color:#888!important;opacity:1!important;user-select:none!important;';
         close.onclick = () => closeImagePopup();
         overlay.onclick = (e) => { if (e.target === overlay) closeImagePopup(); };
         box.appendChild(close);
         box.appendChild(imgEl);
         box.appendChild(copyBtn);
         overlay.appendChild(box);
-        overlay.appendChild(ver);
         document.documentElement.appendChild(overlay); // 挂到 <html> 而非 <body>：避开 body 级 transform/filter/will-change/contain 把 fixed 包含块改写到 body，导致遮罩偏移/不铺满（现代 SPA 常见）
         // === v14 弹窗"仍透字"自动诊断（一锤定音）===
         try {
@@ -1744,10 +1739,10 @@
         overlay.id = '__znhd_text_popup__';
         overlay.style.cssText = 'position:fixed!important;top:0!important;left:0!important;right:0!important;bottom:0!important;width:100vw!important;height:100vh!important;z-index:2147483647!important;display:flex!important;align-items:center!important;justify-content:center!important;background:rgba(0,0,0,0.55)!important;opacity:1!important;font-family:sans-serif!important;';
         const box = document.createElement('div');
-        box.style.cssText = 'position:relative!important;max-width:90vw!important;max-height:90vh!important;background:#fff!important;opacity:1!important;border-radius:12px!important;padding:16px!important;box-shadow:0 8px 30px rgba(0,0,0,0.35)!important;display:flex!important;flex-direction:column!important;align-items:stretch!important;';
+        box.style.cssText = 'position:relative!important;min-width:360px!important;min-height:200px!important;max-width:90vw!important;max-height:90vh!important;background:#fff!important;opacity:1!important;border-radius:12px!important;padding:16px!important;box-shadow:0 8px 30px rgba(0,0,0,0.35)!important;display:flex!important;flex-direction:column!important;align-items:stretch!important;';
         const textEl = document.createElement('div');
         textEl.textContent = txt.text || '';
-        textEl.style.cssText = 'max-width:80vw!important;max-height:55vh!important;overflow:auto!important;white-space:pre-wrap!important;word-break:break-word!important;font-size:15px!important;line-height:1.6!important;color:#222!important;background:#f7f7f7!important;opacity:1!important;border:1px solid #eee!important;border-radius:8px!important;padding:12px!important;';
+        textEl.style.cssText = 'min-width:320px!important;min-height:120px!important;max-width:80vw!important;max-height:55vh!important;overflow:auto!important;white-space:pre-wrap!important;word-break:break-word!important;font-size:15px!important;line-height:1.6!important;color:#222!important;background:#f7f7f7!important;opacity:1!important;border:1px solid #eee!important;border-radius:8px!important;padding:12px!important;';
         const close = document.createElement('div');
         close.textContent = '×';
         close.title = '关闭';
@@ -1762,15 +1757,11 @@
             copyBtn.textContent = '已复制';
             copyBtn.style.background = '#52c41a';
         };
-        const ver = document.createElement('div');
-        ver.textContent = 'znhd v' + (typeof GM_info !== 'undefined' && GM_info.script ? GM_info.script.version : '?');
-        ver.style.cssText = 'position:absolute!important;bottom:6px!important;right:10px!important;font-size:10px!important;color:#888!important;opacity:1!important;user-select:none!important;';
         close.onclick = () => closeTextPopup();
         overlay.onclick = (e) => { if (e.target === overlay) closeTextPopup(); };
         box.appendChild(close);
         box.appendChild(textEl);
         box.appendChild(copyBtn);
-        box.appendChild(ver);
         overlay.appendChild(box);
         document.documentElement.appendChild(overlay);
     }
