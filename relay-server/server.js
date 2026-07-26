@@ -5,8 +5,8 @@
 // 工作流程：
 //   1) 电脑端脚本生成稳定 deviceId，拼出上传链接  http(s)://<本服务>/u/<deviceId>
 //   2) 手机浏览器打开该链接 → 选图（前端 canvas 压缩）→ POST JSON 到同一路径
-//   3) 服务器把图片按 deviceId 暂存（TTL 内）
-//   4) 电脑端脚本用 GM_xmlhttpRequest 长轮询 /recv/<deviceId> 取走图片 → 写剪贴板
+//   3) 服务器把图片或文本按 deviceId 暂存（TTL 内）
+//   4) 电脑端脚本用 GM_xmlhttpRequest 长轮询 /recv/<deviceId> 取走条目（type 区分 image/text）→ 弹窗预览/复制
 //
 // 说明：电脑端使用长轮询而非 WebSocket，是为了绕过征纳互动页面的 CSP 对 connect-src 的限制
 //       （GM_xmlhttpRequest 不受页面 CSP 约束）。手机端页面由本服务同源托管，也无 CORS 问题。
@@ -36,20 +36,20 @@ function sendJson(res, code, obj) {
   res.end(body);
 }
 
-// 把某 deviceId 当前暂存的图片「广播」给所有正在等待的电脑端连接（每个连接各得一份拷贝）。
-// 这样即使同一设备 ID 在多个标签页/浏览器同时长轮询，每张图也都能在**每一个**接收端弹窗，
-// 不再出现「两个接收端抢唯一一条图槽、第一张被别的标签抢走」的竞态。
-// 若当前无人在等：保留 pending（不删），等下一个连上的轮询来取，绝不会漏图。
+// 把某 deviceId 当前暂存的条目（图片或文本）「广播」给所有正在等待的电脑端连接（每个连接各得一份拷贝）。
+// 这样即使同一设备 ID 在多个标签页/浏览器同时长轮询，每个接收端都能拿到，不再出现抢唯一图槽的竞态。
+// 若当前无人在等：保留 pending（不删），等下一个连上的轮询来取，绝不会漏。
+// 直接回传整条 item（含 type: 'image' | 'text'），由电脑端按 type 分流处理。
 function deliverToAll(uuid) {
   const p = pending.get(uuid);
   if (!p || (Date.now() - p.ts) >= PENDING_TTL) { pending.delete(uuid); return; }
   const set = waiting.get(uuid);
-  if (!set || set.size === 0) return; // 当前无等待连接：保留图片，等下个连接
+  if (!set || set.size === 0) return; // 当前无等待连接：保留条目，等下个连接
   const targets = Array.from(set);
   pending.delete(uuid);
   waiting.delete(uuid);
   for (const r of targets) {
-    try { sendJson(r, 200, { name: p.name, mime: p.mime, data: p.data }); }
+    try { sendJson(r, 200, p); } // 回传整条（含 type），图片为 {type,name,mime,data}，文本为 {type,text}
     catch (e) { /* 已断开的连接，忽略 */ }
   }
 }
@@ -79,7 +79,7 @@ function uploadPageHtml() {
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-<title>上传图片到电脑</title>
+<title>上传到电脑</title>
 <style>
   body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif;margin:0;padding:16px;background:#f5f5f5;color:#222}
   h2{font-size:18px;margin:0 0 4px}
@@ -89,18 +89,23 @@ function uploadPageHtml() {
   #info{font-size:13px;color:#666;margin-bottom:12px;word-break:break-all;min-height:18px}
   button.act{width:100%;box-sizing:border-box;padding:14px;border:0;border-radius:10px;background:#007e44;color:#fff;font-size:16px;font-weight:bold}
   button.act:disabled{background:#bbb}
+  .sep{color:#bbb;font-size:13px;text-align:center;margin:16px 0 8px}
+  #txt{width:100%;box-sizing:border-box;padding:12px;border:1px solid #ddd;border-radius:10px;font-size:15px;line-height:1.5;resize:vertical;margin-bottom:12px;font-family:inherit;background:#fff;color:#222}
   .status{margin-top:12px;font-size:13px;color:#007e44;text-align:center;line-height:1.6}
   .err{color:#e4393c}
 </style>
 </head>
 <body>
-  <h2>📷 上传图片到电脑</h2>
-  <p class="tip">选择或拍摄一张图片，将自动压缩后发送到你的电脑剪贴板。</p>
+  <h2>📷 上传到电脑</h2>
+  <p class="tip">选择/拍摄图片自动压缩后发送，或直接输入文本发送到电脑剪贴板。</p>
   <label id="pick">点击选择图片 / 拍照</label>
   <input id="file" type="file" accept="image/*" capture="environment" style="display:none">
   <img id="preview" alt="">
   <div id="info"></div>
-  <button id="send" class="act" disabled>发送到电脑</button>
+  <button id="send" class="act" disabled>发送图片到电脑</button>
+  <div class="sep">— 或发送文本 —</div>
+  <textarea id="txt" placeholder="输入要发送到电脑的文本…" rows="4"></textarea>
+  <button id="sendText" class="act">发送文本到电脑</button>
   <div id="status" class="status"></div>
 
 <script>
@@ -173,6 +178,34 @@ function uploadPageHtml() {
     };
     fr.readAsDataURL(lastBlob);
   });
+
+  // 发送文本到电脑
+  var textArea = document.getElementById('txt');
+  var sendTextBtn = document.getElementById('sendText');
+  sendTextBtn.addEventListener('click', function(){
+    var t = (textArea.value || '').trim();
+    if (!t) { statusEl.className = 'status err'; statusEl.textContent = '请输入要发送的文本'; return; }
+    sendTextBtn.disabled = true;
+    statusEl.className = 'status'; statusEl.textContent = '发送中…';
+    fetch(window.location.pathname, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: t })
+    }).then(function(r){ return r.json(); }).then(function(j){
+      if (j && j.ok) {
+        statusEl.textContent = '✅ 文本已发送到电脑，请在电脑端点击“复制到剪贴板”';
+        sendTextBtn.textContent = '再发一条'; sendTextBtn.disabled = false;
+      } else {
+        statusEl.className = 'status err';
+        statusEl.textContent = '发送失败：' + ((j && j.error) || '未知错误');
+        sendTextBtn.disabled = false;
+      }
+    }).catch(function(err){
+      statusEl.className = 'status err';
+      statusEl.textContent = '发送失败：' + err.message;
+      sendTextBtn.disabled = false;
+    });
+  });
 })();
 </script>
 </body>
@@ -212,14 +245,24 @@ const server = http.createServer(async (req, res) => {
         let payload;
         try { payload = JSON.parse(buf.toString('utf8')); }
         catch (e) { sendJson(res, 400, { error: 'invalid json' }); return; }
-        if (!payload || typeof payload.data !== 'string') { sendJson(res, 400, { error: 'missing data' }); return; }
-        pending.set(uuid, {
-          name: String(payload.name || 'image.jpg').slice(0, 200),
-          mime: String(payload.mime || 'image/jpeg').slice(0, 100),
-          data: payload.data.slice(0, MAX_BODY),
-          ts: Date.now()
-        });
-        deliverToAll(uuid); // 落图后若存在在等待的接收端，立即广播给它们（避免图留在 pending 无人来取）
+        let item;
+        if (typeof payload.text === 'string' && payload.text.length > 0) {
+          // 手机发来的文本
+          item = { type: 'text', text: payload.text.slice(0, MAX_BODY), ts: Date.now() };
+        } else if (typeof payload.data === 'string') {
+          // 手机发来的图片（base64）
+          item = {
+            type: 'image',
+            name: String(payload.name || 'image.jpg').slice(0, 200),
+            mime: String(payload.mime || 'image/jpeg').slice(0, 100),
+            data: payload.data.slice(0, MAX_BODY),
+            ts: Date.now()
+          };
+        } else {
+          sendJson(res, 400, { error: 'missing data or text' }); return;
+        }
+        pending.set(uuid, item);
+        deliverToAll(uuid); // 落库后若存在在等待的接收端，立即广播给它们（避免条目留在 pending 无人来取）
         sendJson(res, 200, { ok: true });
         return;
       }
