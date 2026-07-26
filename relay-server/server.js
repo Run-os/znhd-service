@@ -20,6 +20,8 @@ const UUID_RE = /^[a-z0-9-]{8,64}$/i;
 
 // deviceId -> { name, mime, data(base64), ts }
 const pending = new Map();
+// deviceId -> Set<res> 当前正在等待长轮询的电脑端连接（用于「广播」：一张图同时发给所有在等的接收端）
+const waiting = new Map();
 
 function setCors(res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -32,6 +34,24 @@ function sendJson(res, code, obj) {
   setCors(res);
   res.writeHead(code, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' });
   res.end(body);
+}
+
+// 把某 deviceId 当前暂存的图片「广播」给所有正在等待的电脑端连接（每个连接各得一份拷贝）。
+// 这样即使同一设备 ID 在多个标签页/浏览器同时长轮询，每张图也都能在**每一个**接收端弹窗，
+// 不再出现「两个接收端抢唯一一条图槽、第一张被别的标签抢走」的竞态。
+// 若当前无人在等：保留 pending（不删），等下一个连上的轮询来取，绝不会漏图。
+function deliverToAll(uuid) {
+  const p = pending.get(uuid);
+  if (!p || (Date.now() - p.ts) >= PENDING_TTL) { pending.delete(uuid); return; }
+  const set = waiting.get(uuid);
+  if (!set || set.size === 0) return; // 当前无等待连接：保留图片，等下个连接
+  const targets = Array.from(set);
+  pending.delete(uuid);
+  waiting.delete(uuid);
+  for (const r of targets) {
+    try { sendJson(r, 200, { name: p.name, mime: p.mime, data: p.data }); }
+    catch (e) { /* 已断开的连接，忽略 */ }
+  }
 }
 
 function readBody(req) {
@@ -199,6 +219,7 @@ const server = http.createServer(async (req, res) => {
           data: payload.data.slice(0, MAX_BODY),
           ts: Date.now()
         });
+        deliverToAll(uuid); // 落图后若存在在等待的接收端，立即广播给它们（避免图留在 pending 无人来取）
         sendJson(res, 200, { ok: true });
         return;
       }
@@ -206,6 +227,8 @@ const server = http.createServer(async (req, res) => {
     }
 
     // /recv/<deviceId> ：电脑端长轮询取图
+    // 支持「广播」：同一 deviceId 在多个标签页/浏览器同时长轮询时，每张图会**同时发给所有在等待的接收端**，
+    // 彻底消除「两个接收端抢唯一图槽、第一张被别的标签抢走」的竞态（刷新网页后第一次不弹窗的根因）。
     const r = /^\/recv\/([a-z0-9-]{8,64})$/i.exec(path);
     if (r && method === 'GET') {
       const uuid = r[1];
@@ -213,15 +236,27 @@ const server = http.createServer(async (req, res) => {
       if (!Number.isFinite(maxwait)) maxwait = 25000;
       maxwait = Math.min(Math.max(maxwait, 1000), 30000);
       const start = Date.now();
+      let closed = false; // 客户端断开（刷新/关闭/重连）后置位，放弃本轮轮询
+      // 把本次长轮询连接登记进 waiting 集合，便于广播给所有在等的接收端
+      if (!waiting.has(uuid)) waiting.set(uuid, new Set());
+      waiting.get(uuid).add(res);
+      const removeFromWaiting = () => {
+        const s = waiting.get(uuid);
+        if (s) { s.delete(res); if (s.size === 0) waiting.delete(uuid); }
+      };
+      // 客户端一断开（刷新/关闭/重连）：放弃本轮、从等待集合移除，图片留在 pending 由其他存活连接取走
+      req.on('close', () => { closed = true; removeFromWaiting(); });
       const tick = () => {
+        if (closed || res.writableEnded) { removeFromWaiting(); return; } // 连接已失效/已结束，放弃本轮（不再调度、不再写入）
         const p = pending.get(uuid);
         if (p && (Date.now() - p.ts) < PENDING_TTL) {
-          pending.delete(uuid);
-          sendJson(res, 200, { name: p.name, mime: p.mime, data: p.data });
+          deliverToAll(uuid); // 广播给本 uuid 的所有等待连接（含本次），再清空
           return;
         }
+        if (p) pending.delete(uuid); // 过期图片丢弃
         if (Date.now() - start > maxwait) {
-          sendJson(res, 200, { empty: true });
+          try { sendJson(res, 200, { empty: true }); } catch (e) { /* 已断开，忽略 */ }
+          removeFromWaiting();
           return;
         }
         setTimeout(tick, 400);
