@@ -2,7 +2,7 @@
 // @name           征纳互动人数和在线监控v2
 // @namespace      https://scriptcat.org/
 // @description    实时监控征纳互动等待人数和在线状态，支持语音播报、自定义常用语
-// @version        26.7.26-v20
+// @version        26.7.26-v21
 // @author         runos
 // @match          https://znhd.hunan.chinatax.gov.cn:8443/*
 // @match          https://example.com/*
@@ -107,7 +107,7 @@
         // 常用语数据源（可配置；留空或非法时回退此默认地址）
         commonPhrasesUrl: 'https://gitee.com/runos/znhd-service/raw/master/public/commonPhrases.yaml',
         // 手机图片→电脑剪贴板 中继服务器地址（需为公网可访问的 http(s):// 地址，末尾不带 /）
-        relayServer: 'http://45.207.199.216:5689'
+        relayServer: 'https://znhd.122050.xyz'
     };
 
     // 读取面板保存的位置（无记录返回 null，由调用方兜底默认坐标）
@@ -742,7 +742,10 @@
                 server: s,
                 uuid: getDeviceId(),
                 onConnected: () => { addLog('[手机传图] 已自动开始接收（' + s + '）', 'info'); },
-                onImage: (img) => { showImagePopup(img); }
+                onImage: (img) => {
+                    addLog('[手机传图] 收到图片：' + (img.name || 'image') + '（' + (img.mime || 'image') + '）', 'success');
+                    showImagePopup(img);
+                }
             });
             receiveStopRef.current = stop;
             return () => {
@@ -1694,7 +1697,7 @@
         };
         // 右下角版本标记：一眼确认当前弹窗加载的是哪个版本（排查"改了却没生效"）
         const ver = document.createElement('div');
-        ver.textContent = 'znhd v26.7.26-v20';
+        ver.textContent = 'znhd v26.7.26-v21';
         ver.style.cssText = 'position:absolute!important;bottom:6px!important;right:10px!important;font-size:10px!important;color:#888!important;opacity:1!important;user-select:none!important;';
         close.onclick = () => closeImagePopup();
         overlay.onclick = (e) => { if (e.target === overlay) closeImagePopup(); };
