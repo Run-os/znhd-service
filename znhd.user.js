@@ -2,7 +2,7 @@
 // @name           征纳互动人数和在线监控v2
 // @namespace      https://scriptcat.org/
 // @description    实时监控征纳互动等待人数和在线状态，支持语音播报、自定义常用语
-// @version        26.7.26-v24
+// @version        26.7.27-v1
 // @author         runos
 // @match          https://znhd.hunan.chinatax.gov.cn:8443/*
 // @match          https://example.com/*
@@ -1904,7 +1904,39 @@
         };
     }
 
+    /**
+     * 电脑端 → 手机端 发送（图片或文本）。POST 到中继 /phone/send/<deviceId>。
+     * 仅负责投递；手机是否在线由调用方先查 /phone/status 决定（离线时调用方直接拦截）。
+     * @param {object} opt - { server, uuid, payload, onOk, onFail }
+     *   payload: { text } 或 { name, mime, data(base64) }
+     */
+    function sendToPhone(opt) {
+        const server = (opt.server || '').trim().replace(/\/+$/, '');
+        const uuid = opt.uuid;
+        const url = server + '/phone/send/' + encodeURIComponent(uuid);
+        try {
+            GM_xmlhttpRequest({
+                method: 'POST',
+                url: url,
+                headers: { 'Content-Type': 'application/json' },
+                data: JSON.stringify(opt.payload),
+                timeout: 20000,
+                onload: function (resp) {
+                    let j = null;
+                    try { j = JSON.parse(resp.responseText); } catch (e) { j = null; }
+                    if (j && j.ok) { if (opt.onOk) opt.onOk(); }
+                    else { if (opt.onFail) opt.onFail((j && j.error) || ('HTTP ' + resp.status)); }
+                },
+                onerror: function () { if (opt.onFail) opt.onFail('网络错误，请检查中继地址'); },
+                ontimeout: function () { if (opt.onFail) opt.onFail('发送超时'); }
+            });
+        } catch (e) {
+            if (opt.onFail) opt.onFail(e.message);
+        }
+    }
+
     // 手机传图抽屉：展示本机上传链接 + 二维码（接收由脚本自动进行，收到图片弹窗预览）
+    // 另含「发送到手机」区：检测手机在线状态，发送文本/图片到手机。
     /**
      * 手机传图抽屉组件：展示本机专属上传链接与二维码。
      * 接收由脚本自动进行（中继服务器填好后即生效），图片到达时弹出网页居中预览弹窗，弹窗内「复制到剪贴板」按钮（点击手势）真正写入剪贴板。
@@ -1919,6 +1951,9 @@
         const deviceId = getDeviceId();
         const [qrUrl, setQrUrl] = CAT_UI.useState('');
         const [link, setLink] = CAT_UI.useState('');
+        const [phoneOnline, setPhoneOnline] = CAT_UI.useState(false);
+        const [sending, setSending] = CAT_UI.useState(false);
+        const [sendText, setSendText] = CAT_UI.useState('');
         const copyLink = () => { if (link) safeCopyText(link); };
 
         // 计算链接 + 二维码（仅在打开抽屉或地址变化时）
@@ -1929,6 +1964,74 @@
             setLink(lk);
             genQrDataUrl(lk).then(u => setQrUrl(u)).catch(e => { addLog('[二维码] 失败: ' + e.message, 'error', true); });
         }, [relayServer, visible]);
+
+        // 轮询手机在线状态（每 5s），用于发送前判断是否可发
+        CAT_UI.useEffect(() => {
+            if (!visible || !relayServer) return;
+            const server = relayServer.trim().replace(/\/+$/, '');
+            let alive = true;
+            const check = () => {
+                if (!alive) return;
+                try {
+                    GM_xmlhttpRequest({
+                        method: 'GET',
+                        url: server + '/phone/status/' + encodeURIComponent(deviceId),
+                        timeout: 8000,
+                        onload: (r) => {
+                            if (!alive) return;
+                            let j = null; try { j = JSON.parse(r.responseText); } catch (e) { j = null; }
+                            setPhoneOnline(!!(j && j.online));
+                        },
+                        onerror: () => { if (alive) setPhoneOnline(false); }
+                    });
+                } catch (e) { if (alive) setPhoneOnline(false); }
+            };
+            check();
+            const t = setInterval(check, 5000);
+            return () => { alive = false; clearInterval(t); };
+        }, [visible, relayServer, deviceId]);
+
+        // 发送文本到手机
+        const doSendText = () => {
+            const t = (sendText || '').trim();
+            if (!t) { addLog('[发送到手机] 文本为空', 'error', true); return; }
+            if (!phoneOnline) { addLog('[发送到手机] 当前无在线设备，无法发送', 'error', true); return; }
+            setSending(true);
+            sendToPhone({
+                server: relayServer, uuid: deviceId, payload: { text: t },
+                onOk: () => { addLog('[发送到手机] 文本已发送', 'success'); setSendText(''); setSending(false); },
+                onFail: (e) => { addLog('[发送到手机] 发送失败：' + e, 'error'); setSending(false); }
+            });
+        };
+
+        // 发送图片到手机（文件选择器挂在 document.body 上的原生 input，规避 shadow DOM 挂载问题）
+        const doSendImage = () => {
+            if (!phoneOnline) { addLog('[发送到手机] 当前无在线设备，无法发送', 'error', true); return; }
+            const inp = document.createElement('input');
+            inp.type = 'file'; inp.accept = 'image/*'; inp.style.display = 'none';
+            document.body.appendChild(inp);
+            inp.onchange = () => {
+                const f = inp.files && inp.files[0];
+                inp.remove();
+                if (!f) return;
+                addLog('[发送到手机] 正在读取图片：' + (f.name || 'image'), 'info');
+                const rd = new FileReader();
+                rd.onload = () => {
+                    const b64 = (rd.result || '').split(',')[1] || '';
+                    if (!b64) { addLog('[发送到手机] 图片读取失败', 'error', true); return; }
+                    setSending(true);
+                    sendToPhone({
+                        server: relayServer, uuid: deviceId,
+                        payload: { name: f.name || 'image.jpg', mime: f.type || 'image/jpeg', data: b64 },
+                        onOk: () => { addLog('[发送到手机] 图片已发送：' + (f.name || 'image'), 'success'); setSending(false); },
+                        onFail: (e) => { addLog('[发送到手机] 图片发送失败：' + e, 'error'); setSending(false); }
+                    });
+                };
+                rd.onerror = () => { addLog('[发送到手机] 图片读取失败', 'error', true); };
+                rd.readAsDataURL(f);
+            };
+            inp.click();
+        };
 
         return CAT_UI.Drawer(
             CAT_UI.createElement('div', { style: { textAlign: 'left' } }, [
@@ -1958,9 +2061,35 @@
                         }
                     }) :
                     CAT_UI.createElement('div', { style: { color: '#999', fontSize: '12px', marginTop: '12px' } }, '二维码生成中…（若长时间不出，请手动复制上方链接）'),
+                CAT_UI.Divider('发送到手机'),
+                CAT_UI.createElement('p', {
+                    style: { color: phoneOnline ? '#007e44' : '#e4393c', fontSize: '13px', margin: '0 0 10px', lineHeight: '1.5' }
+                }, phoneOnline ? '🟢 手机已连接，可发送' : '⚪ 当前无在线设备，无法发送'),
+                CAT_UI.createElement('div', { style: { display: 'flex', gap: '8px', marginBottom: '10px' } }, [
+                    CAT_UI.Input({
+                        placeholder: '输入要发送到手机的文本…',
+                        value: sendText,
+                        onChange: (val) => {
+                            const v = (typeof val === 'string') ? val : (val && val.target ? val.target.value : '');
+                            setSendText(v);
+                        },
+                        style: { flex: '1', marginBottom: '0' }
+                    }),
+                    CAT_UI.Button('发送', {
+                        type: 'primary',
+                        disabled: !phoneOnline || sending,
+                        onClick: doSendText,
+                        style: { whiteSpace: 'nowrap' }
+                    })
+                ]),
+                CAT_UI.Button('选择图片发送', {
+                    disabled: !phoneOnline || sending,
+                    onClick: doSendImage,
+                    style: { width: '100%' }
+                })
             ]),
             {
-                title: '手机传图到电脑',
+                title: '手机互传',
                 visible,
                 width: 420,
                 focusLock: true,

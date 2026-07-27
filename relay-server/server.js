@@ -2,11 +2,18 @@
 // 纯 Node 内置模块实现，无需 npm install。
 // 运行： node server.js        （可选 PORT 环境变量，默认 3000）
 //
-// 工作流程：
+// 工作流程（双向）：
+//   正向（手机 → 电脑）：
 //   1) 电脑端脚本生成稳定 deviceId，拼出上传链接  http(s)://<本服务>/u/<deviceId>
-//   2) 手机浏览器打开该链接 → 选图（前端 canvas 压缩）→ POST JSON 到同一路径
+//   2) 手机浏览器打开该链接 → 选图（前端 canvas 压缩）/输入文本 → POST JSON 到同一路径
 //   3) 服务器把图片或文本按 deviceId 暂存（TTL 内）
 //   4) 电脑端脚本用 GM_xmlhttpRequest 长轮询 /recv/<deviceId> 取走条目（type 区分 image/text）→ 弹窗预览/复制
+//
+//   反向（电脑 → 手机）：
+//   1) 手机打开 /u/<deviceId> 后，周期性 POST /phone/heartbeat/<deviceId> 报活（声明在线）
+//   2) 电脑端「发送到手机」前先 GET /phone/status/<deviceId> 判断手机是否在线
+//   3) 电脑端 POST /phone/send/<deviceId>（图片 {data,mime,name} 或文本 {text}）
+//   4) 手机端长轮询 /phone/recv/<deviceId> 取走条目 → 全屏看图/复制文本
 //
 // 说明：电脑端使用长轮询而非 WebSocket，是为了绕过征纳互动页面的 CSP 对 connect-src 的限制
 //       （GM_xmlhttpRequest 不受页面 CSP 约束）。手机端页面由本服务同源托管，也无 CORS 问题。
@@ -22,6 +29,15 @@ const UUID_RE = /^[a-z0-9-]{8,64}$/i;
 const pending = new Map();
 // deviceId -> Set<res> 当前正在等待长轮询的电脑端连接（用于「广播」：一张图同时发给所有在等的接收端）
 const waiting = new Map();
+
+// ===== 反向通道：电脑端 → 手机端 =====
+const PHONE_TTL = 20 * 1000;       // 手机在线判定：超过该时长无心跳视为离线（心跳 8s 一次）
+// deviceId -> lastSeen(ms) 手机最近一次心跳时间
+const phoneOnline = new Map();
+// deviceId -> { type:'image'|'text', text?, name?, mime?, data?, ts } 电脑发来、待手机取的条目
+const phonePending = new Map();
+// deviceId -> Set<res> 当前正在长轮询收件的手机连接
+const phoneWaiting = new Map();
 
 function setCors(res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -50,6 +66,23 @@ function deliverToAll(uuid) {
   waiting.delete(uuid);
   for (const r of targets) {
     try { sendJson(r, 200, p); } // 回传整条（含 type），图片为 {type,name,mime,data}，文本为 {type,text}
+    catch (e) { /* 已断开的连接，忽略 */ }
+  }
+}
+
+// 把某 deviceId 电脑发来的条目「广播」给所有正在等待的手机连接（每个连接各得一份拷贝）。
+// 与 deliverToAll 对称，作用于反向通道的 phonePending/phoneWaiting。
+// 若当前无手机在等：保留 phonePending（不删），等下一个连上的轮询来取，绝不会漏。
+function deliverToPhone(uuid) {
+  const p = phonePending.get(uuid);
+  if (!p || (Date.now() - p.ts) >= PENDING_TTL) { phonePending.delete(uuid); return; }
+  const set = phoneWaiting.get(uuid);
+  if (!set || set.size === 0) return; // 当前无等待连接：保留条目，等下个连接
+  const targets = Array.from(set);
+  phonePending.delete(uuid);
+  phoneWaiting.delete(uuid);
+  for (const r of targets) {
+    try { sendJson(r, 200, p); }
     catch (e) { /* 已断开的连接，忽略 */ }
   }
 }
@@ -93,11 +126,21 @@ function uploadPageHtml() {
   #txt{width:100%;box-sizing:border-box;padding:12px;border:1px solid #ddd;border-radius:10px;font-size:15px;line-height:1.5;resize:vertical;margin-bottom:12px;font-family:inherit;background:#fff;color:#222}
   .status{margin-top:12px;font-size:13px;color:#007e44;text-align:center;line-height:1.6}
   .err{color:#e4393c}
+  .conn{font-size:12px;color:#007e44;text-align:center;margin:4px 0 2px}
+  .conn.off{color:#e4393c}
+  /* 来自电脑的收件弹层 */
+  .recv{position:fixed;left:0;right:0;top:0;bottom:0;background:rgba(0,0,0,0.88);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px;box-sizing:border-box}
+  .recv img{max-width:100%;max-height:72vh;border-radius:8px;background:#fff}
+  .recvtip{color:#fff;font-size:13px;margin-top:10px}
+  .recv pre{background:#fff;color:#222;padding:14px;border-radius:10px;max-width:92vw;max-height:60vh;overflow:auto;white-space:pre-wrap;word-break:break-word;font-size:15px;line-height:1.6;margin:0;font-family:inherit}
+  .recv .act{width:auto;padding:8px 18px;margin-top:12px}
+  .recvclose{position:absolute;top:12px;right:14px;width:34px;height:34px;line-height:32px;text-align:center;font-size:24px;color:#fff;background:rgba(255,255,255,0.2);border-radius:50%;cursor:pointer}
 </style>
 </head>
 <body>
   <h2>📷 上传到电脑</h2>
   <p class="tip">选择/拍摄图片自动压缩后发送，或直接输入文本发送到电脑剪贴板。</p>
+  <div id="conn" class="conn">连接中…</div>
   <label id="pick">点击选择图片 / 拍照</label>
   <input id="file" type="file" accept="image/*" style="display:none">
   <img id="preview" alt="">
@@ -107,6 +150,8 @@ function uploadPageHtml() {
   <textarea id="txt" placeholder="输入要发送到电脑的文本…" rows="4"></textarea>
   <button id="sendText" class="act">发送文本到电脑</button>
   <div id="status" class="status"></div>
+  <div class="sep">— 来自电脑 —</div>
+  <p class="tip">电脑端「发送到手机」的内容会在此自动弹出：图片可长按保存，文本可一键复制。</p>
 
 <script>
 (function(){
@@ -206,6 +251,73 @@ function uploadPageHtml() {
       sendTextBtn.disabled = false;
     });
   });
+
+  // ===== 反向通道：向电脑端证明本手机在线 + 接收电脑发来的内容 =====
+  var idMatch = window.location.pathname.match(/\/u\/([a-z0-9-]{8,64})/i);
+  var deviceId = idMatch ? idMatch[1] : '';
+  var connEl = document.getElementById('conn');
+
+  function setConn(online){
+    if(!connEl) return;
+    if(online){ connEl.className = 'conn'; connEl.textContent = '🟢 已连接，可接收电脑发送'; }
+    else { connEl.className = 'conn off'; connEl.textContent = '⚪ 未连接（电脑端将提示无法发送）'; }
+  }
+
+  // 心跳：声明本手机在线（电脑端据此判断能否发送）
+  function heartbeat(){
+    if(!deviceId) return;
+    fetch('/phone/heartbeat/' + deviceId, { method:'POST' })
+      .then(function(){ setConn(true); })
+      .catch(function(){ setConn(false); });
+  }
+  heartbeat();
+  setInterval(heartbeat, 8000);
+
+  // 长轮询电脑发来的条目（图片/文本）
+  function pollRecv(){
+    if(!deviceId) return;
+    fetch('/phone/recv/' + deviceId + '?maxwait=25000')
+      .then(function(r){ return r.json(); })
+      .then(function(j){
+        if(j && j.type){ showReceived(j); }
+        pollRecv(); // 继续下一次轮询
+      })
+      .catch(function(){ setTimeout(pollRecv, 1500); });
+  }
+
+  function showReceived(j){
+    var box = document.createElement('div');
+    box.className = 'recv';
+    if(j.type === 'image'){
+      var img = document.createElement('img');
+      img.src = 'data:' + (j.mime || 'image/jpeg') + ';base64,' + j.data;
+      box.appendChild(img);
+      var tip = document.createElement('div');
+      tip.className = 'recvtip';
+      tip.textContent = '长按图片可保存';
+      box.appendChild(tip);
+    } else if(j.type === 'text'){
+      var pre = document.createElement('pre');
+      pre.textContent = j.text || '';
+      box.appendChild(pre);
+      var cp = document.createElement('button');
+      cp.className = 'act';
+      cp.textContent = '复制文本';
+      cp.onclick = function(){
+        try { navigator.clipboard.writeText(j.text || ''); cp.textContent = '已复制'; }
+        catch(e){ cp.textContent = '复制失败'; }
+      };
+      box.appendChild(cp);
+    }
+    var close = document.createElement('div');
+    close.className = 'recvclose';
+    close.textContent = '×';
+    close.onclick = function(){ if(box.parentNode) box.parentNode.removeChild(box); };
+    box.appendChild(close);
+    document.body.appendChild(box);
+  }
+
+  pollRecv();
 })();
 </script>
 </body>
@@ -297,6 +409,87 @@ const server = http.createServer(async (req, res) => {
           return;
         }
         if (p) pending.delete(uuid); // 过期图片丢弃
+        if (Date.now() - start > maxwait) {
+          try { sendJson(res, 200, { empty: true }); } catch (e) { /* 已断开，忽略 */ }
+          removeFromWaiting();
+          return;
+        }
+        setTimeout(tick, 400);
+      };
+      tick();
+      return;
+    }
+
+    // ===== 反向通道：电脑端 → 手机端 =====
+
+    // /phone/heartbeat/<deviceId> ：手机打开页面向服务器报活（证明本设备有手机在线）
+    const hb = /^\/phone\/heartbeat\/([a-z0-9-]{8,64})$/i.exec(path);
+    if (hb && method === 'POST') {
+      phoneOnline.set(hb[1], Date.now());
+      sendJson(res, 200, { ok: true });
+      return;
+    }
+
+    // /phone/status/<deviceId> ：电脑端查询手机是否在线（用于发送前判断是否可发）
+    const st = /^\/phone\/status\/([a-z0-9-]{8,64})$/i.exec(path);
+    if (st && method === 'GET') {
+      const last = phoneOnline.get(st[1]) || 0;
+      sendJson(res, 200, { online: (Date.now() - last) < PHONE_TTL });
+      return;
+    }
+
+    // /phone/send/<deviceId> ：电脑端发送图片或文本到手机（镜像 /u 的 POST，方向相反）
+    const ps = /^\/phone\/send\/([a-z0-9-]{8,64})$/i.exec(path);
+    if (ps && method === 'POST') {
+      const buf = await readBody(req);
+      let payload;
+      try { payload = JSON.parse(buf.toString('utf8')); }
+      catch (e) { sendJson(res, 400, { error: 'invalid json' }); return; }
+      const uuid = ps[1];
+      let item;
+      if (typeof payload.text === 'string' && payload.text.length > 0) {
+        item = { type: 'text', text: payload.text.slice(0, MAX_BODY), ts: Date.now() };
+      } else if (typeof payload.data === 'string') {
+        item = {
+          type: 'image',
+          name: String(payload.name || 'image.jpg').slice(0, 200),
+          mime: String(payload.mime || 'image/jpeg').slice(0, 100),
+          data: payload.data.slice(0, MAX_BODY),
+          ts: Date.now()
+        };
+      } else {
+        sendJson(res, 400, { error: 'missing data or text' }); return;
+      }
+      phonePending.set(uuid, item);
+      deliverToPhone(uuid); // 若当前有手机在等，立即广播；否则留在 phonePending 等手机轮询
+      sendJson(res, 200, { ok: true });
+      return;
+    }
+
+    // /phone/recv/<deviceId> ：手机端长轮询取电脑发来的条目（镜像 /recv，方向相反）
+    const pr = /^\/phone\/recv\/([a-z0-9-]{8,64})$/i.exec(path);
+    if (pr && method === 'GET') {
+      const uuid = pr[1];
+      let maxwait = parseInt(u.searchParams.get('maxwait') || '', 10);
+      if (!Number.isFinite(maxwait)) maxwait = 25000;
+      maxwait = Math.min(Math.max(maxwait, 1000), 30000);
+      const start = Date.now();
+      let closed = false; // 手机断开（关页/切后台/重连）后置位，放弃本轮轮询
+      if (!phoneWaiting.has(uuid)) phoneWaiting.set(uuid, new Set());
+      phoneWaiting.get(uuid).add(res);
+      const removeFromWaiting = () => {
+        const s = phoneWaiting.get(uuid);
+        if (s) { s.delete(res); if (s.size === 0) phoneWaiting.delete(uuid); }
+      };
+      req.on('close', () => { closed = true; removeFromWaiting(); });
+      const tick = () => {
+        if (closed || res.writableEnded) { removeFromWaiting(); return; }
+        const p = phonePending.get(uuid);
+        if (p && (Date.now() - p.ts) < PENDING_TTL) {
+          deliverToPhone(uuid); // 广播给本 uuid 的所有等待手机连接，再清空
+          return;
+        }
+        if (p) phonePending.delete(uuid); // 过期条目丢弃
         if (Date.now() - start > maxwait) {
           try { sendJson(res, 200, { empty: true }); } catch (e) { /* 已断开，忽略 */ }
           removeFromWaiting();
