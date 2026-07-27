@@ -39,6 +39,30 @@ const phonePending = new Map();
 // deviceId -> Set<res> 当前正在长轮询收件的手机连接
 const phoneWaiting = new Map();
 
+// ===== 运行日志（每条前面带「精确到秒」的时间戳） =====
+function tsNow() {
+  const d = new Date();
+  const p = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())} `;
+}
+function logEvent(msg) {
+  console.log(tsNow() + msg);
+}
+// 估算 base64 图片体积（KB）
+function b64SizeKB(b64) {
+  const len = b64 ? b64.length : 0;
+  const pad = b64 && b64.endsWith('==') ? 2 : (b64 && b64.endsWith('=') ? 1 : 0);
+  const bytes = Math.max(0, Math.floor(len * 3 / 4) - pad);
+  return Math.round(bytes / 1024);
+}
+// 文本预览：截前 40 字、合并空白、过长加省略号
+function previewText(t) {
+  const s = String(t || '').replace(/\s+/g, ' ');
+  return s.length > 40 ? s.slice(0, 40) + '…' : s;
+}
+// 曾经在线过的手机设备集合，用于「离线」只告警一次
+const phoneWasOnline = new Set();
+
 function setCors(res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
@@ -68,6 +92,7 @@ function deliverToAll(uuid) {
     try { sendJson(r, 200, p); } // 回传整条（含 type），图片为 {type,name,mime,data}，文本为 {type,text}
     catch (e) { /* 已断开的连接，忽略 */ }
   }
+  logEvent(`[投递] 设备 ${uuid} 已向 ${targets.length} 个电脑端接收端投递条目（${p.type}）`);
 }
 
 // 把某 deviceId 电脑发来的条目「广播」给所有正在等待的手机连接（每个连接各得一份拷贝）。
@@ -85,6 +110,7 @@ function deliverToPhone(uuid) {
     try { sendJson(r, 200, p); }
     catch (e) { /* 已断开的连接，忽略 */ }
   }
+  logEvent(`[投递] 设备 ${uuid} 已向 ${targets.length} 个手机端接收端投递条目（${p.type}）`);
 }
 
 function readBody(req) {
@@ -374,6 +400,11 @@ const server = http.createServer(async (req, res) => {
           sendJson(res, 400, { error: 'missing data or text' }); return;
         }
         pending.set(uuid, item);
+        if (item.type === 'image') {
+          logEvent(`[发送] 设备 ${uuid} 手机端发送图片：${item.name}（${item.mime}，约 ${b64SizeKB(item.data)}KB）`);
+        } else {
+          logEvent(`[发送] 设备 ${uuid} 手机端发送文本：${previewText(item.text)}`);
+        }
         deliverToAll(uuid); // 落库后若存在在等待的接收端，立即广播给它们（避免条目留在 pending 无人来取）
         sendJson(res, 200, { ok: true });
         return;
@@ -425,7 +456,15 @@ const server = http.createServer(async (req, res) => {
     // /phone/heartbeat/<deviceId> ：手机打开页面向服务器报活（证明本设备有手机在线）
     const hb = /^\/phone\/heartbeat\/([a-z0-9-]{8,64})$/i.exec(path);
     if (hb && method === 'POST') {
-      phoneOnline.set(hb[1], Date.now());
+      const id = hb[1];
+      const now = Date.now();
+      const last = phoneOnline.get(id) || 0;
+      const wasOnline = phoneWasOnline.has(id) && (now - last) < PHONE_TTL;
+      phoneOnline.set(id, now);
+      if (!wasOnline) {
+        phoneWasOnline.add(id);
+        logEvent(`[连接] 设备 ${id} 已连接（手机端在线）`);
+      }
       sendJson(res, 200, { ok: true });
       return;
     }
@@ -461,6 +500,11 @@ const server = http.createServer(async (req, res) => {
         sendJson(res, 400, { error: 'missing data or text' }); return;
       }
       phonePending.set(uuid, item);
+      if (item.type === 'image') {
+        logEvent(`[发送] 设备 ${uuid} 电脑端发送图片到手机：${item.name}（${item.mime}，约 ${b64SizeKB(item.data)}KB）`);
+      } else {
+        logEvent(`[发送] 设备 ${uuid} 电脑端发送文本到手机：${previewText(item.text)}`);
+      }
       deliverToPhone(uuid); // 若当前有手机在等，立即广播；否则留在 phonePending 等手机轮询
       sendJson(res, 200, { ok: true });
       return;
@@ -507,6 +551,20 @@ const server = http.createServer(async (req, res) => {
     res.end('server error: ' + e.message);
   }
 });
+
+// 周期扫描：手机超过 PHONE_TTL 无心跳即视为离线，仅记一次「已断开」（避免重复告警）
+setInterval(() => {
+  const now = Date.now();
+  for (const [id, last] of phoneOnline) {
+    if (now - last >= PHONE_TTL) {
+      phoneOnline.delete(id);
+      if (phoneWasOnline.has(id)) {
+        phoneWasOnline.delete(id);
+        logEvent(`[断开] 设备 ${id} 已断开（手机端离线超时）`);
+      }
+    }
+  }
+}, 5 * 1000);
 
 server.listen(PORT, '0.0.0.0', () => {
   console.log('[中继服务] 已启动: http://0.0.0.0:' + PORT);
