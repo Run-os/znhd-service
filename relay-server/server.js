@@ -353,8 +353,25 @@ function uploadPageHtml() {
       cp.className = 'act';
       cp.textContent = '复制文本';
       cp.onclick = function(){
-        try { navigator.clipboard.writeText(j.text || ''); cp.textContent = '已复制'; }
-        catch(e){ cp.textContent = '复制失败'; }
+        var txt = j.text || '';
+        function fallbackCopy(){
+          // 老旧 WebView 无 navigator.clipboard，用隐藏 textarea + execCommand 兜底
+          try {
+            var ta = document.createElement('textarea');
+            ta.value = txt;
+            ta.style.position = 'fixed'; ta.style.left = '-9999px';
+            document.body.appendChild(ta);
+            ta.focus(); ta.select();
+            var ok = document.execCommand('copy');
+            document.body.removeChild(ta);
+            cp.textContent = ok ? '已复制' : '复制失败，请长按文本手动复制';
+          } catch(e){ cp.textContent = '复制失败，请长按文本手动复制'; }
+        }
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(txt)
+            .then(function(){ cp.textContent = '已复制'; })
+            .catch(fallbackCopy);
+        } else { fallbackCopy(); }
       };
       box.appendChild(cp);
     }
@@ -384,7 +401,7 @@ const server = http.createServer(async (req, res) => {
     // ===== 访问日志：确认端口是否真的收到请求 =====
     // 跳过长轮询(/recv、/phone/recv)与心跳(/phone/heartbeat)等高频路径，避免刷屏；
     // 这类请求另有 [连接]/[投递] 等语义日志。想全量记录可去掉下面的过滤条件。
-    const ACCESS_NOISE = /^\/(recv|phone\/recv)(\/|$)/i;
+    const ACCESS_NOISE = /^\/(recv|phone\/recv|phone\/heartbeat)(\/|$)/i;
     if (method !== 'OPTIONS' && !ACCESS_NOISE.test(path)) {
       const _t0 = Date.now();
       logEvent(`[访问] ${method} ${req.url}`);
