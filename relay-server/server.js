@@ -281,7 +281,7 @@ function uploadPageHtml() {
   });
 
   // ===== 反向通道：向电脑端证明本手机在线 + 接收电脑发来的内容 =====
-  var idMatch = window.location.pathname.match(/\/u\/([a-z0-9-]{8,64})/i);
+  var idMatch = window.location.pathname.match(/\\/u\\/([a-z0-9-]{8,64})/i);
   var deviceId = idMatch ? idMatch[1] : '';
   var connEl = document.getElementById('conn');
   var devEl = document.getElementById('devid');

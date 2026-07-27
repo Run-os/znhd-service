@@ -1,5 +1,11 @@
 # znhd-service 项目长期记忆
 
+## relay-server 模板字符串陷阱（硬性教训，2026-07-28）
+- `server.js` 手机页 HTML 是**模板字符串**：内嵌 JS 里的 `\/`（正则转义）会被模板字符串吃掉反斜杠，
+  输出成 `//` → 行注释 → 浏览器端 SyntaxError → 整段内联脚本死亡（曾致手机永远"正在连接"）。
+- 规则：模板内正则反斜杠要写 `\\/`；**校验必须针对渲染后的输出**（本地起服务 curl 页面 →
+  抽 `<script>` → `new Function()` 校验），校验转义前源码会漏判。
+
 ## 项目概况
 - `znhd.user.js`：征纳互动（税务）人数/在线监控油猴脚本，运行在 ScriptCat 扩展下，UI 依赖外部库
   CAT_UI（`@require` 自 scriptcat.org/lib/1167/1.0.0/脚本猫UI库.js）。库源码已备份在 `TMP/cat_ui_lib.tmp.js`。
