@@ -370,11 +370,23 @@ function uploadPageHtml() {
 const server = http.createServer(async (req, res) => {
   try {
     setCors(res);
-    if (req.method === 'OPTIONS') { res.writeHead(204); res.end(); return; }
-
     const u = new URL(req.url, 'http://localhost');
     const path = u.pathname;
     const method = req.method;
+
+    // ===== 访问日志：确认端口是否真的收到请求 =====
+    // 跳过长轮询(/recv、/phone/recv)与心跳(/phone/heartbeat)等高频路径，避免刷屏；
+    // 这类请求另有 [连接]/[投递] 等语义日志。想全量记录可去掉下面的过滤条件。
+    const ACCESS_NOISE = /^\/(recv|phone\/recv|phone\/heartbeat)(\/|$)/i;
+    if (method !== 'OPTIONS' && !ACCESS_NOISE.test(path)) {
+      const _t0 = Date.now();
+      logEvent(`[访问] ${method} ${req.url}`);
+      res.on('finish', () => {
+        logEvent(`[响应] ${res.statusCode} ${method} ${req.url} (${Date.now() - _t0}ms)`);
+      });
+    }
+
+    if (method === 'OPTIONS') { res.writeHead(204); res.end(); return; }
 
     if (method === 'GET' && path === '/') {
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
