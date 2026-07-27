@@ -404,7 +404,7 @@ const server = http.createServer(async (req, res) => {
     const ACCESS_NOISE = /^\/(recv|phone\/recv|phone\/heartbeat|phone\/status)(\/|$)/i;
     if (method !== 'OPTIONS' && !ACCESS_NOISE.test(path)) {
       const _t0 = Date.now();
-      logEvent(`[访问] ${method} ${req.url}`);
+      //logEvent(`[访问] ${method} ${req.url}`);
       res.on('finish', () => {
         logEvent(`[响应] ${res.statusCode} ${method} ${req.url} (${Date.now() - _t0}ms)`);
       });
