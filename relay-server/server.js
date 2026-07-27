@@ -154,6 +154,7 @@ function uploadPageHtml() {
   .err{color:#e4393c}
   .conn{font-size:12px;color:#007e44;text-align:center;margin:4px 0 2px}
   .conn.off{color:#e4393c}
+  .devid{font-size:11px;color:#999;text-align:center;margin:0 0 8px;word-break:break-all}
   /* 来自电脑的收件弹层 */
   .recv{position:fixed;left:0;right:0;top:0;bottom:0;background:rgba(0,0,0,0.88);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px;box-sizing:border-box}
   .recv img{max-width:100%;max-height:72vh;border-radius:8px;background:#fff}
@@ -166,7 +167,8 @@ function uploadPageHtml() {
 <body>
   <h2>📷 上传到电脑</h2>
   <p class="tip">选择/拍摄图片自动压缩后发送，或直接输入文本发送到电脑剪贴板。</p>
-  <div id="conn" class="conn">连接中…</div>
+  <div id="conn" class="conn">正在连接…</div>
+  <div id="devid" class="devid"></div>
   <label id="pick">点击选择图片 / 拍照</label>
   <input id="file" type="file" accept="image/*" style="display:none">
   <img id="preview" alt="">
@@ -282,19 +284,33 @@ function uploadPageHtml() {
   var idMatch = window.location.pathname.match(/\/u\/([a-z0-9-]{8,64})/i);
   var deviceId = idMatch ? idMatch[1] : '';
   var connEl = document.getElementById('conn');
+  var devEl = document.getElementById('devid');
+  if (devEl) devEl.textContent = deviceId ? ('设备ID：' + deviceId) : '设备ID：<未识别，请重新生成二维码>';
 
-  function setConn(online){
+  // state: 'online' | 'offline' | 'error'
+  function setConn(state, msg){
     if(!connEl) return;
-    if(online){ connEl.className = 'conn'; connEl.textContent = '🟢 已连接，可接收电脑发送'; }
+    if(state === 'online'){ connEl.className = 'conn'; connEl.textContent = '🟢 已连接，可接收电脑发送'; }
+    else if(state === 'error'){ connEl.className = 'conn off'; connEl.textContent = '⚠️ ' + (msg || '连接失败'); }
     else { connEl.className = 'conn off'; connEl.textContent = '⚪ 未连接（电脑端将提示无法发送）'; }
   }
 
   // 心跳：声明本手机在线（电脑端据此判断能否发送）
+  // 加 8s 超时：避免请求被代理/防火墙卡住时一直停在「连接中」而不报错
   function heartbeat(){
-    if(!deviceId) return;
-    fetch('/phone/heartbeat/' + deviceId, { method:'POST' })
-      .then(function(){ setConn(true); })
-      .catch(function(){ setConn(false); });
+    if(!deviceId){ setConn('error', '链接无效：未识别到设备ID，请重新生成二维码'); return; }
+    var ctrl = ('AbortController' in window) ? new AbortController() : null;
+    var timer = setTimeout(function(){ if(ctrl) ctrl.abort(); }, 8000);
+    var opt = { method:'POST' };
+    if(ctrl) opt.signal = ctrl.signal;
+    fetch('/phone/heartbeat/' + deviceId, opt)
+      .then(function(){ clearTimeout(timer); setConn('online'); })
+      .catch(function(err){
+        clearTimeout(timer);
+        var m = (err && err.name === 'AbortError') ? '连接超时（8秒无响应，请检查服务器地址/代理/防火墙）'
+                 : ('连接失败：' + ((err && err.message) || '未知错误'));
+        setConn('error', m);
+      });
   }
   heartbeat();
   setInterval(heartbeat, 8000);
