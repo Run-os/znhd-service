@@ -296,18 +296,23 @@ function uploadPageHtml() {
   }
 
   // 心跳：声明本手机在线（电脑端据此判断能否发送）
-  // 加 8s 超时：避免请求被代理/防火墙卡住时一直停在「连接中」而不报错
+  // 用 Promise.race 做「硬性 8 秒超时」，不依赖 AbortController（部分老旧 WebView 不支持/不触发 abort），
+  // 避免请求被代理/防火墙卡住时一直停在「连接中」而无提示。带 body+Content-Type，兼容对空 POST 敏感的代理。
   function heartbeat(){
     if(!deviceId){ setConn('error', '链接无效：未识别到设备ID，请重新生成二维码'); return; }
     var ctrl = ('AbortController' in window) ? new AbortController() : null;
-    var timer = setTimeout(function(){ if(ctrl) ctrl.abort(); }, 8000);
-    var opt = { method:'POST' };
+    var opt = { method:'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' };
     if(ctrl) opt.signal = ctrl.signal;
-    fetch('/phone/heartbeat/' + deviceId, opt)
-      .then(function(){ clearTimeout(timer); setConn('online'); })
+    var timeout = new Promise(function(_, rej){ setTimeout(function(){ rej(new Error('timeout')); }, 8000); });
+    Promise.race([ fetch('/phone/heartbeat/' + deviceId, opt), timeout ])
+      .then(function(r){
+        if(ctrl) ctrl.abort();
+        if(r && r.ok){ setConn('online'); }
+        else { setConn('error', '服务器返回 ' + (r && r.status) + '，请检查中继地址/代理'); }
+      })
       .catch(function(err){
-        clearTimeout(timer);
-        var m = (err && err.name === 'AbortError') ? '连接超时（8秒无响应，请检查服务器地址/代理/防火墙）'
+        if(ctrl) ctrl.abort();
+        var m = (err && err.message === 'timeout') ? '连接超时（8秒无响应，请检查网络/代理/防火墙）'
                  : ('连接失败：' + ((err && err.message) || '未知错误'));
         setConn('error', m);
       });
@@ -377,7 +382,7 @@ const server = http.createServer(async (req, res) => {
     // ===== 访问日志：确认端口是否真的收到请求 =====
     // 跳过长轮询(/recv、/phone/recv)与心跳(/phone/heartbeat)等高频路径，避免刷屏；
     // 这类请求另有 [连接]/[投递] 等语义日志。想全量记录可去掉下面的过滤条件。
-    const ACCESS_NOISE = /^\/(recv|phone\/recv|phone\/heartbeat)(\/|$)/i;
+    const ACCESS_NOISE = /^\/(recv|phone\/recv)(\/|$)/i;
     if (method !== 'OPTIONS' && !ACCESS_NOISE.test(path)) {
       const _t0 = Date.now();
       logEvent(`[访问] ${method} ${req.url}`);
