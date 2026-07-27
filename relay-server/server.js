@@ -399,9 +399,9 @@ const server = http.createServer(async (req, res) => {
     const method = req.method;
 
     // ===== 访问日志：确认端口是否真的收到请求 =====
-    // 跳过长轮询(/recv、/phone/recv)与心跳(/phone/heartbeat)等高频路径，避免刷屏；
-    // 这类请求另有 [连接]/[投递] 等语义日志。想全量记录可去掉下面的过滤条件。
-    const ACCESS_NOISE = /^\/(recv|phone\/recv|phone\/heartbeat)(\/|$)/i;
+    // 跳过长轮询(/recv、/phone/recv)、心跳(/phone/heartbeat)与在线状态轮询(/phone/status)等
+    // 高频路径，避免刷屏；这类请求另有 [连接]/[投递] 等语义日志。想全量记录可去掉下面的过滤条件。
+    const ACCESS_NOISE = /^\/(recv|phone\/recv|phone\/heartbeat|phone\/status)(\/|$)/i;
     if (method !== 'OPTIONS' && !ACCESS_NOISE.test(path)) {
       const _t0 = Date.now();
       logEvent(`[访问] ${method} ${req.url}`);
