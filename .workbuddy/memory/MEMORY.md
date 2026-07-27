@@ -51,6 +51,21 @@
   要与实际代码一致，不能描述已删除/迁移的字段）、功能详解、更新日志（在顶部补新版本条目）、版本号示例。
 - 维护历史中 ReadMe 曾多次滞后（CONFIG 还写着旧 `WORKING_HOURS`、版本号停在 v26.2.26），改动后务必核对。
 
+## 中继服务器部署要点（2026-07-27~28 排查结论）
+- 代码：`relay-server/server.js`，`const PORT = process.env.PORT || 5689;`（**默认 5689**，2026-07-28 由 3000 改）。
+  原因：服务器宿主 3000 已被占用，relay 改为监听 5689，与 nginx upstream `127.0.0.1:5689` 对齐。
+- **外部映射端口应配为 `5689 → 5689`**（公网 5689 → relay 容器/进程内部 5689）。务必同步把旧的 `5689→3000`
+  改掉，否则公网 5689 会转发到内部已无服务的 3000。
+- **nginx 反代（域名 znhd.122050.xyz）`proxy_pass` 应为 `http://127.0.0.1:5689`**（现与 relay 监听端口一致，正确）。
+  正确链路：浏览器 → 域名 → nginx → `127.0.0.1:5689` → relay。
+- ⚠️ **容器化注意**：若 nginx 与 relay 是各自独立容器，`127.0.0.1` 指 nginx 自身 loopback，连不到 relay 容器。
+  此时 `proxy_pass` 须用 relay 的 Docker 服务名，如 `http://znhd:5689` 或 `http://znhd-image-relay:5689`。
+- ⚠️ **典型事故历史**：曾因 nginx upstream 指向外部映射端口（5689→3000 中的 5689 外部端）且内部无服务监听，
+  全部 `/recv`、`/phone/*`、`/u/*` 报 `connect() failed (111: Connection refused) upstream http://127.0.0.1:5689`，
+  表现为手机"连接中"、PC"无在线设备"、图片收不到。改 relay 监听 5689 + 映射对齐后解决。
+- 诊断：relay 启动日志末尾应为 `http://0.0.0.0:5689`；nginx 报 `Connection refused (111)` + upstream 5689 即说明
+  relay 没在该端口监听（未重启/代码未更新/容器未对齐）。手机页 HTML 由 relay 同源托管，relay 错位时手机会"连不上"。
+
 ## 已落地的功能改进
 - 工作时间可配置：DEFAULTS.workingHours（morningStart/End, afternoonStart/End），缓存 cachedWorkingHours，
   isWorkingHours() 读缓存（无配置兜底 true）；SettingsDrawer 用原生 input[type=time] 选取。

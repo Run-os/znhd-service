@@ -1,6 +1,6 @@
 // 征纳互动 · 手机图片 → 电脑剪贴板 中继服务器
 // 纯 Node 内置模块实现，无需 npm install。
-// 运行： node server.js        （可选 PORT 环境变量，默认 3000）
+// 运行： node server.js        （可选 PORT 环境变量，默认 5689）
 //
 // 工作流程（双向）：
 //   正向（手机 → 电脑）：
@@ -19,7 +19,7 @@
 //       （GM_xmlhttpRequest 不受页面 CSP 约束）。手机端页面由本服务同源托管，也无 CORS 问题。
 
 const http = require('http');
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 5689;
 
 const PENDING_TTL = 60 * 1000;      // 暂存有效期 60s（手机先传、电脑后开也来得及）
 const MAX_BODY = 12 * 1024 * 1024; // 单图体积上限 12MB
