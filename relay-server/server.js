@@ -99,7 +99,7 @@ function uploadPageHtml() {
   <h2>📷 上传到电脑</h2>
   <p class="tip">选择/拍摄图片自动压缩后发送，或直接输入文本发送到电脑剪贴板。</p>
   <label id="pick">点击选择图片 / 拍照</label>
-  <input id="file" type="file" accept="image/*" capture="environment" style="display:none">
+  <input id="file" type="file" accept="image/*" style="display:none">
   <img id="preview" alt="">
   <div id="info"></div>
   <button id="send" class="act" disabled>发送图片到电脑</button>
