@@ -50,7 +50,11 @@
   - 反面案例：2026-07-27 完成的「双向互传」功能，被误写成 `@version 26.7.26-v25`（沿用了前一天 7/26 的日期），
     且违反跨天规则未重置——正确应为 `26.7.27-v1`。已事后更正。
   - 只改 `@version` 头即可；面板两处（line ~668 启动日志、line ~901 面板版本文本）都用 `GM_info.script.version`
-    动态读取，无需同步改。
+  动态读取，无需同步改。
+- **relay-server 同规范**（2026-07-28 起）：版本号唯一来源是 `relay-server/package.json` 的 `version`
+  （同格式 `YY.M.D-vN`，是合法 semver——`-vN` 按 prerelease 解析）。`server.js` 启动时 require 读取，
+  启动日志打 `[中继服务] vXX 已启动`，`GET /health` 返回 `{ok,version}`（可用于确认线上跑的是哪版）。
+  对 `relay-server/` 的任何代码改动同样必须递增该版本号，跨天重置 v1。
 
 ## 文档同步约定（硬性约定）
 - 对 `znhd.user.js` 做代码改动后，**必须同步更新 `ReadMe.md`**：核心特性、配置说明（`CONFIG`/`DEFAULTS`

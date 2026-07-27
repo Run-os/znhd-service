@@ -20,6 +20,8 @@
 
 const http = require('http');
 const PORT = process.env.PORT || 5689;
+// 版本号唯一来源：package.json 的 version（格式 YY.M.D-vN，规范同 znhd.user.js）
+const VERSION = (() => { try { return require('./package.json').version; } catch (e) { return 'unknown'; } })();
 
 const PENDING_TTL = 60 * 1000;      // 暂存有效期 60s（手机先传、电脑后开也来得及）
 const MAX_BODY = 12 * 1024 * 1024; // 单图体积上限 12MB
@@ -398,7 +400,7 @@ const server = http.createServer(async (req, res) => {
       res.end('<h2>征纳互动 · 图片中继服务</h2><p>手机请打开脚本面板「手机传图」提供的上传链接。</p>');
       return;
     }
-    if (method === 'GET' && path === '/health') { sendJson(res, 200, { ok: true }); return; }
+    if (method === 'GET' && path === '/health') { sendJson(res, 200, { ok: true, version: VERSION }); return; }
 
     // 二维码改由电脑端脚本用 qrcodejs 客户端生成，本服务不再提供 /qr 端点。
 
@@ -600,5 +602,5 @@ setInterval(() => {
 }, 5 * 1000);
 
 server.listen(PORT, '0.0.0.0', () => {
-  console.log('[中继服务] 已启动: http://0.0.0.0:' + PORT);
+  console.log('[中继服务] v' + VERSION + ' 已启动: http://0.0.0.0:' + PORT);
 });
