@@ -82,9 +82,19 @@ jobs:
               echo "❌ 未找到 1panel/node 容器，请在 workflow 的 CONTAINER_NAME 里手动指定容器名"
               exit 1
             fi
-            echo "🔄 重启容器: $CID"
-            docker restart "$CID"
-            sleep 5
+            # 2) 重启容器 + 强制把最新代码拷入 /app
+            #     注意：1panel 的 bind 挂载在 git 同步替换目录 inode 后可能「失联」（容器仍读旧目录）。
+            #     故不再仅靠挂载自动同步，而是显式 docker cp 把工作树最新代码写入容器 /app，
+            #     并用 stop+start（start 会按路径重新绑定挂载）双保险。
+            echo "🔄 停止并重新启动容器(重新绑定挂载): $CID"
+            docker stop "$CID"
+            docker start "$CID"
+            sleep 3
+            echo "📦 将最新代码拷入容器 /app ..."
+            docker cp "$DEPLOY_PATH/relay-server/." "$CID":/app/ 2>/dev/null \
+              && echo "✅ 已 docker cp 最新代码到 /app" \
+              || echo "⚠️ docker cp 失败（若挂载本身正常可忽略，stop+start 已重新绑定）"
+            sleep 2
 
             # 3) 健康检查 + 版本自证（避免「日志成功但代码没更新」的静默失败）
             EXPECT_VER="$(grep '"version"' relay-server/package.json 2>/dev/null | head -1 | tr -d ' ,"' | sed 's/version://')"
@@ -100,7 +110,8 @@ jobs:
               if [ "$CT_VER" = "$EXPECT_VER" ]; then
                 echo "✅ 容器内版本($CT_VER) 与代码库一致，部署生效"
               else
-                echo "❌ 版本不一致：容器内=$CT_VER  期望=$EXPECT_VER —— 说明挂载目录未被 git 更新（常见于 relay-server 是符号链接/挂载点错位）。请排查服务器诊断输出。"
+                echo "❌ 版本不一致：容器内=$CT_VER  期望=$EXPECT_VER —— 说明 git 已更新磁盘(v2)但容器未加载。"
+                echo "   请登录服务器执行： docker inspect -f '{{ json .Mounts }}' $CID   （确认 /app 的 Type 是 bind 还是 volume）"
                 exit 1
               fi
             else
