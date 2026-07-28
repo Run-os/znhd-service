@@ -163,6 +163,11 @@ function uploadPageHtml() {
   #grid .cell{position:relative;padding-top:100%;border-radius:8px;overflow:hidden;background:#fff}
   #grid .cell img{position:absolute;left:0;top:0;width:100%;height:100%;object-fit:cover}
   #grid .cell .del{position:absolute;top:2px;right:2px;width:22px;height:22px;line-height:20px;text-align:center;font-size:16px;color:#fff;background:rgba(0,0,0,0.55);border-radius:50%;cursor:pointer}
+  /* 来自电脑的图片：九宫格画廊，与脚本端 Viewer.js 对齐 */
+  #recvGrid{display:none;grid-template-columns:repeat(3,1fr);gap:6px;margin:8px 0 12px}
+  #recvGrid .cell{position:relative;padding-top:100%;border-radius:8px;overflow:hidden;background:#fff;cursor:pointer}
+  #recvGrid .cell img{position:absolute;left:0;top:0;width:100%;height:100%;object-fit:cover}
+  #recvGrid .cell .idx{position:absolute;right:4px;bottom:4px;font-size:11px;color:#fff;background:rgba(0,0,0,0.5);border-radius:8px;padding:0 5px;line-height:16px;pointer-events:none}
   #info{font-size:13px;color:#666;margin-bottom:12px;word-break:break-all;min-height:18px}
   button.act{width:100%;box-sizing:border-box;padding:14px;border:0;border-radius:10px;background:#007e44;color:#fff;font-size:16px;font-weight:bold}
   button.act:disabled{background:#bbb}
@@ -197,7 +202,8 @@ function uploadPageHtml() {
   <button id="sendText" class="act">发送文本到电脑</button>
   <div id="status" class="status"></div>
   <div class="sep">— 来自电脑 —</div>
-  <p class="tip">电脑端「发送到手机」的内容会在此自动弹出：图片可长按保存，文本可一键复制。</p>
+  <p class="tip">电脑端「发送到手机」的图片会收进下方九宫格（与脚本端一致），点击可放大查看、长按可保存；文本仍自动弹出。</p>
+  <div id="recvGrid"></div>
 
 <script>
 (function(){
@@ -209,6 +215,9 @@ function uploadPageHtml() {
   var statusEl = document.getElementById('status');
   // 待发送图片列表：{ blob, name, mime, url }
   var items = [];
+  // 来自电脑的图片（九宫格画廊）：{ url, mime }
+  var recvItems = [];
+  var recvGrid = document.getElementById('recvGrid');
 
   function renderGrid(){
     grid.innerHTML = '';
@@ -430,18 +439,54 @@ function uploadPageHtml() {
       .catch(function(){ setTimeout(pollRecv, 1500); });
   }
 
-  function showReceived(j){
+  function renderRecvGrid(){
+    recvGrid.innerHTML = '';
+    recvGrid.style.display = recvItems.length ? 'grid' : 'none';
+    recvItems.forEach(function(it, idx){
+      var cell = document.createElement('div');
+      cell.className = 'cell';
+      var img = document.createElement('img');
+      img.src = it.url;
+      cell.appendChild(img);
+      var idxEl = document.createElement('div');
+      idxEl.className = 'idx';
+      idxEl.textContent = (idx + 1);
+      cell.appendChild(idxEl);
+      cell.onclick = function(){ openRecvImage(it); };
+      recvGrid.appendChild(cell);
+    });
+  }
+
+  function openRecvImage(it){
     var box = document.createElement('div');
     box.className = 'recv';
+    var img = document.createElement('img');
+    img.src = it.url;
+    box.appendChild(img);
+    var tip = document.createElement('div');
+    tip.className = 'recvtip';
+    tip.textContent = '长按图片可保存';
+    box.appendChild(tip);
+    var close = document.createElement('div');
+    close.className = 'recvclose';
+    close.textContent = '×';
+    close.onclick = function(){ if(box.parentNode) box.parentNode.removeChild(box); };
+    box.appendChild(close);
+    document.body.appendChild(box);
+  }
+
+  function showReceived(j){
     if(j.type === 'image'){
-      var img = document.createElement('img');
-      img.src = 'data:' + (j.mime || 'image/jpeg') + ';base64,' + j.data;
-      box.appendChild(img);
-      var tip = document.createElement('div');
-      tip.className = 'recvtip';
-      tip.textContent = '长按图片可保存';
-      box.appendChild(tip);
-    } else if(j.type === 'text'){
+      // 收进九宫格画廊，点击缩略图再放大（与脚本端 Viewer.js 一致）
+      recvItems.push({ url: 'data:' + (j.mime || 'image/jpeg') + ';base64,' + j.data, mime: j.mime || 'image/jpeg' });
+      renderRecvGrid();
+      try { recvGrid.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); } catch(e){}
+      return;
+    }
+    // 文本仍弹独立弹层
+    var box = document.createElement('div');
+    box.className = 'recv';
+    if(j.type === 'text'){
       var pre = document.createElement('pre');
       pre.textContent = j.text || '';
       box.appendChild(pre);
