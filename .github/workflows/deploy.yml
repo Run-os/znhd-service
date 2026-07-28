@@ -1,0 +1,71 @@
+name: 同步到云服务器
+
+# 触发条件：与示例一致
+# 1) 推送到 main 分支
+# 2) 发布 Release
+# 3) 手动在 Actions 页面点 Run workflow
+on:
+  push:
+    branches:
+      - main
+
+  release:
+    types:
+      - published
+
+  workflow_dispatch:
+
+env:
+  TZ: Asia/Shanghai
+  # ↓↓↓ 改成你服务器上把本仓库 clone 下来的实际绝对路径（如 /opt/znhd-service、/root/znhd-service）
+  DEPLOY_PATH: /opt/znhd-service
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      # 沿用示例格式保留的签出步骤（此处仅供格式一致性 / 日后扩展，真正的部署在下一步的 SSH 里完成）
+      - name: 检查分支
+        uses: actions/checkout@main
+        with:
+          ref: main
+
+      # 核心：SSH 登录服务器，拉取最新代码并重启 relay-server
+      # relay-server 是纯 Node 内置模块、零依赖，无需 npm install / 构建，直接 node server.js 即可
+      - name: 同步代码并重启中继服务
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.KEY }}
+          passphrase: ${{ secrets.PASSPHRASE }}   # 密钥无密码可留空（不配置该 Secret 即可）
+          port: ${{ secrets.PORT }}               # SSH 端口，默认 22；非 22 时配置该 Secret
+          script: |
+            set -e
+            cd "$DEPLOY_PATH"
+            # 仓库目录若属主与执行 git 的用户不同，需加 safe.directory，否则 git 会报错拒绝
+            git config --global --add safe.directory "$(pwd)"
+            # 拉取远端 main 最新提交并强制对齐（丢弃服务器上的本地改动，保证与仓库一致）
+            git fetch origin main
+            git reset --hard origin/main
+
+            echo "✅ 代码已同步到最新提交: $(git rev-parse --short HEAD)"
+
+            # ===== 重启 relay-server（你用 node server.js 直接后台运行）=====
+            cd "$DEPLOY_PATH/relay-server"
+            # 先停掉旧进程（没有在跑也不报错）
+            pkill -f "node server.js" 2>/dev/null || true
+            sleep 1
+            # 如需自定义端口，去掉下一行注释并设置：export PORT=你的端口
+            # export PORT=5689
+            # setsid 让进程彻底脱离 SSH 会话，nohup 屏蔽 SIGHUP，确保 Action 结束后服务仍在跑
+            setsid nohup node server.js > relay.log 2>&1 < /dev/null &
+            sleep 2
+
+            # 健康检查：relay-server 自带 /health 接口，确认服务真的起来了
+            # 如果改了上面的 PORT，把下面的 5689 同步改掉
+            if curl -fsS "http://127.0.0.1:5689/health" >/dev/null 2>&1; then
+              echo "✅ 中继服务已重启并健康: $(curl -fsS http://127.0.0.1:5689/health)"
+            else
+              echo "⚠️ 健康检查未通过（服务可能仍在启动，或端口/防火墙不同），请登录服务器排查 relay.log"
+            fi
