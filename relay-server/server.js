@@ -163,11 +163,18 @@ function uploadPageHtml() {
   #grid .cell{position:relative;padding-top:100%;border-radius:8px;overflow:hidden;background:#fff}
   #grid .cell img{position:absolute;left:0;top:0;width:100%;height:100%;object-fit:cover}
   #grid .cell .del{position:absolute;top:2px;right:2px;width:22px;height:22px;line-height:20px;text-align:center;font-size:16px;color:#fff;background:rgba(0,0,0,0.55);border-radius:50%;cursor:pointer}
-  /* 来自电脑的图片：九宫格画廊，与脚本端 Viewer.js 对齐 */
-  #recvGrid{display:none;grid-template-columns:repeat(3,1fr);gap:6px;margin:8px 0 12px}
+  /* 来自电脑的图片：以弹窗方式查看（与脚本端弹出画廊一致），不再贴在网页底部 */
+  #recvPopup{position:fixed;left:0;right:0;top:0;bottom:0;background:rgba(0,0,0,0.85);z-index:9998;display:none;flex-direction:column;padding:14px;box-sizing:border-box}
+  #recvPopup.show{display:flex}
+  #recvPopup .rh{display:flex;align-items:center;justify-content:space-between;color:#fff;margin:2px 2px 10px}
+  #recvPopup .rh .t{font-size:15px;font-weight:bold}
+  #recvPopup .rh .close{width:34px;height:34px;line-height:32px;text-align:center;font-size:24px;color:#fff;background:rgba(255,255,255,0.2);border-radius:50%;cursor:pointer;flex:0 0 auto}
+  #recvGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;flex:1;min-height:0;overflow:auto;align-content:start}
   #recvGrid .cell{position:relative;padding-top:100%;border-radius:8px;overflow:hidden;background:#fff;cursor:pointer}
   #recvGrid .cell img{position:absolute;left:0;top:0;width:100%;height:100%;object-fit:cover}
   #recvGrid .cell .idx{position:absolute;right:4px;bottom:4px;font-size:11px;color:#fff;background:rgba(0,0,0,0.5);border-radius:8px;padding:0 5px;line-height:16px;pointer-events:none}
+  #recvBtn{display:none;width:100%;box-sizing:border-box;padding:12px;border:0;border-radius:10px;background:#e6f3ec;color:#007e44;font-size:15px;font-weight:bold;margin-bottom:12px}
+  #recvBtn.show{display:block}
   #info{font-size:13px;color:#666;margin-bottom:12px;word-break:break-all;min-height:18px}
   button.act{width:100%;box-sizing:border-box;padding:14px;border:0;border-radius:10px;background:#007e44;color:#fff;font-size:16px;font-weight:bold}
   button.act:disabled{background:#bbb}
@@ -202,8 +209,12 @@ function uploadPageHtml() {
   <button id="sendText" class="act">发送文本到电脑</button>
   <div id="status" class="status"></div>
   <div class="sep">— 来自电脑 —</div>
-  <p class="tip">电脑端「发送到手机」的图片会收进下方九宫格（与脚本端一致），点击可放大查看、长按可保存；文本仍自动弹出。</p>
-  <div id="recvGrid"></div>
+  <p class="tip">电脑端「发送到手机」的图片会以弹窗形式自动弹出（与脚本端一致），点击缩略图可放大、长按可保存；文本仍自动弹出。</p>
+  <button id="recvBtn">查看收到的图片</button>
+  <div id="recvPopup">
+    <div class="rh"><span class="t">收到的图片</span><span class="close">×</span></div>
+    <div id="recvGrid"></div>
+  </div>
 
 <script>
 (function(){
@@ -218,6 +229,8 @@ function uploadPageHtml() {
   // 来自电脑的图片（九宫格画廊）：{ url, mime }
   var recvItems = [];
   var recvGrid = document.getElementById('recvGrid');
+  var recvPopup = document.getElementById('recvPopup');
+  var recvBtn = document.getElementById('recvBtn');
 
   function renderGrid(){
     grid.innerHTML = '';
@@ -441,7 +454,6 @@ function uploadPageHtml() {
 
   function renderRecvGrid(){
     recvGrid.innerHTML = '';
-    recvGrid.style.display = recvItems.length ? 'grid' : 'none';
     recvItems.forEach(function(it, idx){
       var cell = document.createElement('div');
       cell.className = 'cell';
@@ -455,6 +467,11 @@ function uploadPageHtml() {
       cell.onclick = function(){ openRecvImage(it); };
       recvGrid.appendChild(cell);
     });
+    // 同步「查看收到的图片」按钮（关闭弹窗后也能重新打开画廊）
+    if (recvBtn) {
+      recvBtn.classList.toggle('show', recvItems.length > 0);
+      recvBtn.textContent = '🖼 收到的图片（' + recvItems.length + '）';
+    }
   }
 
   function openRecvImage(it){
@@ -475,12 +492,22 @@ function uploadPageHtml() {
     document.body.appendChild(box);
   }
 
+  // 收到的图片以弹窗（画廊）形式查看，与脚本端弹出画廊保持一致
+  function openRecvPopup(){ if(recvItems.length) recvPopup.classList.add('show'); }
+  function closeRecvPopup(){ recvPopup.classList.remove('show'); }
+  if (recvPopup) {
+    var rpClose = recvPopup.querySelector('.close');
+    if (rpClose) rpClose.onclick = closeRecvPopup;
+    recvPopup.onclick = function(e){ if(e.target === recvPopup) closeRecvPopup(); };
+  }
+  if (recvBtn) recvBtn.onclick = openRecvPopup;
+
   function showReceived(j){
     if(j.type === 'image'){
-      // 收进九宫格画廊，点击缩略图再放大（与脚本端 Viewer.js 一致）
+      // 收进画廊并自动弹出查看（与脚本端弹出画廊一致），点击缩略图再放大
       recvItems.push({ url: 'data:' + (j.mime || 'image/jpeg') + ';base64,' + j.data, mime: j.mime || 'image/jpeg' });
       renderRecvGrid();
-      try { recvGrid.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); } catch(e){}
+      openRecvPopup();
       return;
     }
     // 文本仍弹独立弹层
