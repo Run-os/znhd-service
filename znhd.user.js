@@ -18,8 +18,8 @@
 // @connect        *
 // @connect        znhd-service.zeabur.app
 // @homepageURL    https://scriptcat.org/zh-CN/script-show-page/3650
-// @updateURL      https://gitee.com/runos/znhd-service/raw/master/znhd.user.js
-// @downloadURL    https://gitee.com/runos/znhd-service/raw/master/znhd.user.js
+// @updateURL      https://cdn.jsdelivr.net/gh/Run-os/znhd-service@refs/heads/main/znhd.user.js
+// @downloadURL    https://cdn.jsdelivr.net/gh/Run-os/znhd-service@refs/heads/main/znhd.user.js
 // @require        https://scriptcat.org/lib/1167/1.0.0/%E8%84%9A%E6%9C%AC%E7%8C%ABUI%E5%BA%93.js?sha384-jXdR3hCwnDJf53Ue6XHAi6tApeudgS/wXnMYBD/ZJcgge8Xnzu/s7bkEf2tPi2KS
 // @require        https://cdn.jsdelivr.net/npm/@fingerprintjs/fingerprintjs@5/dist/fp.min.js
 // @require        https://cdn.jsdelivr.net/npm/js-yaml@4.1.0/dist/js-yaml.min.js
@@ -36,7 +36,7 @@
     const CONFIG = {
         CHECK_INTERVAL: 3000,
         MAX_LOG_ENTRIES: 20,
-        didaUrl: 'https://gitee.com/runos/znhd-service/raw/master/public/dida.mp3',
+        didaUrl: 'https://cdn.jsdelivr.net/gh/Run-os/znhd-service@refs/heads/main/public/dida.mp3',
         // 语音播报超时保护（毫秒），防止 onend/onerror 不触发导致队列卡死
         SPEECH_TIMEOUT: 15000,
         // 语音队列最大长度，超过时丢弃最早（最旧）的消息，防止内存堆积
@@ -108,7 +108,7 @@
             afternoonEnd: 18
         },
         // 常用语数据源（可配置；留空或非法时回退此默认地址）
-        commonPhrasesUrl: 'https://gitee.com/runos/znhd-service/raw/master/public/commonPhrases.yaml',
+        commonPhrasesUrl: 'https://cdn.jsdelivr.net/gh/Run-os/znhd-service@refs/heads/main/public/commonPhrases.yaml',
         // 手机图片→电脑剪贴板 中继服务器地址（需为公网可访问的 http(s):// 地址，末尾不带 /）
         relayServer: 'https://znhd.122050.xyz'
     };

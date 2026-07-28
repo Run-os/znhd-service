@@ -144,7 +144,7 @@ const DEFAULTS = {
         morningStart: 9, morningEnd: 12,
         afternoonStart: 13.5, afternoonEnd: 18
     },
-    commonPhrasesUrl: 'https://gitee.com/runos/znhd-service/raw/master/public/commonPhrases.yaml',
+    commonPhrasesUrl: 'https://cdn.jsdelivr.net/gh/Run-os/znhd-service@refs/heads/main/public/commonPhrases.yaml',
     relayServer: ''        // 手机传图中继服务器公网地址（如 https://你的服务器:端口），留空则功能不可用
 };
 ```
