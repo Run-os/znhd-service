@@ -46,6 +46,14 @@ jobs:
             cd "$DEPLOY_PATH" 2>/dev/null || { echo "❌ DEPLOY_PATH=$DEPLOY_PATH 不存在，请先在服务器创建该目录"; exit 1; }
             git config --global --add safe.directory "$(pwd)"
 
+            # 防御：清理挂载源子目录内的「嵌套 .git」（如 relay-server/.git）。
+            # 否则父仓库会把 relay-server/ 当成孤立目录，checkout/reset 永远碰不到它，
+            # 表现为「日志同步成功、但 /app 文件不更新、/health 仍是旧版本」。
+            for d in $(find . -name .git -type d -mindepth 2 2>/dev/null); do
+              echo "⚠️ 发现嵌套 git 目录: $d，已移除（由 $DEPLOY_PATH 根仓库统一管理）"
+              rm -rf "$d"
+            done
+
             # 首次部署：若目录不是 git 仓库（或没有 origin 远端），则就地初始化并绑定
             # （该目录已存在、内含正在运行的 relay-server 挂载源，故用 init 而非 clone，不破坏现有文件）
             if [ ! -d .git ]; then
@@ -57,10 +65,12 @@ jobs:
               git remote add origin "git@github.com:Run-os/znhd-service.git"
             fi
 
-            # 拉取并强制同步到 origin/main（会覆盖本地文件，即更新被挂载的 /app）
+            # 强制同步工作树到 origin/main（reset --hard + clean 保证与远端完全一致，即更新被挂载的 /app）
             git fetch origin
             git checkout -f -B main origin/main
-            echo "✅ 代码已同步到最新提交: $(git rev-parse --short HEAD)"
+            git reset --hard origin/main
+            git clean -fd
+            echo "✅ 代码已同步到提交: $(git rev-parse --short HEAD) / 工作树版本: $(grep '"version"' relay-server/package.json | head -1 | tr -d ' ,')"
 
             # 2) 找到运行 relay 的 1panel/node 容器
             if [ -n "$CONTAINER_NAME" ]; then
@@ -76,9 +86,23 @@ jobs:
             docker restart "$CID"
             sleep 5
 
-            # 3) 健康检查（容器 5689 已映射到宿主机）
+            # 3) 健康检查 + 版本自证（避免「日志成功但代码没更新」的静默失败）
+            EXPECT_VER="$(grep '"version"' relay-server/package.json 2>/dev/null | head -1 | tr -d ' ,"' | sed 's/version://')"
             if curl -fsS "http://127.0.0.1:5689/health" >/dev/null 2>&1; then
-              echo "✅ 中继服务已重启并健康: $(curl -fsS http://127.0.0.1:5689/health)"
+              HL="$(curl -fsS http://127.0.0.1:5689/health)"
+              echo "✅ 健康检查通过: $HL"
             else
               echo "⚠️ 健康检查未通过（服务可能仍在启动，或 5689 未映射到宿主机），请登录服务器 docker logs $CID 排查"
+            fi
+            # 直接读容器内 /app 的版本，与工作树期望版本比对
+            CT_VER="$(docker exec "$CID" grep -m1 '"version"' /app/package.json 2>/dev/null | tr -d ' ,"' | sed 's/version://')"
+            if [ -n "$CT_VER" ]; then
+              if [ "$CT_VER" = "$EXPECT_VER" ]; then
+                echo "✅ 容器内版本($CT_VER) 与代码库一致，部署生效"
+              else
+                echo "❌ 版本不一致：容器内=$CT_VER  期望=$EXPECT_VER —— 说明挂载目录未被 git 更新（常见于 relay-server 是符号链接/挂载点错位）。请排查服务器诊断输出。"
+                exit 1
+              fi
+            else
+              echo "⚠️ 无法读取容器内 /app/package.json 版本（容器可能未就绪）"
             fi
