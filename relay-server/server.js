@@ -27,7 +27,9 @@ const PENDING_TTL = 60 * 1000;      // 暂存有效期 60s（手机先传、电�
 const MAX_BODY = 12 * 1024 * 1024; // 单图体积上限 12MB
 const UUID_RE = /^[a-z0-9-]{8,64}$/i;
 
-// deviceId -> { name, mime, data(base64), ts }
+// deviceId -> Array<{ type, name?, mime?, data?, text?, ts }> 待电脑端取走的条目队列（FIFO）
+// 队列化以支持手机端一次多选发送多张图（旧实现是单槽，连发会互相覆盖丢图）
+const MAX_QUEUE = 9; // 每设备最多暂存条目数（与手机页多选上限一致），超出丢弃最旧
 const pending = new Map();
 // deviceId -> Set<res> 当前正在等待长轮询的电脑端连接（用于「广播」：一张图同时发给所有在等的接收端）
 const waiting = new Map();
@@ -83,18 +85,23 @@ function sendJson(res, code, obj) {
 // 若当前无人在等：保留 pending（不删），等下一个连上的轮询来取，绝不会漏。
 // 直接回传整条 item（含 type: 'image' | 'text'），由电脑端按 type 分流处理。
 function deliverToAll(uuid) {
-  const p = pending.get(uuid);
-  if (!p || (Date.now() - p.ts) >= PENDING_TTL) { pending.delete(uuid); return; }
+  const q = pending.get(uuid);
+  if (!q || q.length === 0) { pending.delete(uuid); return; }
+  // 丢弃队头已过期的条目
+  while (q.length && (Date.now() - q[0].ts) >= PENDING_TTL) q.shift();
+  if (q.length === 0) { pending.delete(uuid); return; }
   const set = waiting.get(uuid);
-  if (!set || set.size === 0) return; // 当前无等待连接：保留条目，等下个连接
+  if (!set || set.size === 0) return; // 当前无等待连接：保留队列，等下个连接
+  // 每次只投递队头一条（长轮询协议每个响应回一条）；电脑端收到后会立刻重新轮询取下一条
+  const p = q.shift();
+  if (q.length === 0) pending.delete(uuid);
   const targets = Array.from(set);
-  pending.delete(uuid);
   waiting.delete(uuid);
   for (const r of targets) {
     try { sendJson(r, 200, p); } // 回传整条（含 type），图片为 {type,name,mime,data}，文本为 {type,text}
     catch (e) { /* 已断开的连接，忽略 */ }
   }
-  logEvent(`[投递] 设备 ${uuid} 已向 ${targets.length} 个电脑端接收端投递条目（${p.type}）`);
+  logEvent(`[投递] 设备 ${uuid} 已向 ${targets.length} 个电脑端接收端投递条目（${p.type}）${q.length ? `，队列剩余 ${q.length} 条` : ''}`);
 }
 
 // 把某 deviceId 电脑发来的条目「广播」给所有正在等待的手机连接（每个连接各得一份拷贝）。
@@ -146,7 +153,10 @@ function uploadPageHtml() {
   h2{font-size:18px;margin:0 0 4px}
   .tip{color:#888;font-size:13px;margin:0 0 16px;line-height:1.6}
   #pick{display:block;width:100%;box-sizing:border-box;padding:16px;border:2px dashed #bbb;border-radius:10px;text-align:center;color:#555;background:#fff;font-size:15px;margin-bottom:12px}
-  #preview{width:100%;border-radius:10px;display:none;margin-bottom:12px;background:#fff}
+  #grid{display:none;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:12px}
+  #grid .cell{position:relative;padding-top:100%;border-radius:8px;overflow:hidden;background:#fff}
+  #grid .cell img{position:absolute;left:0;top:0;width:100%;height:100%;object-fit:cover}
+  #grid .cell .del{position:absolute;top:2px;right:2px;width:22px;height:22px;line-height:20px;text-align:center;font-size:16px;color:#fff;background:rgba(0,0,0,0.55);border-radius:50%;cursor:pointer}
   #info{font-size:13px;color:#666;margin-bottom:12px;word-break:break-all;min-height:18px}
   button.act{width:100%;box-sizing:border-box;padding:14px;border:0;border-radius:10px;background:#007e44;color:#fff;font-size:16px;font-weight:bold}
   button.act:disabled{background:#bbb}
@@ -171,9 +181,9 @@ function uploadPageHtml() {
   <p class="tip">选择/拍摄图片自动压缩后发送，或直接输入文本发送到电脑剪贴板。</p>
   <div id="conn" class="conn">正在连接…</div>
   <div id="devid" class="devid"></div>
-  <label id="pick">点击选择图片 / 拍照</label>
-  <input id="file" type="file" accept="image/*" style="display:none">
-  <img id="preview" alt="">
+  <label id="pick">点击选择图片 / 拍照（可多选，最多 9 张）</label>
+  <input id="file" type="file" accept="image/*" multiple style="display:none">
+  <div id="grid"></div>
   <div id="info"></div>
   <button id="send" class="act" disabled>发送图片到电脑</button>
   <div class="sep">— 或发送文本 —</div>
@@ -185,19 +195,46 @@ function uploadPageHtml() {
 
 <script>
 (function(){
-  var MAX_DIM = 1600, QUALITY = 0.75;
+  var MAX_DIM = 1600, QUALITY = 0.75, MAX_PICK = 9;
   var fileInput = document.getElementById('file');
-  var preview = document.getElementById('preview');
+  var grid = document.getElementById('grid');
   var info = document.getElementById('info');
   var sendBtn = document.getElementById('send');
   var statusEl = document.getElementById('status');
-  var lastBlob = null, lastName = 'image.jpg', lastMime = 'image/jpeg';
+  // 待发送图片列表：{ blob, name, mime, url }
+  var items = [];
 
-  fileInput.addEventListener('change', function(e){
-    var f = e.target.files && e.target.files[0];
-    if(!f){ return; }
-    lastName = f.name || 'image.jpg';
-    statusEl.className = 'status'; statusEl.textContent = '';
+  function renderGrid(){
+    grid.innerHTML = '';
+    grid.style.display = items.length ? 'grid' : 'none';
+    items.forEach(function(it, idx){
+      var cell = document.createElement('div');
+      cell.className = 'cell';
+      var img = document.createElement('img');
+      img.src = it.url;
+      cell.appendChild(img);
+      var del = document.createElement('div');
+      del.className = 'del';
+      del.textContent = '×';
+      del.onclick = function(){
+        URL.revokeObjectURL(it.url);
+        items.splice(idx, 1);
+        renderGrid();
+      };
+      cell.appendChild(del);
+      grid.appendChild(cell);
+    });
+    var totalKB = 0;
+    items.forEach(function(it){ totalKB += it.blob.size / 1024; });
+    info.textContent = items.length
+      ? ('已选 ' + items.length + '/' + MAX_PICK + ' 张，压缩后共约 ' + totalKB.toFixed(0) + ' KB')
+      : '';
+    sendBtn.disabled = items.length === 0;
+    sendBtn.textContent = items.length > 1 ? ('发送 ' + items.length + ' 张图片到电脑') : '发送图片到电脑';
+  }
+
+  // 压缩单个文件为 blob（canvas 缩放 + JPEG 压缩）
+  function compressFile(f, done, fail){
     var reader = new FileReader();
     reader.onload = function(){
       var img = new Image();
@@ -210,48 +247,103 @@ function uploadPageHtml() {
         var ctx = canvas.getContext('2d');
         ctx.drawImage(img, 0, 0, cw, ch);
         canvas.toBlob(function(blob){
-          lastBlob = blob; lastMime = blob.type || 'image/jpeg';
-          preview.src = URL.createObjectURL(blob);
-          preview.style.display = 'block';
-          info.textContent = '尺寸 ' + cw + '×' + ch + '，约 ' + (blob.size/1024).toFixed(0) + ' KB';
-          sendBtn.disabled = false;
+          if(blob){ done(blob); } else { fail(new Error('压缩失败')); }
         }, 'image/jpeg', QUALITY);
       };
-      img.onerror = function(){ statusEl.className = 'status err'; statusEl.textContent = '图片解析失败'; };
+      img.onerror = function(){ fail(new Error('图片解析失败')); };
       img.src = reader.result;
     };
+    reader.onerror = function(){ fail(new Error('读取文件失败')); };
     reader.readAsDataURL(f);
+  }
+
+  fileInput.addEventListener('change', function(e){
+    var files = Array.prototype.slice.call(e.target.files || []);
+    fileInput.value = ''; // 允许再次选同一批文件
+    if(!files.length){ return; }
+    var room = MAX_PICK - items.length;
+    if(room <= 0){
+      statusEl.className = 'status err';
+      statusEl.textContent = '最多只能选 ' + MAX_PICK + ' 张，请先删除部分再添加';
+      return;
+    }
+    var overflow = files.length > room;
+    files = files.slice(0, room);
+    statusEl.className = 'status';
+    statusEl.textContent = '处理中…（0/' + files.length + '）';
+    var doneCount = 0, failCount = 0;
+    files.forEach(function(f){
+      compressFile(f, function(blob){
+        items.push({ blob: blob, name: f.name || 'image.jpg', mime: blob.type || 'image/jpeg', url: URL.createObjectURL(blob) });
+        doneCount++;
+        statusEl.textContent = '处理中…（' + (doneCount + failCount) + '/' + files.length + '）';
+        if(doneCount + failCount === files.length){ finishPick(); }
+      }, function(err){
+        failCount++;
+        if(doneCount + failCount === files.length){ finishPick(); }
+      });
+    });
+    function finishPick(){
+      renderGrid();
+      var msg = '';
+      if(failCount){ msg += failCount + ' 张处理失败已跳过；'; }
+      if(overflow){ msg += '超出 ' + MAX_PICK + ' 张上限，多余的已忽略；'; }
+      statusEl.className = failCount ? 'status err' : 'status';
+      statusEl.textContent = msg;
+    }
   });
 
   document.getElementById('pick').addEventListener('click', function(){ fileInput.click(); });
 
-  sendBtn.addEventListener('click', function(){
-    if(!lastBlob){ return; }
-    sendBtn.disabled = true;
-    statusEl.className = 'status'; statusEl.textContent = '发送中…';
+  // 逐张顺序发送（一张成功再发下一张，保证到达顺序；失败即停，剩余保留可重试）
+  function blobToB64(blob, done, fail){
     var fr = new FileReader();
-    fr.onload = function(){
-      var b64 = fr.result.split(',')[1];
-      fetch(window.location.pathname, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: lastName, mime: lastMime, data: b64 })
-      }).then(function(r){ return r.json(); }).then(function(j){
-        if(j && j.ok){
-          statusEl.textContent = '✅ 已发送到电脑，请在电脑端点击“复制到剪贴板”';
-          sendBtn.textContent = '再发一张'; sendBtn.disabled = false;
-        } else {
+    fr.onload = function(){ done(fr.result.split(',')[1]); };
+    fr.onerror = function(){ fail(new Error('读取图片失败')); };
+    fr.readAsDataURL(blob);
+  }
+
+  sendBtn.addEventListener('click', function(){
+    if(!items.length){ return; }
+    sendBtn.disabled = true;
+    var total = items.length, sent = 0;
+    statusEl.className = 'status';
+    function sendNext(){
+      if(!items.length){
+        statusEl.textContent = '✅ ' + total + ' 张已全部发送到电脑，请在电脑端接收';
+        renderGrid();
+        return;
+      }
+      var it = items[0];
+      statusEl.textContent = '发送中…（' + (sent + 1) + '/' + total + '）';
+      blobToB64(it.blob, function(b64){
+        fetch(window.location.pathname, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: it.name, mime: it.mime, data: b64 })
+        }).then(function(r){ return r.json(); }).then(function(j){
+          if(j && j.ok){
+            URL.revokeObjectURL(it.url);
+            items.shift();
+            sent++;
+            sendNext();
+          } else {
+            statusEl.className = 'status err';
+            statusEl.textContent = '第 ' + (sent + 1) + ' 张发送失败：' + ((j && j.error) || '未知错误') + '，已发 ' + sent + '/' + total + '，可点按钮重试剩余';
+            renderGrid();
+          }
+        }).catch(function(err){
           statusEl.className = 'status err';
-          statusEl.textContent = '发送失败：' + ((j && j.error) || '未知错误');
-          sendBtn.disabled = false;
-        }
-      }).catch(function(err){
+          statusEl.textContent = '第 ' + (sent + 1) + ' 张发送失败：' + err.message + '，已发 ' + sent + '/' + total + '，可点按钮重试剩余';
+          renderGrid();
+        });
+      }, function(err){
         statusEl.className = 'status err';
-        statusEl.textContent = '发送失败：' + err.message;
-        sendBtn.disabled = false;
+        statusEl.textContent = err.message;
+        renderGrid();
       });
-    };
-    fr.readAsDataURL(lastBlob);
+    }
+    sendNext();
   });
 
   // 发送文本到电脑
@@ -451,9 +543,16 @@ const server = http.createServer(async (req, res) => {
         } else {
           sendJson(res, 400, { error: 'missing data or text' }); return;
         }
-        pending.set(uuid, item);
+        // 入队（FIFO）：支持手机端多选连发；超出 MAX_QUEUE 丢弃最旧一条
+        if (!pending.has(uuid)) pending.set(uuid, []);
+        const q = pending.get(uuid);
+        q.push(item);
+        if (q.length > MAX_QUEUE) {
+          const dropped = q.shift();
+          logEvent(`[丢弃] 设备 ${uuid} 暂存队列已满（>${MAX_QUEUE}），丢弃最旧条目（${dropped.type}）`);
+        }
         if (item.type === 'image') {
-          logEvent(`[发送] 设备 ${uuid} 手机端发送图片：${item.name}（${item.mime}，约 ${b64SizeKB(item.data)}KB）`);
+          logEvent(`[发送] 设备 ${uuid} 手机端发送图片：${item.name}（${item.mime}，约 ${b64SizeKB(item.data)}KB），队列 ${q.length} 条`);
         } else {
           logEvent(`[发送] 设备 ${uuid} 手机端发送文本：${previewText(item.text)}`);
         }
@@ -486,12 +585,13 @@ const server = http.createServer(async (req, res) => {
       req.on('close', () => { closed = true; removeFromWaiting(); });
       const tick = () => {
         if (closed || res.writableEnded) { removeFromWaiting(); return; } // 连接已失效/已结束，放弃本轮（不再调度、不再写入）
-        const p = pending.get(uuid);
-        if (p && (Date.now() - p.ts) < PENDING_TTL) {
-          deliverToAll(uuid); // 广播给本 uuid 的所有等待连接（含本次），再清空
-          return;
+        const q = pending.get(uuid);
+        if (q && q.length) {
+          // 清掉队头过期条目后若仍有货，投递一条给所有等待连接（含本次）
+          while (q.length && (Date.now() - q[0].ts) >= PENDING_TTL) q.shift();
+          if (q.length) { deliverToAll(uuid); return; }
+          pending.delete(uuid); // 全部过期，清空
         }
-        if (p) pending.delete(uuid); // 过期图片丢弃
         if (Date.now() - start > maxwait) {
           try { sendJson(res, 200, { empty: true }); } catch (e) { /* 已断开，忽略 */ }
           removeFromWaiting();

@@ -1,6 +1,6 @@
 {
   "name": "znhd-image-relay",
-  "version": "26.7.28-v3",
+  "version": "26.7.28-v4",
   "description": "征纳互动脚本配套：手机图片 → 电脑剪贴板 中继服务（纯 Node 内置 http，零依赖）",
   "main": "server.js",
   "scripts": {
