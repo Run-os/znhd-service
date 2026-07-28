@@ -42,20 +42,24 @@ jobs:
           port: ${{ secrets.PORT }}               # SSH 端口，默认 22；非 22 时配置该 Secret
           script: |
             set -e
-            # 1) 拉取最新代码（宿主机上的仓库克隆）
-            cd "$DEPLOY_PATH" 2>/dev/null || { echo "❌ DEPLOY_PATH=$DEPLOY_PATH 不存在，请先在服务器克隆整个仓库到此处"; exit 1; }
-            if [ ! -d .git ]; then
-              echo "❌ $DEPLOY_PATH 不是 git 仓库。该目录已存在（含正在运行的 relay-server 挂载源），请就地初始化："
-              echo "   cd $DEPLOY_PATH"
-              echo "   git init -q && git remote add origin git@github.com:Run-os/znhd-service.git"
-              echo "   git fetch origin && git checkout -f -B main origin/main"
-              echo "   （私有库需先配置 Deploy Key：把服务器 ~/.ssh/id_ed25519.pub 加到 GitHub 仓库 Deploy keys，"
-              echo "    并执行 ssh-keyscan github.com >> ~/.ssh/known_hosts）"
-              exit 1
-            fi
+            # 1) 同步代码（首次自动就地初始化 git 仓库，无需手动 SSH）
+            cd "$DEPLOY_PATH" 2>/dev/null || { echo "❌ DEPLOY_PATH=$DEPLOY_PATH 不存在，请先在服务器创建该目录"; exit 1; }
             git config --global --add safe.directory "$(pwd)"
-            git fetch origin main
-            git reset --hard origin/main
+
+            # 首次部署：若目录不是 git 仓库（或没有 origin 远端），则就地初始化并绑定
+            # （该目录已存在、内含正在运行的 relay-server 挂载源，故用 init 而非 clone，不破坏现有文件）
+            if [ ! -d .git ]; then
+              echo "ℹ️ 首次部署：$DEPLOY_PATH 不是 git 仓库，自动就地初始化..."
+              git init -q
+              git remote add origin "git@github.com:Run-os/znhd-service.git"
+            elif ! git remote get-url origin >/dev/null 2>&1; then
+              echo "ℹ️ 未发现 origin 远端，重新绑定..."
+              git remote add origin "git@github.com:Run-os/znhd-service.git"
+            fi
+
+            # 拉取并强制同步到 origin/main（会覆盖本地文件，即更新被挂载的 /app）
+            git fetch origin
+            git checkout -f -B main origin/main
             echo "✅ 代码已同步到最新提交: $(git rev-parse --short HEAD)"
 
             # 2) 找到运行 relay 的 1panel/node 容器
