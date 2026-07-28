@@ -29,7 +29,7 @@ const UUID_RE = /^[a-z0-9-]{8,64}$/i;
 
 // deviceId -> Array<{ type, name?, mime?, data?, text?, ts }> 待电脑端取走的条目队列（FIFO）
 // 队列化以支持手机端一次多选发送多张图（旧实现是单槽，连发会互相覆盖丢图）
-const MAX_QUEUE = 9; // 每设备最多暂存条目数（与手机页多选上限一致），超出丢弃最旧
+const MAX_QUEUE = 100; // 每设备最多暂存条目数（内存保护上限；手机端选图张数已不限制），超出丢弃最旧
 const pending = new Map();
 // deviceId -> Set<res> 当前正在等待长轮询的电脑端连接（用于「广播」：一张图同时发给所有在等的接收端）
 const waiting = new Map();
@@ -38,7 +38,8 @@ const waiting = new Map();
 const PHONE_TTL = 20 * 1000;       // 手机在线判定：超过该时长无心跳视为离线（心跳 8s 一次）
 // deviceId -> lastSeen(ms) 手机最近一次心跳时间
 const phoneOnline = new Map();
-// deviceId -> { type:'image'|'text', text?, name?, mime?, data?, ts } 电脑发来、待手机取的条目
+// deviceId -> Array<{ type:'image'|'text', text?, name?, mime?, data?, ts }> 电脑发来、待手机取的条目队列（FIFO）
+// 队列化以支持电脑端多选图片连发（旧实现是单槽，连发会互相覆盖丢图）
 const phonePending = new Map();
 // deviceId -> Set<res> 当前正在长轮询收件的手机连接
 const phoneWaiting = new Map();
@@ -108,18 +109,23 @@ function deliverToAll(uuid) {
 // 与 deliverToAll 对称，作用于反向通道的 phonePending/phoneWaiting。
 // 若当前无手机在等：保留 phonePending（不删），等下一个连上的轮询来取，绝不会漏。
 function deliverToPhone(uuid) {
-  const p = phonePending.get(uuid);
-  if (!p || (Date.now() - p.ts) >= PENDING_TTL) { phonePending.delete(uuid); return; }
+  const q = phonePending.get(uuid);
+  if (!q || q.length === 0) { phonePending.delete(uuid); return; }
+  // 丢弃队头已过期的条目
+  while (q.length && (Date.now() - q[0].ts) >= PENDING_TTL) q.shift();
+  if (q.length === 0) { phonePending.delete(uuid); return; }
   const set = phoneWaiting.get(uuid);
-  if (!set || set.size === 0) return; // 当前无等待连接：保留条目，等下个连接
+  if (!set || set.size === 0) return; // 当前无等待连接：保留队列，等下个连接
+  // 每次只投递队头一条（长轮询协议每个响应回一条）；手机端收到后会立刻重新轮询取下一条
+  const p = q.shift();
+  if (q.length === 0) phonePending.delete(uuid);
   const targets = Array.from(set);
-  phonePending.delete(uuid);
   phoneWaiting.delete(uuid);
   for (const r of targets) {
     try { sendJson(r, 200, p); }
     catch (e) { /* 已断开的连接，忽略 */ }
   }
-  logEvent(`[投递] 设备 ${uuid} 已向 ${targets.length} 个手机端接收端投递条目（${p.type}）`);
+  logEvent(`[投递] 设备 ${uuid} 已向 ${targets.length} 个手机端接收端投递条目（${p.type}）${q.length ? `，队列剩余 ${q.length} 条` : ''}`);
 }
 
 function readBody(req) {
@@ -181,7 +187,7 @@ function uploadPageHtml() {
   <p class="tip">选择/拍摄图片自动压缩后发送，或直接输入文本发送到电脑剪贴板。</p>
   <div id="conn" class="conn">正在连接…</div>
   <div id="devid" class="devid"></div>
-  <label id="pick">点击选择图片 / 拍照（可多选，最多 9 张）</label>
+  <label id="pick">点击选择图片 / 拍照（可多选）</label>
   <input id="file" type="file" accept="image/*" multiple style="display:none">
   <div id="grid"></div>
   <div id="info"></div>
@@ -195,7 +201,7 @@ function uploadPageHtml() {
 
 <script>
 (function(){
-  var MAX_DIM = 1600, QUALITY = 0.75, MAX_PICK = 9;
+  var MAX_DIM = 1600, QUALITY = 0.75;
   var fileInput = document.getElementById('file');
   var grid = document.getElementById('grid');
   var info = document.getElementById('info');
@@ -227,14 +233,22 @@ function uploadPageHtml() {
     var totalKB = 0;
     items.forEach(function(it){ totalKB += it.blob.size / 1024; });
     info.textContent = items.length
-      ? ('已选 ' + items.length + '/' + MAX_PICK + ' 张，压缩后共约 ' + totalKB.toFixed(0) + ' KB')
+      ? ('已选 ' + items.length + ' 张，共约 ' + totalKB.toFixed(0) + ' KB')
       : '';
     sendBtn.disabled = items.length === 0;
     sendBtn.textContent = items.length > 1 ? ('发送 ' + items.length + ' 张图片到电脑') : '发送图片到电脑';
   }
 
   // 压缩单个文件为 blob（canvas 缩放 + JPEG 压缩）
+  // SVG 例外：canvas 无法可靠光栅化 SVG（无固有尺寸时画布为 0、部分 WebView 直接 onerror），
+  // 且压成 JPEG 会丢失矢量特性——故 SVG 跳过压缩，原样直传（修正 mime 为 image/svg+xml）。
   function compressFile(f, done, fail){
+    var isSvg = (f.type === 'image/svg+xml') || /\\.svg$/i.test(f.name || '');
+    if(isSvg){
+      var svgBlob = (f.type === 'image/svg+xml') ? f : f.slice(0, f.size, 'image/svg+xml');
+      done(svgBlob);
+      return;
+    }
     var reader = new FileReader();
     reader.onload = function(){
       var img = new Image();
@@ -261,14 +275,6 @@ function uploadPageHtml() {
     var files = Array.prototype.slice.call(e.target.files || []);
     fileInput.value = ''; // 允许再次选同一批文件
     if(!files.length){ return; }
-    var room = MAX_PICK - items.length;
-    if(room <= 0){
-      statusEl.className = 'status err';
-      statusEl.textContent = '最多只能选 ' + MAX_PICK + ' 张，请先删除部分再添加';
-      return;
-    }
-    var overflow = files.length > room;
-    files = files.slice(0, room);
     statusEl.className = 'status';
     statusEl.textContent = '处理中…（0/' + files.length + '）';
     var doneCount = 0, failCount = 0;
@@ -285,9 +291,7 @@ function uploadPageHtml() {
     });
     function finishPick(){
       renderGrid();
-      var msg = '';
-      if(failCount){ msg += failCount + ' 张处理失败已跳过；'; }
-      if(overflow){ msg += '超出 ' + MAX_PICK + ' 张上限，多余的已忽略；'; }
+      var msg = failCount ? (failCount + ' 张处理失败已跳过；') : '';
       statusEl.className = failCount ? 'status err' : 'status';
       statusEl.textContent = msg;
     }
@@ -651,9 +655,16 @@ const server = http.createServer(async (req, res) => {
       } else {
         sendJson(res, 400, { error: 'missing data or text' }); return;
       }
-      phonePending.set(uuid, item);
+      // 入队（FIFO）：支持电脑端多选连发；超出 MAX_QUEUE 丢弃最旧一条
+      if (!phonePending.has(uuid)) phonePending.set(uuid, []);
+      const pq = phonePending.get(uuid);
+      pq.push(item);
+      if (pq.length > MAX_QUEUE) {
+        const dropped = pq.shift();
+        logEvent(`[丢弃] 设备 ${uuid} 手机收件队列已满（>${MAX_QUEUE}），丢弃最旧条目（${dropped.type}）`);
+      }
       if (item.type === 'image') {
-        logEvent(`[发送] 设备 ${uuid} 电脑端发送图片到手机：${item.name}（${item.mime}，约 ${b64SizeKB(item.data)}KB）`);
+        logEvent(`[发送] 设备 ${uuid} 电脑端发送图片到手机：${item.name}（${item.mime}，约 ${b64SizeKB(item.data)}KB），队列 ${pq.length} 条`);
       } else {
         logEvent(`[发送] 设备 ${uuid} 电脑端发送文本到手机：${previewText(item.text)}`);
       }
@@ -680,12 +691,13 @@ const server = http.createServer(async (req, res) => {
       req.on('close', () => { closed = true; removeFromWaiting(); });
       const tick = () => {
         if (closed || res.writableEnded) { removeFromWaiting(); return; }
-        const p = phonePending.get(uuid);
-        if (p && (Date.now() - p.ts) < PENDING_TTL) {
-          deliverToPhone(uuid); // 广播给本 uuid 的所有等待手机连接，再清空
-          return;
+        const q = phonePending.get(uuid);
+        if (q && q.length) {
+          // 清掉队头过期条目后若仍有货，投递一条给所有等待连接（含本次）
+          while (q.length && (Date.now() - q[0].ts) >= PENDING_TTL) q.shift();
+          if (q.length) { deliverToPhone(uuid); return; }
+          phonePending.delete(uuid); // 全部过期，清空
         }
-        if (p) phonePending.delete(uuid); // 过期条目丢弃
         if (Date.now() - start > maxwait) {
           try { sendJson(res, 200, { empty: true }); } catch (e) { /* 已断开，忽略 */ }
           removeFromWaiting();

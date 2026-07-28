@@ -2,7 +2,7 @@
 // @name           征纳互动人数和在线监控v2
 // @namespace      https://scriptcat.org/
 // @description    实时监控征纳互动等待人数和在线状态，支持语音播报、自定义常用语
-// @version        26.7.27-v1
+// @version        26.7.28-v3
 // @author         runos
 // @match          https://znhd.hunan.chinatax.gov.cn:8443/*
 // @match          https://example.com/*
@@ -14,6 +14,7 @@
 // @grant          GM_notification
 // @grant          GM_getValue
 // @grant          GM_setValue
+// @grant          GM_getResourceText
 // @connect        *
 // @connect        znhd-service.zeabur.app
 // @homepageURL    https://scriptcat.org/zh-CN/script-show-page/3650
@@ -23,6 +24,8 @@
 // @require        https://cdn.jsdelivr.net/npm/@fingerprintjs/fingerprintjs@5/dist/fp.min.js
 // @require        https://cdn.jsdelivr.net/npm/js-yaml@4.1.0/dist/js-yaml.min.js
 // @require        https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js
+// @require        https://cdn.jsdelivr.net/npm/viewerjs/dist/viewer.min.js
+// @resource       VIEWER_CSS https://cdn.jsdelivr.net/npm/viewerjs/dist/viewer.min.css
 // ==/UserScript==
 
 (function () {
@@ -1666,67 +1669,203 @@
         });
     }
 
-    // 收到手机图片时，在网页正中弹出预览弹窗（直接挂到 document.body，不受 CAT_UI 面板 transform 影响）
-    // 弹窗含：右上角关闭按钮、底部「复制到剪贴板」按钮（点击手势触发，满足浏览器剪贴板策略）
+    // ========== 收到图片：九宫格画廊弹窗（Viewer.js 放大查看） ==========
+    // 收到的图片累积进 receivedImages 列表，以 3 列九宫格缩略图展示（直接挂 document.documentElement，
+    // 不受 CAT_UI 面板 transform 影响）。单击缩略图用 Viewer.js 放大（缩放/旋转/多图左右切换），
+    // 每张图下方有「复制」按钮（点击手势触发，满足浏览器剪贴板策略）和右上角 × 移除。
+    const MAX_GALLERY = 27; // 画廊最多保留张数，超出丢最旧（释放其 objectURL）
+    const receivedImages = []; // { blob, previewUrl, name, mime, ts }
+    let galleryViewer = null;  // Viewer.js 实例（重建画廊时先销毁）
+    let viewerCssInjected = false;
+
+    // 注入 Viewer.js 的 CSS：优先 @resource（GM_getResourceText），失败回退 CDN <link>
+    function ensureViewerCss() {
+        if (viewerCssInjected) return;
+        let baseInjected = false;
+        try {
+            const css = (typeof GM_getResourceText === 'function') ? GM_getResourceText('VIEWER_CSS') : '';
+            if (css) { GM_addStyle(css); baseInjected = true; }
+        } catch (e) { /* 继续走 link 回退 */ }
+        if (!baseInjected) {
+            const link = document.createElement('link');
+            link.rel = 'stylesheet';
+            link.href = 'https://cdn.jsdelivr.net/npm/viewerjs/dist/viewer.min.css';
+            (document.head || document.documentElement).appendChild(link);
+        }
+        // 覆盖样式：Viewer.js 默认遮罩是半透明黑（rgba(0,0,0,0.5)），放大时会透出后面的画廊弹窗；
+        // 改为纯黑不透明，彻底遮住背景（!important 保证无论加载顺序都生效）
+        GM_addStyle('.viewer-backdrop{background-color:#000 !important;}' +
+                    '.viewer-container{background-color:#000 !important;}');
+        viewerCssInjected = true;
+    }
+
+    /**
+     * 生成下载文件名：优先原始文件名；无名或无扩展名时按 mime 补扩展名。
+     * @param {string} name - 原始文件名（可空）
+     * @param {string} mime - MIME 类型
+     * @param {number} idx - 画廊序号（用于兜底命名）
+     * @returns {string} 带扩展名的文件名
+     */
+    function downloadFileName(name, mime, idx) {
+        const extByMime = {
+            'image/jpeg': '.jpg', 'image/png': '.png', 'image/gif': '.gif',
+            'image/webp': '.webp', 'image/svg+xml': '.svg', 'image/bmp': '.bmp'
+        };
+        let n = String(name || '').trim();
+        if (!n) n = 'znhd-image-' + (idx + 1);
+        if (!/\.[a-z0-9]{2,5}$/i.test(n)) n += (extByMime[(mime || '').toLowerCase()] || '.jpg');
+        return n;
+    }
+
+    // 对外入口（poll 回调调用）：新图入列并打开/刷新画廊弹窗
     function showImagePopup(img) {
-        closeImagePopup();
+        img.ts = Date.now();
+        receivedImages.push(img);
+        while (receivedImages.length > MAX_GALLERY) {
+            const old = receivedImages.shift();
+            try { URL.revokeObjectURL(old.previewUrl); } catch (e) { /* 忽略 */ }
+        }
+        renderImageGallery();
+    }
+
+    function removeGalleryImage(idx) {
+        const it = receivedImages.splice(idx, 1)[0];
+        if (it) { try { URL.revokeObjectURL(it.previewUrl); } catch (e) { /* 忽略 */ } }
+        if (receivedImages.length === 0) closeImagePopup();
+        else renderImageGallery();
+    }
+
+    function renderImageGallery() {
+        closeImagePopup(); // 重建（销毁旧 Viewer 实例与旧 DOM）
+        ensureViewerCss();
         const overlay = document.createElement('div');
         overlay.id = '__znhd_img_popup__';
         // 所有样式加 !important + 铺满 100vw/vh，隔绝任何外部 CSS（含扩展/页面）对弹窗的覆盖
-        overlay.style.cssText = 'position:fixed!important;top:0!important;left:0!important;right:0!important;bottom:0!important;width:100vw!important;height:100vh!important;z-index:2147483647!important;display:flex!important;align-items:center!important;justify-content:center!important;background:rgba(0,0,0,0.55)!important;opacity:1!important;font-family:sans-serif!important;';
+        overlay.style.cssText = 'position:fixed!important;top:0!important;left:0!important;right:0!important;bottom:0!important;width:100vw!important;height:100vh!important;z-index:2147483640!important;display:flex!important;align-items:center!important;justify-content:center!important;background:rgba(0,0,0,0.55)!important;opacity:1!important;font-family:sans-serif!important;';
         const box = document.createElement('div');
-        box.style.cssText = 'position:relative!important;max-width:90vw!important;max-height:90vh!important;background:#fff!important;opacity:1!important;border-radius:12px!important;padding:16px!important;box-shadow:0 8px 30px rgba(0,0,0,0.35)!important;display:flex!important;flex-direction:column!important;align-items:center!important;';
-        const imgEl = document.createElement('img');
-        imgEl.src = img.previewUrl;
-        imgEl.style.cssText = 'max-width:80vw!important;max-height:60vh!important;border-radius:8px!important;object-fit:contain!important;display:block!important;';
+        box.style.cssText = 'position:relative!important;width:min(560px,92vw)!important;max-height:88vh!important;background:#fff!important;opacity:1!important;border-radius:12px!important;padding:16px!important;box-shadow:0 8px 30px rgba(0,0,0,0.35)!important;display:flex!important;flex-direction:column!important;';
+        // 标题
+        const title = document.createElement('div');
+        title.textContent = '收到的图片（' + receivedImages.length + '）· 单击放大';
+        title.style.cssText = 'font-size:15px!important;font-weight:bold!important;color:#333!important;margin:0 0 10px 2px!important;';
+        // 右上角关闭
         const close = document.createElement('div');
         close.textContent = '×';
-        close.title = '关闭';
+        close.title = '关闭（图片保留，收到新图会再次弹出）';
         close.style.cssText = 'position:absolute!important;top:8px!important;right:10px!important;width:30px!important;height:30px!important;line-height:28px!important;text-align:center!important;font-size:22px!important;color:#fff!important;cursor:pointer!important;border-radius:50%!important;background:#e4393c!important;opacity:1!important;box-shadow:0 1px 4px rgba(0,0,0,0.3)!important;font-weight:bold!important;';
         close.onmouseenter = () => { close.style.background = '#c9302c'; };
         close.onmouseleave = () => { close.style.background = '#e4393c'; };
-        const copyBtn = document.createElement('button');
-        copyBtn.textContent = '复制到剪贴板';
-        copyBtn.style.cssText = 'margin-top:14px!important;padding:8px 18px!important;border:none!important;border-radius:8px!important;background:#1890ff!important;color:#fff!important;font-size:14px!important;opacity:1!important;cursor:pointer!important;';
-        copyBtn.onclick = () => {
-            copyImageToClipboard(img.blob).then(ok => {
-                if (ok) {
-                    copyBtn.textContent = '复制成功';
-                    copyBtn.style.background = '#52c41a';
-                    addLog('图片已复制到剪贴板: ' + (img.name || ''), 'success');
-                } else {
-                    copyBtn.textContent = '复制失败，请长按图片保存';
-                    copyBtn.style.background = '#e4393c';
-                }
-            });
-        };
         close.onclick = () => closeImagePopup();
-        overlay.onclick = (e) => { if (e.target === overlay) closeImagePopup(); };
+        // 九宫格容器（3 列，可滚动）
+        const grid = document.createElement('div');
+        grid.id = '__znhd_img_grid__';
+        grid.style.cssText = 'display:grid!important;grid-template-columns:repeat(3,1fr)!important;gap:10px!important;overflow-y:auto!important;padding:2px!important;max-height:60vh!important;';
+        receivedImages.forEach((it, idx) => {
+            const cell = document.createElement('div');
+            cell.style.cssText = 'position:relative!important;display:flex!important;flex-direction:column!important;';
+            const thumbWrap = document.createElement('div');
+            thumbWrap.style.cssText = 'position:relative!important;width:100%!important;aspect-ratio:1/1!important;border-radius:8px!important;overflow:hidden!important;background:#f2f2f2!important;cursor:zoom-in!important;';
+            const imgEl = document.createElement('img');
+            imgEl.src = it.previewUrl;
+            imgEl.alt = it.name || ('image-' + (idx + 1));
+            imgEl.style.cssText = 'width:100%!important;height:100%!important;object-fit:cover!important;display:block!important;';
+            thumbWrap.appendChild(imgEl);
+            // 单张移除 ×
+            const del = document.createElement('div');
+            del.textContent = '×';
+            del.title = '移除这张';
+            del.style.cssText = 'position:absolute!important;top:4px!important;right:4px!important;width:20px!important;height:20px!important;line-height:18px!important;text-align:center!important;font-size:14px!important;color:#fff!important;cursor:pointer!important;border-radius:50%!important;background:rgba(0,0,0,0.55)!important;font-weight:bold!important;z-index:2!important;';
+            del.onclick = (e) => { e.stopPropagation(); removeGalleryImage(idx); };
+            thumbWrap.appendChild(del);
+            // 按钮行：复制（写剪贴板）+ 下载（存为文件）
+            const btnRow = document.createElement('div');
+            btnRow.style.cssText = 'display:flex!important;gap:4px!important;margin-top:6px!important;';
+            const copyBtn = document.createElement('button');
+            copyBtn.textContent = '复制';
+            copyBtn.style.cssText = 'flex:1!important;padding:4px 0!important;border:none!important;border-radius:6px!important;background:#1890ff!important;color:#fff!important;font-size:12px!important;opacity:1!important;cursor:pointer!important;';
+            copyBtn.onclick = (e) => {
+                e.stopPropagation();
+                copyBtn.textContent = '复制中…'; copyBtn.disabled = true;
+                copyImageToClipboard(it.blob).then(ok => {
+                    copyBtn.disabled = false;
+                    if (ok) {
+                        copyBtn.textContent = '✓ 已复制';
+                        copyBtn.style.background = '#52c41a';
+                        addLog('图片已复制到剪贴板: ' + (it.name || ''), 'success');
+                    } else {
+                        copyBtn.textContent = '复制失败';
+                        copyBtn.style.background = '#e4393c';
+                    }
+                });
+            };
+            const dlBtn = document.createElement('button');
+            dlBtn.textContent = '下载';
+            dlBtn.style.cssText = 'flex:1!important;padding:4px 0!important;border:none!important;border-radius:6px!important;background:#722ed1!important;color:#fff!important;font-size:12px!important;opacity:1!important;cursor:pointer!important;';
+            dlBtn.onclick = (e) => {
+                e.stopPropagation();
+                try {
+                    const fname = downloadFileName(it.name, it.mime, idx);
+                    const a = document.createElement('a');
+                    const url = URL.createObjectURL(it.blob);
+                    a.href = url; a.download = fname; a.style.display = 'none';
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                    setTimeout(() => { try { URL.revokeObjectURL(url); } catch (e2) { /* 忽略 */ } }, 3000);
+                    dlBtn.textContent = '✓ 已下载';
+                    dlBtn.style.background = '#52c41a';
+                    addLog('图片已下载: ' + fname, 'success');
+                } catch (err) {
+                    dlBtn.textContent = '下载失败';
+                    dlBtn.style.background = '#e4393c';
+                    addLog('[下载] 失败：' + err.message, 'error', true);
+                }
+            };
+            btnRow.appendChild(copyBtn);
+            btnRow.appendChild(dlBtn);
+            cell.appendChild(thumbWrap);
+            cell.appendChild(btnRow);
+            grid.appendChild(cell);
+        });
+        // 底部操作条
+        const bar = document.createElement('div');
+        bar.style.cssText = 'display:flex!important;justify-content:center!important;gap:12px!important;margin-top:12px!important;';
+        const clearBtn = document.createElement('button');
+        clearBtn.textContent = '清空全部';
+        clearBtn.style.cssText = 'padding:7px 18px!important;border:none!important;border-radius:8px!important;background:#999!important;color:#fff!important;font-size:13px!important;cursor:pointer!important;';
+        clearBtn.onclick = () => {
+            receivedImages.forEach(it => { try { URL.revokeObjectURL(it.previewUrl); } catch (e) { /* 忽略 */ } });
+            receivedImages.length = 0;
+            closeImagePopup();
+        };
+        bar.appendChild(clearBtn);
         box.appendChild(close);
-        box.appendChild(imgEl);
-        box.appendChild(copyBtn);
+        box.appendChild(title);
+        box.appendChild(grid);
+        box.appendChild(bar);
         overlay.appendChild(box);
-        document.documentElement.appendChild(overlay); // 挂到 <html> 而非 <body>：避开 body 级 transform/filter/will-change/contain 把 fixed 包含块改写到 body，导致遮罩偏移/不铺满（现代 SPA 常见）
-        // === v14 弹窗"仍透字"自动诊断（一锤定音）===
-        try {
-            const r = overlay.getBoundingClientRect();
-            const bg = getComputedStyle(overlay).backgroundColor;
-            // 关键指标：遮罩四边是否贴住视口（left/top≈0 且 right/bottom≈视口宽高）。
-            // 若祖先有 transform/filter/will-change/contain，fixed 的包含块会被改写，
-            // 遮罩虽 width=100vw 但 left 不再≈0 → 两侧露字（这正是本 bug 的签名）。
-            const coverFull = r.left <= 1 && r.top <= 1 && r.right >= innerWidth - 1 && r.bottom >= innerHeight - 1;
-            const cornerOk = document.elementsFromPoint(3, 3).indexOf(overlay) !== -1;
-            const cx = Math.round(r.left + r.width / 2), cy = Math.round(r.top + r.height / 2);
-            const stack = document.elementsFromPoint(cx, cy)
-                .map(el => (el.id ? '#' + el.id : el.tagName.toLowerCase()) + (el.className && typeof el.className === 'string' ? '.' + el.className.trim().split(/\s+/)[0] : ''));
-            console.log('[znhd弹窗诊断] 视口=' + innerWidth + 'x' + innerHeight + ' 遮罩rect={l:' + Math.round(r.left) + ',t:' + Math.round(r.top) + ',r:' + Math.round(r.right) + ',b:' + Math.round(r.bottom) + '} 背景=' + bg + ' 铺满=' + coverFull + ' 左上角被盖=' + cornerOk);
-            if (!coverFull) console.warn('[znhd弹窗诊断] ⚠ 遮罩未铺满视口（left/top 未贴边），疑祖先 transform/filter/will-change/contain 改写 fixed 包含块：rect=', Math.round(r.left) + ',' + Math.round(r.top) + ',' + Math.round(r.right) + ',' + Math.round(r.bottom));
-            else if (bg !== 'rgb(0, 0, 0)') console.warn('[znhd弹窗诊断] ⚠ 遮罩背景不是纯黑（被外部样式覆盖）：', bg);
-            else if (!cornerOk) console.warn('[znhd弹窗诊断] ⚠ 视口左上角未被遮罩覆盖，存在更上层元素遮挡');
-            else console.log('[znhd弹窗诊断] ✅ 纯黑铺满且无遮挡，此环境下弹窗应不透明；若仍见文字请截图发我');
-        } catch (e) { console.log('[znhd弹窗诊断] 执行失败: ' + e.message); }
+        overlay.onclick = (e) => { if (e.target === overlay) closeImagePopup(); };
+        document.documentElement.appendChild(overlay); // 挂到 <html> 而非 <body>：避开 body 级 transform/filter 改写 fixed 包含块
+        // 用 Viewer.js 绑定画廊：单击缩略图放大，多图可左右切换
+        if (typeof Viewer === 'function') {
+            try {
+                galleryViewer = new Viewer(grid, {
+                    zIndex: 2147483647,          // 盖住画廊遮罩（遮罩为 ...640）
+                    zoomRatio: 0.4,
+                    title: (image) => image.alt || '',
+                    toolbar: { zoomIn: 1, zoomOut: 1, oneToOne: 1, reset: 1, prev: 1, next: 1, rotateLeft: 1, rotateRight: 1, flipHorizontal: 1, flipVertical: 1 },
+                    filter(image) { return true; },
+                });
+            } catch (e) {
+                addLog('[手机传图] Viewer 初始化失败：' + e.message, 'error', true);
+            }
+        } else {
+            addLog('[手机传图] Viewer.js 未加载，单击放大不可用（缩略图仍可复制）', 'warning', true);
+        }
     }
+
     function closeImagePopup() {
+        if (galleryViewer) { try { galleryViewer.destroy(); } catch (e) { /* 忽略 */ } galleryViewer = null; }
         const ex = document.getElementById('__znhd_img_popup__');
         if (ex && ex.parentNode) ex.parentNode.removeChild(ex);
     }
@@ -2005,30 +2144,43 @@
         };
 
         // 发送图片到手机（文件选择器挂在 document.body 上的原生 input，规避 shadow DOM 挂载问题）
+        // 支持多选：逐张顺序发送（一张成功再发下一张，保证到达顺序；失败即停并提示进度）。
+        // 中继服务端手机收件通道已队列化（phonePending FIFO），连发不会互相覆盖。
         const doSendImage = () => {
             if (!phoneOnline) { addLog('[发送到手机] 当前无在线设备，无法发送', 'error', true); return; }
             const inp = document.createElement('input');
-            inp.type = 'file'; inp.accept = 'image/*'; inp.style.display = 'none';
+            inp.type = 'file'; inp.accept = 'image/*'; inp.multiple = true; inp.style.display = 'none';
             document.body.appendChild(inp);
             inp.onchange = () => {
-                const f = inp.files && inp.files[0];
+                const files = Array.prototype.slice.call(inp.files || []);
                 inp.remove();
-                if (!f) return;
-                addLog('[发送到手机] 正在读取图片：' + (f.name || 'image'), 'info');
-                const rd = new FileReader();
-                rd.onload = () => {
-                    const b64 = (rd.result || '').split(',')[1] || '';
-                    if (!b64) { addLog('[发送到手机] 图片读取失败', 'error', true); return; }
-                    setSending(true);
-                    sendToPhone({
-                        server: relayServer, uuid: deviceId,
-                        payload: { name: f.name || 'image.jpg', mime: f.type || 'image/jpeg', data: b64 },
-                        onOk: () => { addLog('[发送到手机] 图片已发送：' + (f.name || 'image'), 'success'); setSending(false); },
-                        onFail: (e) => { addLog('[发送到手机] 图片发送失败：' + e, 'error'); setSending(false); }
-                    });
+                if (!files.length) return;
+                setSending(true);
+                const total = files.length;
+                let sent = 0;
+                const sendNext = () => {
+                    if (sent >= total) {
+                        addLog('[发送到手机] ' + total + ' 张图片已全部发送', 'success');
+                        setSending(false);
+                        return;
+                    }
+                    const f = files[sent];
+                    addLog('[发送到手机] 正在发送（' + (sent + 1) + '/' + total + '）：' + (f.name || 'image'), 'info');
+                    const rd = new FileReader();
+                    rd.onload = () => {
+                        const b64 = (rd.result || '').split(',')[1] || '';
+                        if (!b64) { addLog('[发送到手机] 第 ' + (sent + 1) + ' 张读取失败，已停止（已发 ' + sent + '/' + total + '）', 'error', true); setSending(false); return; }
+                        sendToPhone({
+                            server: relayServer, uuid: deviceId,
+                            payload: { name: f.name || 'image.jpg', mime: f.type || 'image/jpeg', data: b64 },
+                            onOk: () => { sent++; sendNext(); },
+                            onFail: (e) => { addLog('[发送到手机] 第 ' + (sent + 1) + ' 张发送失败：' + e + '（已发 ' + sent + '/' + total + '）', 'error'); setSending(false); }
+                        });
+                    };
+                    rd.onerror = () => { addLog('[发送到手机] 第 ' + (sent + 1) + ' 张读取失败，已停止（已发 ' + sent + '/' + total + '）', 'error', true); setSending(false); };
+                    rd.readAsDataURL(f);
                 };
-                rd.onerror = () => { addLog('[发送到手机] 图片读取失败', 'error', true); };
-                rd.readAsDataURL(f);
+                sendNext();
             };
             inp.click();
         };
@@ -2082,7 +2234,7 @@
                         style: { whiteSpace: 'nowrap' }
                     })
                 ]),
-                CAT_UI.Button('选择图片发送', {
+                CAT_UI.Button('选择图片发送（可多选）', {
                     disabled: !phoneOnline || sending,
                     onClick: doSendImage,
                     style: { width: '100%' }
