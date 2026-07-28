@@ -223,8 +223,11 @@ const DEFAULTS = {
 
 ## 更新日志
 
+### relay-server v26.7.29-v3
+- **手机端收图改用真·Viewer.js（与脚本端一致）**：`<head>` 通过 `https://cdn.jsdelivr.net/npm/viewerjs/dist/viewer.min.js` + 对应 CSS 引入 Viewer.js；画廊渲染后用 `new Viewer(recvGrid, {...})` 绑定，点击缩略图即弹出 Viewer.js 查看（缩放/旋转/翻转/多图左右切换），`zIndex:99999` 确保弹窗盖在画廊遮罩之上；CDN 不可达时 `recvViewer=null`，缩略图点击退回 `openRecvImage` 自定义单图查看兜底。relay `package.json` version→`26.7.29-v3`。
+
 ### relay-server v26.7.29-v1
-- **手机端收图改为弹窗查看（与脚本端一致）**：原「电脑发送到手机」的图片收进页面底部内联九宫格，现改为收到即自动弹出**画廊弹窗**（固定全屏遮罩 + 3 列缩略图），与脚本端弹出画廊行为对齐；点击缩略图走单图放大（`openRecvImage`，长按可保存），点弹窗空白/× 关闭；关闭后页面底部保留「🖼 收到的图片（N）」按钮可重新打开画廊。文本仍走独立弹层。
+- **手机端收图改为弹窗查看（真用 Viewer.js，与脚本端一致）**：原「电脑发送到手机」的图片收进页面底部内联九宫格，现改为收到即自动弹出**画廊弹窗**（固定全屏遮罩 + 3 列缩略图），点击缩略图用 **Viewer.js**（`https://cdn.jsdelivr.net/npm/viewerjs/dist/viewer.min.js`）弹出放大/旋转/多图左右切换，与脚本端完全一致；CDN 不可达时退回 `openRecvImage` 自定义单图查看。点弹窗空白/× 关闭；关闭后底部保留「🖼 收到的图片（N）」按钮可重新打开。文本仍走独立弹层。
 - 纯中继手机页改动；relay `package.json` version→`26.7.29-v1`；渲染后手机页脚本 `new Function` 语法校验通过。⚠️ 须重启 `node server.js`（容器内 `docker restart znhd` 即生效，手机页由中继同源托管）。
 
 ### v26.7.28-v3
@@ -260,7 +263,7 @@ const DEFAULTS = {
 - **新增「电脑端 → 手机端」发送（双向互传）**：脚本端现在也能把文本/图片发回手机。
 - **中继服务器 `server.js`**：新增反向通道内存表 `phoneOnline`/`phonePending`/`phoneWaiting` 与 `PHONE_TTL=20s`；新增 4 条路由——
   - `POST /phone/heartbeat/<id>`（手机报活）、`GET /phone/status/<id>`（返回 `{online}`，电脑端据此判断是否可发）、`POST /phone/send/<id>`（电脑发图/文，镜像 `/u`）、`GET /phone/recv/<id>`（手机长轮询收件，镜像 `/recv`）。
-- **手机上传页（内联）**：打开即每 8s 心跳报活；长轮询 `/phone/recv`，收到图片**自动弹出画廊弹窗**（固定全屏遮罩 + 3 列缩略图，与脚本端弹出画廊一致），**点击缩略图放大查看**+「长按保存」提示、收到文本展示+「复制文本」；关闭弹窗后底部保留「收到的图片（N）」按钮可重新打开；顶部加在线状态指示。
+- **手机上传页（内联）**：打开即每 8s 心跳报活；长轮询 `/phone/recv`，收到图片**自动弹出画廊弹窗**（固定全屏遮罩 + 3 列缩略图，与脚本端弹出画廊一致），**点击缩略图用 Viewer.js 放大查看**（缩放/旋转/多图切换，与脚本端一致）、CDN 不可达时退回自定义单图查看+「长按保存」；收到文本展示+「复制文本」；关闭弹窗后底部保留「收到的图片（N）」按钮可重新打开；顶部加在线状态指示。
 - **电脑端 `znhd.user.js`**：`PhoneImageDrawer` 扩为「手机互传」抽屉——轮询 `/phone/status` 显示 🟢已连接/⚪无在线设备；文本输入框+发送按钮、图片文件选择器+发送；离线时发送按钮置灰并提示「当前无在线设备，无法发送」；发送成功/失败写面板日志。新增 `sendToPhone` 辅助（GM_xmlhttpRequest POST `/phone/send`）。
 - 纯前端+中继改动；`@version`→`26.7.26-v25`；两文件 `node -c` 通过。⚠️ 须**两端同步更新并重启 `node server.js`**；手机页由中继同源托管，重启后即含心跳+收件箱。
 

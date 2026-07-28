@@ -154,6 +154,7 @@ function uploadPageHtml() {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>上传到电脑</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/viewerjs/dist/viewer.min.css">
 <style>
   body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif;margin:0;padding:16px;background:#f5f5f5;color:#222}
   h2{font-size:18px;margin:0 0 4px}
@@ -194,6 +195,7 @@ function uploadPageHtml() {
   .recv .act{width:auto;padding:8px 18px;margin-top:12px}
   .recvclose{position:absolute;top:12px;right:14px;width:34px;height:34px;line-height:32px;text-align:center;font-size:24px;color:#fff;background:rgba(255,255,255,0.2);border-radius:50%;cursor:pointer}
 </style>
+<script src="https://cdn.jsdelivr.net/npm/viewerjs/dist/viewer.min.js"></script>
 </head>
 <body>
   <h2>📷 上传到电脑<span class="ver">v${VERSION}</span></h2>
@@ -232,6 +234,7 @@ function uploadPageHtml() {
   var recvGrid = document.getElementById('recvGrid');
   var recvPopup = document.getElementById('recvPopup');
   var recvBtn = document.getElementById('recvBtn');
+  var recvViewer = null;  // Viewer.js 实例（CDN 未加载时为 null，退回自定义单图查看）
 
   function renderGrid(){
     grid.innerHTML = '';
@@ -465,9 +468,12 @@ function uploadPageHtml() {
       idxEl.className = 'idx';
       idxEl.textContent = (idx + 1);
       cell.appendChild(idxEl);
-      cell.onclick = function(){ openRecvImage(it); };
+      // Viewer.js 已加载时，缩略图点击由 Viewer 接管（弹出放大/旋转/多图切换）；
+      // 未加载（CDN 不可达）时退回自定义单图查看
+      if (!recvViewer) cell.onclick = function(){ openRecvImage(it); };
       recvGrid.appendChild(cell);
     });
+    initRecvViewer();
     // 同步「查看收到的图片」按钮（关闭弹窗后也能重新打开画廊）
     if (recvBtn) {
       recvBtn.classList.toggle('show', recvItems.length > 0);
@@ -491,6 +497,27 @@ function uploadPageHtml() {
     close.onclick = function(){ if(box.parentNode) box.parentNode.removeChild(box); };
     box.appendChild(close);
     document.body.appendChild(box);
+  }
+
+  // 用 Viewer.js（与脚本端一致）绑定画廊：点击缩略图弹出放大/旋转/多图左右切换。
+  // CDN 未加载时 recvViewer 置 null，缩略图点击走 openRecvImage 自定义单图查看兜底。
+  // zIndex 设为高于画廊遮罩(9998)与 .recv(9999)，避免 Viewer 弹窗被遮在下面。
+  function initRecvViewer(){
+    if (typeof Viewer !== 'function') { recvViewer = null; return; }
+    if (recvViewer) { try { recvViewer.destroy(); } catch(e){} }
+    recvViewer = new Viewer(recvGrid, {
+      toolbar: true,
+      navbar: false,
+      title: false,
+      movable: true,
+      zoomable: true,
+      rotatable: true,
+      scalable: true,
+      transition: true,
+      fullscreen: true,
+      keyboard: true,
+      zIndex: 99999
+    });
   }
 
   // 收到的图片以弹窗（画廊）形式查看，与脚本端弹出画廊保持一致
