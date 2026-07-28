@@ -2,7 +2,7 @@
 // @name           征纳互动人数和在线监控v2
 // @namespace      https://scriptcat.org/
 // @description    实时监控征纳互动等待人数和在线状态，支持语音播报、自定义常用语
-// @version        26.7.28-v3
+// @version        26.7.29-v1
 // @author         runos
 // @match          https://znhd.hunan.chinatax.gov.cn:8443/*
 // @match          https://example.com/*
@@ -2143,10 +2143,11 @@
             });
         };
 
-        // 发送图片到手机（文件选择器挂在 document.body 上的原生 input，规避 shadow DOM 挂载问题）
-        // 支持多选：逐张顺序发送（一张成功再发下一张，保证到达顺序；失败即停并提示进度）。
-        // 中继服务端手机收件通道已队列化（phonePending FIFO），连发不会互相覆盖。
-        const doSendImage = () => {
+        // 选择图片到手机：选完仅加入「待发送」预览列表，不立即上传；点「发送」才真正发送。
+        // 与手机端上传页（选图 → 下方预览 → 点发送）行为一致，避免误选即发的冲动操作。
+        const [pendingImages, setPendingImages] = CAT_UI.useState([]);
+
+        const pickImages = () => {
             if (!phoneOnline) { addLog('[发送到手机] 当前无在线设备，无法发送', 'error', true); return; }
             const inp = document.createElement('input');
             inp.type = 'file'; inp.accept = 'image/*'; inp.multiple = true; inp.style.display = 'none';
@@ -2155,34 +2156,57 @@
                 const files = Array.prototype.slice.call(inp.files || []);
                 inp.remove();
                 if (!files.length) return;
-                setSending(true);
-                const total = files.length;
-                let sent = 0;
-                const sendNext = () => {
-                    if (sent >= total) {
-                        addLog('[发送到手机] ' + total + ' 张图片已全部发送', 'success');
-                        setSending(false);
-                        return;
-                    }
-                    const f = files[sent];
-                    addLog('[发送到手机] 正在发送（' + (sent + 1) + '/' + total + '）：' + (f.name || 'image'), 'info');
-                    const rd = new FileReader();
-                    rd.onload = () => {
-                        const b64 = (rd.result || '').split(',')[1] || '';
-                        if (!b64) { addLog('[发送到手机] 第 ' + (sent + 1) + ' 张读取失败，已停止（已发 ' + sent + '/' + total + '）', 'error', true); setSending(false); return; }
-                        sendToPhone({
-                            server: relayServer, uuid: deviceId,
-                            payload: { name: f.name || 'image.jpg', mime: f.type || 'image/jpeg', data: b64 },
-                            onOk: () => { sent++; sendNext(); },
-                            onFail: (e) => { addLog('[发送到手机] 第 ' + (sent + 1) + ' 张发送失败：' + e + '（已发 ' + sent + '/' + total + '）', 'error'); setSending(false); }
-                        });
-                    };
-                    rd.onerror = () => { addLog('[发送到手机] 第 ' + (sent + 1) + ' 张读取失败，已停止（已发 ' + sent + '/' + total + '）', 'error', true); setSending(false); };
-                    rd.readAsDataURL(f);
-                };
-                sendNext();
+                const arr = files.map(f => ({
+                    file: f,
+                    name: f.name || 'image.jpg',
+                    mime: f.type || 'image/jpeg',
+                    url: URL.createObjectURL(f)
+                }));
+                setPendingImages(prev => prev.concat(arr));
             };
             inp.click();
+        };
+
+        const removePendingImage = (i) => {
+            const arr = pendingImages.slice();
+            const removed = arr.splice(i, 1)[0];
+            try { URL.revokeObjectURL(removed.url); } catch (e) { /* 忽略 */ }
+            setPendingImages(arr);
+        };
+
+        // 真正发送：逐张顺序发送（一张成功再发下一张，保证到达顺序；失败即停并提示进度）。
+        // 中继服务端手机收件通道已队列化（phonePending FIFO），连发不会互相覆盖。
+        const confirmSendImage = () => {
+            if (!pendingImages.length) return;
+            if (!phoneOnline) { addLog('[发送到手机] 当前无在线设备，无法发送', 'error', true); return; }
+            setSending(true);
+            const list = pendingImages.slice();
+            const total = list.length;
+            let sent = 0;
+            const sendNext = () => {
+                if (sent >= total) {
+                    addLog('[发送到手机] ' + total + ' 张图片已全部发送', 'success');
+                    setSending(false);
+                    setPendingImages([]);
+                    return;
+                }
+                const it = list[sent];
+                addLog('[发送到手机] 正在发送（' + (sent + 1) + '/' + total + '）：' + (it.name || 'image'), 'info');
+                const rd = new FileReader();
+                rd.onload = () => {
+                    const b64 = (rd.result || '').split(',')[1] || '';
+                    if (!b64) { addLog('[发送到手机] 第 ' + (sent + 1) + ' 张读取失败，已停止（已发 ' + sent + '/' + total + '）', 'error', true); setSending(false); return; }
+                    sendToPhone({
+                        server: relayServer, uuid: deviceId,
+                        payload: { name: it.name, mime: it.mime, data: b64 },
+                        onOk: () => { sent++; sendNext(); },
+                        onFail: (e) => { addLog('[发送到手机] 第 ' + (sent + 1) + ' 张发送失败：' + e + '（已发 ' + sent + '/' + total + '）', 'error'); setSending(false); }
+                    });
+                };
+                rd.onerror = () => { addLog('[发送到手机] 第 ' + (sent + 1) + ' 张读取失败，已停止（已发 ' + sent + '/' + total + '）', 'error', true); setSending(false); };
+                rd.readAsDataURL(it.file);
+            };
+            sendNext();
         };
 
         return CAT_UI.Drawer(
@@ -2234,11 +2258,33 @@
                         style: { whiteSpace: 'nowrap' }
                     })
                 ]),
-                CAT_UI.Button('选择图片发送（可多选）', {
+                CAT_UI.Button('选择 / 添加图片（可多选）', {
                     disabled: !phoneOnline || sending,
-                    onClick: doSendImage,
-                    style: { width: '100%' }
-                })
+                    onClick: pickImages,
+                    style: { width: '100%', marginBottom: pendingImages.length ? '10px' : '0' }
+                }),
+                pendingImages.length > 0 ?
+                    CAT_UI.createElement('div', { style: { marginBottom: '10px' } }, [
+                        CAT_UI.createElement('div', {
+                            style: { display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '6px', marginBottom: '10px' }
+                        }, pendingImages.map((img, i) =>
+                            CAT_UI.createElement('div', {
+                                style: { position: 'relative', width: '100%', paddingBottom: '100%', backgroundImage: 'url("' + img.url + '")', backgroundSize: 'cover', backgroundPosition: 'center', borderRadius: '8px' }
+                            }, [
+                                CAT_UI.Button('×', {
+                                    type: 'link',
+                                    onClick: () => removePendingImage(i),
+                                    style: { position: 'absolute', top: '2px', right: '2px', padding: '0 6px', minWidth: '22px', height: '22px', lineHeight: '20px', fontSize: '16px', color: '#fff', background: 'rgba(0,0,0,0.55)', borderRadius: '50%' }
+                                })
+                            ])
+                        )),
+                        CAT_UI.Button(pendingImages.length > 1 ? ('发送 ' + pendingImages.length + ' 张图片到手机') : '发送图片到手机', {
+                            type: 'primary',
+                            disabled: !phoneOnline || sending,
+                            onClick: confirmSendImage,
+                            style: { width: '100%' }
+                        })
+                    ]) : null
             ]),
             {
                 title: '手机互传',

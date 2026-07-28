@@ -165,16 +165,25 @@ function uploadPageHtml() {
   #grid .cell{position:relative;padding-top:100%;border-radius:8px;overflow:hidden;background:#fff}
   #grid .cell img{position:absolute;left:0;top:0;width:100%;height:100%;object-fit:cover}
   #grid .cell .del{position:absolute;top:2px;right:2px;width:22px;height:22px;line-height:20px;text-align:center;font-size:16px;color:#fff;background:rgba(0,0,0,0.55);border-radius:50%;cursor:pointer}
-  /* 来自电脑的图片：以弹窗方式查看（与脚本端弹出画廊一致），不再贴在网页底部 */
-  #recvPopup{position:fixed;left:0;right:0;top:0;bottom:0;background:rgba(0,0,0,0.85);z-index:9998;display:none;flex-direction:column;padding:14px;box-sizing:border-box}
+  /* 来自电脑的图片：弹窗画廊，视觉与脚本端（PC 收图弹窗）保持一致 */
+  #recvPopup{position:fixed;left:0;right:0;top:0;bottom:0;background:rgba(0,0,0,0.55);z-index:9990;display:none;align-items:center;justify-content:center;padding:14px;box-sizing:border-box}
   #recvPopup.show{display:flex}
-  #recvPopup .rh{display:flex;align-items:center;justify-content:space-between;color:#fff;margin:2px 2px 10px}
-  #recvPopup .rh .t{font-size:15px;font-weight:bold}
-  #recvPopup .rh .close{width:34px;height:34px;line-height:32px;text-align:center;font-size:24px;color:#fff;background:rgba(255,255,255,0.2);border-radius:50%;cursor:pointer;flex:0 0 auto}
-  #recvGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;flex:1;min-height:0;overflow:auto;align-content:start}
-  #recvGrid .cell{position:relative;padding-top:100%;border-radius:8px;overflow:hidden;background:#fff;cursor:pointer}
-  #recvGrid .cell img{position:absolute;left:0;top:0;width:100%;height:100%;object-fit:cover}
-  #recvGrid .cell .idx{position:absolute;right:4px;bottom:4px;font-size:11px;color:#fff;background:rgba(0,0,0,0.5);border-radius:8px;padding:0 5px;line-height:16px;pointer-events:none}
+  #recvPopup .box{position:relative;width:min(560px,92vw);max-height:88vh;background:#fff;border-radius:12px;padding:16px;box-shadow:0 8px 30px rgba(0,0,0,0.35);display:flex;flex-direction:column;box-sizing:border-box}
+  #recvPopup .rt{font-size:15px;font-weight:bold;color:#333;margin:0 0 10px 2px}
+  #recvPopup .rclose{position:absolute;top:8px;right:10px;width:30px;height:30px;line-height:28px;text-align:center;font-size:22px;color:#fff;background:#e4393c;border-radius:50%;cursor:pointer;font-weight:bold}
+  #recvGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;overflow:auto;max-height:60vh;align-content:start}
+  #recvGrid .cell{position:relative;display:flex;flex-direction:column}
+  #recvGrid .thumb{position:relative;width:100%;padding-bottom:100%;border-radius:8px;overflow:hidden;background:#f2f2f2;cursor:zoom-in}
+  #recvGrid .thumb img{position:absolute;left:0;top:0;width:100%;height:100%;object-fit:cover;display:block}
+  #recvGrid .del{position:absolute;top:4px;right:4px;width:20px;height:20px;line-height:18px;text-align:center;font-size:14px;color:#fff;background:rgba(0,0,0,0.55);border-radius:50%;cursor:pointer;font-weight:bold;z-index:2}
+  #recvGrid .btns{flex:0 0 auto;display:flex;gap:4px;margin-top:6px}
+  #recvGrid .btns button{flex:1;padding:4px 0;border:none;border-radius:6px;background:#1890ff;color:#fff;font-size:12px;opacity:1;cursor:pointer}
+  #recvGrid .btns .dl{background:#722ed1}
+  #recvPopup .bar{display:flex;justify-content:center;margin-top:12px}
+  #recvPopup .bar button{padding:7px 18px;border:none;border-radius:8px;background:#999;color:#fff;font-size:13px;cursor:pointer}
+  /* Viewer.js 遮罩压黑，与脚本端一致 */
+  .viewer-backdrop{background-color:#000 !important}
+  .viewer-container{background-color:#000 !important}
   #recvBtn{display:none;width:100%;box-sizing:border-box;padding:12px;border:0;border-radius:10px;background:#e6f3ec;color:#007e44;font-size:15px;font-weight:bold;margin-bottom:12px}
   #recvBtn.show{display:block}
   #info{font-size:13px;color:#666;margin-bottom:12px;word-break:break-all;min-height:18px}
@@ -215,8 +224,12 @@ function uploadPageHtml() {
   <p class="tip">电脑端「发送到手机」的图片会以弹窗形式自动弹出（与脚本端一致），点击缩略图可放大、长按可保存；文本仍自动弹出。</p>
   <button id="recvBtn">查看收到的图片</button>
   <div id="recvPopup">
-    <div class="rh"><span class="t">收到的图片</span><span class="close">×</span></div>
-    <div id="recvGrid"></div>
+    <div class="box">
+      <div class="rclose">×</div>
+      <div class="rt">收到的图片</div>
+      <div id="recvGrid"></div>
+      <div class="bar"><button id="recvClear">清空全部</button></div>
+    </div>
   </div>
 
 <script>
@@ -461,16 +474,33 @@ function uploadPageHtml() {
     recvItems.forEach(function(it, idx){
       var cell = document.createElement('div');
       cell.className = 'cell';
+      // 缩略图（点击由 Viewer.js 接管放大/旋转/多图切换；viewer 未加载时退回单图查看）
+      var thumb = document.createElement('div');
+      thumb.className = 'thumb';
       var img = document.createElement('img');
       img.src = it.url;
-      cell.appendChild(img);
-      var idxEl = document.createElement('div');
-      idxEl.className = 'idx';
-      idxEl.textContent = (idx + 1);
-      cell.appendChild(idxEl);
-      // Viewer.js 已加载时，缩略图点击由 Viewer 接管（弹出放大/旋转/多图切换）；
-      // 未加载（CDN 不可达）时退回自定义单图查看
-      if (!recvViewer) cell.onclick = function(){ openRecvImage(it); };
+      thumb.appendChild(img);
+      var del = document.createElement('div');
+      del.className = 'del';
+      del.textContent = '×';
+      del.title = '移除这张';
+      del.onclick = function(e){ e.stopPropagation(); removeRecvItem(idx); };
+      thumb.appendChild(del);
+      if (!recvViewer) thumb.onclick = function(){ openRecvImage(it); };
+      cell.appendChild(thumb);
+      // 按钮行：复制 / 下载（与脚本端收图弹窗一致）
+      var btns = document.createElement('div');
+      btns.className = 'btns';
+      var copyBtn = document.createElement('button');
+      copyBtn.textContent = '复制';
+      copyBtn.onclick = function(e){ e.stopPropagation(); copyRecvImage(it, copyBtn); };
+      var dlBtn = document.createElement('button');
+      dlBtn.className = 'dl';
+      dlBtn.textContent = '下载';
+      dlBtn.onclick = function(e){ e.stopPropagation(); downloadRecvImage(it, dlBtn); };
+      btns.appendChild(copyBtn);
+      btns.appendChild(dlBtn);
+      cell.appendChild(btns);
       recvGrid.appendChild(cell);
     });
     initRecvViewer();
@@ -479,6 +509,54 @@ function uploadPageHtml() {
       recvBtn.classList.toggle('show', recvItems.length > 0);
       recvBtn.textContent = '🖼 收到的图片（' + recvItems.length + '）';
     }
+    // 标题计数（与脚本端一致：收到的图片（N）· 单击放大）
+    var rt = recvPopup.querySelector('.rt');
+    if (rt) rt.textContent = '收到的图片（' + recvItems.length + '）· 单击放大';
+  }
+
+  function removeRecvItem(idx){
+    if (idx < 0 || idx >= recvItems.length) return;
+    recvItems.splice(idx, 1);
+    if (recvItems.length === 0) closeRecvPopup();
+    else renderRecvGrid();
+  }
+
+  // dataURL -> Blob（用于复制/下载）
+  function toBlob(url){
+    try { return fetch(url).then(function(r){ return r.blob(); }).catch(function(){ return null; }); }
+    catch(e){ return Promise.resolve(null); }
+  }
+
+  function copyRecvImage(it, btn){
+    var old = btn.textContent;
+    btn.textContent = '复制中…';
+    toBlob(it.url).then(function(blob){
+      if (!blob || !navigator.clipboard || typeof window.ClipboardItem === 'undefined') {
+        btn.textContent = '复制不可用';
+        setTimeout(function(){ btn.textContent = old; }, 1500);
+        return;
+      }
+      var item = {}; item[blob.type || 'image/png'] = blob;
+      navigator.clipboard.write([ new ClipboardItem(item) ])
+        .then(function(){ btn.textContent = '✓ 已复制'; })
+        .catch(function(){ btn.textContent = '复制失败'; });
+      setTimeout(function(){ btn.textContent = old; }, 1500);
+    });
+  }
+
+  function downloadRecvImage(it, btn){
+    var old = btn.textContent;
+    btn.textContent = '保存中…';
+    toBlob(it.url).then(function(blob){
+      if (!blob) { btn.textContent = '保存失败'; setTimeout(function(){ btn.textContent = old; }, 1500); return; }
+      var a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      var ext = (it.mime && it.mime.split('/')[1]) || 'jpg';
+      a.download = (it.name || ('znhd-image.' + ext));
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(function(){ try { URL.revokeObjectURL(a.href); } catch(e){} btn.textContent = '✓ 已保存'; }, 300);
+      setTimeout(function(){ btn.textContent = old; }, 1500);
+    });
   }
 
   function openRecvImage(it){
@@ -524,9 +602,15 @@ function uploadPageHtml() {
   function openRecvPopup(){ if(recvItems.length) recvPopup.classList.add('show'); }
   function closeRecvPopup(){ recvPopup.classList.remove('show'); }
   if (recvPopup) {
-    var rpClose = recvPopup.querySelector('.close');
+    var rpClose = recvPopup.querySelector('.rclose');
     if (rpClose) rpClose.onclick = closeRecvPopup;
     recvPopup.onclick = function(e){ if(e.target === recvPopup) closeRecvPopup(); };
+    var rpClear = document.getElementById('recvClear');
+    if (rpClear) rpClear.onclick = function(){
+      recvItems.length = 0;
+      closeRecvPopup();
+      renderRecvGrid();
+    };
   }
   if (recvBtn) recvBtn.onclick = openRecvPopup;
 

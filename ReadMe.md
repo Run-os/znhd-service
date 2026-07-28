@@ -223,6 +223,12 @@ const DEFAULTS = {
 
 ## 更新日志
 
+### relay-server v26.7.29-v4
+- **手机端收图弹窗视觉与脚本端完全一致**：把 `#recvPopup` 从「深色全屏遮罩+纯图片网格」改为脚本端同款**白底圆角卡片**——标题「收到的图片（N）· 单击放大」+ 红色 × 关闭 + 3 列缩略图（每张带「复制 / 下载」按钮 + 单张移除 ×）+ 底部「清空全部」；点击缩略图仍由 Viewer.js 接管放大/旋转/多图切换（遮罩压黑 `!important`，`zIndex:99999` 盖住卡片）。复制/下载走 `dataURL→Blob`（`ClipboardItem` 复制图片、`<a download>` 保存），CDN 不可达时退回 `openRecvImage` 单图查看。relay `package.json` version→`26.7.29-v4`。
+
+### znhd.user.js v26.7.29-v1
+- **「发送到手机」选图改为先预览后发送（与手机端一致）**：原选完图片立即上传，现改为选图仅加入「待发送」预览列表（抽屉内 3 列缩略图网格，单张 × 移除、可继续添加），点「发送 N 张到手机」才真正逐张顺序上传；避免误选即发的冲动操作。发送逻辑与之前一致（逐张顺序、失败即停、进度日志）。`@version`→`26.7.29-v1`。
+
 ### relay-server v26.7.29-v3
 - **手机端收图改用真·Viewer.js（与脚本端一致）**：`<head>` 通过 `https://cdn.jsdelivr.net/npm/viewerjs/dist/viewer.min.js` + 对应 CSS 引入 Viewer.js；画廊渲染后用 `new Viewer(recvGrid, {...})` 绑定，点击缩略图即弹出 Viewer.js 查看（缩放/旋转/翻转/多图左右切换），`zIndex:99999` 确保弹窗盖在画廊遮罩之上；CDN 不可达时 `recvViewer=null`，缩略图点击退回 `openRecvImage` 自定义单图查看兜底。relay `package.json` version→`26.7.29-v3`。
 
@@ -263,8 +269,8 @@ const DEFAULTS = {
 - **新增「电脑端 → 手机端」发送（双向互传）**：脚本端现在也能把文本/图片发回手机。
 - **中继服务器 `server.js`**：新增反向通道内存表 `phoneOnline`/`phonePending`/`phoneWaiting` 与 `PHONE_TTL=20s`；新增 4 条路由——
   - `POST /phone/heartbeat/<id>`（手机报活）、`GET /phone/status/<id>`（返回 `{online}`，电脑端据此判断是否可发）、`POST /phone/send/<id>`（电脑发图/文，镜像 `/u`）、`GET /phone/recv/<id>`（手机长轮询收件，镜像 `/recv`）。
-- **手机上传页（内联）**：打开即每 8s 心跳报活；长轮询 `/phone/recv`，收到图片**自动弹出画廊弹窗**（固定全屏遮罩 + 3 列缩略图，与脚本端弹出画廊一致），**点击缩略图用 Viewer.js 放大查看**（缩放/旋转/多图切换，与脚本端一致）、CDN 不可达时退回自定义单图查看+「长按保存」；收到文本展示+「复制文本」；关闭弹窗后底部保留「收到的图片（N）」按钮可重新打开；顶部加在线状态指示。
-- **电脑端 `znhd.user.js`**：`PhoneImageDrawer` 扩为「手机互传」抽屉——轮询 `/phone/status` 显示 🟢已连接/⚪无在线设备；文本输入框+发送按钮、图片文件选择器+发送；离线时发送按钮置灰并提示「当前无在线设备，无法发送」；发送成功/失败写面板日志。新增 `sendToPhone` 辅助（GM_xmlhttpRequest POST `/phone/send`）。
+- **手机上传页（内联）**：打开即每 8s 心跳报活；长轮询 `/phone/recv`，收到图片**自动弹出与脚本端一致的白底卡片画廊弹窗**（标题「收到的图片（N）· 单击放大」+ 红色 × + 3 列缩略图，每张带「复制 / 下载」按钮 + 单张移除 ×，底部「清空全部」），**点击缩略图用 Viewer.js 放大查看**（缩放/旋转/多图切换，与脚本端一致）、CDN 不可达时退回自定义单图查看+「长按保存」；收到文本展示+「复制文本」；关闭弹窗后底部保留「收到的图片（N）」按钮可重新打开；顶部加在线状态指示。
+- **电脑端 `znhd.user.js`**：`PhoneImageDrawer` 扩为「手机互传」抽屉——轮询 `/phone/status` 显示 🟢已连接/⚪无在线设备；文本输入框+发送按钮、**图片选完先在下方的 3 列缩略图网格预览、点「发送 N 张到手机」才真正上传**（与手机端上传页行为一致，单张 × 可移除、可继续添加）；离线时发送按钮置灰并提示「当前无在线设备，无法发送」；发送成功/失败写面板日志。新增 `sendToPhone` 辅助（GM_xmlhttpRequest POST `/phone/send`）。
 - 纯前端+中继改动；`@version`→`26.7.26-v25`；两文件 `node -c` 通过。⚠️ 须**两端同步更新并重启 `node server.js`**；手机页由中继同源托管，重启后即含心跳+收件箱。
 
 ### v26.7.26-v24
