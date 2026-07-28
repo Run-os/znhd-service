@@ -45,9 +45,12 @@ jobs:
             # 1) 拉取最新代码（宿主机上的仓库克隆）
             cd "$DEPLOY_PATH" 2>/dev/null || { echo "❌ DEPLOY_PATH=$DEPLOY_PATH 不存在，请先在服务器克隆整个仓库到此处"; exit 1; }
             if [ ! -d .git ]; then
-              echo "❌ $DEPLOY_PATH 不是 git 仓库。请先在服务器执行："
-              echo "   cd /opt && git clone git@github.com:Run-os/znhd-service.git znhd-service"
-              echo "   （私有库需先配置 Deploy Key / 读权限凭证）"
+              echo "❌ $DEPLOY_PATH 不是 git 仓库。该目录已存在（含正在运行的 relay-server 挂载源），请就地初始化："
+              echo "   cd $DEPLOY_PATH"
+              echo "   git init -q && git remote add origin git@github.com:Run-os/znhd-service.git"
+              echo "   git fetch origin && git checkout -f -B main origin/main"
+              echo "   （私有库需先配置 Deploy Key：把服务器 ~/.ssh/id_ed25519.pub 加到 GitHub 仓库 Deploy keys，"
+              echo "    并执行 ssh-keyscan github.com >> ~/.ssh/known_hosts）"
               exit 1
             fi
             git config --global --add safe.directory "$(pwd)"
