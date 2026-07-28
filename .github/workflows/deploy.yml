@@ -39,7 +39,6 @@ jobs:
           host: ${{ secrets.SERVER_IP }}
           username: ${{ secrets.USERNAME }}
           key: ${{ secrets.KEY }}
-          passphrase: ${{ secrets.PASSPHRASE }}   # 密钥无密码可留空（不配置该 Secret 即可）
           port: ${{ secrets.PORT }}               # SSH 端口，默认 22；非 22 时配置该 Secret
           script: |
             set -e
