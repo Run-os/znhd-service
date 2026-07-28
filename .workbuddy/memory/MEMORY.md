@@ -74,7 +74,28 @@
   全部 `/recv`、`/phone/*`、`/u/*` 报 `connect() failed (111: Connection refused) upstream http://127.0.0.1:5689`，
   表现为手机"连接中"、PC"无在线设备"、图片收不到。改 relay 监听 5689 + 映射对齐后解决。
 - 诊断：relay 启动日志末尾应为 `http://0.0.0.0:5689`；nginx 报 `Connection refused (111)` + upstream 5689 即说明
-  relay 没在该端口监听（未重启/代码未更新/容器未对齐）。手机页 HTML 由 relay 同源托管，relay 错位时手机会"连不上"。
+  relay 没在该端口监听（未重启/代码未更新/容器未对齐）。手机页 HTML 由 relay 同源托管，  relay 错位时手机会"连不上"。
+
+## GitHub Actions 同步 1panel Docker 的 bind 挂载陷阱（2026-07-29 结论）
+- 部署架构：relay 跑在 1panel 的 node 容器 `znhd`（镜像 1panel/node:25.9.0），容器工作目录 `/app`，
+  bind 挂载 `/opt/znhd-service/relay-server => /app`（读写），`run.sh` 内部 `node server.js`。
+  GitHub Actions（appleboy/ssh-action）SSH 登录宿主机 → 在 `/opt/znhd-service`（仓库根 git 克隆）`git fetch/reset --hard`
+  → 重启容器使其加载新代码。
+- ⚠️ **核心陷阱（耗费 5 轮排查）**：git 的 `reset --hard` + `clean -fd` 更新 `relay-server/` 时会**替换该目录的 inode**。
+  Docker 的 bind 挂载 `/app` 指向的是旧目录的 inode（变成「孤儿目录」，里面是旧版本），而
+  `docker stop/start/restart` **都不会重新解析 bind 挂载**（容器未被销毁重建，mount namespace 不变），
+  于是容器持续读到旧 v6，与磁盘 git 已是 v2 形成「日志同步成功、健康检查发现旧版」的矛盾。
+- 已排除的假设（按时间）：① 私有库无读权限（SSH 已通）→ ② 挂载源有嵌套 .git（用户确认无）→
+  ③ relay-server 是符号链接/被 gitignore（本地核实正常跟踪）→ ④ volume 而非 bind（用户确认三条均为 bind 挂载）。
+- ✅ **最终生效方案（写进 deploy.yml）**：不再依赖 bind 自动反映、也不靠会失败的 `docker cp`（SRC 路径 `/.` 解析坑），
+  改用 **`tar` 管道把最新代码直接写进容器当前看到的 `/app`**：
+  `rm -rf /tmp/znhd-deploy && mkdir -p /tmp/znhd-deploy && cp -a <仓库>/relay-server/. /tmp/znhd-deploy/ && rm -rf /tmp/znhd-deploy/node_modules /tmp/znhd-deploy/.git`
+  `（ cd /tmp/znhd-deploy && tar cf - . ） | docker exec -i <cid> tar xf - -C /app` → `docker restart <cid>`。
+  tar 管道写入的正是容器文件系统当前挂载的 /app（无论 bind 是否失联都正确），再 restart 让 node 重新加载。
+- 加**自证式健康检查**：重启后 `docker exec <cid> grep -m1 version /app/package.json` 读容器内真实版本，
+  与 git 工作树 EXPECT_VER 比对，不一致则 `exit 1` 明确报错（杜绝静默失败）。
+- 工作流路径：`.github/workflows/deploy.yml`；env `DEPLOY_PATH=/opt/znhd-service`、`CONTAINER_NAME=znhd`；
+  Secrets 需 `SERVER_IP/USERNAME/KEY/PORT`（PASSPHRASE 留空，因为 SSH 私钥无密码）。
 
 ## 已落地的功能改进
 - 工作时间可配置：DEFAULTS.workingHours（morningStart/End, afternoonStart/End），缓存 cachedWorkingHours，
