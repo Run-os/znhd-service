@@ -197,7 +197,7 @@ const DEFAULTS = {
 
 ### 常用语加载失败
 
-1. 检查网络是否能访问 `gitee.com`（常用语配置文件托管在 Gitee）
+1. 检查网络是否能访问 `github.com`（常用语配置文件托管在 github）
 2. 打开浏览器开发者工具（F12）→ Console 查看具体错误信息
 3. 尝试点击常用语抽屉中的"重新加载常用语"按钮
 
@@ -398,7 +398,7 @@ const DEFAULTS = {
 - 「重新加载常用语」按钮改为强制刷新（忽略缓存）；修改数据源地址也会触发重新拉取
 
 ### v26.7.18-v3
-- 常用语数据源地址现可在设置面板自定义（「设置 → 常用语数据源」），默认仍为 gitee 上的 commonPhrases.yaml
+- 常用语数据源地址现可在设置面板自定义（「设置 → 常用语数据源」），默认仍为 github 上的 commonPhrases.yaml
 - 数据源支持留空回退默认地址，并校验必须以 http(s):// 开头
 - 同期累积改进（v1→v3）：面板位置拖拽持久化与边界约束、工作时间段可在设置面板配置、工作时间控件改为时间选择器、面板标题改用站点 favicon、确立 `YY.M.D-vN` 版本号规范
 
@@ -432,7 +432,7 @@ MIT License
 ## 联系方式
 
 - **作者**：runos
-- **项目地址**：https://gitee.com/runos/znhd-service
+- **项目地址**：https://github.com/runos/znhd-service
 - **脚本主页**：https://scriptcat.org/zh-CN/script-show-page/3650
 - **使用教程**：https://flowus.cn/runos/share/e48623a2-f273-4327-8597-639e08902be8?code=1YD5Z5
 

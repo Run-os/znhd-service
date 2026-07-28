@@ -149,9 +149,9 @@ catch (e) {
 ### 6.1 `GM_xmlhttpRequest` 的 `@connect *`
 **位置**: [第17行](znhd.user.js:17) `// @connect *`  
 **问题**: 允许连接任意域名，虽然油猴脚本常用此配置，但存在潜在安全风险。  
-**建议**: 如果只连接 gitee 和自建服务，可以限制为具体域名：
+**建议**: 如果只连接 github 和自建服务，可以限制为具体域名：
 ```
-// @connect        gitee.com
+// @connect        github.com
 // @connect        znhd-service.zeabur.app
 ```
 
