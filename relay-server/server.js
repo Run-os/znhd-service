@@ -157,6 +157,7 @@ function uploadPageHtml() {
 <style>
   body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif;margin:0;padding:16px;background:#f5f5f5;color:#222}
   h2{font-size:18px;margin:0 0 4px}
+  h2 .ver{font-size:12px;font-weight:normal;color:#007e44;background:#e6f3ec;padding:1px 7px;border-radius:10px;vertical-align:middle;margin-left:6px}
   .tip{color:#888;font-size:13px;margin:0 0 16px;line-height:1.6}
   #pick{display:block;width:100%;box-sizing:border-box;padding:16px;border:2px dashed #bbb;border-radius:10px;text-align:center;color:#555;background:#fff;font-size:15px;margin-bottom:12px}
   #grid{display:none;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:12px}
@@ -195,7 +196,7 @@ function uploadPageHtml() {
 </style>
 </head>
 <body>
-  <h2>📷 上传到电脑</h2>
+  <h2>📷 上传到电脑<span class="ver">v${VERSION}</span></h2>
   <p class="tip">选择/拍摄图片自动压缩后发送，或直接输入文本发送到电脑剪贴板。</p>
   <div id="conn" class="conn">正在连接…</div>
   <div id="devid" class="devid"></div>
