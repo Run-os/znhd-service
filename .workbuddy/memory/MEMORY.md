@@ -76,7 +76,16 @@
 - 诊断：relay 启动日志末尾应为 `http://0.0.0.0:5689`；nginx 报 `Connection refused (111)` + upstream 5689 即说明
   relay 没在该端口监听（未重启/代码未更新/容器未对齐）。手机页 HTML 由 relay 同源托管，  relay 错位时手机会"连不上"。
 
-## GitHub Actions 同步 1panel Docker 的 bind 挂载陷阱（2026-07-29 结论）
+## 重大事故：DEPLOY_PATH 未注入导致脚本在 /root 执行（2026-07-29，真实根因，压倒性）
+- **真实根因**：`appleboy/ssh-action` **不会把 GitHub Actions 的顶层 `env` 注入远程 shell**。workflow 顶层 `env.DEPLOY_PATH=/opt/znhd-service` 只存在于 runner，远程 `$DEPLOY_PATH` 为空。
+- 后果：`cd "$DEPLOY_PATH"` 变成 `cd`（无参）→ 进入 SSH 登录默认家目录 `/root`；而 `cd "" 2>/dev/null` 不报错，原 `|| exit 1` 保护**完全失效**。之后 `git init/fetch/checkout -f/reset --hard/clean -fd` 全部在 `/root` 执行：
+  - 把 GitHub 项目文件解出到 `/root`（用户发现「/root 下全是项目文件」）；
+  - `git clean -fd` 删光 `/root` 下未跟踪文件（含 `.ssh/`、`\.bashrc`、`\.profile`、`\.gitconfig`、`\.cache` 等），造成家目录被破坏。
+- 连带真相：之前所有「同步成功」日志其实都在 `/root` 跑；容器挂载源 `/opt/znhd-service/relay-server` **从未被 git 更新**，一直停 1panel 初始 v6。所以容器 /health 永远 v6 **不是「bind 失联」，而是「挂载源压根没动」**。下方『bind 挂载陷阱』段落属**早期误诊**，请以此段为准。
+- **止损（已在用户服务器发生，需用户手动恢复）**：① 当前 SSH 连接勿断，另开云控制台备用终端；② 重建 `/root/.ssh` 并恢复 `authorized_keys`（否则断连后无法再登录）；③ 清走 `/root` 误入的项目文件、`rm -rf /root/.git` 让 /root 不再是仓库；④ 从 `/etc/skel` 恢复 `.bashrc/.profile`；⑤ 修复前**禁用该 workflow**，勿再 push 触发。
+- **修复（已写入 deploy.yml）**：① 变量在 `script` 内**硬编码** `DEPLOY_PATH="/opt/znhd-service"` `CONTAINER_NAME="znhd"`，不再依赖 env 传递；② 加**安全阀**：cd 后 `case $(pwd)` 拒绝 `/root`、`/home`、`/` 等受保护目录，且要求 `[ -f relay-server/server.js ]` 存在才继续；③ 这样 git 强覆盖只会落在 /opt/znhd-service。
+
+## GitHub Actions 同步 1panel Docker 的 bind 挂载陷阱（2026-07-29 结论，早期误诊，仅供参考）
 - 部署架构：relay 跑在 1panel 的 node 容器 `znhd`（镜像 1panel/node:25.9.0），容器工作目录 `/app`，
   bind 挂载 `/opt/znhd-service/relay-server => /app`（读写），`run.sh` 内部 `node server.js`。
   GitHub Actions（appleboy/ssh-action）SSH 登录宿主机 → 在 `/opt/znhd-service`（仓库根 git 克隆）`git fetch/reset --hard`

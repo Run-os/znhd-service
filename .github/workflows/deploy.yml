@@ -42,8 +42,19 @@ jobs:
           port: ${{ secrets.PORT }}               # SSH 端口，默认 22；非 22 时配置该 Secret
           script: |
             set -e
+            # ⚠️ 变量在此硬编码，不要依赖顶层 env 传递：
+            #   appleboy/ssh-action 不会把 GitHub Actions 的 env 注入远程 shell，
+            #   远程 $DEPLOY_PATH 为空会导致 cd 误进 /root，造成家目录被 git 强覆盖破坏（已发生过的事故）。
+            DEPLOY_PATH="/opt/znhd-service"
+            CONTAINER_NAME="znhd"
+
             # 1) 同步代码（首次自动就地初始化 git 仓库，无需手动 SSH）
-            cd "$DEPLOY_PATH" 2>/dev/null || { echo "❌ DEPLOY_PATH=$DEPLOY_PATH 不存在，请先在服务器创建该目录"; exit 1; }
+            cd "$DEPLOY_PATH" || { echo "❌ DEPLOY_PATH=$DEPLOY_PATH 不存在，请先在服务器创建该目录"; exit 1; }
+            # 安全阀：绝不在家目录/根目录执行 git 强覆盖（防 DEPLOY_PATH 再次失效）
+            case "$(pwd)" in
+              /root|/root/*|/home|/home/*|/|/*/..) echo "❌ 危险：当前目录 $(pwd) 是受保护目录，拒绝执行 git 操作"; exit 1;;
+            esac
+            [ -f relay-server/server.js ] || { echo "❌ $DEPLOY_PATH 不是预期仓库（缺 relay-server/server.js），拒绝执行"; exit 1; }
             git config --global --add safe.directory "$(pwd)"
 
             # 防御：清理挂载源子目录内的「嵌套 .git」（如 relay-server/.git）。
