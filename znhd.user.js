@@ -2,7 +2,7 @@
 // @name           征纳互动人数和在线监控v2
 // @namespace      https://scriptcat.org/
 // @description    实时监控征纳互动等待人数和在线状态，支持语音播报、自定义常用语
-// @version        26.7.29-v5
+// @version        26.7.29-v7
 // @author         runos
 // @match          https://znhd.hunan.chinatax.gov.cn:8443/*
 // @match          https://example.com/*
@@ -477,25 +477,30 @@
                     ],
                     { direction: "horizontal", size: "small" }
                 ),
+                CAT_UI.Divider("其他设置"),
                 // CDN 加速开关：控制项目内 GitHub 资源（常用语 YAML、提示音）是否经 jsDelivr 加速
+                // 注意：① CAT_UI.Switch 运行时为 undefined；② 裸 createElement('input') 不在 CAT_UI 的
+                // React 渲染器白名单内，会触发 React error #137（与 img 同类）。
+                // 改用白名单内的 div 模拟勾选框（受控：样式随 useCdn 变化，点击触发 onChangeUseCdn 取反）。
                 CAT_UI.Space(
                     [
                         CAT_UI.Text("使用 CDN 加速（jsDelivr）加载资源", {
                             style: { display: "block", fontWeight: "bold" }
                         }),
-                        CAT_UI.Switch({
-                            checked: !!useCdn,
-                            onChange: (checked) => { if (typeof onChangeUseCdn === 'function') onChangeUseCdn(!!checked); }
-                        }),
+                        CAT_UI.createElement('div', {
+                            onClick: () => { if (typeof onChangeUseCdn === 'function') onChangeUseCdn(!useCdn); },
+                            style: {
+                                width: '18px', height: '18px', cursor: 'pointer', marginLeft: '8px',
+                                boxSizing: 'border-box', userSelect: 'none',
+                                border: '1px solid ' + (useCdn ? '#1890ff' : '#d9d9d9'),
+                                borderRadius: '3px', background: useCdn ? '#1890ff' : '#fff',
+                                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                                color: '#fff', fontSize: '12px', lineHeight: '1'
+                            }
+                        }, useCdn ? '✓' : ''),
                     ],
                     { direction: "horizontal", size: "small", style: { marginBottom: "8px" } }
                 ),
-                CAT_UI.createElement(
-                    "p",
-                    { style: { margin: "0 0 8px", color: "#999", fontSize: "12px", lineHeight: "1.5" } },
-                    "开启后，常用语、提示音等 GitHub 资源经 jsDelivr CDN 加速；关闭则直连 GitHub 原始链接（访问慢或 CDN 不可用时可临时关闭）。"
-                ),
-                CAT_UI.Divider("其他设置"),
                 // 监控时间段配置（使用时间选择器）
                 CAT_UI.Text("监控时间段（点击选择时间）", {
                     style: { display: "block", marginBottom: "8px", fontWeight: "bold" }

@@ -223,6 +223,12 @@ const DEFAULTS = {
 
 ## 更新日志
 
+### znhd.user.js v26.7.29-v7
+- **二次修复 CDN 开关（裸 `input` 仍触发 React #137）**：上一版改用裸 `createElement('input')` 报错 `React error #137; got input`——证实 CAT_UI 的 React 渲染器白名单**连 `input` 也不支持**（与 `img` 同类）。再次改为白名单内的 `div` 模拟勾选框：受控样式（`useCdn` 为真时蓝底白勾、假时灰框），点击 `onClick` 调 `onChangeUseCdn(!useCdn)` 取反。`@version`→`26.7.29-v7`。
+
+### znhd.user.js v26.7.29-v6
+- **修复设置抽屉崩溃（`CAT_UI.Switch is not a function`）**：实测 `CAT_UI.Switch` 运行时为 `undefined`（库清单误列，与 `TimePicker`/`Image` 同类陷阱），导致打开「设置」即报错。改用原生 `<input type="checkbox">`（受控，配合 `onChange` 写回 `useCdn`），视觉与交互不变。默认开启 CDN 的逻辑不受影响（`loadAllvalue` 以 `{...DEFAULTS, ...parsed}` 合并，`useCdn` 缺省由 `DEFAULTS.useCdn:true` 兜底）。`@version`→`26.7.29-v6`。
+
 ### znhd.user.js v26.7.29-v5
 - **新增「使用 CDN 加速」配置 + `resolveGithubUrl()` 转换函数**：设置抽屉新增开关「使用 CDN 加速（jsDelivr）加载资源」（默认开启，存于 `Allvalue.useCdn`）。新增模块级函数 `resolveGithubUrl(githubUrl)`：输入一个 GitHub 文件链接，开启 CDN 时输出 `https://cdn.jsdelivr.net/gh/用户名/仓库名@分支/文件路径`，关闭时输出原始 `raw.githubusercontent.com` 链接；非 GitHub 链接（如 npm CDN）原样返回。分支含斜杠（如 `refs/heads/main`）用单次捕获正则正确转换。已接入：① `commonPhrasesUrl` 默认值改为 GitHub 网页链接、取用时经该函数解析（常用语抽屉「数据源」也显示解析后实际地址）；② `CONFIG.didaUrl` 改为 GitHub 链接、`playDidaSound` 取用时解析。Viewer.js 的 npm CDN 链接不属 GitHub 资源，维持原样。`@version`→`26.7.29-v5`。
 
