@@ -2,7 +2,7 @@
 // @name           征纳互动人数和在线监控v2
 // @namespace      https://scriptcat.org/
 // @description    实时监控征纳互动等待人数和在线状态，支持语音播报、自定义常用语
-// @version        26.7.29-v4
+// @version        26.7.29-v5
 // @author         runos
 // @match          https://znhd.hunan.chinatax.gov.cn:8443/*
 // @match          https://example.com/*
@@ -36,7 +36,8 @@
     const CONFIG = {
         CHECK_INTERVAL: 3000,
         MAX_LOG_ENTRIES: 20,
-        didaUrl: 'https://cdn.jsdelivr.net/gh/Run-os/znhd-service@refs/heads/main/public/dida.mp3',
+        // 提示音地址（GitHub 网页链接，运行时由 resolveGithubUrl() 按 useCdn 决定是否转 CDN）
+        didaUrl: 'https://github.com/Run-os/znhd-service/blob/refs/heads/main/public/dida.mp3',
         // 语音播报超时保护（毫秒），防止 onend/onerror 不触发导致队列卡死
         SPEECH_TIMEOUT: 15000,
         // 语音队列最大长度，超过时丢弃最早（最旧）的消息，防止内存堆积
@@ -107,8 +108,12 @@
             afternoonStart: 13.5,
             afternoonEnd: 18
         },
-        // 常用语数据源（可配置；留空或非法时回退此默认地址）
-        commonPhrasesUrl: 'https://cdn.jsdelivr.net/gh/Run-os/znhd-service@refs/heads/main/public/commonPhrases.yaml',
+        // 是否使用 CDN 加速（jsDelivr）加载项目内的 GitHub 资源（常用语 YAML、提示音 mp3 等）。
+        // true=经 jsDelivr 加速；false=直接走 GitHub 原始链接（raw.githubusercontent.com）。
+        useCdn: true,
+        // 常用语数据源（可配置；留空或非法时回退此默认地址）。
+        // 注意：此处存「GitHub 网页链接」，运行时由 resolveGithubUrl() 按 useCdn 决定是否转 CDN。
+        commonPhrasesUrl: 'https://github.com/Run-os/znhd-service/blob/refs/heads/main/public/commonPhrases.yaml',
         // 手机图片→电脑剪贴板 中继服务器地址（需为公网可访问的 http(s):// 地址，末尾不带 /）
         relayServer: 'https://znhd.122050.xyz'
     };
@@ -240,8 +245,57 @@
     let cachedWorkingHours = _initAllvalue.workingHours;
     // 缓存常用语数据源地址，避免每次请求都读取 localStorage
     let cachedCommonPhrasesUrl = _initAllvalue.commonPhrasesUrl;
+    // 缓存「是否使用 CDN 加速」开关，供 resolveGithubUrl() 在调用时读取（随设置实时更新）
+    let cachedUseCdn = !!_initAllvalue.useCdn;
 
     // ==========工具函数==========
+
+    /**
+     * 将 GitHub 文件链接按需转换为 jsDelivr CDN 链接（或原始 GitHub 链接）。
+     *
+     * 转换规则：
+     * - 开启 CDN（useCdn=true）：输出 `https://cdn.jsdelivr.net/gh/用户名/仓库名@分支/文件路径`
+     *   （分支可含斜杠，如 `refs/heads/main`，通过字符串变换直接把 `/blob/` 或仓库后的 `/` 替换为 `@`，
+     *   无需拆分分支/路径，故天然支持多段分支）。
+     * - 关闭 CDN（useCdn=false）：输出可直接访问的 GitHub 原始链接 `https://raw.githubusercontent.com/...`。
+     * - 输入非 GitHub 链接（如已是 jsDelivr / npm CDN / 其他域名）：原样返回，不做转换。
+     *
+     * 支持的输入形式：
+     *   1. `https://github.com/用户名/仓库名/blob/分支/文件路径`
+     *   2. `https://raw.githubusercontent.com/用户名/仓库名/分支/文件路径`
+     *
+     * @param {string} githubUrl - GitHub 文件链接（函数唯一输入变量）
+     * @returns {string} 解析后的资源链接（CDN 或原始 GitHub）
+     */
+    function resolveGithubUrl(githubUrl) {
+        const url = (githubUrl || '').trim();
+        if (!url) return url;
+        const useCdn = cachedUseCdn; // 读取模块级缓存（设置变更时由 updateAllvalue 同步）
+
+        // 形式一：github.com 网页链接  https://github.com/用户/仓库/blob/分支/路径
+        // （分支可含斜杠，如 refs/heads/main；用单次捕获 $3 兜住「分支/路径」整段，@ 插在仓库后）
+        const ghBlob = /^https?:\/\/github\.com\/([^/]+)\/([^/]+)\/blob\/(.+)$/i;
+        if (ghBlob.test(url)) {
+            if (useCdn) {
+                return url.replace(ghBlob, 'https://cdn.jsdelivr.net/gh/$1/$2@$3');
+            }
+            // 关闭 CDN：转为可直接访问的原始链接
+            return url.replace(ghBlob, 'https://raw.githubusercontent.com/$1/$2/$3');
+        }
+
+        // 形式二：raw.githubusercontent.com 原始链接  https://raw.githubusercontent.com/用户/仓库/分支/路径
+        const raw = /^https?:\/\/raw\.githubusercontent\.com\/([^/]+)\/([^/]+)\/(.+)$/i;
+        if (raw.test(url)) {
+            if (useCdn) {
+                return url.replace(raw, 'https://cdn.jsdelivr.net/gh/$1/$2@$3');
+            }
+            return url; // 已是原始链接，原样返回
+        }
+
+        // 非 GitHub 链接（如已是 jsDelivr / npm CDN / 其他域名）：原样返回，不做转换
+        return url;
+    }
+
     // HTML 转义函数（复用单个 div 元素，避免重复创建）
     const _escapeHelper = document.createElement('div');
     /**
@@ -349,9 +403,11 @@
      * @param {Function} props.onChangeWorkingHours - 时间段变更回调（入参为完整 workingHours 对象）
      * @param {string} props.commonPhrasesUrl - 当前常用语数据源地址
      * @param {Function} props.onChangeCommonPhrasesUrl - 数据源地址变更回调（入参为 URL 字符串）
+     * @param {boolean} props.useCdn - 是否使用 CDN 加速（jsDelivr）加载项目内 GitHub 资源
+     * @param {Function} props.onChangeUseCdn - CDN 开关变更回调（入参为布尔值）
      * @returns {object} CAT_UI React 元素
      */
-    function SettingsDrawer({ visible, setVisible, logEntries, workingHours, onChangeWorkingHours, commonPhrasesUrl, onChangeCommonPhrasesUrl, relayServer, onChangeRelayServer }) {
+    function SettingsDrawer({ visible, setVisible, logEntries, workingHours, onChangeWorkingHours, commonPhrasesUrl, onChangeCommonPhrasesUrl, relayServer, onChangeRelayServer, useCdn, onChangeUseCdn }) {
         // 当前监控时间段（兜底默认值，避免未配置时报错）
         const wh = workingHours || { morningStart: 9, morningEnd: 12, afternoonStart: 13.5, afternoonEnd: 18 };
         // 更新单个时间段字段（入参为十进制小时）
@@ -420,6 +476,24 @@
                         }),
                     ],
                     { direction: "horizontal", size: "small" }
+                ),
+                // CDN 加速开关：控制项目内 GitHub 资源（常用语 YAML、提示音）是否经 jsDelivr 加速
+                CAT_UI.Space(
+                    [
+                        CAT_UI.Text("使用 CDN 加速（jsDelivr）加载资源", {
+                            style: { display: "block", fontWeight: "bold" }
+                        }),
+                        CAT_UI.Switch({
+                            checked: !!useCdn,
+                            onChange: (checked) => { if (typeof onChangeUseCdn === 'function') onChangeUseCdn(!!checked); }
+                        }),
+                    ],
+                    { direction: "horizontal", size: "small", style: { marginBottom: "8px" } }
+                ),
+                CAT_UI.createElement(
+                    "p",
+                    { style: { margin: "0 0 8px", color: "#999", fontSize: "12px", lineHeight: "1.5" } },
+                    "开启后，常用语、提示音等 GitHub 资源经 jsDelivr CDN 加速；关闭则直连 GitHub 原始链接（访问慢或 CDN 不可用时可临时关闭）。"
                 ),
                 CAT_UI.Divider("其他设置"),
                 // 监控时间段配置（使用时间选择器）
@@ -545,7 +619,7 @@
                             wordBreak: "break-all"
                         }
                     },
-                    `数据源: ${decodeURIComponent(commonPhrasesUrl || DEFAULTS.commonPhrasesUrl)}`
+                    `数据源: ${decodeURIComponent(resolveGithubUrl(commonPhrasesUrl || DEFAULTS.commonPhrasesUrl))}`
                 ),
                 // 重新加载按钮
                 CAT_UI.Button("重新加载常用语", {
@@ -633,6 +707,8 @@
             cachedWorkingHours = newValue.workingHours;
             // 同步更新常用语数据源缓存
             cachedCommonPhrasesUrl = newValue.commonPhrasesUrl;
+            // 同步更新 CDN 加速开关缓存
+            cachedUseCdn = !!newValue.useCdn;
         };
         const patchAllvalue = (kv) => updateAllvalue({ ...Allvalue, ...kv });
 
@@ -698,7 +774,7 @@
             setPhrasesLoading(true);
             GM_xmlhttpRequest({
                 method: 'GET',
-                url: cachedCommonPhrasesUrl,
+                url: resolveGithubUrl(cachedCommonPhrasesUrl),
                 onload: function (response) {
                     try {
                         const data = jsyaml.load(response.responseText);
@@ -871,6 +947,11 @@
                             onChangeRelayServer: (url) => {
                                 patchAllvalue({ relayServer: url });
                                 addLog('中继服务器已更新: ' + (url || '（空）'), 'info');
+                            },
+                            useCdn: Allvalue.useCdn,
+                            onChangeUseCdn: (v) => {
+                                patchAllvalue({ useCdn: !!v });
+                                addLog('CDN 加速已' + (v ? '开启' : '关闭'), 'info');
                             }
                         }),
                         CAT_UI.createElement(CommonPhrasesDrawer, {
@@ -1530,7 +1611,7 @@
             // 复用 Audio 实例，避免重复解码
             if (!didaAudioPlayer) {
                 didaAudioPlayer = new Audio();
-                didaAudioPlayer.src = CONFIG.didaUrl;
+                didaAudioPlayer.src = resolveGithubUrl(CONFIG.didaUrl);
                 didaAudioPlayer.volume = 0.5;
             }
             // 重置播放位置并播放

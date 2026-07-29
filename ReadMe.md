@@ -223,6 +223,9 @@ const DEFAULTS = {
 
 ## 更新日志
 
+### znhd.user.js v26.7.29-v5
+- **新增「使用 CDN 加速」配置 + `resolveGithubUrl()` 转换函数**：设置抽屉新增开关「使用 CDN 加速（jsDelivr）加载资源」（默认开启，存于 `Allvalue.useCdn`）。新增模块级函数 `resolveGithubUrl(githubUrl)`：输入一个 GitHub 文件链接，开启 CDN 时输出 `https://cdn.jsdelivr.net/gh/用户名/仓库名@分支/文件路径`，关闭时输出原始 `raw.githubusercontent.com` 链接；非 GitHub 链接（如 npm CDN）原样返回。分支含斜杠（如 `refs/heads/main`）用单次捕获正则正确转换。已接入：① `commonPhrasesUrl` 默认值改为 GitHub 网页链接、取用时经该函数解析（常用语抽屉「数据源」也显示解析后实际地址）；② `CONFIG.didaUrl` 改为 GitHub 链接、`playDidaSound` 取用时解析。Viewer.js 的 npm CDN 链接不属 GitHub 资源，维持原样。`@version`→`26.7.29-v5`。
+
 ### znhd.user.js v26.7.29-v4
 - **「本机上传链接」区二维码与链接左右对调**：用户要求二维码放在左侧。修正了上一版（v3）嵌套错误导致二维码与链接实际未左右并列的问题——现 flex 容器两个子节点严格左「二维码（`140×140px`，带边框圆角）」、右「链接文本 + 复制链接按钮」；二维码未生成时左侧显示占位提示，抽屉窄时自动换行。`@version`→`26.7.29-v4`。
 
