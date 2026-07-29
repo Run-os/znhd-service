@@ -34,6 +34,35 @@
     模拟勾选框（受控样式随状态变化，点击取反）。`CAT_UI.Switch` 也不可用（运行时 undefined）。
   - 文本输入/时间选择：`CAT_UI.Input` 可靠（透传 type，如 `{type:"time"}`），但仅限 arco Input 支持的输入类，
     不要指望它渲染 checkbox/radio 等控件形态。
+- **自定义弹窗 vs arco 焦点锁（focus-lock）冲突**：脚本自绘的裸 DOM 弹窗（图片画廊 `renderImageGallery`、文本弹窗
+  `showTextPopup`，挂 `document.documentElement`）内的 `<button>` 是焦点可夺取元素。当脚本面板的 arco 抽屉
+  （设置/常用语/手机传图）**或税务页面自身的 arco 弹窗**同时开着时，arco 的 focus-lock 发现焦点跑到弹窗按钮上
+  又拉不回，会反复刷 `FocusLock: focus-fighting detected. Only one focus management system could be active.`。
+  修复模板：弹窗挂载后对其内所有 `button` 设 `tabIndex=-1` 且 `mousedown` 时 `e.preventDefault()`（阻止抢占焦点，
+  鼠标点击 `onClick` 仍正常）。这样焦点锁看不到竞争焦点，告警消失；无论"另一个焦点锁"来自脚本面板还是页面都有效。
+- **自定义弹窗被外部高层灰层覆盖（2026-07-29 实测）**：弹窗自身 CSS 干净（白底、opacity:1、无伪元素），但用户
+  仍看到缩略图和按钮"灰蒙蒙"，本质是**宿主页或浏览器扩展有一个 z-index 高于弹窗 `2147483640` 的半透明灰层**
+  盖在了弹窗内容之上（通过 `document.elementFromPoint` 验证：图片中心的最上层元素变成了外部 div）。
+  修复模板：把弹窗 `overlay` 的 `z-index` 提到 CSS 最大值 `2147483647`；给白盒 `box` 加
+  `isolation:isolate`、`filter:none`、`backdrop-filter:none`、`z-index:1`；并对内容区 `grid` / 缩略图包装
+  `thumbWrap` / `img` / `button` 显式声明 `filter:none; backdrop-filter:none; opacity:1`。若灰层来自
+  宿主对 `html` 应用 `filter`，则子元素无法逃脱，只能排查禁用相关扩展或切换站点。
+- **Viewer.js 全屏预览与自定义弹窗的层叠冲突（2026-07-29 实测）**：
+  - Viewer.js（CDN `viewerjs/dist/viewer.min.js`）全屏预览容器 `.viewer-container` 默认挂在 `body` 下，
+    且**不提供 `on`/`addListener` 事件 API**（该构建原型方法是 `shown`/`hidden` 内部 handler，选项回调 `shown` 也不可靠）；
+    其显隐靠 CSS 类 `viewer-in` 增删 + opacity/visibility 过渡（不是 `display:none`）。
+  - 若自定义弹窗 `overlay` 与 Viewer 同为 `z-index:2147483647` 且弹窗挂在 `documentElement`、Viewer 挂 `body`，
+    谁压谁取决于页面层叠上下文——真实税务页 body 常带 transform/filter 形成独立层叠上下文，会把挂 body 的
+    Viewer 困住，永远被弹窗压后面（"预览跑到弹窗后"）。同时全屏 Viewer 会盖住弹窗右上角 ×。
+  - **已验证修法**：用 `MutationObserver` 监听 `.viewer-container` 出现即 `overlay.appendChild(vc)` 移入弹窗内部
+    （`vc.style.zIndex='2'`，高于白盒 `z-index:1`），预览必盖在白盒之上、且不受外部页面层叠上下文干扰；
+    并加安全网：再 `observe(vc,{attributes:true,attributeFilter:['class']})`，按 `viewer-in` 类增删切换
+    `vc.style.pointerEvents`（有=auto / 无=none），确保关闭预览后残留容器不遮挡弹窗关闭按钮/缩略图。
+  - **预存布局坑（与 Viewer 无关，纯 CSS）**：弹窗 `box` 是 `display:flex` 容器时，标题/正文作为 flex item 在层叠里
+    等同 `z-index:0` 层；关闭按钮是 `position:absolute`（同属 z-index:auto 层），同层按 DOM 顺序——标题在关闭按钮
+    之后 append 会画到关闭按钮之上吃掉点击（视觉无重叠，但标题隐形盒子铺满整行）。修法：给关闭按钮显式
+    `z-index:2!important` 抬到正 z-index 层。图片画廊与文本弹窗的关闭按钮都需加。
+  - 验证手段：`document.elementFromPoint` 取坐标最上层元素 + `elementsFromPoint` 看完整栈，可精准定位"被谁盖住"。
 - `createPanel` 的 options **不提供 onDrag 回调**（只认 point/header/render/onMin/onReady/style 等）。
   面板拖拽由内部 react-draggable 改写**内部层**的 `transform: translate`，根容器 left/top 不变。
 - 面板渲染在 **Shadow DOM**（`attachShadow({mode:"open"})`，自定义元素 <cat-ui-plan> 挂 document.body），

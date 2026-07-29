@@ -223,6 +223,20 @@ const DEFAULTS = {
 
 ## 更新日志
 
+### znhd.user.js v26.7.29-v11
+- **支持 ESC 键关闭图片预览/文本弹窗**：图片放大预览（Viewer.js）弹出后，Viewer.js 自带的键盘监听在本脚本「把 `.viewer-container` 移入 `overlay`」的特殊处理 + 真实税务页面 body 常被加 transform 的环境下常常失效，导致 ESC 关不掉预览。新增一个独立的全局 `keydown` 监听兜底：① 预览（Viewer）可见时按 ESC 先退出预览回到画廊九宫格；② 画廊态按 ESC 直接关闭整个图片弹窗；③ 文本弹窗按 ESC 直接关闭。监听仅安装一次（自保护），按当前弹窗状态分支处理，与 Viewer.js 自带 ESC 互不冲突（幂等）。`@version`→`26.7.29-v11`。
+
+### znhd.user.js v26.7.29-v10
+- **修复收到图片弹窗「点缩略图放大后预览跑到弹窗后面 / 右上角关闭按钮消失」**：
+  - 预览跑到弹窗后面：画廊 `overlay`（`z-index:2147483647`）与 Viewer 全屏预览容器（同样 `2147483647`）互相压制——Viewer 默认挂在 `body` 下、画廊挂在 `documentElement` 下，谁压谁取决于页面的层叠上下文（真实税务页面 body 常被加 transform/filter 形成独立层叠上下文，把挂 body 的 Viewer 困住，永远被画廊压后面）。修复：用 `MutationObserver` 监听 `.viewer-container` 出现即移入画廊 `overlay` 内部，使其处于本弹窗的层叠上下文之上（`vc.style.zIndex='2'`，高于白盒的 `1`），预览必定盖在白盒之上、且不受外部页面层叠上下文干扰；全屏预览时由 Viewer 自带 × 关闭回到画廊（标准模态交互）。（注：Viewer.js 该构建无 `on`/`addListener` 事件 API，故不依赖事件，改用 DOM 观察。）
+  - 关闭按钮"消失/点不到"：① 全屏 Viewer 容器与画廊等 z-index 时会盖住画廊右上角的 ×——随预览移入 overlay 一并解决；并加安全网：监听 Viewer 显隐（`viewer-in` 类增删），隐藏后置 `pointer-events:none`，确保残留容器不遮挡画廊关闭按钮/缩略图。② **预存布局 bug**：box 是 `display:flex` 容器，标题作为 flex item 在层叠里等同 `z-index:0` 层，而关闭按钮是 `position:absolute`（同属 z-index:auto 层），同层按 DOM 顺序——标题在关闭按钮之后 append，会画到关闭按钮之上并吃掉点击（视觉无重叠，但标题隐形盒子铺满整行）。给图片画廊与文本弹窗的关闭按钮都加 `z-index:2!important` 抬到正 z-index 层修复。浏览器实测：预览在顶层、关闭后关闭按钮可点中均通过。`@version`→`26.7.29-v10`。
+
+### znhd.user.js v26.7.29-v9
+- **修复收到图片弹窗内缩略图/按钮被灰蒙蒙遮罩覆盖的问题**：通过浏览器实测复现确认，弹窗自身 CSS 干净（白底、图片/按钮 `opacity:1`、`filter:none`、无伪元素遮罩）。灰蒙蒙来自**宿主页面的某个 z-index 高于 `2147483640` 的半透明灰层**（可能是翻译/深色模式/阅读模式类扩展，或税务站自身的高层级遮罩）盖到了弹窗内容上方。修复：将弹窗 `overlay` 的 `z-index` 提升到 CSS 最大值 `2147483647`；给白盒 `box` 增加 `isolation:isolate`、`filter:none`、`backdrop-filter:none`、`z-index:1`；并对 `grid` / `thumbWrap` / `img` / 所有按钮显式声明 `filter:none`、`backdrop-filter:none`、`opacity:1`，最大限度隔绝外部滤镜与高级别遮罩的渗透。`@version`→`26.7.29-v9`。
+
+### znhd.user.js v26.7.29-v8
+- **消除图片/文本预览弹窗的 `FocusLock: focus-fighting detected` 告警**：预览弹窗（`renderImageGallery`/`showTextPopup`，裸 DOM 挂 `documentElement`）内的 `<button>`（复制/下载/清空）是焦点可夺取元素。当脚本面板的 arco 抽屉（设置/常用语/手机传图）或税务页面自身的 arco 弹窗同时开着时，arco 的 focus-lock 焦点锁发现焦点跑到弹窗按钮上又拉不回，反复打架刷此告警。修复：弹窗挂载后对其内所有 `button` 设 `tabIndex=-1` 且 `mousedown` 时 `preventDefault()`（阻止抢占焦点，鼠标点击 `onClick` 仍正常）。`@version`→`26.7.29-v8`。
+
 ### znhd.user.js v26.7.29-v7
 - **二次修复 CDN 开关（裸 `input` 仍触发 React #137）**：上一版改用裸 `createElement('input')` 报错 `React error #137; got input`——证实 CAT_UI 的 React 渲染器白名单**连 `input` 也不支持**（与 `img` 同类）。再次改为白名单内的 `div` 模拟勾选框：受控样式（`useCdn` 为真时蓝底白勾、假时灰框），点击 `onClick` 调 `onChangeUseCdn(!useCdn)` 取反。`@version`→`26.7.29-v7`。
 
@@ -236,7 +250,7 @@ const DEFAULTS = {
 - **「本机上传链接」区二维码与链接左右对调**：用户要求二维码放在左侧。修正了上一版（v3）嵌套错误导致二维码与链接实际未左右并列的问题——现 flex 容器两个子节点严格左「二维码（`140×140px`，带边框圆角）」、右「链接文本 + 复制链接按钮」；二维码未生成时左侧显示占位提示，抽屉窄时自动换行。`@version`→`26.7.29-v4`。
 
 ### znhd.user.js v26.7.29-v3
-- **「本机上传链接」区改为左右并列**：原「链接 + 复制按钮」与二维码纯上下堆叠，现改为 flex 左右并排——左侧显示链接文本与「复制链接」按钮，右侧显示二维码（`140×140px`，带 1px 浅灰边框与圆角）；二维码尚未生成时右侧显示占位提示。抽屉较窄或移动端自动换行（`flexWrap: 'wrap'`）。`@version`→`26.7.29-v3`。
+- **「本机上传链接」区改为左历史*：原「链接 + 复制按钮」与二维码纯上下堆叠，现改为 flex 左右历史左侧显示链接文本与「历史」按钮，右侧显示二维码（`140×140px`，带 1px 浅灰历史角）；二维码尚未生成时右侧显示占位提示。抽屉较窄或移动端自动换行（`flexWrap: 'wrap'`）。`@version`→`26.7.29-v3`。
 
 ### znhd.user.js v26.7.29-v2
 - **面板按钮重排 + 新增「查看待存文件」入口**：面板按钮区改为两行——第一行「设置、常用语」，第二行「查看待存文件、设备互联」（「查看待存文件」在「设置」正下方、「设备互联」在「常用语」正下方）。点击「查看待存文件」随时打开**已收到图片的画廊**（复用 `receivedImages` + `renderImageGallery`，与收到新图时弹出的画廊一致，含复制/下载/清空；列表未清空前可反复查看，空列表时提示「暂无待存文件」）。`@version`→`26.7.29-v2`。

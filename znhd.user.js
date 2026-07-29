@@ -2,7 +2,7 @@
 // @name           征纳互动人数和在线监控v2
 // @namespace      https://scriptcat.org/
 // @description    实时监控征纳互动等待人数和在线状态，支持语音播报、自定义常用语
-// @version        26.7.29-v7
+// @version        26.7.29-v11
 // @author         runos
 // @match          https://znhd.hunan.chinatax.gov.cn:8443/*
 // @match          https://example.com/*
@@ -903,7 +903,7 @@
                         ),
                         CAT_UI.Space(
                             [
-                                CAT_UI.Button("查看待存文件", {
+                                CAT_UI.Button("历史文件", {
                                     type: "primary",
                                     onClick: () => {
                                         if (!receivedImages.length) {
@@ -1788,6 +1788,7 @@
     const MAX_GALLERY = 27; // 画廊最多保留张数，超出丢最旧（释放其 objectURL）
     const receivedImages = []; // { blob, previewUrl, name, mime, ts }
     let galleryViewer = null;  // Viewer.js 实例（重建画廊时先销毁）
+    let galleryViewerObserver = null; // 监听 Viewer 全屏容器出现并移入画廊遮罩的 MutationObserver
     let viewerCssInjected = false;
 
     // 注入 Viewer.js 的 CSS：优先 @resource（GM_getResourceText），失败回退 CDN <link>
@@ -1849,38 +1850,42 @@
 
     function renderImageGallery() {
         closeImagePopup(); // 重建（销毁旧 Viewer 实例与旧 DOM）
+        installPopupKeyHandler(); // 安装全局 ESC 关闭（预览态→退出预览；画廊态→关弹窗）
         ensureViewerCss();
         const overlay = document.createElement('div');
         overlay.id = '__znhd_img_popup__';
         // 所有样式加 !important + 铺满 100vw/vh，隔绝任何外部 CSS（含扩展/页面）对弹窗的覆盖
-        overlay.style.cssText = 'position:fixed!important;top:0!important;left:0!important;right:0!important;bottom:0!important;width:100vw!important;height:100vh!important;z-index:2147483640!important;display:flex!important;align-items:center!important;justify-content:center!important;background:rgba(0,0,0,0.55)!important;opacity:1!important;font-family:sans-serif!important;';
+        overlay.style.cssText = 'position:fixed!important;top:0!important;left:0!important;right:0!important;bottom:0!important;width:100vw!important;height:100vh!important;z-index:2147483647!important;display:flex!important;align-items:center!important;justify-content:center!important;background:rgba(0,0,0,0.55)!important;opacity:1!important;font-family:sans-serif!important;';
         const box = document.createElement('div');
-        box.style.cssText = 'position:relative!important;width:min(560px,92vw)!important;max-height:88vh!important;background:#fff!important;opacity:1!important;border-radius:12px!important;padding:16px!important;box-shadow:0 8px 30px rgba(0,0,0,0.35)!important;display:flex!important;flex-direction:column!important;';
+        box.style.cssText = 'position:relative!important;z-index:1!important;width:min(560px,92vw)!important;max-height:88vh!important;background:#fff!important;opacity:1!important;border-radius:12px!important;padding:16px!important;box-shadow:0 8px 30px rgba(0,0,0,0.35)!important;display:flex!important;flex-direction:column!important;filter:none!important;backdrop-filter:none!important;isolation:isolate!important;';
         // 标题
         const title = document.createElement('div');
-        title.textContent = '收到的图片（' + receivedImages.length + '）· 单击放大';
+        title.textContent = '收到的图片（' + receivedImages.length + '）· 单击放大，最新图片在最后';
         title.style.cssText = 'font-size:15px!important;font-weight:bold!important;color:#333!important;margin:0 0 10px 2px!important;';
         // 右上角关闭
         const close = document.createElement('div');
         close.textContent = '×';
         close.title = '关闭（图片保留，收到新图会再次弹出）';
-        close.style.cssText = 'position:absolute!important;top:8px!important;right:10px!important;width:30px!important;height:30px!important;line-height:28px!important;text-align:center!important;font-size:22px!important;color:#fff!important;cursor:pointer!important;border-radius:50%!important;background:#e4393c!important;opacity:1!important;box-shadow:0 1px 4px rgba(0,0,0,0.3)!important;font-weight:bold!important;';
+        // 注意：box 是 display:flex 容器，标题作为 flex item 在层叠里等同 z-index:0 层；
+        // 关闭按钮是 position:absolute（同属 z-index:auto 层），同层按 DOM 顺序——标题在关闭按钮之后 append，
+        // 会画到关闭按钮之上并吃掉点击（视觉无重叠，但标题隐形盒子铺满整行）。故显式抬到 z-index:2 确保可点。
+        close.style.cssText = 'position:absolute!important;top:8px!important;right:10px!important;width:30px!important;height:30px!important;line-height:28px!important;text-align:center!important;font-size:22px!important;color:#fff!important;cursor:pointer!important;border-radius:50%!important;background:#e4393c!important;opacity:1!important;box-shadow:0 1px 4px rgba(0,0,0,0.3)!important;font-weight:bold!important;z-index:2!important;';
         close.onmouseenter = () => { close.style.background = '#c9302c'; };
         close.onmouseleave = () => { close.style.background = '#e4393c'; };
         close.onclick = () => closeImagePopup();
         // 九宫格容器（3 列，可滚动）
         const grid = document.createElement('div');
         grid.id = '__znhd_img_grid__';
-        grid.style.cssText = 'display:grid!important;grid-template-columns:repeat(3,1fr)!important;gap:10px!important;overflow-y:auto!important;padding:2px!important;max-height:60vh!important;';
+        grid.style.cssText = 'display:grid!important;grid-template-columns:repeat(3,1fr)!important;gap:10px!important;overflow-y:auto!important;padding:2px!important;max-height:60vh!important;filter:none!important;backdrop-filter:none!important;opacity:1!important;';
         receivedImages.forEach((it, idx) => {
             const cell = document.createElement('div');
             cell.style.cssText = 'position:relative!important;display:flex!important;flex-direction:column!important;';
             const thumbWrap = document.createElement('div');
-            thumbWrap.style.cssText = 'position:relative!important;width:100%!important;aspect-ratio:1/1!important;border-radius:8px!important;overflow:hidden!important;background:#f2f2f2!important;cursor:zoom-in!important;';
+            thumbWrap.style.cssText = 'position:relative!important;width:100%!important;aspect-ratio:1/1!important;border-radius:8px!important;overflow:hidden!important;background:#f2f2f2!important;cursor:zoom-in!important;filter:none!important;backdrop-filter:none!important;opacity:1!important;';
             const imgEl = document.createElement('img');
             imgEl.src = it.previewUrl;
             imgEl.alt = it.name || ('image-' + (idx + 1));
-            imgEl.style.cssText = 'width:100%!important;height:100%!important;object-fit:cover!important;display:block!important;';
+            imgEl.style.cssText = 'width:100%!important;height:100%!important;object-fit:cover!important;display:block!important;filter:none!important;opacity:1!important;';
             thumbWrap.appendChild(imgEl);
             // 单张移除 ×
             const del = document.createElement('div');
@@ -1894,7 +1899,7 @@
             btnRow.style.cssText = 'display:flex!important;gap:4px!important;margin-top:6px!important;';
             const copyBtn = document.createElement('button');
             copyBtn.textContent = '复制';
-            copyBtn.style.cssText = 'flex:1!important;padding:4px 0!important;border:none!important;border-radius:6px!important;background:#1890ff!important;color:#fff!important;font-size:12px!important;opacity:1!important;cursor:pointer!important;';
+            copyBtn.style.cssText = 'flex:1!important;padding:4px 0!important;border:none!important;border-radius:6px!important;background:#1890ff!important;color:#fff!important;font-size:12px!important;opacity:1!important;cursor:pointer!important;filter:none!important;backdrop-filter:none!important;';
             copyBtn.onclick = (e) => {
                 e.stopPropagation();
                 copyBtn.textContent = '复制中…'; copyBtn.disabled = true;
@@ -1912,7 +1917,7 @@
             };
             const dlBtn = document.createElement('button');
             dlBtn.textContent = '下载';
-            dlBtn.style.cssText = 'flex:1!important;padding:4px 0!important;border:none!important;border-radius:6px!important;background:#722ed1!important;color:#fff!important;font-size:12px!important;opacity:1!important;cursor:pointer!important;';
+            dlBtn.style.cssText = 'flex:1!important;padding:4px 0!important;border:none!important;border-radius:6px!important;background:#722ed1!important;color:#fff!important;font-size:12px!important;opacity:1!important;cursor:pointer!important;filter:none!important;backdrop-filter:none!important;';
             dlBtn.onclick = (e) => {
                 e.stopPropagation();
                 try {
@@ -1944,7 +1949,7 @@
         bar.style.cssText = 'display:flex!important;justify-content:center!important;gap:12px!important;margin-top:12px!important;';
         const clearBtn = document.createElement('button');
         clearBtn.textContent = '清空全部';
-        clearBtn.style.cssText = 'padding:7px 18px!important;border:none!important;border-radius:8px!important;background:#999!important;color:#fff!important;font-size:13px!important;cursor:pointer!important;';
+        clearBtn.style.cssText = 'padding:7px 18px!important;border:none!important;border-radius:8px!important;background:#999!important;color:#fff!important;font-size:13px!important;cursor:pointer!important;filter:none!important;backdrop-filter:none!important;';
         clearBtn.onclick = () => {
             receivedImages.forEach(it => { try { URL.revokeObjectURL(it.previewUrl); } catch (e) { /* 忽略 */ } });
             receivedImages.length = 0;
@@ -1958,6 +1963,14 @@
         overlay.appendChild(box);
         overlay.onclick = (e) => { if (e.target === overlay) closeImagePopup(); };
         document.documentElement.appendChild(overlay); // 挂到 <html> 而非 <body>：避开 body 级 transform/filter 改写 fixed 包含块
+        // 焦点隔离：弹窗内的 <button> 设为不可 Tab 聚焦，且点击时不抢占焦点。
+        // 否则当脚本面板或税务页面自身的 arco 抽屉/弹窗（带 focus-lock 焦点锁）同时开着时，
+        // 焦点在抽屉与弹窗按钮间来回“打架”，控制台会刷出 "FocusLock: focus-fighting detected"。
+        // 鼠标点击仍正常触发 onClick，不影响复制/下载/清空功能。
+        overlay.querySelectorAll('button').forEach(function (b) {
+            b.tabIndex = -1;
+            b.addEventListener('mousedown', function (e) { e.preventDefault(); });
+        });
         // 用 Viewer.js 绑定画廊：单击缩略图放大，多图可左右切换
         if (typeof Viewer === 'function') {
             try {
@@ -1968,6 +1981,32 @@
                     toolbar: { zoomIn: 1, zoomOut: 1, oneToOne: 1, reset: 1, prev: 1, next: 1, rotateLeft: 1, rotateRight: 1, flipHorizontal: 1, flipVertical: 1 },
                     filter(image) { return true; },
                 });
+                // 关键：把 Viewer 全屏预览容器移入画廊遮罩内部，使其处于本弹窗的层叠上下文之上（高于白盒），
+                // 避免与画廊遮罩（同为 2147483647）互相压制导致「预览跑到弹窗后面」或「关闭按钮被盖住」。
+                // 否则在真实税务页面里 body 常被加 transform/filter 形成独立层叠上下文，把挂在 body 下的 Viewer
+                // 困住，永远被画廊压在后面；且全屏 Viewer 容器与画廊遮罩等 z-index 时会盖住画廊右上角的 ×。
+                // 移入后：全屏预览盖在白盒之上，由 Viewer 自带 × 关闭回到画廊（标准模态交互）。
+                // 用 MutationObserver 监听 .viewer-container 出现即移入（Viewer.js 该构建的事件 API 不可靠，不依赖之）。
+                if (window.MutationObserver) {
+                    if (galleryViewerObserver) { try { galleryViewerObserver.disconnect(); } catch (e) { /* 忽略 */ } }
+                    galleryViewerObserver = new MutationObserver(function () {
+                        const vc = document.querySelector('.viewer-container');
+                        if (vc && vc.parentNode !== overlay) {
+                            overlay.appendChild(vc);
+                            vc.style.zIndex = '2'; // 在画廊遮罩上下文内，高于白盒(z-index:1)
+                            // 安全网：监听 Viewer 显隐（viewer-in 类的增删，不依赖其事件 API）。
+                            // 显示时允许交互；隐藏后置 pointer-events:none，避免残留容器遮挡画廊关闭按钮/缩略图。
+                            if (!vc.__znhdWatched) {
+                                vc.__znhdWatched = true;
+                                vc.style.pointerEvents = vc.className.indexOf('viewer-in') >= 0 ? 'auto' : 'none';
+                                new MutationObserver(function () {
+                                    vc.style.pointerEvents = vc.className.indexOf('viewer-in') >= 0 ? 'auto' : 'none';
+                                }).observe(vc, { attributes: true, attributeFilter: ['class'] });
+                            }
+                        }
+                    });
+                    galleryViewerObserver.observe(document.documentElement, { childList: true, subtree: true });
+                }
             } catch (e) {
                 addLog('[设备互联] Viewer 初始化失败：' + e.message, 'error', true);
             }
@@ -1977,15 +2016,46 @@
     }
 
     function closeImagePopup() {
+        if (galleryViewerObserver) { try { galleryViewerObserver.disconnect(); } catch (e) { /* 忽略 */ } galleryViewerObserver = null; }
         if (galleryViewer) { try { galleryViewer.destroy(); } catch (e) { /* 忽略 */ } galleryViewer = null; }
         const ex = document.getElementById('__znhd_img_popup__');
         if (ex && ex.parentNode) ex.parentNode.removeChild(ex);
+    }
+
+    // 全局 ESC 关闭：图片预览（Viewer）可见时先退出预览回画廊；画廊态时关闭整个弹窗；
+    // 文本弹窗则直接关闭。Viewer.js 自带键盘监听在本脚本「把 .viewer-container 移入 overlay」的
+    // 特殊处理 + 真实税务页面 body 常被加 transform 的环境下常常失效，这里用独立监听兜底，确保 ESC 一定可用。
+    // 仅安装一次（自保护），内部按当前弹窗状态分支处理。
+    let _znhdPopupKeyInstalled = false;
+    function installPopupKeyHandler() {
+        if (_znhdPopupKeyInstalled) return;
+        _znhdPopupKeyInstalled = true;
+        document.addEventListener('keydown', function (e) {
+            if (e.key !== 'Escape' && e.keyCode !== 27) return;
+            // 图片画廊弹窗优先
+            const gallery = document.getElementById('__znhd_img_popup__');
+            if (gallery) {
+                const vc = document.querySelector('.viewer-container');
+                const viewerVisible = vc && vc.className.indexOf('viewer-in') >= 0;
+                if (viewerVisible && galleryViewer) {
+                    try { galleryViewer.hide(); } catch (err) { /* 忽略 */ }
+                } else {
+                    closeImagePopup();
+                }
+                return;
+            }
+            const textPopup = document.getElementById('__znhd_text_popup__');
+            if (textPopup) {
+                closeTextPopup();
+            }
+        });
     }
 
     // 收到手机文本时，在网页正中弹出预览弹窗（与图片弹窗同一挂法：document.documentElement），
     // 含文本展示区、复制到剪贴板按钮（复用 safeCopyText，满足浏览器剪贴板策略并记日志/提示音）、关闭按钮。
     function showTextPopup(txt) {
         closeTextPopup();
+        installPopupKeyHandler(); // 安装全局 ESC 关闭（文本弹窗直接关闭）
         const overlay = document.createElement('div');
         overlay.id = '__znhd_text_popup__';
         overlay.style.cssText = 'position:fixed!important;top:0!important;left:0!important;right:0!important;bottom:0!important;width:100vw!important;height:100vh!important;z-index:2147483647!important;display:flex!important;align-items:center!important;justify-content:center!important;background:rgba(0,0,0,0.55)!important;opacity:1!important;font-family:sans-serif!important;';
@@ -1997,7 +2067,8 @@
         const close = document.createElement('div');
         close.textContent = '×';
         close.title = '关闭';
-        close.style.cssText = 'position:absolute!important;top:8px!important;right:10px!important;width:30px!important;height:30px!important;line-height:28px!important;text-align:center!important;font-size:22px!important;color:#fff!important;cursor:pointer!important;border-radius:50%!important;background:#e4393c!important;opacity:1!important;box-shadow:0 1px 4px rgba(0,0,0,0.3)!important;font-weight:bold!important;';
+        // 同上：box 为 display:flex 容器，标题/正文为 flex item（等同 z-index:0 层），需把关闭按钮抬到 z-index:2 才能被点中。
+        close.style.cssText = 'position:absolute!important;top:8px!important;right:10px!important;width:30px!important;height:30px!important;line-height:28px!important;text-align:center!important;font-size:22px!important;color:#fff!important;cursor:pointer!important;border-radius:50%!important;background:#e4393c!important;opacity:1!important;box-shadow:0 1px 4px rgba(0,0,0,0.3)!important;font-weight:bold!important;z-index:2!important;';
         close.onmouseenter = () => { close.style.background = '#c9302c'; };
         close.onmouseleave = () => { close.style.background = '#e4393c'; };
         const copyBtn = document.createElement('button');
@@ -2015,6 +2086,12 @@
         box.appendChild(copyBtn);
         overlay.appendChild(box);
         document.documentElement.appendChild(overlay);
+        // 焦点隔离（同图片弹窗）：避免与 arco 抽屉/弹窗的焦点锁冲突刷出 focus-fighting 警告。
+        // 按钮仍可鼠标点击触发 onClick。
+        overlay.querySelectorAll('button').forEach(function (b) {
+            b.tabIndex = -1;
+            b.addEventListener('mousedown', function (e) { e.preventDefault(); });
+        });
     }
     function closeTextPopup() {
         const ex = document.getElementById('__znhd_text_popup__');
