@@ -694,7 +694,7 @@ const server = http.createServer(async (req, res) => {
 
     if (method === 'GET' && path === '/') {
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-      res.end('<h2>征纳互动 · 图片中继服务</h2><p>手机请打开脚本面板「手机传图」提供的上传链接。</p>');
+      res.end('<h2>征纳互动 · 图片中继服务</h2><p>手机请打开脚本面板「设备互联」提供的上传链接。</p>');
       return;
     }
     if (method === 'GET' && path === '/health') { sendJson(res, 200, { ok: true, version: VERSION }); return; }

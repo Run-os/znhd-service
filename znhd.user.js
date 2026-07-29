@@ -2,7 +2,7 @@
 // @name           征纳互动人数和在线监控v2
 // @namespace      https://scriptcat.org/
 // @description    实时监控征纳互动等待人数和在线状态，支持语音播报、自定义常用语
-// @version        26.7.29-v1
+// @version        26.7.29-v3
 // @author         runos
 // @match          https://znhd.hunan.chinatax.gov.cn:8443/*
 // @match          https://example.com/*
@@ -485,7 +485,7 @@
                 CAT_UI.createElement(
                     "p",
                     { style: { margin: "0 0 8px", color: "#999", fontSize: "12px", lineHeight: "1.5" } },
-                    "用于「手机传图到电脑」：手机上传的图片经此服务器转发到本机剪贴板。需自行部署配套 relay-server（见项目说明）。"
+                    "用于「设备互联到电脑」：手机上传的图片经此服务器转发到本机剪贴板。需自行部署配套 relay-server（见项目说明）。"
                 ),
                 CAT_UI.Divider("日志内容"),
                 CAT_UI.createElement(LogPanel, { logEntries }),
@@ -645,9 +645,9 @@
         const [visible, setVisible] = CAT_UI.useState(false);
         // 常用语抽屉显示状态管理
         const [commonPhrasesVisible, setCommonPhrasesVisible] = CAT_UI.useState(false);
-        // 手机传图抽屉显示状态
+        // 设备互联抽屉显示状态
         const [phoneVisible, setPhoneVisible] = CAT_UI.useState(false);
-        // 手机传图自动接收的停止函数（用 ref 避免重复启动）
+        // 设备互联自动接收的停止函数（用 ref 避免重复启动）
         const receiveStopRef = CAT_UI.useRef(null);
         // 日志条目状态管理
         const [logEntries, setLogEntries] = CAT_UI.useState([]);
@@ -733,7 +733,7 @@
             }
         }, [commonPhrasesVisible]);
 
-        // 手机传图：中继服务器地址填好后，默认自动开始接收（无需点击按钮）
+        // 设备互联：中继服务器地址填好后，默认自动开始接收（无需点击按钮）
         // 收到图片即弹出网页居中的预览弹窗（含复制 / 关闭按钮，见 showImagePopup）
         CAT_UI.useEffect(() => {
             const s = (Allvalue.relayServer || '').trim().replace(/\/+$/, '');
@@ -744,14 +744,14 @@
             const stop = startPhoneReceive({
                 server: s,
                 uuid: getDeviceId(),
-                onConnected: () => { addLog('[手机传图] 已自动开始接收（' + s + '）', 'info'); },
+                onConnected: () => { addLog('[设备互联] 已自动开始接收（' + s + '）', 'info'); },
                 onImage: (img) => {
-                    addLog('[手机传图] 收到图片：' + (img.name || 'image') + '（' + (img.mime || 'image') + '）', 'success');
+                    addLog('[设备互联] 收到图片：' + (img.name || 'image') + '（' + (img.mime || 'image') + '）', 'success');
                     showImagePopup(img);
                 },
                 onText: (txt) => {
                     const t = (txt.text || '').replace(/\s+$/, '');
-                    addLog('[手机传图] 收到文本：' + (t.length > 40 ? t.slice(0, 40) + '…' : t), 'success');
+                    addLog('[设备互联] 收到文本：' + (t.length > 40 ? t.slice(0, 40) + '…' : t), 'success');
                     showTextPopup(txt);
                 }
             });
@@ -802,24 +802,50 @@
                 ),
                 CAT_UI.Space(
                     [
-                        CAT_UI.Button("设置", {
-                            type: "primary",
-                            onClick: () => setVisible(true),
-                        }),
-                        CAT_UI.Button("常用语", {
-                            type: "primary",
-                            onClick() {
-                                setCommonPhrasesVisible(true);
-                            },
-                        }),
-                        CAT_UI.Button("手机传图", {
-                            type: "primary",
-                            onClick: () => setPhoneVisible(true),
-                        }),
+                        CAT_UI.Space(
+                            [
+                                CAT_UI.Button("设置", {
+                                    type: "primary",
+                                    onClick: () => setVisible(true),
+                                }),
+                                CAT_UI.Button("常用语", {
+                                    type: "primary",
+                                    onClick() {
+                                        setCommonPhrasesVisible(true);
+                                    },
+                                }),
+                            ],
+                            {
+                                direction: "horizontal",
+                                size: "middle",
+                            }
+                        ),
+                        CAT_UI.Space(
+                            [
+                                CAT_UI.Button("查看待存文件", {
+                                    type: "primary",
+                                    onClick: () => {
+                                        if (!receivedImages.length) {
+                                            CAT_UI.Message.info('暂无待存文件');
+                                            return;
+                                        }
+                                        renderImageGallery();
+                                    },
+                                }),
+                                CAT_UI.Button("设备互联", {
+                                    type: "primary",
+                                    onClick: () => setPhoneVisible(true),
+                                }),
+                            ],
+                            {
+                                direction: "horizontal",
+                                size: "middle",
+                            }
+                        ),
                     ],
                     {
-                        direction: "horizontal",
-                        size: "middle",
+                        direction: "vertical",
+                        size: "small",
                     }
                 ),
 
@@ -1857,10 +1883,10 @@
                     filter(image) { return true; },
                 });
             } catch (e) {
-                addLog('[手机传图] Viewer 初始化失败：' + e.message, 'error', true);
+                addLog('[设备互联] Viewer 初始化失败：' + e.message, 'error', true);
             }
         } else {
-            addLog('[手机传图] Viewer.js 未加载，单击放大不可用（缩略图仍可复制）', 'warning', true);
+            addLog('[设备互联] Viewer.js 未加载，单击放大不可用（缩略图仍可复制）', 'warning', true);
         }
     }
 
@@ -1961,7 +1987,7 @@
     }
 
     /**
-     * 启动「手机传图」长轮询接收循环（直到 stop() 调用）。
+     * 启动「设备互联」长轮询接收循环（直到 stop() 调用）。
      * 通过 GM_xmlhttpRequest 轮询中继服务器 /recv/<uuid>（绕过税务页面 CSP 对 connect-src 的限制）。
      * 收到图片时回调 onImage；状态变化回调 onStatus；网络异常自动重连。
      * @param {object} opt - { server, uuid, onStatus, onImage }
@@ -2021,7 +2047,7 @@
                     },
                     onerror: function () {
                         if (stopped) return;
-                        if (!loggedConnFail) { loggedConnFail = true; addLog('[手机传图] 连接服务器失败，请检查中继地址/网络（' + server + '）', 'error'); }
+                        if (!loggedConnFail) { loggedConnFail = true; addLog('[设备互联] 连接服务器失败，请检查中继地址/网络（' + server + '）', 'error'); }
                         if (opt.onStatus) opt.onStatus('连接中断，正在重连…');
                         setTimeout(poll, 2000);
                     },
@@ -2074,10 +2100,10 @@
         }
     }
 
-    // 手机传图抽屉：展示本机上传链接 + 二维码（接收由脚本自动进行，收到图片弹窗预览）
+    // 设备互联抽屉：展示本机上传链接 + 二维码（接收由脚本自动进行，收到图片弹窗预览）
     // 另含「发送到手机」区：检测手机在线状态，发送文本/图片到手机。
     /**
-     * 手机传图抽屉组件：展示本机专属上传链接与二维码。
+     * 设备互联抽屉组件：展示本机专属上传链接与二维码。
      * 接收由脚本自动进行（中继服务器填好后即生效），图片到达时弹出网页居中预览弹窗，弹窗内「复制到剪贴板」按钮（点击手势）真正写入剪贴板。
      * @param {object} props - 组件属性
      * @param {boolean} props.visible - 抽屉是否可见
@@ -2211,32 +2237,30 @@
 
         return CAT_UI.Drawer(
             CAT_UI.createElement('div', { style: { textAlign: 'left' } }, [
-                CAT_UI.createElement('p', {
-                    style: { color: '#666', fontSize: '13px', lineHeight: '1.6', margin: '0 0 12px' }
-                }, '本机已默认自动接收（填好中继服务器即生效）。手机扫码或在浏览器打开下方链接，选图后会自动弹出预览，点「复制到剪贴板」即可在征纳互动 Ctrl+V 粘贴。'),
-                CAT_UI.Divider('本机上传链接'),
                 link ?
-                    CAT_UI.createElement('div', {}, [
-                        CAT_UI.createElement('div', {
-                            style: { fontSize: '12px', color: '#999', wordBreak: 'break-all', marginBottom: '8px' }
-                        }, link),
-                        CAT_UI.Button('复制链接', {
-                            type: 'link',
-                            onClick: copyLink,
-                            style: { padding: '0 8px', color: '#1890ff', fontWeight: 'bold' }
-                        }),
+                    CAT_UI.createElement('div', { style: { display: 'flex', gap: '16px', alignItems: 'flex-start', flexWrap: 'wrap' } }, [
+                        CAT_UI.createElement('div', { style: { flex: '1', minWidth: '180px' } }, [
+                            CAT_UI.createElement('div', {
+                                style: { fontSize: '12px', color: '#999', wordBreak: 'break-all', marginBottom: '8px' }
+                            }, link),
+                            CAT_UI.Button('复制链接', {
+                                type: 'link',
+                                onClick: copyLink,
+                                style: { padding: '0 8px', color: '#1890ff', fontWeight: 'bold' }
+                            }),
+                        ]),
+                        qrUrl ?
+                            CAT_UI.createElement('div', {
+                                style: {
+                                    width: '140px', height: '140px', flexShrink: 0,
+                                    backgroundImage: 'url("' + qrUrl + '")',
+                                    backgroundSize: 'contain', backgroundRepeat: 'no-repeat', backgroundPosition: 'center',
+                                    border: '1px solid #eee', borderRadius: '8px'
+                                }
+                            }) :
+                            CAT_UI.createElement('div', { style: { color: '#999', fontSize: '12px', width: '140px', textAlign: 'center' } }, '二维码生成中…（若长时间不出，请手动复制左侧链接）'),
                     ]) :
                     CAT_UI.createElement('p', { style: { color: '#e4393c', fontSize: '13px', margin: '0' } }, '尚未配置中继服务器，请到「设置」填写。'),
-                qrUrl ?
-                    CAT_UI.createElement('div', {
-                        style: {
-                            width: '200px', height: '200px', marginTop: '12px', marginBottom: '8px',
-                            backgroundImage: 'url("' + qrUrl + '")',
-                            backgroundSize: 'contain', backgroundRepeat: 'no-repeat', backgroundPosition: 'center',
-                            border: '1px solid #eee', borderRadius: '8px'
-                        }
-                    }) :
-                    CAT_UI.createElement('div', { style: { color: '#999', fontSize: '12px', marginTop: '12px' } }, '二维码生成中…（若长时间不出，请手动复制上方链接）'),
                 CAT_UI.Divider('发送到手机'),
                 CAT_UI.createElement('p', {
                     style: { color: phoneOnline ? '#007e44' : '#e4393c', fontSize: '13px', margin: '0 0 10px', lineHeight: '1.5' }
