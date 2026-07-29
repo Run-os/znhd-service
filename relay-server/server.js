@@ -331,7 +331,6 @@ function uploadPageHtml() {
       return;
     }
     compressBlob(f);
-    reader.readAsDataURL(f);
   }
 
   fileInput.addEventListener('change', function(e){
