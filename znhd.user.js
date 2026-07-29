@@ -2,7 +2,7 @@
 // @name           征纳互动人数和在线监控v2
 // @namespace      https://scriptcat.org/
 // @description    实时监控征纳互动等待人数和在线状态，支持语音播报、自定义常用语
-// @version        26.7.29-v3
+// @version        26.7.29-v4
 // @author         runos
 // @match          https://znhd.hunan.chinatax.gov.cn:8443/*
 // @match          https://example.com/*
@@ -2239,6 +2239,20 @@
             CAT_UI.createElement('div', { style: { textAlign: 'left' } }, [
                 link ?
                     CAT_UI.createElement('div', { style: { display: 'flex', gap: '16px', alignItems: 'flex-start', flexWrap: 'wrap' } }, [
+                        // 左侧：二维码
+                        CAT_UI.createElement('div', { style: { flexShrink: '0' } }, [
+                            qrUrl ?
+                            CAT_UI.createElement('div', {
+                                style: {
+                                    width: '140px', height: '140px',
+                                    backgroundImage: 'url("' + qrUrl + '")',
+                                    backgroundSize: 'contain', backgroundRepeat: 'no-repeat', backgroundPosition: 'center',
+                                    border: '1px solid #eee', borderRadius: '8px'
+                                }
+                            }) :
+                            CAT_UI.createElement('div', { style: { color: '#999', fontSize: '12px', width: '140px', textAlign: 'center' } }, '二维码生成中…（若长时间不出，请手动复制右侧链接）'),
+                        ]),
+                        // 右侧：链接文本 + 复制按钮
                         CAT_UI.createElement('div', { style: { flex: '1', minWidth: '180px' } }, [
                             CAT_UI.createElement('div', {
                                 style: { fontSize: '12px', color: '#999', wordBreak: 'break-all', marginBottom: '8px' }
@@ -2249,16 +2263,6 @@
                                 style: { padding: '0 8px', color: '#1890ff', fontWeight: 'bold' }
                             }),
                         ]),
-                        qrUrl ?
-                            CAT_UI.createElement('div', {
-                                style: {
-                                    width: '140px', height: '140px', flexShrink: 0,
-                                    backgroundImage: 'url("' + qrUrl + '")',
-                                    backgroundSize: 'contain', backgroundRepeat: 'no-repeat', backgroundPosition: 'center',
-                                    border: '1px solid #eee', borderRadius: '8px'
-                                }
-                            }) :
-                            CAT_UI.createElement('div', { style: { color: '#999', fontSize: '12px', width: '140px', textAlign: 'center' } }, '二维码生成中…（若长时间不出，请手动复制左侧链接）'),
                     ]) :
                     CAT_UI.createElement('p', { style: { color: '#e4393c', fontSize: '13px', margin: '0' } }, '尚未配置中继服务器，请到「设置」填写。'),
                 CAT_UI.Divider('发送到手机'),
