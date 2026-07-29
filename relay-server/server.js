@@ -205,6 +205,7 @@ function uploadPageHtml() {
   .recvclose{position:absolute;top:12px;right:14px;width:34px;height:34px;line-height:32px;text-align:center;font-size:24px;color:#fff;background:rgba(255,255,255,0.2);border-radius:50%;cursor:pointer}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/viewerjs/dist/viewer.min.js"></script>
+<script src="https://cdn.bootcdn.net/ajax/libs/heic2any/0.0.4/heic2any.js"></script>
 </head>
 <body>
   <h2>📷 上传到电脑<span class="ver">v${VERSION}</span></h2>
@@ -283,30 +284,53 @@ function uploadPageHtml() {
   // 且压成 JPEG 会丢失矢量特性——故 SVG 跳过压缩，原样直传（修正 mime 为 image/svg+xml）。
   function compressFile(f, done, fail){
     var isSvg = (f.type === 'image/svg+xml') || /\\.svg$/i.test(f.name || '');
+    var isHeic = (f.type === 'image/heic' || f.type === 'image/heif' || (f.name || '').toLowerCase().indexOf('.heic') > -1 || (f.name || '').toLowerCase().indexOf('.heif') > -1);
     if(isSvg){
       var svgBlob = (f.type === 'image/svg+xml') ? f : f.slice(0, f.size, 'image/svg+xml');
       done(svgBlob);
       return;
     }
-    var reader = new FileReader();
-    reader.onload = function(){
-      var img = new Image();
-      img.onload = function(){
-        var w = img.width, h = img.height;
-        var scale = Math.min(1, MAX_DIM / Math.max(w, h));
-        var cw = Math.round(w*scale), ch = Math.round(h*scale);
-        var canvas = document.createElement('canvas');
-        canvas.width = cw; canvas.height = ch;
-        var ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, cw, ch);
-        canvas.toBlob(function(blob){
-          if(blob){ done(blob); } else { fail(new Error('压缩失败')); }
-        }, 'image/jpeg', QUALITY);
+    // 通用 canvas 压缩（缩放 + JPEG 白底）；HEIC 转码后也复用此流程
+    function compressBlob(srcBlob){
+      var reader = new FileReader();
+      reader.onload = function(){
+        var img = new Image();
+        img.onload = function(){
+          var w = img.width, h = img.height;
+          var scale = Math.min(1, MAX_DIM / Math.max(w, h));
+          var cw = Math.round(w*scale), ch = Math.round(h*scale);
+          var canvas = document.createElement('canvas');
+          canvas.width = cw; canvas.height = ch;
+          var ctx = canvas.getContext('2d');
+          // JPEG 无透明通道：先铺白底，避免透明 PNG 被压成黑色背景
+          ctx.fillStyle = '#fff';
+          ctx.fillRect(0, 0, cw, ch);
+          ctx.drawImage(img, 0, 0, cw, ch);
+          canvas.toBlob(function(blob){
+            if(blob){ done(blob); } else { fail(new Error('压缩失败')); }
+          }, 'image/jpeg', QUALITY);
+        };
+        img.onerror = function(){ fail(new Error('图片解析失败')); };
+        img.src = reader.result;
       };
-      img.onerror = function(){ fail(new Error('图片解析失败')); };
-      img.src = reader.result;
-    };
-    reader.onerror = function(){ fail(new Error('读取文件失败')); };
+      reader.onerror = function(){ fail(new Error('读取文件失败')); };
+      reader.readAsDataURL(srcBlob);
+    }
+    // HEIC：优先用 heic2any 转成 JPEG 再走通用压缩；库缺失/失败则原样直传兜底
+    if(isHeic){
+      if(typeof heic2any === 'function'){
+        heic2any({ blob: f, toType: 'image/jpeg', quality: 0.9 })
+          .then(function(out){
+            var jpg = Array.isArray(out) ? out[0] : out;
+            if(jpg){ compressBlob(jpg); } else { done(f); }
+          })
+          .catch(function(){ done(f); });
+      } else {
+        done(f); // heic2any 未加载，原样直传交由电脑端处理
+      }
+      return;
+    }
+    compressBlob(f);
     reader.readAsDataURL(f);
   }
 
@@ -316,7 +340,7 @@ function uploadPageHtml() {
     if(!files.length){ return; }
     statusEl.className = 'status';
     statusEl.textContent = '处理中…（0/' + files.length + '）';
-    var doneCount = 0, failCount = 0;
+    var doneCount = 0, failCount = 0, failReasons = [];
     files.forEach(function(f){
       compressFile(f, function(blob){
         items.push({ blob: blob, name: f.name || 'image.jpg', mime: blob.type || 'image/jpeg', url: URL.createObjectURL(blob) });
@@ -325,14 +349,19 @@ function uploadPageHtml() {
         if(doneCount + failCount === files.length){ finishPick(); }
       }, function(err){
         failCount++;
+        failReasons.push((f.name || '图片') + '：' + (err && err.message ? err.message : err));
         if(doneCount + failCount === files.length){ finishPick(); }
       });
     });
     function finishPick(){
       renderGrid();
-      var msg = failCount ? (failCount + ' 张处理失败已跳过；') : '';
-      statusEl.className = failCount ? 'status err' : 'status';
-      statusEl.textContent = msg;
+      if(failCount){
+        statusEl.className = 'status err';
+        statusEl.textContent = failCount + ' 张处理失败已跳过：' + failReasons.join('；');
+      } else {
+        statusEl.className = 'status';
+        statusEl.textContent = '';
+      }
     }
   });
 
