@@ -112,7 +112,7 @@ znhd-service/
 **工作流程**：
 1. 每台电脑首次运行脚本时用 `crypto.randomUUID()` 生成并持久化一个**稳定设备 ID**（存在 `GM_setValue`，刷新/重开不变）；
 2. 面板「设备互联」抽屉展示本机专属上传链接 `https://<中继服务器>/u/<设备ID>` 及对应二维码（**二维码由脚本端 qrcodejs 本地生成，无需服务器参与**）；
-3. 手机浏览器打开该链接（或直接扫二维码）→ 选图/拍照（**支持多选，张数不限**，九宫格预览、可单张删除）→ 手机端用 canvas 逐张自动压缩（最大边 1600px、JPEG 质量 0.75；**SVG 例外：跳过压缩原样直传**，保留矢量与 `image/svg+xml` 类型）→ 逐张按序上传到中继服务器（服务端按设备维护 FIFO 队列，内存保护上限 100 条）；
+3. 手机浏览器打开该链接（或直接扫二维码）→ 选图/拍照（**支持多选，张数不限**，九宫格预览、可单张删除）→ 手机端用 canvas 逐张自动压缩（最大边 1600px、JPEG 质量 0.75；**SVG 例外：跳过压缩原样直传**，保留矢量与 `image/svg+xml` 类型；**HEIC/HEIF 例外：手机端用 heic2any（公共 CDN）解码转 JPEG 后同样铺白底压缩直传**，确保电脑端含 Windows 无需额外编解码器即可打开，库缺失时回退原样直传）→ 逐张按序上传到中继服务器（服务端按设备维护 FIFO 队列，内存保护上限 100 条）；**处理失败时状态栏会显示具体原因**（如「IMG.heic：图片解析失败 / 压缩失败」），便于排查。
 4. 电脑端脚本在「中继服务器」填好后**默认自动**用 `GM_xmlhttpRequest` **长轮询** `/recv/<设备ID>` 取回图片（无需点击按钮；长轮询而非 WebSocket 是为了绕过征纳互动页面的 CSP 对 connect-src 的限制）；
 5. 收到图片后即在**网页正中弹出九宫格画廊弹窗**（3 列缩略图，收到的图片自动累积、最多保留 27 张，直接挂到 `<html>`，不受面板 transform 影响）：**单击缩略图用 [Viewer.js](https://github.com/fengyuanchen/viewerjs) 放大查看**（缩放/旋转/多图左右切换），每张图下方「复制」按钮把图片写入系统剪贴板（此步必须由一次点击触发，满足浏览器安全策略）→ 去征纳互动 Ctrl+V 即可；「下载」按钮把原图存为文件（自动按原名/MIME 补扩展名）；每张右上角 × 可单独移除，底部「清空全部」，弹窗右上角关闭（图片保留，收到新图会再次弹出）。
 
@@ -209,7 +209,7 @@ const DEFAULTS = {
 
 ### 设备互联功能用不了
 1. 确认已在「设置 → 中继服务器」填写公网可访问的服务器地址（如 `https://你的服务器:端口`，末尾不带 `/`）
-2. 中继服务器需自行部署：进入 `relay-server/` 目录执行 `node server.js`（纯 Node 内置模块、零依赖，默认端口 3000，可用 `PORT` 环境变量修改）
+2. 中继服务器需自行部署：进入 `relay-server/` 目录执行 `node server.js`（纯 Node 内置模块、零依赖，默认端口 3000，可用 `PORT` 环境变量修改；注：Node 端仍零依赖，仅手机端转换 HEIC 时需从公共 CDN 加载 heic2any，断网时 HEIC 回退原样直传）
 3. 该服务器必须能从手机浏览器公网访问；仅本机 `localhost` 时手机无法连上
 4. 打开「设备互联」抽屉后，用手机扫二维码或打开链接上传；中继地址填好后**脚本自动开始接收**（无需点按钮），收到后弹窗点「复制到剪贴板」
 5. **中继服务更新后必须重启**才会生效（它常驻后台进程，不会自动热更）。若改过 `relay-server/server.js`，请先停掉旧进程再 `node server.js`（PM2/`systemd`/`docker` 对应 `restart`）。
@@ -257,6 +257,18 @@ const DEFAULTS = {
 
 ### relay-server v26.7.29-v4
 - **手机端收图弹窗视觉与脚本端完全一致**：把 `#recvPopup` 从「深色全屏遮罩+纯图片网格」改为脚本端同款**白底圆角卡片**——标题「收到的图片（N）· 单击放大」+ 红色 × 关闭 + 3 列缩略图（每张带「复制 / 下载」按钮 + 单张移除 ×）+ 底部「清空全部」；点击缩略图仍由 Viewer.js 接管放大/旋转/多图切换（遮罩压黑 `!important`，`zIndex:99999` 盖住卡片）。复制/下载走 `dataURL→Blob`（`ClipboardItem` 复制图片、`<a download>` 保存），CDN 不可达时退回 `openRecvImage` 单图查看。relay `package.json` version→`26.7.29-v4`。
+
+### relay-server v26.7.29-v8
+- **修复多选非 HEIC 图片卡死**：先前把 `compressFile` 重构为 `compressBlob` 时漏删一行残留 `reader.readAsDataURL(f)`（`reader` 已移入 `compressBlob` 内部、`compressFile` 作用域不再存在）。非 HEIC 多选时该残留行抛 `ReferenceError` 中断 `files.forEach` 循环，致后续图片不处理、`doneCount` 永远小于总数、状态永久卡在「处理中…」；HEIC 分支因提前 `return` 规避报错故不卡。已删除残留行。relay `package.json` version→`26.7.29-v8`。⚠️ 须重启 `node server.js`（容器内 `docker restart znhd`）生效。
+
+### relay-server v26.7.29-v7
+- **HEIC 改用 heic2any（公共 CDN）转 JPEG 后再压缩直传**：手机上传页 `<head>` 引入 `https://cdn.bootcdn.net/ajax/libs/heic2any/0.0.4/heic2any.js`；`compressFile` 对 HEIC/HEIF 走 `heic2any({blob, toType:'image/jpeg'})` 解码转 JPEG，`toBlob` 前先 `fillStyle='#fff';fillRect` 铺白底（防透明区黑底），成功后再 canvas 压成 JPEG 上传；库缺失/转换失败时回退原样直传兜底。确保 HEIC 在电脑端（含 Windows，无需额外编解码器）能直接打开。relay `package.json` version→`26.7.29-v7`。
+
+### relay-server v26.7.29-v6
+- **HEIC 支持（原样直传回退）+ 失败原因可见**：`compressFile` 新增 `isHeic` 检测（mime `image/heic`/`image/heif` 或文件名 `.heic`/`.heif`）；浏览器可解码 HEIC（如 iOS Safari）仍压 JPEG，不可解码（`img.onerror`）或 canvas 压缩失败（`toBlob` 返回 null）时改为**原样直传**避免整张被跳过。同步把多选失败提示从笼统「N 张处理失败已跳过」改为显示具体「文件名：原因」（如 `IMG.heic：图片解析失败` / `压缩失败` / `读取文件失败`）。relay `package.json` version→`26.7.29-v6`。
+
+### relay-server v26.7.29-v5
+- **压缩图铺白底，透明 PNG 不再黑底**：`compressFile` 在 canvas `drawImage` 前先 `fillStyle='#fff';fillRect(0,0,cw,ch)` 铺白。修复手机选带透明圆角/透明背景的 PNG 被压成 JPEG 后透出黑色背景的问题（透明像素在 JPEG 无透明通道、canvas 默认黑底所致）。relay `package.json` version→`26.7.29-v5`。
 
 ### znhd.user.js v26.7.29-v1
 - **「发送到手机」选图改为先预览后发送（与手机端一致）**：原选完图片立即上传，现改为选图仅加入「待发送」预览列表（抽屉内 3 列缩略图网格，单张 × 移除、可继续添加），点「发送 N 张到手机」才真正逐张顺序上传；避免误选即发的冲动操作。发送逻辑与之前一致（逐张顺序、失败即停、进度日志）。`@version`→`26.7.29-v1`。
