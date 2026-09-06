@@ -100,7 +100,7 @@
 3. **不得无理由重构可运行逻辑**（尤其弹窗 CSS、长轮询/广播机制、CAT_UI 用法）。改前先读 ReadMe 更新日志对应条目——多数"诡异写法"是真实浏览器实测结论。
 4. **新依赖必须记录**：同步更新 ReadMe「技术栈」与「项目结构」（依赖清单唯一归属 ReadMe，agent 不另存）。
 5. **硬编码尽量迁移配置**：脚本端用户可配置项进 `DEFAULTS`，常量进 `CONFIG`。
-6. **GitHub 资源引用存「GitHub 网页链接」**，运行时经 `resolveGithubUrl()` + `useCdn` 转 jsDelivr/raw；勿在 `DEFAULTS` 存 CDN 成品链接。
+6. **GitHub 资源引用存「GitHub 网页链接」**，运行时经 `resolveGithubUrl()` + `useCdn` 转 jsDelivr/raw；勿在 `DEFAULTS` 存 CDN 成品链接。（例外：`commonPhrasesUrl` 自 v26.9.6-v5 起规范值改存 **raw 原始直链**——用户误填网页/仓库页面会把整页 HTML 当 YAML 解析失败；raw 属 `resolveGithubUrl` 形式二，`useCdn` 开仍转 jsDelivr。其余如 `didaUrl` 仍存网页链接。）
 7. **新增 GM API 必须补 `@grant`**；`@match` 含税务页与 example.com（调试宿主），勿乱动。
 8. **保持现有风格**：中文注释/日志、语义前缀（`[监控]` `[设备互联]` 等）、JSDoc；提交前 `node --check <file>` 两文件均需通过。
 9. **双向互传类改动 = 两端同步 + 重启 + 版本说明**（脚本 `@version`、服务端 version 各自递增）。

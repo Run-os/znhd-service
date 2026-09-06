@@ -2,7 +2,7 @@
 // @name           征纳互动人数和在线监控v2
 // @namespace      https://scriptcat.org/
 // @description    实时监控征纳互动等待人数和在线状态，支持语音播报、自定义常用语
-// @version        26.9.6-v4
+// @version        26.9.6-v5
 // @author         runos
 // @match          https://znhd.hunan.chinatax.gov.cn:8443/*
 // @match          https://example.com/*
@@ -119,9 +119,11 @@
         // 是否使用 CDN 加速（jsDelivr）加载项目内的 GitHub 资源（常用语 YAML、提示音 mp3 等）。
         // true=经 jsDelivr 加速；false=直接走 GitHub 原始链接（raw.githubusercontent.com）。
         useCdn: true,
-        // 常用语数据源（可配置；留空或非法时回退此默认地址）。
-        // 注意：此处存「GitHub 网页链接」，运行时由 resolveGithubUrl() 按 useCdn 决定是否转 CDN。
-        commonPhrasesUrl: 'https://github.com/Run-os/znhd-service/blob/refs/heads/main/public/commonPhrases.yaml',
+        // 常用语数据源（可配置；留空时回退此默认地址）。
+        // 存「raw 原始直链」（resolveGithubUrl 形式二）：useCdn=true 时仍会转 jsDelivr 加速，false 时直连 raw。
+        // 不用「github.com/blob 网页链接」作规范值——若用户把该字段误填成网页/仓库页面，请求会拉回整页 HTML
+        // （如 --fontStack-monospace 的 CSS），jsyaml 解析即报「document separator expected」（v26.9.6-v5 起因）。
+        commonPhrasesUrl: 'https://raw.githubusercontent.com/Run-os/znhd-service/refs/heads/main/public/commonPhrases.yaml',
         // 手机图片→电脑剪贴板 中继服务器地址（需为公网可访问的 http(s):// 地址，末尾不带 /）
         relayServer: 'https://znhd.122050.xyz'
     };
@@ -787,7 +789,8 @@
             setPhrasesLoading(true);
             GM_xmlhttpRequest({
                 method: 'GET',
-                url: resolveGithubUrl(cachedCommonPhrasesUrl),
+                // 存值被清空时回退 DEFAULTS 默认直链，避免「空地址」静默失败（旧逻辑此处直接用可能为空的缓存值）
+                url: resolveGithubUrl(cachedCommonPhrasesUrl || DEFAULTS.commonPhrasesUrl),
                 onload: function (response) {
                     try {
                         // jsyaml.load('')/空响应体会返回 undefined/null；必须归一为 {}，

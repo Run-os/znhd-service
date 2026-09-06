@@ -146,8 +146,9 @@ const DEFAULTS = {
         afternoonStart: 13.5, afternoonEnd: 18
     },
     useCdn: true,         // 使用 CDN 加速（jsDelivr）加载项目内 GitHub 资源
-    // 注意：项目内 GitHub 资源存「网页链接」，运行时由 resolveGithubUrl() 按 useCdn 转 jsDelivr（开）/ raw（关）
-    commonPhrasesUrl: 'https://github.com/Run-os/znhd-service/blob/refs/heads/main/public/commonPhrases.yaml',
+    // 注意：常用语数据源存「raw 原始直链」，运行时由 resolveGithubUrl() 按 useCdn 转 jsDelivr（开）/ raw（关）。
+    // 勿填成 github.com 网页/仓库页面，否则会拉回整页 HTML 导致 YAML 解析失败。
+    commonPhrasesUrl: 'https://raw.githubusercontent.com/Run-os/znhd-service/refs/heads/main/public/commonPhrases.yaml',
     relayServer: 'https://znhd.122050.xyz' // 设备互联中继服务器公网地址，留空则该功能不可用
 };
 ```
@@ -229,6 +230,9 @@ const DEFAULTS = {
 ## 更新日志
 
 > **版本号规范**：脚本与服务端均采用 `YY.M.D-vN`（日期 + 当日改动序号，跨天序号重置为 v1）。`znhd.user.js` 版本见头部 `@version`；`relay-server` 版本存于 `relay-server/package.json` 的 `version`（`/health` 接口返回同一版本）。每次改动需在本节顶部补一条（形如 `### <脚本名> <版本号>`），写明改动说明。
+
+### znhd.user.js v26.9.6-v5
+- **常用语数据源规范值由 github blob 网页链接改为 raw 原始直链**：若用户把「常用语数据源」误填成 GitHub 网页/仓库页面地址，请求会拉回整页 HTML（GitHub CSS，含 `--fontStack-monospace`），`jsyaml` 解析报「end of the stream or a document separator is expected」。现 `DEFAULTS.commonPhrasesUrl` 存 `raw.githubusercontent.com` 直链（`resolveGithubUrl` 形式二，`useCdn=true` 时仍转 jsDelivr 加速、`false` 时直连 raw）；并让 `loadPhrasesData` 在缓存值为空时回退默认直链，避免空地址静默失败。`@version`→`26.9.6-v5`。
 
 ### relay-server v26.9.6-v2
 - **请求体超限回明确 413**（处理本轮代码审查）：`readBody` 超过 `MAX_BODY` 时原先中途 `req.destroy()` 掐断连接，客户端只见笼统「网络错误」，无从判断是体积问题。现改为超限后仅继续计数、不再缓存，一直读到 `end` 再以 `{statusCode:413}` 拒绝，`parseItemBody` 映射为 413 JSON `{error:'内容过大…请压缩后再发送'}`；这样请求被完整消费、不残留未读体破坏 keep-alive，客户端能稳定收到可理解的提示。relay `package.json` version→`26.9.6-v2`。⚠️ 须重启 `node server.js`（容器内 `docker restart znhd`）生效，`curl /health` 看到 `26.9.6-v2` 即生效。
