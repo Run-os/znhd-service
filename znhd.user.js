@@ -2,7 +2,7 @@
 // @name           征纳互动人数和在线监控v2
 // @namespace      https://scriptcat.org/
 // @description    实时监控征纳互动等待人数和在线状态，支持语音播报、自定义常用语
-// @version        26.9.6-v1
+// @version        26.9.6-v4
 // @author         runos
 // @match          https://znhd.hunan.chinatax.gov.cn:8443/*
 // @match          https://example.com/*
@@ -777,7 +777,7 @@
                 const cache = loadPhrasesCache();
                 if (cache && cache.url === cachedCommonPhrasesUrl &&
                     (Date.now() - cache.time) < PHRASES_CACHE_TTL) {
-                    setPhrasesData(cache.data);
+                    setPhrasesData(cache.data || {}); // 防 cache.data 为 undefined/null（历史上可能存过空值）
                     const mins = Math.round((Date.now() - cache.time) / 60000);
                     addLog('常用语使用本地缓存（' + mins + ' 分钟前加载），已跳过网络请求', 'info');
                     CAT_UI.Message.success('常用语已加载（本地缓存）');
@@ -790,15 +790,18 @@
                 url: resolveGithubUrl(cachedCommonPhrasesUrl),
                 onload: function (response) {
                     try {
-                        const data = jsyaml.load(response.responseText);
+                        // jsyaml.load('')/空响应体会返回 undefined/null；必须归一为 {}，
+                        // 否则抽屉渲染 Object.keys(phrasesData) 会抛 TypeError（空文件/空 200 即触发）。
+                        const data = jsyaml.load(response.responseText) || {};
                         setPhrasesData(data);
                         savePhrasesCache(cachedCommonPhrasesUrl, data);
                         addLog('常用语加载成功，共 ' + Object.keys(data || {}).length + ' 条', 'success');
                         CAT_UI.Message.success('常用语加载成功');
                     } catch (error) {
-                        addLog('YAML 解析失败: ' + error.message, 'error', true);
-                        CAT_UI.Message.error('YAML 解析失败: ' + error.message);
-                        setPhrasesData({});
+                        // 解析失败时保留已加载的旧数据（若有），用户仍可用；仅提示失败原因
+                        const hasOld = Object.keys(phrasesData).length > 0;
+                        addLog('YAML 解析失败: ' + error.message + (hasOld ? '，仍显示上次加载的内容' : ''), 'error', true);
+                        CAT_UI.Message.error('YAML 解析失败' + (hasOld ? '，仍显示上次内容' : ''));
                     } finally {
                         setPhrasesLoading(false);
                     }
@@ -807,10 +810,11 @@
                     // 统一处理 error 参数（可能是 Error 对象、字符串或事件）
                     const errMsg = (error && error.message) ? error.message
                         : (typeof error === 'string' ? error : '网络错误');
-                    addLog('加载常用语失败: ' + errMsg, 'error', true);
-                    CAT_UI.Message.error('加载常用语失败');
+                    // 网络失败时保留已加载的旧数据（若有），断网/服务器故障期间仍可使用上次的常用语
+                    const hasOld = Object.keys(phrasesData).length > 0;
+                    addLog('加载常用语失败: ' + errMsg + (hasOld ? '，仍显示上次加载的内容' : ''), 'error', true);
+                    CAT_UI.Message.error('加载常用语失败' + (hasOld ? '，仍显示上次内容' : ''));
                     setPhrasesLoading(false);
-                    setPhrasesData({});
                 }
             });
         };
@@ -1464,8 +1468,12 @@
             }
         }
 
+        // 兜底路径：body#tinymce 位于 iframe 内部，主 document 查询永远为 null，
+        // 须先定位 iframe 再读其 contentDocument 的 body 文本（与上面 DOM 兜底写入的是同一个 body）
+        const fallbackIframe = document.querySelector('iframe.tox-edit-area__iframe') ||
+            document.querySelector('iframe[class*="tox"]');
         const finalText = editor ? editor.getContent({ format: 'text' })
-            : document.querySelector('body#tinymce')?.textContent ?? '';
+            : (fallbackIframe?.contentDocument?.body?.textContent ?? '');
         addLog('已追加文本并同步: ' + finalText, 'success', true);
         return finalText;
     }
@@ -1697,6 +1705,21 @@
     // 每台电脑/每个脚本安装实例一个稳定 deviceId（持久化，刷新不变），
     // 拼出上传链接 <relayServer>/u/<deviceId>；手机打开该链接上传，电脑端长轮询取走。
     const DEVICE_ID_KEY = 'znhd_device_id';
+    // 单请求体上限，须与 relay-server 的 MAX_BODY 保持一致（服务端按「整段 JSON 体积」掐断）。
+    // 发图前据此预检体积，避免 base64 膨胀后超过上限，被服务端拒绝时只见笼统的网络/服务器错误。
+    const RELAY_MAX_BODY = 12 * 1024 * 1024;
+    /**
+     * 估算把该文件作为一条 POST body（含 name+mime+base64(data) 与 JSON 结构开销）的体积。
+     * 仅用于「发送到手机」发前预检，与服务端 MAX_BODY 对齐（约 12MB）。
+     * @param {File} file - 待发图片文件
+     * @param {string} [name] - 文件名
+     * @param {string} [mime] - MIME 类型
+     * @returns {number} 估算的 body 字节数
+     */
+    function imagePayloadBytes(file, name, mime) {
+        const b64Len = Math.ceil((file && file.size || 0) / 3) * 4; // base64 膨胀 ≈ 4/3
+        return b64Len + String(name || '').length + String(mime || '').length + 120;
+    }
     /**
      * 取得本机稳定设备 ID：首次运行用 crypto.randomUUID() 生成并持久化（GM_setValue），
      * 之后刷新/重开都读同一值。用于区分不同电脑（A、B 各自不同链接）。
@@ -2229,7 +2252,11 @@
                         if (data && data.empty) { poll(); return; }
                         if (data && data.type === 'image' && data.data) {
                             const blob = base64ToBlob(data.data, data.mime || 'image/jpeg');
-                            const previewUrl = 'data:' + (data.mime || 'image/jpeg') + ';base64,' + data.data;
+                            // 预览统一用 objectURL（与「发送到手机」待发列表一致）：
+                            // ① 画廊上限淘汰/单张移除/清空全部时的 URL.revokeObjectURL 真正生效
+                            //   （data:URL 字符串无法 revoke，旧写法实为无效空操作）；
+                            // ② 避免最多 27 张图的 base64 dataURL 长字符串常驻 JS 堆（可达几十 MB）。
+                            const previewUrl = URL.createObjectURL(blob);
                             if (opt.onStatus) opt.onStatus('收到图片：' + (data.name || 'image'));
                             if (opt.onImage) opt.onImage({ blob: blob, previewUrl: previewUrl, name: data.name, mime: data.mime });
                             poll(); // 继续接收下一张
@@ -2288,7 +2315,13 @@
                     let j = null;
                     try { j = JSON.parse(resp.responseText); } catch (e) { j = null; }
                     if (j && j.ok) { if (opt.onOk) opt.onOk(); }
-                    else { if (opt.onFail) opt.onFail((j && j.error) || ('HTTP ' + resp.status)); }
+                    else {
+                        // 优先用服务端 JSON 里的中文错误（如 413「内容过大」）；否则按状态码给可读提示，避免笼统报错。
+                        let msg = (j && j.error) ? String(j.error) : '';
+                        if (!msg && resp.status === 413) msg = '内容过大，请压缩后再发送';
+                        else if (!msg && resp.status >= 400) msg = '服务器错误（HTTP ' + resp.status + '）';
+                        if (opt.onFail) opt.onFail(msg || ('HTTP ' + resp.status));
+                    }
                 },
                 onerror: function () { if (opt.onFail) opt.onFail('网络错误，请检查中继地址'); },
                 ontimeout: function () { if (opt.onFail) opt.onFail('发送超时'); }
@@ -2409,12 +2442,20 @@
             let sent = 0;
             const sendNext = () => {
                 if (sent >= total) {
+                    // 发送成功后释放所有待发送图片的 objectURL，防止 blob URL 累积泄漏
+                    list.forEach(it => { try { URL.revokeObjectURL(it.url); } catch (e) { /* 忽略 */ } });
                     addLog('[发送到手机] ' + total + ' 张图片已全部发送', 'success');
                     setSending(false);
                     setPendingImages([]);
                     return;
                 }
                 const it = list[sent];
+                // 体积预检：base64 膨胀后若超服务端单请求上限，直接友好报错停止（不盲目传一半再被 413）
+                if (imagePayloadBytes(it.file, it.name, it.mime) > RELAY_MAX_BODY) {
+                    addLog('[发送到手机] 第 ' + (sent + 1) + ' 张过大（单张约 12MB 上限），已停止，请压缩后再试（已发 ' + sent + '/' + total + '）', 'error', true);
+                    setSending(false);
+                    return;
+                }
                 addLog('[发送到手机] 正在发送（' + (sent + 1) + '/' + total + '）：' + (it.name || 'image'), 'info');
                 const rd = new FileReader();
                 rd.onload = () => {

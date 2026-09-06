@@ -127,10 +127,12 @@ znhd-service/
 
 ```javascript
 const CONFIG = {
-    CHECK_INTERVAL: 3000,    // 监控检查间隔（毫秒）
-    MAX_LOG_ENTRIES: 20,     // 面板最大日志条目数
-    didaUrl: '.../dida.mp3', // 提示音文件地址
-    SPEECH_TIMEOUT: 15000    // 单条语音播报超时保护（毫秒），防止队列卡死
+    CHECK_INTERVAL: 3000,      // 监控检查间隔（毫秒）
+    MAX_LOG_ENTRIES: 20,       // 面板最大日志条目数
+    didaUrl: 'https://github.com/Run-os/znhd-service/blob/refs/heads/main/public/dida.mp3', // 提示音文件（GitHub 网页链接，运行时按 useCdn 转 CDN/raw）
+    SPEECH_TIMEOUT: 15000,     // 单条语音播报超时保护（毫秒），防止队列卡死
+    MAX_SPEECH_QUEUE: 10,      // 语音队列最大长度，超出丢弃最早
+    SPEECH_QUEUE_TTL: 30000    // 语音队列消息有效期（毫秒），入队/播放前剔除过期内容
 };
 ```
 
@@ -227,6 +229,35 @@ const DEFAULTS = {
 ## 更新日志
 
 > **版本号规范**：脚本与服务端均采用 `YY.M.D-vN`（日期 + 当日改动序号，跨天序号重置为 v1）。`znhd.user.js` 版本见头部 `@version`；`relay-server` 版本存于 `relay-server/package.json` 的 `version`（`/health` 接口返回同一版本）。每次改动需在本节顶部补一条（形如 `### <脚本名> <版本号>`），写明改动说明。
+
+### relay-server v26.9.6-v2
+- **请求体超限回明确 413**（处理本轮代码审查）：`readBody` 超过 `MAX_BODY` 时原先中途 `req.destroy()` 掐断连接，客户端只见笼统「网络错误」，无从判断是体积问题。现改为超限后仅继续计数、不再缓存，一直读到 `end` 再以 `{statusCode:413}` 拒绝，`parseItemBody` 映射为 413 JSON `{error:'内容过大…请压缩后再发送'}`；这样请求被完整消费、不残留未读体破坏 keep-alive，客户端能稳定收到可理解的提示。relay `package.json` version→`26.9.6-v2`。⚠️ 须重启 `node server.js`（容器内 `docker restart znhd`）生效，`curl /health` 看到 `26.9.6-v2` 即生效。
+
+### znhd.user.js v26.9.6-v4
+- **处理本轮代码审查两项**（服务端改动对应 relay v26.9.6-v2，需两端同步）：
+  - **「发送到手机」图片加体积预检**：发图前按「base64 膨胀 ≈4/3 + name/mime + JSON 开销」估算 body，超过单请求上限（与 relay `MAX_BODY` 12MB 对齐）即友好报错并停止，不再传一半被服务端掐断后只见笼统网络错误。
+  - **常用语加载空数据不再崩抽屉**：`jsyaml.load('')`/空响应体会返回 `undefined`/`null`，原先直接 `setPhrasesData(data)` 会在抽屉渲染 `Object.keys(phrasesData)` 时抛 TypeError（空文件/空 200 即触发）；现统一 `data || {}`（网络与缓存命中两路径）。
+- 纯健壮性改进，无功能变化；`node --check` 通过；`@version`→`26.9.6-v4`。
+
+### znhd.user.js v26.9.6-v3
+- **处理本轮代码审查「建议修」的脚本侧两项**：
+  - **收到图片的 previewUrl 统一为 objectURL**：`startPhoneReceive` 收图时原先用 `data:` URL 字符串做预览，而画廊上限淘汰/单张移除/清空全部时的 `URL.revokeObjectURL` 对 data:URL 是无效空操作，且最多 27 张图的 base64 长字符串常驻 JS 堆（可达几十 MB）。现改为 `URL.createObjectURL(blob)`（与「发送到手机」待发列表一致），revoke 真正生效、内存可回收。
+  - **常用语加载失败不再清空旧数据**：`loadPhrasesData` 的网络错误（onerror）与 YAML 解析失败（catch）原先都会 `setPhrasesData({})` 把已加载的常用语清掉，断网/数据源损坏时抽屉直接变空。现保留上次加载的内容，日志与提示补「仍显示上次内容」说明（首次加载失败无旧数据时行为不变）。
+- 纯健壮性改进，无功能变化；`node --check` 通过；`@version`→`26.9.6-v3`。
+
+### relay-server v26.9.6-v1
+- **通道工厂化重构 + 长轮询去 tick 化**（处理本轮代码审查「建议修」的服务端两项）：
+  - **抽取 `createChannel()` 工厂**：正向（手机→电脑，`/u` + `/recv`）与反向（电脑→手机，`/phone/send` + `/phone/recv`）原本是三组近乎逐行相同的镜像代码（入队、投递、长轮询，约 200 行重复），历史上 v26.7.29-v8 的残留行 bug 即发生在这类镜像代码里。现正反向各实例化一次（`forwardChannel`/`reverseChannel`），共用 `enqueue`/`deliver`/`handlePoll`/`sweepExpired`，日志文案按方向参数化，修一处等于修两处；POST 正文解析也抽为共用的 `parseItemBody()`。
+  - **去掉每连接 400ms tick 轮询**：投递本就由「POST 入队时同步 deliver」与「连接注册时立即查队」两条同步路径全覆盖，tick 定时器属空转。现改为「注册即查队 + 单次 maxwait 定时器」，过期清理由 5s 周期任务的 `sweepExpired()` 承担（投递前仍会清队头过期项，绝不投递过期内容）。N 个等待连接不再挂 N 个 400ms 定时器；连接清理改用幂等的 `req`/`res` 双 `close` 监听，兼容不同 Node 版本。
+  - 顺带移除从未被引用的死代码 `UUID_RE` 常量。
+  - 语义严格保持：FIFO、MAX_QUEUE=100 丢最旧、广播（一次投递给所有等待连接）、maxwait 钳制 [1000,30000] 到期回 `{empty:true}`、PENDING_TTL 过期不投递。**已本地端到端冒烟测试 25 项全部通过**（版本/积压即时投递/空响应/事件驱动即时投递/双连接广播/FIFO 顺序/队列上限丢最旧/maxwait 下限钳制/反向通道心跳-状态-发送-收件/图片字段透传/400/404/405）。
+- relay `package.json` version→`26.9.6-v1`。⚠️ 须重启 `node server.js`（容器内 `docker restart znhd`）生效，`curl /health` 看到 `26.9.6-v1` 即生效。
+
+### znhd.user.js v26.9.6-v2
+- **修复本轮代码审查「必须修」的两项缺陷**：
+  - **「发送到手机」成功后释放 objectURL（内存泄漏）**：`confirmSendImage` 全部发送成功后原先只 `setPendingImages([])`，`pickImages` 为每张图创建的 blob objectURL 从未 revoke（对比单张移除路径有 revoke），反复多选发送会持续累积泄漏。现发送成功后对列表逐张 `URL.revokeObjectURL` 再清空。
+  - **`appendToTinyMCE` 兜底路径返回值失真**：DOM 兜底插入成功后，`finalText` 用 `document.querySelector('body#tinymce')` 读取最终文本——但 `body#tinymce` 位于 iframe 内部，主 document 查询永远为 null，导致日志「已追加文本并同步:」恒为空、函数返回值失真。现改为先定位 tox iframe、再读其 `contentDocument.body.textContent`（与兜底写入的是同一个 body）。
+- 纯 bug 修复，无功能变化；`node --check` 通过；`@version`→`26.9.6-v2`。
 
 ### znhd.user.js v26.9.6-v1
 - **处理历史代码审查遗留项**（来源：`.workbuddy/reviews/znhd-userjs-review.md`）：

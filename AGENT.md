@@ -55,15 +55,15 @@
 ## 复用代码溯源
 
 - **手机页收图画廊 ≈ 脚本端画廊**：`server.js` 内联页 `#recvPopup`/`renderRecvGrid` 与 `znhd.user.js` `renderImageGallery`/`showImagePopup` 是同一套交互的两份独立实现。**改一侧需评估另一侧是否同步**。
-- **路由成对镜像**：`/u` ↔ `/phone/send`、`/recv` ↔ `/phone/recv`（入队/tick 逻辑逐行镜像）、`deliverToAll` ↔ `deliverToPhone`。**改一侧通道逻辑需同步考虑反向通道**。
+- **正反向通道已在服务端统一**：`server.js` 把 `/u`+`/recv`（手机→电脑）与 `/phone/send`+`/phone/recv`（电脑→手机）抽成 `createChannel()` 工厂，实例化为 `forwardChannel`/`reverseChannel`，入队/投递/长轮询共用（relay v26.9.6-v1 消除的历史逐行镜像，修一处即两处；语义见 `createChannel` 注释）。**仍需人工同步的是跨端合约**：`znhd.user.js`（脚本收图/发图）↔ `server.js` 内联手机页（上传/收件）各自实现。
 - **剪贴板结论跨端复用**：「Chromium 只可靠支持 PNG / 需页面主世界 write / 保留点击手势」先在脚本端踩出，后被手机页 `copyRecvImage` 复用简化版。
 
 ## 内部执行流程
 
 ### 数据转发循环（内部视角；用户流程见 ReadMe「设备互联」）
 1. 脚本端 `getDeviceId()`：`GM_getValue` 持久化 `crypto.randomUUID()` → 每台电脑稳定 `deviceId`。
-2. 手机 GET `/u/<id>` 拿内联上传页 → 前端压缩/HEIC 转码 → POST `/u/<id>` 入 `pending` 队列（超上限丢最旧）。
-3. 服务端 `deliverToAll` **广播**给所有在等连接（各一份拷贝）；无连接等待时条目留队列。
+2. 手机 GET `/u/<id>` 拿内联上传页 → 前端压缩/HEIC 转码 → POST `/u/<id>` 入 `forwardChannel`（FIFO，超 `MAX_QUEUE` 丢最旧）。
+3. 服务端 `forwardChannel` 入队即投递：把队头一条**广播**给所有在等连接（各一份拷贝）；无连接等待时条目留队列。
 4. 电脑端 `GM_xmlhttpRequest` 长轮询 `/recv/<id>`（绕过税务页 CSP），按 `type` 分流 image/text 弹窗。
 5. 反向：手机每 8s POST `/phone/heartbeat` 报活；电脑先 `GET /phone/status` 判在线再 `POST /phone/send`；服务端每 5s 扫描超 `PHONE_TTL` 判离线（只告警一次）。
 
@@ -78,14 +78,13 @@
 
 ## 关键数据结构（ReadMe 未系统性覆盖，AI 修改服务端必读）
 
-`server.js` 内存 Map，按 `deviceId` 为键，**无持久化**：
+`server.js` 内存态，按 `deviceId` 为键，**无持久化**：
 | 结构 | 含义 |
 |---|---|
-| `pending` / `phonePending` | 正向/反向 FIFO 条目队列（上限 100） |
-| `waiting` / `phoneWaiting` | 长轮询在等连接 `Set<res>`（广播目标） |
+| `forwardChannel` / `reverseChannel` | `createChannel()` 工厂两个实例（正向/反向）；各自闭包内持 `pending`（FIFO 条目队列，上限 100）+ `waiting`（长轮询在等连接 `Set<res>`，广播目标）+ `sweepExpired()` |
 | `phoneOnline` / `phoneWasOnline` | 手机最近心跳时间 / 曾在线集合（离线只告警一次） |
 
-条目 `Item = {type:'image'|'text', name?, mime?, data?, text?, ts}`；常量 `PENDING_TTL=60s`、`MAX_BODY=12MB`、`PHONE_TTL=20s`。
+条目 `Item = {type:'image'|'text', name?, mime?, data?, text?, ts}`；常量 `PENDING_TTL=60s`、`MAX_BODY=12MB`（超限回 413）、`PHONE_TTL=20s`、`MAX_QUEUE=100`。
 
 脚本端 localStorage 键（ReadMe 只提及 `scriptCat_Allvalue`，其余在此补全）：
 - `scriptCat_PanelPoint`：面板位置（防抖写）。
@@ -124,5 +123,4 @@
 
 - **FingerprintJS**：`@require` 引入（fp@5）但代码无调用点 → 遗留依赖，可整行删除（ReadMe「技术栈」已不再列出）。
 - **画廊两端重复实现**（脚本端 / server.js 手机页）：无共享模块，改动成本翻倍（见「复用代码溯源」）。
-- **双向通道逐行镜像**：`/recv` ↔ `/phone/recv` 改动易漏一侧。
-- **无自动化测试**：仅 `node --check` 语法校验 + 人工/浏览器实测；服务端无类型声明。
+- **无自动化测试**：仅 `node --check` 语法校验 + 人工/浏览器实测；服务端无类型声明。（服务端正反向逐行镜像已由 `createChannel()` 工厂消除，relay v26.9.6-v1。）
