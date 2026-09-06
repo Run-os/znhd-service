@@ -39,3 +39,29 @@
 - 工作时间可配置 DEFAULTS.workingHours；启动日志走 addLog 进面板日志窗。
 - resolveGithubUrl(githubUrl)：useCdn 时 jsdelivr gh，否则 raw.githubusercontent；支持 blob/raw 多段分支。DEFAULTS.useCdn 默认 true。
 - 手机上传页 compressFile：SVG 跳过压缩原样直传；HEIC 用 heic2any（CDN bootcdn 0.0.4）转 JPEG 再 canvas 压缩（铺白底防黑底），库缺失/失败原样直传兜底；失败原因在状态区显示。
+- 常用语 2 小时本地缓存（键 `scriptCat_PhrasesCache`，URL 变或点「重新加载」才重拉）。
+- 语音队列：上限 10（MAX_SPEECH_QUEUE）+ TTL 30s + 关语音时 clearSpeechQueue()。
+- 日志去重：`RECENT_LOG_COUNT=5` 最近 N 条窗口（原为只比对上一条，间隔性重复会刷屏）。
+- 主面板组件 `MainPanel`（原 `DM`，v26.9.6 重命名）；掉线检测双选择器 `:nth-child(2)`/`nth-of-type(2)` 是互补兜底，勿合并。
+
+## 写图片到剪贴板（硬性，唯一可靠路径）
+- `GM_setClipboard(data)` 在 ScriptCat **只支持文本**，传 Blob 不报错但**不真正写图**→假成功。图片分支已彻底移除。
+- 唯一可靠路径 = 页面主世界 `unsafeWindow.navigator.clipboard.write` + `unsafeWindow.ClipboardItem`（隔离世界里 ClipboardItem 常 undefined）。
+- Chromium 对图片**只可靠支持 image/png**；大图先降采样到最大边 1600px 再编码。转换要在**弹窗展示期预做**（`prepareClipboardImage`），点击时只做写入，否则点复制会明显卡顿。
+
+## 中继广播架构与反向通道（relay-server）
+- `/recv` 是**广播**：`waiting` 集合登记所有在等长轮询，`deliverToAll` 给每个等待连接各发一份 → 多标签同时开着会**各自都弹窗**（想只弹一个就关掉其它标签）。旧版单槽竞态（"第一次不弹、第二次才弹"）已由此解决。
+- 反向通道镜像正向：`/u`↔`/phone/send`、`/recv`↔`/phone/recv`、`deliverToAll`↔`deliverToPhone`；手机每 8s `/phone/heartbeat` 报活，`PHONE_TTL=20s`，5s 扫描判离线（只告警一次）。**改一侧逻辑必须同步评估另一侧**。
+- `pending`/`phonePending` 为 FIFO 队列（上限 100），全部内存态、无持久化；重启即清空。
+- 脚本端用 `GM_xmlhttpRequest` 长轮询（非 WebSocket）是为了绕过税务页 CSP 对 connect-src 的限制。
+
+## 排查方法论（硬性经验）
+- userscript 的 UI bug（弹窗透字/层级/遮挡）**不要靠读代码猜**，要连真机浏览器量运行中元素：`getComputedStyle`（opacity/background）、`getBoundingClientRect`（是否四边贴住视口）、`elementFromPoint`（谁在最顶）。本仓库 v10→v14 连续推断全错，v15 才"量"出真因 `opacity:0.8`。
+- 判断脚本是否在页面注入：**查 DOM 里的 Shadow 宿主**（`cat-ui-plan`/`cat-ui-popup`），绝不靠 `window` 全局变量或 `<script>` 标签（ScriptCat 跑隔离世界，都不暴露）。
+- 改了文件却"像没生效"：先确认运行版本（必要时让用户删除脚本重装 + Ctrl+Shift+R），运行版副本可能与工作区文件不一致。
+- 手机端"连不上"绝大多数是**部署/网络层**（反代没转发 POST、跨网、HTTPS 混合内容），先让用户给服务端 `[连接]` 日志 + 手机页错误文案，别先改代码逻辑。
+
+## 文档体系（agent.md / ReadMe.md 分工，v26.9.6 确立）
+- ReadMe = 对外唯一档案：功能/配置/技术栈/FAQ/更新日志（版本号规则写在更新日志开头）。agent.md = AI 内部：代码组织、复用溯源、数据结构、修改约束、踩坑索引（只留一句话规则 + 指向 ReadMe 版本条目）。
+- 更新前先做归属判断：对外→ReadMe；ReadMe 写错→直接修 ReadMe（不在 agent 另存正确版）；两边都要→正文进 ReadMe、agent 只留指针。
+- 部署流程以 `.github/workflows/deploy.yml` 注释为唯一真源（tar 直写 `/app` + `docker restart`；`appleboy/ssh-action` 不注入 env，远程脚本内变量硬编码），不在文档里维护第二份流程说明。

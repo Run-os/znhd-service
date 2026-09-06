@@ -2,7 +2,7 @@
 // @name           征纳互动人数和在线监控v2
 // @namespace      https://scriptcat.org/
 // @description    实时监控征纳互动等待人数和在线状态，支持语音播报、自定义常用语
-// @version        26.7.29-v11
+// @version        26.9.6-v1
 // @author         runos
 // @match          https://znhd.hunan.chinatax.gov.cn:8443/*
 // @match          https://example.com/*
@@ -27,6 +27,9 @@
 // @require        https://cdn.jsdelivr.net/npm/viewerjs/dist/viewer.min.js
 // @resource       VIEWER_CSS https://cdn.jsdelivr.net/npm/viewerjs/dist/viewer.min.css
 // ==/UserScript==
+// 元信息说明（勿随意改动，均为有意为之）：
+//  - @match https://example.com/* ：本脚本面板/弹窗的调试宿主，本地验证用，发布版保留以便排查问题。
+//  - @connect * ：中继服务器地址由用户在设置面板自定义（域名不固定），必须通配，无法收窄为固定域名。
 
 (function () {
     'use strict';
@@ -49,13 +52,15 @@
     // ==========日志管理==========
     // 全局日志状态管理
     let setLogEntriesCallback = null;
-    // 存储上一次的日志文本（用于重复内容检测）
-    let lastLogMessage = null;
+    // 日志去重窗口：保留最近若干条日志文本，同文本重复出现即忽略
+    // （避免「每 3 秒一条」的间隔性重复刷屏，比只比对上一条更可靠）
+    const RECENT_LOG_COUNT = 5;
+    let recentLogMessages = [];
 
     // 添加日志条目函数
     /**
      * 添加一条日志条目，输出到设置面板的日志窗口（通过回调写入 React 状态）。
-     * 内置重复内容过滤：与上一条日志文本完全相同则忽略，避免刷屏。
+     * 内置重复内容过滤：最近 RECENT_LOG_COUNT（5）条内出现过相同文本则忽略，避免刷屏。
      * @param {string} message - 日志正文
      * @param {('info'|'warning'|'success'|'error')} [type='info'] - 日志类型，决定着色
      * @param {boolean} [logenabled=false] - 是否同时输出到浏览器控制台（console.log）
@@ -64,15 +69,18 @@
     function addLog(message, type = 'info', logenabled = false) {
         const timestamp = new Date().toTimeString().slice(0, 8);
 
-        // 检查是否为重复内容
-        if (lastLogMessage && message === lastLogMessage) {
+        // 检查是否为重复内容（最近 RECENT_LOG_COUNT 条内出现过相同文本即忽略）
+        if (recentLogMessages.indexOf(message) !== -1) {
             // 如果内容相同，不输出本次内容
             console.log('[监控] 重复日志，已忽略:', message);
             return;
         }
 
-        // 更新上一次的日志文本
-        lastLogMessage = message;
+        // 更新日志去重窗口（滚动保留最近 RECENT_LOG_COUNT 条）
+        recentLogMessages.push(message);
+        if (recentLogMessages.length > RECENT_LOG_COUNT) {
+            recentLogMessages.shift();
+        }
 
         const logItem = { timestamp, message, type };
 
@@ -693,11 +701,11 @@
 
     // 主抽屉/模态框组件
     /**
-     * 主面板组件（DM = Dashboard/Main）：组装语音开关、设置与常用语入口及两个抽屉，
+     * 主面板组件（MainPanel）：组装语音开关、设置与常用语入口及两个抽屉，
      * 管理面板内全部状态（配置、日志、常用语数据等）。
      * @returns {object} CAT_UI React 元素
      */
-    function DM() {
+    function MainPanel() {
         // 使用加载的数据初始化Allvalue
         const [Allvalue, setAllvalue] = CAT_UI.useState(loadAllvalue());
 
@@ -1027,7 +1035,7 @@
                     borderBottom: "1px solid var(--color-neutral-3)"
                 },
             },
-            render: DM,
+            render: MainPanel,
 
             // 面板初始位置：优先使用上次保存的位置，否则用默认坐标
             point: loadPanelPoint() || {
@@ -1053,14 +1061,24 @@
     (function setupPanelPositionTracking() {
         const PDBG = false; // 诊断开关：验证通过后可改 false
 
+        // resize 监听句柄（保存引用，供页面卸载时移除，避免监听器残留）
+        let resizeHandler = null;
+
+        // 缓存已扫描到的 shadow 宿主（面板宿主由 ScriptCat 插入，扫描到后结构不再变化）
+        let shadowHostsCache = null;
+
         // 收集页面上所有带 open shadowRoot 的宿主元素
         /**
          * 收集页面上所有带有 open shadowRoot 的宿主元素（用于穿透 Shadow DOM 定位面板）。
+         * 结果做缓存：首次扫描到非空结果后直接复用，避免定时器里反复全树遍历 `querySelectorAll('*')`；
+         * 空结果不缓存（面板可能尚未插入 DOM），下次仍会重新扫描。
          * @returns {Array<Element>} 带有 shadowRoot 的 DOM 元素数组
          */
         function getShadowHosts() {
+            if (shadowHostsCache) return shadowHostsCache;
             const hosts = [];
             document.querySelectorAll('*').forEach(el => { if (el.shadowRoot) hosts.push(el); });
+            if (hosts.length) shadowHostsCache = hosts;
             return hosts;
         }
 
@@ -1195,14 +1213,23 @@
             // 双保险：拖拽过程（mousedown→mousemove→mouseup）中实时裁剪并保存最终位置
             root.addEventListener('mousedown', () => {
                 const onMove = () => persistAndClamp(root);
+                // mouseup 以 once 注册：无论鼠标是否在面板内释放都会自动解绑，避免监听器残留
                 const onUp = () => {
                     persistAndClamp(root);
                     document.removeEventListener('mousemove', onMove);
-                    document.removeEventListener('mouseup', onUp);
                 };
                 document.addEventListener('mousemove', onMove);
-                document.addEventListener('mouseup', onUp);
+                document.addEventListener('mouseup', onUp, { once: true });
             });
+
+            // 页面卸载时统一清理：断开 MutationObserver、移除 resize 监听，避免监听器残留
+            window.addEventListener('beforeunload', () => {
+                try { observer.disconnect(); } catch (e) { /* 忽略已断开的情况 */ }
+                if (resizeHandler) {
+                    window.removeEventListener('resize', resizeHandler);
+                    resizeHandler = null;
+                }
+            }, { once: true });
         }
 
         let tries = 0;
@@ -1219,8 +1246,9 @@
                 savePanelPoint(clamped);
                 if (PDBG) console.log('[面板位置] 已定位面板(Shadow DOM)，初始坐标:', clamped);
                 applyTracking(root);
-                // 视口尺寸变化时重新裁剪，防止面板被挤出可视范围
-                window.addEventListener('resize', () => persistAndClamp(root));
+                // 视口尺寸变化时重新裁剪，防止面板被挤出可视范围（保存句柄以便卸载时移除）
+                resizeHandler = () => persistAndClamp(root);
+                window.addEventListener('resize', resizeHandler);
             } else if (tries > 80) {
                 clearInterval(timer);
                 if (PDBG) console.warn('[面板位置] 未找到面板(已尝试穿透 Shadow DOM)，放弃位置跟踪');
@@ -1327,6 +1355,9 @@
 
             // ========== 离线检测 ==========
             // 每次重新查询，不缓存（弹窗元素动态创建/销毁）
+            // 掉线弹窗图标：两个选择器是「互补兜底」关系而非冗余——
+            // :nth-child(2) 按父元素下所有子元素的序号匹配，:nth-of-type(2) 按同标签类型序号匹配；
+            // 不同版本页面在图标前可能插入额外节点（导致两者命中不同元素），故保留双写法。
             const offlineEl = document.querySelector('.t-dialog__body__icon:nth-child(2)') ||
                 document.querySelector('.t-dialog__body__icon:nth-of-type(2)');
 
@@ -1349,10 +1380,10 @@
      * 向页面中第一个 TinyMCE 编辑器追加文本并立即生效。
      * 优先使用 TinyMCE API，失败时降级为直接操作 iframe DOM 并派发 input 事件；
      * 输入框非空时在内容前补 <br> 实现换行。
-     * @param {string} [text2append='xxxxx'] - 要追加的文本
-     * @returns {string} 追加后的编辑器完整纯文本
+     * @param {string} [text2append=''] - 要追加的文本（默认空串，避免掩盖漏传参数的 bug）
+     * @returns {string} 成功返回追加后的编辑器完整纯文本；找不到编辑器/iframe 等失败场景返回空字符串
      */
-    function appendToTinyMCE(text2append = 'xxxxx') {
+    function appendToTinyMCE(text2append = '') {
         /* 1. 拿到编辑器实例（动态匹配，不依赖 id） */
         const editors = window.tinymce?.editors ?? [];   // 所有 TinyMCE 实例
         const ed = editors.find(e => e.inline === false); // 先拿第一个非 inline 的
@@ -1621,8 +1652,12 @@
             }
             // 重置播放位置并播放
             didaAudioPlayer.currentTime = 0;
+            // play() 的 rejection 多来自浏览器自动播放策略（预期行为），静默忽略避免干扰
             didaAudioPlayer.play().catch(() => { });
-        } catch (e) { }
+        } catch (e) {
+            // 结构性异常（如 Audio 构造/赋值失败）需留痕，便于排查
+            addLog('播放提示音失败: ' + e.message, 'warning', true);
+        }
     }
 
     // 安全复制工具：仅在页面聚焦且支持 clipboard 时尝试复制

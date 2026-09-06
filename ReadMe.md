@@ -20,8 +20,7 @@
 ```
 znhd-service/
 ├── public/
-│   ├── commonPhrases.yaml       # 常用语配置文件（YAML 格式，当前使用）
-│   ├── 常用语.json              # 常用语配置文件（JSON 格式，已废弃）
+│   ├── commonPhrases.yaml       # 常用语配置文件（YAML 格式）
 │   └── dida.mp3                 # 操作提示音文件
 ├── ReadMe.md                    # 项目说明文档
 ├── relay-server/                 # 设备互联配套中继服务（Node，需自行部署到公网）
@@ -135,7 +134,7 @@ const CONFIG = {
 };
 ```
 
-可用户配置项（工作时间、常用语数据源、语音开关）存放在 `DEFAULTS` 中，运行时存于 `localStorage`（键 `scriptCat_Allvalue`），可在设置面板直接修改，无需改代码：
+可用户配置项（工作时间、常用语数据源、CDN 开关、语音开关、中继服务器地址）存放在 `DEFAULTS` 中，运行时存于 `localStorage`（键 `scriptCat_Allvalue`），可在设置面板直接修改，无需改代码：
 
 ```javascript
 const DEFAULTS = {
@@ -144,8 +143,10 @@ const DEFAULTS = {
         morningStart: 9, morningEnd: 12,
         afternoonStart: 13.5, afternoonEnd: 18
     },
-    commonPhrasesUrl: 'https://cdn.jsdelivr.net/gh/Run-os/znhd-service@refs/heads/main/public/commonPhrases.yaml',
-    relayServer: ''        // 设备互联中继服务器公网地址（如 https://你的服务器:端口），留空则功能不可用
+    useCdn: true,         // 使用 CDN 加速（jsDelivr）加载项目内 GitHub 资源
+    // 注意：项目内 GitHub 资源存「网页链接」，运行时由 resolveGithubUrl() 按 useCdn 转 jsDelivr（开）/ raw（关）
+    commonPhrasesUrl: 'https://github.com/Run-os/znhd-service/blob/refs/heads/main/public/commonPhrases.yaml',
+    relayServer: 'https://znhd.122050.xyz' // 设备互联中继服务器公网地址，留空则该功能不可用
 };
 ```
 
@@ -174,7 +175,9 @@ const DEFAULTS = {
 | JavaScript (ES6+)                                                                 | 脚本主语言                                                                                            |
 | [脚本猫UI库](https://scriptcat.org/lib/1167)                                      | 浮动面板、抽屉、按钮等 UI 组件                                                                        |
 | [js-yaml](https://github.com/nodeca/js-yaml)                                      | 解析 YAML 格式的常用语配置文件                                                                        |
-| [FingerprintJS](https://github.com/fingerprintjs/fingerprintjs)                   | 浏览器指纹识别                                                                                        |
+| [qrcodejs](https://github.com/davidshimjs/qrcodejs)                               | 「本机上传链接」二维码由脚本端本地生成（无需服务器参与）                                                |
+| [Viewer.js](https://github.com/fengyuanchen/viewerjs)                             | 图片放大预览：脚本端画廊（`@require`）与手机上传页画廊（页面 CDN 引入）共用                              |
+| [heic2any](https://github.com/alexcorvi/heic2any)（手机上传页 CDN 加载）         | 手机端把 HEIC/HEIF 解码转 JPEG 后压缩上传；CDN 不可达时回退原样直传                                      |
 | [Web Speech API](https://developer.mozilla.org/en-US/docs/Web/API/Web_Speech_API) | 语音合成播报                                                                                          |
 | [GM API](https://www.tampermonkey.net/documentation.php)                          | `GM_xmlhttpRequest`、`GM_setClipboard`、`GM_notification`、`GM_getValue`/`GM_setValue` 等油猴扩展 API |
 | [relay-server](relay-server/server.js:1)                                            | 设备互联配套中继服务：纯 Node 内置 `http`（零依赖），手机上传页内联、电脑端长轮询取图；需部署到公网 |
@@ -209,10 +212,10 @@ const DEFAULTS = {
 
 ### 设备互联功能用不了
 1. 确认已在「设置 → 中继服务器」填写公网可访问的服务器地址（如 `https://你的服务器:端口`，末尾不带 `/`）
-2. 中继服务器需自行部署：进入 `relay-server/` 目录执行 `node server.js`（纯 Node 内置模块、零依赖，默认端口 3000，可用 `PORT` 环境变量修改；注：Node 端仍零依赖，仅手机端转换 HEIC 时需从公共 CDN 加载 heic2any，断网时 HEIC 回退原样直传）
+2. 中继服务器需自行部署：进入 `relay-server/` 目录执行 `node server.js`（纯 Node 内置模块、零依赖，默认端口 5689，可用 `PORT` 环境变量修改；注：Node 端仍零依赖，仅手机端转换 HEIC 时需从公共 CDN 加载 heic2any，断网时 HEIC 回退原样直传）
 3. 该服务器必须能从手机浏览器公网访问；仅本机 `localhost` 时手机无法连上
 4. 打开「设备互联」抽屉后，用手机扫二维码或打开链接上传；中继地址填好后**脚本自动开始接收**（无需点按钮），收到后弹窗点「复制到剪贴板」
-5. **中继服务更新后必须重启**才会生效（它常驻后台进程，不会自动热更）。若改过 `relay-server/server.js`，请先停掉旧进程再 `node server.js`（PM2/`systemd`/`docker` 对应 `restart`）。
+5. **中继服务更新后必须重启**才会生效（常驻进程不热更）。正式部署：push 到 `main` 即由 GitHub Actions 自动同步到服务器并重启容器，无需手动操作；部署后 `curl http://127.0.0.1:5689/health` 返回的 `version` 与 `relay-server/package.json` 一致即生效。容器/手动场景：改过 `server.js` 后用 `docker restart znhd`（或 PM2/`systemd` 对应 restart，直接跑则停旧进程后重新 `node server.js`）。
 6. **同一设备 ID 在多个标签页/浏览器同时开着会各自接收**：中继现已「广播」——每张图会同时推给所有在等待的接收端（你正在看的那个标签页一定会弹窗）。若只想在一个页面弹窗，关掉其余跑了脚本的标签页即可（例如调试用的 example.com）。
 
 ### 常用语点击后未填入编辑器
@@ -222,6 +225,20 @@ const DEFAULTS = {
 3. 脚本会自动降级处理：优先使用 TinyMCE API，失败后直接操作 DOM
 
 ## 更新日志
+
+> **版本号规范**：脚本与服务端均采用 `YY.M.D-vN`（日期 + 当日改动序号，跨天序号重置为 v1）。`znhd.user.js` 版本见头部 `@version`；`relay-server` 版本存于 `relay-server/package.json` 的 `version`（`/health` 接口返回同一版本）。每次改动需在本节顶部补一条（形如 `### <脚本名> <版本号>`），写明改动说明。
+
+### znhd.user.js v26.9.6-v1
+- **处理历史代码审查遗留项**（来源：`.workbuddy/reviews/znhd-userjs-review.md`）：
+  - **日志去重增强**：由「只比对上一条」改为「最近 5 条窗口」（`RECENT_LOG_COUNT`），修掉每 3 秒一次「找不到人数元素」这类间隔性重复刷屏。
+  - **`appendToTinyMCE` 参数与返回值规整**：无意义的默认参数 `'xxxxx'` 改为 `''`；JSDoc 明确返回值语义（成功返回编辑器最终文本，失败返回空字符串）。
+  - **面板位置跟踪的监听器清理**：新增 `beforeunload` 清理（断开 `MutationObserver`、移除 `resize` 监听）；拖拽的 `mouseup` 改用 `{ once: true }` 注册，杜绝监听器残留。
+  - **`getShadowHosts()` 加缓存**：仅在扫描到非空结果时缓存（空结果不固化，避免面板未插入时永久失效），去掉定时器里的反复全树遍历。
+  - **主面板组件重命名**：`DM` → `MainPanel`（语义可读）。
+  - **`playDidaSound` 异常留痕**：结构性异常记录 warning 日志；`play()` 被浏览器自动播放策略拒绝仍静默（属预期行为）。
+  - **掉线检测双选择器**（`:nth-child(2)` / `:nth-of-type(2)`）补充「互补兜底」注释：页面结构差异时两者命中的元素不同，非冗余，不合并。
+  - **`@match https://example.com/*` 与 `@connect *` 均为有意保留**（前者是面板/弹窗调试宿主，后者因中继地址由用户自定义而必须通配），已在元信息块下方加注释说明，勿再当作问题处理。
+- 纯代码质量与健壮性改进，无功能变化；`node --check` 两文件通过。`@version`→`26.9.6-v1`。
 
 ### znhd.user.js v26.7.29-v11
 - **支持 ESC 键关闭图片预览/文本弹窗**：图片放大预览（Viewer.js）弹出后，Viewer.js 自带的键盘监听在本脚本「把 `.viewer-container` 移入 `overlay`」的特殊处理 + 真实税务页面 body 常被加 transform 的环境下常常失效，导致 ESC 关不掉预览。新增一个独立的全局 `keydown` 监听兜底：① 预览（Viewer）可见时按 ESC 先退出预览回到画廊九宫格；② 画廊态按 ESC 直接关闭整个图片弹窗；③ 文本弹窗按 ESC 直接关闭。监听仅安装一次（自保护），按当前弹窗状态分支处理，与 Viewer.js 自带 ESC 互不冲突（幂等）。`@version`→`26.7.29-v11`。
