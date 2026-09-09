@@ -56,6 +56,10 @@ function previewText(t) {
   const s = String(t || '').replace(/\s+/g, ' ');
   return s.length > 40 ? s.slice(0, 40) + '…' : s;
 }
+// 文件名清洗（仅用于日志）：剔除控制字符，防止伪造的 name 注入/干扰 docker 日志，超长截断
+function cleanLogName(name) {
+  return String(name || '').replace(/[\u0000-\u001f\u007f]/g, '').slice(0, 80);
+}
 // 曾经在线过的手机设备集合，用于「离线」只告警一次
 const phoneWasOnline = new Set();
 
@@ -66,10 +70,19 @@ function setCors(res) {
 }
 
 function sendJson(res, code, obj) {
+  if (res.destroyed || res.writableEnded) return; // 客户端已断开：不写已销毁的响应（B5，防版本相关 ERR_STREAM_DESTROYED）
   const body = JSON.stringify(obj);
   setCors(res);
   res.writeHead(code, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' });
   res.end(body);
+}
+
+// 405 响应：补 Allow 头（协议语义：客户端可据此知道允许的方法）
+function sendMethodNotAllowed(res, allow) {
+  if (res.destroyed || res.writableEnded) return;
+  setCors(res);
+  res.writeHead(405, { 'Allow': allow });
+  res.end('method not allowed');
 }
 
 // ===================== 通道抽象（正向手机→电脑 / 反向电脑→手机 共用） =====================
@@ -113,11 +126,13 @@ function createChannel(labels) {
     if (!q || q.length === 0) { pending.delete(uuid); return; }
     const set = waiting.get(uuid);
     if (!set || set.size === 0) return; // 当前无等待连接：保留队列，等下个连接
+    // 先筛出仍可写的目标连接再出队：若等待者此刻全部已结束/断开（res 'close' 尚未触发的窄窗口），
+    // 直接放弃本次投递并保留队头，等下个连接来取——避免队头被 shift 后无人能收造成丢条（B6）。
+    const targets = Array.from(set).filter(r => !r.writableEnded && !r.destroyed);
+    if (targets.length === 0) { waiting.delete(uuid); return; }
     // 每次只投递队头一条（长轮询协议每个响应回一条）；接收端收到后会立刻重新轮询取下一条
     const p = q.shift();
     if (q.length === 0) pending.delete(uuid);
-    // 已结束/已断开的连接直接跳过（正常情况下 res 'close' 清理已及时移除，此处为兜底）
-    const targets = Array.from(set).filter(r => !r.writableEnded && !r.destroyed);
     waiting.delete(uuid);
     for (const r of targets) {
       try { sendJson(r, 200, p); }
@@ -189,7 +204,7 @@ function createChannel(labels) {
 const forwardChannel = createChannel({
   recv: '电脑端接收端',
   dropQ: '暂存队列',
-  sendImg: (uuid, item, len) => `[发送] 设备 ${uuid} 手机端发送图片：${item.name}（${item.mime}，约 ${b64SizeKB(item.data)}KB），队列 ${len} 条`,
+  sendImg: (uuid, item, len) => `[发送] 设备 ${uuid} 手机端发送图片：${cleanLogName(item.name)}（${item.mime}，约 ${b64SizeKB(item.data)}KB），队列 ${len} 条`,
   sendTxt: (uuid, item) => `[发送] 设备 ${uuid} 手机端发送文本：${previewText(item.text)}`
 });
 
@@ -197,7 +212,7 @@ const forwardChannel = createChannel({
 const reverseChannel = createChannel({
   recv: '手机端接收端',
   dropQ: '手机收件队列',
-  sendImg: (uuid, item, len) => `[发送] 设备 ${uuid} 电脑端发送图片到手机：${item.name}（${item.mime}，约 ${b64SizeKB(item.data)}KB），队列 ${len} 条`,
+  sendImg: (uuid, item, len) => `[发送] 设备 ${uuid} 电脑端发送图片到手机：${cleanLogName(item.name)}（${item.mime}，约 ${b64SizeKB(item.data)}KB），队列 ${len} 条`,
   sendTxt: (uuid, item) => `[发送] 设备 ${uuid} 电脑端发送文本到手机：${previewText(item.text)}`
 });
 
@@ -683,7 +698,7 @@ function uploadPageHtml() {
     if (idx < 0 || idx >= recvItems.length) return;
     recvItems.splice(idx, 1);
     if (recvItems.length === 0) closeRecvPopup();
-    else renderRecvGrid();
+    renderRecvGrid(); // 空时也重绘：同步底部「查看收到的图片」按钮的显示与计数（旧实现空分支漏重绘致计数残留）
   }
 
   // dataURL -> Blob（用于复制/下载）
@@ -692,20 +707,51 @@ function uploadPageHtml() {
     catch(e){ return Promise.resolve(null); }
   }
 
+  // 复制图片到剪贴板：先以原始 mime 直写（点击手势最新鲜）；失败再转 PNG 重试。
+  // 原因（本仓库自有结论，ReadMe v26.7.26-v5 / AGENT.md）：Chromium 系对 clipboard.write 的
+  // image/png 支持最可靠，直接写 JPEG 在部分安卓 WebView 会失败（此前手机页一直直写原始 mime）。
   function copyRecvImage(it, btn){
     var old = btn.textContent;
     btn.textContent = '复制中…';
+    function doWrite(blob, type){
+      return new Promise(function(rs){
+        if (!blob || !navigator.clipboard || typeof window.ClipboardItem === 'undefined') { rs(false); return; }
+        var item = {}; item[type] = blob;
+        navigator.clipboard.write([ new ClipboardItem(item) ])
+          .then(function(){ rs(true); }).catch(function(){ rs(false); });
+      });
+    }
+    function toPng(blob){
+      return new Promise(function(rs){
+        try {
+          if (typeof createImageBitmap !== 'function') { rs(blob); return; }
+          createImageBitmap(blob).then(function(bmp){
+            var cv = document.createElement('canvas');
+            cv.width = bmp.width; cv.height = bmp.height;
+            var ctx = cv.getContext('2d');
+            if(!ctx){ if(bmp.close) bmp.close(); rs(blob); return; }
+            ctx.drawImage(bmp, 0, 0);
+            if(bmp.close) bmp.close();
+            cv.toBlob(function(b){ rs(b || blob); }, 'image/png');
+          }).catch(function(){ rs(blob); });
+        } catch(e){ rs(blob); }
+      });
+    }
     toBlob(it.url).then(function(blob){
-      if (!blob || !navigator.clipboard || typeof window.ClipboardItem === 'undefined') {
-        btn.textContent = '复制不可用';
+      if (!blob) { btn.textContent = '复制不可用'; setTimeout(function(){ btn.textContent = old; }, 1500); return; }
+      var type0 = blob.type || 'image/png';
+      doWrite(blob, type0).then(function(ok){
+        if (ok) { btn.textContent = '✓ 已复制'; }
+        else {
+          toPng(blob).then(function(png){
+            var type = (png.type) || 'image/png';
+            doWrite(png, type).then(function(ok2){
+              btn.textContent = ok2 ? '✓ 已复制' : '复制失败';
+            });
+          });
+        }
         setTimeout(function(){ btn.textContent = old; }, 1500);
-        return;
-      }
-      var item = {}; item[blob.type || 'image/png'] = blob;
-      navigator.clipboard.write([ new ClipboardItem(item) ])
-        .then(function(){ btn.textContent = '✓ 已复制'; })
-        .catch(function(){ btn.textContent = '复制失败'; });
-      setTimeout(function(){ btn.textContent = old; }, 1500);
+      });
     });
   }
 
@@ -717,6 +763,8 @@ function uploadPageHtml() {
       var a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
       var ext = (it.mime && it.mime.split('/')[1]) || 'jpg';
+      // 扩展名清洗：image/svg+xml 的 split 得 'svg+xml'（字面量 '..svg+xml' 文件名怪异）；剔除异常字符
+      ext = ((ext.split('+')[0] || ext).replace(/[^a-zA-Z0-9]/g, '')) || 'jpg';
       a.download = (it.name || ('znhd-image.' + ext));
       document.body.appendChild(a); a.click(); a.remove();
       setTimeout(function(){ try { URL.revokeObjectURL(a.href); } catch(e){} btn.textContent = '✓ 已保存'; }, 300);
@@ -781,8 +829,8 @@ function uploadPageHtml() {
 
   function showReceived(j){
     if(j.type === 'image'){
-      // 收进画廊并自动弹出查看（与脚本端弹出画廊一致），点击缩略图再放大
-      recvItems.push({ url: 'data:' + (j.mime || 'image/jpeg') + ';base64,' + j.data, mime: j.mime || 'image/jpeg' });
+      // 收进画廊并自动弹出查看（与脚本端弹出画廊一致），点击缩略图再放大；name 一并保留供下载命名
+      recvItems.push({ url: 'data:' + (j.mime || 'image/jpeg') + ';base64,' + j.data, mime: j.mime || 'image/jpeg', name: j.name });
       // 上限保护：超出丢最旧（dataURL 项无可 revoke，直接 shift 释放引用即可）
       while (recvItems.length > MAX_RECV) recvItems.shift();
       renderRecvGrid();
@@ -841,6 +889,8 @@ function uploadPageHtml() {
 const server = http.createServer(async (req, res) => {
   try {
     setCors(res);
+    // 兜底：客户端中途断开时 res 可能触发 'error'（版本相关行为），挂 noop 防未处理 error 崩进程
+    res.on('error', () => { /* 已断开连接的错误由 sendJson/destroyed 守卫兜底，忽略 */ });
     const u = new URL(req.url, 'http://localhost');
     const path = u.pathname;
     const method = req.method;
@@ -884,7 +934,8 @@ const server = http.createServer(async (req, res) => {
         sendJson(res, 200, { ok: true });
         return;
       }
-      res.writeHead(405); res.end(); return;
+      sendMethodNotAllowed(res, 'GET, POST');
+      return;
     }
 
     // /recv/<deviceId> ：电脑端长轮询取图
@@ -896,6 +947,7 @@ const server = http.createServer(async (req, res) => {
       forwardChannel.handlePoll(req, res, r[1], u);
       return;
     }
+    if (r) { sendMethodNotAllowed(res, 'GET'); return; }
 
     // ===== 反向通道：电脑端 → 手机端 =====
 
@@ -914,6 +966,7 @@ const server = http.createServer(async (req, res) => {
       sendJson(res, 200, { ok: true });
       return;
     }
+    if (hb) { sendMethodNotAllowed(res, 'POST'); return; }
 
     // /phone/status/<deviceId> ：电脑端查询手机是否在线（用于发送前判断是否可发）
     const st = /^\/phone\/status\/([a-z0-9-]{8,64})$/i.exec(path);
@@ -922,6 +975,7 @@ const server = http.createServer(async (req, res) => {
       sendJson(res, 200, { online: (Date.now() - last) < PHONE_TTL });
       return;
     }
+    if (st) { sendMethodNotAllowed(res, 'GET'); return; }
 
     // /phone/send/<deviceId> ：电脑端发送图片或文本到手机（镜像 /u 的 POST，方向相反）
     const ps = /^\/phone\/send\/([a-z0-9-]{8,64})$/i.exec(path);
@@ -932,6 +986,7 @@ const server = http.createServer(async (req, res) => {
       sendJson(res, 200, { ok: true });
       return;
     }
+    if (ps) { sendMethodNotAllowed(res, 'POST'); return; }
 
     // /phone/recv/<deviceId> ：手机端长轮询取电脑发来的条目（镜像 /recv，方向相反）
     // 语义详见 createChannel 注释。
@@ -940,9 +995,11 @@ const server = http.createServer(async (req, res) => {
       reverseChannel.handlePoll(req, res, pr[1], u);
       return;
     }
+    if (pr) { sendMethodNotAllowed(res, 'GET'); return; }
 
     res.writeHead(404); res.end('not found');
   } catch (e) {
+    if (res.destroyed || res.writableEnded) return; // 客户端已断开，不再尝试回 500
     if (!res.headersSent) res.writeHead(500);
     res.end('server error: ' + e.message);
   }

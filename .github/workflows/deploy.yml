@@ -1,14 +1,16 @@
 name: 同步到云服务器（1panel Docker）
 
-# 触发条件
+# 触发条件（注：release 触发器已移除——发布任意 tag 都会部署 main 会造成版本错位）
 on:
   push:
     branches:
       - main
-  release:
-    types:
-      - published
   workflow_dispatch:
+
+# 并发互斥：连续 push 只保留最新一次，避免两个 SSH 部署（git reset/tar/docker restart）互相踩
+concurrency:
+  group: deploy-main
+  cancel-in-progress: true
 
 env:
   TZ: Asia/Shanghai
@@ -27,9 +29,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: 检查分支
-        uses: actions/checkout@main
+        uses: actions/checkout@v4    # 钉版本（旧 main 是移动分支），同时为下方语法门禁提供代码
         with:
           ref: main
+
+      # 语法门禁：部署前先在 runner 上校验 server.js，防止把坏文件推上线（旧版只在远端启动后才发现）
+      - name: 语法预检 relay-server
+        run: node --check relay-server/server.js
 
       # 核心：SSH 登录宿主机 → git pull 更新被容器挂载的代码 → 重启 1panel/node 容器
       # （relay-server 零依赖、无需 npm install / 构建；重启容器即重新 node server.js 加载新代码）
@@ -42,6 +48,7 @@ jobs:
           port: ${{ secrets.PORT }}               # SSH 端口，默认 22；非 22 时配置该 Secret
           script: |
             set -e
+            set -o pipefail    # 让 (tar)|docker tar 管道左侧失败也能暴露，防「静默部署坏/空文件」
             # ⚠️ 变量在此硬编码，不要依赖顶层 env 传递：
             #   appleboy/ssh-action 不会把 GitHub Actions 的 env 注入远程 shell，
             #   远程 $DEPLOY_PATH 为空会导致 cd 误进 /root，造成家目录被 git 强覆盖破坏（已发生过的事故）。

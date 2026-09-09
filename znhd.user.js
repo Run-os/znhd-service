@@ -2,7 +2,7 @@
 // @name           征纳互动人数和在线监控v2
 // @namespace      https://scriptcat.org/
 // @description    实时监控征纳互动等待人数和在线状态，支持语音播报、自定义常用语
-// @version        26.9.6-v6
+// @version        26.9.6-v7
 // @author         runos
 // @match          https://znhd.hunan.chinatax.gov.cn:8443/*
 // @match          https://example.com/*
@@ -11,7 +11,6 @@
 // @grant          unsafeWindow
 // @grant          GM_xmlhttpRequest
 // @grant          GM_setClipboard
-// @grant          GM_notification
 // @grant          GM_getValue
 // @grant          GM_setValue
 // @grant          GM_getResourceText
@@ -21,7 +20,6 @@
 // @updateURL      https://cdn.jsdelivr.net/gh/Run-os/znhd-service@refs/heads/main/znhd.user.js
 // @downloadURL    https://cdn.jsdelivr.net/gh/Run-os/znhd-service@refs/heads/main/znhd.user.js
 // @require        https://scriptcat.org/lib/1167/1.0.0/%E8%84%9A%E6%9C%AC%E7%8C%ABUI%E5%BA%93.js?sha384-jXdR3hCwnDJf53Ue6XHAi6tApeudgS/wXnMYBD/ZJcgge8Xnzu/s7bkEf2tPi2KS
-// @require        https://cdn.jsdelivr.net/npm/@fingerprintjs/fingerprintjs@5/dist/fp.min.js
 // @require        https://cdn.jsdelivr.net/npm/js-yaml@4.1.0/dist/js-yaml.min.js
 // @require        https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js
 // @require        https://cdn.jsdelivr.net/npm/viewerjs/dist/viewer.min.js
@@ -52,6 +50,8 @@
     // ==========日志管理==========
     // 全局日志状态管理
     let setLogEntriesCallback = null;
+    // 常用语请求序号（loadPhrasesData 用）：仅最新一次请求可落地结果，防慢的旧响应后到覆盖新数据
+    let phrasesRequestSeq = 0;
     // 日志去重窗口：保留最近若干条日志文本，同文本重复出现即忽略
     // （避免「每 3 秒一条」的间隔性重复刷屏，比只比对上一条更可靠）
     const RECENT_LOG_COUNT = 5;
@@ -138,7 +138,7 @@
             const saved = localStorage.getItem(PANEL_POINT_KEY);
             if (saved) {
                 const p = JSON.parse(saved);
-                if (typeof p.x === 'number' && typeof p.y === 'number') {
+                if (Number.isFinite(p.x) && Number.isFinite(p.y)) { // isFinite 同时排除 NaN/±Infinity（typeof NaN==='number' 会漏）
                     return p;
                 }
             }
@@ -221,7 +221,21 @@
             const saved = localStorage.getItem(STORAGE_KEY);
             if (saved) {
                 const parsed = JSON.parse(saved);
-                return { ...DEFAULTS, ...parsed };
+                const merged = { ...DEFAULTS, ...parsed };
+                // 对嵌套 workingHours 做字段级合并 + 数值校验：残缺/损坏的存量 workingHours
+                // （如只存了 morningStart）不得整体顶掉 DEFAULTS 其余字段——否则缺字段变 undefined，
+                // isWorkingHours 恒判「非工作时间」导致监控静默停摆（v26.9.6-v7 起因）。
+                const wh = parsed && typeof parsed.workingHours === 'object' && parsed.workingHours;
+                if (wh) {
+                    const defWh = DEFAULTS.workingHours;
+                    merged.workingHours = {
+                        morningStart: Number.isFinite(wh.morningStart) ? wh.morningStart : defWh.morningStart,
+                        morningEnd: Number.isFinite(wh.morningEnd) ? wh.morningEnd : defWh.morningEnd,
+                        afternoonStart: Number.isFinite(wh.afternoonStart) ? wh.afternoonStart : defWh.afternoonStart,
+                        afternoonEnd: Number.isFinite(wh.afternoonEnd) ? wh.afternoonEnd : defWh.afternoonEnd
+                    };
+                }
+                return merged;
             }
         } catch (error) {
             addLog('加载存储数据失败: ' + error.message, 'error', true);
@@ -316,6 +330,17 @@
     function escapeHtml(text) {
         _escapeHelper.textContent = text;
         return _escapeHelper.innerHTML;
+    }
+
+    // URL 解码的安全版：地址含游离 %（用户误填/粘贴截断的百分号编码）时 decodeURIComponent 会抛 URIError，
+    // 渲染路径上直接抛会崩掉整个抽屉；解码失败回退原字符串。
+    /**
+     * 安全解码 URL（用于展示）：decodeURIComponent 失败时返回原串，绝不抛出。
+     * @param {string} url - 待解码 URL
+     * @returns {string} 解码后字符串；解码失败返回原串
+     */
+    function safeDecodeURIComponent(url) {
+        try { return decodeURIComponent(url); } catch (e) { return url; }
     }
 
     // 十进制小时(如 13.5) 与 "HH:mm" 字符串互转，供时间选择器使用
@@ -444,20 +469,14 @@
             if (dec !== null) updateWh(field, dec);
         };
 
-        // 常用语数据源地址变更处理：留空恢复默认；需以 http(s):// 开头
+        // 常用语数据源地址变更处理：留空恢复默认；直接提交用户输入，不再逐键拦截。
+        // 说明：旧逻辑「非 http(s):// 前缀即拒绝提交 + 每键弹 warning」会让受控输入无法逐字输入、
+        // 且任意重渲染把输入框拉回已提交值；地址是否可用改由使用时的加载校验兜底（loadPhrasesData 的 status/类型校验）。
         const DEFAULT_PHRASES_URL = DEFAULTS.commonPhrasesUrl;
         const onUrlChange = (val) => {
             let url = (typeof val === 'string') ? val : (val && val.target ? val.target.value : '');
             url = (url || '').trim();
-            if (!url) {
-                onChangeCommonPhrasesUrl(DEFAULT_PHRASES_URL);
-                return;
-            }
-            if (!/^https?:\/\//i.test(url)) {
-                CAT_UI.Message.warning('数据源地址需以 http(s):// 开头');
-                return;
-            }
-            onChangeCommonPhrasesUrl(url);
+            onChangeCommonPhrasesUrl(url || DEFAULT_PHRASES_URL); // 留空恢复默认
         };
 
         return CAT_UI.Drawer(
@@ -562,10 +581,8 @@
                     onChange: (val) => {
                         let url = (typeof val === 'string') ? val : (val && val.target ? val.target.value : '');
                         url = (url || '').trim().replace(/\/+$/, ''); // 去掉末尾多余的 /（如用户粘贴 http://x:5689/ ）
-                        if (url && !/^https?:\/\//i.test(url)) {
-                            CAT_UI.Message.warning('服务器地址需以 http(s):// 开头');
-                            return;
-                        }
+                        // 逐字提交（不再逐键拦截非 http 前缀导致无法输入）；
+                        // 「设备互联」自动接收侧另有 http(s) 前缀门控 + 800ms 防抖，避免输入过程中无效启停
                         onChangeRelayServer(url);
                     },
                     allowClear: true,
@@ -634,7 +651,7 @@
                             wordBreak: "break-all"
                         }
                     },
-                    `数据源: ${decodeURIComponent(resolveGithubUrl(commonPhrasesUrl || DEFAULTS.commonPhrasesUrl))}`
+                    `数据源: ${safeDecodeURIComponent(resolveGithubUrl(commonPhrasesUrl || DEFAULTS.commonPhrasesUrl))}`
                 ),
                 // 重新加载按钮
                 CAT_UI.Button("重新加载常用语", {
@@ -643,11 +660,13 @@
                     onClick: () => loadPhrasesData(true),
                     style: { marginBottom: "16px", width: "100%" }
                 }),
-                // 搜索框
+                // 搜索框（onChange 与兄弟输入框同款解包：兼容 CAT_UI 回传字符串或事件对象两种形态）
                 CAT_UI.Input({
                     placeholder: "搜索常用语(按键名称或内容)",
                     value: searchKeyword,
-                    onChange: setSearchKeyword,
+                    onChange: (val) => {
+                        setSearchKeyword(typeof val === 'string' ? val : (val && val.target ? val.target.value : ''));
+                    },
                     allowClear: true,
                     style: { marginBottom: "16px", width: "100%" }
                 }),
@@ -782,10 +801,11 @@
                     setPhrasesData(cache.data || {}); // 防 cache.data 为 undefined/null（历史上可能存过空值）
                     const mins = Math.round((Date.now() - cache.time) / 60000);
                     addLog('常用语使用本地缓存（' + mins + ' 分钟前加载），已跳过网络请求', 'info');
-                    CAT_UI.Message.success('常用语已加载（本地缓存）');
+                    // 缓存命中不弹成功 toast（每次开抽屉都弹会打扰；日志已说明，仅新加载时提示）
                     return;
                 }
             }
+            const seq = ++phrasesRequestSeq; // 请求序号：仅最新一次请求可落地结果，防旧响应后到覆盖新数据
             setPhrasesLoading(true);
             GM_xmlhttpRequest({
                 method: 'GET',
@@ -793,24 +813,31 @@
                 url: resolveGithubUrl(cachedCommonPhrasesUrl || DEFAULTS.commonPhrasesUrl),
                 timeout: 15000, // raw.githubusercontent 在国内常被黑洞，无超时会让 phrasesLoading 永久卡 true
                 onload: function (response) {
+                    if (seq !== phrasesRequestSeq) return; // 已过期请求（期间又发起了新加载），丢弃
                     try {
-                        // jsyaml.load('')/空响应体会返回 undefined/null；必须归一为 {}，
-                        // 否则抽屉渲染 Object.keys(phrasesData) 会抛 TypeError（空文件/空 200 即触发）。
-                        const data = jsyaml.load(response.responseText) || {};
+                        // HTTP 状态 + 类型双重校验：404/错误页的纯文本可能是「合法 YAML」（标量/键值对），
+                        // 直接 setPhrasesData 会渲染垃圾按钮并把垃圾写进 2h 缓存（v26.9.6-v7 起因）；
+                        // 必须 200 且解析结果是「纯键值对象」才算成功。
+                        if (response.status !== 200) throw new Error('数据源返回 HTTP ' + response.status);
+                        const data = jsyaml.load(response.responseText);
+                        if (typeof data !== 'object' || data === null || Array.isArray(data)) {
+                            throw new Error('数据源不是有效的键值对象（可能返回了网页/错误页）');
+                        }
                         setPhrasesData(data);
                         savePhrasesCache(cachedCommonPhrasesUrl, data);
-                        addLog('常用语加载成功，共 ' + Object.keys(data || {}).length + ' 条', 'success');
+                        addLog('常用语加载成功，共 ' + Object.keys(data).length + ' 条', 'success');
                         CAT_UI.Message.success('常用语加载成功');
                     } catch (error) {
-                        // 解析失败时保留已加载的旧数据（若有），用户仍可用；仅提示失败原因
+                        // 失败时保留已加载的旧数据（若有），用户仍可用；仅提示失败原因
                         const hasOld = Object.keys(phrasesData).length > 0;
-                        addLog('YAML 解析失败: ' + error.message + (hasOld ? '，仍显示上次加载的内容' : ''), 'error', true);
-                        CAT_UI.Message.error('YAML 解析失败' + (hasOld ? '，仍显示上次内容' : ''));
+                        addLog('常用语加载失败: ' + error.message + (hasOld ? '，仍显示上次加载的内容' : ''), 'error', true);
+                        CAT_UI.Message.error('常用语加载失败' + (hasOld ? '，仍显示上次内容' : ''));
                     } finally {
                         setPhrasesLoading(false);
                     }
                 },
                 onerror: function (error) {
+                    if (seq !== phrasesRequestSeq) return;
                     // 统一处理 error 参数（可能是 Error 对象、字符串或事件）
                     const errMsg = (error && error.message) ? error.message
                         : (typeof error === 'string' ? error : '网络错误');
@@ -821,6 +848,7 @@
                     setPhrasesLoading(false);
                 },
                 ontimeout: function () {
+                    if (seq !== phrasesRequestSeq) return;
                     // 请求挂起超时（如数据源被墙/无响应）：同样复位 loading、保留旧数据，抽屉可再次点重载
                     const hasOld = Object.keys(phrasesData).length > 0;
                     addLog('加载常用语超时（15s），已取消' + (hasOld ? '，仍显示上次加载的内容' : ''), 'error', true);
@@ -841,26 +869,31 @@
         // 收到图片即弹出网页居中的预览弹窗（含复制 / 关闭按钮，见 showImagePopup）
         CAT_UI.useEffect(() => {
             const s = (Allvalue.relayServer || '').trim().replace(/\/+$/, '');
-            if (!s) return;
-            if (receiveStopRef.current) return; // 已在接收，避免重复启动
-            // 「已自动开始接收」日志在脚本**连上服务器时立即**显示（见 startPhoneReceive 的 onConnected，
-            // 由首次 /recv 短轮询确认触发，约 1 秒内），不等待手机端发送图片。地址末尾的 / 已在上面归一。
-            const stop = startPhoneReceive({
-                server: s,
-                uuid: getDeviceId(),
-                onConnected: () => { addLog('[设备互联] 已自动开始接收（' + s + '）', 'info'); },
-                onImage: (img) => {
-                    addLog('[设备互联] 收到图片：' + (img.name || 'image') + '（' + (img.mime || 'image') + '）', 'success');
-                    showImagePopup(img);
-                },
-                onText: (txt) => {
-                    const t = (txt.text || '').replace(/\s+$/, '');
-                    addLog('[设备互联] 收到文本：' + (t.length > 40 ? t.slice(0, 40) + '…' : t), 'success');
-                    showTextPopup(txt);
-                }
-            });
-            receiveStopRef.current = stop;
+            // 门控 + 防抖：设置里逐字输入时 relayServer 连续变化，立即启停会造成无效轮询抖动；
+            // 仅当地址以 http(s):// 开头且停顿 800ms 未再变化时才（重新）开始接收。
+            if (!s || !/^https?:\/\//i.test(s)) return;
+            const timer = setTimeout(() => {
+                if (receiveStopRef.current) return; // 已在接收，避免重复启动
+                // 「已自动开始接收」日志在脚本**连上服务器时立即**显示（见 startPhoneReceive 的 onConnected，
+                // 由首次 /recv 短轮询确认触发，约 1 秒内），不等待手机端发送图片。地址末尾的 / 已在上面归一。
+                const stop = startPhoneReceive({
+                    server: s,
+                    uuid: getDeviceId(),
+                    onConnected: () => { addLog('[设备互联] 已自动开始接收（' + s + '）', 'info'); },
+                    onImage: (img) => {
+                        addLog('[设备互联] 收到图片：' + (img.name || 'image') + '（' + (img.mime || 'image') + '）', 'success');
+                        showImagePopup(img);
+                    },
+                    onText: (txt) => {
+                        const t = (txt.text || '').replace(/\s+$/, '');
+                        addLog('[设备互联] 收到文本：' + (t.length > 40 ? t.slice(0, 40) + '…' : t), 'success');
+                        showTextPopup(txt);
+                    }
+                });
+                receiveStopRef.current = stop;
+            }, 800);
             return () => {
+                clearTimeout(timer);
                 if (receiveStopRef.current) { receiveStopRef.current(); receiveStopRef.current = null; }
             };
         }, [Allvalue.relayServer]);
@@ -1672,9 +1705,11 @@
             // 复用 Audio 实例，避免重复解码
             if (!didaAudioPlayer) {
                 didaAudioPlayer = new Audio();
-                didaAudioPlayer.src = resolveGithubUrl(CONFIG.didaUrl);
                 didaAudioPlayer.volume = 0.5;
             }
+            // src 每次按当前 useCdn 状态解析并比对重设：切换 CDN 开关后提示音即刻走新选择，无需刷新
+            const src = resolveGithubUrl(CONFIG.didaUrl);
+            if (didaAudioPlayer.src !== src) didaAudioPlayer.src = src;
             // 重置播放位置并播放
             didaAudioPlayer.currentTime = 0;
             // play() 的 rejection 多来自浏览器自动播放策略（预期行为），静默忽略避免干扰
@@ -1689,17 +1724,20 @@
     /**
      * 安全复制文本到剪贴板：优先 GM_setClipboard（无需焦点），降级到 navigator.clipboard；
      * 成功复制后播放提示音。失败时记录日志，不抛出。
-     * @param {string} text - 待复制文本（空值直接返回）
+     * @param {string} text - 待复制文本（空值直接返回并回调 false）
+     * @param {Function} [onResult] - 可选结果回调 (ok:boolean)，供调用方据实更新 UI（如复制按钮文案）
      * @returns {void}
      */
-    function safeCopyText(text) {
-        if (!text) return;
+    function safeCopyText(text, onResult) {
+        const notify = (v) => { if (typeof onResult === 'function') { try { onResult(!!v); } catch (e) { /* 忽略回调异常 */ } } };
+        if (!text) { notify(false); return; }
         // 1) 优先使用 GM_setClipboard（无需焦点）
         if (typeof GM_setClipboard === 'function') {
             try {
                 GM_setClipboard(text);
                 addLog('[复制] 已复制到剪贴板 (GM_setClipboard)', 'success', true);
                 playDidaSound();
+                notify(true);
                 return;
             } catch (e) {
                 addLog('[复制] GM_setClipboard 失败: ' + e.message, 'error', true);
@@ -1711,11 +1749,14 @@
             navigator.clipboard.writeText(text).then(() => {
                 addLog('[复制] 已复制到剪贴板 (navigator.clipboard)', 'success', true);
                 playDidaSound();
+                notify(true);
             }).catch(err => {
                 addLog('[复制] 复制到剪贴板失败: ' + err.message, 'error', true);
+                notify(false);
             });
             return;
         }
+        notify(false); // 无任何可用复制途径
     }
 
     // ========== 手机图片 → 电脑剪贴板 ==========
@@ -1735,7 +1776,12 @@
      */
     function imagePayloadBytes(file, name, mime) {
         const b64Len = Math.ceil((file && file.size || 0) / 3) * 4; // base64 膨胀 ≈ 4/3
-        return b64Len + String(name || '').length + String(mime || '').length + 120;
+        // name/mime 按 UTF-8 字节数计（服务端 readBody 按字节累加；String.length 是 UTF-16 码元，
+        // 中文文件名会低估约 3 倍，接近上限时预检可能误放行）
+        const enc = typeof TextEncoder === 'function' ? new TextEncoder() : null;
+        const byteLen = enc ? enc.encode(String(name || '') + String(mime || '')).length
+            : (String(name || '') + String(mime || '')).length;
+        return b64Len + byteLen + 120;
     }
     /**
      * 取得本机稳定设备 ID：首次运行用 crypto.randomUUID() 生成并持久化（GM_setValue），
@@ -2150,9 +2196,14 @@
         copyBtn.textContent = '复制到剪贴板';
         copyBtn.style.cssText = 'margin-top:14px!important;padding:8px 18px!important;border:none!important;border-radius:8px!important;background:#1890ff!important;color:#fff!important;font-size:14px!important;opacity:1!important;cursor:pointer!important;align-self:center!important;';
         copyBtn.onclick = () => {
-            safeCopyText(txt.text || '');
-            copyBtn.textContent = '已复制';
-            copyBtn.style.background = '#52c41a';
+            copyBtn.textContent = '复制中…';
+            copyBtn.disabled = true;
+            // 用 safeCopyText 的真实结果更新按钮文案：无可用复制途径/被拒绝时不再假显示「已复制」
+            safeCopyText(txt.text || '', (ok) => {
+                copyBtn.disabled = false;
+                copyBtn.textContent = ok ? '✓ 已复制' : '复制失败，请长按文本手动复制';
+                copyBtn.style.background = ok ? '#52c41a' : '#e4393c';
+            });
         };
         close.onclick = () => closeTextPopup();
         overlay.onclick = (e) => { if (e.target === overlay) closeTextPopup(); };
@@ -2242,6 +2293,7 @@
         function markConnected() {
             if (connected) return;
             connected = true;
+            loggedConnFail = false; // 恢复连接后复位失败标记，后续再次断线仍会记日志（旧实现不复位，之后断连静默）
             if (opt.onConnected) { try { opt.onConnected(); } catch (e) { /* 忽略 */ } }
         }
         // 说明：不单独探测 /health。旧版中继可能没有该端点，会导致请求挂起并误报
@@ -2329,12 +2381,14 @@
         const uuid = opt.uuid;
         const url = server + '/phone/send/' + encodeURIComponent(uuid);
         try {
+            const body = JSON.stringify(opt.payload);
             GM_xmlhttpRequest({
                 method: 'POST',
                 url: url,
                 headers: { 'Content-Type': 'application/json' },
-                data: JSON.stringify(opt.payload),
-                timeout: 20000,
+                data: body,
+                // 超时随载荷缩放：放行的最大单请求约 16MB（base64 膨胀后），固定 20s 在慢上行时会把合法大图误杀
+                timeout: 20000 + Math.round(body.length / 200), // ≈ 20s + 每 200B 1ms；16MB 体 ≈ 100s
                 onload: function (resp) {
                     let j = null;
                     try { j = JSON.parse(resp.responseText); } catch (e) { j = null; }
@@ -2376,19 +2430,19 @@
         const [sendText, setSendText] = CAT_UI.useState('');
         const copyLink = () => { if (link) safeCopyText(link); };
 
-        // 计算链接 + 二维码（仅在打开抽屉或地址变化时）
+        // 计算链接 + 二维码（仅在打开抽屉或地址变化时；非 http(s) 前缀即设置输入中途，不生成）
         CAT_UI.useEffect(() => {
-            const s = (relayServer || '').trim();
-            if (!s) { setLink(''); setQrUrl(''); return; }
-            const lk = s.replace(/\/+$/, '') + '/u/' + deviceId;
+            const s = (relayServer || '').trim().replace(/\/+$/, '');
+            if (!/^https?:\/\//i.test(s)) { setLink(''); setQrUrl(''); return; }
+            const lk = s + '/u/' + deviceId;
             setLink(lk);
             genQrDataUrl(lk).then(u => setQrUrl(u)).catch(e => { addLog('[二维码] 失败: ' + e.message, 'error', true); });
         }, [relayServer, visible]);
 
         // 轮询手机在线状态（每 5s），用于发送前判断是否可发
         CAT_UI.useEffect(() => {
-            if (!visible || !relayServer) return;
-            const server = relayServer.trim().replace(/\/+$/, '');
+            const server = (relayServer || '').trim().replace(/\/+$/, '');
+            if (!visible || !/^https?:\/\//i.test(server)) return; // 非法前缀（设置里逐字输入中）不发起请求
             let alive = true;
             const check = () => {
                 if (!alive) return;
@@ -2433,8 +2487,15 @@
             const inp = document.createElement('input');
             inp.type = 'file'; inp.accept = 'image/*'; inp.multiple = true; inp.style.display = 'none';
             document.body.appendChild(inp);
+            // 取消选择（对话框关闭但未选文件）也要移除隐藏 input：'cancel' 事件非标准，
+            // 用「对话框关闭后 window 恢复焦点」兜底清理，避免反复取消在 body 累积 input
+            const cleanupFocus = () => {
+                window.removeEventListener('focus', cleanupFocus);
+                try { inp.remove(); } catch (e) { /* 已移除 */ }
+            };
             inp.onchange = () => {
                 const files = Array.prototype.slice.call(inp.files || []);
+                window.removeEventListener('focus', cleanupFocus);
                 inp.remove();
                 if (!files.length) return;
                 const arr = files.map(f => ({
@@ -2445,10 +2506,12 @@
                 }));
                 setPendingImages(prev => prev.concat(arr));
             };
+            window.addEventListener('focus', cleanupFocus);
             inp.click();
         };
 
         const removePendingImage = (i) => {
+            if (sending) return; // 发送中禁止移除：发送按快照进行，移除会导致界面与实际发送不一致
             const arr = pendingImages.slice();
             const removed = arr.splice(i, 1)[0];
             try { URL.revokeObjectURL(removed.url); } catch (e) { /* 忽略 */ }
@@ -2564,6 +2627,7 @@
                             }, [
                                 CAT_UI.Button('×', {
                                     type: 'link',
+                                    disabled: sending, // 发送中禁止移除（removePendingImage 内也有守卫）
                                     onClick: () => removePendingImage(i),
                                     style: { position: 'absolute', top: '2px', right: '2px', padding: '0 6px', minWidth: '22px', height: '22px', lineHeight: '20px', fontSize: '16px', color: '#fff', background: 'rgba(0,0,0,0.55)', borderRadius: '50%' }
                                 })
