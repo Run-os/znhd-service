@@ -111,24 +111,26 @@ jobs:
             docker restart "$CID"
             sleep 4
 
-            # 3) 健康检查 + 版本自证（避免「日志成功但代码没更新」的静默失败）
+            # 3) 健康检查 + 版本自证（必须能「失败」：进程真的在服务新代码才算部署成功）
+            #    旧实现 /health 失败只 echo 警告不退出，且版本取自「刚 tar 进去的 /app/package.json」
+            #    （近似同义反复），进程 crash-loop 时部署仍显示绿。改为重试 /health 并解析其 version 与代码库比对。
             EXPECT_VER="$(grep '"version"' relay-server/package.json 2>/dev/null | head -1 | tr -d ' ,"' | sed 's/version://')"
-            if curl -fsS "http://127.0.0.1:5689/health" >/dev/null 2>&1; then
-              HL="$(curl -fsS http://127.0.0.1:5689/health)"
-              echo "✅ 健康检查通过: $HL"
-            else
-              echo "⚠️ 健康检查未通过（服务可能仍在启动，或 5689 未映射到宿主机），请登录服务器 docker logs $CID 排查"
+            HL=""
+            for i in $(seq 1 10); do
+              HL="$(curl -fsS --max-time 3 http://127.0.0.1:5689/health 2>/dev/null || true)"
+              [ -n "$HL" ] && break
+              sleep 1
+            done
+            if [ -z "$HL" ]; then
+              echo "❌ 健康检查失败：重启后约 10s 内 /health 无响应（服务可能未启动/crash-loop）"
+              echo "   请登录服务器执行： docker logs $CID"
+              exit 1
             fi
-            # 直接读容器内 /app 的版本，与工作树期望版本比对
-            CT_VER="$(docker exec "$CID" grep -m1 '"version"' /app/package.json 2>/dev/null | tr -d ' ,"' | sed 's/version://')"
-            if [ -n "$CT_VER" ]; then
-              if [ "$CT_VER" = "$EXPECT_VER" ]; then
-                echo "✅ 容器内版本($CT_VER) 与代码库一致，部署生效"
-              else
-                echo "❌ 版本不一致：容器内=$CT_VER  期望=$EXPECT_VER —— 说明 git 已更新磁盘(v2)但容器未加载。"
-                echo "   请登录服务器执行： docker exec $CID sh -c 'ls -la /app | head'   和   docker inspect -f '{{ json .Mounts }}' $CID"
-                exit 1
-              fi
-            else
-              echo "⚠️ 无法读取容器内 /app/package.json 版本（容器可能未就绪）"
+            ACTUAL_VER="$(printf '%s' "$HL" | sed -n 's/.*"version":"\([^"]*\)".*/\1/p')"
+            echo "✅ 健康检查通过: $HL"
+            if [ -n "$ACTUAL_VER" ] && [ "$ACTUAL_VER" != "$EXPECT_VER" ]; then
+              echo "❌ 版本不一致：/health=$ACTUAL_VER  期望=$EXPECT_VER —— 进程仍在服务旧代码"
+              echo "   请登录服务器执行： docker logs $CID   和   docker exec $CID sh -c 'ls -la /app | head'"
+              exit 1
             fi
+            echo "✅ /health 版本($ACTUAL_VER) 与代码库($EXPECT_VER) 一致，部署生效"

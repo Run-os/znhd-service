@@ -84,7 +84,7 @@
 | `forwardChannel` / `reverseChannel` | `createChannel()` 工厂两个实例（正向/反向）；各自闭包内持 `pending`（FIFO 条目队列，上限 100）+ `waiting`（长轮询在等连接 `Set<res>`，广播目标）+ `sweepExpired()` |
 | `phoneOnline` / `phoneWasOnline` | 手机最近心跳时间 / 曾在线集合（离线只告警一次） |
 
-条目 `Item = {type:'image'|'text', name?, mime?, data?, text?, ts}`；常量 `PENDING_TTL=60s`、`MAX_BODY=12MB`（超限回 413）、`PHONE_TTL=20s`、`MAX_QUEUE=100`。
+条目 `Item = {type:'image'|'text', name?, mime?, data?, text?, ts}`；常量 `PENDING_TTL=60s`、`MAX_BODY=12MB`（超限回 413）、`PHONE_TTL=20s`、`MAX_QUEUE=100`、`BODY_TIMEOUT=60s`（读请求体超时回 408；Node14 无默认 requestTimeout，故在 `readBody` 内自管定时器）。手机页（`uploadPageHtml` 内联）另有 `MAX_RECV=27` 收件画廊上限（与脚本端 `MAX_GALLERY=27` 对齐）。
 
 脚本端 localStorage 键（ReadMe 只提及 `scriptCat_Allvalue`，其余在此补全）：
 - `scriptCat_PanelPoint`：面板位置（防抖写）。

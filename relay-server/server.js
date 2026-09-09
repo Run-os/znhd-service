@@ -28,6 +28,7 @@ const MAX_BODY = 12 * 1024 * 1024; // 单图体积上限 12MB
 // 每设备最多暂存条目数（内存保护上限；手机端选图张数已不限制），超出丢弃最旧。
 // 队列化（FIFO）以支持多选连发（旧实现是单槽，连发会互相覆盖丢图）。
 const MAX_QUEUE = 100;
+const BODY_TIMEOUT = 60 * 1000;     // 读取请求体超时兜底（慢客户端/卡住连接），超时回 408 并断开
 
 // ===== 反向通道在线状态：电脑端 → 手机端 =====
 const PHONE_TTL = 20 * 1000;       // 手机在线判定：超过该时长无心跳视为离线（心跳 8s 一次）
@@ -210,6 +211,7 @@ async function parseItemBody(req, res) {
     // 请求体超限（> MAX_BODY）：明确回 413（Payload Too Large）而非通用 500/静默断开。
     // 旧实现 req.destroy() 会掐断连接，客户端只见笼统的「网络错误」，无从定位是体积问题。
     if (e && e.statusCode === 413) sendJson(res, 413, { error: '内容过大，超过单次上限（约 12MB），请压缩后再发送' });
+    else if (e && e.statusCode === 408) sendJson(res, 408, { error: '读取请求超时，请检查网络后重试' });
     else sendJson(res, 400, { error: '读取请求失败' });
     return null;
   }
@@ -237,20 +239,34 @@ async function parseItemBody(req, res) {
 // 读取整个请求体为 Buffer。超过 MAX_BODY 时进入「溢出」态：之后只继续计数、不再缓存，
 // 一直等到 'end' 再统一以 {statusCode:413} 拒绝——保证请求被完整消费完，客户端能稳定收到明确的 413，
 // 也不残留未读请求体破坏 keep-alive（旧实现中途 req.destroy() 掐断连接，客户端只见网络错误）。
+// 附超时兜底：engines 声明 Node>=14，其默认 requestTimeout=0（无超时），慢/卡客户端可能永远占着连接，
+// 故在本函数自管 BODY_TIMEOUT 定时器，超时以 {statusCode:408} 拒绝并断开。
 function readBody(req) {
   return new Promise((resolve, reject) => {
-    let size = 0, overflow = false;
+    let size = 0, overflow = false, settled = false;
     const chunks = [];
+    const timer = setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      reject(Object.assign(new Error('read body timeout'), { statusCode: 408 }));
+      req.destroy();
+    }, BODY_TIMEOUT);
+    const settle = (fn, v) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      fn(v);
+    };
     req.on('data', c => {
       size += c.length;
       if (size > MAX_BODY) { overflow = true; return; } // 超限后仅计数、不再累积内存
       chunks.push(c);
     });
     req.on('end', () => {
-      if (overflow) { reject(Object.assign(new Error('body too large'), { statusCode: 413 })); return; }
-      resolve(Buffer.concat(chunks));
+      if (overflow) { settle(reject, Object.assign(new Error('body too large'), { statusCode: 413 })); return; }
+      settle(resolve, Buffer.concat(chunks));
     });
-    req.on('error', reject);
+    req.on('error', e => settle(reject, e));
   });
 }
 
@@ -344,6 +360,9 @@ function uploadPageHtml() {
 <script>
 (function(){
   var MAX_DIM = 1600, QUALITY = 0.75;
+  // 收件画廊上限：与脚本端 MAX_GALLERY=27 对齐，超出丢最旧（收件项是 base64 dataURL 大字符串，
+  // 无上限时页面长期挂着内存持续累积）
+  var MAX_RECV = 27;
   var fileInput = document.getElementById('file');
   var grid = document.getElementById('grid');
   var info = document.getElementById('info');
@@ -594,15 +613,25 @@ function uploadPageHtml() {
   setInterval(heartbeat, 8000);
 
   // 长轮询电脑发来的条目（图片/文本）
+  // 带看门狗（与 heartbeat 同款 Promise.race）：服务器 maxwait=25s 到期必回 empty，
+  // 若请求被系统挂起/代理卡住永不 settle（如手机息屏后被 OS 冻结），race 兜底 35s（25s+10s 余量）强制重连，
+  // 避免接收静默停摆直到手动刷新。AbortController 缺失的旧 WebView 退回无 abort（race 本身仍生效）。
   function pollRecv(){
     if(!deviceId) return;
-    fetch('/phone/recv/' + deviceId + '?maxwait=25000')
-      .then(function(r){ return r.json(); })
+    var ctrl = ('AbortController' in window) ? new AbortController() : null;
+    var opt = { method: 'GET' };
+    if(ctrl) opt.signal = ctrl.signal;
+    var watchdog = new Promise(function(_, rej){ setTimeout(function(){ rej(new Error('timeout')); }, 35000); });
+    Promise.race([ fetch('/phone/recv/' + deviceId + '?maxwait=25000', opt), watchdog ])
+      .then(function(r){
+        if(ctrl) ctrl.abort();
+        return r.json();
+      })
       .then(function(j){
         if(j && j.type){ showReceived(j); }
         pollRecv(); // 继续下一次轮询
       })
-      .catch(function(){ setTimeout(pollRecv, 1500); });
+      .catch(function(){ if(ctrl) ctrl.abort(); setTimeout(pollRecv, 1500); });
   }
 
   function renderRecvGrid(){
@@ -754,6 +783,8 @@ function uploadPageHtml() {
     if(j.type === 'image'){
       // 收进画廊并自动弹出查看（与脚本端弹出画廊一致），点击缩略图再放大
       recvItems.push({ url: 'data:' + (j.mime || 'image/jpeg') + ';base64,' + j.data, mime: j.mime || 'image/jpeg' });
+      // 上限保护：超出丢最旧（dataURL 项无可 revoke，直接 shift 释放引用即可）
+      while (recvItems.length > MAX_RECV) recvItems.shift();
       renderRecvGrid();
       openRecvPopup();
       return;

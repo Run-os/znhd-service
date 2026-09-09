@@ -231,6 +231,20 @@ const DEFAULTS = {
 
 > **版本号规范**：脚本与服务端均采用 `YY.M.D-vN`（日期 + 当日改动序号，跨天序号重置为 v1）。`znhd.user.js` 版本见头部 `@version`；`relay-server` 版本存于 `relay-server/package.json` 的 `version`（`/health` 接口返回同一版本）。每次改动需在本节顶部补一条（形如 `### <脚本名> <版本号>`），写明改动说明。
 
+### znhd.user.js v26.9.6-v6
+- **处理代码审查「第一批」三项**（脚本侧健壮性，无功能变化）：
+  - **设备互联收包分发加 try/catch**：任一张图的 base64 损坏（`atob` 抛错）或回调抛异常都会让旧实现的 `poll()` 链永久中断——接收循环静默死亡、直到刷新页面才恢复。现把收包分发整体包进 try/catch，异常记日志后 1s 继续下一次轮询。
+  - **常用语加载加 `timeout: 15000` + `ontimeout`**：raw.githubusercontent 在部分网络下会被黑洞，无超时会导致 `phrasesLoading` 永久卡 true——抽屉停在「加载中…」、重载按钮转圈锁定、重开无效。超时后复位 loading 并保留旧数据，可再次点重载。
+  - **掉线语音只在弹窗新出现时播报一次**：掉线弹窗停留期间原先每 3s 都 `speak("征纳互动已掉线")`（循环报警、占满语音队列）；现按「上升沿」门控只播一次，弹窗消失后复位可再次提醒。
+- `node --check` 通过；`@version`→`26.9.6-v6`。
+
+### relay-server v26.9.6-v3
+- **处理代码审查「第一批」三项**（服务端+手机页健壮性，语义不变）：
+  - **`readBody` 加 60s 超时兜底**：`engines` 声明 Node≥14，而 Node14 默认 `requestTimeout=0`（无超时），慢/卡客户端可无限占住连接与内存。现于读取处自管 `BODY_TIMEOUT` 定时器，超时以 408 拒绝并断开（`parseItemBody` 映射 408 JSON）。
+  - **手机页收件画廊加上限**：`recvItems` 无上限时 dataURL 大字符串（单张可达 ~16MB 字符）随页面常驻累积；现新增 `MAX_RECV=27`（与脚本端 `MAX_GALLERY=27` 对齐），超出丢最旧。
+  - **`pollRecv` 加 35s 看门狗**：与 `heartbeat` 同款 `Promise.race`——服务器 maxwait=25s 到期必回 `empty`，若请求被系统挂起/代理卡住永不 settle（如手机息屏被 OS 冻结），race 兜底强制重连，避免接收静默停摆到手动刷新。
+- relay `package.json` version→`26.9.6-v3`。⚠️ 须重启 `node server.js`（容器内 `docker restart znhd`）生效，`curl /health` 看到 `26.9.6-v3` 即生效。
+
 ### znhd.user.js v26.9.6-v5
 - **常用语数据源规范值由 github blob 网页链接改为 raw 原始直链**：若用户把「常用语数据源」误填成 GitHub 网页/仓库页面地址，请求会拉回整页 HTML（GitHub CSS，含 `--fontStack-monospace`），`jsyaml` 解析报「end of the stream or a document separator is expected」。现 `DEFAULTS.commonPhrasesUrl` 存 `raw.githubusercontent.com` 直链（`resolveGithubUrl` 形式二，`useCdn=true` 时仍转 jsDelivr 加速、`false` 时直连 raw）；并让 `loadPhrasesData` 在缓存值为空时回退默认直链，避免空地址静默失败。`@version`→`26.9.6-v5`。
 

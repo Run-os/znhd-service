@@ -2,7 +2,7 @@
 // @name           征纳互动人数和在线监控v2
 // @namespace      https://scriptcat.org/
 // @description    实时监控征纳互动等待人数和在线状态，支持语音播报、自定义常用语
-// @version        26.9.6-v5
+// @version        26.9.6-v6
 // @author         runos
 // @match          https://znhd.hunan.chinatax.gov.cn:8443/*
 // @match          https://example.com/*
@@ -791,6 +791,7 @@
                 method: 'GET',
                 // 存值被清空时回退 DEFAULTS 默认直链，避免「空地址」静默失败（旧逻辑此处直接用可能为空的缓存值）
                 url: resolveGithubUrl(cachedCommonPhrasesUrl || DEFAULTS.commonPhrasesUrl),
+                timeout: 15000, // raw.githubusercontent 在国内常被黑洞，无超时会让 phrasesLoading 永久卡 true
                 onload: function (response) {
                     try {
                         // jsyaml.load('')/空响应体会返回 undefined/null；必须归一为 {}，
@@ -817,6 +818,13 @@
                     const hasOld = Object.keys(phrasesData).length > 0;
                     addLog('加载常用语失败: ' + errMsg + (hasOld ? '，仍显示上次加载的内容' : ''), 'error', true);
                     CAT_UI.Message.error('加载常用语失败' + (hasOld ? '，仍显示上次内容' : ''));
+                    setPhrasesLoading(false);
+                },
+                ontimeout: function () {
+                    // 请求挂起超时（如数据源被墙/无响应）：同样复位 loading、保留旧数据，抽屉可再次点重载
+                    const hasOld = Object.keys(phrasesData).length > 0;
+                    addLog('加载常用语超时（15s），已取消' + (hasOld ? '，仍显示上次加载的内容' : ''), 'error', true);
+                    CAT_UI.Message.error('常用语加载超时' + (hasOld ? '，仍显示上次内容' : ''));
                     setPhrasesLoading(false);
                 }
             });
@@ -1310,6 +1318,10 @@
     // 记录上一次的工作时间状态，用于检测「进入/离开工作时间」的变化（仅在翻转时记日志）
     let lastWorkingState = null;
 
+    // 掉线语音已在播报标记：只在「掉线弹窗新出现」的上升沿播报一次，
+    // 弹窗停留期间每 3s 轮询不再重复（避免循环报警占满语音队列）；弹窗消失后复位可再次提醒。
+    let lastOfflineAnnounced = false;
+
     // 修改主要检测函数
     /**
      * 主检测函数：每次轮询执行。判断工作时间、读取等待人数（状态变化时记录/播报），
@@ -1367,15 +1379,17 @@
             // 不同版本页面在图标前可能插入额外节点（导致两者命中不同元素），故保留双写法。
             const offlineEl = document.querySelector('.t-dialog__body__icon:nth-child(2)') ||
                 document.querySelector('.t-dialog__body__icon:nth-of-type(2)');
-
-            if (offlineEl) {
-                // 使用可选链安全读取文本
-                const text = (offlineEl?.innerText ?? offlineEl?.textContent ?? '').trim();
-
-                if (text.includes('掉线')) {
-                    addLog(`掉线提示：${text}`, 'error');
+            // 使用可选链安全读取文本
+            const offlineText = offlineEl ? ((offlineEl?.innerText ?? offlineEl?.textContent ?? '').trim()) : '';
+            if (offlineText.includes('掉线')) {
+                addLog(`掉线提示：${offlineText}`, 'error');
+                if (!lastOfflineAnnounced) {
+                    lastOfflineAnnounced = true; // 仅弹窗新出现时播报一次，避免停留期间每 3s 循环报警
                     speak("征纳互动已掉线");
                 }
+            } else {
+                // 掉线弹窗消失/尚未出现：复位标记，下次真正掉线仍会提醒
+                lastOfflineAnnounced = false;
             }
 
         } catch (error) {
@@ -2250,28 +2264,35 @@
                     onload: function (resp) {
                         if (stopped) return;
                         markConnected(); // 首次成功收到服务器响应即视为已连上
-                        let data = null;
-                        try { data = JSON.parse(resp.responseText); } catch (e) { data = null; }
-                        if (data && data.empty) { poll(); return; }
-                        if (data && data.type === 'image' && data.data) {
-                            const blob = base64ToBlob(data.data, data.mime || 'image/jpeg');
-                            // 预览统一用 objectURL（与「发送到手机」待发列表一致）：
-                            // ① 画廊上限淘汰/单张移除/清空全部时的 URL.revokeObjectURL 真正生效
-                            //   （data:URL 字符串无法 revoke，旧写法实为无效空操作）；
-                            // ② 避免最多 27 张图的 base64 dataURL 长字符串常驻 JS 堆（可达几十 MB）。
-                            const previewUrl = URL.createObjectURL(blob);
-                            if (opt.onStatus) opt.onStatus('收到图片：' + (data.name || 'image'));
-                            if (opt.onImage) opt.onImage({ blob: blob, previewUrl: previewUrl, name: data.name, mime: data.mime });
-                            poll(); // 继续接收下一张
-                            return;
+                        try {
+                            let data = null;
+                            try { data = JSON.parse(resp.responseText); } catch (e) { data = null; }
+                            if (data && data.empty) { poll(); return; }
+                            if (data && data.type === 'image' && data.data) {
+                                const blob = base64ToBlob(data.data, data.mime || 'image/jpeg');
+                                // 预览统一用 objectURL（与「发送到手机」待发列表一致）：
+                                // ① 画廊上限淘汰/单张移除/清空全部时的 URL.revokeObjectURL 真正生效
+                                //   （data:URL 字符串无法 revoke，旧写法实为无效空操作）；
+                                // ② 避免最多 27 张图的 base64 dataURL 长字符串常驻 JS 堆（可达几十 MB）。
+                                const previewUrl = URL.createObjectURL(blob);
+                                if (opt.onStatus) opt.onStatus('收到图片：' + (data.name || 'image'));
+                                if (opt.onImage) opt.onImage({ blob: blob, previewUrl: previewUrl, name: data.name, mime: data.mime });
+                                poll(); // 继续接收下一张
+                                return;
+                            }
+                            if (data && data.type === 'text' && typeof data.text === 'string') {
+                                if (opt.onStatus) opt.onStatus('收到文本');
+                                if (opt.onText) opt.onText({ text: data.text, ts: data.ts });
+                                poll(); // 继续接收下一条
+                                return;
+                            }
+                            setTimeout(poll, 1000); // 解析失败稍后重试
+                        } catch (e) {
+                            // 单条数据异常（base64 损坏 atob 抛错、回调抛错等）不得杀死接收循环：
+                            // 记录一次后继续下一次轮询（旧实现无兜底，异常会让 poll 链永久中断、收图静默失效）
+                            addLog('[设备互联] 处理收到数据失败: ' + ((e && e.message) ? e.message : e), 'error', true);
+                            setTimeout(poll, 1000);
                         }
-                        if (data && data.type === 'text' && typeof data.text === 'string') {
-                            if (opt.onStatus) opt.onStatus('收到文本');
-                            if (opt.onText) opt.onText({ text: data.text, ts: data.ts });
-                            poll(); // 继续接收下一条
-                            return;
-                        }
-                        setTimeout(poll, 1000); // 解析失败稍后重试
                     },
                     onerror: function () {
                         if (stopped) return;
