@@ -2,7 +2,7 @@
 // @name           征纳互动人数和在线监控v2
 // @namespace      https://scriptcat.org/
 // @description    实时监控征纳互动等待人数和在线状态，支持语音播报、自定义常用语
-// @version        26.9.6-v7
+// @version        26.9.6-v8
 // @author         runos
 // @match          https://znhd.hunan.chinatax.gov.cn:8443/*
 // @match          https://example.com/*
@@ -469,14 +469,35 @@
             if (dec !== null) updateWh(field, dec);
         };
 
-        // 常用语数据源地址变更处理：留空恢复默认；直接提交用户输入，不再逐键拦截。
-        // 说明：旧逻辑「非 http(s):// 前缀即拒绝提交 + 每键弹 warning」会让受控输入无法逐字输入、
-        // 且任意重渲染把输入框拉回已提交值；地址是否可用改由使用时的加载校验兜底（loadPhrasesData 的 status/类型校验）。
+        // 常用语数据源地址：草稿 + 失焦回填默认。
+        // 旧逻辑 onChange 空串时立即提交默认地址，受控 Input 的 value 随之变回默认——
+        // 用户清空后还没来得及输入/粘贴新地址，输入框就被自动填上默认值，体验很糟。
+        // 现改为：输入框显示独立的 urlDraft 草稿（清空后保持为空），非空时逐字提交保存；
+        // 仅当**失焦且草稿为空**时才把默认地址回填并提交（符合「点别处才恢复默认」的直觉）。
+        // 地址可用性仍由使用时的加载校验兜底（loadPhrasesData 的 status/类型校验）。
         const DEFAULT_PHRASES_URL = DEFAULTS.commonPhrasesUrl;
+        const [urlDraft, setUrlDraft] = CAT_UI.useState(commonPhrasesUrl || DEFAULT_PHRASES_URL);
+        // 外部已保存值变化（提交、重开设置）时同步草稿；输入中不会触发（外部值未变），不打断打字
+        CAT_UI.useEffect(() => {
+            setUrlDraft(commonPhrasesUrl || DEFAULT_PHRASES_URL);
+        }, [commonPhrasesUrl]);
+        // 重开设置抽屉时丢弃上次未完成/未失焦的草稿，按已保存值展示
+        CAT_UI.useEffect(() => {
+            if (visible) setUrlDraft(commonPhrasesUrl || DEFAULT_PHRASES_URL);
+        }, [visible]);
         const onUrlChange = (val) => {
             let url = (typeof val === 'string') ? val : (val && val.target ? val.target.value : '');
             url = (url || '').trim();
-            onChangeCommonPhrasesUrl(url || DEFAULT_PHRASES_URL); // 留空恢复默认
+            setUrlDraft(url); // 草稿始终跟随输入（含清空），输入框保持为空，不回填默认
+            if (url) onChangeCommonPhrasesUrl(url); // 非空逐字提交；空串延迟到失焦处理
+        };
+        // 失焦时从事件目标读最新 DOM 值（不依赖闭包快照）；为空则回填默认地址并提交
+        const onUrlBlur = (e) => {
+            const url = ((e && e.target && typeof e.target.value === 'string' ? e.target.value : urlDraft) || '').trim();
+            if (!url) {
+                onChangeCommonPhrasesUrl(DEFAULT_PHRASES_URL);
+                setUrlDraft(DEFAULT_PHRASES_URL);
+            }
         };
 
         return CAT_UI.Drawer(
@@ -562,15 +583,16 @@
                 }),
                 CAT_UI.Input({
                     placeholder: "https://.../commonPhrases.yaml",
-                    value: commonPhrasesUrl || DEFAULTS.commonPhrasesUrl,
+                    value: urlDraft,
                     onChange: onUrlChange,
+                    onBlur: onUrlBlur,
                     allowClear: true,
                     style: { marginBottom: "8px", width: "100%" }
                 }),
                 CAT_UI.createElement(
                     "p",
                     { style: { margin: "0 0 8px", color: "#999", fontSize: "12px", lineHeight: "1.5" } },
-                    "修改后请在「常用语」面板点「重新加载常用语」生效；留空则恢复默认地址。"
+                    "修改后请在「常用语」面板点「重新加载常用语」生效；留空并点击其他区域（失焦）后恢复默认地址。"
                 ),
                 CAT_UI.Text("中继服务器地址", {
                     style: { display: "block", marginBottom: "8px", fontWeight: "bold" }
