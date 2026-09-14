@@ -639,7 +639,9 @@ function uploadPageHtml() {
     var watchdog = new Promise(function(_, rej){ setTimeout(function(){ rej(new Error('timeout')); }, 35000); });
     Promise.race([ fetch('/phone/recv/' + deviceId + '?maxwait=25000', opt), watchdog ])
       .then(function(r){
-        if(ctrl) ctrl.abort();
+        // ⚠️ 此处绝不能 abort()：响应体还没读，abort() 会让下面的 r.json() 抛 AbortError（本机 Chromium 实测），
+        // 每次投递都被 catch 吞掉并重连 → 手机端永远收不到内容（而服务端已把条目出队、电脑端显示发送成功）。
+        // abort 的正确位置只有「看门狗已超时、原请求还挂着」的 catch 分支（见下方）。
         return r.json();
       })
       .then(function(j){
@@ -837,9 +839,13 @@ function uploadPageHtml() {
       openRecvPopup();
       return;
     }
-    // 文本仍弹独立弹层
+    // 文本仍弹独立弹层。同屏只保留最新一条（与脚本端 showTextPopup 一致）：旧实现连收多条会
+    // 叠加多个全屏遮罩，关掉顶层会露出过期文本。.recv-text 只标记文本层，不误伤
+    // openRecvImage 的单图查看层（同为 .recv，仅在 Viewer.js CDN 未加载时才走）。
+    // 注意：本段位于内联模板串内，注释里禁用反引号与插值起始符（会截断或求值整个 HTML）。
+    Array.prototype.forEach.call(document.querySelectorAll('.recv-text'), function(el){ el.remove(); });
     var box = document.createElement('div');
-    box.className = 'recv';
+    box.className = 'recv recv-text';
     if(j.type === 'text'){
       var pre = document.createElement('pre');
       pre.textContent = j.text || '';

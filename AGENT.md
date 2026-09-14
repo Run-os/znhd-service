@@ -89,6 +89,7 @@
 脚本端 localStorage 键（ReadMe 只提及 `scriptCat_Allvalue`，其余在此补全）：
 - `scriptCat_PanelPoint`：面板位置（防抖写）。
 - `scriptCat_PhrasesCache`：`{time,url,data}`，2h TTL。
+- 写盘语义（v26.9.6-v9 起）：`saveAllvalue()` 是 **300ms 尾防抖**，返回时尚未写入 localStorage；需要「写完立刻读」时先调 `flushSaveAllvalue()`（`beforeunload` 已自动兜底）。面板位置 `savePanelPoint()` 走 rAF 防抖；逐字设置的日志用 `addLogDebounced(key,...)` 400ms 合并。
 - 弹窗/画廊 DOM：挂 `document.documentElement`，`z-index:2147483647`；`.viewer-container` 由 MutationObserver 移入画廊 overlay 内。
 
 ---
@@ -115,12 +116,14 @@
 | Viewer.js 预览层级 | 预览容器由 MutationObserver 移入本弹窗 overlay 内（页面 body transform 会困住挂 body 的 Viewer） | v26.7.29-v10 |
 | CAT_UI 组件白名单 | `Switch`/`TimePicker`/`Image` 实为 undefined，裸 `input`/`img` 触发 React #137；开关用受控 checkbox/div 模拟 | v26.7.29-v6/v7 |
 | 图片复制 | `GM_setClipboard(blob)` 在 ScriptCat 静默无效（仅文本）；唯一可靠路径 = 页面主世界 `unsafeWindow.navigator.clipboard.write`（PNG） | v26.7.26-v4~v8 |
-| server.js 内联模板串 | 反斜杠（`\.svg`）易被吞；残留引用导致线上静默异常；改后 `node --check` + 渲染脚本 `new Function` 自检 | relay v26.7.28-v6、v26.7.29-v8 |
+| server.js 内联模板串 | 反引号或 `${` 会**截断/求值整个 HTML**：`node --check` 可能仍通过（被解析成合法的属性访问），必须用「请求手机页 + 内联 `<script>` 跑 `new Function`」自检 | relay v26.7.28-v6、v26.7.29-v8、v26.9.6-v5 |
+| `Promise.race` + `AbortController` | **绝不在读取响应体前 `abort()`**（`r.json()` 会抛 AbortError 被 catch 吞掉）；abort 只能放在「看门狗已超时」分支 | relay v26.9.6-v5 |
 | arco focus-lock 打架 | 弹窗内 button 设 `tabIndex=-1` + mousedown `preventDefault` | v26.7.29-v8 |
 | bind 挂载失联 | git reset 更新挂载源会替换 inode 使 bind 失联，stop/start/restart 都不重绑；正解 = tar 管道直写容器 `/app` 再 restart | deploy.yml 注释 |
 
 ## 技术债务
 
-- **FingerprintJS**：`@require` 引入（fp@5）但代码无调用点 → 遗留依赖，可整行删除（ReadMe「技术栈」已不再列出）。
+- **FingerprintJS**：`@require` 已删除（v26.9.6-v7 清理死依赖），此项已关闭。
 - **画廊两端重复实现**（脚本端 / server.js 手机页）：无共享模块，改动成本翻倍（见「复用代码溯源」）。
+- **待评估优化池**（2026-09-14 「性能与冗余」审查；第一批 P1/P2/P3/P5/P8/P9 已落地 v26.9.6-v9 + relay v26.9.6-v5）：① 归一化 `trim().replace(/\/+$/,'')` 6 处 + 输入事件解包 5 处可提炼 helper；② `appendToTinyMCE` 返回值全仓无人接收且 iframe 查询重复 3 处；③ relay `MAX_QUEUE=100` 按条数计（单条 ≤12MB → 每设备最坏 ~1.2GB），可加 `MAX_QUEUE_BYTES`。细则见 `.workbuddy/memory/2026-09-14.md`。
 - **无自动化测试**：仅 `node --check` 语法校验 + 人工/浏览器实测；服务端无类型声明。（服务端正反向逐行镜像已由 `createChannel()` 工厂消除，relay v26.9.6-v1。）

@@ -231,6 +231,20 @@ const DEFAULTS = {
 
 > **版本号规范**：脚本与服务端均采用 `YY.M.D-vN`（日期 + 当日改动序号，跨天序号重置为 v1）。`znhd.user.js` 版本见头部 `@version`；`relay-server` 版本存于 `relay-server/package.json` 的 `version`（`/health` 接口返回同一版本）。每次改动需在本节顶部补一条（形如 `### <脚本名> <版本号>`），写明改动说明。
 
+### znhd.user.js v26.9.6-v9
+- **处理「性能与冗余」审查第一批**（脚本端，交互语义不变）：
+  - **主面板配置改惰性初始化**：`useState(loadAllvalue())` 的实参在**每次渲染**都会求值，而本组件因日志状态每 3 秒+ 就重渲染一次 → 每次渲染白读一次 localStorage 并 `JSON.parse`；改用 `useState(() => _initAllvalue)`（顶层启动时已读好的同一份数据，会话内设置改动都会写回它）。
+  - **设置项持久化改 300ms 尾防抖 + 关页兜底**：设置输入是逐字提交的，旧实现每按一键就同步 `JSON.stringify + localStorage.setItem`，并顺带记一条「数据已保存到localStorage」；现 `saveAllvalue()` 只把「持久化」推迟到停顿后（状态仍逐字更新，最终写入必是最新值），并在 `beforeunload` 调 `flushSaveAllvalue()` 兜底，不丢最后一笔。
+  - **逐字设置的日志防抖**：中继地址 / 常用语地址的「已更新」日志改走新增的 `addLogDebounced()`（同一 key 400ms 内只记最后一条），一次输入/粘贴不再把 20 条上限的日志面板刷满中间态。
+  - **画廊 Viewer 观察器加短路**：`.viewer-container` 成功移入弹窗后置 `viewerMoved` 标志，回调先判标志即返回——该观察器监听整个 `documentElement` 的 subtree，税务页每次 DOM 变更都会触发回调，而「移入」动作一辈子只成功一次（观察器不断开，兼容可能重建容器的 Viewer 构建）。
+  - **杂项清理**：删掉只被调用一次的 `isElementInDocument()` 单行包装（内联 `isConnected` 判断）；常用语按钮补 React `key`（消除列表告警）。
+- `node --check` 通过；`@version`→`26.9.6-v9`。
+
+### relay-server v26.9.6-v5
+- **修复「电脑 → 手机」整条通道静默失效（重要）**：手机页 `pollRecv` 在 `fetch` 成功回调里、**读取响应体之前**调用了 `ctrl.abort()`（v26.9.6-v3/v4 加 35s 看门狗时引入），Chromium 实测这会让随后的 `r.json()` 抛 `AbortError` → 每次投递都被 `.catch` 吞掉并重连。表现：电脑端「发送到手机」显示成功、手机端**永远收不到**任何图片/文本（服务端已把条目出队，条目实际丢失）。现只在「看门狗超时、原请求仍挂着」的 catch 分支才 abort；本机浏览器实测：连发两条文本 → 手机页只显示最新一条，图片画廊计数正常。
+- **手机页文本弹层改「同屏只留最新一条」**：连收多条文本时旧实现会在 body 上叠加多个全屏遮罩，关掉顶层会露出**过期**文本；现文本层加 `.recv-text` 标记，新文本到达前先移除旧文本层（与脚本端 `showTextPopup` 行为一致）。`openRecvImage` 的单图查看层（同为 `.recv`，仅 Viewer.js CDN 未加载时走）不受影响。
+- 纯手机页改动，收发协议不变；relay `package.json` version→`26.9.6-v5`。⚠️ 须重启生效（容器内 `docker restart znhd`，或手动停旧进程后重新 `node server.js`），`curl /health` 见 `26.9.6-v5` 即生效；**手机端需刷新上传页**（修的是页内 JS）。
+
 ### znhd.user.js v26.9.6-v8
 - **常用语数据地址改为「草稿 + 失焦回填默认」**：旧逻辑在输入框 `onChange` 收到空串时立即提交默认地址，受控 Input 的 value 随之瞬间被拉回默认——用户清空后想输入/粘贴新地址时，输入框马上被自动填上默认值（`v26.9.6-v7` 改自由输入后暴露）。现输入框改显独立的本地草稿 `urlDraft`（清空后保持为空，可继续粘贴/输入），非空时逐字提交保存；仅当**失焦且草稿为空**才回填并提交默认地址。`allowClear` 的清除按钮不触发 blur，故清空后焦点仍在输入框、不会误触回填。`@version`→`26.9.6-v8`。
 

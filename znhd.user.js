@@ -2,7 +2,7 @@
 // @name           征纳互动人数和在线监控v2
 // @namespace      https://scriptcat.org/
 // @description    实时监控征纳互动等待人数和在线状态，支持语音播报、自定义常用语
-// @version        26.9.6-v8
+// @version        26.9.6-v9
 // @author         runos
 // @match          https://znhd.hunan.chinatax.gov.cn:8443/*
 // @match          https://example.com/*
@@ -97,6 +97,24 @@
         if (logenabled) {
             console.log(`[监控] ${timestamp} ${message}`);
         }
+    }
+
+    // 逐字输入类设置项的日志防抖：同一 key 的连续变化只在停顿后记一条「最终值」。
+    // 输入/粘贴一个地址若每键都记日志，一次输入就能把 20 条上限的日志面板刷满（只剩中间态）。
+    const _logDebounceTimers = {};
+    /**
+     * 防抖写日志：同一 key 在 400ms 内的多次调用只保留最后一次。
+     * @param {string} key - 防抖分组键（同一设置项用同一 key）
+     * @param {string} message - 日志正文（取最后一次调用的值）
+     * @param {('info'|'warning'|'success'|'error')} [type='info'] - 日志类型
+     * @returns {void}
+     */
+    function addLogDebounced(key, message, type = 'info') {
+        clearTimeout(_logDebounceTimers[key]);
+        _logDebounceTimers[key] = setTimeout(() => {
+            delete _logDebounceTimers[key];
+            addLog(message, type);
+        }, 400);
     }
 
     // ==========存储管理==========
@@ -244,13 +262,25 @@
         return { ...DEFAULTS };
     }
 
-    // 保存Allvalue数据到localStorage
+    // 保存Allvalue数据到localStorage（300ms 尾防抖）
+    // 设置项是逐字提交的（见 SettingsDrawer 的 onChange）：每键都落盘即每次按键一次同步
+    // JSON.stringify + localStorage.setItem，并顺带刷一条日志（面板位置保存早已用 rAF 防抖）。
+    // 这里只把「持久化」推迟到停顿后——状态仍逐字更新，最终写入的必然是最新值；
+    // 关页由 beforeunload 调 flushSaveAllvalue() 兜底，不会丢最后一笔。
+    let _saveAllvalueTimer = null;
+    let _saveAllvaluePending = null;
     /**
-     * 将全部用户配置写入 localStorage，并记录成功/失败日志。
-     * @param {object} data - 待保存的配置对象
+     * 立即落盘待保存的配置并取消未到期的防抖定时器。幂等：无待写值时直接返回。
      * @returns {void}
      */
-    function saveAllvalue(data) {
+    function flushSaveAllvalue() {
+        if (_saveAllvalueTimer) {
+            clearTimeout(_saveAllvalueTimer);
+            _saveAllvalueTimer = null;
+        }
+        if (_saveAllvaluePending === null) return;
+        const data = _saveAllvaluePending;
+        _saveAllvaluePending = null;
         try {
             localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
             addLog('数据已保存到localStorage', 'success', true);
@@ -258,6 +288,16 @@
             addLog('保存数据失败: ' + error.message, 'error', true);
             CAT_UI.Message.error('保存设置失败: ' + error.message);
         }
+    }
+    /**
+     * 将全部用户配置写入 localStorage（300ms 尾防抖，语义见上方注释）。
+     * 注意：返回时尚未落盘，需要立刻读到最新值时先调 flushSaveAllvalue()。
+     * @param {object} data - 待保存的配置对象
+     * @returns {void}
+     */
+    function saveAllvalue(data) {
+        _saveAllvaluePending = data;
+        if (!_saveAllvalueTimer) _saveAllvalueTimer = setTimeout(flushSaveAllvalue, 300);
     }
 
     // ==========状态缓存==========
@@ -712,6 +752,7 @@
                                 CAT_UI.Space(
                                     filteredEntries.map(([key, value]) =>
                                         CAT_UI.Button(key, {
+                                            key: key, // React 列表 key（缺省会告警，且重排时复用错节点）
                                             type: "default",
                                             onClick() {
                                                 safeCopyText(value);
@@ -750,7 +791,10 @@
      */
     function MainPanel() {
         // 使用加载的数据初始化Allvalue
-        const [Allvalue, setAllvalue] = CAT_UI.useState(loadAllvalue());
+        // 惰性初始化：useState(loadAllvalue()) 的实参每次渲染都会求值，而本组件因 logEntries
+        // 每 3 秒+ 就重渲染一次，等于反复白读 localStorage + JSON.parse。顶层 _initAllvalue
+        // 已是启动时读好的同一份数据（本会话内设置改动都会同步写回它）。
+        const [Allvalue, setAllvalue] = CAT_UI.useState(() => _initAllvalue);
 
         // 包装setAllvalue函数，实现自动保存
         const updateAllvalue = (newValue) => {
@@ -1024,12 +1068,12 @@
                             commonPhrasesUrl: Allvalue.commonPhrasesUrl,
                             onChangeCommonPhrasesUrl: (url) => {
                                 patchAllvalue({ commonPhrasesUrl: url });
-                                addLog('常用语数据源已更新: ' + url, 'info');
+                                addLogDebounced('commonPhrasesUrl', '常用语数据源已更新: ' + url, 'info');
                             },
                             relayServer: Allvalue.relayServer || '',
                             onChangeRelayServer: (url) => {
                                 patchAllvalue({ relayServer: url });
-                                addLog('中继服务器已更新: ' + (url || '（空）'), 'info');
+                                addLogDebounced('relayServer', '中继服务器已更新: ' + (url || '（空）'), 'info');
                             },
                             useCdn: Allvalue.useCdn,
                             onChangeUseCdn: (v) => {
@@ -1055,7 +1099,7 @@
                             relayServer: Allvalue.relayServer || '',
                             onChangeRelayServer: (url) => {
                                 patchAllvalue({ relayServer: url });
-                                addLog('中继服务器已更新: ' + (url || '（空）'), 'info');
+                                addLogDebounced('relayServer', '中继服务器已更新: ' + (url || '（空）'), 'info');
                             }
                         }),
                     ],
@@ -1357,16 +1401,6 @@
         // 注意：offlineElement 不缓存，每次重新查询
     };
 
-    // 检测DOM元素是否仍然存在于文档中
-    /**
-     * 检测 DOM 元素是否仍连接在文档中（用于清理失效的缓存元素引用）。
-     * @param {Element} element - 待检测元素
-     * @returns {boolean} 仍连接返回 true，否则 false
-     */
-    function isElementInDocument(element) {
-        return element && element.isConnected;
-    }
-
     // 记录上一次的等待人数，用于检测状态变化
     let lastWaitCount = null;
 
@@ -1393,8 +1427,8 @@
         if (!inWork) return;
 
         try {
-            // 清理缓存中已失效的人数元素
-            if (!isElementInDocument(domCache.ocurrentElement)) {
+            // 清理缓存中已失效的人数元素（isConnected 为假即已脱离文档）
+            if (domCache.ocurrentElement && !domCache.ocurrentElement.isConnected) {
                 domCache.ocurrentElement = null;
             }
 
@@ -1702,6 +1736,7 @@
 
     // 页面关闭时清理定时器
     window.addEventListener('beforeunload', () => {
+        flushSaveAllvalue(); // 落盘防抖窗口内的最后一笔设置，避免关页丢改动
         if (monitoringInterval) {
             clearInterval(monitoringInterval);
             monitoringInterval = null;
@@ -2132,10 +2167,16 @@
                 // 用 MutationObserver 监听 .viewer-container 出现即移入（Viewer.js 该构建的事件 API 不可靠，不依赖之）。
                 if (window.MutationObserver) {
                     if (galleryViewerObserver) { try { galleryViewerObserver.disconnect(); } catch (e) { /* 忽略 */ } }
+                    // 移动成功后不再重复查询：本观察器监听整个 documentElement 的 subtree，
+                    // 税务页每次 DOM 变更都会触发回调，而真正要干的「移入 overlay」一辈子只成功一次。
+                    // 保留观察器（不断开）是为兼容可能重建容器的 Viewer 构建，代价只剩一次布尔判断。
+                    let viewerMoved = false;
                     galleryViewerObserver = new MutationObserver(function () {
+                        if (viewerMoved) return;
                         const vc = document.querySelector('.viewer-container');
                         if (vc && vc.parentNode !== overlay) {
                             overlay.appendChild(vc);
+                            viewerMoved = true;
                             vc.style.zIndex = '2'; // 在画廊遮罩上下文内，高于白盒(z-index:1)
                             // 安全网：监听 Viewer 显隐（viewer-in 类的增删，不依赖其事件 API）。
                             // 显示时允许交互；隐藏后置 pointer-events:none，避免残留容器遮挡画廊关闭按钮/缩略图。
