@@ -6,3 +6,4 @@ tmp/
 node_modules/
 dist/*
 !/dist/znhd.user.js
+.archify/
