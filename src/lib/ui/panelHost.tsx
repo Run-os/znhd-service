@@ -18,9 +18,11 @@ import { createRoot, type Root } from 'react-dom/client';
 import { useCallback, useEffect, useRef } from 'react';
 import PanelApp from './PanelApp';
 import { loadPanelPoint, savePanelPoint } from '@/lib/storage';
+import { PANEL_HOST_ID } from '@/lib/ui/panelIds';
+import { injectUiReset } from '@/lib/ui/uiReset';
 
-/** 面板宿主 id（位置跟踪按 id 定位） */
-export const PANEL_HOST_ID = '__znhd_panel_host__';
+// 面板宿主 id 定义在 panelIds（供 uiReset 共用，避免循环依赖）；此处转出，保持既有 import 路径可用
+export { PANEL_HOST_ID };
 
 /** 浮层容器：所有弹窗/浮层统一挂到 documentElement，避开 body 的层叠上下文 */
 export function getOverlayContainer(): HTMLElement {
@@ -57,6 +59,9 @@ let root: Root | null = null;
 
 /** 创建宿主并挂载 React 面板，返回宿主元素 */
 export function mountPanel(): HTMLElement {
+    // 先注入样式隔离层：宿主页面的全局 CSS（居中、非 border-box、svg 对齐等）会污染 antd 组件外观，
+    // 详见 uiReset.ts。（必须在渲染前，避免第一帧抖动）
+    injectUiReset();
     const host = document.createElement('div');
     host.id = PANEL_HOST_ID;
     host.style.cssText = 'position:fixed;z-index:2147482000;left:0;top:0;';

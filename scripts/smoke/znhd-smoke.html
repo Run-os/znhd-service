@@ -5,6 +5,21 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>znhd 冒烟测试</title>
 
+    <!-- ===== 模拟真实宿主页面的「敌意 CSS」=====
+         本脚本的面板/弹窗是注入到**别人页面**里的：税务页有全局 text-align:center、
+         非 border-box 盒模型、自定义 svg 对齐等规则，会污染 antd 组件外观
+         （v26.10.06-v11 的「弹窗文字全居中 + 输入框图标偏移」就是这么来的）。
+         这里常驻几条同类规则，作为样式隔离层（lib/ui/uiReset.ts + 弹窗 styles.body）的回归守卫。 -->
+    <style>
+      html,
+      body {
+        text-align: center; /* 旧代码靠显式 textAlign:'left' 守，去掉就会整屏居中 */
+      }
+      body * {
+        box-sizing: content-box; /* 非 border-box，验证隔离层是否复位 */
+      }
+    </style>
+
     <!-- ===== GM API 桩（模拟油猴环境 + 按真实中继协议返回数据） ===== -->
     <script>
       // 先落一份干净的配置（脚本读 localStorage，不读 GM_getValue）
@@ -452,6 +467,23 @@
             window.__phoneSendCheck.bytes < (window.__phoneSendCheck.originalBytes || Infinity)
           ),
           xhr: window.__gmXhrLog.slice(0, 6),
+          // ===== 样式隔离断言（v26.10.06-v11）=====
+          // 宿主页面把 html/body 设成 text-align:center、且要求 content-box，
+          // 面板/弹窗必须仍保持左对齐、盒模型正确 —— 否则就是隔离层失效（用户实测反馈过）。
+          modalTextAlignLeft: (() => {
+            const body = document.querySelector('.ant-modal-body');
+            return !!body && getComputedStyle(body).textAlign === 'left';
+          })(),
+          // 时间选择器的时钟图标必须与输入框同一水平线（图标中心与输入框中心误差 ≤2px）。
+          // 用户反馈的现象是「图标向上偏移、跑出输入框」。
+          pickerIconCentered: (() => {
+            const input = document.querySelector('.ant-picker-input');
+            const icon = document.querySelector('.ant-picker-suffix');
+            if (!input || !icon) return false;
+            const a = input.getBoundingClientRect();
+            const b = icon.getBoundingClientRect();
+            return Math.abs(a.top + a.height / 2 - (b.top + b.height / 2)) <= 2;
+          })(),
           relevantErrors: relevant,
         };
         document.getElementById('smoke-result').textContent = JSON.stringify(report, null, 2);

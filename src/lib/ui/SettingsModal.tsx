@@ -90,6 +90,8 @@ export default function SettingsModal({
             onCancel={onClose}
             getContainer={getOverlayContainer}
             width={520}
+            // 显式左对齐：宿主页面常有全局 text-align:center（税务页就是），不设会整屏居中
+            styles={{ body: { textAlign: 'left' } }}
             destroyOnHidden
             footer={
                 <Space>

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name                征纳互动人数和在线监控v2
 // @namespace           https://scriptcat.org/
-// @version             26.10.06-v10
+// @version             26.10.06-v11
 // @description         实时监控征纳互动等待人数和在线状态，支持语音播报、自定义常用语
 // @author              runos
 // @match               https://znhd.hunan.chinatax.gov.cn:8443/*
@@ -72466,7 +72466,9 @@ function SettingsModal({ open, onClose, workingHours, onChangeWorkingHours, comm
             setUrlDraft(DEFAULT_PHRASES_URL);
         }
     };
-    return ((0,react_jsx_runtime_production_namespaceFn().jsxs)(modal, { open: open, title: "\u8BBE\u7F6E\u83DC\u5355", onCancel: onClose, getContainer: getOverlayContainer, width: 520, destroyOnHidden: true, footer: (0,react_jsx_runtime_production_namespaceFn().jsxs)(es_space, { children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { onClick: onClose, children: "\u53D6\u6D88" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { color: "primary", variant: "solid", onClick: onClose, children: "\u786E\u5B9A" })] }), children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)(es_space, { size: 4, wrap: true, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { type: "link", onClick: () => window.open('https://github.com/Run-os/znhd-service', '_blank'), children: "[\u811A\u672C\u4E3B\u9875]" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { type: "link", onClick: () => window.open((GM_info.scriptUpdateURL || GM_info.script.updateURL), '_blank'), children: "[\u66F4\u65B0\u811A\u672C]" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { type: "link", onClick: () => showChangelogPopup(), children: "[\u66F4\u65B0\u65E5\u5FD7]" })] }), (0,react_jsx_runtime_production_namespaceFn().jsx)(divider, { style: { margin: '8px 0' }, children: "\u5176\u4ED6\u8BBE\u7F6E" }), (0,react_jsx_runtime_production_namespaceFn().jsxs)(es_space, { size: 8, style: { marginBottom: 12 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(SettingsModal_Text, { strong: true, children: "\u4F7F\u7528 CDN \u52A0\u901F\uFF08Fastly \u955C\u50CF\uFF09\u52A0\u8F7D\u8D44\u6E90" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_switch, { checked: !!useCdn, onChange: (v) => onChangeUseCdn(v) })] }), (0,react_jsx_runtime_production_namespaceFn().jsx)(SettingsModal_Text, { strong: true, style: { display: 'block', marginBottom: 8 }, children: "\u76D1\u63A7\u65F6\u95F4\u6BB5\uFF08\u70B9\u51FB\u9009\u62E9\u65F6\u95F4\uFF09" }), (0,react_jsx_runtime_production_namespaceFn().jsxs)(es_space, { size: 8, wrap: true, style: { marginBottom: 8 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(SettingsModal_Text, { children: "\u4E0A\u5348" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(time_picker, { value: toDayjs(wh.morningStart), format: "HH:mm", minuteStep: 5, allowClear: false, style: { width: 110 }, onChange: (v) => v && updateWh('morningStart', v.hour() + v.minute() / 60) }), (0,react_jsx_runtime_production_namespaceFn().jsx)(SettingsModal_Text, { children: "\u81F3" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(time_picker, { value: toDayjs(wh.morningEnd), format: "HH:mm", minuteStep: 5, allowClear: false, style: { width: 110 }, onChange: (v) => v && updateWh('morningEnd', v.hour() + v.minute() / 60) })] }), (0,react_jsx_runtime_production_namespaceFn().jsxs)(es_space, { size: 8, wrap: true, style: { marginBottom: 8 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(SettingsModal_Text, { children: "\u4E0B\u5348" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(time_picker, { value: toDayjs(wh.afternoonStart), format: "HH:mm", minuteStep: 5, allowClear: false, style: { width: 110 }, onChange: (v) => v && updateWh('afternoonStart', v.hour() + v.minute() / 60) }), (0,react_jsx_runtime_production_namespaceFn().jsx)(SettingsModal_Text, { children: "\u81F3" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(time_picker, { value: toDayjs(wh.afternoonEnd), format: "HH:mm", minuteStep: 5, allowClear: false, style: { width: 110 }, onChange: (v) => v && updateWh('afternoonEnd', v.hour() + v.minute() / 60) })] }), (0,react_jsx_runtime_production_namespaceFn().jsx)(SettingsModal_Text, { type: "secondary", style: { fontSize: 12, display: 'block', marginBottom: 12 }, children: "\u63D0\u793A\uFF1A\u5C06\u300C\u4E0B\u5348\u5F00\u59CB\u300D\u8BBE\u4E3A\u4E0E\u300C\u4E0A\u5348\u7ED3\u675F\u300D\u76F8\u540C\uFF08\u5982\u90FD\u8BBE\u4E3A 12:00\uFF09\uFF0C\u5373\u53EF\u5348\u4F11\u65F6\u6BB5\u4E5F\u76D1\u63A7\u3002" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(SettingsModal_Text, { strong: true, style: { display: 'block', marginBottom: 8 }, children: "\u5E38\u7528\u8BED\u6570\u636E\u5730\u5740\uFF08\u53EF\u81EA\u5B9A\u4E49\u8FDC\u7A0B YAML\uFF09" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_input, { placeholder: "https://.../commonPhrases.yaml", value: urlDraft, onChange: (e) => onUrlChange(e.target.value), onBlur: onUrlBlur, allowClear: true, style: { marginBottom: 8 } }), (0,react_jsx_runtime_production_namespaceFn().jsx)(SettingsModal_Text, { type: "secondary", style: { fontSize: 12, display: 'block', marginBottom: 12 }, children: "\u4FEE\u6539\u540E\u8BF7\u5728\u300C\u5E38\u7528\u8BED\u300D\u9762\u677F\u70B9\u300C\u91CD\u65B0\u52A0\u8F7D\u5E38\u7528\u8BED\u300D\u751F\u6548\uFF1B\u7559\u7A7A\u5E76\u70B9\u51FB\u5176\u4ED6\u533A\u57DF\uFF08\u5931\u7126\uFF09\u540E\u6062\u590D\u9ED8\u8BA4\u5730\u5740\u3002" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(SettingsModal_Text, { strong: true, style: { display: 'block', marginBottom: 8 }, children: "\u4E2D\u7EE7\u670D\u52A1\u5668\u5730\u5740" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_input, { placeholder: "https://\u4F60\u7684\u670D\u52A1\u5668:\u7AEF\u53E3", value: relayServer || '', onChange: (e) => onChangeRelayServer((e.target.value || '').trim().replace(/\/+$/, '')), allowClear: true, style: { marginBottom: 8 } }), (0,react_jsx_runtime_production_namespaceFn().jsx)(SettingsModal_Text, { type: "secondary", style: { fontSize: 12, display: 'block' }, children: "\u7528\u4E8E\u300C\u8BBE\u5907\u4E92\u8054\u5230\u7535\u8111\u300D\uFF1A\u624B\u673A\u4E0A\u4F20\u7684\u56FE\u7247\u7ECF\u6B64\u670D\u52A1\u5668\u8F6C\u53D1\u5230\u672C\u673A\u526A\u8D34\u677F\u3002\u9700\u81EA\u884C\u90E8\u7F72\u914D\u5957 relay-server\uFF08\u89C1\u9879\u76EE\u8BF4\u660E\uFF09\u3002" })] }));
+    return ((0,react_jsx_runtime_production_namespaceFn().jsxs)(modal, { open: open, title: "\u8BBE\u7F6E\u83DC\u5355", onCancel: onClose, getContainer: getOverlayContainer, width: 520, 
+        // 显式左对齐：宿主页面常有全局 text-align:center（税务页就是），不设会整屏居中
+        styles: { body: { textAlign: 'left' } }, destroyOnHidden: true, footer: (0,react_jsx_runtime_production_namespaceFn().jsxs)(es_space, { children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { onClick: onClose, children: "\u53D6\u6D88" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { color: "primary", variant: "solid", onClick: onClose, children: "\u786E\u5B9A" })] }), children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)(es_space, { size: 4, wrap: true, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { type: "link", onClick: () => window.open('https://github.com/Run-os/znhd-service', '_blank'), children: "[\u811A\u672C\u4E3B\u9875]" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { type: "link", onClick: () => window.open((GM_info.scriptUpdateURL || GM_info.script.updateURL), '_blank'), children: "[\u66F4\u65B0\u811A\u672C]" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { type: "link", onClick: () => showChangelogPopup(), children: "[\u66F4\u65B0\u65E5\u5FD7]" })] }), (0,react_jsx_runtime_production_namespaceFn().jsx)(divider, { style: { margin: '8px 0' }, children: "\u5176\u4ED6\u8BBE\u7F6E" }), (0,react_jsx_runtime_production_namespaceFn().jsxs)(es_space, { size: 8, style: { marginBottom: 12 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(SettingsModal_Text, { strong: true, children: "\u4F7F\u7528 CDN \u52A0\u901F\uFF08Fastly \u955C\u50CF\uFF09\u52A0\u8F7D\u8D44\u6E90" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_switch, { checked: !!useCdn, onChange: (v) => onChangeUseCdn(v) })] }), (0,react_jsx_runtime_production_namespaceFn().jsx)(SettingsModal_Text, { strong: true, style: { display: 'block', marginBottom: 8 }, children: "\u76D1\u63A7\u65F6\u95F4\u6BB5\uFF08\u70B9\u51FB\u9009\u62E9\u65F6\u95F4\uFF09" }), (0,react_jsx_runtime_production_namespaceFn().jsxs)(es_space, { size: 8, wrap: true, style: { marginBottom: 8 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(SettingsModal_Text, { children: "\u4E0A\u5348" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(time_picker, { value: toDayjs(wh.morningStart), format: "HH:mm", minuteStep: 5, allowClear: false, style: { width: 110 }, onChange: (v) => v && updateWh('morningStart', v.hour() + v.minute() / 60) }), (0,react_jsx_runtime_production_namespaceFn().jsx)(SettingsModal_Text, { children: "\u81F3" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(time_picker, { value: toDayjs(wh.morningEnd), format: "HH:mm", minuteStep: 5, allowClear: false, style: { width: 110 }, onChange: (v) => v && updateWh('morningEnd', v.hour() + v.minute() / 60) })] }), (0,react_jsx_runtime_production_namespaceFn().jsxs)(es_space, { size: 8, wrap: true, style: { marginBottom: 8 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(SettingsModal_Text, { children: "\u4E0B\u5348" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(time_picker, { value: toDayjs(wh.afternoonStart), format: "HH:mm", minuteStep: 5, allowClear: false, style: { width: 110 }, onChange: (v) => v && updateWh('afternoonStart', v.hour() + v.minute() / 60) }), (0,react_jsx_runtime_production_namespaceFn().jsx)(SettingsModal_Text, { children: "\u81F3" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(time_picker, { value: toDayjs(wh.afternoonEnd), format: "HH:mm", minuteStep: 5, allowClear: false, style: { width: 110 }, onChange: (v) => v && updateWh('afternoonEnd', v.hour() + v.minute() / 60) })] }), (0,react_jsx_runtime_production_namespaceFn().jsx)(SettingsModal_Text, { type: "secondary", style: { fontSize: 12, display: 'block', marginBottom: 12 }, children: "\u63D0\u793A\uFF1A\u5C06\u300C\u4E0B\u5348\u5F00\u59CB\u300D\u8BBE\u4E3A\u4E0E\u300C\u4E0A\u5348\u7ED3\u675F\u300D\u76F8\u540C\uFF08\u5982\u90FD\u8BBE\u4E3A 12:00\uFF09\uFF0C\u5373\u53EF\u5348\u4F11\u65F6\u6BB5\u4E5F\u76D1\u63A7\u3002" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(SettingsModal_Text, { strong: true, style: { display: 'block', marginBottom: 8 }, children: "\u5E38\u7528\u8BED\u6570\u636E\u5730\u5740\uFF08\u53EF\u81EA\u5B9A\u4E49\u8FDC\u7A0B YAML\uFF09" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_input, { placeholder: "https://.../commonPhrases.yaml", value: urlDraft, onChange: (e) => onUrlChange(e.target.value), onBlur: onUrlBlur, allowClear: true, style: { marginBottom: 8 } }), (0,react_jsx_runtime_production_namespaceFn().jsx)(SettingsModal_Text, { type: "secondary", style: { fontSize: 12, display: 'block', marginBottom: 12 }, children: "\u4FEE\u6539\u540E\u8BF7\u5728\u300C\u5E38\u7528\u8BED\u300D\u9762\u677F\u70B9\u300C\u91CD\u65B0\u52A0\u8F7D\u5E38\u7528\u8BED\u300D\u751F\u6548\uFF1B\u7559\u7A7A\u5E76\u70B9\u51FB\u5176\u4ED6\u533A\u57DF\uFF08\u5931\u7126\uFF09\u540E\u6062\u590D\u9ED8\u8BA4\u5730\u5740\u3002" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(SettingsModal_Text, { strong: true, style: { display: 'block', marginBottom: 8 }, children: "\u4E2D\u7EE7\u670D\u52A1\u5668\u5730\u5740" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_input, { placeholder: "https://\u4F60\u7684\u670D\u52A1\u5668:\u7AEF\u53E3", value: relayServer || '', onChange: (e) => onChangeRelayServer((e.target.value || '').trim().replace(/\/+$/, '')), allowClear: true, style: { marginBottom: 8 } }), (0,react_jsx_runtime_production_namespaceFn().jsx)(SettingsModal_Text, { type: "secondary", style: { fontSize: 12, display: 'block' }, children: "\u7528\u4E8E\u300C\u8BBE\u5907\u4E92\u8054\u5230\u7535\u8111\u300D\uFF1A\u624B\u673A\u4E0A\u4F20\u7684\u56FE\u7247\u7ECF\u6B64\u670D\u52A1\u5668\u8F6C\u53D1\u5230\u672C\u673A\u526A\u8D34\u677F\u3002\u9700\u81EA\u884C\u90E8\u7F72\u914D\u5957 relay-server\uFF08\u89C1\u9879\u76EE\u8BF4\u660E\uFF09\u3002" })] }));
 }
 
 ;// ./node_modules/throttle-debounce/esm/index.js
@@ -73611,7 +73613,7 @@ function PhrasesModal({ open, onClose, phrasesData, phrasesLoading, searchKeywor
     const filtered = keyword
         ? entries.filter(([key, value]) => String(key).toLowerCase().includes(keyword) || String(value).toLowerCase().includes(keyword))
         : entries;
-    return ((0,react_jsx_runtime_production_namespaceFn().jsxs)(modal, { open: open, title: "\u5E38\u7528\u8BED", onCancel: onClose, getContainer: getOverlayContainer, width: 520, destroyOnHidden: true, footer: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_space, { children: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { onClick: onClose, children: "\u5173\u95ED" }) }), children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)(PhrasesModal_Text, { type: "secondary", style: { fontSize: 12, wordBreak: 'break-all', display: 'block', marginBottom: 12 }, children: ["\u6570\u636E\u6E90: ", safeDecodeURIComponent(resolveGithubUrl(commonPhrasesUrl || DEFAULTS.commonPhrasesUrl))] }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { color: "primary", variant: "solid", block: true, loading: phrasesLoading, onClick: () => loadPhrasesData(true), style: { marginBottom: 12 }, children: "\u91CD\u65B0\u52A0\u8F7D\u5E38\u7528\u8BED" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_input, { placeholder: "\u641C\u7D22\u5E38\u7528\u8BED(\u6309\u952E\u540D\u79F0\u6216\u5185\u5BB9)", value: searchKeyword, onChange: (e) => setSearchKeyword(e.target.value), allowClear: true, style: { marginBottom: 12 } }), phrasesLoading ? ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { textAlign: 'center', padding: 20 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(spin, {}), " ", (0,react_jsx_runtime_production_namespaceFn().jsx)(PhrasesModal_Text, { type: "secondary", children: "\u52A0\u8F7D\u4E2D\u2026" })] })) : entries.length === 0 ? ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_empty, { description: "\u6682\u65E0\u5E38\u7528\u8BED\u6570\u636E\uFF0C\u8BF7\u70B9\u51FB\u4E0A\u65B9\u6309\u94AE\u52A0\u8F7D" })) : filtered.length === 0 ? ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_empty, { description: "\u6CA1\u6709\u5339\u914D\u7684\u5E38\u7528\u8BED" })) : ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_space, { orientation: "vertical", size: 8, style: { width: '100%', maxHeight: '50vh', overflow: 'auto' }, children: filtered.map(([key, value]) => ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { block: true, onClick: () => {
+    return ((0,react_jsx_runtime_production_namespaceFn().jsxs)(modal, { open: open, title: "\u5E38\u7528\u8BED", onCancel: onClose, getContainer: getOverlayContainer, width: 520, styles: { body: { textAlign: 'left' } }, destroyOnHidden: true, footer: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_space, { children: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { onClick: onClose, children: "\u5173\u95ED" }) }), children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)(PhrasesModal_Text, { type: "secondary", style: { fontSize: 12, wordBreak: 'break-all', display: 'block', marginBottom: 12 }, children: ["\u6570\u636E\u6E90: ", safeDecodeURIComponent(resolveGithubUrl(commonPhrasesUrl || DEFAULTS.commonPhrasesUrl))] }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { color: "primary", variant: "solid", block: true, loading: phrasesLoading, onClick: () => loadPhrasesData(true), style: { marginBottom: 12 }, children: "\u91CD\u65B0\u52A0\u8F7D\u5E38\u7528\u8BED" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_input, { placeholder: "\u641C\u7D22\u5E38\u7528\u8BED(\u6309\u952E\u540D\u79F0\u6216\u5185\u5BB9)", value: searchKeyword, onChange: (e) => setSearchKeyword(e.target.value), allowClear: true, style: { marginBottom: 12 } }), phrasesLoading ? ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { textAlign: 'center', padding: 20 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(spin, {}), " ", (0,react_jsx_runtime_production_namespaceFn().jsx)(PhrasesModal_Text, { type: "secondary", children: "\u52A0\u8F7D\u4E2D\u2026" })] })) : entries.length === 0 ? ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_empty, { description: "\u6682\u65E0\u5E38\u7528\u8BED\u6570\u636E\uFF0C\u8BF7\u70B9\u51FB\u4E0A\u65B9\u6309\u94AE\u52A0\u8F7D" })) : filtered.length === 0 ? ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_empty, { description: "\u6CA1\u6709\u5339\u914D\u7684\u5E38\u7528\u8BED" })) : ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_space, { orientation: "vertical", size: 8, style: { width: '100%', maxHeight: '50vh', overflow: 'auto' }, children: filtered.map(([key, value]) => ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { block: true, onClick: () => {
                         safeCopyText(value);
                         onClose();
                         appendToTinyMCE(value);
@@ -75295,7 +75297,7 @@ function PhoneModal({ open, onClose, relayServer }) {
         sendNext();
     };
     const percent = progress && progress.total ? Math.round((progress.done / progress.total) * 100) : 0;
-    return ((0,react_jsx_runtime_production_namespaceFn().jsxs)(modal, { open: open, title: "\u8BBE\u5907\u4E92\u8054", onCancel: onClose, getContainer: getOverlayContainer, width: 560, destroyOnHidden: true, footer: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_space, { children: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { onClick: onClose, children: "\u5173\u95ED" }) }), children: [link ? ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', gap: 16, alignItems: 'flex-start', flexWrap: 'wrap' }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { flexShrink: 0 }, children: qrUrl ? ((0,react_jsx_runtime_production_namespaceFn().jsx)("img", { src: qrUrl, alt: "\u4E0A\u4F20\u94FE\u63A5\u4E8C\u7EF4\u7801", style: { width: 140, height: 140, border: '1px solid #eee', borderRadius: 8 } })) : ((0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: {
+    return ((0,react_jsx_runtime_production_namespaceFn().jsxs)(modal, { open: open, title: "\u8BBE\u5907\u4E92\u8054", onCancel: onClose, getContainer: getOverlayContainer, width: 560, styles: { body: { textAlign: 'left' } }, destroyOnHidden: true, footer: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_space, { children: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { onClick: onClose, children: "\u5173\u95ED" }) }), children: [link ? ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', gap: 16, alignItems: 'flex-start', flexWrap: 'wrap' }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { flexShrink: 0 }, children: qrUrl ? ((0,react_jsx_runtime_production_namespaceFn().jsx)("img", { src: qrUrl, alt: "\u4E0A\u4F20\u94FE\u63A5\u4E8C\u7EF4\u7801", style: { width: 140, height: 140, border: '1px solid #eee', borderRadius: 8 } })) : ((0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: {
                                 width: 140,
                                 height: 140,
                                 border: '1px solid #eee',
@@ -75378,7 +75380,7 @@ function LogModal({ open, onClose, logEntries, onClear }) {
             color: on ? '#fff' : '#999',
             opacity: on ? 1 : 0.85,
         }, children: label }, key));
-    return ((0,react_jsx_runtime_production_namespaceFn().jsxs)(modal, { open: open, title: "\u8FD0\u884C\u65E5\u5FD7", onCancel: onClose, getContainer: getOverlayContainer, width: 560, destroyOnHidden: true, footer: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_space, { children: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { onClick: onClose, children: "\u5173\u95ED" }) }), children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', flexWrap: 'wrap', gap: 6 }, children: [chip('all', allOn ? '全部（点此全隐）' : '全部', '#666', allOn, () => setFilter({ info: !allOn, success: !allOn, warning: !allOn, error: !allOn })), TYPE_META.map((m) => chip(m.type, m.label + ' ' + (counts[m.type] || 0), m.color, filter[m.type], () => setFilter({ ...filter, [m.type]: !filter[m.type] })))] }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { danger: true, disabled: logEntries.length === 0, onClick: onClear, style: { flex: '0 0 auto' }, children: "\u6E05\u7A7A" })] }), (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: {
+    return ((0,react_jsx_runtime_production_namespaceFn().jsxs)(modal, { open: open, title: "\u8FD0\u884C\u65E5\u5FD7", onCancel: onClose, getContainer: getOverlayContainer, width: 560, styles: { body: { textAlign: 'left' } }, destroyOnHidden: true, footer: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_space, { children: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { onClick: onClose, children: "\u5173\u95ED" }) }), children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', flexWrap: 'wrap', gap: 6 }, children: [chip('all', allOn ? '全部（点此全隐）' : '全部', '#666', allOn, () => setFilter({ info: !allOn, success: !allOn, warning: !allOn, error: !allOn })), TYPE_META.map((m) => chip(m.type, m.label + ' ' + (counts[m.type] || 0), m.color, filter[m.type], () => setFilter({ ...filter, [m.type]: !filter[m.type] })))] }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { danger: true, disabled: logEntries.length === 0, onClick: onClear, style: { flex: '0 0 auto' }, children: "\u6E05\u7A7A" })] }), (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: {
                     display: 'flex',
                     flexDirection: 'column-reverse',
                     overflowY: 'auto',
@@ -75733,7 +75735,84 @@ function PanelApp({ host }) {
         button: { autoInsertSpace: false }, children: (0,react_jsx_runtime_production_namespaceFn().jsxs)(app, { children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(MessageBridge, {}), (0,react_jsx_runtime_production_namespaceFn().jsx)(MainPanel, { host: host })] }) }));
 }
 
+;// ./src/lib/ui/panelIds.ts
+/**
+ * 本脚本 UI 的共享常量。
+ * 单独成文件是为了让 uiReset（样式隔离）与 panelHost（宿主/挂载）都能引用，
+ * 避免两者互相 import 形成循环依赖。
+ */
+/** 面板宿主元素 id */
+const PANEL_HOST_ID = '__znhd_panel_host__';
+
+;// ./src/lib/ui/uiReset.ts
+/**
+ * 本脚本 UI 的样式隔离层（v26.10.06-v11）。
+ *
+ * 背景：antd v5+ **不再自带全局 reset**，官方迁移文档明确要求手动引入 `antd/dist/reset.css`；
+ * 我们没引入，而面板/弹窗又是注入到**别人的页面**里，于是宿主页面的全局 CSS 会渗进来：
+ *   · `* { text-align: center }` → 弹窗里所有文字变居中；
+ *   · 非 `border-box` 的盒模型 / 页面自定义 `line-height`/`font-size` → 输入框内的
+ *     图标（时间选择器时钟、输入框清空 ×）垂直偏移、跑出输入框。
+ *
+ * 为什么不用 `import 'antd/dist/reset.css'`：那会**全局重置宿主页面**（税务页也会被改样式），
+ * 不可接受。故这里把 reset 的关键规则**按本脚本的容器加前缀**注入，等价于「只给我们的 UI 做 reset」。
+ *
+ * ⚠️ 选择器只覆盖本脚本自己渲染的容器：面板宿主、Modal/Drawer 根、Picker 浮层、message 浮层。
+ */
+
+const RESET_CSS = `
+/* 盒模型与文本基线：宿主页面常把 * 设为 content-box / 居中，这里只复位我们的容器 */
+#${PANEL_HOST_ID}, .ant-modal-root, .ant-picker-dropdown, .ant-message, .ant-notification, .ant-tooltip, .ant-dropdown {
+  box-sizing: border-box;
+  text-align: left;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  font-size: 14px;
+  line-height: 1.5715;
+}
+#${PANEL_HOST_ID} *, .ant-modal-root *, .ant-picker-dropdown *, .ant-message *, .ant-notification *, .ant-tooltip *, .ant-dropdown * {
+  box-sizing: border-box;
+  /* inherit：低优先级复位，antd 自己需要居中的组件（Empty 等）仍用其类规则覆盖 */
+  text-align: inherit;
+}
+/* 图标垂直对齐：宿主页面若有 svg 的 vertical-align/line-height 规则，会把 antd 图标顶出输入框 */
+#${PANEL_HOST_ID} svg, .ant-modal-root svg, .ant-picker-dropdown svg, .ant-message svg, .ant-notification svg {
+  vertical-align: inherit;
+}
+/* 输入类控件去掉宿主页面可能带来的额外外边距/最小高度 */
+#${PANEL_HOST_ID} input, #${PANEL_HOST_ID} textarea, .ant-modal-root input, .ant-modal-root textarea {
+  margin: 0;
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+}
+`;
+let injected = false;
+/**
+ * 注入样式隔离层（只注入一次，幂等）。
+ * 用 GM_addStyle：不进构建产物的 CSS 流程，也不受宿主页面 CSP 的 <style> 限制影响
+ * （GM_addStyle 由油猴管理器在沙箱侧插入，且只在文档里加一个 style 节点）。
+ */
+function injectUiReset() {
+    if (injected)
+        return;
+    injected = true;
+    try {
+        if (typeof GM_addStyle === 'function') {
+            GM_addStyle(RESET_CSS);
+            return;
+        }
+    }
+    catch (e) {
+        /* 落到下面的兜底 */
+    }
+    const style = document.createElement('style');
+    style.id = '__znhd_ui_reset__';
+    style.textContent = RESET_CSS;
+    document.head.appendChild(style);
+}
+
 ;// ./src/lib/ui/panelHost.tsx
+/* unused harmony import specifier */ var panelHost_PANEL_HOST_ID;
 
 /**
  * 面板宿主：把 React + Ant Design 面板挂到税务页上，并负责「位置 + 拖拽」。
@@ -75754,8 +75833,10 @@ function PanelApp({ host }) {
 
 
 
-/** 面板宿主 id（位置跟踪按 id 定位） */
-const PANEL_HOST_ID = '__znhd_panel_host__';
+
+
+// 面板宿主 id 定义在 panelIds（供 uiReset 共用，避免循环依赖）；此处转出，保持既有 import 路径可用
+
 /** 浮层容器：所有弹窗/浮层统一挂到 documentElement，避开 body 的层叠上下文 */
 function getOverlayContainer() {
     return document.documentElement;
@@ -75786,6 +75867,9 @@ function initialPoint() {
 let panelHost_root = null;
 /** 创建宿主并挂载 React 面板，返回宿主元素 */
 function mountPanel() {
+    // 先注入样式隔离层：宿主页面的全局 CSS（居中、非 border-box、svg 对齐等）会污染 antd 组件外观，
+    // 详见 uiReset.ts。（必须在渲染前，避免第一帧抖动）
+    injectUiReset();
     const host = document.createElement('div');
     host.id = PANEL_HOST_ID;
     host.style.cssText = 'position:fixed;z-index:2147482000;left:0;top:0;';
@@ -75806,7 +75890,7 @@ function unmountPanel() {
         /* 忽略重复卸载 */
     }
     panelHost_root = null;
-    const ex = document.getElementById(PANEL_HOST_ID);
+    const ex = document.getElementById(panelHost_PANEL_HOST_ID);
     if (ex && ex.parentNode)
         ex.parentNode.removeChild(ex);
 }

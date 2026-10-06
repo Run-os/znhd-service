@@ -70,6 +70,7 @@ export default function LogModal({ open, onClose, logEntries, onClear }: LogModa
             onCancel={onClose}
             getContainer={getOverlayContainer}
             width={560}
+            styles={{ body: { textAlign: 'left' } }}
             destroyOnHidden
             footer={
                 <Space>

@@ -24,6 +24,16 @@
 - 版本：relay `package.json` → `26.10.06-v3`（页面显示版本由构建期从该文件注入）。
 - 验证：手机（iPhone 14 视口 390×844）与桌面（1440×900）实拍确认布局；真实浏览器跑通「选 3 张图 → canvas 压缩 124KB→80KB → 进度 0/3→1/3→2/3→✅ 3/3 → 待发列表清空」共 10/10 断言；「电脑 → 手机」收图/收文本弹窗实测正常；静态回归 18 项通过（零第三方外链、gzip、immutable、目录穿越返回 403、缺资源 404、版本自证）。
 
+### znhd.user.js v26.10.06-v11
+- **修复「设置弹窗排版被宿主页面 CSS 污染」**（用户实测反馈的两条）：
+  1. **内容不该居中**：宿主页面（税务页）常有全局 `text-align: center`，弹窗里的标题/说明/地址全部被带成居中。根因是上一版改 antd 时漏掉了旧代码在抽屉内容上显式写的 `textAlign: 'left'` 守卫。现按 antd 语义化写法给四个弹窗加 `styles={{ body: { textAlign: 'left' } }}`，并在隔离层里对弹窗容器再兜一层。
+  2. **输入框内图标（时间选择器时钟、清空 ×）垂直偏移**：根因是 **antd v5+ 不再自带全局 reset**（官方迁移文档要求手动引入 `antd/dist/reset.css`），而面板/弹窗是注入到别人页面里的，宿主页面的盒模型（`content-box`）、`line-height`/`font-size`、`svg` 对齐规则会渗进来，把图标顶出输入框。
+- 修法（不污染宿主页面）：新增 `lib/ui/uiReset.ts`，把 antd reset 的**关键规则按本脚本容器加前缀**注入（面板宿主 / `.ant-modal-root` / Picker 与 message 浮层）：`box-sizing: border-box`、`text-align: left`（子元素用低优先级 `inherit` 复位，antd 自己需要居中的组件仍可覆盖）、统一的 `font-family/size/line-height`、`svg { vertical-align: inherit }`、输入控件 `margin:0 + 继承字体`。
+  - ⚠️ 为什么**不直接** `import 'antd/dist/reset.css'`：那是全局重置，会把税务页自己的样式一起改掉，不可接受。
+- **新增两条样式回归断言**（`npm run verify`）：① 「弹窗内容左对齐（不被宿主 CSS 污染）」② 「时间图标与输入框同一水平线（中心误差 ≤2px）」；并给冒烟测试页**常驻注入「敌意 CSS」**（`html/body { text-align: center }` + `* { box-sizing: content-box }`）来模拟真实宿主页面——否则这类污染在干净的测试页里根本复现不出来。
+- 验证：`npm run verify` **12 项全绿**（新增两条均通过）；`antd lint ./src` 0 issue；`typecheck` 通过。
+- ⚠️ **诚实说明**：第 1 条已用「模拟敌意 CSS」复现并验证修复；第 2 条（图标偏移）**本机没能复现**（在干净页面 + 敌意 CSS 下量到的图标都是居中的），已按 antd 官方基线做了最可能命中的修复并加了断言，**请在实际税务页再确认一次**；若仍偏移，需要提供该页面上 `.ant-picker-suffix` 的计算样式。
+
 ### znhd.user.js v26.10.06-v10
 - **主面板按参考版式重做**（对齐用户给的视觉稿）：头部「蓝色圆角图标 + 征纳互动监控 + 版本胶囊 + ✕ 收起」；**人数/状态卡**（当前等待人数大字 + 「在线 · 正常监控 / 工作时段内」两行状态点）；**语音播报行**（🔊 + Switch 开关）；**2×2 大按钮**（⚙️ 设置〔主色实心〕/ 💬 常用语 / 🖼️ 历史文件 / 💻 设备互联）；底部一行「上次播报：N 分钟前 · 原因」+「查看日志 →」链接。
 - 为此**监控模块新增状态出口**：`lib/monitor.ts` 增加 `MonitorState`（waiting / online / inWorkingHours / lastSpeak）与 `getMonitorState()` / `setMonitorStateSink()`，在 checkCount 里随检测结果发布——面板首次能显示实时等待人数、在线状态与工作时段状态（以前这些只进日志）。

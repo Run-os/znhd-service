@@ -50,6 +50,7 @@ export default function PhrasesModal({
             onCancel={onClose}
             getContainer={getOverlayContainer}
             width={520}
+            styles={{ body: { textAlign: 'left' } }}
             destroyOnHidden
             footer={
                 <Space>

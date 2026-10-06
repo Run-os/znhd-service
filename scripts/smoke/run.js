@@ -68,6 +68,8 @@ const CHECKS = [
   ['viewerZoomOk', '缩略图放大显示主图'],
   ['copyOk', '图片复制只尝试写 PNG'],
   ['phoneSendCompressedOk', '发送到手机前压缩'],
+  ['modalTextAlignLeft', '弹窗内容左对齐（不被宿主 CSS 污染）'],
+  ['pickerIconCentered', '时间图标与输入框同一水平线'],
 ];
 
 /**
