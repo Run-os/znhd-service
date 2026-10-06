@@ -160,8 +160,9 @@
       };
     </script>
 
-    <!-- ===== 与 userscript @require 完全相同的依赖 ===== -->
-    <script src="https://scriptcat.org/lib/1167/1.0.0/%E8%84%9A%E6%9C%AC%E7%8C%ABUI%E5%BA%93.js"></script>
+    <!-- ===== 与 userscript @require 完全相同的依赖 =====
+         v26.10.06-v9：CAT_UI（脚本猫 UI 库）已从项目中移除，面板改为 React 19 + Ant Design v6
+         （随产物打包，无需 @require）；Viewer 仍用于收图放大预览。 -->
     <script src="https://fastly.jsdelivr.net/npm/js-yaml@4.1.0/dist/js-yaml.min.js"></script>
     <script src="https://fastly.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
     <script src="https://fastly.jsdelivr.net/npm/viewerjs/dist/viewer.min.js"></script>
@@ -388,8 +389,13 @@
           Viewer: typeof window.Viewer,
           recvResponses: window.__recvCount || 0,
           panel: text.includes('征纳互动监控'),
-          // 版本号只从面板所在的 Shadow DOM 里取：弹窗内容（更新日志里也有版本号）会串台
-          version: (collectShadowText().match(/v\d+\.\d+\.\d+-v\d+/) || ['<无>'])[0],
+          // 版本号只从「面板宿主」里取：弹窗（更新日志/日志/常用语…）都 portal 到 documentElement，
+          // 里面有各自的版本号文本，读全页会串台（v26.10.6-v1 踩过）。
+          // v26.10.06-v9 起面板不再是 Shadow DOM，改为按宿主 id 取。
+          version: (() => {
+            const host = document.getElementById('__znhd_panel_host__');
+            return ((host && host.textContent) || '').match(/v\d+\.\d+\.\d+-v\d+/) ? ((host.textContent.match(/v\d+\.\d+\.\d+-v\d+/) || ['<无>'])[0]) : '<无>';
+          })(),
           // 文本弹窗
           textPopup: text.includes('冒烟测试文本：收到一条文本消息'),
           // 九宫格画廊

@@ -2,9 +2,17 @@
   "compilerOptions": {
     /* Language and Environment */
     "target": "esnext",
+    // UI 已从 CAT_UI 换成 React 19 + Ant Design v6（2026-10-06），组件用 .tsx 写
+    "jsx": "react-jsx",
 
     /* Modules */
-    "module": "commonjs",
+    // v26.10.06-v9：由 commonjs 改为 ESM 输出 —— UI 引入 antd 后，commonjs 会让 TS 产出
+    // `require('antd')`（拉整个 barrel，实测 1.62MiB），webpack 无法 tree-shaking；
+    // 改 ESM 后 webpack 才能只打包用到的组件。
+    // ⚠️ moduleResolution 只能用 node：本仓库 TypeScript 为 4.6，不认识 TS5 的 `bundler`
+    //    （会报 TS6046）；antd 的 .d.ts 里那些子路径 exports 由 skipLibCheck 兜住。
+    "module": "esnext",
+    "moduleResolution": "node",
     "paths": {
       "@/*": ["./src/*"]
     },
@@ -30,7 +38,11 @@
     "useUnknownInCatchVariables": false,
 
     /* Completeness */
-    "skipLibCheck": false
+    // v26.10.06-v9：UI 引入 antd 后必须打开 skipLibCheck —— antd 自带/其 @rc-component 依赖的
+    // .d.ts 在 `module: commonjs` + 默认 moduleResolution 下有多处不兼容（子路径 exports 解析不到、
+    // 接口定义互不兼容等），实测十余条错误全部位于 node_modules，与本仓库代码无关；
+    // 关着它只会让 `npm run typecheck` 永远红，无法作为门禁。本仓库自有代码仍按 strict 全量检查。
+    "skipLibCheck": true
   },
   "include": ["src"]
 }

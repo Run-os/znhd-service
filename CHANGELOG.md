@@ -24,6 +24,20 @@
 - 版本：relay `package.json` → `26.10.06-v3`（页面显示版本由构建期从该文件注入）。
 - 验证：手机（iPhone 14 视口 390×844）与桌面（1440×900）实拍确认布局；真实浏览器跑通「选 3 张图 → canvas 压缩 124KB→80KB → 进度 0/3→1/3→2/3→✅ 3/3 → 待发列表清空」共 10/10 断言；「电脑 → 手机」收图/收文本弹窗实测正常；静态回归 18 项通过（零第三方外链、gzip、immutable、目录穿越返回 403、缺资源 404、版本自证）。
 
+### znhd.user.js v26.10.06-v9
+- **UI 层从 CAT_UI（脚本猫 UI 库）整体换成 React 19 + Ant Design v6**，`@require` 里的脚本猫 UI 库已移除；**四个侧边抽屉（设置/常用语/日志/设备互联）全部改为 antd Modal 弹窗**。
+- 依赖与构建：
+  - 新增 `react` / `react-dom` / `antd` / `@ant-design/cssinjs`（devDependencies，随产物打包）。
+  - tsconfig 三项改动，都是被 antd 逼出来的，**别改回去**：① `module` 由 `commonjs` 改 `esnext`——commonjs 下 TS 产出 `require('antd')` 会把整个 barrel 拉进来（实测 1.62MiB），webpack 无法 tree-shaking；② `moduleResolution` 用 `node`（本仓库 TypeScript 4.6 不认识 TS5 的 `bundler`，会报 TS6046）；③ `skipLibCheck` 由 `false` 改 `true`——antd 及其 `@rc-component` 的 .d.ts 在本配置下十余条不兼容错误**全部位于 node_modules**，关着它 `npm run typecheck` 永远红，无法当门禁（本仓库自有代码仍按 strict 全量检查）。
+- 架构（`lib/ui/panelHost.tsx` 取代 `CAT_UI.createPanel`）：
+  - **不再使用 Shadow DOM**：antd 的弹窗默认 portal 到 body、样式走 document.head 的 CSS-in-JS，组件塞进 shadow root 后两者都进不去 → 弹窗会是无样式裸 DOM。改为挂到 `documentElement`（沿用仓库既有结论：税务页 body 常被加 transform 形成层叠上下文，会把 fixed 浮层困住），弹窗 `getContainer` 指向同一容器。
+  - **自研拖拽**（指针事件改 `left/top`）：CAT_UI 用 react-draggable，而它依赖 React 19 已删除的 `findDOMNode`；且 transform 会让 `position:fixed` 的弹窗改以面板为包含块而被「困」在面板内。原 `lib/ui/panelPosition.ts`（穿透 shadowRoot 找面板 + 跟踪 transform）随之删除。
+- 组件：`MainPanel.tsx`（antd Card + 按钮组 + 拖拽手柄）、`SettingsModal` / `PhrasesModal` / `LogModal` / `PhoneModal`（原 xxxDrawer.ts 删除）；`storage.ts` 的 `CAT_UI.Message` → 新增 `lib/ui/notify.ts`（由根组件注入 antd `App.useApp()` 的 message 实例）；设置里的时间选择改用 antd `TimePicker`、CDN 开关改用 antd `Switch`。
+- ⚠️ **antd 会给「两个汉字」的按钮自动插空格**（设置 → `设 置`），会让按钮文案变化、并让「按文字点击」的测试失配；已用 `ConfigProvider button={{ autoInsertSpace: false }}` 关闭（v6 中 `autoInsertSpaceInButton` 已弃用）。
+- ⚠️ **产物由 ~177KB 涨到 2.41MiB**。已确认 tree-shaking 生效（未用的 Table/Form/Transfer/DatePicker/Carousel 等都不在产物内），体量来自真正用到的 antd 组件 + cssinjs 引擎 + React。油猴会缓存脚本，主要影响首次安装/升级时的下载量。
+- 验证：`npm run verify` 10 项全绿（含常用语弹窗、更新日志弹窗、设备互联「发送到手机前压缩」、收图放大）；`antd lint ./src` **0 issue**（过程中它抓到 `Space direction` 已弃用，已按 v6 改为 `orientation`）；`typecheck` 通过。
+- 本次未纳入（下一步）：**收图画廊 / 更新日志弹窗仍是原 DOM 实现**（本身就是弹窗形态、且不含 CAT_UI），尚未改成 antd 组件，Viewer.js 的 `@require` 暂时保留。
+
 ### znhd.user.js v26.10.06-v8
 - **日志面板独立成「运行日志」抽屉**（原来挤在「设置菜单」最底部）：主面板新增【日志】按钮，就放在【常用语】右边；设置抽屉里的「日志内容」整段移除。
   - 新增 `src/lib/ui/LogDrawer.ts`：**时间正序**展示（旧在上、新在下）+ **自动停在最新一条**、**按类型过滤**（全部 / 信息 / 成功 / 警告 / 错误，每个胶囊带条数，可多选开关）+ **清空**按钮。旧组件 `src/lib/ui/LogPanel.ts` 随之删除。

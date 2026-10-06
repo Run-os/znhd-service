@@ -44,12 +44,6 @@ declare global {
      */
     const heic2any: any;
 
-    /**
-     * 脚本猫 UI 库（@require scriptcat.org/lib/1167）。
-     * 运行时成分不稳定（Switch/TimePicker/Image 实测为 undefined），故声明为 any。
-     */
-    const CAT_UI: any;
-
     interface Window {
         /** 页面注入的 TinyMCE 全局（税务页编辑器）；实例结构随页面版本变化，按 any 处理 */
         tinymce?: any;

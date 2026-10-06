@@ -1,4 +1,5 @@
 import { addLog } from '@/lib/logger';
+import { notify } from '@/lib/ui/notify';
 import { DEFAULTS, PANEL_POINT_KEY, PHRASES_CACHE_KEY, STORAGE_KEY } from '@/lib/constants';
 
 /**
@@ -154,7 +155,7 @@ export function flushSaveAllvalue() {
         addLog('数据已保存到localStorage', 'success', true);
     } catch (error) {
         addLog('保存数据失败: ' + error.message, 'error', true);
-        CAT_UI.Message.error('保存设置失败: ' + error.message);
+        notify.error('保存设置失败: ' + error.message);
     }
 }
 /**
