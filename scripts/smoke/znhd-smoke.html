@@ -355,7 +355,9 @@
         });
       }, 7200);
       setTimeout(() => {
-        const btn = deepQuery((el) => el.tagName === 'BUTTON' && (el.textContent || '').indexOf('图片到手机') >= 0);
+        // v26.10.06-v17：按钮文案按参考稿改为「发送 N 张图片」（原「发送 N 张图片到手机」），
+        // 故用「张图片」匹配（唯一命中该按钮；选图按钮文案是「选择 / 添加图片」，不含「张图片」）
+        const btn = deepQuery((el) => el.tagName === 'BUTTON' && (el.textContent || '').indexOf('张图片') >= 0);
         window.__clickedSendImg = !!btn;
         if (btn) btn.click();
       }, 9000);

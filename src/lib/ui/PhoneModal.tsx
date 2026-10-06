@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
-import { Modal, Button, Input, Progress, Space, Typography } from 'antd';
+import { useEffect, useState } from 'react';
+import { Modal, Button, Input, Progress, Tag, Typography } from 'antd';
 import { addLog } from '@/lib/logger';
 import { safeCopyText } from '@/lib/clipboard';
 import { RELAY_MAX_BODY, imagePayloadBytes, compressImageForPhone, getDeviceId, sendToPhone } from '@/lib/relay';
@@ -9,7 +9,7 @@ import { getOverlayContainer } from '@/lib/ui/panelHost';
 const { Text } = Typography;
 
 /** 体积显示：统一按 KB 输出（不足 1KB 也显示 1KB，避免出现「0KB」） */
-function kbText(bytes: number) {
+function kbText(bytes: any) {
     const n = Number(bytes) || 0;
     return Math.max(1, Math.round(n / 1024)) + 'KB';
 }
@@ -36,9 +36,33 @@ interface ProgressState {
     text: string;
 }
 
+/** 卡片式分区（与参考稿一致：圆角描边区块 + 区块标题） */
+function Section({ title, extra, children }: { title: string; extra?: React.ReactNode; children: React.ReactNode }) {
+    return (
+        <div style={{ border: '1px solid #f0f0f0', borderRadius: 10, padding: '12px 14px', marginBottom: 12 }}>
+            <div
+                style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: 8,
+                    marginBottom: 10,
+                }}>
+                <span style={{ fontWeight: 600, fontSize: 14 }}>{title}</span>
+                {extra}
+            </div>
+            {children}
+        </div>
+    );
+}
+
 /**
- * 设备互联弹窗（v26.10.06-v9：由 CAT_UI.Drawer 侧边抽屉改为 antd Modal 弹窗）。
- * 业务逻辑（二维码、在线轮询、逐张压缩发送）与旧实现一致，仅替换渲染层。
+ * 设备互联弹窗（v26.10.06-v17：按参考稿重排版式）。
+ *
+ * 版式：标题「📱 手机互传 + 设备互联标签」→「电脑接收 · 本机专属链接」分区
+ * （左二维码 + 右链接框 + 复制按钮；**按要求不放「重新生成」**）→ 居中的在线状态胶囊 →
+ * 「发送到手机」分区（文本行 + 待发送图片行 + 虚线选图 + 发送按钮）。
+ * 业务逻辑（二维码、在线轮询、逐张压缩发送、进度）与旧实现一致，只换成新排版。
  */
 export default function PhoneModal({ open, onClose, relayServer }: PhoneModalProps) {
     const deviceId = getDeviceId();
@@ -49,9 +73,6 @@ export default function PhoneModal({ open, onClose, relayServer }: PhoneModalPro
     const [sendText, setSendText] = useState('');
     const [pendingImages, setPendingImages] = useState<PendingImage[]>([]);
     const [progress, setProgress] = useState<ProgressState | null>(null);
-    // 待发列表的实时快照：发送循环里要读最新列表，又不想把整个循环塞进 setState 回调
-    const pendingRef = useRef<PendingImage[]>([]);
-    pendingRef.current = pendingImages;
 
     // 计算链接 + 二维码（非 http(s) 前缀即地址输入中途，不生成）
     useEffect(() => {
@@ -128,7 +149,7 @@ export default function PhoneModal({ open, onClose, relayServer }: PhoneModalPro
                 setSendText('');
                 setSending(false);
             },
-            onFail: (e) => {
+            onFail: (e: any) => {
                 addLog('[发送到手机] 发送失败：' + e, 'error');
                 setSending(false);
             },
@@ -205,6 +226,21 @@ export default function PhoneModal({ open, onClose, relayServer }: PhoneModalPro
         const total = list.length;
         let sent = 0;
 
+        const failAt = (reason: string) => {
+            addLog(
+                '[发送到手机] 第 ' + (sent + 1) + ' 张发送失败：' + reason + '（已发 ' + sent + '/' + total + '）',
+                'error'
+            );
+            setSending(false);
+            setProgress({
+                done: sent,
+                total,
+                busy: false,
+                failed: true,
+                text: '❌ 已发送 ' + sent + '/' + total + '，已停止',
+            });
+        };
+
         const sendNext = () => {
             if (sent >= total) {
                 list.forEach((it) => {
@@ -230,7 +266,7 @@ export default function PhoneModal({ open, onClose, relayServer }: PhoneModalPro
                 failed: false,
                 text: '处理中… ' + sent + '/' + total + '（第 ' + (sent + 1) + ' 张）',
             });
-            compressImageForPhone(it.file).then((out) => {
+            compressImageForPhone(it.file).then((out: any) => {
                 if (imagePayloadBytes(out.blob, out.name, out.mime) > RELAY_MAX_BODY) {
                     addLog(
                         '[发送到手机] 第 ' +
@@ -287,7 +323,7 @@ export default function PhoneModal({ open, onClose, relayServer }: PhoneModalPro
                             });
                             sendNext();
                         },
-                        onFail: (e) => failAt(e),
+                        onFail: (e: any) => failAt(e),
                     });
                 };
                 rd.onerror = () => failAt('读取图片失败');
@@ -295,180 +331,235 @@ export default function PhoneModal({ open, onClose, relayServer }: PhoneModalPro
             });
         };
 
-        const failAt = (reason: string) => {
-            addLog(
-                '[发送到手机] 第 ' + (sent + 1) + ' 张发送失败：' + reason + '（已发 ' + sent + '/' + total + '）',
-                'error'
-            );
-            setSending(false);
-            setProgress({
-                done: sent,
-                total,
-                busy: false,
-                failed: true,
-                text: '❌ 已发送 ' + sent + '/' + total + '，已停止',
-            });
-        };
-
         sendNext();
     };
 
     const percent = progress && progress.total ? Math.round((progress.done / progress.total) * 100) : 0;
+    const canSend = phoneOnline && !sending;
 
     return (
         <Modal
             open={open}
-            title="设备互联"
+            title={
+                <span>
+                    📱 手机互传{' '}
+                    <Tag style={{ marginLeft: 6, fontWeight: 400 }} color="default">
+                        设备互联
+                    </Tag>
+                </span>
+            }
             onCancel={onClose}
             getContainer={getOverlayContainer}
             width={560}
             styles={{ body: { textAlign: 'left' } }}
             destroyOnHidden
-            footer={
-                <Space>
-                    <Button onClick={onClose}>关闭</Button>
-                </Space>
-            }>
-            {link ? (
-                <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start', flexWrap: 'wrap' }}>
-                    <div style={{ flexShrink: 0 }}>
-                        {qrUrl ? (
-                            <img
-                                src={qrUrl}
-                                alt="上传链接二维码"
-                                style={{ width: 140, height: 140, border: '1px solid #eee', borderRadius: 8 }}
-                            />
-                        ) : (
-                            <div
-                                style={{
-                                    width: 140,
-                                    height: 140,
-                                    border: '1px solid #eee',
-                                    borderRadius: 8,
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    color: '#999',
-                                    fontSize: 12,
-                                    textAlign: 'center',
-                                }}>
-                                二维码生成中…
-                            </div>
-                        )}
-                    </div>
-                    <div style={{ flex: 1, minWidth: 180 }}>
-                        <Text type="secondary" style={{ fontSize: 12, wordBreak: 'break-all', display: 'block' }}>
-                            {link}
-                        </Text>
-                        <Button type="link" onClick={() => link && safeCopyText(link)}>
-                            复制链接
-                        </Button>
-                    </div>
-                </div>
-            ) : (
-                <Text type="danger">尚未配置中继服务器，请到「设置」填写。</Text>
-            )}
-
-            <div style={{ margin: '12px 0 4px', fontWeight: 600 }}>发送到手机</div>
-            <Text type={phoneOnline ? 'success' : 'danger'} style={{ fontSize: 13 }}>
-                {phoneOnline ? '🟢 手机已连接，可发送' : '⚪ 当前无在线设备，无法发送'}
-            </Text>
-
-            <Space.Compact style={{ width: '100%', marginTop: 10 }}>
-                <Input
-                    placeholder="输入要发送到手机的文本…"
-                    value={sendText}
-                    onChange={(e) => setSendText(e.target.value)}
-                    onPressEnter={doSendText}
-                />
-                <Button
-                    color="primary"
-                    variant="solid"
-                    disabled={!phoneOnline || sending}
-                    loading={sending}
-                    onClick={doSendText}>
-                    发送
-                </Button>
-            </Space.Compact>
-
-            <Button block disabled={!phoneOnline || sending} onClick={pickImages} style={{ marginTop: 12 }}>
-                选择 / 添加图片（可多选）
-            </Button>
-
-            {pendingImages.length > 0 && (
-                <>
-                    <div
-                        style={{
-                            display: 'grid',
-                            gridTemplateColumns: 'repeat(4, 1fr)',
-                            gap: 6,
-                            marginTop: 10,
-                        }}>
-                        {pendingImages.map((img, i) => (
-                            <div
-                                key={img.url}
-                                style={{
-                                    position: 'relative',
-                                    paddingBottom: '100%',
-                                    borderRadius: 8,
-                                    overflow: 'hidden',
-                                    background: '#f2f2f2',
-                                }}>
+            footer={<Button onClick={onClose}>关闭</Button>}>
+            {/* 电脑接收 · 本机专属链接 */}
+            <Section
+                title="电脑接收 · 本机专属链接"
+                extra={
+                    <Tag color="blue" style={{ margin: 0, fontWeight: 400 }}>
+                        手机扫码即上传
+                    </Tag>
+                }>
+                {link ? (
+                    <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+                        <div style={{ flex: '0 0 auto', textAlign: 'center' }}>
+                            {qrUrl ? (
                                 <img
-                                    src={img.url}
-                                    alt={img.name}
+                                    src={qrUrl}
+                                    alt="上传链接二维码"
                                     style={{
-                                        position: 'absolute',
-                                        inset: 0,
-                                        width: '100%',
-                                        height: '100%',
-                                        objectFit: 'cover',
+                                        width: 124,
+                                        height: 124,
+                                        border: '1px solid #f0f0f0',
+                                        borderRadius: 8,
+                                        display: 'block',
                                     }}
                                 />
-                                <Button
-                                    size="small"
-                                    danger
-                                    disabled={sending}
-                                    onClick={() => removePendingImage(i)}
+                            ) : (
+                                <div
                                     style={{
-                                        position: 'absolute',
-                                        top: 2,
-                                        right: 2,
-                                        padding: '0 6px',
-                                        minWidth: 22,
-                                        height: 22,
+                                        width: 124,
+                                        height: 124,
+                                        border: '1px solid #f0f0f0',
+                                        borderRadius: 8,
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        color: '#999',
+                                        fontSize: 12,
                                     }}>
-                                    ×
-                                </Button>
+                                    二维码生成中…
+                                </div>
+                            )}
+                            <div style={{ fontSize: 12, color: '#8c8c8c', marginTop: 6 }}>扫一扫上传</div>
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: 12, color: '#8c8c8c', marginBottom: 6 }}>
+                                链接（复制到手机浏览器打开）
                             </div>
-                        ))}
+                            <div
+                                style={{
+                                    border: '1px solid #d9d9d9',
+                                    borderRadius: 8,
+                                    padding: '7px 10px',
+                                    fontSize: 13,
+                                    wordBreak: 'break-all',
+                                    background: '#fafafa',
+                                    maxHeight: 56,
+                                    overflow: 'auto',
+                                }}>
+                                {link}
+                            </div>
+                            <Button
+                                color="primary"
+                                variant="solid"
+                                block
+                                style={{ marginTop: 10 }}
+                                onClick={() => link && safeCopyText(link)}>
+                                复制链接
+                            </Button>
+                        </div>
                     </div>
+                ) : (
+                    <Text type="danger">尚未配置中继服务器，请到「设置」填写。</Text>
+                )}
+            </Section>
+
+            {/* 在线状态胶囊 */}
+            <div style={{ textAlign: 'center', marginBottom: 12 }}>
+                <span
+                    style={{
+                        display: 'inline-block',
+                        border: '1px solid ' + (phoneOnline ? '#b7eb8f' : '#ffccc7'),
+                        background: phoneOnline ? '#f6ffed' : '#fff2f0',
+                        color: phoneOnline ? '#389e0d' : '#cf1322',
+                        borderRadius: 16,
+                        padding: '4px 16px',
+                        fontSize: 13,
+                    }}>
+                    <span
+                        style={{
+                            display: 'inline-block',
+                            width: 6,
+                            height: 6,
+                            borderRadius: '50%',
+                            background: phoneOnline ? '#52c41a' : '#ff4d4f',
+                            marginRight: 6,
+                            verticalAlign: 'middle',
+                        }}
+                    />
+                    {phoneOnline ? '手机已连接，可发送' : '当前无在线设备，无法发送'}
+                </span>
+            </div>
+
+            {/* 发送到手机 */}
+            <Section title="发送到手机">
+                <div style={{ display: 'flex', gap: 8 }}>
+                    <Input
+                        placeholder="输入要发送到手机的文本…"
+                        value={sendText}
+                        onChange={(e) => setSendText(e.target.value)}
+                        onPressEnter={doSendText}
+                        style={{ flex: 1 }}
+                    />
                     <Button
-                        block
                         color="primary"
                         variant="solid"
-                        disabled={!phoneOnline || sending}
+                        disabled={!canSend}
                         loading={sending}
-                        onClick={confirmSendImage}
-                        style={{ marginTop: 10 }}>
-                        发送 {pendingImages.length} 张图片到手机
+                        onClick={doSendText}
+                        style={{ width: 84 }}>
+                        发送
                     </Button>
-                </>
-            )}
-
-            {progress && (
-                <div style={{ marginTop: 10 }}>
-                    <Progress
-                        percent={percent}
-                        size="small"
-                        strokeColor={progress.failed ? '#e4393c' : '#007e44'}
-                        status={progress.failed ? 'exception' : 'normal'}
-                    />
-                    <Text type={progress.failed ? 'danger' : 'secondary'} style={{ fontSize: 12 }}>
-                        {progress.text}
-                    </Text>
                 </div>
-            )}
+
+                {pendingImages.length > 0 && (
+                    <>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', margin: '14px 0 8px' }}>
+                            <span style={{ fontSize: 13, color: '#595959' }}>待发送图片</span>
+                            <span style={{ fontSize: 13, color: '#8c8c8c' }}>已选 {pendingImages.length} 张</span>
+                        </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0,1fr))', gap: 8 }}>
+                            {pendingImages.map((img, i) => (
+                                <div
+                                    key={img.url}
+                                    style={{
+                                        position: 'relative',
+                                        paddingBottom: '86%',
+                                        borderRadius: 10,
+                                        overflow: 'hidden',
+                                        background: '#f2f2f2',
+                                    }}>
+                                    <img
+                                        src={img.url}
+                                        alt={img.name}
+                                        style={{
+                                            position: 'absolute',
+                                            inset: 0,
+                                            width: '100%',
+                                            height: '100%',
+                                            objectFit: 'cover',
+                                        }}
+                                    />
+                                    <span
+                                        title="移除这张"
+                                        onClick={() => removePendingImage(i)}
+                                        style={{
+                                            position: 'absolute',
+                                            top: 6,
+                                            right: 6,
+                                            width: 20,
+                                            height: 20,
+                                            borderRadius: '50%',
+                                            background: 'rgba(0,0,0,0.55)',
+                                            color: '#fff',
+                                            fontSize: 13,
+                                            lineHeight: '20px',
+                                            textAlign: 'center',
+                                            cursor: sending ? 'not-allowed' : 'pointer',
+                                            userSelect: 'none',
+                                        }}>
+                                        ×
+                                    </span>
+                                </div>
+                            ))}
+                        </div>
+                    </>
+                )}
+
+                <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
+                    <Button variant="dashed" disabled={!canSend} onClick={pickImages} style={{ flex: '1 1 0' }}>
+                        ＋ 选择 / 添加图片（可多选）
+                    </Button>
+                    {pendingImages.length > 0 && (
+                        <Button
+                            color="primary"
+                            variant="solid"
+                            disabled={!canSend}
+                            loading={sending}
+                            onClick={confirmSendImage}
+                            style={{ flex: '1.2 1 0' }}>
+                            发送 {pendingImages.length} 张图片
+                        </Button>
+                    )}
+                </div>
+
+                {progress && (
+                    <div style={{ marginTop: 12 }}>
+                        <Progress
+                            percent={percent}
+                            size="small"
+                            strokeColor={progress.failed ? '#e4393c' : '#007e44'}
+                            status={progress.failed ? 'exception' : 'normal'}
+                        />
+                        <Text type={progress.failed ? 'danger' : 'secondary'} style={{ fontSize: 12 }}>
+                            {progress.text}
+                        </Text>
+                    </div>
+                )}
+            </Section>
         </Modal>
     );
 }

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name                征纳互动人数和在线监控v2
 // @namespace           https://scriptcat.org/
-// @version             26.10.06-v16
+// @version             26.10.06-v17
 // @description         实时监控征纳互动等待人数和在线状态，支持语音播报、自定义常用语
 // @author              runos
 // @match               https://znhd.hunan.chinatax.gov.cn:8443/*
@@ -56407,7 +56407,7 @@ __webpack_require__.dn(tooltip_style);
 
 
 const inverseColors = PresetColors.map(color => `${color}-inverse`);
-const PresetStatusColors = (/* unused pure expression or super */ null && (['success', 'processing', 'error', 'default', 'warning']));
+const PresetStatusColors = ['success', 'processing', 'error', 'default', 'warning'];
 /**
  * determine if the color keyword belongs to the `Ant Design` {@link PresetColors}.
  * @param color color to be judged
@@ -64954,6 +64954,708 @@ function PhrasesDrawer({ open, onClose, phrasesData, phrasesLoading, searchKeywo
                     }, children: key }, key))) }))] }));
 }
 
+;// ./node_modules/antd/es/tag/style/index.js
+
+
+
+
+
+
+// ============================== Styles ==============================
+const tag_style_genBaseStyle = token => {
+  const {
+    paddingXXS,
+    lineWidth,
+    tagPaddingHorizontal,
+    componentCls,
+    calc
+  } = token;
+  const paddingInline = calc(tagPaddingHorizontal).sub(lineWidth).equal();
+  const iconMarginInline = calc(paddingXXS).sub(lineWidth).equal();
+  return {
+    // Result
+    [componentCls]: {
+      ...resetComponent(token),
+      display: 'inline-block',
+      height: 'auto',
+      paddingInline,
+      fontSize: token.tagFontSize,
+      lineHeight: token.tagLineHeight,
+      whiteSpace: 'nowrap',
+      backgroundColor: token.defaultBg,
+      border: `${util_unit(token.lineWidth)} ${token.lineType} ${token.colorBorder}`,
+      borderRadius: token.borderRadiusSM,
+      opacity: 1,
+      transition: `all ${token.motionDurationMid}`,
+      textAlign: 'start',
+      position: 'relative',
+      // RTL
+      [`&${componentCls}-rtl`]: {
+        direction: 'rtl'
+      },
+      '&, a, a:hover': {
+        color: token.defaultColor
+      },
+      [`${componentCls}-close-icon`]: {
+        marginInlineStart: iconMarginInline,
+        fontSize: token.tagIconSize,
+        color: token.colorIcon,
+        cursor: 'pointer',
+        transition: `all ${token.motionDurationMid}`,
+        '&:hover': {
+          color: token.colorTextHeading
+        }
+      },
+      '&-checkable': {
+        backgroundColor: 'transparent',
+        borderColor: 'transparent',
+        cursor: 'pointer',
+        [`&:not(${componentCls}-checkable-checked):hover`]: {
+          color: token.colorPrimary,
+          backgroundColor: token.colorFillSecondary
+        },
+        '&:active, &-checked': {
+          color: token.colorTextLightSolid
+        },
+        '&-checked': {
+          backgroundColor: token.colorPrimary,
+          '&:hover': {
+            backgroundColor: token.colorPrimaryHover
+          }
+        },
+        '&:active': {
+          backgroundColor: token.colorPrimaryActive
+        },
+        '&-disabled': {
+          cursor: 'not-allowed',
+          [`&:not(${componentCls}-checkable-checked)`]: {
+            color: token.colorTextDisabled,
+            '&:hover': {
+              backgroundColor: 'transparent'
+            }
+          },
+          [`&${componentCls}-checkable-checked`]: {
+            color: token.colorTextDisabled,
+            backgroundColor: token.colorBgContainerDisabled
+          },
+          '&:hover, &:active': {
+            backgroundColor: token.colorBgContainerDisabled,
+            color: token.colorTextDisabled
+          },
+          [`&:not(${componentCls}-checkable-checked):hover`]: {
+            color: token.colorTextDisabled
+          }
+        },
+        '&-group': {
+          display: 'flex',
+          flexWrap: 'wrap',
+          gap: token.paddingXS
+        }
+      },
+      '&-hidden': {
+        display: 'none'
+      },
+      // Icons from third-party libraries are a bare `<svg>`, which none of the `.anticon`
+      // rules reach. An `<svg>` has no baseline of its own, so it is aligned by its bottom
+      // margin edge (CSS 2.1 §10.8.1) and rides above the text. Centre it instead: unlike an
+      // `.anticon` (whose `<svg>` is always `1em`, so a fixed `-0.125em` nudge suffices), a
+      // third-party `<svg>` may be sized in `px`, so the correction must not depend on size.
+      // `display: inline-block` keeps it an atomic inline box so `vertical-align` still applies even
+      // under a CSS reset that forces `svg { display: block }` (e.g. Tailwind Preflight), which would
+      // otherwise drop the icon onto its own line. `vertical-align: middle` centres the margin box on
+      // the x-height line; `margin-block-end` then lifts it by half its own value onto the cap-height
+      // centre (capHeight − xHeight ≈ 0.2em across typical fonts), keeping it centred at any icon size.
+      // Only matches a bare `<svg>`: an `.anticon` keeps its `<svg>` one level deeper.
+      '> svg': {
+        display: 'inline-block',
+        verticalAlign: 'middle',
+        marginBlockEnd: '0.2em'
+      },
+      // To ensure that a space will be placed between character and `Icon`.
+      [`> ${token.iconCls} + span, > span + ${token.iconCls}, > svg + span, > span + svg`]: {
+        marginInlineStart: paddingInline
+      }
+    },
+    [`&${token.componentCls}-solid`]: {
+      borderColor: 'transparent',
+      color: token.colorTextLightSolid,
+      backgroundColor: token.colorBgSolid,
+      [`&${componentCls}-default`]: {
+        color: token.solidTextColor
+      }
+    },
+    [`${componentCls}-filled`]: {
+      borderColor: 'transparent',
+      backgroundColor: token.tagBorderlessBg
+    },
+    [`&${componentCls}-disabled`]: {
+      color: token.colorTextDisabled,
+      cursor: 'not-allowed',
+      backgroundColor: token.colorBgContainerDisabled,
+      a: {
+        cursor: 'not-allowed',
+        pointerEvents: 'none',
+        color: token.colorTextDisabled,
+        '&:hover': {
+          color: token.colorTextDisabled
+        }
+      },
+      'a&': {
+        '&:hover, &:active': {
+          color: token.colorTextDisabled
+        }
+      },
+      [`&${componentCls}-outlined`]: {
+        borderColor: token.colorBorderDisabled
+      },
+      [`&${componentCls}-solid, &${componentCls}-filled`]: {
+        color: token.colorTextDisabled,
+        [`${componentCls}-close-icon`]: {
+          color: token.colorTextDisabled
+        }
+      },
+      [`${componentCls}-close-icon`]: {
+        cursor: 'not-allowed',
+        color: token.colorTextDisabled,
+        '&:hover': {
+          color: token.colorTextDisabled
+        }
+      }
+    }
+  };
+};
+// ============================== Export ==============================
+const tag_style_prepareToken = token => {
+  const {
+    lineWidth,
+    fontSizeIcon,
+    calc
+  } = token;
+  const tagFontSize = token.fontSizeSM;
+  const tagToken = statistic_merge(token, {
+    tagFontSize,
+    tagLineHeight: util_unit(calc(token.lineHeightSM).mul(tagFontSize).equal()),
+    tagIconSize: calc(fontSizeIcon).sub(calc(lineWidth).mul(2)).equal(),
+    // Tag icon is much smaller
+    tagPaddingHorizontal: 8,
+    // Fixed padding.
+    tagBorderlessBg: token.defaultBg
+  });
+  return tagToken;
+};
+const tag_style_prepareComponentToken = token => {
+  const solidTextColor = isBright(new AggregationColor(token.colorBgSolid), '#fff') ? '#000' : '#fff';
+  return {
+    defaultBg: new FastColor(token.colorFillTertiary).onBackground(token.colorBgContainer).toHexString(),
+    defaultColor: token.colorText,
+    solidTextColor
+  };
+};
+/* harmony default export */ const tag_style = (genStyleHooks('Tag', token => {
+  const tagToken = tag_style_prepareToken(token);
+  return tag_style_genBaseStyle(tagToken);
+}, tag_style_prepareComponentToken));
+;// ./node_modules/antd/es/tag/CheckableTag.js
+"use client";
+
+
+
+
+
+
+const CheckableTag = /*#__PURE__*/(react_production_namespaceFn().forwardRef)((props, ref) => {
+  const {
+    prefixCls: customizePrefixCls,
+    style,
+    className,
+    checked,
+    children,
+    icon,
+    onChange,
+    onClick,
+    onKeyDown,
+    disabled: customDisabled,
+    ...restProps
+  } = props;
+  const {
+    getPrefixCls,
+    tag
+  } = (react_production_namespaceFn().useContext)(ConfigContext);
+  const disabled = (react_production_namespaceFn().useContext)(config_provider_DisabledContext);
+  const mergedDisabled = customDisabled ?? disabled;
+  const handleClick = e => {
+    if (mergedDisabled) {
+      return;
+    }
+    onChange?.(!checked);
+    onClick?.(e);
+  };
+  const handleKeyDown = e => {
+    onKeyDown?.(e);
+    if (e.defaultPrevented || mergedDisabled) {
+      return;
+    }
+    if (e.key === ' ') {
+      e.preventDefault();
+      if (!e.repeat) {
+        onChange?.(!checked);
+      }
+    }
+  };
+  const prefixCls = getPrefixCls('tag', customizePrefixCls);
+  // Style
+  const [hashId, cssVarCls] = tag_style(prefixCls);
+  const cls = clsx(prefixCls, `${prefixCls}-checkable`, {
+    [`${prefixCls}-checkable-checked`]: checked,
+    [`${prefixCls}-checkable-disabled`]: mergedDisabled
+  }, tag?.className, className, hashId, cssVarCls);
+  return /*#__PURE__*/(react_production_namespaceFn().createElement)("span", {
+    ...restProps,
+    ref: ref,
+    role: "checkbox",
+    "aria-checked": checked,
+    "aria-disabled": mergedDisabled || undefined,
+    tabIndex: mergedDisabled ? -1 : 0,
+    style: {
+      ...tag?.style,
+      ...style
+    },
+    className: cls,
+    onClick: handleClick,
+    onKeyDown: handleKeyDown
+  }, icon, /*#__PURE__*/(react_production_namespaceFn().createElement)("span", null, children));
+});
+/* harmony default export */ const tag_CheckableTag = (CheckableTag);
+;// ./node_modules/antd/es/tag/CheckableTagGroup.js
+"use client";
+
+
+
+
+
+
+
+
+
+
+
+const CheckableTagGroup = /*#__PURE__*/(react_production_namespaceFn().forwardRef)((props, ref) => {
+  const {
+    id,
+    prefixCls: customizePrefixCls,
+    rootClassName,
+    className,
+    style,
+    classNames,
+    styles,
+    disabled,
+    options,
+    value,
+    defaultValue,
+    onChange,
+    multiple,
+    ...restProps
+  } = props;
+  const {
+    getPrefixCls,
+    direction,
+    className: contextClassName,
+    style: contextStyle,
+    classNames: contextClassNames,
+    styles: contextStyles
+  } = useComponentConfig('tag');
+  const prefixCls = getPrefixCls('tag', customizePrefixCls);
+  const groupPrefixCls = `${prefixCls}-checkable-group`;
+  const rootCls = hooks_useCSSVarCls(prefixCls);
+  const [hashId, cssVarCls] = tag_style(prefixCls, rootCls);
+  // ====================== Styles ======================
+  const contextStyleRoot = useSemanticRootStyle(contextStyle);
+  const styleRoot = useSemanticRootStyle(style);
+  const [mergedClassNames, mergedStyles] = useMergeSemantic([contextClassNames, classNames], [contextStyles, contextStyleRoot, styles, styleRoot], {
+    props
+  });
+  // =============================== Option ===============================
+  const parsedOptions = (0,react_production_namespaceFn().useMemo)(() => {
+    if (!Array.isArray(options)) {
+      return [];
+    }
+    return options.map(option => {
+      if (isPlainObject(option)) {
+        return option;
+      }
+      return {
+        value: option,
+        label: option
+      };
+    });
+  }, [options]);
+  // =============================== Values ===============================
+  const [mergedValue, setMergedValue] = useControlledState(defaultValue, value);
+  const handleChange = (checked, option) => {
+    let newValue = null;
+    if (multiple) {
+      const valueList = mergedValue || [];
+      newValue = checked ? [].concat(_toConsumableArray(valueList), [option.value]) : valueList.filter(item => item !== option.value);
+    } else {
+      newValue = checked ? option.value : null;
+    }
+    setMergedValue(newValue);
+    onChange?.(newValue); // TS not support generic type in function call
+  };
+  // ================================ Refs ================================
+  const divRef = (react_production_namespaceFn().useRef)(null);
+  (0,react_production_namespaceFn().useImperativeHandle)(ref, () => ({
+    nativeElement: divRef.current
+  }));
+  // ================================ ARIA ================================
+  const ariaProps = pickAttrs(restProps, {
+    aria: true,
+    data: true
+  });
+  // =============================== Render ===============================
+  return /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
+    ...ariaProps,
+    className: clsx(groupPrefixCls, contextClassName, rootClassName, {
+      [`${groupPrefixCls}-disabled`]: disabled,
+      [`${groupPrefixCls}-rtl`]: direction === 'rtl'
+    }, hashId, cssVarCls, className, mergedClassNames.root),
+    style: mergedStyles.root,
+    id: id,
+    ref: divRef
+  }, parsedOptions.map(option => (/*#__PURE__*/(react_production_namespaceFn().createElement)(tag_CheckableTag, {
+    key: option.value,
+    className: clsx(`${groupPrefixCls}-item`, mergedClassNames.item, option.className),
+    style: {
+      ...mergedStyles.item,
+      ...option.style
+    },
+    checked: multiple ? (mergedValue || []).includes(option.value) : mergedValue === option.value,
+    onChange: checked => handleChange(checked, option),
+    disabled: disabled
+  }, option.label))));
+});
+if (false) // removed by dead control flow
+{}
+/* harmony default export */ const tag_CheckableTagGroup = (CheckableTagGroup);
+;// ./node_modules/antd/es/tag/hooks/useColor.js
+
+
+
+/**
+ * Convert color related props to a unified object,
+ * which is used to flatten the compatibility requirements.
+ */
+function useColor(props, contextVariant) {
+  const {
+    color,
+    variant,
+    bordered
+  } = props;
+  return (react_production_namespaceFn().useMemo)(() => {
+    const isInverseColor = color?.endsWith('-inverse');
+    // =================== Variant ===================
+    let nextVariant;
+    if (variant) {
+      // `variant` first
+      nextVariant = variant;
+    } else if (isInverseColor) {
+      // Fallback if using inverse color
+      nextVariant = 'solid';
+    } else if (bordered === false) {
+      // Fallback if using filled
+      nextVariant = 'filled';
+    } else {
+      // Finally not conflict, use context
+      nextVariant = contextVariant || 'filled';
+    }
+    // ==================== Color ====================
+    let nextColor = isInverseColor ? color?.replace('-inverse', '') : color;
+    if (nextColor === undefined && nextVariant === 'solid') {
+      nextColor = 'default';
+    }
+    // =============== Preset & Status ===============
+    const nextIsPreset = isPresetColor(nextColor);
+    const nextIsStatus = isPresetStatusColor(nextColor);
+    // ================== Customize ==================
+    // When `color` is not preset color,
+    // dynamic calculate the color pair.
+    const tagStyle = {};
+    if (!nextIsPreset && !nextIsStatus && nextColor) {
+      if (nextVariant === 'solid') {
+        tagStyle.backgroundColor = color;
+      } else {
+        const hsl = new FastColor(nextColor).toHsl();
+        hsl.l = 0.95;
+        tagStyle.backgroundColor = new FastColor(hsl).toHexString();
+        tagStyle.color = color;
+        if (nextVariant === 'outlined') {
+          tagStyle.borderColor = color;
+        }
+      }
+    }
+    return [nextVariant, nextColor, nextIsPreset, nextIsStatus, tagStyle];
+  }, [color, variant, bordered, contextVariant]);
+}
+;// ./node_modules/antd/es/tag/style/presetCmp.js
+// Style as status component
+
+
+// ============================== Preset ==============================
+const genPresetStyle = token => genPresetColor_genPresetColor(token, (colorKey, {
+  textColor,
+  lightBorderColor,
+  lightColor,
+  darkColor
+}) => ({
+  [`${token.componentCls}${token.componentCls}-${colorKey}:not(${token.componentCls}-disabled)`]: {
+    [`&${token.componentCls}-outlined`]: {
+      backgroundColor: lightColor,
+      borderColor: lightBorderColor,
+      color: textColor
+    },
+    [`&${token.componentCls}-solid`]: {
+      backgroundColor: darkColor,
+      borderColor: darkColor,
+      color: token.colorTextLightSolid
+    },
+    [`&${token.componentCls}-filled`]: {
+      backgroundColor: lightColor,
+      color: textColor
+    }
+  }
+}));
+// ============================== Export ==============================
+/* harmony default export */ const presetCmp = (genSubStyleComponent(['Tag', 'preset'], token => {
+  const tagToken = tag_style_prepareToken(token);
+  return genPresetStyle(tagToken);
+}, tag_style_prepareComponentToken));
+;// ./node_modules/antd/es/_util/capitalize.js
+function capitalize(str) {
+  if (typeof str !== 'string') {
+    return str;
+  }
+  const ret = str.charAt(0).toUpperCase() + str.slice(1);
+  return ret;
+}
+;// ./node_modules/antd/es/tag/style/statusCmp.js
+
+
+
+const genTagStatusStyle = (token, status, cssVariableType) => {
+  const capitalizedCssVariableType = capitalize(cssVariableType);
+  return {
+    [`${token.componentCls}${token.componentCls}-${status}:not(${token.componentCls}-disabled)`]: {
+      [`&${token.componentCls}-outlined`]: {
+        backgroundColor: token[`color${capitalizedCssVariableType}Bg`],
+        borderColor: token[`color${capitalizedCssVariableType}Border`],
+        color: token[`color${cssVariableType}`]
+      },
+      [`&${token.componentCls}-solid`]: {
+        backgroundColor: token[`color${cssVariableType}`],
+        borderColor: token[`color${cssVariableType}`]
+      },
+      [`&${token.componentCls}-filled`]: {
+        backgroundColor: token[`color${capitalizedCssVariableType}Bg`],
+        color: token[`color${cssVariableType}`]
+      }
+    }
+  };
+};
+// ============================== Export ==============================
+/* harmony default export */ const statusCmp = (genSubStyleComponent(['Tag', 'status'], token => {
+  const tagToken = tag_style_prepareToken(token);
+  return [genTagStatusStyle(tagToken, 'success', 'Success'), genTagStatusStyle(tagToken, 'processing', 'Info'), genTagStatusStyle(tagToken, 'error', 'Error'), genTagStatusStyle(tagToken, 'warning', 'Warning')];
+}, tag_style_prepareComponentToken));
+;// ./node_modules/antd/es/tag/index.js
+"use client";
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+const InternalTag = /*#__PURE__*/(react_production_namespaceFn().forwardRef)((props, ref) => {
+  const {
+    prefixCls: customizePrefixCls,
+    className,
+    rootClassName,
+    style,
+    children,
+    icon,
+    color,
+    variant: _variant,
+    onClose,
+    bordered,
+    disabled: customDisabled,
+    href,
+    target,
+    styles,
+    classNames,
+    ...restProps
+  } = props;
+  const {
+    getPrefixCls,
+    direction,
+    className: contextClassName,
+    variant: contextVariant,
+    style: contextStyle,
+    classNames: contextClassNames,
+    styles: contextStyles
+  } = useComponentConfig('tag');
+  // ===================== Warnings =====================
+  if (false) // removed by dead control flow
+{}
+  // ====================== Colors ======================
+  const [mergedVariant, mergedColor, isPreset, isStatus, customTagStyle] = useColor(props, contextVariant);
+  const isInternalColor = isPreset || isStatus;
+  // ===================== Disabled =====================
+  const disabled = (react_production_namespaceFn().useContext)(config_provider_DisabledContext);
+  const mergedDisabled = customDisabled ?? disabled;
+  const {
+    tag: tagContext
+  } = (react_production_namespaceFn().useContext)(ConfigContext);
+  const [visible, setVisible] = (react_production_namespaceFn().useState)(true);
+  const domProps = omit(restProps, ['closeIcon', 'closable']);
+  // =========== Merged Props for Semantic ===========
+  const mergedProps = {
+    ...props,
+    color: mergedColor,
+    variant: mergedVariant,
+    disabled: mergedDisabled
+  };
+  // ====================== Styles ======================
+  const contextStyleRoot = useSemanticRootStyle(contextStyle);
+  const styleRoot = useSemanticRootStyle(style);
+  const [mergedClassNames, mergedStyles] = useMergeSemantic([contextClassNames, classNames], [contextStyles, contextStyleRoot, styles, styleRoot], {
+    props: mergedProps
+  });
+  const tagStyle = (react_production_namespaceFn().useMemo)(() => {
+    let nextTagStyle = mergedStyles.root;
+    if (!mergedDisabled) {
+      nextTagStyle = {
+        ...customTagStyle,
+        ...nextTagStyle
+      };
+    }
+    return nextTagStyle;
+  }, [mergedStyles.root, customTagStyle, mergedDisabled]);
+  const prefixCls = getPrefixCls('tag', customizePrefixCls);
+  const [hashId, cssVarCls] = tag_style(prefixCls);
+  const tagClassName = clsx(prefixCls, contextClassName, mergedClassNames.root, `${prefixCls}-${mergedVariant}`, {
+    [`${prefixCls}-${mergedColor}`]: isInternalColor,
+    [`${prefixCls}-hidden`]: !visible,
+    [`${prefixCls}-rtl`]: direction === 'rtl',
+    [`${prefixCls}-disabled`]: mergedDisabled
+  }, className, rootClassName, hashId, cssVarCls);
+  // ===================== Closable =====================
+  const triggerClose = e => {
+    if (mergedDisabled) {
+      return;
+    }
+    e.stopPropagation();
+    onClose?.(e);
+    if (e.defaultPrevented) {
+      return;
+    }
+    if (href) {
+      e.preventDefault();
+    }
+    setVisible(false);
+  };
+  const handleCloseKeyDown = e => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      if (!e.repeat) {
+        e.currentTarget.click();
+      }
+    }
+  };
+  const [, mergedCloseIcon] = useClosable_useClosable(pickClosable(props), pickClosable(tagContext), {
+    closable: false,
+    closeIconRender: iconNode => {
+      const replacement = /*#__PURE__*/(react_production_namespaceFn().createElement)("span", {
+        role: "button",
+        tabIndex: mergedDisabled ? -1 : 0,
+        "aria-disabled": mergedDisabled || undefined,
+        className: clsx(`${prefixCls}-close-icon`, mergedClassNames.close),
+        onClick: triggerClose,
+        onKeyDown: handleCloseKeyDown,
+        style: mergedStyles.close
+      }, iconNode);
+      return replaceElement(iconNode, replacement, originProps => ({
+        onClick: e => {
+          originProps?.onClick?.(e);
+          triggerClose(e);
+        },
+        onKeyDown: e => {
+          originProps?.onKeyDown?.(e);
+          if (!e.defaultPrevented) {
+            handleCloseKeyDown(e);
+          }
+        },
+        role: 'button',
+        tabIndex: mergedDisabled ? -1 : 0,
+        'aria-disabled': mergedDisabled || undefined,
+        className: clsx(originProps?.className, `${prefixCls}-close-icon`, mergedClassNames.close),
+        style: {
+          ...mergedStyles.close,
+          ...originProps?.style
+        }
+      }));
+    }
+  });
+  // ====================== Render ======================
+  const isNeedWave = isFunction(restProps.onClick) || children && children.type === 'a';
+  const iconNode = cloneElement(icon, {
+    className: clsx(/*#__PURE__*/(react_production_namespaceFn().isValidElement)(icon) ? icon.props?.className : undefined, mergedClassNames.icon),
+    style: mergedStyles.icon
+  });
+  const child = iconNode ? (/*#__PURE__*/(react_production_namespaceFn().createElement)((react_production_namespaceFn().Fragment), null, iconNode, isReactRenderable(children) && (/*#__PURE__*/(react_production_namespaceFn().createElement)("span", {
+    className: mergedClassNames.content,
+    style: mergedStyles.content
+  }, children)))) : children;
+  const TagWrapper = href ? 'a' : 'span';
+  const tagNode = /*#__PURE__*/(react_production_namespaceFn().createElement)(TagWrapper, {
+    ...domProps,
+    ref: ref,
+    className: tagClassName,
+    style: tagStyle,
+    href: mergedDisabled ? undefined : href,
+    target: target,
+    onClick: mergedDisabled ? undefined : domProps.onClick,
+    ...(href && mergedDisabled ? {
+      'aria-disabled': true
+    } : {})
+  }, child, mergedCloseIcon, isPreset && /*#__PURE__*/(react_production_namespaceFn().createElement)(presetCmp, {
+    key: "preset",
+    prefixCls: prefixCls
+  }), isStatus && /*#__PURE__*/(react_production_namespaceFn().createElement)(statusCmp, {
+    key: "status",
+    prefixCls: prefixCls
+  }));
+  return isNeedWave ? /*#__PURE__*/(react_production_namespaceFn().createElement)(wave, {
+    component: "Tag"
+  }, tagNode) : tagNode;
+});
+const Tag = InternalTag;
+if (false) // removed by dead control flow
+{}
+Tag.CheckableTag = tag_CheckableTag;
+Tag.CheckableTagGroup = tag_CheckableTagGroup;
+/* harmony default export */ const es_tag = (Tag);
 ;// ./node_modules/@rc-component/progress/es/common.js
 
 const defaultProps = {
@@ -66362,9 +67064,23 @@ function kbText(bytes) {
     const n = Number(bytes) || 0;
     return Math.max(1, Math.round(n / 1024)) + 'KB';
 }
+/** 卡片式分区（与参考稿一致：圆角描边区块 + 区块标题） */
+function Section({ title, extra, children }) {
+    return ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { border: '1px solid #f0f0f0', borderRadius: 10, padding: '12px 14px', marginBottom: 12 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: {
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: 8,
+                    marginBottom: 10,
+                }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("span", { style: { fontWeight: 600, fontSize: 14 }, children: title }), extra] }), children] }));
+}
 /**
- * 设备互联弹窗（v26.10.06-v9：由 CAT_UI.Drawer 侧边抽屉改为 antd Modal 弹窗）。
- * 业务逻辑（二维码、在线轮询、逐张压缩发送）与旧实现一致，仅替换渲染层。
+ * 设备互联弹窗（v26.10.06-v17：按参考稿重排版式）。
+ *
+ * 版式：标题「📱 手机互传 + 设备互联标签」→「电脑接收 · 本机专属链接」分区
+ * （左二维码 + 右链接框 + 复制按钮；**按要求不放「重新生成」**）→ 居中的在线状态胶囊 →
+ * 「发送到手机」分区（文本行 + 待发送图片行 + 虚线选图 + 发送按钮）。
+ * 业务逻辑（二维码、在线轮询、逐张压缩发送、进度）与旧实现一致，只换成新排版。
  */
 function PhoneModal({ open, onClose, relayServer }) {
     const deviceId = getDeviceId();
@@ -66375,9 +67091,6 @@ function PhoneModal({ open, onClose, relayServer }) {
     const [sendText, setSendText] = (0,react_production_namespaceFn().useState)('');
     const [pendingImages, setPendingImages] = (0,react_production_namespaceFn().useState)([]);
     const [progress, setProgress] = (0,react_production_namespaceFn().useState)(null);
-    // 待发列表的实时快照：发送循环里要读最新列表，又不想把整个循环塞进 setState 回调
-    const pendingRef = (0,react_production_namespaceFn().useRef)([]);
-    pendingRef.current = pendingImages;
     // 计算链接 + 二维码（非 http(s) 前缀即地址输入中途，不生成）
     (0,react_production_namespaceFn().useEffect)(() => {
         const s = (relayServer || '').trim().replace(/\/+$/, '');
@@ -66532,6 +67245,17 @@ function PhoneModal({ open, onClose, relayServer }) {
         const list = pendingImages.slice();
         const total = list.length;
         let sent = 0;
+        const failAt = (reason) => {
+            addLog('[发送到手机] 第 ' + (sent + 1) + ' 张发送失败：' + reason + '（已发 ' + sent + '/' + total + '）', 'error');
+            setSending(false);
+            setProgress({
+                done: sent,
+                total,
+                busy: false,
+                failed: true,
+                text: '❌ 已发送 ' + sent + '/' + total + '，已停止',
+            });
+        };
         const sendNext = () => {
             if (sent >= total) {
                 list.forEach((it) => {
@@ -66615,56 +67339,78 @@ function PhoneModal({ open, onClose, relayServer }) {
                 rd.readAsDataURL(out.blob);
             });
         };
-        const failAt = (reason) => {
-            addLog('[发送到手机] 第 ' + (sent + 1) + ' 张发送失败：' + reason + '（已发 ' + sent + '/' + total + '）', 'error');
-            setSending(false);
-            setProgress({
-                done: sent,
-                total,
-                busy: false,
-                failed: true,
-                text: '❌ 已发送 ' + sent + '/' + total + '，已停止',
-            });
-        };
         sendNext();
     };
     const percent = progress && progress.total ? Math.round((progress.done / progress.total) * 100) : 0;
-    return ((0,react_jsx_runtime_production_namespaceFn().jsxs)(modal, { open: open, title: "\u8BBE\u5907\u4E92\u8054", onCancel: onClose, getContainer: getOverlayContainer, width: 560, styles: { body: { textAlign: 'left' } }, destroyOnHidden: true, footer: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_space, { children: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { onClick: onClose, children: "\u5173\u95ED" }) }), children: [link ? ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', gap: 16, alignItems: 'flex-start', flexWrap: 'wrap' }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { flexShrink: 0 }, children: qrUrl ? ((0,react_jsx_runtime_production_namespaceFn().jsx)("img", { src: qrUrl, alt: "\u4E0A\u4F20\u94FE\u63A5\u4E8C\u7EF4\u7801", style: { width: 140, height: 140, border: '1px solid #eee', borderRadius: 8 } })) : ((0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: {
-                                width: 140,
-                                height: 140,
-                                border: '1px solid #eee',
-                                borderRadius: 8,
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                color: '#999',
-                                fontSize: 12,
-                                textAlign: 'center',
-                            }, children: "\u4E8C\u7EF4\u7801\u751F\u6210\u4E2D\u2026" })) }), (0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { flex: 1, minWidth: 180 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(PhoneModal_Text, { type: "secondary", style: { fontSize: 12, wordBreak: 'break-all', display: 'block' }, children: link }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { type: "link", onClick: () => link && safeCopyText(link), children: "\u590D\u5236\u94FE\u63A5" })] })] })) : ((0,react_jsx_runtime_production_namespaceFn().jsx)(PhoneModal_Text, { type: "danger", children: "\u5C1A\u672A\u914D\u7F6E\u4E2D\u7EE7\u670D\u52A1\u5668\uFF0C\u8BF7\u5230\u300C\u8BBE\u7F6E\u300D\u586B\u5199\u3002" })), (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { margin: '12px 0 4px', fontWeight: 600 }, children: "\u53D1\u9001\u5230\u624B\u673A" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(PhoneModal_Text, { type: phoneOnline ? 'success' : 'danger', style: { fontSize: 13 }, children: phoneOnline ? '🟢 手机已连接，可发送' : '⚪ 当前无在线设备，无法发送' }), (0,react_jsx_runtime_production_namespaceFn().jsxs)(es_space.Compact, { style: { width: '100%', marginTop: 10 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(es_input, { placeholder: "\u8F93\u5165\u8981\u53D1\u9001\u5230\u624B\u673A\u7684\u6587\u672C\u2026", value: sendText, onChange: (e) => setSendText(e.target.value), onPressEnter: doSendText }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { color: "primary", variant: "solid", disabled: !phoneOnline || sending, loading: sending, onClick: doSendText, children: "\u53D1\u9001" })] }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { block: true, disabled: !phoneOnline || sending, onClick: pickImages, style: { marginTop: 12 }, children: "\u9009\u62E9 / \u6DFB\u52A0\u56FE\u7247\uFF08\u53EF\u591A\u9009\uFF09" }), pendingImages.length > 0 && ((0,react_jsx_runtime_production_namespaceFn().jsxs)((react_jsx_runtime_production_namespaceFn().Fragment), { children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: {
-                            display: 'grid',
-                            gridTemplateColumns: 'repeat(4, 1fr)',
-                            gap: 6,
-                            marginTop: 10,
-                        }, children: pendingImages.map((img, i) => ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: {
-                                position: 'relative',
-                                paddingBottom: '100%',
-                                borderRadius: 8,
-                                overflow: 'hidden',
-                                background: '#f2f2f2',
-                            }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("img", { src: img.url, alt: img.name, style: {
-                                        position: 'absolute',
-                                        inset: 0,
-                                        width: '100%',
-                                        height: '100%',
-                                        objectFit: 'cover',
-                                    } }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { size: "small", danger: true, disabled: sending, onClick: () => removePendingImage(i), style: {
-                                        position: 'absolute',
-                                        top: 2,
-                                        right: 2,
-                                        padding: '0 6px',
-                                        minWidth: 22,
-                                        height: 22,
-                                    }, children: "\u00D7" })] }, img.url))) }), (0,react_jsx_runtime_production_namespaceFn().jsxs)(es_button, { block: true, color: "primary", variant: "solid", disabled: !phoneOnline || sending, loading: sending, onClick: confirmSendImage, style: { marginTop: 10 }, children: ["\u53D1\u9001 ", pendingImages.length, " \u5F20\u56FE\u7247\u5230\u624B\u673A"] })] })), progress && ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { marginTop: 10 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(es_progress, { percent: percent, size: "small", strokeColor: progress.failed ? '#e4393c' : '#007e44', status: progress.failed ? 'exception' : 'normal' }), (0,react_jsx_runtime_production_namespaceFn().jsx)(PhoneModal_Text, { type: progress.failed ? 'danger' : 'secondary', style: { fontSize: 12 }, children: progress.text })] }))] }));
+    const canSend = phoneOnline && !sending;
+    return ((0,react_jsx_runtime_production_namespaceFn().jsxs)(modal, { open: open, title: (0,react_jsx_runtime_production_namespaceFn().jsxs)("span", { children: ["\uD83D\uDCF1 \u624B\u673A\u4E92\u4F20", ' ', (0,react_jsx_runtime_production_namespaceFn().jsx)(es_tag, { style: { marginLeft: 6, fontWeight: 400 }, color: "default", children: "\u8BBE\u5907\u4E92\u8054" })] }), onCancel: onClose, getContainer: getOverlayContainer, width: 560, styles: { body: { textAlign: 'left' } }, destroyOnHidden: true, footer: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { onClick: onClose, children: "\u5173\u95ED" }), children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(Section, { title: "\u7535\u8111\u63A5\u6536 \u00B7 \u672C\u673A\u4E13\u5C5E\u94FE\u63A5", extra: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_tag, { color: "blue", style: { margin: 0, fontWeight: 400 }, children: "\u624B\u673A\u626B\u7801\u5373\u4E0A\u4F20" }), children: link ? ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', gap: 12, alignItems: 'flex-start' }, children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { flex: '0 0 auto', textAlign: 'center' }, children: [qrUrl ? ((0,react_jsx_runtime_production_namespaceFn().jsx)("img", { src: qrUrl, alt: "\u4E0A\u4F20\u94FE\u63A5\u4E8C\u7EF4\u7801", style: {
+                                        width: 124,
+                                        height: 124,
+                                        border: '1px solid #f0f0f0',
+                                        borderRadius: 8,
+                                        display: 'block',
+                                    } })) : ((0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: {
+                                        width: 124,
+                                        height: 124,
+                                        border: '1px solid #f0f0f0',
+                                        borderRadius: 8,
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        color: '#999',
+                                        fontSize: 12,
+                                    }, children: "\u4E8C\u7EF4\u7801\u751F\u6210\u4E2D\u2026" })), (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { fontSize: 12, color: '#8c8c8c', marginTop: 6 }, children: "\u626B\u4E00\u626B\u4E0A\u4F20" })] }), (0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { flex: 1, minWidth: 0 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { fontSize: 12, color: '#8c8c8c', marginBottom: 6 }, children: "\u94FE\u63A5\uFF08\u590D\u5236\u5230\u624B\u673A\u6D4F\u89C8\u5668\u6253\u5F00\uFF09" }), (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: {
+                                        border: '1px solid #d9d9d9',
+                                        borderRadius: 8,
+                                        padding: '7px 10px',
+                                        fontSize: 13,
+                                        wordBreak: 'break-all',
+                                        background: '#fafafa',
+                                        maxHeight: 56,
+                                        overflow: 'auto',
+                                    }, children: link }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { color: "primary", variant: "solid", block: true, style: { marginTop: 10 }, onClick: () => link && safeCopyText(link), children: "\u590D\u5236\u94FE\u63A5" })] })] })) : ((0,react_jsx_runtime_production_namespaceFn().jsx)(PhoneModal_Text, { type: "danger", children: "\u5C1A\u672A\u914D\u7F6E\u4E2D\u7EE7\u670D\u52A1\u5668\uFF0C\u8BF7\u5230\u300C\u8BBE\u7F6E\u300D\u586B\u5199\u3002" })) }), (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { textAlign: 'center', marginBottom: 12 }, children: (0,react_jsx_runtime_production_namespaceFn().jsxs)("span", { style: {
+                        display: 'inline-block',
+                        border: '1px solid ' + (phoneOnline ? '#b7eb8f' : '#ffccc7'),
+                        background: phoneOnline ? '#f6ffed' : '#fff2f0',
+                        color: phoneOnline ? '#389e0d' : '#cf1322',
+                        borderRadius: 16,
+                        padding: '4px 16px',
+                        fontSize: 13,
+                    }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("span", { style: {
+                                display: 'inline-block',
+                                width: 6,
+                                height: 6,
+                                borderRadius: '50%',
+                                background: phoneOnline ? '#52c41a' : '#ff4d4f',
+                                marginRight: 6,
+                                verticalAlign: 'middle',
+                            } }), phoneOnline ? '手机已连接，可发送' : '当前无在线设备，无法发送'] }) }), (0,react_jsx_runtime_production_namespaceFn().jsxs)(Section, { title: "\u53D1\u9001\u5230\u624B\u673A", children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', gap: 8 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(es_input, { placeholder: "\u8F93\u5165\u8981\u53D1\u9001\u5230\u624B\u673A\u7684\u6587\u672C\u2026", value: sendText, onChange: (e) => setSendText(e.target.value), onPressEnter: doSendText, style: { flex: 1 } }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { color: "primary", variant: "solid", disabled: !canSend, loading: sending, onClick: doSendText, style: { width: 84 }, children: "\u53D1\u9001" })] }), pendingImages.length > 0 && ((0,react_jsx_runtime_production_namespaceFn().jsxs)((react_jsx_runtime_production_namespaceFn().Fragment), { children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', justifyContent: 'space-between', margin: '14px 0 8px' }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("span", { style: { fontSize: 13, color: '#595959' }, children: "\u5F85\u53D1\u9001\u56FE\u7247" }), (0,react_jsx_runtime_production_namespaceFn().jsxs)("span", { style: { fontSize: 13, color: '#8c8c8c' }, children: ["\u5DF2\u9009 ", pendingImages.length, " \u5F20"] })] }), (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0,1fr))', gap: 8 }, children: pendingImages.map((img, i) => ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: {
+                                        position: 'relative',
+                                        paddingBottom: '86%',
+                                        borderRadius: 10,
+                                        overflow: 'hidden',
+                                        background: '#f2f2f2',
+                                    }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("img", { src: img.url, alt: img.name, style: {
+                                                position: 'absolute',
+                                                inset: 0,
+                                                width: '100%',
+                                                height: '100%',
+                                                objectFit: 'cover',
+                                            } }), (0,react_jsx_runtime_production_namespaceFn().jsx)("span", { title: "\u79FB\u9664\u8FD9\u5F20", onClick: () => removePendingImage(i), style: {
+                                                position: 'absolute',
+                                                top: 6,
+                                                right: 6,
+                                                width: 20,
+                                                height: 20,
+                                                borderRadius: '50%',
+                                                background: 'rgba(0,0,0,0.55)',
+                                                color: '#fff',
+                                                fontSize: 13,
+                                                lineHeight: '20px',
+                                                textAlign: 'center',
+                                                cursor: sending ? 'not-allowed' : 'pointer',
+                                                userSelect: 'none',
+                                            }, children: "\u00D7" })] }, img.url))) })] })), (0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', gap: 8, marginTop: 14 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { variant: "dashed", disabled: !canSend, onClick: pickImages, style: { flex: '1 1 0' }, children: "\uFF0B \u9009\u62E9 / \u6DFB\u52A0\u56FE\u7247\uFF08\u53EF\u591A\u9009\uFF09" }), pendingImages.length > 0 && ((0,react_jsx_runtime_production_namespaceFn().jsxs)(es_button, { color: "primary", variant: "solid", disabled: !canSend, loading: sending, onClick: confirmSendImage, style: { flex: '1.2 1 0' }, children: ["\u53D1\u9001 ", pendingImages.length, " \u5F20\u56FE\u7247"] }))] }), progress && ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { marginTop: 12 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(es_progress, { percent: percent, size: "small", strokeColor: progress.failed ? '#e4393c' : '#007e44', status: progress.failed ? 'exception' : 'normal' }), (0,react_jsx_runtime_production_namespaceFn().jsx)(PhoneModal_Text, { type: progress.failed ? 'danger' : 'secondary', style: { fontSize: 12 }, children: progress.text })] }))] })] }));
 }
 
 ;// ./src/lib/ui/LogModal.tsx
