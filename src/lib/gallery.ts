@@ -23,7 +23,12 @@ export interface GalleryImage {
 }
 
 export const receivedImages: GalleryImage[] = [];
-let galleryViewer: any = null; // Viewer.js 实例（重建画廊时先销毁）
+/** Viewer.js 实例中本文件用到的两个方法（库由 @require 注入，全局声明为 any，故只收窄用到的部分） */
+interface ViewerInstance {
+    destroy: () => void;
+    hide: () => void;
+}
+let galleryViewer: ViewerInstance | null = null; // Viewer.js 实例（重建画廊时先销毁）
 let galleryViewerObserver: MutationObserver | null = null; // 监听 Viewer 全屏容器出现并移入画廊遮罩的 MutationObserver
 let viewerCssInjected = false;
 
@@ -61,7 +66,7 @@ function ensureViewerCss() {
  * @param {number} idx - 画廊序号（用于兜底命名）
  * @returns {string} 带扩展名的文件名
  */
-function downloadFileName(name: any, mime: any, idx: any) {
+function downloadFileName(name?: string | null, mime?: string | null, idx = 0) {
     const extByMime: Record<string, string> = {
         'image/jpeg': '.jpg',
         'image/png': '.png',
@@ -77,11 +82,12 @@ function downloadFileName(name: any, mime: any, idx: any) {
 }
 
 // 对外入口（poll 回调调用）：新图入列并打开/刷新画廊弹窗
-export function showImagePopup(img: any) {
+export function showImagePopup(img: GalleryImage) {
     img.ts = Date.now();
     receivedImages.push(img);
     while (receivedImages.length > MAX_GALLERY) {
-        const old = receivedImages.shift()!; // 上面 while 已保证长度 > MAX_GALLERY，不会取空
+        const old = receivedImages.shift();
+        if (!old) break; // 上面 while 已保证长度 > MAX_GALLERY，这里只为类型收窄
         try {
             URL.revokeObjectURL(old.previewUrl);
         } catch (e) {
@@ -91,7 +97,7 @@ export function showImagePopup(img: any) {
     renderImageGallery();
 }
 
-function removeGalleryImage(idx: any) {
+function removeGalleryImage(idx: number) {
     const it = receivedImages.splice(idx, 1)[0];
     if (it) {
         try {
@@ -283,7 +289,7 @@ export function renderImageGallery() {
                 // hide() 亦因未加 CLASS_TRANSITION 而走 hideImmediately() 同步收尾，连带消掉关闭侧残留容器风险。
                 // 代价：失去放大/关闭的淡入淡出（换确定性，值得）。改前请读 AGENT.md 约束 3。
                 transition: false,
-                title: (image: any) => image.alt || '',
+                title: (image: HTMLImageElement) => image.alt || '',
                 toolbar: {
                     zoomIn: 1,
                     zoomOut: 1,
@@ -296,7 +302,8 @@ export function renderImageGallery() {
                     flipHorizontal: 1,
                     flipVertical: 1,
                 },
-                filter(image: any) {
+                // Viewer.js 会带 (image, index) 调用；本弹窗全部放行，故不声明入参（避免未使用参数告警）
+                filter() {
                     return true;
                 },
             });
@@ -327,8 +334,9 @@ export function renderImageGallery() {
                         vc.style.zIndex = '2'; // 在画廊遮罩上下文内，高于白盒(z-index:1)
                         // 安全网：监听 Viewer 显隐（viewer-in 类的增删，不依赖其事件 API）。
                         // 显示时允许交互；隐藏后置 pointer-events:none，避免残留容器遮挡画廊关闭按钮/缩略图。
-                        if (!(vc as any).__znhdWatched) {
-                            (vc as any).__znhdWatched = true;
+                        const vcWatched = vc as HTMLElement & { __znhdWatched?: boolean };
+                        if (!vcWatched.__znhdWatched) {
+                            vcWatched.__znhdWatched = true;
                             vc.style.pointerEvents = vc.className.indexOf('viewer-in') >= 0 ? 'auto' : 'none';
                             new MutationObserver(function () {
                                 vc.style.pointerEvents = vc.className.indexOf('viewer-in') >= 0 ? 'auto' : 'none';
@@ -402,7 +410,7 @@ function installPopupKeyHandler() {
 
 // 收到手机文本时，在网页正中弹出预览弹窗（与图片弹窗同一挂法：document.documentElement），
 // 含文本展示区、复制到剪贴板按钮（复用 safeCopyText，满足浏览器剪贴板策略并记日志/提示音）、关闭按钮。
-export function showTextPopup(txt: any) {
+export function showTextPopup(txt: { text?: string; ts?: number }) {
     closeTextPopup();
     installPopupKeyHandler(); // 安装全局 ESC 关闭（文本弹窗直接关闭）
     const overlay = document.createElement('div');

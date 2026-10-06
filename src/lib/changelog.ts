@@ -140,8 +140,10 @@ function loadChangelog(done: (entries: ChangelogEntry[] | null, errMsg?: string)
             addLog('更新日志加载成功，共 ' + entries.length + ' 条', 'info');
             done(entries);
         },
-        onerror: function (error: any) {
-            const errMsg = error && error.message ? error.message : typeof error === 'string' ? error : '网络错误';
+        onerror: function (error: unknown) {
+            // GM_xmlhttpRequest 的错误参数形态不定（对象 / 字符串），故按需取值而非断言类型
+            const err = (error || {}) as { message?: string };
+            const errMsg = err.message ? err.message : typeof error === 'string' ? error : '网络错误';
             addLog('更新日志加载失败: ' + errMsg, 'error', true);
             done(null, errMsg);
         },
