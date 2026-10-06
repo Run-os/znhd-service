@@ -41,7 +41,19 @@ async function launchBrowser() {
       console.warn('系统浏览器启动失败，回退到 puppeteer 自带 Chromium：' + e.message);
     }
   }
-  return puppeteer.launch(base);
+  try {
+    return await puppeteer.launch(base);
+  } catch (e) {
+    // CI 里设了 PUPPETEER_SKIP_DOWNLOAD=true（用系统 Chrome），本机若没装 Chrome/Edge 又跳过下载，
+    // 就会走到这里。把「找了哪些路径」打出来，避免只看到 puppeteer 那句笼统的 Could not find Chrome。
+    throw new Error(
+      '找不到可用浏览器。已探测的系统路径：' +
+        (SYSTEM_BROWSERS.join('、') || '（无）') +
+        '；puppeteer 自带 Chromium 也不可用（若设了 PUPPETEER_SKIP_DOWNLOAD 则不会下载）。' +
+        '请安装 Chrome/Edge，或用环境变量 PUPPETEER_EXECUTABLE_PATH 指定浏览器可执行文件。原始错误：' +
+        e.message
+    );
+  }
 }
 
 const CHECKS = [

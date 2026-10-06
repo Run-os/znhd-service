@@ -26,6 +26,13 @@ jobs:
         # 注意：puppeteer@25（npm run verify 用）要求 Node >= 22.12，不能用 20.x。
         node-version: [22.x]
 
+    env:
+      # 跳过 puppeteer 的 Chromium 下载（~150MB）：CI runner 镜像已预装 Google Chrome
+      # （Ubuntu 24.04 镜像「Browsers and Drivers」列明确含 Google Chrome），
+      # scripts/smoke/run.js 会自动探测系统浏览器（/usr/bin/google-chrome 等）。
+      # 不跳过时 npm ci 会卡在下载上（实测 8 分钟仍未完成），且缓存 key 随 package-lock 变化而失效。
+      PUPPETEER_SKIP_DOWNLOAD: 'true'
+
     steps:
       - uses: actions/checkout@v4
 
@@ -33,12 +40,6 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: ${{ matrix.node-version }}
-
-      - name: 缓存 puppeteer 下载的 Chromium
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/puppeteer
-          key: puppeteer-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
 
       - name: Build
         run: |
