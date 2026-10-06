@@ -11,6 +11,19 @@
 
 ---
 
+### znhd.user.js v26.10.07-v2
+- **明确项目许可证为 MIT，并补上此前缺失的许可证文件**：
+  - 新增仓库根 `LICENSE`（MIT 全文，`Copyright (c) 2026 Run-os`）。此前 ReadMe 只写了「MIT License」四个字、仓库里**没有 LICENSE 文件**，属于声明与事实不符。
+  - 脚本元信息新增 **`@license MIT`**（`config/common.meta.json`，紧随 `author`），随构建写入产物头——油猴/ScriptCat 的脚本详情页会显示它，许可证因此随产物一起分发（这是本次唯一影响产物体的改动，故升版本号）。
+  - **选型依据（有据可查）**：随产物打包的依赖全部是 MIT —— react / react-dom / antd / @ant-design/icons / @ant-design/cssinjs / js-yaml；运行时经 `@require` 按需加载的 qrcodejs、heic2any 同为 MIT；`relay-server` 零运行时依赖。**MIT 与之天然兼容且不引入额外义务**，也是油猴脚本生态的通行选择（ReadMe 原本已声明 MIT，本次是把声明坐实）。
+- **ReadMe 更新**：
+  - **删除「使用教程」链接**（原 `## 联系方式` 里指向 flowus.cn 的那条，按用户要求移除）；
+  - 「许可证」章节写实：说明 MIT 的含义（可自由使用/修改/分发含商用，需保留版权与许可声明、无担保）、指向 `LICENSE` 文件、并列出第三方依赖的许可与兼容性说明；
+  - 顺手修正「项目地址」大小写：`github.com/runos/...` → **`github.com/Run-os/...`**（与 `@homepageURL`、git remote 一致；GitHub 对 owner 大小写不敏感所以原本不算坏链，但属文档与代码不符，按 AGENT.md 规则 11 直接修）。
+- 验证：`npm run typecheck` 0 错、`npm run build` 结论行 `compiled`、`npm run check` 通过、`npm run verify` **22 项全绿**、产物头确认含 `@license MIT`、三处版本号一致（`26.10.07-v2`）。
+- ⚠️ **只做本地提交，未推送**。
+
+
 ### znhd.user.js v26.10.07-v1
 - **「运行日志」弹窗重构为专业暗色终端风**（依据仓库根《运行日志样式重构-开发文档.md》，**只改 `src/lib/ui/LogModal.tsx` 一个源文件**）：
   - 日志区：底色 `#0f141a`、等宽字体栈（`SF Mono/Consolas/Menlo/Courier New`）、12.5px / 行高 1.9、`border: 1px solid #1f2733`、圆角 4，高度仍 360、自身滚动。

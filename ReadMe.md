@@ -302,14 +302,17 @@ const DEFAULTS = {
 
 ## 许可证
 
-MIT License
+本项目采用 **MIT License** 开源，许可证全文见 [LICENSE](LICENSE)。
+
+即：可自由使用、修改、分发（含商用），只需保留版权声明与许可证声明；软件按「原样」提供，作者不提供任何担保、不承担使用后果。
+
+随本项目分发与加载的第三方依赖均为 **MIT** 许可（React、ReactDOM、Ant Design、js-yaml，以及运行时按需加载的 qrcodejs、heic2any），与本许可证相互兼容。
 
 ## 联系方式
 
 - **作者**：runos
-- **项目地址**：https://github.com/runos/znhd-service
+- **项目地址**：https://github.com/Run-os/znhd-service
 - **脚本主页**：https://scriptcat.org/zh-CN/script-show-page/3650
-- **使用教程**：https://flowus.cn/runos/share/e48623a2-f273-4327-8597-639e08902be8?code=1YD5Z5
 
 ## 贡献
 
