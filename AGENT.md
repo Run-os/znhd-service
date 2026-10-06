@@ -1,6 +1,6 @@
 # agent.md — AI 专属内部心智文档
 
-> 本文件仅供 AI 编码助手使用。**禁止与 `ReadMe.md` 重复内容**：凡终端用户或维护者日常会查的信息（功能、配置、技术栈、FAQ、更新日志）一律归 ReadMe，本文件只做【引用】，需要时由 AI 去读 ReadMe.md。
+> 本文件仅供 AI 编码助手使用。**禁止与 `ReadMe.md` / `CHANGELOG.md` 重复内容**：凡终端用户或维护者日常会查的信息（功能、配置、技术栈、FAQ）归 ReadMe，**更新日志归 `CHANGELOG.md`**，本文件只做【引用】，需要时由 AI 去读。
 
 ---
 
@@ -8,17 +8,18 @@
 
 1. **文件定位区分**
    - `agent.md` = AI 专属内部文档，只记录：代码内部组织事实、复用代码溯源、内部执行流程、关键数据结构、代码修改强制约束、技术债务、历史踩坑索引（一句话规则 + 指向 ReadMe 版本条目）。
-   - `ReadMe.md` = 对外文档：功能详解、配置说明、技术栈、FAQ、更新日志（唯一的对外版本档案）。
+   - `ReadMe.md` = 对外文档：功能详解、配置说明、技术栈、FAQ（只留「更新日志见 CHANGELOG.md」的指针）。
+   - `CHANGELOG.md` = **更新日志唯一来源**（按版本倒序，脚本运行时也读它）。
 
 2. **文档写入决策流程（每次更新文档前，按顺序判断）**
    1. **读者是谁**：终端用户/维护者日常会查（使用、配置、排障、部署运维）→ 写 **ReadMe**；只有 AI 改代码时才需要的导航/约束 → 写 **agent.md**。
-   2. **ReadMe 是否已有该主题**（功能详解/配置说明/技术栈/FAQ/更新日志）：已有 → 只引用其章节，不重复编写。
+   2. **ReadMe 是否已有该主题**（功能详解/配置说明/技术栈/FAQ；更新日志看 `CHANGELOG.md`）：已有 → 只引用其章节，不重复编写。
    3. **是否 ReadMe 写错/过时**：**直接修正 ReadMe**（以代码为准），禁止在 agent.md 另存一份「正确对照表」。
    4. **两边都需要**：正文写 ReadMe，agent.md 只留约束或一句引用指针。
-   5. **版本号与更新日志正文永远只进 ReadMe**；agent.md 不复制 changelog，只记版本指针。
+   5. **版本号与更新日志正文只进 `CHANGELOG.md`**（2026-10-06 起从 ReadMe 迁出）；ReadMe 只留一句指针，agent.md 不复制 changelog，只记版本指针。
    6. 拿不准时先问自己：这段话若删掉，改代码时是否还能正确干活？能 → 别写。
 
-3. **读取顺序**：① 完整读 `agent.md`；② 本文件提示需对外信息时，读 `ReadMe.md`（如版本规则见其「更新日志」开头、技术栈/功能细节见其对应章节）；③ 缺历史上下文读 `.workbuddy/memory/`（见下）；④ 看源码；⑤ 部署相关以 `.github/workflows/deploy.yml` 注释为准。
+3. **读取顺序**：① 完整读 `agent.md`；② 本文件提示需对外信息时，读 `ReadMe.md`（技术栈/功能细节见其对应章节）；③ **历史与版本规则读 `CHANGELOG.md`**（更新日志唯一来源，按版本倒序）；④ 缺历史上下文读 `.workbuddy/memory/`（见下）；⑤ 看源码；⑥ 部署相关以 `.github/workflows/deploy.yml` 注释为准。
 
 4. **更新要求**：新增依赖/核心逻辑变动/约束变更/新增坑点时更新；不写宣传话术；**【Agent修改代码强制约束】章节为最高优先级，不得删减**。
 
@@ -48,13 +49,14 @@
 | 文件 | AI 需知的事实 |
 |---|---|
 | `dist/znhd.user.js` | **构建产物，禁止直接编辑**（下次构建会覆盖）。由 `npm run build` 从 `src/` 生成，**提交进仓库**（模板同款做法）。`==UserScript==` 头由 `config/common.meta.json` 生成。 |
-| `znhd.user.js`（仓库根） | ⚠️ **迁移期过渡跳板，不是产物输出位置**：`dist/znhd.user.js` 的**字节副本**（发版时用 `Copy-Item` 拷一份即可）。存在理由：老安装的 `@updateURL` 指向根路径，拿到 v26.10.5-v1 后其头部会换成 dist 地址，之后更新自动走 dist。**不要编辑它、也不要纳入构建/校验**；待确认老用户都已升级后，下一个版本**删除此文件**（届时同步清理本行与 ReadMe 对应说明）。 |
+| `znhd.user.js`（仓库根） | ⚠️ **迁移期过渡跳板，不是产物输出位置**：`dist/znhd.user.js` 的**字节副本**（**每次发版都要重新拷一份**，让滞留的老用户直接升到最新版；用 `Copy-Item` 即可）。存在理由：老安装的 `@updateURL` 指向根路径，拿到带新 `@updateURL` 的版本后就会自动改走 dist。**不要编辑它、也不要纳入构建/校验**；待确认老用户都已升级后，下一个版本**删除此文件**（届时同步清理本行与 ReadMe 对应说明）。 |
+| `CHANGELOG.md` | **更新日志唯一来源**（2026-10-06 起，从 ReadMe 整段迁出）。脚本内「设置菜单 → [更新日志]」运行时读取它（`src/lib/changelog.ts`），默认展示最新 10 条。**新增日志一律追加到文件顶部**，见「更新日志约定」。 |
 | `config/common.meta.json` | 脚本元信息唯一来源（`@version`/`@grant`/`@require`/`@updateURL` 等）——**改版本号改这里，不改产物**。 |
 | `config/dev.meta.json` | 开发态元信息覆盖（`-dev` 名、localhost `@match`、`GM_addValueChangeListener`、`@require file://.../dist/znhd.dev.user.js`）。⚠️ 数组字段是**整体覆盖**而非追加，故 `require` 必须写全量列表。 |
 | `config/webpack*.js` | 构建配置（对齐 Eished/douyu-helper 模板）。生产产物落 `dist/znhd.user.js`（提交），开发产物落 `dist/znhd.dev.user.js`（忽略）。 |
 | `src/index.ts` | 入口：生产直接 `app()`；开发动态 import `devTools`（热重载 / 首次自动安装）。 |
 | `src/app.ts` | **入口装配**（~90 行）：创建面板 → `setupPanelPositionTracking()` → beforeunload 清理 → 启动监控。业务实现全在 `src/lib/`。 |
-| `src/lib/*.ts` | 业务模块：`constants`（CONFIG/DEFAULTS/存储键）、`logger`（addLog/防抖/`setLogEntriesSink`）、`storage`（localStorage 读写）、`state`（`runtime` 运行时缓存）、`utils`（链接解析/转义/时间换算）、`speech`（语音队列）、`monitor`（人数·掉线·工作时间）、`tinymce`（编辑器写入）、`clipboard`（提示音+安全复制）、`relay`（中继客户端+图片剪贴板）、`gallery`（九宫格画廊+文本弹窗）、`qrcode`（二维码 dataURL）。 |
+| `src/lib/*.ts` | 业务模块：`constants`（CONFIG/DEFAULTS/存储键）、`logger`（addLog/防抖/`setLogEntriesSink`）、`storage`（localStorage 读写）、`state`（`runtime` 运行时缓存）、`utils`（链接解析/转义/时间换算）、`speech`（语音队列）、`monitor`（人数·掉线·工作时间）、`tinymce`（编辑器写入）、`clipboard`（提示音+安全复制）、`relay`（中继客户端+图片剪贴板）、`gallery`（九宫格画廊+文本弹窗）、`changelog`（更新日志拉取/解析/弹窗）、`qrcode`（二维码 dataURL）。 |
 | `src/lib/ui/*.ts` | UI 组件：`LogPanel`、`SettingsDrawer`、`CommonPhrasesDrawer`、`PhoneImageDrawer`、`MainPanel`、`panelPosition`（面板拖拽位置保存，由原具名 IIFE 改为导出函数）。 |
 
 > **有意未拆出的模块**：`phrases`（常用语加载/缓存/请求序号）。`loadPhrasesData` 直接读写 React 状态（`phrasesData`/`setPhrasesData`/`setPhrasesLoading`）与 `phrasesRequestSeq`，抽成独立模块必须引入 `getData/setData` 桥接，属于「为拆而拆」，与约束 3「不得无理由重构可运行逻辑」冲突，故保留在 `src/lib/ui/MainPanel.ts` 内。如日后要拆，请连同组件状态一起改成自定义 hook。
@@ -69,12 +71,22 @@
 
 - **唯一真源**：`src/`（源码）+ `config/*.meta.json`（元信息）；`znhd.user.js` 是产物。
 - **常用命令**：`npm install` → `npm run build`（生产）/ `npm run dev`（watch 到 `dist/`）/ `npm start`（devServer :8080）/ `npm run typecheck`（strict）/ `npm run lint` / `npm run check` / `npm run verify`（无头端到端冒烟）。VSCode 里 `Ctrl+Shift+B` 选 `start & dev`。
-- **发布链路**：生产产物写 `dist/znhd.user.js`（模板默认位置），并提交进仓库；`@updateURL`/`@downloadURL` 指向 jsDelivr 上的 `.../main/dist/znhd.user.js`。⚠️ **2026-10-05 起产物路径由仓库根迁到 `dist/`**：老安装的脚本头部仍指向根路径，为此仓库根**临时保留一份过渡跳板 `znhd.user.js`**（= 产物副本，见文件表），老用户轮询根路径即可拿到本版本并自动换到 dist 地址；同时仍应在 ScriptCat 的「源代码同步」里把地址改到 `dist/znhd.user.js`（详见 ReadMe 更新日志）。
+- **发布链路**：生产产物写 `dist/znhd.user.js`（模板默认位置），并提交进仓库；`@updateURL`/`@downloadURL` 指向 jsDelivr 上的 `.../main/dist/znhd.user.js`。⚠️ **2026-10-05 起产物路径由仓库根迁到 `dist/`**：老安装的脚本头部仍指向根路径，为此仓库根**临时保留一份过渡跳板 `znhd.user.js`**（= 产物副本，见文件表），老用户轮询根路径即可拿到本版本并自动换到 dist 地址；同时仍应在 ScriptCat 的「源代码同步」里把地址改到 `dist/znhd.user.js`（详见 `CHANGELOG.md` v26.10.5-v1）。
 - **模块化约定**：一次只搬一个模块，搬完必须 `npm run build && npm run typecheck && npm run verify` 通过；模块间共享可变状态一律走 `src/lib/state.ts` 的 `runtime` 对象（ES module 的 import 绑定只读，不能用 `export let` 让外部赋值）。新模块一律带类型，**不再写 `@ts-nocheck`**。
 - **为什么只有 `.prettierignore`、没有 `.eslintignore`**：`npm run lint` 的 glob 只覆盖 `src/**/*.{ts,tsx}`，本来就碰不到 `dist/`、`relay-server/`、仓库根，故 `.eslintignore` 属冗余已删除。`.prettierignore` 保留，是为了挡住「有人手动 `npx prettier --write .`」把**提交进仓库的产物 `dist/znhd.user.js`** 与 `relay-server/server.js` 重排（prettier 是全局格式化，不像 eslint 有 glob 限制）。
 - **迁移等价性是怎么证明的（工具已按需删除，勿再重建）**：`26.10.5-v1` 迁移期做了两层验证——① AST 级「顶层语句零丢失」比对（对迁移前快照，89 条，丢失 0，6 条已登记的有意重组）；② 差异对照：同一 harness 分别跑「迁移前原版」与「当前构建产物」，报告字段 / 6 条 XHR 路径 / `localStorage` 三个键 / GM 设备 ID / 面板 ShadowDOM 文本 / 两个弹窗文本**逐字节一致**。两层均已完成并记录在 `.workbuddy/memory/2026-10-0{5,6}.md`；工具与 151KB 快照已删除（它们会让日后的正常修改误报，且是为「迁移」而非「回归」服务的）。
-- **端到端冒烟（`npm run verify`，已接入 CI）**：`scripts/smoke/` 起本地服务（`/` 测试页、`/znhd.user.js` 构建产物），用 puppeteer 无头 Chromium 加载，GM API 桩 + 真实 `@require` 依赖 + 按真实中继协议投递 1 条文本 + 1 张图。断言面板/版本号/文本弹窗/九宫格画廊/常用语 YAML 解析/抽屉可打开 + 页面无脚本自身报错。**结构变动后必须本地跑一次**。
+- **端到端冒烟（`npm run verify`，已接入 CI）**：`scripts/smoke/` 起本地服务（`/` 测试页、`/znhd.user.js` 构建产物），用 puppeteer 无头 Chromium 加载，GM API 桩 + 真实 `@require` 依赖 + 按真实中继协议投递 1 条文本 + 1 张图，并 mock 常用语 YAML 与 `CHANGELOG.md`。断言：面板 / **版本号（精确等于产物 `@version`，由 run.js 从产物头部读出注入）** / 文本弹窗 / 九宫格画廊 / 常用语 YAML 解析 / 常用语抽屉 / **更新日志弹窗（最新 10 条 + 获取更多日志 + 条数提示）** / 页面无脚本自身报错。**结构变动后必须本地跑一次**。
+  - 新增断言时注意：`collectText()` 覆盖全页（含挂在 `documentElement` 下的弹窗），读**面板**文本要用 `collectShadowText()`——否则弹窗内容里的版本号会串台（v26.10.6-v1 踩过）。
 - **`tsconfig.json` 已开启 `strict: true`**（2026-10-06）；唯一例外是 `useUnknownInCatchVariables: false`（沿用「catch 后直接读 e.message 记日志」的既有写法，18 处）。新增代码按 strict 写。
+
+## 更新日志约定（2026-10-06 起）
+
+- **唯一归属 `CHANGELOG.md`**（仓库根）。此前写在 `ReadMe.md` 的 72 条已整段迁入；**不要再往 ReadMe 写日志条目**，ReadMe 只在「## 更新日志」留一句指针。
+- **位置**：新条目追加到**文件顶部**——在 `---` 分隔线之后、上一条目之前（最新在上）。
+- **格式**：标题 `### <脚本名或服务名> v<版本号>`，正文用无序列表，写清「改了什么 / 为什么 / 影响面」。
+- **版本号必须一致**：脚本条目的版本号 = `config/common.meta.json` 的 `version`；`relay-server` 条目 = `relay-server/package.json` 的 `version`。数值规范见 `CHANGELOG.md` 开头的「版本号规范」。
+- **为什么独立成文件**：① 脚本内「设置菜单 → [更新日志]」要**运行时读取**它（`src/lib/changelog.ts`），而 ReadMe 混着大量使用文档，不适合当数据源；② 让「更新日志」只有一个归属，杜绝两处各写一半。
+- ⚠️ **改文件格式会直接影响脚本弹窗**：解析规则是「按 `### ` 行切分」（`parseChangelog()`），不要把条目标题换成 `##` 或其它层级；`## 更新日志` 这类二级标题会被自动忽略（前言区安全）。
 
 ## 复用代码溯源
 
@@ -120,9 +132,9 @@
 
 ## Agent修改代码强制约束（最高优先级）
 
-1. **版本号 `YY.M.D-vN`，跨天序号重置 v1**（规范详见 ReadMe「更新日志」开头）。改脚本 → 递增 **`config/common.meta.json` 的 `version`**（产物头是构建生成的，**不要**去改 `znhd.user.js`）；改 `relay-server/server.js` → 递增 `relay-server/package.json` 的 `version`；每次改动在 ReadMe「更新日志」顶部补一条。
+1. **版本号 `YY.M.D-vN`，跨天序号重置 v1**（规范详见 `CHANGELOG.md` 开头）。改脚本 → 递增 **`config/common.meta.json` 的 `version`**（产物头是构建生成的，**不要**去改 `znhd.user.js`）；改 `relay-server/server.js` → 递增 `relay-server/package.json` 的 `version`；每次改动在 **`CHANGELOG.md` 顶部**补一条（见「更新日志约定」）。
 2. **禁止给 `relay-server` 增加 npm 依赖/构建步骤**（部署无 npm install）。
-3. **不得无理由重构可运行逻辑**（尤其弹窗 CSS、长轮询/广播机制、CAT_UI 用法）。改前先读 ReadMe 更新日志对应条目——多数"诡异写法"是真实浏览器实测结论。
+3. **不得无理由重构可运行逻辑**（尤其弹窗 CSS、长轮询/广播机制、CAT_UI 用法）。改前先读 `CHANGELOG.md` 对应条目——多数"诡异写法"是真实浏览器实测结论。
 4. **新依赖必须记录**：同步更新 ReadMe「技术栈」与「项目结构」（依赖清单唯一归属 ReadMe，agent 不另存）。
 5. **硬编码尽量迁移配置**：脚本端用户可配置项进 `DEFAULTS`，常量进 `CONFIG`。
 6. **GitHub 资源引用存「GitHub 网页链接」**，运行时经 `resolveGithubUrl()` + `useCdn` 转 jsDelivr/raw；勿在 `DEFAULTS` 存 CDN 成品链接。（例外：`commonPhrasesUrl` 自 v26.9.6-v5 起规范值改存 **raw 原始直链**——用户误填网页/仓库页面会把整页 HTML 当 YAML 解析失败；raw 属 `resolveGithubUrl` 形式二，`useCdn` 开仍转 jsDelivr。其余如 `didaUrl` 仍存网页链接。）
@@ -132,7 +144,7 @@
 10. 涉及部署/容器/路径以 `.github/workflows/deploy.yml` 为准，勿硬编码别处。
 11. **发现 ReadMe 与代码不符 → 直接修 ReadMe**（本仓库文档已多次过期），不在 agent.md 建长期对照表；修正后改代码处如有注释也一并更新。
 
-## 历史踩坑索引（完整来龙去脉见 ReadMe 更新日志对应版本，此处只留指针 + 一句规则）
+## 历史踩坑索引（完整来龙去脉见 `CHANGELOG.md` 对应版本，此处只留指针 + 一句规则）
 
 | 领域 | 一句话规则 | 详见 ReadMe 版本条目 |
 |---|---|---|
@@ -151,4 +163,4 @@
 - **画廊两端重复实现**（脚本端 / server.js 手机页）：无共享模块，改动成本翻倍（见「复用代码溯源」）。
 - **待评估优化池**（2026-09-14 「性能与冗余」审查；第一批 P1/P2/P3/P5/P8/P9 已落地 v26.9.6-v9 + relay v26.9.6-v5）：① 归一化 `trim().replace(/\/+$/,'')` 6 处 + 输入事件解包 5 处可提炼 helper；② `appendToTinyMCE` 返回值全仓无人接收且 iframe 查询重复 3 处；③ relay `MAX_QUEUE=100` 按条数计（单条 ≤12MB → 每设备最坏 ~1.2GB），可加 `MAX_QUEUE_BYTES`。细则见 `.workbuddy/memory/2026-09-14.md`。
 - **模块化 + 类型化已完成（2026-10-05 ~ 10-06，v26.10.5-v1）**：原 2727 行单文件已拆为 `src/lib/*` + `src/lib/ui/*`，`src/app.ts` 只剩装配；`tsconfig.json` 已开 `strict: true`（仅 `useUnknownInCatchVariables: false`）；`npm run verify` 已接入 CI。
-- **无单元测试**：覆盖靠 `npm run typecheck`（strict）+ `npm run verify`（无头端到端冒烟：面板/弹窗/画廊/常用语/剪贴板）+ 人工税务页实测；服务端仍无类型声明。（服务端正反向逐行镜像已由 `createChannel()` 工厂消除，relay v26.9.6-v1。）
+- **无单元测试**：覆盖靠 `npm run typecheck`（strict）+ `npm run verify`（无头端到端冒烟：面板/版本号/弹窗/画廊/常用语/更新日志/剪贴板）+ 人工税务页实测；服务端仍无类型声明。（服务端正反向逐行镜像已由 `createChannel()` 工厂消除，relay v26.9.6-v1。）

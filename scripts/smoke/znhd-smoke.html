@@ -16,6 +16,17 @@
       const PNG_1x1 =
         'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
       const PHRASES_YAML = ['冒烟常用语A: |', '  A 的内容', '冒烟常用语B: |', '  B 的内容', ''].join('\n');
+      // 更新日志：给 12 条，验证「默认只显示最新 10 条」+ 条数提示（多出的 2 条不渲染）
+      const CHANGELOG_MD = (() => {
+        const parts = ['# 更新日志', '', '本文件是唯一来源。', '', '---', ''];
+        for (let i = 1; i <= 12; i++) {
+          parts.push('### znhd.user.js v99.0.' + i + '-v1');
+          parts.push('');
+          parts.push(i === 1 ? '- 冒烟更新日志标记行' : '- 第 ' + i + ' 条日志内容');
+          parts.push('');
+        }
+        return parts.join('\n');
+      })();
 
       const reply = (details, payload) => {
         setTimeout(() => {
@@ -32,7 +43,9 @@
       };
 
       window.GM_info = {
-        script: { version: '26.10.5-v1' },
+        // 由 run.js 从构建产物的 ==UserScript== 头读出真实 @version 注入（evaluateOnNewDocument），
+        // 这样「面板渲染的版本号」才是对产物的真实校验，而不是桩里的死值
+        script: { version: window.__scriptVersion || '0.0.0-v0' },
         scriptHandler: 'smoke-harness',
         scriptUpdateURL: 'https://example.invalid/znhd.user.js',
         scriptWillUpdate: false,
@@ -61,6 +74,11 @@
         // 常用语 YAML：走成功路径
         if (url.includes('commonPhrases.yaml')) {
           reply(details, PHRASES_YAML);
+          return { abort: () => {} };
+        }
+        // 更新日志 CHANGELOG.md：走成功路径
+        if (url.includes('CHANGELOG.md')) {
+          reply(details, CHANGELOG_MD);
           return { abort: () => {} };
         }
         // 手机在线状态：离线
@@ -122,8 +140,9 @@
     <script>
       // CAT_UI 把面板挂在 Shadow DOM 里，必须穿透 shadowRoot 才能读到文本；
       // 弹窗（画廊/文本）挂在 documentElement 下，故用 documentElement.textContent 兜底。
-      const collectText = () => {
-        let text = (document.documentElement.innerText || '') + '\n' + (document.documentElement.textContent || '');
+      // CAT_UI 把面板挂在 Shadow DOM 里，必须穿透 shadowRoot 才能读到文本
+      const collectShadowText = () => {
+        let text = '';
         const walk = (root) => {
           root.querySelectorAll('*').forEach((el) => {
             if (el.shadowRoot) {
@@ -135,6 +154,13 @@
         walk(document);
         return text;
       };
+      // 全页文本：Shadow DOM + documentElement（弹窗挂在 documentElement 下）
+      const collectText = () =>
+        (document.documentElement.innerText || '') +
+        '\n' +
+        (document.documentElement.textContent || '') +
+        '\n' +
+        collectShadowText();
 
       // 自动打开「常用语」抽屉，验证远程 YAML 成功路径
       const clickByText = (label) => {
@@ -155,9 +181,18 @@
         window.__clickedPhrases = clickByText('常用语');
       }, 3200);
 
+      // 打开「设置」抽屉 → 点它里面的「更新日志」，验证新入口 + 弹窗 + 只显示最新 10 条
+      setTimeout(() => {
+        window.__clickedSettings = clickByText('设置');
+      }, 4200);
+      setTimeout(() => {
+        window.__clickedChangelog = clickByText('[更新日志]');
+      }, 5200);
+
       setTimeout(() => {
         const text = collectText();
         const relevant = window.__errors.filter((e) => !/chrome-extension:/.test(e));
+        const popup = document.getElementById('__znhd_changelog_popup__');
         const report = {
           CAT_UI: typeof window.CAT_UI,
           jsyaml: typeof window.jsyaml,
@@ -165,7 +200,8 @@
           Viewer: typeof window.Viewer,
           recvResponses: window.__recvCount || 0,
           panel: text.includes('征纳互动监控'),
-          version: (text.match(/v26\.\d+\.\d+-v\d+/) || ['<无>'])[0],
+          // 版本号只从面板所在的 Shadow DOM 里取：弹窗内容（更新日志里也有版本号）会串台
+          version: (collectShadowText().match(/v\d+\.\d+\.\d+-v\d+/) || ['<无>'])[0],
           // 文本弹窗
           textPopup: text.includes('冒烟测试文本：收到一条文本消息'),
           // 九宫格画廊
@@ -173,14 +209,26 @@
           // 常用语成功路径（YAML 解析出按钮）
           phrasesLoaded: text.includes('冒烟常用语A'),
           phrasesClicked: !!window.__clickedPhrases,
+          // 更新日志：入口可点 → 弹窗出现 → 渲染 mock 正文 → 底部按钮 → 条数提示（12 条只渲染 10）
+          settingsClicked: !!window.__clickedSettings,
+          changelogClicked: !!window.__clickedChangelog,
+          changelogPopup: !!popup && text.includes('冒烟更新日志标记行'),
+          changelogMoreBtn: !!popup && text.includes('获取更多日志'),
+          changelogLimitHint: !!popup && text.includes('共 12 条，已显示最新 10 条'),
           xhr: window.__gmXhrLog.slice(0, 6),
           relevantErrors: relevant,
         };
         document.getElementById('smoke-result').textContent = JSON.stringify(report, null, 2);
         document.title =
           'znhd-smoke:' +
-          (report.panel && report.textPopup && report.galleryText && report.phrasesLoaded ? 'ALL-OK' : 'PARTIAL');
-      }, 6000);
+          (report.panel &&
+          report.textPopup &&
+          report.galleryText &&
+          report.phrasesLoaded &&
+          report.changelogPopup
+            ? 'ALL-OK'
+            : 'PARTIAL');
+      }, 6500);
     </script>
   </body>
 </html>

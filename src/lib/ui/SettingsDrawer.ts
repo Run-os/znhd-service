@@ -6,6 +6,7 @@
 
 import { DEFAULTS } from '@/lib/constants';
 import { LogEntry } from '@/lib/logger';
+import { showChangelogPopup } from '@/lib/changelog';
 import { hoursToHHmm, hhmmToHours } from '@/lib/utils';
 import { LogPanel } from '@/lib/ui/LogPanel';
 
@@ -121,6 +122,18 @@ export function SettingsDrawer({
                         type: 'link',
                         onClick: () => {
                             window.open((GM_info.scriptUpdateURL || GM_info.script.updateURL) as string, '_blank');
+                        },
+                        style: {
+                            padding: '0 8px',
+                            color: '#1890ff',
+                            fontWeight: 'bold',
+                        },
+                    }),
+                    // 更新日志：读仓库根 CHANGELOG.md，弹窗展示最新 10 条（见 lib/changelog.ts）
+                    CAT_UI.Button('[更新日志]', {
+                        type: 'link',
+                        onClick: () => {
+                            showChangelogPopup();
                         },
                         style: {
                             padding: '0 8px',

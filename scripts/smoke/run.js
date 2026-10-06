@@ -7,7 +7,8 @@
  *   - 按真实中继协议投递：/recv 先空响应确认连接 → 1 条文本 → 1 张 PNG → 空转；常用语地址返回小 YAML
  *
  * 通过条件（全部满足，否则退出码 1）：
- *   面板渲染 / 版本号 / 文本弹窗 / 九宫格画廊 / 常用语 YAML 解析 / 常用语抽屉可打开 / 页面无脚本自身报错
+ *   面板渲染 / 版本号（= 产物 @version） / 文本弹窗 / 九宫格画廊 / 常用语 YAML 解析 /
+ *   常用语抽屉可打开 / 更新日志弹窗（最新 10 条 + 获取更多日志） / 页面无脚本自身报错
  *
  * 前置：先 `npm run build` 生成 dist/znhd.user.js。
  */
@@ -50,6 +51,7 @@ const CHECKS = [
   ['galleryText', '九宫格画廊'],
   ['phrasesLoaded', '常用语 YAML 解析'],
   ['phrasesClicked', '常用语抽屉可打开'],
+  ['changelogPopup', '更新日志弹窗（最新 10 条）'],
 ];
 
 /**
@@ -73,6 +75,10 @@ async function main() {
   const url = `http://127.0.0.1:${server.address().port}/smoke.html`;
   let browser = null;
 
+  // 从构建产物的 ==UserScript== 头读真实 @version，注入页面作 GM_info.script.version。
+  // 这样「面板渲染的版本号」是对产物的真实校验，而不是 harness 里的死值。
+  const scriptVersion = (fs.readFileSync(BUNDLE, 'utf8').match(/@version\s+(\S+)/) || [])[1] || '';
+
   try {
     browser = await launchBrowser();
     const page = await browser.newPage();
@@ -80,6 +86,9 @@ async function main() {
     const pageErrors = [];
     page.on('pageerror', (e) => pageErrors.push(String(e && e.message ? e.message : e)));
 
+    await page.evaluateOnNewDocument((v) => {
+      window.__scriptVersion = v;
+    }, scriptVersion);
     await page.goto(url, { waitUntil: 'load', timeout: 60000 });
     await page.waitForFunction(() => document.title.indexOf('znhd-smoke:') === 0, { timeout: 60000 });
 
@@ -88,10 +97,15 @@ async function main() {
       title: document.title,
     }));
 
+    // version 检查改为「渲染值 === 产物 @version」的精确比对
+    const checkPass = (key) => (key === 'version' ? report.version === 'v' + scriptVersion : !!report[key]);
+
     console.log('冒烟测试报告：');
     for (const [key, label] of CHECKS) {
-      const value = key === 'version' ? report.version !== '<无>' : !!report[key];
-      console.log(`  ${value ? '✅' : '❌'} ${label}${key === 'version' ? '（' + report.version + '）' : ''}`);
+      const value = checkPass(key);
+      console.log(
+        `  ${value ? '✅' : '❌'} ${label}${key === 'version' ? '（' + report.version + ' ← 产物 ' + scriptVersion + '）' : ''}`
+      );
     }
     const allErrors = (report.relevantErrors || []).concat(pageErrors);
     const benign = allErrors.filter(isBenign);
@@ -100,9 +114,7 @@ async function main() {
     scriptErrors.forEach((e) => console.log('      · ' + e));
     benign.forEach((e) => console.log('      （已知无害，见 run.js 白名单说明）· ' + e));
 
-    const failed = CHECKS.filter(([key]) =>
-      key === 'version' ? report.version === '<无>' : !report[key]
-    );
+    const failed = CHECKS.filter(([key]) => !checkPass(key));
     if (failed.length || scriptErrors.length) {
       console.error(`\n❌ 冒烟测试未通过（${title}）：${failed.map(([, l]) => l).join('、') || ''}`);
       process.exitCode = 1;
