@@ -117,9 +117,20 @@
           reply(details, CHANGELOG_MD);
           return { abort: () => {} };
         }
-        // 手机在线状态：离线
+        // 手机在线状态：在线（「发送到手机」相关断言需要抽屉里的按钮可用）
         if (/\/phone\/status\//.test(url)) {
-          reply(details, { online: false });
+          reply(details, { online: true });
+          return { abort: () => {} };
+        }
+        // 发送到手机：记录实际 POST 的载荷，用于校验「先压缩再发」（v26.10.06-v6 回归断言）
+        if (/\/phone\/send\//.test(url)) {
+          try {
+            window.__phoneSent = window.__phoneSent || [];
+            window.__phoneSent.push(JSON.parse((details && details.data) || '{}'));
+          } catch (e) {
+            window.__phoneSendErr = String((e && e.message) || e);
+          }
+          reply(details, { ok: true });
           return { abort: () => {} };
         }
         // 中继收件长轮询：先空响应确认连接，再给一条文本、一张图片，之后空转
@@ -219,6 +230,36 @@
         return !!hit;
       };
 
+      // 影子 DOM 感知的元素查找（抽屉可能渲染在 shadow root 内，document.querySelectorAll 穿不透）
+      const deepQuery = (pred) => {
+        let hit = null;
+        const walk = (root) => {
+          root.querySelectorAll('*').forEach((el) => {
+            if (hit) return;
+            if (el.shadowRoot) walk(el.shadowRoot);
+            if (!hit && pred(el)) hit = el;
+          });
+        };
+        walk(document);
+        return hit;
+      };
+
+      // 造一张 3000x2000 的大图（最长边远超压缩上限 1600），用于验证「发送到手机」会先压缩
+      const makeBigFile = () =>
+        new Promise((res) => {
+          const cv = document.createElement('canvas');
+          cv.width = 3000;
+          cv.height = 2000;
+          const ctx = cv.getContext('2d');
+          ctx.fillStyle = '#1e7d5a';
+          ctx.fillRect(0, 0, 3000, 2000);
+          for (let i = 0; i < 200; i++) {
+            ctx.fillStyle = 'hsl(' + (i * 5) + ',80%,50%)';
+            ctx.fillRect((i * 137) % 3000, (i * 89) % 2000, 160, 120);
+          }
+          cv.toBlob((b) => res(new File([b], 'smoke-big.jpg', { type: 'image/jpeg' })), 'image/jpeg', 0.95);
+        });
+
       setTimeout(() => {
         window.__clickedPhrases = clickByText('常用语');
       }, 3200);
@@ -264,6 +305,76 @@
       setTimeout(() => {
         window.__clickedChangelog = clickByText('[更新日志]');
       }, 5200);
+
+      // 「发送到手机」：打开抽屉 → 选一张 3000x2000 大图 → 发送，断言实际 POST 出去的是压缩后的 JPEG。
+      // 旧实现是 FileReader 直读原文件再 POST（原图直传），与「手机 → 电脑」的 canvas 压缩不对称：
+      // 一张 3MB 照片就要上行 4MB（base64 +33%），且原图 ≥9MB 直接撞 12MB 单请求上限被拒。
+      setTimeout(() => {
+        window.__openedPhone = clickByText('设备互联');
+      }, 6000);
+      setTimeout(() => {
+        const btn = deepQuery((el) => el.tagName === 'BUTTON' && (el.textContent || '').indexOf('选择 / 添加图片') >= 0);
+        window.__clickedPick = !!btn;
+        if (btn) btn.click();
+      }, 6800);
+      setTimeout(() => {
+        const inp = document.querySelector('input[type=file]');
+        if (!inp) {
+          window.__pickErr = '未找到隐藏的 file input';
+          return;
+        }
+        makeBigFile().then((f) => {
+          window.__sentOriginalSize = f.size;
+          const dt = new DataTransfer();
+          dt.items.add(f);
+          inp.files = dt.files;
+          inp.dispatchEvent(new Event('change'));
+          window.__injectedFile = true;
+        });
+      }, 7200);
+      setTimeout(() => {
+        const btn = deepQuery((el) => el.tagName === 'BUTTON' && (el.textContent || '').indexOf('图片到手机') >= 0);
+        window.__clickedSendImg = !!btn;
+        if (btn) btn.click();
+      }, 9000);
+      // 解出实际 POST 的字节：必须是 JPEG、最长边 ≤1600、且比原图小
+      setTimeout(() => {
+        const sent = (window.__phoneSent || [])[0];
+        if (!sent || !sent.data) {
+          window.__phoneSendCheck = { got: false, sentCount: (window.__phoneSent || []).length };
+          return;
+        }
+        try {
+          const bin = atob(sent.data);
+          const arr = new Uint8Array(bin.length);
+          for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+          const jpegMagic = arr[0] === 0xff && arr[1] === 0xd8;
+          createImageBitmap(new Blob([arr], { type: sent.mime || 'image/jpeg' }))
+            .then((bmp) => {
+              window.__phoneSendCheck = {
+                got: true,
+                mime: sent.mime,
+                name: sent.name,
+                bytes: arr.length,
+                originalBytes: window.__sentOriginalSize || 0,
+                w: bmp.width,
+                h: bmp.height,
+                jpegMagic: jpegMagic,
+              };
+              bmp.close();
+            })
+            .catch((e) => {
+              window.__phoneSendCheck = {
+                got: true,
+                mime: sent.mime,
+                bytes: arr.length,
+                decodeErr: String((e && e.message) || e),
+              };
+            });
+        } catch (e) {
+          window.__phoneSendCheck = { got: false, err: String((e && e.message) || e) };
+        }
+      }, 10300);
 
       setTimeout(() => {
         const text = collectText();
@@ -321,6 +432,16 @@
             );
             return sawPng && bad === null;
           })(),
+          // 发送到手机：必须先压缩再发（v26.10.06-v6 回归断言）。判定要点：
+          // 实际 POST 的字节是 JPEG、最长边 ≤1600（压缩上限）、且比原图小。
+          phoneSendCheck: window.__phoneSendCheck || null,
+          phoneSendCompressedOk: !!(
+            window.__phoneSendCheck &&
+            window.__phoneSendCheck.got &&
+            window.__phoneSendCheck.jpegMagic &&
+            Math.max(window.__phoneSendCheck.w || 0, window.__phoneSendCheck.h || 0) <= 1600 &&
+            window.__phoneSendCheck.bytes < (window.__phoneSendCheck.originalBytes || Infinity)
+          ),
           xhr: window.__gmXhrLog.slice(0, 6),
           relevantErrors: relevant,
         };
@@ -333,10 +454,11 @@
           report.phrasesLoaded &&
           report.changelogPopup &&
           report.viewerZoomOk &&
-          report.copyOk
+          report.copyOk &&
+          report.phoneSendCompressedOk
             ? 'ALL-OK'
             : 'PARTIAL');
-      }, 6500);
+      }, 11000);
     </script>
   </body>
 </html>

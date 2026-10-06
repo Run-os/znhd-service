@@ -5,8 +5,14 @@
 
 import { addLog } from '@/lib/logger';
 import { safeCopyText } from '@/lib/clipboard';
-import { RELAY_MAX_BODY, imagePayloadBytes, getDeviceId, sendToPhone } from '@/lib/relay';
+import { RELAY_MAX_BODY, imagePayloadBytes, compressImageForPhone, getDeviceId, sendToPhone } from '@/lib/relay';
 import { genQrDataUrl } from '@/lib/qrcode';
+
+/** 体积显示：统一按 KB 输出（不足 1KB 也显示 1KB，避免出现「0KB」） */
+function kbText(bytes: any) {
+    const n = Number(bytes) || 0;
+    return Math.max(1, Math.round(n / 1024)) + 'KB';
+}
 
 /** PhoneImageDrawer 组件属性 */
 export interface PhoneImageDrawerProps {
@@ -192,69 +198,86 @@ export function PhoneImageDrawer({ visible, setVisible, relayServer, onChangeRel
                 return;
             }
             const it = list[sent];
-            // 体积预检：base64 膨胀后若超服务端单请求上限，直接友好报错停止（不盲目传一半再被 413）
-            if (imagePayloadBytes(it.file, it.name, it.mime) > RELAY_MAX_BODY) {
-                addLog(
-                    '[发送到手机] 第 ' +
-                        (sent + 1) +
-                        ' 张过大（单张约 12MB 上限），已停止，请压缩后再试（已发 ' +
-                        sent +
-                        '/' +
-                        total +
-                        '）',
-                    'error',
-                    true
-                );
-                setSending(false);
-                return;
-            }
-            addLog('[发送到手机] 正在发送（' + (sent + 1) + '/' + total + '）：' + (it.name || 'image'), 'info');
-            const rd = new FileReader();
-            rd.onload = () => {
-                const b64 = ((rd.result as string) || '').split(',')[1] || '';
-                if (!b64) {
+            // 发送前统一压缩（与「手机 → 电脑」方向一致，默认开启、无开关）：
+            // canvas 等比缩放到最大边 PHONE_MAX_DIM 后导出 JPEG；SVG/GIF、解码失败、
+            // 以及「压完反而更大」的情况都回退原图直传，绝不阻断发送（见 relay.ts）。
+            addLog('[发送到手机] 正在处理（' + (sent + 1) + '/' + total + '）：' + (it.name || 'image'), 'info');
+            compressImageForPhone(it.file).then((out) => {
+                // 体积预检：base64 膨胀后若超服务端单请求上限，直接友好报错停止（不盲目传一半再被 413）
+                if (imagePayloadBytes(out.blob, out.name, out.mime) > RELAY_MAX_BODY) {
                     addLog(
-                        '[发送到手机] 第 ' + (sent + 1) + ' 张读取失败，已停止（已发 ' + sent + '/' + total + '）',
+                        '[发送到手机] 第 ' +
+                            (sent + 1) +
+                            ' 张压缩后仍超限（单张约 12MB 上限），已停止（已发 ' +
+                            sent +
+                            '/' +
+                            total +
+                            '）',
                         'error',
                         true
                     );
                     setSending(false);
                     return;
                 }
-                sendToPhone({
-                    server: relayServer,
-                    uuid: deviceId,
-                    payload: { name: it.name, mime: it.mime, data: b64 },
-                    onOk: () => {
-                        sent++;
-                        sendNext();
-                    },
-                    onFail: (e: any) => {
+                addLog(
+                    '[发送到手机] ' +
+                        (out.compressed
+                            ? '已压缩 ' + it.name + '：' + kbText(it.file.size) + ' → ' + kbText(out.blob.size)
+                            : '原图发送 ' + out.name + '（' + kbText(out.blob.size) + '）') +
+                        '，正在发送（' +
+                        (sent + 1) +
+                        '/' +
+                        total +
+                        '）',
+                    'info'
+                );
+                const rd = new FileReader();
+                rd.onload = () => {
+                    const b64 = ((rd.result as string) || '').split(',')[1] || '';
+                    if (!b64) {
                         addLog(
-                            '[发送到手机] 第 ' +
-                                (sent + 1) +
-                                ' 张发送失败：' +
-                                e +
-                                '（已发 ' +
-                                sent +
-                                '/' +
-                                total +
-                                '）',
-                            'error'
+                            '[发送到手机] 第 ' + (sent + 1) + ' 张读取失败，已停止（已发 ' + sent + '/' + total + '）',
+                            'error',
+                            true
                         );
                         setSending(false);
-                    },
-                });
-            };
-            rd.onerror = () => {
-                addLog(
-                    '[发送到手机] 第 ' + (sent + 1) + ' 张读取失败，已停止（已发 ' + sent + '/' + total + '）',
-                    'error',
-                    true
-                );
-                setSending(false);
-            };
-            rd.readAsDataURL(it.file);
+                        return;
+                    }
+                    sendToPhone({
+                        server: relayServer,
+                        uuid: deviceId,
+                        payload: { name: out.name, mime: out.mime, data: b64 },
+                        onOk: () => {
+                            sent++;
+                            sendNext();
+                        },
+                        onFail: (e: any) => {
+                            addLog(
+                                '[发送到手机] 第 ' +
+                                    (sent + 1) +
+                                    ' 张发送失败：' +
+                                    e +
+                                    '（已发 ' +
+                                    sent +
+                                    '/' +
+                                    total +
+                                    '）',
+                                'error'
+                            );
+                            setSending(false);
+                        },
+                    });
+                };
+                rd.onerror = () => {
+                    addLog(
+                        '[发送到手机] 第 ' + (sent + 1) + ' 张读取失败，已停止（已发 ' + sent + '/' + total + '）',
+                        'error',
+                        true
+                    );
+                    setSending(false);
+                };
+                rd.readAsDataURL(out.blob);
+            });
         };
         sendNext();
     };

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name                征纳互动人数和在线监控v2
 // @namespace           https://scriptcat.org/
-// @version             26.10.06-v5
+// @version             26.10.06-v6
 // @description         实时监控征纳互动等待人数和在线状态，支持语音播报、自定义常用语
 // @author              runos
 // @match               https://znhd.hunan.chinatax.gov.cn:8443/*
@@ -1419,7 +1419,7 @@ exports.genQrDataUrl = genQrDataUrl;
 var __webpack_unused_export__;
 
 __webpack_unused_export__ = ({ value: true });
-exports.sendToPhone = exports.startPhoneReceive = exports.copyImageToClipboard = exports.getDeviceId = exports.imagePayloadBytes = exports.RELAY_MAX_BODY = void 0;
+exports.sendToPhone = exports.startPhoneReceive = exports.copyImageToClipboard = exports.getDeviceId = exports.compressImageForPhone = exports.oN = exports.dL = exports.imagePayloadBytes = exports.RELAY_MAX_BODY = void 0;
 const logger_1 = __webpack_require__(514);
 /**
  * 设备互联中继客户端（手机 → 电脑）与图片剪贴板工具。
@@ -1452,6 +1452,108 @@ function imagePayloadBytes(file, name, mime) {
     return b64Len + byteLen + 120;
 }
 exports.imagePayloadBytes = imagePayloadBytes;
+/** 「发送到手机」压缩参数：与手机上传页保持一致（canvas 缩放到最大边 + JPEG 质量）。 */
+exports.dL = 1600;
+exports.oN = 0.75;
+/**
+ * 「电脑端 → 手机端」发送前的图片压缩，策略与手机上传页的 compressFile 对齐：
+ * canvas 等比缩放到最大边 PHONE_MAX_DIM，铺白底后导出 JPEG（PHONE_JPEG_QUALITY）。
+ *
+ * 以下情况一律回退「原图直传」，绝不阻断发送：
+ *  - SVG：canvas 无法可靠光栅化（无固有尺寸时画布为 0），且压成 JPEG 会丢矢量特性；
+ *  - GIF：canvas 只取首帧，会把动图压成静态图；
+ *  - 浏览器解不开的格式（如桌面 Chrome 的 HEIC/HEIF）：解码失败即回退；
+ *  - 压完反而更大（小图 / 已高度压缩的图）：回退原图，避免「越压越大」。
+ *
+ * @param {File|Blob} file - 用户选择的原始图片文件
+ * @returns {Promise<PhoneImagePayload>} 实际要发送的内容
+ */
+function compressImageForPhone(file) {
+    const name = String((file && file.name) || 'image.jpg');
+    const mime = String((file && file.type) || 'image/jpeg');
+    const original = { blob: file, name: name, mime: mime, compressed: false };
+    const lowerName = name.toLowerCase();
+    const lowerMime = mime.toLowerCase();
+    // SVG / GIF 原样直传（见上方说明）
+    if (lowerMime === 'image/svg+xml' ||
+        lowerMime === 'image/gif' ||
+        /\.svg$/.test(lowerName) ||
+        /\.gif$/.test(lowerName)) {
+        return Promise.resolve(original);
+    }
+    return new Promise((resolve) => {
+        // <img> 兜底解码：createImageBitmap 在部分内核/格式上不可用或直接抛
+        const decodeViaImg = () => new Promise((rs, rj) => {
+            const url = URL.createObjectURL(file);
+            const img = new Image();
+            img.onload = () => rs({
+                source: img,
+                width: img.naturalWidth,
+                height: img.naturalHeight,
+                release: () => URL.revokeObjectURL(url),
+            });
+            img.onerror = () => {
+                URL.revokeObjectURL(url);
+                rj(new Error('decode failed'));
+            };
+            img.src = url;
+        });
+        const decoded = typeof createImageBitmap === 'function'
+            ? createImageBitmap(file)
+                .then((bmp) => ({
+                source: bmp,
+                width: bmp.width,
+                height: bmp.height,
+                release: () => {
+                    if (bmp.close)
+                        bmp.close();
+                },
+            }))
+                .catch(() => decodeViaImg())
+            : decodeViaImg();
+        decoded
+            .then((dec) => {
+            const w = Number(dec.width) || 0;
+            const h = Number(dec.height) || 0;
+            if (!w || !h) {
+                dec.release();
+                resolve(original);
+                return;
+            }
+            const scale = Math.min(1, exports.dL / Math.max(w, h));
+            const cw = Math.max(1, Math.round(w * scale));
+            const ch = Math.max(1, Math.round(h * scale));
+            const cv = document.createElement('canvas');
+            cv.width = cw;
+            cv.height = ch;
+            const ctx = cv.getContext('2d');
+            if (!ctx) {
+                dec.release();
+                resolve(original);
+                return;
+            }
+            // JPEG 无透明通道：先铺白底，避免透明 PNG 被压成黑底（与手机上传页一致）
+            ctx.fillStyle = '#fff';
+            ctx.fillRect(0, 0, cw, ch);
+            ctx.drawImage(dec.source, 0, 0, cw, ch);
+            dec.release();
+            cv.toBlob((b) => {
+                if (!b || b.size >= (file.size || 0)) {
+                    resolve(original); // 压不小就不压
+                    return;
+                }
+                resolve({
+                    blob: b,
+                    name: name.replace(/\.[a-z0-9]+$/i, '') + '.jpg',
+                    mime: 'image/jpeg',
+                    compressed: true,
+                });
+            }, 'image/jpeg', exports.oN);
+        })
+            .catch(() => resolve(original));
+    });
+}
+exports.compressImageForPhone = compressImageForPhone;
 /**
  * 取得本机稳定设备 ID：首次运行用 crypto.randomUUID() 生成并持久化（GM_setValue），
  * 之后刷新/重开都读同一值。用于区分不同电脑（A、B 各自不同链接）。
@@ -2856,6 +2958,11 @@ const logger_1 = __webpack_require__(514);
 const clipboard_1 = __webpack_require__(170);
 const relay_1 = __webpack_require__(289);
 const qrcode_1 = __webpack_require__(888);
+/** 体积显示：统一按 KB 输出（不足 1KB 也显示 1KB，避免出现「0KB」） */
+function kbText(bytes) {
+    const n = Number(bytes) || 0;
+    return Math.max(1, Math.round(n / 1024)) + 'KB';
+}
 function PhoneImageDrawer({ visible, setVisible, relayServer, onChangeRelayServer }) {
     const deviceId = (0, relay_1.getDeviceId)();
     const [qrUrl, setQrUrl] = CAT_UI.useState('');
@@ -3039,54 +3146,68 @@ function PhoneImageDrawer({ visible, setVisible, relayServer, onChangeRelayServe
                 return;
             }
             const it = list[sent];
-            // 体积预检：base64 膨胀后若超服务端单请求上限，直接友好报错停止（不盲目传一半再被 413）
-            if ((0, relay_1.imagePayloadBytes)(it.file, it.name, it.mime) > relay_1.RELAY_MAX_BODY) {
-                (0, logger_1.addLog)('[发送到手机] 第 ' +
-                    (sent + 1) +
-                    ' 张过大（单张约 12MB 上限），已停止，请压缩后再试（已发 ' +
-                    sent +
-                    '/' +
-                    total +
-                    '）', 'error', true);
-                setSending(false);
-                return;
-            }
-            (0, logger_1.addLog)('[发送到手机] 正在发送（' + (sent + 1) + '/' + total + '）：' + (it.name || 'image'), 'info');
-            const rd = new FileReader();
-            rd.onload = () => {
-                const b64 = (rd.result || '').split(',')[1] || '';
-                if (!b64) {
-                    (0, logger_1.addLog)('[发送到手机] 第 ' + (sent + 1) + ' 张读取失败，已停止（已发 ' + sent + '/' + total + '）', 'error', true);
+            // 发送前统一压缩（与「手机 → 电脑」方向一致，默认开启、无开关）：
+            // canvas 等比缩放到最大边 PHONE_MAX_DIM 后导出 JPEG；SVG/GIF、解码失败、
+            // 以及「压完反而更大」的情况都回退原图直传，绝不阻断发送（见 relay.ts）。
+            (0, logger_1.addLog)('[发送到手机] 正在处理（' + (sent + 1) + '/' + total + '）：' + (it.name || 'image'), 'info');
+            (0, relay_1.compressImageForPhone)(it.file).then((out) => {
+                // 体积预检：base64 膨胀后若超服务端单请求上限，直接友好报错停止（不盲目传一半再被 413）
+                if ((0, relay_1.imagePayloadBytes)(out.blob, out.name, out.mime) > relay_1.RELAY_MAX_BODY) {
+                    (0, logger_1.addLog)('[发送到手机] 第 ' +
+                        (sent + 1) +
+                        ' 张压缩后仍超限（单张约 12MB 上限），已停止（已发 ' +
+                        sent +
+                        '/' +
+                        total +
+                        '）', 'error', true);
                     setSending(false);
                     return;
                 }
-                (0, relay_1.sendToPhone)({
-                    server: relayServer,
-                    uuid: deviceId,
-                    payload: { name: it.name, mime: it.mime, data: b64 },
-                    onOk: () => {
-                        sent++;
-                        sendNext();
-                    },
-                    onFail: (e) => {
-                        (0, logger_1.addLog)('[发送到手机] 第 ' +
-                            (sent + 1) +
-                            ' 张发送失败：' +
-                            e +
-                            '（已发 ' +
-                            sent +
-                            '/' +
-                            total +
-                            '）', 'error');
+                (0, logger_1.addLog)('[发送到手机] ' +
+                    (out.compressed
+                        ? '已压缩 ' + it.name + '：' + kbText(it.file.size) + ' → ' + kbText(out.blob.size)
+                        : '原图发送 ' + out.name + '（' + kbText(out.blob.size) + '）') +
+                    '，正在发送（' +
+                    (sent + 1) +
+                    '/' +
+                    total +
+                    '）', 'info');
+                const rd = new FileReader();
+                rd.onload = () => {
+                    const b64 = (rd.result || '').split(',')[1] || '';
+                    if (!b64) {
+                        (0, logger_1.addLog)('[发送到手机] 第 ' + (sent + 1) + ' 张读取失败，已停止（已发 ' + sent + '/' + total + '）', 'error', true);
                         setSending(false);
-                    },
-                });
-            };
-            rd.onerror = () => {
-                (0, logger_1.addLog)('[发送到手机] 第 ' + (sent + 1) + ' 张读取失败，已停止（已发 ' + sent + '/' + total + '）', 'error', true);
-                setSending(false);
-            };
-            rd.readAsDataURL(it.file);
+                        return;
+                    }
+                    (0, relay_1.sendToPhone)({
+                        server: relayServer,
+                        uuid: deviceId,
+                        payload: { name: out.name, mime: out.mime, data: b64 },
+                        onOk: () => {
+                            sent++;
+                            sendNext();
+                        },
+                        onFail: (e) => {
+                            (0, logger_1.addLog)('[发送到手机] 第 ' +
+                                (sent + 1) +
+                                ' 张发送失败：' +
+                                e +
+                                '（已发 ' +
+                                sent +
+                                '/' +
+                                total +
+                                '）', 'error');
+                            setSending(false);
+                        },
+                    });
+                };
+                rd.onerror = () => {
+                    (0, logger_1.addLog)('[发送到手机] 第 ' + (sent + 1) + ' 张读取失败，已停止（已发 ' + sent + '/' + total + '）', 'error', true);
+                    setSending(false);
+                };
+                rd.readAsDataURL(out.blob);
+            });
         };
         sendNext();
     };

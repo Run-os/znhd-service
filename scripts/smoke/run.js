@@ -67,6 +67,7 @@ const CHECKS = [
   ['changelogPopup', '更新日志弹窗（最新 10 条）'],
   ['viewerZoomOk', '缩略图放大显示主图'],
   ['copyOk', '图片复制只尝试写 PNG'],
+  ['phoneSendCompressedOk', '发送到手机前压缩'],
 ];
 
 /**

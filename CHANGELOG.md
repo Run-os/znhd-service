@@ -11,6 +11,16 @@
 
 ---
 
+### znhd.user.js v26.10.06-v6
+- **修复：电脑 → 手机发图完全没有压缩（原图直传），与「手机 → 电脑」方向不对称**。手机上传页一直有 canvas 压缩（最大边 1600px + JPEG q=0.75），而电脑端「发送到手机」是 `FileReader.readAsDataURL(原文件)` 直接 POST：base64 后体积 = 原文件 × 1.33，全程只有一条「超 12MB 就报错、让用户自己压缩」的兜底。实际影响：3MB 照片要上行 4MB；5MB 截图 PNG 要上行 6.7MB；**原图 ≥9MB 直接撞 12MB 单请求上限被拒**。
+- 改法（**默认压缩，不加开关**）：
+  - 新增 `compressImageForPhone()`（`src/lib/relay.ts`）：`createImageBitmap` 解码（不可用时回退 `<img>`）→ canvas 等比缩放到最大边 `PHONE_MAX_DIM = 1600` → 铺白底 → 导出 JPEG `PHONE_JPEG_QUALITY = 0.75`，参数与手机上传页的 `compressFile` 完全一致。
+  - 四种情况**回退原图直传**、绝不阻断发送：SVG（canvas 无法可靠光栅化且会丢矢量）、GIF（canvas 只取首帧，会把动图压成静态图）、浏览器解不开的格式（桌面 Chrome 的 HEIC/HEIF）、以及**压完反而更大**的小图 / 已高度压缩图。
+  - `PhoneImageDrawer` 发送循环改为「**先压缩 → 再体积预检 → 再发送**」；日志分别显示「已压缩 x → y」与「原图发送（y）」，超限文案改为「压缩后仍超限」。压缩后统一 `image/jpeg` + 原主名 `.jpg`（手机端「下载」的扩展名据此生成）。
+- **新增回归断言**（`npm run verify`）：「**发送到手机前压缩**」—— 冒烟页打开「设备互联」抽屉 → 注入一张 3000×2000 的 JPEG → 点发送 → 解出**实际 POST 出去的字节**，断言「是 JPEG（magic FFD8）、最长边 ≤1600、且比原图小」。断言有效性已用**反向对照**验证：把产物里的压缩短路后该项变红、套件退出码 1（避免了「空转断言」）。
+- 另用真实浏览器对产物里的 `compressImageForPhone` 跑了 15 项断言：4000×3000 JPEG → 1600×1200（106KB → 22KB，宽高比保持）；带透明 PNG → 透明区被铺成白底 `rgb(255,255,255)`、42KB → 19KB；GIF / SVG **对象原样返回**（未被替换）；小图无增益时回退原图。
+- `npm run typecheck`（strict）、`npm run lint`（0 error）、`npm run verify`（10 项全绿）均通过；`@version`→`26.10.06-v6`。
+
 ### znhd.user.js v26.10.06-v5
 - **全部 CDN 地址由 `cdn.jsdelivr.net` 换成 `fastly.jsdelivr.net`（jsDelivr 的 Fastly 镜像）**。根因：jsDelivr 主域在国内**直连不可达**（TCP 能连上、**TLS 阶段即失败**；`testingcf.jsdelivr.net` 同样），而 `fastly.jsdelivr.net` 正常可用。两者路径规则完全一致，仅换主机名，无行为差异。
   - `@require` ×3（js-yaml / qrcodejs / viewerjs）+ `@resource VIEWER_CSS`：改 `config/common.meta.json` 与 `config/dev.meta.json`。
