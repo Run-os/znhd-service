@@ -11,7 +11,7 @@
 
 ---
 
-### znhd.user.js v26.10.8-v1
+### znhd.user.js v26.10.06-v3
 
 - **修复：收到图片后单击缩略图放大，有时长时间不出图**（表现为弹出一片纯黑遮罩、图一直不出来，且反复点击无效）。根因是 Viewer.js 集成里的一处竞态：
   - Viewer.js 的 `shown()`（设置 `isShown=true`、创建主图、执行 `render()`/`bind()`）**只由容器的 `transitionend` 事件触发**；而本脚本为让预览盖在画廊白盒之上，用 `MutationObserver` 把 `.viewer-container` 在出现瞬间移入画廊遮罩——**移动 DOM 节点会打断正在进行的 CSS 过渡**，`transitionend` 不再触发 → `shown()` 永不执行 → `isShown` 永远为 `false` → 之后每次 `view()` 都在 `!this.isShown` 处提前返回，**主图从不被创建**；同时 `this.showing` 卡在 `true`（只在 `shown()` 里清除），所以反复点击同样无效。
@@ -20,15 +20,16 @@
   - 代价：失去放大/关闭的淡入淡出动画。
   - 该问题自 v26.7.29-v10 引入「把预览容器移入 overlay」的层级修复起就已存在，**非新引入**。
 - **补齐关键回归断言**：`npm run verify` 新增「**缩略图放大显示主图**」一项。此前 7 项断言里只有「九宫格画廊」（缩略图出现），**从未点过缩略图** —— 这正是该 bug 能存活两个多月的原因。断言同时覆盖「主图位于 `.viewer-canvas` 内、已解码、且有可见尺寸」（注意不能用 `vc.querySelector('img')`：会命中 `.viewer-magnifier-image` 放大镜占位图，其 `src` 为空、`naturalWidth` 恒为 0）。
+- **编号更正（本版发布时同步完成）**：把 2026-10-06 当天的三条条目统一为 `26.10.06-v1`/`v2`/`v3`。原先误把「当天第几次改动」当成日期递增（`26.10.6-v1` → `26.10.7-v1` → `26.10.8-v1`），等于凭空造出 10-07 / 10-08 两个日期，并会让油猴的版本比较把随后几天的新版本判成「更旧」。旧的错误编号可在 git 历史中查到；规范见本文件开头与 `AGENT.md` 约束 1。
 
-### znhd.user.js v26.10.7-v1
+### znhd.user.js v26.10.06-v2
 
 - **自动更新地址由 jsDelivr 改为 GitHub raw**：`@updateURL`/`@downloadURL` 从 `https://cdn.jsdelivr.net/gh/Run-os/znhd-service@refs/heads/main/dist/znhd.user.js` 改为 **`https://raw.githubusercontent.com/Run-os/znhd-service/refs/heads/main/dist/znhd.user.js`**。
-  - 原因：jsDelivr 对分支引用（`@refs/heads/main`）的文件带较长缓存，曾出现「仓库已推送新版本、jsDelivr 仍返回上一版」，用户因此收不到更新（见 v26.10.6-v1 的排查记录）；raw 走 Fastly 短 TTL，推送后基本秒级可见。
+  - 原因：jsDelivr 对分支引用（`@refs/heads/main`）的文件带较长缓存，曾出现「仓库已推送新版本、jsDelivr 仍返回上一版」，用户因此收不到更新（见 v26.10.06-v1 的排查记录）；raw 走 Fastly 短 TTL，推送后基本秒级可见。
   - ⚠️ **注意**：这两个字段由油猴管理器**直接请求**，不经过 `resolveGithubUrl()` —— 设置里的「使用 CDN 加速」开关对「脚本自动更新」无效，写死什么就用什么。
   - ⚠️ 改动随**脚本头部**生效：已装用户需**先更新到本版**，之后才会走 raw；尚未迁移的老安装仍轮询仓库根路径（jsDelivr）的过渡跳板，跳板每次发版都会同步刷新。
 
-### znhd.user.js v26.10.6-v1
+### znhd.user.js v26.10.06-v1
 
 - **新增：更新日志查看器** —— 「设置菜单」在 `[更新脚本]` 旁新增 `[更新日志]` 按钮，点击弹窗展示最新 10 条更新日志；弹窗底部「获取更多日志」跳转到 `CHANGELOG.md` 网页查看全部历史。
 - **重构：更新日志独立成文件** —— 原写在 `ReadMe.md` 里的全部更新日志移至仓库根的 `CHANGELOG.md`，ReadMe 只留指引；脚本运行时直接读取该文件（`GM_xmlhttpRequest`，遵循设置里的「使用 CDN 加速」开关走 jsDelivr / raw）。
