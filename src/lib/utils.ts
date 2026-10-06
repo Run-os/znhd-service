@@ -11,7 +11,8 @@ import { runtime } from '@/lib/state';
  * 将 GitHub 文件链接按需转换为 jsDelivr CDN 链接（或原始 GitHub 链接）。
  *
  * 转换规则：
- * - 开启 CDN（useCdn=true）：输出 `https://cdn.jsdelivr.net/gh/用户名/仓库名@分支/文件路径`
+ * - 开启 CDN（useCdn=true）：输出 `https://fastly.jsdelivr.net/gh/用户名/仓库名@分支/文件路径`
+ *   （jsDelivr 主域国内直连不可达，故固定走 Fastly 镜像；两者路径规则完全一致）
  *   （分支可含斜杠，如 `refs/heads/main`，通过字符串变换直接把 `/blob/` 或仓库后的 `/` 替换为 `@`，
  *   无需拆分分支/路径，故天然支持多段分支）。
  * - 关闭 CDN（useCdn=false）：输出可直接访问的 GitHub 原始链接 `https://raw.githubusercontent.com/...`。
@@ -34,7 +35,7 @@ export function resolveGithubUrl(githubUrl: string): string {
     const ghBlob = /^https?:\/\/github\.com\/([^/]+)\/([^/]+)\/blob\/(.+)$/i;
     if (ghBlob.test(url)) {
         if (useCdn) {
-            return url.replace(ghBlob, 'https://cdn.jsdelivr.net/gh/$1/$2@$3');
+            return url.replace(ghBlob, 'https://fastly.jsdelivr.net/gh/$1/$2@$3');
         }
         // 关闭 CDN：转为可直接访问的原始链接
         return url.replace(ghBlob, 'https://raw.githubusercontent.com/$1/$2/$3');
@@ -44,7 +45,7 @@ export function resolveGithubUrl(githubUrl: string): string {
     const raw = /^https?:\/\/raw\.githubusercontent\.com\/([^/]+)\/([^/]+)\/(.+)$/i;
     if (raw.test(url)) {
         if (useCdn) {
-            return url.replace(raw, 'https://cdn.jsdelivr.net/gh/$1/$2@$3');
+            return url.replace(raw, 'https://fastly.jsdelivr.net/gh/$1/$2@$3');
         }
         return url; // 已是原始链接，原样返回
     }

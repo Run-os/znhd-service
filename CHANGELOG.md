@@ -11,6 +11,16 @@
 
 ---
 
+### znhd.user.js v26.10.06-v5
+- **全部 CDN 地址由 `cdn.jsdelivr.net` 换成 `fastly.jsdelivr.net`（jsDelivr 的 Fastly 镜像）**。根因：jsDelivr 主域在国内**直连不可达**（TCP 能连上、**TLS 阶段即失败**；`testingcf.jsdelivr.net` 同样），而 `fastly.jsdelivr.net` 正常可用。两者路径规则完全一致，仅换主机名，无行为差异。
+  - `@require` ×3（js-yaml / qrcodejs / viewerjs）+ `@resource VIEWER_CSS`：改 `config/common.meta.json` 与 `config/dev.meta.json`。
+  - **运行时 CDN 解析**：`src/lib/utils.ts` 的 `resolveGithubUrl()` 开启「使用 CDN 加速」时输出 `https://fastly.jsdelivr.net/gh/...`（影响常用语数据源与提示音等 GitHub 资源）。
+  - Viewer.js CSS 的 CDN 兜底 `<link>`（`GM_getResourceText` 不可用时走）：`src/lib/gallery.ts`。
+  - 冒烟测试页依赖 `scripts/smoke/znhd-smoke.html` 一并同步，保证测试加载的仍是产物真实依赖。
+  - ⚠️ **未改**长缓存语义：`@refs/heads/main` 这类分支引用在 jsDelivr 上仍是长缓存（换镜像不改变缓存策略），因此 `@updateURL`/`@downloadURL` 继续指向 `raw.githubusercontent.com`（见 v26.10.06-v2）。
+- 实测 `fastly.jsdelivr.net` 上各路径均 200：`/npm/js-yaml@4.1.0`、`/npm/qrcodejs@1.0.0`、`/npm/viewerjs/dist/*`、`/gh/Run-os/znhd-service@refs/heads/main/public/dida.mp3`。
+- 已 `npm run build` 重建 `dist/znhd.user.js` 并按约定同步根跳板 `znhd.user.js`（两者字节一致）；`node --check`、`npm run typecheck`、`npm run verify` 均通过。`@version`→`26.10.06-v5`。
+
 ### relay-server v26.10.06-v1
 - **修复「手机上传页打开要 10 秒以上」——首屏白屏 10.87s 降到 ~0.2s**。根因不在服务端（实测 TTFB 仅 0.15~0.6s），而在手机页 `<head>` 里同步挂着两个第三方 CDN 脚本（无 `defer`/`async`，阻塞整个页面解析）：
   - `heic2any.js` **1.36MB**：`cdn.bootcdn.net` 对该网络**限速约 128KB/s**（同一 CDN 上 echarts、其他文件同样是 127KB/s，而本机从 npmmirror 下 5.8MB 只要 0.92s，排除本地带宽因素），且响应头为 **`Cache-Control: no-store`**（天天首次访问都要重下）——单这一个文件就是 **10.6s**；`heic2any.min.js` 同为 1.35MB，压缩/混淆救不了（内嵌解码器）。

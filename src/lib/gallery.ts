@@ -43,7 +43,7 @@ function ensureViewerCss() {
     if (!baseInjected) {
         const link = document.createElement('link');
         link.rel = 'stylesheet';
-        link.href = 'https://cdn.jsdelivr.net/npm/viewerjs/dist/viewer.min.css';
+        link.href = 'https://fastly.jsdelivr.net/npm/viewerjs/dist/viewer.min.css';
         (document.head || document.documentElement).appendChild(link);
     }
     // 覆盖样式：Viewer.js 默认遮罩是半透明黑（rgba(0,0,0,0.5)），放大时会透出后面的画廊弹窗；

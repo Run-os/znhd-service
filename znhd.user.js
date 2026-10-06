@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name                征纳互动人数和在线监控v2
 // @namespace           https://scriptcat.org/
-// @version             26.10.06-v4
+// @version             26.10.06-v5
 // @description         实时监控征纳互动等待人数和在线状态，支持语音播报、自定义常用语
 // @author              runos
 // @match               https://znhd.hunan.chinatax.gov.cn:8443/*
@@ -20,10 +20,10 @@
 // @updateURL           https://raw.githubusercontent.com/Run-os/znhd-service/refs/heads/main/dist/znhd.user.js
 // @downloadURL         https://raw.githubusercontent.com/Run-os/znhd-service/refs/heads/main/dist/znhd.user.js
 // @require             https://scriptcat.org/lib/1167/1.0.0/%E8%84%9A%E6%9C%AC%E7%8C%ABUI%E5%BA%93.js?sha384-jXdR3hCwnDJf53Ue6XHAi6tApeudgS/wXnMYBD/ZJcgge8Xnzu/s7bkEf2tPi2KS
-// @require             https://cdn.jsdelivr.net/npm/js-yaml@4.1.0/dist/js-yaml.min.js
-// @require             https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js
-// @require             https://cdn.jsdelivr.net/npm/viewerjs/dist/viewer.min.js
-// @resource            VIEWER_CSS https://cdn.jsdelivr.net/npm/viewerjs/dist/viewer.min.css
+// @require             https://fastly.jsdelivr.net/npm/js-yaml@4.1.0/dist/js-yaml.min.js
+// @require             https://fastly.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js
+// @require             https://fastly.jsdelivr.net/npm/viewerjs/dist/viewer.min.js
+// @resource            VIEWER_CSS https://fastly.jsdelivr.net/npm/viewerjs/dist/viewer.min.css
 // ==/UserScript==
 /* eslint-disable */ /* spell-checker: disable */
 // @[ 本文件是构建产物，源码与构建方式见 GitHub 仓库 Run-os/znhd-service，请勿直接编辑 ]
@@ -658,7 +658,7 @@ function ensureViewerCss() {
     if (!baseInjected) {
         const link = document.createElement('link');
         link.rel = 'stylesheet';
-        link.href = 'https://cdn.jsdelivr.net/npm/viewerjs/dist/viewer.min.css';
+        link.href = 'https://fastly.jsdelivr.net/npm/viewerjs/dist/viewer.min.css';
         (document.head || document.documentElement).appendChild(link);
     }
     // 覆盖样式：Viewer.js 默认遮罩是半透明黑（rgba(0,0,0,0.5)），放大时会透出后面的画廊弹窗；
@@ -3718,7 +3718,8 @@ const state_1 = __webpack_require__(989);
  * 将 GitHub 文件链接按需转换为 jsDelivr CDN 链接（或原始 GitHub 链接）。
  *
  * 转换规则：
- * - 开启 CDN（useCdn=true）：输出 `https://cdn.jsdelivr.net/gh/用户名/仓库名@分支/文件路径`
+ * - 开启 CDN（useCdn=true）：输出 `https://fastly.jsdelivr.net/gh/用户名/仓库名@分支/文件路径`
+ *   （jsDelivr 主域国内直连不可达，故固定走 Fastly 镜像；两者路径规则完全一致）
  *   （分支可含斜杠，如 `refs/heads/main`，通过字符串变换直接把 `/blob/` 或仓库后的 `/` 替换为 `@`，
  *   无需拆分分支/路径，故天然支持多段分支）。
  * - 关闭 CDN（useCdn=false）：输出可直接访问的 GitHub 原始链接 `https://raw.githubusercontent.com/...`。
@@ -3741,7 +3742,7 @@ function resolveGithubUrl(githubUrl) {
     const ghBlob = /^https?:\/\/github\.com\/([^/]+)\/([^/]+)\/blob\/(.+)$/i;
     if (ghBlob.test(url)) {
         if (useCdn) {
-            return url.replace(ghBlob, 'https://cdn.jsdelivr.net/gh/$1/$2@$3');
+            return url.replace(ghBlob, 'https://fastly.jsdelivr.net/gh/$1/$2@$3');
         }
         // 关闭 CDN：转为可直接访问的原始链接
         return url.replace(ghBlob, 'https://raw.githubusercontent.com/$1/$2/$3');
@@ -3750,7 +3751,7 @@ function resolveGithubUrl(githubUrl) {
     const raw = /^https?:\/\/raw\.githubusercontent\.com\/([^/]+)\/([^/]+)\/(.+)$/i;
     if (raw.test(url)) {
         if (useCdn) {
-            return url.replace(raw, 'https://cdn.jsdelivr.net/gh/$1/$2@$3');
+            return url.replace(raw, 'https://fastly.jsdelivr.net/gh/$1/$2@$3');
         }
         return url; // 已是原始链接，原样返回
     }
