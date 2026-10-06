@@ -8,6 +8,9 @@ name: NodeJS with Webpack
 #   5) 手机上传页（React+antd）—— 独立子项目 web/：装依赖 → typecheck → 构建 → 产物漂移检查
 #   - 脚本发布：dist/znhd.user.js 由 jsDelivr / ScriptCat 源代码同步对外提供
 #   - 服务端部署：由 deploy.yml 负责（relay-server 运行时不装依赖，产物直接 tar 进容器）
+# 另：支持 workflow_dispatch，可手动指定 runner 镜像（默认 ubuntu-latest）。
+#     用途 = 在 ubuntu-latest 迁到 Ubuntu 26.04 之前做一次整套门禁预检：
+#       gh workflow run webpack.yml -f runner=ubuntu-26.04
 permissions:
   contents: read
 
@@ -16,10 +19,21 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  workflow_dispatch:
+    inputs:
+      runner:
+        # 留空 = ubuntu-latest。预检填 ubuntu-26.04；若不准备迁就填 ubuntu-24.04 钉住旧镜像。
+        description: 'Runner 镜像标签（Ubuntu 26.04 迁移预检用，留空 = ubuntu-latest）'
+        required: false
+        default: ubuntu-latest
+        type: string
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    # 默认 ubuntu-latest；workflow_dispatch 时可用 runner 输入覆盖（Ubuntu 26.04 迁移预检）。
+    # ⚠️ ubuntu-latest 将于 2026-10-19 ~ 11-19 逐步迁到 Ubuntu 26.04（GitHub 公告）：
+    #    预检通过就不用改；预检失败则把 runner 输入填 ubuntu-24.04，或把下面的默认值直接钉成 ubuntu-24.04。
+    runs-on: ${{ github.event.inputs.runner || 'ubuntu-latest' }}
 
     strategy:
       matrix:
@@ -32,13 +46,18 @@ jobs:
       # （Ubuntu 24.04 镜像「Browsers and Drivers」列明确含 Google Chrome），
       # scripts/smoke/run.js 会自动探测系统浏览器（/usr/bin/google-chrome 等）。
       # 不跳过时 npm ci 会卡在下载上（实测 8 分钟仍未完成），且缓存 key 随 package-lock 变化而失效。
+      # 已核对迁移目标镜像：Ubuntu 26.04 清单（Image 20260927.149.1）同样预装 Google Chrome 154，
+      # 且仍缓存 Node 22.23.3，故下面 node-version: 22.x 与本条在 26.04 上均成立。
       PUPPETEER_SKIP_DOWNLOAD: 'true'
 
     steps:
-      - uses: actions/checkout@v4
+      # v7 起用 Node 24 运行时。旧版（checkout@v4 / setup-node@v3）跑在 Node 20 上，
+      # 而 Node 20 已于 2026-09-23 在 GitHub Actions 下线（连 ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION
+      # 逃生门都移除），现被强制顶到 Node 24 并报弃用警告，故升级。
+      - uses: actions/checkout@v7
 
       - name: Use Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v7
         with:
           node-version: ${{ matrix.node-version }}
 

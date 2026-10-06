@@ -26,10 +26,12 @@ env:
 
 jobs:
   deploy:
+    # ubuntu-latest 将于 2026-10-19 ~ 11-19 逐步迁到 Ubuntu 26.04（GitHub 公告）。本 job 只用到镜像的
+    # git/ssh/curl + node --check，无浏览器等版本敏感依赖，迁移预期无感；真出问题就把这里钉成 ubuntu-24.04。
     runs-on: ubuntu-latest
     steps:
       - name: 检查分支
-        uses: actions/checkout@v4    # 钉版本（旧 main 是移动分支），同时为下方语法门禁提供代码
+        uses: actions/checkout@v7    # 钉版本（旧 main 是移动分支），同时为下方语法门禁提供代码；v7 = Node 24 运行时（v4 跑在 2026-09-23 已下线的 Node 20 上）
         with:
           ref: main
 
