@@ -19,14 +19,34 @@
 
 ```
 znhd-service/
+├── config/                       # 构建配置（模板：Eished/douyu-helper）
+│   ├── common.meta.json          # 脚本元信息唯一来源（@version/@grant/@require/@updateURL…）
+│   ├── dev.meta.json             # 开发态元信息覆盖（-dev 名、localhost 调试）
+│   └── webpack.config.base.js / webpack.dev.js / webpack.prod.js
 ├── public/
-│   ├── commonPhrases.yaml       # 常用语配置文件（YAML 格式）
-│   └── dida.mp3                 # 操作提示音文件
-├── ReadMe.md                    # 项目说明文档
+│   ├── commonPhrases.yaml        # 常用语配置文件（YAML 格式）
+│   ├── dida.mp3                  # 操作提示音文件
+│   └── index.html                # 本地调试宿主页（webpack-dev-server）
+├── src/                          # 脚本源码（改代码改这里）
+│   ├── index.ts                  # 入口：生产直接启动 / 开发态热重载
+│   ├── app.ts                    # 装配：创建面板 → 面板位置跟踪 → 卸载清理 → 启动监控
+│   └── lib/                      # 业务模块
+│       ├── constants / logger / storage / state / utils
+│       ├── speech（语音队列）/ monitor（人数·掉线·工作时间）
+│       ├── tinymce / clipboard（提示音+安全复制）/ relay（中继+图片剪贴板）
+│       ├── gallery（画廊+文本弹窗）/ qrcode（二维码）
+│       └── ui/                   # LogPanel / SettingsDrawer / CommonPhrasesDrawer /
+│                                 #   PhoneImageDrawer / MainPanel / panelPosition
+├── dist/                         # 构建产物
+│   ├── znhd.user.js              # ⚠️ 发布产物（由 npm run build 生成，提交进仓库，勿手改）
+│   └── znhd.dev.user.js          # 开发产物（不提交）
 ├── relay-server/                 # 设备互联配套中继服务（Node，需自行部署到公网）
-│   ├── server.js               # 中继服务器：手机上传页 + 长轮询取图（纯 Node 内置 http，零依赖）
-│   └── package.json          # 零依赖，运行：node server.js
-└── znhd.user.js                 # 油猴脚本主文件
+│   ├── server.js                 # 中继服务器：手机上传页 + 长轮询取图（纯 Node 内置 http，零依赖）
+│   └── package.json              # 零依赖，运行：node server.js
+├── scripts/smoke/                # 无头端到端冒烟（puppeteer + GM 桩测试页）：npm run verify
+├── package.json / tsconfig.json / .eslintrc.js / .prettierrc.js
+├── ReadMe.md                     # 项目说明文档
+└── (仓库根不再放脚本产物)
 ```
 
 ## 快速开始
@@ -43,7 +63,7 @@ znhd-service/
 
 **方式二：手动安装**
 
-1. 打开 [`znhd.user.js`](znhd.user.js:1) 文件，复制全部内容
+1. 打开 [`dist/znhd.user.js`](dist/znhd.user.js:1) 文件，复制全部内容
 2. 点击油猴扩展图标 → 创建新脚本
 3. 粘贴内容并保存（Ctrl+S）
 
@@ -52,6 +72,24 @@ znhd-service/
 1. 访问征纳互动平台：https://znhd.hunan.chinatax.gov.cn:8443/
 2. 脚本自动启动，右下角出现"征纳互动监控"浮动面板
 3. 面板显示当前版本号、语音播报开关、设置和常用语入口
+
+### 4. 开发与构建（改源码时）
+
+脚本采用 Webpack + TypeScript 工程化开发（脚手架与 [douyu-helper](https://github.com/Eished/douyu-helper) 一致）。**源码在 `src/`，仓库根的 `znhd.user.js` 是构建产物，请勿直接编辑**（下次构建会覆盖）。
+
+```bash
+npm install            # 首次：安装开发依赖
+npm run build          # 生产构建：lint 修复 → 输出 dist/znhd.user.js
+npm run dev            # 开发构建（watch，输出 dist/znhd.dev.user.js）
+npm start              # 启动本地调试页 http://localhost:8080 并 watch（VSCode 里 Ctrl+Shift+B → start & dev）
+npm run typecheck      # TypeScript 类型检查（strict）
+npm run check          # 产物 + 服务端语法校验
+npm run verify         # 无头 Chromium 端到端冒烟（面板/弹窗/画廊/常用语），CI 也跑这个
+```
+
+- **改版本号**：编辑 `config/common.meta.json` 的 `version`（`YY.M.D-vN`），产物头部由构建自动生成。
+- **本地调试**：`npm start` 后，按 `config/dev.meta.json` 中 `@require` 指向的 `dist/znhd.dev.user.js` 安装开发脚本（需在油猴中允许访问本地文件 URL）；改动 `src/` 会触发目标站点热重载。
+- **发布**：push 到 `main` 后，`@updateURL`/`@downloadURL` 指向的 `dist/znhd.user.js` 即为最新产物，ScriptCat 自动同步。
 
 ## 功能详解
 
@@ -123,7 +161,7 @@ znhd-service/
 
 ### 脚本内部配置
 
-[`znhd.user.js`](znhd.user.js:32) 中的 `CONFIG` 对象（只读的运行参数）：
+[`src/lib/constants.ts`](src/lib/constants.ts:1) 中的 `CONFIG` 对象（只读的运行参数）：
 
 ```javascript
 const CONFIG = {
@@ -136,7 +174,7 @@ const CONFIG = {
 };
 ```
 
-可用户配置项（工作时间、常用语数据源、CDN 开关、语音开关、中继服务器地址）存放在 `DEFAULTS` 中，运行时存于 `localStorage`（键 `scriptCat_Allvalue`），可在设置面板直接修改，无需改代码：
+可用户配置项（工作时间、常用语数据源、CDN 开关、语音开关、中继服务器地址）存放在 [`src/lib/constants.ts`](src/lib/constants.ts:1) 的 `DEFAULTS` 中，运行时存于 `localStorage`（键 `scriptCat_Allvalue`），可在设置面板直接修改，无需改代码：
 
 ```javascript
 const DEFAULTS = {
@@ -184,6 +222,9 @@ const DEFAULTS = {
 | [Web Speech API](https://developer.mozilla.org/en-US/docs/Web/API/Web_Speech_API) | 语音合成播报                                                                                          |
 | [GM API](https://www.tampermonkey.net/documentation.php)                          | `GM_xmlhttpRequest`、`GM_setClipboard`、`GM_notification`、`GM_getValue`/`GM_setValue` 等油猴扩展 API |
 | [relay-server](relay-server/server.js:1)                                            | 设备互联配套中继服务：纯 Node 内置 `http`（零依赖），手机上传页内联、电脑端长轮询取图；需部署到公网 |
+| [Webpack 5](https://webpack.js.org/) + [TypeScript](https://www.typescriptlang.org/) | 构建与开发环境（脚手架对齐 [Eished/douyu-helper](https://github.com/Eished/douyu-helper)）：`src/` 打包成单文件产物 `znhd.user.js` |
+| [ESLint](https://eslint.org/) + [Prettier](https://prettier.io/)                     | 代码规范与格式化（`npm run lint` / `npm run build` 自动修复） |
+| [Puppeteer](https://pptr.dev/)                                                       | 无头 Chromium，跑 `npm run verify` 端到端冒烟（开发依赖，CI 也会用） |
 
 ## 浏览器兼容性
 
@@ -230,6 +271,20 @@ const DEFAULTS = {
 ## 更新日志
 
 > **版本号规范**：脚本与服务端均采用 `YY.M.D-vN`（日期 + 当日改动序号，跨天序号重置为 v1）。`znhd.user.js` 版本见头部 `@version`；`relay-server` 版本存于 `relay-server/package.json` 的 `version`（`/health` 接口返回同一版本）。每次改动需在本节顶部补一条（形如 `### <脚本名> <版本号>`），写明改动说明。
+
+### znhd.user.js v26.10.5-v1
+- **工程化改造：接入 douyu-helper(monkey-template) 构建体系 + 源码模块化（脚本行为不变）**：
+  - **新增 Webpack + TypeScript 构建**：源码迁到 `src/`，`==UserScript==` 头与 `@version` 等元信息改由 `config/common.meta.json` 生成；**生产产物输出到模板默认位置 `dist/znhd.user.js` 并提交进仓库**。开发态另有 `config/dev.meta.json` + `npm start`（devServer :8080、本地调试宿主页、`GM_addValueChangeListener` 热重载）。
+  - ⚠️ **发布地址已变更（升级需注意）**：`@updateURL`/`@downloadURL` 由 `main/znhd.user.js` 改为 **`main/dist/znhd.user.js`**，仓库根不再放产物。老版本安装的脚本头部仍指向根路径，**请在 ScriptCat 的「源代码同步」里把地址改成 `https://github.com/Run-os/znhd-service/raw/main/dist/znhd.user.js`（或 jsDelivr 同路径）**；改动生效后新版本会自动带上新地址。若同步源未能改写，个别安装实例可能需要重装一次。
+  - **抽离模块到 `src/lib/` 与 `src/lib/ui/`（模块化完成）**：`constants`（CONFIG/DEFAULTS/存储键）、`logger`（日志与防抖去重，回调改为 `setLogEntriesSink` 注入）、`storage`（面板位置/常用语缓存/配置读写）、`state`（`runtime` 运行时缓存）、`utils`（GitHub 链接解析/HTML 转义/URL 安全解码/时间换算）、`speech`（语音队列与超时保护）、`monitor`（人数监控/掉线检测/工作时间）、`tinymce`（编辑器追加）、`clipboard`（提示音 + 安全复制）、`relay`（中继客户端 + 图片剪贴板）、`gallery`（九宫格画廊/文本弹窗/Viewer 接管）、`qrcode`；UI 侧为 `ui/LogPanel`、`ui/SettingsDrawer`、`ui/CommonPhrasesDrawer`、`ui/PhoneImageDrawer`、`ui/MainPanel`、`ui/panelPosition`。**`src/app.ts` 从 2727 行降到约 90 行装配代码**，全仓已无 `@ts-nocheck`。
+  - **等价性验证**：迁移用 AST 比对确认「原 IIFE 的 89 条顶层语句零丢失」（6 条为运行时缓存对象化 / 卸载清理改模块函数 / 具名 IIFE 改导出函数的有意重组）；`npm run build` / `npm run typecheck` / `npm run lint` / `npm run check` 全部通过。
+  - **浏览器实测（example.com 调试宿主 + GM 桩按真实中继协议投递文本/图片）**：浮动面板与版本号、设置抽屉（时间段/地址/日志）、文本弹窗、九宫格画廊、图片与文本两条剪贴板路径、常用语 YAML 成功解析、中继离线优雅降级均通过，脚本自身零报错。
+  - 说明：常用语加载/缓存逻辑（`loadPhrasesData`）因与面板 React 状态深度绑定，**保留在 `src/lib/ui/MainPanel.ts`** 内未单独成模块（拆出需为状态加桥接，属无意义重构）。
+  - **类型收紧**：`tsconfig.json` 开启 `strict: true`（唯一例外 `useUnknownInCatchVariables: false`，沿用既有的「catch 后直接读 `e.message` 记日志」写法）。修掉实测的 197 个 strict 错误，绝大多数是补参数/变量类型标注——**类型会被编译擦除，产物行为不变**。
+  - **新增自动化回归**：`npm run verify` 用 puppeteer 无头 Chromium 加载真实构建产物（GM API 桩 + 真实 `@require` 依赖 + 按真实中继协议投递文本/图片），断言面板、版本号、文本弹窗、九宫格画廊、常用语解析、抽屉可打开且页面无脚本自身报错；已接入 GitHub Actions（push / PR 都会跑）。
+  - **迁移等价性验证（工具已删除）**：迁移期做过两层证明——① 对迁移前快照做 AST 级「顶层语句零丢失」比对（89 条，丢失 0）；② 差异对照：同一 harness 分别跑「迁移前原版」与「当前产物」，报告字段 / XHR 路径 / `localStorage` 三个键 / GM 设备 ID / 面板 ShadowDOM 文本 / 两个弹窗文本**逐字节一致**。验证完成后相关脚本与 151KB 快照已删除（它们只服务于「迁移」而非「日常回归」，留着会让正常修改误报）。
+  - ⚠️ 仅工程化改动，**功能逻辑未变**；税务页真实环境仍建议按 ReadMe「快速开始 → 开发与构建」再实测一次面板/语音/常用语/设备互联。
+- `@version`→`26.10.5-v1`。
 
 ### znhd.user.js v26.9.6-v9
 - **处理「性能与冗余」审查第一批**（脚本端，交互语义不变）：

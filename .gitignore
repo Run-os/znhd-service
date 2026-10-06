@@ -1,2 +1,8 @@
 relay-server/node_modules
 tmp/
+
+# 构建/依赖
+# 源码在 src/，发布产物是 dist/znhd.user.js（与 douyu-helper 模板一致，提交进仓库）
+node_modules/
+dist/*
+!/dist/znhd.user.js

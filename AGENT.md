@@ -47,10 +47,33 @@
 
 | 文件 | AI 需知的事实 |
 |---|---|
-| `znhd.user.js` | 单文件 IIFE（`'use strict'`）；用 `// ==========` 注释分区导航；每个具名函数有 JSDoc。头部 `@version` 即脚本版本。 |
+| `dist/znhd.user.js` | **构建产物，禁止直接编辑**（下次构建会覆盖）。由 `npm run build` 从 `src/` 生成，**提交进仓库**（模板同款做法）。`==UserScript==` 头由 `config/common.meta.json` 生成。 |
+| `config/common.meta.json` | 脚本元信息唯一来源（`@version`/`@grant`/`@require`/`@updateURL` 等）——**改版本号改这里，不改产物**。 |
+| `config/dev.meta.json` | 开发态元信息覆盖（`-dev` 名、localhost `@match`、`GM_addValueChangeListener`、`@require file://.../dist/znhd.dev.user.js`）。⚠️ 数组字段是**整体覆盖**而非追加，故 `require` 必须写全量列表。 |
+| `config/webpack*.js` | 构建配置（对齐 Eished/douyu-helper 模板）。生产产物落 `dist/znhd.user.js`（提交），开发产物落 `dist/znhd.dev.user.js`（忽略）。 |
+| `src/index.ts` | 入口：生产直接 `app()`；开发动态 import `devTools`（热重载 / 首次自动安装）。 |
+| `src/app.ts` | **入口装配**（~90 行）：创建面板 → `setupPanelPositionTracking()` → beforeunload 清理 → 启动监控。业务实现全在 `src/lib/`。 |
+| `src/lib/*.ts` | 业务模块：`constants`（CONFIG/DEFAULTS/存储键）、`logger`（addLog/防抖/`setLogEntriesSink`）、`storage`（localStorage 读写）、`state`（`runtime` 运行时缓存）、`utils`（链接解析/转义/时间换算）、`speech`（语音队列）、`monitor`（人数·掉线·工作时间）、`tinymce`（编辑器写入）、`clipboard`（提示音+安全复制）、`relay`（中继客户端+图片剪贴板）、`gallery`（九宫格画廊+文本弹窗）、`qrcode`（二维码 dataURL）。 |
+| `src/lib/ui/*.ts` | UI 组件：`LogPanel`、`SettingsDrawer`、`CommonPhrasesDrawer`、`PhoneImageDrawer`、`MainPanel`、`panelPosition`（面板拖拽位置保存，由原具名 IIFE 改为导出函数）。 |
+
+> **有意未拆出的模块**：`phrases`（常用语加载/缓存/请求序号）。`loadPhrasesData` 直接读写 React 状态（`phrasesData`/`setPhrasesData`/`setPhrasesLoading`）与 `phrasesRequestSeq`，抽成独立模块必须引入 `getData/setData` 桥接，属于「为拆而拆」，与约束 3「不得无理由重构可运行逻辑」冲突，故保留在 `src/lib/ui/MainPanel.ts` 内。如日后要拆，请连同组件状态一起改成自定义 hook。
+| `src/global.d.ts` | 全局声明：`PRODUCTION`/`FILENAME`（DefinePlugin 注入）+ `CAT_UI`/`jsyaml`/`QRCode`/`Viewer`（`@require` 注入）。GM_* 由 `@types/tampermonkey` 提供。 |
+| `public/index.html` | 本地调试宿主页（HtmlWebpackPlugin 模板 + devServer 静态根）。 |
+| `scripts/smoke/` | 无头端到端冒烟：`server.js`（本地服务）+ `znhd-smoke.html`（GM 桩测试页）+ `run.js`（puppeteer）。`npm run verify`，**已接入 CI**。目录名沿用模板外的最小新增（模板无测试目录）。 |
 | `relay-server/server.js` | `uploadPageHtml()` 返回整页内联 HTML/JS（手机上传页），同源托管。`PORT = process.env.PORT \|\| 5689`。版本读 `package.json`（`VERSION`），`/health` 返回。 |
 | `relay-server/package.json` | 零依赖；`version` 是服务端版本唯一来源。 |
 | `.github/workflows/deploy.yml` | 部署真源。**注意：`appleboy/ssh-action` 不会把顶层 `env` 注入远程 shell，脚本内变量是硬编码的**；容器名/路径改动要改脚本内与 env 两处。自带详尽注释（bind 失联背景等），勿在别处再维护第二份流程说明。 |
+
+## 构建与模块化（对齐 Eished/douyu-helper 模板）
+
+- **唯一真源**：`src/`（源码）+ `config/*.meta.json`（元信息）；`znhd.user.js` 是产物。
+- **常用命令**：`npm install` → `npm run build`（生产）/ `npm run dev`（watch 到 `dist/`）/ `npm start`（devServer :8080）/ `npm run typecheck`（strict）/ `npm run lint` / `npm run check` / `npm run verify`（无头端到端冒烟）。VSCode 里 `Ctrl+Shift+B` 选 `start & dev`。
+- **发布链路**：生产产物写 `dist/znhd.user.js`（模板默认位置），并提交进仓库；`@updateURL`/`@downloadURL` 指向 jsDelivr 上的 `.../main/dist/znhd.user.js`。⚠️ **2026-10-05 起产物路径由仓库根迁到 `dist/`**：老版本安装的脚本头部仍指向根路径，需要在 ScriptCat 的「源代码同步」里改到新地址（详见 ReadMe 更新日志）。
+- **模块化约定**：一次只搬一个模块，搬完必须 `npm run build && npm run typecheck && npm run verify` 通过；模块间共享可变状态一律走 `src/lib/state.ts` 的 `runtime` 对象（ES module 的 import 绑定只读，不能用 `export let` 让外部赋值）。新模块一律带类型，**不再写 `@ts-nocheck`**。
+- **为什么只有 `.prettierignore`、没有 `.eslintignore`**：`npm run lint` 的 glob 只覆盖 `src/**/*.{ts,tsx}`，本来就碰不到 `dist/`、`relay-server/`、仓库根，故 `.eslintignore` 属冗余已删除。`.prettierignore` 保留，是为了挡住「有人手动 `npx prettier --write .`」把**提交进仓库的产物 `dist/znhd.user.js`** 与 `relay-server/server.js` 重排（prettier 是全局格式化，不像 eslint 有 glob 限制）。
+- **迁移等价性是怎么证明的（工具已按需删除，勿再重建）**：`26.10.5-v1` 迁移期做了两层验证——① AST 级「顶层语句零丢失」比对（对迁移前快照，89 条，丢失 0，6 条已登记的有意重组）；② 差异对照：同一 harness 分别跑「迁移前原版」与「当前构建产物」，报告字段 / 6 条 XHR 路径 / `localStorage` 三个键 / GM 设备 ID / 面板 ShadowDOM 文本 / 两个弹窗文本**逐字节一致**。两层均已完成并记录在 `.workbuddy/memory/2026-10-0{5,6}.md`；工具与 151KB 快照已删除（它们会让日后的正常修改误报，且是为「迁移」而非「回归」服务的）。
+- **端到端冒烟（`npm run verify`，已接入 CI）**：`scripts/smoke/` 起本地服务（`/` 测试页、`/znhd.user.js` 构建产物），用 puppeteer 无头 Chromium 加载，GM API 桩 + 真实 `@require` 依赖 + 按真实中继协议投递 1 条文本 + 1 张图。断言面板/版本号/文本弹窗/九宫格画廊/常用语 YAML 解析/抽屉可打开 + 页面无脚本自身报错。**结构变动后必须本地跑一次**。
+- **`tsconfig.json` 已开启 `strict: true`**（2026-10-06）；唯一例外是 `useUnknownInCatchVariables: false`（沿用「catch 后直接读 e.message 记日志」的既有写法，18 处）。新增代码按 strict 写。
 
 ## 复用代码溯源
 
@@ -96,14 +119,14 @@
 
 ## Agent修改代码强制约束（最高优先级）
 
-1. **版本号 `YY.M.D-vN`，跨天序号重置 v1**（规范详见 ReadMe「更新日志」开头）。改脚本 → 递增头部 `@version`；改 `relay-server/server.js` → 递增 `relay-server/package.json` 的 `version`；每次改动在 ReadMe「更新日志」顶部补一条。
+1. **版本号 `YY.M.D-vN`，跨天序号重置 v1**（规范详见 ReadMe「更新日志」开头）。改脚本 → 递增 **`config/common.meta.json` 的 `version`**（产物头是构建生成的，**不要**去改 `znhd.user.js`）；改 `relay-server/server.js` → 递增 `relay-server/package.json` 的 `version`；每次改动在 ReadMe「更新日志」顶部补一条。
 2. **禁止给 `relay-server` 增加 npm 依赖/构建步骤**（部署无 npm install）。
 3. **不得无理由重构可运行逻辑**（尤其弹窗 CSS、长轮询/广播机制、CAT_UI 用法）。改前先读 ReadMe 更新日志对应条目——多数"诡异写法"是真实浏览器实测结论。
 4. **新依赖必须记录**：同步更新 ReadMe「技术栈」与「项目结构」（依赖清单唯一归属 ReadMe，agent 不另存）。
 5. **硬编码尽量迁移配置**：脚本端用户可配置项进 `DEFAULTS`，常量进 `CONFIG`。
 6. **GitHub 资源引用存「GitHub 网页链接」**，运行时经 `resolveGithubUrl()` + `useCdn` 转 jsDelivr/raw；勿在 `DEFAULTS` 存 CDN 成品链接。（例外：`commonPhrasesUrl` 自 v26.9.6-v5 起规范值改存 **raw 原始直链**——用户误填网页/仓库页面会把整页 HTML 当 YAML 解析失败；raw 属 `resolveGithubUrl` 形式二，`useCdn` 开仍转 jsDelivr。其余如 `didaUrl` 仍存网页链接。）
 7. **新增 GM API 必须补 `@grant`**；`@match` 含税务页与 example.com（调试宿主），勿乱动。
-8. **保持现有风格**：中文注释/日志、语义前缀（`[监控]` `[设备互联]` 等）、JSDoc；提交前 `node --check <file>` 两文件均需通过。
+8. **保持现有风格**：中文注释/日志、语义前缀（`[监控]` `[设备互联]` 等）、JSDoc。提交前必须依次通过：`npm run build`（= `lint:fix` + webpack）、`npm run typecheck`（strict）、`npm run check`（产物 + 服务端 `node --check`）、`npm run verify`（无头端到端冒烟）。**禁止手改 `dist/znhd.user.js`**（构建会覆盖）。
 9. **双向互传类改动 = 两端同步 + 重启 + 版本说明**（脚本 `@version`、服务端 version 各自递增）。
 10. 涉及部署/容器/路径以 `.github/workflows/deploy.yml` 为准，勿硬编码别处。
 11. **发现 ReadMe 与代码不符 → 直接修 ReadMe**（本仓库文档已多次过期），不在 agent.md 建长期对照表；修正后改代码处如有注释也一并更新。
@@ -126,4 +149,5 @@
 - **FingerprintJS**：`@require` 已删除（v26.9.6-v7 清理死依赖），此项已关闭。
 - **画廊两端重复实现**（脚本端 / server.js 手机页）：无共享模块，改动成本翻倍（见「复用代码溯源」）。
 - **待评估优化池**（2026-09-14 「性能与冗余」审查；第一批 P1/P2/P3/P5/P8/P9 已落地 v26.9.6-v9 + relay v26.9.6-v5）：① 归一化 `trim().replace(/\/+$/,'')` 6 处 + 输入事件解包 5 处可提炼 helper；② `appendToTinyMCE` 返回值全仓无人接收且 iframe 查询重复 3 处；③ relay `MAX_QUEUE=100` 按条数计（单条 ≤12MB → 每设备最坏 ~1.2GB），可加 `MAX_QUEUE_BYTES`。细则见 `.workbuddy/memory/2026-09-14.md`。
-- **无自动化测试**：仅 `node --check` 语法校验 + 人工/浏览器实测；服务端无类型声明。（服务端正反向逐行镜像已由 `createChannel()` 工厂消除，relay v26.9.6-v1。）
+- **模块化 + 类型化已完成（2026-10-05 ~ 10-06，v26.10.5-v1）**：原 2727 行单文件已拆为 `src/lib/*` + `src/lib/ui/*`，`src/app.ts` 只剩装配；`tsconfig.json` 已开 `strict: true`（仅 `useUnknownInCatchVariables: false`）；`npm run verify` 已接入 CI。
+- **无单元测试**：覆盖靠 `npm run typecheck`（strict）+ `npm run verify`（无头端到端冒烟：面板/弹窗/画廊/常用语/剪贴板）+ 人工税务页实测；服务端仍无类型声明。（服务端正反向逐行镜像已由 `createChannel()` 工厂消除，relay v26.9.6-v1。）

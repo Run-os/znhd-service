@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>znhd 冒烟测试</title>
+
+    <!-- ===== GM API 桩（模拟油猴环境 + 按真实中继协议返回数据） ===== -->
+    <script>
+      // 先落一份干净的配置（脚本读 localStorage，不读 GM_getValue）
+      localStorage.removeItem('scriptCat_PhrasesCache');
+      localStorage.removeItem('scriptCat_PanelPoint');
+      localStorage.setItem('scriptCat_Allvalue', JSON.stringify({ voiceEnabled: false, useCdn: true }));
+
+      window.__gmXhrLog = [];
+      const PNG_1x1 =
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
+      const PHRASES_YAML = ['冒烟常用语A: |', '  A 的内容', '冒烟常用语B: |', '  B 的内容', ''].join('\n');
+
+      const reply = (details, payload) => {
+        setTimeout(() => {
+          if (typeof details.onload === 'function') {
+            details.onload({
+              status: 200,
+              statusText: 'OK',
+              responseText: typeof payload === 'string' ? payload : JSON.stringify(payload),
+              responseHeaders: '',
+              finalUrl: details.url,
+            });
+          }
+        }, 40);
+      };
+
+      window.GM_info = {
+        script: { version: '26.10.5-v1' },
+        scriptHandler: 'smoke-harness',
+        scriptUpdateURL: 'https://example.invalid/znhd.user.js',
+        scriptWillUpdate: false,
+      };
+      window.unsafeWindow = window;
+      window.GM_getValue = (k, d) => (k in (window.__store || {}) ? window.__store[k] : d);
+      window.GM_setValue = (k, v) => {
+        window.__store = window.__store || {};
+        window.__store[k] = v;
+      };
+      window.GM_addStyle = (css) => {
+        const s = document.createElement('style');
+        s.textContent = css;
+        document.head.appendChild(s);
+        return s;
+      };
+      window.GM_setClipboard = () => {};
+      window.GM_getResourceText = () => '';
+      window.GM_notification = () => {};
+      window.GM_addValueChangeListener = () => {};
+
+      window.GM_xmlhttpRequest = (details) => {
+        const url = String((details && details.url) || '');
+        window.__gmXhrLog.push(((details && details.method) || 'GET') + ' ' + url);
+
+        // 常用语 YAML：走成功路径
+        if (url.includes('commonPhrases.yaml')) {
+          reply(details, PHRASES_YAML);
+          return { abort: () => {} };
+        }
+        // 手机在线状态：离线
+        if (/\/phone\/status\//.test(url)) {
+          reply(details, { online: false });
+          return { abort: () => {} };
+        }
+        // 中继收件长轮询：先空响应确认连接，再给一条文本、一张图片，之后空转
+        if (/\/recv\//.test(url)) {
+          const n = (window.__recvCount = (window.__recvCount || 0) + 1);
+          if (n === 1) reply(details, { empty: true });
+          else if (n === 2)
+            reply(details, { type: 'text', text: '冒烟测试文本：收到一条文本消息', ts: Date.now() });
+          else if (n === 3)
+            reply(details, { type: 'image', name: 'smoke.png', mime: 'image/png', data: PNG_1x1, ts: Date.now() });
+          else reply(details, { empty: true });
+          return { abort: () => {} };
+        }
+        // 其它一律失败，观察脚本是否优雅降级
+        setTimeout(() => {
+          if (details && typeof details.onerror === 'function') {
+            details.onerror({ status: 0, statusText: 'smoke-harness-blocked' });
+          }
+        }, 40);
+        return { abort: () => {} };
+      };
+    </script>
+
+    <!-- ===== 与 userscript @require 完全相同的依赖 ===== -->
+    <script src="https://scriptcat.org/lib/1167/1.0.0/%E8%84%9A%E6%9C%AC%E7%8C%ABUI%E5%BA%93.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/js-yaml@4.1.0/dist/js-yaml.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/viewerjs/dist/viewer.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/viewerjs/dist/viewer.min.css" />
+  </head>
+  <body>
+    <h1>znhd 面板冒烟测试</h1>
+    <p>模拟 example.com 调试宿主：脚本会在本页注入浮动面板，并由 GM 桩按真实协议投递文本/图片。</p>
+
+    <!-- 人数监控取 .count:nth-child(2)：本题为 body 的第 2 个子节点 -->
+    <div class="count"><span>等待人数</span><span>0</span></div>
+
+    <pre id="smoke-result" style="margin-top: 40px">running…</pre>
+
+    <script>
+      window.__errors = [];
+      window.addEventListener('error', (e) =>
+        window.__errors.push('error: ' + (e.message || e.type) + ' @ ' + (e.filename || '-') + ':' + (e.lineno || '-'))
+      );
+      window.addEventListener('unhandledrejection', (e) => {
+        const r = e.reason;
+        window.__errors.push('unhandledrejection: ' + ((r && (r.stack || r.message)) || String(r)));
+      });
+    </script>
+
+    <!-- ===== 被测对象：构建产物 ===== -->
+    <script src="/znhd.user.js"></script>
+
+    <script>
+      // CAT_UI 把面板挂在 Shadow DOM 里，必须穿透 shadowRoot 才能读到文本；
+      // 弹窗（画廊/文本）挂在 documentElement 下，故用 documentElement.textContent 兜底。
+      const collectText = () => {
+        let text = (document.documentElement.innerText || '') + '\n' + (document.documentElement.textContent || '');
+        const walk = (root) => {
+          root.querySelectorAll('*').forEach((el) => {
+            if (el.shadowRoot) {
+              text += '\n' + (el.shadowRoot.textContent || '');
+              walk(el.shadowRoot);
+            }
+          });
+        };
+        walk(document);
+        return text;
+      };
+
+      // 自动打开「常用语」抽屉，验证远程 YAML 成功路径
+      const clickByText = (label) => {
+        let hit = null;
+        const walk = (root) => {
+          root.querySelectorAll('*').forEach((el) => {
+            if (hit) return;
+            if (el.shadowRoot) walk(el.shadowRoot);
+            if (!hit && (el.tagName === 'BUTTON' || el.tagName === 'A') && (el.textContent || '').trim() === label) hit = el;
+          });
+        };
+        walk(document);
+        if (hit) hit.click();
+        return !!hit;
+      };
+
+      setTimeout(() => {
+        window.__clickedPhrases = clickByText('常用语');
+      }, 3200);
+
+      setTimeout(() => {
+        const text = collectText();
+        const relevant = window.__errors.filter((e) => !/chrome-extension:/.test(e));
+        const report = {
+          CAT_UI: typeof window.CAT_UI,
+          jsyaml: typeof window.jsyaml,
+          QRCode: typeof window.QRCode,
+          Viewer: typeof window.Viewer,
+          recvResponses: window.__recvCount || 0,
+          panel: text.includes('征纳互动监控'),
+          version: (text.match(/v26\.\d+\.\d+-v\d+/) || ['<无>'])[0],
+          // 文本弹窗
+          textPopup: text.includes('冒烟测试文本：收到一条文本消息'),
+          // 九宫格画廊
+          galleryText: text.includes('收到的图片'),
+          // 常用语成功路径（YAML 解析出按钮）
+          phrasesLoaded: text.includes('冒烟常用语A'),
+          phrasesClicked: !!window.__clickedPhrases,
+          xhr: window.__gmXhrLog.slice(0, 6),
+          relevantErrors: relevant,
+        };
+        document.getElementById('smoke-result').textContent = JSON.stringify(report, null, 2);
+        document.title =
+          'znhd-smoke:' +
+          (report.panel && report.textPopup && report.galleryText && report.phrasesLoaded ? 'ALL-OK' : 'PARTIAL');
+      }, 6000);
+    </script>
+  </body>
+</html>

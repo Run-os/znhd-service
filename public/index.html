@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>征纳互动监控 · 本地调试宿主</title>
+  </head>
+  <body>
+    <h1>征纳互动人数和在线监控 · 本地调试宿主</h1>
+    <p>本页用于本地调试脚本面板/弹窗/画廊，真实业务逻辑仍以税务页实测为准。</p>
+
+    <!--
+      人数监控取 `.count:nth-child(2)`：必须是「父节点的第 2 个子节点」且带 .count 类。
+      下面 h1/p 是第 1/2 个子节点，故这里再加一层容器让 .count 成为其唯一子节点。
+    -->
+    <div class="mock-monitor">
+      <div class="count"><span>等待人数</span><span>0</span></div>
+    </div>
+
+    <!-- 掉线弹窗选择器 .t-dialog__body__icon:nth-child(2)；默认不渲染，需要时手动取消注释 -->
+    <!-- <div class="t-dialog"><div></div><div class="t-dialog__body__icon">已掉线</div></div> -->
+
+    <!-- 常用语填入目标：TinyMCE（本地调试时可选，缺失会走脚本的降级分支） -->
+  </body>
+</html>

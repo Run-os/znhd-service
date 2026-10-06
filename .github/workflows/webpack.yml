@@ -1,0 +1,48 @@
+name: NodeJS with Webpack
+
+# 构建门禁：push/PR 到 main 时安装依赖并依次校验，全部通过才算成功，不做部署。
+#   1) npm run build          —— webpack 打包（含 lint 修复）
+#   2) npm run typecheck      —— TypeScript strict 类型检查
+#   3) npm run verify         —— 无头 Chromium 端到端冒烟（面板/弹窗/画廊/常用语/无脚本报错）
+#   4) node --check 产物      —— 产物语法门禁
+#   - 脚本发布：dist/znhd.user.js 由 jsDelivr / ScriptCat 源代码同步对外提供
+#   - 服务端部署：由 deploy.yml 负责（relay-server，零依赖 tar 直写容器）
+permissions:
+  contents: read
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        # 模板为 14.x；本仓库 devDependencies 用 ^ 范围解析到较新版本，Node 14 已不兼容
+        node-version: [20.x]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Build
+        run: |
+          npm ci
+          npm run build
+
+      - name: 类型检查（strict）
+        run: npm run typecheck
+
+      - name: 端到端冒烟（无头 Chromium）
+        run: npm run verify
+
+      - name: 产物语法门禁
+        run: node --check dist/znhd.user.js

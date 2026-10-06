@@ -1,0 +1,36 @@
+{
+  "compilerOptions": {
+    /* Language and Environment */
+    "target": "esnext",
+
+    /* Modules */
+    "module": "commonjs",
+    "paths": {
+      "@/*": ["./src/*"]
+    },
+    "types": ["tampermonkey"],
+    "allowUmdGlobalAccess": true,
+
+    /* JavaScript Support */
+    "allowJs": true,
+    "checkJs": false,
+
+    /* Interop Constraints */
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+
+    /* Type Checking */
+    // 模板默认 strict: true。模块化完成后（2026-10-06）已整体开启；
+    // 新增代码一律按 strict 写；确需临时放宽时请在具体行用 // @ts-expect-error 并注明原因，
+    // 不要整体关掉 strict（见 AGENT.md「技术债务」）。
+    "strict": true,
+    // 唯一有意保留为 false 的 strict 子开关：本仓库沿用「catch (e) 后直接读 e.message 记日志」的既有写法
+    // （storage/relay/gallery/monitor/clipboard/tinymce/qrcode/MainPanel 共 18 处），
+    // 逐个改写成 instanceof 判断会改动 AST 且无实际收益。ES 的 e 仍可能是任意值，此处维持 4.4 之前的行为。
+    "useUnknownInCatchVariables": false,
+
+    /* Completeness */
+    "skipLibCheck": false
+  },
+  "include": ["src"]
+}
