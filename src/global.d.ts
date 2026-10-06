@@ -39,6 +39,12 @@ declare global {
     const Viewer: any;
 
     /**
+     * @require heic2any 注入：把 HEIC/HEIF 解码转成 JPEG。
+     * 桌面 Chrome 原生不支持 HEIC/HEIF，故「发送到手机」必须先经它转码再压缩。
+     */
+    const heic2any: any;
+
+    /**
      * 脚本猫 UI 库（@require scriptcat.org/lib/1167）。
      * 运行时成分不稳定（Switch/TimePicker/Image 实测为 undefined），故声明为 any。
      */

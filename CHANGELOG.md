@@ -11,6 +11,19 @@
 
 ---
 
+### znhd.user.js v26.10.06-v7
+- **修复：电脑 → 手机发送 HEIC/HEIF 不压缩（v26.10.06-v6 的遗留缺口）**。上一版给「发送到手机」加了 canvas 压缩，但 HEIC/HEIF 会走「解码失败 → 原图直传」：**桌面 Chrome 原生解不开 HEIC/HEIF**，而 heic2any 当时只存在于**手机上传页**，油猴脚本的 `@require` 里没有它 —— 所以那条链路上根本没有解码器（不是「不能压」）。
+- 改法：**把 heic2any 加进脚本 `@require`**（`config/common.meta.json` / `config/dev.meta.json`，取 `fastly.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.js`，br 后约 334KB、`immutable` 一年缓存）。
+  - `compressImageForPhone()` 拆成三层：`isHeicLike()`（MIME + 扩展名双判——桌面 Chrome 给的 `file.type` 可能是空串）→ `heicToJpeg()`（heic2any 转 JPEG，多图 HEIC 取首帧）→ `toPhoneJpeg()`（原有的 canvas 缩放 + 白底 + JPEG q0.75）。
+  - **HEIC 不套用「压不小就不压」**：转码本身既是压体积、也是修掉安卓端不显示 HEIC 的兼容问题，故只要转码成功就发 JPEG；库缺失 / 文件损坏时仍回退原图直传。
+  - `src/global.d.ts` 补 `heic2any` 全局声明；冒烟页同步加载该依赖（维持「与 `@require` 完全相同的依赖」）。
+- ⚠️ **代价（明知而选的取舍）**：所有用户每次脚本更新都会多下这个库（br 约 334KB / 原始 1.36MB，jsDelivr 缓存一年），换来「HEIC 可压缩 + 安卓端能显示」。
+- 验证：
+  - 真实 CDN：`typeof heic2any === 'function'`，喂非 HEIC 数据返回 `ERR_LIBHEIF format not supported` —— 证明 libheif 解码器真的在跑（不是空壳 200）。
+  - 用**产物中抽出的真实代码 + 打桩 heic2any** 跑 13 项断言：heic2any 调用参数（`toType:'image/jpeg'` / `quality:0.9` / 传入原始 File）、输出 JPEG + `.jpg` + 最长边 1600（4000×3000 → 1600×1067）、库缺失时回退原图且保留 `image/heic`、转码被拒时回退原图、HEIC「压不小也发 JPEG」（64B → 6408B）、非 HEIC 回归（大 JPEG 仍压缩 / GIF 仍直传）。
+  - `npm run typecheck`（strict）、`npm run lint`（0 error）、`npm run verify`（10 项全绿，冒烟页已真实加载 heic2any）通过。`@version`→`26.10.06-v7`。
+- 说明：本机与 CI 都无法生成真实 HEIC 样张（真 HEIC 需要编码器），上述针对 HEIC 的验证是「打桩 + 真实库可调用性」，**建议真机拿一张 iPhone HEIC 照片复测一次**。
+
 ### znhd.user.js v26.10.06-v6
 - **修复：电脑 → 手机发图完全没有压缩（原图直传），与「手机 → 电脑」方向不对称**。手机上传页一直有 canvas 压缩（最大边 1600px + JPEG q=0.75），而电脑端「发送到手机」是 `FileReader.readAsDataURL(原文件)` 直接 POST：base64 后体积 = 原文件 × 1.33，全程只有一条「超 12MB 就报错、让用户自己压缩」的兜底。实际影响：3MB 照片要上行 4MB；5MB 截图 PNG 要上行 6.7MB；**原图 ≥9MB 直接撞 12MB 单请求上限被拒**。
 - 改法（**默认压缩，不加开关**）：
