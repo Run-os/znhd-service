@@ -54693,7 +54693,7 @@ const RELAY_MAX_BODY = 12 * 1024 * 1024;
 /**
  * 估算把该文件作为一条 POST body（含 name+mime+base64(data) 与 JSON 结构开销）的体积。
  * 仅用于「发送到手机」发前预检，与服务端 MAX_BODY 对齐（约 12MB）。
- * @param {File} file - 待发图片文件
+ * @param {File|Blob} file - 待发图片文件
  * @param {string} [name] - 文件名
  * @param {string} [mime] - MIME 类型
  * @returns {number} 估算的 body 字节数
@@ -54946,7 +54946,8 @@ function blobToPng(blob) {
 }
 /** 统一取可读的异常文本 */
 function errTextOf(e) {
-    return e && e.name ? e.name + ': ' + e.message : String((e && e.message) || e);
+    const err = e;
+    return err && err.name ? err.name + ': ' + err.message : String((err && err.message) || e);
 }
 /**
  * 用目标 realm 的原生 Blob 构造器重新包一层。
@@ -55036,7 +55037,8 @@ function copyImageToClipboard(blob) {
         if (pageWin &&
             pageWin.navigator &&
             pageWin.navigator.clipboard &&
-            pageWin.navigator.clipboard.write &&
+            // 用 typeof 判断而非直接取真值：写方法在类型上恒有定义，真值判断会被 TS 判为恒真
+            typeof pageWin.navigator.clipboard.write === 'function' &&
             pageWin.ClipboardItem) {
             realms.push({
                 name: '页面主世界',
@@ -55083,7 +55085,7 @@ function copyImageToClipboard(blob) {
  * 启动「设备互联」长轮询接收循环（直到 stop() 调用）。
  * 通过 GM_xmlhttpRequest 轮询中继服务器 /recv/<uuid>（绕过税务页面 CSP 对 connect-src 的限制）。
  * 收到图片时回调 onImage；状态变化回调 onStatus；网络异常自动重连。
- * @param {object} opt - { server, uuid, onStatus, onImage }
+ * @param {PhoneReceiveOptions} opt - { server, uuid, onStatus, onImage, onText, onConnected }
  * @returns {Function} stop() 停止接收
  */
 function startPhoneReceive(opt) {
@@ -55215,7 +55217,7 @@ function startPhoneReceive(opt) {
 /**
  * 电脑端 → 手机端 发送（图片或文本）。POST 到中继 /phone/send/<deviceId>。
  * 仅负责投递；手机是否在线由调用方先查 /phone/status 决定（离线时调用方直接拦截）。
- * @param {object} opt - { server, uuid, payload, onOk, onFail }
+ * @param {SendToPhoneOptions} opt - { server, uuid, payload, onOk, onFail }
  *   payload: { text } 或 { name, mime, data(base64) }
  */
 function sendToPhone(opt) {
@@ -55415,7 +55417,7 @@ function ensureViewerCss() {
  * @param {number} idx - 画廊序号（用于兜底命名）
  * @returns {string} 带扩展名的文件名
  */
-function downloadFileName(name, mime, idx) {
+function downloadFileName(name, mime, idx = 0) {
     const extByMime = {
         'image/jpeg': '.jpg',
         'image/png': '.png',
@@ -55436,7 +55438,9 @@ function showImagePopup(img) {
     img.ts = Date.now();
     receivedImages.push(img);
     while (receivedImages.length > MAX_GALLERY) {
-        const old = receivedImages.shift(); // 上面 while 已保证长度 > MAX_GALLERY，不会取空
+        const old = receivedImages.shift();
+        if (!old)
+            break; // 上面 while 已保证长度 > MAX_GALLERY，这里只为类型收窄
         try {
             URL.revokeObjectURL(old.previewUrl);
         }
@@ -55658,7 +55662,8 @@ function renderImageGallery() {
                     flipHorizontal: 1,
                     flipVertical: 1,
                 },
-                filter(image) {
+                // Viewer.js 会带 (image, index) 调用；本弹窗全部放行，故不声明入参（避免未使用参数告警）
+                filter() {
                     return true;
                 },
             });
@@ -55691,8 +55696,9 @@ function renderImageGallery() {
                         vc.style.zIndex = '2'; // 在画廊遮罩上下文内，高于白盒(z-index:1)
                         // 安全网：监听 Viewer 显隐（viewer-in 类的增删，不依赖其事件 API）。
                         // 显示时允许交互；隐藏后置 pointer-events:none，避免残留容器遮挡画廊关闭按钮/缩略图。
-                        if (!vc.__znhdWatched) {
-                            vc.__znhdWatched = true;
+                        const vcWatched = vc;
+                        if (!vcWatched.__znhdWatched) {
+                            vcWatched.__znhdWatched = true;
                             vc.style.pointerEvents = vc.className.indexOf('viewer-in') >= 0 ? 'auto' : 'none';
                             new MutationObserver(function () {
                                 vc.style.pointerEvents = vc.className.indexOf('viewer-in') >= 0 ? 'auto' : 'none';
@@ -55927,6 +55933,11 @@ function processSpeechQueue() {
     }
     isSpeaking = true;
     const item = speechQueue.shift();
+    // 上面已确认队列非空，这里只为类型收窄（同时兜住异常清空的情况，避免 isSpeaking 卡死）
+    if (!item) {
+        isSpeaking = false;
+        return;
+    }
     const utterance = item.utterance;
     // 清理上一次的超时定时器
     if (speechTimer) {
@@ -56075,9 +56086,10 @@ function checkCount() {
             addLog('找不到人数元素', 'warning');
             return;
         }
-        const currentCount = parseInt(ocurrentElement.textContent.trim(), 10);
+        const currentText = (ocurrentElement.textContent || '').trim();
+        const currentCount = parseInt(currentText, 10);
         if (isNaN(currentCount)) {
-            addLog(`无法解析等待人数: "${ocurrentElement.textContent.trim()}"`, 'warning');
+            addLog(`无法解析等待人数: "${currentText}"`, 'warning');
             return;
         }
         publishState({ waiting: currentCount });
@@ -72266,7 +72278,9 @@ function loadChangelog(done) {
             done(entries);
         },
         onerror: function (error) {
-            const errMsg = error && error.message ? error.message : typeof error === 'string' ? error : '网络错误';
+            // GM_xmlhttpRequest 的错误参数形态不定（对象 / 字符串），故按需取值而非断言类型
+            const err = (error || {});
+            const errMsg = err.message ? err.message : typeof error === 'string' ? error : '网络错误';
             addLog('更新日志加载失败: ' + errMsg, 'error', true);
             done(null, errMsg);
         },
@@ -73523,8 +73537,14 @@ function appendToTinyMCE(text2append = '') {
             document.querySelector('iframe[class*="tox"]');
         if (iframe) {
             try {
-                const body = iframe.contentDocument.querySelector('body#tinymce') || iframe.contentDocument.body;
-                isInputEmpty = !body.textContent.trim();
+                // 不用非空断言：contentDocument 在跨域/未挂载时为 null，走 catch 记日志（与原 AND 断言行为一致）
+                const doc = iframe.contentDocument;
+                if (!doc)
+                    throw new Error('contentDocument 不可访问');
+                const body = doc.querySelector('body#tinymce') || doc.body;
+                if (!body)
+                    throw new Error('找不到 iframe body');
+                isInputEmpty = !(body.textContent || '').trim();
             }
             catch (e) {
                 addLog('无法访问iframe内容: ' + e.message, 'warning', true);
@@ -73563,7 +73583,8 @@ function appendToTinyMCE(text2append = '') {
             return '';
         }
         try {
-            const body = iframe.contentDocument.body;
+            const doc = iframe.contentDocument;
+            const body = doc ? doc.body : null;
             if (!body) {
                 addLog('找不到 body', 'error', true);
                 return '';
@@ -75455,6 +75476,8 @@ function lastSpeakText(last) {
  */
 function MainPanel({ host }) {
     const drag = usePanelDrag(host);
+    // 惰性初始化：useState(loadAllvalue()) 的实参每次渲染都会求值，而本组件因 logEntries 频繁重渲染，
+    // 等于反复白读 localStorage。顶层 runtime.init 已是启动时读好的同一份数据。
     const [Allvalue, setAllvalue] = (0,react_production_namespaceFn().useState)(() => state_runtime.init);
     const [settingsOpen, setSettingsOpen] = (0,react_production_namespaceFn().useState)(false);
     const [phrasesOpen, setPhrasesOpen] = (0,react_production_namespaceFn().useState)(false);
@@ -75547,7 +75570,9 @@ function MainPanel({ host }) {
             onerror: function (error) {
                 if (seq !== phrasesRequestSeq)
                     return;
-                const errMsg = error && error.message ? error.message : typeof error === 'string' ? error : '网络错误';
+                // GM_xmlhttpRequest 的错误参数形态不定（对象 / 字符串），故按需取值而非断言类型
+                const err = (error || {});
+                const errMsg = err.message ? err.message : typeof error === 'string' ? error : '网络错误';
                 const hasOld = Object.keys(phrasesData).length > 0;
                 addLog('加载常用语失败: ' + errMsg + (hasOld ? '，仍显示上次加载的内容' : ''), 'error', true);
                 notify.error('加载常用语失败' + (hasOld ? '，仍显示上次内容' : ''));
@@ -75580,6 +75605,7 @@ function MainPanel({ host }) {
                 server: s,
                 uuid: getDeviceId(),
                 onConnected: () => addLog('[设备互联] 已自动开始接收（' + s + '）', 'info'),
+                // 入参类型由 startPhoneReceive 的 PhoneReceiveOptions 上下文推断，无需显式标注
                 onImage: (img) => {
                     addLog('[设备互联] 收到图片：' + (img.name || 'image') + '（' + (img.mime || 'image') + '）', 'success');
                     showImagePopup(img);
