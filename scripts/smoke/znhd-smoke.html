@@ -15,6 +15,26 @@
       window.__gmXhrLog = [];
       const PNG_1x1 =
         'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
+      // 收到图片的载荷：用 canvas 生成一张**真实尺寸**的 JPEG（480×360），而不是 1×1 占位 PNG。
+      // 原因：断言里要校验「放大后主图有可见尺寸」（rect > 10px），而 1×1 的图 Viewer 只会渲染成 1px，
+      // 该判定形同虚设（v26.10.8-v1 加断言时踩过：canvasImg/decoded 都 true，只有 visible 因 1px 为 false）。
+      const SMOKE_IMG_B64 = (() => {
+        try {
+          const c = document.createElement('canvas');
+          c.width = 480;
+          c.height = 360;
+          const ctx = c.getContext('2d');
+          ctx.fillStyle = '#e6f2ff';
+          ctx.fillRect(0, 0, 480, 360);
+          for (let i = 0; i < 40; i++) {
+            ctx.fillStyle = 'hsl(' + ((i * 37) % 360) + ',70%,55%)';
+            ctx.fillRect((i * 53) % 420, (i * 97) % 300, 60, 50);
+          }
+          return c.toDataURL('image/jpeg', 0.8).split(',')[1];
+        } catch (e) {
+          return PNG_1x1; // canvas 不可用时退回占位图（可见尺寸断言会因此失败，属预期）
+        }
+      })();
       const PHRASES_YAML = ['冒烟常用语A: |', '  A 的内容', '冒烟常用语B: |', '  B 的内容', ''].join('\n');
       // 更新日志：给 12 条，验证「默认只显示最新 10 条」+ 条数提示（多出的 2 条不渲染）
       const CHANGELOG_MD = (() => {
@@ -93,7 +113,13 @@
           else if (n === 2)
             reply(details, { type: 'text', text: '冒烟测试文本：收到一条文本消息', ts: Date.now() });
           else if (n === 3)
-            reply(details, { type: 'image', name: 'smoke.png', mime: 'image/png', data: PNG_1x1, ts: Date.now() });
+            reply(details, {
+              type: 'image',
+              name: 'smoke.jpg',
+              mime: 'image/jpeg',
+              data: SMOKE_IMG_B64,
+              ts: Date.now(),
+            });
           else reply(details, { empty: true });
           return { abort: () => {} };
         }
@@ -181,6 +207,30 @@
         window.__clickedPhrases = clickByText('常用语');
       }, 3200);
 
+      // ⚠️ 收到图片后点缩略图放大：必须断言「主图真的渲染出来」。
+      // 这条断言是 v26.10.8-v1 补的——此前 7 项断言里只有「九宫格画廊」（缩略图出现），
+      // 从没点过缩略图，导致「点开放大后 .viewer-canvas 一直是空的、只有黑罩」的 bug 存活了两个多月。
+      // 判定要点：主图在 .viewer-canvas 内（不要用 vc.querySelector('img')，那会命中放大镜占位图
+      // .viewer-magnifier-image，它 src 为空、naturalWidth 恒为 0）、已解码、且有可见尺寸。
+      setTimeout(() => {
+        const grid = document.getElementById('__znhd_img_grid__');
+        const thumb = grid && grid.querySelector('img');
+        window.__clickedThumb = !!thumb;
+        if (thumb) thumb.click();
+      }, 2000);
+      setTimeout(() => {
+        const vc = document.querySelector('.viewer-container');
+        const img = vc ? vc.querySelector('.viewer-canvas img') : null;
+        const r = img ? img.getBoundingClientRect() : null;
+        window.__viewerZoom = {
+          container: !!vc,
+          shownClass: !!(vc && vc.className.indexOf('viewer-in') >= 0),
+          canvasImg: !!img,
+          decoded: !!(img && img.complete && img.naturalWidth > 0),
+          visible: !!(r && r.width > 10 && r.height > 10),
+        };
+      }, 2600);
+
       // 打开「设置」抽屉 → 点它里面的「更新日志」，验证新入口 + 弹窗 + 只显示最新 10 条
       setTimeout(() => {
         window.__clickedSettings = clickByText('设置');
@@ -215,6 +265,14 @@
           changelogPopup: !!popup && text.includes('冒烟更新日志标记行'),
           changelogMoreBtn: !!popup && text.includes('获取更多日志'),
           changelogLimitHint: !!popup && text.includes('共 12 条，已显示最新 10 条'),
+          // 点缩略图放大：主图必须真的渲染出来（v26.10.8-v1 回归断言）
+          viewerZoom: window.__viewerZoom || null,
+          viewerZoomOk: !!(
+            window.__viewerZoom &&
+            window.__viewerZoom.container &&
+            window.__viewerZoom.decoded &&
+            window.__viewerZoom.visible
+          ),
           xhr: window.__gmXhrLog.slice(0, 6),
           relevantErrors: relevant,
         };
@@ -225,7 +283,8 @@
           report.textPopup &&
           report.galleryText &&
           report.phrasesLoaded &&
-          report.changelogPopup
+          report.changelogPopup &&
+          report.viewerZoomOk
             ? 'ALL-OK'
             : 'PARTIAL');
       }, 6500);

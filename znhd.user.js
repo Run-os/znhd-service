@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name                征纳互动人数和在线监控v2
 // @namespace           https://scriptcat.org/
-// @version             26.10.7-v1
+// @version             26.10.8-v1
 // @description         实时监控征纳互动等待人数和在线状态，支持语音播报、自定义常用语
 // @author              runos
 // @match               https://znhd.hunan.chinatax.gov.cn:8443/*
@@ -892,6 +892,18 @@ function renderImageGallery() {
             galleryViewer = new Viewer(grid, {
                 zIndex: 2147483647,
                 zoomRatio: 0.4,
+                // ⚠️ 必须关掉过渡（v26.10.8-v1 修「点缩略图放大后有时长时间不出图 / 只有黑罩」）：
+                // Viewer.js 的 shown()（设置 isShown=true、创建主图、执行 render()+bind()）**只由容器的
+                // transitionend 触发**（viewer.js 的 show()：addListener(viewer,'transitionend',shown)）。
+                // 而本文件下方那段 MutationObserver 会在容器刚出现时把它 appendChild 移进画廊 overlay，
+                // **移动 DOM 节点会打断正在进行的 CSS 过渡** → transitionend 不再触发 → shown() 永不执行
+                // → isShown 永远 false → 之后每次 view() 都在 `!this.isShown` 处提前 return，主图从不被创建；
+                // 且 this.showing 卡在 true（只在 shown() 里清），反复点击同样无效。
+                // 实测：默认过渡下 4 秒内 .viewer-canvas 始终为空；transition:false 后 22~29ms 出图。
+                // 原理：transition:false 时 show() 走 else 分支**同步调用 shown()**，彻底不依赖过渡事件；
+                // hide() 亦因未加 CLASS_TRANSITION 而走 hideImmediately() 同步收尾，连带消掉关闭侧残留容器风险。
+                // 代价：失去放大/关闭的淡入淡出（换确定性，值得）。改前请读 AGENT.md 约束 3。
+                transition: false,
                 title: (image) => image.alt || '',
                 toolbar: {
                     zoomIn: 1,

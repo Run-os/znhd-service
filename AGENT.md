@@ -151,10 +151,11 @@
 
 ## 历史踩坑索引（完整来龙去脉见 `CHANGELOG.md` 对应版本，此处只留指针 + 一句规则）
 
-| 领域 | 一句话规则 | 详见 ReadMe 版本条目 |
+| 领域 | 一句话规则 | 详见 CHANGELOG 版本条目 |
 |---|---|---|
 | 弹窗层叠/透字/半透明 | 挂 `documentElement` + `z-index:2147483647` + `!important`；遮罩半透明用 `background:rgba()` 而**非** `opacity`（会把子元素带透） | v26.7.26-v12~v16、v26.7.29-v9~v10 |
-| Viewer.js 预览层级 | 预览容器由 MutationObserver 移入本弹窗 overlay 内（页面 body transform 会困住挂 body 的 Viewer） | v26.7.29-v10 |
+| Viewer.js 预览层级 + **过渡** | 预览容器由 MutationObserver 移入本弹窗 overlay 内（页面 body transform 会困住挂 body 的 Viewer）；⚠️ **`new Viewer()` 必须传 `transition: false`** —— 移动容器会打断正在跑的 CSS 过渡 → Viewer 的 `shown()` 永不执行 → `isShown` 永远 false → **主图永不创建**（点开只有黑罩、反复点也无效），因为 `showing` 卡在 true | v26.7.29-v10、**v26.10.8-v1** |
+| Viewer 放大断言 | 判定「放大后主图真的出来」要用 **`.viewer-canvas img`**（`.viewer-container` 里另有 `.viewer-magnifier-image` 占位图，`src` 为空、`naturalWidth` 恒 0，用 `vc.querySelector('img')` 会误判） | v26.10.8-v1 |
 | CAT_UI 组件白名单 | `Switch`/`TimePicker`/`Image` 实为 undefined，裸 `input`/`img` 触发 React #137；开关用受控 checkbox/div 模拟 | v26.7.29-v6/v7 |
 | 图片复制 | `GM_setClipboard(blob)` 在 ScriptCat 静默无效（仅文本）；唯一可靠路径 = 页面主世界 `unsafeWindow.navigator.clipboard.write`（PNG） | v26.7.26-v4~v8 |
 | server.js 内联模板串 | 反引号或 `${` 会**截断/求值整个 HTML**：`node --check` 可能仍通过（被解析成合法的属性访问），必须用「请求手机页 + 内联 `<script>` 跑 `new Function`」自检 | relay v26.7.28-v6、v26.7.29-v8、v26.9.6-v5 |

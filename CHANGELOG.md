@@ -11,6 +11,16 @@
 
 ---
 
+### znhd.user.js v26.10.8-v1
+
+- **修复：收到图片后单击缩略图放大，有时长时间不出图**（表现为弹出一片纯黑遮罩、图一直不出来，且反复点击无效）。根因是 Viewer.js 集成里的一处竞态：
+  - Viewer.js 的 `shown()`（设置 `isShown=true`、创建主图、执行 `render()`/`bind()`）**只由容器的 `transitionend` 事件触发**；而本脚本为让预览盖在画廊白盒之上，用 `MutationObserver` 把 `.viewer-container` 在出现瞬间移入画廊遮罩——**移动 DOM 节点会打断正在进行的 CSS 过渡**，`transitionend` 不再触发 → `shown()` 永不执行 → `isShown` 永远为 `false` → 之后每次 `view()` 都在 `!this.isShown` 处提前返回，**主图从不被创建**；同时 `this.showing` 卡在 `true`（只在 `shown()` 里清除），所以反复点击同样无效。
+  - 修复：给 `new Viewer()` 传 **`transition: false`** —— `show()` 改为**同步调用 `shown()`**，彻底不依赖过渡事件；`hide()` 亦因未加 `CLASS_TRANSITION` 而走同步收尾，连带消掉关闭侧的残留容器风险。
+  - 实测：默认过渡下 4 秒内 `.viewer-canvas` 始终为空；改后 **22ms** 出图（4000×3000 / 854KB 的图 29ms）。**与图片大小无关**（该图 `decode()` 仅 25ms）。
+  - 代价：失去放大/关闭的淡入淡出动画。
+  - 该问题自 v26.7.29-v10 引入「把预览容器移入 overlay」的层级修复起就已存在，**非新引入**。
+- **补齐关键回归断言**：`npm run verify` 新增「**缩略图放大显示主图**」一项。此前 7 项断言里只有「九宫格画廊」（缩略图出现），**从未点过缩略图** —— 这正是该 bug 能存活两个多月的原因。断言同时覆盖「主图位于 `.viewer-canvas` 内、已解码、且有可见尺寸」（注意不能用 `vc.querySelector('img')`：会命中 `.viewer-magnifier-image` 放大镜占位图，其 `src` 为空、`naturalWidth` 恒为 0）。
+
 ### znhd.user.js v26.10.7-v1
 
 - **自动更新地址由 jsDelivr 改为 GitHub raw**：`@updateURL`/`@downloadURL` 从 `https://cdn.jsdelivr.net/gh/Run-os/znhd-service@refs/heads/main/dist/znhd.user.js` 改为 **`https://raw.githubusercontent.com/Run-os/znhd-service/refs/heads/main/dist/znhd.user.js`**。
