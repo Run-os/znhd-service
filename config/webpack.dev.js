@@ -38,6 +38,9 @@ module.exports = (env) => {
     watchFiles: ['src/**/*', 'public/**/*'],
   };
   baseOptions.mode = 'development';
+  // 本地调试产物保持未压缩（v26.10.06-v19）：base 里已为发布物开启 Terser，
+  // 但 dev 产物是给人看/断点调试用的，压缩后既不可读、构建也明显变慢，故这里显式关掉。
+  baseOptions.optimization.minimize = false;
 
   return baseOptions;
 };

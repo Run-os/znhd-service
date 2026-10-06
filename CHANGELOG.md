@@ -24,6 +24,15 @@
 - 版本：relay `package.json` → `26.10.06-v3`（页面显示版本由构建期从该文件注入）。
 - 验证：手机（iPhone 14 视口 390×844）与桌面（1440×900）实拍确认布局；真实浏览器跑通「选 3 张图 → canvas 压缩 124KB→80KB → 进度 0/3→1/3→2/3→✅ 3/3 → 待发列表清空」共 10/10 断言；「电脑 → 手机」收图/收文本弹窗实测正常；静态回归 18 项通过（零第三方外链、gzip、immutable、目录穿越返回 403、缺资源 404、版本自证）。
 
+### znhd.user.js v26.10.06-v19
+- **开启 Terser 压缩（`optimization.minimize: false` → `true`）**：`dist/znhd.user.js` **2.243 MiB → 0.770 MiB（−1502 KB，−65.4%）**，gzip 后 **257 KB**（原约 800 KB）。
+  - 配置本来就把 `TerserPlugin` 写好了（含保住元信息的 comments 白名单），只是 `minimize` 一直为 `false` 没生效；本次只翻这一个开关。
+  - **元信息完整性已逐项验证**：`==UserScript==` 成对、`@version/@name/@namespace/@description/@author/@match/@icon/@grant/@connect/@homepageURL/@updateURL/@downloadURL/@require` 全部保留（脚本元信息不是"注释"，被压掉脚本直接装不上）；冒烟里"版本号渲染"断言正是从元信息解析出来的，它通过即证明白名单生效。
+  - **dev 侧显式关回 `false`**（`config/webpack.dev.js`）：本地调试产物要可读、构建要快，否则 `npm run dev` 每次都白花时间在压缩上。
+- 顺带查明一个**配置陷阱**：`config/webpack.config.base.js` 导出的是**共享可变单例** `baseOptions`。若在同一进程里先后 `require` dev 与 prod 两个配置工厂，后者的改动会覆盖前者（实测两个都显示 `mode=production, minimize=false`）——**验证这类开关必须分进程**，否则会得出错误结论（本次差点被自己的测试骗过）。
+- 验证：`npm run verify` **16 项全绿**；`npm run check`（`node --check` 产物）通过；`antd lint` 0 issue；分进程断言 prod `minimize=true` / dev `minimize=false`。
+- ⚠️ 与 v9~v18 一样**只做本地提交，未推送**。
+
 ### znhd.user.js v26.10.06-v18
 - **修复编辑器里的 TypeScript 弃用报错**「选项 `moduleResolution=node10` 已弃用，将在 TypeScript 7.0 停止运行」：
   - 根因：本仓库 TypeScript 仍是 4.9.5（`^4.6.3`），而 VS Code 用的是**自带 6.x**。当初我用 `moduleResolution: "node"` 正是因为 TS 4.6 不认识 `bundler`（TS6046）——是个被旧工具链逼出来的临时选择。
