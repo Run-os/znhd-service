@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+        <meta name="color-scheme" content="light" />
+        <title>上传到电脑</title>
+        <!-- 内联首屏占位：React+antd 挂载前也能立刻看到反馈（避免白屏等待） -->
+        <style>
+            html,
+            body {
+                margin: 0;
+                background: #f5f5f5;
+            }
+            #boot {
+                display: flex;
+                min-height: 100vh;
+                align-items: center;
+                justify-content: center;
+                gap: 8px;
+                color: #007e44;
+                font: 14px -apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif;
+            }
+            #boot i {
+                width: 14px;
+                height: 14px;
+                border: 2px solid #cfe8dc;
+                border-top-color: #007e44;
+                border-radius: 50%;
+                animation: bootSpin 0.8s linear infinite;
+            }
+            @keyframes bootSpin {
+                to {
+                    transform: rotate(360deg);
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <div id="boot"><i></i><span>正在加载…</span></div>
+        <div id="root"></div>
+        <script type="module" src="/src/main.tsx"></script>
+    </body>
+</html>

@@ -41,8 +41,14 @@ znhd-service/
 │   ├── znhd.user.js              # ⚠️ 发布产物（由 npm run build 生成，提交进仓库，勿手改）
 │   └── znhd.dev.user.js          # 开发产物（不提交）
 ├── relay-server/                 # 设备互联配套中继服务（Node，需自行部署到公网）
-│   ├── server.js                 # 中继服务器：手机上传页 + 长轮询取图（纯 Node 内置 http，零依赖）
-│   └── package.json              # 零依赖，运行：node server.js
+│   ├── server.js                 # 中继服务器：路由 / 长轮询取图 / 静态资源（纯 Node 内置模块，运行时不装依赖）
+│   ├── upload-page.js            # 手机上传页出口：读 public/index.html（缺失时给兜底页）
+│   ├── public/                   # ⚠️ 手机上传页构建产物（提交进仓库，勿手改）：index.html + assets/*
+│   └── package.json              # 运行时不依赖任何包，运行：node server.js
+├── web/                          # 手机上传页应用源码（React 19 + Ant Design v6 + Vite + TS，独立子项目）
+│   ├── src/App.tsx               # 页面 UI（响应式：手机单列 / 桌面两列）
+│   ├── src/lib/                  # relay（心跳+长轮询）/ image（canvas 压缩）/ heic（HEIC 懒加载）
+│   └── package.json              # npm run build:web → 产出到 relay-server/public
 ├── scripts/smoke/                # 无头端到端冒烟（puppeteer + GM 桩测试页）：npm run verify
 ├── package.json / tsconfig.json / .eslintrc.js / .prettierrc.js
 ├── ReadMe.md                     # 项目说明文档（使用/配置/排障）

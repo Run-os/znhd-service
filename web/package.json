@@ -1,0 +1,24 @@
+{
+  "name": "znhd-relay-web",
+  "private": true,
+  "version": "26.10.06-v3",
+  "type": "module",
+  "description": "手机上传页（React 19 + Ant Design v6），构建产物输出到 relay-server/public 由中继同源托管",
+  "scripts": {
+    "dev": "vite",
+    "build": "node scripts/clean.mjs && vite build",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "antd": "^6.6.5",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.1.2",
+    "typescript": "^5.9.3",
+    "vite": "^8.3.3"
+  }
+}

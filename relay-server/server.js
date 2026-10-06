@@ -19,9 +19,32 @@
 //       （GM_xmlhttpRequest 不受页面 CSP 约束）。手机端页面由本服务同源托管，也无 CORS 问题。
 
 const http = require('http');
+const fs = require('fs');
+const zlib = require('zlib');
+// ⚠️ 本文件的路由处理里有个局部变量叫 path（请求路径），故 path 模块改名 nodePath 以免遮蔽
+const nodePath = require('path');
 const PORT = process.env.PORT || 5689;
 // 版本号唯一来源：package.json 的 version（格式 YY.M.D-vN，规范同 znhd.user.js）
 const VERSION = (() => { try { return require('./package.json').version; } catch (e) { return 'unknown'; } })();
+// 手机上传页（React + antd 构建产物）由独立模块提供，见 upload-page.js
+const { uploadPageHtml, PUBLIC_DIR } = require('./upload-page');
+
+// 前端构建产物目录（web/ 由 Vite 构建到 relay-server/public/）：/assets/* 直接静态托管。
+// 文件名带内容 hash，故可长缓存；HTML 本身用 no-cache（见 /u/ 路由）。
+const ASSETS_DIR = nodePath.join(PUBLIC_DIR, 'assets');
+const ASSET_MIME = {
+  '.js': 'text/javascript; charset=utf-8',
+  '.mjs': 'text/javascript; charset=utf-8',
+  '.css': 'text/css; charset=utf-8',
+  '.json': 'application/json; charset=utf-8',
+  '.map': 'application/json; charset=utf-8',
+  '.svg': 'image/svg+xml',
+  '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.webp': 'image/webp',
+  '.woff2': 'font/woff2',
+  '.woff': 'font/woff',
+};
 
 const PENDING_TTL = 60 * 1000;      // 暂存有效期 60s（手机先传、电脑后开也来得及）
 const MAX_BODY = 12 * 1024 * 1024; // 单图体积上限 12MB
@@ -286,744 +309,7 @@ function readBody(req) {
 }
 
 // ===================== 手机上传页（内联，同源托管） =====================
-function uploadPageHtml() {
-  return `<!doctype html>
-<html lang="zh-CN">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-<title>上传到电脑</title>
-<!-- 首屏不引入任何第三方资源：Viewer.js 的 CSS/JS 与 heic2any 全部改由页面内联脚本按需异步注入。
-     旧实现在 <head> 里同步挂两个 CDN 脚本（无 defer/async），会阻塞整个页面解析，实测：
-       · heic2any.js 1.36MB，bootcdn 对该网络限速约 128KB/s 且响应头 no-store（每次都不缓存）→ 10.6s；
-       · jsDelivr 主域国内直连不可达（TLS 阶段即失败，须走 fastly 镜像）→ 首次访问无缓存时还会再挂一次；
-       合计首屏白屏 10.87s（FCP），而服务端 TTFB 仅 0.15~0.6s —— 慢的全是这两个脚本。 -->
-<style>
-  body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif;margin:0;padding:16px;background:#f5f5f5;color:#222}
-  h2{font-size:18px;margin:0 0 4px}
-  h2 .ver{font-size:12px;font-weight:normal;color:#007e44;background:#e6f3ec;padding:1px 7px;border-radius:10px;vertical-align:middle;margin-left:6px}
-  .tip{color:#888;font-size:13px;margin:0 0 16px;line-height:1.6}
-  #pick{display:block;width:100%;box-sizing:border-box;padding:16px;border:2px dashed #bbb;border-radius:10px;text-align:center;color:#555;background:#fff;font-size:15px;margin-bottom:12px}
-  #grid{display:none;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:12px}
-  #grid .cell{position:relative;padding-top:100%;border-radius:8px;overflow:hidden;background:#fff}
-  #grid .cell img{position:absolute;left:0;top:0;width:100%;height:100%;object-fit:cover}
-  #grid .cell .del{position:absolute;top:2px;right:2px;width:22px;height:22px;line-height:20px;text-align:center;font-size:16px;color:#fff;background:rgba(0,0,0,0.55);border-radius:50%;cursor:pointer}
-  /* 来自电脑的图片：弹窗画廊，视觉与脚本端（PC 收图弹窗）保持一致 */
-  #recvPopup{position:fixed;left:0;right:0;top:0;bottom:0;background:rgba(0,0,0,0.55);z-index:9990;display:none;align-items:center;justify-content:center;padding:14px;box-sizing:border-box}
-  #recvPopup.show{display:flex}
-  #recvPopup .box{position:relative;width:min(560px,92vw);max-height:88vh;background:#fff;border-radius:12px;padding:16px;box-shadow:0 8px 30px rgba(0,0,0,0.35);display:flex;flex-direction:column;box-sizing:border-box}
-  #recvPopup .rt{font-size:15px;font-weight:bold;color:#333;margin:0 0 10px 2px}
-  #recvPopup .rclose{position:absolute;top:8px;right:10px;width:30px;height:30px;line-height:28px;text-align:center;font-size:22px;color:#fff;background:#e4393c;border-radius:50%;cursor:pointer;font-weight:bold}
-  #recvGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;overflow:auto;max-height:60vh;align-content:start}
-  #recvGrid .cell{position:relative;display:flex;flex-direction:column}
-  #recvGrid .thumb{position:relative;width:100%;padding-bottom:100%;border-radius:8px;overflow:hidden;background:#f2f2f2;cursor:zoom-in}
-  #recvGrid .thumb img{position:absolute;left:0;top:0;width:100%;height:100%;object-fit:cover;display:block}
-  #recvGrid .del{position:absolute;top:4px;right:4px;width:20px;height:20px;line-height:18px;text-align:center;font-size:14px;color:#fff;background:rgba(0,0,0,0.55);border-radius:50%;cursor:pointer;font-weight:bold;z-index:2}
-  #recvGrid .btns{flex:0 0 auto;display:flex;gap:4px;margin-top:6px}
-  #recvGrid .btns button{flex:1;padding:4px 0;border:none;border-radius:6px;background:#1890ff;color:#fff;font-size:12px;opacity:1;cursor:pointer}
-  #recvGrid .btns .dl{background:#722ed1}
-  #recvPopup .bar{display:flex;justify-content:center;margin-top:12px}
-  #recvPopup .bar button{padding:7px 18px;border:none;border-radius:8px;background:#999;color:#fff;font-size:13px;cursor:pointer}
-  /* Viewer.js 遮罩压黑，与脚本端一致 */
-  .viewer-backdrop{background-color:#000 !important}
-  .viewer-container{background-color:#000 !important}
-  #recvBtn{display:none;width:100%;box-sizing:border-box;padding:12px;border:0;border-radius:10px;background:#e6f3ec;color:#007e44;font-size:15px;font-weight:bold;margin-bottom:12px}
-  #recvBtn.show{display:block}
-  #info{font-size:13px;color:#666;margin-bottom:12px;word-break:break-all;min-height:18px}
-  button.act{width:100%;box-sizing:border-box;padding:14px;border:0;border-radius:10px;background:#007e44;color:#fff;font-size:16px;font-weight:bold}
-  button.act:disabled{background:#bbb}
-  .sep{color:#bbb;font-size:13px;text-align:center;margin:16px 0 8px}
-  #txt{width:100%;box-sizing:border-box;padding:12px;border:1px solid #ddd;border-radius:10px;font-size:15px;line-height:1.5;resize:vertical;margin-bottom:12px;font-family:inherit;background:#fff;color:#222}
-  .status{margin-top:12px;font-size:13px;color:#007e44;text-align:center;line-height:1.6}
-  .err{color:#e4393c}
-  .conn{font-size:12px;color:#007e44;text-align:center;margin:4px 0 2px}
-  .conn.off{color:#e4393c}
-  .devid{font-size:11px;color:#999;text-align:center;margin:0 0 8px;word-break:break-all}
-  /* 来自电脑的收件弹层 */
-  .recv{position:fixed;left:0;right:0;top:0;bottom:0;background:rgba(0,0,0,0.88);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px;box-sizing:border-box}
-  .recv img{max-width:100%;max-height:72vh;border-radius:8px;background:#fff}
-  .recvtip{color:#fff;font-size:13px;margin-top:10px}
-  .recv pre{background:#fff;color:#222;padding:14px;border-radius:10px;max-width:92vw;max-height:60vh;overflow:auto;white-space:pre-wrap;word-break:break-word;font-size:15px;line-height:1.6;margin:0;font-family:inherit}
-  .recv .act{width:auto;padding:8px 18px;margin-top:12px}
-  .recvclose{position:absolute;top:12px;right:14px;width:34px;height:34px;line-height:32px;text-align:center;font-size:24px;color:#fff;background:rgba(255,255,255,0.2);border-radius:50%;cursor:pointer}
-  /* 连发多图进度条：传输中显示条纹滚动 + 转圈动画，替代原先只靠状态栏文字报进度 */
-  #progressBox{display:none;margin:12px 0 4px}
-  #progressBox.on{display:block}
-  #progressTrack{height:10px;background:#e6e6e6;border-radius:6px;overflow:hidden}
-  #progressBar{height:100%;width:0;border-radius:6px;background:#007e44;transition:width .25s ease}
-  #progressTrack.busy #progressBar{background-image:linear-gradient(45deg,rgba(255,255,255,.35) 25%,transparent 25%,transparent 50%,rgba(255,255,255,.35) 50%,rgba(255,255,255,.35) 75%,transparent 75%);background-size:14px 14px;animation:barStripe .6s linear infinite}
-  @keyframes barStripe{from{background-position:0 0}to{background-position:14px 0}}
-  #progressText{display:flex;align-items:center;justify-content:center;gap:6px;font-size:13px;color:#007e44;margin-top:6px}
-  .spinner{width:12px;height:12px;flex:0 0 auto;border:2px solid #cfe8dc;border-top-color:#007e44;border-radius:50%;animation:spin .7s linear infinite}
-  @keyframes spin{to{transform:rotate(360deg)}}
-</style>
-</head>
-<body>
-  <h2>📷 上传到电脑<span class="ver">v${VERSION}</span></h2>
-  <p class="tip">选择/拍摄图片自动压缩后发送，或直接输入文本发送到电脑剪贴板。</p>
-  <div id="conn" class="conn">正在连接…</div>
-  <div id="devid" class="devid"></div>
-  <label id="pick">点击选择图片 / 拍照（可多选）</label>
-  <input id="file" type="file" accept="image/*" multiple style="display:none">
-  <div id="grid"></div>
-  <div id="info"></div>
-  <div id="progressBox">
-    <div id="progressTrack"><div id="progressBar"></div></div>
-    <div id="progressText"><span class="spinner" id="progressSpin"></span><span id="progressLabel"></span></div>
-  </div>
-  <button id="send" class="act" disabled>发送图片到电脑</button>
-  <button id="recvBtn">查看收到的图片</button>
-  <div class="sep">— 或发送文本 —</div>
-  <textarea id="txt" placeholder="输入要发送到电脑的文本…" rows="4"></textarea>
-  <button id="sendText" class="act">发送文本到电脑</button>
-  <div id="status" class="status"></div>
-  <div class="sep">— 来自电脑 —</div>
-  <p class="tip">电脑端「发送到手机」的图片会以弹窗形式自动弹出（与脚本端一致），点击缩略图可放大、长按可保存；文本仍自动弹出。</p>
-  <div id="recvPopup">
-    <div class="box">
-      <div class="rclose">×</div>
-      <div class="rt">收到的图片</div>
-      <div id="recvGrid"></div>
-      <div class="bar"><button id="recvClear">清空全部</button></div>
-    </div>
-  </div>
 
-<script>
-(function(){
-  var MAX_DIM = 1600, QUALITY = 0.75;
-  // 收件画廊上限：与脚本端 MAX_GALLERY=27 对齐，超出丢最旧（收件项是 base64 dataURL 大字符串，
-  // 无上限时页面长期挂着内存持续累积）
-  var MAX_RECV = 27;
-  var fileInput = document.getElementById('file');
-  var grid = document.getElementById('grid');
-  var info = document.getElementById('info');
-  var sendBtn = document.getElementById('send');
-  var statusEl = document.getElementById('status');
-
-  // ===== 连发多图进度：进度条 + 发送中动画（替代原先只靠状态栏文字报进度）=====
-  var progressBox = document.getElementById('progressBox');
-  var progressTrack = document.getElementById('progressTrack');
-  var progressBar = document.getElementById('progressBar');
-  var progressLabel = document.getElementById('progressLabel');
-  var progressSpin = document.getElementById('progressSpin');
-  var progressTimer = null;
-
-  // 显示/更新进度：done = 已完成张数；busy = 当前这张正在传输（条纹滚动 + 转圈动画）
-  function showProgress(done, total, busy){
-    if(progressTimer){ clearTimeout(progressTimer); progressTimer = null; }
-    progressBox.className = 'on';
-    progressBar.style.width = Math.round((done / total) * 100) + '%';
-    progressTrack.className = busy ? 'busy' : '';
-    progressSpin.style.display = busy ? 'inline-block' : 'none';
-    progressLabel.style.color = '#007e44';
-    progressLabel.textContent = busy
-      ? ('发送中… ' + done + '/' + total + '（正在发送第 ' + Math.min(done + 1, total) + ' 张）')
-      : ('已发送 ' + done + '/' + total);
-  }
-  // 全部完成：拉满进度条，短暂停留后自动收起
-  function finishProgress(text){
-    if(progressTimer){ clearTimeout(progressTimer); }
-    progressBar.style.width = '100%';
-    progressTrack.className = '';
-    progressSpin.style.display = 'none';
-    progressLabel.style.color = '#007e44';
-    progressLabel.textContent = text;
-    progressTimer = setTimeout(function(){ progressBox.className = ''; }, 2500);
-  }
-  // 失败中止：不自动收起，文字转红，保留「已发 N/M」便于决定是否重试剩余
-  function failProgress(text){
-    if(progressTimer){ clearTimeout(progressTimer); progressTimer = null; }
-    progressTrack.className = '';
-    progressSpin.style.display = 'none';
-    progressLabel.style.color = '#e4393c';
-    progressLabel.textContent = text;
-  }
-  // 待发送图片列表：{ blob, name, mime, url }
-  var items = [];
-  // 来自电脑的图片（九宫格画廊）：{ url, mime }
-  var recvItems = [];
-  var recvGrid = document.getElementById('recvGrid');
-  var recvPopup = document.getElementById('recvPopup');
-  var recvBtn = document.getElementById('recvBtn');
-  var recvViewer = null;  // Viewer.js 实例（CDN 未加载时为 null，退回自定义单图查看）
-
-  // ===== 第三方库：按需异步加载（首屏不引入任何第三方资源）=====
-  // 选源依据（2026-10-06 本机实测）：
-  //  · jsDelivr 主域 / testingcf 子域国内直连不可达（连接后 TLS 阶段失败）；
-  //    fastly.jsdelivr.net 可用，且响应带 br 压缩 + Cache-Control: immutable（一年）。
-  //  · cdn.bootcdn.net 可用但对该网络限速约 128KB/s，heic2any.js 为 1.36MB 且 no-store 不缓存，
-  //    每次都要下满 10.6s —— 只作兜底源，不作首选。
-  //  ⚠️ 本段位于 uploadPageHtml() 的模板字符串内：禁用反引号与插值起始符（美元符号 + 左花括号）。
-  var VIEWER_CSS_URL = 'https://fastly.jsdelivr.net/npm/viewerjs@1.11.7/dist/viewer.min.css';
-  var VIEWER_JS_URLS = ['https://fastly.jsdelivr.net/npm/viewerjs@1.11.7/dist/viewer.min.js'];
-  var HEIC_URLS = [
-    'https://fastly.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.js',
-    'https://cdn.bootcdn.net/ajax/libs/heic2any/0.0.4/heic2any.js'
-  ];
-  var SCRIPT_TIMEOUT = 15000; // 单源最长等待，超时即换下一个源（避免某个 CDN 挂住后无限等）
-  var viewerLoading = false;
-  var heicPromise = null;
-
-  // 依次尝试多个 URL 注入脚本：任一源令 isReady() 为真即成功；全部失败回调 false。
-  function loadScriptChain(urls, isReady, onDone){
-    var i = 0;
-    function next(){
-      if(isReady()){ onDone(true); return; }
-      if(i >= urls.length){ onDone(false); return; }
-      var url = urls[i++];
-      var s = document.createElement('script');
-      var timer = setTimeout(function(){ s.onload = null; s.onerror = null; s.remove(); next(); }, SCRIPT_TIMEOUT);
-      s.async = true;
-      s.onload = function(){
-        clearTimeout(timer);
-        if(isReady()){ onDone(true); } else { s.remove(); next(); }
-      };
-      s.onerror = function(){ clearTimeout(timer); s.remove(); next(); };
-      s.src = url;
-      document.head.appendChild(s);
-    }
-    next();
-  }
-
-  // Viewer.js 仅「收件画廊」需要，异步加载即可；就绪后立刻接管已渲染缩略图的点击放大。
-  // 始终加载不出来时保持 recvViewer = null，缩略图点击退回自定义单图查看（见 thumb.onclick）。
-  function loadViewerLib(){
-    if(viewerLoading || typeof Viewer === 'function') return;
-    viewerLoading = true;
-    var link = document.createElement('link');
-    link.rel = 'stylesheet';
-    link.href = VIEWER_CSS_URL;
-    document.head.appendChild(link);
-    loadScriptChain(VIEWER_JS_URLS, function(){ return typeof Viewer === 'function'; }, function(ok){
-      if(ok){ initRecvViewer(); }
-    });
-  }
-
-  // heic2any 约 1.36MB，只有真的要转 HEIC/HEIF 时才需要 —— 按需加载并复用同一个 Promise
-  // （连选多张 HEIC 不重复下载）。全部源失败时 resolve(null)，调用方回退原样直传。
-  function loadHeic2any(){
-    if(!heicPromise){
-      heicPromise = new Promise(function(resolve){
-        loadScriptChain(HEIC_URLS, function(){ return typeof heic2any === 'function'; }, function(ok){
-          resolve(ok ? heic2any : null);
-        });
-      });
-    }
-    return heicPromise;
-  }
-
-  function renderGrid(){
-    grid.innerHTML = '';
-    grid.style.display = items.length ? 'grid' : 'none';
-    items.forEach(function(it, idx){
-      var cell = document.createElement('div');
-      cell.className = 'cell';
-      var img = document.createElement('img');
-      img.src = it.url;
-      cell.appendChild(img);
-      var del = document.createElement('div');
-      del.className = 'del';
-      del.textContent = '×';
-      del.onclick = function(){
-        URL.revokeObjectURL(it.url);
-        items.splice(idx, 1);
-        renderGrid();
-      };
-      cell.appendChild(del);
-      grid.appendChild(cell);
-    });
-    var totalKB = 0;
-    items.forEach(function(it){ totalKB += it.blob.size / 1024; });
-    info.textContent = items.length
-      ? ('已选 ' + items.length + ' 张，共约 ' + totalKB.toFixed(0) + ' KB')
-      : '';
-    sendBtn.disabled = items.length === 0;
-    sendBtn.textContent = items.length > 1 ? ('发送 ' + items.length + ' 张图片到电脑') : '发送图片到电脑';
-  }
-
-  // 压缩单个文件为 blob（canvas 缩放 + JPEG 压缩）
-  // SVG 例外：canvas 无法可靠光栅化 SVG（无固有尺寸时画布为 0、部分 WebView 直接 onerror），
-  // 且压成 JPEG 会丢失矢量特性——故 SVG 跳过压缩，原样直传（修正 mime 为 image/svg+xml）。
-  function compressFile(f, done, fail){
-    var isSvg = (f.type === 'image/svg+xml') || /\\.svg$/i.test(f.name || '');
-    var isHeic = (f.type === 'image/heic' || f.type === 'image/heif' || (f.name || '').toLowerCase().indexOf('.heic') > -1 || (f.name || '').toLowerCase().indexOf('.heif') > -1);
-    if(isSvg){
-      var svgBlob = (f.type === 'image/svg+xml') ? f : f.slice(0, f.size, 'image/svg+xml');
-      done(svgBlob);
-      return;
-    }
-    // 通用 canvas 压缩（缩放 + JPEG 白底）；HEIC 转码后也复用此流程
-    function compressBlob(srcBlob){
-      var reader = new FileReader();
-      reader.onload = function(){
-        var img = new Image();
-        img.onload = function(){
-          var w = img.width, h = img.height;
-          var scale = Math.min(1, MAX_DIM / Math.max(w, h));
-          var cw = Math.round(w*scale), ch = Math.round(h*scale);
-          var canvas = document.createElement('canvas');
-          canvas.width = cw; canvas.height = ch;
-          var ctx = canvas.getContext('2d');
-          // JPEG 无透明通道：先铺白底，避免透明 PNG 被压成黑色背景
-          ctx.fillStyle = '#fff';
-          ctx.fillRect(0, 0, cw, ch);
-          ctx.drawImage(img, 0, 0, cw, ch);
-          canvas.toBlob(function(blob){
-            if(blob){ done(blob); } else { fail(new Error('压缩失败')); }
-          }, 'image/jpeg', QUALITY);
-        };
-        img.onerror = function(){ fail(new Error('图片解析失败')); };
-        img.src = reader.result;
-      };
-      reader.onerror = function(){ fail(new Error('读取文件失败')); };
-      reader.readAsDataURL(srcBlob);
-    }
-    // HEIC：按需加载 heic2any 转成 JPEG 再走通用压缩；库缺失/超时/转换失败则原样直传兜底。
-    // ⚠️ 解码库不在 <head> 同步引入（1.36MB 会阻塞首屏 10s+），只有走到这个分支才去下载。
-    if(isHeic){
-      statusEl.className = 'status';
-      statusEl.textContent = '检测到 HEIC，正在加载解码库…';
-      loadHeic2any().then(function(lib){
-        if(!lib){ done(f); return; } // 解码库不可用：原样直传交由电脑端处理
-        lib({ blob: f, toType: 'image/jpeg', quality: 0.9 })
-          .then(function(out){
-            var jpg = Array.isArray(out) ? out[0] : out;
-            if(jpg){ compressBlob(jpg); } else { done(f); }
-          })
-          .catch(function(){ done(f); });
-      });
-      return;
-    }
-    compressBlob(f);
-  }
-
-  fileInput.addEventListener('change', function(e){
-    var files = Array.prototype.slice.call(e.target.files || []);
-    fileInput.value = ''; // 允许再次选同一批文件
-    if(!files.length){ return; }
-    statusEl.className = 'status';
-    statusEl.textContent = '处理中…（0/' + files.length + '）';
-    var doneCount = 0, failCount = 0, failReasons = [];
-    files.forEach(function(f){
-      compressFile(f, function(blob){
-        items.push({ blob: blob, name: f.name || 'image.jpg', mime: blob.type || 'image/jpeg', url: URL.createObjectURL(blob) });
-        doneCount++;
-        statusEl.textContent = '处理中…（' + (doneCount + failCount) + '/' + files.length + '）';
-        if(doneCount + failCount === files.length){ finishPick(); }
-      }, function(err){
-        failCount++;
-        failReasons.push((f.name || '图片') + '：' + (err && err.message ? err.message : err));
-        if(doneCount + failCount === files.length){ finishPick(); }
-      });
-    });
-    function finishPick(){
-      renderGrid();
-      if(failCount){
-        statusEl.className = 'status err';
-        statusEl.textContent = failCount + ' 张处理失败已跳过：' + failReasons.join('；');
-      } else {
-        statusEl.className = 'status';
-        statusEl.textContent = '';
-      }
-    }
-  });
-
-  document.getElementById('pick').addEventListener('click', function(){ fileInput.click(); });
-
-  // 逐张顺序发送（一张成功再发下一张，保证到达顺序；失败即停，剩余保留可重试）
-  function blobToB64(blob, done, fail){
-    var fr = new FileReader();
-    fr.onload = function(){ done(fr.result.split(',')[1]); };
-    fr.onerror = function(){ fail(new Error('读取图片失败')); };
-    fr.readAsDataURL(blob);
-  }
-
-  sendBtn.addEventListener('click', function(){
-    if(!items.length){ return; }
-    sendBtn.disabled = true;
-    var total = items.length, sent = 0;
-    statusEl.className = 'status';
-    statusEl.textContent = ''; // 发送中的 n/N 交给进度条，状态栏只留最终结果/错误
-    showProgress(sent, total, true);
-    function sendNext(){
-      if(!items.length){
-        statusEl.textContent = '✅ ' + total + ' 张已全部发送到电脑，请在电脑端接收';
-        finishProgress('✅ 已发送 ' + total + '/' + total + '，全部完成');
-        renderGrid();
-        return;
-      }
-      var it = items[0];
-      showProgress(sent, total, true);
-      blobToB64(it.blob, function(b64){
-        fetch(window.location.pathname, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name: it.name, mime: it.mime, data: b64 })
-        }).then(function(r){ return r.json(); }).then(function(j){
-          if(j && j.ok){
-            URL.revokeObjectURL(it.url);
-            items.shift();
-            sent++;
-            showProgress(sent, total, sent < total);
-            sendNext();
-          } else {
-            statusEl.className = 'status err';
-            statusEl.textContent = '第 ' + (sent + 1) + ' 张发送失败：' + ((j && j.error) || '未知错误') + '，已发 ' + sent + '/' + total + '，可点按钮重试剩余';
-            failProgress('❌ 已发送 ' + sent + '/' + total + '，已停止');
-            renderGrid();
-          }
-        }).catch(function(err){
-          statusEl.className = 'status err';
-          statusEl.textContent = '第 ' + (sent + 1) + ' 张发送失败：' + err.message + '，已发 ' + sent + '/' + total + '，可点按钮重试剩余';
-          failProgress('❌ 已发送 ' + sent + '/' + total + '，已停止');
-          renderGrid();
-        });
-      }, function(err){
-        statusEl.className = 'status err';
-        statusEl.textContent = err.message;
-        failProgress('❌ 已发送 ' + sent + '/' + total + '，已停止');
-        renderGrid();
-      });
-    }
-    sendNext();
-  });
-
-  // 发送文本到电脑
-  var textArea = document.getElementById('txt');
-  var sendTextBtn = document.getElementById('sendText');
-  sendTextBtn.addEventListener('click', function(){
-    var t = (textArea.value || '').trim();
-    if (!t) { statusEl.className = 'status err'; statusEl.textContent = '请输入要发送的文本'; return; }
-    sendTextBtn.disabled = true;
-    statusEl.className = 'status'; statusEl.textContent = '发送中…';
-    fetch(window.location.pathname, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text: t })
-    }).then(function(r){ return r.json(); }).then(function(j){
-      if (j && j.ok) {
-        statusEl.textContent = '✅ 文本已发送到电脑，请在电脑端点击“复制到剪贴板”';
-        sendTextBtn.textContent = '再发一条'; sendTextBtn.disabled = false;
-      } else {
-        statusEl.className = 'status err';
-        statusEl.textContent = '发送失败：' + ((j && j.error) || '未知错误');
-        sendTextBtn.disabled = false;
-      }
-    }).catch(function(err){
-      statusEl.className = 'status err';
-      statusEl.textContent = '发送失败：' + err.message;
-      sendTextBtn.disabled = false;
-    });
-  });
-
-  // ===== 反向通道：向电脑端证明本手机在线 + 接收电脑发来的内容 =====
-  var idMatch = window.location.pathname.match(/\\/u\\/([a-z0-9-]{8,64})/i);
-  var deviceId = idMatch ? idMatch[1] : '';
-  var connEl = document.getElementById('conn');
-  var devEl = document.getElementById('devid');
-  if (devEl) devEl.textContent = deviceId ? ('设备ID：' + deviceId) : '设备ID：<未识别，请重新生成二维码>';
-
-  // state: 'online' | 'offline' | 'error'
-  function setConn(state, msg){
-    if(!connEl) return;
-    if(state === 'online'){ connEl.className = 'conn'; connEl.textContent = '🟢 已连接，可接收电脑发送'; }
-    else if(state === 'error'){ connEl.className = 'conn off'; connEl.textContent = '⚠️ ' + (msg || '连接失败'); }
-    else { connEl.className = 'conn off'; connEl.textContent = '⚪ 未连接（电脑端将提示无法发送）'; }
-  }
-
-  // 心跳：声明本手机在线（电脑端据此判断能否发送）
-  // 用 Promise.race 做「硬性 8 秒超时」，不依赖 AbortController（部分老旧 WebView 不支持/不触发 abort），
-  // 避免请求被代理/防火墙卡住时一直停在「连接中」而无提示。带 body+Content-Type，兼容对空 POST 敏感的代理。
-  function heartbeat(){
-    if(!deviceId){ setConn('error', '链接无效：未识别到设备ID，请重新生成二维码'); return; }
-    var ctrl = ('AbortController' in window) ? new AbortController() : null;
-    var opt = { method:'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' };
-    if(ctrl) opt.signal = ctrl.signal;
-    var timeout = new Promise(function(_, rej){ setTimeout(function(){ rej(new Error('timeout')); }, 8000); });
-    Promise.race([ fetch('/phone/heartbeat/' + deviceId, opt), timeout ])
-      .then(function(r){
-        if(ctrl) ctrl.abort();
-        if(r && r.ok){ setConn('online'); }
-        else { setConn('error', '服务器返回 ' + (r && r.status) + '，请检查中继地址/代理'); }
-      })
-      .catch(function(err){
-        if(ctrl) ctrl.abort();
-        var m = (err && err.message === 'timeout') ? '连接超时（8秒无响应，请检查网络/代理/防火墙）'
-                 : ('连接失败：' + ((err && err.message) || '未知错误'));
-        setConn('error', m);
-      });
-  }
-  heartbeat();
-  setInterval(heartbeat, 8000);
-
-  // 长轮询电脑发来的条目（图片/文本）
-  // 带看门狗（与 heartbeat 同款 Promise.race）：服务器 maxwait=25s 到期必回 empty，
-  // 若请求被系统挂起/代理卡住永不 settle（如手机息屏后被 OS 冻结），race 兜底 35s（25s+10s 余量）强制重连，
-  // 避免接收静默停摆直到手动刷新。AbortController 缺失的旧 WebView 退回无 abort（race 本身仍生效）。
-  function pollRecv(){
-    if(!deviceId) return;
-    var ctrl = ('AbortController' in window) ? new AbortController() : null;
-    var opt = { method: 'GET' };
-    if(ctrl) opt.signal = ctrl.signal;
-    var watchdog = new Promise(function(_, rej){ setTimeout(function(){ rej(new Error('timeout')); }, 35000); });
-    Promise.race([ fetch('/phone/recv/' + deviceId + '?maxwait=25000', opt), watchdog ])
-      .then(function(r){
-        // ⚠️ 此处绝不能 abort()：响应体还没读，abort() 会让下面的 r.json() 抛 AbortError（本机 Chromium 实测），
-        // 每次投递都被 catch 吞掉并重连 → 手机端永远收不到内容（而服务端已把条目出队、电脑端显示发送成功）。
-        // abort 的正确位置只有「看门狗已超时、原请求还挂着」的 catch 分支（见下方）。
-        return r.json();
-      })
-      .then(function(j){
-        if(j && j.type){ showReceived(j); }
-        pollRecv(); // 继续下一次轮询
-      })
-      .catch(function(){ if(ctrl) ctrl.abort(); setTimeout(pollRecv, 1500); });
-  }
-
-  function renderRecvGrid(){
-    recvGrid.innerHTML = '';
-    recvItems.forEach(function(it, idx){
-      var cell = document.createElement('div');
-      cell.className = 'cell';
-      // 缩略图（点击由 Viewer.js 接管放大/旋转/多图切换；viewer 未加载时退回单图查看）
-      var thumb = document.createElement('div');
-      thumb.className = 'thumb';
-      var img = document.createElement('img');
-      img.src = it.url;
-      thumb.appendChild(img);
-      var del = document.createElement('div');
-      del.className = 'del';
-      del.textContent = '×';
-      del.title = '移除这张';
-      del.onclick = function(e){ e.stopPropagation(); removeRecvItem(idx); };
-      thumb.appendChild(del);
-      // Viewer.js 是异步加载的，可能晚于本次渲染到达，故点击时再判定一次：
-      // 就绪时由 Viewer 接管放大，未就绪则退回自定义单图查看（不会两套同时弹）。
-      thumb.onclick = function(){ if (!recvViewer) openRecvImage(it); };
-      cell.appendChild(thumb);
-      // 按钮行：复制 / 下载（与脚本端收图弹窗一致）
-      var btns = document.createElement('div');
-      btns.className = 'btns';
-      var copyBtn = document.createElement('button');
-      copyBtn.textContent = '复制';
-      copyBtn.onclick = function(e){ e.stopPropagation(); copyRecvImage(it, copyBtn); };
-      var dlBtn = document.createElement('button');
-      dlBtn.className = 'dl';
-      dlBtn.textContent = '下载';
-      dlBtn.onclick = function(e){ e.stopPropagation(); downloadRecvImage(it, dlBtn); };
-      btns.appendChild(copyBtn);
-      btns.appendChild(dlBtn);
-      cell.appendChild(btns);
-      recvGrid.appendChild(cell);
-    });
-    initRecvViewer();
-    // 同步「查看收到的图片」按钮（关闭弹窗后也能重新打开画廊）
-    if (recvBtn) {
-      recvBtn.classList.toggle('show', recvItems.length > 0);
-      recvBtn.textContent = '🖼 收到的图片（' + recvItems.length + '）';
-    }
-    // 标题计数（与脚本端一致：收到的图片（N）· 单击放大）
-    var rt = recvPopup.querySelector('.rt');
-    if (rt) rt.textContent = '收到的图片（' + recvItems.length + '）· 单击放大';
-  }
-
-  function removeRecvItem(idx){
-    if (idx < 0 || idx >= recvItems.length) return;
-    recvItems.splice(idx, 1);
-    if (recvItems.length === 0) closeRecvPopup();
-    renderRecvGrid(); // 空时也重绘：同步底部「查看收到的图片」按钮的显示与计数（旧实现空分支漏重绘致计数残留）
-  }
-
-  // dataURL -> Blob（用于复制/下载）
-  function toBlob(url){
-    try { return fetch(url).then(function(r){ return r.blob(); }).catch(function(){ return null; }); }
-    catch(e){ return Promise.resolve(null); }
-  }
-
-  // 复制图片到剪贴板：先以原始 mime 直写（点击手势最新鲜）；失败再转 PNG 重试。
-  // 原因（本仓库自有结论，ReadMe v26.7.26-v5 / AGENT.md）：Chromium 系对 clipboard.write 的
-  // image/png 支持最可靠，直接写 JPEG 在部分安卓 WebView 会失败（此前手机页一直直写原始 mime）。
-  function copyRecvImage(it, btn){
-    var old = btn.textContent;
-    btn.textContent = '复制中…';
-    function doWrite(blob, type){
-      return new Promise(function(rs){
-        if (!blob || !navigator.clipboard || typeof window.ClipboardItem === 'undefined') { rs(false); return; }
-        var item = {}; item[type] = blob;
-        navigator.clipboard.write([ new ClipboardItem(item) ])
-          .then(function(){ rs(true); }).catch(function(){ rs(false); });
-      });
-    }
-    function toPng(blob){
-      return new Promise(function(rs){
-        try {
-          if (typeof createImageBitmap !== 'function') { rs(blob); return; }
-          createImageBitmap(blob).then(function(bmp){
-            var cv = document.createElement('canvas');
-            cv.width = bmp.width; cv.height = bmp.height;
-            var ctx = cv.getContext('2d');
-            if(!ctx){ if(bmp.close) bmp.close(); rs(blob); return; }
-            ctx.drawImage(bmp, 0, 0);
-            if(bmp.close) bmp.close();
-            cv.toBlob(function(b){ rs(b || blob); }, 'image/png');
-          }).catch(function(){ rs(blob); });
-        } catch(e){ rs(blob); }
-      });
-    }
-    toBlob(it.url).then(function(blob){
-      if (!blob) { btn.textContent = '复制不可用'; setTimeout(function(){ btn.textContent = old; }, 1500); return; }
-      var type0 = blob.type || 'image/png';
-      doWrite(blob, type0).then(function(ok){
-        if (ok) { btn.textContent = '✓ 已复制'; }
-        else {
-          toPng(blob).then(function(png){
-            var type = (png.type) || 'image/png';
-            doWrite(png, type).then(function(ok2){
-              btn.textContent = ok2 ? '✓ 已复制' : '复制失败';
-            });
-          });
-        }
-        setTimeout(function(){ btn.textContent = old; }, 1500);
-      });
-    });
-  }
-
-  function downloadRecvImage(it, btn){
-    var old = btn.textContent;
-    btn.textContent = '保存中…';
-    toBlob(it.url).then(function(blob){
-      if (!blob) { btn.textContent = '保存失败'; setTimeout(function(){ btn.textContent = old; }, 1500); return; }
-      var a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      var ext = (it.mime && it.mime.split('/')[1]) || 'jpg';
-      // 扩展名清洗：image/svg+xml 的 split 得 'svg+xml'（字面量 '..svg+xml' 文件名怪异）；剔除异常字符
-      ext = ((ext.split('+')[0] || ext).replace(/[^a-zA-Z0-9]/g, '')) || 'jpg';
-      a.download = (it.name || ('znhd-image.' + ext));
-      document.body.appendChild(a); a.click(); a.remove();
-      setTimeout(function(){ try { URL.revokeObjectURL(a.href); } catch(e){} btn.textContent = '✓ 已保存'; }, 300);
-      setTimeout(function(){ btn.textContent = old; }, 1500);
-    });
-  }
-
-  function openRecvImage(it){
-    var box = document.createElement('div');
-    box.className = 'recv';
-    var img = document.createElement('img');
-    img.src = it.url;
-    box.appendChild(img);
-    var tip = document.createElement('div');
-    tip.className = 'recvtip';
-    tip.textContent = '长按图片可保存';
-    box.appendChild(tip);
-    var close = document.createElement('div');
-    close.className = 'recvclose';
-    close.textContent = '×';
-    close.onclick = function(){ if(box.parentNode) box.parentNode.removeChild(box); };
-    box.appendChild(close);
-    document.body.appendChild(box);
-  }
-
-  // 用 Viewer.js（与脚本端一致）绑定画廊：点击缩略图弹出放大/旋转/多图左右切换。
-  // CDN 未加载时 recvViewer 置 null，缩略图点击走 openRecvImage 自定义单图查看兜底。
-  // zIndex 设为高于画廊遮罩(9998)与 .recv(9999)，避免 Viewer 弹窗被遮在下面。
-  function initRecvViewer(){
-    if (typeof Viewer !== 'function') { recvViewer = null; return; }
-    if (recvViewer) { try { recvViewer.destroy(); } catch(e){} }
-    recvViewer = new Viewer(recvGrid, {
-      toolbar: true,
-      navbar: false,
-      title: false,
-      movable: true,
-      zoomable: true,
-      rotatable: true,
-      scalable: true,
-      transition: true,
-      fullscreen: true,
-      keyboard: true,
-      zIndex: 99999
-    });
-  }
-
-  // 收到的图片以弹窗（画廊）形式查看，与脚本端弹出画廊保持一致
-  function openRecvPopup(){ if(recvItems.length) recvPopup.classList.add('show'); }
-  function closeRecvPopup(){ recvPopup.classList.remove('show'); }
-  if (recvPopup) {
-    var rpClose = recvPopup.querySelector('.rclose');
-    if (rpClose) rpClose.onclick = closeRecvPopup;
-    recvPopup.onclick = function(e){ if(e.target === recvPopup) closeRecvPopup(); };
-    var rpClear = document.getElementById('recvClear');
-    if (rpClear) rpClear.onclick = function(){
-      recvItems.length = 0;
-      closeRecvPopup();
-      renderRecvGrid();
-    };
-  }
-  if (recvBtn) recvBtn.onclick = openRecvPopup;
-
-  function showReceived(j){
-    if(j.type === 'image'){
-      // 收进画廊并自动弹出查看（与脚本端弹出画廊一致），点击缩略图再放大；name 一并保留供下载命名
-      recvItems.push({ url: 'data:' + (j.mime || 'image/jpeg') + ';base64,' + j.data, mime: j.mime || 'image/jpeg', name: j.name });
-      // 上限保护：超出丢最旧（dataURL 项无可 revoke，直接 shift 释放引用即可）
-      while (recvItems.length > MAX_RECV) recvItems.shift();
-      renderRecvGrid();
-      openRecvPopup();
-      return;
-    }
-    // 文本仍弹独立弹层。同屏只保留最新一条（与脚本端 showTextPopup 一致）：旧实现连收多条会
-    // 叠加多个全屏遮罩，关掉顶层会露出过期文本。.recv-text 只标记文本层，不误伤
-    // openRecvImage 的单图查看层（同为 .recv，仅在 Viewer.js CDN 未加载时才走）。
-    // 注意：本段位于内联模板串内，注释里禁用反引号与插值起始符（会截断或求值整个 HTML）。
-    Array.prototype.forEach.call(document.querySelectorAll('.recv-text'), function(el){ el.remove(); });
-    var box = document.createElement('div');
-    box.className = 'recv recv-text';
-    if(j.type === 'text'){
-      var pre = document.createElement('pre');
-      pre.textContent = j.text || '';
-      box.appendChild(pre);
-      var cp = document.createElement('button');
-      cp.className = 'act';
-      cp.textContent = '复制文本';
-      cp.onclick = function(){
-        var txt = j.text || '';
-        function fallbackCopy(){
-          // 老旧 WebView 无 navigator.clipboard，用隐藏 textarea + execCommand 兜底
-          try {
-            var ta = document.createElement('textarea');
-            ta.value = txt;
-            ta.style.position = 'fixed'; ta.style.left = '-9999px';
-            document.body.appendChild(ta);
-            ta.focus(); ta.select();
-            var ok = document.execCommand('copy');
-            document.body.removeChild(ta);
-            cp.textContent = ok ? '已复制' : '复制失败，请长按文本手动复制';
-          } catch(e){ cp.textContent = '复制失败，请长按文本手动复制'; }
-        }
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-          navigator.clipboard.writeText(txt)
-            .then(function(){ cp.textContent = '已复制'; })
-            .catch(fallbackCopy);
-        } else { fallbackCopy(); }
-      };
-      box.appendChild(cp);
-    }
-    var close = document.createElement('div');
-    close.className = 'recvclose';
-    close.textContent = '×';
-    close.onclick = function(){ if(box.parentNode) box.parentNode.removeChild(box); };
-    box.appendChild(close);
-    document.body.appendChild(box);
-  }
-
-  // 第三方库异步加载：不阻塞首屏；加载完成前收到图片也能正常进画廊（点击走自定义单图查看兜底）
-  loadViewerLib();
-
-  pollRecv();
-})();
-</script>
-</body>
-</html>`;
-}
 
 // ===================== 路由 =====================
 const server = http.createServer(async (req, res) => {
@@ -1058,12 +344,48 @@ const server = http.createServer(async (req, res) => {
 
     // 二维码改由电脑端脚本用 qrcodejs 客户端生成，本服务不再提供 /qr 端点。
 
+    // /assets/* ：手机上传页（React + antd）的构建产物，同源托管，避免任何第三方请求
+    // （HEAD 也照常返回头部：Node 对 HEAD 会自动不发 body，缓存/探活更友好）
+    if ((method === 'GET' || method === 'HEAD') && path.indexOf('/assets/') === 0) {
+      const rel = path.slice('/assets/'.length);
+      const file = nodePath.join(ASSETS_DIR, rel);
+      // 目录穿越防护：解析后的绝对路径必须仍在 ASSETS_DIR 内
+      if (rel.indexOf('..') !== -1 || file.indexOf(ASSETS_DIR) !== 0) {
+        res.writeHead(403); res.end('forbidden');
+        return;
+      }
+      fs.readFile(file, (err, data) => {
+        if (err) { res.writeHead(404); res.end('not found'); return; }
+        const type = ASSET_MIME[nodePath.extname(file).toLowerCase()] || 'application/octet-stream';
+        // 文件名带内容 hash，可长缓存
+        const headers = { 'Content-Type': type, 'Cache-Control': 'public, max-age=31536000, immutable' };
+        // gzip：前端产物 746KB→242KB。Node 内置 zlib，中继依旧零依赖；
+        // 前面若还有 openresty 等反代，这里压过也不冲突（它看到 Content-Encoding 就不会再压）。
+        const isText = /^(text\/|application\/(javascript|json))/.test(type);
+        const acceptsGzip = /\bgzip\b/.test(String(req.headers['accept-encoding'] || ''));
+        if (isText && acceptsGzip) {
+          zlib.gzip(data, (zerr, buf) => {
+            if (zerr) { res.writeHead(200, headers); res.end(data); return; }
+            headers['Content-Encoding'] = 'gzip';
+            headers['Vary'] = 'Accept-Encoding';
+            res.writeHead(200, headers);
+            res.end(buf);
+          });
+        } else {
+          res.writeHead(200, headers);
+          res.end(data);
+        }
+      });
+      return;
+    }
+
     // /u/<deviceId> ：手机上传页 + 接收上传
     const m = /^\/u\/([a-z0-9-]{8,64})$/i.exec(path);
     if (m) {
       const uuid = m[1];
       if (method === 'GET') {
-        res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+        // no-cache：HTML 里引用的是带 hash 的静态资源，HTML 本身不能被长期缓存（否则发新版后手机仍拿旧页面）
+        res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-cache' });
         res.end(uploadPageHtml());
         return;
       }
