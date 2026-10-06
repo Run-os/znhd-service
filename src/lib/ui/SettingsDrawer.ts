@@ -1,14 +1,14 @@
 /**
- * 设置抽屉（原 app.ts 的 SettingsDrawer）：脚本链接、CDN 开关、监控时间段、常用语地址、中继地址、日志。
+ * 设置抽屉（原 app.ts 的 SettingsDrawer）：脚本链接、CDN 开关、监控时间段、常用语地址、中继地址。
  * 模块化 P5：逐字迁移，仅加 export。
  * ⚠️ 时间输入与地址草稿的处理是真实页面实测结论（见块内注释），禁止顺手重构。
+ * ⚠️ 日志已在 v26.10.06-v8 独立成 `LogDrawer`（主面板「日志」按钮）——日志含版本号文本，
+ *    与面板版本号同处一个 shadow root 会串台（见 LogDrawer 文件头说明 2），不要搬回来。
  */
 
 import { DEFAULTS } from '@/lib/constants';
-import { LogEntry } from '@/lib/logger';
 import { showChangelogPopup } from '@/lib/changelog';
 import { hoursToHHmm, hhmmToHours } from '@/lib/utils';
-import { LogPanel } from '@/lib/ui/LogPanel';
 
 /** 监控时间段（十进制小时，13.5 表示 13:30） */
 export interface WorkingHours {
@@ -22,7 +22,6 @@ export interface WorkingHours {
 export interface SettingsDrawerProps {
     visible: boolean;
     setVisible: (v: boolean) => void;
-    logEntries: LogEntry[];
     workingHours: WorkingHours | null;
     onChangeWorkingHours: (wh: WorkingHours) => void;
     commonPhrasesUrl: string;
@@ -36,7 +35,6 @@ export interface SettingsDrawerProps {
 export function SettingsDrawer({
     visible,
     setVisible,
-    logEntries,
     workingHours,
     onChangeWorkingHours,
     commonPhrasesUrl,
@@ -268,8 +266,6 @@ export function SettingsDrawer({
                 { style: { margin: '0 0 8px', color: '#999', fontSize: '12px', lineHeight: '1.5' } },
                 '用于「设备互联到电脑」：手机上传的图片经此服务器转发到本机剪贴板。需自行部署配套 relay-server（见项目说明）。'
             ),
-            CAT_UI.Divider('日志内容'),
-            CAT_UI.createElement(LogPanel, { logEntries }),
         ]),
         {
             title: '设置菜单',

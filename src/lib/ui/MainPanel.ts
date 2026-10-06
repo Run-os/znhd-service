@@ -4,7 +4,7 @@
  */
 
 import { DEFAULTS, PHRASES_CACHE_TTL } from '@/lib/constants';
-import { addLog, addLogDebounced, setLogEntriesSink } from '@/lib/logger';
+import { addLog, addLogDebounced, setLogEntriesSink, clearLogs } from '@/lib/logger';
 import { loadPanelPoint, loadPhrasesCache, savePhrasesCache, saveAllvalue } from '@/lib/storage';
 import { runtime } from '@/lib/state';
 import { resolveGithubUrl, hoursToHHmm } from '@/lib/utils';
@@ -14,6 +14,7 @@ import { clearSpeechQueue } from '@/lib/speech';
 import { SettingsDrawer } from '@/lib/ui/SettingsDrawer';
 import { CommonPhrasesDrawer } from '@/lib/ui/CommonPhrasesDrawer';
 import { PhoneImageDrawer } from '@/lib/ui/PhoneImageDrawer';
+import { LogDrawer } from '@/lib/ui/LogDrawer';
 
 // 常用语请求序号（loadPhrasesData 用）：仅最新一次请求可落地结果，防慢的旧响应后到覆盖新数据
 let phrasesRequestSeq = 0;
@@ -52,6 +53,8 @@ export function MainPanel() {
     const [commonPhrasesVisible, setCommonPhrasesVisible] = CAT_UI.useState(false);
     // 设备互联抽屉显示状态
     const [phoneVisible, setPhoneVisible] = CAT_UI.useState(false);
+    // 日志抽屉显示状态（v26.10.06-v8：从设置抽屉独立出来）
+    const [logVisible, setLogVisible] = CAT_UI.useState(false);
     // 设备互联自动接收的停止函数（用 ref 避免重复启动）
     const receiveStopRef = CAT_UI.useRef(null);
     // 日志条目状态管理
@@ -269,6 +272,13 @@ export function MainPanel() {
                                     setCommonPhrasesVisible(true);
                                 },
                             }),
+                            // 日志入口（紧挨「常用语」，与它同级；v26.10.06-v8 起日志独立成抽屉）
+                            CAT_UI.Button('日志', {
+                                type: 'primary',
+                                onClick() {
+                                    setLogVisible(true);
+                                },
+                            }),
                         ],
                         {
                             direction: 'horizontal',
@@ -310,7 +320,6 @@ export function MainPanel() {
                     CAT_UI.createElement(SettingsDrawer, {
                         visible,
                         setVisible,
-                        logEntries,
                         workingHours: Allvalue.workingHours,
                         onChangeWorkingHours: (wh: any) => {
                             patchAllvalue({ workingHours: wh });
@@ -362,6 +371,13 @@ export function MainPanel() {
                             patchAllvalue({ relayServer: url });
                             addLogDebounced('relayServer', '中继服务器已更新: ' + (url || '（空）'), 'info');
                         },
+                    }),
+                    // 日志抽屉：日志列表（含版本号文本）只在 visible 时才渲染，避免与面板版本号串台
+                    CAT_UI.createElement(LogDrawer, {
+                        visible: logVisible,
+                        setVisible: setLogVisible,
+                        logEntries,
+                        onClear: clearLogs,
                     }),
                 ],
                 {

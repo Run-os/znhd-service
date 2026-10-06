@@ -35,7 +35,7 @@ znhd-service/
 │       ├── speech（语音队列）/ monitor（人数·掉线·工作时间）
 │       ├── tinymce / clipboard（提示音+安全复制）/ relay（中继+图片剪贴板）
 │       ├── gallery（画廊+文本弹窗）/ changelog（更新日志读取+弹窗）/ qrcode（二维码）
-│       └── ui/                   # LogPanel / SettingsDrawer / CommonPhrasesDrawer /
+│       └── ui/                   # LogDrawer（运行日志抽屉）/ SettingsDrawer / CommonPhrasesDrawer /
 │                                 #   PhoneImageDrawer / MainPanel / panelPosition
 ├── dist/                         # 构建产物
 │   ├── znhd.user.js              # ⚠️ 发布产物（由 npm run build 生成，提交进仓库，勿手改）

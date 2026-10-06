@@ -96,3 +96,16 @@ export function addLogDebounced(key: string, message: string, type: LogType = 'i
 export function setLogEntriesSink(cb: LogSink | null): void {
     setLogEntriesCallback = cb;
 }
+
+/**
+ * 清空全部日志（「日志」抽屉里的「清空」按钮用）。
+ * ⚠️ 连去重窗口一起清：否则清空后同样的内容会被 RECENT_LOG_COUNT 去重规则静默丢弃，
+ * 用户会误以为「清空之后就不再记日志了」。
+ * @returns {void}
+ */
+export function clearLogs(): void {
+    recentLogMessages.length = 0;
+    if (setLogEntriesCallback) {
+        setLogEntriesCallback(() => []);
+    }
+}

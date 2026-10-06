@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name                征纳互动人数和在线监控v2
 // @namespace           https://scriptcat.org/
-// @version             26.10.06-v7
+// @version             26.10.06-v8
 // @description         实时监控征纳互动等待人数和在线状态，支持语音播报、自定义常用语
 // @author              runos
 // @match               https://znhd.hunan.chinatax.gov.cn:8443/*
@@ -1108,7 +1108,7 @@ function closeTextPopup() {
 var __webpack_unused_export__;
 
 __webpack_unused_export__ = ({ value: true });
-exports.setLogEntriesSink = exports.addLogDebounced = exports.addLog = void 0;
+exports.clearLogs = exports.setLogEntriesSink = exports.addLogDebounced = exports.addLog = void 0;
 const constants_1 = __webpack_require__(149);
 // ==========日志管理==========
 // 全局日志状态管理
@@ -1183,6 +1183,19 @@ function setLogEntriesSink(cb) {
     setLogEntriesCallback = cb;
 }
 exports.setLogEntriesSink = setLogEntriesSink;
+/**
+ * 清空全部日志（「日志」抽屉里的「清空」按钮用）。
+ * ⚠️ 连去重窗口一起清：否则清空后同样的内容会被 RECENT_LOG_COUNT 去重规则静默丢弃，
+ * 用户会误以为「清空之后就不再记日志了」。
+ * @returns {void}
+ */
+function clearLogs() {
+    recentLogMessages.length = 0;
+    if (setLogEntriesCallback) {
+        setLogEntriesCallback(() => []);
+    }
+}
+exports.clearLogs = clearLogs;
 
 
 /***/ },
@@ -2594,52 +2607,140 @@ exports.CommonPhrasesDrawer = CommonPhrasesDrawer;
 
 /***/ },
 
-/***/ 295
+/***/ 764
 (__unused_webpack_module, exports) {
 
 var __webpack_unused_export__;
 
 /**
- * 日志面板组件（原 app.ts「UI部分」内的 LogPanel）。
- * 模块化 P5：逐字迁移，仅加 export。
+ * 日志抽屉（v26.10.06-v8 从「设置菜单」里独立出来）：时间正序 + 自动停在最新一条 + 按类型过滤 + 清空。
+ *
+ * ⚠️ 两个关键实现取舍（改动前先读）：
+ * 1. **自动滚底不写一行 JS**：列表容器用 `flexDirection: 'column-reverse'`，而 DOM 仍按
+ *    logger 的存储顺序（最新在前）渲染 —— 浏览器自动把视口锚在「底部＝最新一条」，
+ *    新日志到达时只要用户还停在底部就保持跟随；用户向上翻阅历史时不会被新日志拽回底部。
+ *    比「useEffect + ref + scrollTop」省掉 ref API 依赖（CAT_UI.createElement 是否透传 ref 无保证）。
+ * 2. **不要把日志塞进设置抽屉**：日志条目里含版本号（「脚本已启动，版本 vX」），而面板版本号断言
+ *    取的是 shadow 文本里**第一个** `vX.Y.Z-vN` 匹配（见 AGENT.md「读面板文本要用 collectShadowText」
+ *    那条踩坑）。日志与面板同处一个 shadow root，一旦展开就会与面板版本号串台，故日志必须独立成一个
+ *    抽屉、默认收起（收起时不展开、不参与面板文本）。
  */
 __webpack_unused_export__ = ({ value: true });
-exports.LogPanel = void 0;
-function LogPanel({ logEntries }) {
-    // 根据日志类型定义颜色
-    const colorMap = {
-        info: '#1890ff',
-        warning: '#faad14',
-        success: '#52c41a',
-        error: '#ff4d4f', // 红色
-    };
-    return CAT_UI.createElement('div', {
+exports.LogDrawer = void 0;
+/** 四种日志类型的展示元信息（顺序即筛选条顺序） */
+const TYPE_META = [
+    { type: 'info', label: '信息', color: '#1890ff' },
+    { type: 'success', label: '成功', color: '#52c41a' },
+    { type: 'warning', label: '警告', color: '#faad14' },
+    { type: 'error', label: '错误', color: '#ff4d4f' },
+];
+function LogDrawer({ visible, setVisible, logEntries, onClear }) {
+    // 四种类型各自的开关（可多选）；默认全开
+    const [filter, setFilter] = CAT_UI.useState({ info: true, success: true, warning: true, error: true });
+    // 各类型条数（显示在筛选条上，便于一眼看出有没有错误）
+    const counts = { info: 0, success: 0, warning: 0, error: 0 };
+    logEntries.forEach((e) => {
+        counts[e.type] = (counts[e.type] || 0) + 1;
+    });
+    const shown = logEntries.filter((e) => filter[e.type]);
+    const allOn = TYPE_META.every((m) => filter[m.type]);
+    const toggle = (type) => setFilter({ ...filter, [type]: !filter[type] });
+    const setAll = (on) => setFilter({ info: on, success: on, warning: on, error: on });
+    // 筛选条上的一个小胶囊（用 div 而非 Button：需要按类型着色，且点击切换开关）
+    const chip = (key, label, color, on, onClick) => CAT_UI.createElement('div', {
+        key,
+        onClick,
+        title: on ? '点击隐藏该类日志' : '点击显示该类日志',
         style: {
-            whiteSpace: 'pre-wrap',
-            wordBreak: 'break-word',
-            maxHeight: '500px',
-            overflowY: 'auto',
-            backgroundColor: '#f5f5f5',
-            padding: '10px',
-            borderRadius: '4px',
-            fontFamily: 'monospace',
+            cursor: 'pointer',
+            userSelect: 'none',
             fontSize: '12px',
+            lineHeight: '20px',
+            padding: '0 9px',
+            marginRight: '6px',
+            marginBottom: '6px',
+            borderRadius: '11px',
+            border: '1px solid ' + (on ? color : '#d9d9d9'),
+            background: on ? color : '#fff',
+            color: on ? '#fff' : '#999',
+            opacity: on ? 1 : 0.85,
         },
-    }, logEntries.map((entry, index) => {
-        const color = colorMap[entry.type] || '#333333';
-        return CAT_UI.createElement('div', {
-            key: index,
+    }, label);
+    return CAT_UI.Drawer(CAT_UI.createElement('div', { style: { textAlign: 'left' } }, [
+        // 第一行：筛选胶囊（左）+ 清空（右）
+        CAT_UI.createElement('div', {
             style: {
-                color: color,
-                marginBottom: '4px',
-                borderLeft: `3px solid ${color}`,
-                paddingLeft: '8px',
-                fontWeight: 'bold',
+                display: 'flex',
+                alignItems: 'flex-start',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
             },
-        }, `${entry.timestamp} - ${entry.message}`);
-    }));
+        }, [
+            CAT_UI.createElement('div', { style: { display: 'flex', flexWrap: 'wrap', alignItems: 'center' } }, [
+                chip('all', allOn ? '全部（点此全隐）' : '全部', '#666', allOn, () => setAll(!allOn)),
+                ...TYPE_META.map((m) => chip(m.type, m.label + ' ' + (counts[m.type] || 0), m.color, filter[m.type], () => toggle(m.type))),
+            ]),
+            CAT_UI.Button('清空', {
+                type: 'primary',
+                onClick: onClear,
+                disabled: logEntries.length === 0,
+                style: { marginBottom: '6px', flex: '0 0 auto' },
+            }),
+        ]),
+        // 日志列表：column-reverse 实现「自动停在最新一条」（见文件头说明 1）
+        CAT_UI.createElement('div', {
+            style: {
+                display: 'flex',
+                flexDirection: 'column-reverse',
+                overflowY: 'auto',
+                height: '360px',
+                backgroundColor: '#f5f5f5',
+                padding: '8px',
+                borderRadius: '4px',
+                fontFamily: 'monospace',
+                fontSize: '12px',
+            },
+        }, shown.length
+            ? shown.map((entry, index) => {
+                const color = TYPE_META.filter((m) => m.type === entry.type).map((m) => m.color)[0] || '#333333';
+                return CAT_UI.createElement('div', {
+                    key: index,
+                    style: {
+                        flex: '0 0 auto',
+                        color: color,
+                        marginBottom: '4px',
+                        borderLeft: '3px solid ' + color,
+                        paddingLeft: '8px',
+                        fontWeight: 'bold',
+                        whiteSpace: 'pre-wrap',
+                        wordBreak: 'break-word',
+                    },
+                }, entry.timestamp + ' - ' + entry.message);
+            })
+            : CAT_UI.createElement('div', { style: { color: '#999', textAlign: 'center', padding: '24px 0' } }, logEntries.length ? '没有符合当前筛选条件的日志' : '暂无日志')),
+        CAT_UI.createElement('p', { style: { margin: '8px 0 0', color: '#999', fontSize: '12px', lineHeight: '1.5' } }, '共 ' +
+            logEntries.length +
+            ' 条（显示 ' +
+            shown.length +
+            ' 条，按 ' +
+            (allOn ? '全部类型' : '已选类型') +
+            '过滤）；新日志会自动出现在最下方，向上翻阅时不会被拉回。'),
+    ]), {
+        title: '运行日志',
+        visible,
+        width: 460,
+        focusLock: true,
+        autoFocus: false,
+        zIndex: 10001,
+        onOk: () => {
+            setVisible(false);
+        },
+        onCancel: () => {
+            setVisible(false);
+        },
+    });
 }
-exports.LogPanel = LogPanel;
+exports.LogDrawer = LogDrawer;
 
 
 /***/ },
@@ -2666,6 +2767,7 @@ const speech_1 = __webpack_require__(988);
 const SettingsDrawer_1 = __webpack_require__(919);
 const CommonPhrasesDrawer_1 = __webpack_require__(703);
 const PhoneImageDrawer_1 = __webpack_require__(63);
+const LogDrawer_1 = __webpack_require__(764);
 // 常用语请求序号（loadPhrasesData 用）：仅最新一次请求可落地结果，防慢的旧响应后到覆盖新数据
 let phrasesRequestSeq = 0;
 function MainPanel() {
@@ -2698,6 +2800,8 @@ function MainPanel() {
     const [commonPhrasesVisible, setCommonPhrasesVisible] = CAT_UI.useState(false);
     // 设备互联抽屉显示状态
     const [phoneVisible, setPhoneVisible] = CAT_UI.useState(false);
+    // 日志抽屉显示状态（v26.10.06-v8：从设置抽屉独立出来）
+    const [logVisible, setLogVisible] = CAT_UI.useState(false);
     // 设备互联自动接收的停止函数（用 ref 避免重复启动）
     const receiveStopRef = CAT_UI.useRef(null);
     // 日志条目状态管理
@@ -2897,6 +3001,13 @@ function MainPanel() {
                         setCommonPhrasesVisible(true);
                     },
                 }),
+                // 日志入口（紧挨「常用语」，与它同级；v26.10.06-v8 起日志独立成抽屉）
+                CAT_UI.Button('日志', {
+                    type: 'primary',
+                    onClick() {
+                        setLogVisible(true);
+                    },
+                }),
             ], {
                 direction: 'horizontal',
                 size: 'middle',
@@ -2929,7 +3040,6 @@ function MainPanel() {
             CAT_UI.createElement(SettingsDrawer_1.SettingsDrawer, {
                 visible,
                 setVisible,
-                logEntries,
                 workingHours: Allvalue.workingHours,
                 onChangeWorkingHours: (wh) => {
                     patchAllvalue({ workingHours: wh });
@@ -2978,6 +3088,13 @@ function MainPanel() {
                     patchAllvalue({ relayServer: url });
                     (0, logger_1.addLogDebounced)('relayServer', '中继服务器已更新: ' + (url || '（空）'), 'info');
                 },
+            }),
+            // 日志抽屉：日志列表（含版本号文本）只在 visible 时才渲染，避免与面板版本号串台
+            CAT_UI.createElement(LogDrawer_1.LogDrawer, {
+                visible: logVisible,
+                setVisible: setLogVisible,
+                logEntries,
+                onClear: logger_1.clearLogs,
             }),
         ], {
             direction: 'horizontal',
@@ -3409,17 +3526,18 @@ exports.PhoneImageDrawer = PhoneImageDrawer;
 var __webpack_unused_export__;
 
 /**
- * 设置抽屉（原 app.ts 的 SettingsDrawer）：脚本链接、CDN 开关、监控时间段、常用语地址、中继地址、日志。
+ * 设置抽屉（原 app.ts 的 SettingsDrawer）：脚本链接、CDN 开关、监控时间段、常用语地址、中继地址。
  * 模块化 P5：逐字迁移，仅加 export。
  * ⚠️ 时间输入与地址草稿的处理是真实页面实测结论（见块内注释），禁止顺手重构。
+ * ⚠️ 日志已在 v26.10.06-v8 独立成 `LogDrawer`（主面板「日志」按钮）——日志含版本号文本，
+ *    与面板版本号同处一个 shadow root 会串台（见 LogDrawer 文件头说明 2），不要搬回来。
  */
 __webpack_unused_export__ = ({ value: true });
 exports.SettingsDrawer = void 0;
 const constants_1 = __webpack_require__(149);
 const changelog_1 = __webpack_require__(462);
 const utils_1 = __webpack_require__(973);
-const LogPanel_1 = __webpack_require__(295);
-function SettingsDrawer({ visible, setVisible, logEntries, workingHours, onChangeWorkingHours, commonPhrasesUrl, onChangeCommonPhrasesUrl, relayServer, onChangeRelayServer, useCdn, onChangeUseCdn, }) {
+function SettingsDrawer({ visible, setVisible, workingHours, onChangeWorkingHours, commonPhrasesUrl, onChangeCommonPhrasesUrl, relayServer, onChangeRelayServer, useCdn, onChangeUseCdn, }) {
     // 当前监控时间段（兜底默认值，避免未配置时报错）
     const wh = workingHours || { morningStart: 9, morningEnd: 12, afternoonStart: 13.5, afternoonEnd: 18 };
     // 更新单个时间段字段（入参为十进制小时）
@@ -3620,8 +3738,6 @@ function SettingsDrawer({ visible, setVisible, logEntries, workingHours, onChang
             style: { marginBottom: '8px', width: '100%' },
         }),
         CAT_UI.createElement('p', { style: { margin: '0 0 8px', color: '#999', fontSize: '12px', lineHeight: '1.5' } }, '用于「设备互联到电脑」：手机上传的图片经此服务器转发到本机剪贴板。需自行部署配套 relay-server（见项目说明）。'),
-        CAT_UI.Divider('日志内容'),
-        CAT_UI.createElement(LogPanel_1.LogPanel, { logEntries }),
     ]), {
         title: '设置菜单',
         visible,

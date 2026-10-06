@@ -57,7 +57,7 @@
 | `src/index.ts` | 入口：生产直接 `app()`；开发动态 import `devTools`（热重载 / 首次自动安装）。 |
 | `src/app.ts` | **入口装配**（~90 行）：创建面板 → `setupPanelPositionTracking()` → beforeunload 清理 → 启动监控。业务实现全在 `src/lib/`。 |
 | `src/lib/*.ts` | 业务模块：`constants`（CONFIG/DEFAULTS/存储键）、`logger`（addLog/防抖/`setLogEntriesSink`）、`storage`（localStorage 读写）、`state`（`runtime` 运行时缓存）、`utils`（链接解析/转义/时间换算）、`speech`（语音队列）、`monitor`（人数·掉线·工作时间）、`tinymce`（编辑器写入）、`clipboard`（提示音+安全复制）、`relay`（中继客户端+图片剪贴板）、`gallery`（九宫格画廊+文本弹窗）、`changelog`（更新日志拉取/解析/弹窗）、`qrcode`（二维码 dataURL）。 |
-| `src/lib/ui/*.ts` | UI 组件：`LogPanel`、`SettingsDrawer`、`CommonPhrasesDrawer`、`PhoneImageDrawer`、`MainPanel`、`panelPosition`（面板拖拽位置保存，由原具名 IIFE 改为导出函数）。 |
+| `src/lib/ui/*.ts` | UI 组件：`LogDrawer`（运行日志抽屉：类型过滤/清空/自动停在最新，v26.10.06-v8 从设置抽屉独立出来）、`SettingsDrawer`、`CommonPhrasesDrawer`、`PhoneImageDrawer`、`MainPanel`、`panelPosition`（面板拖拽位置保存，由原具名 IIFE 改为导出函数）。 |
 
 > **有意未拆出的模块**：`phrases`（常用语加载/缓存/请求序号）。`loadPhrasesData` 直接读写 React 状态（`phrasesData`/`setPhrasesData`/`setPhrasesLoading`）与 `phrasesRequestSeq`，抽成独立模块必须引入 `getData/setData` 桥接，属于「为拆而拆」，与约束 3「不得无理由重构可运行逻辑」冲突，故保留在 `src/lib/ui/MainPanel.ts` 内。如日后要拆，请连同组件状态一起改成自定义 hook。
 | `src/global.d.ts` | 全局声明：`PRODUCTION`/`FILENAME`（DefinePlugin 注入）+ `CAT_UI`/`jsyaml`/`QRCode`/`Viewer`（`@require` 注入）。GM_* 由 `@types/tampermonkey` 提供。 |
