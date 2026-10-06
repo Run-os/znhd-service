@@ -24,6 +24,18 @@
 - 版本：relay `package.json` → `26.10.06-v3`（页面显示版本由构建期从该文件注入）。
 - 验证：手机（iPhone 14 视口 390×844）与桌面（1440×900）实拍确认布局；真实浏览器跑通「选 3 张图 → canvas 压缩 124KB→80KB → 进度 0/3→1/3→2/3→✅ 3/3 → 待发列表清空」共 10/10 断言；「电脑 → 手机」收图/收文本弹窗实测正常；静态回归 18 项通过（零第三方外链、gzip、immutable、目录穿越返回 403、缺资源 404、版本自证）。
 
+### znhd.user.js v26.10.06-v16
+- **设置里的「监控时间段」把 antd `TimePicker` 换回原生 `<input type="time">`（仍用 antd `Input` 包壳，外观与其余输入框一致）**，目的是瘦身：
+  - **实测产物 2.560 MiB → 2.243 MiB（-325 KB，-12.4%）**。省掉的是 antd TimePicker 的整套底座：`@rc-component/picker`（单包 229KB 未压缩）+ `dayjs` + Picker 相关样式；已核对产物中不再出现 `dayjs` / `rc-picker` / `ant-picker-*`。
+  - 这**正是项目原本的写法**（旧代码注释：「CAT_UI 未导出 TimePicker，此处用原生 `<input type="time">`」），v9 重写 UI 时我"顺手升级"成 antd TimePicker 才把它带进来的；现在按实测数据换回。
+  - `step={300}`（5 分钟）与原 `minuteStep={5}` 等价；清空输入时 `hhmmToHours` 返回 `null`，`updateWh` 已改为忽略 null，不会把 NaN/undefined 写进配置。
+- **关于「用 CDN 加载 antd 让脚本变小」的核查结论（v15 已记，此处仅摘要）**：React 19 已移除 UMD 构建（实测 `react/umd` 不存在），传统 `@require` 全局包路线不成立；改走 React 18 UMD + antd 全量 UMD 则总体积打平且失去 tree-shaking。**故本次采用纯本地的按需瘦身，未引入任何 CDN 依赖。**
+- 冒烟断言同步：
+  - 新增「时间段为 4 个原生 time 输入（HH:mm）」；
+  - 原「时间图标与输入框同一水平线」在 TimePicker 移除后对象消失，**改量为同类对象**（输入框「清空 ×」→ 弹窗关闭图标 → 侧边栏关闭图标），继续守卫「第三方样式给 svg 加负 margin 把图标顶出控件」这一真实踩坑。
+- 验证：`npm run verify` **16 项全绿**；`antd lint ./src` 0 issue；`typecheck` 通过。
+- ⚠️ 与 v9~v15 一样**只做本地提交，未推送**。
+
 ### znhd.user.js v26.10.06-v15
 - **层级方案改为 B：antd 浮层（Modal / Drawer / message）盖在面板之上**。
   - 实现方式（比单纯降 z-index 更稳）：面板宿主保持 `z-index:999999`（仍高于宿主页面自身内容，页面弹窗多在 1000~9999），同时把 antd 的浮层基数抬到面板之上——`ConfigProvider` 设 `theme.token.zIndexPopupBase = 1000000`。于是弹窗/侧边栏/消息都在面板之上，遮罩也会遮住面板（符合常规层级直觉）。

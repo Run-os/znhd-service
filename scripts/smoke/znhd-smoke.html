@@ -411,6 +411,13 @@
           QRCode: typeof window.QRCode,
           Viewer: typeof window.Viewer,
           recvResponses: window.__recvCount || 0,
+          // 监控时间段是 4 个原生 <input type="time">（v26.10.06-v16 换掉 antd TimePicker：
+          // 去掉 rc-picker + dayjs，产物实测 -325KB），值必须是 HH:mm
+          timeInputsOk: (() => {
+            const els = Array.from(document.querySelectorAll('.ant-modal input[type="time"]'));
+            if (els.length !== 4) return false;
+            return els.every((el) => /^\d{2}:\d{2}$/.test(el.value));
+          })(),
           // 常用语必须是 antd **Drawer**（侧边栏），不是 Modal：v26.10.06-v14 按需求改的。
           // ⚠️ 断言用 `.ant-drawer-body`（v5/v6 都有）；**不要用 `.ant-drawer-content`** ——
           //    v6 已把它改名为 `.ant-drawer-section`，用旧名会假失败（本条踩过）。
@@ -493,16 +500,25 @@
             const body = document.querySelector('.ant-modal-body');
             return !!body && getComputedStyle(body).textAlign === 'left';
           })(),
-          // 时间选择器的时钟图标必须与输入框同一水平线（图标中心与输入框中心误差 ≤2px）。
-          // ⚠️ 必须量 **svg 本身**（.ant-picker-suffix svg）：第三方样式加的负 margin 作用在 svg 上，
-          //    外层 span（.ant-picker-suffix）不动 —— 量 span 会假通过（v26.10.06-v11 踩过）。
-          pickerIconCentered: (() => {
-            const input = document.querySelector('.ant-picker-input');
-            const icon = document.querySelector('.ant-picker-suffix svg');
-            if (!input || !icon) return false;
-            const a = input.getBoundingClientRect();
-            const b = icon.getBoundingClientRect();
-            return Math.abs(a.top + a.height / 2 - (b.top + b.height / 2)) <= 2;
+          // 图标必须与所在控件垂直居中（±2px）——守卫「第三方样式给 svg 加负 margin 把图标顶出控件」。
+          // v26.10.06-v16 起 antd TimePicker 换回原生 input，原时钟图标已不存在，故改为量同类对象：
+          // 输入框「清空 ×」→ 弹窗关闭图标 → 侧边栏关闭图标，取第一个存在且有高度的。
+          iconVerticallyCentered: (() => {
+            const pairs = [
+              ['.ant-input-affix-wrapper', '.ant-input-clear-icon'],
+              ['.ant-modal-close', '.ant-modal-close-x svg'],
+              ['.ant-drawer-close', '.ant-drawer-close svg'],
+            ];
+            for (const pair of pairs) {
+              const box = document.querySelector(pair[0]);
+              const icon = document.querySelector(pair[1]);
+              if (!box || !icon) continue;
+              const a = box.getBoundingClientRect();
+              const b = icon.getBoundingClientRect();
+              if (!b.height) continue;
+              return Math.abs(a.top + a.height / 2 - (b.top + b.height / 2)) <= 2;
+            }
+            return false;
           })(),
           relevantErrors: relevant,
         };

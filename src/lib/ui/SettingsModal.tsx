@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import { Modal, Button, Divider, Input, Space, Switch, TimePicker, Typography } from 'antd';
-import dayjs from 'dayjs';
+import { Modal, Button, Divider, Input, Space, Switch, Typography } from 'antd';
 import { DEFAULTS } from '@/lib/constants';
+import { hoursToHHmm, hhmmToHours } from '@/lib/utils';
 import { getOverlayContainer } from '@/lib/ui/panelHost';
 
 const { Text } = Typography;
@@ -29,13 +29,6 @@ export interface SettingsModalProps {
     onChangeUseCdn: (v: boolean) => void;
 }
 
-/** 十进制小时 → dayjs（避免依赖 dayjs 的 customParseFormat 插件做字符串解析） */
-function toDayjs(dec: number) {
-    const h = Math.floor(dec);
-    const m = Math.round((dec - h) * 60);
-    return dayjs().hour(h).minute(m).second(0);
-}
-
 /**
  * 设置弹窗（v26.10.06-v9：由 CAT_UI.Drawer 侧边抽屉改为 antd Modal 弹窗）。
  * ⚠️ 时间输入与地址草稿的处理是真实页面实测结论（见块内注释），禁止顺手重构。
@@ -55,8 +48,10 @@ export default function SettingsModal({
 }: SettingsModalProps) {
     const wh = workingHours || { morningStart: 9, morningEnd: 12, afternoonStart: 13.5, afternoonEnd: 18 };
 
-    const updateWh = (field: keyof WorkingHours, dec: number) => {
-        if (typeof dec !== 'number' || isNaN(dec)) return;
+    // 原生 <input type="time"> 被清空时 hhmmToHours 返回 null（v26.10.06-v16 换掉 antd TimePicker 后
+    // 才有这个形态）：此时保持原值不动，避免把 undefined/NaN 写进配置。
+    const updateWh = (field: keyof WorkingHours, dec: number | null) => {
+        if (dec === null || typeof dec !== 'number' || isNaN(dec)) return;
         onChangeWorkingHours({ ...wh, [field]: dec });
     };
 
@@ -132,42 +127,38 @@ export default function SettingsModal({
             </Text>
             <Space size={8} wrap style={{ marginBottom: 8 }}>
                 <Text>上午</Text>
-                <TimePicker
-                    value={toDayjs(wh.morningStart)}
-                    format="HH:mm"
-                    minuteStep={5}
-                    allowClear={false}
+                <Input
+                    type="time"
+                    step={300}
+                    value={hoursToHHmm(wh.morningStart)}
+                    onChange={(e) => updateWh('morningStart', hhmmToHours(e.target.value))}
                     style={{ width: 110 }}
-                    onChange={(v) => v && updateWh('morningStart', v.hour() + v.minute() / 60)}
                 />
                 <Text>至</Text>
-                <TimePicker
-                    value={toDayjs(wh.morningEnd)}
-                    format="HH:mm"
-                    minuteStep={5}
-                    allowClear={false}
+                <Input
+                    type="time"
+                    step={300}
+                    value={hoursToHHmm(wh.morningEnd)}
+                    onChange={(e) => updateWh('morningEnd', hhmmToHours(e.target.value))}
                     style={{ width: 110 }}
-                    onChange={(v) => v && updateWh('morningEnd', v.hour() + v.minute() / 60)}
                 />
             </Space>
             <Space size={8} wrap style={{ marginBottom: 8 }}>
                 <Text>下午</Text>
-                <TimePicker
-                    value={toDayjs(wh.afternoonStart)}
-                    format="HH:mm"
-                    minuteStep={5}
-                    allowClear={false}
+                <Input
+                    type="time"
+                    step={300}
+                    value={hoursToHHmm(wh.afternoonStart)}
+                    onChange={(e) => updateWh('afternoonStart', hhmmToHours(e.target.value))}
                     style={{ width: 110 }}
-                    onChange={(v) => v && updateWh('afternoonStart', v.hour() + v.minute() / 60)}
                 />
                 <Text>至</Text>
-                <TimePicker
-                    value={toDayjs(wh.afternoonEnd)}
-                    format="HH:mm"
-                    minuteStep={5}
-                    allowClear={false}
+                <Input
+                    type="time"
+                    step={300}
+                    value={hoursToHHmm(wh.afternoonEnd)}
+                    onChange={(e) => updateWh('afternoonEnd', hhmmToHours(e.target.value))}
                     style={{ width: 110 }}
-                    onChange={(v) => v && updateWh('afternoonEnd', v.hour() + v.minute() / 60)}
                 />
             </Space>
             <Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 12 }}>
