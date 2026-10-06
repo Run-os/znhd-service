@@ -66,6 +66,7 @@ const CHECKS = [
   ['phrasesClicked', '常用语抽屉可打开'],
   ['changelogPopup', '更新日志弹窗（最新 10 条）'],
   ['viewerZoomOk', '缩略图放大显示主图'],
+  ['copyOk', '图片复制只尝试写 PNG'],
 ];
 
 /**

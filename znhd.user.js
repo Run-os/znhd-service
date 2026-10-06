@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name                征纳互动人数和在线监控v2
 // @namespace           https://scriptcat.org/
-// @version             26.10.06-v3
+// @version             26.10.06-v4
 // @description         实时监控征纳互动等待人数和在线状态，支持语音播报、自定义常用语
 // @author              runos
 // @match               https://znhd.hunan.chinatax.gov.cn:8443/*
@@ -16,7 +16,7 @@
 // @grant               GM_getResourceText
 // @connect             *
 // @connect             znhd-service.zeabur.app
-// @homepageURL         https://scriptcat.org/zh-CN/script-show-page/3650
+// @homepageURL         https://github.com/Run-os/znhd-service
 // @updateURL           https://raw.githubusercontent.com/Run-os/znhd-service/refs/heads/main/dist/znhd.user.js
 // @downloadURL         https://raw.githubusercontent.com/Run-os/znhd-service/refs/heads/main/dist/znhd.user.js
 // @require             https://scriptcat.org/lib/1167/1.0.0/%E8%84%9A%E6%9C%AC%E7%8C%ABUI%E5%BA%93.js?sha384-jXdR3hCwnDJf53Ue6XHAi6tApeudgS/wXnMYBD/ZJcgge8Xnzu/s7bkEf2tPi2KS
@@ -1542,48 +1542,84 @@ function blobToPng(blob) {
         }
     });
 }
+/** 统一取可读的异常文本 */
+function errTextOf(e) {
+    return e && e.name ? e.name + ': ' + e.message : String((e && e.message) || e);
+}
 /**
- * 尝试把图片写入剪贴板：优先「页面主世界(unsafeWindow)」的 navigator.clipboard.write，
- * 失败再退回「隔离世界」的同名 API。两者都不行则返回 false。
- * 页面主世界路径是文档确认的、唯一能把图片真正写进系统剪贴板的可靠方式
- * （ScriptCat 隔离世界里 ClipboardItem 常缺失，且 ScriptCat 的 GM_setClipboard 仅支持文本，
- *  传 Blob 会静默无效——故图片复制不再依赖 GM_setClipboard）。
- * @param {Blob} data
- * @param {string} type
- * @returns {Promise<boolean>}
+ * 用目标 realm 的原生 Blob 构造器重新包一层。
+ * 跨 realm 直接把「隔离世界的 Blob」交给「页面主世界的 ClipboardItem」可能被拒绝；
+ * 参考实现 qsniyg/maxurl 同样是用页面原生 `native_blob` 构造后再传入 ClipboardItem。
  */
-function attemptWriteImage(data, type) {
-    const doWrite = (nav, CI) => new Promise((r) => {
-        try {
-            if (nav && nav.clipboard && nav.clipboard.write && typeof CI !== 'undefined') {
-                nav.clipboard
-                    .write([new CI({ [type]: data })])
-                    .then(() => r(true))
-                    .catch(() => r(false));
+function toRealmBlob(blob, BlobCtor) {
+    const type = blob && blob.type ? blob.type : 'image/png';
+    try {
+        return BlobCtor ? new BlobCtor([blob], { type: type }) : blob;
+    }
+    catch (e) {
+        return blob;
+    }
+}
+/**
+ * 在指定 realm 里写**一次**剪贴板（只写 image/png）。
+ *
+ * ⚠️ 为什么只写一次：`clipboard.write()` 通过用户手势校验后就会**消耗**这次手势，失败也不退还。
+ * 所以任何「先拿原图试一下、失败再重试」的兜底都会把手势烧掉，让后面的重试必然 NotAllowedError。
+ * preferPromiseForm=true 时使用 ClipboardItem 的 Promise 形式：write() 在本次点击手势内**同步发起**，
+ * 由浏览器去等异步转换结果 —— 转换耗时（实测约 1s）不再影响手势有效性。
+ * @param {ClipboardRealm} realm - 写入目标
+ * @param {Promise<any>} pngPromise - 解析为 PNG Blob 的 Promise
+ * @param {boolean} preferPromiseForm - 是否优先用 Promise 形式的 ClipboardItem
+ * @returns {Promise<boolean>} 写入是否成功
+ */
+function writeClipboardOnce(realm, pngPromise, preferPromiseForm) {
+    return new Promise((resolve) => {
+        const doWrite = (item) => {
+            try {
+                realm.nav.clipboard.write([item]).then(() => resolve(true), (e) => {
+                    (0, logger_1.addLog)('[复制] 写入剪贴板被拒（' + realm.name + '）: ' + errTextOf(e), 'warning', true);
+                    resolve(false);
+                });
+            }
+            catch (e) {
+                (0, logger_1.addLog)('[复制] 调用 clipboard.write 异常（' + realm.name + '）: ' + errTextOf(e), 'error', true);
+                resolve(false);
+            }
+        };
+        if (preferPromiseForm) {
+            try {
+                doWrite(new realm.CI({ 'image/png': pngPromise }));
                 return;
             }
+            catch (e) {
+                (0, logger_1.addLog)('[复制] ClipboardItem 不支持 Promise 形式，改为先转换再写入: ' + errTextOf(e), 'warning', true);
+            }
         }
-        catch (e) {
-            /* 忽略，走降级 */
-        }
-        r(false);
-    });
-    const w = typeof unsafeWindow !== 'undefined' ? unsafeWindow : window;
-    return doWrite(w && w.navigator, w && w.ClipboardItem).then((ok) => {
-        if (ok)
-            return true;
-        return doWrite(navigator, ClipboardItem);
+        pngPromise.then((png) => {
+            try {
+                doWrite(new realm.CI({ 'image/png': toRealmBlob(png, realm.BlobCtor) }));
+            }
+            catch (e) {
+                (0, logger_1.addLog)('[复制] 构造 ClipboardItem 失败（' + realm.name + '）: ' + errTextOf(e), 'error', true);
+                resolve(false);
+            }
+        });
     });
 }
 /**
- * 将图片 Blob 写入系统剪贴板（由一次「用户点击」触发，以保留浏览器要求的用户手势）。
- * 流程：
- *   1) 先用「原始 blob」直接写（此时点击手势最新鲜、无任何异步转换，成功率最高）；
- *   2) 若失败（多半因内核仅支持 image/png 而原图为 jpeg），再统一转 PNG 后重试；
- *   3) 写入一律走页面主世界的 navigator.clipboard.write（见 attemptWriteImage），
- *      不再依赖 GM_setClipboard（ScriptCat 该 API 仅支持文本，传 Blob 会静默无效导致"假成功"）。
+ * 将图片 Blob 写入系统剪贴板（必须由一次「用户点击」触发）。
+ *
+ * ⚠️ 2026-10-06 重写。旧实现「先按原图类型写一次 → 失败后再转 PNG 重试」是**注定失败**的写法：
+ *   1) Chromium 的异步剪贴板**只支持写 `image/png`**（实测 `ClipboardItem.supports('image/jpeg') === false`），
+ *      而手机传来的图多为 jpeg ⇒ 第一次写入必然失败；
+ *   2) 按规范，`clipboard.write()` 通过手势校验后即**消耗**该手势（失败也不退还）
+ *      ⇒ 转 PNG 后的第二次重试必然 `NotAllowedError: Write permission denied`，用户只看到「复制失败」；
+ *   3) 正确顺序：**先转好 PNG，再只写一次**。
+ *
+ * 参考实现：qsniyg/maxurl（只调用一次 write + 用页面原生 Blob 构造 ClipboardItem + 显式异常分支）。
+ * 本脚本不需要它们「跨域图片经 GM_xmlhttpRequest 取二进制」那一段 —— 图片本来就是中继传进来的 Blob。
  * @param {Blob} blob - 图片 Blob
- * @returns {Promise<boolean>} 成功返回 true，失败返回 false
+ * @returns {Promise<boolean>} 成功返回 true，失败返回 false（失败原因写入日志）
  */
 function copyImageToClipboard(blob) {
     return new Promise((resolve) => {
@@ -1592,35 +1628,53 @@ function copyImageToClipboard(blob) {
             resolve(false);
             return;
         }
-        const type0 = blob.type ? blob.type : 'image/png';
-        // 1) 原始 blob 直接写（手势最新鲜）
-        attemptWriteImage(blob, type0).then((ok) => {
-            if (ok) {
-                (0, logger_1.addLog)('[复制] 图片已复制到剪贴板', 'success', true);
-                resolve(true);
-                return;
-            }
-            // 2) 转 PNG 后重试（规避内核仅支持 image/png 的限制）
-            blobToPng(blob)
-                .then((png) => {
-                const data = png || blob;
-                const type = data.type ? data.type : 'image/png';
-                attemptWriteImage(data, type).then((ok2) => {
-                    if (ok2) {
-                        (0, logger_1.addLog)('[复制] 图片已复制到剪贴板 (转PNG)', 'success', true);
-                        resolve(true);
-                    }
-                    else {
-                        (0, logger_1.addLog)('[复制] 所有复制方式均失败，请长按图片手动保存', 'error', true);
-                        resolve(false);
-                    }
-                });
-            })
-                .catch(() => {
-                (0, logger_1.addLog)('[复制] PNG 转换失败', 'error', true);
-                resolve(false);
+        const pageWin = typeof unsafeWindow !== 'undefined' ? unsafeWindow : null;
+        const realms = [];
+        // 页面主世界优先：ScriptCat 隔离世界里的 ClipboardItem / 写入常不可用
+        if (pageWin &&
+            pageWin.navigator &&
+            pageWin.navigator.clipboard &&
+            pageWin.navigator.clipboard.write &&
+            pageWin.ClipboardItem) {
+            realms.push({
+                name: '页面主世界',
+                nav: pageWin.navigator,
+                CI: pageWin.ClipboardItem,
+                BlobCtor: pageWin.Blob,
+                isPageRealm: true,
             });
+        }
+        if (navigator.clipboard &&
+            typeof navigator.clipboard.write === 'function' &&
+            typeof ClipboardItem !== 'undefined') {
+            realms.push({ name: '隔离世界', nav: navigator, CI: ClipboardItem, BlobCtor: Blob, isPageRealm: false });
+        }
+        if (!realms.length) {
+            (0, logger_1.addLog)('[复制] 当前环境不支持图片剪贴板（缺 clipboard.write 或 ClipboardItem）', 'error', true);
+            resolve(false);
+            return;
+        }
+        // 先启动 PNG 转换（不阻塞手势）：Chromium 只认 image/png
+        const pngPromise = (blob.type === 'image/png' ? Promise.resolve(blob) : blobToPng(blob)).then((b) => {
+            if (b && b.type !== 'image/png') {
+                // blobToPng 转换失败时会原样返回原图；此处只提示，成败仍交给写入阶段判定
+                (0, logger_1.addLog)('[复制] 图片转 PNG 失败（内核不支持位图解码/Canvas），可能无法写入剪贴板', 'warning', true);
+            }
+            return b;
         });
+        (async () => {
+            for (const realm of realms) {
+                // 主世界优先用 Promise 形式（write 落在手势内）；隔离世界退化为「先转换、后写入」
+                const ok = await writeClipboardOnce(realm, pngPromise, realm.isPageRealm);
+                if (ok) {
+                    (0, logger_1.addLog)('[复制] 图片已复制到剪贴板（' + realm.name + '）', 'success', true);
+                    resolve(true);
+                    return;
+                }
+            }
+            (0, logger_1.addLog)('[复制] 图片写入剪贴板失败：常见原因是浏览器/油猴未授予剪贴板权限、页面未获得焦点，或该内核不支持图片剪贴板；可长按图片手动保存', 'error', true);
+            resolve(false);
+        })();
     });
 }
 exports.copyImageToClipboard = copyImageToClipboard;
@@ -3266,7 +3320,8 @@ function SettingsDrawer({ visible, setVisible, logEntries, workingHours, onChang
             CAT_UI.Button('[脚本主页]', {
                 type: 'link',
                 onClick: () => {
-                    window.open('https://scriptcat.org/zh-CN/script-show-page/3650', '_blank');
+                    // 与 config/common.meta.json 的 @homepageURL 保持一致（2026-10-06 起改为 GitHub 仓库）
+                    window.open('https://github.com/Run-os/znhd-service', '_blank');
                 },
                 style: {
                     padding: '0 8px',

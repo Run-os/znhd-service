@@ -110,7 +110,8 @@ export function SettingsDrawer({
                     CAT_UI.Button('[脚本主页]', {
                         type: 'link',
                         onClick: () => {
-                            window.open('https://scriptcat.org/zh-CN/script-show-page/3650', '_blank');
+                            // 与 config/common.meta.json 的 @homepageURL 保持一致（2026-10-06 起改为 GitHub 仓库）
+                            window.open('https://github.com/Run-os/znhd-service', '_blank');
                         },
                         style: {
                             padding: '0 8px',

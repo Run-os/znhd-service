@@ -1,7 +1,7 @@
 {
   "name": "征纳互动人数和在线监控v2",
   "namespace": "https://scriptcat.org/",
-  "version": "26.10.06-v3",
+  "version": "26.10.06-v4",
   "description": "实时监控征纳互动等待人数和在线状态，支持语音播报、自定义常用语",
   "author": "runos",
   "match": ["https://znhd.hunan.chinatax.gov.cn:8443/*", "https://example.com/*"],
@@ -16,7 +16,7 @@
     "GM_getResourceText"
   ],
   "connect": ["*", "znhd-service.zeabur.app"],
-  "homepageURL": "https://scriptcat.org/zh-CN/script-show-page/3650",
+  "homepageURL": "https://github.com/Run-os/znhd-service",
   "updateURL": "https://raw.githubusercontent.com/Run-os/znhd-service/refs/heads/main/dist/znhd.user.js",
   "downloadURL": "https://raw.githubusercontent.com/Run-os/znhd-service/refs/heads/main/dist/znhd.user.js",
   "require": [

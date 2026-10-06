@@ -48,6 +48,22 @@
         return parts.join('\n');
       })();
 
+      // 剪贴板写入桩：只**记录**每次 clipboard.write 的条目类型并直接拒绝。
+      // 这样无需真实剪贴板权限即可断言「代码有没有先拿不支持的 jpeg 去试」——
+      // headless 里图片剪贴板根本写不进去（实测即使只写一次 image/png 也会被拒），
+      // 所以断言只能锁「尝试的类型」这个不变量，不能锁「写成功」。
+      window.__copyWriteTypes = [];
+      try {
+        if (typeof Clipboard !== 'undefined' && Clipboard.prototype && Clipboard.prototype.write) {
+          Clipboard.prototype.write = function (items) {
+            window.__copyWriteTypes.push(Array.prototype.map.call(items, (i) => i.types));
+            return Promise.reject(new DOMException('smoke-stub: 桩环境不支持写剪贴板', 'NotAllowedError'));
+          };
+        }
+      } catch (e) {
+        /* 忽略：环境没有 Clipboard 时断言会因「零次调用」而失败，属预期 */
+      }
+
       const reply = (details, payload) => {
         setTimeout(() => {
           if (typeof details.onload === 'function') {
@@ -231,6 +247,16 @@
         };
       }, 2600);
 
+      // 点画廊里的「复制」，验证剪贴板写入路径（v26.10.06-v4 回归断言）。
+      // 用程序化 click 而非真实鼠标点击：此时 Viewer/更新日志弹窗可能盖在画廊上（真实点击会打偏）。
+      setTimeout(() => {
+        const grid = document.getElementById('__znhd_img_grid__');
+        const btns = grid ? Array.from(grid.querySelectorAll('button')) : [];
+        const b = btns.find((x) => (x.textContent || '').trim() === '复制');
+        window.__clickedCopy = !!b;
+        if (b) b.click();
+      }, 3400);
+
       // 打开「设置」抽屉 → 点它里面的「更新日志」，验证新入口 + 弹窗 + 只显示最新 10 条
       setTimeout(() => {
         window.__clickedSettings = clickByText('设置');
@@ -273,6 +299,28 @@
             window.__viewerZoom.decoded &&
             window.__viewerZoom.visible
           ),
+          // 图片复制：**只允许尝试写 image/png**。
+          // 旧实现「先按原图类型（jpeg）写一次、失败再转 PNG 重试」会命中
+          // ClipboardItem.supports('image/jpeg') === false，且那一次失败已按规范消耗掉用户手势，
+          // 导致真正的 PNG 重试也必然失败 —— 本断言就是把这条不变量钉死。
+          copyWriteTypes: window.__copyWriteTypes || [],
+          copyOk: (() => {
+            // __copyWriteTypes 的结构：每次 write → [每个 item 的 types 数组]
+            // 例如 [[['image/png']]] 表示「一次 write，一个 item，该 item 只声明了 image/png」
+            const recs = window.__copyWriteTypes || [];
+            if (!recs.length) return false; // 一次都没发起写入 → 代码没走到写入路径
+            let sawPng = false;
+            let bad = null;
+            recs.forEach((rec) =>
+              (rec || []).forEach((types) =>
+                (types || []).forEach((t) => {
+                  if (t === 'image/png') sawPng = true;
+                  else bad = t;
+                })
+              )
+            );
+            return sawPng && bad === null;
+          })(),
           xhr: window.__gmXhrLog.slice(0, 6),
           relevantErrors: relevant,
         };
@@ -284,7 +332,8 @@
           report.galleryText &&
           report.phrasesLoaded &&
           report.changelogPopup &&
-          report.viewerZoomOk
+          report.viewerZoomOk &&
+          report.copyOk
             ? 'ALL-OK'
             : 'PARTIAL');
       }, 6500);

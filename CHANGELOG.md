@@ -11,6 +11,17 @@
 
 ---
 
+### znhd.user.js v26.10.06-v4
+
+- **修复：收到图片后点「复制」，图片没有被写进剪贴板**（弹窗里显示「复制失败」）。根因是写入顺序错了：
+  - Chromium 的异步剪贴板**只支持写 `image/png`**（实测 `ClipboardItem.supports('image/jpeg') === false`），而手机传来的图多为 jpeg。旧实现「先按**原图类型**写一次 → 失败后再转 PNG 重试」的第一次调用**注定失败**；
+  - 更关键的是：按规范 `clipboard.write()` 在通过用户手势校验后即**消耗**该手势（失败也不退还），于是转 PNG 之后的第二次重试必然 `NotAllowedError: Write permission denied` —— 用户看到的就是「复制失败，请长按图片手动保存」。
+  - 重写为：**先转好 PNG，再只写一次**；并用 `ClipboardItem` 的 **Promise 形式**让 `write()` 在点击手势内**同步发起**，异步转换耗时不再影响手势有效性。写入走**页面主世界**（`unsafeWindow`）的 `navigator.clipboard` + `ClipboardItem`，并按参考实现用该 realm 的**原生 Blob 构造器**重新包一层，避免跨 realm 被拒。失败原因（权限 / 页面未聚焦 / 内核不支持）写进日志。
+  - 参考实现：[qsniyg/maxurl](https://github.com/qsniyg/maxurl)（只调用一次 write + 用页面原生 `native_blob` 构造 ClipboardItem + 显式异常分支）。本脚本**不需要**参考实现里「跨域图片经 `GM_xmlhttpRequest` 取二进制」那一段 —— 图片本来就是中继传进来的 Blob。
+- **新增回归断言**：`npm run verify` 新增「**图片复制只尝试写 PNG**」—— 在页面里桩掉 `Clipboard.prototype.write` 记录条目类型，断言「至少发起过一次写入，且**只出现 `image/png`**」。旧实现会产生 `image/jpeg` 条目而被判失败。
+  - 说明：headless 环境里图片剪贴板**根本写不进去**（实测即使只写一次 `image/png` 也返回 `NotAllowedError`），所以断言只锁「尝试的类型」这一不变量，不锁「写成功」。
+- **`@homepageURL` 改为 `https://github.com/Run-os/znhd-service`**；面板设置里的 `[脚本主页]` 按钮同步指向该仓库（原先指向 ScriptCat 脚本页）。
+
 ### znhd.user.js v26.10.06-v3
 
 - **修复：收到图片后单击缩略图放大，有时长时间不出图**（表现为弹出一片纯黑遮罩、图一直不出来，且反复点击无效）。根因是 Viewer.js 集成里的一处竞态：
