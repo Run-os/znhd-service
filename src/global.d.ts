@@ -35,9 +35,6 @@ declare global {
         CorrectLevel: { L: number; M: number; Q: number; H: number };
     };
 
-    /** @require viewerjs 注入 */
-    const Viewer: any;
-
     /**
      * @require heic2any 注入：把 HEIC/HEIF 解码转成 JPEG。
      * 桌面 Chrome 原生不支持 HEIC/HEIF，故「发送到手机」必须先经它转码再压缩。

@@ -24,6 +24,20 @@
 - 版本：relay `package.json` → `26.10.06-v3`（页面显示版本由构建期从该文件注入）。
 - 验证：手机（iPhone 14 视口 390×844）与桌面（1440×900）实拍确认布局；真实浏览器跑通「选 3 张图 → canvas 压缩 124KB→80KB → 进度 0/3→1/3→2/3→✅ 3/3 → 待发列表清空」共 10/10 断言；「电脑 → 手机」收图/收文本弹窗实测正常；静态回归 18 项通过（零第三方外链、gzip、immutable、目录穿越返回 403、缺资源 404、版本自证）。
 
+### znhd.user.js v26.10.06-v13
+- **收图画廊与更新日志弹窗改为 antd，并移除 Viewer.js 依赖**（UI 至此全部是 Ant Design）。
+- 收图画廊：原「自拼 DOM 弹窗 + Viewer.js 放大」→ **antd `Modal` + `Image.PreviewGroup`**（多图左右切换 / 缩放 / 旋转 / 翻转 / 1:1 都自带，无需第三方库）：
+  - 新增 `ui/RecvGalleryModal.tsx`（九宫格缩略图，每张「复制 / 下载 / ×」，底部「清空全部」）；
+  - `lib/gallery.ts` 从 474 行瘦成「数据 + 命名工具」：只留 `GalleryImage` / `MAX_GALLERY` / `downloadFileName`，**不再有任何 DOM 操作**；列表状态改由主面板 React state 持有（含超上限 revoke 最旧 objectURL）；
+  - 剪贴板仍走 `relay.copyImageToClipboard`（先转 PNG 再只写一次，仓库实测结论，未改）。
+- 收到文本：原 DOM 覆盖层 → `ui/RecvTextModal.tsx`（antd Modal）；同时修掉「多个全屏遮罩叠加、关掉顶层会露出过期文本」的老问题（现在单实例替换内容）。
+- 更新日志：原自拼 DOM 弹窗（fixed 全屏 + z-index 拉满 + 自装 ESC）→ `ui/ChangelogModal.tsx`（antd Modal）；`lib/changelog.ts` 只保留纯逻辑（`parseChangelog` / `mdToPlain` / `loadChangelog` + 会话缓存），超时/HTTP/格式校验等判定一字未改。
+- **移除 Viewer.js**：`@require viewerjs` 与 `@resource VIEWER_CSS` 从 `common.meta.json`/`dev.meta.json` 删除；`GM_getResourceText` 授权（仅供 Viewer CSS 使用）一并移除；`global.d.ts` 删除 `Viewer` 声明。至此脚本 `@require` 只剩 js-yaml / qrcodejs / heic2any。
+- 测试同步：冒烟的放大断言由 `.viewer-canvas img` 改为 **`.ant-image-preview-img`**（判定要点不变：已解码 + 可见尺寸）；「点画廊复制」改为在 antd Modal 内找「复制」按钮；更新日志断言改为查 antd Modal（旧 id `__znhd_changelog_popup__` 已不存在）。
+- 文档同步（B）：`AGENT.md` 的文件表/入口装配/全局声明/弹窗浮层规则全部对齐新结构，历史踩坑表给 Viewer.js 与 CAT_UI 条目加上「【已废弃】」标记；`ReadMe.md` 目录树改为新组件清单、技术栈去掉「脚本猫UI库」与「Viewer.js」、补 React 19 + Ant Design v6 一行，全篇「抽屉」→「弹窗」共 12 处。
+- 验证：`npm run verify` **13 项全绿**；`antd lint ./src` 0 issue；`typecheck` 通过。
+- ⚠️ 本次**只做本地提交，未推送**（按用户 2026-10-06 的要求：确认后再上传）。
+
 ### znhd.user.js v26.10.06-v12
 - **定位并修复「时间时钟图标 / 输入框清空 × 跑出输入框、与输入框不在同一水平线」的真因**。用户提供了该图标的计算样式，里面有一行 **`margin: -2.75em auto 0`**（按 16px 字号约 **-44px**）外加 `opacity: .55; pointer-events: none;` —— **antd 自身从不给 `svg` 设 margin**（antd 只设 `width/height/fill/display/vertical-align`），这条负外边距来自宿主环境的第三方样式（用户环境里能同时看到 SR 注释类扩展的 `--sr-annote-*` 变量），把 svg 整体顶出输入框。
 - 修法：在样式隔离层（`lib/ui/uiReset.ts`）给本脚本容器内的 `svg` 补一条 **`margin: 0`**。第三方这类规则特异性只有 (0,0,1)，用带容器前缀的选择器（`#宿主 svg` / `.ant-modal-root svg` / …）即可稳压，且不影响宿主页面自身。

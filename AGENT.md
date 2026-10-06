@@ -61,12 +61,12 @@
 | `config/dev.meta.json` | 开发态元信息覆盖（`-dev` 名、localhost `@match`、`GM_addValueChangeListener`、`@require file://.../dist/znhd.dev.user.js`）。⚠️ 数组字段是**整体覆盖**而非追加，故 `require` 必须写全量列表。 |
 | `config/webpack*.js` | 构建配置（对齐 Eished/douyu-helper 模板）。生产产物落 `dist/znhd.user.js`（提交），开发产物落 `dist/znhd.dev.user.js`（忽略）。 |
 | `src/index.ts` | 入口：生产直接 `app()`；开发动态 import `devTools`（热重载 / 首次自动安装）。 |
-| `src/app.ts` | **入口装配**（~90 行）：创建面板 → `setupPanelPositionTracking()` → beforeunload 清理 → 启动监控。业务实现全在 `src/lib/`。 |
-| `src/lib/*.ts` | 业务模块：`constants`（CONFIG/DEFAULTS/存储键）、`logger`（addLog/防抖/`setLogEntriesSink`）、`storage`（localStorage 读写）、`state`（`runtime` 运行时缓存）、`utils`（链接解析/转义/时间换算）、`speech`（语音队列）、`monitor`（人数·掉线·工作时间）、`tinymce`（编辑器写入）、`clipboard`（提示音+安全复制）、`relay`（中继客户端+图片剪贴板）、`gallery`（九宫格画廊+文本弹窗）、`changelog`（更新日志拉取/解析/弹窗）、`qrcode`（二维码 dataURL）。 |
-| `src/lib/ui/*.ts` | UI 组件：`LogDrawer`（运行日志抽屉：类型过滤/清空/自动停在最新，v26.10.06-v8 从设置抽屉独立出来）、`SettingsDrawer`、`CommonPhrasesDrawer`、`PhoneImageDrawer`、`MainPanel`、`panelPosition`（面板拖拽位置保存，由原具名 IIFE 改为导出函数）。 |
+| `src/app.ts` | **入口装配**（~60 行）：`mountPanel()`（挂载 React+antd 面板；位置恢复与拖拽都在 `ui/panelHost` 内） → beforeunload 清理 → 启动监控。业务实现全在 `src/lib/`。 |
+| `src/lib/*.ts` | 业务模块：`constants`（CONFIG/DEFAULTS/存储键）、`logger`（addLog/防抖/`setLogEntriesSink`）、`storage`（localStorage 读写）、`state`（`runtime` 运行时缓存）、`utils`（链接解析/转义/时间换算）、`speech`（语音队列）、`monitor`（人数·掉线·工作时间）、`tinymce`（编辑器写入）、`clipboard`（提示音+安全复制）、`relay`（中继客户端+图片剪贴板）、`gallery`（收到图片的数据/命名工具；渲染在 ui/RecvGalleryModal）、`changelog`（更新日志拉取/解析；渲染在 ui/ChangelogModal）、`qrcode`（二维码 dataURL）。 |
+| `src/lib/ui/*.tsx` | UI 组件（React 19 + Ant Design v6，**全部以弹窗形态呈现**）：`MainPanel`（主面板：人数/状态卡 + 语音开关 + 2×2 按钮 + 查看日志）、`SettingsModal`、`PhrasesModal`、`LogModal`、`PhoneModal`、`ChangelogModal`、`RecvGalleryModal`（收图画廊，放大用 antd `Image.PreviewGroup`）、`RecvTextModal`；基础设施：`panelHost`（宿主挂载 + 自研指针拖拽 + 位置持久化）、`panelIds`、`notify`（antd message 桥）、`uiReset`（样式隔离层）。 |
 
-> **有意未拆出的模块**：`phrases`（常用语加载/缓存/请求序号）。`loadPhrasesData` 直接读写 React 状态（`phrasesData`/`setPhrasesData`/`setPhrasesLoading`）与 `phrasesRequestSeq`，抽成独立模块必须引入 `getData/setData` 桥接，属于「为拆而拆」，与约束 3「不得无理由重构可运行逻辑」冲突，故保留在 `src/lib/ui/MainPanel.ts` 内。如日后要拆，请连同组件状态一起改成自定义 hook。
-| `src/global.d.ts` | 全局声明：`PRODUCTION`/`FILENAME`（DefinePlugin 注入）+ `CAT_UI`/`jsyaml`/`QRCode`/`Viewer`（`@require` 注入）。GM_* 由 `@types/tampermonkey` 提供。 |
+> **有意未拆出的模块**：`phrases`（常用语加载/缓存/请求序号）。`loadPhrasesData` 直接读写 React 状态（`phrasesData`/`setPhrasesData`/`setPhrasesLoading`）与 `phrasesRequestSeq`，抽成独立模块必须引入 `getData/setData` 桥接，属于「为拆而拆」，与约束 3「不得无理由重构可运行逻辑」冲突，故保留在 `src/lib/ui/MainPanel.tsx` 内。如日后要拆，请连同组件状态一起改成自定义 hook。
+| `src/global.d.ts` | 全局声明：`PRODUCTION`/`FILENAME`（DefinePlugin 注入）+ `jsyaml`/`QRCode`/`heic2any`（`@require` 注入）。GM_* 由 `@types/tampermonkey` 提供。 |
 | `public/index.html` | 本地调试宿主页（HtmlWebpackPlugin 模板 + devServer 静态根）。 |
 | `scripts/smoke/` | 无头端到端冒烟：`server.js`（本地服务）+ `znhd-smoke.html`（GM 桩测试页）+ `run.js`（puppeteer）。`npm run verify`，**已接入 CI**。目录名沿用模板外的最小新增（模板无测试目录）。 |
 | `relay-server/server.js` | 中继服务本体（纯 Node 内置模块，运行时不装依赖）：路由、通道、`/health`。**手机上传页已不再是内联字符串**，见下两行。`PORT = process.env.PORT \|\| 5689`。 |
@@ -173,7 +173,7 @@
 - `scriptCat_PanelPoint`：面板位置（防抖写）。
 - `scriptCat_PhrasesCache`：`{time,url,data}`，2h TTL。
 - 写盘语义（v26.9.6-v9 起）：`saveAllvalue()` 是 **300ms 尾防抖**，返回时尚未写入 localStorage；需要「写完立刻读」时先调 `flushSaveAllvalue()`（`beforeunload` 已自动兜底）。面板位置 `savePanelPoint()` 走 rAF 防抖；逐字设置的日志用 `addLogDebounced(key,...)` 400ms 合并。
-- 弹窗/画廊 DOM：挂 `document.documentElement`，`z-index:2147483647`；`.viewer-container` 由 MutationObserver 移入画廊 overlay 内。
+- 弹窗/浮层：统一用 antd Modal，`getContainer` 指向 `document.documentElement`（避开 body 的 transform 层叠上下文）；宿主页面 CSS 的污染由 `ui/uiReset.ts` 兜（v26.10.06-v11 起）。
 
 ---
 
@@ -181,7 +181,7 @@
 
 1. **版本号 `YY.MM.DD-vN`**（**零填充**；`N` = **当天第几次改动**，跨天重置为 `v1`）。⚠️⚠️ **同一天内不管改几次，日期部分都不许动，只能递增 `-vN`**：2026-10-06 当天曾误写成 `26.10.6-v1` → `26.10.7-v1` → `26.10.8-v1`，等于凭空造出 10-07 / 10-08 两个日期，**并会让油猴的版本比较把随后几天的新版本判成「更旧」而收不到更新**。正确写法是 `26.10.06-v1` → `26.10.06-v2` → `26.10.06-v3`。（历史条目沿用旧的 `YY.M.D` 非零填充写法，如 `26.10.5-v1`、`26.7.29-v1`，**不改写**。）规范详见 `CHANGELOG.md` 开头。改脚本 → 递增 **`config/common.meta.json` 的 `version`**（产物头是构建生成的，**不要**去改 `znhd.user.js`）；改 `relay-server/server.js` → 递增 `relay-server/package.json` 的 `version`；每次改动在 **`CHANGELOG.md` 顶部**补一条（见「更新日志约定」）。
 2. **禁止给 `relay-server` 增加 npm 依赖/构建步骤**（部署无 npm install）。
-3. **不得无理由重构可运行逻辑**（尤其弹窗 CSS、长轮询/广播机制、CAT_UI 用法）。改前先读 `CHANGELOG.md` 对应条目——多数"诡异写法"是真实浏览器实测结论。
+3. **不得无理由重构可运行逻辑**（尤其弹窗布局、长轮询/广播机制、antd 用法与 `uiReset` 隔离层）。改前先读 `CHANGELOG.md` 对应条目——多数"诡异写法"是真实浏览器实测结论。
 4. **新依赖必须记录**：同步更新 ReadMe「技术栈」与「项目结构」（依赖清单唯一归属 ReadMe，agent 不另存）。
 5. **硬编码尽量迁移配置**：脚本端用户可配置项进 `DEFAULTS`，常量进 `CONFIG`。
 6. **GitHub 资源引用存「GitHub 网页链接」**，运行时经 `resolveGithubUrl()` + `useCdn` 转 jsDelivr/raw；勿在 `DEFAULTS` 存 CDN 成品链接。（例外：`commonPhrasesUrl` 自 v26.9.6-v5 起规范值改存 **raw 原始直链**——用户误填网页/仓库页面会把整页 HTML 当 YAML 解析失败；raw 属 `resolveGithubUrl` 形式二，`useCdn` 开仍转 jsDelivr。其余如 `didaUrl` 仍存网页链接。）
@@ -196,9 +196,9 @@
 | 领域 | 一句话规则 | 详见 CHANGELOG 版本条目 |
 |---|---|---|
 | 弹窗层叠/透字/半透明 | 挂 `documentElement` + `z-index:2147483647` + `!important`；遮罩半透明用 `background:rgba()` 而**非** `opacity`（会把子元素带透） | v26.7.26-v12~v16、v26.7.29-v9~v10 |
-| Viewer.js 预览层级 + **过渡** | 预览容器由 MutationObserver 移入本弹窗 overlay 内（页面 body transform 会困住挂 body 的 Viewer）；⚠️ **`new Viewer()` 必须传 `transition: false`** —— 移动容器会打断正在跑的 CSS 过渡 → Viewer 的 `shown()` 永不执行 → `isShown` 永远 false → **主图永不创建**（点开只有黑罩、反复点也无效），因为 `showing` 卡在 true | v26.7.29-v10、**v26.10.06-v3** |
-| Viewer 放大断言 | 判定「放大后主图真的出来」要用 **`.viewer-canvas img`**（`.viewer-container` 里另有 `.viewer-magnifier-image` 占位图，`src` 为空、`naturalWidth` 恒 0，用 `vc.querySelector('img')` 会误判） | v26.10.06-v3 |
-| CAT_UI 组件白名单 | `Switch`/`TimePicker`/`Image` 实为 undefined，裸 `input`/`img` 触发 React #137；开关用受控 checkbox/div 模拟 | v26.7.29-v6/v7 |
+| 【已废弃·v13 移除 Viewer】Viewer.js 预览层级 + **过渡** | 预览容器由 MutationObserver 移入本弹窗 overlay 内（页面 body transform 会困住挂 body 的 Viewer）；⚠️ **`new Viewer()` 必须传 `transition: false`** —— 移动容器会打断正在跑的 CSS 过渡 → Viewer 的 `shown()` 永不执行 → `isShown` 永远 false → **主图永不创建**（点开只有黑罩、反复点也无效），因为 `showing` 卡在 true | v26.7.29-v10、**v26.10.06-v3** |
+| 【已废弃·v13 改用 antd】Viewer 放大断言 | 判定「放大后主图真的出来」要用 **`.viewer-canvas img`**（`.viewer-container` 里另有 `.viewer-magnifier-image` 占位图，`src` 为空、`naturalWidth` 恒 0，用 `vc.querySelector('img')` 会误判） | v26.10.06-v3 |
+| 【已废弃·v9 移除 CAT_UI】组件白名单 | `Switch`/`TimePicker`/`Image` 实为 undefined，裸 `input`/`img` 触发 React #137；开关用受控 checkbox/div 模拟 | v26.7.29-v6/v7 |
 | 图片写剪贴板 | **只写一次、只写 `image/png`**。Chromium `ClipboardItem.supports('image/jpeg') === false`，而 `clipboard.write()` 通过用户手势校验后即**消耗**该手势（失败也不退）⇒「先按原图类型写一次、失败再转 PNG 重试」**必然失败**（重试时手势已没）。正确顺序：**先转好 PNG → 只写一次**，并用 `ClipboardItem` 的 **Promise 形式**让 write 落在点击手势内；Blob 要用目标 realm 的原生构造器包一层（跨 realm 会被拒）。参考 qsniyg/maxurl。另：`GM_setClipboard(blob)` 在 ScriptCat 静默无效（仅文本） | **v26.10.06-v4**、v26.7.26-v4~v8 |
 | 图片复制断言 | headless 里图片剪贴板**根本写不进去**（只写一次 `image/png` 也被拒），故断言只能锁「**尝试的 MIME 只有 `image/png`**」这一不变量（桩掉 `Clipboard.prototype.write` 记录类型），不能锁「写成功」 | v26.10.06-v4 |
 | server.js 内联模板串 | 反引号或 `${` 会**截断/求值整个 HTML**：`node --check` 可能仍通过（被解析成合法的属性访问），必须用「请求手机页 + 内联 `<script>` 跑 `new Function`」自检 | relay v26.7.28-v6、v26.7.29-v8、v26.9.6-v5 |

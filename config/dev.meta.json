@@ -21,7 +21,6 @@
     "file:///D:/文档/GitHub/znhd-service/dist/znhd.dev.user.js",
     "https://fastly.jsdelivr.net/npm/js-yaml@4.1.0/dist/js-yaml.min.js",
     "https://fastly.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js",
-    "https://fastly.jsdelivr.net/npm/viewerjs/dist/viewer.min.js",
     "https://fastly.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.js"
   ]
 }

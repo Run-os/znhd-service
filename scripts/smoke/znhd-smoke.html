@@ -182,13 +182,11 @@
     </script>
 
     <!-- ===== 与 userscript @require 完全相同的依赖 =====
-         v26.10.06-v9：CAT_UI（脚本猫 UI 库）已从项目中移除，面板改为 React 19 + Ant Design v6
-         （随产物打包，无需 @require）；Viewer 仍用于收图放大预览。 -->
+         v26.10.06-v9：CAT_UI（脚本猫 UI 库）已移除，面板改为 React 19 + Ant Design v6（随产物打包）。
+         v26.10.06-v13：Viewer.js 也已移除——收图放大改用 antd Image.PreviewGroup，故此处不再加载它。 -->
     <script src="https://fastly.jsdelivr.net/npm/js-yaml@4.1.0/dist/js-yaml.min.js"></script>
     <script src="https://fastly.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
-    <script src="https://fastly.jsdelivr.net/npm/viewerjs/dist/viewer.min.js"></script>
     <script src="https://fastly.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.js"></script>
-    <link rel="stylesheet" href="https://fastly.jsdelivr.net/npm/viewerjs/dist/viewer.min.css" />
   </head>
   <body>
     <h1>znhd 面板冒烟测试</h1>
@@ -290,38 +288,37 @@
       }, 3200);
 
       // ⚠️ 收到图片后点缩略图放大：必须断言「主图真的渲染出来」。
-      // 这条断言是 v26.10.8-v1 补的——此前 7 项断言里只有「九宫格画廊」（缩略图出现），
-      // 从没点过缩略图，导致「点开放大后 .viewer-canvas 一直是空的、只有黑罩」的 bug 存活了两个多月。
-      // 判定要点：主图在 .viewer-canvas 内（不要用 vc.querySelector('img')，那会命中放大镜占位图
-      // .viewer-magnifier-image，它 src 为空、naturalWidth 恒为 0）、已解码、且有可见尺寸。
+      // 历史：v26.10.8-v1 补的——此前只断言「九宫格画廊（缩略图出现）」，从没点过缩略图，
+      // 导致「点开后只有黑罩、主图一直不出现」的 bug 存活了两个多月。
+      // v26.10.06-v13 起画廊改为 antd Modal + Image.PreviewGroup，断言对象随之改为
+      // `.ant-image-preview` / `.ant-image-preview-img`；判定要点不变：**已解码 + 有可见尺寸**。
       setTimeout(() => {
-        const grid = document.getElementById('__znhd_img_grid__');
-        const thumb = grid && grid.querySelector('img');
+        // 收到图片后画廊弹窗会自动打开，点其中的 antd 缩略图触发放大预览
+        const thumb = document.querySelector('.ant-modal-body .ant-image img');
         window.__clickedThumb = !!thumb;
         if (thumb) thumb.click();
-      }, 2000);
+      }, 3600);
       setTimeout(() => {
-        const vc = document.querySelector('.viewer-container');
-        const img = vc ? vc.querySelector('.viewer-canvas img') : null;
+        const wrap = document.querySelector('.ant-image-preview');
+        const img = wrap ? wrap.querySelector('.ant-image-preview-img') : null;
         const r = img ? img.getBoundingClientRect() : null;
         window.__viewerZoom = {
-          container: !!vc,
-          shownClass: !!(vc && vc.className.indexOf('viewer-in') >= 0),
+          container: !!wrap,
+          shownClass: !!(wrap && (wrap.className || '').indexOf('ant-image-preview-open') >= 0),
           canvasImg: !!img,
           decoded: !!(img && img.complete && img.naturalWidth > 0),
           visible: !!(r && r.width > 10 && r.height > 10),
         };
-      }, 2600);
+      }, 4600);
 
       // 点画廊里的「复制」，验证剪贴板写入路径（v26.10.06-v4 回归断言）。
-      // 用程序化 click 而非真实鼠标点击：此时 Viewer/更新日志弹窗可能盖在画廊上（真实点击会打偏）。
+      // 用程序化 click 而非真实鼠标点击：此时放大预览/其它弹窗可能盖在画廊上（真实点击会打偏）。
       setTimeout(() => {
-        const grid = document.getElementById('__znhd_img_grid__');
-        const btns = grid ? Array.from(grid.querySelectorAll('button')) : [];
+        const btns = Array.from(document.querySelectorAll('.ant-modal-body button'));
         const b = btns.find((x) => (x.textContent || '').trim() === '复制');
         window.__clickedCopy = !!b;
         if (b) b.click();
-      }, 3400);
+      }, 5200);
 
       // 打开「设置」抽屉 → 点它里面的「更新日志」，验证新入口 + 弹窗 + 只显示最新 10 条
       setTimeout(() => {
@@ -404,7 +401,10 @@
       setTimeout(() => {
         const text = collectText();
         const relevant = window.__errors.filter((e) => !/chrome-extension:/.test(e));
-        const popup = document.getElementById('__znhd_changelog_popup__');
+        // v26.10.06-v13 起更新日志也是 antd Modal（不再是自拼 DOM 的 #__znhd_changelog_popup__）
+        const popup = Array.from(document.querySelectorAll('.ant-modal')).find(
+          (m) => (m.textContent || '').indexOf('更新日志') >= 0
+        );
         const report = {
           CAT_UI: typeof window.CAT_UI,
           jsyaml: typeof window.jsyaml,

@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { Modal, Button, Divider, Input, Space, Switch, TimePicker, Typography } from 'antd';
 import dayjs from 'dayjs';
 import { DEFAULTS } from '@/lib/constants';
-import { showChangelogPopup } from '@/lib/changelog';
 import { getOverlayContainer } from '@/lib/ui/panelHost';
 
 const { Text } = Typography;
@@ -18,6 +17,8 @@ export interface WorkingHours {
 export interface SettingsModalProps {
     open: boolean;
     onClose: () => void;
+    /** 打开「更新日志」弹窗（v26.10.06-v13 起由 antd Modal 承载，不再是自拼 DOM） */
+    onOpenChangelog: () => void;
     workingHours: WorkingHours | null;
     onChangeWorkingHours: (wh: WorkingHours) => void;
     commonPhrasesUrl: string;
@@ -42,6 +43,7 @@ function toDayjs(dec: number) {
 export default function SettingsModal({
     open,
     onClose,
+    onOpenChangelog,
     workingHours,
     onChangeWorkingHours,
     commonPhrasesUrl,
@@ -112,7 +114,7 @@ export default function SettingsModal({
                     }>
                     [更新脚本]
                 </Button>
-                <Button type="link" onClick={() => showChangelogPopup()}>
+                <Button type="link" onClick={() => onOpenChangelog()}>
                     [更新日志]
                 </Button>
             </Space>

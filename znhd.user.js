@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name                征纳互动人数和在线监控v2
 // @namespace           https://scriptcat.org/
-// @version             26.10.06-v12
+// @version             26.10.06-v13
 // @description         实时监控征纳互动等待人数和在线状态，支持语音播报、自定义常用语
 // @author              runos
 // @match               https://znhd.hunan.chinatax.gov.cn:8443/*
@@ -13,7 +13,6 @@
 // @grant               GM_setClipboard
 // @grant               GM_getValue
 // @grant               GM_setValue
-// @grant               GM_getResourceText
 // @connect             *
 // @connect             znhd-service.zeabur.app
 // @homepageURL         https://github.com/Run-os/znhd-service
@@ -21,9 +20,8 @@
 // @downloadURL         https://raw.githubusercontent.com/Run-os/znhd-service/refs/heads/main/dist/znhd.user.js
 // @require             https://fastly.jsdelivr.net/npm/js-yaml@4.1.0/dist/js-yaml.min.js
 // @require             https://fastly.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js
-// @require             https://fastly.jsdelivr.net/npm/viewerjs/dist/viewer.min.js
 // @require             https://fastly.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.js
-// @resource            VIEWER_CSS https://fastly.jsdelivr.net/npm/viewerjs/dist/viewer.min.css
+
 // ==/UserScript==
 /* eslint-disable */ /* spell-checker: disable */
 // @[ 本文件是构建产物，源码与构建方式见 GitHub 仓库 Run-os/znhd-service，请勿直接编辑 ]
@@ -55272,577 +55270,6 @@ function sendToPhone(opt) {
     }
 }
 
-;// ./src/lib/clipboard.ts
-
-
-
-/**
- * 剪贴板与提示音（原 app.ts 的 playDidaSound / safeCopyText）。
- * 模块化 P3：逐字迁移，仅加 export（playDidaSound 仅内部使用，不导出）。
- */
-// 复用的音频播放器实例（避免每次创建新对象）
-let didaAudioPlayer = null;
-// 播放提示音函数
-/**
- * 播放提示音（dida.mp3）。复用 Audio 实例，避免重复解码。
- * @returns {void}
- */
-function playDidaSound() {
-    if (!CONFIG.didaUrl)
-        return;
-    try {
-        // 复用 Audio 实例，避免重复解码
-        if (!didaAudioPlayer) {
-            didaAudioPlayer = new Audio();
-            didaAudioPlayer.volume = 0.5;
-        }
-        // src 每次按当前 useCdn 状态解析并比对重设：切换 CDN 开关后提示音即刻走新选择，无需刷新
-        const src = resolveGithubUrl(CONFIG.didaUrl);
-        if (didaAudioPlayer.src !== src)
-            didaAudioPlayer.src = src;
-        // 重置播放位置并播放
-        didaAudioPlayer.currentTime = 0;
-        // play() 的 rejection 多来自浏览器自动播放策略（预期行为），静默忽略避免干扰
-        didaAudioPlayer.play().catch(() => {
-            // 预期行为：被浏览器自动播放策略拒绝，静默忽略避免干扰
-        });
-    }
-    catch (e) {
-        // 结构性异常（如 Audio 构造/赋值失败）需留痕，便于排查
-        addLog('播放提示音失败: ' + e.message, 'warning', true);
-    }
-}
-// 安全复制工具：仅在页面聚焦且支持 clipboard 时尝试复制
-/**
- * 安全复制文本到剪贴板：优先 GM_setClipboard（无需焦点），降级到 navigator.clipboard；
- * 成功复制后播放提示音。失败时记录日志，不抛出。
- * @param {string} text - 待复制文本（空值直接返回并回调 false）
- * @param {Function} [onResult] - 可选结果回调 (ok:boolean)，供调用方据实更新 UI（如复制按钮文案）
- * @returns {void}
- */
-function safeCopyText(text, onResult = null) {
-    const notify = (v) => {
-        if (typeof onResult === 'function') {
-            try {
-                onResult(!!v);
-            }
-            catch (e) {
-                /* 忽略回调异常 */
-            }
-        }
-    };
-    if (!text) {
-        notify(false);
-        return;
-    }
-    // 1) 优先使用 GM_setClipboard（无需焦点）
-    if (typeof GM_setClipboard === 'function') {
-        try {
-            GM_setClipboard(text);
-            addLog('[复制] 已复制到剪贴板 (GM_setClipboard)', 'success', true);
-            playDidaSound();
-            notify(true);
-            return;
-        }
-        catch (e) {
-            addLog('[复制] GM_setClipboard 失败: ' + e.message, 'error', true);
-        }
-    }
-    // 2) 浏览器异步 clipboard API
-    if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
-        navigator.clipboard
-            .writeText(text)
-            .then(() => {
-            addLog('[复制] 已复制到剪贴板 (navigator.clipboard)', 'success', true);
-            playDidaSound();
-            notify(true);
-        })
-            .catch((err) => {
-            addLog('[复制] 复制到剪贴板失败: ' + err.message, 'error', true);
-            notify(false);
-        });
-        return;
-    }
-    notify(false); // 无任何可用复制途径
-}
-
-;// ./src/lib/gallery.ts
-
-
-
-/**
- * 收到图片的九宫格画廊 + 文本弹窗（原 app.ts「收到图片」段）。
- * 模块化 P4：逐字迁移，仅加 export。
- * ⚠️ 弹窗 CSS / z-index / Viewer 接管逻辑是真实页面实测结论，禁止「顺手重构」。
- */
-// ========== 收到图片：九宫格画廊弹窗（Viewer.js 放大查看） ==========
-// 收到的图片累积进 receivedImages 列表，以 3 列九宫格缩略图展示（直接挂 document.documentElement，
-// 不受 CAT_UI 面板 transform 影响）。单击缩略图用 Viewer.js 放大（缩放/旋转/多图左右切换），
-// 每张图下方有「复制」按钮（点击手势触发，满足浏览器剪贴板策略）和右上角 × 移除。
-const MAX_GALLERY = 27; // 画廊最多保留张数，超出丢最旧（释放其 objectURL）
-const receivedImages = [];
-let galleryViewer = null; // Viewer.js 实例（重建画廊时先销毁）
-let galleryViewerObserver = null; // 监听 Viewer 全屏容器出现并移入画廊遮罩的 MutationObserver
-let viewerCssInjected = false;
-// 注入 Viewer.js 的 CSS：优先 @resource（GM_getResourceText），失败回退 CDN <link>
-function ensureViewerCss() {
-    if (viewerCssInjected)
-        return;
-    let baseInjected = false;
-    try {
-        const css = typeof GM_getResourceText === 'function' ? GM_getResourceText('VIEWER_CSS') : '';
-        if (css) {
-            GM_addStyle(css);
-            baseInjected = true;
-        }
-    }
-    catch (e) {
-        /* 继续走 link 回退 */
-    }
-    if (!baseInjected) {
-        const link = document.createElement('link');
-        link.rel = 'stylesheet';
-        link.href = 'https://fastly.jsdelivr.net/npm/viewerjs/dist/viewer.min.css';
-        (document.head || document.documentElement).appendChild(link);
-    }
-    // 覆盖样式：Viewer.js 默认遮罩是半透明黑（rgba(0,0,0,0.5)），放大时会透出后面的画廊弹窗；
-    // 改为纯黑不透明，彻底遮住背景（!important 保证无论加载顺序都生效）
-    GM_addStyle('.viewer-backdrop{background-color:#000 !important;}' + '.viewer-container{background-color:#000 !important;}');
-    viewerCssInjected = true;
-}
-/**
- * 生成下载文件名：优先原始文件名；无名或无扩展名时按 mime 补扩展名。
- * @param {string} name - 原始文件名（可空）
- * @param {string} mime - MIME 类型
- * @param {number} idx - 画廊序号（用于兜底命名）
- * @returns {string} 带扩展名的文件名
- */
-function downloadFileName(name, mime, idx = 0) {
-    const extByMime = {
-        'image/jpeg': '.jpg',
-        'image/png': '.png',
-        'image/gif': '.gif',
-        'image/webp': '.webp',
-        'image/svg+xml': '.svg',
-        'image/bmp': '.bmp',
-    };
-    let n = String(name || '').trim();
-    if (!n)
-        n = 'znhd-image-' + (idx + 1);
-    if (!/\.[a-z0-9]{2,5}$/i.test(n))
-        n += extByMime[(mime || '').toLowerCase()] || '.jpg';
-    return n;
-}
-// 对外入口（poll 回调调用）：新图入列并打开/刷新画廊弹窗
-function showImagePopup(img) {
-    img.ts = Date.now();
-    receivedImages.push(img);
-    while (receivedImages.length > MAX_GALLERY) {
-        const old = receivedImages.shift();
-        if (!old)
-            break; // 上面 while 已保证长度 > MAX_GALLERY，这里只为类型收窄
-        try {
-            URL.revokeObjectURL(old.previewUrl);
-        }
-        catch (e) {
-            /* 忽略 */
-        }
-    }
-    renderImageGallery();
-}
-function removeGalleryImage(idx) {
-    const it = receivedImages.splice(idx, 1)[0];
-    if (it) {
-        try {
-            URL.revokeObjectURL(it.previewUrl);
-        }
-        catch (e) {
-            /* 忽略 */
-        }
-    }
-    if (receivedImages.length === 0)
-        closeImagePopup();
-    else
-        renderImageGallery();
-}
-function renderImageGallery() {
-    closeImagePopup(); // 重建（销毁旧 Viewer 实例与旧 DOM）
-    installPopupKeyHandler(); // 安装全局 ESC 关闭（预览态→退出预览；画廊态→关弹窗）
-    ensureViewerCss();
-    const overlay = document.createElement('div');
-    overlay.id = '__znhd_img_popup__';
-    // 所有样式加 !important + 铺满 100vw/vh，隔绝任何外部 CSS（含扩展/页面）对弹窗的覆盖
-    overlay.style.cssText =
-        'position:fixed!important;top:0!important;left:0!important;right:0!important;bottom:0!important;width:100vw!important;height:100vh!important;z-index:2147483647!important;display:flex!important;align-items:center!important;justify-content:center!important;background:rgba(0,0,0,0.55)!important;opacity:1!important;font-family:sans-serif!important;';
-    const box = document.createElement('div');
-    box.style.cssText =
-        'position:relative!important;z-index:1!important;width:min(560px,92vw)!important;max-height:88vh!important;background:#fff!important;opacity:1!important;border-radius:12px!important;padding:16px!important;box-shadow:0 8px 30px rgba(0,0,0,0.35)!important;display:flex!important;flex-direction:column!important;filter:none!important;backdrop-filter:none!important;isolation:isolate!important;';
-    // 标题
-    const title = document.createElement('div');
-    title.textContent = '收到的图片（' + receivedImages.length + '）· 单击放大，最新图片在最后';
-    title.style.cssText =
-        'font-size:15px!important;font-weight:bold!important;color:#333!important;margin:0 0 10px 2px!important;';
-    // 右上角关闭
-    const close = document.createElement('div');
-    close.textContent = '×';
-    close.title = '关闭（图片保留，收到新图会再次弹出）';
-    // 注意：box 是 display:flex 容器，标题作为 flex item 在层叠里等同 z-index:0 层；
-    // 关闭按钮是 position:absolute（同属 z-index:auto 层），同层按 DOM 顺序——标题在关闭按钮之后 append，
-    // 会画到关闭按钮之上并吃掉点击（视觉无重叠，但标题隐形盒子铺满整行）。故显式抬到 z-index:2 确保可点。
-    close.style.cssText =
-        'position:absolute!important;top:8px!important;right:10px!important;width:30px!important;height:30px!important;line-height:28px!important;text-align:center!important;font-size:22px!important;color:#fff!important;cursor:pointer!important;border-radius:50%!important;background:#e4393c!important;opacity:1!important;box-shadow:0 1px 4px rgba(0,0,0,0.3)!important;font-weight:bold!important;z-index:2!important;';
-    close.onmouseenter = () => {
-        close.style.background = '#c9302c';
-    };
-    close.onmouseleave = () => {
-        close.style.background = '#e4393c';
-    };
-    close.onclick = () => closeImagePopup();
-    // 九宫格容器（3 列，可滚动）
-    const grid = document.createElement('div');
-    grid.id = '__znhd_img_grid__';
-    grid.style.cssText =
-        'display:grid!important;grid-template-columns:repeat(3,1fr)!important;gap:10px!important;overflow-y:auto!important;padding:2px!important;max-height:60vh!important;filter:none!important;backdrop-filter:none!important;opacity:1!important;';
-    receivedImages.forEach((it, idx) => {
-        const cell = document.createElement('div');
-        cell.style.cssText = 'position:relative!important;display:flex!important;flex-direction:column!important;';
-        const thumbWrap = document.createElement('div');
-        thumbWrap.style.cssText =
-            'position:relative!important;width:100%!important;aspect-ratio:1/1!important;border-radius:8px!important;overflow:hidden!important;background:#f2f2f2!important;cursor:zoom-in!important;filter:none!important;backdrop-filter:none!important;opacity:1!important;';
-        const imgEl = document.createElement('img');
-        imgEl.src = it.previewUrl;
-        imgEl.alt = it.name || 'image-' + (idx + 1);
-        imgEl.style.cssText =
-            'width:100%!important;height:100%!important;object-fit:cover!important;display:block!important;filter:none!important;opacity:1!important;';
-        thumbWrap.appendChild(imgEl);
-        // 单张移除 ×
-        const del = document.createElement('div');
-        del.textContent = '×';
-        del.title = '移除这张';
-        del.style.cssText =
-            'position:absolute!important;top:4px!important;right:4px!important;width:20px!important;height:20px!important;line-height:18px!important;text-align:center!important;font-size:14px!important;color:#fff!important;cursor:pointer!important;border-radius:50%!important;background:rgba(0,0,0,0.55)!important;font-weight:bold!important;z-index:2!important;';
-        del.onclick = (e) => {
-            e.stopPropagation();
-            removeGalleryImage(idx);
-        };
-        thumbWrap.appendChild(del);
-        // 按钮行：复制（写剪贴板）+ 下载（存为文件）
-        const btnRow = document.createElement('div');
-        btnRow.style.cssText = 'display:flex!important;gap:4px!important;margin-top:6px!important;';
-        const copyBtn = document.createElement('button');
-        copyBtn.textContent = '复制';
-        copyBtn.style.cssText =
-            'flex:1!important;padding:4px 0!important;border:none!important;border-radius:6px!important;background:#1890ff!important;color:#fff!important;font-size:12px!important;opacity:1!important;cursor:pointer!important;filter:none!important;backdrop-filter:none!important;';
-        copyBtn.onclick = (e) => {
-            e.stopPropagation();
-            copyBtn.textContent = '复制中…';
-            copyBtn.disabled = true;
-            copyImageToClipboard(it.blob).then((ok) => {
-                copyBtn.disabled = false;
-                if (ok) {
-                    copyBtn.textContent = '✓ 已复制';
-                    copyBtn.style.background = '#52c41a';
-                    addLog('图片已复制到剪贴板: ' + (it.name || ''), 'success');
-                }
-                else {
-                    copyBtn.textContent = '复制失败';
-                    copyBtn.style.background = '#e4393c';
-                }
-            });
-        };
-        const dlBtn = document.createElement('button');
-        dlBtn.textContent = '下载';
-        dlBtn.style.cssText =
-            'flex:1!important;padding:4px 0!important;border:none!important;border-radius:6px!important;background:#722ed1!important;color:#fff!important;font-size:12px!important;opacity:1!important;cursor:pointer!important;filter:none!important;backdrop-filter:none!important;';
-        dlBtn.onclick = (e) => {
-            e.stopPropagation();
-            try {
-                const fname = downloadFileName(it.name, it.mime, idx);
-                const a = document.createElement('a');
-                const url = URL.createObjectURL(it.blob);
-                a.href = url;
-                a.download = fname;
-                a.style.display = 'none';
-                document.body.appendChild(a);
-                a.click();
-                a.remove();
-                setTimeout(() => {
-                    try {
-                        URL.revokeObjectURL(url);
-                    }
-                    catch (e2) {
-                        /* 忽略 */
-                    }
-                }, 3000);
-                dlBtn.textContent = '✓ 已下载';
-                dlBtn.style.background = '#52c41a';
-                addLog('图片已下载: ' + fname, 'success');
-            }
-            catch (err) {
-                dlBtn.textContent = '下载失败';
-                dlBtn.style.background = '#e4393c';
-                addLog('[下载] 失败：' + err.message, 'error', true);
-            }
-        };
-        btnRow.appendChild(copyBtn);
-        btnRow.appendChild(dlBtn);
-        cell.appendChild(thumbWrap);
-        cell.appendChild(btnRow);
-        grid.appendChild(cell);
-    });
-    // 底部操作条
-    const bar = document.createElement('div');
-    bar.style.cssText =
-        'display:flex!important;justify-content:center!important;gap:12px!important;margin-top:12px!important;';
-    const clearBtn = document.createElement('button');
-    clearBtn.textContent = '清空全部';
-    clearBtn.style.cssText =
-        'padding:7px 18px!important;border:none!important;border-radius:8px!important;background:#999!important;color:#fff!important;font-size:13px!important;cursor:pointer!important;filter:none!important;backdrop-filter:none!important;';
-    clearBtn.onclick = () => {
-        receivedImages.forEach((it) => {
-            try {
-                URL.revokeObjectURL(it.previewUrl);
-            }
-            catch (e) {
-                /* 忽略 */
-            }
-        });
-        receivedImages.length = 0;
-        closeImagePopup();
-    };
-    bar.appendChild(clearBtn);
-    box.appendChild(close);
-    box.appendChild(title);
-    box.appendChild(grid);
-    box.appendChild(bar);
-    overlay.appendChild(box);
-    overlay.onclick = (e) => {
-        if (e.target === overlay)
-            closeImagePopup();
-    };
-    document.documentElement.appendChild(overlay); // 挂到 <html> 而非 <body>：避开 body 级 transform/filter 改写 fixed 包含块
-    // 焦点隔离：弹窗内的 <button> 设为不可 Tab 聚焦，且点击时不抢占焦点。
-    // 否则当脚本面板或税务页面自身的 arco 抽屉/弹窗（带 focus-lock 焦点锁）同时开着时，
-    // 焦点在抽屉与弹窗按钮间来回“打架”，控制台会刷出 "FocusLock: focus-fighting detected"。
-    // 鼠标点击仍正常触发 onClick，不影响复制/下载/清空功能。
-    overlay.querySelectorAll('button').forEach(function (b) {
-        b.tabIndex = -1;
-        b.addEventListener('mousedown', function (e) {
-            e.preventDefault();
-        });
-    });
-    // 用 Viewer.js 绑定画廊：单击缩略图放大，多图可左右切换
-    if (typeof Viewer === 'function') {
-        try {
-            galleryViewer = new Viewer(grid, {
-                zIndex: 2147483647,
-                zoomRatio: 0.4,
-                // ⚠️ 必须关掉过渡（v26.10.8-v1 修「点缩略图放大后有时长时间不出图 / 只有黑罩」）：
-                // Viewer.js 的 shown()（设置 isShown=true、创建主图、执行 render()+bind()）**只由容器的
-                // transitionend 触发**（viewer.js 的 show()：addListener(viewer,'transitionend',shown)）。
-                // 而本文件下方那段 MutationObserver 会在容器刚出现时把它 appendChild 移进画廊 overlay，
-                // **移动 DOM 节点会打断正在进行的 CSS 过渡** → transitionend 不再触发 → shown() 永不执行
-                // → isShown 永远 false → 之后每次 view() 都在 `!this.isShown` 处提前 return，主图从不被创建；
-                // 且 this.showing 卡在 true（只在 shown() 里清），反复点击同样无效。
-                // 实测：默认过渡下 4 秒内 .viewer-canvas 始终为空；transition:false 后 22~29ms 出图。
-                // 原理：transition:false 时 show() 走 else 分支**同步调用 shown()**，彻底不依赖过渡事件；
-                // hide() 亦因未加 CLASS_TRANSITION 而走 hideImmediately() 同步收尾，连带消掉关闭侧残留容器风险。
-                // 代价：失去放大/关闭的淡入淡出（换确定性，值得）。改前请读 AGENT.md 约束 3。
-                transition: false,
-                title: (image) => image.alt || '',
-                toolbar: {
-                    zoomIn: 1,
-                    zoomOut: 1,
-                    oneToOne: 1,
-                    reset: 1,
-                    prev: 1,
-                    next: 1,
-                    rotateLeft: 1,
-                    rotateRight: 1,
-                    flipHorizontal: 1,
-                    flipVertical: 1,
-                },
-                // Viewer.js 会带 (image, index) 调用；本弹窗全部放行，故不声明入参（避免未使用参数告警）
-                filter() {
-                    return true;
-                },
-            });
-            // 关键：把 Viewer 全屏预览容器移入画廊遮罩内部，使其处于本弹窗的层叠上下文之上（高于白盒），
-            // 避免与画廊遮罩（同为 2147483647）互相压制导致「预览跑到弹窗后面」或「关闭按钮被盖住」。
-            // 否则在真实税务页面里 body 常被加 transform/filter 形成独立层叠上下文，把挂在 body 下的 Viewer
-            // 困住，永远被画廊压在后面；且全屏 Viewer 容器与画廊遮罩等 z-index 时会盖住画廊右上角的 ×。
-            // 移入后：全屏预览盖在白盒之上，由 Viewer 自带 × 关闭回到画廊（标准模态交互）。
-            // 用 MutationObserver 监听 .viewer-container 出现即移入（Viewer.js 该构建的事件 API 不可靠，不依赖之）。
-            if (window.MutationObserver) {
-                if (galleryViewerObserver) {
-                    try {
-                        galleryViewerObserver.disconnect();
-                    }
-                    catch (e) {
-                        /* 忽略 */
-                    }
-                }
-                // 移动成功后不再重复查询：本观察器监听整个 documentElement 的 subtree，
-                // 税务页每次 DOM 变更都会触发回调，而真正要干的「移入 overlay」一辈子只成功一次。
-                // 保留观察器（不断开）是为兼容可能重建容器的 Viewer 构建，代价只剩一次布尔判断。
-                let viewerMoved = false;
-                galleryViewerObserver = new MutationObserver(function () {
-                    if (viewerMoved)
-                        return;
-                    const vc = document.querySelector('.viewer-container');
-                    if (vc && vc.parentNode !== overlay) {
-                        overlay.appendChild(vc);
-                        viewerMoved = true;
-                        vc.style.zIndex = '2'; // 在画廊遮罩上下文内，高于白盒(z-index:1)
-                        // 安全网：监听 Viewer 显隐（viewer-in 类的增删，不依赖其事件 API）。
-                        // 显示时允许交互；隐藏后置 pointer-events:none，避免残留容器遮挡画廊关闭按钮/缩略图。
-                        const vcWatched = vc;
-                        if (!vcWatched.__znhdWatched) {
-                            vcWatched.__znhdWatched = true;
-                            vc.style.pointerEvents = vc.className.indexOf('viewer-in') >= 0 ? 'auto' : 'none';
-                            new MutationObserver(function () {
-                                vc.style.pointerEvents = vc.className.indexOf('viewer-in') >= 0 ? 'auto' : 'none';
-                            }).observe(vc, { attributes: true, attributeFilter: ['class'] });
-                        }
-                    }
-                });
-                galleryViewerObserver.observe(document.documentElement, { childList: true, subtree: true });
-            }
-        }
-        catch (e) {
-            addLog('[设备互联] Viewer 初始化失败：' + e.message, 'error', true);
-        }
-    }
-    else {
-        addLog('[设备互联] Viewer.js 未加载，单击放大不可用（缩略图仍可复制）', 'warning', true);
-    }
-}
-function closeImagePopup() {
-    if (galleryViewerObserver) {
-        try {
-            galleryViewerObserver.disconnect();
-        }
-        catch (e) {
-            /* 忽略 */
-        }
-        galleryViewerObserver = null;
-    }
-    if (galleryViewer) {
-        try {
-            galleryViewer.destroy();
-        }
-        catch (e) {
-            /* 忽略 */
-        }
-        galleryViewer = null;
-    }
-    const ex = document.getElementById('__znhd_img_popup__');
-    if (ex && ex.parentNode)
-        ex.parentNode.removeChild(ex);
-}
-// 全局 ESC 关闭：图片预览（Viewer）可见时先退出预览回画廊；画廊态时关闭整个弹窗；
-// 文本弹窗则直接关闭。Viewer.js 自带键盘监听在本脚本「把 .viewer-container 移入 overlay」的
-// 特殊处理 + 真实税务页面 body 常被加 transform 的环境下常常失效，这里用独立监听兜底，确保 ESC 一定可用。
-// 仅安装一次（自保护），内部按当前弹窗状态分支处理。
-let _znhdPopupKeyInstalled = false;
-function installPopupKeyHandler() {
-    if (_znhdPopupKeyInstalled)
-        return;
-    _znhdPopupKeyInstalled = true;
-    document.addEventListener('keydown', function (e) {
-        if (e.key !== 'Escape' && e.keyCode !== 27)
-            return;
-        // 图片画廊弹窗优先
-        const gallery = document.getElementById('__znhd_img_popup__');
-        if (gallery) {
-            const vc = document.querySelector('.viewer-container');
-            const viewerVisible = vc && vc.className.indexOf('viewer-in') >= 0;
-            if (viewerVisible && galleryViewer) {
-                try {
-                    galleryViewer.hide();
-                }
-                catch (err) {
-                    /* 忽略 */
-                }
-            }
-            else {
-                closeImagePopup();
-            }
-            return;
-        }
-        const textPopup = document.getElementById('__znhd_text_popup__');
-        if (textPopup) {
-            closeTextPopup();
-        }
-    });
-}
-// 收到手机文本时，在网页正中弹出预览弹窗（与图片弹窗同一挂法：document.documentElement），
-// 含文本展示区、复制到剪贴板按钮（复用 safeCopyText，满足浏览器剪贴板策略并记日志/提示音）、关闭按钮。
-function showTextPopup(txt) {
-    closeTextPopup();
-    installPopupKeyHandler(); // 安装全局 ESC 关闭（文本弹窗直接关闭）
-    const overlay = document.createElement('div');
-    overlay.id = '__znhd_text_popup__';
-    overlay.style.cssText =
-        'position:fixed!important;top:0!important;left:0!important;right:0!important;bottom:0!important;width:100vw!important;height:100vh!important;z-index:2147483647!important;display:flex!important;align-items:center!important;justify-content:center!important;background:rgba(0,0,0,0.55)!important;opacity:1!important;font-family:sans-serif!important;';
-    const box = document.createElement('div');
-    box.style.cssText =
-        'position:relative!important;min-width:360px!important;min-height:200px!important;max-width:90vw!important;max-height:90vh!important;background:#fff!important;opacity:1!important;border-radius:12px!important;padding:16px!important;box-shadow:0 8px 30px rgba(0,0,0,0.35)!important;display:flex!important;flex-direction:column!important;align-items:stretch!important;';
-    const textEl = document.createElement('div');
-    textEl.textContent = txt.text || '';
-    textEl.style.cssText =
-        'min-width:320px!important;min-height:120px!important;max-width:80vw!important;max-height:55vh!important;overflow:auto!important;white-space:pre-wrap!important;word-break:break-word!important;font-size:15px!important;line-height:1.6!important;color:#222!important;background:#f7f7f7!important;opacity:1!important;border:1px solid #eee!important;border-radius:8px!important;padding:12px!important;';
-    const close = document.createElement('div');
-    close.textContent = '×';
-    close.title = '关闭';
-    // 同上：box 为 display:flex 容器，标题/正文为 flex item（等同 z-index:0 层），需把关闭按钮抬到 z-index:2 才能被点中。
-    close.style.cssText =
-        'position:absolute!important;top:8px!important;right:10px!important;width:30px!important;height:30px!important;line-height:28px!important;text-align:center!important;font-size:22px!important;color:#fff!important;cursor:pointer!important;border-radius:50%!important;background:#e4393c!important;opacity:1!important;box-shadow:0 1px 4px rgba(0,0,0,0.3)!important;font-weight:bold!important;z-index:2!important;';
-    close.onmouseenter = () => {
-        close.style.background = '#c9302c';
-    };
-    close.onmouseleave = () => {
-        close.style.background = '#e4393c';
-    };
-    const copyBtn = document.createElement('button');
-    copyBtn.textContent = '复制到剪贴板';
-    copyBtn.style.cssText =
-        'margin-top:14px!important;padding:8px 18px!important;border:none!important;border-radius:8px!important;background:#1890ff!important;color:#fff!important;font-size:14px!important;opacity:1!important;cursor:pointer!important;align-self:center!important;';
-    copyBtn.onclick = () => {
-        copyBtn.textContent = '复制中…';
-        copyBtn.disabled = true;
-        // 用 safeCopyText 的真实结果更新按钮文案：无可用复制途径/被拒绝时不再假显示「已复制」
-        safeCopyText(txt.text || '', (ok) => {
-            copyBtn.disabled = false;
-            copyBtn.textContent = ok ? '✓ 已复制' : '复制失败，请长按文本手动复制';
-            copyBtn.style.background = ok ? '#52c41a' : '#e4393c';
-        });
-    };
-    close.onclick = () => closeTextPopup();
-    overlay.onclick = (e) => {
-        if (e.target === overlay)
-            closeTextPopup();
-    };
-    box.appendChild(close);
-    box.appendChild(textEl);
-    box.appendChild(copyBtn);
-    overlay.appendChild(box);
-    document.documentElement.appendChild(overlay);
-    // 焦点隔离（同图片弹窗）：避免与 arco 抽屉/弹窗的焦点锁冲突刷出 focus-fighting 警告。
-    // 按钮仍可鼠标点击触发 onClick。
-    overlay.querySelectorAll('button').forEach(function (b) {
-        b.tabIndex = -1;
-        b.addEventListener('mousedown', function (e) {
-            e.preventDefault();
-        });
-    });
-}
-function closeTextPopup() {
-    const ex = document.getElementById('__znhd_text_popup__');
-    if (ex && ex.parentNode)
-        ex.parentNode.removeChild(ex);
-}
-
 ;// ./src/lib/speech.ts
 
 
@@ -72146,291 +71573,7 @@ es_input_Input.TextArea = input_TextArea;
 es_input_Input.Password = input_Password;
 es_input_Input.OTP = input_OTP;
 /* harmony default export */ const es_input = (es_input_Input);
-;// ./src/lib/changelog.ts
-/**
- * 更新日志：拉取仓库根的 CHANGELOG.md → 解析成条目 → 弹窗展示（默认最新 10 条）。
- *
- * 设计要点：
- * - 数据源用 CHANGELOG.md 的 raw 原始直链，经 resolveGithubUrl() 按设置里的「使用 CDN 加速」
- *   开关决定走 jsDelivr 还是 raw —— 与常用语 YAML、提示音 mp3 同一套规则，用户无需理解网络细节。
- * - 弹窗默认只渲染最新 CHANGELOG_DEFAULT_LIMIT 条（文件已 300+ 行，全量渲染没必要）；
- *   底部「获取更多日志」跳 CHANGELOG_PAGE_URL（GitHub 网页）看全部历史。
- * - 弹窗样式沿用 gallery.ts 那套「fixed 全屏 overlay + 白盒 + × 关闭 + ESC + z-index 拉满 + 全部
- *   !important」：税务页面 body 常被加 transform，页面/扩展 CSS 也会污染，必须强隔离。
- *   ⚠️ 这里刻意**不**把 gallery 的两个弹窗抽成公共组件：它们与 Viewer.js 的生命周期耦合
- *   （v26.7.29-v9/v10 反复调过），为省几十行样式去动已实测可行的代码不划算（见 AGENT.md）。
- * - 全程走 addLog，便于用户从「设置 → 日志内容」自查失败原因。
- */
-
-
-/** CHANGELOG 数据源（raw 原始直链形式；resolveGithubUrl 会按 useCdn 决定是否转 jsDelivr） */
-const CHANGELOG_RAW_URL = 'https://raw.githubusercontent.com/Run-os/znhd-service/refs/heads/main/CHANGELOG.md';
-/** 「获取更多日志」按钮跳转的网页地址 */
-const CHANGELOG_PAGE_URL = 'https://github.com/Run-os/znhd-service/blob/main/CHANGELOG.md';
-/** 弹窗默认展示的条数 */
-const CHANGELOG_DEFAULT_LIMIT = 10;
-/** 弹窗根节点 id（同时作为 ESC 关闭的判定依据） */
-const CHANGELOG_POPUP_ID = '__znhd_changelog_popup__';
-/**
- * 把 CHANGELOG.md 文本解析成条目数组。
- * 以 `### ` 开头的行为条目分隔，文件顺序即展示顺序（约定最新在最前），`##` 级标题与前言自动忽略。
- * @param {string} md - CHANGELOG.md 全文
- * @returns {ChangelogEntry[]} 条目数组；没有任何 `### ` 标题时返回空数组
- */
-function parseChangelog(md) {
-    const entries = [];
-    const lines = String(md || '').split(/\r?\n/);
-    // 用「标题 + 正文行」两个独立变量，而不是 {title,lines}|null 对象：后者在 forEach 闭包里会被
-    // TS 的控制流分析收窄成 never（闭包内对 let 变量的赋值不被追踪），改写成 for 循环更直白
-    let curTitle = null;
-    let curLines = [];
-    for (const line of lines) {
-        const m = /^###\s+(.+?)\s*$/.exec(line);
-        if (m) {
-            if (curTitle !== null)
-                entries.push({ title: curTitle, body: curLines.join('\n').trim() });
-            curTitle = m[1];
-            curLines = [];
-            continue;
-        }
-        if (curTitle !== null)
-            curLines.push(line);
-    }
-    if (curTitle !== null)
-        entries.push({ title: curTitle, body: curLines.join('\n').trim() });
-    return entries;
-}
-/**
- * markdown 正文 → 易读纯文本（不引第三方渲染器，只做最小变换，避免 XSS 面）：
- * `- `/`* ` 列表项换 `• `、去掉强调与行内代码标记、规整连续空行。
- * @param {string} md - 条目正文（markdown）
- * @returns {string} 便于在弹窗里 pre-wrap 展示的纯文本
- */
-function mdToPlain(md) {
-    return String(md || '')
-        .split(/\r?\n/)
-        .map((line) => {
-        let s = line.replace(/^(\s*)[-*]\s+/, '$1• ');
-        s = s.replace(/\*\*(.+?)\*\*/g, '$1').replace(/`/g, '');
-        return s.replace(/\s+$/, '');
-    })
-        .join('\n')
-        .replace(/\n{3,}/g, '\n\n')
-        .trim();
-}
-/** 本次会话内的日志缓存（同一次浏览里重复点按钮不再发请求） */
-let _changelogCache = null;
-/** ESC 监听只装一次（自保护） */
-let _changelogEscInstalled = false;
-/** 关闭更新日志弹窗（无弹窗时静默返回） */
-function closeChangelogPopup() {
-    const ex = document.getElementById(CHANGELOG_POPUP_ID);
-    if (ex && ex.parentNode)
-        ex.parentNode.removeChild(ex);
-}
-/**
- * 安装全局 ESC 关闭（只装一次）。
- * gallery.ts 的同类监听只处理图片/文本弹窗，故此处独立安装，互不干扰。
- * @returns {void}
- */
-function installEscHandler() {
-    if (_changelogEscInstalled)
-        return;
-    _changelogEscInstalled = true;
-    document.addEventListener('keydown', function (e) {
-        if (e.key !== 'Escape' && e.keyCode !== 27)
-            return;
-        if (document.getElementById(CHANGELOG_POPUP_ID))
-            closeChangelogPopup();
-    });
-}
-/**
- * 拉取并解析 CHANGELOG.md（命中会话缓存则直接回调，不发请求）。
- * @param {(entries: ChangelogEntry[]|null, errMsg?: string) => void} done - 完成回调；失败时 entries 为 null
- * @returns {void}
- */
-function loadChangelog(done) {
-    if (_changelogCache) {
-        done(_changelogCache);
-        return;
-    }
-    GM_xmlhttpRequest({
-        method: 'GET',
-        url: resolveGithubUrl(CHANGELOG_RAW_URL),
-        timeout: 15000,
-        onload: function (response) {
-            if (response.status !== 200) {
-                const msg = '数据源返回 HTTP ' + response.status;
-                addLog('更新日志加载失败: ' + msg, 'error', true);
-                done(null, msg);
-                return;
-            }
-            const entries = parseChangelog(response.responseText);
-            if (!entries.length) {
-                // 404 页面/错误页也可能是合法文本，必须校验解析结果，避免把垃圾当日志渲染
-                const msg = '内容为空或格式不符（缺少 ### 标题）';
-                addLog('更新日志加载失败: ' + msg, 'error', true);
-                done(null, msg);
-                return;
-            }
-            _changelogCache = entries;
-            addLog('更新日志加载成功，共 ' + entries.length + ' 条', 'info');
-            done(entries);
-        },
-        onerror: function (error) {
-            // GM_xmlhttpRequest 的错误参数形态不定（对象 / 字符串），故按需取值而非断言类型
-            const err = (error || {});
-            const errMsg = err.message ? err.message : typeof error === 'string' ? error : '网络错误';
-            addLog('更新日志加载失败: ' + errMsg, 'error', true);
-            done(null, errMsg);
-        },
-        ontimeout: function () {
-            addLog('更新日志加载超时（15s），已取消', 'error', true);
-            done(null, '请求超时（15s）');
-        },
-    });
-}
-/**
- * 把条目渲染进弹窗内容区。
- * @param {HTMLElement} content - 内容容器
- * @param {ChangelogEntry[]} entries - 全部条目
- * @param {HTMLElement} hint - 底部条数提示节点
- * @returns {void}
- */
-function renderEntries(content, entries, hint) {
-    const show = entries.slice(0, CHANGELOG_DEFAULT_LIMIT);
-    content.textContent = '';
-    show.forEach((en) => {
-        const item = document.createElement('div');
-        item.style.cssText = 'margin:0 0 14px!important;';
-        const h = document.createElement('div');
-        h.textContent = en.title;
-        h.style.cssText =
-            'font-size:14px!important;font-weight:bold!important;color:#1890ff!important;margin:0 0 6px!important;';
-        const b = document.createElement('div');
-        b.textContent = mdToPlain(en.body);
-        b.style.cssText =
-            'font-size:13px!important;line-height:1.6!important;color:#333!important;white-space:pre-wrap!important;word-break:break-word!important;';
-        item.appendChild(h);
-        item.appendChild(b);
-        content.appendChild(item);
-    });
-    hint.textContent =
-        entries.length > show.length
-            ? '共 ' + entries.length + ' 条，已显示最新 ' + show.length + ' 条'
-            : '共 ' + entries.length + ' 条（已全部显示）';
-}
-/** 显示「读取中…」占位 */
-function showLoading(content, hint) {
-    content.textContent = '';
-    const loading = document.createElement('div');
-    loading.textContent = '读取中…';
-    loading.style.cssText = 'font-size:14px!important;color:#999!important;padding:20px 0!important;';
-    content.appendChild(loading);
-    hint.textContent = '';
-}
-/** 显示失败提示（仍保留「获取更多日志」按钮可用） */
-function showError(content, hint, errMsg) {
-    content.textContent = '';
-    const err = document.createElement('div');
-    err.textContent = '读取失败：' + errMsg;
-    err.style.cssText = 'font-size:13px!important;color:#e4393c!important;line-height:1.6!important;';
-    const tip = document.createElement('div');
-    tip.textContent = '可点下方「获取更多日志」在浏览器中打开 CHANGELOG.md 查看。';
-    tip.style.cssText =
-        'font-size:13px!important;color:#999!important;line-height:1.6!important;margin-top:8px!important;';
-    content.appendChild(err);
-    content.appendChild(tip);
-    hint.textContent = '';
-}
-/**
- * 弹出更新日志窗口（默认最新 10 条 + 「获取更多日志」跳转）。
- * 重复点击先关闭旧弹窗再重建；加载完成时若弹窗已被关闭则丢弃结果。
- * @returns {void}
- */
-function showChangelogPopup() {
-    closeChangelogPopup();
-    installEscHandler();
-    const overlay = document.createElement('div');
-    overlay.id = CHANGELOG_POPUP_ID;
-    // 同 gallery 弹窗：全屏 fixed + 全部 !important，隔绝页面/扩展 CSS 污染
-    overlay.style.cssText =
-        'position:fixed!important;top:0!important;left:0!important;right:0!important;bottom:0!important;width:100vw!important;height:100vh!important;z-index:2147483647!important;display:flex!important;align-items:center!important;justify-content:center!important;background:rgba(0,0,0,0.55)!important;opacity:1!important;font-family:sans-serif!important;';
-    const box = document.createElement('div');
-    box.style.cssText =
-        'position:relative!important;z-index:1!important;width:min(620px,92vw)!important;max-height:88vh!important;background:#fff!important;opacity:1!important;border-radius:12px!important;padding:16px!important;box-shadow:0 8px 30px rgba(0,0,0,0.35)!important;display:flex!important;flex-direction:column!important;filter:none!important;backdrop-filter:none!important;isolation:isolate!important;';
-    const title = document.createElement('div');
-    title.textContent = '更新日志（最新 ' + CHANGELOG_DEFAULT_LIMIT + ' 条）';
-    title.style.cssText =
-        'font-size:15px!important;font-weight:bold!important;color:#333!important;margin:0 0 10px 2px!important;';
-    // 右上角关闭：box 是 flex 容器，标题作为 flex item 在层叠里等同 z-index:0，
-    // 关闭按钮需显式抬到 z-index:2，否则标题的隐形盒子会吃掉点击（同 gallery 弹窗的实测结论）
-    const close = document.createElement('div');
-    close.textContent = '×';
-    close.title = '关闭';
-    close.style.cssText =
-        'position:absolute!important;top:8px!important;right:10px!important;width:30px!important;height:30px!important;line-height:28px!important;text-align:center!important;font-size:22px!important;color:#fff!important;cursor:pointer!important;border-radius:50%!important;background:#e4393c!important;opacity:1!important;box-shadow:0 1px 4px rgba(0,0,0,0.3)!important;font-weight:bold!important;z-index:2!important;';
-    close.onmouseenter = () => {
-        close.style.background = '#c9302c';
-    };
-    close.onmouseleave = () => {
-        close.style.background = '#e4393c';
-    };
-    close.onclick = () => closeChangelogPopup();
-    const content = document.createElement('div');
-    content.id = '__znhd_changelog_content__';
-    content.style.cssText =
-        'overflow-y:auto!important;padding:2px!important;max-height:62vh!important;border:1px solid #eee!important;border-radius:8px!important;background:#fafafa!important;padding:12px!important;filter:none!important;opacity:1!important;';
-    const hint = document.createElement('div');
-    hint.style.cssText =
-        'font-size:12px!important;color:#999!important;margin-top:8px!important;text-align:center!important;';
-    const moreBtn = document.createElement('button');
-    moreBtn.textContent = '获取更多日志';
-    moreBtn.style.cssText =
-        'margin-top:10px!important;padding:8px 18px!important;border:none!important;border-radius:8px!important;background:#1890ff!important;color:#fff!important;font-size:14px!important;opacity:1!important;cursor:pointer!important;align-self:center!important;';
-    moreBtn.onmouseenter = () => {
-        moreBtn.style.background = '#096dd9';
-    };
-    moreBtn.onmouseleave = () => {
-        moreBtn.style.background = '#1890ff';
-    };
-    moreBtn.onclick = () => {
-        window.open(CHANGELOG_PAGE_URL, '_blank');
-    };
-    overlay.onclick = (e) => {
-        if (e.target === overlay)
-            closeChangelogPopup();
-    };
-    box.appendChild(close);
-    box.appendChild(title);
-    box.appendChild(content);
-    box.appendChild(hint);
-    box.appendChild(moreBtn);
-    overlay.appendChild(box);
-    document.documentElement.appendChild(overlay);
-    // 焦点隔离（同 gallery/文本弹窗）：避免与 arco 抽屉/弹窗的焦点锁冲突刷 focus-fighting 警告；
-    // 按钮仍可鼠标点击触发 onClick
-    overlay.querySelectorAll('button').forEach(function (b) {
-        b.tabIndex = -1;
-        b.addEventListener('mousedown', function (e) {
-            e.preventDefault();
-        });
-    });
-    showLoading(content, hint);
-    loadChangelog((entries, errMsg) => {
-        // 弹窗可能已被关闭（用户等得不耐烦点了 × / ESC），此时丢弃结果，避免写进游离节点
-        if (!document.getElementById(CHANGELOG_POPUP_ID))
-            return;
-        if (!entries) {
-            showError(content, hint, errMsg || '未知错误');
-            return;
-        }
-        renderEntries(content, entries, hint);
-    });
-}
-
 ;// ./src/lib/ui/SettingsModal.tsx
-
 
 
 
@@ -72448,7 +71591,7 @@ function toDayjs(dec) {
  * 设置弹窗（v26.10.06-v9：由 CAT_UI.Drawer 侧边抽屉改为 antd Modal 弹窗）。
  * ⚠️ 时间输入与地址草稿的处理是真实页面实测结论（见块内注释），禁止顺手重构。
  */
-function SettingsModal({ open, onClose, workingHours, onChangeWorkingHours, commonPhrasesUrl, onChangeCommonPhrasesUrl, relayServer, onChangeRelayServer, useCdn, onChangeUseCdn, }) {
+function SettingsModal({ open, onClose, onOpenChangelog, workingHours, onChangeWorkingHours, commonPhrasesUrl, onChangeCommonPhrasesUrl, relayServer, onChangeRelayServer, useCdn, onChangeUseCdn, }) {
     const wh = workingHours || { morningStart: 9, morningEnd: 12, afternoonStart: 13.5, afternoonEnd: 18 };
     const updateWh = (field, dec) => {
         if (typeof dec !== 'number' || isNaN(dec))
@@ -72482,7 +71625,7 @@ function SettingsModal({ open, onClose, workingHours, onChangeWorkingHours, comm
     };
     return ((0,react_jsx_runtime_production_namespaceFn().jsxs)(modal, { open: open, title: "\u8BBE\u7F6E\u83DC\u5355", onCancel: onClose, getContainer: getOverlayContainer, width: 520, 
         // 显式左对齐：宿主页面常有全局 text-align:center（税务页就是），不设会整屏居中
-        styles: { body: { textAlign: 'left' } }, destroyOnHidden: true, footer: (0,react_jsx_runtime_production_namespaceFn().jsxs)(es_space, { children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { onClick: onClose, children: "\u53D6\u6D88" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { color: "primary", variant: "solid", onClick: onClose, children: "\u786E\u5B9A" })] }), children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)(es_space, { size: 4, wrap: true, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { type: "link", onClick: () => window.open('https://github.com/Run-os/znhd-service', '_blank'), children: "[\u811A\u672C\u4E3B\u9875]" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { type: "link", onClick: () => window.open((GM_info.scriptUpdateURL || GM_info.script.updateURL), '_blank'), children: "[\u66F4\u65B0\u811A\u672C]" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { type: "link", onClick: () => showChangelogPopup(), children: "[\u66F4\u65B0\u65E5\u5FD7]" })] }), (0,react_jsx_runtime_production_namespaceFn().jsx)(divider, { style: { margin: '8px 0' }, children: "\u5176\u4ED6\u8BBE\u7F6E" }), (0,react_jsx_runtime_production_namespaceFn().jsxs)(es_space, { size: 8, style: { marginBottom: 12 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(SettingsModal_Text, { strong: true, children: "\u4F7F\u7528 CDN \u52A0\u901F\uFF08Fastly \u955C\u50CF\uFF09\u52A0\u8F7D\u8D44\u6E90" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_switch, { checked: !!useCdn, onChange: (v) => onChangeUseCdn(v) })] }), (0,react_jsx_runtime_production_namespaceFn().jsx)(SettingsModal_Text, { strong: true, style: { display: 'block', marginBottom: 8 }, children: "\u76D1\u63A7\u65F6\u95F4\u6BB5\uFF08\u70B9\u51FB\u9009\u62E9\u65F6\u95F4\uFF09" }), (0,react_jsx_runtime_production_namespaceFn().jsxs)(es_space, { size: 8, wrap: true, style: { marginBottom: 8 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(SettingsModal_Text, { children: "\u4E0A\u5348" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(time_picker, { value: toDayjs(wh.morningStart), format: "HH:mm", minuteStep: 5, allowClear: false, style: { width: 110 }, onChange: (v) => v && updateWh('morningStart', v.hour() + v.minute() / 60) }), (0,react_jsx_runtime_production_namespaceFn().jsx)(SettingsModal_Text, { children: "\u81F3" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(time_picker, { value: toDayjs(wh.morningEnd), format: "HH:mm", minuteStep: 5, allowClear: false, style: { width: 110 }, onChange: (v) => v && updateWh('morningEnd', v.hour() + v.minute() / 60) })] }), (0,react_jsx_runtime_production_namespaceFn().jsxs)(es_space, { size: 8, wrap: true, style: { marginBottom: 8 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(SettingsModal_Text, { children: "\u4E0B\u5348" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(time_picker, { value: toDayjs(wh.afternoonStart), format: "HH:mm", minuteStep: 5, allowClear: false, style: { width: 110 }, onChange: (v) => v && updateWh('afternoonStart', v.hour() + v.minute() / 60) }), (0,react_jsx_runtime_production_namespaceFn().jsx)(SettingsModal_Text, { children: "\u81F3" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(time_picker, { value: toDayjs(wh.afternoonEnd), format: "HH:mm", minuteStep: 5, allowClear: false, style: { width: 110 }, onChange: (v) => v && updateWh('afternoonEnd', v.hour() + v.minute() / 60) })] }), (0,react_jsx_runtime_production_namespaceFn().jsx)(SettingsModal_Text, { type: "secondary", style: { fontSize: 12, display: 'block', marginBottom: 12 }, children: "\u63D0\u793A\uFF1A\u5C06\u300C\u4E0B\u5348\u5F00\u59CB\u300D\u8BBE\u4E3A\u4E0E\u300C\u4E0A\u5348\u7ED3\u675F\u300D\u76F8\u540C\uFF08\u5982\u90FD\u8BBE\u4E3A 12:00\uFF09\uFF0C\u5373\u53EF\u5348\u4F11\u65F6\u6BB5\u4E5F\u76D1\u63A7\u3002" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(SettingsModal_Text, { strong: true, style: { display: 'block', marginBottom: 8 }, children: "\u5E38\u7528\u8BED\u6570\u636E\u5730\u5740\uFF08\u53EF\u81EA\u5B9A\u4E49\u8FDC\u7A0B YAML\uFF09" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_input, { placeholder: "https://.../commonPhrases.yaml", value: urlDraft, onChange: (e) => onUrlChange(e.target.value), onBlur: onUrlBlur, allowClear: true, style: { marginBottom: 8 } }), (0,react_jsx_runtime_production_namespaceFn().jsx)(SettingsModal_Text, { type: "secondary", style: { fontSize: 12, display: 'block', marginBottom: 12 }, children: "\u4FEE\u6539\u540E\u8BF7\u5728\u300C\u5E38\u7528\u8BED\u300D\u9762\u677F\u70B9\u300C\u91CD\u65B0\u52A0\u8F7D\u5E38\u7528\u8BED\u300D\u751F\u6548\uFF1B\u7559\u7A7A\u5E76\u70B9\u51FB\u5176\u4ED6\u533A\u57DF\uFF08\u5931\u7126\uFF09\u540E\u6062\u590D\u9ED8\u8BA4\u5730\u5740\u3002" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(SettingsModal_Text, { strong: true, style: { display: 'block', marginBottom: 8 }, children: "\u4E2D\u7EE7\u670D\u52A1\u5668\u5730\u5740" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_input, { placeholder: "https://\u4F60\u7684\u670D\u52A1\u5668:\u7AEF\u53E3", value: relayServer || '', onChange: (e) => onChangeRelayServer((e.target.value || '').trim().replace(/\/+$/, '')), allowClear: true, style: { marginBottom: 8 } }), (0,react_jsx_runtime_production_namespaceFn().jsx)(SettingsModal_Text, { type: "secondary", style: { fontSize: 12, display: 'block' }, children: "\u7528\u4E8E\u300C\u8BBE\u5907\u4E92\u8054\u5230\u7535\u8111\u300D\uFF1A\u624B\u673A\u4E0A\u4F20\u7684\u56FE\u7247\u7ECF\u6B64\u670D\u52A1\u5668\u8F6C\u53D1\u5230\u672C\u673A\u526A\u8D34\u677F\u3002\u9700\u81EA\u884C\u90E8\u7F72\u914D\u5957 relay-server\uFF08\u89C1\u9879\u76EE\u8BF4\u660E\uFF09\u3002" })] }));
+        styles: { body: { textAlign: 'left' } }, destroyOnHidden: true, footer: (0,react_jsx_runtime_production_namespaceFn().jsxs)(es_space, { children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { onClick: onClose, children: "\u53D6\u6D88" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { color: "primary", variant: "solid", onClick: onClose, children: "\u786E\u5B9A" })] }), children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)(es_space, { size: 4, wrap: true, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { type: "link", onClick: () => window.open('https://github.com/Run-os/znhd-service', '_blank'), children: "[\u811A\u672C\u4E3B\u9875]" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { type: "link", onClick: () => window.open((GM_info.scriptUpdateURL || GM_info.script.updateURL), '_blank'), children: "[\u66F4\u65B0\u811A\u672C]" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { type: "link", onClick: () => onOpenChangelog(), children: "[\u66F4\u65B0\u65E5\u5FD7]" })] }), (0,react_jsx_runtime_production_namespaceFn().jsx)(divider, { style: { margin: '8px 0' }, children: "\u5176\u4ED6\u8BBE\u7F6E" }), (0,react_jsx_runtime_production_namespaceFn().jsxs)(es_space, { size: 8, style: { marginBottom: 12 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(SettingsModal_Text, { strong: true, children: "\u4F7F\u7528 CDN \u52A0\u901F\uFF08Fastly \u955C\u50CF\uFF09\u52A0\u8F7D\u8D44\u6E90" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_switch, { checked: !!useCdn, onChange: (v) => onChangeUseCdn(v) })] }), (0,react_jsx_runtime_production_namespaceFn().jsx)(SettingsModal_Text, { strong: true, style: { display: 'block', marginBottom: 8 }, children: "\u76D1\u63A7\u65F6\u95F4\u6BB5\uFF08\u70B9\u51FB\u9009\u62E9\u65F6\u95F4\uFF09" }), (0,react_jsx_runtime_production_namespaceFn().jsxs)(es_space, { size: 8, wrap: true, style: { marginBottom: 8 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(SettingsModal_Text, { children: "\u4E0A\u5348" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(time_picker, { value: toDayjs(wh.morningStart), format: "HH:mm", minuteStep: 5, allowClear: false, style: { width: 110 }, onChange: (v) => v && updateWh('morningStart', v.hour() + v.minute() / 60) }), (0,react_jsx_runtime_production_namespaceFn().jsx)(SettingsModal_Text, { children: "\u81F3" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(time_picker, { value: toDayjs(wh.morningEnd), format: "HH:mm", minuteStep: 5, allowClear: false, style: { width: 110 }, onChange: (v) => v && updateWh('morningEnd', v.hour() + v.minute() / 60) })] }), (0,react_jsx_runtime_production_namespaceFn().jsxs)(es_space, { size: 8, wrap: true, style: { marginBottom: 8 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(SettingsModal_Text, { children: "\u4E0B\u5348" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(time_picker, { value: toDayjs(wh.afternoonStart), format: "HH:mm", minuteStep: 5, allowClear: false, style: { width: 110 }, onChange: (v) => v && updateWh('afternoonStart', v.hour() + v.minute() / 60) }), (0,react_jsx_runtime_production_namespaceFn().jsx)(SettingsModal_Text, { children: "\u81F3" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(time_picker, { value: toDayjs(wh.afternoonEnd), format: "HH:mm", minuteStep: 5, allowClear: false, style: { width: 110 }, onChange: (v) => v && updateWh('afternoonEnd', v.hour() + v.minute() / 60) })] }), (0,react_jsx_runtime_production_namespaceFn().jsx)(SettingsModal_Text, { type: "secondary", style: { fontSize: 12, display: 'block', marginBottom: 12 }, children: "\u63D0\u793A\uFF1A\u5C06\u300C\u4E0B\u5348\u5F00\u59CB\u300D\u8BBE\u4E3A\u4E0E\u300C\u4E0A\u5348\u7ED3\u675F\u300D\u76F8\u540C\uFF08\u5982\u90FD\u8BBE\u4E3A 12:00\uFF09\uFF0C\u5373\u53EF\u5348\u4F11\u65F6\u6BB5\u4E5F\u76D1\u63A7\u3002" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(SettingsModal_Text, { strong: true, style: { display: 'block', marginBottom: 8 }, children: "\u5E38\u7528\u8BED\u6570\u636E\u5730\u5740\uFF08\u53EF\u81EA\u5B9A\u4E49\u8FDC\u7A0B YAML\uFF09" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_input, { placeholder: "https://.../commonPhrases.yaml", value: urlDraft, onChange: (e) => onUrlChange(e.target.value), onBlur: onUrlBlur, allowClear: true, style: { marginBottom: 8 } }), (0,react_jsx_runtime_production_namespaceFn().jsx)(SettingsModal_Text, { type: "secondary", style: { fontSize: 12, display: 'block', marginBottom: 12 }, children: "\u4FEE\u6539\u540E\u8BF7\u5728\u300C\u5E38\u7528\u8BED\u300D\u9762\u677F\u70B9\u300C\u91CD\u65B0\u52A0\u8F7D\u5E38\u7528\u8BED\u300D\u751F\u6548\uFF1B\u7559\u7A7A\u5E76\u70B9\u51FB\u5176\u4ED6\u533A\u57DF\uFF08\u5931\u7126\uFF09\u540E\u6062\u590D\u9ED8\u8BA4\u5730\u5740\u3002" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(SettingsModal_Text, { strong: true, style: { display: 'block', marginBottom: 8 }, children: "\u4E2D\u7EE7\u670D\u52A1\u5668\u5730\u5740" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_input, { placeholder: "https://\u4F60\u7684\u670D\u52A1\u5668:\u7AEF\u53E3", value: relayServer || '', onChange: (e) => onChangeRelayServer((e.target.value || '').trim().replace(/\/+$/, '')), allowClear: true, style: { marginBottom: 8 } }), (0,react_jsx_runtime_production_namespaceFn().jsx)(SettingsModal_Text, { type: "secondary", style: { fontSize: 12, display: 'block' }, children: "\u7528\u4E8E\u300C\u8BBE\u5907\u4E92\u8054\u5230\u7535\u8111\u300D\uFF1A\u624B\u673A\u4E0A\u4F20\u7684\u56FE\u7247\u7ECF\u6B64\u670D\u52A1\u5668\u8F6C\u53D1\u5230\u672C\u673A\u526A\u8D34\u677F\u3002\u9700\u81EA\u884C\u90E8\u7F72\u914D\u5957 relay-server\uFF08\u89C1\u9879\u76EE\u8BF4\u660E\uFF09\u3002" })] }));
 }
 
 ;// ./node_modules/throttle-debounce/esm/index.js
@@ -73611,6 +72754,100 @@ function appendToTinyMCE(text2append = '') {
         : fallbackIframe?.contentDocument?.body?.textContent ?? '';
     addLog('已追加文本并同步: ' + finalText, 'success', true);
     return finalText;
+}
+
+;// ./src/lib/clipboard.ts
+
+
+
+/**
+ * 剪贴板与提示音（原 app.ts 的 playDidaSound / safeCopyText）。
+ * 模块化 P3：逐字迁移，仅加 export（playDidaSound 仅内部使用，不导出）。
+ */
+// 复用的音频播放器实例（避免每次创建新对象）
+let didaAudioPlayer = null;
+// 播放提示音函数
+/**
+ * 播放提示音（dida.mp3）。复用 Audio 实例，避免重复解码。
+ * @returns {void}
+ */
+function playDidaSound() {
+    if (!CONFIG.didaUrl)
+        return;
+    try {
+        // 复用 Audio 实例，避免重复解码
+        if (!didaAudioPlayer) {
+            didaAudioPlayer = new Audio();
+            didaAudioPlayer.volume = 0.5;
+        }
+        // src 每次按当前 useCdn 状态解析并比对重设：切换 CDN 开关后提示音即刻走新选择，无需刷新
+        const src = resolveGithubUrl(CONFIG.didaUrl);
+        if (didaAudioPlayer.src !== src)
+            didaAudioPlayer.src = src;
+        // 重置播放位置并播放
+        didaAudioPlayer.currentTime = 0;
+        // play() 的 rejection 多来自浏览器自动播放策略（预期行为），静默忽略避免干扰
+        didaAudioPlayer.play().catch(() => {
+            // 预期行为：被浏览器自动播放策略拒绝，静默忽略避免干扰
+        });
+    }
+    catch (e) {
+        // 结构性异常（如 Audio 构造/赋值失败）需留痕，便于排查
+        addLog('播放提示音失败: ' + e.message, 'warning', true);
+    }
+}
+// 安全复制工具：仅在页面聚焦且支持 clipboard 时尝试复制
+/**
+ * 安全复制文本到剪贴板：优先 GM_setClipboard（无需焦点），降级到 navigator.clipboard；
+ * 成功复制后播放提示音。失败时记录日志，不抛出。
+ * @param {string} text - 待复制文本（空值直接返回并回调 false）
+ * @param {Function} [onResult] - 可选结果回调 (ok:boolean)，供调用方据实更新 UI（如复制按钮文案）
+ * @returns {void}
+ */
+function safeCopyText(text, onResult = null) {
+    const notify = (v) => {
+        if (typeof onResult === 'function') {
+            try {
+                onResult(!!v);
+            }
+            catch (e) {
+                /* 忽略回调异常 */
+            }
+        }
+    };
+    if (!text) {
+        notify(false);
+        return;
+    }
+    // 1) 优先使用 GM_setClipboard（无需焦点）
+    if (typeof GM_setClipboard === 'function') {
+        try {
+            GM_setClipboard(text);
+            addLog('[复制] 已复制到剪贴板 (GM_setClipboard)', 'success', true);
+            playDidaSound();
+            notify(true);
+            return;
+        }
+        catch (e) {
+            addLog('[复制] GM_setClipboard 失败: ' + e.message, 'error', true);
+        }
+    }
+    // 2) 浏览器异步 clipboard API
+    if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+        navigator.clipboard
+            .writeText(text)
+            .then(() => {
+            addLog('[复制] 已复制到剪贴板 (navigator.clipboard)', 'success', true);
+            playDidaSound();
+            notify(true);
+        })
+            .catch((err) => {
+            addLog('[复制] 复制到剪贴板失败: ' + err.message, 'error', true);
+            notify(false);
+        });
+        return;
+    }
+    notify(false); // 无任何可用复制途径
 }
 
 ;// ./src/lib/ui/PhrasesModal.tsx
@@ -75427,7 +74664,2896 @@ function LogModal({ open, onClose, logEntries, onClear }) {
                 })) : ((0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { color: '#999', textAlign: 'center', padding: '24px 0' }, children: logEntries.length ? '没有符合当前筛选条件的日志' : '暂无日志' })) }), (0,react_jsx_runtime_production_namespaceFn().jsxs)(LogModal_Text, { type: "secondary", style: { fontSize: 12, display: 'block', marginTop: 8 }, children: ["\u5171 ", logEntries.length, " \u6761\uFF08\u663E\u793A ", shown.length, " \u6761\uFF0C\u6309 ", allOn ? '全部类型' : '已选类型', "\u8FC7\u6EE4\uFF09\uFF1B \u65B0\u65E5\u5FD7\u4F1A\u81EA\u52A8\u51FA\u73B0\u5728\u6700\u4E0B\u65B9\uFF0C\u5411\u4E0A\u7FFB\u9605\u65F6\u4E0D\u4F1A\u88AB\u62C9\u56DE\u3002"] })] }));
 }
 
+;// ./src/lib/changelog.ts
+/**
+ * 更新日志：拉取仓库根的 CHANGELOG.md → 解析成条目（v26.10.06-v13 起渲染层交给 antd Modal）。
+ *
+ * 变化：原实现自己拼 DOM 弹窗（fixed 全屏 overlay + 白盒 + × + ESC + z-index 拉满，为对抗
+ * 税务页的 CSS/transform 污染）。现在统一用 antd（见 `ui/ChangelogModal.tsx`）：
+ * 弹窗挂在 `documentElement` 下、主题与其余弹窗一致，隔离问题由 `ui/uiReset.ts` 统一兜。
+ * 本文件只保留**纯逻辑**（解析 / 拉取 / 会话缓存），无任何 DOM 操作。
+ */
+
+
+/** CHANGELOG 数据源（raw 原始直链形式；resolveGithubUrl 会按 useCdn 决定是否走 CDN 镜像） */
+const CHANGELOG_RAW_URL = 'https://raw.githubusercontent.com/Run-os/znhd-service/refs/heads/main/CHANGELOG.md';
+/** 「获取更多日志」按钮跳转的网页地址 */
+const CHANGELOG_PAGE_URL = 'https://github.com/Run-os/znhd-service/blob/main/CHANGELOG.md';
+/** 弹窗默认展示的条数 */
+const CHANGELOG_DEFAULT_LIMIT = 10;
+/**
+ * 把 CHANGELOG.md 文本解析成条目数组。
+ * 以 `### ` 开头的行为条目分隔，文件顺序即展示顺序（约定最新在最前），`##` 级标题与前言自动忽略。
+ * @param {string} md - CHANGELOG.md 全文
+ * @returns {ChangelogEntry[]} 条目数组；没有任何 `### ` 标题时返回空数组
+ */
+function parseChangelog(md) {
+    const entries = [];
+    const lines = String(md || '').split(/\r?\n/);
+    // 用「标题 + 正文行」两个独立变量，而不是 {title,lines}|null 对象：后者在闭包里会被
+    // TS 的控制流分析收窄成 never，改写成 for 循环更直白
+    let curTitle = null;
+    let curLines = [];
+    for (const line of lines) {
+        const m = /^###\s+(.+?)\s*$/.exec(line);
+        if (m) {
+            if (curTitle !== null)
+                entries.push({ title: curTitle, body: curLines.join('\n').trim() });
+            curTitle = m[1];
+            curLines = [];
+            continue;
+        }
+        if (curTitle !== null)
+            curLines.push(line);
+    }
+    if (curTitle !== null)
+        entries.push({ title: curTitle, body: curLines.join('\n').trim() });
+    return entries;
+}
+/**
+ * markdown 正文 → 易读纯文本（不引第三方渲染器，只做最小变换，避免 XSS 面）：
+ * `- `/`* ` 列表项换 `• `、去掉强调与行内代码标记、规整连续空行。
+ * @param {string} md - 条目正文（markdown）
+ * @returns {string} 便于在弹窗里 pre-wrap 展示的纯文本
+ */
+function mdToPlain(md) {
+    return String(md || '')
+        .split(/\r?\n/)
+        .map((line) => {
+        let s = line.replace(/^(\s*)[-*]\s+/, '$1• ');
+        s = s.replace(/\*\*(.+?)\*\*/g, '$1').replace(/`/g, '');
+        return s.replace(/\s+$/, '');
+    })
+        .join('\n')
+        .replace(/\n{3,}/g, '\n\n')
+        .trim();
+}
+/** 本次会话内的日志缓存（同一次浏览里重复打开弹窗不再发请求） */
+let _changelogCache = null;
+/**
+ * 拉取并解析 CHANGELOG.md（命中会话缓存则直接回调，不发请求）。
+ * @param {(entries: ChangelogEntry[]|null, errMsg?: string) => void} done - 完成回调；失败时 entries 为 null
+ * @returns {void}
+ */
+function loadChangelog(done) {
+    if (_changelogCache) {
+        done(_changelogCache);
+        return;
+    }
+    GM_xmlhttpRequest({
+        method: 'GET',
+        url: resolveGithubUrl(CHANGELOG_RAW_URL),
+        timeout: 15000,
+        onload: function (response) {
+            if (response.status !== 200) {
+                const msg = '数据源返回 HTTP ' + response.status;
+                addLog('更新日志加载失败: ' + msg, 'error', true);
+                done(null, msg);
+                return;
+            }
+            const entries = parseChangelog(response.responseText);
+            if (!entries.length) {
+                // 404 页面/错误页也可能是合法文本，必须校验解析结果，避免把垃圾当日志渲染
+                const msg = '内容为空或格式不符（缺少 ### 标题）';
+                addLog('更新日志加载失败: ' + msg, 'error', true);
+                done(null, msg);
+                return;
+            }
+            _changelogCache = entries;
+            addLog('更新日志加载成功，共 ' + entries.length + ' 条', 'info');
+            done(entries);
+        },
+        onerror: function (error) {
+            // GM_xmlhttpRequest 的错误参数形态不定（对象 / 字符串），故按需取值而非断言类型
+            const err = (error || {});
+            const errMsg = err.message ? err.message : typeof error === 'string' ? error : '网络错误';
+            addLog('更新日志加载失败: ' + errMsg, 'error', true);
+            done(null, errMsg);
+        },
+        ontimeout: function () {
+            addLog('更新日志加载超时（15s），已取消', 'error', true);
+            done(null, '请求超时（15s）');
+        },
+    });
+}
+
+;// ./src/lib/ui/ChangelogModal.tsx
+
+
+
+
+
+const { Text: ChangelogModal_Text } = typography;
+/**
+ * 更新日志弹窗（v26.10.06-v13：由原 DOM 弹窗改为 antd Modal）。
+ * 拉取/解析逻辑仍在 `lib/changelog.ts`（保持可测试的纯函数），这里只管渲染。
+ */
+function ChangelogModal({ open, onClose }) {
+    const [entries, setEntries] = (0,react_production_namespaceFn().useState)(null);
+    const [err, setErr] = (0,react_production_namespaceFn().useState)('');
+    const [loading, setLoading] = (0,react_production_namespaceFn().useState)(false);
+    (0,react_production_namespaceFn().useEffect)(() => {
+        if (!open)
+            return;
+        let alive = true;
+        setLoading(true);
+        setErr('');
+        loadChangelog((list, errMsg) => {
+            if (!alive)
+                return;
+            setLoading(false);
+            if (!list) {
+                setErr(errMsg || '未知错误');
+                return;
+            }
+            setEntries(list);
+        });
+        return () => {
+            alive = false;
+        };
+    }, [open]);
+    const shown = entries ? entries.slice(0, (/* inlined export .CHANGELOG_DEFAULT_LIMIT */10)) : [];
+    return ((0,react_jsx_runtime_production_namespaceFn().jsx)(modal, { open: open, title: '更新日志（最新 ' + (/* inlined export .CHANGELOG_DEFAULT_LIMIT */10) + ' 条）', onCancel: onClose, getContainer: getOverlayContainer, width: 620, styles: { body: { textAlign: 'left' } }, destroyOnHidden: true, footer: (0,react_jsx_runtime_production_namespaceFn().jsxs)(es_space, { children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { onClick: () => window.open(CHANGELOG_PAGE_URL, '_blank'), children: "\u83B7\u53D6\u66F4\u591A\u65E5\u5FD7" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { color: "primary", variant: "solid", onClick: onClose, children: "\u5173\u95ED" })] }), children: loading ? ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { textAlign: 'center', padding: 24 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(spin, {}), " ", (0,react_jsx_runtime_production_namespaceFn().jsx)(ChangelogModal_Text, { type: "secondary", children: "\u8BFB\u53D6\u4E2D\u2026" })] })) : err ? ((0,react_jsx_runtime_production_namespaceFn().jsxs)((react_jsx_runtime_production_namespaceFn().Fragment), { children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)(ChangelogModal_Text, { type: "danger", children: ["\u8BFB\u53D6\u5931\u8D25\uFF1A", err] }), (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { marginTop: 8 }, children: (0,react_jsx_runtime_production_namespaceFn().jsx)(ChangelogModal_Text, { type: "secondary", style: { fontSize: 12 }, children: "\u53EF\u70B9\u4E0B\u65B9\u300C\u83B7\u53D6\u66F4\u591A\u65E5\u5FD7\u300D\u5728\u6D4F\u89C8\u5668\u4E2D\u6253\u5F00 CHANGELOG.md \u67E5\u770B\u3002" }) })] })) : !entries || entries.length === 0 ? ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_empty, { description: "\u6682\u65E0\u66F4\u65B0\u65E5\u5FD7" })) : ((0,react_jsx_runtime_production_namespaceFn().jsxs)((react_jsx_runtime_production_namespaceFn().Fragment), { children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { maxHeight: '60vh', overflow: 'auto', paddingRight: 4 }, children: shown.map((en) => ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { marginBottom: 14 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { fontSize: 14, fontWeight: 'bold', color: '#1890ff', marginBottom: 6 }, children: en.title }), (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: {
+                                    fontSize: 13,
+                                    lineHeight: 1.6,
+                                    color: '#333',
+                                    whiteSpace: 'pre-wrap',
+                                    wordBreak: 'break-word',
+                                }, children: mdToPlain(en.body) })] }, en.title))) }), (0,react_jsx_runtime_production_namespaceFn().jsx)(ChangelogModal_Text, { type: "secondary", style: { fontSize: 12, display: 'block', marginTop: 8, textAlign: 'center' }, children: entries.length > shown.length
+                        ? '共 ' + entries.length + ' 条，已显示最新 ' + shown.length + ' 条'
+                        : '共 ' + entries.length + ' 条（已全部显示）' })] })) }));
+}
+
+;// ./node_modules/@rc-component/image/es/context.js
+
+const PreviewGroupContext = /*#__PURE__*/(react_production_namespaceFn().createContext)(null);
+;// ./node_modules/@rc-component/image/es/util.js
+function isImageValid(src) {
+  return new Promise(resolve => {
+    if (!src) {
+      resolve(false);
+      return;
+    }
+    const img = document.createElement('img');
+    img.onerror = () => resolve(false);
+    img.onload = () => resolve(true);
+    img.src = src;
+  });
+}
+
+// ============================= Legacy =============================
+function getClientSize() {
+  const width = document.documentElement.clientWidth;
+  const height = window.innerHeight || document.documentElement.clientHeight;
+  return {
+    width,
+    height
+  };
+}
+;// ./node_modules/@rc-component/image/es/hooks/useImageTransform.js
+
+
+
+const initialTransform = {
+  x: 0,
+  y: 0,
+  rotate: 0,
+  scale: 1,
+  flipX: false,
+  flipY: false
+};
+function useImageTransform(imgRef, minScale, maxScale, onTransform) {
+  const frame = (0,react_production_namespaceFn().useRef)(null);
+  const queue = (0,react_production_namespaceFn().useRef)([]);
+  const [transform, setTransform] = (0,react_production_namespaceFn().useState)(initialTransform);
+  const resetTransform = action => {
+    setTransform(initialTransform);
+    if (!es_isEqual(initialTransform, transform)) {
+      onTransform?.({
+        transform: initialTransform,
+        action
+      });
+    }
+  };
+
+  /** Direct update transform */
+  const updateTransform = (newTransform, action) => {
+    if (frame.current === null) {
+      queue.current = [];
+      frame.current = es_raf(() => {
+        setTransform(preState => {
+          let memoState = preState;
+          queue.current.forEach(queueState => {
+            memoState = {
+              ...memoState,
+              ...queueState
+            };
+          });
+          frame.current = null;
+          onTransform?.({
+            transform: memoState,
+            action
+          });
+          return memoState;
+        });
+      });
+    }
+    queue.current.push({
+      ...transform,
+      ...newTransform
+    });
+  };
+
+  /** Scale according to the position of centerX and centerY */
+  const dispatchZoomChange = (ratio, action, centerX, centerY, isTouch) => {
+    const {
+      width,
+      height,
+      offsetWidth,
+      offsetHeight,
+      offsetLeft,
+      offsetTop
+    } = imgRef.current;
+    let newRatio = ratio;
+    let newScale = transform.scale * ratio;
+    if (newScale > maxScale) {
+      newScale = maxScale;
+      newRatio = maxScale / transform.scale;
+    } else if (newScale < minScale) {
+      // For mobile interactions, allow scaling down to the minimum scale.
+      newScale = isTouch ? newScale : minScale;
+      newRatio = newScale / transform.scale;
+    }
+
+    /** Default center point scaling */
+    const mergedCenterX = centerX ?? innerWidth / 2;
+    const mergedCenterY = centerY ?? innerHeight / 2;
+    const diffRatio = newRatio - 1;
+    /** Deviation calculated from image size */
+    const diffImgX = diffRatio * width * 0.5;
+    const diffImgY = diffRatio * height * 0.5;
+    /** The difference between the click position and the edge of the document */
+    const diffOffsetLeft = diffRatio * (mergedCenterX - transform.x - offsetLeft);
+    const diffOffsetTop = diffRatio * (mergedCenterY - transform.y - offsetTop);
+    /** Final positioning */
+    let newX = transform.x - (diffOffsetLeft - diffImgX);
+    let newY = transform.y - (diffOffsetTop - diffImgY);
+
+    /**
+     * When zooming the image
+     * When the image size is smaller than the width and height of the window, the position is initialized
+     */
+    if (ratio < 1 && newScale === 1) {
+      const mergedWidth = offsetWidth * newScale;
+      const mergedHeight = offsetHeight * newScale;
+      const {
+        width: clientWidth,
+        height: clientHeight
+      } = getClientSize();
+      if (mergedWidth <= clientWidth && mergedHeight <= clientHeight) {
+        newX = 0;
+        newY = 0;
+      }
+    }
+    updateTransform({
+      x: newX,
+      y: newY,
+      scale: newScale
+    }, action);
+  };
+  return {
+    transform,
+    resetTransform,
+    updateTransform,
+    dispatchZoomChange
+  };
+}
+;// ./node_modules/@rc-component/image/es/getFixScaleEleTransPosition.js
+
+function fixPoint(key, start, width, clientWidth) {
+  const startAddWidth = start + width;
+  const offsetStart = (width - clientWidth) / 2;
+  if (width > clientWidth) {
+    if (start > 0) {
+      return {
+        [key]: offsetStart
+      };
+    }
+    if (start < 0 && startAddWidth < clientWidth) {
+      return {
+        [key]: -offsetStart
+      };
+    }
+  } else if (start < 0 || startAddWidth > clientWidth) {
+    return {
+      [key]: start < 0 ? offsetStart : -offsetStart
+    };
+  }
+  return {};
+}
+
+/**
+ * Fix positon x,y point when
+ *
+ * Ele width && height < client
+ * - Back origin
+ *
+ * - Ele width | height > clientWidth | clientHeight
+ * - left | top > 0 -> Back 0
+ * - left | top + width | height < clientWidth | clientHeight -> Back left | top + width | height === clientWidth | clientHeight
+ *
+ * Regardless of other
+ */
+function getFixScaleEleTransPosition(width, height, left, top) {
+  const {
+    width: clientWidth,
+    height: clientHeight
+  } = getClientSize();
+  let fixPos = null;
+  if (width <= clientWidth && height <= clientHeight) {
+    fixPos = {
+      x: 0,
+      y: 0
+    };
+  } else if (width > clientWidth || height > clientHeight) {
+    fixPos = {
+      ...fixPoint('x', left, width, clientWidth),
+      ...fixPoint('y', top, height, clientHeight)
+    };
+  }
+  return fixPos;
+}
+;// ./node_modules/@rc-component/image/es/hooks/useMouseEvent.js
+
+
+
+
+function useMouseEvent(imgRef, movable, open, scaleStep, transform, updateTransform, dispatchZoomChange, wheel = true) {
+  const {
+    rotate,
+    scale,
+    x,
+    y
+  } = transform;
+  const [isMoving, setMoving] = (0,react_production_namespaceFn().useState)(false);
+  const startPositionInfo = (0,react_production_namespaceFn().useRef)({
+    diffX: 0,
+    diffY: 0,
+    transformX: 0,
+    transformY: 0
+  });
+  const onMouseDown = event => {
+    // Only allow main button
+    if (!movable || event.button !== 0) return;
+    event.preventDefault();
+    event.stopPropagation();
+    startPositionInfo.current = {
+      diffX: event.pageX - x,
+      diffY: event.pageY - y,
+      transformX: x,
+      transformY: y
+    };
+    setMoving(true);
+  };
+  const onMouseMove = event => {
+    if (open && isMoving) {
+      updateTransform({
+        x: event.pageX - startPositionInfo.current.diffX,
+        y: event.pageY - startPositionInfo.current.diffY
+      }, 'move');
+    }
+  };
+  const onMouseUp = () => {
+    if (open && isMoving) {
+      setMoving(false);
+
+      /** No need to restore the position when the picture is not moved, So as not to interfere with the click */
+      const {
+        transformX,
+        transformY
+      } = startPositionInfo.current;
+      const hasChangedPosition = x !== transformX && y !== transformY;
+      if (!hasChangedPosition) return;
+      const width = imgRef.current.offsetWidth * scale;
+      const height = imgRef.current.offsetHeight * scale;
+      // eslint-disable-next-line @typescript-eslint/no-shadow
+      const {
+        left,
+        top
+      } = imgRef.current.getBoundingClientRect();
+      const isRotate = rotate % 180 !== 0;
+      const fixState = getFixScaleEleTransPosition(isRotate ? height : width, isRotate ? width : height, left, top);
+      if (fixState) {
+        updateTransform({
+          ...fixState
+        }, 'dragRebound');
+      }
+    }
+  };
+  const onWheel = event => {
+    if (!open || !wheel || event.deltaY == 0) return;
+    // Scale ratio depends on the deltaY size
+    const scaleRatio = Math.abs(event.deltaY / 100);
+    // Limit the maximum scale ratio
+    const mergedScaleRatio = Math.min(scaleRatio, (/* inlined export .WHEEL_MAX_SCALE_RATIO */1));
+    // Scale the ratio each time
+    let ratio = (/* inlined export .BASE_SCALE_RATIO */1) + mergedScaleRatio * scaleStep;
+    if (event.deltaY > 0) {
+      ratio = (/* inlined export .BASE_SCALE_RATIO */1) / ratio;
+    }
+    dispatchZoomChange(ratio, 'wheel', event.clientX, event.clientY);
+  };
+  (0,react_production_namespaceFn().useEffect)(() => {
+    if (movable) {
+      window.addEventListener('mouseup', onMouseUp, false);
+      window.addEventListener('mousemove', onMouseMove, false);
+      try {
+        // Resolve if in iframe lost event
+        /* istanbul ignore next */
+        if (window.top !== window.self) {
+          window.top.addEventListener('mouseup', onMouseUp, false);
+          window.top.addEventListener('mousemove', onMouseMove, false);
+        }
+      } catch (error) {
+        /* istanbul ignore next */
+        es_warning(false, `[rc-image] ${error}`);
+      }
+    }
+    return () => {
+      window.removeEventListener('mouseup', onMouseUp);
+      window.removeEventListener('mousemove', onMouseMove);
+
+      /* istanbul ignore next */
+      try {
+        window.top?.removeEventListener('mouseup', onMouseUp);
+        window.top?.removeEventListener('mousemove', onMouseMove);
+      } catch (error) {
+        // Do nothing
+      }
+    };
+  }, [open, isMoving, x, y, rotate, movable]);
+  return {
+    isMoving,
+    onMouseDown,
+    onMouseMove,
+    onMouseUp,
+    onWheel
+  };
+}
+;// ./node_modules/@rc-component/image/es/hooks/useStatus.js
+
+
+function useStatus_useStatus({
+  src,
+  isCustomPlaceholder,
+  fallback
+}) {
+  const [status, setStatus] = (0,react_production_namespaceFn().useState)(isCustomPlaceholder ? 'loading' : 'normal');
+  const isLoaded = (0,react_production_namespaceFn().useRef)(false);
+  const isError = status === 'error';
+
+  // https://github.com/react-component/image/pull/187
+  (0,react_production_namespaceFn().useEffect)(() => {
+    let isCurrentSrc = true;
+    isImageValid(src).then(isValid => {
+      // https://github.com/ant-design/ant-design/issues/44948
+      // If src changes, the previous setStatus should not be triggered
+      if (!isValid && isCurrentSrc) {
+        setStatus('error');
+      }
+    });
+    return () => {
+      isCurrentSrc = false;
+    };
+  }, [src]);
+  (0,react_production_namespaceFn().useEffect)(() => {
+    if (isCustomPlaceholder && !isLoaded.current) {
+      setStatus('loading');
+    } else if (isError) {
+      setStatus('normal');
+    }
+  }, [src]);
+  const onLoad = () => {
+    setStatus('normal');
+  };
+  const getImgRef = img => {
+    isLoaded.current = false;
+    if (status === 'loading' && img?.complete && (img.naturalWidth || img.naturalHeight)) {
+      isLoaded.current = true;
+      onLoad();
+    }
+  };
+  const srcAndOnload = isError && fallback ? {
+    src: fallback
+  } : {
+    onLoad,
+    src
+  };
+  return [getImgRef, srcAndOnload, status];
+}
+;// ./node_modules/@rc-component/image/es/hooks/useTouchEvent.js
+
+
+function getDistance(a, b) {
+  const x = a.x - b.x;
+  const y = a.y - b.y;
+  return Math.hypot(x, y);
+}
+function getCenter(oldPoint1, oldPoint2, newPoint1, newPoint2) {
+  // Calculate the distance each point has moved
+  const distance1 = getDistance(oldPoint1, newPoint1);
+  const distance2 = getDistance(oldPoint2, newPoint2);
+
+  // If both distances are 0, return the original points
+  if (distance1 === 0 && distance2 === 0) {
+    return [oldPoint1.x, oldPoint1.y];
+  }
+
+  // Calculate the ratio of the distances
+  const ratio = distance1 / (distance1 + distance2);
+
+  // Calculate the new center point based on the ratio
+  const x = oldPoint1.x + ratio * (oldPoint2.x - oldPoint1.x);
+  const y = oldPoint1.y + ratio * (oldPoint2.y - oldPoint1.y);
+  return [x, y];
+}
+function useTouchEvent(imgRef, movable, open, minScale, transform, updateTransform, dispatchZoomChange) {
+  const {
+    rotate,
+    scale,
+    x,
+    y
+  } = transform;
+  const [isTouching, setIsTouching] = (0,react_production_namespaceFn().useState)(false);
+  const touchPointInfo = (0,react_production_namespaceFn().useRef)({
+    point1: {
+      x: 0,
+      y: 0
+    },
+    point2: {
+      x: 0,
+      y: 0
+    },
+    eventType: 'none'
+  });
+  const updateTouchPointInfo = values => {
+    touchPointInfo.current = {
+      ...touchPointInfo.current,
+      ...values
+    };
+  };
+  const onTouchStart = event => {
+    if (!movable) return;
+    event.stopPropagation();
+    setIsTouching(true);
+    const {
+      touches = []
+    } = event;
+    if (touches.length > 1) {
+      // touch zoom
+      updateTouchPointInfo({
+        point1: {
+          x: touches[0].clientX,
+          y: touches[0].clientY
+        },
+        point2: {
+          x: touches[1].clientX,
+          y: touches[1].clientY
+        },
+        eventType: 'touchZoom'
+      });
+    } else {
+      // touch move
+      updateTouchPointInfo({
+        point1: {
+          x: touches[0].clientX - x,
+          y: touches[0].clientY - y
+        },
+        eventType: 'move'
+      });
+    }
+  };
+  const onTouchMove = event => {
+    const {
+      touches = []
+    } = event;
+    const {
+      point1,
+      point2,
+      eventType
+    } = touchPointInfo.current;
+    if (touches.length > 1 && eventType === 'touchZoom') {
+      // touch zoom
+      const newPoint1 = {
+        x: touches[0].clientX,
+        y: touches[0].clientY
+      };
+      const newPoint2 = {
+        x: touches[1].clientX,
+        y: touches[1].clientY
+      };
+      const [centerX, centerY] = getCenter(point1, point2, newPoint1, newPoint2);
+      const ratio = getDistance(newPoint1, newPoint2) / getDistance(point1, point2);
+      dispatchZoomChange(ratio, 'touchZoom', centerX, centerY, true);
+      updateTouchPointInfo({
+        point1: newPoint1,
+        point2: newPoint2,
+        eventType: 'touchZoom'
+      });
+    } else if (eventType === 'move') {
+      // touch move
+      updateTransform({
+        x: touches[0].clientX - point1.x,
+        y: touches[0].clientY - point1.y
+      }, 'move');
+      updateTouchPointInfo({
+        eventType: 'move'
+      });
+    }
+  };
+  const onTouchEnd = () => {
+    if (!open) return;
+    if (isTouching) {
+      setIsTouching(false);
+    }
+    updateTouchPointInfo({
+      eventType: 'none'
+    });
+    if (minScale > scale) {
+      /** When the scaling ratio is less than the minimum scaling ratio, reset the scaling ratio */
+      return updateTransform({
+        x: 0,
+        y: 0,
+        scale: minScale
+      }, 'touchZoom');
+    }
+    const width = imgRef.current.offsetWidth * scale;
+    const height = imgRef.current.offsetHeight * scale;
+    // eslint-disable-next-line @typescript-eslint/no-shadow
+    const {
+      left,
+      top
+    } = imgRef.current.getBoundingClientRect();
+    const isRotate = rotate % 180 !== 0;
+    const fixState = getFixScaleEleTransPosition(isRotate ? height : width, isRotate ? width : height, left, top);
+    if (fixState) {
+      updateTransform({
+        ...fixState
+      }, 'dragRebound');
+    }
+  };
+  (0,react_production_namespaceFn().useEffect)(() => {
+    const preventDefault = e => {
+      e.preventDefault();
+    };
+    if (open && movable) {
+      window.addEventListener('touchmove', preventDefault, {
+        passive: false
+      });
+    }
+    return () => {
+      window.removeEventListener('touchmove', preventDefault);
+    };
+  }, [open, movable]);
+  return {
+    isTouching,
+    onTouchStart,
+    onTouchMove,
+    onTouchEnd
+  };
+}
+;// ./node_modules/@rc-component/image/es/Preview/CloseBtn.js
+
+
+function CloseBtn(props) {
+  const {
+    prefixCls,
+    icon,
+    onClick,
+    className,
+    style
+  } = props;
+  return /*#__PURE__*/(react_production_namespaceFn().createElement)("button", {
+    className: clsx(`${prefixCls}-close`, className),
+    style: style,
+    onClick: onClick
+  }, icon);
+}
+;// ./node_modules/@rc-component/image/es/Preview/Footer.js
+
+
+function Preview_Footer_Footer(props) {
+  // 修改解构，添加缺失的属性，并提供默认值
+  const {
+    prefixCls,
+    showProgress,
+    current,
+    count,
+    showSwitch,
+    // Style
+    classNames,
+    styles,
+    // render
+    icons,
+    image,
+    transform,
+    countRender,
+    actionsRender,
+    // Scale
+    scale,
+    minScale,
+    maxScale,
+    // Actions
+    onActive,
+    onFlipY,
+    onFlipX,
+    onRotateLeft,
+    onRotateRight,
+    onZoomOut,
+    onZoomIn,
+    onClose,
+    onReset
+  } = props;
+  const {
+    left,
+    right,
+    prev,
+    next,
+    flipY,
+    flipX,
+    rotateLeft,
+    rotateRight,
+    zoomOut,
+    zoomIn
+  } = icons;
+
+  // ========================== Render ==========================
+  // >>>>> Progress
+  const progressNode = showProgress && /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
+    className: `${prefixCls}-progress`
+  }, countRender ? countRender(current + 1, count) : /*#__PURE__*/(react_production_namespaceFn().createElement)("bdi", null, `${current + 1} / ${count}`));
+
+  // >>>>> Actions
+  const actionCls = `${prefixCls}-actions-action`;
+  const renderOperation = ({
+    type,
+    disabled,
+    onClick,
+    icon
+  }) => {
+    return /*#__PURE__*/(react_production_namespaceFn().createElement)("button", {
+      type: "button",
+      key: type,
+      className: clsx(actionCls, `${actionCls}-${type}`, {
+        [`${actionCls}-disabled`]: !!disabled
+      }),
+      onClick: onClick,
+      disabled: !!disabled,
+      "aria-label": type
+    }, icon);
+  };
+  const switchPrevNode = showSwitch ? renderOperation({
+    icon: prev ?? left,
+    onClick: () => onActive(-1),
+    type: 'prev',
+    disabled: current === 0
+  }) : undefined;
+  const switchNextNode = showSwitch ? renderOperation({
+    icon: next ?? right,
+    onClick: () => onActive(1),
+    type: 'next',
+    disabled: current === count - 1
+  }) : undefined;
+  const flipYNode = renderOperation({
+    icon: flipY,
+    onClick: onFlipY,
+    type: 'flipY'
+  });
+  const flipXNode = renderOperation({
+    icon: flipX,
+    onClick: onFlipX,
+    type: 'flipX'
+  });
+  const rotateLeftNode = renderOperation({
+    icon: rotateLeft,
+    onClick: onRotateLeft,
+    type: 'rotateLeft'
+  });
+  const rotateRightNode = renderOperation({
+    icon: rotateRight,
+    onClick: onRotateRight,
+    type: 'rotateRight'
+  });
+  const zoomOutNode = renderOperation({
+    icon: zoomOut,
+    onClick: onZoomOut,
+    type: 'zoomOut',
+    disabled: scale <= minScale
+  });
+  const zoomInNode = renderOperation({
+    icon: zoomIn,
+    onClick: onZoomIn,
+    type: 'zoomIn',
+    disabled: scale === maxScale
+  });
+  const actionsNode = /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
+    className: clsx(`${prefixCls}-actions`, classNames.actions),
+    style: styles.actions
+  }, flipYNode, flipXNode, rotateLeftNode, rotateRightNode, zoomOutNode, zoomInNode);
+
+  // >>>>> Render
+  return /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
+    className: clsx(`${prefixCls}-footer`, classNames.footer),
+    style: styles.footer
+  }, progressNode, actionsRender ? actionsRender(actionsNode, {
+    icons: {
+      prevIcon: switchPrevNode,
+      nextIcon: switchNextNode,
+      flipYIcon: flipYNode,
+      flipXIcon: flipXNode,
+      rotateLeftIcon: rotateLeftNode,
+      rotateRightIcon: rotateRightNode,
+      zoomOutIcon: zoomOutNode,
+      zoomInIcon: zoomInNode
+    },
+    actions: {
+      onActive,
+      onFlipY,
+      onFlipX,
+      onRotateLeft,
+      onRotateRight,
+      onZoomOut,
+      onZoomIn,
+      onReset,
+      onClose
+    },
+    transform,
+    current,
+    total: count,
+    image
+  }) : actionsNode);
+}
+;// ./node_modules/@rc-component/image/es/Preview/PrevNext.js
+
+
+function PrevNext(props) {
+  const {
+    prefixCls,
+    onActive,
+    current,
+    count,
+    icons: {
+      left,
+      right,
+      prev,
+      next
+    }
+  } = props;
+  const switchCls = `${prefixCls}-switch`;
+  const prevDisabled = current === 0;
+  const nextDisabled = current === count - 1;
+  return /*#__PURE__*/(react_production_namespaceFn().createElement)((react_production_namespaceFn().Fragment), null, /*#__PURE__*/(react_production_namespaceFn().createElement)("button", {
+    className: clsx(switchCls, `${switchCls}-prev`, {
+      [`${switchCls}-disabled`]: prevDisabled
+    }),
+    onClick: () => onActive(-1),
+    disabled: prevDisabled
+  }, prev ?? left), /*#__PURE__*/(react_production_namespaceFn().createElement)("button", {
+    type: "button",
+    className: clsx(switchCls, `${switchCls}-next`, {
+      [`${switchCls}-disabled`]: nextDisabled
+    }),
+    onClick: () => onActive(1),
+    disabled: nextDisabled
+  }, next ?? right));
+}
+;// ./node_modules/@rc-component/image/es/Preview/index.js
+function Preview_extends() { Preview_extends = Object.assign ? Object.assign.bind() : function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; }; return Preview_extends.apply(this, arguments); }
+;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// Note: if you want to add `action`,
+// pls contact @zombieJ or @thinkasany first.
+
+const PreviewImage = ({
+  fallback,
+  src,
+  imgRef,
+  ...props
+}) => {
+  const [getImgRef, srcAndOnload] = useStatus_useStatus({
+    src,
+    fallback
+  });
+  return /*#__PURE__*/(react_production_namespaceFn().createElement)("img", Preview_extends({
+    ref: ref => {
+      imgRef.current = ref;
+      getImgRef(ref);
+    }
+  }, props, srcAndOnload));
+};
+const Preview = props => {
+  const {
+    prefixCls,
+    rootClassName,
+    src,
+    alt,
+    imageInfo,
+    fallback,
+    movable = true,
+    onClose,
+    open,
+    afterOpenChange,
+    maskClosable = true,
+    icons = {},
+    closeIcon,
+    getContainer,
+    current = 0,
+    count = 1,
+    countRender,
+    scaleStep = 0.5,
+    minScale = 1,
+    maxScale = 50,
+    motionName = 'fade',
+    imageRender,
+    imgCommonProps,
+    actionsRender,
+    onTransform,
+    onChange,
+    classNames = {},
+    styles = {},
+    mousePosition,
+    zIndex,
+    wheel = true,
+    focusTrap = true
+  } = props;
+  const imgRef = (0,react_production_namespaceFn().useRef)(null);
+  const wrapperRef = (0,react_production_namespaceFn().useRef)(null);
+  const triggerRef = (0,react_production_namespaceFn().useRef)(null);
+  const groupContext = (0,react_production_namespaceFn().useContext)(PreviewGroupContext);
+  const showLeftOrRightSwitches = groupContext && count > 1;
+  const showOperationsProgress = groupContext && count >= 1;
+
+  // ======================== Transform =========================
+  const [enableTransition, setEnableTransition] = (0,react_production_namespaceFn().useState)(true);
+  const {
+    transform,
+    resetTransform,
+    updateTransform,
+    dispatchZoomChange
+  } = useImageTransform(imgRef, minScale, maxScale, onTransform);
+  const {
+    isMoving,
+    onMouseDown,
+    onWheel
+  } = useMouseEvent(imgRef, movable, open, scaleStep, transform, updateTransform, dispatchZoomChange, wheel);
+  const {
+    isTouching,
+    onTouchStart,
+    onTouchMove,
+    onTouchEnd
+  } = useTouchEvent(imgRef, movable, open, minScale, transform, updateTransform, dispatchZoomChange);
+  const {
+    rotate,
+    scale
+  } = transform;
+  (0,react_production_namespaceFn().useEffect)(() => {
+    if (!enableTransition) {
+      setEnableTransition(true);
+    }
+  }, [enableTransition]);
+  (0,react_production_namespaceFn().useEffect)(() => {
+    if (!open) {
+      resetTransform('close');
+    }
+  }, [open]);
+
+  // ========================== Image ===========================
+  const onDoubleClick = event => {
+    if (open) {
+      if (scale !== 1) {
+        updateTransform({
+          x: 0,
+          y: 0,
+          scale: 1
+        }, 'doubleClick');
+      } else {
+        dispatchZoomChange((/* inlined export .BASE_SCALE_RATIO */1) + scaleStep, 'doubleClick', event.clientX, event.clientY);
+      }
+    }
+  };
+  const imgNode = /*#__PURE__*/(react_production_namespaceFn().createElement)(PreviewImage, Preview_extends({}, imgCommonProps, {
+    width: props.width,
+    height: props.height,
+    imgRef: imgRef,
+    className: `${prefixCls}-img`,
+    alt: alt,
+    style: {
+      transform: `translate3d(${transform.x}px, ${transform.y}px, 0) scale3d(${transform.flipX ? '-' : ''}${scale}, ${transform.flipY ? '-' : ''}${scale}, 1) rotate(${rotate}deg)`,
+      transitionDuration: (!enableTransition || isTouching) && '0s'
+    },
+    fallback: fallback,
+    src: src,
+    onWheel: onWheel,
+    onMouseDown: onMouseDown,
+    onDoubleClick: onDoubleClick,
+    onTouchStart: onTouchStart,
+    onTouchMove: onTouchMove,
+    onTouchEnd: onTouchEnd,
+    onTouchCancel: onTouchEnd
+  }));
+  const image = {
+    url: src,
+    alt,
+    ...imageInfo
+  };
+
+  // ======================== Operation =========================
+  // >>>>> Actions
+  const onZoomIn = () => {
+    dispatchZoomChange((/* inlined export .BASE_SCALE_RATIO */1) + scaleStep, 'zoomIn');
+  };
+  const onZoomOut = () => {
+    dispatchZoomChange((/* inlined export .BASE_SCALE_RATIO */1) / ((/* inlined export .BASE_SCALE_RATIO */1) + scaleStep), 'zoomOut');
+  };
+  const onRotateRight = () => {
+    updateTransform({
+      rotate: rotate + 90
+    }, 'rotateRight');
+  };
+  const onRotateLeft = () => {
+    updateTransform({
+      rotate: rotate - 90
+    }, 'rotateLeft');
+  };
+  const onFlipX = () => {
+    updateTransform({
+      flipX: !transform.flipX
+    }, 'flipX');
+  };
+  const onFlipY = () => {
+    updateTransform({
+      flipY: !transform.flipY
+    }, 'flipY');
+  };
+  const onReset = () => {
+    resetTransform('reset');
+  };
+  const onActive = offset => {
+    const nextCurrent = current + offset;
+    if (nextCurrent >= 0 && nextCurrent <= count - 1) {
+      setEnableTransition(false);
+      resetTransform(offset < 0 ? 'prev' : 'next');
+      onChange?.(nextCurrent, current);
+    }
+  };
+
+  // >>>>> Effect: Keyboard
+  const onKeyDown = hooks_useEvent(event => {
+    if (open) {
+      const {
+        keyCode
+      } = event;
+      if (showLeftOrRightSwitches) {
+        if (keyCode === es_KeyCode.LEFT) {
+          onActive(-1);
+        } else if (keyCode === es_KeyCode.RIGHT) {
+          onActive(1);
+        }
+      }
+    }
+  });
+  (0,react_production_namespaceFn().useEffect)(() => {
+    if (open) {
+      window.addEventListener('keydown', onKeyDown);
+      return () => {
+        window.removeEventListener('keydown', onKeyDown);
+      };
+    }
+  }, [open]);
+
+  // ======================= Lock Scroll ========================
+  const [lockScroll, setLockScroll] = (0,react_production_namespaceFn().useState)(false);
+  (react_production_namespaceFn().useEffect)(() => {
+    if (open) {
+      setLockScroll(true);
+    }
+  }, [open]);
+  const onVisibleChanged = nextVisible => {
+    if (!nextVisible) {
+      setLockScroll(false);
+
+      // Restore focus to the trigger element after leave animation
+      triggerRef.current?.focus?.();
+      triggerRef.current = null;
+    }
+    afterOpenChange?.(nextVisible);
+  };
+
+  // ========================== Portal ==========================
+  const [portalRender, setPortalRender] = (0,react_production_namespaceFn().useState)(false);
+  hooks_useLayoutEffect(() => {
+    if (open) {
+      setPortalRender(true);
+    }
+  }, [open]);
+  const onEsc = ({
+    top
+  }) => {
+    if (top) {
+      onClose?.();
+    }
+  };
+
+  // =========================== Focus ============================
+  hooks_useLayoutEffect(() => {
+    if (open) {
+      triggerRef.current = document.activeElement;
+    }
+  }, [open]);
+  useLockFocus(focusTrap && open && portalRender, () => wrapperRef.current);
+
+  // ========================== Render ==========================
+  const bodyStyle = {
+    ...styles.body
+  };
+  if (mousePosition) {
+    bodyStyle.transformOrigin = `${mousePosition.x}px ${mousePosition.y}px`;
+  }
+  return /*#__PURE__*/(react_production_namespaceFn().createElement)(portal_es, {
+    open: portalRender && open,
+    autoDestroy: false,
+    getContainer: getContainer,
+    autoLock: lockScroll,
+    onEsc: onEsc
+  }, /*#__PURE__*/(react_production_namespaceFn().createElement)(es, {
+    motionName: motionName,
+    visible: portalRender && open,
+    motionAppear: true,
+    motionEnter: true,
+    motionLeave: true,
+    onVisibleChanged: onVisibleChanged
+  }, ({
+    className: motionClassName,
+    style: motionStyle
+  }) => {
+    const mergedStyle = {
+      ...styles.root,
+      ...motionStyle
+    };
+    if (zIndex) {
+      mergedStyle.zIndex = zIndex;
+    }
+    return /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
+      ref: wrapperRef,
+      className: clsx(prefixCls, rootClassName, classNames.root, motionClassName, {
+        [`${prefixCls}-movable`]: movable,
+        [`${prefixCls}-moving`]: isMoving
+      }),
+      style: mergedStyle,
+      role: "dialog",
+      "aria-modal": "true",
+      "aria-label": alt,
+      tabIndex: -1
+    }, /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
+      className: clsx(`${prefixCls}-mask`, classNames.mask),
+      style: styles.mask,
+      onClick: maskClosable ? onClose : undefined
+    }), /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
+      className: clsx(`${prefixCls}-body`, classNames.body),
+      style: bodyStyle
+    }, imageRender ? imageRender(imgNode, {
+      transform,
+      image,
+      ...(groupContext ? {
+        current
+      } : {})
+    }) : imgNode), closeIcon !== false && closeIcon !== null && /*#__PURE__*/(react_production_namespaceFn().createElement)(CloseBtn, {
+      prefixCls: prefixCls,
+      icon: closeIcon === true ? icons.close : closeIcon || icons.close,
+      onClick: onClose,
+      className: classNames.close,
+      style: styles.close
+    }), showLeftOrRightSwitches && /*#__PURE__*/(react_production_namespaceFn().createElement)(PrevNext, {
+      prefixCls: prefixCls,
+      current: current,
+      count: count,
+      icons: icons,
+      onActive: onActive
+    }), /*#__PURE__*/(react_production_namespaceFn().createElement)(Preview_Footer_Footer, {
+      prefixCls: prefixCls,
+      showProgress: showOperationsProgress,
+      current: current,
+      count: count,
+      showSwitch: showLeftOrRightSwitches
+      // Style
+      ,
+      classNames: classNames,
+      styles: styles
+      // Render
+      ,
+      image: image,
+      transform: transform,
+      icons: icons,
+      countRender: countRender,
+      actionsRender: actionsRender
+      // Scale
+      ,
+      scale: scale,
+      minScale: minScale,
+      maxScale: maxScale
+      // Actions
+      ,
+      onActive: onActive,
+      onFlipY: onFlipY,
+      onFlipX: onFlipX,
+      onRotateLeft: onRotateLeft,
+      onRotateRight: onRotateRight,
+      onZoomOut: onZoomOut,
+      onZoomIn: onZoomIn,
+      onClose: onClose,
+      onReset: onReset
+    }));
+  }));
+};
+/* harmony default export */ const es_Preview = (Preview);
+;// ./node_modules/@rc-component/image/es/common.js
+const COMMON_PROPS = ['crossOrigin', 'decoding', 'draggable', 'loading', 'referrerPolicy', 'sizes', 'srcSet', 'useMap', 'alt', 'fetchPriority'];
+;// ./node_modules/@rc-component/image/es/hooks/usePreviewItems.js
+
+
+/**
+ * Merge props provided `items` or context collected images
+ */
+function usePreviewItems(items) {
+  // Context collection image data
+  const [images, setImages] = (react_production_namespaceFn().useState)({});
+  const registerImage = (react_production_namespaceFn().useCallback)((id, data) => {
+    setImages(imgs => ({
+      ...imgs,
+      [id]: data
+    }));
+    return () => {
+      setImages(imgs => {
+        const cloneImgs = {
+          ...imgs
+        };
+        delete cloneImgs[id];
+        return cloneImgs;
+      });
+    };
+  }, []);
+
+  // items
+  const mergedItems = (react_production_namespaceFn().useMemo)(() => {
+    // use `items` first
+    if (items) {
+      return items.map(item => {
+        if (typeof item === 'string') {
+          return {
+            data: {
+              src: item
+            }
+          };
+        }
+        const data = {};
+        Object.keys(item).forEach(key => {
+          if (['src', ...COMMON_PROPS].includes(key)) {
+            data[key] = item[key];
+          }
+        });
+        return {
+          data
+        };
+      });
+    }
+
+    // use registered images secondly
+    return Object.keys(images).reduce((total, id) => {
+      const {
+        canPreview,
+        data
+      } = images[id];
+      if (canPreview) {
+        total.push({
+          data,
+          id
+        });
+      }
+      return total;
+    }, []);
+  }, [items, images]);
+  return [mergedItems, registerImage, !!items];
+}
+;// ./node_modules/@rc-component/image/es/PreviewGroup.js
+function PreviewGroup_extends() { PreviewGroup_extends = Object.assign ? Object.assign.bind() : function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; }; return PreviewGroup_extends.apply(this, arguments); }
+;
+
+
+
+
+
+const PreviewGroup_Group = ({
+  previewPrefixCls = 'rc-image-preview',
+  classNames,
+  styles,
+  children,
+  icons = {},
+  items,
+  preview,
+  fallback
+}) => {
+  const {
+    open: previewOpen,
+    onOpenChange,
+    current: currentIndex,
+    onChange,
+    ...restProps
+  } = preview && typeof preview === 'object' ? preview : {};
+
+  // ========================== Items ===========================
+  const [mergedItems, register, fromItems] = usePreviewItems(items);
+
+  // ========================= Preview ==========================
+  // >>> Index
+  const [current, setCurrent] = useControlledState(0, currentIndex);
+  const [keepOpenIndex, setKeepOpenIndex] = (0,react_production_namespaceFn().useState)(false);
+
+  // >>> Image
+  const {
+    src,
+    ...imgCommonProps
+  } = mergedItems[current]?.data || {};
+  // >>> Visible
+  const [isShowPreview, setShowPreview] = useControlledState(!!previewOpen, previewOpen);
+  const triggerShowPreview = hooks_useEvent(next => {
+    setShowPreview(next);
+    if (next !== isShowPreview) {
+      onOpenChange?.(next, {
+        current
+      });
+    }
+  });
+
+  // >>> Position
+  const [mousePosition, setMousePosition] = (0,react_production_namespaceFn().useState)(null);
+  const onPreviewFromImage = (react_production_namespaceFn().useCallback)((id, imageSrc, mouseX, mouseY) => {
+    const index = fromItems ? mergedItems.findIndex(item => item.data.src === imageSrc) : mergedItems.findIndex(item => item.id === id);
+    setCurrent(index < 0 ? 0 : index);
+    triggerShowPreview(true);
+    setMousePosition({
+      x: mouseX,
+      y: mouseY
+    });
+    setKeepOpenIndex(true);
+  }, [mergedItems, fromItems]);
+
+  // Reset current when reopen
+  (react_production_namespaceFn().useEffect)(() => {
+    if (isShowPreview) {
+      if (!keepOpenIndex) {
+        setCurrent(0);
+      }
+    } else {
+      setKeepOpenIndex(false);
+    }
+  }, [isShowPreview]);
+
+  // ========================== Events ==========================
+  const onInternalChange = (next, prev) => {
+    setCurrent(next);
+    onChange?.(next, prev);
+  };
+  const onPreviewClose = () => {
+    triggerShowPreview(false);
+    setMousePosition(null);
+  };
+
+  // ========================= Context ==========================
+  const previewGroupContext = (react_production_namespaceFn().useMemo)(() => ({
+    register,
+    onPreview: onPreviewFromImage
+  }), [register, onPreviewFromImage]);
+
+  // ========================== Render ==========================
+  return /*#__PURE__*/(react_production_namespaceFn().createElement)(PreviewGroupContext.Provider, {
+    value: previewGroupContext
+  }, children, /*#__PURE__*/(react_production_namespaceFn().createElement)(es_Preview, PreviewGroup_extends({
+    "aria-hidden": !isShowPreview,
+    open: isShowPreview,
+    prefixCls: previewPrefixCls,
+    onClose: onPreviewClose,
+    mousePosition: mousePosition,
+    imgCommonProps: imgCommonProps,
+    src: src,
+    fallback: fallback,
+    icons: icons,
+    current: current,
+    count: mergedItems.length,
+    onChange: onInternalChange
+  }, restProps, {
+    classNames: classNames?.popup,
+    styles: styles?.popup
+  })));
+};
+/* harmony default export */ const PreviewGroup = (PreviewGroup_Group);
+;// ./node_modules/@rc-component/image/es/hooks/useRegisterImage.js
+
+
+let uid = 0;
+function useRegisterImage(canPreview, data) {
+  const [id] = (react_production_namespaceFn().useState)(() => {
+    uid += 1;
+    return String(uid);
+  });
+  const groupContext = (react_production_namespaceFn().useContext)(PreviewGroupContext);
+  const registerData = {
+    data,
+    canPreview
+  };
+
+  // Keep order start
+  // Resolve https://github.com/ant-design/ant-design/issues/28881
+  // Only need unRegister when component unMount
+  (react_production_namespaceFn().useEffect)(() => {
+    if (groupContext) {
+      return groupContext.register(id, registerData);
+    }
+  }, []);
+  (react_production_namespaceFn().useEffect)(() => {
+    if (groupContext) {
+      groupContext.register(id, registerData);
+    }
+  }, [canPreview, data]);
+  return id;
+}
+;// ./node_modules/@rc-component/image/es/Image.js
+function Image_extends() { Image_extends = Object.assign ? Object.assign.bind() : function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; }; return Image_extends.apply(this, arguments); }
+;
+
+
+
+
+
+
+
+
+
+const ImageInternal = props => {
+  const {
+    // Misc
+    prefixCls = 'rc-image',
+    previewPrefixCls = `${prefixCls}-preview`,
+    // Style
+    rootClassName,
+    className,
+    style,
+    classNames = {},
+    styles = {},
+    width,
+    height,
+    // Image
+    src: imgSrc,
+    alt,
+    placeholder,
+    fallback,
+    // Preview
+    preview = true,
+    // Events
+    onClick,
+    onError,
+    onKeyDown,
+    ...otherProps
+  } = props;
+  const groupContext = (0,react_production_namespaceFn().useContext)(PreviewGroupContext);
+
+  // ========================== Preview ===========================
+  const canPreview = !!preview;
+  const {
+    src: previewSrc,
+    open: previewOpen,
+    onOpenChange: onPreviewOpenChange,
+    cover,
+    rootClassName: previewRootClassName,
+    ...restProps
+  } = preview && typeof preview === 'object' ? preview : {};
+  const coverPlacement = typeof cover === 'object' && cover.placement ? cover.placement || 'center' : 'center';
+  const coverNode = typeof cover === 'object' && cover.coverNode ? cover.coverNode : cover;
+
+  // ============================ Open ============================
+  const [isShowPreview, setShowPreview] = useControlledState(!!previewOpen, previewOpen);
+  const [mousePosition, setMousePosition] = (0,react_production_namespaceFn().useState)(null);
+  const triggerPreviewOpen = nextOpen => {
+    setShowPreview(nextOpen);
+    onPreviewOpenChange?.(nextOpen);
+  };
+  const onPreviewClose = () => {
+    triggerPreviewOpen(false);
+  };
+
+  // ========================= ImageProps =========================
+  const isCustomPlaceholder = placeholder && placeholder !== true;
+  const src = previewSrc ?? imgSrc;
+  const [getImgRef, srcAndOnload, status] = useStatus_useStatus({
+    src: imgSrc,
+    isCustomPlaceholder,
+    fallback
+  });
+  const imgCommonProps = (0,react_production_namespaceFn().useMemo)(() => {
+    const obj = {};
+    COMMON_PROPS.forEach(prop => {
+      if (props[prop] !== undefined) {
+        obj[prop] = props[prop];
+      }
+    });
+    return obj;
+  }, COMMON_PROPS.map(prop => props[prop]));
+
+  // ========================== Register ==========================
+  const registerData = (0,react_production_namespaceFn().useMemo)(() => ({
+    ...imgCommonProps,
+    src
+  }), [src, imgCommonProps]);
+  const imageId = useRegisterImage(canPreview, registerData);
+
+  // ========================== Preview ===========================
+  const onPreview = e => {
+    const rect = e.target.getBoundingClientRect();
+    const left = rect.x + rect.width / 2;
+    const top = rect.y + rect.height / 2;
+    if (groupContext) {
+      groupContext.onPreview(imageId, src, left, top);
+    } else {
+      setMousePosition({
+        x: left,
+        y: top
+      });
+      triggerPreviewOpen(true);
+    }
+    onClick?.(e);
+  };
+
+  // ======================= Keyboard Preview =====================
+  const onPreviewKeyDown = event => {
+    onKeyDown?.(event);
+    if (!canPreview) {
+      return;
+    }
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      const rect = event.target.getBoundingClientRect();
+      const left = rect.x + rect.width / 2;
+      const top = rect.y + rect.height / 2;
+      if (groupContext) {
+        groupContext.onPreview(imageId, src, left, top);
+      } else {
+        setMousePosition({
+          x: left,
+          y: top
+        });
+        triggerPreviewOpen(true);
+      }
+    }
+  };
+
+  // =========================== Render ===========================
+  return /*#__PURE__*/(react_production_namespaceFn().createElement)((react_production_namespaceFn().Fragment), null, /*#__PURE__*/(react_production_namespaceFn().createElement)("div", Image_extends({}, otherProps, {
+    className: clsx(prefixCls, rootClassName, classNames.root, {
+      [`${prefixCls}-error`]: status === 'error'
+    }),
+    onClick: canPreview ? onPreview : onClick,
+    role: canPreview ? 'button' : otherProps.role,
+    tabIndex: canPreview && otherProps.tabIndex == null ? 0 : otherProps.tabIndex,
+    "aria-label": canPreview ? otherProps['aria-label'] ?? alt : otherProps['aria-label'],
+    onKeyDown: onPreviewKeyDown,
+    style: {
+      width,
+      height,
+      ...styles.root
+    }
+  }), /*#__PURE__*/(react_production_namespaceFn().createElement)("img", Image_extends({}, imgCommonProps, {
+    className: clsx(`${prefixCls}-img`, {
+      [`${prefixCls}-img-placeholder`]: placeholder === true
+    }, classNames.image, className),
+    style: {
+      height,
+      ...styles.image,
+      ...style
+    },
+    ref: getImgRef
+  }, srcAndOnload, {
+    width: width,
+    height: height,
+    onError: onError
+  })), status === 'loading' && /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
+    "aria-hidden": "true",
+    className: `${prefixCls}-placeholder`
+  }, placeholder), cover !== false && canPreview && /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
+    className: clsx(`${prefixCls}-cover`, classNames.cover, `${prefixCls}-cover-${coverPlacement}`),
+    style: {
+      display: style?.display === 'none' ? 'none' : undefined,
+      ...styles.cover
+    }
+  }, coverNode)), !groupContext && canPreview && /*#__PURE__*/(react_production_namespaceFn().createElement)(es_Preview, Image_extends({
+    "aria-hidden": !isShowPreview,
+    open: isShowPreview,
+    prefixCls: previewPrefixCls,
+    onClose: onPreviewClose,
+    mousePosition: mousePosition,
+    src: src,
+    alt: alt,
+    imageInfo: {
+      width,
+      height
+    },
+    fallback: fallback,
+    imgCommonProps: imgCommonProps
+  }, restProps, {
+    classNames: classNames?.popup,
+    styles: styles?.popup,
+    rootClassName: clsx(previewRootClassName, rootClassName)
+  })));
+};
+ImageInternal.PreviewGroup = PreviewGroup;
+if (false) // removed by dead control flow
+{}
+/* harmony default export */ const es_Image = (ImageInternal);
+;// ./node_modules/@rc-component/image/es/index.js
+
+
+/* harmony default export */ const image_es = (es_Image);
+;// ./node_modules/antd/es/image/hooks/useMergedPreviewConfig.js
+
+
+
+
+const useMergedPreviewConfig = (previewConfig, contextPreviewConfig, prefixCls, mergedRootClassName, getContextPopupContainer, icons, defaultCover) => {
+  const [zIndex] = useZIndex('ImagePreview', previewConfig?.zIndex);
+  const [mergedPreviewMask, blurClassName, mergedMaskClosable] = useMergedMask(previewConfig?.mask, contextPreviewConfig?.mask, `${prefixCls}-preview`);
+  return (react_production_namespaceFn().useMemo)(() => {
+    if (!previewConfig) {
+      return previewConfig;
+    }
+    const {
+      cover,
+      getContainer,
+      closeIcon,
+      rootClassName: previewRootClassName
+    } = previewConfig;
+    const {
+      closeIcon: contextCloseIcon
+    } = contextPreviewConfig ?? {};
+    return {
+      motionName: motion_getTransitionName(`${prefixCls}-preview`, 'fade'),
+      ...previewConfig,
+      ...(defaultCover ? {
+        cover: cover ?? defaultCover
+      } : {}),
+      icons,
+      getContainer: getContainer ?? getContextPopupContainer,
+      zIndex,
+      closeIcon: closeIcon ?? contextCloseIcon,
+      rootClassName: clsx(mergedRootClassName, previewRootClassName),
+      mask: mergedPreviewMask,
+      maskClosable: mergedMaskClosable,
+      blurClassName: blurClassName.mask
+    };
+  }, [previewConfig, contextPreviewConfig, prefixCls, mergedRootClassName, getContextPopupContainer, defaultCover, icons, zIndex, mergedPreviewMask, mergedMaskClosable, blurClassName]);
+};
+/* harmony default export */ const hooks_useMergedPreviewConfig = (useMergedPreviewConfig);
+;// ./node_modules/antd/es/image/hooks/usePlaceholderConfig.js
+
+
+function isPlaceholderConfig(placeholder) {
+  return isPlainObject(placeholder) && ! /*#__PURE__*/(0,react_production_namespaceFn().isValidElement)(placeholder);
+}
+function usePlaceholderConfig(placeholder) {
+  return (0,react_production_namespaceFn().useMemo)(() => {
+    if (!placeholder || !isPlaceholderConfig(placeholder)) {
+      return {};
+    }
+    if (typeof placeholder.progress === 'boolean') {
+      return {
+        progressConfig: placeholder.progress ? {} : undefined
+      };
+    }
+    return {
+      progressConfig: placeholder.progress
+    };
+  }, [placeholder]);
+}
+;// ./node_modules/antd/es/image/hooks/usePreviewConfig.js
+
+
+
+function normalizeMask(mask) {
+  if (/*#__PURE__*/(0,react_production_namespaceFn().isValidElement)(mask)) {
+    return [mask, undefined];
+  }
+  if (typeof mask === 'boolean' || isPlainObject(mask)) {
+    return [undefined, mask];
+  }
+  return [undefined, undefined];
+}
+function usePreviewConfig(preview) {
+  // Get origin preview config
+  const rawPreviewConfig = (0,react_production_namespaceFn().useMemo)(() => {
+    if (typeof preview === 'boolean') {
+      return preview ? {} : null;
+    }
+    return isPlainObject(preview) ? preview : {};
+  }, [preview]);
+  const splittedPreviewConfig = (0,react_production_namespaceFn().useMemo)(() => {
+    if (!rawPreviewConfig) {
+      return [rawPreviewConfig, '', ''];
+    }
+    const {
+      open,
+      onOpenChange,
+      cover,
+      actionsRender,
+      visible,
+      onVisibleChange,
+      rootClassName,
+      maskClassName,
+      mask,
+      forceRender: _forceRender,
+      destroyOnClose: _destroyOnClose,
+      toolbarRender,
+      ...restPreviewConfig
+    } = rawPreviewConfig;
+    let onInternalOpenChange;
+    if (onOpenChange) {
+      onInternalOpenChange = onOpenChange;
+    } else if (onVisibleChange) {
+      onInternalOpenChange = (nextOpen, info) => {
+        const {
+          current
+        } = info || {};
+        if (current !== undefined) {
+          onVisibleChange(nextOpen, !nextOpen, current);
+        } else {
+          onVisibleChange(nextOpen, !nextOpen);
+        }
+      };
+    }
+    const [coverElement, maskConfig] = normalizeMask(mask);
+    return [{
+      ...restPreviewConfig,
+      open: open ?? visible,
+      onOpenChange: onInternalOpenChange,
+      cover: cover ?? coverElement,
+      mask: maskConfig,
+      actionsRender: actionsRender ?? toolbarRender
+    }, rootClassName, maskClassName];
+  }, [rawPreviewConfig]);
+  if (false) // removed by dead control flow
+{}
+  return splittedPreviewConfig;
+}
+;// ./node_modules/@ant-design/icons-svg/es/asn/LeftOutlined.js
+// This icon file is generated automatically.
+var LeftOutlined = { "icon": { "tag": "svg", "attrs": { "viewBox": "64 64 896 896", "focusable": "false" }, "children": [{ "tag": "path", "attrs": { "d": "M724 218.3V141c0-6.7-7.7-10.4-12.9-6.3L260.3 486.8a31.86 31.86 0 000 50.3l450.8 352.1c5.3 4.1 12.9.4 12.9-6.3v-77.3c0-4.9-2.3-9.6-6.1-12.6l-360-281 360-281.1c3.8-3 6.1-7.7 6.1-12.6z" } }] }, "name": "left", "theme": "outlined" };
+/* harmony default export */ const asn_LeftOutlined = (LeftOutlined);
+
+;// ./node_modules/@ant-design/icons/es/icons/LeftOutlined.js
+function LeftOutlined_extends() { LeftOutlined_extends = Object.assign ? Object.assign.bind() : function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; }; return LeftOutlined_extends.apply(this, arguments); }
+// GENERATED BY ./scripts/generate.ts
+// DO NOT EDIT IT MANUALLY
+
+;
+
+
+const LeftOutlined_LeftOutlined = (props, ref) => /*#__PURE__*/(react_production_namespaceFn().createElement)(AntdIconLight, LeftOutlined_extends({}, props, {
+  ref: ref,
+  icon: asn_LeftOutlined
+}));
+
+/**![left](data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTAiIGhlaWdodD0iNTAiIGZpbGw9IiNjYWNhY2EiIHZpZXdCb3g9IjY0IDY0IDg5NiA4OTYiIGZvY3VzYWJsZT0iZmFsc2UiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHBhdGggZD0iTTcyNCAyMTguM1YxNDFjMC02LjctNy43LTEwLjQtMTIuOS02LjNMMjYwLjMgNDg2LjhhMzEuODYgMzEuODYgMCAwMDAgNTAuM2w0NTAuOCAzNTIuMWM1LjMgNC4xIDEyLjkuNCAxMi45LTYuM3YtNzcuM2MwLTQuOS0yLjMtOS42LTYuMS0xMi42bC0zNjAtMjgxIDM2MC0yODEuMWMzLjgtMyA2LjEtNy43IDYuMS0xMi42eiIgLz48L3N2Zz4=) */
+const LeftOutlined_RefIcon = /*#__PURE__*/(react_production_namespaceFn().forwardRef)(LeftOutlined_LeftOutlined);
+if (false) // removed by dead control flow
+{}
+/* harmony default export */ const icons_LeftOutlined = (LeftOutlined_RefIcon);
+;// ./node_modules/@ant-design/icons-svg/es/asn/RightOutlined.js
+// This icon file is generated automatically.
+var RightOutlined = { "icon": { "tag": "svg", "attrs": { "viewBox": "64 64 896 896", "focusable": "false" }, "children": [{ "tag": "path", "attrs": { "d": "M765.7 486.8L314.9 134.7A7.97 7.97 0 00302 141v77.3c0 4.9 2.3 9.6 6.1 12.6l360 281.1-360 281.1c-3.9 3-6.1 7.7-6.1 12.6V883c0 6.7 7.7 10.4 12.9 6.3l450.8-352.1a31.96 31.96 0 000-50.4z" } }] }, "name": "right", "theme": "outlined" };
+/* harmony default export */ const asn_RightOutlined = (RightOutlined);
+
+;// ./node_modules/@ant-design/icons/es/icons/RightOutlined.js
+function RightOutlined_extends() { RightOutlined_extends = Object.assign ? Object.assign.bind() : function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; }; return RightOutlined_extends.apply(this, arguments); }
+// GENERATED BY ./scripts/generate.ts
+// DO NOT EDIT IT MANUALLY
+
+;
+
+
+const RightOutlined_RightOutlined = (props, ref) => /*#__PURE__*/(react_production_namespaceFn().createElement)(AntdIconLight, RightOutlined_extends({}, props, {
+  ref: ref,
+  icon: asn_RightOutlined
+}));
+
+/**![right](data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTAiIGhlaWdodD0iNTAiIGZpbGw9IiNjYWNhY2EiIHZpZXdCb3g9IjY0IDY0IDg5NiA4OTYiIGZvY3VzYWJsZT0iZmFsc2UiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHBhdGggZD0iTTc2NS43IDQ4Ni44TDMxNC45IDEzNC43QTcuOTcgNy45NyAwIDAwMzAyIDE0MXY3Ny4zYzAgNC45IDIuMyA5LjYgNi4xIDEyLjZsMzYwIDI4MS4xLTM2MCAyODEuMWMtMy45IDMtNi4xIDcuNy02LjEgMTIuNlY4ODNjMCA2LjcgNy43IDEwLjQgMTIuOSA2LjNsNDUwLjgtMzUyLjFhMzEuOTYgMzEuOTYgMCAwMDAtNTAuNHoiIC8+PC9zdmc+) */
+const RightOutlined_RefIcon = /*#__PURE__*/(react_production_namespaceFn().forwardRef)(RightOutlined_RightOutlined);
+if (false) // removed by dead control flow
+{}
+/* harmony default export */ const icons_RightOutlined = (RightOutlined_RefIcon);
+;// ./node_modules/@ant-design/icons-svg/es/asn/RotateLeftOutlined.js
+// This icon file is generated automatically.
+var RotateLeftOutlined = { "icon": { "tag": "svg", "attrs": { "viewBox": "64 64 896 896", "focusable": "false" }, "children": [{ "tag": "path", "attrs": { "d": "M672 418H144c-17.7 0-32 14.3-32 32v414c0 17.7 14.3 32 32 32h528c17.7 0 32-14.3 32-32V450c0-17.7-14.3-32-32-32zm-44 402H188V494h440v326z" } }, { "tag": "path", "attrs": { "d": "M819.3 328.5c-78.8-100.7-196-153.6-314.6-154.2l-.2-64c0-6.5-7.6-10.1-12.6-6.1l-128 101c-4 3.1-3.9 9.1 0 12.3L492 318.6c5.1 4 12.7.4 12.6-6.1v-63.9c12.9.1 25.9.9 38.8 2.5 42.1 5.2 82.1 18.2 119 38.7 38.1 21.2 71.2 49.7 98.4 84.3 27.1 34.7 46.7 73.7 58.1 115.8a325.95 325.95 0 016.5 140.9h74.9c14.8-103.6-11.3-213-81-302.3z" } }] }, "name": "rotate-left", "theme": "outlined" };
+/* harmony default export */ const asn_RotateLeftOutlined = (RotateLeftOutlined);
+
+;// ./node_modules/@ant-design/icons/es/icons/RotateLeftOutlined.js
+function RotateLeftOutlined_extends() { RotateLeftOutlined_extends = Object.assign ? Object.assign.bind() : function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; }; return RotateLeftOutlined_extends.apply(this, arguments); }
+// GENERATED BY ./scripts/generate.ts
+// DO NOT EDIT IT MANUALLY
+
+;
+
+
+const RotateLeftOutlined_RotateLeftOutlined = (props, ref) => /*#__PURE__*/(react_production_namespaceFn().createElement)(AntdIconLight, RotateLeftOutlined_extends({}, props, {
+  ref: ref,
+  icon: asn_RotateLeftOutlined
+}));
+
+/**![rotate-left](data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTAiIGhlaWdodD0iNTAiIGZpbGw9IiNjYWNhY2EiIHZpZXdCb3g9IjY0IDY0IDg5NiA4OTYiIGZvY3VzYWJsZT0iZmFsc2UiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHBhdGggZD0iTTY3MiA0MThIMTQ0Yy0xNy43IDAtMzIgMTQuMy0zMiAzMnY0MTRjMCAxNy43IDE0LjMgMzIgMzIgMzJoNTI4YzE3LjcgMCAzMi0xNC4zIDMyLTMyVjQ1MGMwLTE3LjctMTQuMy0zMi0zMi0zMnptLTQ0IDQwMkgxODhWNDk0aDQ0MHYzMjZ6IiAvPjxwYXRoIGQ9Ik04MTkuMyAzMjguNWMtNzguOC0xMDAuNy0xOTYtMTUzLjYtMzE0LjYtMTU0LjJsLS4yLTY0YzAtNi41LTcuNi0xMC4xLTEyLjYtNi4xbC0xMjggMTAxYy00IDMuMS0zLjkgOS4xIDAgMTIuM0w0OTIgMzE4LjZjNS4xIDQgMTIuNy40IDEyLjYtNi4xdi02My45YzEyLjkuMSAyNS45LjkgMzguOCAyLjUgNDIuMSA1LjIgODIuMSAxOC4yIDExOSAzOC43IDM4LjEgMjEuMiA3MS4yIDQ5LjcgOTguNCA4NC4zIDI3LjEgMzQuNyA0Ni43IDczLjcgNTguMSAxMTUuOGEzMjUuOTUgMzI1Ljk1IDAgMDE2LjUgMTQwLjloNzQuOWMxNC44LTEwMy42LTExLjMtMjEzLTgxLTMwMi4zeiIgLz48L3N2Zz4=) */
+const RotateLeftOutlined_RefIcon = /*#__PURE__*/(react_production_namespaceFn().forwardRef)(RotateLeftOutlined_RotateLeftOutlined);
+if (false) // removed by dead control flow
+{}
+/* harmony default export */ const icons_RotateLeftOutlined = (RotateLeftOutlined_RefIcon);
+;// ./node_modules/@ant-design/icons-svg/es/asn/RotateRightOutlined.js
+// This icon file is generated automatically.
+var RotateRightOutlined = { "icon": { "tag": "svg", "attrs": { "viewBox": "64 64 896 896", "focusable": "false" }, "children": [{ "tag": "path", "attrs": { "d": "M480.5 251.2c13-1.6 25.9-2.4 38.8-2.5v63.9c0 6.5 7.5 10.1 12.6 6.1L660 217.6c4-3.2 4-9.2 0-12.3l-128-101c-5.1-4-12.6-.4-12.6 6.1l-.2 64c-118.6.5-235.8 53.4-314.6 154.2A399.75 399.75 0 00123.5 631h74.9c-.9-5.3-1.7-10.7-2.4-16.1-5.1-42.1-2.1-84.1 8.9-124.8 11.4-42.2 31-81.1 58.1-115.8 27.2-34.7 60.3-63.2 98.4-84.3 37-20.6 76.9-33.6 119.1-38.8z" } }, { "tag": "path", "attrs": { "d": "M880 418H352c-17.7 0-32 14.3-32 32v414c0 17.7 14.3 32 32 32h528c17.7 0 32-14.3 32-32V450c0-17.7-14.3-32-32-32zm-44 402H396V494h440v326z" } }] }, "name": "rotate-right", "theme": "outlined" };
+/* harmony default export */ const asn_RotateRightOutlined = (RotateRightOutlined);
+
+;// ./node_modules/@ant-design/icons/es/icons/RotateRightOutlined.js
+function RotateRightOutlined_extends() { RotateRightOutlined_extends = Object.assign ? Object.assign.bind() : function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; }; return RotateRightOutlined_extends.apply(this, arguments); }
+// GENERATED BY ./scripts/generate.ts
+// DO NOT EDIT IT MANUALLY
+
+;
+
+
+const RotateRightOutlined_RotateRightOutlined = (props, ref) => /*#__PURE__*/(react_production_namespaceFn().createElement)(AntdIconLight, RotateRightOutlined_extends({}, props, {
+  ref: ref,
+  icon: asn_RotateRightOutlined
+}));
+
+/**![rotate-right](data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTAiIGhlaWdodD0iNTAiIGZpbGw9IiNjYWNhY2EiIHZpZXdCb3g9IjY0IDY0IDg5NiA4OTYiIGZvY3VzYWJsZT0iZmFsc2UiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHBhdGggZD0iTTQ4MC41IDI1MS4yYzEzLTEuNiAyNS45LTIuNCAzOC44LTIuNXY2My45YzAgNi41IDcuNSAxMC4xIDEyLjYgNi4xTDY2MCAyMTcuNmM0LTMuMiA0LTkuMiAwLTEyLjNsLTEyOC0xMDFjLTUuMS00LTEyLjYtLjQtMTIuNiA2LjFsLS4yIDY0Yy0xMTguNi41LTIzNS44IDUzLjQtMzE0LjYgMTU0LjJBMzk5Ljc1IDM5OS43NSAwIDAwMTIzLjUgNjMxaDc0LjljLS45LTUuMy0xLjctMTAuNy0yLjQtMTYuMS01LjEtNDIuMS0yLjEtODQuMSA4LjktMTI0LjggMTEuNC00Mi4yIDMxLTgxLjEgNTguMS0xMTUuOCAyNy4yLTM0LjcgNjAuMy02My4yIDk4LjQtODQuMyAzNy0yMC42IDc2LjktMzMuNiAxMTkuMS0zOC44eiIgLz48cGF0aCBkPSJNODgwIDQxOEgzNTJjLTE3LjcgMC0zMiAxNC4zLTMyIDMydjQxNGMwIDE3LjcgMTQuMyAzMiAzMiAzMmg1MjhjMTcuNyAwIDMyLTE0LjMgMzItMzJWNDUwYzAtMTcuNy0xNC4zLTMyLTMyLTMyem0tNDQgNDAySDM5NlY0OTRoNDQwdjMyNnoiIC8+PC9zdmc+) */
+const RotateRightOutlined_RefIcon = /*#__PURE__*/(react_production_namespaceFn().forwardRef)(RotateRightOutlined_RotateRightOutlined);
+if (false) // removed by dead control flow
+{}
+/* harmony default export */ const icons_RotateRightOutlined = (RotateRightOutlined_RefIcon);
+;// ./node_modules/@ant-design/icons-svg/es/asn/SwapOutlined.js
+// This icon file is generated automatically.
+var SwapOutlined = { "icon": { "tag": "svg", "attrs": { "viewBox": "64 64 896 896", "focusable": "false" }, "children": [{ "tag": "path", "attrs": { "d": "M847.9 592H152c-4.4 0-8 3.6-8 8v60c0 4.4 3.6 8 8 8h605.2L612.9 851c-4.1 5.2-.4 13 6.3 13h72.5c4.9 0 9.5-2.2 12.6-6.1l168.8-214.1c16.5-21 1.6-51.8-25.2-51.8zM872 356H266.8l144.3-183c4.1-5.2.4-13-6.3-13h-72.5c-4.9 0-9.5 2.2-12.6 6.1L150.9 380.2c-16.5 21-1.6 51.8 25.1 51.8h696c4.4 0 8-3.6 8-8v-60c0-4.4-3.6-8-8-8z" } }] }, "name": "swap", "theme": "outlined" };
+/* harmony default export */ const asn_SwapOutlined = (SwapOutlined);
+
+;// ./node_modules/@ant-design/icons/es/icons/SwapOutlined.js
+function SwapOutlined_extends() { SwapOutlined_extends = Object.assign ? Object.assign.bind() : function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; }; return SwapOutlined_extends.apply(this, arguments); }
+// GENERATED BY ./scripts/generate.ts
+// DO NOT EDIT IT MANUALLY
+
+;
+
+
+const SwapOutlined_SwapOutlined = (props, ref) => /*#__PURE__*/(react_production_namespaceFn().createElement)(AntdIconLight, SwapOutlined_extends({}, props, {
+  ref: ref,
+  icon: asn_SwapOutlined
+}));
+
+/**![swap](data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTAiIGhlaWdodD0iNTAiIGZpbGw9IiNjYWNhY2EiIHZpZXdCb3g9IjY0IDY0IDg5NiA4OTYiIGZvY3VzYWJsZT0iZmFsc2UiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHBhdGggZD0iTTg0Ny45IDU5MkgxNTJjLTQuNCAwLTggMy42LTggOHY2MGMwIDQuNCAzLjYgOCA4IDhoNjA1LjJMNjEyLjkgODUxYy00LjEgNS4yLS40IDEzIDYuMyAxM2g3Mi41YzQuOSAwIDkuNS0yLjIgMTIuNi02LjFsMTY4LjgtMjE0LjFjMTYuNS0yMSAxLjYtNTEuOC0yNS4yLTUxLjh6TTg3MiAzNTZIMjY2LjhsMTQ0LjMtMTgzYzQuMS01LjIuNC0xMy02LjMtMTNoLTcyLjVjLTQuOSAwLTkuNSAyLjItMTIuNiA2LjFMMTUwLjkgMzgwLjJjLTE2LjUgMjEtMS42IDUxLjggMjUuMSA1MS44aDY5NmM0LjQgMCA4LTMuNiA4LTh2LTYwYzAtNC40LTMuNi04LTgtOHoiIC8+PC9zdmc+) */
+const SwapOutlined_RefIcon = /*#__PURE__*/(react_production_namespaceFn().forwardRef)(SwapOutlined_SwapOutlined);
+if (false) // removed by dead control flow
+{}
+/* harmony default export */ const icons_SwapOutlined = (SwapOutlined_RefIcon);
+;// ./node_modules/@ant-design/icons-svg/es/asn/ZoomInOutlined.js
+// This icon file is generated automatically.
+var ZoomInOutlined = { "icon": { "tag": "svg", "attrs": { "viewBox": "64 64 896 896", "focusable": "false" }, "children": [{ "tag": "path", "attrs": { "d": "M637 443H519V309c0-4.4-3.6-8-8-8h-60c-4.4 0-8 3.6-8 8v134H325c-4.4 0-8 3.6-8 8v60c0 4.4 3.6 8 8 8h118v134c0 4.4 3.6 8 8 8h60c4.4 0 8-3.6 8-8V519h118c4.4 0 8-3.6 8-8v-60c0-4.4-3.6-8-8-8zm284 424L775 721c122.1-148.9 113.6-369.5-26-509-148-148.1-388.4-148.1-537 0-148.1 148.6-148.1 389 0 537 139.5 139.6 360.1 148.1 509 26l146 146c3.2 2.8 8.3 2.8 11 0l43-43c2.8-2.7 2.8-7.8 0-11zM696 696c-118.8 118.7-311.2 118.7-430 0-118.7-118.8-118.7-311.2 0-430 118.8-118.7 311.2-118.7 430 0 118.7 118.8 118.7 311.2 0 430z" } }] }, "name": "zoom-in", "theme": "outlined" };
+/* harmony default export */ const asn_ZoomInOutlined = (ZoomInOutlined);
+
+;// ./node_modules/@ant-design/icons/es/icons/ZoomInOutlined.js
+function ZoomInOutlined_extends() { ZoomInOutlined_extends = Object.assign ? Object.assign.bind() : function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; }; return ZoomInOutlined_extends.apply(this, arguments); }
+// GENERATED BY ./scripts/generate.ts
+// DO NOT EDIT IT MANUALLY
+
+;
+
+
+const ZoomInOutlined_ZoomInOutlined = (props, ref) => /*#__PURE__*/(react_production_namespaceFn().createElement)(AntdIconLight, ZoomInOutlined_extends({}, props, {
+  ref: ref,
+  icon: asn_ZoomInOutlined
+}));
+
+/**![zoom-in](data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTAiIGhlaWdodD0iNTAiIGZpbGw9IiNjYWNhY2EiIHZpZXdCb3g9IjY0IDY0IDg5NiA4OTYiIGZvY3VzYWJsZT0iZmFsc2UiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHBhdGggZD0iTTYzNyA0NDNINTE5VjMwOWMwLTQuNC0zLjYtOC04LThoLTYwYy00LjQgMC04IDMuNi04IDh2MTM0SDMyNWMtNC40IDAtOCAzLjYtOCA4djYwYzAgNC40IDMuNiA4IDggOGgxMTh2MTM0YzAgNC40IDMuNiA4IDggOGg2MGM0LjQgMCA4LTMuNiA4LThWNTE5aDExOGM0LjQgMCA4LTMuNiA4LTh2LTYwYzAtNC40LTMuNi04LTgtOHptMjg0IDQyNEw3NzUgNzIxYzEyMi4xLTE0OC45IDExMy42LTM2OS41LTI2LTUwOS0xNDgtMTQ4LjEtMzg4LjQtMTQ4LjEtNTM3IDAtMTQ4LjEgMTQ4LjYtMTQ4LjEgMzg5IDAgNTM3IDEzOS41IDEzOS42IDM2MC4xIDE0OC4xIDUwOSAyNmwxNDYgMTQ2YzMuMiAyLjggOC4zIDIuOCAxMSAwbDQzLTQzYzIuOC0yLjcgMi44LTcuOCAwLTExek02OTYgNjk2Yy0xMTguOCAxMTguNy0zMTEuMiAxMTguNy00MzAgMC0xMTguNy0xMTguOC0xMTguNy0zMTEuMiAwLTQzMCAxMTguOC0xMTguNyAzMTEuMi0xMTguNyA0MzAgMCAxMTguNyAxMTguOCAxMTguNyAzMTEuMiAwIDQzMHoiIC8+PC9zdmc+) */
+const ZoomInOutlined_RefIcon = /*#__PURE__*/(react_production_namespaceFn().forwardRef)(ZoomInOutlined_ZoomInOutlined);
+if (false) // removed by dead control flow
+{}
+/* harmony default export */ const icons_ZoomInOutlined = (ZoomInOutlined_RefIcon);
+;// ./node_modules/@ant-design/icons-svg/es/asn/ZoomOutOutlined.js
+// This icon file is generated automatically.
+var ZoomOutOutlined = { "icon": { "tag": "svg", "attrs": { "viewBox": "64 64 896 896", "focusable": "false" }, "children": [{ "tag": "path", "attrs": { "d": "M637 443H325c-4.4 0-8 3.6-8 8v60c0 4.4 3.6 8 8 8h312c4.4 0 8-3.6 8-8v-60c0-4.4-3.6-8-8-8zm284 424L775 721c122.1-148.9 113.6-369.5-26-509-148-148.1-388.4-148.1-537 0-148.1 148.6-148.1 389 0 537 139.5 139.6 360.1 148.1 509 26l146 146c3.2 2.8 8.3 2.8 11 0l43-43c2.8-2.7 2.8-7.8 0-11zM696 696c-118.8 118.7-311.2 118.7-430 0-118.7-118.8-118.7-311.2 0-430 118.8-118.7 311.2-118.7 430 0 118.7 118.8 118.7 311.2 0 430z" } }] }, "name": "zoom-out", "theme": "outlined" };
+/* harmony default export */ const asn_ZoomOutOutlined = (ZoomOutOutlined);
+
+;// ./node_modules/@ant-design/icons/es/icons/ZoomOutOutlined.js
+function ZoomOutOutlined_extends() { ZoomOutOutlined_extends = Object.assign ? Object.assign.bind() : function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; }; return ZoomOutOutlined_extends.apply(this, arguments); }
+// GENERATED BY ./scripts/generate.ts
+// DO NOT EDIT IT MANUALLY
+
+;
+
+
+const ZoomOutOutlined_ZoomOutOutlined = (props, ref) => /*#__PURE__*/(react_production_namespaceFn().createElement)(AntdIconLight, ZoomOutOutlined_extends({}, props, {
+  ref: ref,
+  icon: asn_ZoomOutOutlined
+}));
+
+/**![zoom-out](data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTAiIGhlaWdodD0iNTAiIGZpbGw9IiNjYWNhY2EiIHZpZXdCb3g9IjY0IDY0IDg5NiA4OTYiIGZvY3VzYWJsZT0iZmFsc2UiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHBhdGggZD0iTTYzNyA0NDNIMzI1Yy00LjQgMC04IDMuNi04IDh2NjBjMCA0LjQgMy42IDggOCA4aDMxMmM0LjQgMCA4LTMuNiA4LTh2LTYwYzAtNC40LTMuNi04LTgtOHptMjg0IDQyNEw3NzUgNzIxYzEyMi4xLTE0OC45IDExMy42LTM2OS41LTI2LTUwOS0xNDgtMTQ4LjEtMzg4LjQtMTQ4LjEtNTM3IDAtMTQ4LjEgMTQ4LjYtMTQ4LjEgMzg5IDAgNTM3IDEzOS41IDEzOS42IDM2MC4xIDE0OC4xIDUwOSAyNmwxNDYgMTQ2YzMuMiAyLjggOC4zIDIuOCAxMSAwbDQzLTQzYzIuOC0yLjcgMi44LTcuOCAwLTExek02OTYgNjk2Yy0xMTguOCAxMTguNy0zMTEuMiAxMTguNy00MzAgMC0xMTguNy0xMTguOC0xMTguNy0zMTEuMiAwLTQzMCAxMTguOC0xMTguNyAzMTEuMi0xMTguNyA0MzAgMCAxMTguNyAxMTguOCAxMTguNyAzMTEuMiAwIDQzMHoiIC8+PC9zdmc+) */
+const ZoomOutOutlined_RefIcon = /*#__PURE__*/(react_production_namespaceFn().forwardRef)(ZoomOutOutlined_ZoomOutOutlined);
+if (false) // removed by dead control flow
+{}
+/* harmony default export */ const icons_ZoomOutOutlined = (ZoomOutOutlined_RefIcon);
+;// ./node_modules/antd/es/image/style/progressAnimation.js
+
+// Progress active animation - subtle shimmer effect (reverse direction)
+const progressActive = new Keyframes('antImageProgressActive', {
+  '0%': {
+    backgroundPosition: '200% 0'
+  },
+  '100%': {
+    backgroundPosition: '-200% 0'
+  }
+});
+// Create ink flow keyframes with custom transform and opacity values
+const createInkFlow = (name, midTransform, midOpacity, startTransform = 'translate(0%, 0%)', startOpacity = 0.8) => new Keyframes(name, {
+  '0%': {
+    transform: startTransform,
+    opacity: startOpacity
+  },
+  '50%': {
+    transform: midTransform,
+    opacity: midOpacity
+  },
+  '100%': {
+    transform: startTransform,
+    opacity: startOpacity
+  }
+});
+const inkFlow1 = createInkFlow('antImageInkFlow1', 'translate(15%, -20%) scale(1.25)', 0.5);
+const inkFlow2 = createInkFlow('antImageInkFlow2', 'translate(-18%, 15%) scale(0.85)', 0.9, 'translate(0%, 0%) scale(1.1)', 0.7);
+const inkFlow3 = createInkFlow('antImageInkFlow3', 'translate(8%, 10%) scale(1.15)', 0.8, 'translate(0%, 0%) scale(0.85)', 0.65);
+;// ./node_modules/antd/es/image/style/index.js
+
+
+
+
+
+const genBoxStyle = position => ({
+  position: position || 'absolute',
+  inset: 0
+});
+const genImageCoverStyle = token => {
+  const {
+    componentCls,
+    motionDurationSlow,
+    colorTextLightSolid
+  } = token;
+  return {
+    [componentCls]: {
+      [`${componentCls}-cover`]: {
+        position: 'absolute',
+        inset: 0,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        color: colorTextLightSolid,
+        background: new FastColor('#000').setA(0.3).toRgbString(),
+        cursor: 'pointer',
+        opacity: 0,
+        transition: `opacity ${motionDurationSlow}`
+      },
+      '&:hover, &:focus-visible': {
+        [`${componentCls}-cover`]: {
+          opacity: 1
+        }
+      },
+      [`${componentCls}-cover-top`]: {
+        inset: '0 0 auto 0',
+        justifyContent: 'center'
+      },
+      [`${componentCls}-cover-bottom`]: {
+        inset: 'auto 0 0 0',
+        justifyContent: 'center'
+      }
+    }
+  };
+};
+const genImageProgressStyle = token => {
+  const {
+    componentCls,
+    motionDurationMid,
+    motionEaseInOut,
+    progressAnimationDuration
+  } = token;
+  // Common ink layer base styles
+  const inkBaseStyle = {
+    position: 'absolute',
+    width: '150%',
+    height: '150%',
+    left: '-25%',
+    top: '-25%',
+    animationTimingFunction: motionEaseInOut,
+    animationIterationCount: 'infinite',
+    pointerEvents: 'none',
+    willChange: 'transform, opacity'
+  };
+  return {
+    // Progress root (wrapper)
+    [`${componentCls}-progress-wrapper`]: {
+      position: 'relative',
+      display: 'inline-block',
+      overflow: 'hidden',
+      borderRadius: 'inherit',
+      backgroundColor: token.colorBgBase,
+      backdropFilter: 'blur(8px)',
+      // Ink group 1: Ink 1 (main) + Ink 2 (::before) + Ink 3 (::after)
+      [`${componentCls}-progress-ink-1`]: {
+        ...inkBaseStyle,
+        // Ink 1 - Top left blue cloud
+        background: `radial-gradient(ellipse 65% 55% at 25% 30%, rgba(100, 180, 255, 0.98) 0%, transparent 55%)`,
+        animationName: inkFlow1,
+        animationDuration: progressAnimationDuration,
+        filter: 'blur(40px)',
+        // Ink 2 - Center right lavender
+        '&::before': {
+          content: '""',
+          ...inkBaseStyle,
+          background: `radial-gradient(ellipse 60% 65% at 75% 45%, rgba(180, 140, 255, 0.95) 0%, transparent 50%)`,
+          animationName: inkFlow2,
+          animationDuration: `calc(${progressAnimationDuration} + 2s)`,
+          animationDelay: '-1s',
+          filter: 'blur(45px)'
+        },
+        // Ink 3 - Bottom center cyan
+        '&::after': {
+          content: '""',
+          ...inkBaseStyle,
+          background: `radial-gradient(ellipse 55% 50% at 50% 70%, rgba(100, 220, 220, 0.9) 0%, transparent 45%)`,
+          animationName: inkFlow3,
+          animationDuration: `calc(${progressAnimationDuration} + 0.5s)`,
+          animationDelay: '-2s',
+          filter: 'blur(38px)'
+        }
+      },
+      // Ink group 2: Ink 4 (main) + Ink 5 (::before)
+      [`${componentCls}-progress-ink-2`]: {
+        ...inkBaseStyle,
+        // Ink 4 - Scattered pink blossom
+        background: `radial-gradient(ellipse 45% 40% at 60% 20%, rgba(255, 150, 200, 0.88) 0%, transparent 45%)`,
+        animationName: inkFlow3,
+        animationDuration: `calc(${progressAnimationDuration} + 1.5s)`,
+        animationDelay: '-3s',
+        filter: 'blur(42px)',
+        // Ink 5 - Soft periwinkle accent
+        '&::before': {
+          content: '""',
+          ...inkBaseStyle,
+          background: `radial-gradient(ellipse 50% 55% at 20% 75%, rgba(160, 190, 255, 0.88) 0%, transparent 50%)`,
+          animationName: inkFlow1,
+          animationDuration: `calc(${progressAnimationDuration} + 2.5s)`,
+          animationDelay: '-2.5s',
+          filter: 'blur(35px)'
+        }
+      },
+      // Progress content
+      [`${componentCls}-progress-content`]: {
+        position: 'absolute',
+        top: '50%',
+        left: 0,
+        transform: 'translateY(-50%)',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        width: '100%',
+        paddingInline: token.paddingLG,
+        textAlign: 'center',
+        fontSize: token.fontSize,
+        color: token.colorTextSecondary,
+        zIndex: 1
+      },
+      // Progress rail (background container)
+      [`${componentCls}-progress-rail`]: {
+        width: '100%',
+        height: 6,
+        marginTop: token.marginSM,
+        backgroundColor: 'rgba(255, 255, 255, 0.5)',
+        borderRadius: token.borderRadiusXS,
+        overflow: 'hidden',
+        backdropFilter: 'blur(4px)',
+        // Track (filled portion) using ::before
+        '&::before': {
+          content: '""',
+          display: 'block',
+          height: '100%',
+          width: 'var(--progress-percent, 0%)',
+          background: 'linear-gradient(90deg, rgba(120, 170, 255, 0.85) 0%, rgba(160, 150, 245, 0.85) 40%, rgba(130, 200, 220, 0.85) 60%, rgba(120, 170, 255, 0.85) 100%)',
+          backgroundSize: '200% 100%',
+          borderRadius: token.borderRadiusXS / 2,
+          transition: `width ${motionDurationMid} ease`,
+          animationName: progressActive,
+          animationDuration: progressAnimationDuration,
+          animationTimingFunction: 'linear',
+          animationIterationCount: 'infinite'
+        }
+      },
+      // Progress indicator (percent text)
+      [`${componentCls}-progress-indicator`]: {
+        marginTop: token.marginXS
+      }
+    }
+  };
+};
+const genImagePreviewStyle = token => {
+  const {
+    motionEaseOut,
+    previewCls,
+    motionDurationSlow,
+    componentCls,
+    colorBgMask,
+    marginXL,
+    marginSM,
+    margin,
+    colorTextLightSolid,
+    paddingSM,
+    paddingLG,
+    previewOperationHoverColor,
+    previewOperationColorDisabled,
+    previewOperationSize,
+    zIndexPopup
+  } = token;
+  const operationBg = new FastColor(colorBgMask).setA(0.1);
+  const operationBgHover = operationBg.clone().setA(0.2);
+  const singleBtn = {
+    position: 'absolute',
+    color: colorTextLightSolid,
+    backgroundColor: operationBg.toRgbString(),
+    borderRadius: '50%',
+    padding: paddingSM,
+    outline: 0,
+    border: 0,
+    cursor: 'pointer',
+    transition: `all ${motionDurationSlow}`,
+    display: 'flex',
+    fontSize: previewOperationSize,
+    '&:hover': {
+      backgroundColor: operationBgHover.toRgbString()
+    },
+    '&:active': {
+      backgroundColor: operationBg.toRgbString()
+    },
+    '&:focus-visible': genFocusOutline(token)
+  };
+  return {
+    [`${componentCls}-preview`]: {
+      textAlign: 'center',
+      inset: 0,
+      position: 'fixed',
+      userSelect: 'none',
+      zIndex: zIndexPopup,
+      // ================= Mask =================
+      [`${previewCls}-mask`]: {
+        inset: 0,
+        position: 'absolute',
+        background: colorBgMask,
+        backdropFilter: 'blur(0px)',
+        transition: `backdrop-filter ${motionDurationSlow}`,
+        [`&${componentCls}-preview-mask-blur`]: {
+          backdropFilter: 'blur(4px)'
+        },
+        [`&${componentCls}-preview-mask-hidden`]: {
+          display: 'none'
+        }
+      },
+      // ================= Body =================
+      [`${previewCls}-body`]: {
+        ...genBoxStyle(),
+        'pointer-events': 'none',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        '> *': {
+          pointerEvents: 'auto'
+        }
+      },
+      // Body > Image
+      [`${previewCls}-img`]: {
+        maxWidth: '100%',
+        maxHeight: '70%',
+        verticalAlign: 'middle',
+        transform: 'scale3d(1, 1, 1)',
+        transition: `transform ${motionDurationSlow} ${motionEaseOut} 0s`
+      },
+      [`&-movable ${previewCls}-img`]: {
+        cursor: 'grab'
+      },
+      [`&-moving ${previewCls}-img`]: {
+        cursor: 'grabbing'
+      },
+      // =============== CloseBtn ===============
+      [`${previewCls}-close`]: {
+        // Shared style
+        ...singleBtn,
+        top: marginSM,
+        insetInlineEnd: marginSM
+      },
+      // ================ Switch ================
+      [`${previewCls}-switch`]: {
+        ...singleBtn,
+        top: '50%',
+        transform: `translateY(-50%)`,
+        '&-disabled': {
+          '&, &:hover, &:active': {
+            color: previewOperationColorDisabled,
+            background: 'transparent',
+            cursor: 'not-allowed'
+          }
+        },
+        '&-prev': {
+          insetInlineStart: marginSM
+        },
+        '&-next': {
+          insetInlineEnd: marginSM
+        }
+      },
+      // ================ Footer ================
+      [`${previewCls}-footer`]: {
+        position: 'absolute',
+        bottom: marginXL,
+        left: {
+          _skip_check_: true,
+          value: '50%'
+        },
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        color: token.previewOperationColor,
+        transform: 'translateX(-50%)',
+        gap: margin
+      },
+      // =============== Actions ================
+      [`${previewCls}-actions`]: {
+        display: 'flex',
+        gap: paddingSM,
+        padding: `0 ${util_unit(paddingLG)}`,
+        backgroundColor: operationBg.toRgbString(),
+        borderRadius: 100,
+        fontSize: previewOperationSize,
+        '&-action': {
+          color: 'inherit',
+          background: 'transparent',
+          border: 0,
+          font: 'inherit',
+          padding: paddingSM,
+          cursor: 'pointer',
+          transition: `all ${motionDurationSlow}`,
+          display: 'flex',
+          [`&:not(${previewCls}-actions-action-disabled):hover`]: {
+            color: previewOperationHoverColor
+          },
+          '&:focus-visible': genFocusOutline(token),
+          '&-disabled': {
+            color: previewOperationColorDisabled,
+            cursor: 'not-allowed'
+          }
+        }
+      }
+    }
+  };
+};
+const genImageStyle = token => {
+  const {
+    componentCls
+  } = token;
+  return {
+    // ============================== image ==============================
+    [componentCls]: {
+      position: 'relative',
+      display: 'inline-block',
+      ...genFocusStyle(token),
+      [`${componentCls}-img`]: {
+        width: '100%',
+        height: 'auto',
+        verticalAlign: 'middle'
+      },
+      [`${componentCls}-img-placeholder`]: {
+        backgroundColor: token.colorBgContainerDisabled,
+        backgroundImage: "url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTYiIGhlaWdodD0iMTYiIHZpZXdCb3g9IjAgMCAxNiAxNiIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBkPSJNMTQuNSAyLjVoLTEzQS41LjUgMCAwIDAgMSAzdjEwYS41LjUgMCAwIDAgLjUuNWgxM2EuNS41IDAgMCAwIC41LS41VjNhLjUuNSAwIDAgMC0uNS0uNXpNNS4yODEgNC43NWExIDEgMCAwIDEgMCAyIDEgMSAwIDAgMSAwLTJ6bTguMDMgNi44M2EuMTI3LjEyNyAwIDAgMS0uMDgxLjAzSDIuNzY5YS4xMjUuMTI1IDAgMCAxLS4wOTYtLjIwN2wyLjY2MS0zLjE1NmEuMTI2LjEyNiAwIDAgMSAuMTc3LS4wMTZsLjAxNi4wMTZMNy4wOCAxMC4wOWwyLjQ3LTIuOTNhLjEyNi4xMjYgMCAwIDEgLjE3Ny0uMDE2bC4wMTUuMDE2IDMuNTg4IDQuMjQ0YS4xMjcuMTI3IDAgMCAxLS4wMi4xNzV6IiBmaWxsPSIjOEM4QzhDIiBmaWxsLXJ1bGU9Im5vbnplcm8iLz48L3N2Zz4=')",
+        backgroundRepeat: 'no-repeat',
+        backgroundPosition: 'center center',
+        backgroundSize: '30%'
+      },
+      [`${componentCls}-placeholder`]: {
+        ...genBoxStyle()
+      }
+    }
+  };
+};
+const genPreviewMotion = token => {
+  const {
+    previewCls,
+    motionDurationSlow
+  } = token;
+  return {
+    [previewCls]: {
+      '&-fade': {
+        transition: `opacity ${motionDurationSlow}`,
+        '&-enter, &-appear': {
+          opacity: 0,
+          [`${previewCls}-body`]: {
+            transform: 'scale(0)'
+          },
+          '&-active': {
+            opacity: 1,
+            [`${previewCls}-body`]: {
+              transform: 'scale(1)',
+              transition: `transform ${motionDurationSlow}`
+            }
+          }
+        },
+        '&-leave': {
+          opacity: 1,
+          '&-active': {
+            opacity: 0,
+            [`${previewCls}-body`]: {
+              transform: 'scale(0)',
+              transition: `transform ${motionDurationSlow}`
+            }
+          }
+        }
+      }
+    }
+  };
+};
+// ============================== Export ==============================
+const image_style_prepareComponentToken = token => ({
+  zIndexPopup: token.zIndexPopupBase + 80,
+  previewOperationColor: new FastColor(token.colorTextLightSolid).setA(0.65).toRgbString(),
+  previewOperationHoverColor: new FastColor(token.colorTextLightSolid).setA(0.85).toRgbString(),
+  previewOperationColorDisabled: new FastColor(token.colorTextLightSolid).setA(0.25).toRgbString(),
+  previewOperationSize: token.fontSizeIcon * 1.5,
+  // FIXME: fontSizeIconLG
+  progressAnimationDuration: '3s'
+});
+/* harmony default export */ const image_style = (genStyleHooks('Image', token => {
+  const previewCls = `${token.componentCls}-preview`;
+  const imageToken = statistic_merge(token, {
+    previewCls,
+    imagePreviewSwitchSize: token.controlHeightLG
+  });
+  return [genImageStyle(imageToken), genImageCoverStyle(imageToken), genImageProgressStyle(imageToken), genImagePreviewStyle(imageToken), genPreviewMotion(imageToken)];
+}, image_style_prepareComponentToken));
+;// ./node_modules/antd/es/image/PreviewGroup.js
+"use client";
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+const icons = {
+  rotateLeft: /*#__PURE__*/(react_production_namespaceFn().createElement)(icons_RotateLeftOutlined, null),
+  rotateRight: /*#__PURE__*/(react_production_namespaceFn().createElement)(icons_RotateRightOutlined, null),
+  zoomIn: /*#__PURE__*/(react_production_namespaceFn().createElement)(icons_ZoomInOutlined, null),
+  zoomOut: /*#__PURE__*/(react_production_namespaceFn().createElement)(icons_ZoomOutOutlined, null),
+  close: /*#__PURE__*/(react_production_namespaceFn().createElement)(icons_CloseOutlined, null),
+  left: /*#__PURE__*/(react_production_namespaceFn().createElement)(icons_LeftOutlined, null),
+  right: /*#__PURE__*/(react_production_namespaceFn().createElement)(icons_RightOutlined, null),
+  flipX: /*#__PURE__*/(react_production_namespaceFn().createElement)(icons_SwapOutlined, null),
+  flipY: /*#__PURE__*/(react_production_namespaceFn().createElement)(icons_SwapOutlined, {
+    rotate: 90
+  })
+};
+const InternalPreviewGroup = ({
+  previewPrefixCls: customizePrefixCls,
+  preview,
+  classNames,
+  styles,
+  ...otherProps
+}) => {
+  // =============================== MISC ===============================
+  // Context
+  const {
+    getPrefixCls,
+    getPopupContainer: getContextPopupContainer,
+    direction,
+    preview: contextPreview,
+    classNames: contextClassNames,
+    styles: contextStyles
+  } = useComponentConfig('image');
+  const prefixCls = getPrefixCls('image', customizePrefixCls);
+  const previewPrefixCls = `${prefixCls}-preview`;
+  // ============================== Style ===============================
+  const rootCls = hooks_useCSSVarCls(prefixCls);
+  const [hashId, cssVarCls] = image_style(prefixCls, rootCls);
+  const mergedRootClassName = clsx(hashId, cssVarCls, rootCls);
+  // ============================= Preview ==============================
+  const [previewConfig, previewRootClassName, previewMaskClassName] = usePreviewConfig(preview);
+  const [contextPreviewConfig, contextPreviewRootClassName, contextPreviewMaskClassName] = usePreviewConfig(contextPreview);
+  // ============================ Semantics =============================
+  const memoizedIcons = (react_production_namespaceFn().useMemo)(() => ({
+    ...icons,
+    left: direction === 'rtl' ? /*#__PURE__*/(react_production_namespaceFn().createElement)(icons_RightOutlined, null) : /*#__PURE__*/(react_production_namespaceFn().createElement)(icons_LeftOutlined, null),
+    right: direction === 'rtl' ? /*#__PURE__*/(react_production_namespaceFn().createElement)(icons_LeftOutlined, null) : /*#__PURE__*/(react_production_namespaceFn().createElement)(icons_RightOutlined, null)
+  }), [direction]);
+  const mergedPreview = hooks_useMergedPreviewConfig(
+  // Preview config
+  previewConfig, contextPreviewConfig,
+  // MISC
+  prefixCls, mergedRootClassName, getContextPopupContainer, memoizedIcons);
+  const {
+    mask: mergedMask,
+    blurClassName
+  } = mergedPreview ?? {};
+  // =========== Merged Props for Semantic ===========
+  const mergedProps = {
+    ...otherProps,
+    classNames,
+    styles
+  };
+  const [mergedClassNames, mergedStyles] = useMergeSemantic([contextClassNames, classNames, {
+    cover: clsx(contextPreviewMaskClassName, previewMaskClassName),
+    popup: {
+      root: clsx(contextPreviewRootClassName, previewRootClassName),
+      mask: clsx({
+        [`${prefixCls}-preview-mask-hidden`]: !mergedMask
+      }, blurClassName)
+    }
+  }], [contextStyles, styles], {
+    props: mergedProps
+  }, {
+    popup: {
+      _default: 'root'
+    }
+  });
+  return /*#__PURE__*/(react_production_namespaceFn().createElement)(image_es.PreviewGroup, {
+    preview: mergedPreview,
+    previewPrefixCls: previewPrefixCls,
+    icons: memoizedIcons,
+    ...otherProps,
+    classNames: mergedClassNames,
+    styles: mergedStyles
+  });
+};
+/* harmony default export */ const image_PreviewGroup = (InternalPreviewGroup);
+;// ./node_modules/antd/es/image/Progress.js
+"use client";
+
+
+
+
+// Visually hidden styles for screen readers
+const VISUALLY_HIDDEN_STYLE = {
+  position: 'absolute',
+  width: 1,
+  height: 1,
+  padding: 0,
+  margin: -1,
+  overflow: 'hidden',
+  clip: 'rect(0, 0, 0, 0)',
+  whiteSpace: 'nowrap',
+  border: 0
+};
+const image_Progress_Progress = props => {
+  const {
+    prefixCls,
+    percent,
+    render: progressRender,
+    classNames: progressClassNames,
+    styles: progressStyles,
+    rootClassName,
+    rootStyle,
+    width,
+    height
+  } = props;
+  // Check if percent is a valid finite number
+  const hasPercent = isNumber(percent) && Number.isFinite(percent);
+  // Calculate percent value (clamped to 0-100 for progress bar width)
+  const percentValue = hasPercent ? Math.max(0, Math.min(100, Math.round(percent))) : 0;
+  // ARIA attributes for accessibility
+  const ariaProps = hasPercent ? {
+    role: 'progressbar',
+    'aria-valuemin': 0,
+    'aria-valuemax': 100,
+    'aria-valuenow': percentValue,
+    'aria-label': `${percentValue}%`
+  } : {
+    'aria-busy': true
+  };
+  // Render progress bar (rail with ::before pseudo for track)
+  const progressBar = hasPercent ? (/*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
+    className: clsx(`${prefixCls}-progress-rail`, progressClassNames?.rail),
+    style: {
+      ...progressStyles?.rail,
+      '--progress-percent': `${percentValue}%`
+    }
+  })) : null;
+  // Render progress content
+  const progressContent = progressRender ? progressRender(progressBar, percentValue) : (/*#__PURE__*/(react_production_namespaceFn().createElement)((react_production_namespaceFn().Fragment), null, progressBar, hasPercent && (/*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
+    className: clsx(`${prefixCls}-progress-indicator`, progressClassNames?.indicator),
+    style: progressStyles?.indicator
+  }, `${percentValue}%`))));
+  return /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
+    className: clsx(prefixCls, `${prefixCls}-progress-wrapper`, progressClassNames?.root, rootClassName),
+    style: {
+      width,
+      height,
+      ...rootStyle,
+      ...progressStyles?.root
+    },
+    ...ariaProps
+  }, !hasPercent && (/*#__PURE__*/(react_production_namespaceFn().createElement)("span", {
+    role: "status",
+    "aria-live": "polite",
+    style: VISUALLY_HIDDEN_STYLE
+  }, "Loading")), /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
+    className: `${prefixCls}-progress-ink-1`
+  }), /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
+    className: `${prefixCls}-progress-ink-2`
+  }), /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
+    className: clsx(`${prefixCls}-progress-content`, progressClassNames?.content),
+    style: progressStyles?.content
+  }, progressContent));
+};
+if (false) // removed by dead control flow
+{}
+/* harmony default export */ const image_Progress = (image_Progress_Progress);
+;// ./node_modules/antd/es/image/index.js
+"use client";
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+const image_Image = props => {
+  const {
+    prefixCls: customizePrefixCls,
+    preview,
+    className,
+    rootClassName,
+    style,
+    styles,
+    classNames,
+    wrapperStyle,
+    fallback,
+    placeholder,
+    ...otherProps
+  } = props;
+  // =============================== MISC ===============================
+  // Context
+  const {
+    getPrefixCls,
+    getPopupContainer: getContextPopupContainer,
+    className: contextClassName,
+    style: contextStyle,
+    preview: contextPreview,
+    styles: contextStyles,
+    classNames: contextClassNames,
+    fallback: contextFallback
+  } = useComponentConfig('image');
+  const prefixCls = getPrefixCls('image', customizePrefixCls);
+  // ============================= Warning ==============================
+  if (false) // removed by dead control flow
+{}
+  // ============================== Styles ==============================
+  const rootCls = hooks_useCSSVarCls(prefixCls);
+  const [hashId, cssVarCls] = image_style(prefixCls, rootCls);
+  const mergedRootClassName = clsx(rootClassName, hashId, cssVarCls, rootCls);
+  const mergedClassName = clsx(className, hashId, contextClassName);
+  // ============================= Preview ==============================
+  const [previewConfig, previewRootClassName, previewMaskClassName] = usePreviewConfig(preview);
+  const [contextPreviewConfig, contextPreviewRootClassName, contextPreviewMaskClassName] = usePreviewConfig(contextPreview);
+  const mergedPreviewConfig = hooks_useMergedPreviewConfig(
+  // Preview config
+  previewConfig, contextPreviewConfig,
+  // MISC
+  prefixCls, mergedRootClassName, getContextPopupContainer, icons, true);
+  // =========== Merged Props for Semantic ===========
+  const mergedProps = {
+    ...props,
+    preview: mergedPreviewConfig
+  };
+  // ============================= Semantic =============================
+  const mergedLegacyClassNames = (react_production_namespaceFn().useMemo)(() => ({
+    cover: clsx(contextPreviewMaskClassName, previewMaskClassName),
+    popup: {
+      root: clsx(contextPreviewRootClassName, previewRootClassName)
+    }
+  }), [previewRootClassName, previewMaskClassName, contextPreviewRootClassName, contextPreviewMaskClassName]);
+  const {
+    mask: mergedMask,
+    blurClassName
+  } = mergedPreviewConfig ?? {};
+  const mergedPopupClassNames = (react_production_namespaceFn().useMemo)(() => ({
+    mask: clsx({
+      [`${prefixCls}-preview-mask-hidden`]: !mergedMask
+    }, blurClassName)
+  }), [mergedMask, prefixCls, blurClassName]);
+  const internalClassNames = (react_production_namespaceFn().useMemo)(() => [contextClassNames, classNames, mergedLegacyClassNames, {
+    popup: mergedPopupClassNames
+  }], [contextClassNames, classNames, mergedLegacyClassNames, mergedPopupClassNames]);
+  const contextImageStyle = useSemanticRootStyle(contextStyle, 'image');
+  const imageStyle = useSemanticRootStyle(style, 'image');
+  const contextRootStyle = useSemanticRootStyle(contextStyle);
+  const rootStyle = useSemanticRootStyle(style);
+  const [mergedClassNames, mergedStyles] = useMergeSemantic(internalClassNames, [contextStyles, {
+    root: wrapperStyle
+  }, contextImageStyle, styles, imageStyle], {
+    props: mergedProps
+  }, {
+    popup: {
+      _default: 'root'
+    },
+    placeholder: {}
+  });
+  const [, progressMergedStyles] = useMergeSemantic([], [contextStyles, contextRootStyle, {
+    root: wrapperStyle
+  }, styles, rootStyle], {
+    props: mergedProps
+  }, {
+    popup: {
+      _default: 'root'
+    },
+    placeholder: {}
+  });
+  const {
+    image: mergedImageStyle,
+    ...restMergedStyles
+  } = mergedStyles;
+  const mergedFallback = fallback ?? contextFallback;
+  // ============================= Progress ==============================
+  const {
+    progressConfig
+  } = usePlaceholderConfig(placeholder);
+  const showProgressOverlay = progressConfig !== undefined;
+  const {
+    percent,
+    render: progressRender
+  } = progressConfig || {};
+  // Get progress classNames and styles
+  const progressClassNames = mergedClassNames?.placeholder?.progress;
+  const progressStyles = progressMergedStyles?.placeholder?.progress;
+  // ============================== Render ==============================
+  const {
+    width,
+    height,
+    src,
+    ...restOtherProps
+  } = otherProps;
+  // When placeholder is ReactNode (not progress config) and src is not provided,
+  // render it as an overlay since rc-image would set status to 'error' when src is empty
+  const placeholderNode = isPlaceholderConfig(placeholder) ? undefined : placeholder;
+  const shouldRenderPlaceholderOverlay = placeholderNode && !src;
+  // Memoize the placeholder render function to avoid creating new function on each render
+  const mergedProgressRender = shouldRenderPlaceholderOverlay ? _progress => placeholderNode : progressRender;
+  // When progress is active, render only progress layer with dimensions
+  if (showProgressOverlay || shouldRenderPlaceholderOverlay) {
+    return /*#__PURE__*/(react_production_namespaceFn().createElement)(image_Progress, {
+      prefixCls: prefixCls,
+      percent: percent,
+      render: mergedProgressRender,
+      classNames: progressClassNames,
+      styles: progressStyles,
+      rootClassName: clsx(mergedRootClassName, mergedClassName),
+      rootStyle: progressMergedStyles?.root,
+      width: width,
+      height: height
+    });
+  }
+  return /*#__PURE__*/(react_production_namespaceFn().createElement)(image_es, {
+    prefixCls: prefixCls,
+    preview: mergedPreviewConfig || false,
+    rootClassName: mergedRootClassName,
+    className: mergedClassName,
+    style: mergedImageStyle,
+    fallback: mergedFallback,
+    placeholder: placeholderNode,
+    width: width,
+    height: height,
+    src: src,
+    ...restOtherProps,
+    classNames: mergedClassNames,
+    styles: restMergedStyles
+  });
+};
+image_Image.PreviewGroup = image_PreviewGroup;
+if (false) // removed by dead control flow
+{}
+/* harmony default export */ const es_image = (image_Image);
+;// ./src/lib/gallery.ts
+/**
+ * 收到图片的数据与纯工具（v26.10.06-v13）。
+ *
+ * 变化：渲染层已整体改为 React + Ant Design（见 `ui/RecvGalleryModal.tsx`），
+ * 本文件**不再有任何 DOM 操作**，也**不再依赖 Viewer.js** —— 图片放大统一交给
+ * antd `Image.PreviewGroup`（多图左右切换、缩放、旋转都自带），故 Viewer 的
+ * `@require` / `@resource` 已从脚本元信息里移除。
+ *
+ * 这里只保留：图片条目类型 + 文件命名工具。列表状态由主面板（React state）持有。
+ */
+/** 画廊最多保留张数，超出丢最旧（并释放其 objectURL） */
+const MAX_GALLERY = 27;
+/**
+ * 计算下载用的文件名：优先用原始名；无扩展名时按 MIME 补。
+ * @param {string} name - 原始文件名（可空）
+ * @param {string} mime - MIME 类型
+ * @param {number} idx - 画廊序号（用于兜底命名）
+ * @returns {string} 带扩展名的文件名
+ */
+function downloadFileName(name, mime, idx = 0) {
+    const extByMime = {
+        'image/jpeg': '.jpg',
+        'image/png': '.png',
+        'image/gif': '.gif',
+        'image/webp': '.webp',
+        'image/svg+xml': '.svg',
+        'image/bmp': '.bmp',
+    };
+    let n = String(name || '').trim();
+    if (!n)
+        n = 'znhd-image-' + (idx + 1);
+    if (!/\.[a-z0-9]{2,5}$/i.test(n))
+        n += extByMime[(mime || '').toLowerCase()] || '.jpg';
+    return n;
+}
+
+;// ./src/lib/ui/RecvGalleryModal.tsx
+
+
+
+
+
+
+const { Text: RecvGalleryModal_Text } = typography;
+/**
+ * 收到图片的画廊弹窗（v26.10.06-v13：由原 DOM 弹窗 + Viewer.js 改为 antd Modal + Image.PreviewGroup）。
+ *
+ * 为什么能去掉 Viewer.js：antd 的 `Image.PreviewGroup` 自带
+ * 「多图左右切换 / 缩放 / 旋转 / 翻转 / 1:1 / 关闭」整套交互，与脚本端原来的能力对齐，
+ * 少一个第三方库 + 一份它自带的 CSS（以及当年为它写的层级/过渡补丁）。
+ * ⚠️ 剪贴板写入仍走 `copyImageToClipboard`：Chromium 对 image/png 支持最可靠，
+ *    且「先转好 PNG 再只写一次」是仓库实测结论（写失败也会消耗用户手势），不要改回去。
+ */
+function RecvGalleryModal({ open, onClose, images, onRemove, onClear }) {
+    const doCopy = (it, btn) => {
+        const old = btn.textContent;
+        btn.textContent = '复制中…';
+        copyImageToClipboard(it.blob).then((ok) => {
+            btn.textContent = ok ? '✓ 已复制' : '复制失败';
+            if (ok)
+                addLog('图片已复制到剪贴板: ' + (it.name || ''), 'success');
+            window.setTimeout(() => {
+                btn.textContent = old;
+            }, 1500);
+        });
+    };
+    const doDownload = (it, idx) => {
+        const fname = downloadFileName(it.name, it.mime, idx);
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(it.blob);
+        a.download = fname;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+        addLog('图片已下载: ' + fname, 'success');
+    };
+    return ((0,react_jsx_runtime_production_namespaceFn().jsxs)(modal, { open: open, title: '收到的图片（' + images.length + '）· 单击放大', onCancel: onClose, getContainer: getOverlayContainer, width: 620, styles: { body: { textAlign: 'left' } }, destroyOnHidden: true, footer: (0,react_jsx_runtime_production_namespaceFn().jsxs)(es_space, { children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { danger: true, onClick: () => {
+                        onClear();
+                        onClose();
+                    }, children: "\u6E05\u7A7A\u5168\u90E8" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { color: "primary", variant: "solid", onClick: onClose, children: "\u5173\u95ED" })] }), children: [images.length === 0 ? ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_empty, { description: "\u6682\u65E0\u56FE\u7247" })) : (
+            // items 用 objectURL 列表：预览里的左右切换由 antd 接管
+            (0,react_jsx_runtime_production_namespaceFn().jsx)(es_image.PreviewGroup, { items: images.map((i) => i.previewUrl), children: (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: {
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(3, minmax(0,1fr))',
+                        gap: 8,
+                        maxHeight: '60vh',
+                        overflow: 'auto',
+                        alignContent: 'start',
+                    }, children: images.map((it, idx) => ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', flexDirection: 'column' }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(es_image, { src: it.previewUrl, alt: it.name || 'image', style: { width: '100%', aspectRatio: '1 / 1', objectFit: 'cover', borderRadius: 8 } }), (0,react_jsx_runtime_production_namespaceFn().jsxs)(es_space, { size: 4, style: { marginTop: 4, width: '100%' }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { size: "small", style: { flex: 1 }, onClick: (e) => doCopy(it, e.currentTarget), children: "\u590D\u5236" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { size: "small", style: { flex: 1 }, onClick: () => doDownload(it, idx), children: "\u4E0B\u8F7D" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { size: "small", danger: true, onClick: () => onRemove(idx), children: "\u00D7" })] })] }, it.previewUrl))) }) })), images.length > 0 && ((0,react_jsx_runtime_production_namespaceFn().jsx)(RecvGalleryModal_Text, { type: "secondary", style: { fontSize: 12, display: 'block', marginTop: 8 }, children: "\u63D0\u793A\uFF1A\u5355\u51FB\u7F29\u7565\u56FE\u53EF\u653E\u5927/\u65CB\u8F6C/\u591A\u56FE\u5207\u6362\uFF1B\u300C\u590D\u5236\u300D\u4F1A\u628A\u56FE\u7247\u5199\u5165\u7CFB\u7EDF\u526A\u8D34\u677F\uFF0C\u56DE\u5F81\u7EB3\u4E92\u52A8 Ctrl+V \u5373\u53EF\u3002" }))] }));
+}
+
+;// ./src/lib/ui/RecvTextModal.tsx
+
+
+
+
+
+/**
+ * 收到文本的弹窗（v26.10.06-v13：由原 DOM 覆盖层改为 antd Modal）。
+ * 同屏只保留最新一条：新文本直接替换内容（旧实现会叠加多个全屏遮罩，关掉顶层会露出过期文本）。
+ */
+function RecvTextModal({ text, onClose }) {
+    const [copied, setCopied] = (0,react_production_namespaceFn().useState)('');
+    const doCopy = () => {
+        // 用 safeCopyText 的真实结果更新按钮文案：无可用途径 / 被拒绝时不再假显示「已复制」
+        safeCopyText(text || '', (ok) => {
+            setCopied(ok ? '✓ 已复制' : '复制失败，请长按文本手动复制');
+        });
+    };
+    return ((0,react_jsx_runtime_production_namespaceFn().jsx)(modal, { open: text !== null, title: "\u6536\u5230\u7535\u8111\u53D1\u6765\u7684\u6587\u672C", onCancel: () => {
+            setCopied('');
+            onClose();
+        }, getContainer: getOverlayContainer, width: 520, styles: { body: { textAlign: 'left' } }, destroyOnHidden: true, footer: (0,react_jsx_runtime_production_namespaceFn().jsxs)(es_space, { children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { color: "primary", variant: "solid", onClick: doCopy, children: copied || '复制到剪贴板' }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { onClick: () => {
+                        setCopied('');
+                        onClose();
+                    }, children: "\u5173\u95ED" })] }), children: (0,react_jsx_runtime_production_namespaceFn().jsx)("pre", { style: {
+                margin: 0,
+                maxHeight: '60vh',
+                overflow: 'auto',
+                whiteSpace: 'pre-wrap',
+                wordBreak: 'break-word',
+                fontFamily: 'inherit',
+                fontSize: 15,
+                lineHeight: 1.6,
+            }, children: text || '' }) }));
+}
+
 ;// ./src/lib/ui/MainPanel.tsx
+
+
+
 
 
 
@@ -75483,6 +77609,11 @@ function MainPanel({ host }) {
     const [phrasesOpen, setPhrasesOpen] = (0,react_production_namespaceFn().useState)(false);
     const [phoneOpen, setPhoneOpen] = (0,react_production_namespaceFn().useState)(false);
     const [logOpen, setLogOpen] = (0,react_production_namespaceFn().useState)(false);
+    const [changelogOpen, setChangelogOpen] = (0,react_production_namespaceFn().useState)(false);
+    // 收到图片/文本（v26.10.06-v13：由原来的命令式 DOM 弹窗改为 React state 驱动 antd 弹窗）
+    const [recvImages, setRecvImages] = (0,react_production_namespaceFn().useState)([]);
+    const [galleryOpen, setGalleryOpen] = (0,react_production_namespaceFn().useState)(false);
+    const [recvText, setRecvText] = (0,react_production_namespaceFn().useState)(null);
     const [logEntries, setLogEntries] = (0,react_production_namespaceFn().useState)([]);
     const [phrasesData, setPhrasesData] = (0,react_production_namespaceFn().useState)({});
     const [phrasesLoading, setPhrasesLoading] = (0,react_production_namespaceFn().useState)(false);
@@ -75608,12 +77739,34 @@ function MainPanel({ host }) {
                 // 入参类型由 startPhoneReceive 的 PhoneReceiveOptions 上下文推断，无需显式标注
                 onImage: (img) => {
                     addLog('[设备互联] 收到图片：' + (img.name || 'image') + '（' + (img.mime || 'image') + '）', 'success');
-                    showImagePopup(img);
+                    // 入列 + 上限保护（超出的丢最旧并 revoke 其 objectURL，防内存累积），随后自动打开画廊
+                    setRecvImages((prev) => {
+                        const next = prev.concat({
+                            blob: img.blob,
+                            previewUrl: img.previewUrl,
+                            name: img.name,
+                            mime: img.mime,
+                        });
+                        while (next.length > (/* inlined export .MAX_GALLERY */27)) {
+                            const dropped = next.shift();
+                            if (dropped) {
+                                try {
+                                    URL.revokeObjectURL(dropped.previewUrl);
+                                }
+                                catch (e) {
+                                    /* 忽略 */
+                                }
+                            }
+                        }
+                        return next;
+                    });
+                    setGalleryOpen(true);
                 },
                 onText: (txt) => {
                     const t = (txt.text || '').replace(/\s+$/, '');
                     addLog('[设备互联] 收到文本：' + (t.length > 40 ? t.slice(0, 40) + '…' : t), 'success');
-                    showTextPopup(txt);
+                    // 同屏只留最新一条：直接替换内容（antd Modal 单实例）
+                    setRecvText(txt.text || '');
                 },
             });
             receiveStopRef.current = stop;
@@ -75693,11 +77846,11 @@ function MainPanel({ host }) {
                     justifyContent: 'space-between',
                     marginBottom: 10,
                 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)(es_space, { size: 6, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("span", { children: voiceEnabled ? '🔊' : '🔇' }), (0,react_jsx_runtime_production_namespaceFn().jsx)("span", { style: { fontSize: 13 }, children: "\u8BED\u97F3\u64AD\u62A5" })] }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_switch, { checked: !!voiceEnabled, onChange: toggleVoice })] }), (0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { color: "primary", variant: "solid", size: "large", onClick: () => setSettingsOpen(true), children: "\u2699\uFE0F \u8BBE\u7F6E" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { size: "large", onClick: () => setPhrasesOpen(true), children: "\uD83D\uDCAC \u5E38\u7528\u8BED" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { size: "large", onClick: () => {
-                            if (!receivedImages.length) {
+                            if (!recvImages.length) {
                                 notify.info('暂无待存文件');
                                 return;
                             }
-                            renderImageGallery();
+                            setGalleryOpen(true);
                         }, children: "\uD83D\uDDBC\uFE0F \u5386\u53F2\u6587\u4EF6" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { size: "large", onClick: () => setPhoneOpen(true), children: "\uD83D\uDCBB \u8BBE\u5907\u4E92\u8054" })] }), (0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: {
                     marginTop: 10,
                     display: 'flex',
@@ -75706,7 +77859,7 @@ function MainPanel({ host }) {
                     gap: 8,
                     fontSize: 12,
                     color: '#8c8c8c',
-                }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("span", { style: { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }, children: lastSpeakText(mon.lastSpeak) }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { type: "link", size: "small", style: { padding: 0 }, onClick: () => setLogOpen(true), children: "\u67E5\u770B\u65E5\u5FD7 \u2192" })] }), (0,react_jsx_runtime_production_namespaceFn().jsx)(SettingsModal, { open: settingsOpen, onClose: () => setSettingsOpen(false), workingHours: Allvalue.workingHours, onChangeWorkingHours: (wh) => {
+                }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("span", { style: { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }, children: lastSpeakText(mon.lastSpeak) }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { type: "link", size: "small", style: { padding: 0 }, onClick: () => setLogOpen(true), children: "\u67E5\u770B\u65E5\u5FD7 \u2192" })] }), (0,react_jsx_runtime_production_namespaceFn().jsx)(SettingsModal, { open: settingsOpen, onClose: () => setSettingsOpen(false), onOpenChangelog: () => setChangelogOpen(true), workingHours: Allvalue.workingHours, onChangeWorkingHours: (wh) => {
                     patchAllvalue({ workingHours: wh });
                     addLog('监控时间段已更新：上午 ' +
                         hoursToHHmm(wh.morningStart) +
@@ -75728,7 +77881,29 @@ function MainPanel({ host }) {
                 } }), (0,react_jsx_runtime_production_namespaceFn().jsx)(PhrasesModal, { open: phrasesOpen, onClose: () => setPhrasesOpen(false), phrasesData: phrasesData, phrasesLoading: phrasesLoading, searchKeyword: searchKeyword, setSearchKeyword: setSearchKeyword, loadPhrasesData: loadPhrasesData, commonPhrasesUrl: Allvalue.commonPhrasesUrl }), (0,react_jsx_runtime_production_namespaceFn().jsx)(PhoneModal, { open: phoneOpen, onClose: () => setPhoneOpen(false), relayServer: Allvalue.relayServer || '', onChangeRelayServer: (url) => {
                     patchAllvalue({ relayServer: url });
                     addLogDebounced('relayServer', '中继服务器已更新: ' + (url || '（空）'), 'info');
-                } }), (0,react_jsx_runtime_production_namespaceFn().jsx)(LogModal, { open: logOpen, onClose: () => setLogOpen(false), logEntries: logEntries, onClear: clearLogs })] }));
+                } }), (0,react_jsx_runtime_production_namespaceFn().jsx)(LogModal, { open: logOpen, onClose: () => setLogOpen(false), logEntries: logEntries, onClear: clearLogs }), (0,react_jsx_runtime_production_namespaceFn().jsx)(ChangelogModal, { open: changelogOpen, onClose: () => setChangelogOpen(false) }), (0,react_jsx_runtime_production_namespaceFn().jsx)(RecvGalleryModal, { open: galleryOpen, onClose: () => setGalleryOpen(false), images: recvImages, onRemove: (idx) => setRecvImages((prev) => {
+                    const next = prev.slice();
+                    const removed = next.splice(idx, 1)[0];
+                    if (removed) {
+                        try {
+                            URL.revokeObjectURL(removed.previewUrl);
+                        }
+                        catch (e) {
+                            /* 忽略 */
+                        }
+                    }
+                    return next;
+                }), onClear: () => setRecvImages((prev) => {
+                    prev.forEach((it) => {
+                        try {
+                            URL.revokeObjectURL(it.previewUrl);
+                        }
+                        catch (e) {
+                            /* 忽略 */
+                        }
+                    });
+                    return [];
+                }) }), (0,react_jsx_runtime_production_namespaceFn().jsx)(RecvTextModal, { text: recvText, onClose: () => setRecvText(null) })] }));
 }
 
 ;// ./src/lib/ui/PanelApp.tsx

@@ -65,7 +65,7 @@ const CHECKS = [
   ['phrasesLoaded', '常用语 YAML 解析'],
   ['phrasesClicked', '常用语抽屉可打开'],
   ['changelogPopup', '更新日志弹窗（最新 10 条）'],
-  ['viewerZoomOk', '缩略图放大显示主图'],
+  ['viewerZoomOk', '缩略图放大显示主图（antd 预览）'],
   ['copyOk', '图片复制只尝试写 PNG'],
   ['phoneSendCompressedOk', '发送到手机前压缩'],
   ['modalTextAlignLeft', '弹窗内容左对齐（不被宿主 CSS 污染）'],

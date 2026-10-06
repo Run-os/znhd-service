@@ -6,7 +6,7 @@ import { loadPhrasesCache, savePhrasesCache, saveAllvalue, type Allvalue } from 
 import { runtime } from '@/lib/state';
 import { resolveGithubUrl, hoursToHHmm } from '@/lib/utils';
 import { getDeviceId, startPhoneReceive } from '@/lib/relay';
-import { renderImageGallery, receivedImages, showImagePopup, showTextPopup } from '@/lib/gallery';
+import { MAX_GALLERY, type GalleryImage } from '@/lib/gallery';
 import { clearSpeechQueue } from '@/lib/speech';
 import { getMonitorState, setMonitorStateSink, type MonitorState } from '@/lib/monitor';
 import { notify } from '@/lib/ui/notify';
@@ -15,6 +15,9 @@ import SettingsModal from '@/lib/ui/SettingsModal';
 import PhrasesModal from '@/lib/ui/PhrasesModal';
 import PhoneModal from '@/lib/ui/PhoneModal';
 import LogModal from '@/lib/ui/LogModal';
+import ChangelogModal from '@/lib/ui/ChangelogModal';
+import RecvGalleryModal from '@/lib/ui/RecvGalleryModal';
+import RecvTextModal from '@/lib/ui/RecvTextModal';
 
 // 常用语请求序号（loadPhrasesData 用）：仅最新一次请求可落地结果，防慢的旧响应后到覆盖新数据
 let phrasesRequestSeq = 0;
@@ -66,6 +69,11 @@ export default function MainPanel({ host }: MainPanelProps) {
     const [phrasesOpen, setPhrasesOpen] = useState(false);
     const [phoneOpen, setPhoneOpen] = useState(false);
     const [logOpen, setLogOpen] = useState(false);
+    const [changelogOpen, setChangelogOpen] = useState(false);
+    // 收到图片/文本（v26.10.06-v13：由原来的命令式 DOM 弹窗改为 React state 驱动 antd 弹窗）
+    const [recvImages, setRecvImages] = useState<GalleryImage[]>([]);
+    const [galleryOpen, setGalleryOpen] = useState(false);
+    const [recvText, setRecvText] = useState<string | null>(null);
     const [logEntries, setLogEntries] = useState<LogEntry[]>([]);
     const [phrasesData, setPhrasesData] = useState<Record<string, string>>({});
     const [phrasesLoading, setPhrasesLoading] = useState(false);
@@ -200,12 +208,33 @@ export default function MainPanel({ host }: MainPanelProps) {
                         '[设备互联] 收到图片：' + (img.name || 'image') + '（' + (img.mime || 'image') + '）',
                         'success'
                     );
-                    showImagePopup(img);
+                    // 入列 + 上限保护（超出的丢最旧并 revoke 其 objectURL，防内存累积），随后自动打开画廊
+                    setRecvImages((prev) => {
+                        const next = prev.concat({
+                            blob: img.blob,
+                            previewUrl: img.previewUrl,
+                            name: img.name,
+                            mime: img.mime,
+                        });
+                        while (next.length > MAX_GALLERY) {
+                            const dropped = next.shift();
+                            if (dropped) {
+                                try {
+                                    URL.revokeObjectURL(dropped.previewUrl);
+                                } catch (e) {
+                                    /* 忽略 */
+                                }
+                            }
+                        }
+                        return next;
+                    });
+                    setGalleryOpen(true);
                 },
                 onText: (txt) => {
                     const t = (txt.text || '').replace(/\s+$/, '');
                     addLog('[设备互联] 收到文本：' + (t.length > 40 ? t.slice(0, 40) + '…' : t), 'success');
-                    showTextPopup(txt);
+                    // 同屏只留最新一条：直接替换内容（antd Modal 单实例）
+                    setRecvText(txt.text || '');
                 },
             });
             receiveStopRef.current = stop;
@@ -371,11 +400,11 @@ export default function MainPanel({ host }: MainPanelProps) {
                 <Button
                     size="large"
                     onClick={() => {
-                        if (!receivedImages.length) {
+                        if (!recvImages.length) {
                             notify.info('暂无待存文件');
                             return;
                         }
-                        renderImageGallery();
+                        setGalleryOpen(true);
                     }}>
                     🖼️ 历史文件
                 </Button>
@@ -406,6 +435,7 @@ export default function MainPanel({ host }: MainPanelProps) {
             <SettingsModal
                 open={settingsOpen}
                 onClose={() => setSettingsOpen(false)}
+                onOpenChangelog={() => setChangelogOpen(true)}
                 workingHours={Allvalue.workingHours}
                 onChangeWorkingHours={(wh: Allvalue['workingHours']) => {
                     patchAllvalue({ workingHours: wh });
@@ -460,6 +490,42 @@ export default function MainPanel({ host }: MainPanelProps) {
             />
 
             <LogModal open={logOpen} onClose={() => setLogOpen(false)} logEntries={logEntries} onClear={clearLogs} />
+
+            <ChangelogModal open={changelogOpen} onClose={() => setChangelogOpen(false)} />
+
+            <RecvGalleryModal
+                open={galleryOpen}
+                onClose={() => setGalleryOpen(false)}
+                images={recvImages}
+                onRemove={(idx) =>
+                    setRecvImages((prev) => {
+                        const next = prev.slice();
+                        const removed = next.splice(idx, 1)[0];
+                        if (removed) {
+                            try {
+                                URL.revokeObjectURL(removed.previewUrl);
+                            } catch (e) {
+                                /* 忽略 */
+                            }
+                        }
+                        return next;
+                    })
+                }
+                onClear={() =>
+                    setRecvImages((prev) => {
+                        prev.forEach((it) => {
+                            try {
+                                URL.revokeObjectURL(it.previewUrl);
+                            } catch (e) {
+                                /* 忽略 */
+                            }
+                        });
+                        return [];
+                    })
+                }
+            />
+
+            <RecvTextModal text={recvText} onClose={() => setRecvText(null)} />
         </Card>
     );
 }
