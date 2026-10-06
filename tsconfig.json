@@ -9,10 +9,14 @@
     // v26.10.06-v9：由 commonjs 改为 ESM 输出 —— UI 引入 antd 后，commonjs 会让 TS 产出
     // `require('antd')`（拉整个 barrel，实测 1.62MiB），webpack 无法 tree-shaking；
     // 改 ESM 后 webpack 才能只打包用到的组件。
-    // ⚠️ moduleResolution 只能用 node：本仓库 TypeScript 为 4.6，不认识 TS5 的 `bundler`
-    //    （会报 TS6046）；antd 的 .d.ts 里那些子路径 exports 由 skipLibCheck 兜住。
+    // v26.10.06-v18：moduleResolution 由 node(node10) 改为 **bundler** ——
+    //   ① node10 已被 TS 6/7 标记弃用（编辑器里报「选项 moduleResolution=node10 已弃用，
+    //      将在 TypeScript 7.0 停止运行」），bundler 是 webpack/Vite 这类打包器场景的正式选项；
+    //   ② 它按 package.json 的 `exports` 解析子路径，antd 及其 @rc-component 依赖大量使用子路径导出，
+    //      解析正确后 node_modules 里那批 .d.ts 报错也随之消失。
+    //   ⚠️ bundler 需要 TS ≥5.0：本仓库 TypeScript 已随之升到 6.x（见 .vscode 的 typescript.tsdk 绑定）。
     "module": "esnext",
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "paths": {
       "@/*": ["./src/*"]
     },
@@ -38,10 +42,10 @@
     "useUnknownInCatchVariables": false,
 
     /* Completeness */
-    // v26.10.06-v9：UI 引入 antd 后必须打开 skipLibCheck —— antd 自带/其 @rc-component 依赖的
-    // .d.ts 在 `module: commonjs` + 默认 moduleResolution 下有多处不兼容（子路径 exports 解析不到、
-    // 接口定义互不兼容等），实测十余条错误全部位于 node_modules，与本仓库代码无关；
-    // 关着它只会让 `npm run typecheck` 永远红，无法作为门禁。本仓库自有代码仍按 strict 全量检查。
+    // v26.10.06-v9：UI 引入 antd 后打开 skipLibCheck —— antd 及其 @rc-component 的 .d.ts
+    // 曾在本仓库配置下报出十余条不兼容错误（全部位于 node_modules）。
+    // v26.10.06-v18：moduleResolution 改为 bundler 后这些解析问题已消失，但**暂时仍保留 true**：
+    // 打开它只跳过第三方 .d.ts 的检查，本仓库自有代码依旧按 strict 全量检查（`npm run typecheck`）。
     "skipLibCheck": true
   },
   "include": ["src"]

@@ -1,6 +1,6 @@
 {
   "name": "znhd-service",
-  "version": "26.10.06-v17",
+  "version": "26.10.06-v18",
   "description": "征纳互动人数和在线监控：油猴脚本（人数/掉线监控、语音播报、常用语、设备互联图片互传）",
   "main": "./dist/znhd.user.js",
   "scripts": {
@@ -60,7 +60,7 @@
     "terser-webpack-plugin": "^5.3.1",
     "to-string-loader": "^1.2.0",
     "ts-loader": "^9.2.8",
-    "typescript": "^4.6.3",
+    "typescript": "^6.0.3",
     "webpack": "^5.72.0",
     "webpack-cli": "^4.9.2",
     "webpack-dev-server": "^4.9.0"

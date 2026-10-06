@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name                征纳互动人数和在线监控v2
 // @namespace           https://scriptcat.org/
-// @version             26.10.06-v17
+// @version             26.10.06-v18
 // @description         实时监控征纳互动等待人数和在线状态，支持语音播报、自定义常用语
 // @author              runos
 // @match               https://znhd.hunan.chinatax.gov.cn:8443/*
@@ -55181,7 +55181,7 @@ function sendToPhone(opt) {
             headers: { 'Content-Type': 'application/json' },
             data: body,
             // 超时随载荷缩放：放行的最大单请求约 16MB（base64 膨胀后），固定 20s 在慢上行时会把合法大图误杀
-            timeout: 20000 + Math.round(body.length / 200),
+            timeout: 20000 + Math.round(body.length / 200), // ≈ 20s + 每 200B 1ms；16MB 体 ≈ 100s
             onload: function (resp) {
                 let j = null;
                 try {
@@ -67460,7 +67460,7 @@ function LogModal({ open, onClose, logEntries, onClear }) {
         }, children: label }, key));
     return ((0,react_jsx_runtime_production_namespaceFn().jsxs)(modal, { open: open, title: "\u8FD0\u884C\u65E5\u5FD7", onCancel: onClose, getContainer: getOverlayContainer, width: 560, styles: { body: { textAlign: 'left' } }, destroyOnHidden: true, footer: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_space, { children: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { onClick: onClose, children: "\u5173\u95ED" }) }), children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', flexWrap: 'wrap', gap: 6 }, children: [chip('all', allOn ? '全部（点此全隐）' : '全部', '#666', allOn, () => setFilter({ info: !allOn, success: !allOn, warning: !allOn, error: !allOn })), TYPE_META.map((m) => chip(m.type, m.label + ' ' + (counts[m.type] || 0), m.color, filter[m.type], () => setFilter({ ...filter, [m.type]: !filter[m.type] })))] }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { danger: true, disabled: logEntries.length === 0, onClick: onClear, style: { flex: '0 0 auto' }, children: "\u6E05\u7A7A" })] }), (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: {
                     display: 'flex',
-                    flexDirection: 'column-reverse',
+                    flexDirection: 'column-reverse', // 关键：自动锚底，见文件头说明
                     overflowY: 'auto',
                     height: 360,
                     marginTop: 10,
@@ -67563,7 +67563,7 @@ function loadChangelog(done) {
     GM_xmlhttpRequest({
         method: 'GET',
         url: resolveGithubUrl(CHANGELOG_RAW_URL),
-        timeout: 15000,
+        timeout: 15000, // raw.githubusercontent 在国内常被黑洞，必须给超时，否则弹窗永远停在「读取中」
         onload: function (response) {
             if (response.status !== 200) {
                 const msg = '数据源返回 HTTP ' + response.status;
@@ -70322,9 +70322,7 @@ function RecvGalleryModal({ open, onClose, images, onRemove, onClear }) {
     return ((0,react_jsx_runtime_production_namespaceFn().jsxs)(modal, { open: open, title: '收到的图片（' + images.length + '）· 单击放大', onCancel: onClose, getContainer: getOverlayContainer, width: 620, styles: { body: { textAlign: 'left' } }, destroyOnHidden: true, footer: (0,react_jsx_runtime_production_namespaceFn().jsxs)(es_space, { children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { danger: true, onClick: () => {
                         onClear();
                         onClose();
-                    }, children: "\u6E05\u7A7A\u5168\u90E8" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { color: "primary", variant: "solid", onClick: onClose, children: "\u5173\u95ED" })] }), children: [images.length === 0 ? ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_empty, { description: "\u6682\u65E0\u56FE\u7247" })) : (
-            // items 用 objectURL 列表：预览里的左右切换由 antd 接管
-            (0,react_jsx_runtime_production_namespaceFn().jsx)(es_image.PreviewGroup, { items: images.map((i) => i.previewUrl), children: (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: {
+                    }, children: "\u6E05\u7A7A\u5168\u90E8" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { color: "primary", variant: "solid", onClick: onClose, children: "\u5173\u95ED" })] }), children: [images.length === 0 ? ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_empty, { description: "\u6682\u65E0\u56FE\u7247" })) : ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_image.PreviewGroup, { items: images.map((i) => i.previewUrl), children: (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: {
                         display: 'grid',
                         gridTemplateColumns: 'repeat(3, minmax(0,1fr))',
                         gap: 8,
@@ -70637,9 +70635,7 @@ function MainPanel({ host }) {
     if (collapsed) {
         return ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { shape: "circle", color: "primary", variant: "solid", title: "\u5C55\u5F00\u76D1\u63A7\u9762\u677F", onClick: () => setCollapsed(false), style: { width: 36, height: 36, boxShadow: '0 4px 16px rgba(0,0,0,0.18)' }, children: (0,react_jsx_runtime_production_namespaceFn().jsx)(BrandIcon, { size: 20 }) }));
     }
-    return ((0,react_jsx_runtime_production_namespaceFn().jsxs)(card, { size: "small", style: { width: PANEL_WIDTH, boxShadow: '0 6px 24px rgba(0,0,0,0.18)' }, styles: { body: { padding: 12 }, header: { padding: '8px 10px', minHeight: 46 } }, title: 
-        // 标题栏 = 拖拽手柄（唯一可抓取区）
-        (0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { ...drag, style: {
+    return ((0,react_jsx_runtime_production_namespaceFn().jsxs)(card, { size: "small", style: { width: PANEL_WIDTH, boxShadow: '0 6px 24px rgba(0,0,0,0.18)' }, styles: { body: { padding: 12 }, header: { padding: '8px 10px', minHeight: 46 } }, title: (0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { ...drag, style: {
                 cursor: 'move',
                 userSelect: 'none',
                 touchAction: 'none',

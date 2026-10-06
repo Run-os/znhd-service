@@ -24,6 +24,14 @@
 - 版本：relay `package.json` → `26.10.06-v3`（页面显示版本由构建期从该文件注入）。
 - 验证：手机（iPhone 14 视口 390×844）与桌面（1440×900）实拍确认布局；真实浏览器跑通「选 3 张图 → canvas 压缩 124KB→80KB → 进度 0/3→1/3→2/3→✅ 3/3 → 待发列表清空」共 10/10 断言；「电脑 → 手机」收图/收文本弹窗实测正常；静态回归 18 项通过（零第三方外链、gzip、immutable、目录穿越返回 403、缺资源 404、版本自证）。
 
+### znhd.user.js v26.10.06-v18
+- **修复编辑器里的 TypeScript 弃用报错**「选项 `moduleResolution=node10` 已弃用，将在 TypeScript 7.0 停止运行」：
+  - 根因：本仓库 TypeScript 仍是 4.9.5（`^4.6.3`），而 VS Code 用的是**自带 6.x**。当初我用 `moduleResolution: "node"` 正是因为 TS 4.6 不认识 `bundler`（TS6046）——是个被旧工具链逼出来的临时选择。
+  - 修法三步：① 根依赖 `typescript` 升到 **^6.0.3**；② `moduleResolution` 由 `node`(node10) 改为 **`bundler`**（打包器场景的正式选项，且按 `package.json#exports` 解析子路径，更贴合 antd）；③ `.vscode/settings.json` 加 `typescript.tsdk: node_modules/typescript/lib` + `enablePromptUseWorkspaceTsdk`，**让编辑器与 `npm run typecheck` 用同一份 TS**（否则两边规则不一致，编辑器报的错在 CI 里复现不出来）。
+- **`skipLibCheck` 维持 `true`（实测后确认必须保留）**：改 `bundler` 后曾试开 `false`，仍报 `@rc-component/image`、`@rc-component/picker` 两条 **TS2430（接口不兼容）**——那是这两个包**声明文件自身的类型 bug**，与模块解析无关。已把结论写进 tsconfig 注释，避免后人反复试。
+- 验证：`npm run typecheck` 0 错；`npm run build` 通过；`antd lint ./src` 0 issue；`npm run verify` **16 项全绿**；`npx tsc` 已无任何弃用告警。
+- ⚠️ 与 v9~v17 一样**只做本地提交，未推送**。
+
 ### znhd.user.js v26.10.06-v17
 - **「设备互联」弹窗按参考稿重排版式**（原为平铺的若干行控件）：
   - 标题改为「📱 手机互传」+ `设备互联` 标签；
