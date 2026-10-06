@@ -24,6 +24,19 @@
 - 版本：relay `package.json` → `26.10.06-v3`（页面显示版本由构建期从该文件注入）。
 - 验证：手机（iPhone 14 视口 390×844）与桌面（1440×900）实拍确认布局；真实浏览器跑通「选 3 张图 → canvas 压缩 124KB→80KB → 进度 0/3→1/3→2/3→✅ 3/3 → 待发列表清空」共 10/10 断言；「电脑 → 手机」收图/收文本弹窗实测正常；静态回归 18 项通过（零第三方外链、gzip、immutable、目录穿越返回 403、缺资源 404、版本自证）。
 
+### znhd.user.js v26.10.06-v14
+- **常用语改为网页侧边栏样式（antd `Drawer`）**：`PhrasesModal.tsx` → `PhrasesDrawer.tsx`，从右侧滑出、`size={360}`。理由：常用语是长列表，弹窗要反复滚动且高度受限；侧边抽屉能用满屏高、滑出时不遮挡右侧网页内容。其余弹窗（设置/日志/设备互联/更新日志/收图）仍为 Modal——那是一次性确认型交互。
+  - ⚠️ v6 中 Drawer 的 **`width` 已弃用**，改用 `size`（`number | string | 'default' | 'large'`）。
+  - ⚠️ v6 的 Drawer DOM 也变了：**不再有 `.ant-drawer-content`，改为 `.ant-drawer-section`**（冒烟断言用旧类名会假失败，已改用 v5/v6 通用的 `.ant-drawer-body`）。
+  - `ui/uiReset.ts` 把 `.ant-drawer` 一并纳入样式隔离范围。
+- **面板品牌图标改为税务站点 favicon**（`https://znhd.hunan.chinatax.gov.cn:8443/favicon.ico`，与元信息 `@icon` 同源）：新增 `BrandIcon` 组件，优先 `<img>`，**加载失败回退 emoji**，避免离线/被拦时头部留白块。面板头部与收起态圆钮都改用它。
+- **修复「面板可能被放到几乎完全出屏、只剩一条边、按钮点不到」**：
+  - 根因①：默认初始坐标用了 `window.screen.width/height`（**物理屏幕**）而非 `innerWidth/innerHeight`（**视口**），多屏或窗口变窄时差别很大；
+  - 根因②：恢复存档坐标时用的裁函数只保证「留 48px 可抓取」（那是**拖拽**时该有的语义），存档来自更宽窗口/另一显示器时就被算到视口外。
+  - 修法：新增 `clampIntoView(pt, w, h)`（放得下的前提下要求**整块可见**），挂载后按真实尺寸裁一次（不落盘）、窗口 resize 时同样处理（落盘）；拖拽过程中的贴边语义保持不变。
+- 验证：`npm run verify` **14 项全绿**（新增「常用语是 antd Drawer 侧边栏（非 Modal）」）；`antd lint ./src` 0 issue（抓到并修掉 Drawer `width` 弃用）；`typecheck` 通过；面板位置修复前后截图对照（修前只剩约 50px 露在右边缘，修后完整可见）。
+- ⚠️ 本条与 v9~v13 一样**只做本地提交，未推送**（按用户 2026-10-06 的要求）。
+
 ### znhd.user.js v26.10.06-v13
 - **收图画廊与更新日志弹窗改为 antd，并移除 Viewer.js 依赖**（UI 至此全部是 Ant Design）。
 - 收图画廊：原「自拼 DOM 弹窗 + Viewer.js 放大」→ **antd `Modal` + `Image.PreviewGroup`**（多图左右切换 / 缩放 / 旋转 / 翻转 / 1:1 都自带，无需第三方库）：

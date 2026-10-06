@@ -17,30 +17,30 @@ import { PANEL_HOST_ID } from '@/lib/ui/panelIds';
 
 const RESET_CSS = `
 /* 盒模型与文本基线：宿主页面常把 * 设为 content-box / 居中，这里只复位我们的容器 */
-#${PANEL_HOST_ID}, .ant-modal-root, .ant-picker-dropdown, .ant-message, .ant-notification, .ant-tooltip, .ant-dropdown {
+#${PANEL_HOST_ID}, .ant-modal-root, .ant-drawer, .ant-picker-dropdown, .ant-message, .ant-notification, .ant-tooltip, .ant-dropdown {
   box-sizing: border-box;
   text-align: left;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
   font-size: 14px;
   line-height: 1.5715;
 }
-#${PANEL_HOST_ID} *, .ant-modal-root *, .ant-picker-dropdown *, .ant-message *, .ant-notification *, .ant-tooltip *, .ant-dropdown * {
+#${PANEL_HOST_ID} *, .ant-modal-root *, .ant-drawer *, .ant-picker-dropdown *, .ant-message *, .ant-notification *, .ant-tooltip *, .ant-dropdown * {
   box-sizing: border-box;
   /* inherit：低优先级复位，antd 自己需要居中的组件（Empty 等）仍用其类规则覆盖 */
   text-align: inherit;
 }
 /* 图标垂直对齐：宿主页面若有 svg 的 vertical-align/line-height 规则，会把 antd 图标顶出输入框 */
-#${PANEL_HOST_ID} svg, .ant-modal-root svg, .ant-picker-dropdown svg, .ant-message svg, .ant-notification svg {
+#${PANEL_HOST_ID} svg, .ant-modal-root svg, .ant-drawer svg, .ant-picker-dropdown svg, .ant-message svg, .ant-notification svg {
   vertical-align: inherit;
 }
 /* ★ 图标被第三方样式加负外边距而跑出输入框（用户实测：时钟图标的计算样式里
    margin: -2.75em auto 0，按 16px 字号约 -44px；antd 自身从不给 svg 设 margin）。
    这类规则特异性只有 (0,0,1)，用带容器前缀的选择器即可稳压。 */
-#${PANEL_HOST_ID} svg, .ant-modal-root svg, .ant-picker-dropdown svg, .ant-message svg, .ant-notification svg, .ant-tooltip svg, .ant-dropdown svg {
+#${PANEL_HOST_ID} svg, .ant-modal-root svg, .ant-drawer svg, .ant-picker-dropdown svg, .ant-message svg, .ant-notification svg, .ant-tooltip svg, .ant-dropdown svg {
   margin: 0;
 }
 /* 输入类控件去掉宿主页面可能带来的额外外边距/最小高度 */
-#${PANEL_HOST_ID} input, #${PANEL_HOST_ID} textarea, .ant-modal-root input, .ant-modal-root textarea {
+#${PANEL_HOST_ID} input, #${PANEL_HOST_ID} textarea, .ant-modal-root input, .ant-modal-root textarea, .ant-drawer input, .ant-drawer textarea {
   margin: 0;
   font-family: inherit;
   font-size: inherit;

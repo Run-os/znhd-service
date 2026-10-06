@@ -411,6 +411,10 @@
           QRCode: typeof window.QRCode,
           Viewer: typeof window.Viewer,
           recvResponses: window.__recvCount || 0,
+          // 常用语必须是 antd **Drawer**（侧边栏），不是 Modal：v26.10.06-v14 按需求改的。
+          // ⚠️ 断言用 `.ant-drawer-body`（v5/v6 都有）；**不要用 `.ant-drawer-content`** ——
+          //    v6 已把它改名为 `.ant-drawer-section`，用旧名会假失败（本条踩过）。
+          phrasesIsDrawer: !!document.querySelector('.ant-drawer.ant-drawer-right .ant-drawer-body'),
           panel: text.includes('征纳互动监控'),
           // 版本号只从「面板宿主」里取：弹窗（更新日志/日志/常用语…）都 portal 到 documentElement，
           // 里面有各自的版本号文本，读全页会串台（v26.10.6-v1 踩过）。

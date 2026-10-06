@@ -48,11 +48,31 @@ export function clampPanelPoint(pt: { x: number; y: number }, size?: { w?: numbe
     };
 }
 
-/** 读取存档位置（无存档时给默认坐标）并裁剪 */
+/**
+ * 把坐标约束到「尽量完整可见」（挂载与窗口尺寸变化时用）。
+ *
+ * ⚠️ 与 clampPanelPoint 的区别：那个只保证留 48px 可抓取（拖拽时允许用户主动贴边藏起来），
+ * 用它来**恢复存档坐标**会出事——存档若来自更宽的窗口/别的显示器，面板会被算到视口外，
+ * 只剩一条边（用户看到的是「面板不见了/按钮点不到」）。所以这里在放得下的前提下要求整块可见。
+ */
+export function clampIntoView(pt: { x: number; y: number }, w: number, h: number) {
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    const maxX = Math.max(4, vw - w - 4);
+    const maxY = Math.max(4, vh - h - 4);
+    return {
+        x: Math.min(Math.max(pt.x, 4), maxX),
+        y: Math.min(Math.max(pt.y, 4), maxY),
+    };
+}
+
+/** 读取存档位置（无存档时给默认坐标），先按默认尺寸做一次粗裁剪 */
 function initialPoint(): { x: number; y: number } {
     const saved = loadPanelPoint();
-    const pt = saved || { x: window.screen.width * 0.55, y: window.screen.height * 0.01 };
-    return clampPanelPoint(pt);
+    // ⚠️ 默认坐标必须用 innerWidth/innerHeight（视口），不能用 screen.width/height（物理屏幕）：
+    // 在多屏或缩窄窗口时二者差别很大，用后者会把面板初始位置算到视口外。
+    const pt = saved || { x: Math.round(window.innerWidth * 0.55), y: 12 };
+    return clampIntoView(pt, 340, 0);
 }
 
 let root: Root | null = null;
@@ -129,15 +149,22 @@ export function usePanelDrag(host: HTMLElement) {
 
     // 视口尺寸变化时重新裁剪，避免面板被挤出可视范围
     useEffect(() => {
-        const onResize = () => {
-            const pt = clampPanelPoint(
+        const clampNow = (persist: boolean) => {
+            // 用真实尺寸要求「整块可见」；拖拽过程中的贴边约束仍走 clampPanelPoint（允许只留 48px）
+            const pt = clampIntoView(
                 { x: parseFloat(host.style.left) || 0, y: parseFloat(host.style.top) || 0 },
-                { w: host.offsetWidth }
+                host.offsetWidth,
+                host.offsetHeight
             );
             host.style.left = Math.round(pt.x) + 'px';
             host.style.top = Math.round(pt.y) + 'px';
-            savePanelPoint(pt);
+            if (persist) savePanelPoint(pt);
         };
+        // 挂载后先按「面板真实宽度」裁剪一次：存档坐标可能来自更宽的窗口或多屏，
+        // 若只按默认宽度裁剪，面板会被算到视口外（只剩 48px 可抓取 → 表现为「按钮点不到」）。
+        // 首次提交后 host.offsetWidth 才可用，故放在 effect 里而不是初始坐标计算里。
+        clampNow(false);
+        const onResize = () => clampNow(true);
         window.addEventListener('resize', onResize);
         return () => window.removeEventListener('resize', onResize);
     }, [host]);

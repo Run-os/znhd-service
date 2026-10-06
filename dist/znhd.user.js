@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name                征纳互动人数和在线监控v2
 // @namespace           https://scriptcat.org/
-// @version             26.10.06-v13
+// @version             26.10.06-v14
 // @description         实时监控征纳互动等待人数和在线状态，支持语音播报、自定义常用语
 // @author              runos
 // @match               https://znhd.hunan.chinatax.gov.cn:8443/*
@@ -71628,6 +71628,1299 @@ function SettingsModal({ open, onClose, onOpenChangelog, workingHours, onChangeW
         styles: { body: { textAlign: 'left' } }, destroyOnHidden: true, footer: (0,react_jsx_runtime_production_namespaceFn().jsxs)(es_space, { children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { onClick: onClose, children: "\u53D6\u6D88" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { color: "primary", variant: "solid", onClick: onClose, children: "\u786E\u5B9A" })] }), children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)(es_space, { size: 4, wrap: true, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { type: "link", onClick: () => window.open('https://github.com/Run-os/znhd-service', '_blank'), children: "[\u811A\u672C\u4E3B\u9875]" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { type: "link", onClick: () => window.open((GM_info.scriptUpdateURL || GM_info.script.updateURL), '_blank'), children: "[\u66F4\u65B0\u811A\u672C]" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { type: "link", onClick: () => onOpenChangelog(), children: "[\u66F4\u65B0\u65E5\u5FD7]" })] }), (0,react_jsx_runtime_production_namespaceFn().jsx)(divider, { style: { margin: '8px 0' }, children: "\u5176\u4ED6\u8BBE\u7F6E" }), (0,react_jsx_runtime_production_namespaceFn().jsxs)(es_space, { size: 8, style: { marginBottom: 12 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(SettingsModal_Text, { strong: true, children: "\u4F7F\u7528 CDN \u52A0\u901F\uFF08Fastly \u955C\u50CF\uFF09\u52A0\u8F7D\u8D44\u6E90" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_switch, { checked: !!useCdn, onChange: (v) => onChangeUseCdn(v) })] }), (0,react_jsx_runtime_production_namespaceFn().jsx)(SettingsModal_Text, { strong: true, style: { display: 'block', marginBottom: 8 }, children: "\u76D1\u63A7\u65F6\u95F4\u6BB5\uFF08\u70B9\u51FB\u9009\u62E9\u65F6\u95F4\uFF09" }), (0,react_jsx_runtime_production_namespaceFn().jsxs)(es_space, { size: 8, wrap: true, style: { marginBottom: 8 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(SettingsModal_Text, { children: "\u4E0A\u5348" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(time_picker, { value: toDayjs(wh.morningStart), format: "HH:mm", minuteStep: 5, allowClear: false, style: { width: 110 }, onChange: (v) => v && updateWh('morningStart', v.hour() + v.minute() / 60) }), (0,react_jsx_runtime_production_namespaceFn().jsx)(SettingsModal_Text, { children: "\u81F3" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(time_picker, { value: toDayjs(wh.morningEnd), format: "HH:mm", minuteStep: 5, allowClear: false, style: { width: 110 }, onChange: (v) => v && updateWh('morningEnd', v.hour() + v.minute() / 60) })] }), (0,react_jsx_runtime_production_namespaceFn().jsxs)(es_space, { size: 8, wrap: true, style: { marginBottom: 8 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(SettingsModal_Text, { children: "\u4E0B\u5348" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(time_picker, { value: toDayjs(wh.afternoonStart), format: "HH:mm", minuteStep: 5, allowClear: false, style: { width: 110 }, onChange: (v) => v && updateWh('afternoonStart', v.hour() + v.minute() / 60) }), (0,react_jsx_runtime_production_namespaceFn().jsx)(SettingsModal_Text, { children: "\u81F3" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(time_picker, { value: toDayjs(wh.afternoonEnd), format: "HH:mm", minuteStep: 5, allowClear: false, style: { width: 110 }, onChange: (v) => v && updateWh('afternoonEnd', v.hour() + v.minute() / 60) })] }), (0,react_jsx_runtime_production_namespaceFn().jsx)(SettingsModal_Text, { type: "secondary", style: { fontSize: 12, display: 'block', marginBottom: 12 }, children: "\u63D0\u793A\uFF1A\u5C06\u300C\u4E0B\u5348\u5F00\u59CB\u300D\u8BBE\u4E3A\u4E0E\u300C\u4E0A\u5348\u7ED3\u675F\u300D\u76F8\u540C\uFF08\u5982\u90FD\u8BBE\u4E3A 12:00\uFF09\uFF0C\u5373\u53EF\u5348\u4F11\u65F6\u6BB5\u4E5F\u76D1\u63A7\u3002" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(SettingsModal_Text, { strong: true, style: { display: 'block', marginBottom: 8 }, children: "\u5E38\u7528\u8BED\u6570\u636E\u5730\u5740\uFF08\u53EF\u81EA\u5B9A\u4E49\u8FDC\u7A0B YAML\uFF09" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_input, { placeholder: "https://.../commonPhrases.yaml", value: urlDraft, onChange: (e) => onUrlChange(e.target.value), onBlur: onUrlBlur, allowClear: true, style: { marginBottom: 8 } }), (0,react_jsx_runtime_production_namespaceFn().jsx)(SettingsModal_Text, { type: "secondary", style: { fontSize: 12, display: 'block', marginBottom: 12 }, children: "\u4FEE\u6539\u540E\u8BF7\u5728\u300C\u5E38\u7528\u8BED\u300D\u9762\u677F\u70B9\u300C\u91CD\u65B0\u52A0\u8F7D\u5E38\u7528\u8BED\u300D\u751F\u6548\uFF1B\u7559\u7A7A\u5E76\u70B9\u51FB\u5176\u4ED6\u533A\u57DF\uFF08\u5931\u7126\uFF09\u540E\u6062\u590D\u9ED8\u8BA4\u5730\u5740\u3002" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(SettingsModal_Text, { strong: true, style: { display: 'block', marginBottom: 8 }, children: "\u4E2D\u7EE7\u670D\u52A1\u5668\u5730\u5740" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_input, { placeholder: "https://\u4F60\u7684\u670D\u52A1\u5668:\u7AEF\u53E3", value: relayServer || '', onChange: (e) => onChangeRelayServer((e.target.value || '').trim().replace(/\/+$/, '')), allowClear: true, style: { marginBottom: 8 } }), (0,react_jsx_runtime_production_namespaceFn().jsx)(SettingsModal_Text, { type: "secondary", style: { fontSize: 12, display: 'block' }, children: "\u7528\u4E8E\u300C\u8BBE\u5907\u4E92\u8054\u5230\u7535\u8111\u300D\uFF1A\u624B\u673A\u4E0A\u4F20\u7684\u56FE\u7247\u7ECF\u6B64\u670D\u52A1\u5668\u8F6C\u53D1\u5230\u672C\u673A\u526A\u8D34\u677F\u3002\u9700\u81EA\u884C\u90E8\u7F72\u914D\u5957 relay-server\uFF08\u89C1\u9879\u76EE\u8BF4\u660E\uFF09\u3002" })] }));
 }
 
+;// ./node_modules/@rc-component/drawer/es/context.js
+
+const DrawerContext = /*#__PURE__*/(react_production_namespaceFn().createContext)(null);
+const context_RefContext = /*#__PURE__*/(react_production_namespaceFn().createContext)({});
+/* harmony default export */ const drawer_es_context = (DrawerContext);
+;// ./node_modules/@rc-component/drawer/es/DrawerPanel.js
+function DrawerPanel_extends() { DrawerPanel_extends = Object.assign ? Object.assign.bind() : function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; }; return DrawerPanel_extends.apply(this, arguments); }
+;
+
+
+
+
+const DrawerPanel = props => {
+  const {
+    prefixCls,
+    className,
+    containerRef,
+    ...restProps
+  } = props;
+  const {
+    panel: panelRef
+  } = (react_production_namespaceFn().useContext)(context_RefContext);
+  const mergedRef = useComposeRef(panelRef, containerRef);
+
+  // =============================== Render ===============================
+
+  return /*#__PURE__*/(react_production_namespaceFn().createElement)("div", DrawerPanel_extends({
+    className: clsx(`${prefixCls}-section`, className),
+    role: "dialog",
+    ref: mergedRef
+  }, pickAttrs(props, {
+    aria: true
+  }), {
+    "aria-modal": "true"
+  }, restProps));
+};
+if (false) // removed by dead control flow
+{}
+/* harmony default export */ const es_DrawerPanel = (DrawerPanel);
+;// ./node_modules/@rc-component/drawer/es/hooks/useDrag.js
+
+
+
+function useDrag(options) {
+  const {
+    prefixCls,
+    direction,
+    className,
+    style,
+    maxSize,
+    containerRef,
+    currentSize,
+    onResize,
+    onResizeEnd,
+    onResizeStart
+  } = options;
+  const [isDragging, setIsDragging] = (react_production_namespaceFn().useState)(false);
+  const [startPos, setStartPos] = (react_production_namespaceFn().useState)(0);
+  const [startSize, setStartSize] = (react_production_namespaceFn().useState)(0);
+  const isHorizontal = direction === 'left' || direction === 'right';
+  const handleMouseDown = hooks_useEvent(e => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+    if (isHorizontal) {
+      setStartPos(e.clientX);
+    } else {
+      setStartPos(e.clientY);
+    }
+
+    // Use provided currentSize, or fallback to container size
+    let startSize;
+    if (typeof currentSize === 'number') {
+      startSize = currentSize;
+    } else if (containerRef?.current) {
+      const rect = containerRef.current.getBoundingClientRect();
+      startSize = isHorizontal ? rect.width : rect.height;
+    }
+    setStartSize(startSize);
+    onResizeStart?.(startSize);
+  });
+  const handleMouseMove = hooks_useEvent(e => {
+    if (!isDragging) return;
+    const currentPos = isHorizontal ? e.clientX : e.clientY;
+    let delta = currentPos - startPos;
+
+    // Adjust delta direction based on placement
+    if (direction === 'right' || direction === 'bottom') {
+      delta = -delta;
+    }
+    let newSize = startSize + delta;
+
+    // Apply min/max size limits
+    if (newSize < 0) {
+      newSize = 0;
+    }
+    // Only apply maxSize if it's a valid positive number
+    if (maxSize && newSize > maxSize) {
+      newSize = maxSize;
+    }
+    onResize?.(newSize);
+  });
+  const handleMouseUp = (react_production_namespaceFn().useCallback)(() => {
+    if (isDragging) {
+      setIsDragging(false);
+
+      // Get the final size after resize
+      if (containerRef?.current) {
+        const rect = containerRef.current.getBoundingClientRect();
+        const finalSize = isHorizontal ? rect.width : rect.height;
+        onResizeEnd?.(finalSize);
+      }
+    }
+  }, [isDragging, containerRef, onResizeEnd, isHorizontal]);
+  (react_production_namespaceFn().useEffect)(() => {
+    if (isDragging) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+      return () => {
+        document.removeEventListener('mousemove', handleMouseMove);
+        document.removeEventListener('mouseup', handleMouseUp);
+      };
+    }
+  }, [isDragging, handleMouseMove, handleMouseUp]);
+  const dragElementClassName = clsx(`${prefixCls}-dragger`, `${prefixCls}-dragger-${direction}`, {
+    [`${prefixCls}-dragger-dragging`]: isDragging,
+    [`${prefixCls}-dragger-horizontal`]: isHorizontal,
+    [`${prefixCls}-dragger-vertical`]: !isHorizontal
+  }, className);
+  return {
+    dragElementProps: {
+      className: dragElementClassName,
+      style,
+      onMouseDown: handleMouseDown
+    },
+    isDragging
+  };
+}
+;// ./node_modules/@rc-component/drawer/es/util.js
+/* unused harmony import specifier */ var es_util_warning;
+/* unused harmony import specifier */ var es_util_canUseDom;
+
+
+function parseWidthHeight(value) {
+  if (typeof value === 'string') {
+    const num = Number(value.replace(/px$/i, ''));
+    const floatNum = parseFloat(value);
+    if (floatNum === num) {
+      es_warning(false, 'Invalid value type of `width` or `height` which should be number type instead.');
+    }
+    if (!Number.isNaN(num)) {
+      return num;
+    }
+  }
+  return value;
+}
+function warnCheck(props) {
+  es_util_warning(!('wrapperClassName' in props), `'wrapperClassName' is removed. Please use 'rootClassName' instead.`);
+  es_util_warning(es_util_canUseDom() || !props.open, `Drawer with 'open' in SSR is not work since no place to createPortal. Please move to 'useEffect' instead.`);
+}
+;// ./node_modules/@rc-component/drawer/es/hooks/useFocusable.js
+
+
+function useFocusable_useFocusable(getContainer, open, autoFocus, focusTrap, mask) {
+  const mergedFocusTrap = focusTrap ?? mask !== false;
+
+  // Focus lock
+  const [ignoreElement] = useLockFocus(open && mergedFocusTrap, getContainer);
+
+  // Auto Focus
+  (react_production_namespaceFn().useEffect)(() => {
+    if (open && autoFocus === true) {
+      getContainer()?.focus({
+        preventScroll: true
+      });
+    }
+  }, [open]);
+  return ignoreElement;
+}
+;// ./node_modules/@rc-component/drawer/es/DrawerPopup.js
+function DrawerPopup_extends() { DrawerPopup_extends = Object.assign ? Object.assign.bind() : function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; }; return DrawerPopup_extends.apply(this, arguments); }
+;
+
+
+
+
+
+
+
+
+
+const DrawerPopup = (props, ref) => {
+  const {
+    prefixCls,
+    open,
+    placement,
+    inline,
+    push,
+    forceRender,
+    // Focus
+    autoFocus,
+    focusTrap,
+    // classNames
+    classNames: drawerClassNames,
+    // Root
+    rootClassName,
+    rootStyle,
+    zIndex,
+    // Drawer
+    className,
+    id,
+    style,
+    motion,
+    width,
+    height,
+    size,
+    maxSize,
+    children,
+    // Mask
+    mask,
+    maskClosable,
+    maskMotion,
+    maskClassName,
+    maskStyle,
+    // Events
+    afterOpenChange,
+    onClose,
+    onMouseEnter,
+    onMouseOver,
+    onMouseLeave,
+    onClick,
+    onKeyDown,
+    onKeyUp,
+    styles,
+    drawerRender,
+    resizable,
+    defaultSize
+  } = props;
+
+  // ================================ Refs ================================
+  const panelRef = (react_production_namespaceFn().useRef)(null);
+  (react_production_namespaceFn().useImperativeHandle)(ref, () => panelRef.current);
+
+  // ========================= Focusable ==========================
+  const ignoreElement = useFocusable_useFocusable(() => panelRef.current, open, autoFocus, focusTrap, mask);
+
+  // ============================ Push ============================
+  const [pushed, setPushed] = (react_production_namespaceFn().useState)(false);
+  const parentContext = (react_production_namespaceFn().useContext)(drawer_es_context);
+
+  // Merge push distance
+  let pushConfig;
+  if (typeof push === 'boolean') {
+    pushConfig = push ? {} : {
+      distance: 0
+    };
+  } else {
+    pushConfig = push || {};
+  }
+  const pushDistance = pushConfig?.distance ?? parentContext?.pushDistance ?? 180;
+  const mergedContext = (react_production_namespaceFn().useMemo)(() => ({
+    pushDistance,
+    push: () => {
+      setPushed(true);
+    },
+    pull: () => {
+      setPushed(false);
+    }
+  }), [pushDistance]);
+
+  // ========================= ScrollLock =========================
+  // Tell parent to push
+  (react_production_namespaceFn().useEffect)(() => {
+    if (open) {
+      parentContext?.push?.();
+    } else {
+      parentContext?.pull?.();
+    }
+  }, [open]);
+
+  // Clean up
+  (react_production_namespaceFn().useEffect)(() => () => {
+    parentContext?.pull?.();
+  }, []);
+
+  // ============================ Mask ============================
+  const maskNode = /*#__PURE__*/(react_production_namespaceFn().createElement)(es, DrawerPopup_extends({
+    key: "mask"
+  }, maskMotion, {
+    visible: mask && open
+  }), ({
+    className: motionMaskClassName,
+    style: motionMaskStyle
+  }, maskRef) => /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
+    className: clsx(`${prefixCls}-mask`, motionMaskClassName, drawerClassNames?.mask, maskClassName),
+    style: {
+      ...motionMaskStyle,
+      ...maskStyle,
+      ...styles?.mask
+    },
+    onClick: maskClosable && open ? onClose : undefined,
+    ref: maskRef
+  }));
+
+  // =========================== Panel ============================
+  const motionProps = typeof motion === 'function' ? motion(placement) : motion;
+
+  // ============================ Size ============================
+  const [currentSize, setCurrentSize] = (react_production_namespaceFn().useState)();
+  const isHorizontal = placement === 'left' || placement === 'right';
+
+  // Aggregate size logic with backward compatibility using useMemo
+  const mergedSize = (react_production_namespaceFn().useMemo)(() => {
+    const legacySize = isHorizontal ? width : height;
+    const nextMergedSize = size ?? legacySize ?? currentSize ?? defaultSize ?? (isHorizontal ? 378 : undefined);
+    return parseWidthHeight(nextMergedSize);
+  }, [size, width, height, defaultSize, isHorizontal, currentSize]);
+
+  // >>> Style
+  const wrapperStyle = (react_production_namespaceFn().useMemo)(() => {
+    const nextWrapperStyle = {};
+    if (pushed && pushDistance) {
+      switch (placement) {
+        case 'top':
+          nextWrapperStyle.transform = `translateY(${pushDistance}px)`;
+          break;
+        case 'bottom':
+          nextWrapperStyle.transform = `translateY(${-pushDistance}px)`;
+          break;
+        case 'left':
+          nextWrapperStyle.transform = `translateX(${pushDistance}px)`;
+          break;
+        default:
+          nextWrapperStyle.transform = `translateX(${-pushDistance}px)`;
+          break;
+      }
+    }
+    if (isHorizontal) {
+      nextWrapperStyle.width = parseWidthHeight(mergedSize);
+    } else {
+      nextWrapperStyle.height = parseWidthHeight(mergedSize);
+    }
+    return nextWrapperStyle;
+  }, [pushed, pushDistance, placement, isHorizontal, mergedSize]);
+
+  // =========================== Resize ===========================
+  const wrapperRef = (react_production_namespaceFn().useRef)(null);
+  const isResizable = !!resizable;
+  const resizeConfig = typeof resizable === 'object' && resizable || {};
+  const onInternalResize = hooks_useEvent(size => {
+    setCurrentSize(size);
+    resizeConfig.onResize?.(size);
+  });
+  const {
+    dragElementProps,
+    isDragging
+  } = useDrag({
+    prefixCls: `${prefixCls}-resizable`,
+    direction: placement,
+    className: drawerClassNames?.dragger,
+    style: styles?.dragger,
+    maxSize,
+    containerRef: wrapperRef,
+    currentSize: mergedSize,
+    onResize: onInternalResize,
+    onResizeStart: resizeConfig.onResizeStart,
+    onResizeEnd: resizeConfig.onResizeEnd
+  });
+
+  // =========================== Events ===========================
+  const eventHandlers = {
+    onMouseEnter,
+    onMouseOver,
+    onMouseLeave,
+    onClick,
+    onKeyDown,
+    onKeyUp,
+    onFocus: e => {
+      ignoreElement(e.target);
+    }
+  };
+
+  // =========================== Render ==========================
+  // >>>>> Panel
+  const panelNode = /*#__PURE__*/(react_production_namespaceFn().createElement)(es, DrawerPopup_extends({
+    key: "panel"
+  }, motionProps, {
+    visible: open,
+    forceRender: forceRender,
+    onVisibleChanged: afterOpenChange,
+    removeOnLeave: false,
+    leavedClassName: `${prefixCls}-content-wrapper-hidden`
+  }), ({
+    className: motionClassName,
+    style: motionStyle
+  }, motionRef) => {
+    const content = /*#__PURE__*/(react_production_namespaceFn().createElement)(es_DrawerPanel, DrawerPopup_extends({
+      id: id,
+      containerRef: motionRef,
+      prefixCls: prefixCls,
+      className: clsx(className, drawerClassNames?.section),
+      style: {
+        ...style,
+        ...styles?.section
+      }
+    }, pickAttrs(props, {
+      aria: true
+    }), eventHandlers), children);
+    return /*#__PURE__*/(react_production_namespaceFn().createElement)("div", DrawerPopup_extends({
+      ref: wrapperRef,
+      className: clsx(`${prefixCls}-content-wrapper`, isDragging && `${prefixCls}-content-wrapper-dragging`, drawerClassNames?.wrapper, !isDragging && motionClassName),
+      style: {
+        ...motionStyle,
+        ...wrapperStyle,
+        ...styles?.wrapper
+      }
+    }, pickAttrs(props, {
+      data: true
+    })), isResizable && /*#__PURE__*/(react_production_namespaceFn().createElement)("div", dragElementProps), drawerRender ? drawerRender(content) : content);
+  });
+
+  // >>>>> Container
+  const containerStyle = {
+    ...rootStyle
+  };
+  if (zIndex) {
+    containerStyle.zIndex = zIndex;
+  }
+  return /*#__PURE__*/(react_production_namespaceFn().createElement)(drawer_es_context.Provider, {
+    value: mergedContext
+  }, /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
+    className: clsx(prefixCls, `${prefixCls}-${placement}`, rootClassName, {
+      [`${prefixCls}-open`]: open,
+      [`${prefixCls}-inline`]: inline
+    }),
+    style: containerStyle,
+    tabIndex: -1,
+    ref: panelRef
+  }, maskNode, panelNode));
+};
+const RefDrawerPopup = /*#__PURE__*/(react_production_namespaceFn().forwardRef)(DrawerPopup);
+if (false) // removed by dead control flow
+{}
+/* harmony default export */ const es_DrawerPopup = (RefDrawerPopup);
+;// ./node_modules/@rc-component/drawer/es/Drawer.js
+
+
+
+
+
+
+const Drawer = props => {
+  const {
+    open = false,
+    prefixCls = 'rc-drawer',
+    placement = 'right',
+    autoFocus = true,
+    keyboard = true,
+    width,
+    height,
+    size,
+    maxSize,
+    mask = true,
+    maskClosable = true,
+    getContainer,
+    forceRender,
+    afterOpenChange,
+    destroyOnHidden,
+    onMouseEnter,
+    onMouseOver,
+    onMouseLeave,
+    onClick,
+    onKeyDown,
+    onKeyUp,
+    onClose,
+    resizable,
+    defaultSize,
+    focusTriggerAfterClose,
+    // Refs
+    panelRef
+  } = props;
+  const [animatedVisible, setAnimatedVisible] = (react_production_namespaceFn().useState)(false);
+
+  // ============================= Warn =============================
+  if (false) // removed by dead control flow
+{}
+
+  // ============================= Open =============================
+  const [mounted, setMounted] = (react_production_namespaceFn().useState)(false);
+  hooks_useLayoutEffect(() => {
+    setMounted(true);
+  }, []);
+  const mergedOpen = mounted ? open : false;
+
+  // ============================ Focus =============================
+  const popupRef = (react_production_namespaceFn().useRef)(null);
+  const lastActiveRef = (react_production_namespaceFn().useRef)(null);
+  hooks_useLayoutEffect(() => {
+    if (mergedOpen) {
+      lastActiveRef.current = document.activeElement;
+    }
+  }, [mergedOpen]);
+
+  // ============================= Open =============================
+  const internalAfterOpenChange = nextVisible => {
+    setAnimatedVisible(nextVisible);
+    afterOpenChange?.(nextVisible);
+    if (!nextVisible && focusTriggerAfterClose !== false && lastActiveRef.current && !popupRef.current?.contains(lastActiveRef.current)) {
+      lastActiveRef.current?.focus({
+        preventScroll: true
+      });
+    }
+  };
+
+  // =========================== Context ============================
+  const refContext = (react_production_namespaceFn().useMemo)(() => ({
+    panel: panelRef
+  }), [panelRef]);
+
+  // ============================ Render ============================
+  if (!forceRender && !animatedVisible && !mergedOpen && destroyOnHidden) {
+    return null;
+  }
+  const eventHandlers = {
+    onMouseEnter,
+    onMouseOver,
+    onMouseLeave,
+    onClick,
+    onKeyDown,
+    onKeyUp
+  };
+  const drawerPopupProps = {
+    ...props,
+    open: mergedOpen,
+    prefixCls,
+    placement,
+    autoFocus,
+    keyboard,
+    width,
+    height,
+    size,
+    maxSize,
+    defaultSize,
+    mask,
+    maskClosable,
+    inline: getContainer === false,
+    afterOpenChange: internalAfterOpenChange,
+    ref: popupRef,
+    resizable,
+    ...eventHandlers
+  };
+  const onEsc = ({
+    top,
+    event
+  }) => {
+    if (top && keyboard) {
+      event.stopPropagation();
+      onClose?.(event);
+    }
+  };
+  return /*#__PURE__*/(react_production_namespaceFn().createElement)(context_RefContext.Provider, {
+    value: refContext
+  }, /*#__PURE__*/(react_production_namespaceFn().createElement)(portal_es, {
+    open: mergedOpen || forceRender || animatedVisible,
+    autoDestroy: false,
+    getContainer: getContainer,
+    autoLock: mask && (mergedOpen || animatedVisible),
+    onEsc: onEsc
+  }, /*#__PURE__*/(react_production_namespaceFn().createElement)(es_DrawerPopup, drawerPopupProps)));
+};
+if (false) // removed by dead control flow
+{}
+/* harmony default export */ const es_Drawer = (Drawer);
+;// ./node_modules/@rc-component/drawer/es/index.js
+// export this package's api
+
+/* harmony default export */ const drawer_es = (es_Drawer);
+;// ./node_modules/antd/es/drawer/DrawerPanel.js
+"use client";
+
+
+
+
+
+
+
+
+
+
+const DrawerPanel_DrawerPanel = props => {
+  const {
+    prefixCls,
+    ariaId,
+    title,
+    footer,
+    extra,
+    closable,
+    loading,
+    onClose,
+    headerStyle,
+    bodyStyle,
+    footerStyle,
+    children,
+    classNames: drawerClassNames,
+    styles: drawerStyles
+  } = props;
+  const drawerContext = useComponentConfig('drawer');
+  const {
+    classNames: contextClassNames,
+    styles: contextStyles,
+    closable: contextClosable
+  } = drawerContext;
+  const [mergedClassNames, mergedStyles] = useMergeSemantic([contextClassNames, drawerClassNames], [contextStyles, drawerStyles], {
+    props: {
+      ...props,
+      closable: closable ?? contextClosable
+    }
+  });
+  const closablePlacement = (react_production_namespaceFn().useMemo)(() => {
+    const merged = closable ?? contextClosable;
+    if (merged === false) {
+      return undefined;
+    }
+    if (isPlainObject(merged) && merged?.placement === 'end') {
+      return 'end';
+    }
+    return 'start';
+  }, [closable, contextClosable]);
+  const customCloseIconRender = (react_production_namespaceFn().useCallback)(icon => (/*#__PURE__*/(react_production_namespaceFn().createElement)("button", {
+    type: "button",
+    onClick: onClose,
+    className: clsx(`${prefixCls}-close`, {
+      [`${prefixCls}-close-${closablePlacement}`]: closablePlacement === 'end'
+    }, mergedClassNames.close),
+    style: mergedStyles.close
+  }, icon)), [onClose, prefixCls, closablePlacement, mergedClassNames.close, mergedStyles.close]);
+  const [mergedClosable, mergedCloseIcon, closeBtnIsDisabled] = useClosable_useClosable(pickClosable(props), pickClosable(drawerContext), {
+    closable: true,
+    closeIconRender: customCloseIconRender
+  });
+  const mergedCloseButton = cloneElement(mergedCloseIcon, {
+    disabled: closeBtnIsDisabled
+  });
+  const hasTitle = isReactRenderable(title);
+  const hasExtra = isReactRenderable(extra);
+  const renderHeader = () => {
+    if (!hasTitle && !mergedClosable && !hasExtra) {
+      return null;
+    }
+    return /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
+      style: {
+        ...mergedStyles.header,
+        ...headerStyle
+      },
+      className: clsx(`${prefixCls}-header`, mergedClassNames.header, {
+        [`${prefixCls}-header-close-only`]: mergedClosable && !hasTitle && !hasExtra
+      })
+    }, /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
+      className: `${prefixCls}-header-title`
+    }, closablePlacement === 'start' && mergedCloseButton, hasTitle && (/*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
+      className: clsx(`${prefixCls}-title`, mergedClassNames.title),
+      style: mergedStyles.title,
+      id: ariaId
+    }, title))), hasExtra && (/*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
+      className: clsx(`${prefixCls}-extra`, mergedClassNames.extra),
+      style: mergedStyles.extra
+    }, extra)), closablePlacement === 'end' && mergedCloseButton);
+  };
+  const renderFooter = () => {
+    if (!footer) {
+      return null;
+    }
+    return /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
+      className: clsx(`${prefixCls}-footer`, mergedClassNames.footer),
+      style: {
+        ...mergedStyles.footer,
+        ...footerStyle
+      }
+    }, footer);
+  };
+  return /*#__PURE__*/(react_production_namespaceFn().createElement)((react_production_namespaceFn().Fragment), null, renderHeader(), /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
+    className: clsx(`${prefixCls}-body`, mergedClassNames.body),
+    style: {
+      ...mergedStyles.body,
+      ...bodyStyle
+    }
+  }, loading ? (/*#__PURE__*/(react_production_namespaceFn().createElement)(skeleton, {
+    active: true,
+    title: false,
+    paragraph: {
+      rows: 5
+    },
+    className: `${prefixCls}-body-skeleton`
+  })) : children), renderFooter());
+};
+/* harmony default export */ const drawer_DrawerPanel = (DrawerPanel_DrawerPanel);
+;// ./node_modules/antd/es/drawer/style/motion.js
+const getMoveTranslate = direction => {
+  const value = '100%';
+  return {
+    left: `translateX(-${value})`,
+    right: `translateX(${value})`,
+    top: `translateY(-${value})`,
+    bottom: `translateY(${value})`
+  }[direction];
+};
+const getEnterLeaveStyle = (startStyle, endStyle) => ({
+  '&-enter, &-appear': {
+    ...startStyle,
+    '&-active': endStyle
+  },
+  '&-leave': {
+    ...endStyle,
+    '&-active': startStyle
+  }
+});
+const getFadeStyle = (from, duration) => ({
+  '&-enter, &-appear, &-leave': {
+    '&-start': {
+      transition: 'none'
+    },
+    '&-active': {
+      transition: `all ${duration}`
+    }
+  },
+  ...getEnterLeaveStyle({
+    opacity: from
+  }, {
+    opacity: 1
+  })
+});
+const getPanelMotionStyles = (direction, duration) => [getFadeStyle(0.7, duration), getEnterLeaveStyle({
+  transform: getMoveTranslate(direction)
+}, {
+  transform: 'none'
+})];
+const motion_genMotionStyle = token => {
+  const {
+    componentCls,
+    motionDurationSlow
+  } = token;
+  return {
+    [componentCls]: {
+      // ======================== Mask ========================
+      [`${componentCls}-mask-motion`]: getFadeStyle(0, motionDurationSlow),
+      // ======================= Panel ========================
+      [`${componentCls}-panel-motion`]: ['left', 'right', 'top', 'bottom'].reduce((obj, direction) => {
+        return {
+          ...obj,
+          [`&-${direction}`]: getPanelMotionStyles(direction, motionDurationSlow)
+        };
+      }, {})
+    }
+  };
+};
+/* harmony default export */ const drawer_style_motion = (motion_genMotionStyle);
+;// ./node_modules/antd/es/drawer/style/index.js
+
+
+
+
+// =============================== Base ===============================
+const genDrawerStyle = token => {
+  const {
+    borderRadiusSM,
+    componentCls,
+    zIndexPopup,
+    colorBgMask,
+    colorBgElevated,
+    motionDurationSlow,
+    motionDurationMid,
+    paddingXS,
+    padding,
+    paddingLG,
+    fontSizeLG,
+    lineHeightLG,
+    lineWidth,
+    lineType,
+    colorSplit,
+    marginXS,
+    colorIcon,
+    colorIconHover,
+    colorBgTextHover,
+    colorBgTextActive,
+    colorText,
+    fontWeightStrong,
+    footerPaddingBlock,
+    footerPaddingInline,
+    draggerSize,
+    calc
+  } = token;
+  const wrapperCls = `${componentCls}-content-wrapper`;
+  const draggerCls = `${componentCls}-resizable-dragger`;
+  return {
+    [componentCls]: {
+      position: 'fixed',
+      inset: 0,
+      zIndex: zIndexPopup,
+      pointerEvents: 'none',
+      color: colorText,
+      '&-pure': {
+        position: 'relative',
+        background: colorBgElevated,
+        display: 'flex',
+        flexDirection: 'column',
+        pointerEvents: 'auto',
+        [`&${componentCls}-left`]: {
+          boxShadow: token.boxShadowDrawerLeft
+        },
+        [`&${componentCls}-right`]: {
+          boxShadow: token.boxShadowDrawerRight
+        },
+        [`&${componentCls}-top`]: {
+          boxShadow: token.boxShadowDrawerUp
+        },
+        [`&${componentCls}-bottom`]: {
+          boxShadow: token.boxShadowDrawerDown
+        }
+      },
+      '&-inline': {
+        position: 'absolute'
+      },
+      // ====================== Mask ======================
+      [`${componentCls}-mask`]: {
+        position: 'absolute',
+        inset: 0,
+        zIndex: zIndexPopup,
+        background: colorBgMask,
+        pointerEvents: 'auto',
+        [`&${componentCls}-mask-blur`]: {
+          backdropFilter: 'blur(4px)'
+        }
+      },
+      // ==================== Content =====================
+      [wrapperCls]: {
+        position: 'absolute',
+        zIndex: zIndexPopup,
+        maxWidth: '100vw',
+        transition: `all ${motionDurationSlow}`,
+        '&-hidden': {
+          display: 'none'
+        }
+      },
+      // Placement
+      [`&-left > ${wrapperCls}`]: {
+        top: 0,
+        bottom: 0,
+        left: {
+          _skip_check_: true,
+          value: 0
+        },
+        boxShadow: token.boxShadowDrawerLeft
+      },
+      [`&-right > ${wrapperCls}`]: {
+        top: 0,
+        right: {
+          _skip_check_: true,
+          value: 0
+        },
+        bottom: 0,
+        boxShadow: token.boxShadowDrawerRight
+      },
+      [`&-top > ${wrapperCls}`]: {
+        top: 0,
+        insetInline: 0,
+        boxShadow: token.boxShadowDrawerUp
+      },
+      [`&-bottom > ${wrapperCls}`]: {
+        bottom: 0,
+        insetInline: 0,
+        boxShadow: token.boxShadowDrawerDown
+      },
+      [`${componentCls}-section`]: {
+        display: 'flex',
+        flexDirection: 'column',
+        width: '100%',
+        height: '100%',
+        overflow: 'auto',
+        background: colorBgElevated,
+        pointerEvents: 'auto'
+      },
+      // Header
+      [`${componentCls}-header`]: {
+        display: 'flex',
+        flex: 0,
+        alignItems: 'center',
+        padding: `${util_unit(padding)} ${util_unit(paddingLG)}`,
+        fontSize: fontSizeLG,
+        lineHeight: lineHeightLG,
+        borderBottom: `${util_unit(lineWidth)} ${lineType} ${colorSplit}`,
+        '&-title': {
+          display: 'flex',
+          flex: 1,
+          alignItems: 'center',
+          minWidth: 0,
+          minHeight: 0
+        }
+      },
+      [`${componentCls}-extra`]: {
+        flex: 'none'
+      },
+      [`${componentCls}-close`]: {
+        display: 'inline-flex',
+        width: calc(fontSizeLG).add(paddingXS).equal(),
+        height: calc(fontSizeLG).add(paddingXS).equal(),
+        borderRadius: borderRadiusSM,
+        justifyContent: 'center',
+        alignItems: 'center',
+        color: colorIcon,
+        fontWeight: fontWeightStrong,
+        fontSize: fontSizeLG,
+        fontStyle: 'normal',
+        lineHeight: 1,
+        textAlign: 'center',
+        textTransform: 'none',
+        textDecoration: 'none',
+        background: 'transparent',
+        border: 0,
+        cursor: 'pointer',
+        transition: `all ${motionDurationMid}`,
+        textRendering: 'auto',
+        [`&${componentCls}-close-end`]: {
+          marginInlineStart: marginXS
+        },
+        [`&:not(${componentCls}-close-end)`]: {
+          marginInlineEnd: marginXS
+        },
+        '&:disabled': {
+          pointerEvents: 'none'
+        },
+        '&:hover': {
+          color: colorIconHover,
+          backgroundColor: colorBgTextHover,
+          textDecoration: 'none'
+        },
+        '&:active': {
+          backgroundColor: colorBgTextActive
+        },
+        ...genFocusStyle(token)
+      },
+      [`${componentCls}-title`]: {
+        flex: 1,
+        margin: 0,
+        fontWeight: token.fontWeightStrong,
+        fontSize: fontSizeLG,
+        lineHeight: lineHeightLG
+      },
+      // Body
+      [`${componentCls}-body`]: {
+        flex: 1,
+        minWidth: 0,
+        minHeight: 0,
+        padding: paddingLG,
+        overflow: 'auto',
+        [`${componentCls}-body-skeleton`]: {
+          width: '100%',
+          height: '100%',
+          display: 'flex',
+          justifyContent: 'center'
+        }
+      },
+      // Footer
+      [`${componentCls}-footer`]: {
+        flexShrink: 0,
+        padding: `${util_unit(footerPaddingBlock)} ${util_unit(footerPaddingInline)}`,
+        borderTop: `${util_unit(lineWidth)} ${lineType} ${colorSplit}`
+      },
+      // ==================== Resizable ===================
+      [draggerCls]: {
+        position: 'absolute',
+        zIndex: 1,
+        backgroundColor: 'transparent',
+        userSelect: 'none',
+        pointerEvents: 'auto',
+        '&:hover': {
+          backgroundColor: token.colorPrimary,
+          opacity: 0.2
+        },
+        '&-dragging': {
+          backgroundColor: token.colorPrimary,
+          opacity: 0.3
+        }
+      },
+      [`${draggerCls}-left`]: {
+        top: 0,
+        bottom: 0,
+        right: {
+          _skip_check_: true,
+          value: 0
+        },
+        width: draggerSize,
+        cursor: 'col-resize'
+      },
+      [`${draggerCls}-right`]: {
+        top: 0,
+        bottom: 0,
+        left: {
+          _skip_check_: true,
+          value: 0
+        },
+        width: draggerSize,
+        cursor: 'col-resize'
+      },
+      [`${draggerCls}-top`]: {
+        insetInline: 0,
+        bottom: 0,
+        height: draggerSize,
+        cursor: 'row-resize'
+      },
+      [`${draggerCls}-bottom`]: {
+        insetInline: 0,
+        top: 0,
+        height: draggerSize,
+        cursor: 'row-resize'
+      },
+      // Wrapper dragging state - disable transitions for smooth dragging
+      [`${wrapperCls}-dragging`]: {
+        userSelect: 'none',
+        transition: 'none',
+        willChange: 'width, height',
+        [`${componentCls}-content`]: {
+          pointerEvents: 'none'
+        },
+        [`${componentCls}-section`]: {
+          pointerEvents: 'none'
+        }
+      },
+      // ====================== RTL =======================
+      '&-rtl': {
+        direction: 'rtl'
+      }
+    }
+  };
+};
+const drawer_style_prepareComponentToken = token => ({
+  zIndexPopup: token.zIndexPopupBase,
+  footerPaddingBlock: token.paddingXS,
+  footerPaddingInline: token.padding,
+  draggerSize: 4
+});
+// ============================== Export ==============================
+/* harmony default export */ const drawer_style = (genStyleHooks('Drawer', token => {
+  const drawerToken = statistic_merge(token, {});
+  return [genDrawerStyle(drawerToken), drawer_style_motion(drawerToken)];
+}, drawer_style_prepareComponentToken));
+;// ./node_modules/antd/es/drawer/Drawer.js
+"use client";
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+const _SizeTypes = (/* unused pure expression or super */ null && (['default', 'large']));
+const DEFAULT_PUSH_STATE = {
+  distance: 180
+};
+const Drawer_DEFAULT_SIZE = 378;
+const MOTION_CONFIG = {
+  motionAppear: true,
+  motionEnter: true,
+  motionLeave: true,
+  motionDeadline: 500
+};
+const Drawer_Drawer = props => {
+  const {
+    rootClassName,
+    size,
+    defaultSize = Drawer_DEFAULT_SIZE,
+    height,
+    width,
+    mask: drawerMask,
+    push = DEFAULT_PUSH_STATE,
+    open,
+    afterOpenChange,
+    onClose,
+    prefixCls: customizePrefixCls,
+    getContainer: customizeGetContainer,
+    panelRef = null,
+    style,
+    className,
+    resizable,
+    'aria-labelledby': ariaLabelledby,
+    // Focus
+    focusable,
+    // Deprecated
+    maskClosable,
+    maskStyle,
+    drawerStyle,
+    contentWrapperStyle,
+    destroyOnClose,
+    destroyOnHidden,
+    ...rest
+  } = props;
+  const {
+    placement
+  } = rest;
+  const id = hooks_useId();
+  const ariaId = isReactRenderable(rest.title) ? id : undefined;
+  const {
+    getPopupContainer,
+    getPrefixCls,
+    direction,
+    className: contextClassName,
+    style: contextStyle,
+    classNames: contextClassNames,
+    styles: contextStyles,
+    mask: contextMask,
+    focusable: contextFocusable
+  } = useComponentConfig('drawer');
+  const prefixCls = getPrefixCls('drawer', customizePrefixCls);
+  const [hashId, cssVarCls] = drawer_style(prefixCls);
+  const getContainer =
+  // 有可能为 false，所以不能直接判断
+  customizeGetContainer === undefined && getPopupContainer ? () => getPopupContainer(document.body) : customizeGetContainer;
+  // ============================ Size ============================
+  const drawerSize = (react_production_namespaceFn().useMemo)(() => {
+    if (isNumber(size)) {
+      return size;
+    }
+    if (size === 'large') {
+      return 736;
+    }
+    if (size === 'default') {
+      return Drawer_DEFAULT_SIZE;
+    }
+    if (typeof size === 'string') {
+      if (/^\d+(\.\d+)?$/.test(size)) {
+        return Number(size);
+      }
+      return size;
+    }
+    if (!placement || placement === 'left' || placement === 'right') {
+      return width;
+    }
+    return height;
+  }, [size, placement, width, height]);
+  // =========================== Motion ===========================
+  const maskMotion = {
+    motionName: motion_getTransitionName(prefixCls, 'mask-motion'),
+    ...MOTION_CONFIG
+  };
+  const panelMotion = motionPlacement => ({
+    motionName: motion_getTransitionName(prefixCls, `panel-motion-${motionPlacement}`),
+    ...MOTION_CONFIG
+  });
+  // ============================ Refs ============================
+  // Select `ant-drawer-content` by `panelRef`
+  const innerPanelRef = usePanelRef();
+  const mergedPanelRef = composeRef(panelRef, innerPanelRef);
+  // =========================== zIndex ===========================
+  const [zIndex, contextZIndex] = useZIndex('Drawer', rest.zIndex);
+  // ============================ Mask ============================
+  const [mergedMask, maskBlurClassName, mergedMaskClosable] = useMergedMask(drawerMask, contextMask, prefixCls, maskClosable);
+  // ========================== Focusable =========================
+  const mergedFocusable = useFocusable({
+    ...contextFocusable,
+    ...focusable
+  }, getContainer !== false && mergedMask);
+  // =========================== Render ===========================
+  const {
+    classNames,
+    styles,
+    rootStyle
+  } = rest;
+  const mergedProps = {
+    ...props,
+    zIndex,
+    panelRef,
+    mask: mergedMask,
+    maskClosable: mergedMaskClosable,
+    defaultSize,
+    push,
+    focusable: mergedFocusable
+  };
+  const contextSectionStyle = useSemanticRootStyle(contextStyle, 'section');
+  const drawerSectionStyle = useSemanticRootStyle(drawerStyle, 'section');
+  const sectionStyle = useSemanticRootStyle(style, 'section');
+  const [mergedClassNames, mergedStyles] = useMergeSemantic([contextClassNames, classNames], [contextStyles, contextSectionStyle, styles, drawerSectionStyle, sectionStyle], {
+    props: mergedProps
+  });
+  const drawerClassName = clsx({
+    'no-mask': !mergedMask,
+    [`${prefixCls}-rtl`]: direction === 'rtl'
+  }, rootClassName, hashId, cssVarCls, mergedClassNames.root);
+  // ========================== Warning ===========================
+  if (false) // removed by dead control flow
+{}
+  return /*#__PURE__*/(react_production_namespaceFn().createElement)(_util_ContextIsolator, {
+    form: true,
+    space: true
+  }, /*#__PURE__*/(react_production_namespaceFn().createElement)(zindexContext.Provider, {
+    value: contextZIndex
+  }, /*#__PURE__*/(react_production_namespaceFn().createElement)(drawer_es, {
+    prefixCls: prefixCls,
+    onClose: onClose,
+    maskMotion: maskMotion,
+    motion: panelMotion,
+    ...rest,
+    classNames: {
+      mask: clsx(mergedClassNames.mask, maskBlurClassName.mask),
+      section: mergedClassNames.section,
+      wrapper: mergedClassNames.wrapper,
+      dragger: mergedClassNames.dragger
+    },
+    styles: {
+      mask: {
+        ...mergedStyles.mask,
+        ...maskStyle
+      },
+      section: mergedStyles.section,
+      wrapper: {
+        ...mergedStyles.wrapper,
+        ...contentWrapperStyle
+      },
+      dragger: mergedStyles.dragger
+    },
+    open: open,
+    mask: mergedMask,
+    maskClosable: mergedMaskClosable,
+    push: push,
+    size: drawerSize,
+    defaultSize: defaultSize,
+    rootStyle: {
+      ...mergedStyles.root,
+      ...rootStyle
+    },
+    className: clsx(contextClassName, className),
+    rootClassName: drawerClassName,
+    getContainer: getContainer,
+    afterOpenChange: afterOpenChange,
+    panelRef: mergedPanelRef,
+    zIndex: zIndex,
+    ...(resizable ? {
+      resizable
+    } : {}),
+    "aria-labelledby": ariaLabelledby ?? ariaId,
+    destroyOnHidden: destroyOnHidden ?? destroyOnClose,
+    // Focusable
+    focusTriggerAfterClose: mergedFocusable.focusTriggerAfterClose,
+    focusTrap: mergedFocusable.trap
+  }, /*#__PURE__*/(react_production_namespaceFn().createElement)(drawer_DrawerPanel, {
+    prefixCls: prefixCls,
+    size: size,
+    ...rest,
+    ariaId: ariaId,
+    onClose: onClose
+  }))));
+};
+/** @private Internal Component. Do not use in your production. */
+const Drawer_PurePanel = props => {
+  const {
+    prefixCls: customizePrefixCls,
+    style,
+    className,
+    placement = 'right',
+    ...restProps
+  } = props;
+  const {
+    getPrefixCls
+  } = (react_production_namespaceFn().useContext)(ConfigContext);
+  const prefixCls = getPrefixCls('drawer', customizePrefixCls);
+  const [hashId, cssVarCls] = drawer_style(prefixCls);
+  const cls = clsx(prefixCls, `${prefixCls}-pure`, `${prefixCls}-${placement}`, hashId, cssVarCls, className);
+  return /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
+    className: cls,
+    style: style
+  }, /*#__PURE__*/(react_production_namespaceFn().createElement)(drawer_DrawerPanel, {
+    prefixCls: prefixCls,
+    ...restProps
+  }));
+};
+Drawer_Drawer._InternalPanelDoNotUseOrYouWillBeFired = Drawer_PurePanel;
+if (false) // removed by dead control flow
+{}
+/* harmony default export */ const drawer_Drawer = (Drawer_Drawer);
+;// ./node_modules/antd/es/drawer/index.js
+"use client";
+
+
+/* harmony default export */ const drawer = (drawer_Drawer);
 ;// ./node_modules/throttle-debounce/esm/index.js
 /* eslint-disable no-undefined,no-param-reassign,no-shadow */
 
@@ -72850,7 +74143,7 @@ function safeCopyText(text, onResult = null) {
     notify(false); // 无任何可用复制途径
 }
 
-;// ./src/lib/ui/PhrasesModal.tsx
+;// ./src/lib/ui/PhrasesDrawer.tsx
 
 
 
@@ -72860,18 +74153,25 @@ function safeCopyText(text, onResult = null) {
 
 
 
-const { Text: PhrasesModal_Text } = typography;
+const { Text: PhrasesDrawer_Text } = typography;
 /**
- * 常用语弹窗（v26.10.06-v9：由 CAT_UI.Drawer 侧边抽屉改为 antd Modal 弹窗）。
+ * 常用语侧边栏（v26.10.06-v14：由 antd Modal 改为 antd **Drawer**）。
+ *
+ * 为什么它单独用 Drawer：常用语是一份**长列表**（几十条，逐条一个按钮），
+ * 弹窗要反复滚动、高度受限；侧边抽屉能用满整屏高度，且滑出时不遮挡右侧网页内容，
+ * 更贴近「网页侧边栏」的用法。其余弹窗（设置/日志/设备互联/更新日志/收图）仍用 Modal，
+ * 因为它们是「一次性确认型」交互。
+ *
  * 逻辑与旧实现一致：搜索过滤 → 点按钮复制 + 关闭 + 追加到 TinyMCE。
  */
-function PhrasesModal({ open, onClose, phrasesData, phrasesLoading, searchKeyword, setSearchKeyword, loadPhrasesData, commonPhrasesUrl, }) {
+function PhrasesDrawer({ open, onClose, phrasesData, phrasesLoading, searchKeyword, setSearchKeyword, loadPhrasesData, commonPhrasesUrl, }) {
     const keyword = searchKeyword.trim().toLowerCase();
     const entries = Object.entries(phrasesData || {});
     const filtered = keyword
         ? entries.filter(([key, value]) => String(key).toLowerCase().includes(keyword) || String(value).toLowerCase().includes(keyword))
         : entries;
-    return ((0,react_jsx_runtime_production_namespaceFn().jsxs)(modal, { open: open, title: "\u5E38\u7528\u8BED", onCancel: onClose, getContainer: getOverlayContainer, width: 520, styles: { body: { textAlign: 'left' } }, destroyOnHidden: true, footer: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_space, { children: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { onClick: onClose, children: "\u5173\u95ED" }) }), children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)(PhrasesModal_Text, { type: "secondary", style: { fontSize: 12, wordBreak: 'break-all', display: 'block', marginBottom: 12 }, children: ["\u6570\u636E\u6E90: ", safeDecodeURIComponent(resolveGithubUrl(commonPhrasesUrl || DEFAULTS.commonPhrasesUrl))] }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { color: "primary", variant: "solid", block: true, loading: phrasesLoading, onClick: () => loadPhrasesData(true), style: { marginBottom: 12 }, children: "\u91CD\u65B0\u52A0\u8F7D\u5E38\u7528\u8BED" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_input, { placeholder: "\u641C\u7D22\u5E38\u7528\u8BED(\u6309\u952E\u540D\u79F0\u6216\u5185\u5BB9)", value: searchKeyword, onChange: (e) => setSearchKeyword(e.target.value), allowClear: true, style: { marginBottom: 12 } }), phrasesLoading ? ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { textAlign: 'center', padding: 20 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(spin, {}), " ", (0,react_jsx_runtime_production_namespaceFn().jsx)(PhrasesModal_Text, { type: "secondary", children: "\u52A0\u8F7D\u4E2D\u2026" })] })) : entries.length === 0 ? ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_empty, { description: "\u6682\u65E0\u5E38\u7528\u8BED\u6570\u636E\uFF0C\u8BF7\u70B9\u51FB\u4E0A\u65B9\u6309\u94AE\u52A0\u8F7D" })) : filtered.length === 0 ? ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_empty, { description: "\u6CA1\u6709\u5339\u914D\u7684\u5E38\u7528\u8BED" })) : ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_space, { orientation: "vertical", size: 8, style: { width: '100%', maxHeight: '50vh', overflow: 'auto' }, children: filtered.map(([key, value]) => ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { block: true, onClick: () => {
+    return ((0,react_jsx_runtime_production_namespaceFn().jsxs)(drawer, { open: open, title: "\u5E38\u7528\u8BED", placement: "right" // 网页侧边栏习惯：从右侧滑出
+        , size: 360, onClose: onClose, getContainer: getOverlayContainer, styles: { body: { textAlign: 'left', paddingTop: 12 } }, destroyOnHidden: true, children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)(PhrasesDrawer_Text, { type: "secondary", style: { fontSize: 12, wordBreak: 'break-all', display: 'block', marginBottom: 12 }, children: ["\u6570\u636E\u6E90: ", safeDecodeURIComponent(resolveGithubUrl(commonPhrasesUrl || DEFAULTS.commonPhrasesUrl))] }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { color: "primary", variant: "solid", block: true, loading: phrasesLoading, onClick: () => loadPhrasesData(true), style: { marginBottom: 12 }, children: "\u91CD\u65B0\u52A0\u8F7D\u5E38\u7528\u8BED" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_input, { placeholder: "\u641C\u7D22\u5E38\u7528\u8BED(\u6309\u952E\u540D\u79F0\u6216\u5185\u5BB9)", value: searchKeyword, onChange: (e) => setSearchKeyword(e.target.value), allowClear: true, style: { marginBottom: 12 } }), phrasesLoading ? ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { textAlign: 'center', padding: 20 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(spin, {}), " ", (0,react_jsx_runtime_production_namespaceFn().jsx)(PhrasesDrawer_Text, { type: "secondary", children: "\u52A0\u8F7D\u4E2D\u2026" })] })) : entries.length === 0 ? ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_empty, { description: "\u6682\u65E0\u5E38\u7528\u8BED\u6570\u636E\uFF0C\u8BF7\u70B9\u51FB\u4E0A\u65B9\u6309\u94AE\u52A0\u8F7D" })) : filtered.length === 0 ? ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_empty, { description: "\u6CA1\u6709\u5339\u914D\u7684\u5E38\u7528\u8BED" })) : ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_space, { orientation: "vertical", size: 8, style: { width: '100%' }, children: filtered.map(([key, value]) => ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { block: true, onClick: () => {
                         safeCopyText(value);
                         onClose();
                         appendToTinyMCE(value);
@@ -77574,6 +78874,28 @@ function RecvTextModal({ text, onClose }) {
 
 // 常用语请求序号（loadPhrasesData 用）：仅最新一次请求可落地结果，防慢的旧响应后到覆盖新数据
 let phrasesRequestSeq = 0;
+/** 面板品牌图标：税务站点自身的 favicon（与脚本 @icon 一致） */
+const BRAND_ICON = 'https://znhd.hunan.chinatax.gov.cn:8443/favicon.ico';
+/**
+ * 品牌图标：优先用 favicon（与油猴脚本 @icon 同源），加载失败（离线/被拦）时回退到 emoji，
+ * 避免面板头部出现空白块。
+ */
+function BrandIcon({ size = 26 }) {
+    const [failed, setFailed] = (0,react_production_namespaceFn().useState)(false);
+    const box = { width: size, height: size, borderRadius: 6, flex: '0 0 auto' };
+    if (failed) {
+        return ((0,react_jsx_runtime_production_namespaceFn().jsx)("span", { style: {
+                ...box,
+                background: '#1677ff',
+                color: '#fff',
+                fontSize: Math.round(size * 0.55),
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+            }, children: "\uD83C\uDFAF" }));
+    }
+    return (0,react_jsx_runtime_production_namespaceFn().jsx)("img", { src: BRAND_ICON, alt: "", style: { ...box, display: 'block' }, onError: () => setFailed(true) });
+}
 /** 面板宽度（位置存档的边界裁剪按它估算） */
 const PANEL_WIDTH = 340;
 /** 状态点 */
@@ -77793,7 +79115,7 @@ function MainPanel({ host }) {
     };
     // 收起：只留一个圆形按钮，避免「关掉就再也找不回来」
     if (collapsed) {
-        return ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { shape: "circle", color: "primary", variant: "solid", title: "\u5C55\u5F00\u76D1\u63A7\u9762\u677F", onClick: () => setCollapsed(false), style: { width: 36, height: 36, boxShadow: '0 4px 16px rgba(0,0,0,0.18)' }, children: "\uD83C\uDFAF" }));
+        return ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { shape: "circle", color: "primary", variant: "solid", title: "\u5C55\u5F00\u76D1\u63A7\u9762\u677F", onClick: () => setCollapsed(false), style: { width: 36, height: 36, boxShadow: '0 4px 16px rgba(0,0,0,0.18)' }, children: (0,react_jsx_runtime_production_namespaceFn().jsx)(BrandIcon, { size: 20 }) }));
     }
     return ((0,react_jsx_runtime_production_namespaceFn().jsxs)(card, { size: "small", style: { width: PANEL_WIDTH, boxShadow: '0 6px 24px rgba(0,0,0,0.18)' }, styles: { body: { padding: 12 }, header: { padding: '8px 10px', minHeight: 46 } }, title: 
         // 标题栏 = 拖拽手柄（唯一可抓取区）
@@ -77804,18 +79126,7 @@ function MainPanel({ host }) {
                 display: 'flex',
                 alignItems: 'center',
                 gap: 8,
-            }, title: "\u6309\u4F4F\u62D6\u52A8\u9762\u677F", children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("span", { style: {
-                        width: 26,
-                        height: 26,
-                        borderRadius: 7,
-                        background: '#1677ff',
-                        color: '#fff',
-                        fontSize: 14,
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        flex: '0 0 auto',
-                    }, children: "\uD83C\uDFAF" }), (0,react_jsx_runtime_production_namespaceFn().jsx)("span", { style: { fontWeight: 700, fontSize: 15 }, children: "\u5F81\u7EB3\u4E92\u52A8\u76D1\u63A7" }), (0,react_jsx_runtime_production_namespaceFn().jsxs)("span", { style: {
+            }, title: "\u6309\u4F4F\u62D6\u52A8\u9762\u677F", children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(BrandIcon, {}), (0,react_jsx_runtime_production_namespaceFn().jsx)("span", { style: { fontWeight: 700, fontSize: 15 }, children: "\u5F81\u7EB3\u4E92\u52A8\u76D1\u63A7" }), (0,react_jsx_runtime_production_namespaceFn().jsxs)("span", { style: {
                         background: '#e6f4ff',
                         color: '#1677ff',
                         borderRadius: 10,
@@ -77878,7 +79189,7 @@ function MainPanel({ host }) {
                 }, useCdn: Allvalue.useCdn, onChangeUseCdn: (v) => {
                     patchAllvalue({ useCdn: !!v });
                     addLog('CDN 加速已' + (v ? '开启' : '关闭'), 'info');
-                } }), (0,react_jsx_runtime_production_namespaceFn().jsx)(PhrasesModal, { open: phrasesOpen, onClose: () => setPhrasesOpen(false), phrasesData: phrasesData, phrasesLoading: phrasesLoading, searchKeyword: searchKeyword, setSearchKeyword: setSearchKeyword, loadPhrasesData: loadPhrasesData, commonPhrasesUrl: Allvalue.commonPhrasesUrl }), (0,react_jsx_runtime_production_namespaceFn().jsx)(PhoneModal, { open: phoneOpen, onClose: () => setPhoneOpen(false), relayServer: Allvalue.relayServer || '', onChangeRelayServer: (url) => {
+                } }), (0,react_jsx_runtime_production_namespaceFn().jsx)(PhrasesDrawer, { open: phrasesOpen, onClose: () => setPhrasesOpen(false), phrasesData: phrasesData, phrasesLoading: phrasesLoading, searchKeyword: searchKeyword, setSearchKeyword: setSearchKeyword, loadPhrasesData: loadPhrasesData, commonPhrasesUrl: Allvalue.commonPhrasesUrl }), (0,react_jsx_runtime_production_namespaceFn().jsx)(PhoneModal, { open: phoneOpen, onClose: () => setPhoneOpen(false), relayServer: Allvalue.relayServer || '', onChangeRelayServer: (url) => {
                     patchAllvalue({ relayServer: url });
                     addLogDebounced('relayServer', '中继服务器已更新: ' + (url || '（空）'), 'info');
                 } }), (0,react_jsx_runtime_production_namespaceFn().jsx)(LogModal, { open: logOpen, onClose: () => setLogOpen(false), logEntries: logEntries, onClear: clearLogs }), (0,react_jsx_runtime_production_namespaceFn().jsx)(ChangelogModal, { open: changelogOpen, onClose: () => setChangelogOpen(false) }), (0,react_jsx_runtime_production_namespaceFn().jsx)(RecvGalleryModal, { open: galleryOpen, onClose: () => setGalleryOpen(false), images: recvImages, onRemove: (idx) => setRecvImages((prev) => {
@@ -77963,30 +79274,30 @@ const PANEL_HOST_ID = '__znhd_panel_host__';
 
 const RESET_CSS = `
 /* 盒模型与文本基线：宿主页面常把 * 设为 content-box / 居中，这里只复位我们的容器 */
-#${PANEL_HOST_ID}, .ant-modal-root, .ant-picker-dropdown, .ant-message, .ant-notification, .ant-tooltip, .ant-dropdown {
+#${PANEL_HOST_ID}, .ant-modal-root, .ant-drawer, .ant-picker-dropdown, .ant-message, .ant-notification, .ant-tooltip, .ant-dropdown {
   box-sizing: border-box;
   text-align: left;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
   font-size: 14px;
   line-height: 1.5715;
 }
-#${PANEL_HOST_ID} *, .ant-modal-root *, .ant-picker-dropdown *, .ant-message *, .ant-notification *, .ant-tooltip *, .ant-dropdown * {
+#${PANEL_HOST_ID} *, .ant-modal-root *, .ant-drawer *, .ant-picker-dropdown *, .ant-message *, .ant-notification *, .ant-tooltip *, .ant-dropdown * {
   box-sizing: border-box;
   /* inherit：低优先级复位，antd 自己需要居中的组件（Empty 等）仍用其类规则覆盖 */
   text-align: inherit;
 }
 /* 图标垂直对齐：宿主页面若有 svg 的 vertical-align/line-height 规则，会把 antd 图标顶出输入框 */
-#${PANEL_HOST_ID} svg, .ant-modal-root svg, .ant-picker-dropdown svg, .ant-message svg, .ant-notification svg {
+#${PANEL_HOST_ID} svg, .ant-modal-root svg, .ant-drawer svg, .ant-picker-dropdown svg, .ant-message svg, .ant-notification svg {
   vertical-align: inherit;
 }
 /* ★ 图标被第三方样式加负外边距而跑出输入框（用户实测：时钟图标的计算样式里
    margin: -2.75em auto 0，按 16px 字号约 -44px；antd 自身从不给 svg 设 margin）。
    这类规则特异性只有 (0,0,1)，用带容器前缀的选择器即可稳压。 */
-#${PANEL_HOST_ID} svg, .ant-modal-root svg, .ant-picker-dropdown svg, .ant-message svg, .ant-notification svg, .ant-tooltip svg, .ant-dropdown svg {
+#${PANEL_HOST_ID} svg, .ant-modal-root svg, .ant-drawer svg, .ant-picker-dropdown svg, .ant-message svg, .ant-notification svg, .ant-tooltip svg, .ant-dropdown svg {
   margin: 0;
 }
 /* 输入类控件去掉宿主页面可能带来的额外外边距/最小高度 */
-#${PANEL_HOST_ID} input, #${PANEL_HOST_ID} textarea, .ant-modal-root input, .ant-modal-root textarea {
+#${PANEL_HOST_ID} input, #${PANEL_HOST_ID} textarea, .ant-modal-root input, .ant-modal-root textarea, .ant-drawer input, .ant-drawer textarea {
   margin: 0;
   font-family: inherit;
   font-size: inherit;
@@ -78065,11 +79376,30 @@ function clampPanelPoint(pt, size) {
         y: Math.min(Math.max(pt.y, minY), maxY),
     };
 }
-/** 读取存档位置（无存档时给默认坐标）并裁剪 */
+/**
+ * 把坐标约束到「尽量完整可见」（挂载与窗口尺寸变化时用）。
+ *
+ * ⚠️ 与 clampPanelPoint 的区别：那个只保证留 48px 可抓取（拖拽时允许用户主动贴边藏起来），
+ * 用它来**恢复存档坐标**会出事——存档若来自更宽的窗口/别的显示器，面板会被算到视口外，
+ * 只剩一条边（用户看到的是「面板不见了/按钮点不到」）。所以这里在放得下的前提下要求整块可见。
+ */
+function clampIntoView(pt, w, h) {
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    const maxX = Math.max(4, vw - w - 4);
+    const maxY = Math.max(4, vh - h - 4);
+    return {
+        x: Math.min(Math.max(pt.x, 4), maxX),
+        y: Math.min(Math.max(pt.y, 4), maxY),
+    };
+}
+/** 读取存档位置（无存档时给默认坐标），先按默认尺寸做一次粗裁剪 */
 function initialPoint() {
     const saved = loadPanelPoint();
-    const pt = saved || { x: window.screen.width * 0.55, y: window.screen.height * 0.01 };
-    return clampPanelPoint(pt);
+    // ⚠️ 默认坐标必须用 innerWidth/innerHeight（视口），不能用 screen.width/height（物理屏幕）：
+    // 在多屏或缩窄窗口时二者差别很大，用后者会把面板初始位置算到视口外。
+    const pt = saved || { x: Math.round(window.innerWidth * 0.55), y: 12 };
+    return clampIntoView(pt, 340, 0);
 }
 let panelHost_root = null;
 /** 创建宿主并挂载 React 面板，返回宿主元素 */
@@ -78137,12 +79467,19 @@ function usePanelDrag(host) {
     }, [host]);
     // 视口尺寸变化时重新裁剪，避免面板被挤出可视范围
     (0,react_production_namespaceFn().useEffect)(() => {
-        const onResize = () => {
-            const pt = clampPanelPoint({ x: parseFloat(host.style.left) || 0, y: parseFloat(host.style.top) || 0 }, { w: host.offsetWidth });
+        const clampNow = (persist) => {
+            // 用真实尺寸要求「整块可见」；拖拽过程中的贴边约束仍走 clampPanelPoint（允许只留 48px）
+            const pt = clampIntoView({ x: parseFloat(host.style.left) || 0, y: parseFloat(host.style.top) || 0 }, host.offsetWidth, host.offsetHeight);
             host.style.left = Math.round(pt.x) + 'px';
             host.style.top = Math.round(pt.y) + 'px';
-            savePanelPoint(pt);
+            if (persist)
+                savePanelPoint(pt);
         };
+        // 挂载后先按「面板真实宽度」裁剪一次：存档坐标可能来自更宽的窗口或多屏，
+        // 若只按默认宽度裁剪，面板会被算到视口外（只剩 48px 可抓取 → 表现为「按钮点不到」）。
+        // 首次提交后 host.offsetWidth 才可用，故放在 effect 里而不是初始坐标计算里。
+        clampNow(false);
+        const onResize = () => clampNow(true);
         window.addEventListener('resize', onResize);
         return () => window.removeEventListener('resize', onResize);
     }, [host]);

@@ -12,7 +12,7 @@ import { getMonitorState, setMonitorStateSink, type MonitorState } from '@/lib/m
 import { notify } from '@/lib/ui/notify';
 import { usePanelDrag } from '@/lib/ui/panelHost';
 import SettingsModal from '@/lib/ui/SettingsModal';
-import PhrasesModal from '@/lib/ui/PhrasesModal';
+import PhrasesDrawer from '@/lib/ui/PhrasesDrawer';
 import PhoneModal from '@/lib/ui/PhoneModal';
 import LogModal from '@/lib/ui/LogModal';
 import ChangelogModal from '@/lib/ui/ChangelogModal';
@@ -21,6 +21,35 @@ import RecvTextModal from '@/lib/ui/RecvTextModal';
 
 // 常用语请求序号（loadPhrasesData 用）：仅最新一次请求可落地结果，防慢的旧响应后到覆盖新数据
 let phrasesRequestSeq = 0;
+
+/** 面板品牌图标：税务站点自身的 favicon（与脚本 @icon 一致） */
+const BRAND_ICON = 'https://znhd.hunan.chinatax.gov.cn:8443/favicon.ico';
+
+/**
+ * 品牌图标：优先用 favicon（与油猴脚本 @icon 同源），加载失败（离线/被拦）时回退到 emoji，
+ * 避免面板头部出现空白块。
+ */
+function BrandIcon({ size = 26 }: { size?: number }) {
+    const [failed, setFailed] = useState(false);
+    const box = { width: size, height: size, borderRadius: 6, flex: '0 0 auto' } as const;
+    if (failed) {
+        return (
+            <span
+                style={{
+                    ...box,
+                    background: '#1677ff',
+                    color: '#fff',
+                    fontSize: Math.round(size * 0.55),
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                }}>
+                🎯
+            </span>
+        );
+    }
+    return <img src={BRAND_ICON} alt="" style={{ ...box, display: 'block' }} onError={() => setFailed(true)} />;
+}
 
 /** 面板宽度（位置存档的边界裁剪按它估算） */
 const PANEL_WIDTH = 340;
@@ -270,7 +299,7 @@ export default function MainPanel({ host }: MainPanelProps) {
                 title="展开监控面板"
                 onClick={() => setCollapsed(false)}
                 style={{ width: 36, height: 36, boxShadow: '0 4px 16px rgba(0,0,0,0.18)' }}>
-                🎯
+                <BrandIcon size={20} />
             </Button>
         );
     }
@@ -293,21 +322,7 @@ export default function MainPanel({ host }: MainPanelProps) {
                         gap: 8,
                     }}
                     title="按住拖动面板">
-                    <span
-                        style={{
-                            width: 26,
-                            height: 26,
-                            borderRadius: 7,
-                            background: '#1677ff',
-                            color: '#fff',
-                            fontSize: 14,
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            flex: '0 0 auto',
-                        }}>
-                        🎯
-                    </span>
+                    <BrandIcon />
                     <span style={{ fontWeight: 700, fontSize: 15 }}>征纳互动监控</span>
                     <span
                         style={{
@@ -468,7 +483,7 @@ export default function MainPanel({ host }: MainPanelProps) {
                 }}
             />
 
-            <PhrasesModal
+            <PhrasesDrawer
                 open={phrasesOpen}
                 onClose={() => setPhrasesOpen(false)}
                 phrasesData={phrasesData}
