@@ -44,6 +44,43 @@ const domCache: { ocurrentElement: Element | null } = {
 // 记录上一次的等待人数，用于检测状态变化
 let lastWaitCount: number | null = null;
 
+// ===== 面板展示用的运行时状态（v26.10.06-v9 新增：主面板要显示人数/在线/工作时段/上次播报）=====
+export interface MonitorState {
+    /** 当前等待人数；null = 尚未取到 */
+    waiting: number | null;
+    /** 是否未掉线 */
+    online: boolean;
+    /** 是否在工作时段内 */
+    inWorkingHours: boolean;
+    /** 上次语音播报（时间戳 + 原因）；null = 本次会话还没有播报 */
+    lastSpeak: { at: number; reason: string } | null;
+}
+
+let monitorState: MonitorState = { waiting: null, online: true, inWorkingHours: true, lastSpeak: null };
+let monitorStateSink: ((s: MonitorState) => void) | null = null;
+
+/** 读取当前监控状态（面板首次渲染用） */
+export function getMonitorState(): MonitorState {
+    return monitorState;
+}
+
+/** 注入/清除状态变更回调（由主面板注册，内部用 setState 风格订阅） */
+export function setMonitorStateSink(cb: ((s: MonitorState) => void) | null): void {
+    monitorStateSink = cb;
+}
+
+/** 合并并广播状态变更 */
+function publishState(patch: Partial<MonitorState>): void {
+    monitorState = { ...monitorState, ...patch };
+    if (monitorStateSink) monitorStateSink(monitorState);
+}
+
+/** 播报 + 记录「上次播报」，供面板底部展示 */
+function speakAndTrack(reason: string, text: string): void {
+    speak(text);
+    publishState({ lastSpeak: { at: Date.now(), reason } });
+}
+
 // 记录上一次的工作时间状态，用于检测「进入/离开工作时间」的变化（仅在翻转时记日志）
 let lastWorkingState: boolean | null = null;
 
@@ -60,6 +97,7 @@ let lastOfflineAnnounced = false;
 function checkCount() {
     // 工作时间状态变化时记录日志（进入/离开），仅在翻转时输出，避免刷屏
     const inWork = isWorkingHours();
+    publishState({ inWorkingHours: inWork });
     if (inWork !== lastWorkingState) {
         lastWorkingState = inWork;
         addLog(inWork ? '已进入工作时间，开始监控征纳互动' : '已离开工作时间，暂停监控', inWork ? 'success' : 'info');
@@ -88,6 +126,7 @@ function checkCount() {
             addLog(`无法解析等待人数: "${ocurrentElement.textContent!.trim()}"`, 'warning');
             return;
         }
+        publishState({ waiting: currentCount });
 
         // 人数状态处理：仅在状态变化时记录日志，避免日志被重复内容填满
         if (currentCount === 0) {
@@ -96,7 +135,7 @@ function checkCount() {
                 addLog('当前等待人数为0', 'success');
             }
         } else {
-            speak('征纳互动有人来了');
+            speakAndTrack('有人进入', '征纳互动有人来了');
             addLog(`当前等待人数: ${currentCount}`, 'info');
         }
         lastWaitCount = currentCount;
@@ -113,13 +152,15 @@ function checkCount() {
         const offlineText = offlineEl ? (offlineEl?.innerText ?? offlineEl?.textContent ?? '').trim() : '';
         if (offlineText.includes('掉线')) {
             addLog(`掉线提示：${offlineText}`, 'error');
+            publishState({ online: false });
             if (!lastOfflineAnnounced) {
                 lastOfflineAnnounced = true; // 仅弹窗新出现时播报一次，避免停留期间每 3s 循环报警
-                speak('征纳互动已掉线');
+                speakAndTrack('已掉线', '征纳互动已掉线');
             }
         } else {
             // 掉线弹窗消失/尚未出现：复位标记，下次真正掉线仍会提醒
             lastOfflineAnnounced = false;
+            publishState({ online: true });
         }
     } catch (error) {
         addLog(`检测错误: ${error.message}`, 'error', true);

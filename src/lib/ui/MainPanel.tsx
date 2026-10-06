@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { App as AntApp, Button, Card, Space, Tag, Typography } from 'antd';
+import { Button, Card, Space, Switch } from 'antd';
 import { DEFAULTS, PHRASES_CACHE_TTL } from '@/lib/constants';
 import { addLog, addLogDebounced, setLogEntriesSink, clearLogs } from '@/lib/logger';
 import { loadPhrasesCache, savePhrasesCache, saveAllvalue } from '@/lib/storage';
@@ -8,6 +8,7 @@ import { resolveGithubUrl, hoursToHHmm } from '@/lib/utils';
 import { getDeviceId, startPhoneReceive } from '@/lib/relay';
 import { renderImageGallery, receivedImages, showImagePopup, showTextPopup } from '@/lib/gallery';
 import { clearSpeechQueue } from '@/lib/speech';
+import { getMonitorState, setMonitorStateSink, type MonitorState } from '@/lib/monitor';
 import { notify } from '@/lib/ui/notify';
 import { usePanelDrag } from '@/lib/ui/panelHost';
 import SettingsModal from '@/lib/ui/SettingsModal';
@@ -15,13 +16,36 @@ import PhrasesModal from '@/lib/ui/PhrasesModal';
 import PhoneModal from '@/lib/ui/PhoneModal';
 import LogModal from '@/lib/ui/LogModal';
 
-const { Text } = Typography;
-
 // 常用语请求序号（loadPhrasesData 用）：仅最新一次请求可落地结果，防慢的旧响应后到覆盖新数据
 let phrasesRequestSeq = 0;
 
-/** 面板宽度（与旧 CAT_UI 面板一致，位置存档的边界裁剪按它估算） */
-const PANEL_WIDTH = 320;
+/** 面板宽度（位置存档的边界裁剪按它估算） */
+const PANEL_WIDTH = 340;
+
+/** 状态点 */
+function Dot({ color }: { color: string }) {
+    return (
+        <span
+            style={{
+                display: 'inline-block',
+                width: 6,
+                height: 6,
+                borderRadius: '50%',
+                background: color,
+                marginRight: 6,
+                verticalAlign: 'middle',
+            }}
+        />
+    );
+}
+
+/** 「上次播报」的展示文案（面板每 3s 随监控状态重渲染，所以相对时间会自动更新） */
+function lastSpeakText(last: MonitorState['lastSpeak']): string {
+    if (!last) return '暂无播报记录';
+    const mins = Math.floor((Date.now() - last.at) / 60000);
+    const when = mins <= 0 ? '刚刚' : mins + ' 分钟前';
+    return '上次播报：' + when + ' · ' + last.reason;
+}
 
 interface MainPanelProps {
     /** 面板宿主元素：拖拽时改写它的 left/top */
@@ -29,14 +53,12 @@ interface MainPanelProps {
 }
 
 /**
- * 主面板（v26.10.06-v9：由 CAT_UI 改写为 React + Ant Design）。
- * 逻辑逐字保留（装配/监控/常用语加载/设备互联自动接收），只替换渲染层与消息提示。
+ * 主面板（v26.10.06-v9：CAT_UI → React + Ant Design）。
+ * 版式对齐参考图：头部（图标+标题+版本+收起）、人数/状态卡、语音开关行、2×2 按钮、底部「查看日志」。
  */
 export default function MainPanel({ host }: MainPanelProps) {
     const drag = usePanelDrag(host);
 
-    // 惰性初始化：useState(loadAllvalue()) 的实参每次渲染都会求值，而本组件因 logEntries 频繁重渲染，
-    // 等于反复白读 localStorage。顶层 runtime.init 已是启动时读好的同一份数据。
     const [Allvalue, setAllvalue] = useState<any>(() => runtime.init);
     const [settingsOpen, setSettingsOpen] = useState(false);
     const [phrasesOpen, setPhrasesOpen] = useState(false);
@@ -46,6 +68,8 @@ export default function MainPanel({ host }: MainPanelProps) {
     const [phrasesData, setPhrasesData] = useState<Record<string, string>>({});
     const [phrasesLoading, setPhrasesLoading] = useState(false);
     const [searchKeyword, setSearchKeyword] = useState('');
+    const [collapsed, setCollapsed] = useState(false);
+    const [mon, setMon] = useState<MonitorState>(() => getMonitorState());
     const receiveStopRef = useRef<null | (() => void)>(null);
 
     const updateAllvalue = (newValue: any) => {
@@ -59,12 +83,18 @@ export default function MainPanel({ host }: MainPanelProps) {
     const patchAllvalue = (kv: any) => updateAllvalue({ ...Allvalue, ...kv });
 
     const { voiceEnabled } = Allvalue;
-    const voiceEnabledText = voiceEnabled ? '🔊 语音' : '🔇 静音';
 
     // 日志写入回调
     useEffect(() => {
         setLogEntriesSink(setLogEntries as any);
         return () => setLogEntriesSink(null);
+    }, []);
+
+    // 监控状态订阅（人数/在线/工作时段/上次播报）
+    useEffect(() => {
+        setMonitorStateSink(setMon);
+        setMon(getMonitorState());
+        return () => setMonitorStateSink(null);
     }, []);
 
     // 启动日志（只跑一次）
@@ -85,8 +115,6 @@ export default function MainPanel({ host }: MainPanelProps) {
             );
         }
         addLog('语音播报：' + (runtime.voiceEnabled ? '已开启' : '已静音'), 'info');
-        // 面板位置由宿主自行恢复，这里只记录一句便于排查
-        addLog('面板位置：已恢复/使用默认位置', 'info');
     }, []);
 
     const loadPhrasesData = (force = false) => {
@@ -186,8 +214,7 @@ export default function MainPanel({ host }: MainPanelProps) {
         };
     }, [Allvalue.relayServer]);
 
-    const toggleVoice = () => {
-        const next = !voiceEnabled;
+    const toggleVoice = (next: boolean) => {
         patchAllvalue({ voiceEnabled: next });
         addLog('语音播报已' + (next ? '开启' : '静音'), 'info');
         if (next && 'speechSynthesis' in window) {
@@ -199,64 +226,177 @@ export default function MainPanel({ host }: MainPanelProps) {
         }
     };
 
+    // 收起：只留一个圆形按钮，避免「关掉就再也找不回来」
+    if (collapsed) {
+        return (
+            <Button
+                shape="circle"
+                color="primary"
+                variant="solid"
+                title="展开监控面板"
+                onClick={() => setCollapsed(false)}
+                style={{ width: 36, height: 36, boxShadow: '0 4px 16px rgba(0,0,0,0.18)' }}>
+                🎯
+            </Button>
+        );
+    }
+
     return (
         <Card
             size="small"
-            style={{ width: PANEL_WIDTH, boxShadow: '0 4px 16px rgba(0,0,0,0.18)' }}
-            styles={{ body: { padding: 12 } }}
+            style={{ width: PANEL_WIDTH, boxShadow: '0 6px 24px rgba(0,0,0,0.18)' }}
+            styles={{ body: { padding: 12 }, header: { padding: '8px 10px', minHeight: 46 } }}
             title={
                 // 标题栏 = 拖拽手柄（唯一可抓取区）
-                <div {...drag} style={{ cursor: 'move', userSelect: 'none', touchAction: 'none' }} title="按住拖动面板">
-                    <Space size={6}>
-                        <span style={{ fontSize: 14, fontWeight: 600 }}>征纳互动监控</span>
-                        <Text type="secondary" style={{ fontSize: 12 }}>
-                            v{GM_info.script.version}
-                        </Text>
-                    </Space>
-                </div>
-            }>
-            <Space orientation="vertical" size={8} style={{ width: '100%' }}>
-                <Space size={8}>
-                    <Text style={{ fontSize: 13 }}>语音播报状态:</Text>
-                    <Button
-                        onClick={toggleVoice}
+                <div
+                    {...drag}
+                    style={{
+                        cursor: 'move',
+                        userSelect: 'none',
+                        touchAction: 'none',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 8,
+                    }}
+                    title="按住拖动面板">
+                    <span
                         style={{
-                            fontWeight: 'bold',
-                            backgroundColor: voiceEnabled ? '#007e44' : '#990018',
-                            borderColor: voiceEnabled ? '#007e44' : '#990018',
+                            width: 26,
+                            height: 26,
+                            borderRadius: 7,
+                            background: '#1677ff',
                             color: '#fff',
+                            fontSize: 14,
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            flex: '0 0 auto',
                         }}>
-                        {voiceEnabledText}
-                    </Button>
-                </Space>
+                        🎯
+                    </span>
+                    <span style={{ fontWeight: 700, fontSize: 15 }}>征纳互动监控</span>
+                    <span
+                        style={{
+                            background: '#e6f4ff',
+                            color: '#1677ff',
+                            borderRadius: 10,
+                            padding: '1px 8px',
+                            fontSize: 11,
+                            fontWeight: 400,
+                            flex: '0 0 auto',
+                        }}>
+                        v{GM_info.script.version}
+                    </span>
+                </div>
+            }
+            extra={
+                <Button
+                    type="text"
+                    size="small"
+                    title="收起面板（点圆形按钮可展开）"
+                    onClick={() => setCollapsed(true)}>
+                    ✕
+                </Button>
+            }>
+            {/* 人数 + 状态 */}
+            <div
+                style={{
+                    background: '#f7f8fa',
+                    borderRadius: 10,
+                    padding: '10px 12px',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    gap: 12,
+                    marginBottom: 10,
+                }}>
+                <div>
+                    <div style={{ fontSize: 12, color: '#8c8c8c' }}>当前等待人数</div>
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
+                        <span style={{ fontSize: 30, fontWeight: 700, color: '#1677ff', lineHeight: 1.15 }}>
+                            {mon.waiting === null ? '—' : mon.waiting}
+                        </span>
+                        <span style={{ fontSize: 12, color: '#8c8c8c' }}>人</span>
+                    </div>
+                </div>
+                <div
+                    style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 4,
+                        justifyContent: 'center',
+                        fontSize: 12,
+                    }}>
+                    <div>
+                        <Dot color={mon.online ? '#52c41a' : '#ff4d4f'} />
+                        {mon.online ? '在线 · 正常监控' : '掉线'}
+                    </div>
+                    <div>
+                        <Dot color="#1677ff" />
+                        {mon.inWorkingHours ? '工作时段内' : '非工作时段'}
+                    </div>
+                </div>
+            </div>
 
-                <Space size={8} wrap>
-                    <Button color="primary" variant="solid" onClick={() => setSettingsOpen(true)}>
-                        设置
-                    </Button>
-                    <Button color="primary" variant="solid" onClick={() => setPhrasesOpen(true)}>
-                        常用语
-                    </Button>
-                    <Button color="primary" variant="solid" onClick={() => setLogOpen(true)}>
-                        日志
-                    </Button>
-                    <Button
-                        color="primary"
-                        variant="solid"
-                        onClick={() => {
-                            if (!receivedImages.length) {
-                                notify.info('暂无待存文件');
-                                return;
-                            }
-                            renderImageGallery();
-                        }}>
-                        历史文件
-                    </Button>
-                    <Button color="primary" variant="solid" onClick={() => setPhoneOpen(true)}>
-                        设备互联
-                    </Button>
+            {/* 语音播报开关 */}
+            <div
+                style={{
+                    background: '#f7f8fa',
+                    borderRadius: 10,
+                    padding: '8px 12px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    marginBottom: 10,
+                }}>
+                <Space size={6}>
+                    <span>{voiceEnabled ? '🔊' : '🔇'}</span>
+                    <span style={{ fontSize: 13 }}>语音播报</span>
                 </Space>
-            </Space>
+                <Switch checked={!!voiceEnabled} onChange={toggleVoice} />
+            </div>
+
+            {/* 2×2 按钮 */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                <Button color="primary" variant="solid" size="large" onClick={() => setSettingsOpen(true)}>
+                    ⚙️ 设置
+                </Button>
+                <Button size="large" onClick={() => setPhrasesOpen(true)}>
+                    💬 常用语
+                </Button>
+                <Button
+                    size="large"
+                    onClick={() => {
+                        if (!receivedImages.length) {
+                            notify.info('暂无待存文件');
+                            return;
+                        }
+                        renderImageGallery();
+                    }}>
+                    🖼️ 历史文件
+                </Button>
+                <Button size="large" onClick={() => setPhoneOpen(true)}>
+                    💻 设备互联
+                </Button>
+            </div>
+
+            {/* 底部：上次播报 + 查看日志 */}
+            <div
+                style={{
+                    marginTop: 10,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: 8,
+                    fontSize: 12,
+                    color: '#8c8c8c',
+                }}>
+                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {lastSpeakText(mon.lastSpeak)}
+                </span>
+                <Button type="link" size="small" style={{ padding: 0 }} onClick={() => setLogOpen(true)}>
+                    查看日志 →
+                </Button>
+            </div>
 
             <SettingsModal
                 open={settingsOpen}

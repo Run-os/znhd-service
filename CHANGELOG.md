@@ -24,6 +24,14 @@
 - 版本：relay `package.json` → `26.10.06-v3`（页面显示版本由构建期从该文件注入）。
 - 验证：手机（iPhone 14 视口 390×844）与桌面（1440×900）实拍确认布局；真实浏览器跑通「选 3 张图 → canvas 压缩 124KB→80KB → 进度 0/3→1/3→2/3→✅ 3/3 → 待发列表清空」共 10/10 断言；「电脑 → 手机」收图/收文本弹窗实测正常；静态回归 18 项通过（零第三方外链、gzip、immutable、目录穿越返回 403、缺资源 404、版本自证）。
 
+### znhd.user.js v26.10.06-v10
+- **主面板按参考版式重做**（对齐用户给的视觉稿）：头部「蓝色圆角图标 + 征纳互动监控 + 版本胶囊 + ✕ 收起」；**人数/状态卡**（当前等待人数大字 + 「在线 · 正常监控 / 工作时段内」两行状态点）；**语音播报行**（🔊 + Switch 开关）；**2×2 大按钮**（⚙️ 设置〔主色实心〕/ 💬 常用语 / 🖼️ 历史文件 / 💻 设备互联）；底部一行「上次播报：N 分钟前 · 原因」+「查看日志 →」链接。
+- 为此**监控模块新增状态出口**：`lib/monitor.ts` 增加 `MonitorState`（waiting / online / inWorkingHours / lastSpeak）与 `getMonitorState()` / `setMonitorStateSink()`，在 checkCount 里随检测结果发布——面板首次能显示实时等待人数、在线状态与工作时段状态（以前这些只进日志）。
+- 「日志」由面板按钮改为底部「查看日志 →」（日志弹窗本身不变）；「收起」= 面板收成一个小圆钮（点击展开），避免关掉后找不回来。
+- ⚠️ 冒烟测试的 `clickByText` 由「精确等于」改为「包含」：面板按钮现在带 emoji 前缀（`⚙️ 设置`），精确匹配会全部点不中。
+- 验证：`npm run verify` 10 项全绿；`antd lint ./src` 0 issue；`typecheck` 通过；本地 harness 截图与参考稿逐项比对（布局、状态点、按钮主次、底部行均一致）。
+- 备注：`Space direction`→`orientation`、`ConfigProvider button={{autoInsertSpace:false}}` 等同 v9 的 v6 适配仍然生效。
+
 ### znhd.user.js v26.10.06-v9
 - **UI 层从 CAT_UI（脚本猫 UI 库）整体换成 React 19 + Ant Design v6**，`@require` 里的脚本猫 UI 库已移除；**四个侧边抽屉（设置/常用语/日志/设备互联）全部改为 antd Modal 弹窗**。
 - 依赖与构建：

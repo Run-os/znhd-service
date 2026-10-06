@@ -218,13 +218,15 @@
         collectShadowText();
 
       // 自动打开「常用语」抽屉，验证远程 YAML 成功路径
+      // ⚠️ 用「包含」而非精确相等：面板按钮现在带 emoji 前缀（如「⚙️ 设置」「💬 常用语」），
+      //    精确匹配会全部点不中（v26.10.06-v9 改制后踩过）。
       const clickByText = (label) => {
         let hit = null;
         const walk = (root) => {
           root.querySelectorAll('*').forEach((el) => {
             if (hit) return;
             if (el.shadowRoot) walk(el.shadowRoot);
-            if (!hit && (el.tagName === 'BUTTON' || el.tagName === 'A') && (el.textContent || '').trim() === label) hit = el;
+            if (!hit && (el.tagName === 'BUTTON' || el.tagName === 'A') && (el.textContent || '').indexOf(label) >= 0) hit = el;
           });
         };
         walk(document);
