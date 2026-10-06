@@ -373,7 +373,8 @@ export default function PhoneModal({ open, onClose, relayServer }: PhoneModalPro
                                         width: 124,
                                         height: 124,
                                         border: '1px solid #f0f0f0',
-                                        borderRadius: 8,
+                                        // 二维码不加圆角（v26.10.06-v21 按用户要求）：圆角会切掉
+                                        // 定位用的三个角标，部分扫码器识别率会下降
                                         display: 'block',
                                     }}
                                 />
@@ -383,7 +384,6 @@ export default function PhoneModal({ open, onClose, relayServer }: PhoneModalPro
                                         width: 124,
                                         height: 124,
                                         border: '1px solid #f0f0f0',
-                                        borderRadius: 8,
                                         display: 'flex',
                                         alignItems: 'center',
                                         justifyContent: 'center',

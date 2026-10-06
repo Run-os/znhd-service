@@ -413,6 +413,11 @@
           QRCode: typeof window.QRCode,
           Viewer: typeof window.Viewer,
           recvResponses: window.__recvCount || 0,
+          // 二维码必须无圆角（v26.10.06-v21 按用户要求；圆角会切掉定位角标影响识别）
+          qrNoRadius: (() => {
+            const q = document.querySelector('img[alt="上传链接二维码"]');
+            return !!q && getComputedStyle(q).borderRadius === '0px';
+          })(),
           // 监控时间段是 4 个原生 <input type="time">（v26.10.06-v16 换掉 antd TimePicker：
           // 去掉 rc-picker + dayjs，产物实测 -325KB），值必须是 HH:mm
           timeInputsOk: (() => {
