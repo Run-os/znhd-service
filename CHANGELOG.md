@@ -11,6 +11,19 @@
 
 ---
 
+### relay-server v26.10.06-v1
+- **修复「手机上传页打开要 10 秒以上」——首屏白屏 10.87s 降到 ~0.2s**。根因不在服务端（实测 TTFB 仅 0.15~0.6s），而在手机页 `<head>` 里同步挂着两个第三方 CDN 脚本（无 `defer`/`async`，阻塞整个页面解析）：
+  - `heic2any.js` **1.36MB**：`cdn.bootcdn.net` 对该网络**限速约 128KB/s**（同一 CDN 上 echarts、其他文件同样是 127KB/s，而本机从 npmmirror 下 5.8MB 只要 0.92s，排除本地带宽因素），且响应头为 **`Cache-Control: no-store`**（天天首次访问都要重下）——单这一个文件就是 **10.6s**；`heic2any.min.js` 同为 1.35MB，压缩/混淆救不了（内嵌解码器）。
+  - `viewer.min.js`/`.css`：`cdn.jsdelivr.net` **国内直连不可达**（TCP 连上但 TLS 阶段即失败，`testingcf.jsdelivr.net` 同样；`fastly.jsdelivr.net` 正常），首次访问（无缓存）还会再挂一次，这就是「或更久」的来源。
+  - 实测闭合：`FCP 10868ms ≈ TTFB 151ms + heic2any 10644ms`。
+- 改法（手机页 `uploadPageHtml()`，收发协议零变化）：
+  - **`<head>` 不再引入任何第三方资源**，首屏只剩同源 HTML。
+  - **heic2any 改为按需加载**：只有用户真的选了 HEIC/HEIF 才去下载（`loadHeic2any()` 复用同一 Promise，连选多张不重复下载），加载期间状态栏提示「检测到 HEIC，正在加载解码库…」；失败/超时仍回退原样直传（与旧行为一致）。绝大多数用户永远不再为这 1.36MB 买单。
+  - **Viewer.js 改为异步注入**（CSS 与 JS 一起，不再阻塞首屏），就绪后回调 `initRecvViewer()` 接管已渲染缩略图的点击放大；缩略图 `onclick` 改为**点击时再判定** `recvViewer`，避免「库晚于渲染到达」时两套预览同时弹；始终加载不出来则退回自定义单图查看（原兜底路径不变）。
+  - **CDN 选源**：Viewer.js 固定 `fastly.jsdelivr.net/npm/viewerjs@1.11.7`（br 压缩 + immutable 一年缓存）；heic2any 首选 `fastly.jsdelivr.net`（br 后约 331KB、immutable），兜底 `cdn.bootcdn.net`。两处均带 **15s 单源超时**，超时自动换下一个源，不再有「某个 CDN 挂住就无限等」。
+  - ⚠️ **纯手机页改动**，`/u/<deviceId>` 之外的接口一行未动。relay `package.json` version→`26.10.06-v1`。
+- ⚠️ 须重启生效（容器内 `docker restart znhd`，或停旧进程后重新 `node server.js`），`curl /health` 见 `26.10.06-v1` 即生效；**手机端需重新打开/刷新上传页**（修的是页内 HTML/JS，浏览器缓存的是旧页面）。
+
 ### znhd.user.js v26.10.06-v4
 
 - **修复：收到图片后点「复制」，图片没有被写进剪贴板**（弹窗里显示「复制失败」）。根因是写入顺序错了：

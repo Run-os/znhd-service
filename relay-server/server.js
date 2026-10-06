@@ -293,7 +293,11 @@ function uploadPageHtml() {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>上传到电脑</title>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/viewerjs/dist/viewer.min.css">
+<!-- 首屏不引入任何第三方资源：Viewer.js 的 CSS/JS 与 heic2any 全部改由页面内联脚本按需异步注入。
+     旧实现在 <head> 里同步挂两个 CDN 脚本（无 defer/async），会阻塞整个页面解析，实测：
+       · heic2any.js 1.36MB，bootcdn 对该网络限速约 128KB/s 且响应头 no-store（每次都不缓存）→ 10.6s；
+       · jsDelivr 主域国内直连不可达（TLS 阶段即失败，须走 fastly 镜像）→ 首次访问无缓存时还会再挂一次；
+       合计首屏白屏 10.87s（FCP），而服务端 TTFB 仅 0.15~0.6s —— 慢的全是这两个脚本。 -->
 <style>
   body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif;margin:0;padding:16px;background:#f5f5f5;color:#222}
   h2{font-size:18px;margin:0 0 4px}
@@ -343,8 +347,6 @@ function uploadPageHtml() {
   .recv .act{width:auto;padding:8px 18px;margin-top:12px}
   .recvclose{position:absolute;top:12px;right:14px;width:34px;height:34px;line-height:32px;text-align:center;font-size:24px;color:#fff;background:rgba(255,255,255,0.2);border-radius:50%;cursor:pointer}
 </style>
-<script src="https://cdn.jsdelivr.net/npm/viewerjs/dist/viewer.min.js"></script>
-<script src="https://cdn.bootcdn.net/ajax/libs/heic2any/0.0.4/heic2any.js"></script>
 </head>
 <body>
   <h2>📷 上传到电脑<span class="ver">v${VERSION}</span></h2>
@@ -391,6 +393,71 @@ function uploadPageHtml() {
   var recvPopup = document.getElementById('recvPopup');
   var recvBtn = document.getElementById('recvBtn');
   var recvViewer = null;  // Viewer.js 实例（CDN 未加载时为 null，退回自定义单图查看）
+
+  // ===== 第三方库：按需异步加载（首屏不引入任何第三方资源）=====
+  // 选源依据（2026-10-06 本机实测）：
+  //  · jsDelivr 主域 / testingcf 子域国内直连不可达（连接后 TLS 阶段失败）；
+  //    fastly.jsdelivr.net 可用，且响应带 br 压缩 + Cache-Control: immutable（一年）。
+  //  · cdn.bootcdn.net 可用但对该网络限速约 128KB/s，heic2any.js 为 1.36MB 且 no-store 不缓存，
+  //    每次都要下满 10.6s —— 只作兜底源，不作首选。
+  //  ⚠️ 本段位于 uploadPageHtml() 的模板字符串内：禁用反引号与插值起始符（美元符号 + 左花括号）。
+  var VIEWER_CSS_URL = 'https://fastly.jsdelivr.net/npm/viewerjs@1.11.7/dist/viewer.min.css';
+  var VIEWER_JS_URLS = ['https://fastly.jsdelivr.net/npm/viewerjs@1.11.7/dist/viewer.min.js'];
+  var HEIC_URLS = [
+    'https://fastly.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.js',
+    'https://cdn.bootcdn.net/ajax/libs/heic2any/0.0.4/heic2any.js'
+  ];
+  var SCRIPT_TIMEOUT = 15000; // 单源最长等待，超时即换下一个源（避免某个 CDN 挂住后无限等）
+  var viewerLoading = false;
+  var heicPromise = null;
+
+  // 依次尝试多个 URL 注入脚本：任一源令 isReady() 为真即成功；全部失败回调 false。
+  function loadScriptChain(urls, isReady, onDone){
+    var i = 0;
+    function next(){
+      if(isReady()){ onDone(true); return; }
+      if(i >= urls.length){ onDone(false); return; }
+      var url = urls[i++];
+      var s = document.createElement('script');
+      var timer = setTimeout(function(){ s.onload = null; s.onerror = null; s.remove(); next(); }, SCRIPT_TIMEOUT);
+      s.async = true;
+      s.onload = function(){
+        clearTimeout(timer);
+        if(isReady()){ onDone(true); } else { s.remove(); next(); }
+      };
+      s.onerror = function(){ clearTimeout(timer); s.remove(); next(); };
+      s.src = url;
+      document.head.appendChild(s);
+    }
+    next();
+  }
+
+  // Viewer.js 仅「收件画廊」需要，异步加载即可；就绪后立刻接管已渲染缩略图的点击放大。
+  // 始终加载不出来时保持 recvViewer = null，缩略图点击退回自定义单图查看（见 thumb.onclick）。
+  function loadViewerLib(){
+    if(viewerLoading || typeof Viewer === 'function') return;
+    viewerLoading = true;
+    var link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = VIEWER_CSS_URL;
+    document.head.appendChild(link);
+    loadScriptChain(VIEWER_JS_URLS, function(){ return typeof Viewer === 'function'; }, function(ok){
+      if(ok){ initRecvViewer(); }
+    });
+  }
+
+  // heic2any 约 1.36MB，只有真的要转 HEIC/HEIF 时才需要 —— 按需加载并复用同一个 Promise
+  // （连选多张 HEIC 不重复下载）。全部源失败时 resolve(null)，调用方回退原样直传。
+  function loadHeic2any(){
+    if(!heicPromise){
+      heicPromise = new Promise(function(resolve){
+        loadScriptChain(HEIC_URLS, function(){ return typeof heic2any === 'function'; }, function(ok){
+          resolve(ok ? heic2any : null);
+        });
+      });
+    }
+    return heicPromise;
+  }
 
   function renderGrid(){
     grid.innerHTML = '';
@@ -458,18 +525,20 @@ function uploadPageHtml() {
       reader.onerror = function(){ fail(new Error('读取文件失败')); };
       reader.readAsDataURL(srcBlob);
     }
-    // HEIC：优先用 heic2any 转成 JPEG 再走通用压缩；库缺失/失败则原样直传兜底
+    // HEIC：按需加载 heic2any 转成 JPEG 再走通用压缩；库缺失/超时/转换失败则原样直传兜底。
+    // ⚠️ 解码库不在 <head> 同步引入（1.36MB 会阻塞首屏 10s+），只有走到这个分支才去下载。
     if(isHeic){
-      if(typeof heic2any === 'function'){
-        heic2any({ blob: f, toType: 'image/jpeg', quality: 0.9 })
+      statusEl.className = 'status';
+      statusEl.textContent = '检测到 HEIC，正在加载解码库…';
+      loadHeic2any().then(function(lib){
+        if(!lib){ done(f); return; } // 解码库不可用：原样直传交由电脑端处理
+        lib({ blob: f, toType: 'image/jpeg', quality: 0.9 })
           .then(function(out){
             var jpg = Array.isArray(out) ? out[0] : out;
             if(jpg){ compressBlob(jpg); } else { done(f); }
           })
           .catch(function(){ done(f); });
-      } else {
-        done(f); // heic2any 未加载，原样直传交由电脑端处理
-      }
+      });
       return;
     }
     compressBlob(f);
@@ -668,7 +737,9 @@ function uploadPageHtml() {
       del.title = '移除这张';
       del.onclick = function(e){ e.stopPropagation(); removeRecvItem(idx); };
       thumb.appendChild(del);
-      if (!recvViewer) thumb.onclick = function(){ openRecvImage(it); };
+      // Viewer.js 是异步加载的，可能晚于本次渲染到达，故点击时再判定一次：
+      // 就绪时由 Viewer 接管放大，未就绪则退回自定义单图查看（不会两套同时弹）。
+      thumb.onclick = function(){ if (!recvViewer) openRecvImage(it); };
       cell.appendChild(thumb);
       // 按钮行：复制 / 下载（与脚本端收图弹窗一致）
       var btns = document.createElement('div');
@@ -883,6 +954,9 @@ function uploadPageHtml() {
     box.appendChild(close);
     document.body.appendChild(box);
   }
+
+  // 第三方库异步加载：不阻塞首屏；加载完成前收到图片也能正常进画廊（点击走自定义单图查看兜底）
+  loadViewerLib();
 
   pollRecv();
 })();
