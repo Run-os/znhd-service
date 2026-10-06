@@ -400,6 +400,12 @@
         }
       }, 10300);
 
+      // 打开「运行日志」弹窗：验证「日志从上到下生成、最新在最上方」（v26.10.06-v23 需求）。
+      // 放在 10600ms（报告在 11000ms 采集），留 400ms 给 React 渲染。
+      setTimeout(() => {
+        window.__openedLog = clickByText('查看日志');
+      }, 10600);
+
       setTimeout(() => {
         const text = collectText();
         const relevant = window.__errors.filter((e) => !/chrome-extension:/.test(e));
@@ -413,6 +419,23 @@
           QRCode: typeof window.QRCode,
           Viewer: typeof window.Viewer,
           recvResponses: window.__recvCount || 0,
+          // 运行日志排序（v26.10.06-v23）：日志行是「HH:MM:SS - 正文」的纯文本 div，
+          // 用「首行时间戳 >= 末行时间戳」判定排序方向（与内容无关），并确认容器不再是 column-reverse。
+          logListNotReversed: (() => {
+            const rows = Array.from(document.querySelectorAll('.ant-modal-body div')).filter(
+              (d) => d.childElementCount === 0 && /^\d{2}:\d{2}:\d{2}\s*-/.test((d.textContent || '').trim())
+            );
+            if (rows.length < 2) return false;
+            return getComputedStyle(rows[0].parentElement).flexDirection !== 'column-reverse';
+          })(),
+          logNewestOnTop: (() => {
+            const rows = Array.from(document.querySelectorAll('.ant-modal-body div')).filter(
+              (d) => d.childElementCount === 0 && /^\d{2}:\d{2}:\d{2}\s*-/.test((d.textContent || '').trim())
+            );
+            if (rows.length < 2) return false;
+            const t = (d) => (d.textContent || '').trim().slice(0, 8);
+            return t(rows[0]) >= t(rows[rows.length - 1]);
+          })(),
           // 主色必须是 antd 官方蓝色系 blue-6（v26.10.06-v22）：先查 token（一处覆盖按钮+开关+派生色），
           // 再查「设置」实心按钮的真实渲染色，两道一起锁。
           // ⚠️ token 必须从**按钮**上读，不能从面板宿主读：`--ant-color-primary` 由 antd 的 css-var

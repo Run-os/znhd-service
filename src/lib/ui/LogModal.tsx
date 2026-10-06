@@ -23,8 +23,11 @@ const TYPE_META: { type: LogType; label: string; color: string }[] = [
 /**
  * 运行日志弹窗（v26.10.06-v9：由 CAT_UI.Drawer 侧边抽屉改为 antd Modal 弹窗）。
  *
- * ⚠️ 自动滚底仍然不写 JS：列表容器用 `flexDirection: column-reverse`，而 DOM 按 logger 的
- *    「最新在前」顺序渲染 —— 浏览器自动把视口锚在底部（＝最新一条），用户向上翻历史时不会被拽回。
+ * ⚠️ 排序（v26.10.06-v23 按用户要求改为「最新在最上方」）：DOM 按 logger 的「最新在前」顺序渲染
+ *    （`logger.ts` 是 `[logItem, ...prevEntries]`），容器用默认的 `column` 即可让最新一条落在顶部，
+ *    且视口天然停在顶部、**不需要任何 JS 锚定**。
+ *    历史写法是用 `column-reverse` 把最新一条翻到底部并自动锚底；用户明确要求「从上到下生成、最新在最上方」，
+ *    故改回 `column`——若日后有人想改回去，注意那会同时改变阅读方向（新日志从底部冒出）。
  *    弹窗内高度固定 + 自身滚动，外层 Modal 不再滚动。
  */
 export default function LogModal({ open, onClose, logEntries, onClear }: LogModalProps) {
@@ -96,7 +99,7 @@ export default function LogModal({ open, onClose, logEntries, onClear }: LogModa
             <div
                 style={{
                     display: 'flex',
-                    flexDirection: 'column-reverse', // 关键：自动锚底，见文件头说明
+                    flexDirection: 'column', // v26.10.06-v23：最新日志在最上方（原为 column-reverse 自动锚底）
                     overflowY: 'auto',
                     height: 360,
                     marginTop: 10,
@@ -135,7 +138,7 @@ export default function LogModal({ open, onClose, logEntries, onClear }: LogModa
 
             <Text type="secondary" style={{ fontSize: 12, display: 'block', marginTop: 8 }}>
                 共 {logEntries.length} 条（显示 {shown.length} 条，按 {allOn ? '全部类型' : '已选类型'}过滤）；
-                新日志会自动出现在最下方，向上翻阅时不会被拉回。
+                <strong>新日志出现在最上方</strong>，向下翻阅历史时不会被拉回。
             </Text>
         </Modal>
     );

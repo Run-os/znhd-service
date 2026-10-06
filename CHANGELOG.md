@@ -11,6 +11,18 @@
 
 ---
 
+### znhd.user.js v26.10.06-v23
+- **运行日志改为「从上到下生成、最新在最上方」**：`LogModal.tsx` 的列表容器由 `flexDirection: column-reverse` 改回 `column`。
+  - 无需新增任何 JS：`logger.ts` 本来就是 `[logItem, ...prevEntries]`（**最新在前**），容器用默认 `column` 后最新一条自然落在顶部，视口也天然停在顶部，不存在"被拽回"的问题。
+  - 历史写法 `column-reverse` 是把最新一条**翻到底部**并自动锚底（当年为避免写 JS 滚动而用的小技巧）；本次按用户要求改回直觉顺序。**已把这段取舍写进文件头注释**，并提醒：若日后想改回去，注意那会同时改变阅读方向。
+  - 底部提示文案同步改为「**新日志出现在最上方**，向下翻阅历史时不会被拉回」（原文案是"最下方…向上翻阅"，不改就是错的）。
+- 冒烟新增两条断言（19 → **21 项全绿**），并为此在时间轴上新增一步（10600ms 打开日志弹窗，报告 11000ms 采集）：
+  - `logListNotReversed`：日志行容器的 `flexDirection !== 'column-reverse'`；
+  - `logNewestOnTop`：**首行时间戳 ≥ 末行时间戳**（日志行是 `HH:MM:SS - 正文` 纯文本 div，用时间戳比较判定排序方向，与具体内容无关，不会因日志文案变化而失效）。
+- 验证：`npm run typecheck` 0 错、`npm run build` 结论行 `compiled`、`npm run check` 通过、`npm run verify` **21 项全绿**。
+- ⚠️ **只做本地提交，未推送**。
+
+
 ### znhd.user.js v26.10.06-v22
 - **面板主色改为 antd 官方蓝色系**：`ConfigProvider` 的 `colorPrimary` 由原税务绿 `#007e44` 改为 **blue-6 `#1677FF`**（依据 antd 色彩规范：`docs/spec/colors-cn`）。
   - 只改这一个 token，antd 会自动派生 hover/active/focus 与浅色底 → **「设置」实心按钮**与**语音 Switch 选中态背景**（本次要求的两处）以及链接、焦点环一起同步变蓝。
