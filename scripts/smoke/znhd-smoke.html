@@ -419,22 +419,42 @@
           QRCode: typeof window.QRCode,
           Viewer: typeof window.Viewer,
           recvResponses: window.__recvCount || 0,
-          // 运行日志排序（v26.10.06-v23）：日志行是「HH:MM:SS - 正文」的纯文本 div，
-          // 用「首行时间戳 >= 末行时间戳」判定排序方向（与内容无关），并确认容器不再是 column-reverse。
+          // 运行日志排序（v26.10.06-v23 需求 / v26.10.07-v1 改版后仍适用）：
+          // 行结构改为「时间戳 + 类型标签 + 消息」三栏后，不能再按整行文本匹配，改用行类名
+          // `.znhd-log-row` 与时间戳单元 `.znhd-log-ts` 定位（断言随被测对象一起升级，而不是删掉）。
           logListNotReversed: (() => {
-            const rows = Array.from(document.querySelectorAll('.ant-modal-body div')).filter(
-              (d) => d.childElementCount === 0 && /^\d{2}:\d{2}:\d{2}\s*-/.test((d.textContent || '').trim())
-            );
+            const rows = Array.from(document.querySelectorAll('.znhd-log-row'));
             if (rows.length < 2) return false;
             return getComputedStyle(rows[0].parentElement).flexDirection !== 'column-reverse';
           })(),
           logNewestOnTop: (() => {
-            const rows = Array.from(document.querySelectorAll('.ant-modal-body div')).filter(
-              (d) => d.childElementCount === 0 && /^\d{2}:\d{2}:\d{2}\s*-/.test((d.textContent || '').trim())
-            );
+            const rows = Array.from(document.querySelectorAll('.znhd-log-row'));
             if (rows.length < 2) return false;
-            const t = (d) => (d.textContent || '').trim().slice(0, 8);
+            const t = (d) => {
+              const s = d.querySelector('.znhd-log-ts');
+              return s ? (s.textContent || '').trim() : '';
+            };
             return t(rows[0]) >= t(rows[rows.length - 1]);
+          })(),
+          // 暗色终端风（v26.10.07-v1）断言：日志区底色、行三栏结构、底部状态栏都在
+          logDarkTerminalOk: (() => {
+            const rows = Array.from(document.querySelectorAll('.znhd-log-row'));
+            if (!rows.length) return false;
+            const scroller = rows[0].parentElement;
+            const bg = getComputedStyle(scroller).backgroundColor;
+            const ts = rows[0].querySelector('.znhd-log-ts');
+            const tag = rows[0].querySelector('.znhd-log-tag');
+            const msg = rows[0].querySelector('.znhd-log-msg');
+            if (!ts || !tag || !msg) return false;
+            // ⚠️ 必须从日志行**就近向上**找它所在的弹窗 body：报告时刻同时开着多个弹窗，
+            //    用 document.querySelector('.ant-modal-body') 会取到别的弹窗（v26.10.07-v1 踩过）。
+            const logBody = scroller.closest('.ant-modal-body') || scroller;
+            const bodyText = logBody.textContent || '';
+            return (
+              bg === 'rgb(15, 20, 26)' && // #0f141a
+              bodyText.indexOf('最新') >= 0 &&
+              bodyText.indexOf('显示') >= 0
+            );
           })(),
           // 主色必须是 antd 官方蓝色系 blue-6（v26.10.06-v22）：先查 token（一处覆盖按钮+开关+派生色），
           // 再查「设置」实心按钮的真实渲染色，两道一起锁。

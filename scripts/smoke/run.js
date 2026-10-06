@@ -70,6 +70,7 @@ const CHECKS = [
   ['settingsBtnBlue', '「设置」按钮渲染为蓝色主色'],
   ['logListNotReversed', '日志列表不再是 column-reverse'],
   ['logNewestOnTop', '日志最新一条在最上方'],
+  ['logDarkTerminalOk', '日志区为暗色终端风（底色/三栏/状态栏）'],
   ['overlayAbovePanel', 'antd 弹窗/侧边栏盖在面板之上（方案 B）'],
   ['changelogPopup', '更新日志弹窗（最新 10 条）'],
   ['viewerZoomOk', '缩略图放大显示主图（antd 预览）'],
