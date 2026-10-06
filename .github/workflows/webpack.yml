@@ -43,7 +43,10 @@ jobs:
 
       - name: Build
         run: |
-          npm ci
+          # npm ci 偶发 ECONNRESET：2026-10-06 v26.10.06-v6 那次首跑就撞上（依赖都没装完就红，
+          # 日志为 npm error network），属 runner 侧瞬时网络抖动，与依赖/代码无关。故重试一次。
+          # npm ci 会先清空 node_modules 再装，失败留下的半成品不影响第二次。
+          npm ci || npm ci
           npm run build
 
       - name: 类型检查（strict）
