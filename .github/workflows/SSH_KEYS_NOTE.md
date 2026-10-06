@@ -130,6 +130,7 @@ ssh -i /root/.ssh/ci-deploy root@127.0.0.1
 | `Permission denied (publickey)` 拉代码失败 | 密钥 A 公钥未正确粘贴 / 权限错 | 重查 Deploy key；确认 `.ssh` 700、私钥 600 |
 | CI 报 `key is not password protected` | 密钥 B 设了 passphrase | 重新 `ssh-keygen -N ""` 生成无密码密钥 |
 | CI 报 `Connection refused (111)` | 服务器 SSH 未监听 / 端口错 / 防火墙 | 服务器 `ss -tlnp | grep :22`；查安全组入站规则 |
+| CI 报 `dial tcp ***:***: i/o timeout`（部署脚本一行都没跑） | **服务器改了 SSH 端口，但 GitHub Secret `PORT` 没跟着改** —— `appleboy/ssh-action` 在 `secrets.PORT` 缺失时回落默认 22，连不存在的端口通常表现为超时而非 refused；也可能是安全组丢弃了 runner 的出口 IP | 核对 **Settings → Secrets and variables → Actions → `PORT`**（只填数字，不要带 `-p`/空格）；服务器 `ss -tlnp` 确认实际监听端口；安全组放行该端口入站。⚠️ 2026-10-06 实际踩过此事 |
 | `Host key verification failed` | 服务器未写入 known_hosts | 重跑 `ssh-keyscan` 追加 |
 | CI 能登录但 `git pull` 无权限 | 密钥 A 是部署钥但仓库地址用了 HTTPS | 统一用 SSH 地址 `git@...` |
 
