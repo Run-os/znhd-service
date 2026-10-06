@@ -24,6 +24,21 @@
 - 版本：relay `package.json` → `26.10.06-v3`（页面显示版本由构建期从该文件注入）。
 - 验证：手机（iPhone 14 视口 390×844）与桌面（1440×900）实拍确认布局；真实浏览器跑通「选 3 张图 → canvas 压缩 124KB→80KB → 进度 0/3→1/3→2/3→✅ 3/3 → 待发列表清空」共 10/10 断言；「电脑 → 手机」收图/收文本弹窗实测正常；静态回归 18 项通过（零第三方外链、gzip、immutable、目录穿越返回 403、缺资源 404、版本自证）。
 
+### znhd.user.js v26.10.06-v20
+- **全部 UI 滚动条改为细浮层样式**（原来用 Windows 默认滚动条：约 17px、带上下箭头，嵌在圆角弹窗里很生硬）。
+- 先说结论（已用官方 CLI 核实）：**antd 没有滚动条组件，也没有 scrollbar 相关的 design token**：
+  - `npx @ant-design/cli info Scrollbar` → `Component 'Scrollbar' not found`；
+  - `npx @ant-design/cli token` → `scroll/thumb/track` **零匹配**（同一命令查 `borderRadius`/`fontSize`/`colorBgLayout` 都正常，说明查询方式没问题）；
+  - antd 自己只在内部依赖 `@rc-component/virtual-list`（v1.5.2）里给虚拟列表自绘滚动条，**不对外导出**为通用组件。
+  - 所以 antd 的通用做法就是**定制浏览器原生滚动条（CSS）**，本项目照此实现。
+- 实现位置：`lib/ui/uiReset.ts`（现有的样式隔离层，按本脚本容器加前缀注入，**不碰宿主页面**）：
+  - 标准属性 `scrollbar-width: thin` + `scrollbar-color: rgba(0,0,0,.25) transparent`（Firefox + Chrome 121+）；
+  - `::-webkit-scrollbar` / `-thumb` / `-track`（旧版 Chromium/Edge）：10px 槽宽 + **3px 透明边框 + `background-clip: padding-box`** → 视觉上是一条细圆角灰条，hover 时加深。
+  - 实测（headless Chrome）：`scrollbar-width: thin`、`scrollbar-color: rgba(0, 0, 0, 0.25) rgba(0, 0, 0, 0)`，且 `offsetWidth === clientWidth`（**不再占布局宽度**，即 Chrome 已切换为浮层滚动条、静置时自动隐藏）。
+- ⚠️ 踩坑：这段 CSS 写在模板字符串里，我第一版注释中用了反引号（`` `info Scrollbar` ``）→ **模板串被提前截断**，`tsc` 报 TS1128/TS1109，而 `npm run build` 的失败被 `Select-Object -Last 1` 掩盖、产物仍是旧文件（差点误判成"已生效"）。**模板字符串内一律不用反引号**，且构建后必须验证产物里真的有新内容。
+- 验证：`npm run typecheck` 0 错；`npm run build` 成功且产物内确认含 `scrollbar-width`/`scrollbar-color`/`::-webkit-scrollbar`/`background-clip`；`npm run verify` **16 项全绿**。
+- ⚠️ **只做本地提交，未推送**（等你确认后再推）。
+
 ### znhd.user.js v26.10.06-v19
 - **开启 Terser 压缩（`optimization.minimize: false` → `true`）**：`dist/znhd.user.js` **2.243 MiB → 0.770 MiB（−1502 KB，−65.4%）**，gzip 后 **257 KB**（原约 800 KB）。
   - 配置本来就把 `TerserPlugin` 写好了（含保住元信息的 comments 白名单），只是 `minimize` 一直为 `false` 没生效；本次只翻这一个开关。

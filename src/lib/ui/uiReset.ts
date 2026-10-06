@@ -46,6 +46,59 @@ const RESET_CSS = `
   font-size: inherit;
   line-height: inherit;
 }
+
+/* ===== 滚动条（v26.10.06-v20）=====
+   antd 没有滚动条组件，也没有对应的 design token（CLI 实测：「info Scrollbar」找不到、
+   「token」里 scroll/thumb/track 零匹配）；它自己也只在 @rc-component/virtual-list 内部自绘滚动条，
+   且不对外导出。故此处按 antd 的通用做法：定制浏览器原生滚动条。
+   不动它时，Windows 默认滚动条又宽又带箭头（约 17px），嵌在圆角弹窗里显得很生硬。
+   做法：10px 槽宽 + 3px 透明边框 + background-clip: padding-box → 视觉上是一条细圆角灰条；
+   标准属性（scrollbar-width/color）覆盖 Firefox 与 Chrome 121+，::-webkit-* 覆盖旧版 Chromium/Edge。
+   ⚠️ 本段是模板字符串的一部分：注释里**不能出现反引号**，否则会提前截断模板（本次踩过）。 */
+#${PANEL_HOST_ID} *, .ant-modal-root *, .ant-drawer *, .ant-picker-dropdown *, .ant-message *, .ant-notification *, .ant-tooltip *, .ant-dropdown *, .ant-image-preview * {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.25) transparent;
+}
+#${PANEL_HOST_ID} *::-webkit-scrollbar,
+.ant-modal-root *::-webkit-scrollbar,
+.ant-drawer *::-webkit-scrollbar,
+.ant-picker-dropdown *::-webkit-scrollbar,
+.ant-dropdown *::-webkit-scrollbar,
+.ant-image-preview *::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+#${PANEL_HOST_ID} *::-webkit-scrollbar-thumb,
+.ant-modal-root *::-webkit-scrollbar-thumb,
+.ant-drawer *::-webkit-scrollbar-thumb,
+.ant-picker-dropdown *::-webkit-scrollbar-thumb,
+.ant-dropdown *::-webkit-scrollbar-thumb,
+.ant-image-preview *::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.22);
+  border: 3px solid transparent;
+  background-clip: padding-box;
+  border-radius: 8px;
+}
+#${PANEL_HOST_ID} *::-webkit-scrollbar-thumb:hover,
+.ant-modal-root *::-webkit-scrollbar-thumb:hover,
+.ant-drawer *::-webkit-scrollbar-thumb:hover,
+.ant-picker-dropdown *::-webkit-scrollbar-thumb:hover,
+.ant-dropdown *::-webkit-scrollbar-thumb:hover,
+.ant-image-preview *::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.38);
+  background-clip: padding-box;
+}
+#${PANEL_HOST_ID} *::-webkit-scrollbar-track,
+.ant-modal-root *::-webkit-scrollbar-track,
+.ant-drawer *::-webkit-scrollbar-track,
+.ant-picker-dropdown *::-webkit-scrollbar-track,
+.ant-dropdown *::-webkit-scrollbar-track,
+.ant-image-preview *::-webkit-scrollbar-track,
+#${PANEL_HOST_ID} *::-webkit-scrollbar-corner,
+.ant-modal-root *::-webkit-scrollbar-corner,
+.ant-drawer *::-webkit-scrollbar-corner {
+  background: transparent;
+}
 `;
 
 let injected = false;
