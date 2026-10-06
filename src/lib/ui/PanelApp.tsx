@@ -24,7 +24,10 @@ export default function PanelApp({ host }: { host: HTMLElement }) {
     return (
         <ConfigProvider
             locale={zhCN}
-            theme={{ token: { colorPrimary: '#007e44', borderRadius: 8 } }}
+            // zIndexPopupBase：把 antd 全部浮层（Modal/Drawer/message/notification/Picker 下拉…）的
+            // 层级基数抬到面板宿主（999999）之上，实现「弹窗/侧边栏盖住面板」的方案 B；
+            // 面板本身仍高于宿主页面自身内容，不会被页面弹窗压住。
+            theme={{ token: { colorPrimary: '#007e44', borderRadius: 8, zIndexPopupBase: 1000000 } }}
             getPopupContainer={getOverlayContainer}
             // antd 默认给「两个汉字」的按钮自动插空格（设置 → 设 置），会改变按钮文案；
             // 面板按钮沿用旧文案（设置/常用语/日志…），故关掉。v6 用 button.autoInsertSpace

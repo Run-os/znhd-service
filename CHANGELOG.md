@@ -24,6 +24,18 @@
 - 版本：relay `package.json` → `26.10.06-v3`（页面显示版本由构建期从该文件注入）。
 - 验证：手机（iPhone 14 视口 390×844）与桌面（1440×900）实拍确认布局；真实浏览器跑通「选 3 张图 → canvas 压缩 124KB→80KB → 进度 0/3→1/3→2/3→✅ 3/3 → 待发列表清空」共 10/10 断言；「电脑 → 手机」收图/收文本弹窗实测正常；静态回归 18 项通过（零第三方外链、gzip、immutable、目录穿越返回 403、缺资源 404、版本自证）。
 
+### znhd.user.js v26.10.06-v15
+- **层级方案改为 B：antd 浮层（Modal / Drawer / message）盖在面板之上**。
+  - 实现方式（比单纯降 z-index 更稳）：面板宿主保持 `z-index:999999`（仍高于宿主页面自身内容，页面弹窗多在 1000~9999），同时把 antd 的浮层基数抬到面板之上——`ConfigProvider` 设 `theme.token.zIndexPopupBase = 1000000`。于是弹窗/侧边栏/消息都在面板之上，遮罩也会遮住面板（符合常规层级直觉）。
+  - 新增冒烟断言「antd 弹窗/侧边栏盖在面板之上（方案 B）」：比较 `.ant-modal-wrap`/`.ant-drawer` 与面板宿主的计算 z-index。
+- **关于「用 CDN 加载 antd 让脚本变小」的核查结论（未改代码，先说清事实）**：
+  - **React 19 已移除 UMD 构建**（实测 `node_modules/react/umd` 不存在）→ 传统的 `@require` CDN 包（依赖 `window.React` 全局）**无法用于本项目**。
+  - antd 6.6.5 仍带 UMD（`dist/antd.min.js` 1396KB / `antd-with-locales.min.js` 1764KB），但它假设 `window.React`/`ReactDOM` 存在；要用只能退到 **React 18 UMD**。
+  - 即便这么做，**总体积基本打平**：CDN 侧要下载 antd 全量 UMD（1764KB，**无 tree-shaking**，含全部组件与全部语言包），而当前 tree-shaking 后的整包是 2.42MiB；换来的是「脚本文件本身变小」，代价是强依赖 CDN 可用性 + 退回 React 18 + 失去按需裁剪。
+  - 真正有效的瘦身方向（本地可验证）：antd `TimePicker` 的底座 `@rc-component/picker` 单包就 **229KB**（未压缩），换成原生 `<input type="time">`（**旧版实现就是这么做的**）是单项收益最大的一刀；此外还有按需懒加载重型弹窗等。
+- 验证：`npm run verify` **15 项全绿**；`antd lint ./src` 0 issue；`typecheck` 通过。
+- ⚠️ 与 v9~v14 一样**只做本地提交，未推送**。
+
 ### znhd.user.js v26.10.06-v14
 - **常用语改为网页侧边栏样式（antd `Drawer`）**：`PhrasesModal.tsx` → `PhrasesDrawer.tsx`，从右侧滑出、`size={360}`。理由：常用语是长列表，弹窗要反复滚动且高度受限；侧边抽屉能用满屏高、滑出时不遮挡右侧网页内容。其余弹窗（设置/日志/设备互联/更新日志/收图）仍为 Modal——那是一次性确认型交互。
   - ⚠️ v6 中 Drawer 的 **`width` 已弃用**，改用 `size`（`number | string | 'default' | 'large'`）。

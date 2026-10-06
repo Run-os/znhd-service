@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name                征纳互动人数和在线监控v2
 // @namespace           https://scriptcat.org/
-// @version             26.10.06-v14
+// @version             26.10.06-v15
 // @description         实时监控征纳互动等待人数和在线状态，支持语音播报、自定义常用语
 // @author              runos
 // @match               https://znhd.hunan.chinatax.gov.cn:8443/*
@@ -79240,7 +79240,11 @@ function MessageBridge() {
  * 浮层若默认挂在 body 会被困在它的层叠上下文里（详见 panelHost.tsx 的说明）。
  */
 function PanelApp({ host }) {
-    return ((0,react_jsx_runtime_production_namespaceFn().jsx)(config_provider, { locale: (lib_locale_zh_CN_namespaceFn().A), theme: { token: { colorPrimary: '#007e44', borderRadius: 8 } }, getPopupContainer: getOverlayContainer, 
+    return ((0,react_jsx_runtime_production_namespaceFn().jsx)(config_provider, { locale: (lib_locale_zh_CN_namespaceFn().A), 
+        // zIndexPopupBase：把 antd 全部浮层（Modal/Drawer/message/notification/Picker 下拉…）的
+        // 层级基数抬到面板宿主（999999）之上，实现「弹窗/侧边栏盖住面板」的方案 B；
+        // 面板本身仍高于宿主页面自身内容，不会被页面弹窗压住。
+        theme: { token: { colorPrimary: '#007e44', borderRadius: 8, zIndexPopupBase: 1000000 } }, getPopupContainer: getOverlayContainer, 
         // antd 默认给「两个汉字」的按钮自动插空格（设置 → 设 置），会改变按钮文案；
         // 面板按钮沿用旧文案（设置/常用语/日志…），故关掉。v6 用 button.autoInsertSpace
         //（config-provider/index.d.ts 明确标注 autoInsertSpaceInButton 已弃用）。
@@ -79409,7 +79413,10 @@ function mountPanel() {
     injectUiReset();
     const host = document.createElement('div');
     host.id = PANEL_HOST_ID;
-    host.style.cssText = 'position:fixed;z-index:2147482000;left:0;top:0;';
+    // 方案 B（v26.10.06-v15）：面板层级仍高于宿主页面自身内容（页面弹窗多在 1000~9999），
+    // 但**低于 antd 浮层的基数**（见 PanelApp 的 zIndexPopupBase=1000000）——
+    // 于是 Modal / Drawer / message 都会盖在面板之上（弹窗遮罩也会遮住面板，符合常规层级直觉）。
+    host.style.cssText = 'position:fixed;z-index:999999;left:0;top:0;';
     const pt = initialPoint();
     host.style.left = Math.round(pt.x) + 'px';
     host.style.top = Math.round(pt.y) + 'px';

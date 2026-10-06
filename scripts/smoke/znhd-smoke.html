@@ -415,6 +415,15 @@
           // ⚠️ 断言用 `.ant-drawer-body`（v5/v6 都有）；**不要用 `.ant-drawer-content`** ——
           //    v6 已把它改名为 `.ant-drawer-section`，用旧名会假失败（本条踩过）。
           phrasesIsDrawer: !!document.querySelector('.ant-drawer.ant-drawer-right .ant-drawer-body'),
+          // 方案 B：antd 浮层（Modal/Drawer…）必须盖在面板之上
+          // （面板宿主 999999 < zIndexPopupBase 1000000）
+          overlayAbovePanel: (() => {
+            const host = document.getElementById('__znhd_panel_host__');
+            const modalWrap = document.querySelector('.ant-modal-wrap, .ant-drawer');
+            if (!host || !modalWrap) return false;
+            const z = (el) => parseInt(getComputedStyle(el).zIndex, 10) || 0;
+            return z(modalWrap) > z(host);
+          })(),
           panel: text.includes('征纳互动监控'),
           // 版本号只从「面板宿主」里取：弹窗（更新日志/日志/常用语…）都 portal 到 documentElement，
           // 里面有各自的版本号文本，读全页会串台（v26.10.6-v1 踩过）。

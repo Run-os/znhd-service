@@ -84,7 +84,10 @@ export function mountPanel(): HTMLElement {
     injectUiReset();
     const host = document.createElement('div');
     host.id = PANEL_HOST_ID;
-    host.style.cssText = 'position:fixed;z-index:2147482000;left:0;top:0;';
+    // 方案 B（v26.10.06-v15）：面板层级仍高于宿主页面自身内容（页面弹窗多在 1000~9999），
+    // 但**低于 antd 浮层的基数**（见 PanelApp 的 zIndexPopupBase=1000000）——
+    // 于是 Modal / Drawer / message 都会盖在面板之上（弹窗遮罩也会遮住面板，符合常规层级直觉）。
+    host.style.cssText = 'position:fixed;z-index:999999;left:0;top:0;';
     const pt = initialPoint();
     host.style.left = Math.round(pt.x) + 'px';
     host.style.top = Math.round(pt.y) + 'px';

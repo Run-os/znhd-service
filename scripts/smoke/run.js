@@ -65,6 +65,7 @@ const CHECKS = [
   ['phrasesLoaded', '常用语 YAML 解析'],
   ['phrasesClicked', '常用语侧边栏可打开'],
   ['phrasesIsDrawer', '常用语是 antd Drawer 侧边栏（非 Modal）'],
+  ['overlayAbovePanel', 'antd 弹窗/侧边栏盖在面板之上（方案 B）'],
   ['changelogPopup', '更新日志弹窗（最新 10 条）'],
   ['viewerZoomOk', '缩略图放大显示主图（antd 预览）'],
   ['copyOk', '图片复制只尝试写 PNG'],
