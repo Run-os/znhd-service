@@ -22,8 +22,9 @@ jobs:
 
     strategy:
       matrix:
-        # 模板为 14.x；本仓库 devDependencies 用 ^ 范围解析到较新版本，Node 14 已不兼容
-        node-version: [20.x]
+        # 模板为 14.x；本仓库 devDependencies 用 ^ 范围解析到较新版本。
+        # 注意：puppeteer@25（npm run verify 用）要求 Node >= 22.12，不能用 20.x。
+        node-version: [22.x]
 
     steps:
       - uses: actions/checkout@v4
@@ -32,6 +33,12 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: ${{ matrix.node-version }}
+
+      - name: 缓存 puppeteer 下载的 Chromium
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/puppeteer
+          key: puppeteer-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
 
       - name: Build
         run: |

@@ -15,6 +15,34 @@ const puppeteer = require('puppeteer');
 const fs = require('fs');
 const { startServer, BUNDLE } = require('./server');
 
+/**
+ * 浏览器可执行文件解析：默认用 puppeteer 自带的 Chromium；
+ * 若设了 PUPPETEER_EXECUTABLE_PATH 或本机/CI 有系统 Chrome/Edge，则优先使用（免下载、更快）。
+ */
+const SYSTEM_BROWSERS = [
+  process.env.PUPPETEER_EXECUTABLE_PATH,
+  '/usr/bin/google-chrome',
+  '/usr/bin/google-chrome-stable',
+  '/usr/bin/chromium-browser',
+  '/usr/bin/chromium',
+  'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
+  'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
+  'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
+  'C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe',
+].filter((p) => p && fs.existsSync(p));
+
+async function launchBrowser() {
+  const base = { headless: true, args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'] };
+  if (SYSTEM_BROWSERS.length) {
+    try {
+      return await puppeteer.launch({ ...base, executablePath: SYSTEM_BROWSERS[0] });
+    } catch (e) {
+      console.warn('系统浏览器启动失败，回退到 puppeteer 自带 Chromium：' + e.message);
+    }
+  }
+  return puppeteer.launch(base);
+}
+
 const CHECKS = [
   ['panel', '浮动面板渲染'],
   ['version', '版本号渲染'],
@@ -46,10 +74,7 @@ async function main() {
   let browser = null;
 
   try {
-    browser = await puppeteer.launch({
-      headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
-    });
+    browser = await launchBrowser();
     const page = await browser.newPage();
 
     const pageErrors = [];
