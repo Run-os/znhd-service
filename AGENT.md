@@ -137,7 +137,7 @@
 
 ## Agent修改代码强制约束（最高优先级）
 
-1. **版本号 `YY.M.D-vN`，跨天序号重置 v1**（规范详见 `CHANGELOG.md` 开头）。改脚本 → 递增 **`config/common.meta.json` 的 `version`**（产物头是构建生成的，**不要**去改 `znhd.user.js`）；改 `relay-server/server.js` → 递增 `relay-server/package.json` 的 `version`；每次改动在 **`CHANGELOG.md` 顶部**补一条（见「更新日志约定」）。
+1. **版本号 `YY.MM.DD-vN`**（**零填充**；`N` = **当天第几次改动**，跨天重置为 `v1`）。⚠️⚠️ **同一天内不管改几次，日期部分都不许动，只能递增 `-vN`**：2026-10-06 当天曾误写成 `26.10.6-v1` → `26.10.7-v1` → `26.10.8-v1`，等于凭空造出 10-07 / 10-08 两个日期，**并会让油猴的版本比较把随后几天的新版本判成「更旧」而收不到更新**。正确写法是 `26.10.06-v1` → `26.10.06-v2` → `26.10.06-v3`。（历史条目沿用旧的 `YY.M.D` 非零填充写法，如 `26.10.5-v1`、`26.7.29-v1`，**不改写**。）规范详见 `CHANGELOG.md` 开头。改脚本 → 递增 **`config/common.meta.json` 的 `version`**（产物头是构建生成的，**不要**去改 `znhd.user.js`）；改 `relay-server/server.js` → 递增 `relay-server/package.json` 的 `version`；每次改动在 **`CHANGELOG.md` 顶部**补一条（见「更新日志约定」）。
 2. **禁止给 `relay-server` 增加 npm 依赖/构建步骤**（部署无 npm install）。
 3. **不得无理由重构可运行逻辑**（尤其弹窗 CSS、长轮询/广播机制、CAT_UI 用法）。改前先读 `CHANGELOG.md` 对应条目——多数"诡异写法"是真实浏览器实测结论。
 4. **新依赖必须记录**：同步更新 ReadMe「技术栈」与「项目结构」（依赖清单唯一归属 ReadMe，agent 不另存）。

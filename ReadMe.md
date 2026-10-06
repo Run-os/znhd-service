@@ -88,7 +88,7 @@ npm run check          # 产物 + 服务端语法校验
 npm run verify         # 无头 Chromium 端到端冒烟（面板/弹窗/画廊/常用语），CI 也跑这个
 ```
 
-- **改版本号**：编辑 `config/common.meta.json` 的 `version`（`YY.M.D-vN`），产物头部由构建自动生成。
+- **改版本号**：编辑 `config/common.meta.json` 的 `version`（格式 `YY.MM.DD-vN`，**零填充**；`N` 为当天第几次改动，**同一天内只递增 `-vN`、日期部分不动**），产物头部由构建自动生成。
 - **本地调试**：`npm start` 后，按 `config/dev.meta.json` 中 `@require` 指向的 `dist/znhd.dev.user.js` 安装开发脚本（需在油猴中允许访问本地文件 URL）；改动 `src/` 会触发目标站点热重载。
 - **发布**：push 到 `main` 后，`@updateURL`/`@downloadURL` 指向的 `dist/znhd.user.js`（GitHub raw 直链，不走 CDN 加速）即为最新产物，ScriptCat 自动同步。
 
