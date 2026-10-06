@@ -18,6 +18,12 @@
       body * {
         box-sizing: content-box; /* 非 border-box，验证隔离层是否复位 */
       }
+      /* 实测抓到的真凶：某第三方样式给 svg 加了负上边距（用户环境里时钟图标的
+         margin: -2.75em auto 0 ≈ -44px），把 antd 图标整体顶出输入框。
+         常驻这条规则，「时间图标与输入框同一水平线」断言才有牙齿。 */
+      svg {
+        margin: -2.75em auto 0;
+      }
     </style>
 
     <!-- ===== GM API 桩（模拟油猴环境 + 按真实中继协议返回数据） ===== -->
@@ -475,10 +481,11 @@
             return !!body && getComputedStyle(body).textAlign === 'left';
           })(),
           // 时间选择器的时钟图标必须与输入框同一水平线（图标中心与输入框中心误差 ≤2px）。
-          // 用户反馈的现象是「图标向上偏移、跑出输入框」。
+          // ⚠️ 必须量 **svg 本身**（.ant-picker-suffix svg）：第三方样式加的负 margin 作用在 svg 上，
+          //    外层 span（.ant-picker-suffix）不动 —— 量 span 会假通过（v26.10.06-v11 踩过）。
           pickerIconCentered: (() => {
             const input = document.querySelector('.ant-picker-input');
-            const icon = document.querySelector('.ant-picker-suffix');
+            const icon = document.querySelector('.ant-picker-suffix svg');
             if (!input || !icon) return false;
             const a = input.getBoundingClientRect();
             const b = icon.getBoundingClientRect();

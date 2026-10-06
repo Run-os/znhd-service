@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name                征纳互动人数和在线监控v2
 // @namespace           https://scriptcat.org/
-// @version             26.10.06-v11
+// @version             26.10.06-v12
 // @description         实时监控征纳互动等待人数和在线状态，支持语音播报、自定义常用语
 // @author              runos
 // @match               https://znhd.hunan.chinatax.gov.cn:8443/*
@@ -75777,6 +75777,12 @@ const RESET_CSS = `
 /* 图标垂直对齐：宿主页面若有 svg 的 vertical-align/line-height 规则，会把 antd 图标顶出输入框 */
 #${PANEL_HOST_ID} svg, .ant-modal-root svg, .ant-picker-dropdown svg, .ant-message svg, .ant-notification svg {
   vertical-align: inherit;
+}
+/* ★ 图标被第三方样式加负外边距而跑出输入框（用户实测：时钟图标的计算样式里
+   margin: -2.75em auto 0，按 16px 字号约 -44px；antd 自身从不给 svg 设 margin）。
+   这类规则特异性只有 (0,0,1)，用带容器前缀的选择器即可稳压。 */
+#${PANEL_HOST_ID} svg, .ant-modal-root svg, .ant-picker-dropdown svg, .ant-message svg, .ant-notification svg, .ant-tooltip svg, .ant-dropdown svg {
+  margin: 0;
 }
 /* 输入类控件去掉宿主页面可能带来的额外外边距/最小高度 */
 #${PANEL_HOST_ID} input, #${PANEL_HOST_ID} textarea, .ant-modal-root input, .ant-modal-root textarea {
