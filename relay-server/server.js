@@ -346,6 +346,16 @@ function uploadPageHtml() {
   .recv pre{background:#fff;color:#222;padding:14px;border-radius:10px;max-width:92vw;max-height:60vh;overflow:auto;white-space:pre-wrap;word-break:break-word;font-size:15px;line-height:1.6;margin:0;font-family:inherit}
   .recv .act{width:auto;padding:8px 18px;margin-top:12px}
   .recvclose{position:absolute;top:12px;right:14px;width:34px;height:34px;line-height:32px;text-align:center;font-size:24px;color:#fff;background:rgba(255,255,255,0.2);border-radius:50%;cursor:pointer}
+  /* 连发多图进度条：传输中显示条纹滚动 + 转圈动画，替代原先只靠状态栏文字报进度 */
+  #progressBox{display:none;margin:12px 0 4px}
+  #progressBox.on{display:block}
+  #progressTrack{height:10px;background:#e6e6e6;border-radius:6px;overflow:hidden}
+  #progressBar{height:100%;width:0;border-radius:6px;background:#007e44;transition:width .25s ease}
+  #progressTrack.busy #progressBar{background-image:linear-gradient(45deg,rgba(255,255,255,.35) 25%,transparent 25%,transparent 50%,rgba(255,255,255,.35) 50%,rgba(255,255,255,.35) 75%,transparent 75%);background-size:14px 14px;animation:barStripe .6s linear infinite}
+  @keyframes barStripe{from{background-position:0 0}to{background-position:14px 0}}
+  #progressText{display:flex;align-items:center;justify-content:center;gap:6px;font-size:13px;color:#007e44;margin-top:6px}
+  .spinner{width:12px;height:12px;flex:0 0 auto;border:2px solid #cfe8dc;border-top-color:#007e44;border-radius:50%;animation:spin .7s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
 </style>
 </head>
 <body>
@@ -357,14 +367,18 @@ function uploadPageHtml() {
   <input id="file" type="file" accept="image/*" multiple style="display:none">
   <div id="grid"></div>
   <div id="info"></div>
+  <div id="progressBox">
+    <div id="progressTrack"><div id="progressBar"></div></div>
+    <div id="progressText"><span class="spinner" id="progressSpin"></span><span id="progressLabel"></span></div>
+  </div>
   <button id="send" class="act" disabled>发送图片到电脑</button>
+  <button id="recvBtn">查看收到的图片</button>
   <div class="sep">— 或发送文本 —</div>
   <textarea id="txt" placeholder="输入要发送到电脑的文本…" rows="4"></textarea>
   <button id="sendText" class="act">发送文本到电脑</button>
   <div id="status" class="status"></div>
   <div class="sep">— 来自电脑 —</div>
   <p class="tip">电脑端「发送到手机」的图片会以弹窗形式自动弹出（与脚本端一致），点击缩略图可放大、长按可保存；文本仍自动弹出。</p>
-  <button id="recvBtn">查看收到的图片</button>
   <div id="recvPopup">
     <div class="box">
       <div class="rclose">×</div>
@@ -385,6 +399,45 @@ function uploadPageHtml() {
   var info = document.getElementById('info');
   var sendBtn = document.getElementById('send');
   var statusEl = document.getElementById('status');
+
+  // ===== 连发多图进度：进度条 + 发送中动画（替代原先只靠状态栏文字报进度）=====
+  var progressBox = document.getElementById('progressBox');
+  var progressTrack = document.getElementById('progressTrack');
+  var progressBar = document.getElementById('progressBar');
+  var progressLabel = document.getElementById('progressLabel');
+  var progressSpin = document.getElementById('progressSpin');
+  var progressTimer = null;
+
+  // 显示/更新进度：done = 已完成张数；busy = 当前这张正在传输（条纹滚动 + 转圈动画）
+  function showProgress(done, total, busy){
+    if(progressTimer){ clearTimeout(progressTimer); progressTimer = null; }
+    progressBox.className = 'on';
+    progressBar.style.width = Math.round((done / total) * 100) + '%';
+    progressTrack.className = busy ? 'busy' : '';
+    progressSpin.style.display = busy ? 'inline-block' : 'none';
+    progressLabel.style.color = '#007e44';
+    progressLabel.textContent = busy
+      ? ('发送中… ' + done + '/' + total + '（正在发送第 ' + Math.min(done + 1, total) + ' 张）')
+      : ('已发送 ' + done + '/' + total);
+  }
+  // 全部完成：拉满进度条，短暂停留后自动收起
+  function finishProgress(text){
+    if(progressTimer){ clearTimeout(progressTimer); }
+    progressBar.style.width = '100%';
+    progressTrack.className = '';
+    progressSpin.style.display = 'none';
+    progressLabel.style.color = '#007e44';
+    progressLabel.textContent = text;
+    progressTimer = setTimeout(function(){ progressBox.className = ''; }, 2500);
+  }
+  // 失败中止：不自动收起，文字转红，保留「已发 N/M」便于决定是否重试剩余
+  function failProgress(text){
+    if(progressTimer){ clearTimeout(progressTimer); progressTimer = null; }
+    progressTrack.className = '';
+    progressSpin.style.display = 'none';
+    progressLabel.style.color = '#e4393c';
+    progressLabel.textContent = text;
+  }
   // 待发送图片列表：{ blob, name, mime, url }
   var items = [];
   // 来自电脑的图片（九宫格画廊）：{ url, mime }
@@ -590,14 +643,17 @@ function uploadPageHtml() {
     sendBtn.disabled = true;
     var total = items.length, sent = 0;
     statusEl.className = 'status';
+    statusEl.textContent = ''; // 发送中的 n/N 交给进度条，状态栏只留最终结果/错误
+    showProgress(sent, total, true);
     function sendNext(){
       if(!items.length){
         statusEl.textContent = '✅ ' + total + ' 张已全部发送到电脑，请在电脑端接收';
+        finishProgress('✅ 已发送 ' + total + '/' + total + '，全部完成');
         renderGrid();
         return;
       }
       var it = items[0];
-      statusEl.textContent = '发送中…（' + (sent + 1) + '/' + total + '）';
+      showProgress(sent, total, true);
       blobToB64(it.blob, function(b64){
         fetch(window.location.pathname, {
           method: 'POST',
@@ -608,20 +664,24 @@ function uploadPageHtml() {
             URL.revokeObjectURL(it.url);
             items.shift();
             sent++;
+            showProgress(sent, total, sent < total);
             sendNext();
           } else {
             statusEl.className = 'status err';
             statusEl.textContent = '第 ' + (sent + 1) + ' 张发送失败：' + ((j && j.error) || '未知错误') + '，已发 ' + sent + '/' + total + '，可点按钮重试剩余';
+            failProgress('❌ 已发送 ' + sent + '/' + total + '，已停止');
             renderGrid();
           }
         }).catch(function(err){
           statusEl.className = 'status err';
           statusEl.textContent = '第 ' + (sent + 1) + ' 张发送失败：' + err.message + '，已发 ' + sent + '/' + total + '，可点按钮重试剩余';
+          failProgress('❌ 已发送 ' + sent + '/' + total + '，已停止');
           renderGrid();
         });
       }, function(err){
         statusEl.className = 'status err';
         statusEl.textContent = err.message;
+        failProgress('❌ 已发送 ' + sent + '/' + total + '，已停止');
         renderGrid();
       });
     }
