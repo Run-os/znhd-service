@@ -27,7 +27,12 @@ export default function PanelApp({ host }: { host: HTMLElement }) {
             // zIndexPopupBase：把 antd 全部浮层（Modal/Drawer/message/notification/Picker 下拉…）的
             // 层级基数抬到面板宿主（999999）之上，实现「弹窗/侧边栏盖住面板」的方案 B；
             // 面板本身仍高于宿主页面自身内容，不会被页面弹窗压住。
-            theme={{ token: { colorPrimary: '#007e44', borderRadius: 8, zIndexPopupBase: 1000000 } }}
+            // colorPrimary：v26.10.06-v22 起由原税务绿 #007e44 改为 **antd 官方色彩规范的蓝色系主色 blue-6 #1677FF**
+            //（https://ant.design/docs/spec/colors-cn）。只改这一个 token，antd 会自动派生 hover/active/focus
+            // 与浅色底：面板的「设置」实心按钮、语音 Switch 选中态背景、以及链接/焦点环都会同步变蓝。
+            // ⚠️ 语义色不跟着变：在线/已连接/日志「成功」仍用 success 绿（#52c41a / #389e0d），
+            //    错误红、警告黄同理——规范里主色与状态色是两套东西，混用会让人误判状态。
+            theme={{ token: { colorPrimary: '#1677ff', borderRadius: 8, zIndexPopupBase: 1000000 } }}
             getPopupContainer={getOverlayContainer}
             // antd 默认给「两个汉字」的按钮自动插空格（设置 → 设 置），会改变按钮文案；
             // 面板按钮沿用旧文案（设置/常用语/日志…），故关掉。v6 用 button.autoInsertSpace

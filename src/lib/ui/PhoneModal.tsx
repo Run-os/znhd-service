@@ -551,7 +551,7 @@ export default function PhoneModal({ open, onClose, relayServer }: PhoneModalPro
                         <Progress
                             percent={percent}
                             size="small"
-                            strokeColor={progress.failed ? '#e4393c' : '#007e44'}
+                            strokeColor={progress.failed ? '#e4393c' : '#1677ff'}
                             status={progress.failed ? 'exception' : 'normal'}
                         />
                         <Text type={progress.failed ? 'danger' : 'secondary'} style={{ fontSize: 12 }}>

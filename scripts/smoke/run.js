@@ -66,6 +66,8 @@ const CHECKS = [
   ['phrasesClicked', '常用语侧边栏可打开'],
   ['phrasesIsDrawer', '常用语是 antd Drawer 侧边栏（非 Modal）'],
   ['qrNoRadius', '二维码无圆角（定位角标不被裁切）'],
+  ['primaryTokenBlue', '主色 token 为 antd 蓝 blue-6 #1677FF'],
+  ['settingsBtnBlue', '「设置」按钮渲染为蓝色主色'],
   ['overlayAbovePanel', 'antd 弹窗/侧边栏盖在面板之上（方案 B）'],
   ['changelogPopup', '更新日志弹窗（最新 10 条）'],
   ['viewerZoomOk', '缩略图放大显示主图（antd 预览）'],

@@ -413,6 +413,23 @@
           QRCode: typeof window.QRCode,
           Viewer: typeof window.Viewer,
           recvResponses: window.__recvCount || 0,
+          // 主色必须是 antd 官方蓝色系 blue-6（v26.10.06-v22）：先查 token（一处覆盖按钮+开关+派生色），
+          // 再查「设置」实心按钮的真实渲染色，两道一起锁。
+          // ⚠️ token 必须从**按钮**上读，不能从面板宿主读：`--ant-color-primary` 由 antd 的 css-var
+          //    包裹元素定义并向下继承，宿主元素本身没有它（v22 踩过，白红了一次）。
+          primaryTokenBlue: (() => {
+            const b = Array.from(document.querySelectorAll('button')).find(
+              (x) => (x.textContent || '').indexOf('设置') >= 0
+            );
+            if (!b) return false;
+            return getComputedStyle(b).getPropertyValue('--ant-color-primary').trim().toLowerCase() === '#1677ff';
+          })(),
+          settingsBtnBlue: (() => {
+            const b = Array.from(document.querySelectorAll('button')).find(
+              (x) => (x.textContent || '').indexOf('设置') >= 0
+            );
+            return !!b && getComputedStyle(b).backgroundColor === 'rgb(22, 119, 255)';
+          })(),
           // 二维码必须无圆角（v26.10.06-v21 按用户要求；圆角会切掉定位角标影响识别）
           qrNoRadius: (() => {
             const q = document.querySelector('img[alt="上传链接二维码"]');
