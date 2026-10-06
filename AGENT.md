@@ -19,7 +19,7 @@
    5. **版本号与更新日志正文只进 `CHANGELOG.md`**（2026-10-06 起从 ReadMe 迁出）；ReadMe 只留一句指针，agent.md 不复制 changelog，只记版本指针。
    6. 拿不准时先问自己：这段话若删掉，改代码时是否还能正确干活？能 → 别写。
 
-3. **读取顺序**：① 完整读 `agent.md`；② 本文件提示需对外信息时，读 `ReadMe.md`（技术栈/功能细节见其对应章节）；③ **历史与版本规则读 `CHANGELOG.md`**（更新日志唯一来源，按版本倒序）；④ 缺历史上下文读 `.workbuddy/memory/`（见下）；⑤ 看源码；⑥ 部署相关以 `.github/workflows/deploy.yml` 注释为准。
+3. **读取顺序**：① 完整读 `agent.md`；② 本文件提示需对外信息时，读 `ReadMe.md`（技术栈/功能细节见其对应章节）；③ **历史与版本规则读 `CHANGELOG.md`**（更新日志唯一来源，按版本倒序）；④ 缺历史上下文读 `.workbuddy/memory/`（见下）；⑤ 看源码；⑥ 部署相关以 `.github/workflows/deploy.yml` 注释为准；⑦ **动 `web/` 里的 Ant Design 代码前，先读本节下方的「前端（手机上传页）· Ant Design 铁律」，并按其中流程先用 `@ant-design/cli` 查 API、改完必 lint**。
 
 4. **更新要求**：新增依赖/核心逻辑变动/约束变更/新增坑点时更新；不写宣传话术；**【Agent修改代码强制约束】章节为最高优先级，不得删减**。
 
@@ -86,6 +86,39 @@
 - **端到端冒烟（`npm run verify`，已接入 CI）**：`scripts/smoke/` 起本地服务（`/` 测试页、`/znhd.user.js` 构建产物），用 puppeteer 无头 Chromium 加载，GM API 桩 + 真实 `@require` 依赖 + 按真实中继协议投递 1 条文本 + 1 张图，并 mock 常用语 YAML 与 `CHANGELOG.md`。断言：面板 / **版本号（精确等于产物 `@version`，由 run.js 从产物头部读出注入）** / 文本弹窗 / 九宫格画廊 / 常用语 YAML 解析 / 常用语抽屉 / **更新日志弹窗（最新 10 条 + 获取更多日志 + 条数提示）** / 页面无脚本自身报错。**结构变动后必须本地跑一次**。
   - 新增断言时注意：`collectText()` 覆盖全页（含挂在 `documentElement` 下的弹窗），读**面板**文本要用 `collectShadowText()`——否则弹窗内容里的版本号会串台（v26.10.6-v1 踩过）。
 - **`tsconfig.json` 已开启 `strict: true`**（2026-10-06）；唯一例外是 `useUnknownInCatchVariables: false`（沿用「catch 后直接读 e.message 记日志」的既有写法，18 处）。新增代码按 strict 写。
+
+## 前端（手机上传页）· Ant Design 铁律
+
+> **背景**：手机上传页（`web/`）自 `v26.10.06-v3` 起是 **React 19 + Ant Design v6** 应用。antd 大版本间破坏性变更频繁，**训练数据里的写法经常已弃用**——写 antd 代码前必须先查、写完必须 lint。本仓库 antd 代码**只在 `web/` 下**。
+
+- **版本基线**：`antd 6.6.5` + `react 19.3.0`（见 `web/package.json`，锁在 `web/package-lock.json`）。查 API 时**始终显式带上该版本**（`--version 6.6.5`），不要凭记忆。
+- **强制流程（缺一不可）**
+  1. **写之前先查**：`npx -y @ant-design/cli info <Component> --version 6.6.5 --format json`（可用 `--detail` 看 since/deprecated）；要可跑范例用 `demo <Component> <name>`；主题 token 用 `token <Component>` / `design.md`；语义化类名用 `semantic <Component>`。
+  2. **写之后必 lint**：在 `web/` 下执行 `npx -y @ant-design/cli lint ./src --format json`，必须 `issues: []`；只查弃用加 `--only deprecated`。
+  3. **升版/迁移前先查**：`npx -y @ant-design/cli migrate <from> <to>`、`changelog <v1> <v2> [Component]`。
+  4. 配置异常 `doctor`、环境快照 `env`、用量统计 `usage ./src`。**所有命令都支持 `--format json`，Agent 一律用 json 解析**。
+- **v5 → v6 已确认的破坏性变更（本页面涉及项；全量 40 条用 `migrate 5 6` 拉）**
+
+  | 组件 | v5 写法 | v6 写法 |
+  |---|---|---|
+  | Button | `type="primary"` | **`color="primary" variant="solid"`**（`type` 已拆成 `color` + `variant`） |
+  | Space | `direction="horizontal"` | **`orientation="horizontal"`**；`split` → `separator` |
+  | Progress | `strokeWidth`/`width`、`trailColor` | **`size`**、**`railColor`**（`status` 仍为 `success`/`exception`/`normal`/`active`） |
+  | Modal | `destroyOnClose`、`bodyStyle`/`maskStyle` | **`destroyOnHidden`**、`styles.body`/`styles.mask` |
+  | Tag | `bordered={false}`、`color="xxx-inverse"` | **`variant="filled"`**、`variant="solid"`；默认外间距已移除 |
+  | Alert | `message`、`closeText` | **`title`**、`closable.closeIcon` |
+  | Card | `bordered`、`bodyStyle`/`headStyle` | **`variant`**、`styles.body`/`styles.header` |
+  | Image | `visible`、`onVisibleChange`、`toolbarRender` | **`open`**、**`onOpenChange`**、`actionsRender` |
+  | Tabs / Menu / Breadcrumb | `TabPane` / `children` / `routes` | 统一用 **`items`** |
+
+  另有全局项：React ≥18、`@ant-design/icons` 必须 v6、CSS 变量默认开启、Modal/Drawer 遮罩默认模糊。
+- **技能与文档**
+  - 官方 skill 已装进仓库：`.agents/skills/antd/SKILL.md`（`skills-lock.json` 记录来源）。安装命令 `npx skills add ant-design/ant-design-cli -a universal -y --copy` —— ⚠️ agent 名**不是** `claude`（会报 Invalid agents），可用 `claude-code` / `cursor` / `codex` / `universal` 等，列表见 `npx skills add --help` 或报错信息。
+  - 官方给 Agent 的说明（**改 antd 代码前先读**）：<https://ant.design/docs/react/for-agents-cn.md>。站点页面是渲染后的，全文取自源文件 `ant-design/ant-design` 的 `docs/react/for-agents.zh-CN.md`（raw 链接）。
+  - 结构化文档：`https://ant.design/llms.txt`（导航）、`https://ant.design/llms-full-cn.txt`（全量中文）、单组件 `https://ant.design/components/<name>.md`、设计语言 `https://ant.design/design.md`。
+- **已验证记录（v26.10.06-v3 交付前）**：`lint` → 0 issue；`doctor` → 全 pass（antd 6.6.5 / React 19.3.0 兼容、无重复安装）；`usage ./src` → 扫到 6 个文件（确认 lint 真的解析了代码，而不是静默跳过）；`info Progress`/`info Tag` → 核对 `status`/`variant` 合法值。**新增 antd 代码后照这套跑一遍再交付。**
+
+---
 
 ## 更新日志约定（2026-10-06 起）
 
