@@ -3,6 +3,13 @@ import { notify } from '@/lib/ui/notify';
 import { DEFAULTS, PANEL_POINT_KEY, PHRASES_CACHE_KEY, STORAGE_KEY } from '@/lib/constants';
 
 /**
+ * 全部用户配置的形状（= DEFAULTS 的结构）。
+ * 用 type 而非 interface：type 别名带隐式索引签名，可直接传给 saveAllvalue(Record<string, unknown>)。
+ * 有了它，loadAllvalue 的返回值不再是推断出的 any，UI 侧也不必再写 useState<any>。
+ */
+export type Allvalue = typeof DEFAULTS;
+
+/**
  * 本地存储读写：面板位置 / 常用语缓存 / 全部用户配置（原 app.ts「存储管理」段）。
  * 模块化 P1：逐字迁移，仅加 export。注意 saveAllvalue 是 300ms 尾防抖，
  * 返回时尚未落盘——需要写完立刻读时先调 flushSaveAllvalue()。
@@ -103,7 +110,7 @@ export function savePhrasesCache(url: string, data: Record<string, unknown>): vo
  * 解析失败时回退到 DEFAULTS，保证调用方始终拿到完整配置对象。
  * @returns {object} 合并后的配置对象（含 voiceEnabled / workingHours / commonPhrasesUrl 等）
  */
-export function loadAllvalue() {
+export function loadAllvalue(): Allvalue {
     try {
         const saved = localStorage.getItem(STORAGE_KEY);
         if (saved) {

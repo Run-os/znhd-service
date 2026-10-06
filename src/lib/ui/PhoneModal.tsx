@@ -9,7 +9,7 @@ import { getOverlayContainer } from '@/lib/ui/panelHost';
 const { Text } = Typography;
 
 /** 体积显示：统一按 KB 输出（不足 1KB 也显示 1KB，避免出现「0KB」） */
-function kbText(bytes: any) {
+function kbText(bytes: number) {
     const n = Number(bytes) || 0;
     return Math.max(1, Math.round(n / 1024)) + 'KB';
 }
@@ -128,7 +128,7 @@ export default function PhoneModal({ open, onClose, relayServer }: PhoneModalPro
                 setSendText('');
                 setSending(false);
             },
-            onFail: (e: any) => {
+            onFail: (e) => {
                 addLog('[发送到手机] 发送失败：' + e, 'error');
                 setSending(false);
             },
@@ -230,7 +230,7 @@ export default function PhoneModal({ open, onClose, relayServer }: PhoneModalPro
                 failed: false,
                 text: '处理中… ' + sent + '/' + total + '（第 ' + (sent + 1) + ' 张）',
             });
-            compressImageForPhone(it.file).then((out: any) => {
+            compressImageForPhone(it.file).then((out) => {
                 if (imagePayloadBytes(out.blob, out.name, out.mime) > RELAY_MAX_BODY) {
                     addLog(
                         '[发送到手机] 第 ' +
@@ -287,7 +287,7 @@ export default function PhoneModal({ open, onClose, relayServer }: PhoneModalPro
                             });
                             sendNext();
                         },
-                        onFail: (e: any) => failAt(e),
+                        onFail: (e) => failAt(e),
                     });
                 };
                 rd.onerror = () => failAt('读取图片失败');

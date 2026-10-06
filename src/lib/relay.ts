@@ -13,15 +13,24 @@ const DEVICE_ID_KEY = 'znhd_device_id';
 // 单请求体上限，须与 relay-server 的 MAX_BODY 保持一致（服务端按「整段 JSON 体积」掐断）。
 // 发图前据此预检体积，避免 base64 膨胀后超过上限，被服务端拒绝时只见笼统的网络/服务器错误。
 export const RELAY_MAX_BODY = 12 * 1024 * 1024;
+/** 待发图片：File（带 name）或裸 Blob（无 name）。用交叉类型收窄，避免断言与 any */
+type ImageFile = Blob & { name?: string };
+/** 体积预检只看 size（name/mime 由入参单独传），故用结构类型兼容 File/Blob 与空值 */
+interface ImageSizeLike {
+    size?: number;
+}
+/** 一条发往中继的载荷：文本，或图片（data 为不带前缀的 base64） */
+type SendToPhonePayload = { text: string } | { name: string; mime: string; data: string };
+
 /**
  * 估算把该文件作为一条 POST body（含 name+mime+base64(data) 与 JSON 结构开销）的体积。
  * 仅用于「发送到手机」发前预检，与服务端 MAX_BODY 对齐（约 12MB）。
- * @param {File} file - 待发图片文件
+ * @param {File|Blob} file - 待发图片文件
  * @param {string} [name] - 文件名
  * @param {string} [mime] - MIME 类型
  * @returns {number} 估算的 body 字节数
  */
-export function imagePayloadBytes(file: any, name: any, mime: any) {
+export function imagePayloadBytes(file: ImageSizeLike | null | undefined, name?: string | null, mime?: string | null) {
     const b64Len = Math.ceil(((file && file.size) || 0) / 3) * 4; // base64 膨胀 ≈ 4/3
     // name/mime 按 UTF-8 字节数计（服务端 readBody 按字节累加；String.length 是 UTF-16 码元，
     // 中文文件名会低估约 3 倍，接近上限时预检可能误放行）
@@ -38,7 +47,7 @@ export const PHONE_JPEG_QUALITY = 0.75;
 
 /** 发送到手机的实际载荷：blob/name/mime 为最终要 POST 的内容；compressed 表示是否发生过压缩。 */
 export interface PhoneImagePayload {
-    blob: any;
+    blob: Blob;
     name: string;
     mime: string;
     compressed: boolean;
@@ -60,14 +69,14 @@ function isHeicLike(lowerMime: string, lowerName: string) {
  * 桌面 Chrome 原生解不开 HEIC/HEIF（createImageBitmap 与 <img> 都会失败），故必须先转码；
  * 与手机上传页用的是同一个库（那边是页面里按需加载，这里是脚本 @require）。
  */
-function heicToJpeg(file: any): Promise<any> {
-    return new Promise((resolve, reject) => {
+function heicToJpeg(file: Blob): Promise<Blob> {
+    return new Promise<Blob>((resolve, reject) => {
         if (typeof heic2any !== 'function') {
             reject(new Error('heic2any 未加载'));
             return;
         }
         heic2any({ blob: file, toType: 'image/jpeg', quality: 0.9 })
-            .then((out: any) => {
+            .then((out: Blob | Blob[]) => {
                 const b = Array.isArray(out) ? out[0] : out; // 多图 HEIC 会返回数组，取首帧
                 if (b) resolve(b);
                 else reject(new Error('heic2any 未产出图片'));
@@ -76,15 +85,23 @@ function heicToJpeg(file: any): Promise<any> {
     });
 }
 
+/** 解码结果：可绘制源 + 原始尺寸 + 释放钩子（createImageBitmap 与 <img> 两条路径统一） */
+interface DecodedImage {
+    source: CanvasImageSource;
+    width: number;
+    height: number;
+    release: () => void;
+}
+
 /**
  * 解码（createImageBitmap，失败回退 <img>）→ canvas 等比缩放到最大边 PHONE_MAX_DIM →
  * 铺白底 → 导出 JPEG。解码/编码失败时 resolve(null)，由调用方决定回退策略。
  */
-function toPhoneJpeg(blob: any): Promise<any> {
-    return new Promise((resolve) => {
+function toPhoneJpeg(blob: Blob): Promise<Blob | null> {
+    return new Promise<Blob | null>((resolve) => {
         // <img> 兜底解码：createImageBitmap 在部分内核/格式上不可用或直接抛
         const decodeViaImg = () =>
-            new Promise((rs: any, rj: any) => {
+            new Promise<DecodedImage>((rs, rj) => {
                 const url = URL.createObjectURL(blob);
                 const img = new Image();
                 img.onload = () =>
@@ -100,10 +117,10 @@ function toPhoneJpeg(blob: any): Promise<any> {
                 };
                 img.src = url;
             });
-        const decoded: Promise<any> =
+        const decoded: Promise<DecodedImage> =
             typeof createImageBitmap === 'function'
                 ? createImageBitmap(blob)
-                      .then((bmp: any) => ({
+                      .then((bmp) => ({
                           source: bmp,
                           width: bmp.width,
                           height: bmp.height,
@@ -114,7 +131,7 @@ function toPhoneJpeg(blob: any): Promise<any> {
                       .catch(() => decodeViaImg())
                 : decodeViaImg();
         decoded
-            .then((dec: any) => {
+            .then((dec) => {
                 const w = Number(dec.width) || 0;
                 const h = Number(dec.height) || 0;
                 if (!w || !h) {
@@ -139,7 +156,7 @@ function toPhoneJpeg(blob: any): Promise<any> {
                 ctx.fillRect(0, 0, cw, ch);
                 ctx.drawImage(dec.source, 0, 0, cw, ch);
                 dec.release();
-                cv.toBlob((b: any) => resolve(b || null), 'image/jpeg', PHONE_JPEG_QUALITY);
+                cv.toBlob((b) => resolve(b || null), 'image/jpeg', PHONE_JPEG_QUALITY);
             })
             .catch(() => resolve(null));
     });
@@ -159,7 +176,7 @@ function toPhoneJpeg(blob: any): Promise<any> {
  * @param {File|Blob} file - 用户选择的原始图片文件
  * @returns {Promise<PhoneImagePayload>} 实际要发送的内容
  */
-export function compressImageForPhone(file: any): Promise<PhoneImagePayload> {
+export function compressImageForPhone(file: ImageFile): Promise<PhoneImagePayload> {
     const name = String((file && file.name) || 'image.jpg');
     const mime = String((file && file.type) || 'image/jpeg');
     const original: PhoneImagePayload = { blob: file, name: name, mime: mime, compressed: false };
@@ -176,10 +193,10 @@ export function compressImageForPhone(file: any): Promise<PhoneImagePayload> {
     }
     const heic = isHeicLike(lowerMime, lowerName);
     // HEIC 转码失败时 heicToJpeg 会 reject，被下面的 catch 兜成原图直传
-    const source = heic ? heicToJpeg(file) : Promise.resolve(file);
+    const source: Promise<Blob> = heic ? heicToJpeg(file) : Promise.resolve<Blob>(file);
     return source
-        .then((blob: any) => toPhoneJpeg(blob))
-        .then((out: any) => {
+        .then((blob) => toPhoneJpeg(blob))
+        .then((out) => {
             if (!out) return original; // 解码/编码失败，或（HEIC）库不可用
             // HEIC 的「转码」本身就是目的：既压体积，也修掉安卓端不显示 HEIC 的兼容问题，
             // 故即使 JPEG 没比原始 HEIC 小也照样发 JPEG；其它格式仍遵循「压不小就不压」。
@@ -230,7 +247,7 @@ export function getDeviceId() {
  * @param {string} mime - MIME 类型
  * @returns {Blob} 图片 Blob
  */
-function base64ToBlob(b64: any, mime: any) {
+function base64ToBlob(b64: string, mime?: string | null) {
     const bin = atob(b64);
     const len = bin.length;
     const arr = new Uint8Array(len);
@@ -247,8 +264,8 @@ function base64ToBlob(b64: any, mime: any) {
  * @param {Blob} blob
  * @returns {Promise<Blob>}
  */
-function blobToPng(blob: any) {
-    return new Promise((resolve) => {
+function blobToPng(blob: Blob): Promise<Blob> {
+    return new Promise<Blob>((resolve) => {
         if (typeof createImageBitmap !== 'function' || typeof document === 'undefined') {
             resolve(blob);
             return;
@@ -281,15 +298,16 @@ function blobToPng(blob: any) {
 /** 剪贴板写入目标：一个 realm 的 navigator.clipboard + ClipboardItem + Blob 构造器 */
 interface ClipboardRealm {
     name: string;
-    nav: any;
-    CI: any;
-    BlobCtor: any;
+    nav: Navigator;
+    CI: typeof ClipboardItem;
+    BlobCtor: typeof Blob;
     isPageRealm: boolean;
 }
 
 /** 统一取可读的异常文本 */
-function errTextOf(e: any) {
-    return e && e.name ? e.name + ': ' + e.message : String((e && e.message) || e);
+function errTextOf(e: unknown) {
+    const err = e as { name?: string; message?: string } | null | undefined;
+    return err && err.name ? err.name + ': ' + err.message : String((err && err.message) || e);
 }
 
 /**
@@ -297,7 +315,7 @@ function errTextOf(e: any) {
  * 跨 realm 直接把「隔离世界的 Blob」交给「页面主世界的 ClipboardItem」可能被拒绝；
  * 参考实现 qsniyg/maxurl 同样是用页面原生 `native_blob` 构造后再传入 ClipboardItem。
  */
-function toRealmBlob(blob: any, BlobCtor: any) {
+function toRealmBlob(blob: Blob, BlobCtor: typeof Blob | undefined) {
     const type = blob && blob.type ? blob.type : 'image/png';
     try {
         return BlobCtor ? new BlobCtor([blob], { type: type }) : blob;
@@ -318,13 +336,13 @@ function toRealmBlob(blob: any, BlobCtor: any) {
  * @param {boolean} preferPromiseForm - 是否优先用 Promise 形式的 ClipboardItem
  * @returns {Promise<boolean>} 写入是否成功
  */
-function writeClipboardOnce(realm: ClipboardRealm, pngPromise: Promise<any>, preferPromiseForm: boolean) {
+function writeClipboardOnce(realm: ClipboardRealm, pngPromise: Promise<Blob>, preferPromiseForm: boolean) {
     return new Promise<boolean>((resolve) => {
-        const doWrite = (item: any) => {
+        const doWrite = (item: ClipboardItem) => {
             try {
                 realm.nav.clipboard.write([item]).then(
                     () => resolve(true),
-                    (e: any) => {
+                    (e) => {
                         addLog('[复制] 写入剪贴板被拒（' + realm.name + '）: ' + errTextOf(e), 'warning', true);
                         resolve(false);
                     }
@@ -353,6 +371,9 @@ function writeClipboardOnce(realm: ClipboardRealm, pngPromise: Promise<any>, pre
     });
 }
 
+/** 页面主世界的 window：用它自己的 ClipboardItem / Blob（隔离世界里这两个常不可用） */
+type PageRealmWindow = Window & { ClipboardItem?: typeof ClipboardItem; Blob: typeof Blob };
+
 /**
  * 将图片 Blob 写入系统剪贴板（必须由一次「用户点击」触发）。
  *
@@ -368,21 +389,22 @@ function writeClipboardOnce(realm: ClipboardRealm, pngPromise: Promise<any>, pre
  * @param {Blob} blob - 图片 Blob
  * @returns {Promise<boolean>} 成功返回 true，失败返回 false（失败原因写入日志）
  */
-export function copyImageToClipboard(blob: any) {
+export function copyImageToClipboard(blob: Blob | null | undefined) {
     return new Promise<boolean>((resolve) => {
         if (!blob) {
             addLog('[复制] 图片数据为空', 'error', true);
             resolve(false);
             return;
         }
-        const pageWin: any = typeof unsafeWindow !== 'undefined' ? unsafeWindow : null;
+        const pageWin: PageRealmWindow | null = typeof unsafeWindow !== 'undefined' ? unsafeWindow : null;
         const realms: ClipboardRealm[] = [];
         // 页面主世界优先：ScriptCat 隔离世界里的 ClipboardItem / 写入常不可用
         if (
             pageWin &&
             pageWin.navigator &&
             pageWin.navigator.clipboard &&
-            pageWin.navigator.clipboard.write &&
+            // 用 typeof 判断而非直接取真值：写方法在类型上恒有定义，真值判断会被 TS 判为恒真
+            typeof pageWin.navigator.clipboard.write === 'function' &&
             pageWin.ClipboardItem
         ) {
             realms.push({
@@ -407,8 +429,8 @@ export function copyImageToClipboard(blob: any) {
         }
 
         // 先启动 PNG 转换（不阻塞手势）：Chromium 只认 image/png
-        const pngPromise: Promise<any> = (blob.type === 'image/png' ? Promise.resolve(blob) : blobToPng(blob)).then(
-            (b: any) => {
+        const pngPromise: Promise<Blob> = (blob.type === 'image/png' ? Promise.resolve(blob) : blobToPng(blob)).then(
+            (b) => {
                 if (b && b.type !== 'image/png') {
                     // blobToPng 转换失败时会原样返回原图；此处只提示，成败仍交给写入阶段判定
                     addLog('[复制] 图片转 PNG 失败（内核不支持位图解码/Canvas），可能无法写入剪贴板', 'warning', true);
@@ -437,14 +459,24 @@ export function copyImageToClipboard(blob: any) {
     });
 }
 
+/** startPhoneReceive 的入参：回调按需传（只用到 onStatus/onImage/onText/onConnected 中的一部分） */
+interface PhoneReceiveOptions {
+    server?: string | null;
+    uuid: string;
+    onStatus?: (text: string) => void;
+    onImage?: (img: { blob: Blob; previewUrl: string; name?: string; mime?: string }) => void;
+    onText?: (item: { text: string; ts?: number }) => void;
+    onConnected?: () => void;
+}
+
 /**
  * 启动「设备互联」长轮询接收循环（直到 stop() 调用）。
  * 通过 GM_xmlhttpRequest 轮询中继服务器 /recv/<uuid>（绕过税务页面 CSP 对 connect-src 的限制）。
  * 收到图片时回调 onImage；状态变化回调 onStatus；网络异常自动重连。
- * @param {object} opt - { server, uuid, onStatus, onImage }
+ * @param {PhoneReceiveOptions} opt - { server, uuid, onStatus, onImage, onText, onConnected }
  * @returns {Function} stop() 停止接收
  */
-export function startPhoneReceive(opt: any) {
+export function startPhoneReceive(opt: PhoneReceiveOptions) {
     const server = (opt.server || '').trim().replace(/\/+$/, '');
     const uuid = opt.uuid;
     let stopped = false;
@@ -553,13 +585,22 @@ export function startPhoneReceive(opt: any) {
     };
 }
 
+/** sendToPhone 的入参：仅负责投递（手机是否在线由调用方先判断） */
+interface SendToPhoneOptions {
+    server?: string | null;
+    uuid: string;
+    payload: SendToPhonePayload;
+    onOk?: () => void;
+    onFail?: (msg: string) => void;
+}
+
 /**
  * 电脑端 → 手机端 发送（图片或文本）。POST 到中继 /phone/send/<deviceId>。
  * 仅负责投递；手机是否在线由调用方先查 /phone/status 决定（离线时调用方直接拦截）。
- * @param {object} opt - { server, uuid, payload, onOk, onFail }
+ * @param {SendToPhoneOptions} opt - { server, uuid, payload, onOk, onFail }
  *   payload: { text } 或 { name, mime, data(base64) }
  */
-export function sendToPhone(opt: any) {
+export function sendToPhone(opt: SendToPhoneOptions) {
     const server = (opt.server || '').trim().replace(/\/+$/, '');
     const uuid = opt.uuid;
     const url = server + '/phone/send/' + encodeURIComponent(uuid);

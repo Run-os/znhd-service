@@ -121,9 +121,10 @@ function checkCount() {
             return;
         }
 
-        const currentCount = parseInt(ocurrentElement.textContent!.trim(), 10);
+        const currentText = (ocurrentElement.textContent || '').trim();
+        const currentCount = parseInt(currentText, 10);
         if (isNaN(currentCount)) {
-            addLog(`无法解析等待人数: "${ocurrentElement.textContent!.trim()}"`, 'warning');
+            addLog(`无法解析等待人数: "${currentText}"`, 'warning');
             return;
         }
         publishState({ waiting: currentCount });

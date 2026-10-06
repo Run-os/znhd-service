@@ -112,7 +112,12 @@ function processSpeechQueue() {
     }
 
     isSpeaking = true;
-    const item = speechQueue.shift()!;
+    const item = speechQueue.shift();
+    // 上面已确认队列非空，这里只为类型收窄（同时兜住异常清空的情况，避免 isSpeaking 卡死）
+    if (!item) {
+        isSpeaking = false;
+        return;
+    }
     const utterance = item.utterance;
 
     // 清理上一次的超时定时器

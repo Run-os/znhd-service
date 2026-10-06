@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { Button, Card, Space, Switch } from 'antd';
 import { DEFAULTS, PHRASES_CACHE_TTL } from '@/lib/constants';
-import { addLog, addLogDebounced, setLogEntriesSink, clearLogs } from '@/lib/logger';
-import { loadPhrasesCache, savePhrasesCache, saveAllvalue } from '@/lib/storage';
+import { addLog, addLogDebounced, setLogEntriesSink, clearLogs, type LogEntry } from '@/lib/logger';
+import { loadPhrasesCache, savePhrasesCache, saveAllvalue, type Allvalue } from '@/lib/storage';
 import { runtime } from '@/lib/state';
 import { resolveGithubUrl, hoursToHHmm } from '@/lib/utils';
 import { getDeviceId, startPhoneReceive } from '@/lib/relay';
@@ -59,12 +59,14 @@ interface MainPanelProps {
 export default function MainPanel({ host }: MainPanelProps) {
     const drag = usePanelDrag(host);
 
-    const [Allvalue, setAllvalue] = useState<any>(() => runtime.init);
+    // 惰性初始化：useState(loadAllvalue()) 的实参每次渲染都会求值，而本组件因 logEntries 频繁重渲染，
+    // 等于反复白读 localStorage。顶层 runtime.init 已是启动时读好的同一份数据。
+    const [Allvalue, setAllvalue] = useState<Allvalue>(() => runtime.init);
     const [settingsOpen, setSettingsOpen] = useState(false);
     const [phrasesOpen, setPhrasesOpen] = useState(false);
     const [phoneOpen, setPhoneOpen] = useState(false);
     const [logOpen, setLogOpen] = useState(false);
-    const [logEntries, setLogEntries] = useState<any[]>([]);
+    const [logEntries, setLogEntries] = useState<LogEntry[]>([]);
     const [phrasesData, setPhrasesData] = useState<Record<string, string>>({});
     const [phrasesLoading, setPhrasesLoading] = useState(false);
     const [searchKeyword, setSearchKeyword] = useState('');
@@ -72,7 +74,7 @@ export default function MainPanel({ host }: MainPanelProps) {
     const [mon, setMon] = useState<MonitorState>(() => getMonitorState());
     const receiveStopRef = useRef<null | (() => void)>(null);
 
-    const updateAllvalue = (newValue: any) => {
+    const updateAllvalue = (newValue: Allvalue) => {
         setAllvalue(newValue);
         saveAllvalue(newValue);
         runtime.voiceEnabled = newValue.voiceEnabled;
@@ -80,13 +82,13 @@ export default function MainPanel({ host }: MainPanelProps) {
         runtime.commonPhrasesUrl = newValue.commonPhrasesUrl;
         runtime.useCdn = !!newValue.useCdn;
     };
-    const patchAllvalue = (kv: any) => updateAllvalue({ ...Allvalue, ...kv });
+    const patchAllvalue = (kv: Partial<Allvalue>) => updateAllvalue({ ...Allvalue, ...kv });
 
     const { voiceEnabled } = Allvalue;
 
     // 日志写入回调
     useEffect(() => {
-        setLogEntriesSink(setLogEntries as any);
+        setLogEntriesSink(setLogEntries);
         return () => setLogEntriesSink(null);
     }, []);
 
@@ -157,9 +159,11 @@ export default function MainPanel({ host }: MainPanelProps) {
                     setPhrasesLoading(false);
                 }
             },
-            onerror: function (error: any) {
+            onerror: function (error: unknown) {
                 if (seq !== phrasesRequestSeq) return;
-                const errMsg = error && error.message ? error.message : typeof error === 'string' ? error : '网络错误';
+                // GM_xmlhttpRequest 的错误参数形态不定（对象 / 字符串），故按需取值而非断言类型
+                const err = (error || {}) as { message?: string };
+                const errMsg = err.message ? err.message : typeof error === 'string' ? error : '网络错误';
                 const hasOld = Object.keys(phrasesData).length > 0;
                 addLog('加载常用语失败: ' + errMsg + (hasOld ? '，仍显示上次加载的内容' : ''), 'error', true);
                 notify.error('加载常用语失败' + (hasOld ? '，仍显示上次内容' : ''));
@@ -190,14 +194,15 @@ export default function MainPanel({ host }: MainPanelProps) {
                 server: s,
                 uuid: getDeviceId(),
                 onConnected: () => addLog('[设备互联] 已自动开始接收（' + s + '）', 'info'),
-                onImage: (img: any) => {
+                // 入参类型由 startPhoneReceive 的 PhoneReceiveOptions 上下文推断，无需显式标注
+                onImage: (img) => {
                     addLog(
                         '[设备互联] 收到图片：' + (img.name || 'image') + '（' + (img.mime || 'image') + '）',
                         'success'
                     );
                     showImagePopup(img);
                 },
-                onText: (txt: any) => {
+                onText: (txt) => {
                     const t = (txt.text || '').replace(/\s+$/, '');
                     addLog('[设备互联] 收到文本：' + (t.length > 40 ? t.slice(0, 40) + '…' : t), 'success');
                     showTextPopup(txt);
@@ -402,7 +407,7 @@ export default function MainPanel({ host }: MainPanelProps) {
                 open={settingsOpen}
                 onClose={() => setSettingsOpen(false)}
                 workingHours={Allvalue.workingHours}
-                onChangeWorkingHours={(wh: any) => {
+                onChangeWorkingHours={(wh: Allvalue['workingHours']) => {
                     patchAllvalue({ workingHours: wh });
                     addLog(
                         '监控时间段已更新：上午 ' +

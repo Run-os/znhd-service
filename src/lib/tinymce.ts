@@ -13,10 +13,10 @@ import { escapeHtml } from '@/lib/utils';
  * @param {string} [text2append=''] - 要追加的文本（默认空串，避免掩盖漏传参数的 bug）
  * @returns {string} 成功返回追加后的编辑器完整纯文本；找不到编辑器/iframe 等失败场景返回空字符串
  */
-export function appendToTinyMCE(text2append: any = '') {
+export function appendToTinyMCE(text2append = '') {
     /* 1. 拿到编辑器实例（动态匹配，不依赖 id） */
     const editors = window.tinymce?.editors ?? []; // 所有 TinyMCE 实例
-    const ed = editors.find((e: any) => e.inline === false); // 先拿第一个非 inline 的
+    const ed = editors.find((e: { inline?: boolean }) => e.inline === false); // 先拿第一个非 inline 的
     // 如果上面没拿到，再随便拿一个
     const editor = ed || editors[0];
 
@@ -32,8 +32,12 @@ export function appendToTinyMCE(text2append: any = '') {
             document.querySelector('iframe[class*="tox"]');
         if (iframe) {
             try {
-                const body = iframe.contentDocument!.querySelector('body#tinymce') || iframe.contentDocument!.body;
-                isInputEmpty = !body.textContent!.trim();
+                // 不用非空断言：contentDocument 在跨域/未挂载时为 null，走 catch 记日志（与原 AND 断言行为一致）
+                const doc = iframe.contentDocument;
+                if (!doc) throw new Error('contentDocument 不可访问');
+                const body = doc.querySelector('body#tinymce') || doc.body;
+                if (!body) throw new Error('找不到 iframe body');
+                isInputEmpty = !(body.textContent || '').trim();
             } catch (e) {
                 addLog('无法访问iframe内容: ' + e.message, 'warning', true);
             }
@@ -76,7 +80,8 @@ export function appendToTinyMCE(text2append: any = '') {
         }
 
         try {
-            const body = iframe.contentDocument!.body;
+            const doc = iframe.contentDocument;
+            const body = doc ? doc.body : null;
             if (!body) {
                 addLog('找不到 body', 'error', true);
                 return '';

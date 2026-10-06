@@ -1,5 +1,9 @@
 /* eslint-disable prettier/prettier */
 module.exports = {
+  // 显式声明根配置：否则 eslint 会继续向上级目录级联查找 .eslintrc*，
+  // 一旦上级目录（例如嵌套在本仓库里的 git worktree）也有 eslint 配置，就会报
+  // 「couldn't determine the plugin "@typescript-eslint" uniquely」而完全无法 lint。
+  root: true,
   parser: '@typescript-eslint/parser', // 定义ESLint的解析器
   extends: ['eslint:recommended', 'plugin:@typescript-eslint/recommended', 'prettier'], //定义文件继承的子规范
   plugins: ['@typescript-eslint', 'html', 'prettier'], //定义了该eslint文件所依赖的插件
