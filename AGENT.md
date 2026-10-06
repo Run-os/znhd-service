@@ -103,6 +103,9 @@
   2. **写之后必 lint**：在 `web/` 下执行 `npx -y @ant-design/cli lint ./src --format json`，必须 `issues: []`；只查弃用加 `--only deprecated`。
   3. **升版/迁移前先查**：`npx -y @ant-design/cli migrate <from> <to>`、`changelog <v1> <v2> [Component]`。
   4. 配置异常 `doctor`、环境快照 `env`、用量统计 `usage ./src`。**所有命令都支持 `--format json`，Agent 一律用 json 解析**。
+  5. **禁止从 CJS 子路径导入**：`antd/lib/...`、`@ant-design/icons/lib/...`、`@rc-component/*/lib`（以及 `/dist`、`/cjs`）**一律不许写**——CJS 入口不受 tree-shaking 约束，会把整套图标/组件打进产物。真实案例（知乎《为何我的 Vite5 + React18 + antd 项目打包后体积大》）：`import { UserOutlined } from '@ant-design/icons/lib'` 让图标部分从 **1.38KB 涨到 1097.1KB**，改成包根 `'@ant-design/icons'`（解析到 ESM 的 `es/`）即可按需打包。**一律从包根导入**。
+     - 排查同类别名：搜索 `from ['"][^'"]*/(lib|dist|cjs)/`。⚠️ 注意本仓库有 `@/lib/...` 路径别名，会误报，须逐条看是否真为第三方包。
+     - 本项目现状（2026-10-06 核实）：`src/` 与 `web/src/` 中 `@ant-design/icons` **零直接导入**，也没有任何第三方 CJS 子路径导入 → 未踩此坑。
 - **v5 → v6 已确认的破坏性变更（本页面涉及项；全量 40 条用 `migrate 5 6` 拉）**
 
   | 组件 | v5 写法 | v6 写法 |
