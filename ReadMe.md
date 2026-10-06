@@ -46,7 +46,7 @@ znhd-service/
 ├── scripts/smoke/                # 无头端到端冒烟（puppeteer + GM 桩测试页）：npm run verify
 ├── package.json / tsconfig.json / .eslintrc.js / .prettierrc.js
 ├── ReadMe.md                     # 项目说明文档
-└── (仓库根不再放脚本产物)
+└── znhd.user.js                  # ⚠️ 迁移期「过渡跳板」= dist 产物的副本（见更新日志），不是产物输出位置
 ```
 
 ## 快速开始
@@ -275,7 +275,8 @@ const DEFAULTS = {
 ### znhd.user.js v26.10.5-v1
 - **工程化改造：接入 douyu-helper(monkey-template) 构建体系 + 源码模块化（脚本行为不变）**：
   - **新增 Webpack + TypeScript 构建**：源码迁到 `src/`，`==UserScript==` 头与 `@version` 等元信息改由 `config/common.meta.json` 生成；**生产产物输出到模板默认位置 `dist/znhd.user.js` 并提交进仓库**。开发态另有 `config/dev.meta.json` + `npm start`（devServer :8080、本地调试宿主页、`GM_addValueChangeListener` 热重载）。
-  - ⚠️ **发布地址已变更（升级需注意）**：`@updateURL`/`@downloadURL` 由 `main/znhd.user.js` 改为 **`main/dist/znhd.user.js`**，仓库根不再放产物。老版本安装的脚本头部仍指向根路径，**请在 ScriptCat 的「源代码同步」里把地址改成 `https://github.com/Run-os/znhd-service/raw/main/dist/znhd.user.js`（或 jsDelivr 同路径）**；改动生效后新版本会自动带上新地址。若同步源未能改写，个别安装实例可能需要重装一次。
+  - ⚠️ **发布地址已变更（升级需注意）**：`@updateURL`/`@downloadURL` 由 `main/znhd.user.js` 改为 **`main/dist/znhd.user.js`**，产物输出位置改为 `dist/`。为了让**已安装的旧版本能自动升级**，仓库根**临时保留一份「过渡跳板」`znhd.user.js`**（内容与本版 `dist/znhd.user.js` 完全相同）：旧安装轮询根路径 → 拿到本版脚本 → 其头部已是新的 dist 地址 → 之后自动跟着 dist 走，**无需手动重装**。确认大家升级完成后，下一个版本会删除这个跳板。
+    - 同时建议在 ScriptCat 的「源代码同步」里把地址改成 `https://github.com/Run-os/znhd-service/raw/main/dist/znhd.user.js`（或 jsDelivr 同路径）。
   - **抽离模块到 `src/lib/` 与 `src/lib/ui/`（模块化完成）**：`constants`（CONFIG/DEFAULTS/存储键）、`logger`（日志与防抖去重，回调改为 `setLogEntriesSink` 注入）、`storage`（面板位置/常用语缓存/配置读写）、`state`（`runtime` 运行时缓存）、`utils`（GitHub 链接解析/HTML 转义/URL 安全解码/时间换算）、`speech`（语音队列与超时保护）、`monitor`（人数监控/掉线检测/工作时间）、`tinymce`（编辑器追加）、`clipboard`（提示音 + 安全复制）、`relay`（中继客户端 + 图片剪贴板）、`gallery`（九宫格画廊/文本弹窗/Viewer 接管）、`qrcode`；UI 侧为 `ui/LogPanel`、`ui/SettingsDrawer`、`ui/CommonPhrasesDrawer`、`ui/PhoneImageDrawer`、`ui/MainPanel`、`ui/panelPosition`。**`src/app.ts` 从 2727 行降到约 90 行装配代码**，全仓已无 `@ts-nocheck`。
   - **等价性验证**：迁移用 AST 比对确认「原 IIFE 的 89 条顶层语句零丢失」（6 条为运行时缓存对象化 / 卸载清理改模块函数 / 具名 IIFE 改导出函数的有意重组）；`npm run build` / `npm run typecheck` / `npm run lint` / `npm run check` 全部通过。
   - **浏览器实测（example.com 调试宿主 + GM 桩按真实中继协议投递文本/图片）**：浮动面板与版本号、设置抽屉（时间段/地址/日志）、文本弹窗、九宫格画廊、图片与文本两条剪贴板路径、常用语 YAML 成功解析、中继离线优雅降级均通过，脚本自身零报错。
