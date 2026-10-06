@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name                征纳互动人数和在线监控v2
 // @namespace           https://scriptcat.org/
-// @version             26.10.6-v1
+// @version             26.10.7-v1
 // @description         实时监控征纳互动等待人数和在线状态，支持语音播报、自定义常用语
 // @author              runos
 // @match               https://znhd.hunan.chinatax.gov.cn:8443/*
@@ -17,8 +17,8 @@
 // @connect             *
 // @connect             znhd-service.zeabur.app
 // @homepageURL         https://scriptcat.org/zh-CN/script-show-page/3650
-// @updateURL           https://cdn.jsdelivr.net/gh/Run-os/znhd-service@refs/heads/main/dist/znhd.user.js
-// @downloadURL         https://cdn.jsdelivr.net/gh/Run-os/znhd-service@refs/heads/main/dist/znhd.user.js
+// @updateURL           https://raw.githubusercontent.com/Run-os/znhd-service/refs/heads/main/dist/znhd.user.js
+// @downloadURL         https://raw.githubusercontent.com/Run-os/znhd-service/refs/heads/main/dist/znhd.user.js
 // @require             https://scriptcat.org/lib/1167/1.0.0/%E8%84%9A%E6%9C%AC%E7%8C%ABUI%E5%BA%93.js?sha384-jXdR3hCwnDJf53Ue6XHAi6tApeudgS/wXnMYBD/ZJcgge8Xnzu/s7bkEf2tPi2KS
 // @require             https://cdn.jsdelivr.net/npm/js-yaml@4.1.0/dist/js-yaml.min.js
 // @require             https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js

@@ -11,6 +11,13 @@
 
 ---
 
+### znhd.user.js v26.10.7-v1
+
+- **自动更新地址由 jsDelivr 改为 GitHub raw**：`@updateURL`/`@downloadURL` 从 `https://cdn.jsdelivr.net/gh/Run-os/znhd-service@refs/heads/main/dist/znhd.user.js` 改为 **`https://raw.githubusercontent.com/Run-os/znhd-service/refs/heads/main/dist/znhd.user.js`**。
+  - 原因：jsDelivr 对分支引用（`@refs/heads/main`）的文件带较长缓存，曾出现「仓库已推送新版本、jsDelivr 仍返回上一版」，用户因此收不到更新（见 v26.10.6-v1 的排查记录）；raw 走 Fastly 短 TTL，推送后基本秒级可见。
+  - ⚠️ **注意**：这两个字段由油猴管理器**直接请求**，不经过 `resolveGithubUrl()` —— 设置里的「使用 CDN 加速」开关对「脚本自动更新」无效，写死什么就用什么。
+  - ⚠️ 改动随**脚本头部**生效：已装用户需**先更新到本版**，之后才会走 raw；尚未迁移的老安装仍轮询仓库根路径（jsDelivr）的过渡跳板，跳板每次发版都会同步刷新。
+
 ### znhd.user.js v26.10.6-v1
 
 - **新增：更新日志查看器** —— 「设置菜单」在 `[更新脚本]` 旁新增 `[更新日志]` 按钮，点击弹窗展示最新 10 条更新日志；弹窗底部「获取更多日志」跳转到 `CHANGELOG.md` 网页查看全部历史。

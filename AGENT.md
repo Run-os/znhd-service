@@ -71,10 +71,12 @@
 
 - **唯一真源**：`src/`（源码）+ `config/*.meta.json`（元信息）；`znhd.user.js` 是产物。
 - **常用命令**：`npm install` → `npm run build`（生产）/ `npm run dev`（watch 到 `dist/`）/ `npm start`（devServer :8080）/ `npm run typecheck`（strict）/ `npm run lint` / `npm run check` / `npm run verify`（无头端到端冒烟）。VSCode 里 `Ctrl+Shift+B` 选 `start & dev`。
-- **发布链路**：生产产物写 `dist/znhd.user.js`（模板默认位置），并提交进仓库；`@updateURL`/`@downloadURL` 指向 jsDelivr 上的 `.../main/dist/znhd.user.js`。⚠️ **2026-10-05 起产物路径由仓库根迁到 `dist/`**：老安装的脚本头部仍指向根路径，为此仓库根**临时保留一份过渡跳板 `znhd.user.js`**（= 产物副本，见文件表，**每次发版都要重新拷贝**），老用户轮询根路径即可拿到本版本并自动换到 dist 地址；同时仍应在 ScriptCat 的「源代码同步」里把地址改到 `dist/znhd.user.js`（详见 `CHANGELOG.md` v26.10.5-v1）。
-- ⚠️ **发版后必须验 jsDelivr 的 dist 是否已刷新**（2026-10-06 踩过）：`@updateURL` 指向 jsDelivr，而 jsDelivr 对 `@refs/heads/main` 的文件是**带缓存**的——曾出现「根跳板已刷新成新版，但 `dist/znhd.user.js` 仍返回上一版」，此时用户收不到更新。验证：
-  `Invoke-WebRequest` / `curl` 拉 `https://cdn.jsdelivr.net/gh/Run-os/znhd-service@refs/heads/main/dist/znhd.user.js` 看 `@version`；未刷新就调 purge：
-  `https://purge.jsdelivr.net/gh/Run-os/znhd-service@refs/heads/main/dist/znhd.user.js`（返回 JSON，秒级生效，无需登录）。
+- **发布链路**：生产产物写 `dist/znhd.user.js`（模板默认位置），并提交进仓库；`@updateURL`/`@downloadURL` 指向 **raw.githubusercontent.com 上的 `.../refs/heads/main/dist/znhd.user.js`**（2026-10-06 从 jsDelivr 改回 raw，避免 jsDelivr 对分支引用的长缓存导致用户收不到更新）。⚠️ **这两个字段由油猴管理器直接请求，不经过 `resolveGithubUrl()`** —— 设置里的「使用 CDN 加速」开关对「脚本自动更新」无效，写死什么就是什么。⚠️ **2026-10-05 起产物路径由仓库根迁到 `dist/`**：老安装的脚本头部仍指向根路径，为此仓库根**临时保留一份过渡跳板 `znhd.user.js`**（= 产物副本，见文件表，**每次发版都要重新拷贝**），老用户轮询根路径即可拿到本版本并自动换到 dist 地址；同时仍应在 ScriptCat 的「源代码同步」里把地址改到 `dist/znhd.user.js`（详见 `CHANGELOG.md` v26.10.5-v1）。
+- ⚠️ **发版后要核对两条 URL**（新旧用户走的是不同来源，缓存行为也不同）：
+  1. **新装 / 已迁移用户**走 `@updateURL`（raw）：拉 `https://raw.githubusercontent.com/Run-os/znhd-service/refs/heads/main/dist/znhd.user.js` 对 `@version`。raw 走 Fastly 短 TTL，一般秒级生效。
+  2. **尚未迁移的老安装**仍轮询仓库根跳板（jsDelivr）：`https://cdn.jsdelivr.net/gh/Run-os/znhd-service@refs/heads/main/znhd.user.js`。jsDelivr 对 `@refs/heads/main` 带较长缓存，2026-10-06 出现过「根跳板已刷新、`dist/` 仍返回上一版」；未刷新就调 purge：
+     `https://purge.jsdelivr.net/gh/Run-os/znhd-service@refs/heads/main/znhd.user.js`（返回 JSON，秒级生效，无需登录）。
+  3. 老用户全部迁移完成后，仓库根跳板即可删除，届时对 jsDelivr 的依赖也随之消失。
 - **模块化约定**：一次只搬一个模块，搬完必须 `npm run build && npm run typecheck && npm run verify` 通过；模块间共享可变状态一律走 `src/lib/state.ts` 的 `runtime` 对象（ES module 的 import 绑定只读，不能用 `export let` 让外部赋值）。新模块一律带类型，**不再写 `@ts-nocheck`**。
 - **为什么只有 `.prettierignore`、没有 `.eslintignore`**：`npm run lint` 的 glob 只覆盖 `src/**/*.{ts,tsx}`，本来就碰不到 `dist/`、`relay-server/`、仓库根，故 `.eslintignore` 属冗余已删除。`.prettierignore` 保留，是为了挡住「有人手动 `npx prettier --write .`」把**提交进仓库的产物 `dist/znhd.user.js`** 与 `relay-server/server.js` 重排（prettier 是全局格式化，不像 eslint 有 glob 限制）。
 - **迁移等价性是怎么证明的（工具已按需删除，勿再重建）**：`26.10.5-v1` 迁移期做了两层验证——① AST 级「顶层语句零丢失」比对（对迁移前快照，89 条，丢失 0，6 条已登记的有意重组）；② 差异对照：同一 harness 分别跑「迁移前原版」与「当前构建产物」，报告字段 / 6 条 XHR 路径 / `localStorage` 三个键 / GM 设备 ID / 面板 ShadowDOM 文本 / 两个弹窗文本**逐字节一致**。两层均已完成并记录在 `.workbuddy/memory/2026-10-0{5,6}.md`；工具与 151KB 快照已删除（它们会让日后的正常修改误报，且是为「迁移」而非「回归」服务的）。
