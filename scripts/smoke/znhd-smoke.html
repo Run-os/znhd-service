@@ -419,22 +419,42 @@
           QRCode: typeof window.QRCode,
           Viewer: typeof window.Viewer,
           recvResponses: window.__recvCount || 0,
-          // 运行日志排序（v26.10.06-v23 需求 / v26.10.07-v1 改版后仍适用）：
-          // 行结构改为「时间戳 + 类型标签 + 消息」三栏后，不能再按整行文本匹配，改用行类名
-          // `.znhd-log-row` 与时间戳单元 `.znhd-log-ts` 定位（断言随被测对象一起升级，而不是删掉）。
+          // 运行日志排序（v26.10.07-v4 起改为「最新在底部」，反转了 v26.10.06-v23 的「最新在顶部」）：
+          // 行结构为「时间戳 + 类型标签 + 消息」三栏，故用行类名 `.znhd-log-row` 与时间戳单元
+          // `.znhd-log-ts` 定位（断言随被测对象一起升级，而不是删掉）。
           logListNotReversed: (() => {
             const rows = Array.from(document.querySelectorAll('.znhd-log-row'));
             if (rows.length < 2) return false;
+            // 容器仍必须是 column：DOM 顺序 = 视觉顺序；「最新在底部」靠反转数组实现，不是 column-reverse
             return getComputedStyle(rows[0].parentElement).flexDirection !== 'column-reverse';
           })(),
-          logNewestOnTop: (() => {
+          logNewestOnBottom: (() => {
             const rows = Array.from(document.querySelectorAll('.znhd-log-row'));
             if (rows.length < 2) return false;
             const t = (d) => {
               const s = d.querySelector('.znhd-log-ts');
               return s ? (s.textContent || '').trim() : '';
             };
-            return t(rows[0]) >= t(rows[rows.length - 1]);
+            return t(rows[rows.length - 1]) >= t(rows[0]);
+          })(),
+          // 自动刷新开关（v26.10.07-v4）：日志弹窗底部状态栏里必须有这个 Switch，且默认开启
+          logAutoRefreshToggle: (() => {
+            const rows = Array.from(document.querySelectorAll('.znhd-log-row'));
+            if (!rows.length) return false;
+            const body = rows[0].parentElement.closest('.ant-modal-body') || rows[0].parentElement;
+            const sw = body.querySelector('.ant-switch');
+            if (!sw) return false;
+            if ((body.textContent || '').indexOf('自动刷新') < 0) return false;
+            return sw.classList.contains('ant-switch-checked');
+          })(),
+          // 日志更新后自动滚到底部（v26.10.07-v4）。
+          // ⚠️ 先要求「真的可滚动」：若内容没超出高度，scrollTop 恒为 0，这条断言会永远为真（假绿）
+          logAutoScrollBottom: (() => {
+            const rows = Array.from(document.querySelectorAll('.znhd-log-row'));
+            if (!rows.length) return false;
+            const scroller = rows[0].parentElement;
+            if (scroller.scrollHeight <= scroller.clientHeight + 2) return false;
+            return scroller.scrollHeight - scroller.clientHeight - scroller.scrollTop <= 4;
           })(),
           // 暗色终端风（v26.10.07-v1）断言：日志区底色、行三栏结构、底部状态栏都在
           logDarkTerminalOk: (() => {
@@ -456,22 +476,39 @@
               bodyText.indexOf('显示') >= 0
             );
           })(),
-          // 主色必须是 antd 官方蓝色系 blue-6（v26.10.06-v22）：先查 token（一处覆盖按钮+开关+派生色），
-          // 再查「设置」实心按钮的真实渲染色，两道一起锁。
-          // ⚠️ token 必须从**按钮**上读，不能从面板宿主读：`--ant-color-primary` 由 antd 的 css-var
+          // 主色必须是 antd 官方蓝色系 blue-6（v26.10.06-v22）：先查 token，再查一个真实渲染的主色控件，两道一起锁。
+          // ⚠️ token 必须从**面板内的 antd 元素**上读，不能从面板宿主读：`--ant-color-primary` 由 antd 的 css-var
           //    包裹元素定义并向下继承，宿主元素本身没有它（v22 踩过，白红了一次）。
+          // v26.10.07-v3：原先从「设置」实心按钮上读；该按钮按用户要求已去掉主色，故改从**语音播报 Switch** 读
+          //    （Switch 选中态本身就是主色，仍在同一 css-var 继承链下，原始意图不变）。
           primaryTokenBlue: (() => {
-            const b = Array.from(document.querySelectorAll('button')).find(
-              (x) => (x.textContent || '').indexOf('设置') >= 0
-            );
-            if (!b) return false;
-            return getComputedStyle(b).getPropertyValue('--ant-color-primary').trim().toLowerCase() === '#1677ff';
+            const s = document.querySelector('#__znhd_panel_host__ .ant-switch');
+            if (!s) return false;
+            return getComputedStyle(s).getPropertyValue('--ant-color-primary').trim().toLowerCase() === '#1677ff';
           })(),
-          settingsBtnBlue: (() => {
-            const b = Array.from(document.querySelectorAll('button')).find(
-              (x) => (x.textContent || '').indexOf('设置') >= 0
+          // v26.10.07-v3：按用户要求「设置」不再单独用主色，四个入口按钮样式必须完全一致（且都不是主色实心）。
+          // 面板按钮现在是「图标 span + 文案 span」两段结构，故统一用 textContent **包含**匹配定位。
+          panelBtnsUniform: (() => {
+            const host = document.getElementById('__znhd_panel_host__');
+            if (!host) return false;
+            const labels = ['设置', '常用语', '历史文件', '设备互联'];
+            const btns = Array.from(host.querySelectorAll('button')).filter((b) =>
+              labels.some((t) => (b.textContent || '').indexOf(t) >= 0)
             );
-            return !!b && getComputedStyle(b).backgroundColor === 'rgb(22, 119, 255)';
+            if (btns.length !== 4) return false;
+            const bg = btns.map((b) => getComputedStyle(b).backgroundColor);
+            return bg.every((c) => c === bg[0]) && bg[0] !== 'rgb(22, 119, 255)';
+          })(),
+          // 四个入口必须排在同一行（同一 offsetTop）——「合并到一行」这条需求的直接断言
+          panelBtnsOneRow: (() => {
+            const host = document.getElementById('__znhd_panel_host__');
+            if (!host) return false;
+            const labels = ['设置', '常用语', '历史文件', '设备互联'];
+            const btns = Array.from(host.querySelectorAll('button')).filter((b) =>
+              labels.some((t) => (b.textContent || '').indexOf(t) >= 0)
+            );
+            if (btns.length !== 4) return false;
+            return new Set(btns.map((b) => Math.round(b.getBoundingClientRect().top))).size === 1;
           })(),
           // 二维码必须无圆角（v26.10.06-v21 按用户要求；圆角会切掉定位角标影响识别）
           qrNoRadius: (() => {

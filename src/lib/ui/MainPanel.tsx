@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Button, Card, Space, Switch } from 'antd';
+import { Button, Card, Space, Switch, Tooltip } from 'antd';
 import { DEFAULTS, PHRASES_CACHE_TTL } from '@/lib/constants';
 import { addLog, addLogDebounced, setLogEntriesSink, clearLogs, type LogEntry } from '@/lib/logger';
 import { loadPhrasesCache, savePhrasesCache, saveAllvalue, type Allvalue } from '@/lib/storage';
@@ -10,7 +10,8 @@ import { MAX_GALLERY, type GalleryImage } from '@/lib/gallery';
 import { clearSpeechQueue } from '@/lib/speech';
 import { getMonitorState, setMonitorStateSink, type MonitorState } from '@/lib/monitor';
 import { notify } from '@/lib/ui/notify';
-import { usePanelDrag } from '@/lib/ui/panelHost';
+import { clampHostIntoView, usePanelDrag } from '@/lib/ui/panelHost';
+import { PANEL_WIDTH } from '@/lib/ui/panelIds';
 import SettingsModal from '@/lib/ui/SettingsModal';
 import PhrasesDrawer from '@/lib/ui/PhrasesDrawer';
 import PhoneModal from '@/lib/ui/PhoneModal';
@@ -48,11 +49,62 @@ function BrandIcon({ size = 26 }: { size?: number }) {
             </span>
         );
     }
-    return <img src={BRAND_ICON} alt="" style={{ ...box, display: 'block' }} onError={() => setFailed(true)} />;
+    return (
+        <img
+            src={BRAND_ICON}
+            alt=""
+            draggable={false}
+            style={{ ...box, display: 'block' }}
+            onError={() => setFailed(true)}
+        />
+    );
 }
 
-/** 面板宽度（位置存档的边界裁剪按它估算） */
-const PANEL_WIDTH = 340;
+/**
+ * 底部四入口按钮的自适应样式（v26.10.07-v3）。
+ *
+ * 需求：4 个入口合并到一行，并随宽度自适应——
+ *   · 宽度足够 → 图标 + 文字同排；
+ *   · 宽度不足 → **只留图标**（当前面板就落在这一档，文案靠 hover Tooltip 给出）；
+ *   · 两种状态下悬停都有 Tooltip（见下方 JSX）。
+ *
+ * 阈值为什么取 68px（实测：Chrome 154）：
+ *   容器查询的尺寸按**内容盒**算 —— 按钮宽度减去内边距 4×2 与边框 1×2 才是被查询的尺寸。
+ *   横排所需宽度 = emoji 18px + 间距 2px + 「历史文件」4 字 × 11px = **64px**，
+ *   正好卡在边界会折成两行，故阈值取 68px（留 4px 余量）。
+ *   ⚠️ 该阈值与面板宽度无关，只取决于按钮自身宽度：
+ *      · 面板 340px 时四列各 74px（内容盒 64px）→ 刚好在阈值下，只显示图标；
+ *      · 面板缩到 238px 后四列各 48.5px（内容盒 38.5px）→ 更在阈值下，仍是只显示图标；
+ *      · 面板加宽到约 78px/按钮以上，文字会自动出现，**无需改代码**。
+ *
+ * ⚠️ 文字用 `display: none` 隐藏，**不是条件渲染**：文字必须留在 DOM 里 ——
+ *    冒烟测试是按 textContent 找面板按钮的（`clickByText('设置')`），
+ *    若改成 `{show && <span>…}` 会把断言直接打挂；同时它也是纯图标态的可访问名。
+ *
+ * ⚠️ 用 CSS 容器查询而非 JS 测量：按钮在 grid 里宽度由栅格决定（与自身内容无关），
+ *    因此不存在「隐藏文字 → 按钮变窄 → 反过来触发隐藏」的抖动回路。
+ */
+const PANEL_CSS = `
+.znhd-panel-btn {
+  container-type: inline-size;
+}
+.znhd-panel-btn-text {
+  display: none;
+}
+@container (min-width: 68px) {
+  .znhd-panel-btn-text {
+    display: inline;
+  }
+}
+`;
+
+/** 底部四个入口：key + 图标 + 文案（文案同时用于 hover Tooltip；点击行为见组件内 actionHandlers） */
+const PANEL_ACTIONS = [
+    { key: 'settings', icon: '⚙️', label: '设置' },
+    { key: 'phrases', icon: '💬', label: '常用语' },
+    { key: 'gallery', icon: '🖼️', label: '历史文件' },
+    { key: 'phone', icon: '💻', label: '设备互联' },
+] as const;
 
 /** 状态点 */
 function Dot({ color }: { color: string }) {
@@ -86,10 +138,11 @@ interface MainPanelProps {
 
 /**
  * 主面板（v26.10.06-v9：CAT_UI → React + Ant Design）。
- * 版式对齐参考图：头部（图标+标题+版本+收起）、人数/状态卡、语音开关行、2×2 按钮、底部「查看日志」。
+ * 版式对齐参考图：头部（图标+标题+版本+收起）、人数/状态卡、语音开关行、一行四入口按钮、底部「查看日志」。
  */
 export default function MainPanel({ host }: MainPanelProps) {
-    const drag = usePanelDrag(host);
+    // dragHandlers 给「展开态标题栏」和「收起态悬浮球」共用；consumeDrag 供悬浮球区分点击与拖拽
+    const { consumeDrag, ...dragHandlers } = usePanelDrag(host);
 
     // 惰性初始化：useState(loadAllvalue()) 的实参每次渲染都会求值，而本组件因 logEntries 频繁重渲染，
     // 等于反复白读 localStorage。顶层 runtime.init 已是启动时读好的同一份数据。
@@ -118,6 +171,7 @@ export default function MainPanel({ host }: MainPanelProps) {
         runtime.workingHours = newValue.workingHours;
         runtime.commonPhrasesUrl = newValue.commonPhrasesUrl;
         runtime.useCdn = !!newValue.useCdn;
+        runtime.logAutoRefresh = !!newValue.logAutoRefresh;
     };
     const patchAllvalue = (kv: Partial<Allvalue>) => updateAllvalue({ ...Allvalue, ...kv });
 
@@ -155,6 +209,16 @@ export default function MainPanel({ host }: MainPanelProps) {
         }
         addLog('语音播报：' + (runtime.voiceEnabled ? '已开启' : '已静音'), 'info');
     }, []);
+
+    // 悬浮球可以被拖到贴边；展开回面板时按**面板真实宽度**重新裁回视口，
+    // 否则「从屏幕右下角展开」会出现面板大半在屏幕外、抓不回来。
+    // ⚠️ 只在「收起 → 展开」这一跳时裁：挂载时 usePanelDrag 已按真实尺寸裁过一次，这里再裁会多写一遍存档。
+    const prevCollapsedRef = useRef(collapsed);
+    useEffect(() => {
+        const wasCollapsed = prevCollapsedRef.current;
+        prevCollapsedRef.current = collapsed;
+        if (wasCollapsed && !collapsed) clampHostIntoView(host);
+    }, [collapsed, host]);
 
     const loadPhrasesData = (force = false) => {
         if (!force) {
@@ -289,20 +353,48 @@ export default function MainPanel({ host }: MainPanelProps) {
         }
     };
 
-    // 收起：只留一个圆形按钮，避免「关掉就再也找不回来」
+    // 收起：只留一个圆形悬浮球，避免「关掉就再也找不回来」。
+    // 悬浮球与标题栏一样可拖动（v26.10.07-v3）：拖动过就不要再展开面板。
     if (collapsed) {
         return (
             <Button
+                {...dragHandlers}
                 shape="circle"
                 color="primary"
                 variant="solid"
-                title="展开监控面板"
-                onClick={() => setCollapsed(false)}
-                style={{ width: 36, height: 36, boxShadow: '0 4px 16px rgba(0,0,0,0.18)' }}>
+                title="拖动可移动位置，点击展开面板"
+                onClick={() => {
+                    // ⚠️ pointerdown 里的 preventDefault 并不能阻止 click（实测序列：拖拽为 pd|pm×N|pu|click），
+                    //    故必须靠 consumeDrag() 把「拖拽尾巴」的那次 click 吃掉，否则拖完一松手就会展开。
+                    if (consumeDrag()) return;
+                    setCollapsed(false);
+                }}
+                style={{
+                    width: 36,
+                    height: 36,
+                    boxShadow: '0 4px 16px rgba(0,0,0,0.18)',
+                    cursor: 'move',
+                    userSelect: 'none',
+                    touchAction: 'none',
+                }}>
                 <BrandIcon size={20} />
             </Button>
         );
     }
+
+    // 四个入口的点击行为（key 与 PANEL_ACTIONS 对齐）
+    const actionHandlers: Record<string, () => void> = {
+        settings: () => setSettingsOpen(true),
+        phrases: () => setPhrasesOpen(true),
+        gallery: () => {
+            if (!recvImages.length) {
+                notify.info('暂无待存文件');
+                return;
+            }
+            setGalleryOpen(true);
+        },
+        phone: () => setPhoneOpen(true),
+    };
 
     return (
         <Card
@@ -312,18 +404,31 @@ export default function MainPanel({ host }: MainPanelProps) {
             title={
                 // 标题栏 = 拖拽手柄（唯一可抓取区）
                 <div
-                    {...drag}
+                    {...dragHandlers}
                     style={{
                         cursor: 'move',
                         userSelect: 'none',
                         touchAction: 'none',
                         display: 'flex',
                         alignItems: 'center',
-                        gap: 8,
+                        // v26.10.07-v3 面板缩到 238px 后，标题栏内容实测 191px 而可用只有 189px（溢出 2px）。
+                        // 间隙 8→6 收回 4px；标题再给 minWidth:0 + 省略号兜底 —— 字体渲染略有差异时
+                        // 让标题自己省略，而不是把右侧的 ✕ 挤出去。
+                        gap: 6,
                     }}
                     title="按住拖动面板">
                     <BrandIcon />
-                    <span style={{ fontWeight: 700, fontSize: 15 }}>征纳互动监控</span>
+                    <span
+                        style={{
+                            fontWeight: 700,
+                            fontSize: 15,
+                            minWidth: 0,
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                        }}>
+                        征纳互动监控
+                    </span>
                     <span
                         style={{
                             background: '#e6f4ff',
@@ -347,6 +452,8 @@ export default function MainPanel({ host }: MainPanelProps) {
                     ✕
                 </Button>
             }>
+            <style>{PANEL_CSS}</style>
+
             {/* 人数 + 状态 */}
             <div
                 style={{
@@ -404,28 +511,22 @@ export default function MainPanel({ host }: MainPanelProps) {
                 <Switch checked={!!voiceEnabled} onChange={toggleVoice} />
             </div>
 
-            {/* 2×2 按钮 */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                <Button color="primary" variant="solid" size="large" onClick={() => setSettingsOpen(true)}>
-                    ⚙️ 设置
-                </Button>
-                <Button size="large" onClick={() => setPhrasesOpen(true)}>
-                    💬 常用语
-                </Button>
-                <Button
-                    size="large"
-                    onClick={() => {
-                        if (!recvImages.length) {
-                            notify.info('暂无待存文件');
-                            return;
-                        }
-                        setGalleryOpen(true);
-                    }}>
-                    🖼️ 历史文件
-                </Button>
-                <Button size="large" onClick={() => setPhoneOpen(true)}>
-                    💻 设备互联
-                </Button>
+            {/* 四个入口合并到一行：宽度自适应（不够时只留图标），悬停给出完整文案 */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 6 }}>
+                {PANEL_ACTIONS.map((a) => (
+                    <Tooltip key={a.key} title={a.label} placement="bottom">
+                        <Button
+                            className="znhd-panel-btn"
+                            size="large"
+                            style={{ padding: '0 4px' }}
+                            onClick={actionHandlers[a.key]}>
+                            <span style={{ fontSize: 13, lineHeight: 1 }}>{a.icon}</span>
+                            <span className="znhd-panel-btn-text" style={{ fontSize: 11, marginLeft: 2 }}>
+                                {a.label}
+                            </span>
+                        </Button>
+                    </Tooltip>
+                ))}
             </div>
 
             {/* 底部：上次播报 + 查看日志 */}
@@ -504,7 +605,18 @@ export default function MainPanel({ host }: MainPanelProps) {
                 }}
             />
 
-            <LogModal open={logOpen} onClose={() => setLogOpen(false)} logEntries={logEntries} onClear={clearLogs} />
+            <LogModal
+                open={logOpen}
+                onClose={() => setLogOpen(false)}
+                logEntries={logEntries}
+                onClear={clearLogs}
+                autoRefresh={!!Allvalue.logAutoRefresh}
+                onAutoRefreshChange={(v) => {
+                    // 只改设置、不写日志：这是「看日志的方式」，不是被监控的业务动作，
+                    // 记一条日志反而会在冻结列表时制造困惑。
+                    patchAllvalue({ logAutoRefresh: !!v });
+                }}
+            />
 
             <ChangelogModal open={changelogOpen} onClose={() => setChangelogOpen(false)} />
 

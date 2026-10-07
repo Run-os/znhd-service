@@ -29,7 +29,9 @@ export default function PanelApp({ host }: { host: HTMLElement }) {
             // 面板本身仍高于宿主页面自身内容，不会被页面弹窗压住。
             // colorPrimary：v26.10.06-v22 起由原税务绿 #007e44 改为 **antd 官方色彩规范的蓝色系主色 blue-6 #1677FF**
             //（https://ant.design/docs/spec/colors-cn）。只改这一个 token，antd 会自动派生 hover/active/focus
-            // 与浅色底：面板的「设置」实心按钮、语音 Switch 选中态背景、以及链接/焦点环都会同步变蓝。
+            // 与浅色底：语音 Switch 选中态背景、以及链接/焦点环都会同步变蓝。
+            // ⚠️ v26.10.07-v3 起面板四个入口按钮统一为 antd 默认样式（原「设置」实心主色按钮已按用户要求去掉），
+            //    故此处不再有「实心按钮」这一主色消费方；主色 token 的回归断言改挂到 Switch 上（见 scripts/smoke）。
             // ⚠️ 语义色不跟着变：在线/已连接/日志「成功」仍用 success 绿（#52c41a / #389e0d），
             //    错误红、警告黄同理——规范里主色与状态色是两套东西，混用会让人误判状态。
             theme={{ token: { colorPrimary: '#1677ff', borderRadius: 8, zIndexPopupBase: 1000000 } }}

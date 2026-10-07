@@ -18,4 +18,6 @@ export const runtime = {
     commonPhrasesUrl: _initAllvalue.commonPhrasesUrl,
     /** 缓存「是否使用 CDN 加速」开关，供 resolveGithubUrl() 在调用时读取 */
     useCdn: !!_initAllvalue.useCdn,
+    /** 缓存「运行日志自动刷新」开关（v26.10.07-v4），供日志弹窗读取 */
+    logAutoRefresh: !!_initAllvalue.logAutoRefresh,
 };

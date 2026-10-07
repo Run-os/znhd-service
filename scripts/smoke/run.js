@@ -57,6 +57,8 @@ async function launchBrowser() {
   }
 }
 
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
 const CHECKS = [
   ['panel', '浮动面板渲染'],
   ['version', '版本号渲染'],
@@ -67,9 +69,13 @@ const CHECKS = [
   ['phrasesIsDrawer', '常用语是 antd Drawer 侧边栏（非 Modal）'],
   ['qrNoRadius', '二维码无圆角（定位角标不被裁切）'],
   ['primaryTokenBlue', '主色 token 为 antd 蓝 blue-6 #1677FF'],
-  ['settingsBtnBlue', '「设置」按钮渲染为蓝色主色'],
-  ['logListNotReversed', '日志列表不再是 column-reverse'],
-  ['logNewestOnTop', '日志最新一条在最上方'],
+  ['panelBtnsUniform', '四个入口按钮样式一致（无主色实心按钮）'],
+  ['panelBtnsOneRow', '四个入口按钮排在同一行'],
+  ['ballDragOk', '悬浮球可拖动移动（且拖完不误触展开）'],
+  ['logListNotReversed', '日志列表仍是 column（非 column-reverse）'],
+  ['logNewestOnBottom', '日志最新一条在最下方'],
+  ['logAutoRefreshToggle', '日志弹窗有「自动刷新」开关且默认开启'],
+  ['logAutoScrollBottom', '日志更新后自动滚到底部'],
   ['logDarkTerminalOk', '日志区为暗色终端风（底色/三栏/状态栏）'],
   ['overlayAbovePanel', 'antd 弹窗/侧边栏盖在面板之上（方案 B）'],
   ['changelogPopup', '更新日志弹窗（最新 10 条）'],
@@ -123,6 +129,60 @@ async function main() {
       report: JSON.parse(document.getElementById('smoke-result').textContent),
       title: document.title,
     }));
+
+    // —— 悬浮球拖拽（v26.10.07-v3）——
+    // 拖拽必须由**真实指针事件**驱动（合成 PointerEvent 会让 setPointerCapture 抛 NotFoundError），
+    // 只能在 puppeteer 侧做，故放在页面报告生成之后单独跑，结果并入 report。
+    // 断言两件事：① 宿主 left/top 真的被拖动了；② 拖完**没有**被顺带展开成面板。
+    report.ballDragOk = await (async () => {
+      await page.evaluate(() => {
+        document.querySelectorAll('.ant-image-preview-root, .ant-image-preview-wrap').forEach((e) => e.remove());
+        document.querySelectorAll('.ant-modal-close, .ant-drawer-close').forEach((b) => b.click());
+      });
+      await sleep(600);
+
+      const collapsedOk = await page.evaluate(() => {
+        const host = document.getElementById('__znhd_panel_host__');
+        if (!host) return false;
+        const btn = Array.from(host.querySelectorAll('button')).find(
+          (b) => (b.getAttribute('title') || '').indexOf('收起') >= 0
+        );
+        if (!btn) return false;
+        btn.click();
+        return true;
+      });
+      if (!collapsedOk) return false;
+      await sleep(600);
+
+      const start = await page.evaluate(() => {
+        const host = document.getElementById('__znhd_panel_host__');
+        if (!host || host.querySelector('.ant-card')) return null; // 必须已经变成悬浮球
+        const ball = host.querySelector('button');
+        if (!ball) return null;
+        const r = ball.getBoundingClientRect();
+        const cx = r.x + r.width / 2;
+        const cy = r.y + r.height / 2;
+        // 落点必须是悬浮球本身：若被残留浮层盖住，拖拽会打到别人身上（宁可红，不要假绿）
+        if (!ball.contains(document.elementFromPoint(cx, cy))) return null;
+        return { x: cx, y: cy, left: parseFloat(host.style.left) || 0, top: parseFloat(host.style.top) || 0 };
+      });
+      if (!start) return false;
+
+      await page.mouse.move(start.x, start.y);
+      await page.mouse.down();
+      await page.mouse.move(start.x - 90, start.y + 70, { steps: 10 });
+      await page.mouse.up();
+      await sleep(500);
+
+      return await page.evaluate((s) => {
+        const host = document.getElementById('__znhd_panel_host__');
+        const left = parseFloat(host.style.left) || 0;
+        const top = parseFloat(host.style.top) || 0;
+        const moved = Math.abs(left - s.left) > 10 || Math.abs(top - s.top) > 10;
+        const stillCollapsed = !host.querySelector('.ant-card');
+        return moved && stillCollapsed;
+      }, start);
+    })();
 
     // version 检查改为「渲染值 === 产物 @version」的精确比对
     const checkPass = (key) => (key === 'version' ? report.version === 'v' + scriptVersion : !!report[key]);

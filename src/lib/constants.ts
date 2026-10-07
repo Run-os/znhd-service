@@ -45,4 +45,8 @@ export const DEFAULTS = {
     commonPhrasesUrl: 'https://raw.githubusercontent.com/Run-os/znhd-service/refs/heads/main/public/commonPhrases.yaml',
     // 手机图片→电脑剪贴板 中继服务器地址（需为公网可访问的 http(s):// 地址，末尾不带 /）
     relayServer: 'https://znhd.122050.xyz',
+    // 「运行日志」弹窗的自动刷新开关（v26.10.07-v4）。
+    // 开：新日志持续进来，并自动滚到底部看最新内容；关：列表冻结在关闭那一刻的快照，便于往上翻看历史。
+    // 持久化（存进 STORAGE_KEY），下次打开弹窗保持上次的选择。
+    logAutoRefresh: true,
 };

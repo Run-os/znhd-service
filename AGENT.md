@@ -85,7 +85,7 @@
 | `src/index.ts` | 入口：生产直接 `app()`；开发动态 import `devTools`（热重载 / 首次自动安装）。 |
 | `src/app.ts` | **入口装配**（~60 行）：`mountPanel()`（挂载 React+antd 面板；位置恢复与拖拽都在 `ui/panelHost` 内） → beforeunload 清理 → 启动监控。业务实现全在 `src/lib/`。 |
 | `src/lib/*.ts` | 业务模块：`constants`（CONFIG/DEFAULTS/存储键）、`logger`（addLog/防抖/`setLogEntriesSink`）、`storage`（localStorage 读写）、`state`（`runtime` 运行时缓存）、`utils`（链接解析/转义/时间换算）、`speech`（语音队列）、`monitor`（人数·掉线·工作时间）、`tinymce`（编辑器写入）、`clipboard`（提示音+安全复制）、`relay`（中继客户端+图片剪贴板）、`gallery`（收到图片的数据/命名工具；渲染在 ui/RecvGalleryModal）、`changelog`（更新日志拉取/解析；渲染在 ui/ChangelogModal）、`qrcode`（二维码 dataURL）。 |
-| `src/lib/ui/*.tsx` | UI 组件（React 19 + Ant Design v6，**全部以弹窗形态呈现**）：`MainPanel`（主面板：人数/状态卡 + 语音开关 + 2×2 按钮 + 查看日志）、`SettingsModal`、`PhrasesModal`、`LogModal`、`PhoneModal`、`ChangelogModal`、`RecvGalleryModal`（收图画廊，放大用 antd `Image.PreviewGroup`）、`RecvTextModal`；基础设施：`panelHost`（宿主挂载 + 自研指针拖拽 + 位置持久化）、`panelIds`、`notify`（antd message 桥）、`uiReset`（样式隔离层）。 |
+| `src/lib/ui/*.tsx` | UI 组件（React 19 + Ant Design v6，**全部以弹窗形态呈现**）：`MainPanel`（主面板：人数/状态卡 + 语音开关 + 一行四入口按钮 + 查看日志）、`SettingsModal`、`PhrasesModal`、`LogModal`、`PhoneModal`、`ChangelogModal`、`RecvGalleryModal`（收图画廊，放大用 antd `Image.PreviewGroup`）、`RecvTextModal`；基础设施：`panelHost`（宿主挂载 + 自研指针拖拽 + 位置持久化）、`panelIds`、`notify`（antd message 桥）、`uiReset`（样式隔离层）。 |
 
 > **有意未拆出的模块**：`phrases`（常用语加载/缓存/请求序号）。`loadPhrasesData` 直接读写 React 状态（`phrasesData`/`setPhrasesData`/`setPhrasesLoading`）与 `phrasesRequestSeq`，抽成独立模块必须引入 `getData/setData` 桥接，属于「为拆而拆」，与约束 3「不得无理由重构可运行逻辑」冲突，故保留在 `src/lib/ui/MainPanel.tsx` 内。如日后要拆，请连同组件状态一起改成自定义 hook。
 | `src/global.d.ts` | 全局声明：`PRODUCTION`/`FILENAME`（DefinePlugin 注入）+ `jsyaml`/`QRCode`/`heic2any`（`@require` 注入）。GM_* 由 `@types/tampermonkey` 提供。 |
@@ -230,6 +230,10 @@
 | `Promise.race` + `AbortController` | **绝不在读取响应体前 `abort()`**（`r.json()` 会抛 AbortError 被 catch 吞掉）；abort 只能放在「看门狗已超时」分支 | relay v26.9.6-v5 |
 | arco focus-lock 打架 | 弹窗内 button 设 `tabIndex=-1` + mousedown `preventDefault` | v26.7.29-v8 |
 | bind 挂载失联 | git reset 更新挂载源会替换 inode 使 bind 失联，stop/start/restart 都不重绑；正解 = tar 管道直写容器 `/app` 再 restart | deploy.yml 注释 |
+| **拖动 vs 点击** | `pointerdown` 里 `preventDefault()` **并不能**阻止后续 `click`（实测 Chrome 154：原地点击 = `pd\|pu\|click`，拖拽 = `pd\|pm×N\|pu\|click`）⇒ 既可拖又可点的元素（如悬浮球）必须自己按位移阈值抑制「拖拽尾巴」的那次点击，否则拖完一松手就误触 | **v26.10.07-v3** |
+| **容器查询比较的是内容盒** | `@container (min-width: Npx)` 比的是容器**内容盒**（要减去 padding 与 border），**不是** border-box。按 border-box 设阈值会表现为「自适应完全没生效」（阈值永远差那几像素） | **v26.10.07-v3** |
+| **antd Modal 首屏滚动** | `destroyOnHidden` 下 Modal 在 `open` **之后**才把内容挂进 DOM ⇒ `useEffect` 触发时 ref 仍是 `null`，「打开就滚到底」永远不生效（实测 scrollTop 恒为 0）。正解：用**回调 ref** 在节点挂载那一刻滚 | **v26.10.07-v4** |
+| **共享尺寸常量** | 面板宽度曾在 `MainPanel` 与 `panelHost.initialPoint()` 里各存一份字面量 ⇒ 只改一处会让存档在右侧的面板**每次加载都往左漂**（先按旧值收一次，按新值的那次不会再推回去）。尺寸类常量一律放 `ui/panelIds.ts` 共用 | **v26.10.07-v3** |
 
 ## 技术债务
 

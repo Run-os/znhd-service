@@ -11,6 +11,57 @@
 
 ---
 
+### znhd.user.js v26.10.07-v4
+- **「运行日志」弹窗：最新日志改为显示在底部，并新增「自动刷新」开关 + 自动滚到底部**（按用户要求；**反转了 v26.10.06-v23 的「最新在顶部」**）：
+  - **排序**：`logger.ts` 的写入顺序仍是「最新在前」（`[logItem, ...prevEntries]`），改为**渲染前把数组反过来**（`shown.slice().reverse()`）⇒ DOM 顺序 = 视觉顺序 = 最旧在上、**最新在下**。容器保持 `column`，**不是 `column-reverse`** —— 后者会把滚动原点翻到底部、阅读方向也跟着反过来。文件头那段「勿改回 column-reverse」的注释已按新需求改写。
+  - **自动刷新开关（持久化）**：底部状态栏新增 `Switch`，默认开。开 = 新日志持续进来并自动滚到底部；关 = 列表**冻结**在关闭那一刻的快照，状态栏显示「· 已冻结」。
+    - ⚠️ 冻结必须在**关掉之前**先 `setSnapshot(logEntries)`：否则 `source` 立刻切到空快照，列表会瞬间清空。
+    - 新增设置项 `DEFAULTS.logAutoRefresh`（`constants.ts`）+ `runtime.logAutoRefresh`（`state.ts`）；`Allvalue = typeof DEFAULTS` 自动带上该字段，`storage.ts` 无需改动。
+  - **自动滚到底部**：按用户明确选择「**总是滚到底**」——开着时只要有新日志就拉到底部，不做「仅在已贴底时跟随」的智能判断（往上翻看历史时会被拉回，不想被打断就关掉开关）。
+  - ⚠️ **首屏滚动必须用回调 ref，不能只靠 `useEffect`**：本弹窗用了 `destroyOnHidden`，antd Modal 是在 `open` **之后**才把内容挂进 DOM 的，effect 触发时 `scrollerRef.current` 仍是 `null` ⇒「打开就停在最顶部」。实测（17 行日志、`scrollHeight 630 > clientHeight 358`，确实可滚动）：`scrollTop` 恒为 **0**；改用回调 ref 在节点挂载那一刻滚之后，`scrollTop = 272 = scrollHeight - clientHeight`（`distanceToBottom: 0`）。
+- **冒烟断言（只改不删，24 → 26 项）**：
+  - `logNewestOnTop`（首行时间戳 ≥ 末行）→ 反转为 **`logNewestOnBottom`**（末行 ≥ 首行）：原断言锁「最新在上」，需求反转后按新语义锁「最新在下」。
+  - `logListNotReversed` 保留、标签改写为「日志列表仍是 column（非 column-reverse）」：它锁的不变量（DOM 顺序 = 视觉顺序）在新需求下依然成立，且正是防止有人用 `column-reverse` 去「实现」最新在底部。
+  - **新增 `logAutoRefreshToggle`**：日志弹窗底部状态栏必须有 `Switch`、文案含「自动刷新」、且默认处于 `ant-switch-checked`。
+  - **新增 `logAutoScrollBottom`**：滚动条必须已在底部。⚠️ 先要求「真的可滚动」（`scrollHeight > clientHeight + 2`）——否则内容没超出高度时 `scrollTop` 恒为 0，断言永远为真（假绿）。
+- 验证：`npm run typecheck` 0 错、`npm run build` 结论行 `compiled`、`npm run check` 通过、`npm run verify` **26 项全绿**、`npx @ant-design/cli lint ./src` `issues: []`。
+  - `logAutoScrollBottom` 经历过一次**真实的反向验证**：修复前它就是 ❌（探针实测 `scrollTop: 0`），修复后才变 ✅ —— 这条断言确实能抓到「自动滚动没生效」，不是假绿。
+- 三处版本号一致（`26.10.07-v4`）；仓库根过渡跳板 `znhd.user.js` 已重新拷贝为与 `dist/znhd.user.js` 逐字节一致。
+- ⚠️ **只做本地提交，未推送**。
+
+
+### znhd.user.js v26.10.07-v3
+- **主面板四个入口按钮合并为一行，并去掉「设置」的主色实心样式**（按用户要求）：
+  - 版式：原 **2×2 栅格** → **一行四列**（`repeat(4, minmax(0, 1fr))`，间距 8→6）。面板内容区仅 316px，四列平分后每个 74px，纵向因此少占约 40px。
+  - 样式：四个按钮**完全一致**（都是 antd 默认按钮），原先「设置」独占的 `color="primary" variant="solid"` 已移除。
+  - **宽度自适应**（按用户要求）：宽度不足只留图标、足够时图标+文字同排，两种状态下悬停都有 **Tooltip** 给出完整文案。用 **CSS 容器查询**实现（`.znhd-panel-btn { container-type: inline-size }` + `@container (min-width: 68px)`）。
+    - 阈值依据（实测 Chrome 154）：容器查询按**内容盒**算 —— 按钮 74px 减去内边距 4×2 与边框 1×2 只剩 **64px**；横排所需 = emoji 18px + 间距 2px + 「历史文件」4 字 × 11px = **64px**，正好卡边界会折行，故阈值取 68px。**当前 64px < 68px → 按用户选择只显示图标**；面板若加宽到约 78px/按钮，文字会自动出现，无需改代码。
+    - ⚠️ 文字用 `display: none` 隐藏而**不是条件渲染**：文字必须留在 DOM 里，否则冒烟按 textContent 找按钮的 `clickByText('设置')` 会直接失败；它同时是纯图标态的可访问名。
+    - ⚠️ 用容器查询而非 JS 测量：按钮在 grid 内宽度由栅格决定、与自身内容无关，不存在「隐藏文字→按钮变窄→反过来触发隐藏」的抖动回路。
+- **悬浮球（面板收起后）支持拖动移动位置**（按用户要求；此前只有展开态标题栏能拖）：
+  - `usePanelDrag` 的处理器改为**标题栏与悬浮球共用**；悬浮球同时保留「点击展开」。
+  - ⚠️ **必须区分「拖动」与「点击」**：实测 Chrome 154 下 `pointerdown` 里调用 `preventDefault()` **并不能**阻止 `click` —— 原地点击序列 `pd|pu|click`，拖拽序列 `pd|pm×N|pu|click`，两者最后都会派发 click。若不区分，**拖完一松手面板会被顺带展开**。故引入 `DRAG_THRESHOLD = 4px` 与 `consumeDrag()`：位移超阈值记为拖动，悬浮球的 onClick 先 `consumeDrag()`，是拖动尾巴就吃掉这次点击（取走即复位，避免残留到下一次键盘触发的 click）。
+  - ⚠️ 顺带修掉一个被这次改动暴露的裁剪缺陷：`clampPanelPoint` 的保留量原先恒为 `MIN_VISIBLE = 48`，而悬浮球只有 36px 宽 → `minX` 被算成 **+12**，表现为「悬浮球永远拖不到视口最左侧」。改为 `Math.min(48, 元素宽度)`；面板宽 340 > 48，**行为与旧实现完全一致**。
+  - 新增 `clampHostIntoView(host)`：悬浮球可以被拖到贴边，但**展开回面板时按面板真实宽度重新裁回视口**，否则「从屏幕右下角展开」会出现面板大半在屏幕外、抓不回来。
+- **冒烟断言同步调整（只改不删，22 → 24 项）**：
+  - `settingsBtnBlue`（断言「设置」按钮必须是 #1677FF 实心蓝底）→ 改为 **`panelBtnsUniform`**：四个入口按钮底色必须一致、且都不是主色实心蓝（原断言锁「主色用对」，现按新需求锁「四个按钮一致」）。
+  - `primaryTokenBlue`：主色 token 改从**语音播报 Switch** 上读（原从「设置」按钮读，该按钮已无主色）。Switch 选中态本身就是主色，仍在同一条 antd css-var 继承链下，验证「宿主页面 CSS 未污染 `--ant-color-primary`」的意图不变。
+  - **新增 `panelBtnsOneRow`**：四个入口按钮必须同一 `offsetTop`。
+  - **新增 `ballDragOk`**：收起面板 → 用**真实指针事件**（puppeteer 侧，合成 PointerEvent 会让 `setPointerCapture` 抛 NotFoundError）把悬浮球拖走 → 断言宿主 left/top 真的变了**且没有被顺带展开**。落点前先校验 `elementFromPoint` 命中悬浮球本身，避免被残留浮层盖住时假绿。
+- **脚本元信息清理：`@connect` 去掉写死的 `znhd-service.zeabur.app`，只保留通配 `*`**（用户明确要求）：
+  - 依据与产物头注释一致 —— 中继服务器地址由用户在设置面板自定义、**域名不固定**，无法收窄为固定域名；写死某个域名既无意义，也容易让人误以为只能连它。
+  - ⚠️ 旧审查存档 `.workbuddy/reviews/znhd-userjs-review.md` 的 6.1 条曾建议「把 `@connect *` 收窄为 `github.com` + `znhd-service.zeabur.app`」——**该建议不采纳**（历史存档不改写，结论记在此处与 `AGENT.md` 的 bannerNotes）。
+  - `config/dev.meta.json` 没有 `connect` 字段（dev 侧 `Object.assign(commonMeta, devMeta)` 继承），故 dev 产物自动同步；已重建 `dist/znhd.dev.user.js` 确认其为 `@connect *`。
+- **主面板整体缩窄 30%：`PANEL_WIDTH` 340 → 238px**（按用户要求）：
+  - ⚠️ **宽度常量原先有两份**：`MainPanel.tsx` 里的 `PANEL_WIDTH`，以及 `panelHost.tsx` 的 `initialPoint()` 里**硬编码的 `340`**（初始坐标粗裁剪）。只改一处会让存档在右侧的面板**每次加载都往左漂** —— 先按 340 收一次，随后按真实 238 的那次不会再把它推回去。
+  - 故把 `PANEL_WIDTH` 移到 `src/lib/ui/panelIds.ts`（该文件的定位本就是「UI 共享常量，单独成文件以避免循环依赖」），`MainPanel` 与 `panelHost` 共用同一份。
+  - 缩窄后实测版式（Chrome 154）：四入口每列 **48.5px**（内容盒 38.5px）→ 仍在容器查询阈值 68px 之下，保持纯图标；人数/状态卡、语音开关行、底部「上次播报 + 查看日志」均放得下。
+  - ⚠️ **标题栏是唯一被挤到边界的**：内容实测 **191px**、可用仅 **189px**（溢出 2px）。已把标题栏 `gap` 8→6 收回 4px，并给标题加 `minWidth: 0` + `overflow/text-overflow/white-space` 兜底 —— 字体渲染略有差异时让标题自己省略，而不是把右侧的 ✕ 挤出去。复测面板内**零横向溢出元素**，标题仍是完整 90px 单行（未被省略）。
+- 验证：`npm run typecheck` 0 错、`npm run build` 结论行 `compiled`、`npm run check` 通过、`npm run verify` **24 项全绿**、`npx @ant-design/cli lint ./src` `issues: []`；**并对 `ballDragOk` 做了反向验证**（临时摘掉悬浮球的拖拽处理器 → 该断言确实变红，排除假绿）。实测拖拽位移与请求一致（−120/+120），拖后 `isBall: true` 未被展开。
+- 三处版本号一致（`26.10.07-v3`）；仓库根过渡跳板 `znhd.user.js` 已重新拷贝为与 `dist/znhd.user.js` **逐字节一致**（`node --check` 通过）。
+- ⚠️ **只做本地提交，未推送**。
+
+
 ### znhd.user.js v26.10.07-v2
 - **明确项目许可证为 MIT，并补上此前缺失的许可证文件**：
   - 新增仓库根 `LICENSE`（MIT 全文，`Copyright (c) 2026 Run-os`）。此前 ReadMe 只写了「MIT License」四个字、仓库里**没有 LICENSE 文件**，属于声明与事实不符。

@@ -18,7 +18,7 @@ import { createRoot, type Root } from 'react-dom/client';
 import { useCallback, useEffect, useRef } from 'react';
 import PanelApp from './PanelApp';
 import { loadPanelPoint, savePanelPoint } from '@/lib/storage';
-import { PANEL_HOST_ID } from '@/lib/ui/panelIds';
+import { PANEL_HOST_ID, PANEL_WIDTH } from '@/lib/ui/panelIds';
 import { injectUiReset } from '@/lib/ui/uiReset';
 
 // 面板宿主 id 定义在 panelIds（供 uiReset 共用，避免循环依赖）；此处转出，保持既有 import 路径可用
@@ -33,15 +33,31 @@ export function getOverlayContainer(): HTMLElement {
 const MIN_VISIBLE = 48; // 水平方向至少留在视口内的像素
 const HANDLE_MIN = 40; // 垂直方向至少保留的标题栏高度
 
+/**
+ * 「拖动」与「点击」的判定阈值（px）：指针位移超过它才算拖动。
+ *
+ * 为什么必须区分（v26.10.07-v3 实测 Chrome 154）：`pointerdown` 里调用 `preventDefault()`
+ * **并不能**阻止后续的 `click` —— 原地点击序列是 `pd|pu|click`，拖拽序列是
+ * `pd|pm×N|pu|click`，两者最后都会派发 click。悬浮球既要「点击展开」又要「拖动移动」，
+ * 不区分就会出现「拖完一松手面板被顺带展开」。
+ */
+const DRAG_THRESHOLD = 4;
+
 /** 把坐标裁剪到视口内（与旧实现同参数） */
 export function clampPanelPoint(pt: { x: number; y: number }, size?: { w?: number; h?: number }) {
     const vw = window.innerWidth;
     const vh = window.innerHeight;
     const w = size && size.w ? size.w : 320;
-    const minX = -(w - MIN_VISIBLE);
-    const maxX = vw - MIN_VISIBLE;
+    const h = size && size.h ? size.h : 0;
+    // ⚠️ 保留量必须与元素自身尺寸取小：悬浮球只有 36px，若仍要求「至少留 48px」，
+    //    minX 会被算成 +12 —— 表现为「悬浮球拖不到视口最左侧」（v26.10.07-v3 加悬浮球拖拽时踩到）。
+    //    面板宽度 340 > 48，keepX 仍是 48，行为与旧实现完全一致。
+    const keepX = Math.min(MIN_VISIBLE, w);
+    const keepY = h ? Math.min(HANDLE_MIN, h) : HANDLE_MIN;
+    const minX = -(w - keepX);
+    const maxX = vw - keepX;
     const minY = 0;
-    const maxY = vh - HANDLE_MIN;
+    const maxY = vh - keepY;
     return {
         x: Math.min(Math.max(pt.x, minX), maxX),
         y: Math.min(Math.max(pt.y, minY), maxY),
@@ -66,13 +82,25 @@ export function clampIntoView(pt: { x: number; y: number }, w: number, h: number
     };
 }
 
+/** 按「整块尽量可见」把宿主裁回视口并存档（悬浮球展开回面板时用：球可以贴边，面板不行） */
+export function clampHostIntoView(host: HTMLElement): void {
+    const pt = clampIntoView(
+        { x: parseFloat(host.style.left) || 0, y: parseFloat(host.style.top) || 0 },
+        host.offsetWidth,
+        host.offsetHeight
+    );
+    host.style.left = Math.round(pt.x) + 'px';
+    host.style.top = Math.round(pt.y) + 'px';
+    savePanelPoint(pt);
+}
+
 /** 读取存档位置（无存档时给默认坐标），先按默认尺寸做一次粗裁剪 */
 function initialPoint(): { x: number; y: number } {
     const saved = loadPanelPoint();
     // ⚠️ 默认坐标必须用 innerWidth/innerHeight（视口），不能用 screen.width/height（物理屏幕）：
     // 在多屏或缩窄窗口时二者差别很大，用后者会把面板初始位置算到视口外。
     const pt = saved || { x: Math.round(window.innerWidth * 0.55), y: 12 };
-    return clampIntoView(pt, 340, 0);
+    return clampIntoView(pt, PANEL_WIDTH, 0);
 }
 
 let root: Root | null = null;
@@ -110,12 +138,15 @@ export function unmountPanel(): void {
 }
 
 /**
- * 面板拖拽：把事件绑到标题栏即可。
+ * 面板拖拽：把事件绑到可抓取区即可 —— 展开态绑标题栏，收起态绑悬浮球。
  * @param host 面板宿主元素（定位写它的 left/top）
- * @returns 需要挂到标题栏上的指针事件处理器
+ * @returns 需要挂到可抓取区上的指针事件处理器 + `consumeDrag()`（供 onClick 判断「这次点击是不是拖拽的尾巴」）
  */
 export function usePanelDrag(host: HTMLElement) {
     const dragRef = useRef<{ dx: number; dy: number } | null>(null);
+    const startRef = useRef<{ x: number; y: number } | null>(null);
+    /** 本次按下是否真的拖动过（位移超过 DRAG_THRESHOLD） */
+    const movedRef = useRef(false);
 
     const onPointerDown = useCallback(
         (e: React.PointerEvent) => {
@@ -123,6 +154,8 @@ export function usePanelDrag(host: HTMLElement) {
             if (e.button !== 0 && e.pointerType === 'mouse') return;
             const rect = host.getBoundingClientRect();
             dragRef.current = { dx: e.clientX - rect.left, dy: e.clientY - rect.top };
+            startRef.current = { x: e.clientX, y: e.clientY };
+            movedRef.current = false;
             (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
             e.preventDefault();
         },
@@ -133,7 +166,16 @@ export function usePanelDrag(host: HTMLElement) {
         (e: React.PointerEvent) => {
             const d = dragRef.current;
             if (!d) return;
-            const pt = clampPanelPoint({ x: e.clientX - d.dx, y: e.clientY - d.dy }, { w: host.offsetWidth });
+            const s = startRef.current;
+            if (s && !movedRef.current) {
+                if (Math.abs(e.clientX - s.x) > DRAG_THRESHOLD || Math.abs(e.clientY - s.y) > DRAG_THRESHOLD) {
+                    movedRef.current = true;
+                }
+            }
+            const pt = clampPanelPoint(
+                { x: e.clientX - d.dx, y: e.clientY - d.dy },
+                { w: host.offsetWidth, h: host.offsetHeight }
+            );
             host.style.left = Math.round(pt.x) + 'px';
             host.style.top = Math.round(pt.y) + 'px';
         },
@@ -143,12 +185,24 @@ export function usePanelDrag(host: HTMLElement) {
     const endDrag = useCallback(() => {
         if (!dragRef.current) return;
         dragRef.current = null;
+        startRef.current = null;
         const pt = { x: parseFloat(host.style.left) || 0, y: parseFloat(host.style.top) || 0 };
-        const clamped = clampPanelPoint(pt, { w: host.offsetWidth });
+        const clamped = clampPanelPoint(pt, { w: host.offsetWidth, h: host.offsetHeight });
         host.style.left = Math.round(clamped.x) + 'px';
         host.style.top = Math.round(clamped.y) + 'px';
         savePanelPoint(clamped);
     }, [host]);
+
+    /**
+     * 取走「本次是否拖动过」并复位。
+     * 悬浮球的 onClick 里用它：拖动过就不要再展开面板。取走后立刻复位，
+     * 避免这个标记残留到下一次**键盘**触发的 click（键盘激活不会经过 pointerdown）。
+     */
+    const consumeDrag = useCallback(() => {
+        const moved = movedRef.current;
+        movedRef.current = false;
+        return moved;
+    }, []);
 
     // 视口尺寸变化时重新裁剪，避免面板被挤出可视范围
     useEffect(() => {
@@ -172,5 +226,5 @@ export function usePanelDrag(host: HTMLElement) {
         return () => window.removeEventListener('resize', onResize);
     }, [host]);
 
-    return { onPointerDown, onPointerMove, onPointerUp: endDrag, onPointerCancel: endDrag };
+    return { onPointerDown, onPointerMove, onPointerUp: endDrag, onPointerCancel: endDrag, consumeDrag };
 }
