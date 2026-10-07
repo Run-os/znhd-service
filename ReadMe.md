@@ -1,5 +1,7 @@
 # 征纳互动人数和在线监控 v2
 
+[![zread](https://img.shields.io/badge/Ask_Zread-_.svg?style=flat-square&color=00b0aa&labelColor=000000&logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB3aWR0aD0iMTYiIGhlaWdodD0iMTYiIHZpZXdCb3g9IjAgMCAxNiAxNiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTQuOTYxNTYgMS42MDAxSDIuMjQxNTZDMS44ODgxIDEuNjAwMSAxLjYwMTU2IDEuODg2NjQgMS42MDE1NiAyLjI0MDFWNC45NjAxQzEuNjAxNTYgNS4zMTM1NiAxLjg4ODEgNS42MDAxIDIuMjQxNTYgNS42MDAxSDQuOTYxNTZDNS4zMTUwMiA1LjYwMDEgNS42MDE1NiA1LjMxMzU2IDUuNjAxNTYgNC45NjAxVjIuMjQwMUM1LjYwMTU2IDEuODg2NjQgNS4zMTUwMiAxLjYwMDEgNC45NjE1NiAxLjYwMDFaIiBmaWxsPSIjZmZmIi8%2BCjxwYXRoIGQ9Ik00Ljk2MTU2IDEwLjM5OTlIMi4yNDE1NkMxLjg4ODEgMTAuMzk5OSAxLjYwMTU2IDEwLjY4NjQgMS42MDE1NiAxMS4wMzk5VjEzLjc1OTlDMS42MDE1NiAxNC4xMTM0IDEuODg4MSAxNC4zOTk5IDIuMjQxNTYgMTQuMzk5OUg0Ljk2MTU2QzUuMzE1MDIgMTQuMzk5OSA1LjYwMTU2IDE0LjExMzQgNS42MDE1NiAxMy43NTk5VjExLjAzOTlDNS42MDE1NiAxMC42ODY0IDUuMzE1MDIgMTAuMzk5OSA0Ljk2MTU2IDEwLjM5OTlaIiBmaWxsPSIjZmZmIi8%2BCjxwYXRoIGQ9Ik0xMy43NTg0IDEuNjAwMUgxMS4wMzg0QzEwLjY4NSAxLjYwMDEgMTAuMzk4NCAxLjg4NjY0IDEwLjM5ODQgMi4yNDAxVjQuOTYwMUMxMC4zOTg0IDUuMzEzNTYgMTAuNjg1IDUuNjAwMSAxMS4wMzg0IDUuNjAwMUgxMy43NTg0QzE0LjExMTkgNS42MDAxIDE0LjM5ODQgNS4zMTM1NiAxNC4zOTg0IDQuOTYwMVYyLjI0MDFDMTQuMzk4NCAxLjg4NjY0IDE0LjExMTkgMS42MDAxIDEzLjc1ODQgMS42MDAxWiIgZmlsbD0iI2ZmZiIvPgo8cGF0aCBkPSJNNCAxMkwxMiA0TDQgMTJaIiBmaWxsPSIjZmZmIi8%2BCjxwYXRoIGQ9Ik00IDEyTDEyIDQiIHN0cm9rZT0iI2ZmZiIgc3Ryb2tlLXdpZHRoPSIxLjUiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPgo8L3N2Zz4K&logoColor=ffffff)](https://zread.ai/Run-os/znhd-service)
+
 ## 项目简介
 
 **征纳互动人数和在线监控** 是一个油猴用户脚本（UserScript），用于实时监控 [征纳互动平台](https://znhd.hunan.chinatax.gov.cn:8443/) 的等待人数和在线状态。当有纳税人等待时自动语音播报提醒，支持自定义常用语快速回复，帮助坐席人员及时响应。
@@ -105,12 +107,12 @@ npm run verify         # 无头 Chromium 端到端冒烟（面板/弹窗/画廊/
 
 脚本在页面右下角创建一个可拖拽的浮动面板，包含：
 
-| 元素              | 说明                                                             |
-|-------------------|------------------------------------------------------------------|
-| 版本号            | 显示当前脚本版本（如 `v26.7.18`）                                |
-| 🔊 语音 / 🔇 静音 | 一键切换语音播报状态，按钮颜色随状态变化（绿色=开启，红色=静音） |
+| 元素              | 说明                                                               |
+|-------------------|--------------------------------------------------------------------|
+| 版本号            | 显示当前脚本版本（如 `v26.7.18`）                                  |
+| 🔊 语音 / 🔇 静音 | 一键切换语音播报状态，按钮颜色随状态变化（绿色=开启，红色=静音）   |
 | 设置              | 打开设置弹窗，可配置工作时间、常用语数据源地址，查看日志和脚本链接 |
-| 常用语            | 打开常用语弹窗，加载并搜索常用语                                 |
+| 常用语            | 打开常用语弹窗，加载并搜索常用语                                   |
 
 ### 人数监控与掉线检测
 
@@ -226,19 +228,19 @@ const DEFAULTS = {
 
 ## 技术栈
 
-| 技术                                                                              | 用途                                                                                                  |
-|-----------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------|
-| JavaScript (ES6+)                                                                 | 脚本主语言                                                                                            |
-| [React 19](https://react.dev/) + [Ant Design v6](https://ant.design/)             | 全部 UI（面板与各弹窗）：组件、主题、消息提示；随产物打包，无第三方运行时请求                          |
-| [js-yaml](https://github.com/nodeca/js-yaml)                                      | 解析 YAML 格式的常用语配置文件                                                                        |
-| [qrcodejs](https://github.com/davidshimjs/qrcodejs)                               | 「本机上传链接」二维码由脚本端本地生成（无需服务器参与）                                                |
-| [heic2any](https://github.com/alexcorvi/heic2any)（手机上传页 CDN 加载）         | 手机端把 HEIC/HEIF 解码转 JPEG 后压缩上传；CDN 不可达时回退原样直传                                      |
-| [Web Speech API](https://developer.mozilla.org/en-US/docs/Web/API/Web_Speech_API) | 语音合成播报                                                                                          |
-| [GM API](https://www.tampermonkey.net/documentation.php)                          | `GM_xmlhttpRequest`、`GM_setClipboard`、`GM_notification`、`GM_getValue`/`GM_setValue` 等油猴扩展 API |
-| [relay-server](relay-server/server.js:1)                                            | 设备互联配套中继服务：纯 Node 内置 `http`（零依赖），手机上传页内联、电脑端长轮询取图；需部署到公网 |
+| 技术                                                                                 | 用途                                                                                                                               |
+|--------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------|
+| JavaScript (ES6+)                                                                    | 脚本主语言                                                                                                                         |
+| [React 19](https://react.dev/) + [Ant Design v6](https://ant.design/)                | 全部 UI（面板与各弹窗）：组件、主题、消息提示；随产物打包，无第三方运行时请求                                                      |
+| [js-yaml](https://github.com/nodeca/js-yaml)                                         | 解析 YAML 格式的常用语配置文件                                                                                                     |
+| [qrcodejs](https://github.com/davidshimjs/qrcodejs)                                  | 「本机上传链接」二维码由脚本端本地生成（无需服务器参与）                                                                           |
+| [heic2any](https://github.com/alexcorvi/heic2any)（手机上传页 CDN 加载）             | 手机端把 HEIC/HEIF 解码转 JPEG 后压缩上传；CDN 不可达时回退原样直传                                                                |
+| [Web Speech API](https://developer.mozilla.org/en-US/docs/Web/API/Web_Speech_API)    | 语音合成播报                                                                                                                       |
+| [GM API](https://www.tampermonkey.net/documentation.php)                             | `GM_xmlhttpRequest`、`GM_setClipboard`、`GM_notification`、`GM_getValue`/`GM_setValue` 等油猴扩展 API                              |
+| [relay-server](relay-server/server.js:1)                                             | 设备互联配套中继服务：纯 Node 内置 `http`（零依赖），手机上传页内联、电脑端长轮询取图；需部署到公网                                |
 | [Webpack 5](https://webpack.js.org/) + [TypeScript](https://www.typescriptlang.org/) | 构建与开发环境（脚手架对齐 [Eished/douyu-helper](https://github.com/Eished/douyu-helper)）：`src/` 打包成单文件产物 `znhd.user.js` |
-| [ESLint](https://eslint.org/) + [Prettier](https://prettier.io/)                     | 代码规范与格式化（`npm run lint` / `npm run build` 自动修复） |
-| [Puppeteer](https://pptr.dev/)                                                       | 无头 Chromium，跑 `npm run verify` 端到端冒烟（开发依赖，CI 也会用） |
+| [ESLint](https://eslint.org/) + [Prettier](https://prettier.io/)                     | 代码规范与格式化（`npm run lint` / `npm run build` 自动修复）                                                                      |
+| [Puppeteer](https://pptr.dev/)                                                       | 无头 Chromium，跑 `npm run verify` 端到端冒烟（开发依赖，CI 也会用）                                                               |
 
 ## 浏览器兼容性
 
