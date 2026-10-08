@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { Button, Card, Space, Switch, Tooltip } from 'antd';
+import { Button, Switch } from '../../../shared/ui/controls';
+import { Tooltip } from '../../../shared/ui/feedback';
 import { DEFAULTS, PHRASES_CACHE_TTL } from '@/lib/constants';
 import { addLog, addLogDebounced, setLogEntriesSink, clearLogs, type LogEntry } from '@/lib/logger';
 import { loadPhrasesCache, savePhrasesCache, saveAllvalue, type Allvalue } from '@/lib/storage';
@@ -32,19 +33,11 @@ const BRAND_ICON = 'https://znhd.hunan.chinatax.gov.cn:8443/favicon.ico';
  */
 function BrandIcon({ size = 26 }: { size?: number }) {
     const [failed, setFailed] = useState(false);
-    const box = { width: size, height: size, borderRadius: 6, flex: '0 0 auto' } as const;
     if (failed) {
         return (
             <span
-                style={{
-                    ...box,
-                    background: '#1677ff',
-                    color: '#fff',
-                    fontSize: Math.round(size * 0.55),
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                }}>
+                className="inline-flex shrink-0 items-center justify-center rounded-md bg-brand-500 text-white"
+                style={{ width: size, height: size, fontSize: Math.round(size * 0.55) }}>
                 🎯
             </span>
         );
@@ -54,7 +47,8 @@ function BrandIcon({ size = 26 }: { size?: number }) {
             src={BRAND_ICON}
             alt=""
             draggable={false}
-            style={{ ...box, display: 'block' }}
+            className="block shrink-0 rounded-md"
+            style={{ width: size, height: size }}
             onError={() => setFailed(true)}
         />
     );
@@ -83,6 +77,9 @@ function BrandIcon({ size = 26 }: { size?: number }) {
  *
  * ⚠️ 用 CSS 容器查询而非 JS 测量：按钮在 grid 里宽度由栅格决定（与自身内容无关），
  *    因此不存在「隐藏文字 → 按钮变窄 → 反过来触发隐藏」的抖动回路。
+ *
+ * ⚠️ 这段 CSS 刻意留在组件内而不是进 tailwind.css：它是**面板独有**的适配规则，
+ *    且依赖 `@container`（容器查询）与面板宿主的具体结构；放进全局 @layer 会污染手机页。
  */
 const PANEL_CSS = `
 .znhd-panel-btn {
@@ -108,19 +105,7 @@ const PANEL_ACTIONS = [
 
 /** 状态点 */
 function Dot({ color }: { color: string }) {
-    return (
-        <span
-            style={{
-                display: 'inline-block',
-                width: 6,
-                height: 6,
-                borderRadius: '50%',
-                background: color,
-                marginRight: 6,
-                verticalAlign: 'middle',
-            }}
-        />
-    );
+    return <span className="mr-1.5 inline-block h-1.5 w-1.5 rounded-full align-middle" style={{ background: color }} />;
 }
 
 /** 「上次播报」的展示文案（面板每 3s 随监控状态重渲染，所以相对时间会自动更新） */
@@ -137,7 +122,7 @@ interface MainPanelProps {
 }
 
 /**
- * 主面板（v26.10.06-v9：CAT_UI → React + Ant Design）。
+ * 主面板（v26.10.06-v9：CAT_UI → React + Ant Design；v26.10.08-v14：antd → Tailwind + 自研基座）。
  * 版式对齐参考图：头部（图标+标题+版本+收起）、人数/状态卡、语音开关行、一行四入口按钮、底部「查看日志」。
  */
 export default function MainPanel({ host }: MainPanelProps) {
@@ -152,7 +137,7 @@ export default function MainPanel({ host }: MainPanelProps) {
     const [phoneOpen, setPhoneOpen] = useState(false);
     const [logOpen, setLogOpen] = useState(false);
     const [changelogOpen, setChangelogOpen] = useState(false);
-    // 收到图片/文本（v26.10.06-v13：由原来的命令式 DOM 弹窗改为 React state 驱动 antd 弹窗）
+    // 收到图片/文本（v26.10.06-v13：由原来的命令式 DOM 弹窗改为 React state 驱动的弹窗）
     const [recvImages, setRecvImages] = useState<GalleryImage[]>([]);
     /** 历史记录里的文本（可回看，上限 MAX_TEXT）；与下面「收到即自动弹出的最新一条」是两条独立路径 */
     const [recvTexts, setRecvTexts] = useState<GalleryText[]>([]);
@@ -279,8 +264,8 @@ export default function MainPanel({ host }: MainPanelProps) {
             ontimeout: function () {
                 if (seq !== phrasesRequestSeq) return;
                 const hasOld = Object.keys(phrasesData).length > 0;
-                addLog('加载常用语超时（15s），已取消' + (hasOld ? '，仍显示上次加载的内容' : ''), 'error', true);
-                notify.error('加载常用语超时' + (hasOld ? '，仍显示上次内容' : ''));
+                addLog('常用语加载超时（15s），已取消' + (hasOld ? '，仍显示上次加载的内容' : ''), 'error', true);
+                notify.error('常用语加载超时' + (hasOld ? '，仍显示上次内容' : ''));
                 setPhrasesLoading(false);
             },
         });
@@ -410,7 +395,7 @@ export default function MainPanel({ host }: MainPanelProps) {
                     addLog('[设备互联] 收到文本：' + (t.length > 40 ? t.slice(0, 40) + '…' : t), 'success');
                     // ① 进「历史记录」的文本页签：最新一条排最前，超出 MAX_TEXT 丢最旧
                     setRecvTexts((prev) => [{ text: t, ts: txt.ts || Date.now() }, ...prev].slice(0, MAX_TEXT));
-                    // ② 保持原有行为：仍自动弹出「最新一条」文本窗（同屏只留最新一条，antd Modal 单实例）
+                    // ② 保持原有行为：仍自动弹出「最新一条」文本窗（同屏只留最新一条，弹窗单实例）
                     setRecvText(txt.text || '');
                 },
             });
@@ -443,23 +428,20 @@ export default function MainPanel({ host }: MainPanelProps) {
         return (
             <Button
                 {...dragHandlers}
-                shape="circle"
-                color="primary"
-                variant="solid"
+                className="rounded-full p-0 shadow-[0_4px_16px_rgb(0_0_0/0.18)]"
+                style={{
+                    width: 36,
+                    height: 36,
+                    cursor: 'move',
+                    userSelect: 'none',
+                    touchAction: 'none',
+                }}
                 title="拖动可移动位置，点击展开面板"
                 onClick={() => {
                     // ⚠️ pointerdown 里的 preventDefault 并不能阻止 click（实测序列：拖拽为 pd|pm×N|pu|click），
                     //    故必须靠 consumeDrag() 把「拖拽尾巴」的那次 click 吃掉，否则拖完一松手就会展开。
                     if (consumeDrag()) return;
                     setCollapsed(false);
-                }}
-                style={{
-                    width: 36,
-                    height: 36,
-                    boxShadow: '0 4px 16px rgba(0,0,0,0.18)',
-                    cursor: 'move',
-                    userSelect: 'none',
-                    touchAction: 'none',
                 }}>
                 <BrandIcon size={20} />
             </Button>
@@ -479,155 +461,93 @@ export default function MainPanel({ host }: MainPanelProps) {
     };
 
     return (
-        <Card
-            size="small"
-            style={{ width: PANEL_WIDTH, boxShadow: '0 6px 24px rgba(0,0,0,0.18)' }}
-            styles={{ body: { padding: 12 }, header: { padding: '8px 10px', minHeight: 46 } }}
-            title={
-                // 标题栏 = 拖拽手柄（唯一可抓取区）
-                <div
-                    {...dragHandlers}
-                    style={{
-                        cursor: 'move',
-                        userSelect: 'none',
-                        touchAction: 'none',
-                        display: 'flex',
-                        alignItems: 'center',
-                        // v26.10.07-v3 面板缩到 238px 后，标题栏内容实测 191px 而可用只有 189px（溢出 2px）。
-                        // 间隙 8→6 收回 4px；标题再给 minWidth:0 + 省略号兜底 —— 字体渲染略有差异时
-                        // 让标题自己省略，而不是把右侧的 ✕ 挤出去。
-                        gap: 6,
-                    }}
-                    title="按住拖动面板">
-                    <BrandIcon />
-                    <span
-                        style={{
-                            fontWeight: 700,
-                            fontSize: 15,
-                            minWidth: 0,
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap',
-                        }}>
-                        征纳互动监控
-                    </span>
-                    <span
-                        style={{
-                            background: '#e6f4ff',
-                            color: '#1677ff',
-                            borderRadius: 10,
-                            padding: '1px 8px',
-                            fontSize: 11,
-                            fontWeight: 400,
-                            flex: '0 0 auto',
-                        }}>
-                        v{GM_info.script.version}
-                    </span>
-                </div>
-            }
-            extra={
+        <div
+            className="overflow-hidden rounded-lg bg-white shadow-[0_6px_24px_rgb(0_0_0/0.18)]"
+            // ⚠️ data-znhd-panel 是「面板已展开」的稳定钩子：冒烟测试用它判断「收起成悬浮球了吗」
+            //    （替换前读的是 antd 的 .ant-card）。改动会让 scripts/smoke/run.js 的收起用例失效。
+            data-znhd-panel=""
+            style={{ width: PANEL_WIDTH }}>
+            {/* 标题栏 = 拖拽手柄（唯一可抓取区） */}
+            <div
+                {...dragHandlers}
+                className="flex min-h-[46px] items-center gap-1.5 border-b border-ink-6 px-2.5 py-2"
+                style={{ cursor: 'move', userSelect: 'none', touchAction: 'none' }}
+                title="按住拖动面板">
+                <BrandIcon />
+                <span
+                    className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-[15px] font-bold"
+                    title="征纳互动监控">
+                    征纳互动监控
+                </span>
+                <span className="shrink-0 rounded-[10px] bg-brand-50 px-2 text-[11px] font-normal leading-[18px] text-brand-500">
+                    v{GM_info.script.version}
+                </span>
                 <Button
-                    type="text"
+                    variant="text"
                     size="small"
+                    className="ml-auto shrink-0"
                     title="收起面板（点圆形按钮可展开）"
                     onClick={() => setCollapsed(true)}>
                     ✕
                 </Button>
-            }>
-            <style>{PANEL_CSS}</style>
-
-            {/* 人数 + 状态 */}
-            <div
-                style={{
-                    background: '#f7f8fa',
-                    borderRadius: 10,
-                    padding: '10px 12px',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    gap: 12,
-                    marginBottom: 10,
-                }}>
-                <div>
-                    <div style={{ fontSize: 12, color: '#8c8c8c' }}>当前等待人数</div>
-                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
-                        <span style={{ fontSize: 30, fontWeight: 700, color: '#1677ff', lineHeight: 1.15 }}>
-                            {mon.waiting === null ? '—' : mon.waiting}
-                        </span>
-                        <span style={{ fontSize: 12, color: '#8c8c8c' }}>人</span>
-                    </div>
-                </div>
-                <div
-                    style={{
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: 4,
-                        justifyContent: 'center',
-                        fontSize: 12,
-                    }}>
-                    <div>
-                        <Dot color={mon.online ? '#52c41a' : '#ff4d4f'} />
-                        {mon.online ? '在线 · 正常监控' : '掉线'}
-                    </div>
-                    <div>
-                        <Dot color="#1677ff" />
-                        {mon.inWorkingHours ? '工作时段内' : '非工作时段'}
-                    </div>
-                </div>
             </div>
 
-            {/* 语音播报开关 */}
-            <div
-                style={{
-                    background: '#f7f8fa',
-                    borderRadius: 10,
-                    padding: '8px 12px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    marginBottom: 10,
-                }}>
-                <Space size={6}>
-                    <span>{voiceEnabled ? '🔊' : '🔇'}</span>
-                    <span style={{ fontSize: 13 }}>语音播报</span>
-                </Space>
-                <Switch checked={!!voiceEnabled} onChange={toggleVoice} />
-            </div>
+            <div className="px-3 py-3">
+                <style>{PANEL_CSS}</style>
 
-            {/* 四个入口合并到一行：宽度自适应（不够时只留图标），悬停给出完整文案 */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 6 }}>
-                {PANEL_ACTIONS.map((a) => (
-                    <Tooltip key={a.key} title={a.label} placement="bottom">
-                        <Button
-                            className="znhd-panel-btn"
-                            size="large"
-                            style={{ padding: '0 4px' }}
-                            onClick={actionHandlers[a.key]}>
-                            <span style={{ fontSize: 13, lineHeight: 1 }}>{a.icon}</span>
-                            <span className="znhd-panel-btn-text" style={{ fontSize: 11, marginLeft: 2 }}>
-                                {a.label}
+                {/* 人数 + 状态 */}
+                <div className="mb-2.5 flex justify-between gap-3 rounded-[10px] bg-ink-7 px-3 py-2.5">
+                    <div>
+                        <div className="text-xs text-ink-3">当前等待人数</div>
+                        <div className="flex items-baseline gap-1">
+                            <span className="text-[30px] font-bold leading-[1.15] text-brand-500">
+                                {mon.waiting === null ? '—' : mon.waiting}
                             </span>
-                        </Button>
-                    </Tooltip>
-                ))}
-            </div>
+                            <span className="text-xs text-ink-3">人</span>
+                        </div>
+                    </div>
+                    <div className="flex flex-col justify-center gap-1 text-xs">
+                        <div>
+                            <Dot color={mon.online ? '#52c41a' : '#ff4d4f'} />
+                            {mon.online ? '在线 · 正常监控' : '掉线'}
+                        </div>
+                        <div>
+                            <Dot color="#1677ff" />
+                            {mon.inWorkingHours ? '工作时段内' : '非工作时段'}
+                        </div>
+                    </div>
+                </div>
 
-            {/* 底部：上次播报 + 查看日志 */}
-            <div
-                style={{
-                    marginTop: 10,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    gap: 8,
-                    fontSize: 12,
-                    color: '#8c8c8c',
-                }}>
-                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {lastSpeakText(mon.lastSpeak)}
-                </span>
-                <Button type="link" size="small" style={{ padding: 0 }} onClick={() => setLogOpen(true)}>
-                    查看日志 →
-                </Button>
+                {/* 语音播报开关 */}
+                <div className="mb-2.5 flex items-center justify-between rounded-[10px] bg-ink-7 px-3 py-2">
+                    <div className="flex items-center gap-1.5">
+                        <span>{voiceEnabled ? '🔊' : '🔇'}</span>
+                        <span className="text-[13px]">语音播报</span>
+                    </div>
+                    <Switch checked={!!voiceEnabled} onChange={toggleVoice} />
+                </div>
+
+                {/* 四个入口合并到一行：宽度自适应（不够时只留图标），悬停给出完整文案 */}
+                <div className="grid grid-cols-4 gap-1.5">
+                    {PANEL_ACTIONS.map((a) => (
+                        <Tooltip key={a.key} content={a.label} side="bottom">
+                            <Button className="znhd-panel-btn w-full px-1" size="large" onClick={actionHandlers[a.key]}>
+                                <span className="text-[13px] leading-none">{a.icon}</span>
+                                <span className="znhd-panel-btn-text ml-0.5 text-[11px]">{a.label}</span>
+                            </Button>
+                        </Tooltip>
+                    ))}
+                </div>
+
+                {/* 底部：上次播报 + 查看日志 */}
+                <div className="mt-2.5 flex items-center justify-between gap-2 text-xs text-ink-3">
+                    <span className="overflow-hidden text-ellipsis whitespace-nowrap">
+                        {lastSpeakText(mon.lastSpeak)}
+                    </span>
+                    <Button variant="link" size="small" className="shrink-0 p-0" onClick={() => setLogOpen(true)}>
+                        查看日志 →
+                    </Button>
+                </div>
             </div>
 
             <SettingsModal
@@ -740,6 +660,6 @@ export default function MainPanel({ host }: MainPanelProps) {
             />
 
             <RecvTextModal text={recvText} onClose={() => setRecvText(null)} />
-        </Card>
+        </div>
     );
 }

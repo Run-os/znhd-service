@@ -1,12 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Modal, Button, Checkbox, Input, Progress, Tag, Typography } from 'antd';
+import { Button, Checkbox, CheckboxGroup, Input, Progress, Tag } from '../../../shared/ui/controls';
+import { Modal } from '../../../shared/ui/OverlayModal';
+import { cn } from '../../../shared/ui/cn';
 import { addLog } from '@/lib/logger';
 import { safeCopyText } from '@/lib/clipboard';
 import { RELAY_MAX_BODY, imagePayloadBytes, compressImageForPhone, getDeviceId, sendToPhone } from '@/lib/relay';
 import { genQrDataUrl } from '@/lib/qrcode';
-import { getOverlayContainer } from '@/lib/ui/panelHost';
-
-const { Text } = Typography;
 
 /** 体积显示：统一按 KB 输出（不足 1KB 也显示 1KB，避免出现「0KB」） */
 function kbText(bytes: any) {
@@ -43,10 +42,10 @@ function shortPhoneId(id: string): string {
 }
 
 /**
- * 设备 ID 的专属配色（v26.10.08-v12，按用户要求：给设备 ID 加边框和彩色底色，不同设备不同色）。
+ * 设备 ID 的专属配色（v26.10.08-v12：给设备 ID 加边框和彩色底色，不同设备不同色）。
  *
  * ⚠️ 用**固定色板 + 哈希取模**，而不是「由 ID 算 HSL」：后者在哈希相邻时会算出几乎一样的色相，
- *    多台手机并排时反而分不清。色板取 antd 预设色阶的「浅底 / 中边框 / 深字」三档（1 / 3 / 7 号色），
+ *    多台手机并排时反而分不清。色板取同一组「浅底 / 中边框 / 深字」三档，
  *    保证浅色主题下文字对比度足够，也与面板整体配色语言一致。
  */
 const DEVICE_COLORS = [
@@ -107,15 +106,8 @@ function DeviceIdTag({ id, colorIndex }: { id: string; colorIndex?: number }) {
         <span
             data-device-id={id}
             data-color-index={idx}
-            style={{
-                display: 'inline-block',
-                padding: '1px 8px',
-                borderRadius: 6,
-                border: '1px solid ' + c.border,
-                background: c.bg,
-                color: c.color,
-                lineHeight: '20px',
-            }}>
+            className="inline-block rounded-[6px] border px-2 leading-5"
+            style={{ background: c.bg, borderColor: c.border, color: c.color }}>
             {shortPhoneId(id)}
         </span>
     );
@@ -132,16 +124,9 @@ interface ProgressState {
 /** 卡片式分区（与参考稿一致：圆角描边区块 + 区块标题） */
 function Section({ title, extra, children }: { title: string; extra?: React.ReactNode; children: React.ReactNode }) {
     return (
-        <div style={{ border: '1px solid #f0f0f0', borderRadius: 10, padding: '12px 14px', marginBottom: 12 }}>
-            <div
-                style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    gap: 8,
-                    marginBottom: 10,
-                }}>
-                <span style={{ fontWeight: 600, fontSize: 14 }}>{title}</span>
+        <div className="mb-3 rounded-[10px] border border-ink-6 px-3.5 py-3">
+            <div className="mb-2.5 flex items-center justify-between gap-2">
+                <span className="text-sm font-semibold">{title}</span>
                 {extra}
             </div>
             {children}
@@ -150,12 +135,12 @@ function Section({ title, extra, children }: { title: string; extra?: React.Reac
 }
 
 /**
- * 设备互联弹窗（v26.10.06-v17：按参考稿重排版式）。
+ * 设备互联弹窗（v26.10.06-v17 按参考稿重排版式；v26.10.08-v14 换自研 Modal 基座）。
  *
  * 版式：标题「📱 手机互传 + 设备互联标签」→「电脑接收 · 本机专属链接」分区
  * （左二维码 + 右链接框 + 复制按钮；**按要求不放「重新生成」**）→ 居中的在线状态胶囊 →
  * 「发送到手机」分区（文本行 + 待发送图片行 + 虚线选图 + 发送按钮）。
- * 业务逻辑（二维码、在线轮询、逐张压缩发送、进度）与旧实现一致，只换成新排版。
+ * 业务逻辑（二维码、在线轮询、逐张压缩发送、进度）与旧实现一致，只换样式载体。
  */
 export default function PhoneModal({ open, onClose, relayServer, phones }: PhoneModalProps) {
     const deviceId = getDeviceId();
@@ -437,115 +422,75 @@ export default function PhoneModal({ open, onClose, relayServer, phones }: Phone
     return (
         <Modal
             open={open}
+            width={560}
+            onClose={onClose}
             title={
-                <span>
-                    📱 手机互传{' '}
-                    <Tag style={{ marginLeft: 6, fontWeight: 400 }} color="default">
-                        设备互联
-                    </Tag>
+                <span className="inline-flex items-center">
+                    📱 手机互传
+                    <Tag className="ml-1.5">设备互联</Tag>
                 </span>
             }
-            onCancel={onClose}
-            getContainer={getOverlayContainer}
-            width={560}
-            styles={{ body: { textAlign: 'left' } }}
-            destroyOnHidden
             footer={<Button onClick={onClose}>关闭</Button>}>
             {/* 电脑接收 · 本机专属链接 */}
             <Section
                 title="电脑接收 · 本机专属链接"
                 extra={
-                    <Tag color="blue" style={{ margin: 0, fontWeight: 400 }}>
+                    <Tag color="blue" className="font-normal">
                         手机扫码即上传
                     </Tag>
                 }>
                 {link ? (
-                    <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-                        <div style={{ flex: '0 0 auto', textAlign: 'center' }}>
+                    <div className="flex items-start gap-3">
+                        <div className="shrink-0 text-center">
                             {qrUrl ? (
                                 <img
                                     src={qrUrl}
                                     alt="上传链接二维码"
-                                    style={{
-                                        width: 124,
-                                        height: 124,
-                                        border: '1px solid #f0f0f0',
-                                        // 二维码不加圆角（v26.10.06-v21 按用户要求）：圆角会切掉
-                                        // 定位用的三个角标，部分扫码器识别率会下降
-                                        display: 'block',
-                                    }}
+                                    className="block border border-ink-6"
+                                    style={{ width: 124, height: 124 }}
                                 />
                             ) : (
                                 <div
-                                    style={{
-                                        width: 124,
-                                        height: 124,
-                                        border: '1px solid #f0f0f0',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        color: '#999',
-                                        fontSize: 12,
-                                    }}>
+                                    className="flex items-center justify-center border border-ink-6 text-xs text-[#999]"
+                                    style={{ width: 124, height: 124 }}>
                                     二维码生成中…
                                 </div>
                             )}
-                            <div style={{ fontSize: 12, color: '#8c8c8c', marginTop: 6 }}>扫一扫上传</div>
+                            <div className="mt-1.5 text-xs text-ink-3">扫一扫上传</div>
                         </div>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ fontSize: 12, color: '#8c8c8c', marginBottom: 6 }}>
-                                链接（复制到手机浏览器打开）
-                            </div>
+                        <div className="min-w-0 flex-1">
+                            <div className="mb-1.5 text-xs text-ink-3">链接（复制到手机浏览器打开）</div>
                             <div
-                                style={{
-                                    border: '1px solid #d9d9d9',
-                                    borderRadius: 8,
-                                    padding: '7px 10px',
-                                    fontSize: 13,
-                                    wordBreak: 'break-all',
-                                    background: '#fafafa',
-                                    maxHeight: 56,
-                                    overflow: 'auto',
-                                }}>
+                                className="max-h-14 overflow-auto break-all rounded-[8px] border border-ink-5 bg-ink-8 px-2.5 py-1.5 text-[13px]"
+                                style={{ wordBreak: 'break-all' }}>
                                 {link}
                             </div>
                             <Button
-                                color="primary"
-                                variant="solid"
+                                variant="primary"
                                 block
-                                style={{ marginTop: 10 }}
+                                className="mt-2.5"
                                 onClick={() => link && safeCopyText(link)}>
                                 复制链接
                             </Button>
                         </div>
                     </div>
                 ) : (
-                    <Text type="danger">尚未配置中继服务器，请到「设置」填写。</Text>
+                    <span className="text-danger-600">尚未配置中继服务器，请到「设置」填写。</span>
                 )}
             </Section>
 
             {/* 在线状态胶囊 */}
-            <div style={{ textAlign: 'center', marginBottom: 12 }}>
+            <div className="mb-3 text-center">
                 <span
-                    style={{
-                        display: 'inline-block',
-                        border: '1px solid ' + (phoneOnline ? '#b7eb8f' : '#ffccc7'),
-                        background: phoneOnline ? '#f6ffed' : '#fff2f0',
-                        color: phoneOnline ? '#389e0d' : '#cf1322',
-                        borderRadius: 16,
-                        padding: '4px 16px',
-                        fontSize: 13,
-                    }}>
+                    className="inline-block rounded-2xl border px-4 py-1 text-[13px]"
+                    style={
+                        phoneOnline
+                            ? { borderColor: '#b7eb8f', background: '#f6ffed', color: '#389e0d' }
+                            : { borderColor: '#ffccc7', background: '#fff2f0', color: '#cf1322' }
+                    }>
                     <span
-                        style={{
-                            display: 'inline-block',
-                            width: 6,
-                            height: 6,
-                            borderRadius: '50%',
-                            background: phoneOnline ? '#52c41a' : '#ff4d4f',
-                            marginRight: 6,
-                            verticalAlign: 'middle',
-                        }}
+                        className="mr-1.5 inline-block h-1.5 w-1.5 rounded-full align-middle"
+                        style={{ background: phoneOnline ? '#52c41a' : '#ff4d4f' }}
                     />
                     {phoneOnline ? '已连接手机 ' + phones.length + ' 台，可发送' : '当前无在线设备，无法发送'}
                 </span>
@@ -553,29 +498,25 @@ export default function PhoneModal({ open, onClose, relayServer, phones }: Phone
 
             {/* 已连接手机列表（v26.10.06-v4）：显示数量与设备 ID；≥2 台时常驻多选，默认全选 */}
             {phones.length > 0 && (
-                <div
-                    style={{
-                        border: '1px solid #f0f0f0',
-                        borderRadius: 10,
-                        padding: '10px 14px',
-                        marginBottom: 12,
-                    }}>
-                    <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>已连接手机（{phones.length}）</div>
+                <div className="mb-3 rounded-[10px] border border-ink-6 px-3.5 py-2.5">
+                    <div className="mb-1.5 text-[13px] font-semibold">已连接手机（{phones.length}）</div>
                     {phones.length > 1 ? (
                         <>
-                            <Checkbox.Group
-                                value={selected}
-                                onChange={(v) => setSelected(v as string[])}
-                                style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                            <CheckboxGroup>
                                 {phones.map((p) => (
-                                    <Checkbox key={p.id} value={p.id}>
+                                    <Checkbox
+                                        key={p.id}
+                                        checked={selected.indexOf(p.id) >= 0}
+                                        onChange={(next) =>
+                                            setSelected((prev) =>
+                                                next ? prev.concat(p.id) : prev.filter((id) => id !== p.id)
+                                            )
+                                        }>
                                         <DeviceIdTag id={p.id} colorIndex={deviceColors[p.id]} />
                                     </Checkbox>
                                 ))}
-                            </Checkbox.Group>
-                            <Text type="secondary" style={{ fontSize: 11 }}>
-                                默认全选；取消勾选后只发给勾选的手机。
-                            </Text>
+                            </CheckboxGroup>
+                            <p className="mt-1.5 text-[11px] text-ink-3">默认全选；取消勾选后只发给勾选的手机。</p>
                         </>
                     ) : (
                         <DeviceIdTag id={phones[0].id} colorIndex={deviceColors[phones[0].id]} />
@@ -585,71 +526,48 @@ export default function PhoneModal({ open, onClose, relayServer, phones }: Phone
 
             {/* 发送到手机 */}
             <Section title="发送到手机">
-                <div style={{ display: 'flex', gap: 8 }}>
+                <div className="flex gap-2">
                     <Input
                         placeholder="输入要发送到手机的文本…"
                         value={sendText}
                         onChange={(e) => setSendText(e.target.value)}
-                        onPressEnter={doSendText}
-                        style={{ flex: 1 }}
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter') doSendText();
+                        }}
+                        className="flex-1"
                     />
                     <Button
-                        color="primary"
-                        variant="solid"
+                        variant="primary"
                         disabled={!canSend}
                         loading={sending}
                         onClick={doSendText}
-                        style={{ width: 84 }}>
+                        className="w-[84px] shrink-0">
                         发送
                     </Button>
                 </div>
 
                 {pendingImages.length > 0 && (
                     <>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', margin: '14px 0 8px' }}>
-                            <span style={{ fontSize: 13, color: '#595959' }}>待发送图片</span>
-                            <span style={{ fontSize: 13, color: '#8c8c8c' }}>已选 {pendingImages.length} 张</span>
+                        <div className="mb-2 mt-3.5 flex items-center justify-between">
+                            <span className="text-[13px] text-ink-2">待发送图片</span>
+                            <span className="text-[13px] text-ink-3">已选 {pendingImages.length} 张</span>
                         </div>
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0,1fr))', gap: 8 }}>
+                        <div className="grid grid-cols-3 gap-2">
                             {pendingImages.map((img, i) => (
                                 <div
                                     key={img.url}
-                                    style={{
-                                        position: 'relative',
-                                        paddingBottom: '86%',
-                                        borderRadius: 10,
-                                        overflow: 'hidden',
-                                        background: '#f2f2f2',
-                                    }}>
+                                    className="relative overflow-hidden rounded-[10px] bg-[#f2f2f2]"
+                                    style={{ paddingBottom: '86%' }}>
                                     <img
                                         src={img.url}
                                         alt={img.name}
-                                        style={{
-                                            position: 'absolute',
-                                            inset: 0,
-                                            width: '100%',
-                                            height: '100%',
-                                            objectFit: 'cover',
-                                        }}
+                                        className="absolute inset-0 h-full w-full object-cover"
                                     />
                                     <span
                                         title="移除这张"
                                         onClick={() => removePendingImage(i)}
-                                        style={{
-                                            position: 'absolute',
-                                            top: 6,
-                                            right: 6,
-                                            width: 20,
-                                            height: 20,
-                                            borderRadius: '50%',
-                                            background: 'rgba(0,0,0,0.55)',
-                                            color: '#fff',
-                                            fontSize: 13,
-                                            lineHeight: '20px',
-                                            textAlign: 'center',
-                                            cursor: sending ? 'not-allowed' : 'pointer',
-                                            userSelect: 'none',
-                                        }}>
+                                        className="absolute right-1.5 top-1.5 h-5 w-5 cursor-pointer select-none rounded-full bg-black/55 text-center text-[13px] leading-5 text-white"
+                                        style={{ cursor: sending ? 'not-allowed' : 'pointer' }}>
                                         ×
                                     </span>
                                 </div>
@@ -658,34 +576,28 @@ export default function PhoneModal({ open, onClose, relayServer, phones }: Phone
                     </>
                 )}
 
-                <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
-                    <Button variant="dashed" disabled={!canSend} onClick={pickImages} style={{ flex: '1 1 0' }}>
+                <div className="mt-3.5 flex gap-2">
+                    <Button variant="dashed" disabled={!canSend} onClick={pickImages} className="flex-[1_1_0]">
                         ＋ 选择 / 添加图片（可多选）
                     </Button>
                     {pendingImages.length > 0 && (
                         <Button
-                            color="primary"
-                            variant="solid"
+                            variant="primary"
                             disabled={!canSend}
                             loading={sending}
                             onClick={confirmSendImage}
-                            style={{ flex: '1.2 1 0' }}>
+                            className="flex-[1.2_1_0]">
                             发送 {pendingImages.length} 张图片
                         </Button>
                     )}
                 </div>
 
                 {progress && (
-                    <div style={{ marginTop: 12 }}>
-                        <Progress
-                            percent={percent}
-                            size="small"
-                            strokeColor={progress.failed ? '#e4393c' : '#1677ff'}
-                            status={progress.failed ? 'exception' : 'normal'}
-                        />
-                        <Text type={progress.failed ? 'danger' : 'secondary'} style={{ fontSize: 12 }}>
+                    <div className="mt-3">
+                        <Progress percent={percent} status={progress.failed ? 'exception' : 'normal'} />
+                        <p className={cn('mt-1 text-xs', progress.failed ? 'text-danger-600' : 'text-ink-3')}>
                             {progress.text}
-                        </Text>
+                        </p>
                     </div>
                 )}
             </Section>

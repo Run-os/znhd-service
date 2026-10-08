@@ -78,6 +78,7 @@ const baseOptions = {
       },
       {
         test: /\.css$/,
+        // 第三方库自带的 CSS：只做解析，不走 Tailwind（避免我们的 postcss 插件去动它们）
         use: ['style-loader', 'css-loader'],
         include: /node_modules/,
       },
@@ -86,19 +87,20 @@ const baseOptions = {
         // 使用哪些 loader 进行处理
         use: [
           // use 数组中 loader 执行顺序：从右到左，从下到上 依次执行
-          // 创建 style 标签，将 js 中的样式资源插入进行，添加到 head 中生效
-          'style-loader',
-          'css-loader',
-          // 'to-string-loader',
-          // 将 css 文件变成 commonjs 模块加载 js 中，里面内容是样式字符串
-          // GM_addStyle 不需要 style-loader
-          // esModule: false 时可以 toString() 后使用 GM_addStyle 插入 css
-          // {
-          //   loader: 'css-loader',
-          //   options: {
-          //     esModule: false,
-          //   },
-          // },
+          // 把 css 变成 JS 模块，导出**样式字符串**（uiReset.ts 用 GM_addStyle 注入，
+          // 因为宿主页面可能有 CSP style-src，页面内 <style> 落地不可靠）
+          {
+            loader: 'css-loader',
+            options: {
+              // ⚠️ esModule 必须保持默认 true：uiReset.ts 走 `import css from './x.css'`。
+              //    （早年的 esModule:false + GM_addStyle 组合已随 style-loader 一起删除）
+              esModule: true,
+            },
+          },
+          // Tailwind v4 由 @tailwindcss/postcss 编译（配置见仓库根 postcss.config.js）。
+          // 放在 css-loader **右侧**（loader 从右到左执行 ⇒ 先 postcss 再 css），
+          // 这样拿到的是 Tailwind 编译并 tree-shake 后的 CSS，而不是未处理的指令。
+          'postcss-loader',
         ],
         include: [src, shared],
       },

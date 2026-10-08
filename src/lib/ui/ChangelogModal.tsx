@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Modal, Button, Empty, Space, Spin, Typography } from 'antd';
+import { Button, Empty, Spinner } from '../../../shared/ui/controls';
+import { Modal } from '../../../shared/ui/OverlayModal';
 import {
     CHANGELOG_DEFAULT_LIMIT,
     CHANGELOG_PAGE_URL,
@@ -7,9 +8,6 @@ import {
     mdToPlain,
     type ChangelogEntry,
 } from '@/lib/changelog';
-import { getOverlayContainer } from '@/lib/ui/panelHost';
-
-const { Text } = Typography;
 
 export interface ChangelogModalProps {
     open: boolean;
@@ -17,7 +15,7 @@ export interface ChangelogModalProps {
 }
 
 /**
- * 更新日志弹窗（v26.10.06-v13：由原 DOM 弹窗改为 antd Modal）。
+ * 更新日志弹窗（v26.10.06-v13 改为弹窗；v26.10.08-v14 换自研 Modal 基座）。
  * 拉取/解析逻辑仍在 `lib/changelog.ts`（保持可测试的纯函数），这里只管渲染。
  */
 export default function ChangelogModal({ open, onClose }: ChangelogModalProps) {
@@ -50,62 +48,47 @@ export default function ChangelogModal({ open, onClose }: ChangelogModalProps) {
         <Modal
             open={open}
             title={'更新日志（最新 ' + CHANGELOG_DEFAULT_LIMIT + ' 条）'}
-            onCancel={onClose}
-            getContainer={getOverlayContainer}
             width={620}
-            styles={{ body: { textAlign: 'left' } }}
-            destroyOnHidden
+            onClose={onClose}
             footer={
-                <Space>
+                <>
                     <Button onClick={() => window.open(CHANGELOG_PAGE_URL, '_blank')}>获取更多日志</Button>
-                    <Button color="primary" variant="solid" onClick={onClose}>
+                    <Button variant="primary" onClick={onClose}>
                         关闭
                     </Button>
-                </Space>
+                </>
             }>
             {loading ? (
-                <div style={{ textAlign: 'center', padding: 24 }}>
-                    <Spin /> <Text type="secondary">读取中…</Text>
+                <div className="flex items-center justify-center gap-2 py-6 text-ink-3">
+                    <Spinner size={16} />
+                    <span className="text-xs">读取中…</span>
                 </div>
             ) : err ? (
                 <>
-                    <Text type="danger">读取失败：{err}</Text>
-                    <div style={{ marginTop: 8 }}>
-                        <Text type="secondary" style={{ fontSize: 12 }}>
-                            可点下方「获取更多日志」在浏览器中打开 CHANGELOG.md 查看。
-                        </Text>
-                    </div>
+                    <p className="text-danger-600">读取失败：{err}</p>
+                    <p className="mt-2 text-xs text-ink-3">
+                        可点下方「获取更多日志」在浏览器中打开 CHANGELOG.md 查看。
+                    </p>
                 </>
             ) : !entries || entries.length === 0 ? (
                 <Empty description="暂无更新日志" />
             ) : (
                 <>
-                    <div style={{ maxHeight: '60vh', overflow: 'auto', paddingRight: 4 }}>
+                    <div className="max-h-[60vh] overflow-auto pr-1">
                         {shown.map((en) => (
-                            <div key={en.title} style={{ marginBottom: 14 }}>
-                                <div style={{ fontSize: 14, fontWeight: 'bold', color: '#1890ff', marginBottom: 6 }}>
-                                    {en.title}
-                                </div>
-                                <div
-                                    style={{
-                                        fontSize: 13,
-                                        lineHeight: 1.6,
-                                        color: '#333',
-                                        whiteSpace: 'pre-wrap',
-                                        wordBreak: 'break-word',
-                                    }}>
+                            <div key={en.title} className="mb-3.5">
+                                <div className="mb-1.5 text-sm font-bold text-brand-500">{en.title}</div>
+                                <div className="whitespace-pre-wrap break-words text-[13px] leading-[1.6] text-ink-1">
                                     {mdToPlain(en.body)}
                                 </div>
                             </div>
                         ))}
                     </div>
-                    <Text
-                        type="secondary"
-                        style={{ fontSize: 12, display: 'block', marginTop: 8, textAlign: 'center' }}>
+                    <p className="mt-2 block text-center text-xs text-ink-3">
                         {entries.length > shown.length
                             ? '共 ' + entries.length + ' 条，已显示最新 ' + shown.length + ' 条'
                             : '共 ' + entries.length + ' 条（已全部显示）'}
-                    </Text>
+                    </p>
                 </>
             )}
         </Modal>

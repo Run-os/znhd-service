@@ -11,6 +11,37 @@
 
 ---
 
+### znhd.user.js v26.10.09-v1
+- **【需求 1】常用语按钮加 hover 提示，悬停即可看到标题对应的文本**：`PhrasesDrawer` 里每条常用语的按钮外包一层 Tooltip，内容就是该条的正文（value），同时保留原生 `title` 属性兜底（触屏/键盘用户等不到悬停时长）。
+- **【需求 2】全面弃用 Ant Design，改用 Tailwind CSS v4 + Radix UI**（按用户要求「antd 还是不好用，请全面替代为 tailwind css」）。**两端同时替换**（脚本面板/弹窗 + 手机上传页），主色沿用同一个蓝 `#1677ff`，两端观感不变。
+  - **新增共享基座层 `shared/ui/`**（脚本端与手机页共用同一份，是本次「不重复维护」的关键）：
+    - `controls.tsx`：`Button` / `Input` / `Textarea` / `Switch` / `Checkbox` / `Tag` / `Progress` / `Empty` / `Spinner` / `Divider`。其中 **Switch 与 Checkbox 用 Radix**（键盘交互与无障碍语义自己写必漏），其余是纯样式组件、自研即可。
+    - `OverlayModal.tsx`：`Modal` / `Drawer` / `ConfirmFooter`，用 **Radix Dialog** 打底 —— 焦点陷阱、Esc 关闭、`role="dialog"`、`aria-modal` 一次到位（注入别人页面时，「按 Tab 把焦点送进宿主表单」是最要紧的一条）。
+    - `feedback.tsx`：`Tooltip` / `Tabs`（Radix）+ **Toast**（自研队列，**取代 antd 的 message 桥**：原先要靠 `App.useApp()` 注入实例、还要在根组件放 `MessageBridge`，现在模块级代码直接 `import notify` 即可）。
+    - `ImagePreview.tsx`：自研图片预览，**取代 `antd Image` / `Image.PreviewGroup`**（含多图左右切换、缩放、旋转、工具栏自定义插槽）。
+    - `zindex.ts`：层级常量集中一处（`PANEL_Z=999999` / `OVERLAY_Z=1000000` / `PREVIEW_Z=OVERLAY_Z+10`），替换掉 antd 的 `zIndexPopupBase` 配置。
+    - `tailwind.css`：Tailwind 入口 + `@theme` 主色与色阶 + `znhd-base` 层（基线复位与滚动条）。
+  - **样式注入链路**：脚本端 `css-loader`（导出**字符串**）+ `postcss-loader`（跑 `@tailwindcss/postcss`），`uiReset.ts` 拿字符串走 **GM_addStyle**（宿主可能有 CSP `style-src`，页面内 `<style>` 不可靠）；手机页走 Vite 的 `@tailwindcss/vite` 常规链路。
+  - **⚠️ 刻意不要 Tailwind 的 preflight**：它是一份**全局 reset**，会把注入进去的税务页面一起改掉。只导入 `theme` + `utilities` 两层；我们需要的基线复位写在 `znhd-base` 层且用 `:where()` 压到 (0,0,0)，这样 Tailwind 工具类（0,1,0）永远压得住它。`uiReset.ts` 里那层「宿主敌意样式兜底」全部带 `.znhd-root` 前缀（替换前是 `.ant-*` 前缀，思路一致）。
+  - **`uiReset.ts` 重写**：复位规则从「逐个罗列 antd 类名」改为「`.znhd-root` 前缀 + 只复位元素默认外观」，并补上宿主给 `svg` 加负 margin 的老坑（保留 `!important`，这类必须压过宿主的元素选择器）。
+  - **遮罩标记从 `.ant-modal-mask` / `.ant-drawer-mask` 改为统一的 `[data-znhd-mask]`**：`shared/preview/mask.ts`（两端共用）据此在预览期间压掉**所有**下层遮罩，机制与数值结论不变（两层 0.45 叠加 = 0.6975，白底灰度 77 vs 单层 140）。
+  - **冒烟断言全面改写**（41 项，无删除）：`.ant-*` 选择器换成基座挂的 `data-znhd-*` 钩子（`data-znhd-modal` / `-title` / `-body` / `-close` / `-preview` / `-panel` / `-card` / `-switch` / `-checkbox` / `-tab`）。这些钩子是**刻意加的稳定契约** —— Tailwind 工具类会被 tree-shake（只进 CSS、不进 DOM 属性），拿它们当契约太脆。
+  - 两处判据因底层机制变化而重写（不是降级）：
+    - ① **主色断言**：不再读 antd 的 `--ant-color-primary` 变量（Tailwind 没有那层 CSS 变量），改为在面板宿主里**造一个挂同一批类名的探针按钮**、显式置 `data-state="checked"`，量它的最终 `background-color`。这样既验了「主色是品牌蓝」，也顺带验了「`data-[state=checked]:` 变体类真的编译出来了」（类名写错 / `@source` 没扫到 ⇒ 量不到蓝色 ⇒ 立刻红）。
+    - ② **图标垂直居中**：基座不再有 antd 那批 svg 图标，改为在页面里**自造一个受测 svg 探针**挂进面板宿主再量。⚠️ 中途试过用「二维码 img」和「面板品牌图标 img」，都不行：二维码在格子里顶部对齐、下方还有一行说明文字（中心天然差 11px，量出来必红但不是 bug）；品牌图标是远程 favicon，无头断网时回退成 emoji span ⇒ 根本不是 svg。
+    - ⚠️ **基准值教训（本轮最不该犯的一个错）**：主色判据一度写成「接近 `rgb(22,126,255)`」，实测量到 `rgb(22,119,255)` 差 7，我误判为「oklch → sRGB 转换误差」并把容差放宽到 ±8 —— 其实 `#1677ff` **就是** `rgb(22,119,255)`（`0x77 = 119`，我把 `0x7E = 126` 记混了）。**颜色没有漂，是我的基准值算错了**；放大容差只会把笔误藏起来、让断言失去牙齿。已改回基准 119 / 容差 ±2。
+- **产物体积**：脚本端 `dist/znhd.user.js` **847KB → 424KB**（约减半）；手机页 JS 320KB / CSS 25.9KB（gzip 5.4KB）。
+- **antd 依赖已彻底移除**：根 `package.json` 的 `antd` / `@ant-design/icons` / `@ant-design/cssinjs`，以及 `web/package.json` 的 `antd` / `@ant-design/icons` 全部 uninstall，代码里零引用（只剩说明性注释）。
+- **行为不变**：面板与各弹窗的可见行为、脚本元信息、中继接口响应形状均未改动；浮层仍挂 `documentElement`、预览仍挂自建宿主 div、剪贴板与打印链路原样保留。
+- ⚠️ 删除 `shared/preview/actions.tsx` 与 `host.ts`：功能分别被基座的 `ImagePreview`（`extraActions` 插槽 + 自带 `getPreviewHost`）吸收，不再需要为 antd 的内部结构写补丁。
+- **⚠️ 本轮踩到并已修掉的三个坑（全都是「静态检查全绿、跑起来才炸」那一类）**：
+  - **① 手机页白屏崩溃 `Cannot read properties of null (reading 'useRef')`** —— 根因是**双份 React 实例**：共享层 `shared/` 在仓库根，Vite 按「引用文件所在目录向上找 node_modules」解析 `import from 'react'`，于是 `shared/ui/*` 拿到**根 node_modules/react**，而 `web/src/*` 拿到 **web/node_modules/react**。两份副本版本完全相同也是两个模块实例 ⇒ react-dom 往 A 份写 dispatcher、组件从 B 份读 hook ⇒ `H` 永远是 null。修法：`web/vite.config.ts` 加 `resolve: { dedupe: ['react', 'react-dom'] }`。
+  - **② 多弹窗并存时「历史记录」的页签点不动** —— 曾怀疑 Radix Dialog 的模态模式互斥，试过关掉 `modal`（结果把别的功能搞坏、红项从 6 涨到 22，已回退）。真实修法是给 Radix `Tabs.Content` 加 `forceMount`，让非激活页签的内容也常驻 DOM（原先 inactive 时内容不渲染，断言读不到文本）。**Radix Dialog 保持默认的模态模式不变** —— 焦点陷阱、Esc、aria-modal 都由它提供，且它自己维护层栈（Esc 天然只关最上层）。
+  - **③ `@source` 写成 `.` 导致 data 变体类不生成** —— `shared/ui/tailwind.css` 里原本写 `@source '.'`，Tailwind 不递归展开，Switch 的 `data-[state=checked]:bg-brand-500` 扫不到 ⇒ 规则不生成 ⇒ **开关功能与 `data-state` 都对，只有颜色不对**（极难定位）。改为显式目录 `@source '../'` + `../../src` + `../../web/src` 后正常。
+- **版本号**：`relay-server/package.json` 与 `web/package.json` 同步为 `26.10.09-v1`（手机页产物由中继同源托管，版本号必须一致；跨天按规范重置为 v1）。
+- 验证：`npm run typecheck` / `npm run typecheck:web` 均 0 错，`npm run build` + `npm run build:web` 通过，`npm run verify` 三段全绿。
+
+
 ### znhd.user.js v26.10.08-v13
 - **抽出跨端共享层 `shared/`：图片压缩与图片预览通用件只维护一份**（按用户要求「至少预览图片和压缩图片保持同步」）：
   - **为什么值得做**：这两块原本是「复制式同步」，而且**已经漂移了** —— 脚本端跳过 GIF（canvas 只取首帧会把动图压成静态图），手机页没跳过，同一张动图两端行为不同；压缩参数（1600 / 0.75）与 A4 打印版式也各写了一份。

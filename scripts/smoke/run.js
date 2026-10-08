@@ -169,8 +169,10 @@ async function main() {
     // 断言两件事：① 宿主 left/top 真的被拖动了；② 拖完**没有**被顺带展开成面板。
     report.ballDragOk = await (async () => {
       await page.evaluate(() => {
-        document.querySelectorAll('.ant-image-preview-root, .ant-image-preview-wrap').forEach((e) => e.remove());
-        document.querySelectorAll('.ant-modal-close, .ant-drawer-close').forEach((b) => b.click());
+        // 关掉一切残留浮层：预览层（Esc）与弹窗/抽屉的关闭按钮。
+        // ⚠️ v26.10.08-v14 起钩子换成 data-znhd-*（见 shared/ui/OverlayModal.tsx 的「选择器钩子」段）
+        document.querySelectorAll('[data-znhd-preview]').forEach((e) => e.remove());
+        document.querySelectorAll('[data-znhd-modal-close]').forEach((b) => b.click());
       });
       await sleep(600);
 
@@ -189,7 +191,7 @@ async function main() {
 
       const start = await page.evaluate(() => {
         const host = document.getElementById('__znhd_panel_host__');
-        if (!host || host.querySelector('.ant-card')) return null; // 必须已经变成悬浮球
+        if (!host || host.querySelector('[data-znhd-panel]')) return null; // 必须已经变成悬浮球
         const ball = host.querySelector('button');
         if (!ball) return null;
         const r = ball.getBoundingClientRect();
@@ -212,7 +214,7 @@ async function main() {
         const left = parseFloat(host.style.left) || 0;
         const top = parseFloat(host.style.top) || 0;
         const moved = Math.abs(left - s.left) > 10 || Math.abs(top - s.top) > 10;
-        const stillCollapsed = !host.querySelector('.ant-card');
+        const stillCollapsed = !host.querySelector('[data-znhd-panel]');
         return moved && stillCollapsed;
       }, start);
     })();

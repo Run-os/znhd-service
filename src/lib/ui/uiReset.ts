@@ -1,131 +1,96 @@
 /**
- * 本脚本 UI 的样式隔离层（v26.10.06-v11）。
+ * 脚本端 UI 的样式注入与宿主隔离层（v26.10.08-v14 重写：antd v6 → Tailwind CSS v4）。
  *
- * 背景：antd v5+ **不再自带全局 reset**，官方迁移文档明确要求手动引入 `antd/dist/reset.css`；
- * 我们没引入，而面板/弹窗又是注入到**别人的页面**里，于是宿主页面的全局 CSS 会渗进来：
- *   · `* { text-align: center }` → 弹窗里所有文字变居中；
- *   · 非 `border-box` 的盒模型 / 页面自定义 `line-height`/`font-size` → 输入框内的
- *     图标（时间选择器时钟、输入框清空 ×）垂直偏移、跑出输入框。
+ * ── 为什么 CSS 走「导出字符串 + GM_addStyle」而不是 style-loader ────────────
+ * 面板注入的是**别人的页面**。宿主页可能带 CSP `style-src` 限制，页面内新建的 `<style>` 有可能落地失败；
+ * `GM_addStyle` 由油猴管理器在沙箱侧插入，不受页面 CSP 影响（替换前 uiReset 就用它兜底）。
+ * 样式入口是 `shared/ui/tailwind.css`（Tailwind 编译后的字符串），由 webpack 的
+ * css-loader + postcss-loader 链处理后以字符串形式被 import 进来。
  *
- * 为什么不用 `import 'antd/dist/reset.css'`：那会**全局重置宿主页面**（税务页也会被改样式），
- * 不可接受。故这里把 reset 的关键规则**按本脚本的容器加前缀**注入，等价于「只给我们的 UI 做 reset」。
+ * ── 隔离策略：Tailwind 刻意不要 preflight ──────────────────────────────────
+ * Tailwind v4 默认会带一份**全局 reset**（清 margin、统一字号/行高、按钮与表单控件的浏览器默认外观）。
+ * 那会连带重置**税务页面**，不可接受。故 shared/ui/tailwind.css 只导入 theme + utilities 两层，
+ * 不导入 preflight；本文件负责补上「我们自己的容器需要的」那点复位。
  *
- * ⚠️ 选择器只覆盖本脚本自己渲染的容器：面板宿主、Modal/Drawer 根、Picker 浮层、message 浮层。
+ * ⚠️ **本文件的复位选择器必须带 `.znhd-root` 前缀**：不带前缀的规则会命中宿主页面的元素，
+ *    那是明确禁止的（替换前 uiReset 也是这个思路，靠「容器前缀」把敌意样式挡在外面）。
+ *    至于「Tailwind 工具类压不压得住这些复位」—— 见下方注释里 `!important` 的取舍说明。
  */
 
 import { PANEL_HOST_ID } from '@/lib/ui/panelIds';
+import tailwindCss from '../../../shared/ui/tailwind.css';
 
-const RESET_CSS = `
-/* 盒模型与文本基线：宿主页面常把 * 设为 content-box / 居中，这里只复位我们的容器 */
-#${PANEL_HOST_ID}, .ant-modal-root, .ant-drawer, .ant-picker-dropdown, .ant-message, .ant-notification, .ant-tooltip, .ant-dropdown {
+/**
+ * 宿主页面敌意样式的兜底复位。
+ *
+ * ⚠️ 这里是**白名单**：只写「确实在真实税务页踩到过」的规则，且每条都带 .znhd-root 前缀。
+ *    凡是 Tailwind 工具类已经能表达的（颜色、间距、圆角…）这里一律不重复写。
+ *
+ * ⚠️ **不用 `!important` 也能压住宿主页**的前提是选择器特异性够高：
+ *    `.znhd-root input` 是 (0,2,1)，宿主页的 `input {}`（0,0,1）或 `.foo input`（0,1,1）都压得住；
+ *    但宿主页若有 `#id input`（1,1,1）这类高特异性规则，则必须加 `!important` ——
+ *    仓库历史上真实踩到的一条就是宿主给 svg 加了 `margin: -2.75em auto 0`（特异性 0,0,1）。
+ *    故下面凡是复位元素**默认样式**（margin / background / border / appearance）的，都带 !important。
+ */
+const HOST_ISOLATION_CSS = `
+/* 盒模型统一：宿主页常把 * 设成 content-box，会让所有宽度计算偏 2px（描边被挤出去） */
+#${PANEL_HOST_ID}, #${PANEL_HOST_ID} *, .znhd-root, .znhd-root * {
   box-sizing: border-box;
-  text-align: left;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
-  font-size: 14px;
-  line-height: 1.5715;
-}
-#${PANEL_HOST_ID} *, .ant-modal-root *, .ant-drawer *, .ant-picker-dropdown *, .ant-message *, .ant-notification *, .ant-tooltip *, .ant-dropdown * {
-  box-sizing: border-box;
-  /* inherit：低优先级复位，antd 自己需要居中的组件（Empty 等）仍用其类规则覆盖 */
-  text-align: inherit;
-}
-/* 图标垂直对齐：宿主页面若有 svg 的 vertical-align/line-height 规则，会把 antd 图标顶出输入框 */
-#${PANEL_HOST_ID} svg, .ant-modal-root svg, .ant-drawer svg, .ant-picker-dropdown svg, .ant-message svg, .ant-notification svg, .ant-image-preview svg {
-  vertical-align: inherit;
-}
-/* ★ 图标被第三方样式加负外边距而跑出控件（用户实测：时钟图标的计算样式里
-   margin: -2.75em auto 0，按 16px 字号约 -44px；antd 自身从不给 svg 设 margin）。
-   这类规则特异性只有 (0,0,1)，用带容器前缀的选择器即可稳压。
-   ⚠️ v26.10.08-v8：**.ant-image-preview 必须在内** —— 预览挂在自己建的宿主 div 下
-   （见 RecvHistoryModal 的 getPreviewHost），既不在面板宿主里、也不在 .ant-modal-root 里；
-   漏了它就会让工具栏图标被顶到胶囊上方（实测偏移 25px），表现成「图标看不见、只剩一条灰色胶囊」。
-   对照：弹窗关闭图标的同类偏移为 0（因为它被本规则覆盖）。 */
-#${PANEL_HOST_ID} svg, .ant-modal-root svg, .ant-drawer svg, .ant-picker-dropdown svg, .ant-message svg, .ant-notification svg, .ant-tooltip svg, .ant-dropdown svg, .ant-image-preview svg {
-  margin: 0;
-}
-/* 输入类控件去掉宿主页面可能带来的额外外边距/最小高度 */
-#${PANEL_HOST_ID} input, #${PANEL_HOST_ID} textarea, .ant-modal-root input, .ant-modal-root textarea, .ant-drawer input, .ant-drawer textarea {
-  margin: 0;
-  font-family: inherit;
-  font-size: inherit;
-  line-height: inherit;
 }
 
-/* ===== 放大预览期间压掉「下层浮层遮罩」的规则**不在这里** =====
-   ⚠️ 本段是模板字符串，注释里不能出现反引号（会截断模板、tsc 报错）。
-   v26.10.08-v13 起搬进共享层 shared/preview/mask.ts（PREVIEW_MASK_CSS），
-   由 syncPreviewMask() 在预览开/关时注入并挂 znhd-previewing 类 —— 手机上传页用的是同一份，
-   避免两端各写一遍（原本这里有一份，容易只改一边）。
-   规则内容：html.znhd-previewing 下的 .ant-modal-mask / .ant-drawer-mask 置 display:none !important，
-   原因（两层 rgba(0,0,0,0.45) 叠成 0.6975、白底灰度 77 vs 单层 140）也一并写在那里。 */
+/* ★ 宿主给 svg 加负外边距把图标顶出控件（真实税务页实测：margin: -2.75em auto 0 ≈ -44px）。
+   antd 自身从不给 svg 设 margin，所以这条复位对图标是安全且必要的。 */
+#${PANEL_HOST_ID} svg, .znhd-root svg {
+  margin: 0 !important;
+}
 
-/* ===== 滚动条（v26.10.06-v20）=====
-   antd 没有滚动条组件，也没有对应的 design token（CLI 实测：「info Scrollbar」找不到、
-   「token」里 scroll/thumb/track 零匹配）；它自己也只在 @rc-component/virtual-list 内部自绘滚动条，
-   且不对外导出。故此处按 antd 的通用做法：定制浏览器原生滚动条。
-   不动它时，Windows 默认滚动条又宽又带箭头（约 17px），嵌在圆角弹窗里显得很生硬。
-   做法：10px 槽宽 + 3px 透明边框 + background-clip: padding-box → 视觉上是一条细圆角灰条；
-   标准属性（scrollbar-width/color）覆盖 Firefox 与 Chrome 121+，::-webkit-* 覆盖旧版 Chromium/Edge。
-   ⚠️ 本段是模板字符串的一部分：注释里**不能出现反引号**，否则会提前截断模板（本次踩过）。 */
-#${PANEL_HOST_ID} *, .ant-modal-root *, .ant-drawer *, .ant-picker-dropdown *, .ant-message *, .ant-notification *, .ant-tooltip *, .ant-dropdown *, .ant-image-preview * {
-  scrollbar-width: thin;
-  scrollbar-color: rgba(0, 0, 0, 0.25) transparent;
+/* 按钮/表单控件去掉浏览器与宿主的默认外观：我们的按钮全部靠 Tailwind 类定外观，
+   若宿主页给 button 加了 background/border/padding，会与我们的类叠加出「双层边框」效果。 */
+#${PANEL_HOST_ID} button, .znhd-root button,
+#${PANEL_HOST_ID} input, .znhd-root input,
+#${PANEL_HOST_ID} textarea, .znhd-root textarea,
+#${PANEL_HOST_ID} select, .znhd-root select {
+  margin: 0 !important;
+  appearance: none;
+  -webkit-appearance: none;
 }
-#${PANEL_HOST_ID} *::-webkit-scrollbar,
-.ant-modal-root *::-webkit-scrollbar,
-.ant-drawer *::-webkit-scrollbar,
-.ant-picker-dropdown *::-webkit-scrollbar,
-.ant-dropdown *::-webkit-scrollbar,
-.ant-image-preview *::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
+
+/* 表单控件的字体必须继承（Chromium 默认表单字体与正文不一致，且宿主页常改 line-height） */
+#${PANEL_HOST_ID} input, #${PANEL_HOST_ID} textarea, .znhd-root input, .znhd-root textarea {
+  font-family: inherit !important;
+  line-height: inherit !important;
 }
-#${PANEL_HOST_ID} *::-webkit-scrollbar-thumb,
-.ant-modal-root *::-webkit-scrollbar-thumb,
-.ant-drawer *::-webkit-scrollbar-thumb,
-.ant-picker-dropdown *::-webkit-scrollbar-thumb,
-.ant-dropdown *::-webkit-scrollbar-thumb,
-.ant-image-preview *::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.22);
-  border: 3px solid transparent;
-  background-clip: padding-box;
-  border-radius: 8px;
+
+/* 输入框的清空按钮/占位符颜色：宿主页常给 ::placeholder 上色，这里拉回中性灰 */
+#${PANEL_HOST_ID} ::placeholder, .znhd-root ::placeholder {
+  color: var(--color-ink-4, #bfbfbf) !important;
+  opacity: 1;
 }
-#${PANEL_HOST_ID} *::-webkit-scrollbar-thumb:hover,
-.ant-modal-root *::-webkit-scrollbar-thumb:hover,
-.ant-drawer *::-webkit-scrollbar-thumb:hover,
-.ant-picker-dropdown *::-webkit-scrollbar-thumb:hover,
-.ant-dropdown *::-webkit-scrollbar-thumb:hover,
-.ant-image-preview *::-webkit-scrollbar-thumb:hover {
-  background: rgba(0, 0, 0, 0.38);
-  background-clip: padding-box;
+
+/* 图片类元素不给宿主留 baseline 空隙 */
+#${PANEL_HOST_ID} img, .znhd-root img {
+  vertical-align: middle;
 }
-#${PANEL_HOST_ID} *::-webkit-scrollbar-track,
-.ant-modal-root *::-webkit-scrollbar-track,
-.ant-drawer *::-webkit-scrollbar-track,
-.ant-picker-dropdown *::-webkit-scrollbar-track,
-.ant-dropdown *::-webkit-scrollbar-track,
-.ant-image-preview *::-webkit-scrollbar-track,
-#${PANEL_HOST_ID} *::-webkit-scrollbar-corner,
-.ant-modal-root *::-webkit-scrollbar-corner,
-.ant-drawer *::-webkit-scrollbar-corner {
-  background: transparent;
-}
+
+/* 自定义滚动条样式统一放在 shared/ui/tailwind.css 的 znhd-base 层（工具类形态），
+   这里不再重复 —— 重复会让滚动条在不同容器里表现不一致。 */
 `;
 
 let injected = false;
 
 /**
- * 注入样式隔离层（只注入一次，幂等）。
- * 用 GM_addStyle：不进构建产物的 CSS 流程，也不受宿主页面 CSP 的 <style> 限制影响
- * （GM_addStyle 由油猴管理器在沙箱侧插入，且只在文档里加一个 style 节点）。
+ * 注入样式（只注入一次，幂等）：Tailwind 编译产物 + 宿主隔离层。
+ *
+ * 顺序要求：隔离层在**后**。它带 !important 的复位必须能压过 Tailwind 的工具类，
+ * 而同优先级下后插入的规则赢 —— 两者同在一个 style 标签里，靠先后顺序决定。
  */
 export function injectUiReset(): void {
     if (injected) return;
     injected = true;
+    const css = tailwindCss + '\n' + HOST_ISOLATION_CSS;
     try {
         if (typeof GM_addStyle === 'function') {
-            GM_addStyle(RESET_CSS);
+            GM_addStyle(css);
             return;
         }
     } catch (e) {
@@ -133,6 +98,6 @@ export function injectUiReset(): void {
     }
     const style = document.createElement('style');
     style.id = '__znhd_ui_reset__';
-    style.textContent = RESET_CSS;
+    style.textContent = css;
     document.head.appendChild(style);
 }

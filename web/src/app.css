@@ -1,4 +1,11 @@
-/* 手机上传页全局样式：只放 antd 覆盖不到的布局（栅格/缩略图/预览文本），组件外观交给 antd 主题 */
+/**
+ * 手机上传页的全局基线样式（v26.10.08-v14：antd → Tailwind）。
+ *
+ * 组件外观全部由 Tailwind 工具类承担，这里只留「页面骨架」那几行 —— 它们作用在
+ * `<html>` / `<body>` / `<#root>` 这类**无法用类名表达**的元素上，故必须走全局 CSS。
+ * 缩略图网格、收件九宫格、预览文本那些原来在这里的规则，v26.10.08-v14 已全部改成
+ * App.tsx 里的 Tailwind 类（或基座组件自带），不再在这里重复。
+ */
 :root {
     color-scheme: light;
 }
@@ -14,7 +21,11 @@ body {
     min-height: 100vh;
 }
 
-/* 手机单列；md 及以上放宽并变两列（由 antd Row/Col 负责分栏） */
+/**
+ * 页面容器：手机单列、桌面放宽。
+ * ⚠️ 断点 768px 必须与 App.tsx 里栅格的 `md:grid-cols-2` **同一个值** ——
+ *    改了一处忘了另一处，表现为「宽屏下左右两栏却挤在半幅里」。
+ */
 .znhd-page {
     max-width: 560px;
     margin: 0 auto;
@@ -27,80 +38,4 @@ body {
         max-width: 1040px;
         padding: 24px;
     }
-}
-
-/* 待发送缩略图：手机 3 列、桌面 6 列 */
-.znhd-preview-grid {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 8px;
-}
-
-@media (min-width: 768px) {
-    .znhd-preview-grid {
-        grid-template-columns: repeat(6, minmax(0, 1fr));
-    }
-}
-
-.znhd-thumb {
-    position: relative;
-    width: 100%;
-    aspect-ratio: 1 / 1;
-    overflow: hidden;
-    border-radius: 8px;
-    background: #fff;
-    border: 1px solid #eee;
-}
-
-.znhd-thumb-img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    display: block;
-}
-
-.znhd-thumb-del {
-    position: absolute;
-    top: 2px;
-    right: 2px;
-    padding: 0 6px;
-    min-width: 22px;
-    height: 22px;
-    line-height: 20px;
-    border-radius: 50%;
-}
-
-/* 收到的图片九宫格 */
-.znhd-recv-grid {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 8px;
-    max-height: 62vh;
-    overflow: auto;
-    align-content: start;
-}
-
-.znhd-recv-cell {
-    display: flex;
-    flex-direction: column;
-}
-
-.znhd-recv-img {
-    width: 100%;
-    aspect-ratio: 1 / 1;
-    object-fit: cover;
-    border-radius: 8px;
-    background: #f2f2f2;
-}
-
-/* 收到的文本 */
-.znhd-recv-text {
-    margin: 0;
-    max-height: 60vh;
-    overflow: auto;
-    white-space: pre-wrap;
-    word-break: break-word;
-    font-family: inherit;
-    font-size: 15px;
-    line-height: 1.6;
 }

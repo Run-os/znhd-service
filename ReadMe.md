@@ -48,7 +48,7 @@ znhd-service/
 │   ├── upload-page.js            # 手机上传页出口：读 public/index.html（缺失时给兜底页）
 │   ├── public/                   # ⚠️ 手机上传页构建产物（提交进仓库，勿手改）：index.html + assets/*
 │   └── package.json              # 运行时不依赖任何包，运行：node server.js
-├── web/                          # 手机上传页应用源码（React 19 + Ant Design v6 + Vite + TS，独立子项目）
+├── web/                          # 手机上传页应用源码（React 19 + Tailwind CSS v4 + Radix UI + Vite + TS，独立子项目）
 │   ├── src/App.tsx               # 页面 UI（响应式：手机单列 / 桌面两列）
 │   ├── src/lib/                  # relay（心跳+长轮询）/ image（canvas 压缩）/ heic（HEIC 懒加载）
 │   └── package.json              # npm run build:web → 产出到 relay-server/public
@@ -169,7 +169,7 @@ npm run verify         # 无头 Chromium 端到端冒烟（面板/弹窗/画廊/
 3. 手机浏览器打开该链接（或直接扫二维码）→ 选图/拍照（**支持多选，张数不限**，九宫格预览、可单张删除）→ 手机端用 canvas 逐张自动压缩（最大边 1600px、JPEG 质量 0.75；**SVG 例外：跳过压缩原样直传**，保留矢量与 `image/svg+xml` 类型；**HEIC/HEIF 例外：手机端用 heic2any（公共 CDN）解码转 JPEG 后同样铺白底压缩直传**，确保电脑端含 Windows 无需额外编解码器即可打开，库缺失时回退原样直传）→ 逐张按序上传到中继服务器（服务端按设备维护 FIFO 队列，内存保护上限 100 条）；**处理失败时状态栏会显示具体原因**（如「IMG.heic：图片解析失败 / 压缩失败」），便于排查。
 4. 电脑端脚本在「中继服务器」填好后**默认自动**用 `GM_xmlhttpRequest` **长轮询** `/recv/<设备ID>` 取回图片（无需点击按钮；长轮询而非 WebSocket 是为了绕过征纳互动页面的 CSP 对 connect-src 的限制）；
 5. 收到图片后即在**网页正中弹出「历史记录」弹窗**（直接挂到 `<html>`，不受面板 transform 影响；图片与文本分**两个页签**，也可随时点面板的「历史记录」入口回看）：
-   - **图片页签**（3 列九宫格，自动累积、最多保留 27 张）：**单击缩略图用 antd [Image.PreviewGroup](https://ant.design/components/image-cn) 放大查看**（缩放/旋转/多图左右切换，无需第三方库），放大后预览底部工具栏末尾有**打印机图标**，点它用 [react-to-print](https://github.com/MatthewHerbst/react-to-print) 拉起浏览器打印对话框打印**当前这张图的原图**，并按 **A4 纸自适应且不带浏览器页眉页脚**（`@page { size: A4 portrait; margin: 0 }` —— 边距归零后浏览器就没地方画标题/URL/日期，图片离纸边的留白改由内容框 padding 提供；整张图等比缩放居中铺满 A4，不裁切、不跨页；⚠️ 打印对话框里的「缩放/适应纸张尺寸」仍会覆盖这个设置，如需完全按 CSS 出纸请把缩放选为 100%/无；打印对话框弹出期间请勿移除该图）；每张图下方「复制」把图片写入系统剪贴板（此步必须由一次点击触发，满足浏览器安全策略）→ 去征纳互动 Ctrl+V 即可；「下载」把原图存为文件（自动按原名/MIME 补扩展名）；每张右上角 × 可单独移除。
+   - **图片页签**（3 列九宫格，自动累积、最多保留 27 张）：**单击缩略图用自研预览层（`shared/ui/ImagePreview`）放大查看**（缩放/旋转/多图左右切换，无需第三方库），放大后预览底部工具栏末尾有**打印机图标**，点它用 [react-to-print](https://github.com/MatthewHerbst/react-to-print) 拉起浏览器打印对话框打印**当前这张图的原图**，并按 **A4 纸自适应且不带浏览器页眉页脚**（`@page { size: A4 portrait; margin: 0 }` —— 边距归零后浏览器就没地方画标题/URL/日期，图片离纸边的留白改由内容框 padding 提供；整张图等比缩放居中铺满 A4，不裁切、不跨页；⚠️ 打印对话框里的「缩放/适应纸张尺寸」仍会覆盖这个设置，如需完全按 CSS 出纸请把缩放选为 100%/无；打印对话框弹出期间请勿移除该图）；每张图下方「复制」把图片写入系统剪贴板（此步必须由一次点击触发，满足浏览器安全策略）→ 去征纳互动 Ctrl+V 即可；「下载」把原图存为文件（自动按原名/MIME 补扩展名）；每张右上角 × 可单独移除。
    - **文本页签**（最多保留 100 条，最新在上）：回看收到的文本（含收到时间），每条可「复制」到剪贴板、可单独 × 删除。
    - 底部「清空图片」/「清空文本」只清**当前页签**的内容；弹窗右上角关闭（内容保留，收到新内容会再次弹出）。
    - **历史为空时也能打开**（点击面板「历史记录」不再被拦截）；标题旁有**「发送测试图片」**按钮：一键从 `https://t.alcy.cc/fj` 取一张随机图，**当作手机上传**投到中继再回到本机，便于空历史时验证「收图 → 放大 → 打印」整条链路（需先配好中继地址）。
@@ -241,8 +241,9 @@ const DEFAULTS = {
 | 技术                                                                                 | 用途                                                                                                                               |
 |--------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------|
 | JavaScript (ES6+)                                                                    | 脚本主语言                                                                                                                         |
-| [React 19](https://react.dev/) + [Ant Design v6](https://ant.design/)                | 全部 UI（面板与各弹窗）：组件、主题、消息提示；随产物打包，无第三方运行时请求                                                      |
-| [@ant-design/icons](https://github.com/ant-design/ant-design-icons)                 | antd 配套图标（v6）：放大预览工具栏末尾的「打印」图标等；从包根按需导入，可 tree-shaking                                          |
+| [React 19](https://react.dev/)                                                        | UI 运行时：面板、各弹窗、手机上传页；随产物打包，无第三方运行时请求                                                                |
+| [Tailwind CSS v4](https://tailwindcss.com/)                                          | **全部样式**（v26.10.09-v1 起取代 Ant Design）：`@theme` 定义主色与色阶，只导入 `theme` + `utilities` 两层（不用 preflight，见下）  |
+| [Radix UI](https://www.radix-ui.com/)                                                | 无障碍基座：`Dialog`（弹窗/抽屉：焦点陷阱、Esc、aria-modal）、`Switch`/`Checkbox`/`Tooltip`/`Tabs`/`Progress` 的键盘与语义           |
 | [react-to-print](https://github.com/MatthewHerbst/react-to-print)                    | 放大预览工具栏「打印」：建隐藏 iframe、等图片加载完再调 `print()` 打印原图（随产物打包）                                             |
 | [js-yaml](https://github.com/nodeca/js-yaml)                                         | 解析 YAML 格式的常用语配置文件                                                                                                     |
 | [qrcodejs](https://github.com/davidshimjs/qrcodejs)                                  | 「本机上传链接」二维码由脚本端本地生成（无需服务器参与）                                                                           |
@@ -320,7 +321,7 @@ const DEFAULTS = {
 
 即：可自由使用、修改、分发（含商用），只需保留版权声明与许可证声明；软件按「原样」提供，作者不提供任何担保、不承担使用后果。
 
-随本项目分发与加载的第三方依赖均为 **MIT** 许可（React、ReactDOM、Ant Design、@ant-design/icons、react-to-print、js-yaml，以及运行时按需加载的 qrcodejs、heic2any），与本许可证相互兼容。
+随本项目分发与加载的第三方依赖均为 **MIT** 许可（React、ReactDOM、Tailwind CSS、Radix UI、react-to-print、js-yaml，以及运行时按需加载的 qrcodejs、heic2any），与本许可证相互兼容。
 
 ## 联系方式
 

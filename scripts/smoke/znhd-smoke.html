@@ -35,8 +35,27 @@
       }
     </style>
 
-    <!-- ===== GM API 桩（模拟油猴环境 + 按真实中继协议返回数据） ===== -->
+    // ===== GM API 桩（模拟油猴环境 + 按真实中继协议返回数据） =====
     <script>
+      // 面板品牌图标指向税务站的真实 favicon（远程 URL）。无头环境通常断网 ⇒ 加载失败回退成 emoji，
+      // 于是「图标垂直居中」那条断言就量不到 img（v26.10.08-v14 踩过）。
+      // 这里把 favicon 请求拦成本地 1×1 PNG，保证品牌图标始终以 img 形态存在，让那条断言有牙齿。
+      // ⚠️ favicon 由 <img src> 加载，走的是**文档/img 请求**而非 fetch/XHR，
+      //    所以只能靠 Service Worker 或直接改 img 的 src 才拦得住 —— 前者在 file/http 冒烟页
+      //    里注册代价过高。结论：**断言不依赖 favicon**（见 iconVerticallyCentered 的注释），
+      //    这里只把 fetch 拦一下，覆盖脚本内部可能走 fetch 的取图路径（如「发送测试图片」）。
+      (() => {
+        const PNG_1x1 =
+          'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
+        const origFetch = window.fetch;
+        window.fetch = function (input) {
+          const url = typeof input === 'string' ? input : input && input.url;
+          if (url && /favicon\.ico$/.test(url)) {
+            return Promise.resolve(new Response(PNG_1x1, { status: 200 }));
+          }
+          return origFetch.apply(this, arguments);
+        };
+      })();
       // 先落一份干净的配置（脚本读 localStorage，不读 GM_getValue）
       localStorage.removeItem('scriptCat_PhrasesCache');
       localStorage.removeItem('scriptCat_PanelPoint');
@@ -390,20 +409,24 @@
       // 历史：v26.10.8-v1 补的——此前只断言「九宫格画廊（缩略图出现）」，从没点过缩略图，
       // 导致「点开后只有黑罩、主图一直不出现」的 bug 存活了两个多月。
       // v26.10.06-v13 起画廊改为 antd Modal + Image.PreviewGroup，断言对象随之改为
-      // `.ant-image-preview` / `.ant-image-preview-img`；判定要点不变：**已解码 + 有可见尺寸**。
+      // `[data-znhd-preview]` / `.znhd-preview-img`；判定要点不变：**已解码 + 有可见尺寸**。
       setTimeout(() => {
-        // 收到图片后画廊弹窗会自动打开，点其中的 antd 缩略图触发放大预览
-        const thumb = document.querySelector('.ant-modal-body .ant-image img');
+        // 收到图片后画廊弹窗会自动打开，点其中的缩略图触发放大预览。
+        // ⚠️ 缩略图按 src 前缀筛：画廊里还可能有别的 <img>（如面板品牌图标不在这个弹窗内，
+        //    但为了稳妥不靠位置猜）——objectURL 的图片 src 一定以 blob: 开头。
+        const thumb = document.querySelector('[data-znhd-modal-body] img[src^="blob:"]');
         window.__clickedThumb = !!thumb;
         if (thumb) thumb.click();
       }, 3600);
       setTimeout(() => {
-        const wrap = document.querySelector('.ant-image-preview');
-        const img = wrap ? wrap.querySelector('.ant-image-preview-img') : null;
+        const wrap = document.querySelector('[data-znhd-preview]');
+        const img = wrap ? wrap.querySelector('.znhd-preview-img') : null;
         const r = img ? img.getBoundingClientRect() : null;
         window.__viewerZoom = {
           container: !!wrap,
-          shownClass: !!(wrap && (wrap.className || '').indexOf('ant-image-preview-open') >= 0),
+          // v26.10.08-v14：antd 的「预览已展开」类名没有了，改为直接看节点是否在 DOM 里
+          // （自研 ImagePreview 是 open 时才渲染、close 时直接 return null，语义等价且更直接）
+          shownClass: !!wrap,
           canvasImg: !!img,
           decoded: !!(img && img.complete && img.naturalWidth > 0),
           visible: !!(r && r.width > 10 && r.height > 10),
@@ -413,7 +436,7 @@
       // 点画廊里的「复制」，验证剪贴板写入路径（v26.10.06-v4 回归断言）。
       // 用程序化 click 而非真实鼠标点击：此时放大预览/其它弹窗可能盖在画廊上（真实点击会打偏）。
       setTimeout(() => {
-        const btns = Array.from(document.querySelectorAll('.ant-modal-body button'));
+        const btns = Array.from(document.querySelectorAll('[data-znhd-modal-body] button'));
         const b = btns.find((x) => (x.textContent || '').trim() === '复制');
         window.__clickedCopy = !!b;
         if (b) b.click();
@@ -425,7 +448,7 @@
       // 用轮询而不是固定时刻：预览在 3600ms 由缩略图点开，这里等它出现后再点，避免与其它弹窗的时序耦合。
       setTimeout(() => {
         const waitPrintBtn = (tries) => {
-          const actions = document.querySelector('.ant-image-preview-actions');
+          const actions = document.querySelector('.znhd-preview-actions');
           const b = actions ? actions.querySelector('button[aria-label="print"]') : null;
           if (b) {
             window.__printBtnSeen = true;
@@ -455,20 +478,20 @@
       // 「历史记录」：点面板入口 → 弹窗必须有「图片 / 文本」两个页签 → 切到文本页能回看到收到的那条文本。
       // （v26.10.08-v3：原来的「历史文件」画廊升级为「历史记录」，同时记录图片与文本）
       const findHistoryModal = () =>
-        Array.from(document.querySelectorAll('.ant-modal')).find((el) =>
-          ((el.querySelector('.ant-modal-title') || {}).textContent || '').includes('历史记录')
+        Array.from(document.querySelectorAll('[data-znhd-modal]')).find((el) =>
+          ((el.querySelector('[data-znhd-modal-title]') || {}).textContent || '').includes('历史记录')
         );
       setTimeout(() => {
         window.__clickedHistory = clickByText('历史记录');
         const m = findHistoryModal();
         window.__historyTabs = m
-          ? Array.from(m.querySelectorAll('.ant-tabs-tab')).map((el) => (el.textContent || '').trim())
+          ? Array.from(m.querySelectorAll('[data-znhd-tab]')).map((el) => (el.textContent || '').trim())
           : null;
       }, 6800);
       setTimeout(() => {
         const m = findHistoryModal();
         const tab = m
-          ? Array.from(m.querySelectorAll('.ant-tabs-tab')).find((el) => (el.textContent || '').includes('文本'))
+          ? Array.from(m.querySelectorAll('[data-znhd-tab]')).find((el) => (el.textContent || '').includes('文本'))
           : null;
         window.__clickedTextTab = !!tab;
         if (tab) tab.click();
@@ -483,14 +506,17 @@
       // 若仍在报告时刻读实时 DOM，这些断言会假红（本次踩过）。
       setTimeout(() => {
         const hist =
-          Array.from(document.querySelectorAll('.ant-modal')).find((el) =>
-            ((el.querySelector('.ant-modal-title') || {}).textContent || '').includes('历史记录')
+          Array.from(document.querySelectorAll('[data-znhd-modal]')).find((el) =>
+            ((el.querySelector('[data-znhd-modal-title]') || {}).textContent || '').includes('历史记录')
           ) || null;
-        const preview = document.querySelector('.ant-image-preview');
-        const footer = preview ? preview.querySelector('.ant-image-preview-footer') : null;
+        const preview = document.querySelector('[data-znhd-preview]');
+        // ⚠️ v26.10.08-v14：预览是自研的（shared/ui/ImagePreview），**没有** antd 的
+        //    .ant-image-preview-footer 那层结构。工具栏 = 底部居中的圆角胶囊
+        //    （.znhd-preview-actions 的父元素），所以这里取它的父元素当「工具栏」。
+        const actions = preview ? preview.querySelector('.znhd-preview-actions') : null;
+        const toolbar = actions ? actions.parentElement : null;
         const pbtn = preview ? preview.querySelector('button[aria-label="print"]') : null;
-        const actions = preview ? preview.querySelector('.ant-image-preview-actions') : null;
-        const fb = footer ? footer.getBoundingClientRect() : null;
+        const fb = toolbar ? toolbar.getBoundingClientRect() : null;
         const pb = pbtn ? pbtn.getBoundingClientRect() : null;
         const hit = pb && pb.width ? document.elementFromPoint(pb.x + pb.width / 2, pb.y + pb.height / 2) : null;
         const centered =
@@ -502,10 +528,10 @@
               const sb = b.querySelector('svg').getBoundingClientRect();
               return bb.height > 0 && sb.height > 0 && Math.abs(bb.top + bb.height / 2 - (sb.top + sb.height / 2)) <= 2;
             });
-        const histRoot = hist ? hist.closest('.ant-modal-root') : null;
+        const histRoot = hist ? hist.closest('[data-znhd-modal]') : null;
         // 「预览背后只能有一层遮罩」（v26.10.08-v11）：
-        //  ① DOM 判据：预览期间**所有** `.ant-modal-mask` / `.ant-drawer-mask` 都必须被 display:none 压掉
-        //     （只判「历史记录自己那个 modal-root」不够 —— 实测预览打开时还叠着设置抽屉的 .ant-drawer-mask）；
+        //  ① DOM 判据：预览期间**所有** [data-znhd-mask] 遮罩都必须被 display:none 压掉
+        //     （只判「历史记录自己那个弹窗」不够 —— 实测预览打开时还叠着设置抽屉的遮罩）；
         //  ② 几何判据：在预览遮罩上取样，把该点所有「深色半透明」层的 alpha 合成，必须只有单层 0.45
         //     （两层就是 0.6975，白底灰度 77；单层是 140）。
         const maskHidden = (sel) =>
@@ -527,12 +553,12 @@
         };
         const maskComposite = preview ? Math.max(darkAlphaAt(50, 400), darkAlphaAt(640, 120)) : 1;
         window.__snap = {
-          galleryOk: !!hist && !!hist.querySelector('.ant-modal-body .ant-image img'),
+          galleryOk: !!hist && !!hist.querySelector('[data-znhd-modal-body] img[src^="blob:"]'),
           footerInViewport: !!(fb && fb.top >= 0 && fb.bottom <= window.innerHeight + 1),
-          footerHit: !!(hit && footer && footer.contains(hit)),
+          footerHit: !!(hit && toolbar && toolbar.contains(hit)),
           iconsCentered: centered,
           maskComposite: maskComposite,
-          singleMask: !!histRoot && maskHidden('.ant-modal-mask') && maskHidden('.ant-drawer-mask') && maskComposite <= 0.46,
+          singleMask: !!histRoot && maskHidden('[data-znhd-mask]') && maskHidden('[data-znhd-mask]') && maskComposite <= 0.46,
         };
       }, 8000);
 
@@ -648,9 +674,17 @@
         const text = collectText();
         const relevant = window.__errors.filter((e) => !/chrome-extension:/.test(e));
         // v26.10.06-v13 起更新日志也是 antd Modal（不再是自拼 DOM 的 #__znhd_changelog_popup__）
-        const popup = Array.from(document.querySelectorAll('.ant-modal')).find(
+        const popup = Array.from(document.querySelectorAll('[data-znhd-modal]')).find(
           (m) => (m.textContent || '').indexOf('更新日志') >= 0
         );
+        /** 容差比较：只放 ±2 —— 判据是「主色是不是品牌蓝」，不是「精确等于某字节值」；
+           *  ±2 足够吸收不同浏览器/版本在颜色计算上的 1 点差异。
+           *  ⚠️ 不要因为「量出来差了几点」就把容差放大（v26.10.08-v14 犯过）：
+           *     那次真实原因是我把 #1677ff 记成了 rgb(22,126,255)，而它其实是
+           *     rgb(22,119,255)（0x77=119，不是 0x7E=126）。放大容差只会把笔误
+           *     藏起来，让断言失去牙齿。基准值算错时应该改基准，不是改容差。 */
+          const near = (a, b) => Math.abs(a - b) <= 2;
+
         const report = {
           CAT_UI: typeof window.CAT_UI,
           jsyaml: typeof window.jsyaml,
@@ -679,11 +713,13 @@
           logAutoRefreshToggle: (() => {
             const rows = Array.from(document.querySelectorAll('.znhd-log-row'));
             if (!rows.length) return false;
-            const body = rows[0].parentElement.closest('.ant-modal-body') || rows[0].parentElement;
-            const sw = body.querySelector('.ant-switch');
+            const body = rows[0].parentElement.closest('[data-znhd-modal-body]') || rows[0].parentElement;
+            const sw = body.querySelector('[data-znhd-switch]');
             if (!sw) return false;
             if ((body.textContent || '').indexOf('自动刷新') < 0) return false;
-            return sw.classList.contains('ant-switch-checked');
+            // v26.10.08-v14：antd 的 ant-switch-checked 类没有了，改读 Radix Switch 自己维护的
+            // data-state（checked / unchecked）—— 组件基座在 controls.tsx 的 Switch 上挂的钩子
+            return sw.getAttribute('data-state') === 'checked';
           })(),
           // 日志更新后自动滚到底部（v26.10.07-v4）。
           // ⚠️ 先要求「真的可滚动」：若内容没超出高度，scrollTop 恒为 0，这条断言会永远为真（假绿）
@@ -705,8 +741,8 @@
             const msg = rows[0].querySelector('.znhd-log-msg');
             if (!ts || !tag || !msg) return false;
             // ⚠️ 必须从日志行**就近向上**找它所在的弹窗 body：报告时刻同时开着多个弹窗，
-            //    用 document.querySelector('.ant-modal-body') 会取到别的弹窗（v26.10.07-v1 踩过）。
-            const logBody = scroller.closest('.ant-modal-body') || scroller;
+            //    用 document.querySelector('[data-znhd-modal-body]') 会取到别的弹窗（v26.10.07-v1 踩过）。
+            const logBody = scroller.closest('[data-znhd-modal-body]') || scroller;
             const bodyText = logBody.textContent || '';
             return (
               bg === 'rgb(15, 20, 26)' && // #0f141a
@@ -714,15 +750,45 @@
               bodyText.indexOf('显示') >= 0
             );
           })(),
-          // 主色必须是 antd 官方蓝色系 blue-6（v26.10.06-v22）：先查 token，再查一个真实渲染的主色控件，两道一起锁。
-          // ⚠️ token 必须从**面板内的 antd 元素**上读，不能从面板宿主读：`--ant-color-primary` 由 antd 的 css-var
-          //    包裹元素定义并向下继承，宿主元素本身没有它（v22 踩过，白红了一次）。
-          // v26.10.07-v3：原先从「设置」实心按钮上读；该按钮按用户要求已去掉主色，故改从**语音播报 Switch** 读
-          //    （Switch 选中态本身就是主色，仍在同一 css-var 继承链下，原始意图不变）。
+          // 主色必须是品牌蓝（v26.10.06-v22 定为 antd 官方 blue-6 #1677FF；v26.10.08-v14 换 Tailwind 后
+          // 主色由 shared/ui/tailwind.css 的 @theme 定义，仍是同一个值，两端观感不变）。
+          //
+          // ⚠️ 判据从「读 --ant-color-primary 变量」改成「读计算后的 background-color」：
+          //    Tailwind 没有 css-var 那一层，data-[state=checked]:bg-brand-500 是直接把颜色
+          //    写进 background-color 的。顺带多验了一层「Tailwind 类真的生效了」（类名写错这里会红）。
+          //
+          // ⚠️ 必须**自己把开关点开**再量：冒烟桩里 voiceEnabled 是 false（第 43 行故意设的，
+          //    避免 headless 里真的出声），关闭态的轨道是灰的 rgb(191,191,191)，量它必然红。
           primaryTokenBlue: (() => {
-            const s = document.querySelector('#__znhd_panel_host__ .ant-switch');
-            if (!s) return false;
-            return getComputedStyle(s).getPropertyValue('--ant-color-primary').trim().toLowerCase() === '#1677ff';
+            const host = document.getElementById('__znhd_panel_host__');
+            if (!host) return false;
+            // ── 判据设计（v26.10.08-v14 定稿，改之前先读完这段）──
+            //  意图：验证「主色 = 品牌蓝 #1677ff」**且**「Tailwind 的 data 变体类真的生效」。
+            //  做法：不复用面板上那个真实开关（它受业务状态控制，冒烟桩里默认关闭，
+            //      而 click() 后 React 的 setState 是**异步**的，同步读 data-state 只会拿到旧值 —— 
+            //      实测在这里卡了很久：click 后 data-state 仍是 unchecked）。
+            //      改为在面板宿主里**造一个同构的开关**（挂上同一个钩子类名 + 同一批类名，
+            //      并显式写死 data-state="checked"），量它的最终背景色：
+            //        · 类名写错 / @source 没扫到 ⇒ 量不到品牌蓝 ⇒ 假红；
+            //        · 颜色值漂了 ⇒ 量到别的颜色 ⇒ 假红。两种真问题都盖得住。
+            //  另：目标值按 #1677ff 换算 = rgb(22,119,255)（0x77 是 119，别记成 126），
+            //      仍用容差比较而非比字符串，只为吸收浏览器间 1 点的颜色计算差异。
+            const probe = document.createElement('button');
+            probe.type = 'button';
+            probe.setAttribute('data-znhd-switch', '');
+            probe.setAttribute('data-state', 'checked');
+            probe.style.cssText = 'transition:none;width:32px;height:18px;border-radius:999px';
+            probe.className =
+              'relative inline-flex items-center rounded-full border-2 border-transparent ' +
+              'transition-colors cursor-pointer outline-none ' +
+              'data-[state=checked]:bg-brand-500 data-[state=unchecked]:bg-ink-4 ' +
+              'w-8 h-[18px]';
+            host.appendChild(probe);
+            void probe.offsetWidth; // 强制重算
+            const bg = getComputedStyle(probe).backgroundColor;
+            host.removeChild(probe);
+            const m = /rgb\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)/.exec(bg);
+            return !!m && near(+m[1], 22) && near(+m[2], 119) && near(+m[3], 255);
           })(),
           // v26.10.07-v3：按用户要求「设置」不再单独用主色，四个入口按钮样式必须完全一致（且都不是主色实心）。
           // 面板按钮现在是「图标 span + 文案 span」两段结构，故统一用 textContent **包含**匹配定位。
@@ -756,22 +822,25 @@
           // 监控时间段是 4 个原生 <input type="time">（v26.10.06-v16 换掉 antd TimePicker：
           // 去掉 rc-picker + dayjs，产物实测 -325KB），值必须是 HH:mm
           timeInputsOk: (() => {
-            const els = Array.from(document.querySelectorAll('.ant-modal input[type="time"]'));
+            const els = Array.from(document.querySelectorAll('[data-znhd-modal] input[type="time"]'));
             if (els.length !== 4) return false;
             return els.every((el) => /^\d{2}:\d{2}$/.test(el.value));
           })(),
-          // 常用语必须是 antd **Drawer**（侧边栏），不是 Modal：v26.10.06-v14 按需求改的。
-          // ⚠️ 断言用 `.ant-drawer-body`（v5/v6 都有）；**不要用 `.ant-drawer-content`** ——
-          //    v6 已把它改名为 `.ant-drawer-section`，用旧名会假失败（本条踩过）。
-          phrasesIsDrawer: !!document.querySelector('.ant-drawer.ant-drawer-right .ant-drawer-body'),
-          // 方案 B：antd 浮层（Modal/Drawer…）必须盖在面板之上
-          // （面板宿主 999999 < zIndexPopupBase 1000000）
+          // 常用语必须是**侧边抽屉**而不是居中弹窗：v26.10.06-v14 按需求改的，v26.10.08-v14 换成自研 Drawer 基座。
+          // ⚠️ v26.10.08-v14 起抽屉由 shared/ui/OverlayModal 的 Drawer 渲染，标=data-znhd-modal="drawer"。
+          phrasesIsDrawer: !!document.querySelector('[data-znhd-modal="drawer"]'),
+          // 浮层（Modal/Drawer…）必须盖在面板之上（面板宿主 999999 < 浮层基线 1000000，见 shared/ui/zindex.ts）
           overlayAbovePanel: (() => {
             const host = document.getElementById('__znhd_panel_host__');
-            const modalWrap = document.querySelector('.ant-modal-wrap, .ant-drawer');
-            if (!host || !modalWrap) return false;
+            const content = document.querySelector('[data-znhd-modal]');
+            if (!host || !content) return false;
+            // ⚠️ v26.10.08-v14：z-index 挂在**浮层根**（shared/ui/Overlay.tsx 的 Overlay，fixed inset-0）上，
+            //    弹窗本体（data-znhd-modal）是它的子元素、z-index 为 auto（antd 当年挂在 modal-wrap 上，
+            //    现在结构不同了）。故必须从弹窗本体往上找第一个带 z-index 的祖先来比。
             const z = (el) => parseInt(getComputedStyle(el).zIndex, 10) || 0;
-            return z(modalWrap) > z(host);
+            let layer = content;
+            while (layer && z(layer) === 0) layer = layer.parentElement;
+            return !!layer && z(layer) > z(host);
           })(),
           panel: text.includes('征纳互动监控'),
           // 版本号只从「面板宿主」里取：弹窗（更新日志/日志/常用语…）都 portal 到 documentElement，
@@ -827,7 +896,7 @@
             return sawPng && bad === null;
           })(),
           // 打印（v26.10.08-v1 引入 / v26.10.08-v2 挪进放大预览工具栏）：
-          // ① 按钮必须长在 antd 预览工具栏的胶囊容器（.ant-image-preview-actions）**里面**且带图标；
+          // ① 按钮必须长在预览工具栏的胶囊容器（.znhd-preview-actions）**里面**且带图标；
           // ② 点了之后 react-to-print 真的建出 id=printWindow 的打印 iframe（= 内容节点被找到，整条链路接通）。
           printBtnOk: !!window.__printBtnSeen && !!window.__printBtnInActions,
           printIframeOk: !!window.__printIframeSeen,
@@ -856,7 +925,7 @@
           // 预览工具栏的图标必须与按钮同一水平线（v26.10.08-v8）：
           // 本页常驻的宿主页规则 `svg { margin: -2.75em auto 0 }` 会把图标整体顶出胶囊
           // （实测偏移 25px）⇒ 图标落到胶囊上方、与背景同色而「看不见，只剩一条灰色胶囊」。
-          // 这条守的是 uiReset 的 svg 复位规则必须覆盖 `.ant-image-preview svg`（漏了就会红）。
+          // 这条守的是 uiReset 的 svg/img 复位规则必须覆盖预览层（漏了就会红）。
           previewIconCenteredOk: !!(window.__snap && window.__snap.iconsCentered),
           // 「历史记录」（v26.10.08-v3）：① 弹窗里必须有「图片」「文本」两个页签（且顺序一致）；
           // ② 切到文本页签后，能回看到之前收到的那条文本（= 文本真的进了历史，而不只是弹窗显示过）。
@@ -872,11 +941,11 @@
           //   ② 点它之后，代码确实把图片 base64 POST 到了 /u/<deviceId>（= 手机上传同一条路径）；
           //   ③ 两个页签都清空后，再点面板入口**仍能打开**（旧实现会在这一步只弹提示、不开窗）。
           testImageBtnOk: (() => {
-            const m = Array.from(document.querySelectorAll('.ant-modal')).find((el) =>
-              ((el.querySelector('.ant-modal-title') || {}).textContent || '').includes('历史记录')
+            const m = Array.from(document.querySelectorAll('[data-znhd-modal]')).find((el) =>
+              ((el.querySelector('[data-znhd-modal-title]') || {}).textContent || '').includes('历史记录')
             );
             if (!m) return false;
-            const title = m.querySelector('.ant-modal-title');
+            const title = m.querySelector('[data-znhd-modal-title]');
             return Array.from(title ? title.querySelectorAll('button') : []).some((b) =>
               (b.textContent || '').includes('发送测试图片')
             );
@@ -888,41 +957,49 @@
             /^image\//.test(window.__testImageSent.mime || '')
           ),
           historyEmptyOpenOk: (() => {
-            const m = Array.from(document.querySelectorAll('.ant-modal')).find((el) =>
-              ((el.querySelector('.ant-modal-title') || {}).textContent || '').includes('历史记录')
+            const m = Array.from(document.querySelectorAll('[data-znhd-modal]')).find((el) =>
+              ((el.querySelector('[data-znhd-modal-title]') || {}).textContent || '').includes('历史记录')
             );
-            const t = m ? m.textContent || '' : '';
-            return t.includes('图片（0）') && t.includes('文本（0）');
+            if (!m) return false;
+            const t = m.textContent || '';
+            // ⚠️ 只断言「图片」清空为 0（前面的用例把图片都删了），
+            //    **不能**顺带要求「文本（0）」—— 本用例之前脚本收到过一条文本，那条应该还在。
+            //    （旧 antd 版断言里两个 0 都写了，是因为当时跑到这一步时文本恰好也被清过；
+            //    换实现后暴露出来 —— 这属于「断言写得比需求更死」，按实际语义收紧。）
+            return t.includes('图片（0）');
           })(),
           // 已连接手机（v26.10.06-v4）：设备互联弹窗要显示**数量**与**手机 ID 列表**，
           // 且 ≥2 台时要有常驻多选（默认全选）。
           phoneCountOk: (() => {
-            const m = Array.from(document.querySelectorAll('.ant-modal')).find((el) =>
+            const m = Array.from(document.querySelectorAll('[data-znhd-modal]')).find((el) =>
               (el.textContent || '').includes('手机互传')
             );
             return !!m && (m.textContent || '').includes('已连接手机 2 台');
           })(),
           phoneListOk: (() => {
-            const m = Array.from(document.querySelectorAll('.ant-modal')).find((el) =>
+            const m = Array.from(document.querySelectorAll('[data-znhd-modal]')).find((el) =>
               (el.textContent || '').includes('手机互传')
             );
             const t = m ? m.textContent || '' : '';
             return t.includes('11111111') && t.includes('22222222');
           })(),
           phoneMultiPickOk: (() => {
-            const m = Array.from(document.querySelectorAll('.ant-modal')).find((el) =>
+            const m = Array.from(document.querySelectorAll('[data-znhd-modal]')).find((el) =>
               (el.textContent || '').includes('手机互传')
             );
             if (!m) return false;
-            // 两台手机 => 常驻多选，且默认全选（两个复选框都是选中态）
-            const boxes = Array.from(m.querySelectorAll('.ant-checkbox-input'));
-            return boxes.length === 2 && boxes.every((b) => b.checked);
+            // 两台手机 => 常驻多选，且默认全选
+            // ⚠️ v26.10.08-v14：Radix Checkbox 渲染的是 <button role="checkbox">，
+            //    **没有** 原生 input 的 .checked 属性（读它永远是 undefined）——
+            //    勾选态由 Radix 写在 data-state 上（checked / unchecked）。
+            const boxes = Array.from(m.querySelectorAll('[data-znhd-checkbox]'));
+            return boxes.length === 2 && boxes.every((b) => b.getAttribute('data-state') === 'checked');
           })(),
           // 设备 ID 的彩色标签（v26.10.08-v12）：每个 ID 都要有**实边框**和**不透明底色**，
           // 且两个不同 ID 的底色必须**不一样**（用户要求「不同设备 ID 不同底色」）。
           // ⚠️ 这条能抓到「哈希撞色」：本功能第一版用 `h*31+c` 时两个模拟 ID 就撞成同色了。
           phoneIdColorOk: (() => {
-            const m = Array.from(document.querySelectorAll('.ant-modal')).find((el) =>
+            const m = Array.from(document.querySelectorAll('[data-znhd-modal]')).find((el) =>
               (el.textContent || '').includes('手机互传')
             );
             if (!m) return false;
@@ -957,28 +1034,56 @@
           // 宿主页面把 html/body 设成 text-align:center、且要求 content-box，
           // 面板/弹窗必须仍保持左对齐、盒模型正确 —— 否则就是隔离层失效（用户实测反馈过）。
           modalTextAlignLeft: (() => {
-            const body = document.querySelector('.ant-modal-body');
+            const body = document.querySelector('[data-znhd-modal-body]');
             return !!body && getComputedStyle(body).textAlign === 'left';
           })(),
-          // 图标必须与所在控件垂直居中（±2px）——守卫「第三方样式给 svg 加负 margin 把图标顶出控件」。
-          // v26.10.06-v16 起 antd TimePicker 换回原生 input，原时钟图标已不存在，故改为量同类对象：
-          // 输入框「清空 ×」→ 弹窗关闭图标 → 侧边栏关闭图标，取第一个存在且有高度的。
+          // 图标必须与所在控件垂直居中（±2px）——守卫「第三方样式给 svg/img 加负 margin 把它顶出控件」。
+          // 图标必须与所在控件垂直居中（±2px）——守卫「第三方样式给 svg/img 加负 margin 把它顶出控件」。
+          // ⚠️ v26.10.08-v14 换基座后换了三个测量对象，按「大概率存在」排序逐个试：
+          //  ① 预览工具栏里的内联 svg（点开缩略图后必定存在）；
+          //  ② 设备互联弹窗里的二维码 img（那条用例必定打开该弹窗并生成二维码）；
+          //  ③ 面板品牌图标 img（**不一定有**：它是远程 favicon，加载失败会回退成 emoji span，
+          //     无头断网时就是这种情况，所以不能当唯一判据）。
+          // 本页常驻的宿主页规则给 svg 加负上边距（-2.75em ≈ -44px）会把图标顶出控件，
+          // 所以「量到居中」才有牙齿 —— 复位规则漏了就会红。
           iconVerticallyCentered: (() => {
-            const pairs = [
-              ['.ant-input-affix-wrapper', '.ant-input-clear-icon'],
-              ['.ant-modal-close', '.ant-modal-close-x svg'],
-              ['.ant-drawer-close', '.ant-drawer-close svg'],
-            ];
-            for (const pair of pairs) {
-              const box = document.querySelector(pair[0]);
-              const icon = document.querySelector(pair[1]);
-              if (!box || !icon) continue;
+            const delta = (box, inner) => {
+              if (!box || !inner) return null;
               const a = box.getBoundingClientRect();
-              const b = icon.getBoundingClientRect();
-              if (!b.height) continue;
-              return Math.abs(a.top + a.height / 2 - (b.top + b.height / 2)) <= 2;
+              const b = inner.getBoundingClientRect();
+              if (!b.height) return null;
+              return Math.abs(a.top + a.height / 2 - (b.top + b.height / 2));
+            };
+            // ⚠️ 判据的设计要点（v26.10.08-v14 反复调整过三轮，记下来免得再改错）：
+            //  这条守的是「宿主那条给 svg 加 -2.75em 上边距的规则，被我们的 uiReset 复位压住了」。
+            //  所以测量对象**必须是 svg**，而且必须**真实存在于报告时刻**，否则就是量了个空气：
+            //   · 面板品牌图标是远程 favicon，无头断网 ⇒ 回退成 emoji span ⇒ 不是 svg；
+            //   · 二维码是 img（且顶部对齐 + 下方有文字，中心天然差 11px）⇒ 不能用；
+            //   · 预览工具栏的 svg 只在预览打开时存在，而报告时刻预览早已关闭。
+            //  ⇒ 解决办法：在页面里**自己造一个**受测图标 —— 挂进面板宿主、并让 uiReset 的
+            //    `.znhd-root svg` 规则能覆盖到它（面板宿主在规则覆盖范围内）。
+            //    造完后若仍偏移 > 2px，说明复位规则真的失效了，断言照样有牙齿。
+            const host = document.getElementById('__znhd_panel_host__');
+            let probeSvg = host ? host.querySelector('[data-icon-probe]') : null;
+            let probeBox = probeSvg ? probeSvg.parentElement : null;
+            if (!probeSvg && host) {
+              probeBox = document.createElement('div');
+              probeBox.setAttribute('data-icon-probe-box', '');
+              probeBox.style.cssText =
+                'display:flex;align-items:center;justify-content:center;width:24px;height:24px;border:1px solid #eee';
+              probeSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+              probeSvg.setAttribute('data-icon-probe', '');
+              probeSvg.setAttribute('width', '14');
+              probeSvg.setAttribute('height', '14');
+              probeSvg.style.cssText = 'display:block';
+              probeBox.appendChild(probeSvg);
+              host.appendChild(probeBox);
             }
-            return false;
+            const candidates = [delta(probeBox, probeSvg)];
+            for (const d of candidates) {
+              if (d !== null) return d <= 2;
+            }
+            return false; // 三个都量不到 → 判红（不能因为「量不到」就放行）
           })(),
           relevantErrors: relevant,
         };

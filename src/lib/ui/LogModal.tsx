@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Modal, Button, Switch } from 'antd';
+import { Button, Switch } from '../../../shared/ui/controls';
+import { Modal } from '../../../shared/ui/OverlayModal';
+import { cn } from '../../../shared/ui/cn';
 import type { LogEntry, LogType } from '@/lib/logger';
-import { getOverlayContainer } from '@/lib/ui/panelHost';
 
 export interface LogModalProps {
     open: boolean;
@@ -13,8 +14,8 @@ export interface LogModalProps {
     onAutoRefreshChange: (next: boolean) => void;
 }
 
-/** 暗色终端风：等宽字体栈（与日志区一致复用） */
-const MONO = "'SF Mono','Consolas','Menlo','Courier New',monospace";
+/** 暗色终端风：等宽字体栈（走 Tailwind 的 font-mono token，与 tailwind.css 的定义同一份） */
+const MONO_CLASS = 'font-mono';
 
 /**
  * 四种日志类型的展示元信息（顺序即筛选条顺序）。
@@ -30,19 +31,7 @@ const TYPE_META: { type: LogType; label: string; color: string; fg: string; bg: 
 const metaOf = (t: LogType) => TYPE_META.find((m) => m.type === t) || TYPE_META[0];
 
 /**
- * 行级样式（内联 style 表达不了 `:hover`）——在本文件内注入一小段 scoped CSS，
- * 不引入任何依赖、不动全局样式；类名统一 `znhd-log-` 前缀避免与宿主页面冲突。
- */
-const LOG_CSS = `
-.znhd-log-row { display: flex; align-items: flex-start; gap: 8px; padding: 2px 10px 2px 9px; border-left: 3px solid transparent; }
-.znhd-log-row:hover { background: rgba(127,127,127,.12); }
-.znhd-log-ts { flex: 0 0 86px; color: #52667a; }
-.znhd-log-tag { flex: 0 0 52px; font-weight: 600; }
-.znhd-log-msg { flex: 1 1 auto; min-width: 0; color: #c3d1df; white-space: pre-wrap; word-break: break-word; }
-`;
-
-/**
- * 运行日志弹窗（v26.10.07-v1：按 `运行日志样式重构-开发文档.md` 重构为专业暗色终端风）。
+ * 运行日志弹窗（v26.10.07-v1 重构为专业暗色终端风；v26.10.08-v14 换自研 Modal 基座）。
  *
  * 版式：暗色终端底 + 等宽字体 + 三栏行（时间戳 86px / 类型标签 52px / 消息自适应）。
  * 行级提示：错误/警告/成功行带整行底色与左侧 3px 色条；hover 高亮。底部为暗色状态栏。
@@ -78,8 +67,8 @@ export default function LogModal({
     /**
      * 滚动区节点的**回调 ref**。
      *
-     * ⚠️ 不能只靠下面那个 effect：antd Modal（本组件用了 `destroyOnHidden`）是在 `open` 之后
-     *    才把内容挂进 DOM 的，effect 触发那一刻 `scrollerRef.current` 仍是 null ——
+     * ⚠️ 不能只靠下面那个 effect：弹窗内容是在 `open` 之后才挂进 DOM 的，
+     *    effect 触发那一刻 `scrollerRef.current` 仍是 null ——
      *    表现为「弹窗首屏永远停在最顶部」（v26.10.07-v4 实测：17 行日志、scrollHeight 630 > 360，
      *    scrollTop 却恒为 0）。回调 ref 在节点挂载那一刻触发，此时日志行已全部在 DOM 中、
      *    `scrollHeight` 已是最终值，可一次性滚到底。
@@ -146,17 +135,12 @@ export default function LogModal({
         <Modal
             open={open}
             title="运行日志"
-            onCancel={onClose}
-            getContainer={getOverlayContainer}
             width={560}
-            styles={{ body: { textAlign: 'left' } }}
-            destroyOnHidden
+            onClose={onClose}
             footer={<Button onClick={onClose}>关闭</Button>}>
-            <style>{LOG_CSS}</style>
-
             {/* 筛选徽章 + 清空 */}
-            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+            <div className="flex items-start justify-between gap-2">
+                <div className="flex flex-wrap gap-1.5">
                     {chip('all', allOn ? '全部（点此全隐）' : '全部', '#6b7b8d', '#ffffff', allOn, () =>
                         setFilter({ info: !allOn, success: !allOn, warning: !allOn, error: !allOn })
                     )}
@@ -166,7 +150,7 @@ export default function LogModal({
                         )
                     )}
                 </div>
-                <Button danger disabled={logEntries.length === 0} onClick={onClear} style={{ flex: '0 0 auto' }}>
+                <Button danger disabled={logEntries.length === 0} onClick={onClear} className="shrink-0">
                     清空
                 </Button>
             </div>
@@ -174,22 +158,12 @@ export default function LogModal({
             {/* 暗色终端日志区 */}
             <div
                 ref={attachScroller}
-                style={{
-                    display: 'flex',
-                    // 容器保持 column（DOM 顺序即视觉顺序）；「最新在底部」靠渲染前反转数组实现，
-                    // 不用 column-reverse —— 那会翻转滚动原点与阅读方向。见文件头说明。
-                    flexDirection: 'column',
-                    overflowY: 'auto',
-                    height: 360,
-                    marginTop: 10,
-                    background: '#0f141a',
-                    border: '1px solid #1f2733',
-                    borderRadius: 4,
-                    padding: '8px 0',
-                    fontFamily: MONO,
-                    fontSize: 12.5,
-                    lineHeight: 1.9,
-                }}>
+                className={cn(
+                    MONO_CLASS,
+                    'mt-2.5 flex flex-col overflow-y-auto rounded border border-[#1f2733] bg-[#0f141a] py-2',
+                    'text-[12.5px] leading-[1.9]'
+                )}
+                style={{ height: 360 }}>
                 {shown.length ? (
                     // 反转成「最旧在上、最新在下」；slice() 先复制，避免 reverse() 改动源数组
                     shown
@@ -200,18 +174,28 @@ export default function LogModal({
                             return (
                                 <div
                                     key={index}
-                                    className="znhd-log-row"
+                                    // ⚠️ 这三个 znhd-log-* 类名是**冒烟断言的稳定契约**
+                                    //    （scripts/smoke/znhd-smoke.html 按它们取时间戳/类型/消息三栏，
+                                    //    并用行数断言「日志确实渲染了」）。Tailwind 工具类能表达布局，
+                                    //    但**语义分栏的钩子**仍要用类名承载，故这里保留。
+                                    className="znhd-log-row group flex items-start gap-2 border-l-[3px] border-l-transparent py-0.5 pl-2 pr-2.5 hover:bg-white/10"
                                     style={{ background: m.bg, borderLeftColor: m.bar }}>
-                                    <span className="znhd-log-ts">{entry.timestamp}</span>
-                                    <span className="znhd-log-tag" style={{ color: m.color }}>
+                                    <span className="znhd-log-ts w-[86px] shrink-0 text-[#52667a]">
+                                        {entry.timestamp}
+                                    </span>
+                                    <span
+                                        className="znhd-log-tag w-[52px] shrink-0 font-semibold"
+                                        style={{ color: m.color }}>
                                         {m.label}
                                     </span>
-                                    <span className="znhd-log-msg">{entry.message}</span>
+                                    <span className="znhd-log-msg min-w-0 flex-1 whitespace-pre-wrap break-words text-[#c3d1df]">
+                                        {entry.message}
+                                    </span>
                                 </div>
                             );
                         })
                 ) : (
-                    <div style={{ color: '#6b7b8d', textAlign: 'center', padding: '24px 0' }}>
+                    <div className="py-6 text-center text-[#6b7b8d]">
                         {source.length ? '没有符合当前筛选条件的日志' : '暂无日志'}
                     </div>
                 )}
@@ -219,36 +203,23 @@ export default function LogModal({
 
             {/* 状态栏（替代原说明文字）：总数 · 显示数 · 最新时间 */}
             <div
-                style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    gap: 8,
-                    borderTop: '1px solid #1f2733',
-                    marginTop: 8,
-                    paddingTop: 6,
-                    color: '#6b7b8d',
-                    fontSize: 11.5,
-                }}>
+                className="mt-2 flex items-center justify-between gap-2 border-t border-[#1f2733] pt-1.5 text-[11.5px] text-[#6b7b8d]"
+                style={{ borderTopColor: '#1f2733' }}>
                 <span>
-                    共 <b style={{ color: '#c3d1df' }}>{source.length}</b> 条 · 显示{' '}
-                    <b style={{ color: '#c3d1df' }}>{shown.length}</b> 条（{allOn ? '全类型' : '已选'}）
+                    共 <b className="text-[#c3d1df]">{source.length}</b> 条 · 显示{' '}
+                    <b className="text-[#c3d1df]">{shown.length}</b> 条（{allOn ? '全类型' : '已选'}）
                     {autoRefresh ? '' : ' · 已冻结'}
                 </span>
-                <span style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span className="flex items-center gap-2.5">
                     <span
-                        style={{ display: 'flex', alignItems: 'center', gap: 5 }}
+                        className="flex items-center gap-1.5"
                         title="开启后新日志持续刷新并自动滚到底部；关闭后列表冻结在当前快照，便于往上翻看历史">
                         <Switch size="small" checked={autoRefresh} onChange={toggleAutoRefresh} />
                         自动刷新
                     </span>
                     <span>
                         最新{' '}
-                        <span
-                            style={{
-                                fontFamily: MONO,
-                                color: latest ? metaOf(latest.type).color : '#6b7b8d',
-                            }}>
+                        <span className="font-mono" style={{ color: latest ? metaOf(latest.type).color : '#6b7b8d' }}>
                             {latest ? latest.timestamp : '--:--:--'}
                         </span>
                     </span>

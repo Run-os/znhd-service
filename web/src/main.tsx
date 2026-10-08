@@ -1,26 +1,15 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
-import { App as AntApp, ConfigProvider } from 'antd';
-import zhCN from 'antd/locale/zh_CN';
 import App from './App';
+// Tailwind 编译后的样式（唯一入口见 shared/ui/tailwind.css）。
+// 手机页是**自己的页面**（中继同源托管），不受宿主 CSP 限制，故走 Vite 的常规 CSS 链路，
+// 与脚本端「导出字符串 + GM_addStyle」那条路殊途同归。
+import '../../shared/ui/tailwind.css';
 import './app.css';
 
 createRoot(document.getElementById('root')!).render(
     <StrictMode>
-        <ConfigProvider
-            locale={zhCN}
-            theme={{
-                token: {
-                    // 与油猴脚本面板同色（#007e44），保持两端观感一致
-                    colorPrimary: '#007e44',
-                    borderRadius: 10,
-                },
-            }}
-        >
-            <AntApp>
-                <App />
-            </AntApp>
-        </ConfigProvider>
+        <App />
     </StrictMode>
 );
 
@@ -29,4 +18,3 @@ window.setTimeout(() => {
     const boot = document.getElementById('boot');
     if (boot) boot.remove();
 }, 0);
-

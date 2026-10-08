@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { Button, Modal, Space } from 'antd';
+import { Button } from '../../../shared/ui/controls';
+import { Modal } from '../../../shared/ui/OverlayModal';
 import { safeCopyText } from '@/lib/clipboard';
-import { getOverlayContainer } from '@/lib/ui/panelHost';
 
 export interface RecvTextModalProps {
     /** 收到的文本；null 表示不显示 */
@@ -10,7 +10,7 @@ export interface RecvTextModalProps {
 }
 
 /**
- * 收到文本的弹窗（v26.10.06-v13：由原 DOM 覆盖层改为 antd Modal）。
+ * 收到文本的弹窗（v26.10.06-v13 改为 Modal；v26.10.08-v14 换自研 Modal 基座）。
  * 同屏只保留最新一条：新文本直接替换内容（旧实现会叠加多个全屏遮罩，关掉顶层会露出过期文本）。
  */
 export default function RecvTextModal({ text, onClose }: RecvTextModalProps) {
@@ -27,17 +27,14 @@ export default function RecvTextModal({ text, onClose }: RecvTextModalProps) {
         <Modal
             open={text !== null}
             title="收到电脑发来的文本"
-            onCancel={() => {
+            width={520}
+            onClose={() => {
                 setCopied('');
                 onClose();
             }}
-            getContainer={getOverlayContainer}
-            width={520}
-            styles={{ body: { textAlign: 'left' } }}
-            destroyOnHidden
             footer={
-                <Space>
-                    <Button color="primary" variant="solid" onClick={doCopy}>
+                <>
+                    <Button variant="primary" onClick={doCopy}>
                         {copied || '复制到剪贴板'}
                     </Button>
                     <Button
@@ -47,19 +44,9 @@ export default function RecvTextModal({ text, onClose }: RecvTextModalProps) {
                         }}>
                         关闭
                     </Button>
-                </Space>
+                </>
             }>
-            <pre
-                style={{
-                    margin: 0,
-                    maxHeight: '60vh',
-                    overflow: 'auto',
-                    whiteSpace: 'pre-wrap',
-                    wordBreak: 'break-word',
-                    fontFamily: 'inherit',
-                    fontSize: 15,
-                    lineHeight: 1.6,
-                }}>
+            <pre className="m-0 max-h-[60vh] overflow-auto whitespace-pre-wrap break-words font-sans text-[15px] leading-[1.6]">
                 {text || ''}
             </pre>
         </Modal>

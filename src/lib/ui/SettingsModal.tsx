@@ -1,10 +1,9 @@
 import { useEffect, useState } from 'react';
-import { Modal, Button, Divider, Input, Space, Switch, Typography } from 'antd';
+import { Button, Divider, Input, Switch } from '../../../shared/ui/controls';
+import { ConfirmFooter, Modal } from '../../../shared/ui/OverlayModal';
+import { cn } from '../../../shared/ui/cn';
 import { DEFAULTS } from '@/lib/constants';
 import { hoursToHHmm, hhmmToHours } from '@/lib/utils';
-import { getOverlayContainer } from '@/lib/ui/panelHost';
-
-const { Text } = Typography;
 
 /** 监控时间段（十进制小时，13.5 表示 13:30） */
 export interface WorkingHours {
@@ -17,7 +16,7 @@ export interface WorkingHours {
 export interface SettingsModalProps {
     open: boolean;
     onClose: () => void;
-    /** 打开「更新日志」弹窗（v26.10.06-v13 起由 antd Modal 承载，不再是自拼 DOM） */
+    /** 打开「更新日志」弹窗（由 Modal 承载，不再是自拼 DOM） */
     onOpenChangelog: () => void;
     workingHours: WorkingHours | null;
     onChangeWorkingHours: (wh: WorkingHours) => void;
@@ -29,8 +28,22 @@ export interface SettingsModalProps {
     onChangeUseCdn: (v: boolean) => void;
 }
 
+/** 链接型按钮：设置弹窗顶部那排 [脚本主页] [更新脚本] [更新日志] */
+function LinkButton({ children, onClick }: { children: React.ReactNode; onClick: () => void }) {
+    return (
+        <Button variant="link" size="small" onClick={onClick}>
+            {children}
+        </Button>
+    );
+}
+
+/** 分组小标题（次要说明文字的统一样式） */
+function Hint({ children, className }: { children: React.ReactNode; className?: string }) {
+    return <p className={cn('block text-xs leading-[18px] text-ink-3', className)}>{children}</p>;
+}
+
 /**
- * 设置弹窗（v26.10.06-v9：由 CAT_UI.Drawer 侧边抽屉改为 antd Modal 弹窗）。
+ * 设置弹窗（v26.10.06-v9 由 CAT_UI.Drawer 改为 Modal；v26.10.08-v14 改为自研 Modal 基座）。
  * ⚠️ 时间输入与地址草稿的处理是真实页面实测结论（见块内注释），禁止顺手重构。
  */
 export default function SettingsModal({
@@ -48,8 +61,8 @@ export default function SettingsModal({
 }: SettingsModalProps) {
     const wh = workingHours || { morningStart: 9, morningEnd: 12, afternoonStart: 13.5, afternoonEnd: 18 };
 
-    // 原生 <input type="time"> 被清空时 hhmmToHours 返回 null（v26.10.06-v16 换掉 antd TimePicker 后
-    // 才有这个形态）：此时保持原值不动，避免把 undefined/NaN 写进配置。
+    // 原生 <input type="time"> 被清空时 hhmmToHours 返回 null（换掉 TimePicker 后才有这个形态）：
+    // 此时保持原值不动，避免把 undefined/NaN 写进配置。
     const updateWh = (field: keyof WorkingHours, dec: number | null) => {
         if (dec === null || typeof dec !== 'number' || isNaN(dec)) return;
         onChangeWorkingHours({ ...wh, [field]: dec });
@@ -80,120 +93,82 @@ export default function SettingsModal({
         }
     };
 
+    /** 一行「时间输入」：标签 + 两个输入框 + 「至」 */
+    const timeRow = (label: string, from: keyof WorkingHours, to: keyof WorkingHours) => (
+        <div className="mb-2 flex flex-wrap items-center gap-2">
+            <span className="text-[13px] text-ink-2">{label}</span>
+            <Input
+                type="time"
+                step={300}
+                value={hoursToHHmm(wh[from])}
+                onChange={(e) => updateWh(from, hhmmToHours(e.target.value))}
+                className="w-[110px]"
+            />
+            <span className="text-[13px] text-ink-2">至</span>
+            <Input
+                type="time"
+                step={300}
+                value={hoursToHHmm(wh[to])}
+                onChange={(e) => updateWh(to, hhmmToHours(e.target.value))}
+                className="w-[110px]"
+            />
+        </div>
+    );
+
     return (
         <Modal
             open={open}
             title="设置菜单"
-            onCancel={onClose}
-            getContainer={getOverlayContainer}
             width={520}
-            // 显式左对齐：宿主页面常有全局 text-align:center（税务页就是），不设会整屏居中
-            styles={{ body: { textAlign: 'left' } }}
-            destroyOnHidden
-            footer={
-                <Space>
-                    <Button onClick={onClose}>取消</Button>
-                    <Button color="primary" variant="solid" onClick={onClose}>
-                        确定
-                    </Button>
-                </Space>
-            }>
-            <Space size={4} wrap>
-                <Button type="link" onClick={() => window.open('https://github.com/Run-os/znhd-service', '_blank')}>
+            onClose={onClose}
+            footer={<ConfirmFooter onCancel={onClose} onOk={onClose} />}>
+            <div className="flex flex-wrap items-center gap-1">
+                <LinkButton onClick={() => window.open('https://github.com/Run-os/znhd-service', '_blank')}>
                     [脚本主页]
-                </Button>
-                <Button
-                    type="link"
+                </LinkButton>
+                <LinkButton
                     onClick={() =>
                         window.open((GM_info.scriptUpdateURL || GM_info.script.updateURL) as string, '_blank')
                     }>
                     [更新脚本]
-                </Button>
-                <Button type="link" onClick={() => onOpenChangelog()}>
-                    [更新日志]
-                </Button>
-            </Space>
+                </LinkButton>
+                <LinkButton onClick={() => onOpenChangelog()}>[更新日志]</LinkButton>
+            </div>
 
-            <Divider style={{ margin: '8px 0' }}>其他设置</Divider>
+            <Divider className="my-2">其他设置</Divider>
 
             {/* CDN 加速开关：控制项目内 GitHub 资源（常用语 YAML、提示音）是否经 CDN 镜像加速 */}
-            <Space size={8} style={{ marginBottom: 12 }}>
-                <Text strong>使用 CDN 加速（Fastly 镜像）加载资源</Text>
+            <div className="mb-3 flex items-center gap-2">
+                <span className="text-[13px] font-medium text-ink-1">使用 CDN 加速（Fastly 镜像）加载资源</span>
                 <Switch checked={!!useCdn} onChange={(v) => onChangeUseCdn(v)} />
-            </Space>
+            </div>
 
-            <Text strong style={{ display: 'block', marginBottom: 8 }}>
-                监控时间段（点击选择时间）
-            </Text>
-            <Space size={8} wrap style={{ marginBottom: 8 }}>
-                <Text>上午</Text>
-                <Input
-                    type="time"
-                    step={300}
-                    value={hoursToHHmm(wh.morningStart)}
-                    onChange={(e) => updateWh('morningStart', hhmmToHours(e.target.value))}
-                    style={{ width: 110 }}
-                />
-                <Text>至</Text>
-                <Input
-                    type="time"
-                    step={300}
-                    value={hoursToHHmm(wh.morningEnd)}
-                    onChange={(e) => updateWh('morningEnd', hhmmToHours(e.target.value))}
-                    style={{ width: 110 }}
-                />
-            </Space>
-            <Space size={8} wrap style={{ marginBottom: 8 }}>
-                <Text>下午</Text>
-                <Input
-                    type="time"
-                    step={300}
-                    value={hoursToHHmm(wh.afternoonStart)}
-                    onChange={(e) => updateWh('afternoonStart', hhmmToHours(e.target.value))}
-                    style={{ width: 110 }}
-                />
-                <Text>至</Text>
-                <Input
-                    type="time"
-                    step={300}
-                    value={hoursToHHmm(wh.afternoonEnd)}
-                    onChange={(e) => updateWh('afternoonEnd', hhmmToHours(e.target.value))}
-                    style={{ width: 110 }}
-                />
-            </Space>
-            <Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 12 }}>
-                提示：将「下午开始」设为与「上午结束」相同（如都设为 12:00），即可午休时段也监控。
-            </Text>
+            <p className="mb-2 block text-[13px] font-medium text-ink-1">监控时间段（点击选择时间）</p>
+            {timeRow('上午', 'morningStart', 'morningEnd')}
+            {timeRow('下午', 'afternoonStart', 'afternoonEnd')}
+            <Hint>提示：将「下午开始」设为与「上午结束」相同（如都设为 12:00），即可午休时段也监控。</Hint>
 
-            <Text strong style={{ display: 'block', marginBottom: 8 }}>
-                常用语数据地址（可自定义远程 YAML）
-            </Text>
+            <p className="mb-2 block text-[13px] font-medium text-ink-1">常用语数据地址（可自定义远程 YAML）</p>
             <Input
                 placeholder="https://.../commonPhrases.yaml"
                 value={urlDraft}
                 onChange={(e) => onUrlChange(e.target.value)}
                 onBlur={onUrlBlur}
-                allowClear
-                style={{ marginBottom: 8 }}
+                className="mb-2"
             />
-            <Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 12 }}>
-                修改后请在「常用语」面板点「重新加载常用语」生效；留空并点击其他区域（失焦）后恢复默认地址。
-            </Text>
+            <Hint>修改后请在「常用语」面板点「重新加载常用语」生效；留空并点击其他区域（失焦）后恢复默认地址。</Hint>
 
-            <Text strong style={{ display: 'block', marginBottom: 8 }}>
-                中继服务器地址
-            </Text>
+            <p className="mb-2 block text-[13px] font-medium text-ink-1">中继服务器地址</p>
             <Input
                 placeholder="https://你的服务器:端口"
                 value={relayServer || ''}
                 onChange={(e) => onChangeRelayServer((e.target.value || '').trim().replace(/\/+$/, ''))}
-                allowClear
-                style={{ marginBottom: 8 }}
+                className="mb-2"
             />
-            <Text type="secondary" style={{ fontSize: 12, display: 'block' }}>
+            <Hint className="mb-0">
                 用于「设备互联到电脑」：手机上传的图片经此服务器转发到本机剪贴板。需自行部署配套
                 relay-server（见项目说明）。
-            </Text>
+            </Hint>
         </Modal>
     );
 }

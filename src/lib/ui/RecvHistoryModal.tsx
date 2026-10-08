@@ -1,19 +1,16 @@
-import { Button, Empty, Image, Modal, Space, Tabs, Typography } from 'antd';
-import { PrinterOutlined } from '@ant-design/icons';
+import { Button, Empty } from '../../../shared/ui/controls';
+import { Tabs, Tooltip } from '../../../shared/ui/feedback';
+import { Modal } from '../../../shared/ui/OverlayModal';
+import { ImagePreview, PRINT_ICON, type PreviewItem } from '../../../shared/ui/ImagePreview';
 import { useEffect, useRef, useState } from 'react';
 import { useReactToPrint } from 'react-to-print';
 import { copyImageToClipboard, getDeviceId, sendTestImage, TEST_IMAGE_URL } from '@/lib/relay';
 import { safeCopyText } from '@/lib/clipboard';
 import { addLog } from '@/lib/logger';
 import { downloadFileName, type GalleryImage, type GalleryText } from '@/lib/gallery';
-import { getOverlayContainer } from '@/lib/ui/panelHost';
-// 预览相关的通用件全部来自共享层（与手机上传页同一份，v26.10.08-v13 起）
-import { appendPreviewActions } from '../../../shared/preview/actions';
-import { getPreviewHost } from '../../../shared/preview/host';
+// 打印版式与「预览期间压掉下层遮罩」来自共享层（手机上传页用的是同一份，见 shared/preview/）
 import { syncPreviewMask } from '../../../shared/preview/mask';
 import { buildA4ImageNode, PRINT_PAGE_STYLE } from '../../../shared/preview/print';
-
-const { Text } = Typography;
 
 export interface RecvHistoryModalProps {
     open: boolean;
@@ -38,28 +35,20 @@ function fmtTime(ts: number): string {
 }
 
 /**
- * 预览浮层的挂载容器、A4 打印版式、遮罩压制、工具栏追加按钮 ——
- * 这些**通用件已全部搬进 `shared/preview/`**（v26.10.08-v13），与手机上传页共用同一份实现，
- * 因此本文件不再自带一份；原来的实测数据与「为什么这么做」的说明随代码一起搬过去了，见：
- *   · `shared/preview/host.ts`  —— 为什么必须自建宿主 div（body 带 transform 会困住 fixed 浮层）
- *   · `shared/preview/print.ts` —— A4 版式常量、`PRINT_PAGE_STYLE`、`buildA4ImageNode()`
- *   · `shared/preview/mask.ts`  —— 预览期间压掉所有下层遮罩（否则两层 rgba 叠成 0.6975）
- *   · `shared/preview/actions.tsx` —— 把按钮追加进 antd 工具栏胶囊
- */
-
-/**
  * 「历史记录」弹窗：图片 + 文本两类收件，分两个页签（v26.10.08-v3 由单纯的「收图画廊」升级而来）。
  *
- * 为什么要分页签而不是混排一条时间线：图片页签要复用 antd `Image.PreviewGroup`（多图左右切换、
- * 缩放/旋转、以及工具栏里的打印），它要求 items 是一组同构的图片 URL；文本条目既没有预览语义、
+ * 为什么要分页签而不是混排一条时间线：图片页签要复用图片预览（多图左右切换、缩放/旋转、
+ * 以及工具栏里的打印），它要求 items 是一组同构的图片地址；文本条目既没有预览语义、
  * 也不需要放大，混进同一列表会把两套交互互相干扰。分页签后图片侧的一切保持不变，文本侧独立。
  *
  * 历史沿革：
- *  - v26.10.06-v13：由原 DOM 弹窗 + Viewer.js 改为 antd Modal + Image.PreviewGroup。
+ *  - v26.10.06-v13：由原 DOM 弹窗 + Viewer.js 改为 Modal + Image.PreviewGroup。
  *    ⚠️ 剪贴板写入仍走 `copyImageToClipboard`：Chromium 对 image/png 支持最可靠，且
  *    「先转好 PNG 再只写一次」是仓库实测结论（写失败也会消耗用户手势），不要改回去。
- *  - v26.10.08-v1/v2：新增「打印」，入口最终落在放大预览的工具栏（antd 预览的 `actionsRender`）。
+ *  - v26.10.08-v1/v2：新增「打印」，入口落在放大预览的工具栏里。
  *  - v26.10.08-v3：改名与扩展为「历史记录」，新增「文本」页签（单条删除 / 清空 / 复制）。
+ *  - v26.10.08-v14：antd Image.PreviewGroup → 自研 `ImagePreview`（见 shared/ui/ImagePreview.tsx
+ *    的说明：为什么不用现成库）。「打印」按钮改由 `extraActions` 插槽注入预览工具栏。
  */
 export default function RecvHistoryModal({
     open,
@@ -79,27 +68,17 @@ export default function RecvHistoryModal({
     /** 「发送测试图片」是否正在取图/投递（防重复点击 + 按钮 loading） */
     const [testSending, setTestSending] = useState(false);
     /**
-     * 放大预览是否打开（v26.10.08-v9 起用于撤掉下层遮罩）。
+     * 放大预览是否打开（用于撤掉本弹窗的遮罩）。
      *
-     * 预览是**全屏**浮层，下层遮罩全被盖住、对视觉毫无贡献；但 antd 的 Modal / Drawer 遮罩都是
-     * `rgba(0,0,0,0.45)`，叠在预览自带的同款遮罩上就是 `1-(0.55×0.55)=0.6975` ——
-     * 白底被压到灰度 **77**（只有一层时是 **140**），肉眼即「没有官方明亮」。
+     * 预览是**全屏**浮层，下层遮罩全被盖住、对视觉毫无贡献；而浮层遮罩是 `rgb(0 0 0 / 0.45)`，
+     * 叠在预览自带的同款遮罩上就是 `1-(0.55×0.55)=0.6975` —— 白底被压到灰度 **77**
+     * （只有一层时是 **140**），肉眼即「没有官方明亮」。
      *
-     * ⚠️ **v26.10.08-v9 只撤了本弹窗自己那层，不够**：实测预览打开时，取样点上还叠着
-     * **设置抽屉的 `.ant-drawer-mask`** 以及其它弹窗的 `.ant-modal-mask`。
-     * v11 起改为「预览期间一律压掉所有下层遮罩」（见下面给 documentElement 挂的类）。
+     * ⚠️ **只撤「自己那层」不够**：预览打开时底下凡是还开着的弹窗，遮罩依然在画。
+     * 统一做法是预览期间给 <html> 挂类、用 CSS 压掉**所有**带 data-znhd-mask 的遮罩
+     * （规则与类名都在共享层 shared/preview/mask.ts，手机页用的是同一份）。
+     * 这里仍保留本弹窗 showMask 的联动，让「自己这层」连画都不画（少一层合成开销）。
      */
-    const [previewOpen, setPreviewOpen] = useState(false);
-
-    /**
-     * 预览开关 → 压掉/恢复**所有**下层浮层遮罩。
-     * 规则与类名都在共享层（`shared/preview/mask.ts`），手机页用的是同一份；
-     * `syncPreviewMask` 幂等，且会顺手把 CSS 注入一次（原先脚本端在 uiReset 里另写了一份，已去掉）。
-     */
-    useEffect(() => {
-        syncPreviewMask(previewOpen);
-        return () => syncPreviewMask(false);
-    }, [previewOpen]);
 
     // 每次打开都回到「图片」页签：收到新图会自动弹这个弹窗，不应停在用户上次看的「文本」页
     useEffect(() => {
@@ -212,83 +191,57 @@ export default function RecvHistoryModal({
         });
     };
 
+    /** 预览的 items：按 images 顺序，用原分辨率地址 */
+    const previewItems: PreviewItem[] = images.map((i) => ({ url: i.previewUrl, name: i.name }));
+    /** 当前预览项下标；-1 表示未打开 */
+    const [previewIdx, setPreviewIdx] = useState(-1);
+
+    // 预览的开/关**不另设 state**，直接由预览下标派生（-1 = 关）：
+    // 两个 state 表达同一件事就必然有机会不同步（关预览时漏改其中一个 → 遮罩压不回来）。
+    const previewOpen = previewIdx >= 0;
+
+    // 预览开关 → 压掉/恢复**所有**下层浮层遮罩。
+    // 规则与类名都在共享层（shared/preview/mask.ts），手机页用的是同一份；
+    // syncPreviewMask 幂等，且会顺手把 CSS 注入一次。
+    useEffect(() => {
+        syncPreviewMask(previewOpen);
+        return () => syncPreviewMask(false);
+    }, [previewOpen]);
+    const openPreview = (idx: number) => setPreviewIdx(idx);
+
     const tabItems = [
         {
             key: 'image',
             label: `图片（${images.length}）`,
-            children: images.length ? (
-                // items 用 objectURL 列表：预览里的左右切换由 antd 接管
-                <Image.PreviewGroup
-                    items={images.map((i) => i.previewUrl)}
-                    preview={{
-                        /**
-                         * ⚠️ **必须显式指定挂载容器**（v26.10.08-v7 修「放大后图片盖住下方工具栏」）：
-                         * 原因、实测数据与「为什么不能直接用 getOverlayContainer」都写在 `getPreviewHost` 的注释里。
-                         */
-                        getContainer: getPreviewHost,
-                        /**
-                         * 预览开/关 → 压掉/恢复下层遮罩（避免两层遮罩叠加变暗）。见上方 useEffect。
-                         */
-                        onOpenChange: (o: boolean) => setPreviewOpen(o),
-                        /**
-                         * 「打印」放在**放大预览的工具栏**里（v26.10.08-v2，按用户要求从缩略图行挪过来）。
-                         * 追加方式用共享层的 `appendPreviewActions`（手机页用的是同一个函数）；
-                         * 「为什么必须 cloneElement 进 antd 的 actions 容器」写在那个文件里。
-                         */
-                        actionsRender: (originalNode, info) => {
-                            const printBtn = (
-                                <button
-                                    key="znhd-print"
-                                    type="button"
-                                    className="ant-image-preview-actions-action"
-                                    aria-label="print"
-                                    title="打印原图"
-                                    onClick={() => {
-                                        // 优先按 url 反查（items 与 images 同序，但按 url 更稳），退回下标
-                                        const found = images.findIndex((i) => i.previewUrl === info.image?.url);
-                                        const at = found >= 0 ? found : info.current;
-                                        if (images[at]) printImage(images[at], at);
-                                    }}>
-                                    <PrinterOutlined />
-                                </button>
-                            );
-                            return appendPreviewActions(originalNode, printBtn);
-                        },
-                    }}>
-                    <div
-                        style={{
-                            display: 'grid',
-                            gridTemplateColumns: 'repeat(3, minmax(0,1fr))',
-                            gap: 8,
-                            maxHeight: '60vh',
-                            overflow: 'auto',
-                            alignContent: 'start',
-                        }}>
-                        {images.map((it, idx) => (
-                            <div key={it.previewUrl} style={{ display: 'flex', flexDirection: 'column' }}>
-                                <Image
-                                    src={it.previewUrl}
-                                    alt={it.name || 'image'}
-                                    style={{ width: '100%', aspectRatio: '1 / 1', objectFit: 'cover', borderRadius: 8 }}
-                                />
-                                <Space size={4} style={{ marginTop: 4, width: '100%' }}>
-                                    <Button
-                                        size="small"
-                                        style={{ flex: 1 }}
-                                        onClick={(e) => doCopy(it, e.currentTarget as HTMLButtonElement)}>
-                                        复制
-                                    </Button>
-                                    <Button size="small" style={{ flex: 1 }} onClick={() => doDownload(it, idx)}>
-                                        下载
-                                    </Button>
-                                    <Button size="small" danger onClick={() => onRemoveImage(idx)}>
-                                        ×
-                                    </Button>
-                                </Space>
+            content: images.length ? (
+                <div className="grid max-h-[60vh] grid-cols-3 content-start gap-2 overflow-auto">
+                    {images.map((it, idx) => (
+                        <div key={it.previewUrl} className="flex flex-col">
+                            <img
+                                src={it.previewUrl}
+                                alt={it.name || 'image'}
+                                title={it.name || '点击放大'}
+                                className="w-full cursor-zoom-in rounded-lg object-cover"
+                                style={{ aspectRatio: '1 / 1' }}
+                                onClick={() => openPreview(idx)}
+                            />
+                            <div className="mt-1 flex w-full gap-1">
+                                <Button
+                                    size="small"
+                                    className="flex-1"
+                                    onClick={(e) => doCopy(it, e.currentTarget as HTMLButtonElement)}>
+                                    复制
+                                </Button>
+                                <Button size="small" className="flex-1" onClick={() => doDownload(it, idx)}>
+                                    下载
+                                </Button>
+                                <Button size="small" danger onClick={() => onRemoveImage(idx)}>
+                                    ×
+                                </Button>
                             </div>
-                        ))}
-                    </div>
-                </Image.PreviewGroup>
+                        </div>
+                    ))}
+                </div>
             ) : (
                 <Empty description="暂无图片" />
             ),
@@ -296,36 +249,20 @@ export default function RecvHistoryModal({
         {
             key: 'text',
             label: `文本（${texts.length}）`,
-            children: texts.length ? (
-                <div style={{ maxHeight: '60vh', overflow: 'auto' }}>
+            content: texts.length ? (
+                <div className="max-h-[60vh] overflow-auto">
                     {/* 最新一条在最上：历史记录按「刚收到的先看」组织，与弹窗外的日志顺序相反是有意的 */}
                     {texts.map((t, idx) => (
                         <div
                             key={t.ts + '-' + idx}
-                            style={{
-                                display: 'flex',
-                                gap: 8,
-                                alignItems: 'flex-start',
-                                padding: '8px 0',
-                                borderBottom: '1px solid rgba(0,0,0,0.06)',
-                            }}>
-                            <div style={{ flex: 1, minWidth: 0 }}>
-                                <pre
-                                    style={{
-                                        margin: 0,
-                                        whiteSpace: 'pre-wrap',
-                                        wordBreak: 'break-word',
-                                        fontFamily: 'inherit',
-                                        fontSize: 14,
-                                        lineHeight: 1.6,
-                                    }}>
+                            className="flex items-start gap-2 border-b border-black/[0.06] py-2">
+                            <div className="min-w-0 flex-1">
+                                <pre className="m-0 whitespace-pre-wrap break-words font-sans text-sm leading-[1.6]">
                                     {t.text}
                                 </pre>
-                                <Text type="secondary" style={{ fontSize: 11 }}>
-                                    {fmtTime(t.ts)}
-                                </Text>
+                                <span className="text-[11px] text-ink-3">{fmtTime(t.ts)}</span>
                             </div>
-                            <Space size={4}>
+                            <div className="flex gap-1">
                                 <Button size="small" onClick={() => doCopyText(t, idx)}>
                                     {copyState && copyState.idx === idx
                                         ? copyState.ok
@@ -336,7 +273,7 @@ export default function RecvHistoryModal({
                                 <Button size="small" danger onClick={() => onRemoveText(idx)}>
                                     ×
                                 </Button>
-                            </Space>
+                            </div>
                         </div>
                     ))}
                 </div>
@@ -347,58 +284,81 @@ export default function RecvHistoryModal({
     ];
 
     return (
-        <Modal
-            open={open}
-            title={
-                // 标题旁边放「发送测试图片」：空历史时也能一键灌入一张图来验证整条链路
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                    <span>{`历史记录（图片 ${images.length} · 文本 ${texts.length}）`}</span>
-                    <Button size="small" loading={testSending} onClick={doSendTestImage}>
-                        发送测试图片
-                    </Button>
-                </div>
-            }
-            onCancel={onClose}
-            getContainer={getOverlayContainer}
-            width={620}
-            styles={{ body: { textAlign: 'left' } }}
-            destroyOnHidden
-            // 预览打开时撤掉本弹窗的遮罩：预览是全屏浮层，这层遮罩被完全盖住、只会让画面多暗一层（见 previewOpen 注释）
-            mask={!previewOpen}
-            footer={
-                <Space>
-                    {/* 清空只作用于**当前页签**：页签化之后「清空全部」会让人误以为连另一页也一起清掉 */}
-                    {tab === 'image' ? (
-                        <Button
-                            danger
-                            disabled={!images.length}
-                            onClick={() => {
-                                onClearImages();
-                                onClose();
-                            }}>
-                            清空图片
+        <>
+            <Modal
+                open={open}
+                width={620}
+                onClose={onClose}
+                // 预览打开时撤掉本弹窗的遮罩：预览是全屏浮层，这层遮罩被完全盖住、只会让画面多暗一层
+                showMask={!previewOpen}
+                title={
+                    // 标题旁边放「发送测试图片」：空历史时也能一键灌入一张图来验证整条链路
+                    <span className="inline-flex flex-wrap items-center gap-2.5">
+                        <span>{`历史记录（图片 ${images.length} · 文本 ${texts.length}）`}</span>
+                        <Button size="small" loading={testSending} onClick={doSendTestImage}>
+                            发送测试图片
                         </Button>
-                    ) : (
-                        <Button
-                            danger
-                            disabled={!texts.length}
-                            onClick={() => {
-                                onClearTexts();
-                                onClose();
-                            }}>
-                            清空文本
+                    </span>
+                }
+                footer={
+                    <>
+                        {/* 清空只作用于**当前页签**：页签化之后「清空全部」会让人误以为连另一页也一起清掉 */}
+                        {tab === 'image' ? (
+                            <Button
+                                danger
+                                disabled={!images.length}
+                                onClick={() => {
+                                    onClearImages();
+                                    onClose();
+                                }}>
+                                清空图片
+                            </Button>
+                        ) : (
+                            <Button
+                                danger
+                                disabled={!texts.length}
+                                onClick={() => {
+                                    onClearTexts();
+                                    onClose();
+                                }}>
+                                清空文本
+                            </Button>
+                        )}
+                        <Button variant="primary" onClick={onClose}>
+                            关闭
                         </Button>
-                    )}
-                    <Button color="primary" variant="solid" onClick={onClose}>
-                        关闭
-                    </Button>
-                </Space>
-            }>
-            <Tabs activeKey={tab} onChange={(k) => setTab(k as 'image' | 'text')} items={tabItems} />
-            <Text type="secondary" style={{ fontSize: 12, display: 'block', marginTop: 8 }}>
-                提示：图片页签单击缩略图可放大/旋转/多图切换，放大后工具栏上的「打印」打印原图；图片与文本的「复制」都会写入系统剪贴板，回征纳互动
-                Ctrl+V 即可（打印对话框弹出后请勿删除该图）。
-            </Text>
-        </Modal>
+                    </>
+                }>
+                <Tabs items={tabItems} value={tab} onChange={(k) => setTab(k as 'image' | 'text')} />
+                <p className="mt-2 block text-xs text-ink-3">
+                    提示：图片页签单击缩略图可放大/旋转/多图切换，放大后工具栏上的「打印」打印原图；图片与文本的「复制」都会写入系统剪贴板，回征纳互动
+                    Ctrl+V 即可（打印对话框弹出后请勿删除该图）。
+                </p>
+            </Modal>
+
+            {/* 图片放大预览（挂在 Modal 之外：它是全屏浮层，层级高于本弹窗） */}
+            <ImagePreview
+                index={previewIdx}
+                items={previewItems}
+                onIndexChange={setPreviewIdx}
+                onClose={() => setPreviewIdx(-1)}
+                caption={(_it, i, total) => `图片 ${i + 1} / ${total}`}
+                extraActions={() => (
+                    <Tooltip content="打印原图" side="top">
+                        <button
+                            type="button"
+                            className="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-full text-white transition-colors hover:bg-white/20"
+                            aria-label="print"
+                            title="打印原图"
+                            onClick={() => {
+                                const it = images[previewIdx];
+                                if (it) printImage(it, previewIdx);
+                            }}>
+                            {PRINT_ICON}
+                        </button>
+                    </Tooltip>
+                )}
+            />
+        </>
     );
 }
