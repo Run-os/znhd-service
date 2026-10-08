@@ -85,17 +85,43 @@
         /* 忽略：环境没有 Clipboard 时断言会因「零次调用」而失败，属预期 */
       }
 
-      // 打印（v26.10.08-v1）：react-to-print 会往 body 挂一个 id=printWindow 的隐藏 iframe。
+      // 打印（v26.10.08-v1 起）：react-to-print 会往 body 挂一个 id=printWindow 的隐藏 iframe。
       // ⚠️ headless 里没有打印对话框，且桌面 UA 下打印完成后 iframe 会被立刻移除，
       //    所以不能用「iframe 还在不在」判断，必须用 MutationObserver 在**插入那一刻**记录。
       // 该 iframe 只在「找到了打印内容节点」时才会被挂上（react-to-print 拿不到内容会直接 return），
       // 因此它出现 = 「按钮 → printImage → doPrint」整条链路真的接通了。
+      // v26.10.08-v4 起再往里看一眼**打印文档本身**：A4 版式（@page size:A4 + 图片框毫米尺寸 + object-fit）
+      // 必须真的注入到 iframe 里，而不是只写在源码里。
+      // 时序说明：react-to-print 是先给 iframe 赋 onload、再 appendChild；我们的监听注册在其后，
+      // 所以本回调触发时它已经把内容克隆进 body、并把 pageStyle 追加进 head 了。
       window.__printIframeSeen = false;
+      window.__printDoc = null;
       try {
         new MutationObserver((muts) => {
           muts.forEach((m) =>
             Array.prototype.forEach.call(m.addedNodes, (n) => {
-              if (n && n.id === 'printWindow') window.__printIframeSeen = true;
+              if (n && n.id === 'printWindow') {
+                window.__printIframeSeen = true;
+                n.addEventListener('load', () => {
+                  try {
+                    const doc = n.contentDocument;
+                    const img = doc && doc.querySelector('img');
+                    const box = doc && doc.querySelector('body > div');
+                    const styles = doc
+                      ? Array.from(doc.querySelectorAll('style')).map((s) => s.textContent || '')
+                      : [];
+                    window.__printDoc = {
+                      hasImg: !!img,
+                      pageA4: styles.some((t) => /@page/.test(t) && /size:\s*A4/i.test(t)),
+                      pageMarginMm: (styles.join(' ').match(/margin:\s*([\d.]+)mm/) || [])[1] || null,
+                      boxStyle: box ? box.getAttribute('style') : null,
+                      imgStyle: img ? img.getAttribute('style') : null,
+                    };
+                  } catch (e) {
+                    window.__printDoc = { error: String((e && e.message) || e) };
+                  }
+                });
+              }
             })
           );
         }).observe(document.documentElement, { childList: true, subtree: true });
@@ -667,6 +693,17 @@
           // ② 点了之后 react-to-print 真的建出 id=printWindow 的打印 iframe（= 内容节点被找到，整条链路接通）。
           printBtnOk: !!window.__printBtnSeen && !!window.__printBtnInActions,
           printIframeOk: !!window.__printIframeSeen,
+          // A4 自适应（v26.10.08-v4）：打印文档里必须同时具备
+          //   ① `@page { size: A4 … }`（纸型）、② 图片框是毫米尺寸且**不大于 A4 本身**、③ 图片 `object-fit: contain`。
+          // 只锁「语义」不锁具体数字：改页边距常量不该把断言打红，但把 A4 版式删掉/写错一定会红。
+          printA4Ok: (() => {
+            const d = window.__printDoc;
+            if (!d || !d.pageA4) return false;
+            if (!/object-fit:\s*contain/i.test(d.imgStyle || '')) return false;
+            const m = /width:\s*([\d.]+)mm;\s*height:\s*([\d.]+)mm/.exec(d.boxStyle || '');
+            if (!m) return false;
+            return parseFloat(m[1]) <= 210 && parseFloat(m[2]) <= 297;
+          })(),
           // 「历史记录」（v26.10.08-v3）：① 弹窗里必须有「图片」「文本」两个页签（且顺序一致）；
           // ② 切到文本页签后，能回看到之前收到的那条文本（= 文本真的进了历史，而不只是弹窗显示过）。
           historyTabsOk: !!(
@@ -728,6 +765,7 @@
           report.copyOk &&
           report.printBtnOk &&
           report.printIframeOk &&
+          report.printA4Ok &&
           report.historyTabsOk &&
           report.historyTextOk &&
           report.phoneSendCompressedOk

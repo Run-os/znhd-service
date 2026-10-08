@@ -31,6 +31,18 @@ function fmtTime(ts: number): string {
 }
 
 /**
+ * A4 打印版式（v26.10.08-v4）：把图片**等比缩放后居中铺满 A4 可用区**，保证整张图完整落在同一页。
+ *
+ * ⚠️ 这几个数必须与下面 `pageStyle` 里的 `@page { size: A4; margin: 10mm }` **配套**，改一处要改两处：
+ *   · 可用宽 = 210 − 10×2 = **190mm**；可用高 = 297 − 10×2 = **277mm**。
+ *   · 高再留 3mm 余量（取 274mm）：图片框高度**正好等于**内容盒高度时，部分浏览器/打印驱动
+ *     会因舍入多吐一张空白页（打印版式的经典坑，宁可少 3mm）。
+ */
+const A4_MARGIN_MM = 10;
+const PRINT_BOX_W_MM = 210 - A4_MARGIN_MM * 2; // 190
+const PRINT_BOX_H_MM = 297 - A4_MARGIN_MM * 2 - 3; // 274
+
+/**
  * 「历史记录」弹窗：图片 + 文本两类收件，分两个页签（v26.10.08-v3 由单纯的「收图画廊」升级而来）。
  *
  * 为什么要分页签而不是混排一条时间线：图片页签要复用 antd `Image.PreviewGroup`（多图左右切换、
@@ -77,27 +89,41 @@ export default function RecvHistoryModal({
     const doPrint = useReactToPrint({
         ignoreGlobalStyles: true,
         documentTitle: () => printTitleRef.current,
-        pageStyle: '@page { margin: 10mm }',
+        /**
+         * A4 版式（v26.10.08-v4）：`@page` 直接注入打印窗口，比外部 CSS 可靠得多。
+         *  - `size: A4 portrait` 让浏览器默认按 A4 纵向出纸（用户在打印对话框里没改纸张时生效）。
+         *  - `margin` 与下面 `PRINT_BOX_*` 是配套的：内容盒 = 210−2×10 × 297−2×10。
+         *  - `html, body { margin: 0 }` 是必需的：打印 iframe 的 body 默认 8px 外边距，
+         *    不归零会把图片框整体挤出内容盒、进而多吐一张空白页。
+         */
+        pageStyle: `@page { size: A4 portrait; margin: ${A4_MARGIN_MM}mm; } html, body { margin: 0; padding: 0; }`,
     });
 
     /**
-     * 打印某一张图的**原图**。
+     * 打印某一张图的**原图**，并自适应 A4 纸（v26.10.08-v4）。
      *
-     * 两个关键取舍：
+     * 三个关键取舍：
      *  1) 打印内容用**临时构造的游离节点**（不挂进 DOM），而不是页面上某个隐藏容器：
      *     `cloneNode` 会把**内联样式**一起克隆，所以 `display:none` / 挪到视口外的隐藏容器
      *     在打印 iframe 里同样不可见 ⇒ 打印出来是空白。游离节点只带我们给的打印样式，没有这个坑；
      *     而且它不进渲染树，也就不会「闪一下大图」。
-     *  2) 打印的是 `previewUrl`（原分辨率 objectURL），不是预览里缩放/旋转后的画面 —— 清晰度最好。
+     *  2) **图片框固定成 A4 可用区**、`object-fit: contain` 等比缩放后居中 —— 整张图必定完整落在同一页，
+     *     不裁切、不跨页；小图会被放大铺满（`contain` 只保证不变形，不保证不放大），大图则缩小。
+     *     `overflow: hidden` 是二道保险：即便有浏览器不认 `object-fit`，也不会把内容顶出纸张触发分页。
+     *  3) 打印的是 `previewUrl`（原分辨率 objectURL），不是预览里缩放/旋转后的画面 —— 清晰度最好。
      *     ⚠️ 打印对话框弹出期间该图的 objectURL 不能被 revoke（移除该图会 revoke），否则打印空白。
+     * ⚠️ 纸张最终仍受用户在打印对话框里的「缩放/适应纸张尺寸」影响：若选了「适应纸张」，
+     *    浏览器会按自己的规则再缩一次，CSS 里的 `@page size` 会被覆盖（这是 CSS「不生效」的常见原因）。
      */
     const printImage = (it: GalleryImage, idx: number) => {
         const fname = downloadFileName(it.name, it.mime, idx);
         const node = document.createElement('div');
+        // 图片框 = A4 可用区（与上面的 @page margin 配套）
+        node.style.cssText = `width:${PRINT_BOX_W_MM}mm;height:${PRINT_BOX_H_MM}mm;overflow:hidden;`;
         const img = document.createElement('img');
         img.src = it.previewUrl;
         img.alt = fname;
-        img.style.cssText = 'display:block;max-width:100%;height:auto;margin:0 auto;';
+        img.style.cssText = 'display:block;width:100%;height:100%;object-fit:contain;';
         node.appendChild(img);
 
         printTitleRef.current = fname;

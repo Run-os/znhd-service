@@ -11,6 +11,23 @@
 
 ---
 
+### znhd.user.js v26.10.08-v4
+- **打印图片时按 A4 纸自适应**（按用户要求；库仍是 `react-to-print`，不换库）：
+  - **`pageStyle` 注入纸型**：`@page { size: A4 portrait; margin: 10mm }` —— 浏览器在用户没改纸张时默认按 A4 纵向出纸。同时 `html, body { margin: 0; padding: 0 }`（**必需**，见下）。
+  - **图片框 = A4 可用区**（210−10×2 = **190mm** × 297−10×2−3 = **274mm**），图片 `object-fit: contain` 等比缩放后居中 ⇒ **整张图必定完整落在同一页**，不裁切、不跨页；小图会被放大铺满，大图缩小。
+  - ⚠️ **两个必踩的坑**（都写进 `AGENT.md` 历史踩坑索引了）：
+    1. **打印 iframe 的 `body` 默认有 8px 外边距**，不写 `html, body { margin: 0 }` 会把 190×274mm 的图片框整体挤出内容盒 → **多吐一张空白页**；
+    2. 图片框高度**正好等于**内容盒高度（277mm）时，部分浏览器/打印驱动会因舍入**再吐一张空白页** ⇒ 故意留 3mm 余量取 274mm。
+  - 容器另加 `overflow: hidden` 作二道保险：即便某浏览器不认 `object-fit`，也不会把内容顶出纸张触发分页。
+  - 参考了用户给的《React函数组件中React-to-print自定义打印页面尺寸问题》一文（`@page` 直接注入比外部 CSS 可靠、容器尺寸必须与纸张对应）。⚠️ **该文的 `content: () => componentRef.current` 是 react-to-print v2 的 API，v3 已改为「可选内容工厂」**，故只借其版式思路，代码仍用 v3 写法（`doPrint(() => node)`），没有照抄。
+  - ⚠️ **CSS 管不到的部分**：打印对话框里的「缩放 / 适应纸张尺寸」会**覆盖** `@page size`（选「适应纸张」时浏览器会再缩一次）。已写进 ReadMe 的提示，需用户侧确认该项为 100%/无。
+- **冒烟断言（只增不删，30 → 31 项）**：新增 **`printA4Ok`** —— 向打印 iframe 的文档里查三件事：① 注入的 `<style>` 含 `@page` + `size: A4`；② 图片框是毫米尺寸且**不大于 A4 本身**（超了必然溢出纸张触发分页）；③ 图片样式含 `object-fit: contain`。**只锁语义、不锁具体数字**：日后调页边距常量不会把断言打红，但删掉/写错 A4 版式一定会红。
+- ✅ **反向验证**：临时把 `pageStyle` 里的 `size: A4 portrait;` 去掉 → 重建后仅 `printA4Ok` **变红**（`printBtnOk` / `printIframeOk` 仍 ✅，退出码 1），恢复后 31 项全绿。证明它锁的确实是 A4 版式，而不是顺带为真。
+- 验证：`npm run typecheck` 0 错、`npm run build` 结论行 `compiled`、`npm run check` 通过、`npm run verify` **31 项全绿**、`npx @ant-design/cli lint ./src` `issues: []`。
+- 三处版本号一致（`26.10.08-v4`）；仓库根过渡跳板 `znhd.user.js` 已重新拷贝为与 `dist/znhd.user.js` 逐字节一致。
+- ⚠️ **只做本地提交，未推送**。
+
+
 ### znhd.user.js v26.10.08-v3
 - **面板入口「历史文件」改名为「历史记录」，并把「收到的文本」也纳入历史**（按用户要求）：弹窗由「只放图片的画廊」升级为**「图片 / 文本」两个页签**。
   - **图片页签**：原有内容与交互**原样保留**（3 列九宫格、`Image.PreviewGroup` 放大、预览工具栏的「打印」、单张复制/下载/×），上限仍 `MAX_GALLERY=27`。

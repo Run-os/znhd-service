@@ -83,6 +83,7 @@ const CHECKS = [
   ['copyOk', '图片复制只尝试写 PNG'],
   ['printBtnOk', '放大预览工具栏有「打印」按钮'],
   ['printIframeOk', '打印链路接通（react-to-print 建出打印 iframe）'],
+  ['printA4Ok', '打印按 A4 自适应（@page size:A4 + 图片框 ≤ A4 + object-fit）'],
   ['historyTabsOk', '「历史记录」弹窗有「图片 / 文本」两个页签'],
   ['historyTextOk', '「文本」页签能回看到收到的文本'],
   ['phoneSendCompressedOk', '发送到手机前压缩'],
