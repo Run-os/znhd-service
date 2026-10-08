@@ -12,11 +12,24 @@
  */
 const http = require('http');
 const path = require('path');
+const net = require('net');
 
-const PORT = Number(process.env.RELAY_TEST_PORT || 5698);
-process.env.PORT = String(PORT);
-// server.js 在 require 时就会 listen（并用 5s 定时器做离线扫描），故测试结束要显式 exit
-require(path.join(__dirname, '..', '..', 'relay-server', 'server.js'));
+/**
+ * 端口：默认**自动挑一个空闲端口**（而不是写死 5698）。
+ * 写死端口会在「上一次测试的进程还没退、再跑一次」时直接 EADDRINUSE 崩掉
+ * （v26.10.08-v10 实测踩到），自动取端口则永远不撞；需要固定端口时用 RELAY_TEST_PORT 覆盖。
+ */
+let PORT = Number(process.env.RELAY_TEST_PORT || 0);
+function pickFreePort() {
+    return new Promise((resolve, reject) => {
+        const s = net.createServer();
+        s.on('error', reject);
+        s.listen(0, '127.0.0.1', () => {
+            const p = s.address().port;
+            s.close(() => resolve(p));
+        });
+    });
+}
 
 const HOST = '127.0.0.1';
 const DEVICE = 'test-device-0001';
@@ -108,9 +121,13 @@ function check(name, ok) {
 }
 
 async function main() {
+    if (!PORT) PORT = await pickFreePort();
+    process.env.PORT = String(PORT);
+    // server.js 在 require 时就会 listen（并用 5s 定时器做离线扫描），故测试结束要显式 exit
+    require(path.join(__dirname, '..', '..', 'relay-server', 'server.js'));
     await sleep(300); // 等 listen
 
-    console.log('中继服务端测试（多手机 + 定向投递）：');
+    console.log(`中继服务端测试（多手机 + 定向投递，端口 ${PORT}）：`);
 
     // 1) 心跳必须带 phoneId
     const hbNoId = await req('POST', `/phone/heartbeat/${DEVICE}`, {});

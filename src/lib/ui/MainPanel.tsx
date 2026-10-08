@@ -471,11 +471,8 @@ export default function MainPanel({ host }: MainPanelProps) {
         settings: () => setSettingsOpen(true),
         phrases: () => setPhrasesOpen(true),
         history: () => {
-            // 图片、文本任意一类有内容就算有历史；两类都空时给提示（与旧「暂无待存文件」同款）
-            if (!recvImages.length && !recvTexts.length) {
-                notify.info('暂无历史记录');
-                return;
-            }
+            // v26.10.08-v10：**历史为空也要能打开**（按用户要求）—— 空态原本就由弹窗内的 Empty 呈现，
+            // 而且标题旁边新增了「发送测试图片」，空历史正是它最有用的场景。故不再提前拦截。
             setHistoryOpen(true);
         },
         phone: () => setPhoneOpen(true),
@@ -709,6 +706,7 @@ export default function MainPanel({ host }: MainPanelProps) {
             <RecvHistoryModal
                 open={historyOpen}
                 onClose={() => setHistoryOpen(false)}
+                relayServer={Allvalue.relayServer || ''}
                 images={recvImages}
                 texts={recvTexts}
                 onRemoveImage={(idx) =>

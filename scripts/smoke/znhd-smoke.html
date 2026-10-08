@@ -193,6 +193,43 @@
           reply(details, CHANGELOG_MD);
           return { abort: () => {} };
         }
+        // 「发送测试图片」（v26.10.08-v10）随机图源：返回一张**真 Blob**（我们的代码用 responseType:'blob'）
+        if (url.indexOf('t.alcy.cc') >= 0) {
+          const cv = document.createElement('canvas');
+          cv.width = 200;
+          cv.height = 150;
+          const ctx = cv.getContext('2d');
+          ctx.fillStyle = '#7c3aed';
+          ctx.fillRect(0, 0, 200, 150);
+          ctx.fillStyle = '#ffffff';
+          ctx.font = 'bold 24px sans-serif';
+          ctx.fillText('TEST', 62, 88);
+          cv.toBlob((b) => {
+            setTimeout(() => {
+              if (typeof details.onload === 'function') {
+                details.onload({
+                  status: 200,
+                  statusText: 'OK',
+                  response: b,
+                  responseText: '',
+                  responseHeaders: 'content-type: image/png',
+                  finalUrl: url,
+                });
+              }
+            }, 40);
+          }, 'image/png');
+          return { abort: () => {} };
+        }
+        // 「发送测试图片」投递：POST /u/<deviceId>（手机上传同一条路径）→ 记录载荷供断言
+        if (/\/u\/[a-z0-9-]{8,64}$/i.test(url) && String(details.method || '').toUpperCase() === 'POST') {
+          try {
+            window.__testImageSent = JSON.parse(details.data || '{}');
+          } catch (e) {
+            window.__testImageSent = { parseErr: String((e && e.message) || e) };
+          }
+          reply(details, { ok: true });
+          return { abort: () => {} };
+        }
         // 手机在线状态：模拟**两台**手机在线（v26.10.06-v4：多手机 + 定向投递相关断言）。
         // 两个 ID 前 8 位不同，才能验证「按短 ID 区分展示」不会把两台显示成同一个。
         if (/\/phone\/status\//.test(url)) {
@@ -441,6 +478,70 @@
         window.__historyText = !!(m && (m.textContent || '').includes('冒烟测试文本：收到一条文本消息'));
       }, 7900);
 
+      // ★ 快照（v26.10.08-v10）：下面这些「预览 / 画廊」事实必须在**清空之前**取值 ——
+      // 后面的「历史为空也能打开」用例会把图片清掉、弹窗卸载后预览也随之关闭，
+      // 若仍在报告时刻读实时 DOM，这些断言会假红（本次踩过）。
+      setTimeout(() => {
+        const hist =
+          Array.from(document.querySelectorAll('.ant-modal')).find((el) =>
+            ((el.querySelector('.ant-modal-title') || {}).textContent || '').includes('历史记录')
+          ) || null;
+        const preview = document.querySelector('.ant-image-preview');
+        const footer = preview ? preview.querySelector('.ant-image-preview-footer') : null;
+        const pbtn = preview ? preview.querySelector('button[aria-label="print"]') : null;
+        const actions = preview ? preview.querySelector('.ant-image-preview-actions') : null;
+        const fb = footer ? footer.getBoundingClientRect() : null;
+        const pb = pbtn ? pbtn.getBoundingClientRect() : null;
+        const hit = pb && pb.width ? document.elementFromPoint(pb.x + pb.width / 2, pb.y + pb.height / 2) : null;
+        const centered =
+          !!actions &&
+          Array.from(actions.querySelectorAll('button'))
+            .filter((b) => b.querySelector('svg'))
+            .every((b) => {
+              const bb = b.getBoundingClientRect();
+              const sb = b.querySelector('svg').getBoundingClientRect();
+              return bb.height > 0 && sb.height > 0 && Math.abs(bb.top + bb.height / 2 - (sb.top + sb.height / 2)) <= 2;
+            });
+        const histRoot = hist ? hist.closest('.ant-modal-root') : null;
+        window.__snap = {
+          galleryOk: !!hist && !!hist.querySelector('.ant-modal-body .ant-image img'),
+          footerInViewport: !!(fb && fb.top >= 0 && fb.bottom <= window.innerHeight + 1),
+          footerHit: !!(hit && footer && footer.contains(hit)),
+          iconsCentered: centered,
+          singleMask: !!histRoot && !histRoot.querySelector('.ant-modal-mask'),
+        };
+      }, 8000);
+
+      // 「发送测试图片」（v26.10.08-v10）：点标题旁的按钮 → 代码去图源取图（桩返回真 Blob）→ 转 base64
+      // → POST /u/<deviceId>（桩记录载荷）。断言只看「有没有真把图片投出去」。
+      setTimeout(() => {
+        const btn = deepQuery((el) => el.tagName === 'BUTTON' && (el.textContent || '').includes('发送测试图片'));
+        window.__clickedTestImage = !!btn;
+        if (btn) btn.click();
+      }, 8300);
+
+      // 「历史为空也能打开」（v26.10.08-v10）：把两个页签都清空（清空后弹窗会自动关闭），
+      // 再点面板入口 —— 旧实现会在这一步被提前拦截（只弹提示、不开窗）。
+      // 此时页签停在「文本」（7200ms 切过去的），所以第一次清的是文本、第二次清的是图片。
+      const clickClearBtn = () =>
+        deepQuery((el) => el.tagName === 'BUTTON' && /^清空/.test((el.textContent || '').trim()));
+      setTimeout(() => {
+        const b = clickClearBtn();
+        window.__cleared1 = (b && b.textContent) || '';
+        if (b) b.click();
+      }, 8600);
+      setTimeout(() => {
+        window.__clickedHistory1 = clickByText('历史记录');
+      }, 8900);
+      setTimeout(() => {
+        const b = clickClearBtn();
+        window.__cleared2 = (b && b.textContent) || '';
+        if (b) b.click();
+      }, 9200);
+      setTimeout(() => {
+        window.__clickedHistory2 = clickByText('历史记录');
+      }, 9500);
+
       // 「发送到手机」：打开抽屉 → 选一张 3000x2000 大图 → 发送，断言实际 POST 出去的是压缩后的 JPEG。
       // 旧实现是 FileReader 直读原文件再 POST（原图直传），与「手机 → 电脑」的 canvas 压缩不对称：
       // 一张 3MB 照片就要上行 4MB（base64 +33%），且原图 ≥9MB 直接撞 12MB 单请求上限被拒。
@@ -658,15 +759,10 @@
           })(),
           // 文本弹窗
           textPopup: text.includes('冒烟测试文本：收到一条文本消息'),
-          // 收图后自动弹出的「历史记录」弹窗（图片页签）：标题含「历史记录」且真的渲染出了缩略图。
-          // v26.10.08-v3 起画廊并入「历史记录」弹窗，标题由「收到的图片」改为「历史记录」，
-          // 故断言对象随之改到同类对象上（弹窗 + 里面的 antd 缩略图），不是删除。
-          galleryText: (() => {
-            const m = Array.from(document.querySelectorAll('.ant-modal')).find((el) =>
-              ((el.querySelector('.ant-modal-title') || {}).textContent || '').includes('历史记录')
-            );
-            return !!m && !!(m.querySelector('.ant-modal-body .ant-image img'));
-          })(),
+          // 收到图后自动弹出的「历史记录」弹窗（图片页签）：标题含「历史记录」且真的渲染出了缩略图。
+          // v26.10.08-v3 起画廊并入「历史记录」弹窗，标题由「收到的图片」改为「历史记录」，故断言对象改到同类对象上。
+          // ⚠️ v26.10.08-v10：取值改自 8000ms 的**快照** —— 后面「历史为空」用例会清空图片，实时 DOM 已不是当时状态。
+          galleryText: !!(window.__snap && window.__snap.galleryOk),
           // 常用语成功路径（YAML 解析出按钮）
           phrasesLoaded: text.includes('冒烟常用语A'),
           phrasesClicked: !!window.__clickedPhrases,
@@ -731,36 +827,13 @@
           })(),
           // 预览工具栏的挂载与层级（v26.10.08-v7）：宿主页 body 带 transform 时（本页已常驻该规则），
           // 预览必须仍在**视口内**、且「打印」按钮正中心的最上层仍是工具栏自己（= 没被放大后的图片盖住）。
-          previewToolbarOk: (() => {
-            const root = document.querySelector('.ant-image-preview');
-            if (!root) return false;
-            const footer = root.querySelector('.ant-image-preview-footer');
-            const btn = root.querySelector('button[aria-label="print"]');
-            if (!footer || !btn) return false;
-            const fb = footer.getBoundingClientRect();
-            // 必须在视口内（被 body 的包含块困住时会跑到 y=2330 这种视口外）
-            if (!(fb.top >= 0 && fb.bottom <= window.innerHeight + 1)) return false;
-            const b = btn.getBoundingClientRect();
-            if (!b.width || !b.height) return false;
-            const hit = document.elementFromPoint(b.x + b.width / 2, b.y + b.height / 2);
-            return !!(hit && footer.contains(hit));
-          })(),
+          // ⚠️ v26.10.08-v10：同样取 8000ms 的快照（清空图片后预览会被卸载）。
+          previewToolbarOk: !!(window.__snap && window.__snap.footerInViewport && window.__snap.footerHit),
           // 预览工具栏的图标必须与按钮同一水平线（v26.10.08-v8）：
           // 本页常驻的宿主页规则 `svg { margin: -2.75em auto 0 }` 会把图标整体顶出胶囊
           // （实测偏移 25px）⇒ 图标落到胶囊上方、与背景同色而「看不见，只剩一条灰色胶囊」。
           // 这条守的是 uiReset 的 svg 复位规则必须覆盖 `.ant-image-preview svg`（漏了就会红）。
-          previewIconCenteredOk: (() => {
-            const actions = document.querySelector('.ant-image-preview-actions');
-            if (!actions) return false;
-            const btns = Array.from(actions.querySelectorAll('button')).filter((b) => b.querySelector('svg'));
-            if (!btns.length) return false;
-            return btns.every((b) => {
-              const bb = b.getBoundingClientRect();
-              const sb = b.querySelector('svg').getBoundingClientRect();
-              if (!bb.height || !sb.height) return false;
-              return Math.abs(bb.top + bb.height / 2 - (sb.top + sb.height / 2)) <= 2;
-            });
-          })(),
+          previewIconCenteredOk: !!(window.__snap && window.__snap.iconsCentered),
           // 「历史记录」（v26.10.08-v3）：① 弹窗里必须有「图片」「文本」两个页签（且顺序一致）；
           // ② 切到文本页签后，能回看到之前收到的那条文本（= 文本真的进了历史，而不只是弹窗显示过）。
           historyTabsOk: !!(
@@ -770,6 +843,33 @@
             window.__historyTabs[1].indexOf('文本') >= 0
           ),
           historyTextOk: !!window.__historyText,
+          // 「发送测试图片」+「历史为空也能打开」（v26.10.08-v10）
+          //   ① 弹窗**标题栏**里必须有「发送测试图片」按钮；
+          //   ② 点它之后，代码确实把图片 base64 POST 到了 /u/<deviceId>（= 手机上传同一条路径）；
+          //   ③ 两个页签都清空后，再点面板入口**仍能打开**（旧实现会在这一步只弹提示、不开窗）。
+          testImageBtnOk: (() => {
+            const m = Array.from(document.querySelectorAll('.ant-modal')).find((el) =>
+              ((el.querySelector('.ant-modal-title') || {}).textContent || '').includes('历史记录')
+            );
+            if (!m) return false;
+            const title = m.querySelector('.ant-modal-title');
+            return Array.from(title ? title.querySelectorAll('button') : []).some((b) =>
+              (b.textContent || '').includes('发送测试图片')
+            );
+          })(),
+          testImageSentOk: !!(
+            window.__testImageSent &&
+            typeof window.__testImageSent.data === 'string' &&
+            window.__testImageSent.data.length > 100 &&
+            /^image\//.test(window.__testImageSent.mime || '')
+          ),
+          historyEmptyOpenOk: (() => {
+            const m = Array.from(document.querySelectorAll('.ant-modal')).find((el) =>
+              ((el.querySelector('.ant-modal-title') || {}).textContent || '').includes('历史记录')
+            );
+            const t = m ? m.textContent || '' : '';
+            return t.includes('图片（0）') && t.includes('文本（0）');
+          })(),
           // 已连接手机（v26.10.06-v4）：设备互联弹窗要显示**数量**与**手机 ID 列表**，
           // 且 ≥2 台时要有常驻多选（默认全选）。
           phoneCountOk: (() => {
@@ -798,15 +898,8 @@
           // 预览是全屏浮层，底下那层弹窗遮罩完全被盖住却仍会把画面再压暗一层
           // （两层 rgba(0,0,0,0.45) 合成 0.6975，白底灰度 77；单层是 140 —— 用户反馈的「没官方明亮」）。
           // 兼容 v6/v5：这里只认「历史记录」弹窗自己那个 modal-root 的遮罩是否已撤掉。
-          previewSingleMaskOk: (() => {
-            if (!document.querySelector('.ant-image-preview')) return false;
-            const hist = Array.from(document.querySelectorAll('.ant-modal')).find((m) =>
-              ((m.querySelector('.ant-modal-title') || {}).textContent || '').includes('历史记录')
-            );
-            if (!hist) return false;
-            const root = hist.closest('.ant-modal-root');
-            return !!root && !root.querySelector('.ant-modal-mask');
-          })(),
+          // ⚠️ v26.10.08-v10：同样取 8000ms 的快照。
+          previewSingleMaskOk: !!(window.__snap && window.__snap.singleMask),
           // 发送到手机：必须先压缩再发（v26.10.06-v6 回归断言）。判定要点：
           // 实际 POST 的字节是 JPEG、最长边 ≤1600（压缩上限）、且比原图小。
           phoneSendCheck: window.__phoneSendCheck || null,
@@ -865,6 +958,9 @@
           report.previewSingleMaskOk &&
           report.historyTabsOk &&
           report.historyTextOk &&
+          report.testImageBtnOk &&
+          report.testImageSentOk &&
+          report.historyEmptyOpenOk &&
           report.phoneCountOk &&
           report.phoneListOk &&
           report.phoneMultiPickOk &&

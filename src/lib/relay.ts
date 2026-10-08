@@ -601,6 +601,118 @@ interface SendToPhoneOptions {
 }
 
 /**
+ * 「发送测试图片」用的随机图源（v26.10.08-v10）。
+ * 直接返回一张图片（会 302 到具体图片），故用 GM_xmlhttpRequest 取二进制。
+ */
+export const TEST_IMAGE_URL = 'https://t.alcy.cc/fj';
+
+/** Blob → 不带前缀的 base64（FileReader；与手机上传页同一套做法） */
+function blobToBase64(blob: Blob): Promise<string> {
+    return new Promise<string>((resolve, reject) => {
+        const fr = new FileReader();
+        fr.onload = () => resolve(String(fr.result || '').split(',')[1] || '');
+        fr.onerror = () => reject(new Error('读取图片失败'));
+        fr.readAsDataURL(blob);
+    });
+}
+
+/** 按 MIME 给测试图起个文件名（仅用于日志与下载命名） */
+function testImageName(mime: string): string {
+    const ext =
+        { 'image/jpeg': '.jpg', 'image/png': '.png', 'image/webp': '.webp', 'image/gif': '.gif' }[mime] || '.jpg';
+    return 'test-image-' + Date.now() + ext;
+}
+
+/** sendTestImage 的入参 */
+interface SendTestImageOptions {
+    /** 中继地址（未配置时无法投递，调用方应先拦） */
+    server?: string | null;
+    /** 本机 deviceId：测试图**当作手机上传**投到 /u/<deviceId>，再经正常通道回到本脚本 */
+    uuid: string;
+    url?: string;
+    onOk?: (info: { bytes: number; mime: string }) => void;
+    onFail?: (msg: string) => void;
+}
+
+/**
+ * 「发送测试图片」（v26.10.08-v10）：从随机图源取一张图，**当作手机上传**投递到本机中继
+ * （`POST /u/<本机 deviceId>`），于是它经**正常的「手机 → 电脑」通道**回到本脚本、进历史记录。
+ *
+ * 为什么走中继而不是本地直接塞进数组：这样这条路径与真实收图**完全一致**
+ * （中继入队 → 长轮询取走 → onImage → 历史），可用它验证整条链路，也能同步到同一台电脑的其它标签页。
+ * 代价是必须配置好中继地址（未配置时调用方直接给出提示，不发请求）。
+ *
+ * ⚠️ 用 GM_xmlhttpRequest 而不是 fetch：税务页 CSP 限制 connect-src，跨域取图也需绕过 CORS。
+ */
+export function sendTestImage(opt: SendTestImageOptions) {
+    const server = (opt.server || '').trim().replace(/\/+$/, '');
+    const url = opt.url || TEST_IMAGE_URL;
+    const fail = (msg: string) => {
+        if (opt.onFail) opt.onFail(msg);
+    };
+    if (!/^https?:\/\//i.test(server)) {
+        fail('未配置中继服务器，无法投递测试图片');
+        return;
+    }
+    try {
+        GM_xmlhttpRequest({
+            method: 'GET',
+            url: url,
+            responseType: 'blob',
+            timeout: 20000,
+            onload: (resp) => {
+                const blob: Blob | undefined = resp && resp.response;
+                if (!blob || typeof blob.size !== 'number' || !blob.size) {
+                    fail('取图失败：响应不是有效的二进制图片');
+                    return;
+                }
+                const mime = blob.type || 'image/jpeg';
+                const name = testImageName(mime);
+                // 体积预检：与手机上传同一套判据，避免 base64 膨胀后撞 12MB 上限
+                if (imagePayloadBytes(blob, name, mime) > RELAY_MAX_BODY) {
+                    fail('测试图片过大（超过中继单次上限约 12MB）');
+                    return;
+                }
+                blobToBase64(blob)
+                    .then((b64) => {
+                        if (!b64) {
+                            fail('取图失败：图片内容为空');
+                            return;
+                        }
+                        GM_xmlhttpRequest({
+                            method: 'POST',
+                            url: server + '/u/' + encodeURIComponent(opt.uuid),
+                            headers: { 'Content-Type': 'application/json' },
+                            data: JSON.stringify({ name: name, mime: mime, data: b64 }),
+                            timeout: 20000 + Math.round(b64.length / 200),
+                            onload: (r2) => {
+                                let j: { ok?: boolean; error?: string } | null = null;
+                                try {
+                                    j = JSON.parse(r2.responseText);
+                                } catch (e) {
+                                    j = null;
+                                }
+                                if (j && j.ok) {
+                                    if (opt.onOk) opt.onOk({ bytes: blob.size, mime: mime });
+                                } else {
+                                    fail((j && j.error) || '投递失败（HTTP ' + r2.status + '）');
+                                }
+                            },
+                            onerror: () => fail('网络错误，无法投递到中继'),
+                            ontimeout: () => fail('投递超时'),
+                        });
+                    })
+                    .catch((e) => fail('取图失败：' + ((e && e.message) || '读取错误')));
+            },
+            onerror: () => fail('网络错误，无法获取测试图片'),
+            ontimeout: () => fail('获取测试图片超时'),
+        });
+    } catch (e) {
+        fail('发送测试图片失败：' + ((e && e.message) || '未知错误'));
+    }
+}
+
+/**
  * 电脑端 → 手机端 发送（图片或文本）。POST 到中继 /phone/send/<deviceId>。
  * 仅负责投递；手机是否在线由调用方先查 /phone/status 决定（离线时调用方直接拦截）。
  * @param {SendToPhoneOptions} opt - { server, uuid, payload, onOk, onFail }

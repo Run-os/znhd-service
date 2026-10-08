@@ -2,7 +2,7 @@ import { Button, Empty, Image, Modal, Space, Tabs, Typography } from 'antd';
 import { PrinterOutlined } from '@ant-design/icons';
 import { Children, cloneElement, useEffect, useRef, useState, type ReactNode } from 'react';
 import { useReactToPrint } from 'react-to-print';
-import { copyImageToClipboard } from '@/lib/relay';
+import { copyImageToClipboard, getDeviceId, sendTestImage, TEST_IMAGE_URL } from '@/lib/relay';
 import { safeCopyText } from '@/lib/clipboard';
 import { addLog } from '@/lib/logger';
 import { downloadFileName, type GalleryImage, type GalleryText } from '@/lib/gallery';
@@ -13,6 +13,8 @@ const { Text } = Typography;
 export interface RecvHistoryModalProps {
     open: boolean;
     onClose: () => void;
+    /** 中继地址：标题栏的「发送测试图片」要经它投递（未配置时按钮会给出提示） */
+    relayServer: string;
     /** 收到的图片（缩略图 + 放大预览 + 打印） */
     images: GalleryImage[];
     /** 收到的文本（可回看的历史；与「自动弹出的最新一条文本」是两回事，见 gallery.ts 的 GalleryText） */
@@ -96,6 +98,7 @@ const PRINT_BOX_H_MM = A4_H_MM - 3; // 294（含内边距；留 3mm 防空白页
 export default function RecvHistoryModal({
     open,
     onClose,
+    relayServer,
     images,
     texts,
     onRemoveImage,
@@ -107,6 +110,8 @@ export default function RecvHistoryModal({
     const [tab, setTab] = useState<'image' | 'text'>('image');
     /** 文本行的复制反馈：记录是**第几行**，避免所有行一起改文案 */
     const [copyState, setCopyState] = useState<{ idx: number; ok: boolean } | null>(null);
+    /** 「发送测试图片」是否正在取图/投递（防重复点击 + 按钮 loading） */
+    const [testSending, setTestSending] = useState(false);
     /**
      * 放大预览是否打开（v26.10.08-v9）。
      *
@@ -212,6 +217,38 @@ export default function RecvHistoryModal({
             setCopyState({ idx, ok });
             if (ok) addLog('文本已复制到剪贴板', 'success');
             window.setTimeout(() => setCopyState(null), 1500);
+        });
+    };
+
+    /**
+     * 「发送测试图片」（v26.10.08-v10，按用户要求）：从 `TEST_IMAGE_URL` 取一张随机图，
+     * **当作手机上传**投递到中继 `/u/<本机 deviceId>`，再经正常的「手机 → 电脑」通道回到本脚本、进历史记录。
+     *
+     * 这样空历史也能一键验证「收图 → 画廊 → 预览 → 打印」整条链路，不必掏手机。
+     * ⚠️ 需要先配置中继地址（未配置时 sendTestImage 会直接失败并给出提示，不发请求）。
+     */
+    const doSendTestImage = () => {
+        if (testSending) return;
+        setTestSending(true);
+        addLog('[测试图片] 正在从 ' + TEST_IMAGE_URL + ' 取图并投递到本机…', 'info');
+        sendTestImage({
+            server: relayServer,
+            uuid: getDeviceId(),
+            onOk: (info) => {
+                setTestSending(false);
+                addLog(
+                    '[测试图片] 已投递（' +
+                        info.mime +
+                        '，约 ' +
+                        Math.max(1, Math.round(info.bytes / 1024)) +
+                        'KB），片刻后会出现在「图片」页签',
+                    'success'
+                );
+            },
+            onFail: (msg) => {
+                setTestSending(false);
+                addLog('[测试图片] 失败：' + msg, 'error', true);
+            },
         });
     };
 
@@ -359,7 +396,15 @@ export default function RecvHistoryModal({
     return (
         <Modal
             open={open}
-            title={`历史记录（图片 ${images.length} · 文本 ${texts.length}）`}
+            title={
+                // 标题旁边放「发送测试图片」：空历史时也能一键灌入一张图来验证整条链路
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                    <span>{`历史记录（图片 ${images.length} · 文本 ${texts.length}）`}</span>
+                    <Button size="small" loading={testSending} onClick={doSendTestImage}>
+                        发送测试图片
+                    </Button>
+                </div>
+            }
             onCancel={onClose}
             getContainer={getOverlayContainer}
             width={620}
