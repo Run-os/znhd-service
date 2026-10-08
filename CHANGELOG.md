@@ -11,6 +11,29 @@
 
 ---
 
+### znhd.user.js v26.10.08-v7
+- **修「点击缩略图放大后，图片盖住下方工具栏」**（用户反馈）。根因**不是**叠加顺序，而是**预览浮层挂错了地方**：
+  - **排查过程（先证伪、再定位）**：在真实页面里做命中测试 —— 1~50 倍缩放下，工具栏胶囊中心与「打印」按钮中心的最上层元素**始终是按钮自己**（`topIsInFooter=true`），截图上工具栏也确实压在图片之上。**即在干净环境下复现不出来**。
+  - 于是改从「本仓库记录过的宿主页坑」入手：`panelHost.tsx` 早就写过**税务页 `body` 常被加 `transform`/`filter`，会困住 `position: fixed` 的浮层**。注入 `body{transform:translateZ(0)}` 后**立刻复现**（页面滚到 y=600）：
+
+    | | 普通 body | body 带 transform |
+    |---|---|---|
+    | 预览根盒子 | 视口大小 | `y=-579, h=3000`（= body 的盒子） |
+    | 工具栏位置 | `y=709`（视口内） | **`y=2330`（视口外）** |
+    | 「打印」按钮中心最上层 | `actions-action`（按钮自己） | **`img`（图片）** |
+
+    即：`position: fixed` 的预览被 transformed body 困住后，以 **body 的盒子**为包含块 ⇒ 工具栏被推到视口外，图片恰好占住它原来的位置，看起来就是「图片盖住了操作栏」。
+  - **修复**：给 `Image.PreviewGroup` 显式指定挂载容器 `getContainer: getPreviewHost` —— 自建一个挂在 `documentElement` 下的宿主 div（不在被 transform 的 body 里）。
+  - ⚠️ **重要发现：`getContainer: getOverlayContainer`（返回 `document.documentElement`）在本 antd/rc-portal 版本下**不生效**** —— 实测预览仍被挂到 `document.body`（我们的 Modal 也是一样）。**必须传一个真实存在的子元素**（自建宿主 div）才生效。这条已写进代码注释，别改回 `getOverlayContainer`。
+- **冒烟断言（只增不删，34 → 35 项）**：
+  - 新增 **`previewToolbarOk`**：预览工具栏必须在视口内、且「打印」按钮正中心的最上层仍属于工具栏（= 没被放大后的图片盖住）。
+  - **敌意 CSS 常驻 `body { transform: translateZ(0) }`**（`znhd-smoke.html`）：把税务页这个坑固化进测试页。它同时守卫两件事 —— 面板/弹窗挂 `documentElement` 因此不受影响，而预览必须自己躲开。
+- ✅ **反向验证**：临时去掉 `getContainer` → 重建后**仅 `previewToolbarOk` 变红**（其余 34 项全绿，退出码 1），恢复后 35 项全绿。
+- 验证：`npm run typecheck` 0 错、`npm run build` 结论行 `compiled`、`npm run check` 通过、`npm run verify`（冒烟 35 项 + 服务端 11 项）全绿、`npx @ant-design/cli lint ./src` `issues: []`。
+- 三处版本号一致（脚本 `26.10.08-v7`）；仓库根过渡跳板已重新拷贝为与 `dist/znhd.user.js` 逐字节一致。
+- ⚠️ **只做本地提交，未推送**。
+
+
 ### znhd.user.js v26.10.08-v6
 - **【设备互联】支持多台手机**（按用户要求，两端同步改造；服务端见下面 relay-server 条目）：
   - **显示已连接手机数量**：在线胶囊由「手机已连接，可发送」改为 **「已连接手机 N 台，可发送」**；下方新增「已连接手机（N）」区块，列出每台手机的**设备 ID**（UUID 取前 8 位 + `…`）。

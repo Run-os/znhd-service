@@ -24,6 +24,15 @@
       svg {
         margin: -2.75em auto 0;
       }
+      /* ★ v26.10.08-v7：税务页 body 上带 transform 会形成独立层叠上下文，把 position:fixed 的浮层
+         **困在 body 的盒子里**（本仓库 panelHost.tsx 有结论）。这里常驻这条规则，守卫两类事情：
+           ① 我们的面板/弹窗挂 documentElement ⇒ 不受影响；
+           ② antd Image 预览默认挂 body ⇒ 必须显式 getContainer 改挂 documentElement，否则工具栏会被推出视口、
+             表现为「放大后图片盖住了下方的操作栏」（真实用户反馈的就是这个）。
+         实测（1280×800、页面滚到 y=600）：不修时预览根 y=-579/h=3000、工具栏 y=2330（视口外）。 */
+      body {
+        transform: translateZ(0);
+      }
     </style>
 
     <!-- ===== GM API 桩（模拟油猴环境 + 按真实中继协议返回数据） ===== -->
@@ -720,6 +729,22 @@
             const pad = /padding:\s*([\d.]+)mm/.exec(s);
             return !!pad && parseFloat(pad[1]) > 0;
           })(),
+          // 预览工具栏的挂载与层级（v26.10.08-v7）：宿主页 body 带 transform 时（本页已常驻该规则），
+          // 预览必须仍在**视口内**、且「打印」按钮正中心的最上层仍是工具栏自己（= 没被放大后的图片盖住）。
+          previewToolbarOk: (() => {
+            const root = document.querySelector('.ant-image-preview');
+            if (!root) return false;
+            const footer = root.querySelector('.ant-image-preview-footer');
+            const btn = root.querySelector('button[aria-label="print"]');
+            if (!footer || !btn) return false;
+            const fb = footer.getBoundingClientRect();
+            // 必须在视口内（被 body 的包含块困住时会跑到 y=2330 这种视口外）
+            if (!(fb.top >= 0 && fb.bottom <= window.innerHeight + 1)) return false;
+            const b = btn.getBoundingClientRect();
+            if (!b.width || !b.height) return false;
+            const hit = document.elementFromPoint(b.x + b.width / 2, b.y + b.height / 2);
+            return !!(hit && footer.contains(hit));
+          })(),
           // 「历史记录」（v26.10.08-v3）：① 弹窗里必须有「图片」「文本」两个页签（且顺序一致）；
           // ② 切到文本页签后，能回看到之前收到的那条文本（= 文本真的进了历史，而不只是弹窗显示过）。
           historyTabsOk: !!(
@@ -806,6 +831,7 @@
           report.printBtnOk &&
           report.printIframeOk &&
           report.printA4Ok &&
+          report.previewToolbarOk &&
           report.historyTabsOk &&
           report.historyTextOk &&
           report.phoneCountOk &&

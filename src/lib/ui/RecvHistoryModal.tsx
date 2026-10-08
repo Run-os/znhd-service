@@ -31,6 +31,31 @@ function fmtTime(ts: number): string {
 }
 
 /**
+ * 放大预览浮层的挂载容器（v26.10.08-v7 修「放大后图片盖住下方工具栏」）。
+ *
+ * ⚠️ **必须自己建一个挂在 `documentElement` 下的宿主 div，不能直接用 `getOverlayContainer()`**：
+ * antd 的 Image 预览是 `position: fixed` 浮层，**默认 portal 到 `document.body`**；而税务页的 `body`
+ * 常被加 `transform`/`filter` 形成独立层叠上下文（本仓库 `panelHost.tsx` 已记录这个坑），
+ * 一旦被放进去，浮层就以 **body 的盒子**而不是视口为包含块 ⇒ 工具栏被推到视口外、图片占住它的位置。
+ *
+ * 实测（1280×800、页面滚到 y=600、`body{transform:translateZ(0)}`）：
+ *   · 不修：预览根 `y=-579 h=3000`（= body 盒子），工具栏 `y=2330`（视口外），打印按钮中心命中的是 `img`；
+ *   · 传 `getContainer: getOverlayContainer`（返回 `document.documentElement`）：**仍然被挂到 body**，
+ *     即这个写法在本 antd/rc-portal 版本下不生效（实测，别改回去）；
+ *   · 传本函数（自建宿主 div）：预览根 `y=0`，工具栏回到视口内，命中测试通过。
+ */
+function getPreviewHost(): HTMLElement {
+    const ID = '__znhd_preview_host__';
+    let el = document.getElementById(ID);
+    if (!el) {
+        el = document.createElement('div');
+        el.id = ID;
+        document.documentElement.appendChild(el);
+    }
+    return el;
+}
+
+/**
  * A4 打印版式（v26.10.08-v4 建，v5 起改为「零页边距 + 内容自己留白」）。
  *
  * ⚠️ **为什么 `@page` 的 margin 必须是 0**：浏览器的「页眉和页脚」（标题 / URL / 日期 / 页码）
@@ -190,6 +215,11 @@ export default function RecvHistoryModal({
                 <Image.PreviewGroup
                     items={images.map((i) => i.previewUrl)}
                     preview={{
+                        /**
+                         * ⚠️ **必须显式指定挂载容器**（v26.10.08-v7 修「放大后图片盖住下方工具栏」）：
+                         * 原因、实测数据与「为什么不能直接用 getOverlayContainer」都写在 `getPreviewHost` 的注释里。
+                         */
+                        getContainer: getPreviewHost,
                         /**
                          * 「打印」放在**放大预览的工具栏**里（v26.10.08-v2，按用户要求从缩略图行挪过来）。
                          *
