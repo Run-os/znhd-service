@@ -1,6 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { App as AntApp, Badge, Button, Card, Col, Empty, Image, Input, Modal, Progress, Row, Space, Tag, Typography } from 'antd';
-import { blobToBase64, parseDeviceId, postItem, startPhoneRelay, type ConnState, type RecvItem } from './lib/relay';
+import {
+    blobToBase64,
+    getPhoneId,
+    parseDeviceId,
+    postItem,
+    startPhoneRelay,
+    type ConnState,
+    type RecvItem,
+} from './lib/relay';
 import { prepareImage } from './lib/image';
 
 const { Title, Text, Paragraph } = Typography;
@@ -38,6 +46,8 @@ const uid = () => 'z' + ++seq + '-' + Date.now().toString(36);
 export default function App() {
     const { message } = AntApp.useApp();
     const deviceId = useMemo(() => parseDeviceId(window.location.pathname), []);
+    // 本机（手机）设备 ID：持久化在 localStorage，用于让电脑端区分「哪台手机在线」
+    const phoneId = useMemo(() => getPhoneId(), []);
 
     const [conn, setConn] = useState<ConnState>({ state: 'offline' });
     const [pending, setPending] = useState<PendingImage[]>([]);
@@ -83,8 +93,8 @@ export default function App() {
             setConn({ state: 'error', msg: '链接无效：未识别到设备ID，请重新生成二维码' });
             return;
         }
-        return startPhoneRelay({ deviceId, onConn: setConn, onItem });
-    }, [deviceId, onItem]);
+        return startPhoneRelay({ deviceId, phoneId, onConn: setConn, onItem });
+    }, [deviceId, phoneId, onItem]);
 
     // ===== 选图（多选）→ 逐张压缩 → 进待发列表 =====
     const onPick = async (files: FileList | null) => {
@@ -264,7 +274,9 @@ export default function App() {
                 </Paragraph>
                 <div style={{ fontSize: 12 }}>{connBadge()}</div>
                 <Text type="secondary" style={{ fontSize: 11, wordBreak: 'break-all' }}>
-                    设备ID：{deviceId || '未识别，请重新生成二维码'}
+                    本机（手机）ID：{phoneId}
+                    <br />
+                    已连接的脚本端设备ID：{deviceId || '未识别，请重新生成二维码'}
                 </Text>
             </header>
 

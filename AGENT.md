@@ -90,7 +90,7 @@
 > **有意未拆出的模块**：`phrases`（常用语加载/缓存/请求序号）。`loadPhrasesData` 直接读写 React 状态（`phrasesData`/`setPhrasesData`/`setPhrasesLoading`）与 `phrasesRequestSeq`，抽成独立模块必须引入 `getData/setData` 桥接，属于「为拆而拆」，与约束 3「不得无理由重构可运行逻辑」冲突，故保留在 `src/lib/ui/MainPanel.tsx` 内。如日后要拆，请连同组件状态一起改成自定义 hook。
 | `src/global.d.ts` | 全局声明：`PRODUCTION`/`FILENAME`（DefinePlugin 注入）+ `jsyaml`/`QRCode`/`heic2any`（`@require` 注入）。GM_* 由 `@types/tampermonkey` 提供。 |
 | `public/index.html` | 本地调试宿主页（HtmlWebpackPlugin 模板 + devServer 静态根）。 |
-| `scripts/smoke/` | 无头端到端冒烟：`server.js`（本地服务）+ `znhd-smoke.html`（GM 桩测试页）+ `run.js`（puppeteer）。`npm run verify`，**已接入 CI**。目录名沿用模板外的最小新增（模板无测试目录）。 |
+| `scripts/smoke/` | 两套验证：① 无头端到端冒烟 `server.js`（本地服务）+ `znhd-smoke.html`（GM 桩测试页）+ `run.js`（puppeteer），**测的是浏览器里的脚本产物**；② `relay.js`（纯 Node，**真实起 relay-server 打真实 HTTP**），测多手机注册与**按手机定向投递**——`createChannel` 的投递逻辑是历史踩坑重灾区，而冒烟的 GM 桩碰不到真实服务端，故必须单独有这一套。`npm run verify` = 两者串跑（`verify:smoke` / `verify:relay` 可单跑），**已接入 CI**。目录名沿用模板外的最小新增（模板无测试目录）。 |
 | `relay-server/server.js` | 中继服务本体（纯 Node 内置模块，运行时不装依赖）：路由、通道、`/health`。**手机上传页已不再是内联字符串**，见下两行。`PORT = process.env.PORT \|\| 5689`。 |
 | `relay-server/upload-page.js` | 只负责把构建产物送出去：启动时读 `public/index.html`（缺失时给可读兜底页）。 |
 | `relay-server/public/` | **手机上传页的构建产物（提交进仓库）**：`index.html` + `assets/*`。由 `web/` 经 Vite 构建产出，`server.js` 同源托管 `/assets/*`（`immutable` 长缓存 + 内置 zlib gzip）。改了 `web/` 必须 `npm run build:web` 并提交，CI 有漂移检查。 |
@@ -173,7 +173,7 @@
 2. 手机 GET `/u/<id>` 拿内联上传页 → 前端压缩/HEIC 转码 → POST `/u/<id>` 入 `forwardChannel`（FIFO，超 `MAX_QUEUE` 丢最旧）。
 3. 服务端 `forwardChannel` 入队即投递：把队头一条**广播**给所有在等连接（各一份拷贝）；无连接等待时条目留队列。
 4. 电脑端 `GM_xmlhttpRequest` 长轮询 `/recv/<id>`（绕过税务页 CSP），按 `type` 分流 image/text 弹窗。
-5. 反向：手机每 8s POST `/phone/heartbeat` 报活；电脑先 `GET /phone/status` 判在线再 `POST /phone/send`；服务端每 5s 扫描超 `PHONE_TTL` 判离线（只告警一次）。
+5. 反向：手机每 8s POST `/phone/heartbeat/<电脑ID>`（**body 必须带 `{phoneId}`**，v26.10.06-v4 起）报活；电脑先 `GET /phone/status/<电脑ID>` 拿 `{online, phones[]}` 判在线并列出手机；服务端每 5s 扫描超 `PHONE_TTL` 判离线（逐台、只告警一次）。发送走 `POST /phone/send`（body 可带 `targets: 'all' | [手机ID...]`），手机端长轮询 `/phone/recv/<电脑ID>?phoneId=xxx`：**定向条目只投给目标手机，广播条目所有人都收**，详见 `createChannel` 的 `perRecipient` 分支。
 
 ### 监控/语音（内部要点；对外细节见 ReadMe）
 - `startMonitoring` 每 `CHECK_INTERVAL=3000ms`；非工作时段跳过；人数取自 `.count:nth-child(2)`。
@@ -190,7 +190,7 @@
 | 结构 | 含义 |
 |---|---|
 | `forwardChannel` / `reverseChannel` | `createChannel()` 工厂两个实例（正向/反向）；各自闭包内持 `pending`（FIFO 条目队列，上限 100）+ `waiting`（长轮询在等连接 `Set<res>`，广播目标）+ `sweepExpired()` |
-| `phoneOnline` / `phoneWasOnline` | 手机最近心跳时间 / 曾在线集合（离线只告警一次） |
+| `phoneOnline` / `phoneWasOnline` | **多手机注册表**（v26.10.06-v4 起）：`deviceId -> Map<phoneId, lastSeen>` / `Set<"deviceId/phoneId">`。⚠️ 旧实现是 `deviceId -> lastSeen`（一台电脑一个布尔位，多台手机互相覆盖），已废弃。手机身份 = 手机页 localStorage 的 `znhd_phone_id`，心跳与长轮询都必须带；不带即 400（**不兼容老手机页**） |
 
 条目 `Item = {type:'image'|'text', name?, mime?, data?, text?, ts}`；常量 `PENDING_TTL=60s`、`MAX_BODY=12MB`（超限回 413）、`PHONE_TTL=20s`、`MAX_QUEUE=100`、`BODY_TIMEOUT=60s`（读请求体超时回 408；Node14 无默认 requestTimeout，故在 `readBody` 内自管定时器）。手机页（`uploadPageHtml` 内联）另有 `MAX_RECV=27` 收件画廊上限（与脚本端 `MAX_GALLERY=27` 对齐）。
 
@@ -235,6 +235,7 @@
 | **antd Modal 首屏滚动** | `destroyOnHidden` 下 Modal 在 `open` **之后**才把内容挂进 DOM ⇒ `useEffect` 触发时 ref 仍是 `null`，「打开就滚到底」永远不生效（实测 scrollTop 恒为 0）。正解：用**回调 ref** 在节点挂载那一刻滚 | **v26.10.07-v4** |
 | **共享尺寸常量** | 面板宽度曾在 `MainPanel` 与 `panelHost.initialPoint()` 里各存一份字面量 ⇒ 只改一处会让存档在右侧的面板**每次加载都往左漂**（先按旧值收一次，按新值的那次不会再推回去）。尺寸类常量一律放 `ui/panelIds.ts` 共用 | **v26.10.07-v3** |
 | **react-to-print 的打印内容** | 它是对内容节点 `cloneNode(true)` 后塞进打印 iframe，而 **`cloneNode` 会连内联样式一起克隆** ⇒ 用 `display:none`／`left:-99999px` 隐藏的容器在打印 iframe 里同样不可见，**打印出来是空白**。必须用**临时构造的游离节点**（不进 DOM，也就不会闪图）经「可选内容工厂」传给 `doPrint(() => node)`；且 `ignoreGlobalStyles: true` 必开（否则连宿主页面整页 CSS 一起抄进打印 iframe） | **v26.10.08-v1** |
+| **手机数变化后 state 的比较** | 「已连接手机」列表由 5s 轮询刷新，为免整面板重渲染会做「没变化就不 setState」的比较。⚠️ **比较必须把元素数量也算进去**：老中继只回 `{online:true}` 时兜底项的 id 是空串，`[]` 与 `[{id:''}]` 的 id 拼接结果都是 `''`，只比 id 会判成「没变化」⇒ `phones` 永远为空、【设备互联】显示「无在线设备」、选图按钮直接拦截（实测踩到，靠反向验证发现） | **v26.10.08-v6** |
 | **antd 预览工具栏 actionsRender 的位置** | 它返回的节点是塞进 `-footer` 的，而 `-footer` 是 **`flex-direction: column`**、胶囊背景/圆角长在 `-actions` **容器**上 ⇒ 直接把按钮当 `originalNode` 的兄弟返回，会渲染成「工具栏下方一个没有背景的裸按钮」。正解：`cloneElement(originalNode, {}, [...Children.toArray(originalNode.props.children), 新按钮])` 把按钮**追加进 `-actions` 容器内部**，并复用 `-actions-action` 类保持样式一致 | **v26.10.08-v2** |
 | **「历史记录」的两条文本状态** | `recvText`（收到即**自动弹窗**用的最新一条）与 `recvTexts`（可回看的**历史数组**，上限 `MAX_TEXT=100`）是**互相独立**的两份状态，别合并：合并后要么「自动弹窗变成弹全部历史」，要么「历史里永远只剩最新一条」。图片侧同理，`recvImages` 是历史、画廊自动弹出只是它的一个副作用 | **v26.10.08-v3** |
 | **打印按 A4 自适应 + 去页眉页脚** | 四件套：① `pageStyle` 里 `@page { size: A4 portrait; margin: 0 }`；② 内容框 = **整张 A4**（210 × 294mm，留 3mm 防空白页）且 **`box-sizing: border-box`**；③ 内容框自己用 `padding: 10mm` 留出图片与纸边的距离；④ 图片 `object-fit: contain` 等比缩放居中。⚠️ 三个必踩的坑：**(a) `@page` 的 margin 绝不能非 0** —— 浏览器的页眉页脚（标题/URL/日期/页码）画在页边距里，非 0 就等于主动给它们腾位置（Chrome 该项**默认勾选**）；CSS 无法取消那个勾选项，只能「不给它留位置」。**(b)** 打印 iframe 的 `body` 默认有 8px 外边距，不写 `html, body { margin: 0 }` 会把内容框挤出纸张 → 多吐空白页。**(c)** 内容框按 A4 取宽后若用 content-box，`padding` 会把宽撑到 230mm → 溢出加空白页；高度正好等于纸高同样会因舍入吐空白页（故留 3mm）。另：打印对话框的「缩放/适应纸张尺寸」会覆盖 `@page`，CSS 管不到 | **v26.10.08-v4/v5** |

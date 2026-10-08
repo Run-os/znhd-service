@@ -19,8 +19,14 @@ type ImageFile = Blob & { name?: string };
 interface ImageSizeLike {
     size?: number;
 }
-/** 一条发往中继的载荷：文本，或图片（data 为不带前缀的 base64） */
-type SendToPhonePayload = { text: string } | { name: string; mime: string; data: string };
+/**
+ * 一条发往中继的载荷：文本，或图片（data 为不带前缀的 base64）。
+ * `targets`（v26.10.06-v4）：发给哪些手机 —— 'all' 或不传 = 全部在线手机；
+ * 数组 = 只发给这些手机 ID（服务端按长轮询 URL 上的 phoneId 过滤）。
+ */
+type SendToPhonePayload = ({ text: string } | { name: string; mime: string; data: string }) & {
+    targets?: 'all' | string[];
+};
 
 /**
  * 估算把该文件作为一条 POST body（含 name+mime+base64(data) 与 JSON 结构开销）的体积。

@@ -158,6 +158,10 @@ export default function MainPanel({ host }: MainPanelProps) {
     const [recvTexts, setRecvTexts] = useState<GalleryText[]>([]);
     const [historyOpen, setHistoryOpen] = useState(false);
     const [recvText, setRecvText] = useState<string | null>(null);
+    /** 已连接的手机（中继 /phone/status 返回；供【设备互联】显示数量与选择发送目标） */
+    const [phones, setPhones] = useState<{ id: string; lastSeen: number }[]>([]);
+    /** 上一次已知的手机 ID 集合，用于「连接/断开」日志去重（不要每 5s 重复刷屏） */
+    const knownPhonesRef = useRef<Set<string>>(new Set());
     const [logEntries, setLogEntries] = useState<LogEntry[]>([]);
     const [phrasesData, setPhrasesData] = useState<Record<string, string>>({});
     const [phrasesLoading, setPhrasesLoading] = useState(false);
@@ -286,6 +290,82 @@ export default function MainPanel({ host }: MainPanelProps) {
     useEffect(() => {
         if (phrasesOpen) loadPhrasesData();
     }, [phrasesOpen]);
+
+    /**
+     * 轮询「已连接的手机」（中继 /phone/status），并记录连接/断开日志（v26.10.06-v4）。
+     *
+     * 为什么放在主面板而不是【设备互联】弹窗里：日志要**不依赖弹窗是否打开**都能记录。
+     * 手机身份由手机页自己生成（localStorage UUID），故这里拿到的是手机 ID 列表。
+     * ⚠️ 老版中继只回 `{online:true}`（没有 phones），此时退化成「1 台未知手机」，
+     *    界面与发送仍可用（走 'all' 广播），不会因为这个接口而整体不可用。
+     */
+    useEffect(() => {
+        const s = (Allvalue.relayServer || '').trim().replace(/\/+$/, '');
+        if (!/^https?:\/\//i.test(s)) {
+            setPhones([]);
+            knownPhonesRef.current = new Set();
+            return;
+        }
+        const uuid = getDeviceId();
+        let alive = true;
+        const check = () => {
+            if (!alive) return;
+            try {
+                GM_xmlhttpRequest({
+                    method: 'GET',
+                    url: s + '/phone/status/' + encodeURIComponent(uuid),
+                    timeout: 8000,
+                    onload: (r) => {
+                        if (!alive) return;
+                        let j: { online?: boolean; phones?: { id?: string; lastSeen?: number }[] } | null = null;
+                        try {
+                            j = JSON.parse(r.responseText);
+                        } catch (e) {
+                            j = null;
+                        }
+                        // 兼容老中继：只有 online 没有 phones 时按「1 台未知手机」处理
+                        const list: { id: string; lastSeen: number }[] =
+                            j && Array.isArray(j.phones)
+                                ? j.phones.map((p) => ({
+                                      id: String(p.id || ''),
+                                      lastSeen: Number(p.lastSeen) || 0,
+                                  }))
+                                : j && j.online
+                                ? [{ id: '', lastSeen: 0 }]
+                                : [];
+                        setPhones((prev) => {
+                            // 只在「手机 ID 集合」真的变化时才更新 state：否则每 5s 轮询都会触发整面板重渲染。
+                            // ⚠️ 必须把**数量**也纳入比较：老中继回的是 `{online:true}` 没有 phones，
+                            //    兜底项 id 为空串，`[]` 与 `[{id:''}]` 的 id 拼接结果都是 '' ——
+                            //    只比 id 会把「0 台 → 1 台未知设备」误判为没变化，导致永远显示无在线设备。
+                            const a = prev.length + '|' + prev.map((p) => p.id).join(',');
+                            const b = list.length + '|' + list.map((p) => p.id).join(',');
+                            return a === b ? prev : list;
+                        });
+                        const nowIds = new Set<string>(list.map((p) => String(p.id || '')).filter((id) => id));
+                        knownPhonesRef.current.forEach((id) => {
+                            if (!nowIds.has(id)) addLog('[设备互联] 手机已断开：' + id, 'warning');
+                        });
+                        nowIds.forEach((id) => {
+                            if (!knownPhonesRef.current.has(id)) addLog('[设备互联] 手机已连接：' + id, 'success');
+                        });
+                        knownPhonesRef.current = nowIds;
+                    },
+                    onerror: () => {
+                        if (alive) setPhones([]);
+                    },
+                });
+            } catch (e) {
+                if (alive) setPhones([]);
+            }
+        };
+        check();
+        const t = setInterval(check, 5000);
+        return () => {
+            alive = false;
+            clearInterval(t);
+        };
+    }, [Allvalue.relayServer]);
 
     // 设备互联：地址填好后默认自动开始接收（门控 + 800ms 防抖，避免逐字输入时反复启停）
     useEffect(() => {
@@ -604,6 +684,7 @@ export default function MainPanel({ host }: MainPanelProps) {
                 open={phoneOpen}
                 onClose={() => setPhoneOpen(false)}
                 relayServer={Allvalue.relayServer || ''}
+                phones={phones}
                 onChangeRelayServer={(url: string) => {
                     patchAllvalue({ relayServer: url });
                     addLogDebounced('relayServer', '中继服务器已更新: ' + (url || '（空）'), 'info');

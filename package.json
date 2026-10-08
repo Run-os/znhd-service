@@ -1,6 +1,6 @@
 {
   "name": "znhd-service",
-  "version": "26.10.08-v5",
+  "version": "26.10.08-v6",
   "description": "征纳互动人数和在线监控：油猴脚本（人数/掉线监控、语音播报、常用语、设备互联图片互传）",
   "main": "./dist/znhd.user.js",
   "scripts": {
@@ -14,8 +14,9 @@
     "lint:fix": "npm run lint -- --fix",
     "typecheck": "tsc --noEmit",
     "check": "node --check dist/znhd.user.js && node --check relay-server/server.js && node --check relay-server/upload-page.js",
-    "verify": "npm run verify:smoke",
-    "verify:smoke": "node scripts/smoke/run.js"
+    "verify": "npm run verify:smoke && npm run verify:relay",
+    "verify:smoke": "node scripts/smoke/run.js",
+    "verify:relay": "node scripts/smoke/relay.js"
   },
   "repository": {
     "type": "git",

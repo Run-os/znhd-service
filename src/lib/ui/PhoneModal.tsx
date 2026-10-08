@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Modal, Button, Input, Progress, Tag, Typography } from 'antd';
+import { Modal, Button, Checkbox, Input, Progress, Tag, Typography } from 'antd';
 import { addLog } from '@/lib/logger';
 import { safeCopyText } from '@/lib/clipboard';
 import { RELAY_MAX_BODY, imagePayloadBytes, compressImageForPhone, getDeviceId, sendToPhone } from '@/lib/relay';
@@ -25,7 +25,21 @@ export interface PhoneModalProps {
     open: boolean;
     onClose: () => void;
     relayServer: string;
+    /** 已连接的手机（由主面板轮询 /phone/status 得到；本组件不再自己轮询） */
+    phones: PhoneTarget[];
     onChangeRelayServer: (url: string) => void;
+}
+
+/** 一台已连接的手机（id 为空表示老版中继只回了 online、没有手机 ID） */
+export interface PhoneTarget {
+    id: string;
+    lastSeen?: number;
+}
+
+/** 手机 ID 的展示用短串（UUID 太长，取前 8 位） */
+function shortPhoneId(id: string): string {
+    if (!id) return '未知设备（旧版中继）';
+    return id.length > 8 ? id.slice(0, 8) + '…' : id;
 }
 
 interface ProgressState {
@@ -64,15 +78,30 @@ function Section({ title, extra, children }: { title: string; extra?: React.Reac
  * 「发送到手机」分区（文本行 + 待发送图片行 + 虚线选图 + 发送按钮）。
  * 业务逻辑（二维码、在线轮询、逐张压缩发送、进度）与旧实现一致，只换成新排版。
  */
-export default function PhoneModal({ open, onClose, relayServer }: PhoneModalProps) {
+export default function PhoneModal({ open, onClose, relayServer, phones }: PhoneModalProps) {
     const deviceId = getDeviceId();
     const [qrUrl, setQrUrl] = useState('');
     const [link, setLink] = useState('');
-    const [phoneOnline, setPhoneOnline] = useState(false);
+    /** 选中的手机 ID（多台时用于定向发送；默认全选） */
+    const [selected, setSelected] = useState<string[]>([]);
     const [sending, setSending] = useState(false);
     const [sendText, setSendText] = useState('');
     const [pendingImages, setPendingImages] = useState<PendingImage[]>([]);
     const [progress, setProgress] = useState<ProgressState | null>(null);
+
+    const phoneIds = phones.map((p) => p.id).filter(Boolean);
+    const phoneOnline = phones.length > 0;
+
+    /**
+     * 目标手机变化时同步选择项：保留「仍在线且在选中」的，把新上线的补进选中（= 默认全选）。
+     * 依赖 phones 的**引用变化**即可 —— 主面板只在手机 ID 集合真的变化时才更新该引用。
+     */
+    useEffect(() => {
+        const ids = phones.map((p) => p.id).filter(Boolean);
+        setSelected((prev) =>
+            prev.filter((id) => ids.indexOf(id) >= 0).concat(ids.filter((id) => prev.indexOf(id) < 0))
+        );
+    }, [phones]);
 
     // 计算链接 + 二维码（非 http(s) 前缀即地址输入中途，不生成）
     useEffect(() => {
@@ -91,48 +120,29 @@ export default function PhoneModal({ open, onClose, relayServer }: PhoneModalPro
             });
     }, [relayServer, open, deviceId]);
 
-    // 轮询手机在线状态（每 5s），用于发送前判断是否可发
-    useEffect(() => {
-        const server = (relayServer || '').trim().replace(/\/+$/, '');
-        if (!open || !/^https?:\/\//i.test(server)) return;
-        let alive = true;
-        const check = () => {
-            if (!alive) return;
-            try {
-                GM_xmlhttpRequest({
-                    method: 'GET',
-                    url: server + '/phone/status/' + encodeURIComponent(deviceId),
-                    timeout: 8000,
-                    onload: (r) => {
-                        if (!alive) return;
-                        let j = null;
-                        try {
-                            j = JSON.parse(r.responseText);
-                        } catch (e) {
-                            j = null;
-                        }
-                        setPhoneOnline(!!(j && j.online));
-                    },
-                    onerror: () => {
-                        if (alive) setPhoneOnline(false);
-                    },
-                });
-            } catch (e) {
-                if (alive) setPhoneOnline(false);
-            }
-        };
-        check();
-        const t = setInterval(check, 5000);
-        return () => {
-            alive = false;
-            clearInterval(t);
-        };
-    }, [open, relayServer, deviceId]);
+    /**
+     * 本次发送的目标（v26.10.06-v4）：
+     *  - 只有 1 台手机（或老版中继没给手机 ID）→ `'all'`：按用户要求「直接发送」，不做选择；
+     *  - 多台且全选 → `'all'`（服务端广播给所有在线手机）；
+     *  - 多台但只勾了部分 → 手机 ID 数组（服务端按长轮询上的 phoneId 定向投递）。
+     */
+    const sendTargets = (): 'all' | string[] => {
+        if (phoneIds.length <= 1) return 'all';
+        const chosen = phoneIds.filter((id) => selected.indexOf(id) >= 0);
+        return chosen.length === phoneIds.length ? 'all' : chosen;
+    };
+
+    /** 多台手机时一台都没勾 → 不允许发送（否则会静默发不出去） */
+    const noTarget = phoneIds.length > 1 && phoneIds.every((id) => selected.indexOf(id) < 0);
 
     const doSendText = () => {
         const t = (sendText || '').trim();
         if (!t) {
             addLog('[发送到手机] 文本为空', 'error', true);
+            return;
+        }
+        if (noTarget) {
+            addLog('[发送到手机] 未选择任何手机，已取消发送', 'error', true);
             return;
         }
         if (!phoneOnline) {
@@ -143,7 +153,7 @@ export default function PhoneModal({ open, onClose, relayServer }: PhoneModalPro
         sendToPhone({
             server: relayServer,
             uuid: deviceId,
-            payload: { text: t },
+            payload: { text: t, targets: sendTargets() },
             onOk: () => {
                 addLog('[发送到手机] 文本已发送', 'success');
                 setSendText('');
@@ -221,7 +231,13 @@ export default function PhoneModal({ open, onClose, relayServer }: PhoneModalPro
             addLog('[发送到手机] 当前无在线设备，无法发送', 'error', true);
             return;
         }
+        if (noTarget) {
+            addLog('[发送到手机] 未选择任何手机，已取消发送', 'error', true);
+            return;
+        }
         setSending(true);
+        // 目标一次性算好：整批图片发给同一组手机（发送过程中用户改勾选不影响本批）
+        const targets = sendTargets();
         const list = pendingImages.slice();
         const total = list.length;
         let sent = 0;
@@ -311,7 +327,7 @@ export default function PhoneModal({ open, onClose, relayServer }: PhoneModalPro
                     sendToPhone({
                         server: relayServer,
                         uuid: deviceId,
-                        payload: { name: out.name, mime: out.mime, data: b64 },
+                        payload: { name: out.name, mime: out.mime, data: b64, targets: targets },
                         onOk: () => {
                             sent++;
                             setProgress({
@@ -335,7 +351,7 @@ export default function PhoneModal({ open, onClose, relayServer }: PhoneModalPro
     };
 
     const percent = progress && progress.total ? Math.round((progress.done / progress.total) * 100) : 0;
-    const canSend = phoneOnline && !sending;
+    const canSend = phoneOnline && !sending && !noTarget;
 
     return (
         <Modal
@@ -450,9 +466,41 @@ export default function PhoneModal({ open, onClose, relayServer }: PhoneModalPro
                             verticalAlign: 'middle',
                         }}
                     />
-                    {phoneOnline ? '手机已连接，可发送' : '当前无在线设备，无法发送'}
+                    {phoneOnline ? '已连接手机 ' + phones.length + ' 台，可发送' : '当前无在线设备，无法发送'}
                 </span>
             </div>
+
+            {/* 已连接手机列表（v26.10.06-v4）：显示数量与设备 ID；≥2 台时常驻多选，默认全选 */}
+            {phones.length > 0 && (
+                <div
+                    style={{
+                        border: '1px solid #f0f0f0',
+                        borderRadius: 10,
+                        padding: '10px 14px',
+                        marginBottom: 12,
+                    }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>已连接手机（{phones.length}）</div>
+                    {phones.length > 1 ? (
+                        <>
+                            <Checkbox.Group
+                                value={selected}
+                                onChange={(v) => setSelected(v as string[])}
+                                style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                                {phones.map((p) => (
+                                    <Checkbox key={p.id} value={p.id}>
+                                        {shortPhoneId(p.id)}
+                                    </Checkbox>
+                                ))}
+                            </Checkbox.Group>
+                            <Text type="secondary" style={{ fontSize: 11 }}>
+                                默认全选；取消勾选后只发给勾选的手机。
+                            </Text>
+                        </>
+                    ) : (
+                        <Text style={{ fontSize: 12, wordBreak: 'break-all' }}>{shortPhoneId(phones[0].id)}</Text>
+                    )}
+                </div>
+            )}
 
             {/* 发送到手机 */}
             <Section title="发送到手机">

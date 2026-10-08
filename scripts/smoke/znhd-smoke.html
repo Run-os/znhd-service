@@ -184,9 +184,16 @@
           reply(details, CHANGELOG_MD);
           return { abort: () => {} };
         }
-        // 手机在线状态：在线（「发送到手机」相关断言需要抽屉里的按钮可用）
+        // 手机在线状态：模拟**两台**手机在线（v26.10.06-v4：多手机 + 定向投递相关断言）。
+        // 两个 ID 前 8 位不同，才能验证「按短 ID 区分展示」不会把两台显示成同一个。
         if (/\/phone\/status\//.test(url)) {
-          reply(details, { online: true });
+          reply(details, {
+            online: true,
+            phones: [
+              { id: '11111111-1111-4111-8111-111111111111', lastSeen: Date.now() },
+              { id: '22222222-2222-4222-8222-222222222222', lastSeen: Date.now() },
+            ],
+          });
           return { abort: () => {} };
         }
         // 发送到手机：记录实际 POST 的载荷，用于校验「先压缩再发」（v26.10.06-v6 回归断言）
@@ -722,6 +729,30 @@
             window.__historyTabs[1].indexOf('文本') >= 0
           ),
           historyTextOk: !!window.__historyText,
+          // 已连接手机（v26.10.06-v4）：设备互联弹窗要显示**数量**与**手机 ID 列表**，
+          // 且 ≥2 台时要有常驻多选（默认全选）。
+          phoneCountOk: (() => {
+            const m = Array.from(document.querySelectorAll('.ant-modal')).find((el) =>
+              (el.textContent || '').includes('手机互传')
+            );
+            return !!m && (m.textContent || '').includes('已连接手机 2 台');
+          })(),
+          phoneListOk: (() => {
+            const m = Array.from(document.querySelectorAll('.ant-modal')).find((el) =>
+              (el.textContent || '').includes('手机互传')
+            );
+            const t = m ? m.textContent || '' : '';
+            return t.includes('11111111') && t.includes('22222222');
+          })(),
+          phoneMultiPickOk: (() => {
+            const m = Array.from(document.querySelectorAll('.ant-modal')).find((el) =>
+              (el.textContent || '').includes('手机互传')
+            );
+            if (!m) return false;
+            // 两台手机 => 常驻多选，且默认全选（两个复选框都是选中态）
+            const boxes = Array.from(m.querySelectorAll('.ant-checkbox-input'));
+            return boxes.length === 2 && boxes.every((b) => b.checked);
+          })(),
           // 发送到手机：必须先压缩再发（v26.10.06-v6 回归断言）。判定要点：
           // 实际 POST 的字节是 JPEG、最长边 ≤1600（压缩上限）、且比原图小。
           phoneSendCheck: window.__phoneSendCheck || null,
@@ -777,6 +808,9 @@
           report.printA4Ok &&
           report.historyTabsOk &&
           report.historyTextOk &&
+          report.phoneCountOk &&
+          report.phoneListOk &&
+          report.phoneMultiPickOk &&
           report.phoneSendCompressedOk
             ? 'ALL-OK'
             : 'PARTIAL');

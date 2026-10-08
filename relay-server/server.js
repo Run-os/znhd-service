@@ -55,8 +55,22 @@ const BODY_TIMEOUT = 60 * 1000;     // 读取请求体超时兜底（慢客户�
 
 // ===== 反向通道在线状态：电脑端 → 手机端 =====
 const PHONE_TTL = 20 * 1000;       // 手机在线判定：超过该时长无心跳视为离线（心跳 8s 一次）
-// deviceId -> lastSeen(ms) 手机最近一次心跳时间
+// v26.10.06-v4：由「一台电脑一个布尔位」升级为**多手机注册表**。
+//   deviceId(电脑) -> Map<phoneId(手机) -> lastSeen(ms)>
+// 手机身份来自手机页自己生成的持久化 UUID（localStorage），心跳时带上；
+// ⚠️ 不带 phoneId 的心跳一律拒收（v26.10.06-v4 起手机页必须升级，不再兼容老页面）。
 const phoneOnline = new Map();
+/** 取某台电脑的手机表（不存在则建） */
+function phoneMap(deviceId) {
+  let m = phoneOnline.get(deviceId);
+  if (!m) { m = new Map(); phoneOnline.set(deviceId, m); }
+  return m;
+}
+/** 手机上线的日志/展示用短 ID（UUID 太长，日志里只留前 8 位） */
+function shortId(id) {
+  const s = String(id || '');
+  return s.length > 8 ? s.slice(0, 8) + '…' : s;
+}
 
 // ===== 运行日志（每条前面带「精确到秒」的时间戳） =====
 function tsNow() {
@@ -83,7 +97,7 @@ function previewText(t) {
 function cleanLogName(name) {
   return String(name || '').replace(/[\u0000-\u001f\u007f]/g, '').slice(0, 80);
 }
-// 曾经在线过的手机设备集合，用于「离线」只告警一次
+// 曾经在线过的「电脑/手机」组合，用于「离线」只告警一次。键 = deviceId + '/' + phoneId
 const phoneWasOnline = new Set();
 
 function setCors(res) {
@@ -124,8 +138,13 @@ function sendMethodNotAllowed(res, allow) {
 // 「连接注册时立即查队」两条同步路径全覆盖，tick 定时器属空转；现改为
 // 「注册即查队 + 单次 maxwait 定时器」，过期清理由全局周期 sweep 承担，
 // N 个等待连接不再挂 N 个 400ms 定时器。
-function createChannel(labels) {
+function createChannel(labels, opts) {
   // labels: { recv, dropQ, sendImg(uuid,item,len), sendTxt(uuid,item) } —— 日志文案（正反向措辞不同）
+  // opts:
+  //   perRecipient   —— true 时按「接收者（手机）」定向投递（反向通道用）；默认 false = 保持原「广播」语义
+  //   recipientFromUrl(u) —— 从长轮询 URL 里取接收者标识；返回 null 表示该请求缺少接收者身份
+  const perRecipient = !!(opts && opts.perRecipient);
+  const recipientFromUrl = (opts && opts.recipientFromUrl) || null;
   const pending = new Map(); // deviceId -> Array<item> 待取走的条目队列（FIFO）
   const waiting = new Map(); // deviceId -> Set<res> 当前正在长轮询等待的连接（用于「广播」）
 
@@ -140,28 +159,90 @@ function createChannel(labels) {
     }
   }
 
-  // 把队头条目「广播」给所有正在等待的连接；无人等待则保留队列，等下个连接来取（不会漏）。
-  // 直接回传整条 item（含 type: 'image' | 'text'），由接收端按 type 分流处理。
+  // 丢弃队列里全部已过期条目（保证绝不投递过期内容）
+  function dropExpired(q) {
+    const now = Date.now();
+    for (let i = q.length - 1; i >= 0; i--) {
+      if (now - q[i].ts >= PENDING_TTL) q.splice(i, 1);
+    }
+  }
+
+  /** 单条 item 是否已投完：无 targets 概念（正向）或 targets='all' 由调用方处理，这里只管定向条目 */
+  function fullyDelivered(item) {
+    return Array.isArray(item.targets) && item.targets.every(id => item.deliveredTo.has(id));
+  }
+
+  // 投递：无人等待则保留队列，等下个连接来取（不会漏）。直接回传整条 item
+  // （含 type: 'image' | 'text'），由接收端按 type 分流处理。
+  //
+  // 【正向（perRecipient=false）】保持既有语义不变：取队头一条「广播」给所有在等连接
+  //   （每个连接各得一份拷贝），同一设备多标签页同时接收互不抢图。
+  // 【反向（perRecipient=true）】按手机定向：
+  //   · `targets === 'all'` 的条目按老语义整条广播给所有在等连接，然后出队；
+  //     ⚠️ 广播条目**不要求它在队头**——否则前面卡着一条「发给某台离线手机」的定向条目时，
+  //     广播图会被一起拖住（离线手机最长要等 PENDING_TTL 才过期）。
+  //   · 定向条目只投给 targets 里包含的、且尚未投过的手机；每个等待连接各领一条属于它的；
+  //     没它份的连接**继续等待**（不结束它的长轮询）。
+  //   · 定向条目在「所有目标手机都收过」时才出队 —— 目标手机离线时条目留在队列等它上线（TTL 内）。
   function deliver(uuid) {
     const q = pending.get(uuid);
-    // 丢弃队头已过期的条目（保证绝不投递过期内容）
-    while (q && q.length && (Date.now() - q[0].ts) >= PENDING_TTL) q.shift();
     if (!q || q.length === 0) { pending.delete(uuid); return; }
+    dropExpired(q);
+    if (q.length === 0) { pending.delete(uuid); return; }
     const set = waiting.get(uuid);
     if (!set || set.size === 0) return; // 当前无等待连接：保留队列，等下个连接
     // 先筛出仍可写的目标连接再出队：若等待者此刻全部已结束/断开（res 'close' 尚未触发的窄窗口），
     // 直接放弃本次投递并保留队头，等下个连接来取——避免队头被 shift 后无人能收造成丢条（B6）。
-    const targets = Array.from(set).filter(r => !r.writableEnded && !r.destroyed);
-    if (targets.length === 0) { waiting.delete(uuid); return; }
-    // 每次只投递队头一条（长轮询协议每个响应回一条）；接收端收到后会立刻重新轮询取下一条
-    const p = q.shift();
-    if (q.length === 0) pending.delete(uuid);
-    waiting.delete(uuid);
-    for (const r of targets) {
-      try { sendJson(r, 200, p); }
-      catch (e) { /* 已断开的连接，忽略 */ }
+    const conns = Array.from(set).filter(r => !r.writableEnded && !r.destroyed);
+    if (conns.length === 0) { waiting.delete(uuid); return; }
+
+    if (!perRecipient) {
+      // 每次只投递队头一条（长轮询协议每个响应回一条）；接收端收到后会立刻重新轮询取下一条
+      const p = q.shift();
+      if (q.length === 0) pending.delete(uuid);
+      waiting.delete(uuid);
+      for (const r of conns) {
+        try { sendJson(r, 200, p); }
+        catch (e) { /* 已断开的连接，忽略 */ }
+      }
+      logEvent(`[投递] 设备 ${uuid} 已向 ${conns.length} 个${labels.recv}投递条目（${p.type}）${q.length ? `，队列剩余 ${q.length} 条` : ''}`);
+      return;
     }
-    logEvent(`[投递] 设备 ${uuid} 已向 ${targets.length} 个${labels.recv}投递条目（${p.type}）${q.length ? `，队列剩余 ${q.length} 条` : ''}`);
+
+    // ===== 反向：定向投递 =====
+    let sent = 0;
+    // ① 优先处理广播条目
+    const allIdx = q.findIndex(it => it.targets === 'all');
+    if (allIdx >= 0) {
+      const p = q.splice(allIdx, 1)[0];
+      if (q.length === 0) pending.delete(uuid);
+      waiting.delete(uuid);
+      for (const r of conns) {
+        try { sendJson(r, 200, p); sent++; }
+        catch (e) { /* 已断开的连接，忽略 */ }
+      }
+      logEvent(`[投递] 设备 ${uuid} 已向 ${sent} 个${labels.recv}投递条目（${p.type}·发给全部手机）${q.length ? `，队列剩余 ${q.length} 条` : ''}`);
+      return;
+    }
+    // ② 定向条目：每个等待连接各领一条属于自己的
+    for (const r of conns) {
+      const rid = r.__recipient;
+      const idx = q.findIndex(it =>
+        Array.isArray(it.targets) && it.targets.indexOf(rid) >= 0 && !it.deliveredTo.has(rid)
+      );
+      if (idx < 0) continue; // 没有发给它的条目：保持等待（不结束这次长轮询）
+      const p = q[idx];
+      try { sendJson(r, 200, p); sent++; }
+      catch (e) { continue; }
+      set.delete(r);
+      p.deliveredTo.add(rid);
+      if (fullyDelivered(p)) q.splice(q.indexOf(p), 1);
+    }
+    if (q.length === 0) pending.delete(uuid);
+    else if (set.size === 0) waiting.delete(uuid);
+    if (sent > 0) {
+      logEvent(`[投递] 设备 ${uuid} 已向 ${sent} 个${labels.recv}投递定向条目${q.length ? `，队列剩余 ${q.length} 条` : ''}`);
+    }
   }
 
   // 入队（FIFO）：超出 MAX_QUEUE 丢弃最旧一条；入队后若存在等待连接立即投递。
@@ -182,10 +263,22 @@ function createChannel(labels) {
   }
 
   // 长轮询：注册进等待集合 → 立即查队（有货即投递）→ 无货挂单次 maxwait 定时器到期回 empty。
+  // @returns {boolean} false 表示拒绝了该请求（缺少接收者身份，已回 400），调用方不要再处理
   function handlePoll(req, res, uuid, u) {
     let maxwait = parseInt(u.searchParams.get('maxwait') || '', 10);
     if (!Number.isFinite(maxwait)) maxwait = 25000;
     maxwait = Math.min(Math.max(maxwait, 1000), 30000);
+
+    // 接收者身份（反向通道 = 手机 ID）：定向投递必须知道是谁在轮询。
+    // ⚠️ 缺失即拒收（v26.10.06-v4 起手机页必须升级；服务端不再兼容不带手机 ID 的老页面）。
+    if (recipientFromUrl) {
+      const rid = recipientFromUrl(u);
+      if (!rid) {
+        sendJson(res, 400, { error: 'missing phoneId：手机页版本过旧，请刷新手机页面后重试' });
+        return false;
+      }
+      res.__recipient = rid;
+    }
 
     if (!waiting.has(uuid)) waiting.set(uuid, new Set());
     waiting.get(uuid).add(res);
@@ -208,7 +301,7 @@ function createChannel(labels) {
     const q = pending.get(uuid);
     if (q && q.length) {
       deliver(uuid);
-      if (res.writableEnded) return; // 已投递给本连接，响应结束（res 'close' 会做清理）
+      if (res.writableEnded) return true; // 已投递给本连接，响应结束（res 'close' 会做清理）
     }
 
     // 无货/未投出：挂单次 maxwait 定时器，到期返回空响应（客户端收到后自行重连轮询）
@@ -218,6 +311,7 @@ function createChannel(labels) {
       try { sendJson(res, 200, { empty: true }); } catch (e) { /* 已断开，忽略 */ }
       cleanup();
     }, maxwait);
+    return true;
   }
 
   return { pending, waiting, enqueue, deliver, handlePoll, sweepExpired };
@@ -232,12 +326,26 @@ const forwardChannel = createChannel({
 });
 
 // 反向通道：电脑 → 手机（POST /phone/send 入队，GET /phone/recv 长轮询取走）
+// v26.10.06-v4 起开启**按手机定向投递**：条目带 targets，长轮询按 URL 上的 phoneId 过滤。
 const reverseChannel = createChannel({
   recv: '手机端接收端',
   dropQ: '手机收件队列',
-  sendImg: (uuid, item, len) => `[发送] 设备 ${uuid} 电脑端发送图片到手机：${cleanLogName(item.name)}（${item.mime}，约 ${b64SizeKB(item.data)}KB），队列 ${len} 条`,
-  sendTxt: (uuid, item) => `[发送] 设备 ${uuid} 电脑端发送文本到手机：${previewText(item.text)}`
+  sendImg: (uuid, item, len) => `[发送] 设备 ${uuid} 电脑端发送图片到手机：${cleanLogName(item.name)}（${item.mime}，约 ${b64SizeKB(item.data)}KB）${targetsText(item)}，队列 ${len} 条`,
+  sendTxt: (uuid, item) => `[发送] 设备 ${uuid} 电脑端发送文本到手机：${previewText(item.text)}${targetsText(item)}`
+}, {
+  perRecipient: true,
+  // 手机身份从长轮询 URL 的 phoneId 取；⚠️ 缺失 = 老手机页，服务端拒收（不兼容）
+  recipientFromUrl: (u) => {
+    const id = u.searchParams.get('phoneId') || '';
+    return /^[a-zA-Z0-9_-]{8,64}$/.test(id) ? id : null;
+  }
 });
+
+/** 发送日志里附上目标手机信息（供上面两个 sendImg/sendTxt 文案用） */
+function targetsText(item) {
+  if (!item || !item.targets || item.targets === 'all') return '（发给全部手机）';
+  return `（发给 ${item.targets.length} 台手机）`;
+}
 
 // 解析 POST 正文为待投递条目（图片 {data,mime,name} 或文本 {text}）；非法时已回 4xx 并返回 null。
 // /u 与 /phone/send 两个 POST 路由共用。
@@ -256,9 +364,13 @@ async function parseItemBody(req, res) {
   let payload;
   try { payload = JSON.parse(buf.toString('utf8')); }
   catch (e) { sendJson(res, 400, { error: 'invalid json' }); return null; }
+  // 目标手机（仅 /phone/send 用；/u 方向没有这个概念，带了也忽略）：
+  //   'all'（缺省） = 发给全部在线手机；数组 = 只发给这些手机 ID。
+  // 非法值一律归一化为 'all'（宁可发多，不要因为参数写错而静默丢消息）。
+  const targets = normalizeTargets(payload.targets);
   if (typeof payload.text === 'string' && payload.text.length > 0) {
     // 文本
-    return { type: 'text', text: payload.text.slice(0, MAX_BODY), ts: Date.now() };
+    return { type: 'text', text: payload.text.slice(0, MAX_BODY), ts: Date.now(), targets, deliveredTo: new Set() };
   }
   if (typeof payload.data === 'string') {
     // 图片（base64）
@@ -267,11 +379,24 @@ async function parseItemBody(req, res) {
       name: String(payload.name || 'image.jpg').slice(0, 200),
       mime: String(payload.mime || 'image/jpeg').slice(0, 100),
       data: payload.data.slice(0, MAX_BODY),
-      ts: Date.now()
+      ts: Date.now(),
+      targets,
+      deliveredTo: new Set()
     };
   }
   sendJson(res, 400, { error: 'missing data or text' });
   return null;
+}
+
+/** 归一化 targets：'all' 或去重后的手机 ID 数组（非法一律回落到 'all'） */
+function normalizeTargets(t) {
+  if (t === 'all' || t === undefined || t === null) return 'all';
+  if (!Array.isArray(t)) return 'all';
+  const ids = t
+    .map(x => String(x || ''))
+    .filter(x => /^[a-zA-Z0-9_-]{8,64}$/.test(x));
+  const uniq = Array.from(new Set(ids));
+  return uniq.length ? uniq : 'all';
 }
 
 // 读取整个请求体为 Buffer。超过 MAX_BODY 时进入「溢出」态：之后只继续计数、不再缓存，
@@ -413,28 +538,59 @@ const server = http.createServer(async (req, res) => {
 
     // ===== 反向通道：电脑端 → 手机端 =====
 
-    // /phone/heartbeat/<deviceId> ：手机打开页面向服务器报活（证明本设备有手机在线）
+    // /phone/heartbeat/<deviceId> ：手机页面向服务器报活（证明**这台手机**在线）。
+    // ⚠️ v26.10.06-v4 起：body 必须带 `{ phoneId }`（手机页持久化的 UUID）。
+    //    缺失即 400 —— 老手机页（心跳体是 `{}`）不再被注册，会在手机端显示连接失败，需刷新页面升级。
     const hb = /^\/phone\/heartbeat\/([a-z0-9-]{8,64})$/i.exec(path);
     if (hb && method === 'POST') {
       const id = hb[1];
-      const now = Date.now();
-      const last = phoneOnline.get(id) || 0;
-      const wasOnline = phoneWasOnline.has(id) && (now - last) < PHONE_TTL;
-      phoneOnline.set(id, now);
-      if (!wasOnline) {
-        phoneWasOnline.add(id);
-        logEvent(`[连接] 设备 ${id} 已连接（手机端在线）`);
+      let phoneId = '';
+      try {
+        const buf = await readBody(req);
+        let body = {};
+        try { body = JSON.parse(buf.toString('utf8')) || {}; } catch (e) { body = {}; }
+        phoneId = String(body.phoneId || '');
+      } catch (e) {
+        sendJson(res, e && e.statusCode === 413 ? 413 : 400, { error: '读取心跳请求体失败' });
+        return;
       }
-      sendJson(res, 200, { ok: true });
+      if (!/^[a-zA-Z0-9_-]{8,64}$/.test(phoneId)) {
+        sendJson(res, 400, { error: 'missing phoneId：手机页面版本过旧，请刷新手机页面后重试' });
+        return;
+      }
+      const now = Date.now();
+      const m = phoneMap(id);
+      const key = id + '/' + phoneId;
+      const last = m.get(phoneId) || 0;
+      const wasOnline = phoneWasOnline.has(key) && (now - last) < PHONE_TTL;
+      m.set(phoneId, now);
+      if (!wasOnline) {
+        phoneWasOnline.add(key);
+        logEvent(`[连接] 设备 ${id} 的手机 ${phoneId} 已连接（手机端在线）`);
+      }
+      sendJson(res, 200, { ok: true, phoneId: phoneId, phoneCount: m.size });
       return;
     }
     if (hb) { sendMethodNotAllowed(res, 'POST'); return; }
 
-    // /phone/status/<deviceId> ：电脑端查询手机是否在线（用于发送前判断是否可发）
+    // /phone/status/<deviceId> ：电脑端查询**有哪些手机在线**（用于显示数量 + 发送时选择目标）
+    // 返回 { online, phones:[{id,lastSeen}] }；`online` 保留给老脚本（= phones.length > 0）。
     const st = /^\/phone\/status\/([a-z0-9-]{8,64})$/i.exec(path);
     if (st && method === 'GET') {
-      const last = phoneOnline.get(st[1]) || 0;
-      sendJson(res, 200, { online: (Date.now() - last) < PHONE_TTL });
+      const id = st[1];
+      const now = Date.now();
+      const m = phoneOnline.get(id);
+      const phones = [];
+      if (m) {
+        for (const [pid, last] of Array.from(m)) {
+          // 顺手清掉已过期的（全局 sweep 每 5s 也做，这里保证接口返回即时准确）
+          if (now - last < PHONE_TTL) phones.push({ id: pid, lastSeen: last });
+          else m.delete(pid);
+        }
+        if (m.size === 0) phoneOnline.delete(id);
+      }
+      phones.sort((a, b) => b.lastSeen - a.lastSeen);
+      sendJson(res, 200, { online: phones.length > 0, phones: phones });
       return;
     }
     if (st) { sendMethodNotAllowed(res, 'GET'); return; }
@@ -473,14 +629,18 @@ const server = http.createServer(async (req, res) => {
 //     里的过期清理职责——投递路径自身仍会在投递前清队头过期项，保证绝不投递过期内容）。
 setInterval(() => {
   const now = Date.now();
-  for (const [id, last] of phoneOnline) {
-    if (now - last >= PHONE_TTL) {
-      phoneOnline.delete(id);
-      if (phoneWasOnline.has(id)) {
-        phoneWasOnline.delete(id);
-        logEvent(`[断开] 设备 ${id} 已断开（手机端离线超时）`);
+  for (const [id, m] of Array.from(phoneOnline)) {
+    for (const [pid, last] of Array.from(m)) {
+      if (now - last >= PHONE_TTL) {
+        m.delete(pid);
+        const key = id + '/' + pid;
+        if (phoneWasOnline.has(key)) {
+          phoneWasOnline.delete(key);
+          logEvent(`[断开] 设备 ${id} 的手机 ${pid} 已断开（离线超时）`);
+        }
       }
     }
+    if (m.size === 0) phoneOnline.delete(id);
   }
   forwardChannel.sweepExpired();
   reverseChannel.sweepExpired();

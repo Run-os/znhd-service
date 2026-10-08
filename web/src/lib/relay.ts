@@ -27,6 +27,33 @@ export function parseDeviceId(pathname: string): string {
     return m ? m[1] : '';
 }
 
+/** 本机（手机）设备 ID 的 localStorage 键 */
+const PHONE_ID_KEY = 'znhd_phone_id';
+
+/**
+ * 取本机（手机）稳定设备 ID：首次打开生成并持久化在 localStorage，刷新/重开不变。
+ *
+ * 为什么需要它：一台电脑可能被多台手机同时连上（都由同一个 `/u/<电脑ID>` 链接进入），
+ * 服务端要靠它区分「哪台手机在线」，电脑端才能显示手机数量、并把图片只发给选中的手机。
+ * ⚠️ 换浏览器 / 清缓存 / 无痕窗口会得到新 ID（等价于「换了一台手机」）。
+ */
+export function getPhoneId(): string {
+    try {
+        let id = localStorage.getItem(PHONE_ID_KEY) || '';
+        if (!/^[a-zA-Z0-9_-]{8,64}$/.test(id)) {
+            id =
+                typeof crypto !== 'undefined' && crypto.randomUUID
+                    ? crypto.randomUUID()
+                    : 'p' + Date.now().toString(16) + Math.random().toString(16).slice(2);
+            localStorage.setItem(PHONE_ID_KEY, id);
+        }
+        return id;
+    } catch (e) {
+        // localStorage 不可用（隐私模式等）：退回进程内随机 ID，功能可用但刷新后算新设备
+        return 'p' + Date.now().toString(16) + Math.random().toString(16).slice(2);
+    }
+}
+
 /** Blob → base64（不带 dataURL 前缀） */
 export function blobToBase64(blob: Blob): Promise<string> {
     return new Promise((resolve, reject) => {
@@ -53,6 +80,8 @@ export function postItem(payload: Record<string, unknown>): Promise<{ ok?: boole
 
 export interface RelayOptions {
     deviceId: string;
+    /** 本机（手机）设备 ID：心跳与长轮询都要带，服务端据此区分多台手机 */
+    phoneId: string;
     onConn: (s: ConnState) => void;
     onItem: (item: RecvItem) => void;
 }
@@ -62,7 +91,7 @@ export interface RelayOptions {
  * @param opts 设备 ID 与回调
  */
 export function startPhoneRelay(opts: RelayOptions): () => void {
-    const { deviceId, onConn, onItem } = opts;
+    const { deviceId, phoneId, onConn, onItem } = opts;
     let stopped = false;
     const timers = new Set<number>();
 
@@ -81,7 +110,12 @@ export function startPhoneRelay(opts: RelayOptions): () => void {
             return;
         }
         const ctrl = 'AbortController' in window ? new AbortController() : null;
-        const opt: RequestInit = { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' };
+        const opt: RequestInit = {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            // v26.10.06-v4：心跳必须带上本机手机 ID，服务端才能区分「哪台手机在线」
+            body: JSON.stringify({ phoneId: phoneId }),
+        };
         if (ctrl) opt.signal = ctrl.signal;
         const timeout = new Promise<Response>((_, rej) => {
             later(() => rej(new Error('timeout')), 8000);
@@ -91,6 +125,8 @@ export function startPhoneRelay(opts: RelayOptions): () => void {
                 if (ctrl) ctrl.abort();
                 if (stopped) return;
                 if (r && r.ok) onConn({ state: 'online' });
+                else if (r && r.status === 400)
+                    onConn({ state: 'error', msg: '手机页面版本过旧或设备ID无效，请刷新页面后重试' });
                 else onConn({ state: 'error', msg: '服务器返回 ' + (r && r.status) + '，请检查中继地址/代理' });
             })
             .catch((err: any) => {
@@ -114,7 +150,19 @@ export function startPhoneRelay(opts: RelayOptions): () => void {
         const watchdog = new Promise<Response>((_, rej) => {
             later(() => rej(new Error('timeout')), 35000);
         });
-        Promise.race([fetch('/phone/recv/' + deviceId + '?maxwait=25000', opt), watchdog])
+        Promise.race(
+            [
+                fetch(
+                    '/phone/recv/' +
+                        deviceId +
+                        '?phoneId=' +
+                        encodeURIComponent(phoneId) +
+                        '&maxwait=25000',
+                    opt
+                ),
+                watchdog,
+            ]
+        )
             .then((r: any) => {
                 // ⚠️ 不要在这里 abort（见文件头说明 2）
                 return r.json();
