@@ -1,12 +1,17 @@
 import { Button, Empty, Image, Modal, Space, Tabs, Typography } from 'antd';
 import { PrinterOutlined } from '@ant-design/icons';
-import { Children, cloneElement, useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useReactToPrint } from 'react-to-print';
 import { copyImageToClipboard, getDeviceId, sendTestImage, TEST_IMAGE_URL } from '@/lib/relay';
 import { safeCopyText } from '@/lib/clipboard';
 import { addLog } from '@/lib/logger';
 import { downloadFileName, type GalleryImage, type GalleryText } from '@/lib/gallery';
 import { getOverlayContainer } from '@/lib/ui/panelHost';
+// 预览相关的通用件全部来自共享层（与手机上传页同一份，v26.10.08-v13 起）
+import { appendPreviewActions } from '../../../shared/preview/actions';
+import { getPreviewHost } from '../../../shared/preview/host';
+import { syncPreviewMask } from '../../../shared/preview/mask';
+import { buildA4ImageNode, PRINT_PAGE_STYLE } from '../../../shared/preview/print';
 
 const { Text } = Typography;
 
@@ -33,53 +38,14 @@ function fmtTime(ts: number): string {
 }
 
 /**
- * 放大预览浮层的挂载容器（v26.10.08-v7 修「放大后图片盖住下方工具栏」）。
- *
- * ⚠️ **必须自己建一个挂在 `documentElement` 下的宿主 div，不能直接用 `getOverlayContainer()`**：
- * antd 的 Image 预览是 `position: fixed` 浮层，**默认 portal 到 `document.body`**；而税务页的 `body`
- * 常被加 `transform`/`filter` 形成独立层叠上下文（本仓库 `panelHost.tsx` 已记录这个坑），
- * 一旦被放进去，浮层就以 **body 的盒子**而不是视口为包含块 ⇒ 工具栏被推到视口外、图片占住它的位置。
- *
- * 实测（1280×800、页面滚到 y=600、`body{transform:translateZ(0)}`）：
- *   · 不修：预览根 `y=-579 h=3000`（= body 盒子），工具栏 `y=2330`（视口外），打印按钮中心命中的是 `img`；
- *   · 传 `getContainer: getOverlayContainer`（返回 `document.documentElement`）：**仍然被挂到 body**，
- *     即这个写法在本 antd/rc-portal 版本下不生效（实测，别改回去）；
- *   · 传本函数（自建宿主 div）：预览根 `y=0`，工具栏回到视口内，命中测试通过。
+ * 预览浮层的挂载容器、A4 打印版式、遮罩压制、工具栏追加按钮 ——
+ * 这些**通用件已全部搬进 `shared/preview/`**（v26.10.08-v13），与手机上传页共用同一份实现，
+ * 因此本文件不再自带一份；原来的实测数据与「为什么这么做」的说明随代码一起搬过去了，见：
+ *   · `shared/preview/host.ts`  —— 为什么必须自建宿主 div（body 带 transform 会困住 fixed 浮层）
+ *   · `shared/preview/print.ts` —— A4 版式常量、`PRINT_PAGE_STYLE`、`buildA4ImageNode()`
+ *   · `shared/preview/mask.ts`  —— 预览期间压掉所有下层遮罩（否则两层 rgba 叠成 0.6975）
+ *   · `shared/preview/actions.tsx` —— 把按钮追加进 antd 工具栏胶囊
  */
-function getPreviewHost(): HTMLElement {
-    const ID = '__znhd_preview_host__';
-    let el = document.getElementById(ID);
-    if (!el) {
-        el = document.createElement('div');
-        el.id = ID;
-        document.documentElement.appendChild(el);
-    }
-    return el;
-}
-
-/**
- * A4 打印版式（v26.10.08-v4 建，v5 起改为「零页边距 + 内容自己留白」）。
- *
- * ⚠️ **为什么 `@page` 的 margin 必须是 0**：浏览器的「页眉和页脚」（标题 / URL / 日期 / 页码）
- *    画在**页边距区域**里，而 Chrome 打印对话框里该项**默认是勾上的**。只要页边距非 0，
- *    它们就有地方可画 ⇒ 纸上会多出页眉页脚。把 `@page` 边距归零后它们无处容身（这也是
- *    react-to-print 默认 pageStyle 用 `margin: 0` 的原因，它自己注释写着 "Remove browser default
- *    header (title) and footer (url)"）。CSS 没有直接关掉那个勾选项的能力，只能这样「不给它留位置」。
- *    ⇒ 图片与纸边之间的距离改由**内容框自己的 padding** 提供（`A4_PAD_MM`），效果一样且不会被浏览器占用。
- *
- * ⚠️ 这几个数必须与下面 `pageStyle` 里的 `@page { size: A4 portrait; margin: 0 }` **配套**：
- *   · 内容框 = 整张 A4（210 × 297mm），减去 3mm 高度余量取 294mm；
- *   · `padding: 10mm` 且**必须 `box-sizing: border-box`** —— 否则 padding 会把框撑到 230×314mm，
- *     直接溢出纸张、多吐空白页（这是本版最容易写错的一处）；
- *   · 于是真正给图片的区域仍是 190 × 274mm。
- *   · 高度留 3mm 余量：框高**正好等于**纸高时，部分浏览器/打印驱动会因舍入多吐一张空白页。
- */
-const A4_W_MM = 210;
-const A4_H_MM = 297;
-/** 图片与纸边的距离（自己留，不靠 @page margin —— 那个位置要留给「没有页眉页脚」） */
-const A4_PAD_MM = 10;
-const PRINT_BOX_W_MM = A4_W_MM; // 210（含内边距）
-const PRINT_BOX_H_MM = A4_H_MM - 3; // 294（含内边距；留 3mm 防空白页）
 
 /**
  * 「历史记录」弹窗：图片 + 文本两类收件，分两个页签（v26.10.08-v3 由单纯的「收图画廊」升级而来）。
@@ -125,12 +91,14 @@ export default function RecvHistoryModal({
      */
     const [previewOpen, setPreviewOpen] = useState(false);
 
-    /** 预览开关 → 压掉/恢复**所有**下层浮层遮罩（规则写在 uiReset.ts 的 `html.znhd-previewing` 段） */
+    /**
+     * 预览开关 → 压掉/恢复**所有**下层浮层遮罩。
+     * 规则与类名都在共享层（`shared/preview/mask.ts`），手机页用的是同一份；
+     * `syncPreviewMask` 幂等，且会顺手把 CSS 注入一次（原先脚本端在 uiReset 里另写了一份，已去掉）。
+     */
     useEffect(() => {
-        const root = document.documentElement;
-        if (previewOpen) root.classList.add('znhd-previewing');
-        else root.classList.remove('znhd-previewing');
-        return () => root.classList.remove('znhd-previewing');
+        syncPreviewMask(previewOpen);
+        return () => syncPreviewMask(false);
     }, [previewOpen]);
 
     // 每次打开都回到「图片」页签：收到新图会自动弹这个弹窗，不应停在用户上次看的「文本」页
@@ -152,46 +120,27 @@ export default function RecvHistoryModal({
         ignoreGlobalStyles: true,
         documentTitle: () => printTitleRef.current,
         /**
-         * A4 版式（v26.10.08-v4；v5 起 `margin` 归零以去掉浏览器页眉页脚）：`@page` 直接注入打印窗口，
-         * 比外部 CSS 可靠得多。
-         *  - `size: A4 portrait` 让浏览器默认按 A4 纵向出纸（用户在打印对话框里没改纸张时生效）。
-         *  - ⚠️ `margin: 0` **不是为了贴边打印**，而是让浏览器没地方画页眉页脚（见上方常量注释）；
-         *    图片与纸边的 10mm 由内容框的 `padding` 提供。
-         *  - `html, body { margin: 0 }` 是必需的：打印 iframe 的 body 默认 8px 外边距，
-         *    不归零会把内容框整体挤出纸张、进而多吐一张空白页。
+         * A4 版式来自共享层 `shared/preview/print.ts`（手机页用的是同一个 `PRINT_PAGE_STYLE`）：
+         * `@page` 直接注入打印窗口，比外部 CSS 可靠得多；`margin: 0` 是为了让浏览器**没地方画页眉页脚**，
+         * 图片与纸边的 10mm 由内容框的 padding 提供 —— 完整理由见该文件头部注释。
          */
-        pageStyle: '@page { size: A4 portrait; margin: 0; } html, body { margin: 0; padding: 0; }',
+        pageStyle: PRINT_PAGE_STYLE,
     });
 
     /**
-     * 打印某一张图的**原图**，并自适应 A4 纸（v26.10.08-v4）。
+     * 打印某一张图的**原图**，并自适应 A4 纸。
      *
-     * 三个关键取舍：
-     *  1) 打印内容用**临时构造的游离节点**（不挂进 DOM），而不是页面上某个隐藏容器：
-     *     `cloneNode` 会把**内联样式**一起克隆，所以 `display:none` / 挪到视口外的隐藏容器
-     *     在打印 iframe 里同样不可见 ⇒ 打印出来是空白。游离节点只带我们给的打印样式，没有这个坑；
-     *     而且它不进渲染树，也就不会「闪一下大图」。
-     *  2) **图片框固定成 A4 可用区**、`object-fit: contain` 等比缩放后居中 —— 整张图必定完整落在同一页，
-     *     不裁切、不跨页；小图会被放大铺满（`contain` 只保证不变形，不保证不放大），大图则缩小。
-     *     `overflow: hidden` 是二道保险：即便有浏览器不认 `object-fit`，也不会把内容顶出纸张触发分页。
-     *  3) 打印的是 `previewUrl`（原分辨率 objectURL），不是预览里缩放/旋转后的画面 —— 清晰度最好。
-     *     ⚠️ 打印对话框弹出期间该图的 objectURL 不能被 revoke（移除该图会 revoke），否则打印空白。
+     * 版式与「为什么用游离节点」都搬进了共享层 `shared/preview/print.ts`（`buildA4ImageNode`），
+     * 手机页打印时用的是同一个函数。这里只保留脚本端特有的两点：
+     *   · 打印的是 `previewUrl`（原分辨率 objectURL），不是预览里缩放/旋转后的画面 —— 清晰度最好；
+     *     ⚠️ 打印对话框弹出期间该图的 objectURL 不能被 revoke（移除该图会 revoke），否则打印空白；
+     *   · 文档标题用 `downloadFileName`（与下载同名，便于在打印对话框里认出来）。
      * ⚠️ 纸张最终仍受用户在打印对话框里的「缩放/适应纸张尺寸」影响：若选了「适应纸张」，
      *    浏览器会按自己的规则再缩一次，CSS 里的 `@page size` 会被覆盖（这是 CSS「不生效」的常见原因）。
      */
     const printImage = (it: GalleryImage, idx: number) => {
         const fname = downloadFileName(it.name, it.mime, idx);
-        const node = document.createElement('div');
-        // 内容框 = 整张 A4（含内边距）。
-        // ⚠️ `box-sizing: border-box` 不能省：width 已按 A4 取 210mm，若按 content-box 再加 10mm padding，
-        //    实际宽度会变成 230mm ⇒ 溢出纸张、多吐空白页。
-        node.style.cssText = `box-sizing:border-box;width:${PRINT_BOX_W_MM}mm;height:${PRINT_BOX_H_MM}mm;padding:${A4_PAD_MM}mm;overflow:hidden;`;
-        const img = document.createElement('img');
-        img.src = it.previewUrl;
-        img.alt = fname;
-        // 图片区域 = 内容框的 padding 内沿（190 × 274mm），等比缩放居中
-        img.style.cssText = 'display:block;width:100%;height:100%;object-fit:contain;';
-        node.appendChild(img);
+        const node = buildA4ImageNode(it.previewUrl, fname);
 
         printTitleRef.current = fname;
         addLog('打印图片: ' + fname, 'success');
@@ -278,17 +227,13 @@ export default function RecvHistoryModal({
                          */
                         getContainer: getPreviewHost,
                         /**
-                         * 预览开/关 → 撤掉/恢复本弹窗自己的遮罩（v26.10.08-v9，避免两层遮罩叠加变暗）。
-                         * 见 `previewOpen` 的注释。
+                         * 预览开/关 → 压掉/恢复下层遮罩（避免两层遮罩叠加变暗）。见上方 useEffect。
                          */
                         onOpenChange: (o: boolean) => setPreviewOpen(o),
                         /**
                          * 「打印」放在**放大预览的工具栏**里（v26.10.08-v2，按用户要求从缩略图行挪过来）。
-                         *
-                         * ⚠️ 必须用 cloneElement 把按钮**追加进 antd 自己的 `.ant-image-preview-actions` 容器**，
-                         *    不能直接当 `originalNode` 的兄弟节点返回：工具栏的胶囊背景与圆角长在 actions 容器上，
-                         *    而它的父级 footer 是 `flex-direction: column` —— 放外面会变成「工具栏下方一个没有背景的裸按钮」。
-                         *    按钮复用 antd 自己的 `-actions-action` 类，尺寸/悬停与自带图标完全一致。
+                         * 追加方式用共享层的 `appendPreviewActions`（手机页用的是同一个函数）；
+                         * 「为什么必须 cloneElement 进 antd 的 actions 容器」写在那个文件里。
                          */
                         actionsRender: (originalNode, info) => {
                             const printBtn = (
@@ -307,10 +252,7 @@ export default function RecvHistoryModal({
                                     <PrinterOutlined />
                                 </button>
                             );
-                            return cloneElement(originalNode, {}, [
-                                ...Children.toArray((originalNode.props as { children?: ReactNode }).children),
-                                printBtn,
-                            ]);
+                            return appendPreviewActions(originalNode, printBtn);
                         },
                     }}>
                     <div

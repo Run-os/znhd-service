@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { App as AntApp, Badge, Button, Card, Col, Empty, Image, Input, Modal, Progress, Row, Space, Tag, Typography } from 'antd';
+import { PrinterOutlined } from '@ant-design/icons';
+import { useReactToPrint } from 'react-to-print';
 import {
     blobToBase64,
     getPhoneId,
@@ -10,6 +12,11 @@ import {
     type RecvItem,
 } from './lib/relay';
 import { prepareImage } from './lib/image';
+// 预览相关的通用件与脚本端**共用同一份**（v26.10.08-v13 起，见仓库根 shared/preview/）
+import { appendPreviewActions } from '../../shared/preview/actions';
+import { getPreviewHost } from '../../shared/preview/host';
+import { syncPreviewMask } from '../../shared/preview/mask';
+import { buildA4ImageNode, PRINT_PAGE_STYLE } from '../../shared/preview/print';
 
 const { Title, Text, Paragraph } = Typography;
 
@@ -248,6 +255,26 @@ export default function App() {
         }
     };
 
+    /**
+     * 打印能力来自 react-to-print（与脚本端同一个库、同一套 A4 版式，v26.10.08-v13 起）。
+     * 版式常量与「游离节点」的做法都在共享层 `shared/preview/print.ts`。
+     * ⚠️ `ignoreGlobalStyles: true`：默认行为会把当前页面全部 <style>/<link> 抄进打印 iframe，
+     *    没必要（打印内容只有一张图），也会拖慢。
+     */
+    const printTitleRef = useRef('image');
+    const doPrint = useReactToPrint({
+        ignoreGlobalStyles: true,
+        documentTitle: () => printTitleRef.current,
+        pageStyle: PRINT_PAGE_STYLE,
+    });
+
+    /** 打印「当前预览的那张图」的原图，自适应 A4（与脚本端行为一致：等比缩放居中、不裁切、不跨页） */
+    const printRecvImage = (img: RecvImage) => {
+        const fname = img.name || 'image.jpg';
+        printTitleRef.current = fname;
+        doPrint(() => buildA4ImageNode(img.url, fname));
+    };
+
     const copyRecvText = async () => {
         const t = recvText ? recvText.text : '';
         try {
@@ -449,7 +476,37 @@ export default function App() {
                 {recvImages.length === 0 ? (
                     <Empty description="暂无图片" />
                 ) : (
-                    <Image.PreviewGroup items={recvImages.map((i) => ({ src: i.url }))}>
+                    <Image.PreviewGroup
+                        items={recvImages.map((i) => ({ src: i.url }))}
+                        preview={{
+                            /**
+                             * 三个通用件全部走**与脚本端同一份**共享实现（v26.10.08-v13 起）：
+                             *  · getPreviewHost：预览是 fixed 浮层，挂到 body 会被宿主页 transform 困住；
+                             *  · onOpenChange + syncPreviewMask：预览期间压掉下层弹窗/抽屉遮罩，
+                             *    否则两层 rgba(0,0,0,0.45) 叠成 0.6975、画面明显发暗（脚本端踩过）；
+                             *  · actionsRender + appendPreviewActions：把「打印」按钮追加进 antd 的工具栏胶囊。
+                             */
+                            getContainer: getPreviewHost,
+                            onOpenChange: (o: boolean) => syncPreviewMask(o),
+                            actionsRender: (originalNode, info) => {
+                                const at = typeof info.current === 'number' ? info.current : 0;
+                                const printBtn = (
+                                    <button
+                                        key="znhd-print"
+                                        type="button"
+                                        className="ant-image-preview-actions-action"
+                                        aria-label="print"
+                                        title="打印原图"
+                                        onClick={() => {
+                                            const img = recvImages[at];
+                                            if (img) printRecvImage(img);
+                                        }}>
+                                        <PrinterOutlined />
+                                    </button>
+                                );
+                                return appendPreviewActions(originalNode, printBtn);
+                            },
+                        }}>
                         <div className="znhd-recv-grid">
                             {recvImages.map((img) => (
                                 <div key={img.id} className="znhd-recv-cell">

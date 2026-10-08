@@ -186,6 +186,113 @@ async function main() {
             );
             console.log('     实测：' + JSON.stringify(info));
         }
+
+        // ===== ② 收到的图片：放大预览（v26.10.08-v13 起与脚本端共用 shared/preview/）=====
+        // 真往中继发一张图给这台「手机」，等它经长轮询收到 → 打开画廊 → 点开预览。
+        const b64 = fs.readFileSync(png).toString('base64');
+        const sent = await fetch(`http://127.0.0.1:${port}/phone/send/test-device-0001`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: 'probe.png', mime: 'image/png', data: b64 }),
+        });
+        check('电脑端 → 手机端：中继投递接口可用（/phone/send 返回 ok）', sent.ok);
+
+        // 画廊入口出现（= 手机页真的收到了这张图）
+        await page.waitForFunction(
+            () => Array.from(document.querySelectorAll('button')).some((b) => (b.textContent || '').includes('查看收到的图片')),
+            { timeout: 25000 }
+        );
+        await page.evaluate(() => {
+            const b = Array.from(document.querySelectorAll('button')).find((x) =>
+                (x.textContent || '').includes('查看收到的图片')
+            );
+            if (b) b.click();
+        });
+        // 点缩略图打开放大预览
+        await page.waitForSelector('.znhd-recv-img img, .znhd-recv-cell .ant-image img', { timeout: 15000 });
+        await page.evaluate(() => {
+            const img = document.querySelector('.znhd-recv-cell .ant-image img') || document.querySelector('.znhd-recv-img img');
+            if (img) img.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+        });
+        await page.waitForSelector('.ant-image-preview', { timeout: 15000 });
+        await sleep(500);
+
+        const previewInfo = await page.evaluate(() => {
+            const root = document.querySelector('.ant-image-preview');
+            const host = document.getElementById('__znhd_preview_host__');
+            const actions = root ? root.querySelector('.ant-image-preview-actions') : null;
+            const printBtn = root ? root.querySelector('button[aria-label="print"]') : null;
+            const hidden = (sel) =>
+                Array.from(document.querySelectorAll(sel)).every((el) => {
+                    const cs = getComputedStyle(el);
+                    return cs.display === 'none' || cs.visibility === 'hidden';
+                });
+            return {
+                mountedInSharedHost: !!(root && host && host.contains(root)),
+                toolbarHasPrint: !!(actions && printBtn && actions.contains(printBtn)),
+                masksHidden: hidden('.ant-modal-mask') && hidden('.ant-drawer-mask'),
+            };
+        });
+        check('预览浮层挂在共享宿主 div #__znhd_preview_host__ 里（不是 body）', previewInfo.mountedInSharedHost);
+        check('预览工具栏里有共享方式追加的「打印」按钮', previewInfo.toolbarHasPrint);
+        check('预览期间下层遮罩被压掉（与脚本端同一份规则）', previewInfo.masksHidden);
+
+        // 点打印 → react-to-print 建出 id=printWindow 的 iframe，且版式来自共享的 PRINT_PAGE_STYLE
+        // ⚠️ 时序：react-to-print 是「先插 iframe、load 时才写入内容」，所以在**插入那一刻**读是空的，
+        //    必须监听 iframe 自己的 load 事件（脚本端冒烟踩过同一个坑，这里照同一判据写）。
+        await page.evaluate(() => {
+            window.__printDoc = null;
+            const obs = new MutationObserver((muts) => {
+                for (const m of muts) {
+                    Array.prototype.forEach.call(m.addedNodes, (n) => {
+                        if (n && n.id === 'printWindow') {
+                            n.addEventListener('load', () => {
+                                try {
+                                    const d = n.contentDocument;
+                                    const img = d && d.querySelector('img');
+                                    const box = d && d.querySelector('body > div');
+                                    const styles = d
+                                        ? Array.from(d.querySelectorAll('style')).map((s) => s.textContent || '')
+                                        : [];
+                                    window.__printDoc = {
+                                        hasImg: !!img,
+                                        pageA4: styles.some((t) => /@page/.test(t) && /size:\s*A4/i.test(t)),
+                                        marginZero: styles.some((t) => /@page\s*\{[^}]*margin:\s*0\s*[;}]/.test(t)),
+                                        boxStyle: box ? box.getAttribute('style') : null,
+                                        imgStyle: img ? img.getAttribute('style') : null,
+                                    };
+                                } catch (e) {
+                                    window.__printDoc = { error: String((e && e.message) || e) };
+                                }
+                            });
+                        }
+                    });
+                }
+            });
+            obs.observe(document.documentElement, { childList: true, subtree: true });
+        });
+        await page.evaluate(() => {
+            const b = document.querySelector('.ant-image-preview button[aria-label="print"]');
+            if (b) b.click();
+        });
+        try {
+            await page.waitForFunction(() => !!window.__printDoc, { timeout: 8000 });
+        } catch (e) {
+            /* 超时后按 null 断言，失败信息更完整 */
+        }
+        const printDoc = await page.evaluate(() => window.__printDoc || null);
+        check(
+            '「打印」按共享 A4 版式建出打印 iframe（@page size:A4 + margin:0 + 210mm 图片框 + object-fit）',
+            !!(
+                printDoc &&
+                printDoc.hasImg &&
+                printDoc.pageA4 &&
+                printDoc.marginZero &&
+                /210mm/.test(printDoc.boxStyle || '') &&
+                /object-fit:\s*contain/.test(printDoc.imgStyle || '')
+            )
+        );
+        console.log('     实测打印文档：' + JSON.stringify(printDoc));
     } finally {
         await browser.close();
         child.kill();

@@ -16,5 +16,6 @@
     "resolveJsonModule": true,
     "types": ["vite/client"]
   },
-  "include": ["src", "vite.config.ts"]
+  // ../shared：与脚本端共用的纯逻辑层（v26.10.08-v13）。未设 rootDir、noEmit，故可 include 项目外文件。
+  "include": ["src", "vite.config.ts", "../shared"]
 }

@@ -1,4 +1,7 @@
 import { addLog } from '@/lib/logger';
+// 图片压缩：与手机上传页共用同一份实现（v26.10.08-v13 起），路径见仓库根 shared/
+import { DEFAULT_MAX_DIM, DEFAULT_QUALITY, makeHeicConverter } from '../../shared/image/compress';
+import { prepareForTransfer } from '../../shared/image/prepare';
 
 /**
  * 设备互联中继客户端（手机 → 电脑）与图片剪贴板工具。
@@ -47,9 +50,9 @@ export function imagePayloadBytes(file: ImageSizeLike | null | undefined, name?:
     return b64Len + byteLen + 120;
 }
 
-/** 「发送到手机」压缩参数：与手机上传页保持一致（canvas 缩放到最大边 + JPEG 质量）。 */
-export const PHONE_MAX_DIM = 1600;
-export const PHONE_JPEG_QUALITY = 0.75;
+/** 「发送到手机」压缩参数：与手机上传页共用同一份实现与默认值（见 shared/image/compress.ts） */
+export const PHONE_MAX_DIM = DEFAULT_MAX_DIM;
+export const PHONE_JPEG_QUALITY = DEFAULT_QUALITY;
 
 /** 发送到手机的实际载荷：blob/name/mime 为最终要 POST 的内容；compressed 表示是否发生过压缩。 */
 export interface PhoneImagePayload {
@@ -59,162 +62,23 @@ export interface PhoneImagePayload {
     compressed: boolean;
 }
 
-/** HEIC/HEIF 判定：MIME 可能为空串或 application/octet-stream，故扩展名也算 */
-function isHeicLike(lowerMime: string, lowerName: string) {
-    return (
-        lowerMime === 'image/heic' ||
-        lowerMime === 'image/heif' ||
-        lowerMime === 'image/heic-sequence' ||
-        lowerMime === 'image/heif-sequence' ||
-        /\.(heic|heif)$/.test(lowerName)
-    );
-}
-
 /**
- * 用 @require 进来的 heic2any 把 HEIC/HEIF 转成 JPEG。
- * 桌面 Chrome 原生解不开 HEIC/HEIF（createImageBitmap 与 <img> 都会失败），故必须先转码；
- * 与手机上传页用的是同一个库（那边是页面里按需加载，这里是脚本 @require）。
- */
-function heicToJpeg(file: Blob): Promise<Blob> {
-    return new Promise<Blob>((resolve, reject) => {
-        if (typeof heic2any !== 'function') {
-            reject(new Error('heic2any 未加载'));
-            return;
-        }
-        heic2any({ blob: file, toType: 'image/jpeg', quality: 0.9 })
-            .then((out: Blob | Blob[]) => {
-                const b = Array.isArray(out) ? out[0] : out; // 多图 HEIC 会返回数组，取首帧
-                if (b) resolve(b);
-                else reject(new Error('heic2any 未产出图片'));
-            })
-            .catch(reject);
-    });
-}
-
-/** 解码结果：可绘制源 + 原始尺寸 + 释放钩子（createImageBitmap 与 <img> 两条路径统一） */
-interface DecodedImage {
-    source: CanvasImageSource;
-    width: number;
-    height: number;
-    release: () => void;
-}
-
-/**
- * 解码（createImageBitmap，失败回退 <img>）→ canvas 等比缩放到最大边 PHONE_MAX_DIM →
- * 铺白底 → 导出 JPEG。解码/编码失败时 resolve(null)，由调用方决定回退策略。
- */
-function toPhoneJpeg(blob: Blob): Promise<Blob | null> {
-    return new Promise<Blob | null>((resolve) => {
-        // <img> 兜底解码：createImageBitmap 在部分内核/格式上不可用或直接抛
-        const decodeViaImg = () =>
-            new Promise<DecodedImage>((rs, rj) => {
-                const url = URL.createObjectURL(blob);
-                const img = new Image();
-                img.onload = () =>
-                    rs({
-                        source: img,
-                        width: img.naturalWidth,
-                        height: img.naturalHeight,
-                        release: () => URL.revokeObjectURL(url),
-                    });
-                img.onerror = () => {
-                    URL.revokeObjectURL(url);
-                    rj(new Error('decode failed'));
-                };
-                img.src = url;
-            });
-        const decoded: Promise<DecodedImage> =
-            typeof createImageBitmap === 'function'
-                ? createImageBitmap(blob)
-                      .then((bmp) => ({
-                          source: bmp,
-                          width: bmp.width,
-                          height: bmp.height,
-                          release: () => {
-                              if (bmp.close) bmp.close();
-                          },
-                      }))
-                      .catch(() => decodeViaImg())
-                : decodeViaImg();
-        decoded
-            .then((dec) => {
-                const w = Number(dec.width) || 0;
-                const h = Number(dec.height) || 0;
-                if (!w || !h) {
-                    dec.release();
-                    resolve(null);
-                    return;
-                }
-                const scale = Math.min(1, PHONE_MAX_DIM / Math.max(w, h));
-                const cw = Math.max(1, Math.round(w * scale));
-                const ch = Math.max(1, Math.round(h * scale));
-                const cv = document.createElement('canvas');
-                cv.width = cw;
-                cv.height = ch;
-                const ctx = cv.getContext('2d');
-                if (!ctx) {
-                    dec.release();
-                    resolve(null);
-                    return;
-                }
-                // JPEG 无透明通道：先铺白底，避免透明 PNG 被压成黑底（与手机上传页一致）
-                ctx.fillStyle = '#fff';
-                ctx.fillRect(0, 0, cw, ch);
-                ctx.drawImage(dec.source, 0, 0, cw, ch);
-                dec.release();
-                cv.toBlob((b) => resolve(b || null), 'image/jpeg', PHONE_JPEG_QUALITY);
-            })
-            .catch(() => resolve(null));
-    });
-}
-
-/**
- * 「电脑端 → 手机端」发送前的图片压缩，策略与手机上传页的 compressFile 对齐：
- * canvas 等比缩放到最大边 PHONE_MAX_DIM，铺白底后导出 JPEG（PHONE_JPEG_QUALITY）；
- * HEIC/HEIF 先经 heic2any 转成 JPEG，再走同一条压缩链。
+ * 「电脑端 → 手机端」发送前的图片压缩。
  *
- * 以下情况回退「原图直传」，绝不阻断发送：
- *  - SVG：canvas 无法可靠光栅化（无固有尺寸时画布为 0），且压成 JPEG 会丢矢量特性；
- *  - GIF：canvas 只取首帧，会把动图压成静态图；
- *  - HEIC/HEIF 转码失败（库未加载 / 文件损坏）：退回原图，交由接收端自行处理；
- *  - 解码失败，或**非 HEIC**时「压完反而更大」（小图 / 已高度压缩的图）。
+ * v26.10.08-v13 起**实现搬进共享层** `shared/image/prepare.ts`（与手机上传页同一份）。
+ * 规则（SVG/GIF 原样直传、HEIC 先转码、压不小就不压、任何失败都回退原图）全部在那边，
+ * 这里只剩脚本端**特有的一步**：把「HEIC 取库方式」注入进去 ——
+ * 脚本端用的是 `@require` 进来的全局 `heic2any`，手机页是运行期按需注入 `<script>`。
  *
  * @param {File|Blob} file - 用户选择的原始图片文件
  * @returns {Promise<PhoneImagePayload>} 实际要发送的内容
  */
 export function compressImageForPhone(file: ImageFile): Promise<PhoneImagePayload> {
-    const name = String((file && file.name) || 'image.jpg');
-    const mime = String((file && file.type) || 'image/jpeg');
-    const original: PhoneImagePayload = { blob: file, name: name, mime: mime, compressed: false };
-    const lowerName = name.toLowerCase();
-    const lowerMime = mime.toLowerCase();
-    // SVG / GIF 原样直传（见上方说明）
-    if (
-        lowerMime === 'image/svg+xml' ||
-        lowerMime === 'image/gif' ||
-        /\.svg$/.test(lowerName) ||
-        /\.gif$/.test(lowerName)
-    ) {
-        return Promise.resolve(original);
-    }
-    const heic = isHeicLike(lowerMime, lowerName);
-    // HEIC 转码失败时 heicToJpeg 会 reject，被下面的 catch 兜成原图直传
-    const source: Promise<Blob> = heic ? heicToJpeg(file) : Promise.resolve<Blob>(file);
-    return source
-        .then((blob) => toPhoneJpeg(blob))
-        .then((out) => {
-            if (!out) return original; // 解码/编码失败，或（HEIC）库不可用
-            // HEIC 的「转码」本身就是目的：既压体积，也修掉安卓端不显示 HEIC 的兼容问题，
-            // 故即使 JPEG 没比原始 HEIC 小也照样发 JPEG；其它格式仍遵循「压不小就不压」。
-            if (!heic && out.size >= ((file && file.size) || 0)) return original;
-            return {
-                blob: out,
-                name: name.replace(/\.[a-z0-9]+$/i, '') + '.jpg',
-                mime: 'image/jpeg',
-                compressed: true,
-            };
-        })
-        .catch(() => original);
+    return prepareForTransfer(file, {
+        maxDim: PHONE_MAX_DIM,
+        quality: PHONE_JPEG_QUALITY,
+        loadHeic: (blob) => makeHeicConverter(typeof heic2any === 'function' ? heic2any : null)(blob),
+    });
 }
 
 /**

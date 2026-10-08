@@ -11,6 +11,31 @@
 
 ---
 
+### znhd.user.js v26.10.08-v13
+- **抽出跨端共享层 `shared/`：图片压缩与图片预览通用件只维护一份**（按用户要求「至少预览图片和压缩图片保持同步」）：
+  - **为什么值得做**：这两块原本是「复制式同步」，而且**已经漂移了** —— 脚本端跳过 GIF（canvas 只取首帧会把动图压成静态图），手机页没跳过，同一张动图两端行为不同；压缩参数（1600 / 0.75）与 A4 打印版式也各写了一份。
+  - **图片压缩**（`shared/image/{compress,prepare}.ts`）：`resizeToJpeg()`（createImageBitmap → 回退 `<img>` → canvas 缩放 → 铺白底 → JPEG）+ `prepareForTransfer()`（SVG/GIF 跳过、HEIC 转码、压不小就不压、任何失败原图直传）**合成一份**。脚本端 `compressImageForPhone` 只剩薄包装，仅注入它特有的 HEIC 取库方式（`@require` 的全局 `heic2any`）。
+    - ⚠️ **行为变更**：GIF 统一为**原样直传**（先前手机页会把它压成静态 JPEG）。
+  - **图片预览**（`shared/preview/`）：`getPreviewHost()`（预览浮层的宿主 div）、`PRINT_PAGE_STYLE` + `buildA4ImageNode()`（A4 版式与游离节点）、`syncPreviewMask()`（预览期间压掉所有下层遮罩）、`appendPreviewActions()`（把按钮追加进 antd 工具栏胶囊）全部搬进共享层；实测数据与「为什么这么做」的注释随代码一起搬走。
+    - `uiReset.ts` 里那份重复的遮罩 CSS 已删除，改由共享层在预览开关时注入 —— **同一份规则不再有两处**。
+  - 本文件因此净减约 180 行重复实现（两端合计），参数/兜底/坑注释只剩一处。
+- **冒烟断言（仍 41 项，无删除）**：共享化后所有既有断言保持全绿，正好当回归用 —— 尤其 `printA4Ok`（A4 版式：`@page size:A4` + `margin:0` + 210mm 内容框 + `object-fit:contain`）与 `previewSingleMaskOk`（DOM 判据：预览期间所有遮罩 `display:none`），证明「搬家」没有改变行为。
+- ⚠️ **又踩了一次 `uiReset.ts` 的反引号坑**（本仓库已记录两次）：新写的 CSS 注释里带了 `` `shared/preview/mask.ts` ``，直接把模板字符串截断、tsc 报 TS1005。**该文件里任何注释都不许出现反引号。**
+- 验证：`npm run typecheck` 0 错、`npm run build` 结论行 `compiled`、`npm run check` 通过、`npm run verify` 三段全绿、产物含共享实现标记（旧的 `decode failed` 已消失）。
+- ⚠️ **只做本地提交，未推送**。
+
+
+### relay-server / 手机上传页 v26.10.08-v3
+- **手机页预览接上共享层，并加上「打印」按钮**（按用户要求：手机端也可能在电脑浏览器里用，所以按通用浏览器实现）：
+  - 预览配置三项全部用与脚本端**同一份**实现：`getContainer: getPreviewHost`（挂共享宿主 div）、`onOpenChange → syncPreviewMask`（预览期间压掉下层遮罩，避免两层 `rgba(0,0,0,0.45)` 叠成 0.6975 变暗）、`actionsRender + appendPreviewActions`（把「打印」追加进 antd 工具栏胶囊）。
+  - 打印用 `react-to-print` + 共享的 `PRINT_PAGE_STYLE` / `buildA4ImageNode` ⇒ 与脚本端**同一套 A4 版式**（实测打印文档：`@page size:A4`、`margin:0`、`box-sizing:border-box;width:210mm;height:294mm;padding:10mm`、`object-fit:contain`）。
+  - **新增依赖**：`react-to-print ^3.3.0`；并把 `@ant-design/icons` 从「靠 antd 带进来的传递依赖」改为**显式声明**（直接 import 就必须声明，否则 `npm --prefix web ci` 会失败）。`web/package-lock.json` 已同步。
+- **手机页端到端测试 3 → 9 项**（`verify:web`）：新增「真往中继发一张图 → 等手机页收到 → 打开画廊 → 点开放大预览」这一段，断言 ①预览挂在共享宿主 `#__znhd_preview_host__`（不是 body）②工具栏里有共享方式追加的「打印」按钮 ③预览期间下层遮罩被压掉 ④点打印真的按共享 A4 版式建出 `#printWindow` iframe。
+  - ⚠️ **时序坑**：react-to-print 是「先插 iframe、`load` 时才写内容」，在插入那一刻读只能拿到空文档 —— 必须在 iframe 自己的 `load` 事件里读（脚本端冒烟早踩过，这次照同一判据写才绿）。
+- 版本：`relay-server/package.json` 与 `web/package.json` 同递增为 `26.10.08-v3`（页头与 `/health` 的版本唯一来源是 relay 那份，递增才能让部署自证「新页面真的上线」）。
+- ⚠️ **只做本地提交，未推送**。
+
+
 ### relay-server / 手机上传页 v26.10.08-v2
 - **手机页（`web/`）修正提示归属 + 删掉冗余卡片**（按用户要求）：
   - 「✅ x 张已全部发送到电脑，请在电脑端接收」原先跑到了**发送文本到电脑**卡片下面 —— 根因是图片/文本两条流程**共用一个 `status` state**，而它只渲染在文本卡片里。现拆成 `imgStatus` / `textStatus`，**各回各的卡片**（图片提示仍在进度条与发送按钮之下）。

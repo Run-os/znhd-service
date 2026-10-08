@@ -48,5 +48,7 @@
     // 打开它只跳过第三方 .d.ts 的检查，本仓库自有代码依旧按 strict 全量检查（`npm run typecheck`）。
     "skipLibCheck": true
   },
-  "include": ["src"]
+  // shared/：脚本端与手机上传页共用（v26.10.08-v13）。
+  // ⚠️ 不加进 include 的话，共享层会变成「能构建、但 npm run typecheck 不检查」的盲区。
+  "include": ["src", "shared"]
 }

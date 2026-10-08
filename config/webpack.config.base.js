@@ -33,6 +33,10 @@ ${bannerNotes.map((line) => `// ${line}`).join('\n')}`;
 
 const relativePath = (p) => path.join(process.cwd(), p);
 const src = relativePath('src');
+// 共享层（v26.10.08-v13 起）：脚本端与手机上传页共用的纯逻辑/纯 DOM 代码。
+// ⚠️ 必须加进下面 ts-loader 的 include，否则 webpack 会因为「src 之外的文件没有匹配的 loader」
+//    把 .ts 当成 JS 解析而报错（这是接共享层时最容易踩的一步）。
+const shared = relativePath('shared');
 
 const baseOptions = {
   entry: './src/index.ts',
@@ -70,7 +74,7 @@ const baseOptions = {
         test: /\.(tsx|ts)?$/,
         use: 'ts-loader',
         exclude: /node_modules/,
-        include: [src],
+        include: [src, shared],
       },
       {
         test: /\.css$/,
@@ -96,7 +100,7 @@ const baseOptions = {
           //   },
           // },
         ],
-        include: [src],
+        include: [src, shared],
       },
       {
         test: /\.less$/,
