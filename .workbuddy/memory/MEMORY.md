@@ -20,6 +20,26 @@
   不 dedupe 就出现双份 React ⇒ 白屏崩 `Cannot read properties of null (reading 'useRef')`。
 - ⚠️ **不再有 antd**：`antd` / `@ant-design/icons` / `@ant-design/cssinjs` 已从两个 package.json 卸载。
 
+## 「某个库能不能走 CDN `@require`」的判定标准（v26.10.09 实测确立）
+走 CDN 不占产物体积，但**必须同时满足两个条件**，缺一不可：
+1. **该库发布了挂全局变量的浏览器构建**（UMD / IIFE）。`@require` 只能加载这类脚本，ESM 不行。
+2. **它能独立于其他模块工作**，不需要与别的模块共享内部实例。
+
+已实测（jsdelivr 实际下载验证）：
+
+| 库 | 格式 | 全局变量 | 大小 | 能否走 CDN |
+|---|---|---|---|---|
+| js-yaml 4.1.0 | UMD | `jsyaml` | 38.5 KB | 是（已在用） |
+| qrcodejs 1.0.0 | IIFE | `QRCode` | 19.5 KB | 是（已在用） |
+| heic2any 0.0.4 | UMD（`global.heic2any`） | `heic2any` | **1.30 MB** | 是（已在用） |
+| react / react-dom 19 | **无 UMD，CDN 404** | — | — | **否** |
+| @radix-ui/* | **只有 ESM 与 .d.ts** | — | — | **否** |
+
+- ⚠️ **heic2any 单库 1.30 MB**（比整个产物 425KB 还大 3 倍）—— 它走 CDN 是刚需，别想着打包进来。
+- ⚠️ 走 CDN 的代价：脚本必须做「库没加载成功」的兜底（见 `src/lib/qrcode.ts` 的
+  `typeof QRCode === 'undefined'` 检查、`src/lib/relay.ts` 的 `typeof heic2any === 'function'`）。
+- 想让 React 走 CDN 只有两条路：降 React 18（有 UMD，10.7KB + 131.8KB），或自己打一份 UMD 上传。
+
 ## 版本号规范（硬性，必遵守）
 - 油猴 `@version` 与 relay `package.json` 同格式 `YY.M.D-vN`（yy.m.d=改动当天真实日期，vN=当天累计第 N 次）。任何代码改动必须递增；跨天重置 v1。
 - 油猴两处版本文本（启动日志~668、面板~901）走 `GM_info.script.version` 动态读，只改 `@version` 头。
