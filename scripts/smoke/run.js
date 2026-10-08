@@ -16,6 +16,7 @@
 const puppeteer = require('puppeteer');
 const fs = require('fs');
 const { startServer, BUNDLE } = require('./server');
+const { hashInputs, readStamp } = require('./build-stamp');
 
 /**
  * 浏览器可执行文件解析：默认用 puppeteer 自带的 Chromium；
@@ -86,6 +87,7 @@ const CHECKS = [
   ['printA4Ok', '打印按 A4 自适应且无页眉页脚（@page margin:0 + 内容框留白 + object-fit）'],
   ['previewToolbarOk', '放大预览的工具栏未被图片盖住（宿主 body 带 transform 时也在视口内）'],
   ['previewIconCenteredOk', '预览工具栏图标与按钮同一水平线（不被宿主 CSS 顶出胶囊）'],
+  ['previewSingleMaskOk', '预览打开时只剩一层遮罩（不叠加弹窗遮罩变暗）'],
   ['historyTabsOk', '「历史记录」弹窗有「图片 / 文本」两个页签'],
   ['historyTextOk', '「文本」页签能回看到收到的文本'],
   ['phoneCountOk', '【设备互联】显示已连接手机数量'],
@@ -111,6 +113,23 @@ const isBenign = (msg) => KNOWN_BENIGN.some((re) => re.test(msg));
 async function main() {
   if (!fs.existsSync(BUNDLE)) {
     console.error('❌ 找不到构建产物 dist/znhd.user.js —— 请先执行 `npm run build`');
+    process.exit(1);
+  }
+
+  // ===== 产物新鲜度门禁（v26.10.08-v9 加）=====
+  // 为什么需要它：**webpack 构建失败时不会更新 dist，旧的产物还在**，于是 `npm run verify`
+  // 会静默地拿**旧 bundle** 跑测试。v26.10.08-v8 就踩过：tsc 报错（uiReset 模板串被反引号截断）
+  // 导致构建失败，紧接着的 verify 却对着旧产物报红，一度被误读成「修复没生效」。
+  // CI 里 build 是 verify 的前置步骤、失败即停，所以这道门禁主要拦「本地手动串跑」。
+  // ⚠️ 判据是**内容哈希**（dist/.build-stamp，由 npm run build 写入）而不是 mtime ——
+  //    webpack 的 compareBeforeEmit 在输出没变时不重写文件，用 mtime 会产生假阳性。
+  //    详见 scripts/smoke/build-stamp.js 头部注释。
+  if (hashInputs() !== readStamp()) {
+    console.error(
+      '❌ dist/znhd.user.js 与当前源码不一致 —— 说明上次 `npm run build` 没成功（或没跑）。\n' +
+        '   ⚠️ 构建失败时旧产物仍在，直接跑 verify 会**静默地测试旧 bundle**，很容易误判改动是否生效。\n' +
+        '   请先执行 `npm run build` 并确认它输出 `compiled successfully` 再重试。'
+    );
     process.exit(1);
   }
 

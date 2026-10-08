@@ -107,6 +107,15 @@ export default function RecvHistoryModal({
     const [tab, setTab] = useState<'image' | 'text'>('image');
     /** 文本行的复制反馈：记录是**第几行**，避免所有行一起改文案 */
     const [copyState, setCopyState] = useState<{ idx: number; ok: boolean } | null>(null);
+    /**
+     * 放大预览是否打开（v26.10.08-v9）。
+     *
+     * 用途只有一个：**预览打开时把本弹窗自己的遮罩撤掉**。
+     * 因为预览是**全屏**浮层，底下那层 `.ant-modal-mask` 完全被盖住、对视觉毫无贡献，
+     * 但它是 `rgba(0,0,0,0.45)`，会和预览自带的同名遮罩**叠加**成 `1-(0.55×0.55)=0.6975`，
+     * 白底被压到灰度 **77**（官方只有一层时是 **140**）—— 用户反馈的「没有官方的明亮」就是这个。
+     */
+    const [previewOpen, setPreviewOpen] = useState(false);
 
     // 每次打开都回到「图片」页签：收到新图会自动弹这个弹窗，不应停在用户上次看的「文本」页
     useEffect(() => {
@@ -220,6 +229,11 @@ export default function RecvHistoryModal({
                          * 原因、实测数据与「为什么不能直接用 getOverlayContainer」都写在 `getPreviewHost` 的注释里。
                          */
                         getContainer: getPreviewHost,
+                        /**
+                         * 预览开/关 → 撤掉/恢复本弹窗自己的遮罩（v26.10.08-v9，避免两层遮罩叠加变暗）。
+                         * 见 `previewOpen` 的注释。
+                         */
+                        onOpenChange: (o: boolean) => setPreviewOpen(o),
                         /**
                          * 「打印」放在**放大预览的工具栏**里（v26.10.08-v2，按用户要求从缩略图行挪过来）。
                          *
@@ -351,6 +365,8 @@ export default function RecvHistoryModal({
             width={620}
             styles={{ body: { textAlign: 'left' } }}
             destroyOnHidden
+            // 预览打开时撤掉本弹窗的遮罩：预览是全屏浮层，这层遮罩被完全盖住、只会让画面多暗一层（见 previewOpen 注释）
+            mask={!previewOpen}
             footer={
                 <Space>
                     {/* 清空只作用于**当前页签**：页签化之后「清空全部」会让人误以为连另一页也一起清掉 */}

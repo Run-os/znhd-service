@@ -11,6 +11,23 @@
 
 ---
 
+### znhd.user.js v26.10.08-v9
+- **修「放大预览没有官方明亮」——底下多叠了一层弹窗遮罩**（用户反馈：怀疑多了一层遮罩，实测确认）：
+  - 预览是**全屏**浮层，但它下面还压着「历史记录」弹窗自己的 `.ant-modal-mask`。两层都是 `rgba(0,0,0,0.45)`，合成 `1-(0.55×0.55)=` **0.6975** —— 白底被压到灰度 **77**，而官方只有一层预览遮罩时是 **140**。
+  - **修法**：`<Image.PreviewGroup preview={{ onOpenChange }}>` 跟踪预览开关，预览打开时把本弹窗的遮罩撤掉（`<Modal mask={!previewOpen}>`）。预览既然全屏盖住它，这层遮罩对视觉毫无贡献、只会让画面多暗一层。
+  - 修复后实测：预览遮罩所在取样点上**只剩一层**（`elementsFromPoint` 逐点计数），合成 **0.45**、白底灰度 **140** —— 与官方一致。
+- **新增「产物新鲜度门禁」，堵住「verify 静默测旧产物」这个洞**（回答「构建失败时断言为什么还能跑」）：
+  - **问题**：`npm run build` 失败时 **webpack 不会更新 dist，旧产物还在**，于是 `npm run verify` 会**静默地拿旧 bundle 跑测试**。v26.10.08-v8 就踩过：tsc 报错（uiReset 模板串被反引号截断）导致构建失败，紧接着的 verify 对着旧产物报红，一度被误读成「修复没生效」。CI 里 build 是 verify 的前置步骤、失败即停，所以这个洞只在**本地手动串跑**时出现。
+  - **判据用内容哈希而不是 mtime**：新增 `scripts/smoke/build-stamp.js`，`npm run build` 成功后把「构建输入（`src/**` + `package.json` + `config/common.meta.json`）的内容哈希」写入 `dist/.build-stamp`（gitignore），`verify` 前比对不一致即失败并提示先 build。
+    - ⚠️ 为什么不用 mtime：webpack 的 `compareBeforeEmit`（默认开）在**输出内容没变时不重写文件**，于是「构建成功」也不代表 dist 的 mtime 变新 —— 实测会**假阳性**（只碰源码时间戳、内容未变，重建后 verify 一直报「产物比源码旧」）。
+  - 四种情形均实测：① 构建后 verify 通过；② 只碰时间戳不假阳性；③ **源码变更未重建 → 拦住**（exit 1 + 明确提示）；④ 恢复后通过。
+- **冒烟断言（只增不删，36 → 37 项）**：新增 **`previewSingleMaskOk`** —— 预览打开时「历史记录」弹窗自己那个 modal-root 里**不能再有 `.ant-modal-mask`**。
+- ✅ **反向验证**：去掉 `mask={!previewOpen}` → 重建后**仅 `previewSingleMaskOk` 变红**，恢复后 37 项全绿。
+- 验证：`npm run typecheck` 0 错、`npm run build` 结论行 `compiled`、`npm run check` 通过、`npm run verify`（冒烟 37 项 + 服务端 11 项）全绿、`npx @ant-design/cli lint ./src` `issues: []`。
+- 三处版本号一致（脚本 `26.10.08-v9`）；仓库根过渡跳板已重新拷贝为与 `dist/znhd.user.js` 逐字节一致。
+- ⚠️ **只做本地提交，未推送**。
+
+
 ### znhd.user.js v26.10.08-v8
 - **修「放大预览的工具栏图标看不见 / 与胶囊不在同一水平线」**（用户截图反馈，是 v7 那条的**真正根因**）：
   - **现象**：预览底部只剩一条灰色胶囊，图标浮在胶囊**上方**；因为图标是白色的，落在白底上就「看不见了」。

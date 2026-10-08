@@ -794,6 +794,19 @@
             const boxes = Array.from(m.querySelectorAll('.ant-checkbox-input'));
             return boxes.length === 2 && boxes.every((b) => b.checked);
           })(),
+          // 预览打开时只能有**一层**遮罩（v26.10.08-v9）：
+          // 预览是全屏浮层，底下那层弹窗遮罩完全被盖住却仍会把画面再压暗一层
+          // （两层 rgba(0,0,0,0.45) 合成 0.6975，白底灰度 77；单层是 140 —— 用户反馈的「没官方明亮」）。
+          // 兼容 v6/v5：这里只认「历史记录」弹窗自己那个 modal-root 的遮罩是否已撤掉。
+          previewSingleMaskOk: (() => {
+            if (!document.querySelector('.ant-image-preview')) return false;
+            const hist = Array.from(document.querySelectorAll('.ant-modal')).find((m) =>
+              ((m.querySelector('.ant-modal-title') || {}).textContent || '').includes('历史记录')
+            );
+            if (!hist) return false;
+            const root = hist.closest('.ant-modal-root');
+            return !!root && !root.querySelector('.ant-modal-mask');
+          })(),
           // 发送到手机：必须先压缩再发（v26.10.06-v6 回归断言）。判定要点：
           // 实际 POST 的字节是 JPEG、最长边 ≤1600（压缩上限）、且比原图小。
           phoneSendCheck: window.__phoneSendCheck || null,
@@ -849,6 +862,7 @@
           report.printA4Ok &&
           report.previewToolbarOk &&
           report.previewIconCenteredOk &&
+          report.previewSingleMaskOk &&
           report.historyTabsOk &&
           report.historyTextOk &&
           report.phoneCountOk &&
