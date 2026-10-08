@@ -56,7 +56,15 @@ export default function App() {
     const [progress, setProgress] = useState<ProgressState | null>(null);
     const [text, setText] = useState('');
     const [sendTextBusy, setSendTextBusy] = useState(false);
-    const [status, setStatus] = useState<{ ok: boolean; msg: string } | null>(null);
+    /**
+     * 两条流程各用各的提示（v26.10.08-v13 修）。
+     *
+     * ⚠️ 原先共用一个 `status` 且只渲染在「发送文本到电脑」卡片里，导致**图片**发完后那句
+     * 「✅ x 张已全部发送到电脑，请在电脑端接收」跑到了**文本**卡片下面（用户反馈）。
+     * 拆成两个 state，各回各的卡片。
+     */
+    const [imgStatus, setImgStatus] = useState<{ ok: boolean; msg: string } | null>(null);
+    const [textStatus, setTextStatus] = useState<{ ok: boolean; msg: string } | null>(null);
     const [recvImages, setRecvImages] = useState<RecvImage[]>([]);
     const [galleryOpen, setGalleryOpen] = useState(false);
     const [recvText, setRecvText] = useState<{ id: string; text: string } | null>(null);
@@ -101,7 +109,7 @@ export default function App() {
         const list = Array.from(files || []);
         if (!list.length) return;
         setPreparing(true);
-        setStatus(null);
+        setImgStatus(null);
         try {
             for (const f of list) {
                 const prepared = await prepareImage(f);
@@ -129,7 +137,7 @@ export default function App() {
     const confirmSend = async () => {
         if (!pending.length) return;
         setSending(true);
-        setStatus(null);
+        setImgStatus(null);
         const list = pending.slice();
         const total = list.length;
         let done = 0;
@@ -148,7 +156,7 @@ export default function App() {
             try {
                 b64 = await blobToBase64(it.blob);
             } catch (e: any) {
-                setStatus({ ok: false, msg: e && e.message ? e.message : '读取图片失败' });
+                setImgStatus({ ok: false, msg: e && e.message ? e.message : '读取图片失败' });
                 setProgress({ done, total, busy: false, failed: true, text: '❌ 已发送 ' + done + '/' + total + '，已停止' });
                 setSending(false);
                 return;
@@ -166,14 +174,14 @@ export default function App() {
                     text: done < total ? '已发送 ' + done + '/' + total : '✅ 已发送 ' + total + '/' + total + '，全部完成',
                 });
             } else {
-                setStatus({ ok: false, msg: '第 ' + (done + 1) + ' 张发送失败：' + ((res && res.error) || '未知错误') + '，可点按钮重试剩余' });
+                setImgStatus({ ok: false, msg: '第 ' + (done + 1) + ' 张发送失败：' + ((res && res.error) || '未知错误') + '，可点按钮重试剩余' });
                 setProgress({ done, total, busy: false, failed: true, text: '❌ 已发送 ' + done + '/' + total + '，已停止' });
                 setSending(false);
                 return;
             }
         }
 
-        setStatus({ ok: true, msg: '✅ ' + total + ' 张已全部发送到电脑，请在电脑端接收' });
+        setImgStatus({ ok: true, msg: '✅ ' + total + ' 张已全部发送到电脑，请在电脑端接收' });
         setSending(false);
         // 完成后 2.5s 自动收起进度条
         window.setTimeout(() => setProgress(null), 2500);
@@ -183,18 +191,18 @@ export default function App() {
     const confirmSendText = async () => {
         const t = (text || '').trim();
         if (!t) {
-            setStatus({ ok: false, msg: '请输入要发送的文本' });
+            setTextStatus({ ok: false, msg: '请输入要发送的文本' });
             return;
         }
         setSendTextBusy(true);
-        setStatus({ ok: false, msg: '发送中…' });
+        setTextStatus({ ok: false, msg: '发送中…' });
         const res = await postItem({ text: t });
         setSendTextBusy(false);
         if (res && res.ok) {
-            setStatus({ ok: true, msg: '✅ 文本已发送到电脑，请在电脑端点击「复制到剪贴板」' });
+            setTextStatus({ ok: true, msg: '✅ 文本已发送到电脑，请在电脑端点击「复制到剪贴板」' });
             setText('');
         } else {
-            setStatus({ ok: false, msg: '发送失败：' + ((res && res.error) || '未知错误') });
+            setTextStatus({ ok: false, msg: '发送失败：' + ((res && res.error) || '未知错误') });
         }
     };
 
@@ -364,6 +372,16 @@ export default function App() {
                         >
                             {pending.length > 1 ? '发送 ' + pending.length + ' 张图片到电脑' : '发送图片到电脑'}
                         </Button>
+                        {/* 图片流程的提示**必须留在图片卡片里**（v26.10.08-v13 修）：原先共用 status 且只渲染在文本卡片，
+                            于是图片发完的「x 张已全部发送到电脑」出现在「发送文本到电脑」下面 */}
+                        {imgStatus && (
+                            <Paragraph
+                                type={imgStatus.ok ? 'success' : 'danger'}
+                                style={{ marginTop: 12, marginBottom: 0, fontSize: 13, textAlign: 'center' }}
+                            >
+                                {imgStatus.msg}
+                            </Paragraph>
+                        )}
                         {recvImages.length > 0 && (
                             <Button block size="large" style={{ marginTop: 8 }} onClick={() => setGalleryOpen(true)}>
                                 🖼 查看收到的图片（{recvImages.length}）
@@ -393,20 +411,14 @@ export default function App() {
                         >
                             发送文本到电脑
                         </Button>
-                        {status && (
+                        {textStatus && (
                             <Paragraph
-                                type={status.ok ? 'success' : 'danger'}
+                                type={textStatus.ok ? 'success' : 'danger'}
                                 style={{ marginTop: 12, marginBottom: 0, fontSize: 13, textAlign: 'center' }}
                             >
-                                {status.msg}
+                                {textStatus.msg}
                             </Paragraph>
                         )}
-                    </Card>
-
-                    <Card title="来自电脑" size="small">
-                        <Paragraph type="secondary" style={{ margin: 0, fontSize: 12 }}>
-                            电脑端「发送到手机」的图片会以弹窗形式自动弹出，点击缩略图可放大/旋转/多图切换；文本仍自动弹出。
-                        </Paragraph>
                     </Card>
                 </Col>
             </Row>

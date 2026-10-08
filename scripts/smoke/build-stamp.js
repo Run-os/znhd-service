@@ -39,9 +39,23 @@ function hashInputs() {
     const h = crypto.createHash('sha256');
     for (const f of collectInputs()) {
         // 路径也纳入：新增/删除源文件必须改变哈希（否则删掉一个文件、其余不变时哈希会漏判）
-        h.update(path.relative(ROOT, f).replace(/\\/g, '/'));
+        const rel = path.relative(ROOT, f).replace(/\\/g, '/');
+        h.update(rel);
         h.update('\0');
-        h.update(fs.readFileSync(f));
+        if (rel === 'package.json') {
+            // ⚠️ 根 package.json 只取 **version**：它进产物（脚本头 @version），改依赖/脚本名不影响 dist。
+            //    早期版本把整个文件计入，结果「只加了条 npm script」也会报「产物过期」——误报会让人
+            //    习惯性忽略这条门禁，所以这里按「是否真的影响产物」收窄粒度。
+            let ver = '';
+            try {
+                ver = String(JSON.parse(fs.readFileSync(f, 'utf8')).version || '');
+            } catch (e) {
+                ver = '';
+            }
+            h.update(ver);
+        } else {
+            h.update(fs.readFileSync(f));
+        }
         h.update('\0');
     }
     return h.digest('hex');

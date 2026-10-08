@@ -1,7 +1,7 @@
 {
   "name": "znhd-relay-web",
   "private": true,
-  "version": "26.10.08-v1",
+  "version": "26.10.08-v2",
   "type": "module",
   "description": "手机上传页（React 19 + Ant Design v6），构建产物输出到 relay-server/public 由中继同源托管",
   "scripts": {

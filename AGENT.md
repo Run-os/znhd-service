@@ -90,7 +90,7 @@
 > **有意未拆出的模块**：`phrases`（常用语加载/缓存/请求序号）。`loadPhrasesData` 直接读写 React 状态（`phrasesData`/`setPhrasesData`/`setPhrasesLoading`）与 `phrasesRequestSeq`，抽成独立模块必须引入 `getData/setData` 桥接，属于「为拆而拆」，与约束 3「不得无理由重构可运行逻辑」冲突，故保留在 `src/lib/ui/MainPanel.tsx` 内。如日后要拆，请连同组件状态一起改成自定义 hook。
 | `src/global.d.ts` | 全局声明：`PRODUCTION`/`FILENAME`（DefinePlugin 注入）+ `jsyaml`/`QRCode`/`heic2any`（`@require` 注入）。GM_* 由 `@types/tampermonkey` 提供。 |
 | `public/index.html` | 本地调试宿主页（HtmlWebpackPlugin 模板 + devServer 静态根）。 |
-| `scripts/smoke/` | 两套验证：① 无头端到端冒烟 `server.js`（本地服务）+ `znhd-smoke.html`（GM 桩测试页）+ `run.js`（puppeteer），**测的是浏览器里的脚本产物**；② `relay.js`（纯 Node，**真实起 relay-server 打真实 HTTP**），测多手机注册与**按手机定向投递**——`createChannel` 的投递逻辑是历史踩坑重灾区，而冒烟的 GM 桩碰不到真实服务端，故必须单独有这一套。`npm run verify` = 两者串跑（`verify:smoke` / `verify:relay` 可单跑），**已接入 CI**。目录名沿用模板外的最小新增（模板无测试目录）。 |
+| `scripts/smoke/` | 三套验证：① 无头端到端冒烟 `server.js`（本地服务）+ `znhd-smoke.html`（GM 桩测试页）+ `run.js`（puppeteer），**测的是浏览器里的脚本产物**；② `relay.js`（纯 Node，**真实起 relay-server 打真实 HTTP**），测多手机注册与**按手机定向投递**——`createChannel` 的投递逻辑是历史踩坑重灾区，而冒烟的 GM 桩碰不到真实服务端，故必须单独有这一套；③ `phone-page.js`（**手机上传页端到端**：真起 relay-server → 无头 Chromium 打开 `/u/<id>` → 真上传一张图 → 断言提示落在哪张卡片里）；⚠️ **改了 `web/` 就跑 `npm run verify:web`** ——手机页的排版归属问题（如提示渲染到别的卡片）**只有跑起来才看得见**，typecheck/build 永远发现不了。`npm run verify` = 三者串跑（`verify:smoke` / `verify:relay` / `verify:web` 可单跑），**已接入 CI**。目录名沿用模板外的最小新增（模板无测试目录）。 |
 | `relay-server/server.js` | 中继服务本体（纯 Node 内置模块，运行时不装依赖）：路由、通道、`/health`。**手机上传页已不再是内联字符串**，见下两行。`PORT = process.env.PORT \|\| 5689`。 |
 | `relay-server/upload-page.js` | 只负责把构建产物送出去：启动时读 `public/index.html`（缺失时给可读兜底页）。 |
 | `relay-server/public/` | **手机上传页的构建产物（提交进仓库）**：`index.html` + `assets/*`。由 `web/` 经 Vite 构建产出，`server.js` 同源托管 `/assets/*`（`immutable` 长缓存 + 内置 zlib gzip）。改了 `web/` 必须 `npm run build:web` 并提交，CI 有漂移检查。 |
@@ -101,7 +101,7 @@
 ## 构建与模块化（对齐 Eished/douyu-helper 模板）
 
 - **唯一真源**：`src/`（源码）+ `config/*.meta.json`（元信息）；`znhd.user.js` 是产物。
-- **常用命令**：`npm install` → `npm run build`（生产）/ `npm run dev`（watch 到 `dist/`）/ `npm start`（devServer :8080）/ `npm run typecheck`（strict）/ `npm run lint` / `npm run check` / `npm run verify`（无头端到端冒烟）/ `npm run build:web` + `npm run typecheck:web`（手机上传页，见 `web/`）。VSCode 里 `Ctrl+Shift+B` 选 `start & dev`。
+- **常用命令**：`npm install` → `npm run build`（生产）/ `npm run dev`（watch 到 `dist/`）/ `npm start`（devServer :8080）/ `npm run typecheck`（strict）/ `npm run lint` / `npm run check` / `npm run verify`（三段：脚本冒烟 + 中继 HTTP + 手机页端到端）/ `npm run build:web` + `npm run typecheck:web`（手机上传页，见 `web/`，改完记得 `npm run verify:web`）。VSCode 里 `Ctrl+Shift+B` 选 `start & dev`。
 - **发布链路**：生产产物写 `dist/znhd.user.js`（模板默认位置），并提交进仓库；`@updateURL`/`@downloadURL` 指向 **raw.githubusercontent.com 上的 `.../refs/heads/main/dist/znhd.user.js`**（2026-10-06 从 jsDelivr 改回 raw，避免 jsDelivr 对分支引用的长缓存导致用户收不到更新）。⚠️ **这两个字段由油猴管理器直接请求，不经过 `resolveGithubUrl()`** —— 设置里的「使用 CDN 加速」开关对「脚本自动更新」无效，写死什么就是什么。⚠️ **2026-10-05 起产物路径由仓库根迁到 `dist/`**：老安装的脚本头部仍指向根路径，为此仓库根**临时保留一份过渡跳板 `znhd.user.js`**（= 产物副本，见文件表，**每次发版都要重新拷贝**），老用户轮询根路径即可拿到本版本并自动换到 dist 地址；同时仍应在 ScriptCat 的「源代码同步」里把地址改到 `dist/znhd.user.js`（详见 `CHANGELOG.md` v26.10.5-v1）。
 - ⚠️ **发版后要核对两条 URL**（新旧用户走的是不同来源，缓存行为也不同）：
   1. **新装 / 已迁移用户**走 `@updateURL`（raw）：拉 `https://raw.githubusercontent.com/Run-os/znhd-service/refs/heads/main/dist/znhd.user.js` 对 `@version`。raw 走 Fastly 短 TTL，一般秒级生效。
@@ -211,7 +211,7 @@
 5. **硬编码尽量迁移配置**：脚本端用户可配置项进 `DEFAULTS`，常量进 `CONFIG`。
 6. **GitHub 资源引用存「GitHub 网页链接」**，运行时经 `resolveGithubUrl()` + `useCdn` 转 jsDelivr/raw；勿在 `DEFAULTS` 存 CDN 成品链接。（例外：`commonPhrasesUrl` 自 v26.9.6-v5 起规范值改存 **raw 原始直链**——用户误填网页/仓库页面会把整页 HTML 当 YAML 解析失败；raw 属 `resolveGithubUrl` 形式二，`useCdn` 开仍转 jsDelivr。其余如 `didaUrl` 仍存网页链接。）
 7. **新增 GM API 必须补 `@grant`**；`@match` 含税务页与 example.com（调试宿主），勿乱动。
-8. **保持现有风格**：中文注释/日志、语义前缀（`[监控]` `[设备互联]` 等）、JSDoc。提交前必须依次通过：`npm run build`（= `lint:fix` + webpack）、`npm run typecheck`（strict）、`npm run check`（产物 + 服务端 `node --check`）、`npm run verify`（无头端到端冒烟）。**禁止手改 `dist/znhd.user.js`**（构建会覆盖）。
+8. **保持现有风格**：中文注释/日志、语义前缀（`[监控]` `[设备互联]` 等）、JSDoc。提交前必须依次通过：`npm run build`（= `lint:fix` + webpack）、`npm run typecheck`（strict）、`npm run check`（产物 + 服务端 `node --check`）、`npm run verify`（三段：脚本冒烟 + 中继 HTTP + 手机页端到端；**改了 `web/` 还要 `npm run typecheck:web` + `npm run build:web` 并提交 `relay-server/public` 产物**）。**禁止手改 `dist/znhd.user.js`**（构建会覆盖）。
 9. **双向互传类改动 = 两端同步 + 重启 + 版本说明**（脚本 `@version`、服务端 version 各自递增）。
 10. 涉及部署/容器/路径以 `.github/workflows/deploy.yml` 为准，勿硬编码别处。
 11. **发现 ReadMe 与代码不符 → 直接修 ReadMe**（本仓库文档已多次过期），不在 agent.md 建长期对照表；修正后改代码处如有注释也一并更新。

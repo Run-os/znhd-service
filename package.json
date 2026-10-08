@@ -14,9 +14,10 @@
     "lint:fix": "npm run lint -- --fix",
     "typecheck": "tsc --noEmit",
     "check": "node --check dist/znhd.user.js && node --check relay-server/server.js && node --check relay-server/upload-page.js",
-    "verify": "npm run verify:smoke && npm run verify:relay",
+    "verify": "npm run verify:smoke && npm run verify:relay && npm run verify:web",
     "verify:smoke": "node scripts/smoke/run.js",
-    "verify:relay": "node scripts/smoke/relay.js"
+    "verify:relay": "node scripts/smoke/relay.js",
+    "verify:web": "node scripts/smoke/phone-page.js"
   },
   "repository": {
     "type": "git",
