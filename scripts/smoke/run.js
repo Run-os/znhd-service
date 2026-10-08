@@ -96,6 +96,7 @@ const CHECKS = [
   ['phoneCountOk', '【设备互联】显示已连接手机数量'],
   ['phoneListOk', '【设备互联】列出已连接手机的设备 ID'],
   ['phoneMultiPickOk', '≥2 台手机时常驻多选且默认全选'],
+  ['phoneIdColorOk', '设备 ID 有边框+彩色底，且不同设备底色不同'],
   ['phoneSendCompressedOk', '发送到手机前压缩'],
   ['modalTextAlignLeft', '弹窗内容左对齐（不被宿主 CSS 污染）'],
   ['timeInputsOk', '时间段为 4 个原生 time 输入（HH:mm，无 antd TimePicker）'],

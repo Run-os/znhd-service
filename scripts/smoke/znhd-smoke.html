@@ -918,6 +918,24 @@
             const boxes = Array.from(m.querySelectorAll('.ant-checkbox-input'));
             return boxes.length === 2 && boxes.every((b) => b.checked);
           })(),
+          // 设备 ID 的彩色标签（v26.10.08-v12）：每个 ID 都要有**实边框**和**不透明底色**，
+          // 且两个不同 ID 的底色必须**不一样**（用户要求「不同设备 ID 不同底色」）。
+          // ⚠️ 这条能抓到「哈希撞色」：本功能第一版用 `h*31+c` 时两个模拟 ID 就撞成同色了。
+          phoneIdColorOk: (() => {
+            const m = Array.from(document.querySelectorAll('.ant-modal')).find((el) =>
+              (el.textContent || '').includes('手机互传')
+            );
+            if (!m) return false;
+            const tags = Array.from(m.querySelectorAll('[data-device-id]'));
+            if (tags.length < 2) return false;
+            const styles = tags.map((t) => {
+              const cs = getComputedStyle(t);
+              return { bg: cs.backgroundColor, borderW: parseFloat(cs.borderTopWidth) || 0 };
+            });
+            const allHaveBorderAndBg = styles.every((s) => s.borderW > 0 && s.bg && s.bg !== 'rgba(0, 0, 0, 0)');
+            const distinctBg = new Set(styles.map((s) => s.bg)).size === styles.length;
+            return allHaveBorderAndBg && distinctBg;
+          })(),
           // 预览打开时只能有**一层**遮罩（v26.10.08-v9）：
           // 预览是全屏浮层，底下那层弹窗遮罩完全被盖住却仍会把画面再压暗一层
           // （两层 rgba(0,0,0,0.45) 合成 0.6975，白底灰度 77；单层是 140 —— 用户反馈的「没官方明亮」）。
@@ -988,6 +1006,7 @@
           report.phoneCountOk &&
           report.phoneListOk &&
           report.phoneMultiPickOk &&
+          report.phoneIdColorOk &&
           report.phoneSendCompressedOk
             ? 'ALL-OK'
             : 'PARTIAL');
