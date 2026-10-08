@@ -11,6 +11,20 @@
 
 ---
 
+### znhd.user.js v26.10.08-v5
+- **打印时不再出现浏览器页眉页脚**（按用户要求）。
+  - **问题根源**：浏览器（Chrome）打印对话框里的「页眉和页脚」**默认是勾上的**，它把标题 / URL / 日期 / 页码画在**页边距区域**里。v26.10.08-v4 为了让图片离纸边 10mm，把 `@page` 的 margin 设成了 `10mm` —— 等于**主动给页眉页脚腾出了位置**。这是 v4 引入的回归。
+  - **修法**：`@page { size: A4 portrait; margin: 0 }` —— 页边距归零，浏览器就没地方画页眉页脚（这也正是 react-to-print 默认 `pageStyle` 用 `margin: 0` 的原因，它自带注释 "Remove browser default header (title) and footer (url)"）。CSS 没有直接取消那个勾选项的能力，只能这样「不给它留位置」。
+  - **图片离纸边的 10mm 改由内容框自己的 `padding` 提供**：内容框 = 整张 A4（210 × 294mm，留 3mm 防空白页）+ `padding: 10mm` ⇒ 图片区域仍是 190 × 274mm，观感与 v4 一致。
+  - ⚠️ **`box-sizing: border-box` 这一版绝不能省**：width 已按 A4 取 210mm，若按 content-box 再加 10mm padding，实际宽度会变成 230mm ⇒ 溢出纸张、多吐空白页。
+- **冒烟断言（保持 31 项，`printA4Ok` 语义扩展）**：新增两项检查 —— ① `@page` 的 `margin` 必须为 **0**（页眉页脚没地方画）；② 内容框必须有 `box-sizing: border-box` 与**正的内边距**（图片离纸边的留白真的来自 padding）。仍是**只锁语义不锁数字**。
+- ✅ **反向验证**：临时把 `@page` 的 margin 改回 `10mm` → 重建后**仅 `printA4Ok` 变红**（另两条打印断言仍 ✅，退出码 1），恢复后 31 项全绿。
+- 验证：`npm run typecheck` 0 错、`npm run build` 结论行 `compiled`、`npm run check` 通过、`npm run verify` **31 项全绿**、`npx @ant-design/cli lint ./src` `issues: []`。
+- 三处版本号一致（`26.10.08-v5`）；仓库根过渡跳板 `znhd.user.js` 已重新拷贝为与 `dist/znhd.user.js` 逐字节一致。
+- ⚠️ **只做本地提交，未推送**。
+- ⚠️ 仍需人工确认的部分见下条 v4：打印对话框里的「缩放/适应纸张尺寸」同样会覆盖 `@page`。
+
+
 ### znhd.user.js v26.10.08-v4
 - **打印图片时按 A4 纸自适应**（按用户要求；库仍是 `react-to-print`，不换库）：
   - **`pageStyle` 注入纸型**：`@page { size: A4 portrait; margin: 10mm }` —— 浏览器在用户没改纸张时默认按 A4 纵向出纸。同时 `html, body { margin: 0; padding: 0 }`（**必需**，见下）。

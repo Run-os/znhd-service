@@ -113,7 +113,9 @@
                     window.__printDoc = {
                       hasImg: !!img,
                       pageA4: styles.some((t) => /@page/.test(t) && /size:\s*A4/i.test(t)),
-                      pageMarginMm: (styles.join(' ').match(/margin:\s*([\d.]+)mm/) || [])[1] || null,
+                      // 页眉页脚（v26.10.08-v5）：浏览器把标题/URL/日期/页码画在**页边距**里，
+                      // 故 `@page` 的 margin 必须为 0 —— 没边距它们就没地方画（CSS 无法直接取消那个勾选项）。
+                      pageMarginZero: styles.some((t) => /@page\s*\{[^}]*margin:\s*0\s*[;}]/.test(t)),
                       boxStyle: box ? box.getAttribute('style') : null,
                       imgStyle: img ? img.getAttribute('style') : null,
                     };
@@ -693,16 +695,23 @@
           // ② 点了之后 react-to-print 真的建出 id=printWindow 的打印 iframe（= 内容节点被找到，整条链路接通）。
           printBtnOk: !!window.__printBtnSeen && !!window.__printBtnInActions,
           printIframeOk: !!window.__printIframeSeen,
-          // A4 自适应（v26.10.08-v4）：打印文档里必须同时具备
-          //   ① `@page { size: A4 … }`（纸型）、② 图片框是毫米尺寸且**不大于 A4 本身**、③ 图片 `object-fit: contain`。
-          // 只锁「语义」不锁具体数字：改页边距常量不该把断言打红，但把 A4 版式删掉/写错一定会红。
+          // A4 自适应（v26.10.08-v4；v5 起含「无页眉页脚」）：打印文档里必须同时具备
+          //   ① `@page { size: A4 … }`（纸型）；② `@page` 的 margin 为 0（否则浏览器会画页眉页脚）；
+          //   ③ 内容框 `box-sizing: border-box` + 毫米尺寸且不大于 A4（超了必溢出纸张）；
+          //   ④ 内容框有正的 padding（图片离纸边的留白由它提供，不是靠 @page margin）；
+          //   ⑤ 图片 `object-fit: contain`（等比缩放居中）。
+          // 只锁「语义」不锁具体数字：改页边距/留白常量不该把断言打红，但版式写错一定会红。
           printA4Ok: (() => {
             const d = window.__printDoc;
-            if (!d || !d.pageA4) return false;
+            if (!d || !d.pageA4 || !d.pageMarginZero) return false;
             if (!/object-fit:\s*contain/i.test(d.imgStyle || '')) return false;
-            const m = /width:\s*([\d.]+)mm;\s*height:\s*([\d.]+)mm/.exec(d.boxStyle || '');
+            const s = d.boxStyle || '';
+            if (!/box-sizing:\s*border-box/i.test(s)) return false;
+            const m = /width:\s*([\d.]+)mm;\s*height:\s*([\d.]+)mm/.exec(s);
             if (!m) return false;
-            return parseFloat(m[1]) <= 210 && parseFloat(m[2]) <= 297;
+            if (!(parseFloat(m[1]) <= 210 && parseFloat(m[2]) <= 297)) return false;
+            const pad = /padding:\s*([\d.]+)mm/.exec(s);
+            return !!pad && parseFloat(pad[1]) > 0;
           })(),
           // 「历史记录」（v26.10.08-v3）：① 弹窗里必须有「图片」「文本」两个页签（且顺序一致）；
           // ② 切到文本页签后，能回看到之前收到的那条文本（= 文本真的进了历史，而不只是弹窗显示过）。
