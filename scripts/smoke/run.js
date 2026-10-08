@@ -83,6 +83,8 @@ const CHECKS = [
   ['copyOk', '图片复制只尝试写 PNG'],
   ['printBtnOk', '放大预览工具栏有「打印」按钮'],
   ['printIframeOk', '打印链路接通（react-to-print 建出打印 iframe）'],
+  ['historyTabsOk', '「历史记录」弹窗有「图片 / 文本」两个页签'],
+  ['historyTextOk', '「文本」页签能回看到收到的文本'],
   ['phoneSendCompressedOk', '发送到手机前压缩'],
   ['modalTextAlignLeft', '弹窗内容左对齐（不被宿主 CSS 污染）'],
   ['timeInputsOk', '时间段为 4 个原生 time 输入（HH:mm，无 antd TimePicker）'],

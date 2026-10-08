@@ -371,6 +371,32 @@
         window.__clickedChangelog = clickByText('[更新日志]');
       }, 5200);
 
+      // 「历史记录」：点面板入口 → 弹窗必须有「图片 / 文本」两个页签 → 切到文本页能回看到收到的那条文本。
+      // （v26.10.08-v3：原来的「历史文件」画廊升级为「历史记录」，同时记录图片与文本）
+      const findHistoryModal = () =>
+        Array.from(document.querySelectorAll('.ant-modal')).find((el) =>
+          ((el.querySelector('.ant-modal-title') || {}).textContent || '').includes('历史记录')
+        );
+      setTimeout(() => {
+        window.__clickedHistory = clickByText('历史记录');
+        const m = findHistoryModal();
+        window.__historyTabs = m
+          ? Array.from(m.querySelectorAll('.ant-tabs-tab')).map((el) => (el.textContent || '').trim())
+          : null;
+      }, 6800);
+      setTimeout(() => {
+        const m = findHistoryModal();
+        const tab = m
+          ? Array.from(m.querySelectorAll('.ant-tabs-tab')).find((el) => (el.textContent || '').includes('文本'))
+          : null;
+        window.__clickedTextTab = !!tab;
+        if (tab) tab.click();
+      }, 7200);
+      setTimeout(() => {
+        const m = findHistoryModal();
+        window.__historyText = !!(m && (m.textContent || '').includes('冒烟测试文本：收到一条文本消息'));
+      }, 7900);
+
       // 「发送到手机」：打开抽屉 → 选一张 3000x2000 大图 → 发送，断言实际 POST 出去的是压缩后的 JPEG。
       // 旧实现是 FileReader 直读原文件再 POST（原图直传），与「手机 → 电脑」的 canvas 压缩不对称：
       // 一张 3MB 照片就要上行 4MB（base64 +33%），且原图 ≥9MB 直接撞 12MB 单请求上限被拒。
@@ -534,7 +560,7 @@
           panelBtnsUniform: (() => {
             const host = document.getElementById('__znhd_panel_host__');
             if (!host) return false;
-            const labels = ['设置', '常用语', '历史文件', '设备互联'];
+            const labels = ['设置', '常用语', '历史记录', '设备互联'];
             const btns = Array.from(host.querySelectorAll('button')).filter((b) =>
               labels.some((t) => (b.textContent || '').indexOf(t) >= 0)
             );
@@ -546,7 +572,7 @@
           panelBtnsOneRow: (() => {
             const host = document.getElementById('__znhd_panel_host__');
             if (!host) return false;
-            const labels = ['设置', '常用语', '历史文件', '设备互联'];
+            const labels = ['设置', '常用语', '历史记录', '设备互联'];
             const btns = Array.from(host.querySelectorAll('button')).filter((b) =>
               labels.some((t) => (b.textContent || '').indexOf(t) >= 0)
             );
@@ -588,8 +614,15 @@
           })(),
           // 文本弹窗
           textPopup: text.includes('冒烟测试文本：收到一条文本消息'),
-          // 九宫格画廊
-          galleryText: text.includes('收到的图片'),
+          // 收图后自动弹出的「历史记录」弹窗（图片页签）：标题含「历史记录」且真的渲染出了缩略图。
+          // v26.10.08-v3 起画廊并入「历史记录」弹窗，标题由「收到的图片」改为「历史记录」，
+          // 故断言对象随之改到同类对象上（弹窗 + 里面的 antd 缩略图），不是删除。
+          galleryText: (() => {
+            const m = Array.from(document.querySelectorAll('.ant-modal')).find((el) =>
+              ((el.querySelector('.ant-modal-title') || {}).textContent || '').includes('历史记录')
+            );
+            return !!m && !!(m.querySelector('.ant-modal-body .ant-image img'));
+          })(),
           // 常用语成功路径（YAML 解析出按钮）
           phrasesLoaded: text.includes('冒烟常用语A'),
           phrasesClicked: !!window.__clickedPhrases,
@@ -634,6 +667,15 @@
           // ② 点了之后 react-to-print 真的建出 id=printWindow 的打印 iframe（= 内容节点被找到，整条链路接通）。
           printBtnOk: !!window.__printBtnSeen && !!window.__printBtnInActions,
           printIframeOk: !!window.__printIframeSeen,
+          // 「历史记录」（v26.10.08-v3）：① 弹窗里必须有「图片」「文本」两个页签（且顺序一致）；
+          // ② 切到文本页签后，能回看到之前收到的那条文本（= 文本真的进了历史，而不只是弹窗显示过）。
+          historyTabsOk: !!(
+            window.__historyTabs &&
+            window.__historyTabs.length === 2 &&
+            window.__historyTabs[0].indexOf('图片') >= 0 &&
+            window.__historyTabs[1].indexOf('文本') >= 0
+          ),
+          historyTextOk: !!window.__historyText,
           // 发送到手机：必须先压缩再发（v26.10.06-v6 回归断言）。判定要点：
           // 实际 POST 的字节是 JPEG、最长边 ≤1600（压缩上限）、且比原图小。
           phoneSendCheck: window.__phoneSendCheck || null,
@@ -686,6 +728,8 @@
           report.copyOk &&
           report.printBtnOk &&
           report.printIframeOk &&
+          report.historyTabsOk &&
+          report.historyTextOk &&
           report.phoneSendCompressedOk
             ? 'ALL-OK'
             : 'PARTIAL');

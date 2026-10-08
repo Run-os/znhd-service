@@ -6,7 +6,7 @@ import { loadPhrasesCache, savePhrasesCache, saveAllvalue, type Allvalue } from 
 import { runtime } from '@/lib/state';
 import { resolveGithubUrl, hoursToHHmm } from '@/lib/utils';
 import { getDeviceId, startPhoneReceive } from '@/lib/relay';
-import { MAX_GALLERY, type GalleryImage } from '@/lib/gallery';
+import { MAX_GALLERY, MAX_TEXT, type GalleryImage, type GalleryText } from '@/lib/gallery';
 import { clearSpeechQueue } from '@/lib/speech';
 import { getMonitorState, setMonitorStateSink, type MonitorState } from '@/lib/monitor';
 import { notify } from '@/lib/ui/notify';
@@ -17,7 +17,7 @@ import PhrasesDrawer from '@/lib/ui/PhrasesDrawer';
 import PhoneModal from '@/lib/ui/PhoneModal';
 import LogModal from '@/lib/ui/LogModal';
 import ChangelogModal from '@/lib/ui/ChangelogModal';
-import RecvGalleryModal from '@/lib/ui/RecvGalleryModal';
+import RecvHistoryModal from '@/lib/ui/RecvHistoryModal';
 import RecvTextModal from '@/lib/ui/RecvTextModal';
 
 // 常用语请求序号（loadPhrasesData 用）：仅最新一次请求可落地结果，防慢的旧响应后到覆盖新数据
@@ -70,7 +70,7 @@ function BrandIcon({ size = 26 }: { size?: number }) {
  *
  * 阈值为什么取 68px（实测：Chrome 154）：
  *   容器查询的尺寸按**内容盒**算 —— 按钮宽度减去内边距 4×2 与边框 1×2 才是被查询的尺寸。
- *   横排所需宽度 = emoji 18px + 间距 2px + 「历史文件」4 字 × 11px = **64px**，
+ *   横排所需宽度 = emoji 18px + 间距 2px + 「历史记录」4 字 × 11px = **64px**，
  *   正好卡在边界会折成两行，故阈值取 68px（留 4px 余量）。
  *   ⚠️ 该阈值与面板宽度无关，只取决于按钮自身宽度：
  *      · 面板 340px 时四列各 74px（内容盒 64px）→ 刚好在阈值下，只显示图标；
@@ -102,7 +102,7 @@ const PANEL_CSS = `
 const PANEL_ACTIONS = [
     { key: 'settings', icon: '⚙️', label: '设置' },
     { key: 'phrases', icon: '💬', label: '常用语' },
-    { key: 'gallery', icon: '🖼️', label: '历史文件' },
+    { key: 'history', icon: '🖼️', label: '历史记录' },
     { key: 'phone', icon: '💻', label: '设备互联' },
 ] as const;
 
@@ -154,7 +154,9 @@ export default function MainPanel({ host }: MainPanelProps) {
     const [changelogOpen, setChangelogOpen] = useState(false);
     // 收到图片/文本（v26.10.06-v13：由原来的命令式 DOM 弹窗改为 React state 驱动 antd 弹窗）
     const [recvImages, setRecvImages] = useState<GalleryImage[]>([]);
-    const [galleryOpen, setGalleryOpen] = useState(false);
+    /** 历史记录里的文本（可回看，上限 MAX_TEXT）；与下面「收到即自动弹出的最新一条」是两条独立路径 */
+    const [recvTexts, setRecvTexts] = useState<GalleryText[]>([]);
+    const [historyOpen, setHistoryOpen] = useState(false);
     const [recvText, setRecvText] = useState<string | null>(null);
     const [logEntries, setLogEntries] = useState<LogEntry[]>([]);
     const [phrasesData, setPhrasesData] = useState<Record<string, string>>({});
@@ -321,12 +323,14 @@ export default function MainPanel({ host }: MainPanelProps) {
                         }
                         return next;
                     });
-                    setGalleryOpen(true);
+                    setHistoryOpen(true);
                 },
                 onText: (txt) => {
                     const t = (txt.text || '').replace(/\s+$/, '');
                     addLog('[设备互联] 收到文本：' + (t.length > 40 ? t.slice(0, 40) + '…' : t), 'success');
-                    // 同屏只留最新一条：直接替换内容（antd Modal 单实例）
+                    // ① 进「历史记录」的文本页签：最新一条排最前，超出 MAX_TEXT 丢最旧
+                    setRecvTexts((prev) => [{ text: t, ts: txt.ts || Date.now() }, ...prev].slice(0, MAX_TEXT));
+                    // ② 保持原有行为：仍自动弹出「最新一条」文本窗（同屏只留最新一条，antd Modal 单实例）
                     setRecvText(txt.text || '');
                 },
             });
@@ -386,12 +390,13 @@ export default function MainPanel({ host }: MainPanelProps) {
     const actionHandlers: Record<string, () => void> = {
         settings: () => setSettingsOpen(true),
         phrases: () => setPhrasesOpen(true),
-        gallery: () => {
-            if (!recvImages.length) {
-                notify.info('暂无待存文件');
+        history: () => {
+            // 图片、文本任意一类有内容就算有历史；两类都空时给提示（与旧「暂无待存文件」同款）
+            if (!recvImages.length && !recvTexts.length) {
+                notify.info('暂无历史记录');
                 return;
             }
-            setGalleryOpen(true);
+            setHistoryOpen(true);
         },
         phone: () => setPhoneOpen(true),
     };
@@ -620,11 +625,12 @@ export default function MainPanel({ host }: MainPanelProps) {
 
             <ChangelogModal open={changelogOpen} onClose={() => setChangelogOpen(false)} />
 
-            <RecvGalleryModal
-                open={galleryOpen}
-                onClose={() => setGalleryOpen(false)}
+            <RecvHistoryModal
+                open={historyOpen}
+                onClose={() => setHistoryOpen(false)}
                 images={recvImages}
-                onRemove={(idx) =>
+                texts={recvTexts}
+                onRemoveImage={(idx) =>
                     setRecvImages((prev) => {
                         const next = prev.slice();
                         const removed = next.splice(idx, 1)[0];
@@ -638,7 +644,7 @@ export default function MainPanel({ host }: MainPanelProps) {
                         return next;
                     })
                 }
-                onClear={() =>
+                onClearImages={() =>
                     setRecvImages((prev) => {
                         prev.forEach((it) => {
                             try {
@@ -650,6 +656,8 @@ export default function MainPanel({ host }: MainPanelProps) {
                         return [];
                     })
                 }
+                onRemoveText={(idx) => setRecvTexts((prev) => prev.filter((_, i) => i !== idx))}
+                onClearTexts={() => setRecvTexts([])}
             />
 
             <RecvTextModal text={recvText} onClose={() => setRecvText(null)} />

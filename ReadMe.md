@@ -36,9 +36,9 @@ znhd-service/
 │       ├── constants / logger / storage / state / utils
 │       ├── speech（语音队列）/ monitor（人数·掉线·工作时间）
 │       ├── tinymce / clipboard（提示音+安全复制）/ relay（中继+图片剪贴板）
-│       ├── gallery（收图数据+命名工具）/ changelog（更新日志拉取解析）/ qrcode（二维码）
+│       ├── gallery（收图/收文数据 + 命名工具 + 上限常量）/ changelog（更新日志拉取解析）/ qrcode（二维码）
 │       └── ui/                   # MainPanel（主面板）+ 各弹窗：SettingsModal / PhrasesModal / LogModal /
-│                                 #   PhoneModal / ChangelogModal / RecvGalleryModal / RecvTextModal
+│                                 #   PhoneModal / ChangelogModal / RecvHistoryModal（历史记录：图片/文本）/ RecvTextModal
 │                                 #   + panelHost（挂载/拖拽）/ uiReset（样式隔离）/ notify
 ├── dist/                         # 构建产物
 │   ├── znhd.user.js              # ⚠️ 发布产物（由 npm run build 生成，提交进仓库，勿手改）
@@ -168,7 +168,10 @@ npm run verify         # 无头 Chromium 端到端冒烟（面板/弹窗/画廊/
 2. 面板「设备互联」弹窗展示本机专属上传链接 `https://<中继服务器>/u/<设备ID>` 及对应二维码（**二维码由脚本端 qrcodejs 本地生成，无需服务器参与**）；
 3. 手机浏览器打开该链接（或直接扫二维码）→ 选图/拍照（**支持多选，张数不限**，九宫格预览、可单张删除）→ 手机端用 canvas 逐张自动压缩（最大边 1600px、JPEG 质量 0.75；**SVG 例外：跳过压缩原样直传**，保留矢量与 `image/svg+xml` 类型；**HEIC/HEIF 例外：手机端用 heic2any（公共 CDN）解码转 JPEG 后同样铺白底压缩直传**，确保电脑端含 Windows 无需额外编解码器即可打开，库缺失时回退原样直传）→ 逐张按序上传到中继服务器（服务端按设备维护 FIFO 队列，内存保护上限 100 条）；**处理失败时状态栏会显示具体原因**（如「IMG.heic：图片解析失败 / 压缩失败」），便于排查。
 4. 电脑端脚本在「中继服务器」填好后**默认自动**用 `GM_xmlhttpRequest` **长轮询** `/recv/<设备ID>` 取回图片（无需点击按钮；长轮询而非 WebSocket 是为了绕过征纳互动页面的 CSP 对 connect-src 的限制）；
-5. 收到图片后即在**网页正中弹出九宫格画廊弹窗**（3 列缩略图，收到的图片自动累积、最多保留 27 张，直接挂到 `<html>`，不受面板 transform 影响）：**单击缩略图用 antd [Image.PreviewGroup](https://ant.design/components/image-cn) 放大查看**（缩放/旋转/多图左右切换，无需第三方库），放大后预览底部工具栏末尾有**打印机图标**，点它用 [react-to-print](https://github.com/MatthewHerbst/react-to-print) 拉起浏览器打印对话框打印**当前这张图的原图**（打印对话框弹出期间请勿移除该图）；每张图下方「复制」按钮把图片写入系统剪贴板（此步必须由一次点击触发，满足浏览器安全策略）→ 去征纳互动 Ctrl+V 即可；「下载」按钮把原图存为文件（自动按原名/MIME 补扩展名）；每张右上角 × 可单独移除，底部「清空全部」，弹窗右上角关闭（图片保留，收到新图会再次弹出）。
+5. 收到图片后即在**网页正中弹出「历史记录」弹窗**（直接挂到 `<html>`，不受面板 transform 影响；图片与文本分**两个页签**，也可随时点面板的「历史记录」入口回看）：
+   - **图片页签**（3 列九宫格，自动累积、最多保留 27 张）：**单击缩略图用 antd [Image.PreviewGroup](https://ant.design/components/image-cn) 放大查看**（缩放/旋转/多图左右切换，无需第三方库），放大后预览底部工具栏末尾有**打印机图标**，点它用 [react-to-print](https://github.com/MatthewHerbst/react-to-print) 拉起浏览器打印对话框打印**当前这张图的原图**（打印对话框弹出期间请勿移除该图）；每张图下方「复制」把图片写入系统剪贴板（此步必须由一次点击触发，满足浏览器安全策略）→ 去征纳互动 Ctrl+V 即可；「下载」把原图存为文件（自动按原名/MIME 补扩展名）；每张右上角 × 可单独移除。
+   - **文本页签**（最多保留 100 条，最新在上）：回看收到的文本（含收到时间），每条可「复制」到剪贴板、可单独 × 删除。
+   - 底部「清空图片」/「清空文本」只清**当前页签**的内容；弹窗右上角关闭（内容保留，收到新内容会再次弹出）。
 
 **按用户隔离**：设备 ID 是每台电脑随机生成、几乎不可猜测的 UUID，因此 A 的电脑、B 的电脑各自持有不同链接与二维码，图片只进对应那台电脑，互不串。
 
