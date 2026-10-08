@@ -1,49 +1,45 @@
 /**
- * 弹窗与抽屉（v26.10.08-v14 起替代 antd Modal / Drawer）。
+ * 弹窗与抽屉（v26.10.09-v3 起改用 shadcn 的 Dialog / Sheet）。
  *
  * ── 为什么用 Radix Dialog 打底 ─────────────────────────────────────────────
  * 焦点陷阱（Tab 不会跑到宿主页面的输入框里）、Esc 关闭、`role="dialog"` + `aria-modal`、
  * 打开时把焦点移进弹窗、关闭后归还 —— 这些自己写必漏其中一两项，而它们恰好是**注入别人页面**
  * 的场景里最要紧的（不然用户在弹窗里按 Tab 会把焦点送进税务页的表单）。
  *
- * ── 与 antd 版的关键行为差异（都已刻意对齐）────────────────────────────────
- *  1. **挂载到 documentElement**：`<Dialog.Portal container={getOverlayHost()}>`。
- *  2. **默认不锁背景滚动**：见 Overlay.tsx 里的说明（避免与宿主 body 打架）。
- *  3. **关闭时卸载内容**（Radix 默认行为，对应 antd 的 destroyOnHidden）：
- *     日志弹窗依赖「打开即滚到底」的回调 ref，内容在挂载那一刻才有 scrollHeight。
+ * ── ⚠️ 唯一绕开官方封装的地方：`DialogContent` / `SheetContent` ──────────────
+ * shadcn 的这两个组件**内部自己渲染 `<DialogPortal>` 且不传 container** ⇒ 挂到 `body`。
+ * 而本项目必须挂 `documentElement`：税务页 body 常被加 transform/filter 形成独立层叠上下文，
+ * 会把 fixed 浮层困在里面（仓库既有结论，见 zindex.ts）。
+ * 故这里用 shadcn 导出的 `DialogPortal` + `DialogOverlay` + `DialogTitle` + `DialogClose`
+ * 自行组合 —— **Portal 与 Overlay 都是官方部件**，只有 Content 用 Radix primitive
+ * （shadcn 没单独导出无 Portal 的 Content）。这是 shadcn 官方支持的组合用法。
+ *
+ * ── 遮罩为什么用官方 `DialogOverlay` 而不是自绘 ─────────────────────────────
+ * 背景色、`data-open/closed` 进出场动画都由官方给齐，这里只覆盖两处：
+ *   · `zIndex`：本项目浮层要盖住 999999 的面板，官方 `z-50` 不够（见 zindex.ts）；
+ *   · `MASK_ATTR`：`shared/preview/mask.ts` 靠它在预览期间压掉**所有**下层遮罩
+ *     （否则两层 0.45 叠加 = 0.6975，白底被压到灰度 77）。
  *
  * ── 选择器钩子（data-* 而非类名）───────────────────────────────────────────
- * 冒烟测试（scripts/smoke/znhd-smoke.html）需要定位「弹窗本体 / 内容区 / 标题 / 关闭按钮 /
- * 遮罩」。Tailwind 的工具类名会被编译期 tree-shake 掉（写进 CSS，不进 DOM 属性），
- * 拿它们当契约太脆；故这里给各部件挂 `data-znhd-*` 属性作为**稳定契约**。
+ * 冒烟测试需要定位「弹窗本体 / 内容区 / 标题 / 关闭按钮 / 遮罩」。
+ * Tailwind 工具类名会被编译期 tree-shake（写进 CSS，不进 DOM 属性），拿它们当契约太脆；
+ * 故这里给各部件挂 `data-znhd-*` 属性作为**稳定契约**。
  * ⚠️ 这些属性是冒烟断言的依赖面，改名/删除会连带改测试，改之前先看 znhd-smoke.html。
  */
 
 import type { ReactNode } from 'react';
-import * as RadixDialog from '@radix-ui/react-dialog';
-import { Overlay } from './Overlay';
-import { getOverlayHost, OVERLAY_ROOT_CLASS } from './zindex';
-import { cn } from './cn';
+import { Dialog as DialogPrimitive } from 'radix-ui';
+import { Dialog as ShadcnDialog, DialogClose, DialogOverlay, DialogPortal, DialogTitle } from '#ui/dialog';
+// ⚠️ sheet.tsx 只导出 8 个部件（无 SheetPortal / SheetOverlay），而 Sheet 底层就是 Radix Dialog，
+//    故 Drawer 的 Portal / Overlay 复用 dialog 的同名件，只有 Title 用 SheetTitle。
+import { Sheet as ShadcnSheet, SheetTitle } from '#ui/sheet';
+import { getOverlayHost, OVERLAY_ROOT_CLASS, OVERLAY_Z } from './zindex';
+import { MASK_ATTR } from '../preview/mask';
+import { cn } from '#ui/utils';
 import { Button } from './controls';
 
-/** 关闭按钮（✕）：用原生 button，避免依赖 Radix 的 Close 组件带来的默认样式 */
-function CloseButton({ onClose, label = '关闭' }: { onClose: () => void; label?: string }) {
-    return (
-        <button
-            type="button"
-            data-znhd-modal-close
-            aria-label={label}
-            title={label}
-            onClick={onClose}
-            className={cn(
-                'inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-[6px]',
-                'text-ink-3 text-base leading-none transition-colors cursor-pointer',
-                'hover:bg-ink-7 hover:text-ink-1'
-            )}>
-            ✕
-        </button>
-    );
-}
+/** 遮罩配色：与替换前 antd 的 `rgba(0,0,0,0.45)` 一致（官方默认是 bg-black/10，偏浅） */
+const MASK_BG = 'rgb(0 0 0 / 0.45)';
 
 /* ============================================================ Modal */
 
@@ -85,56 +81,62 @@ export function Modal({
     bodyClassName,
 }: ModalProps) {
     // ⚠️ Radix 的 modal 模式**必须保留**（v26.10.08-v14 试过关掉，结论是不行）：
-    //    关掉后 `Root` 不再渲染隐藏层的交互上下文，浮层的挂载/关闭都会失灵
-    //    （实测点面板按钮弹窗不开、抽屉也不出）。
-    //    它带来的「Esc 只关自己」由 Radix 自己保证，无需我们接管。
+    //    关掉后 `Root` 不再渲染隐藏层的交互上下文，浮层的挂载/关闭都会失灵。
     return (
-        // ⚠️ 保留 Radix 的 modal 模式（v26.10.08-v14 实测结论）：
-        //    它负责「同一时刻只有一个浮层可交互」—— 这正是我们要的。多个弹窗并存时
-        //    后开的会接管交互，先开的只是**被盖住**（不是被禁用）；Radix 的模态层处理是正确的。
-        //    真正踩过的坑是「页签点不动」，根因不在这里，见下方 Tabs 的说明。
-        <RadixDialog.Root open={open} onOpenChange={(o) => !o && onClose()}>
-            <RadixDialog.Portal container={getOverlayHost()}>
-                <Overlay onMaskClick={maskClosable ? onClose : undefined} masked={showMask} className="flex items-center justify-center">
-                    <RadixDialog.Content
-                        data-znhd-modal="modal"
-                        className={cn(
-                            OVERLAY_ROOT_CLASS,
-                            'relative flex max-h-[88vh] flex-col overflow-hidden rounded-[10px] bg-white',
-                            'shadow-[0_8px_32px_rgb(0_0_0/0.2)] outline-none',
-                            className
-                        )}
-                        style={{ width: `min(${width}px, calc(100vw - 32px))` }}>
-                        {title ? (
-                            <RadixDialog.Title
-                                data-znhd-modal-title
-                                className="shrink-0 border-b border-ink-6 px-4 py-3 text-[15px] font-semibold leading-6 text-ink-1">
-                                {title}
-                            </RadixDialog.Title>
-                        ) : (
-                            /* 无标题时仍要有一个 Title 供读屏软件识别（否则 Radix 会警告） */
-                            <RadixDialog.Title className="sr-only">对话框</RadixDialog.Title>
-                        )}
+        <ShadcnDialog open={open} onOpenChange={(o) => !o && onClose()}>
+            <DialogPortal container={getOverlayHost()}>
+                {showMask ? (
+                    <DialogOverlay
+                        // ⚠️ 必须挂 MASK_ATTR：shared/preview/mask.ts 靠它把**所有**下层遮罩在预览期间压掉
+                        {...{ [MASK_ATTR]: '' }}
+                        className={cn(OVERLAY_ROOT_CLASS, 'bg-[var(--znhd-mask-bg)]')}
+                        style={{ zIndex: OVERLAY_Z, background: MASK_BG }}
+                    />
+                ) : null}
+                <DialogPrimitive.Content
+                    data-znhd-modal="modal"
+                    // 官方 Content 的定位是 fixed top-1/2 left-1/2；这里沿用官方，只覆盖圆角与阴影
+                    className={cn(
+                        OVERLAY_ROOT_CLASS,
+                        'fixed top-1/2 left-1/2 z-50 flex max-h-[88vh] w-full -translate-x-1/2 -translate-y-1/2',
+                        'flex-col gap-0 overflow-hidden rounded-xl bg-popover p-0 text-popover-foreground',
+                        'shadow-[0_8px_32px_rgb(0_0_0/0.2)] ring-1 ring-foreground/10 outline-none',
+                        className
+                    )}
+                    style={{ zIndex: OVERLAY_Z, width: `min(${width}px, calc(100vw - 32px))` }}
+                    // 官方默认点遮罩即关闭；maskClosable=false 时用官方 API 阻止（不自己写 onClick）
+                    onPointerDownOutside={(e) => {
+                        if (!maskClosable) e.preventDefault();
+                    }}>
+                    {title ? (
+                        <DialogTitle
+                            data-znhd-modal-title
+                            className="shrink-0 border-b border-border px-4 py-3 text-[15px] font-semibold leading-6">
+                            {title}
+                        </DialogTitle>
+                    ) : (
+                        /* 无标题时仍要有一个 Title 供读屏软件识别（否则 Radix 会警告） */
+                        <DialogTitle className="sr-only">对话框</DialogTitle>
+                    )}
 
-                        <div
-                            data-znhd-modal-body
-                            className={cn('min-h-0 flex-1 overflow-auto px-4 py-3 text-left', bodyClassName)}>
-                            {children}
+                    <div
+                        data-znhd-modal-body
+                        className={cn('min-h-0 flex-1 overflow-auto px-4 py-3 text-left', bodyClassName)}>
+                        {children}
+                    </div>
+
+                    {footer ? (
+                        <div className="flex shrink-0 items-center justify-end gap-2 border-t border-border px-4 py-2.5">
+                            {footer}
                         </div>
+                    ) : null}
 
-                        {footer ? (
-                            <div className="flex shrink-0 items-center justify-end gap-2 border-t border-ink-6 px-4 py-2.5">
-                                {footer}
-                            </div>
-                        ) : null}
-
-                        <div className="absolute right-3 top-2.5">
-                            <CloseButton onClose={onClose} />
-                        </div>
-                    </RadixDialog.Content>
-                </Overlay>
-            </RadixDialog.Portal>
-        </RadixDialog.Root>
+                    <div className="absolute right-3 top-2.5">
+                        <CloseButton onClose={onClose} />
+                    </div>
+                </DialogPrimitive.Content>
+            </DialogPortal>
+        </ShadcnDialog>
     );
 }
 
@@ -169,46 +171,70 @@ export function Drawer({
     bodyClassName,
 }: DrawerProps) {
     return (
-        // ⚠️ modal 模式的取舍同 Modal（见上）
-        <RadixDialog.Root open={open} onOpenChange={(o) => !o && onClose()}>
-            <RadixDialog.Portal container={getOverlayHost()}>
-                <Overlay onMaskClick={onClose} className="flex justify-end">
-                    <RadixDialog.Content
-                        data-znhd-modal="drawer"
-                        className={cn(
-                            OVERLAY_ROOT_CLASS,
-                            'relative flex h-full flex-col bg-white shadow-[-8px_0_32px_rgb(0_0_0/0.18)] outline-none',
-                            className
-                        )}
-                        style={{ width: `min(${size}px, 100vw)` }}>
-                        <div className="shrink-0 border-b border-ink-6 px-4 py-3 pr-10">
-                            <RadixDialog.Title
-                                data-znhd-modal-title
-                                className="text-[15px] font-semibold leading-6 text-ink-1">
-                                {title ?? '面板'}
-                            </RadixDialog.Title>
+        <ShadcnSheet open={open} onOpenChange={(o) => !o && onClose()}>
+            <DialogPortal container={getOverlayHost()}>
+                <DialogOverlay
+                    {...{ [MASK_ATTR]: '' }}
+                    className={cn(OVERLAY_ROOT_CLASS)}
+                    style={{ zIndex: OVERLAY_Z, background: MASK_BG }}
+                />
+                <DialogPrimitive.Content
+                    data-znhd-modal="drawer"
+                    className={cn(
+                        OVERLAY_ROOT_CLASS,
+                        'fixed inset-y-0 right-0 z-50 flex h-full flex-col gap-0 border-l bg-popover p-0',
+                        'text-popover-foreground shadow-[-8px_0_32px_rgb(0_0_0/0.18)] outline-none',
+                        className
+                    )}
+                    style={{ zIndex: OVERLAY_Z, width: `min(${size}px, 100vw)` }}>
+                    <div className="shrink-0 border-b border-border px-4 py-3 pr-10">
+                        <SheetTitle data-znhd-modal-title className="text-[15px] font-semibold leading-6">
+                            {title ?? '面板'}
+                        </SheetTitle>
+                    </div>
+                    <div
+                        data-znhd-modal-body
+                        className={cn('min-h-0 flex-1 overflow-auto px-4 py-3 text-left', bodyClassName)}>
+                        {children}
+                    </div>
+                    {footer ? (
+                        <div className="flex shrink-0 items-center justify-end gap-2 border-t border-border px-4 py-2.5">
+                            {footer}
                         </div>
-                        <div
-                            data-znhd-modal-body
-                            className={cn('min-h-0 flex-1 overflow-auto px-4 py-3 text-left', bodyClassName)}>
-                            {children}
-                        </div>
-                        {footer ? (
-                            <div className="flex shrink-0 items-center justify-end gap-2 border-t border-ink-6 px-4 py-2.5">
-                                {footer}
-                            </div>
-                        ) : null}
-                        <div className="absolute right-3 top-2.5">
-                            <CloseButton onClose={onClose} />
-                        </div>
-                    </RadixDialog.Content>
-                </Overlay>
-            </RadixDialog.Portal>
-        </RadixDialog.Root>
+                    ) : null}
+                    <div className="absolute right-3 top-2.5">
+                        <CloseButton onClose={onClose} />
+                    </div>
+                </DialogPrimitive.Content>
+            </DialogPortal>
+        </ShadcnSheet>
     );
 }
 
-/* ============================================================ confirm 便捷封装 */
+/* ============================================================ 关闭按钮 / confirm 便捷封装 */
+
+/**
+ * 关闭按钮（✕）。
+ *
+ * 用官方 `DialogClose` 承载（它提供 Radix 的关闭语义与 aria），
+ * 挂 `data-znhd-modal-close` 钩子供冒烟断言定位。
+ */
+function CloseButton({ onClose, label = '关闭' }: { onClose: () => void; label?: string }) {
+    return (
+        <DialogClose
+            data-znhd-modal-close
+            aria-label={label}
+            title={label}
+            onClick={onClose}
+            className={cn(
+                'inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-[6px]',
+                'text-muted-foreground text-base leading-none transition-colors cursor-pointer',
+                'hover:bg-muted hover:text-foreground'
+            )}>
+            ✕
+        </DialogClose>
+    );
+}
 
 /**
  * 「确定/取消」两按钮弹窗 —— 替换前各弹窗的 footer 几乎都是这个组合。

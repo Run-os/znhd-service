@@ -59,14 +59,14 @@ export default function ChangelogModal({ open, onClose }: ChangelogModalProps) {
                 </>
             }>
             {loading ? (
-                <div className="flex items-center justify-center gap-2 py-6 text-ink-3">
+                <div className="flex items-center justify-center gap-2 py-6 text-muted-foreground">
                     <Spinner size={16} />
                     <span className="text-xs">读取中…</span>
                 </div>
             ) : err ? (
                 <>
-                    <p className="text-danger-600">读取失败：{err}</p>
-                    <p className="mt-2 text-xs text-ink-3">
+                    <p className="text-destructive00">读取失败：{err}</p>
+                    <p className="mt-2 text-xs text-muted-foreground">
                         可点下方「获取更多日志」在浏览器中打开 CHANGELOG.md 查看。
                     </p>
                 </>
@@ -77,14 +77,14 @@ export default function ChangelogModal({ open, onClose }: ChangelogModalProps) {
                     <div className="max-h-[60vh] overflow-auto pr-1">
                         {shown.map((en) => (
                             <div key={en.title} className="mb-3.5">
-                                <div className="mb-1.5 text-sm font-bold text-brand-500">{en.title}</div>
-                                <div className="whitespace-pre-wrap break-words text-[13px] leading-[1.6] text-ink-1">
+                                <div className="mb-1.5 text-sm font-bold text-primary00">{en.title}</div>
+                                <div className="whitespace-pre-wrap break-words text-[13px] leading-[1.6] text-foreground">
                                     {mdToPlain(en.body)}
                                 </div>
                             </div>
                         ))}
                     </div>
-                    <p className="mt-2 block text-center text-xs text-ink-3">
+                    <p className="mt-2 block text-center text-xs text-muted-foreground">
                         {entries.length > shown.length
                             ? '共 ' + entries.length + ' 条，已显示最新 ' + shown.length + ' 条'
                             : '共 ' + entries.length + ' 条（已全部显示）'}

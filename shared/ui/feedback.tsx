@@ -1,12 +1,21 @@
 /**
- * Tooltip / Tabs / Toast（v26.10.08-v14 起替代 antd Tooltip / Tabs / message）。
+ * Tooltip / Tabs / Toast。
+ *
+ * v26.10.09-v3 起：Tooltip 与 Tabs 内部改用 shadcn 组件（`shared/ui/tooltip.tsx`、`tabs.tsx`），
+ * Toast 保持自研队列（shadcn 的 sonner 依赖外部 toast 库且自带全局容器，不适合注入宿主页）。
+ * 对外导出名与 `data-znhd-*` 钩子保持不变 —— 冒烟断言 41 项靠它们定位元素。
  */
 
 import { useEffect, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
-import * as RadixTooltip from '@radix-ui/react-tooltip';
-import * as RadixTabs from '@radix-ui/react-tabs';
-import { cn } from './cn';
+import {
+    Tooltip as ShadcnTooltip,
+    TooltipContent as ShadcnTooltipContent,
+    TooltipProvider as ShadcnTooltipProvider,
+    TooltipTrigger as ShadcnTooltipTrigger,
+} from '#ui/tooltip';
+import { Tabs as ShadcnTabs, TabsContent as ShadcnTabsContent, TabsList, TabsTrigger } from '#ui/tabs';
+import { cn } from '#ui/utils';
 import { getOverlayHost, OVERLAY_Z, OVERLAY_ROOT_CLASS } from './zindex';
 
 /* ============================================================ Tooltip */
@@ -22,34 +31,33 @@ export interface TooltipProps {
 }
 
 /**
- * 悬停提示（Radix Tooltip）。
+ * 悬停提示（内部走 shadcn `Tooltip`，Radix 打底）。
  *
  * ⚠️ 用 Radix 而不是原生 title 属性：原生 title 延迟约 1s 且**无法自定义样式**，
  *    在深色浮层上还是浏览器默认的黄底黑字，与整体观感不符（需求：常用语按钮 hover 显示对应文本）。
+ *
+ * ⚠️ 每个 Tooltip 自带一个 `TooltipProvider`（delayDuration=200）：shadcn 官方建议在应用根包一次，
+ *    但本仓库的 UI 是**注入到别人页面**的，没有统一的 React 根，只能就地包。
  */
 export function Tooltip({ content, children, zIndex = 1, side = 'top', className }: TooltipProps) {
     if (content === null || content === undefined || content === '') return <>{children}</>;
     return (
-        <RadixTooltip.Provider delayDuration={200} skipDelayDuration={300}>
-            <RadixTooltip.Root>
-                <RadixTooltip.Trigger asChild>{children}</RadixTooltip.Trigger>
-                <RadixTooltip.Portal container={getOverlayHost()}>
-                    <RadixTooltip.Content
-                        side={side}
-                        sideOffset={6}
-                        className={cn(
-                            OVERLAY_ROOT_CLASS,
-                            'max-w-[280px] rounded-[6px] bg-ink-1 px-2 py-1 text-xs leading-[18px] text-white',
-                            'shadow-[0_4px_12px_rgb(0_0_0/0.25)] break-words whitespace-pre-wrap',
-                            className
-                        )}
-                        style={{ zIndex: OVERLAY_Z + zIndex }}>
-                        {content}
-                        <RadixTooltip.Arrow className="fill-[#262626]" />
-                    </RadixTooltip.Content>
-                </RadixTooltip.Portal>
-            </RadixTooltip.Root>
-        </RadixTooltip.Provider>
+        <ShadcnTooltipProvider delayDuration={200}>
+            <ShadcnTooltip>
+                <ShadcnTooltipTrigger asChild>{children}</ShadcnTooltipTrigger>
+                <ShadcnTooltipContent
+                    side={side}
+                    sideOffset={6}
+                    className={cn(
+                        OVERLAY_ROOT_CLASS,
+                        'max-w-[280px] break-words whitespace-pre-wrap px-2 py-1 text-xs leading-[18px]',
+                        className
+                    )}
+                    style={{ zIndex: OVERLAY_Z + zIndex }}>
+                    {content}
+                </ShadcnTooltipContent>
+            </ShadcnTooltip>
+        </ShadcnTooltipProvider>
     );
 }
 
@@ -69,51 +77,48 @@ export interface TabsProps {
 }
 
 /**
- * 受控页签（Radix Tabs）：键盘左右方向键切换、role="tablist/tab/tabpanel" 齐备。
+ * 受控页签（内部走 shadcn `Tabs`，Radix 打底）：键盘左右方向键切换、role="tablist/tab/tabpanel" 齐备。
  *
  * ⚠️ **坑（v26.10.08-v14 实测）**：浮层里同时开着两个弹窗时（如「收到文本」自动弹窗 +
  *    「历史记录」弹窗），Radix Dialog 的模态层会让**非最上层**的内容变成 `aria-hidden`，
  *    此时点页签**没有任何反应**（页签的 data-state 一直不变，看起来像「页签坏了」）。
  *    规避办法有两条，都在这里做了：
- *      ① `forceMount`：让两个页签的 content **始终在 DOM 里**，只靠 `data-[state=inactive]:hidden`
- *         隐藏 —— 于是断言/读内容不必依赖「当前恰好是激活态」，点击目标也一直存在；
- *      ② 由调用方保证「要操作哪个弹窗，就让它是最后打开的那个」（本项目里 MainPanel 的
- *         「收到文本」弹窗会在历史记录打开时另行弹窗，属于可接受的层级表现）。
+ *      ① `forceMount`：让两个页签的 content **始终在 DOM 里**，只靠 `hidden` 隐藏
+ *         —— 于是断言/读内容不必依赖「当前恰好是激活态」，点击目标也一直存在；
+ *      ② 由调用方保证「要操作哪个弹窗，就让它是最后打开的那个」。
  */
 export function Tabs({ items, value, onChange, className }: TabsProps) {
     return (
-        <RadixTabs.Root value={value} onValueChange={onChange} className={cn('flex flex-col', className)}>
-            <RadixTabs.List className="flex shrink-0 gap-4 border-b border-ink-6" aria-label="页签">
+        <ShadcnTabs value={value} onValueChange={onChange} className={cn('flex flex-col', className)}>
+            <TabsList className="h-auto w-full justify-start gap-4 rounded-none border-b border-border bg-transparent p-0">
                 {items.map((it) => (
-                    <RadixTabs.Trigger
+                    <TabsTrigger
                         key={it.key}
                         value={it.key}
                         // ⚠️ data-znhd-tab 是冒烟断言的稳定钩子（替换前读的是 .ant-tabs-tab）
                         data-znhd-tab=""
                         className={cn(
-                            'relative -mb-px border-b-2 border-transparent pb-2 text-sm cursor-pointer transition-colors',
-                            'hover:text-brand-500 outline-none focus-visible:ring-2 focus-visible:ring-brand-300 rounded-sm',
-                            'data-[state=active]:border-brand-500 data-[state=active]:text-brand-500 data-[state=active]:font-medium'
+                            'relative -mb-px rounded-none border-b-2 border-transparent bg-transparent px-0 pb-2 text-sm',
+                            'cursor-pointer shadow-none transition-colors',
+                            'data-[state=active]:border-primary data-[state=active]:text-primary data-[state=active]:shadow-none',
+                            'data-[state=active]:font-medium data-[state=active]:bg-transparent'
                         )}>
                         {it.label}
-                    </RadixTabs.Trigger>
+                    </TabsTrigger>
                 ))}
-            </RadixTabs.List>
+            </TabsList>
             {items.map((it) => (
-                <RadixTabs.Content
+                <ShadcnTabsContent
                     key={it.key}
                     value={it.key}
                     forceMount
                     data-znhd-tabpanel=""
                     // 非激活态用 hidden 隐藏（forceMount 下 Radix 不再自动加它）
-                    className={cn(
-                        'min-h-0 pt-3 outline-none',
-                        it.key === value ? 'block' : 'hidden'
-                    )}>
+                    className={cn('min-h-0 pt-3 outline-none', it.key === value ? 'block' : 'hidden')}>
                     {it.content}
-                </RadixTabs.Content>
+                </ShadcnTabsContent>
             ))}
-        </RadixTabs.Root>
+        </ShadcnTabs>
     );
 }
 
@@ -195,7 +200,7 @@ export function ToastHost() {
                 {list.map((t) => (
                     <div
                         key={t.id}
-                        className="max-w-[420px] rounded-[8px] border border-ink-6 bg-white px-3 py-2 shadow-[0_4px_16px_rgb(0_0_0/0.16)]">
+                        className="max-w-[420px] rounded-[8px] border border-border bg-popover px-3 py-2 shadow-[0_4px_16px_rgb(0_0_0/0.16)]">
                         <span className={cn('text-[13px] leading-[20px] break-words', TOAST_STYLE[t.level])}>{t.text}</span>
                     </div>
                 ))}

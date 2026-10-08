@@ -11,6 +11,57 @@
 
 ---
 
+### znhd.user.js / 手机上传页 v26.10.09-v3
+- **接入 shadcn/ui：两端共用基座 `shared/ui/` 全面改用 shadcn 组件**（按用户要求）。
+  - **新增依赖**：`shadcn`（CLI + `shadcn/tailwind.css`）、`cn`（官方 cn helper，见下）、
+    `class-variance-authority`、`lucide-react`、`tw-animate-css`、`radix-ui`（统一包，替代分包的 `@radix-ui/react-*`）。
+  - **新增 `components.json`**：`style` = **`radix-nova`**（本项目已有 Radix，故用 radix 变体），
+    tailwind.css 指向 `shared/ui/tailwind.css`，aliases 用 `#ui`。
+  - **落位**：14 个组件进 `shared/ui/`（两端共用）—— button / input / textarea / label / checkbox /
+    switch / progress / separator / badge / card / tabs / tooltip / dialog / sheet。
+  - **已改造的自建基座**：`controls.tsx`（Button/Input/Textarea/Switch/Checkbox/Tag/Progress/Divider）、
+    `OverlayModal.tsx`（Modal/Drawer）、`feedback.tsx`（Tooltip/Tabs）内部全部走 shadcn；
+    `src/lib/ui/` 下业务组件**调用方式不变**，仅把 45 处旧语义色（`ink-*` / `brand-*` / `danger-*`）
+    换成 shadcn 语义 token（`foreground` / `muted-foreground` / `primary` / `destructive` / `border` / `muted`）。
+- **⚠️ 五个必须记住的接入要点（都是踩过的坑，别重复踩）**：
+  1. **shadcn 没有运行时 npm 包**，组件靠 CLI 复制源码进项目；`@shadcn/ui` 只是 0.0.4 占位包。
+  2. **`cn` 已是独立包**（不是 clsx + tailwind-merge）。官方 manual 要求 `export { cn } from "cn"`。
+     旧的手写 `shared/ui/cn.ts` **不做类冲突合并**，shadcn 组件必须用前者，否则外部 `className`
+     覆盖不掉组件内置 variant（纯拼接时两个类都在，谁生效看 CSS 顺序）。
+  3. **alias 不能用 `@/`**：CLI 检测到根目录有 `src/` 就把 `@/` 硬解析成 `src/` ⇒ `@/ui` 会落进 `src/ui`
+     （手机页拿不到）。改用 package imports 形式 **`#ui`** 才正确解析到 `shared/ui/`。
+     另：web/ 是独立包，根 package.json 的 `imports` 对它不生效，故两端额外配了显式别名
+     （根 tsconfig / web tsconfig / webpack `resolve.alias` / Vite `resolve.alias`）。
+  4. **CLI 生成的 import 带 `.tsx` 后缀**（`from "#ui/button.tsx"`）⇒ TS5097，已批量去掉后缀。
+     ⚠️ 以后每次 `shadcn add` 新组件都要再跑一遍这个清理。
+  5. **`DialogContent` / `SheetContent` 不能用**：它们内部自己渲染 `<DialogPortal>` 且不传 container
+     ⇒ 挂到 `body`。本项目必须挂 `documentElement`（税务页 body 的 transform/filter 会困住 fixed 浮层）。
+     改用 shadcn 导出的 `DialogPortal` + `DialogOverlay` 自行组合，只有 Content 用 Radix primitive。
+- **CSS 适配（关键）**：官方 manual 的两处会污染宿主税务页，已改写：
+  · `@import "tailwindcss"` 含 **preflight**（全局 reset）→ 仍只导入 `theme` + `utilities`；
+  · `@layer base { * {...} body {...} }` 是全局选择器 → 改为 `:where(.znhd-root) *` / `:where(.znhd-root)`；
+  · 主题变量从 `:root` 挪到 `.znhd-root`（`--background` 等通用名放全局会覆盖宿主同名变量）。
+  主色沿用替换前 antd 的品牌蓝 `#1677ff`（转 oklch），两端观感不变。
+- **双份 `@types/react` 问题（继 v26.10.08 的 React 运行时双份之后，这次是类型层）**：
+  web 侧 typecheck 报 `Ref<T>` 不兼容（"Two different types with this name exist"），
+  根因是 `shared/ui` 用根 @types/react、`web/src` 用 web 的那份。已在 `web/tsconfig.json` 用
+  `paths` 把 `react`/`react-dom` 统一指到 web 自己的那份解决。
+- **体积**：产物 1218.0 KB → **1450.5 KB**（+232.5 KB，来自 shadcn 组件 + lucide 图标 + radix-ui 统一包）。
+- **验证**：`npm run typecheck` / `typecheck:web` 均 0 错；`npm run build` / `build:web` 通过；
+  `npm run verify` 三段全绿（`znhd-smoke` 41 项 / `relay` / `phone-page`）—— 冒烟全过说明
+  换掉官方 Dialog/Sheet 后 `data-znhd-*` 钩子依旧齐全。
+- **版本号**：`config/common.meta.json` / `package.json` / `web/package.json` / `relay-server/package.json`
+  统一为 `26.10.09-v3`（手机页产物由中继同源托管，版本号必须一致）。
+
+### znhd.user.js v26.10.09-v2
+- **按用户要求关闭生产构建压缩**：`config/webpack.config.base.js` 的 `optimization.minimize` 由 `true` 改回 **`false`**（v26.10.06-v19 期间曾开启，这是第二次反向调整；因当日已有 v1，故递增为 `-v2`）。
+  - **体积变化（实测，非估算）**：`dist/znhd.user.js` **425.4 KB → 1218.0 KB（1.19 MiB）**，gzip 后 129.9 KB → 262.5 KB，brotli 109.5 KB → 207.7 KB。
+  - `TerserPlugin` 的完整配置**刻意保留不删**，包括 `comments: /==\/?UserScript==|^[ ]?@|eslint-disable|spell-checker/i` 这条白名单 —— 脚本元信息不是普通注释，是油猴的运行时解析依据，一旦被压掉脚本直接失效。**想恢复压缩只需把 `minimize` 改回 `true`**，不必重写配置。
+  - 顺带记录体积基线，供日后判断改动影响：压缩比 **2.86×**；`dist/znhd.dev.user.js` 的 4.25MB 是 `mode=development`（eval + 友好报错 + 无优化）造成的，**与 `minimize` 无关**，不要拿它当「关压缩后的体积」。
+  - ⚠️ gzip/brotli 只在传输层起作用，`@downloadURL` 指向 GitHub raw 直链，是否动态 gzip 不由本仓库控制 —— 落到磁盘的体积只有 raw 那一列算数。
+- **行为不变**：只动构建开关，未改任何业务代码、依赖或 UI。产物内 `==UserScript==` 头、`@grant` 6 条、`@match` 3 条、`@require` 3 个 CDN、`@version` 唯一，全部原样保留（未压缩状态下更不会被误删）。
+- **验证**：`npm run build` 通过（3 条 asset size 警告为预期，仅因未压缩超过 webpack 的 244KB 提示阈值）；`npm run check`（`node --check` 产物 + 服务端）通过；`npm run verify` 三段全绿（`znhd-smoke:ALL-OK` / `relay:ALL-OK` / `phone-page:ALL-OK`）。
+
 ### znhd.user.js v26.10.09-v1
 - **【需求 1】常用语按钮加 hover 提示，悬停即可看到标题对应的文本**：`PhrasesDrawer` 里每条常用语的按钮外包一层 Tooltip，内容就是该条的正文（value），同时保留原生 `title` 属性兜底（触屏/键盘用户等不到悬停时长）。
 - **【需求 2】全面弃用 Ant Design，改用 Tailwind CSS v4 + Radix UI**（按用户要求「antd 还是不好用，请全面替代为 tailwind css」）。**两端同时替换**（脚本面板/弹窗 + 手机上传页），主色沿用同一个蓝 `#1677ff`，两端观感不变。

@@ -260,7 +260,7 @@ export default function RecvHistoryModal({
                                 <pre className="m-0 whitespace-pre-wrap break-words font-sans text-sm leading-[1.6]">
                                     {t.text}
                                 </pre>
-                                <span className="text-[11px] text-ink-3">{fmtTime(t.ts)}</span>
+                                <span className="text-[11px] text-muted-foreground">{fmtTime(t.ts)}</span>
                             </div>
                             <div className="flex gap-1">
                                 <Button size="small" onClick={() => doCopyText(t, idx)}>
@@ -330,7 +330,7 @@ export default function RecvHistoryModal({
                     </>
                 }>
                 <Tabs items={tabItems} value={tab} onChange={(k) => setTab(k as 'image' | 'text')} />
-                <p className="mt-2 block text-xs text-ink-3">
+                <p className="mt-2 block text-xs text-muted-foreground">
                     提示：图片页签单击缩略图可放大/旋转/多图切换，放大后工具栏上的「打印」打印原图；图片与文本的「复制」都会写入系统剪贴板，回征纳互动
                     Ctrl+V 即可（打印对话框弹出后请勿删除该图）。
                 </p>
@@ -347,7 +347,7 @@ export default function RecvHistoryModal({
                     <Tooltip content="打印原图" side="top">
                         <button
                             type="button"
-                            className="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-full text-white transition-colors hover:bg-white/20"
+                            className="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-full text-white transition-colors hover:bg-popover/20"
                             aria-label="print"
                             title="打印原图"
                             onClick={() => {

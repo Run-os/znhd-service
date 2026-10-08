@@ -88,7 +88,7 @@ function ToolButton({
             onClick={onClick}
             className={cn(
                 'inline-flex h-8 w-8 items-center justify-center rounded-full text-white transition-colors cursor-pointer',
-                'hover:bg-white/20 disabled:opacity-30 disabled:cursor-not-allowed'
+                'hover:bg-popover/20 disabled:opacity-30 disabled:cursor-not-allowed'
             )}>
             {children}
         </button>

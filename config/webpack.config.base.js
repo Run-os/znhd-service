@@ -125,12 +125,14 @@ const baseOptions = {
     ],
   },
   optimization: {
-    // v26.10.06-v19：开启 Terser 压缩（原为 false，产物一直未压缩）。
-    // 依据：`dist/znhd.user.js` 是**打包发布物**（油猴安装/更新的下载对象），压缩后体积明显下降。
-    // 下面 minimizer 的 comments 白名单负责保住 `==UserScript==` 头与 `@`/eslint/spell-checker 注释 ——
-    // 脚本元信息不是"注释"，是运行时的解析依据，压掉脚本直接废掉。
-    // ⚠️ dev 侧已在 webpack.dev.js 里显式关回 false：本地调试产物要可读、构建要快。
-    minimize: true,
+    // v26.10.09-v2：**关闭 Terser 压缩**（v26.10.06-v19 曾设为 true，v26.10.09-v2 按用户要求改回 false）。
+    // 实测（26.10.09-v1 产物）：minimize=true 425.4 KB，false 1218.0 KB（1.19 MiB），压缩比 2.86×。
+    // ⚠️ 下面是完整的 Terser 配置（含保住 `==UserScript==` 头与 `@`/eslint/spell-checker 注释的
+    //    comments 白名单），**故意保留不删**：白名单是脚本元信息的保险，日后想开启只需把
+    //    minimize 改回 true 即可，不必重写。
+    //    （脚本元信息不是"注释"，是运行时的解析依据，压掉脚本直接废掉。）
+    // ⚠️ dev 侧在 webpack.dev.js 里也显式设 false：调试产物要可读、构建要快。
+    minimize: false,
     minimizer: [
       new TerserPlugin({
         terserOptions: {
@@ -149,6 +151,9 @@ const baseOptions = {
     extensions: ['.tsx', '.ts', '.js', '.jsx', '.json'],
     alias: {
       '@': src,
+      // v26.10.09-v3：shadcn 组件落 shared/ui/（两端共用），components.json 里 alias 前缀写作 `@ui`。
+      // webpack 不读 tsconfig.paths，必须在这里显式补一条，否则 `import { cn } from '@ui/utils'` 解析失败。
+      '#ui': path.join(shared, 'ui'),
     },
   },
   plugins: [],

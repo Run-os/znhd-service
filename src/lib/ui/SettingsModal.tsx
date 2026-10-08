@@ -39,7 +39,7 @@ function LinkButton({ children, onClick }: { children: React.ReactNode; onClick:
 
 /** 分组小标题（次要说明文字的统一样式） */
 function Hint({ children, className }: { children: React.ReactNode; className?: string }) {
-    return <p className={cn('block text-xs leading-[18px] text-ink-3', className)}>{children}</p>;
+    return <p className={cn('block text-xs leading-[18px] text-muted-foreground', className)}>{children}</p>;
 }
 
 /**
@@ -96,7 +96,7 @@ export default function SettingsModal({
     /** 一行「时间输入」：标签 + 两个输入框 + 「至」 */
     const timeRow = (label: string, from: keyof WorkingHours, to: keyof WorkingHours) => (
         <div className="mb-2 flex flex-wrap items-center gap-2">
-            <span className="text-[13px] text-ink-2">{label}</span>
+            <span className="text-[13px] text-muted-foreground">{label}</span>
             <Input
                 type="time"
                 step={300}
@@ -104,7 +104,7 @@ export default function SettingsModal({
                 onChange={(e) => updateWh(from, hhmmToHours(e.target.value))}
                 className="w-[110px]"
             />
-            <span className="text-[13px] text-ink-2">至</span>
+            <span className="text-[13px] text-muted-foreground">至</span>
             <Input
                 type="time"
                 step={300}
@@ -139,16 +139,16 @@ export default function SettingsModal({
 
             {/* CDN 加速开关：控制项目内 GitHub 资源（常用语 YAML、提示音）是否经 CDN 镜像加速 */}
             <div className="mb-3 flex items-center gap-2">
-                <span className="text-[13px] font-medium text-ink-1">使用 CDN 加速（Fastly 镜像）加载资源</span>
+                <span className="text-[13px] font-medium text-foreground">使用 CDN 加速（Fastly 镜像）加载资源</span>
                 <Switch checked={!!useCdn} onChange={(v) => onChangeUseCdn(v)} />
             </div>
 
-            <p className="mb-2 block text-[13px] font-medium text-ink-1">监控时间段（点击选择时间）</p>
+            <p className="mb-2 block text-[13px] font-medium text-foreground">监控时间段（点击选择时间）</p>
             {timeRow('上午', 'morningStart', 'morningEnd')}
             {timeRow('下午', 'afternoonStart', 'afternoonEnd')}
             <Hint>提示：将「下午开始」设为与「上午结束」相同（如都设为 12:00），即可午休时段也监控。</Hint>
 
-            <p className="mb-2 block text-[13px] font-medium text-ink-1">常用语数据地址（可自定义远程 YAML）</p>
+            <p className="mb-2 block text-[13px] font-medium text-foreground">常用语数据地址（可自定义远程 YAML）</p>
             <Input
                 placeholder="https://.../commonPhrases.yaml"
                 value={urlDraft}
@@ -158,7 +158,7 @@ export default function SettingsModal({
             />
             <Hint>修改后请在「常用语」面板点「重新加载常用语」生效；留空并点击其他区域（失焦）后恢复默认地址。</Hint>
 
-            <p className="mb-2 block text-[13px] font-medium text-ink-1">中继服务器地址</p>
+            <p className="mb-2 block text-[13px] font-medium text-foreground">中继服务器地址</p>
             <Input
                 placeholder="https://你的服务器:端口"
                 value={relayServer || ''}

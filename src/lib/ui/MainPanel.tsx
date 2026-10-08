@@ -36,7 +36,7 @@ function BrandIcon({ size = 26 }: { size?: number }) {
     if (failed) {
         return (
             <span
-                className="inline-flex shrink-0 items-center justify-center rounded-md bg-brand-500 text-white"
+                className="inline-flex shrink-0 items-center justify-center rounded-md bg-primary00 text-white"
                 style={{ width: size, height: size, fontSize: Math.round(size * 0.55) }}>
                 🎯
             </span>
@@ -462,7 +462,7 @@ export default function MainPanel({ host }: MainPanelProps) {
 
     return (
         <div
-            className="overflow-hidden rounded-lg bg-white shadow-[0_6px_24px_rgb(0_0_0/0.18)]"
+            className="overflow-hidden rounded-lg bg-popover shadow-[0_6px_24px_rgb(0_0_0/0.18)]"
             // ⚠️ data-znhd-panel 是「面板已展开」的稳定钩子：冒烟测试用它判断「收起成悬浮球了吗」
             //    （替换前读的是 antd 的 .ant-card）。改动会让 scripts/smoke/run.js 的收起用例失效。
             data-znhd-panel=""
@@ -470,7 +470,7 @@ export default function MainPanel({ host }: MainPanelProps) {
             {/* 标题栏 = 拖拽手柄（唯一可抓取区） */}
             <div
                 {...dragHandlers}
-                className="flex min-h-[46px] items-center gap-1.5 border-b border-ink-6 px-2.5 py-2"
+                className="flex min-h-[46px] items-center gap-1.5 border-b border-border px-2.5 py-2"
                 style={{ cursor: 'move', userSelect: 'none', touchAction: 'none' }}
                 title="按住拖动面板">
                 <BrandIcon />
@@ -479,7 +479,7 @@ export default function MainPanel({ host }: MainPanelProps) {
                     title="征纳互动监控">
                     征纳互动监控
                 </span>
-                <span className="shrink-0 rounded-[10px] bg-brand-50 px-2 text-[11px] font-normal leading-[18px] text-brand-500">
+                <span className="shrink-0 rounded-[10px] bg-primary0 px-2 text-[11px] font-normal leading-[18px] text-primary00">
                     v{GM_info.script.version}
                 </span>
                 <Button
@@ -496,14 +496,14 @@ export default function MainPanel({ host }: MainPanelProps) {
                 <style>{PANEL_CSS}</style>
 
                 {/* 人数 + 状态 */}
-                <div className="mb-2.5 flex justify-between gap-3 rounded-[10px] bg-ink-7 px-3 py-2.5">
+                <div className="mb-2.5 flex justify-between gap-3 rounded-[10px] bg-muted px-3 py-2.5">
                     <div>
-                        <div className="text-xs text-ink-3">当前等待人数</div>
+                        <div className="text-xs text-muted-foreground">当前等待人数</div>
                         <div className="flex items-baseline gap-1">
-                            <span className="text-[30px] font-bold leading-[1.15] text-brand-500">
+                            <span className="text-[30px] font-bold leading-[1.15] text-primary00">
                                 {mon.waiting === null ? '—' : mon.waiting}
                             </span>
-                            <span className="text-xs text-ink-3">人</span>
+                            <span className="text-xs text-muted-foreground">人</span>
                         </div>
                     </div>
                     <div className="flex flex-col justify-center gap-1 text-xs">
@@ -519,7 +519,7 @@ export default function MainPanel({ host }: MainPanelProps) {
                 </div>
 
                 {/* 语音播报开关 */}
-                <div className="mb-2.5 flex items-center justify-between rounded-[10px] bg-ink-7 px-3 py-2">
+                <div className="mb-2.5 flex items-center justify-between rounded-[10px] bg-muted px-3 py-2">
                     <div className="flex items-center gap-1.5">
                         <span>{voiceEnabled ? '🔊' : '🔇'}</span>
                         <span className="text-[13px]">语音播报</span>
@@ -540,7 +540,7 @@ export default function MainPanel({ host }: MainPanelProps) {
                 </div>
 
                 {/* 底部：上次播报 + 查看日志 */}
-                <div className="mt-2.5 flex items-center justify-between gap-2 text-xs text-ink-3">
+                <div className="mt-2.5 flex items-center justify-between gap-2 text-xs text-muted-foreground">
                     <span className="overflow-hidden text-ellipsis whitespace-nowrap">
                         {lastSpeakText(mon.lastSpeak)}
                     </span>

@@ -21,6 +21,11 @@ const relayPkg = JSON.parse(
 export default defineConfig({
     plugins: [react(), tailwindcss()],
     resolve: {
+        // v26.10.09-v3：shadcn 组件落 shared/ui/（两端共用），components.json 里 alias 前缀写作 `@ui`。
+        // Vite 不读 tsconfig.paths，必须在这里显式补一条（与 webpack 侧保持同一份约定）。
+        alias: {
+            '#ui': fileURLToPath(new URL('../shared/ui', import.meta.url)),
+        },
         // ⚠️ **必须** dedupe react / react-dom（v26.10.08-v14 实测踩到，症状极具迷惑性）：
         //    共享层 `shared/` 在**仓库根**，而页面源码在 `web/src`。Vite 按「引用文件所在目录向上找
         //    node_modules」解析 `import ... from 'react'` ⇒ shared/ 里的组件拿到**根 node_modules/react**，

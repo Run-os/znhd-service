@@ -178,7 +178,7 @@ export default function LogModal({
                                     //    （scripts/smoke/znhd-smoke.html 按它们取时间戳/类型/消息三栏，
                                     //    并用行数断言「日志确实渲染了」）。Tailwind 工具类能表达布局，
                                     //    但**语义分栏的钩子**仍要用类名承载，故这里保留。
-                                    className="znhd-log-row group flex items-start gap-2 border-l-[3px] border-l-transparent py-0.5 pl-2 pr-2.5 hover:bg-white/10"
+                                    className="znhd-log-row group flex items-start gap-2 border-l-[3px] border-l-transparent py-0.5 pl-2 pr-2.5 hover:bg-popover/10"
                                     style={{ background: m.bg, borderLeftColor: m.bar }}>
                                     <span className="znhd-log-ts w-[86px] shrink-0 text-[#52667a]">
                                         {entry.timestamp}

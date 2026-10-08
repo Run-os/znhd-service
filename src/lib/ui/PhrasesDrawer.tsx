@@ -50,7 +50,7 @@ export default function PhrasesDrawer({
 
     return (
         <Drawer open={open} title="常用语" size={360} onClose={onClose} bodyClassName="pt-3">
-            <p className="mb-3 block text-xs leading-[18px] break-all text-ink-3">
+            <p className="mb-3 block text-xs leading-[18px] break-all text-muted-foreground">
                 数据源: {safeDecodeURIComponent(resolveGithubUrl(commonPhrasesUrl || DEFAULTS.commonPhrasesUrl))}
             </p>
 
@@ -71,7 +71,7 @@ export default function PhrasesDrawer({
             />
 
             {phrasesLoading ? (
-                <div className="flex items-center justify-center gap-2 py-5 text-ink-3">
+                <div className="flex items-center justify-center gap-2 py-5 text-muted-foreground">
                     <Spinner size={16} />
                     <span className="text-xs">加载中…</span>
                 </div>

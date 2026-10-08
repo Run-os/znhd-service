@@ -5,6 +5,18 @@
     "module": "ESNext",
     "moduleResolution": "bundler",
     "jsx": "react-jsx",
+    "baseUrl": ".",
+    "paths": {
+      "#ui/*": ["../shared/ui/*"],
+      // v26.10.09-v3：shadcn 组件落 shared/ui/（仓库根），TS 解析 `react` 类型时按「文件所在目录
+      // 向上找 node_modules」⇒ shared/ui 拿到**根** @types/react、web/src 拿到 **web/** 的那份。
+      // 两份 @types/react 即便版本号完全相同也是两个类型实例，于是 `Ref<T>` 互相不兼容：
+      //   "Two different types with this name exist, but they are unrelated"
+      // （与 v26.10.08-v14 踩过的 React 运行时双份同源，这次是类型层）。
+      // 统一指到 web/ 自己的那份即可 —— 运行时那份由 vite.config.ts 的 dedupe 保证唯一。
+      "react": ["./node_modules/@types/react"],
+      "react-dom": ["./node_modules/@types/react-dom"]
+    },
     "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,

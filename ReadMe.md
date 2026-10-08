@@ -100,6 +100,11 @@ npm run verify         # 无头 Chromium 端到端冒烟（面板/弹窗/画廊/
 - **改版本号**：编辑 `config/common.meta.json` 的 `version`（格式 `YY.MM.DD-vN`，**零填充**；`N` 为当天第几次改动，**同一天内只递增 `-vN`、日期部分不动**），产物头部由构建自动生成。
 - **本地调试**：`npm start` 后，按 `config/dev.meta.json` 中 `@require` 指向的 `dist/znhd.dev.user.js` 安装开发脚本（需在油猴中允许访问本地文件 URL）；改动 `src/` 会触发目标站点热重载。
 - **发布**：push 到 `main` 后，`@updateURL`/`@downloadURL` 指向的 `dist/znhd.user.js`（GitHub raw 直链，不走 CDN 加速）即为最新产物，ScriptCat 自动同步。
+- **产物体积**：`optimization.minimize` 为 **`false`**（v26.10.09-v2 起，发布物不压缩），当前产物约 **1.38 MiB**（接入 shadcn 后：1.19 MiB → 1.38 MiB）。开启压缩可显著降低，做法是把 `config/webpack.config.base.js` 里的 `minimize` 改回 `true` —— `TerserPlugin` 配置连同保住 `==UserScript==` 头的 `comments` 白名单一直保留着，改一个布尔即可。
+- **UI 组件库（shadcn/ui）**：v26.10.09-v3 起两端共用基座 `shared/ui/` 全面使用 **shadcn/ui**。shadcn **没有运行时 npm 包**，组件由 CLI 复制源码进项目（`npx shadcn@latest add <组件>`），配置见仓库根 `components.json`（`style` = `radix-nova`）。
+  - **新增组件的标准步骤**：① `npx shadcn@latest add <组件>`（会落进 `shared/ui/`）；② ⚠️ **把生成文件里 `#ui/xxx.tsx` 的 `.tsx` 后缀去掉**（CLI 会带后缀，触发 TS5097）；③ 在 `shared/ui/` 里按需要包装后导出，记得保留 `data-znhd-*` 钩子（冒烟断言依赖）。
+  - **⚠️ 两个必须绕开的官方封装**：`DialogContent` / `SheetContent` 内部自带 Portal 且挂 `body`，而本项目必须挂 `documentElement`（税务页 body 的 transform/filter 会困住 fixed 浮层）—— 改用 `DialogPortal` + `DialogOverlay` 自行组合。
+  - **⚠️ 主题变量写在 `.znhd-root` 上而不是 `:root`**：`--background` 等是通用名，放全局会覆盖宿主页面同名变量。
 
 ## 功能详解
 
@@ -243,7 +248,9 @@ const DEFAULTS = {
 | JavaScript (ES6+)                                                                    | 脚本主语言                                                                                                                         |
 | [React 19](https://react.dev/)                                                        | UI 运行时：面板、各弹窗、手机上传页；随产物打包，无第三方运行时请求                                                                |
 | [Tailwind CSS v4](https://tailwindcss.com/)                                          | **全部样式**（v26.10.09-v1 起取代 Ant Design）：`@theme` 定义主色与色阶，只导入 `theme` + `utilities` 两层（不用 preflight，见下）  |
-| [Radix UI](https://www.radix-ui.com/)                                                | 无障碍基座：`Dialog`（弹窗/抽屉：焦点陷阱、Esc、aria-modal）、`Switch`/`Checkbox`/`Tooltip`/`Tabs`/`Progress` 的键盘与语义           |
+| [shadcn/ui](https://ui.shadcn.com/)                                                  | **组件库（v26.10.09-v3 起，两端共用）**：button / input / textarea / label / checkbox / switch / progress / separator / badge / card / tabs / tooltip / dialog / sheet。**没有运行时 npm 包**，组件由 CLI 复制源码进 `shared/ui/`，配置见 `components.json`（`style` = `radix-nova`） |
+| [Radix UI](https://www.radix-ui.com/)                                                | shadcn 的无障碍基座（经 `radix-ui` 统一包引入）：`Dialog`（弹窗/抽屉：焦点陷阱、Esc、aria-modal）、`Switch`/`Checkbox`/`Tooltip`/`Tabs`/`Progress` 的键盘与语义 |
+| [lucide-react](https://lucide.dev/)                                                  | shadcn 组件内置图标库（随产物打包，tree-shaking 后只进用到的图标）                                                                  |
 | [react-to-print](https://github.com/MatthewHerbst/react-to-print)                    | 放大预览工具栏「打印」：建隐藏 iframe、等图片加载完再调 `print()` 打印原图（随产物打包）                                             |
 | [js-yaml](https://github.com/nodeca/js-yaml)                                         | 解析 YAML 格式的常用语配置文件                                                                                                     |
 | [qrcodejs](https://github.com/davidshimjs/qrcodejs)                                  | 「本机上传链接」二维码由脚本端本地生成（无需服务器参与）                                                                           |

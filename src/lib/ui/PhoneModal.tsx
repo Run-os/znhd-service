@@ -124,7 +124,7 @@ interface ProgressState {
 /** 卡片式分区（与参考稿一致：圆角描边区块 + 区块标题） */
 function Section({ title, extra, children }: { title: string; extra?: React.ReactNode; children: React.ReactNode }) {
     return (
-        <div className="mb-3 rounded-[10px] border border-ink-6 px-3.5 py-3">
+        <div className="mb-3 rounded-[10px] border border-border px-3.5 py-3">
             <div className="mb-2.5 flex items-center justify-between gap-2">
                 <span className="text-sm font-semibold">{title}</span>
                 {extra}
@@ -446,22 +446,22 @@ export default function PhoneModal({ open, onClose, relayServer, phones }: Phone
                                 <img
                                     src={qrUrl}
                                     alt="上传链接二维码"
-                                    className="block border border-ink-6"
+                                    className="block border border-border"
                                     style={{ width: 124, height: 124 }}
                                 />
                             ) : (
                                 <div
-                                    className="flex items-center justify-center border border-ink-6 text-xs text-[#999]"
+                                    className="flex items-center justify-center border border-border text-xs text-[#999]"
                                     style={{ width: 124, height: 124 }}>
                                     二维码生成中…
                                 </div>
                             )}
-                            <div className="mt-1.5 text-xs text-ink-3">扫一扫上传</div>
+                            <div className="mt-1.5 text-xs text-muted-foreground">扫一扫上传</div>
                         </div>
                         <div className="min-w-0 flex-1">
-                            <div className="mb-1.5 text-xs text-ink-3">链接（复制到手机浏览器打开）</div>
+                            <div className="mb-1.5 text-xs text-muted-foreground">链接（复制到手机浏览器打开）</div>
                             <div
-                                className="max-h-14 overflow-auto break-all rounded-[8px] border border-ink-5 bg-ink-8 px-2.5 py-1.5 text-[13px]"
+                                className="max-h-14 overflow-auto break-all rounded-[8px] border border-border bg-muted px-2.5 py-1.5 text-[13px]"
                                 style={{ wordBreak: 'break-all' }}>
                                 {link}
                             </div>
@@ -475,7 +475,7 @@ export default function PhoneModal({ open, onClose, relayServer, phones }: Phone
                         </div>
                     </div>
                 ) : (
-                    <span className="text-danger-600">尚未配置中继服务器，请到「设置」填写。</span>
+                    <span className="text-destructive00">尚未配置中继服务器，请到「设置」填写。</span>
                 )}
             </Section>
 
@@ -498,7 +498,7 @@ export default function PhoneModal({ open, onClose, relayServer, phones }: Phone
 
             {/* 已连接手机列表（v26.10.06-v4）：显示数量与设备 ID；≥2 台时常驻多选，默认全选 */}
             {phones.length > 0 && (
-                <div className="mb-3 rounded-[10px] border border-ink-6 px-3.5 py-2.5">
+                <div className="mb-3 rounded-[10px] border border-border px-3.5 py-2.5">
                     <div className="mb-1.5 text-[13px] font-semibold">已连接手机（{phones.length}）</div>
                     {phones.length > 1 ? (
                         <>
@@ -516,7 +516,9 @@ export default function PhoneModal({ open, onClose, relayServer, phones }: Phone
                                     </Checkbox>
                                 ))}
                             </CheckboxGroup>
-                            <p className="mt-1.5 text-[11px] text-ink-3">默认全选；取消勾选后只发给勾选的手机。</p>
+                            <p className="mt-1.5 text-[11px] text-muted-foreground">
+                                默认全选；取消勾选后只发给勾选的手机。
+                            </p>
                         </>
                     ) : (
                         <DeviceIdTag id={phones[0].id} colorIndex={deviceColors[phones[0].id]} />
@@ -549,8 +551,8 @@ export default function PhoneModal({ open, onClose, relayServer, phones }: Phone
                 {pendingImages.length > 0 && (
                     <>
                         <div className="mb-2 mt-3.5 flex items-center justify-between">
-                            <span className="text-[13px] text-ink-2">待发送图片</span>
-                            <span className="text-[13px] text-ink-3">已选 {pendingImages.length} 张</span>
+                            <span className="text-[13px] text-muted-foreground">待发送图片</span>
+                            <span className="text-[13px] text-muted-foreground">已选 {pendingImages.length} 张</span>
                         </div>
                         <div className="grid grid-cols-3 gap-2">
                             {pendingImages.map((img, i) => (
@@ -595,7 +597,11 @@ export default function PhoneModal({ open, onClose, relayServer, phones }: Phone
                 {progress && (
                     <div className="mt-3">
                         <Progress percent={percent} status={progress.failed ? 'exception' : 'normal'} />
-                        <p className={cn('mt-1 text-xs', progress.failed ? 'text-danger-600' : 'text-ink-3')}>
+                        <p
+                            className={cn(
+                                'mt-1 text-xs',
+                                progress.failed ? 'text-destructive00' : 'text-muted-foreground'
+                            )}>
                             {progress.text}
                         </p>
                     </div>
