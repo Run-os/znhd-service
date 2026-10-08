@@ -11,6 +11,19 @@
 
 ---
 
+### znhd.user.js v26.10.08-v2
+- **「打印」入口从缩略图行挪到「放大预览的工具栏」**（按用户要求；v26.10.08-v1 是放在缩略图下方按钮行里的）：
+  - 缩略图下方按钮行恢复为「复制 / 下载 / ×」三个；点开大图后，在 antd 预览底部那排缩放/旋转图标**末尾**多出打印机图标。
+  - 用 antd v6 预览的 **`actionsRender`** 实现（`toolbarRender` 已废弃），挂在 `<Image.PreviewGroup preview={{ actionsRender }}>` 上（同时作用于整组图，`info.current` 给出当前图下标）。
+  - ⚠️ **必须用 `cloneElement` 把按钮追加进 antd 自己的 `.ant-image-preview-actions` 容器，不能直接当 `originalNode` 的兄弟节点返回**：工具栏的胶囊背景与圆角长在 actions 容器上，而它的父级 `footer` 是 `flex-direction: column` —— 放外面会渲染成「工具栏下方一个没有背景的裸按钮」。按钮复用 antd 自己的 `ant-image-preview-actions-action` 类，尺寸/悬停与自带图标一致。
+  - 目标是**当前正在看的那张图的原图**：优先按 `info.image.url` 反查 `previewUrl`（`items` 与 `images` 同序，但按 url 更稳），退回 `info.current` 下标。
+  - 新增直接依赖 **`@ant-design/icons` ^6.3.4**（此前只是 antd 的传递依赖；只用到 `PrinterOutlined` 一个图标，从包根导入，可被 tree-shaking）。
+- **冒烟断言（保持 28 项，语义随位置升级）**：`printBtnOk` 由「画廊里有文案为『打印』的按钮」改为「按钮必须长在 `.ant-image-preview-actions` 胶囊容器**里面**且带 svg 图标」——若有人把入口挪回缩略图行，该断言会直接变红。点击时机改为**轮询等待**预览工具栏就绪（预览在 3600ms 由缩略图点开），避免与其它弹窗的时序耦合。
+- 验证：`npm run typecheck` 0 错、`npm run build` 结论行 `compiled`、`npm run check` 通过、`npm run verify` **28 项全绿**、`npx @ant-design/cli lint ./src` `issues: []`。
+- 三处版本号一致（`26.10.08-v2`）；仓库根过渡跳板 `znhd.user.js` 已重新拷贝为与 `dist/znhd.user.js` 逐字节一致。
+- ⚠️ **只做本地提交，未推送**。
+
+
 ### znhd.user.js v26.10.08-v1
 - **「收到的图片」画廊弹窗新增「打印」按钮**（按用户要求）：每张图下方按钮行由「复制 / 下载 / ×」变为「复制 / 下载 / 打印 / ×」，点「打印」直接拉起浏览器打印对话框打印**该图原图**。
   - **背景**：放大查看用的是 antd `Image.PreviewGroup`（v26.10.06-v13 起，替代 Viewer.js），它自带缩放/旋转/多图切换，但**没有任何打印能力**；主流灯箱（Fancybox / lightGallery / PhotoSwipe / Yet Another React Lightbox）同样都没有内置打印插件。故新增一个打印库：**[react-to-print](https://github.com/MatthewHerbst/react-to-print) 3.3.0**（MIT，随产物打包，非 `@require`）。

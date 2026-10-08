@@ -338,15 +338,30 @@
         if (b) b.click();
       }, 5200);
 
-      // 点画廊里的「打印」，验证 react-to-print 链路接通（v26.10.08-v1）。
+      // 点放大预览工具栏里的「打印」，验证 react-to-print 链路接通（v26.10.08-v2：入口从缩略图行挪到预览工具栏）。
       // 只断言「打印 iframe 被建出来」：headless 下看不到打印对话框，且该 iframe 打印后即被移除，
       // 故用 head 里装的 MutationObserver 记录（见 window.__printIframeSeen 的说明）。
+      // 用轮询而不是固定时刻：预览在 3600ms 由缩略图点开，这里等它出现后再点，避免与其它弹窗的时序耦合。
       setTimeout(() => {
-        const btns = Array.from(document.querySelectorAll('.ant-modal-body button'));
-        const b = btns.find((x) => (x.textContent || '').trim() === '打印');
-        window.__clickedPrint = !!b;
-        if (b) b.click();
-      }, 5600);
+        const waitPrintBtn = (tries) => {
+          const actions = document.querySelector('.ant-image-preview-actions');
+          const b = actions ? actions.querySelector('button[aria-label="print"]') : null;
+          if (b) {
+            window.__printBtnSeen = true;
+            // 位置断言：必须长在 antd 工具栏的胶囊容器「里面」（挪回缩略图行时这里会变红）
+            window.__printBtnInActions = actions.contains(b) && !!b.querySelector('svg');
+            b.click();
+            return;
+          }
+          if (tries <= 0) {
+            window.__printBtnSeen = false;
+            window.__printBtnInActions = false;
+            return;
+          }
+          setTimeout(() => waitPrintBtn(tries - 1), 200);
+        };
+        waitPrintBtn(25); // 最多再等 5s
+      }, 4800);
 
       // 打开「设置」抽屉 → 点它里面的「更新日志」，验证新入口 + 弹窗 + 只显示最新 10 条
       setTimeout(() => {
@@ -614,9 +629,10 @@
             );
             return sawPng && bad === null;
           })(),
-          // 打印（v26.10.08-v1）：① 画廊里真的有「打印」按钮；② 点了之后 react-to-print
-          // 真的建出了 id=printWindow 的打印 iframe（= 内容节点被找到，整条链路接通）。
-          printBtnOk: !!window.__clickedPrint,
+          // 打印（v26.10.08-v1 引入 / v26.10.08-v2 挪进放大预览工具栏）：
+          // ① 按钮必须长在 antd 预览工具栏的胶囊容器（.ant-image-preview-actions）**里面**且带图标；
+          // ② 点了之后 react-to-print 真的建出 id=printWindow 的打印 iframe（= 内容节点被找到，整条链路接通）。
+          printBtnOk: !!window.__printBtnSeen && !!window.__printBtnInActions,
           printIframeOk: !!window.__printIframeSeen,
           // 发送到手机：必须先压缩再发（v26.10.06-v6 回归断言）。判定要点：
           // 实际 POST 的字节是 JPEG、最长边 ≤1600（压缩上限）、且比原图小。

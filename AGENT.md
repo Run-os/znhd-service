@@ -85,7 +85,7 @@
 | `src/index.ts` | 入口：生产直接 `app()`；开发动态 import `devTools`（热重载 / 首次自动安装）。 |
 | `src/app.ts` | **入口装配**（~60 行）：`mountPanel()`（挂载 React+antd 面板；位置恢复与拖拽都在 `ui/panelHost` 内） → beforeunload 清理 → 启动监控。业务实现全在 `src/lib/`。 |
 | `src/lib/*.ts` | 业务模块：`constants`（CONFIG/DEFAULTS/存储键）、`logger`（addLog/防抖/`setLogEntriesSink`）、`storage`（localStorage 读写）、`state`（`runtime` 运行时缓存）、`utils`（链接解析/转义/时间换算）、`speech`（语音队列）、`monitor`（人数·掉线·工作时间）、`tinymce`（编辑器写入）、`clipboard`（提示音+安全复制）、`relay`（中继客户端+图片剪贴板）、`gallery`（收到图片的数据/命名工具；渲染在 ui/RecvGalleryModal）、`changelog`（更新日志拉取/解析；渲染在 ui/ChangelogModal）、`qrcode`（二维码 dataURL）。 |
-| `src/lib/ui/*.tsx` | UI 组件（React 19 + Ant Design v6，**全部以弹窗形态呈现**）：`MainPanel`（主面板：人数/状态卡 + 语音开关 + 一行四入口按钮 + 查看日志）、`SettingsModal`、`PhrasesModal`、`LogModal`、`PhoneModal`、`ChangelogModal`、`RecvGalleryModal`（收图画廊，放大用 antd `Image.PreviewGroup`，「打印」按钮用 react-to-print）、`RecvTextModal`；基础设施：`panelHost`（宿主挂载 + 自研指针拖拽 + 位置持久化）、`panelIds`、`notify`（antd message 桥）、`uiReset`（样式隔离层）。 |
+| `src/lib/ui/*.tsx` | UI 组件（React 19 + Ant Design v6，**全部以弹窗形态呈现**）：`MainPanel`（主面板：人数/状态卡 + 语音开关 + 一行四入口按钮 + 查看日志）、`SettingsModal`、`PhrasesModal`、`LogModal`、`PhoneModal`、`ChangelogModal`、`RecvGalleryModal`（收图画廊，放大用 antd `Image.PreviewGroup`，其预览工具栏用 `actionsRender` 加了「打印」）、`RecvTextModal`；基础设施：`panelHost`（宿主挂载 + 自研指针拖拽 + 位置持久化）、`panelIds`、`notify`（antd message 桥）、`uiReset`（样式隔离层）。 |
 
 > **有意未拆出的模块**：`phrases`（常用语加载/缓存/请求序号）。`loadPhrasesData` 直接读写 React 状态（`phrasesData`/`setPhrasesData`/`setPhrasesLoading`）与 `phrasesRequestSeq`，抽成独立模块必须引入 `getData/setData` 桥接，属于「为拆而拆」，与约束 3「不得无理由重构可运行逻辑」冲突，故保留在 `src/lib/ui/MainPanel.tsx` 内。如日后要拆，请连同组件状态一起改成自定义 hook。
 | `src/global.d.ts` | 全局声明：`PRODUCTION`/`FILENAME`（DefinePlugin 注入）+ `jsyaml`/`QRCode`/`heic2any`（`@require` 注入）。GM_* 由 `@types/tampermonkey` 提供。 |
@@ -235,6 +235,7 @@
 | **antd Modal 首屏滚动** | `destroyOnHidden` 下 Modal 在 `open` **之后**才把内容挂进 DOM ⇒ `useEffect` 触发时 ref 仍是 `null`，「打开就滚到底」永远不生效（实测 scrollTop 恒为 0）。正解：用**回调 ref** 在节点挂载那一刻滚 | **v26.10.07-v4** |
 | **共享尺寸常量** | 面板宽度曾在 `MainPanel` 与 `panelHost.initialPoint()` 里各存一份字面量 ⇒ 只改一处会让存档在右侧的面板**每次加载都往左漂**（先按旧值收一次，按新值的那次不会再推回去）。尺寸类常量一律放 `ui/panelIds.ts` 共用 | **v26.10.07-v3** |
 | **react-to-print 的打印内容** | 它是对内容节点 `cloneNode(true)` 后塞进打印 iframe，而 **`cloneNode` 会连内联样式一起克隆** ⇒ 用 `display:none`／`left:-99999px` 隐藏的容器在打印 iframe 里同样不可见，**打印出来是空白**。必须用**临时构造的游离节点**（不进 DOM，也就不会闪图）经「可选内容工厂」传给 `doPrint(() => node)`；且 `ignoreGlobalStyles: true` 必开（否则连宿主页面整页 CSS 一起抄进打印 iframe） | **v26.10.08-v1** |
+| **antd 预览工具栏 actionsRender 的位置** | 它返回的节点是塞进 `-footer` 的，而 `-footer` 是 **`flex-direction: column`**、胶囊背景/圆角长在 `-actions` **容器**上 ⇒ 直接把按钮当 `originalNode` 的兄弟返回，会渲染成「工具栏下方一个没有背景的裸按钮」。正解：`cloneElement(originalNode, {}, [...Children.toArray(originalNode.props.children), 新按钮])` 把按钮**追加进 `-actions` 容器内部**，并复用 `-actions-action` 类保持样式一致 | **v26.10.08-v2** |
 
 ## 技术债务
 

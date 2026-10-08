@@ -1,5 +1,6 @@
 import { Image, Button, Empty, Modal, Space, Typography } from 'antd';
-import { useRef } from 'react';
+import { PrinterOutlined } from '@ant-design/icons';
+import { Children, cloneElement, useRef, type ReactNode } from 'react';
 import { useReactToPrint } from 'react-to-print';
 import { copyImageToClipboard } from '@/lib/relay';
 import { addLog } from '@/lib/logger';
@@ -25,8 +26,10 @@ export interface RecvGalleryModalProps {
  * 少一个第三方库 + 一份它自带的 CSS（以及当年为它写的层级/过渡补丁）。
  * ⚠️ 剪贴板写入仍走 `copyImageToClipboard`：Chromium 对 image/png 支持最可靠，
  *    且「先转好 PNG 再只写一次」是仓库实测结论（写失败也会消耗用户手势），不要改回去。
- * v26.10.08-v1：新增「打印」按钮 —— antd 的 `Image` 预览只带缩放/旋转等变换，**不自带打印**，
+ * v26.10.08-v1：新增「打印」能力 —— antd 的 `Image` 预览只带缩放/旋转等变换，**不自带打印**，
  *    故引入 `react-to-print` 打印**原图**（不是预览里变换后的画面），见 `printImage` 注释。
+ * v26.10.08-v2：按用户要求，打印入口由「缩略图下方按钮行」挪到**放大预览的工具栏**里
+ *    （antd 预览的 `actionsRender`，见 `<Image.PreviewGroup preview>` 处的实现注释）。
  */
 export default function RecvGalleryModal({ open, onClose, images, onRemove, onClear }: RecvGalleryModalProps) {
     /** 打印对话框上的文档标题（react-to-print 会在打印期间临时改写 document.title 再还原） */
@@ -122,7 +125,40 @@ export default function RecvGalleryModal({ open, onClose, images, onRemove, onCl
                 <Empty description="暂无图片" />
             ) : (
                 // items 用 objectURL 列表：预览里的左右切换由 antd 接管
-                <Image.PreviewGroup items={images.map((i) => i.previewUrl)}>
+                <Image.PreviewGroup
+                    items={images.map((i) => i.previewUrl)}
+                    preview={{
+                        /**
+                         * 「打印」放在**放大预览的工具栏**里（v26.10.08-v2，按用户要求从缩略图行挪过来）。
+                         *
+                         * ⚠️ 必须用 cloneElement 把按钮**追加进 antd 自己的 `.ant-image-preview-actions` 容器**，
+                         *    不能直接当 `originalNode` 的兄弟节点返回：工具栏的胶囊背景与圆角长在 actions 容器上，
+                         *    而它的父级 footer 是 `flex-direction: column` —— 放外面会变成「工具栏下方一个没有背景的裸按钮」。
+                         *    按钮复用 antd 自己的 `-actions-action` 类，尺寸/悬停与自带图标完全一致。
+                         */
+                        actionsRender: (originalNode, info) => {
+                            const printBtn = (
+                                <button
+                                    key="znhd-print"
+                                    type="button"
+                                    className="ant-image-preview-actions-action"
+                                    aria-label="print"
+                                    title="打印原图"
+                                    onClick={() => {
+                                        // 优先按 url 反查（items 与 images 同序，但按 url 更稳），退回下标
+                                        const found = images.findIndex((i) => i.previewUrl === info.image?.url);
+                                        const at = found >= 0 ? found : info.current;
+                                        if (images[at]) printImage(images[at], at);
+                                    }}>
+                                    <PrinterOutlined />
+                                </button>
+                            );
+                            return cloneElement(originalNode, {}, [
+                                ...Children.toArray((originalNode.props as { children?: ReactNode }).children),
+                                printBtn,
+                            ]);
+                        },
+                    }}>
                     <div
                         style={{
                             display: 'grid',
@@ -149,9 +185,6 @@ export default function RecvGalleryModal({ open, onClose, images, onRemove, onCl
                                     <Button size="small" style={{ flex: 1 }} onClick={() => doDownload(it, idx)}>
                                         下载
                                     </Button>
-                                    <Button size="small" style={{ flex: 1 }} onClick={() => printImage(it, idx)}>
-                                        打印
-                                    </Button>
                                     <Button size="small" danger onClick={() => onRemove(idx)}>
                                         ×
                                     </Button>
@@ -164,7 +197,7 @@ export default function RecvGalleryModal({ open, onClose, images, onRemove, onCl
             {images.length > 0 && (
                 <Text type="secondary" style={{ fontSize: 12, display: 'block', marginTop: 8 }}>
                     提示：单击缩略图可放大/旋转/多图切换；「复制」会把图片写入系统剪贴板，回征纳互动 Ctrl+V
-                    即可；「打印」打印的是原图（打印对话框弹出后请勿删除该图）。
+                    即可；放大后点工具栏上的「打印」可打印原图（打印对话框弹出后请勿删除该图）。
                 </Text>
             )}
         </Modal>

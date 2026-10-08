@@ -81,7 +81,7 @@ const CHECKS = [
   ['changelogPopup', '更新日志弹窗（最新 10 条）'],
   ['viewerZoomOk', '缩略图放大显示主图（antd 预览）'],
   ['copyOk', '图片复制只尝试写 PNG'],
-  ['printBtnOk', '画廊有「打印」按钮'],
+  ['printBtnOk', '放大预览工具栏有「打印」按钮'],
   ['printIframeOk', '打印链路接通（react-to-print 建出打印 iframe）'],
   ['phoneSendCompressedOk', '发送到手机前压缩'],
   ['modalTextAlignLeft', '弹窗内容左对齐（不被宿主 CSS 污染）'],

@@ -168,7 +168,7 @@ npm run verify         # 无头 Chromium 端到端冒烟（面板/弹窗/画廊/
 2. 面板「设备互联」弹窗展示本机专属上传链接 `https://<中继服务器>/u/<设备ID>` 及对应二维码（**二维码由脚本端 qrcodejs 本地生成，无需服务器参与**）；
 3. 手机浏览器打开该链接（或直接扫二维码）→ 选图/拍照（**支持多选，张数不限**，九宫格预览、可单张删除）→ 手机端用 canvas 逐张自动压缩（最大边 1600px、JPEG 质量 0.75；**SVG 例外：跳过压缩原样直传**，保留矢量与 `image/svg+xml` 类型；**HEIC/HEIF 例外：手机端用 heic2any（公共 CDN）解码转 JPEG 后同样铺白底压缩直传**，确保电脑端含 Windows 无需额外编解码器即可打开，库缺失时回退原样直传）→ 逐张按序上传到中继服务器（服务端按设备维护 FIFO 队列，内存保护上限 100 条）；**处理失败时状态栏会显示具体原因**（如「IMG.heic：图片解析失败 / 压缩失败」），便于排查。
 4. 电脑端脚本在「中继服务器」填好后**默认自动**用 `GM_xmlhttpRequest` **长轮询** `/recv/<设备ID>` 取回图片（无需点击按钮；长轮询而非 WebSocket 是为了绕过征纳互动页面的 CSP 对 connect-src 的限制）；
-5. 收到图片后即在**网页正中弹出九宫格画廊弹窗**（3 列缩略图，收到的图片自动累积、最多保留 27 张，直接挂到 `<html>`，不受面板 transform 影响）：**单击缩略图用 antd [Image.PreviewGroup](https://ant.design/components/image-cn) 放大查看**（缩放/旋转/多图左右切换，无需第三方库），每张图下方「复制」按钮把图片写入系统剪贴板（此步必须由一次点击触发，满足浏览器安全策略）→ 去征纳互动 Ctrl+V 即可；「下载」按钮把原图存为文件（自动按原名/MIME 补扩展名）；「打印」按钮用 [react-to-print](https://github.com/MatthewHerbst/react-to-print) 拉起浏览器打印对话框打印**该图原图**（打印对话框弹出期间请勿移除该图）；每张右上角 × 可单独移除，底部「清空全部」，弹窗右上角关闭（图片保留，收到新图会再次弹出）。
+5. 收到图片后即在**网页正中弹出九宫格画廊弹窗**（3 列缩略图，收到的图片自动累积、最多保留 27 张，直接挂到 `<html>`，不受面板 transform 影响）：**单击缩略图用 antd [Image.PreviewGroup](https://ant.design/components/image-cn) 放大查看**（缩放/旋转/多图左右切换，无需第三方库），放大后预览底部工具栏末尾有**打印机图标**，点它用 [react-to-print](https://github.com/MatthewHerbst/react-to-print) 拉起浏览器打印对话框打印**当前这张图的原图**（打印对话框弹出期间请勿移除该图）；每张图下方「复制」按钮把图片写入系统剪贴板（此步必须由一次点击触发，满足浏览器安全策略）→ 去征纳互动 Ctrl+V 即可；「下载」按钮把原图存为文件（自动按原名/MIME 补扩展名）；每张右上角 × 可单独移除，底部「清空全部」，弹窗右上角关闭（图片保留，收到新图会再次弹出）。
 
 **按用户隔离**：设备 ID 是每台电脑随机生成、几乎不可猜测的 UUID，因此 A 的电脑、B 的电脑各自持有不同链接与二维码，图片只进对应那台电脑，互不串。
 
@@ -232,7 +232,8 @@ const DEFAULTS = {
 |--------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------|
 | JavaScript (ES6+)                                                                    | 脚本主语言                                                                                                                         |
 | [React 19](https://react.dev/) + [Ant Design v6](https://ant.design/)                | 全部 UI（面板与各弹窗）：组件、主题、消息提示；随产物打包，无第三方运行时请求                                                      |
-| [react-to-print](https://github.com/MatthewHerbst/react-to-print)                    | 画廊弹窗「打印」按钮：建隐藏 iframe、等图片加载完再调 `print()` 打印原图（随产物打包）                                             |
+| [@ant-design/icons](https://github.com/ant-design/ant-design-icons)                 | antd 配套图标（v6）：放大预览工具栏末尾的「打印」图标等；从包根按需导入，可 tree-shaking                                          |
+| [react-to-print](https://github.com/MatthewHerbst/react-to-print)                    | 放大预览工具栏「打印」：建隐藏 iframe、等图片加载完再调 `print()` 打印原图（随产物打包）                                             |
 | [js-yaml](https://github.com/nodeca/js-yaml)                                         | 解析 YAML 格式的常用语配置文件                                                                                                     |
 | [qrcodejs](https://github.com/davidshimjs/qrcodejs)                                  | 「本机上传链接」二维码由脚本端本地生成（无需服务器参与）                                                                           |
 | [heic2any](https://github.com/alexcorvi/heic2any)（手机上传页 CDN 加载）             | 手机端把 HEIC/HEIF 解码转 JPEG 后压缩上传；CDN 不可达时回退原样直传                                                                |
@@ -309,7 +310,7 @@ const DEFAULTS = {
 
 即：可自由使用、修改、分发（含商用），只需保留版权声明与许可证声明；软件按「原样」提供，作者不提供任何担保、不承担使用后果。
 
-随本项目分发与加载的第三方依赖均为 **MIT** 许可（React、ReactDOM、Ant Design、react-to-print、js-yaml，以及运行时按需加载的 qrcodejs、heic2any），与本许可证相互兼容。
+随本项目分发与加载的第三方依赖均为 **MIT** 许可（React、ReactDOM、Ant Design、@ant-design/icons、react-to-print、js-yaml，以及运行时按需加载的 qrcodejs、heic2any），与本许可证相互兼容。
 
 ## 联系方式
 

@@ -1,6 +1,6 @@
 {
   "name": "znhd-service",
-  "version": "26.10.08-v1",
+  "version": "26.10.08-v2",
   "description": "征纳互动人数和在线监控：油猴脚本（人数/掉线监控、语音播报、常用语、设备互联图片互传）",
   "main": "./dist/znhd.user.js",
   "scripts": {
@@ -35,6 +35,7 @@
   "homepage": "https://scriptcat.org/zh-CN/script-show-page/3650",
   "devDependencies": {
     "@ant-design/cssinjs": "^2.1.2",
+    "@ant-design/icons": "^6.3.4",
     "@babel/core": "^7.17.9",
     "@babel/preset-env": "^7.16.11",
     "@types/react": "^19.3.0",
