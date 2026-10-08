@@ -51,6 +51,19 @@ const RESET_CSS = `
   line-height: inherit;
 }
 
+/* ===== 放大预览期间压掉所有「下层浮层遮罩」（v26.10.08-v11）=====
+   背景：antd 的 Modal / Drawer 遮罩都是 rgba(0,0,0,0.45)。图片预览是**全屏**浮层，
+   它自己那层遮罩就够做背景了；可底下凡是还开着的弹窗/抽屉，遮罩**依然在画**，
+   两层叠加就是 1-(0.55×0.55)=0.6975 —— 白底被压到灰度 77（单层是 140），肉眼即「没有官方明亮」。
+   ⚠️ 只挡「历史记录」自己那层不够：实测预览打开时，取样点上还叠着设置抽屉的 .ant-drawer-mask，
+   以及其它弹窗的 .ant-modal-mask。故这里按「预览期间一律隐藏下层遮罩」处理：
+   它们这时本来就被全屏预览完全盖住、对视觉毫无贡献，只是白白多加一层暗。
+   类名由 RecvHistoryModal 在预览开/关时挂到 documentElement 上。 */
+html.znhd-previewing .ant-modal-mask,
+html.znhd-previewing .ant-drawer-mask {
+  display: none !important;
+}
+
 /* ===== 滚动条（v26.10.06-v20）=====
    antd 没有滚动条组件，也没有对应的 design token（CLI 实测：「info Scrollbar」找不到、
    「token」里 scroll/thumb/track 零匹配）；它自己也只在 @rc-component/virtual-list 内部自绘滚动条，

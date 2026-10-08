@@ -503,12 +503,36 @@
               return bb.height > 0 && sb.height > 0 && Math.abs(bb.top + bb.height / 2 - (sb.top + sb.height / 2)) <= 2;
             });
         const histRoot = hist ? hist.closest('.ant-modal-root') : null;
+        // 「预览背后只能有一层遮罩」（v26.10.08-v11）：
+        //  ① DOM 判据：预览期间**所有** `.ant-modal-mask` / `.ant-drawer-mask` 都必须被 display:none 压掉
+        //     （只判「历史记录自己那个 modal-root」不够 —— 实测预览打开时还叠着设置抽屉的 .ant-drawer-mask）；
+        //  ② 几何判据：在预览遮罩上取样，把该点所有「深色半透明」层的 alpha 合成，必须只有单层 0.45
+        //     （两层就是 0.6975，白底灰度 77；单层是 140）。
+        const maskHidden = (sel) =>
+          Array.from(document.querySelectorAll(sel)).every((el) => {
+            const cs = getComputedStyle(el);
+            return cs.display === 'none' || cs.visibility === 'hidden';
+          });
+        const darkAlphaAt = (x, y) => {
+          let a = 0;
+          document.elementsFromPoint(x, y).forEach((el) => {
+            const m = /rgba?\(([^)]+)\)/.exec(getComputedStyle(el).backgroundColor || '');
+            if (!m) return;
+            const p = m[1].split(',').map((s) => parseFloat(s.trim()));
+            if (p.length < 3 || !(p[0] < 128 && p[1] < 128 && p[2] < 128)) return;
+            const al = p.length === 4 ? p[3] : 1;
+            a = 1 - (1 - a) * (1 - al);
+          });
+          return Number(a.toFixed(4));
+        };
+        const maskComposite = preview ? Math.max(darkAlphaAt(50, 400), darkAlphaAt(640, 120)) : 1;
         window.__snap = {
           galleryOk: !!hist && !!hist.querySelector('.ant-modal-body .ant-image img'),
           footerInViewport: !!(fb && fb.top >= 0 && fb.bottom <= window.innerHeight + 1),
           footerHit: !!(hit && footer && footer.contains(hit)),
           iconsCentered: centered,
-          singleMask: !!histRoot && !histRoot.querySelector('.ant-modal-mask'),
+          maskComposite: maskComposite,
+          singleMask: !!histRoot && maskHidden('.ant-modal-mask') && maskHidden('.ant-drawer-mask') && maskComposite <= 0.46,
         };
       }, 8000);
 

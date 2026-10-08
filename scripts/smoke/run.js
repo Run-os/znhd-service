@@ -87,7 +87,7 @@ const CHECKS = [
   ['printA4Ok', '打印按 A4 自适应且无页眉页脚（@page margin:0 + 内容框留白 + object-fit）'],
   ['previewToolbarOk', '放大预览的工具栏未被图片盖住（宿主 body 带 transform 时也在视口内）'],
   ['previewIconCenteredOk', '预览工具栏图标与按钮同一水平线（不被宿主 CSS 顶出胶囊）'],
-  ['previewSingleMaskOk', '预览打开时只剩一层遮罩（不叠加弹窗遮罩变暗）'],
+  ['previewSingleMaskOk', '预览背后只有一层遮罩（下层弹窗/抽屉遮罩全部压掉）'],
   ['historyTabsOk', '「历史记录」弹窗有「图片 / 文本」两个页签'],
   ['historyTextOk', '「文本」页签能回看到收到的文本'],
   ['testImageBtnOk', '历史记录标题旁有「发送测试图片」按钮'],

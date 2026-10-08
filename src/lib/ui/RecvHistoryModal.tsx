@@ -113,14 +113,25 @@ export default function RecvHistoryModal({
     /** 「发送测试图片」是否正在取图/投递（防重复点击 + 按钮 loading） */
     const [testSending, setTestSending] = useState(false);
     /**
-     * 放大预览是否打开（v26.10.08-v9）。
+     * 放大预览是否打开（v26.10.08-v9 起用于撤掉下层遮罩）。
      *
-     * 用途只有一个：**预览打开时把本弹窗自己的遮罩撤掉**。
-     * 因为预览是**全屏**浮层，底下那层 `.ant-modal-mask` 完全被盖住、对视觉毫无贡献，
-     * 但它是 `rgba(0,0,0,0.45)`，会和预览自带的同名遮罩**叠加**成 `1-(0.55×0.55)=0.6975`，
-     * 白底被压到灰度 **77**（官方只有一层时是 **140**）—— 用户反馈的「没有官方的明亮」就是这个。
+     * 预览是**全屏**浮层，下层遮罩全被盖住、对视觉毫无贡献；但 antd 的 Modal / Drawer 遮罩都是
+     * `rgba(0,0,0,0.45)`，叠在预览自带的同款遮罩上就是 `1-(0.55×0.55)=0.6975` ——
+     * 白底被压到灰度 **77**（只有一层时是 **140**），肉眼即「没有官方明亮」。
+     *
+     * ⚠️ **v26.10.08-v9 只撤了本弹窗自己那层，不够**：实测预览打开时，取样点上还叠着
+     * **设置抽屉的 `.ant-drawer-mask`** 以及其它弹窗的 `.ant-modal-mask`。
+     * v11 起改为「预览期间一律压掉所有下层遮罩」（见下面给 documentElement 挂的类）。
      */
     const [previewOpen, setPreviewOpen] = useState(false);
+
+    /** 预览开关 → 压掉/恢复**所有**下层浮层遮罩（规则写在 uiReset.ts 的 `html.znhd-previewing` 段） */
+    useEffect(() => {
+        const root = document.documentElement;
+        if (previewOpen) root.classList.add('znhd-previewing');
+        else root.classList.remove('znhd-previewing');
+        return () => root.classList.remove('znhd-previewing');
+    }, [previewOpen]);
 
     // 每次打开都回到「图片」页签：收到新图会自动弹这个弹窗，不应停在用户上次看的「文本」页
     useEffect(() => {

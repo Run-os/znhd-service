@@ -11,6 +11,24 @@
 
 ---
 
+### znhd.user.js v26.10.08-v11
+- **修「预览背景仍比官方暗」——v9 只撤了自己那层遮罩，不够**（用户复反馈，实测确认根因）：
+  - v9 的做法（`<Modal mask={!previewOpen}>`）**确实生效**，但预览是**全屏**浮层，底下凡是**还开着的其它弹窗 / 抽屉**，它们的遮罩**依然在画**。实测取样点上除了 `ant-image-preview-mask`，还叠着 **设置抽屉的 `.ant-drawer-mask`** ⇒ 合成 `1-(0.55×0.55)=` **0.6975**、白底灰度 **77**，和修之前一模一样。
+  - **v11 修法**：预览打开时给 `documentElement` 挂 `znhd-previewing` 类，由 `uiReset.ts` 一段规则把**所有下层遮罩**压掉：
+    ```css
+    html.znhd-previewing .ant-modal-mask,
+    html.znhd-previewing .ant-drawer-mask { display: none !important; }
+    ```
+    它们这时本来就被全屏预览完全盖住、对视觉毫无贡献，只是白白多加一层暗。
+  - **修复后实测（独立探针，两种几何情形都测）**：取样点合成 **0.45**、白底灰度 **140**（= 官方单层值），**有/无 `body{transform}` 都是单层**。
+- ⚠️ **我上一轮的测量方法是错的，必须记住**：v9 我用 `elementsFromPoint` 测出「只剩一层」就下了结论，但**冒烟页常驻的 `body{transform}` 会把挂在 body 下的弹窗遮罩困成 186px 高**，我的采样点（y=400）根本不在它覆盖范围内 —— **「没数到」被当成了「不存在」**。改法：① 采样点要选**必定被覆盖**的位置；② 关键判据改为**与几何无关的 DOM 判据**（`display` 是否为 none）。
+- **冒烟断言（判据强化，条数不变 40）**：`previewSingleMaskOk` 从「历史记录自己那个 root 里没有 `.ant-modal-mask`」升级为 **① DOM：预览期间所有 `.ant-modal-mask` / `.ant-drawer-mask` 都必须是 `display:none`；② 几何：在预览遮罩上取两点，把该点所有「深色半透明」层的 alpha 合成，必须 ≤ 0.46（单层）**。
+- ✅ **反向验证**：只把 CSS 规则里的两个选择器改名（等价于删掉该规则）→ 重建后**仅 `previewSingleMaskOk` 变红**——恰好复现了用户「没修好」的现象，也反证了「只撤自己那层不够」。恢复后 40 项全绿。
+- 验证：`npm run typecheck` 0 错、`npm run build` 结论行 `compiled`、`npm run check` 通过、`npm run verify`（冒烟 40 项 + 服务端 11 项）全绿、`npx @ant-design/cli lint ./src` `issues: []`。
+- 三处版本号一致（脚本 `26.10.08-v11`）；仓库根过渡跳板已重新拷贝为与 `dist/znhd.user.js` 逐字节一致。
+- ⚠️ **只做本地提交，未推送**。
+
+
 ### znhd.user.js v26.10.08-v10
 - **历史记录为空时也能打开窗口**（按用户要求）：`MainPanel` 的入口不再提前拦截（原先「图片、文本都空」时只弹一句「暂无历史记录」、不开窗）。空态本来就由弹窗内的 `Empty`（暂无图片 / 暂无文本）呈现，去掉拦截后语义更顺。
 - **标题旁新增「发送测试图片」按钮**（按用户要求）：一键从 `https://t.alcy.cc/fj` 取一张随机图，**当作手机上传**投到中继 `POST /u/<本机 deviceId>`，再经**正常的「手机 → 电脑」通道**回到本脚本、进历史记录。
