@@ -30,13 +30,17 @@ const RESET_CSS = `
   text-align: inherit;
 }
 /* 图标垂直对齐：宿主页面若有 svg 的 vertical-align/line-height 规则，会把 antd 图标顶出输入框 */
-#${PANEL_HOST_ID} svg, .ant-modal-root svg, .ant-drawer svg, .ant-picker-dropdown svg, .ant-message svg, .ant-notification svg {
+#${PANEL_HOST_ID} svg, .ant-modal-root svg, .ant-drawer svg, .ant-picker-dropdown svg, .ant-message svg, .ant-notification svg, .ant-image-preview svg {
   vertical-align: inherit;
 }
-/* ★ 图标被第三方样式加负外边距而跑出输入框（用户实测：时钟图标的计算样式里
+/* ★ 图标被第三方样式加负外边距而跑出控件（用户实测：时钟图标的计算样式里
    margin: -2.75em auto 0，按 16px 字号约 -44px；antd 自身从不给 svg 设 margin）。
-   这类规则特异性只有 (0,0,1)，用带容器前缀的选择器即可稳压。 */
-#${PANEL_HOST_ID} svg, .ant-modal-root svg, .ant-drawer svg, .ant-picker-dropdown svg, .ant-message svg, .ant-notification svg, .ant-tooltip svg, .ant-dropdown svg {
+   这类规则特异性只有 (0,0,1)，用带容器前缀的选择器即可稳压。
+   ⚠️ v26.10.08-v8：**.ant-image-preview 必须在内** —— 预览挂在自己建的宿主 div 下
+   （见 RecvHistoryModal 的 getPreviewHost），既不在面板宿主里、也不在 .ant-modal-root 里；
+   漏了它就会让工具栏图标被顶到胶囊上方（实测偏移 25px），表现成「图标看不见、只剩一条灰色胶囊」。
+   对照：弹窗关闭图标的同类偏移为 0（因为它被本规则覆盖）。 */
+#${PANEL_HOST_ID} svg, .ant-modal-root svg, .ant-drawer svg, .ant-picker-dropdown svg, .ant-message svg, .ant-notification svg, .ant-tooltip svg, .ant-dropdown svg, .ant-image-preview svg {
   margin: 0;
 }
 /* 输入类控件去掉宿主页面可能带来的额外外边距/最小高度 */

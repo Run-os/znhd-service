@@ -85,6 +85,7 @@ const CHECKS = [
   ['printIframeOk', '打印链路接通（react-to-print 建出打印 iframe）'],
   ['printA4Ok', '打印按 A4 自适应且无页眉页脚（@page margin:0 + 内容框留白 + object-fit）'],
   ['previewToolbarOk', '放大预览的工具栏未被图片盖住（宿主 body 带 transform 时也在视口内）'],
+  ['previewIconCenteredOk', '预览工具栏图标与按钮同一水平线（不被宿主 CSS 顶出胶囊）'],
   ['historyTabsOk', '「历史记录」弹窗有「图片 / 文本」两个页签'],
   ['historyTextOk', '「文本」页签能回看到收到的文本'],
   ['phoneCountOk', '【设备互联】显示已连接手机数量'],

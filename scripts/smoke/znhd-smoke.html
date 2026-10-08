@@ -745,6 +745,22 @@
             const hit = document.elementFromPoint(b.x + b.width / 2, b.y + b.height / 2);
             return !!(hit && footer.contains(hit));
           })(),
+          // 预览工具栏的图标必须与按钮同一水平线（v26.10.08-v8）：
+          // 本页常驻的宿主页规则 `svg { margin: -2.75em auto 0 }` 会把图标整体顶出胶囊
+          // （实测偏移 25px）⇒ 图标落到胶囊上方、与背景同色而「看不见，只剩一条灰色胶囊」。
+          // 这条守的是 uiReset 的 svg 复位规则必须覆盖 `.ant-image-preview svg`（漏了就会红）。
+          previewIconCenteredOk: (() => {
+            const actions = document.querySelector('.ant-image-preview-actions');
+            if (!actions) return false;
+            const btns = Array.from(actions.querySelectorAll('button')).filter((b) => b.querySelector('svg'));
+            if (!btns.length) return false;
+            return btns.every((b) => {
+              const bb = b.getBoundingClientRect();
+              const sb = b.querySelector('svg').getBoundingClientRect();
+              if (!bb.height || !sb.height) return false;
+              return Math.abs(bb.top + bb.height / 2 - (sb.top + sb.height / 2)) <= 2;
+            });
+          })(),
           // 「历史记录」（v26.10.08-v3）：① 弹窗里必须有「图片」「文本」两个页签（且顺序一致）；
           // ② 切到文本页签后，能回看到之前收到的那条文本（= 文本真的进了历史，而不只是弹窗显示过）。
           historyTabsOk: !!(
@@ -832,6 +848,7 @@
           report.printIframeOk &&
           report.printA4Ok &&
           report.previewToolbarOk &&
+          report.previewIconCenteredOk &&
           report.historyTabsOk &&
           report.historyTextOk &&
           report.phoneCountOk &&

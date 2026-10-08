@@ -11,6 +11,21 @@
 
 ---
 
+### znhd.user.js v26.10.08-v8
+- **修「放大预览的工具栏图标看不见 / 与胶囊不在同一水平线」**（用户截图反馈，是 v7 那条的**真正根因**）：
+  - **现象**：预览底部只剩一条灰色胶囊，图标浮在胶囊**上方**；因为图标是白色的，落在白底上就「看不见了」。
+  - **根因**：宿主页有一条全局 `svg { margin: -2.75em auto 0 }`（约 -44px 的负上边距，本仓库 `uiReset.ts` 里早就记录过这条真实规则）。我们的**样式隔离层 `uiReset` 会把它压回 0**，但只覆盖了面板宿主 / `.ant-modal-root` / Drawer / Picker / message / notification / tooltip / dropdown —— **唯独漏了 `.ant-image-preview`**，而预览恰好**既不在面板宿主里、也不在 `.ant-modal-root` 里**（v7 起它挂在自己建的宿主 div 下），于是图标被整体顶出胶囊。
+  - **实测（冒烟页常驻该规则）**：修复前 `按钮中心 − svg 中心 = 25px`（对照：弹窗关闭图标为 **0**，因为它被 uiReset 覆盖）；修复后 7 个按钮**全部为 0**、`svg.marginTop = 0px`。
+  - **修复**：`uiReset.ts` 的两条 svg 规则（`vertical-align: inherit` 与 `margin: 0`）加上 `.ant-image-preview svg`。
+  - 📌 **教训（已写进 AGENT.md）**：uiReset 的「按容器前缀复位」是一张**白名单**——**每新增一种浮层承载方式（如这次的预览宿主 div），都必须把它的根类名补进白名单**，否则宿主页的敌意样式就会从那道口子漏进来。
+  - ⚠️ 顺带踩了 `uiReset.ts` 自己注释里警告过的坑：**CSS 注释里不能出现反引号**，否则会提前截断模板字符串（本次把 `.ant-image-preview` 写成带反引号的形式，tsc 立刻报错）。已修正。
+- **冒烟断言（只增不删，35 → 36 项）**：新增 **`previewIconCenteredOk`** —— 预览工具栏里**每个带 svg 的按钮**，其 svg 中心与按钮中心的垂直偏差必须 ≤ 2px（与既有 `iconVerticallyCentered` 同一套判据）。
+- ✅ **反向验证**：把 `.ant-image-preview svg` 从 uiReset 的 `margin: 0` 规则里去掉 → 重建后**仅 `previewIconCenteredOk` 变红**（其余 35 项全绿，退出码 1），恢复后 36 项全绿。
+- 验证：`npm run typecheck` 0 错、`npm run build` 结论行 `compiled`、`npm run check` 通过、`npm run verify`（冒烟 36 项 + 服务端 11 项）全绿、`npx @ant-design/cli lint ./src` `issues: []`。
+- 三处版本号一致（脚本 `26.10.08-v8`）；仓库根过渡跳板已重新拷贝为与 `dist/znhd.user.js` 逐字节一致。
+- ⚠️ **只做本地提交，未推送**。
+
+
 ### znhd.user.js v26.10.08-v7
 - **修「点击缩略图放大后，图片盖住下方工具栏」**（用户反馈）。根因**不是**叠加顺序，而是**预览浮层挂错了地方**：
   - **排查过程（先证伪、再定位）**：在真实页面里做命中测试 —— 1~50 倍缩放下，工具栏胶囊中心与「打印」按钮中心的最上层元素**始终是按钮自己**（`topIsInFooter=true`），截图上工具栏也确实压在图片之上。**即在干净环境下复现不出来**。
