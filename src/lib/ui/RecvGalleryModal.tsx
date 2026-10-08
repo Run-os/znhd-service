@@ -1,4 +1,6 @@
 import { Image, Button, Empty, Modal, Space, Typography } from 'antd';
+import { useRef } from 'react';
+import { useReactToPrint } from 'react-to-print';
 import { copyImageToClipboard } from '@/lib/relay';
 import { addLog } from '@/lib/logger';
 import { downloadFileName, type GalleryImage } from '@/lib/gallery';
@@ -23,8 +25,51 @@ export interface RecvGalleryModalProps {
  * 少一个第三方库 + 一份它自带的 CSS（以及当年为它写的层级/过渡补丁）。
  * ⚠️ 剪贴板写入仍走 `copyImageToClipboard`：Chromium 对 image/png 支持最可靠，
  *    且「先转好 PNG 再只写一次」是仓库实测结论（写失败也会消耗用户手势），不要改回去。
+ * v26.10.08-v1：新增「打印」按钮 —— antd 的 `Image` 预览只带缩放/旋转等变换，**不自带打印**，
+ *    故引入 `react-to-print` 打印**原图**（不是预览里变换后的画面），见 `printImage` 注释。
  */
 export default function RecvGalleryModal({ open, onClose, images, onRemove, onClear }: RecvGalleryModalProps) {
+    /** 打印对话框上的文档标题（react-to-print 会在打印期间临时改写 document.title 再还原） */
+    const printTitleRef = useRef('图片');
+
+    /**
+     * 打印能力来自 react-to-print：它负责「建隐藏 iframe → 把内容克隆进去 → 等图片加载完 →
+     * 调 iframe 的 print() → 清理」，并自带 CSP `nonce` 与失败回调。
+     *
+     * ⚠️ `ignoreGlobalStyles` 必须显式设 true：它的默认行为是把宿主页面**全部** `<style>`/`<link>`
+     *    抄进打印 iframe，税务页那一大坨 CSS 会跟着进去（跨域样式表读 `cssRules` 还会告警）。
+     */
+    const doPrint = useReactToPrint({
+        ignoreGlobalStyles: true,
+        documentTitle: () => printTitleRef.current,
+        pageStyle: '@page { margin: 10mm }',
+    });
+
+    /**
+     * 打印某一张图的**原图**（v26.10.08-v1）。
+     *
+     * 两个关键取舍：
+     *  1) 打印内容用**临时构造的游离节点**（不挂进 DOM），而不是页面上某个隐藏容器：
+     *     `cloneNode` 会把**内联样式**一起克隆，所以 `display:none` / 挪到视口外的隐藏容器
+     *     在打印 iframe 里同样不可见 ⇒ 打印出来是空白。游离节点只带我们给的打印样式，没有这个坑；
+     *     而且它不进渲染树，也就不会「闪一下大图」。
+     *  2) 打印的是 `previewUrl`（原分辨率 objectURL），不是预览里缩放/旋转后的画面 —— 清晰度最好。
+     *     ⚠️ 打印对话框弹出期间该图的 objectURL 不能被 revoke（移除该图会 revoke），否则打印空白。
+     */
+    const printImage = (it: GalleryImage, idx: number) => {
+        const fname = downloadFileName(it.name, it.mime, idx);
+        const node = document.createElement('div');
+        const img = document.createElement('img');
+        img.src = it.previewUrl;
+        img.alt = fname;
+        img.style.cssText = 'display:block;max-width:100%;height:auto;margin:0 auto;';
+        node.appendChild(img);
+
+        printTitleRef.current = fname;
+        addLog('打印图片: ' + fname, 'success');
+        doPrint(() => node);
+    };
+
     const doCopy = (it: GalleryImage, btn: HTMLButtonElement) => {
         const old = btn.textContent;
         btn.textContent = '复制中…';
@@ -104,6 +149,9 @@ export default function RecvGalleryModal({ open, onClose, images, onRemove, onCl
                                     <Button size="small" style={{ flex: 1 }} onClick={() => doDownload(it, idx)}>
                                         下载
                                     </Button>
+                                    <Button size="small" style={{ flex: 1 }} onClick={() => printImage(it, idx)}>
+                                        打印
+                                    </Button>
                                     <Button size="small" danger onClick={() => onRemove(idx)}>
                                         ×
                                     </Button>
@@ -115,7 +163,8 @@ export default function RecvGalleryModal({ open, onClose, images, onRemove, onCl
             )}
             {images.length > 0 && (
                 <Text type="secondary" style={{ fontSize: 12, display: 'block', marginTop: 8 }}>
-                    提示：单击缩略图可放大/旋转/多图切换；「复制」会把图片写入系统剪贴板，回征纳互动 Ctrl+V 即可。
+                    提示：单击缩略图可放大/旋转/多图切换；「复制」会把图片写入系统剪贴板，回征纳互动 Ctrl+V
+                    即可；「打印」打印的是原图（打印对话框弹出后请勿删除该图）。
                 </Text>
             )}
         </Modal>

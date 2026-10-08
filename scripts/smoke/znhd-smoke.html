@@ -85,6 +85,24 @@
         /* 忽略：环境没有 Clipboard 时断言会因「零次调用」而失败，属预期 */
       }
 
+      // 打印（v26.10.08-v1）：react-to-print 会往 body 挂一个 id=printWindow 的隐藏 iframe。
+      // ⚠️ headless 里没有打印对话框，且桌面 UA 下打印完成后 iframe 会被立刻移除，
+      //    所以不能用「iframe 还在不在」判断，必须用 MutationObserver 在**插入那一刻**记录。
+      // 该 iframe 只在「找到了打印内容节点」时才会被挂上（react-to-print 拿不到内容会直接 return），
+      // 因此它出现 = 「按钮 → printImage → doPrint」整条链路真的接通了。
+      window.__printIframeSeen = false;
+      try {
+        new MutationObserver((muts) => {
+          muts.forEach((m) =>
+            Array.prototype.forEach.call(m.addedNodes, (n) => {
+              if (n && n.id === 'printWindow') window.__printIframeSeen = true;
+            })
+          );
+        }).observe(document.documentElement, { childList: true, subtree: true });
+      } catch (e) {
+        /* 忽略：不支持 MutationObserver 时断言会因「从未见到 iframe」而失败，属预期 */
+      }
+
       const reply = (details, payload) => {
         setTimeout(() => {
           if (typeof details.onload === 'function') {
@@ -319,6 +337,16 @@
         window.__clickedCopy = !!b;
         if (b) b.click();
       }, 5200);
+
+      // 点画廊里的「打印」，验证 react-to-print 链路接通（v26.10.08-v1）。
+      // 只断言「打印 iframe 被建出来」：headless 下看不到打印对话框，且该 iframe 打印后即被移除，
+      // 故用 head 里装的 MutationObserver 记录（见 window.__printIframeSeen 的说明）。
+      setTimeout(() => {
+        const btns = Array.from(document.querySelectorAll('.ant-modal-body button'));
+        const b = btns.find((x) => (x.textContent || '').trim() === '打印');
+        window.__clickedPrint = !!b;
+        if (b) b.click();
+      }, 5600);
 
       // 打开「设置」抽屉 → 点它里面的「更新日志」，验证新入口 + 弹窗 + 只显示最新 10 条
       setTimeout(() => {
@@ -586,6 +614,10 @@
             );
             return sawPng && bad === null;
           })(),
+          // 打印（v26.10.08-v1）：① 画廊里真的有「打印」按钮；② 点了之后 react-to-print
+          // 真的建出了 id=printWindow 的打印 iframe（= 内容节点被找到，整条链路接通）。
+          printBtnOk: !!window.__clickedPrint,
+          printIframeOk: !!window.__printIframeSeen,
           // 发送到手机：必须先压缩再发（v26.10.06-v6 回归断言）。判定要点：
           // 实际 POST 的字节是 JPEG、最长边 ≤1600（压缩上限）、且比原图小。
           phoneSendCheck: window.__phoneSendCheck || null,
@@ -636,6 +668,8 @@
           report.changelogPopup &&
           report.viewerZoomOk &&
           report.copyOk &&
+          report.printBtnOk &&
+          report.printIframeOk &&
           report.phoneSendCompressedOk
             ? 'ALL-OK'
             : 'PARTIAL');

@@ -11,6 +11,21 @@
 
 ---
 
+### znhd.user.js v26.10.08-v1
+- **「收到的图片」画廊弹窗新增「打印」按钮**（按用户要求）：每张图下方按钮行由「复制 / 下载 / ×」变为「复制 / 下载 / 打印 / ×」，点「打印」直接拉起浏览器打印对话框打印**该图原图**。
+  - **背景**：放大查看用的是 antd `Image.PreviewGroup`（v26.10.06-v13 起，替代 Viewer.js），它自带缩放/旋转/多图切换，但**没有任何打印能力**；主流灯箱（Fancybox / lightGallery / PhotoSwipe / Yet Another React Lightbox）同样都没有内置打印插件。故新增一个打印库：**[react-to-print](https://github.com/MatthewHerbst/react-to-print) 3.3.0**（MIT，随产物打包，非 `@require`）。
+  - ⚠️ **打印内容用「临时构造的游离节点」，不能用隐藏容器**：`react-to-print` 是对内容节点做 `cloneNode(true)` 再塞进打印 iframe，而 **`cloneNode` 会连内联样式一起克隆** —— 用 `display:none` 或 `left:-99999px` 隐藏的容器在打印 iframe 里同样不可见，**打印出来是空白**。改为在点击时 `document.createElement` 构造 div + img、通过 hook 的「可选内容工厂」`doPrint(() => node)` 传入：节点只带我们给的打印样式，且不进渲染树（不会「闪一下大图」）。
+  - ⚠️ **`ignoreGlobalStyles` 必须显式设 `true`**：它的默认行为是把宿主页面**全部** `<style>`/`<link>` 抄进打印 iframe，税务页那一大坨 CSS 会跟着进去（跨域样式表读 `cssRules` 还会告警）。同时用 `pageStyle: '@page { margin: 10mm }'` 给打印页边距，`documentTitle` 设为文件名（打印对话框标题）。
+  - **打印的是原图**（`previewUrl` 原分辨率 objectURL），不是预览里缩放/旋转后的画面 —— 清晰度最好；代价是「所见即所得」不成立（要那个得上 html2canvas 光栅化，体积大且失真）。
+  - ⚠️ **打印对话框弹出期间不能移除该图**：`onRemove`/`onClear` 会 `revokeObjectURL`，objectURL 一旦失效打印就是空白。弹窗底部提示已加说明。
+- **冒烟断言（只改不删，26 → 28 项）**：
+  - 新增 `printBtnOk`：画廊弹窗里必须存在文案为「打印」的按钮。
+  - 新增 `printIframeOk`：点「打印」后 react-to-print 必须真的建出 `id=printWindow` 的打印 iframe。⚠️ headless 里没有打印对话框、且桌面 UA 下该 iframe 打印完会被**立刻移除**，所以不能用「iframe 还在不在」判断——改为在测试页 head 里用 `MutationObserver` 在**插入那一刻**记录（`window.__printIframeSeen`）。该 iframe 只在「找到了内容节点」时才会被挂上（react-to-print 拿不到内容会直接 return），因此它出现 = 「按钮 → printImage → doPrint」整条链路真的接通。
+- 验证：`npm run typecheck` 0 错、`npm run build` 结论行 `compiled`、`npm run check` 通过、`npm run verify` **28 项全绿**、`npx @ant-design/cli lint ./src` `issues: []`。
+- 三处版本号一致（`26.10.08-v1`）；仓库根过渡跳板 `znhd.user.js` 已重新拷贝为与 `dist/znhd.user.js` 逐字节一致。
+- ⚠️ **只做本地提交，未推送**。
+
+
 ### znhd.user.js v26.10.07-v4
 - **「运行日志」弹窗：最新日志改为显示在底部，并新增「自动刷新」开关 + 自动滚到底部**（按用户要求；**反转了 v26.10.06-v23 的「最新在顶部」**）：
   - **排序**：`logger.ts` 的写入顺序仍是「最新在前」（`[logItem, ...prevEntries]`），改为**渲染前把数组反过来**（`shown.slice().reverse()`）⇒ DOM 顺序 = 视觉顺序 = 最旧在上、**最新在下**。容器保持 `column`，**不是 `column-reverse`** —— 后者会把滚动原点翻到底部、阅读方向也跟着反过来。文件头那段「勿改回 column-reverse」的注释已按新需求改写。
