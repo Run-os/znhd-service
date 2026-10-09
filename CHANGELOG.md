@@ -11,6 +11,44 @@
 
 ---
 
+### znhd.user.js v26.10.09-v7
+- **重做 Win7 图标方案：改用「内联 SVG」，不再依赖 emoji，也不再依赖图标库**
+  （新增 `src/lib/ui/icons.tsx`；改 `src/lib/ui/MainPanel.tsx`、`src/lib/ui/PhoneModal.tsx`）：
+  - **根因（重述，因为它决定了方案选型）**：Win7 **没有 Segoe UI Emoji 字体**（Win8.1 才随系统引入），
+    而图标原本是补充平面 emoji：`💬 U+1F4AC`、`🖼 U+1F5BC`、`💻 U+1F4BB`、`🎯 U+1F3AF`、`📱 U+1F4F1`、
+    `🔊/🔇` —— 这些码位在 Win7 的任何系统字体里都没有字形，浏览器沿字体回退链退到底就是豆腐块/乱码。
+    关键推论：**「有没有字形」取决于目标机器装了哪些字体**，我们控制不了 ⇒ 凡「靠字体渲染」的方案
+    （emoji、BMP 符号字符、图标字体）在 Win7 上都有残余风险。
+  - **选型**：只保留**矢量路径**一类方案。相比 `@ant-design/icons`，这里把 path **直接内联**进源码：
+    零运行时依赖（此前是「在 `src/` 里运行时 import 一个 devDependency」），产物只多这几条 path，
+    也不受图标库版本升级影响。图形取自 **Lucide**（ISC 许可，lucide-static v1.53.0）的官方 SVG，
+    按原样内联几何数据（24×24、stroke-width 2、round cap/join），来源与许可声明写在文件头。
+  - **本次覆盖范围（全部桌面端可见 emoji）**：主面板四个入口按钮（设置/常用语/历史记录/设备互联）、
+    语音播报开关（开=喇叭+声波、静音=喇叭+叉，并用主色/次要灰区分）、品牌图标加载失败时的回退、
+    「设备互联」弹窗标题的 `📱`。
+  - **顺带处理**：进度失败文案前缀的 `❌`（U+274C，Dingbats）**去掉**——Win7 字形覆盖不可靠，
+    且失败语义已由 `failed:true` 驱动的红色 Progress 表达，符号属冗余。
+  - ⚠️ **一并替换**：`✕`(U+2715) 与 `✓`(U+2713) 同属 **Dingbats（U+2700–U+27BF）**，Win7 的
+    Segoe UI Symbol 对该区段覆盖**不确定**，本次也换成内联 SVG（`CloseIcon` / `CheckIcon`）：
+    - 面板「收起」按钮：`✕` → `CloseIcon`；
+    - 复制反馈：`✓ 已复制` → `CheckIcon` + 「已复制」文字。其中「历史记录 → 图片」页签原本是
+      **命令式改 `btn.textContent`**（`'复制中…'` → `'✓ 已复制'`），要渲染 SVG 就必须由 React 渲染，
+      故改为 state 驱动（行为不变：1.5s 后回到「复制」；**空闲态文案仍是「复制」**，冒烟按它定位按钮）。
+  - **仍保留**（不属缺字形风险区）：`→`(U+2192)、`×`(U+00D7)、`…`(U+2026)、`—`(U+2014) ——
+    这些在 Win7 的 Segoe UI / SimSun 里一定有字形。
+  - **手机上传页（`web/`）的 `📷`/`🖼` 本次不动**：它主要在手机浏览器里跑（手机有 emoji 字体）；
+    若日后要在 Win7 桌面浏览器里用它，需另开一轮（属 `web/` 子项目，有自己的版本与发布流程）。
+  - **容器查询阈值复算**：图标由 emoji（约 18px 宽）换成 SVG（`size={15}` ⇒ 15px 宽）后，
+    阈值由 68px 复算为 **65px**（横排所需 = 15 + 2 + 4×11 = 61px，留 4px 余量）。
+  - **撤销说明**：v26.10.09-v5 里那版「改用 `@ant-design/icons`」的实现已被本次整体替换
+    （`IconBox` 外壳一并去掉：内联 SVG 自身就是 `display:block` + `flex:0 0 auto`，无需再包一层）。
+- 验证：`npm run typecheck` 0 错、`npm run build` 结论行 `compiled`、`npm run check` 通过、
+  `npm run verify` 三段全绿、`antd lint ./src` `issues: []`；另在无头 Chromium 里加载**构建产物**实测：
+  四个入口按钮各含 1 个真实 `<svg>`（15×15、含 1–3 条图元）、面板与各弹窗的可见文本里
+  **不再出现任何 U+1F300+ 码位、也不再出现 Dingbats（U+2700–U+27BF）**，并出截图留证。
+  产物层复核：`✕`/`✓` 出现次数均为 **0**，新的 x/check 路径已进产物。
+  冒烟新增 `panelIconsAreSvg`（四个按钮各含带图元的 svg + 面板文本无补充平面字符、无 Dingbats）。
+
 ### znhd.user.js v26.10.09-v6
 - **修复：宿主页 `body` 带 transform 时，浮层（弹窗/抽屉/提示）被「囚」在 body 的盒子里**
   （`src/lib/ui/panelHost.tsx` 的 `getOverlayContainer`）：

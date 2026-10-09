@@ -5,6 +5,7 @@ import { safeCopyText } from '@/lib/clipboard';
 import { RELAY_MAX_BODY, imagePayloadBytes, compressImageForPhone, getDeviceId, sendToPhone } from '@/lib/relay';
 import { genQrDataUrl } from '@/lib/qrcode';
 import { getOverlayContainer } from '@/lib/ui/panelHost';
+import { SmartphoneIcon } from '@/lib/ui/icons';
 
 const { Text } = Typography;
 
@@ -152,7 +153,7 @@ function Section({ title, extra, children }: { title: string; extra?: React.Reac
 /**
  * 设备互联弹窗（v26.10.06-v17：按参考稿重排版式）。
  *
- * 版式：标题「📱 手机互传 + 设备互联标签」→「电脑接收 · 本机专属链接」分区
+ * 版式：标题「手机互传（SVG 图标）+ 设备互联标签」→「电脑接收 · 本机专属链接」分区
  * （左二维码 + 右链接框 + 复制按钮；**按要求不放「重新生成」**）→ 居中的在线状态胶囊 →
  * 「发送到手机」分区（文本行 + 待发送图片行 + 虚线选图 + 发送按钮）。
  * 业务逻辑（二维码、在线轮询、逐张压缩发送、进度）与旧实现一致，只换成新排版。
@@ -334,8 +335,8 @@ export default function PhoneModal({ open, onClose, relayServer, phones }: Phone
                 total,
                 busy: false,
                 failed: true,
-                // ⚠️ v26.10.09-v5：原本前缀一个 emoji '❌'，Win7 上会渲染成豆腐块（缺字形）。
-                // 失败语义已由 failed:true 驱动样式（红色 Progress 状态），去掉符号即可。
+                // ⚠️ v26.10.09-v7：原文案前缀一个 emoji '❌'（U+274C，Dingbats）——Win7 字形覆盖不可靠，
+                // 且语义上与 failed:true 驱动的「红色 Progress」重复。故直接去掉符号，只留文字。
                 text: '已发送 ' + sent + '/' + total + '，已停止',
             });
         };
@@ -440,9 +441,12 @@ export default function PhoneModal({ open, onClose, relayServer, phones }: Phone
         <Modal
             open={open}
             title={
-                <span>
-                    📱 手机互传{' '}
-                    <Tag style={{ marginLeft: 6, fontWeight: 400 }} color="default">
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                    {/* ⚠️ v26.10.09-v7：原为 emoji '📱'（U+1F4F1，补充平面）——Win7 无 Segoe UI Emoji
+                        ⇒ 弹窗标题上是个豆腐块。改用内联 SVG（来源/许可见 lib/ui/icons.tsx）。 */}
+                    <SmartphoneIcon size={16} />
+                    手机互传
+                    <Tag style={{ marginLeft: 0, fontWeight: 400 }} color="default">
                         设备互联
                     </Tag>
                 </span>

@@ -72,6 +72,7 @@ const CHECKS = [
   ['primaryTokenBlue', '主色 token 为 antd 蓝 blue-6 #1677FF'],
   ['panelBtnsUniform', '四个入口按钮样式一致（无主色实心按钮）'],
   ['panelBtnsOneRow', '四个入口按钮排在同一行'],
+  ['panelIconsAreSvg', '面板图标是真实 SVG 且无补充平面 emoji（Win7 兼容）'],
   ['ballDragOk', '悬浮球可拖动移动（且拖完不误触展开）'],
   ['logListNotReversed', '日志列表仍是 column（非 column-reverse）'],
   ['logNewestOnBottom', '日志最新一条在最下方'],

@@ -7,6 +7,7 @@ import { safeCopyText } from '@/lib/clipboard';
 import { addLog } from '@/lib/logger';
 import { downloadFileName, type GalleryImage, type GalleryText } from '@/lib/gallery';
 import { getOverlayContainer } from '@/lib/ui/panelHost';
+import { CheckIcon } from '@/lib/ui/icons';
 // 预览相关的通用件全部来自共享层（与手机上传页同一份，v26.10.08-v13 起）
 import { appendPreviewActions } from '../../../shared/preview/actions';
 import { getPreviewHost } from '../../../shared/preview/host';
@@ -147,15 +148,22 @@ export default function RecvHistoryModal({
         doPrint(() => node);
     };
 
-    const doCopy = (it: GalleryImage, btn: HTMLButtonElement) => {
-        const old = btn.textContent;
-        btn.textContent = '复制中…';
+    const [imgCopy, setImgCopy] = useState<{ idx: number; state: 'busy' | 'ok' | 'fail' } | null>(null);
+
+    /**
+     * 复制图片并给出反馈。
+     *
+     * ⚠️ v26.10.09-v7：原实现是**命令式改 `btn.textContent`**（`'复制中…'` → `'✓ 已复制'`）。
+     * 因为反馈文案里的 `✓`(U+2713) 属 Dingbats、Win7 字形覆盖不确定，要把它换成内联 SVG
+     * 就必须由 React 渲染，故改为 state 驱动。行为与原来一致：1.5s 后回到「复制」。
+     * ⚠️ 冒烟测试是按 `textContent.trim() === '复制'` 找这个按钮的，所以**空闲态文案必须仍是「复制」**。
+     */
+    const doCopy = (it: GalleryImage, idx: number) => {
+        setImgCopy({ idx, state: 'busy' });
         copyImageToClipboard(it.blob).then((ok: boolean) => {
-            btn.textContent = ok ? '✓ 已复制' : '复制失败';
+            setImgCopy({ idx, state: ok ? 'ok' : 'fail' });
             if (ok) addLog('图片已复制到剪贴板: ' + (it.name || ''), 'success');
-            window.setTimeout(() => {
-                btn.textContent = old;
-            }, 1500);
+            window.setTimeout(() => setImgCopy(null), 1500);
         });
     };
 
@@ -272,11 +280,20 @@ export default function RecvHistoryModal({
                                     style={{ width: '100%', aspectRatio: '1 / 1', objectFit: 'cover', borderRadius: 8 }}
                                 />
                                 <Space size={4} style={{ marginTop: 4, width: '100%' }}>
-                                    <Button
-                                        size="small"
-                                        style={{ flex: 1 }}
-                                        onClick={(e) => doCopy(it, e.currentTarget as HTMLButtonElement)}>
-                                        复制
+                                    <Button size="small" style={{ flex: 1 }} onClick={() => doCopy(it, idx)}>
+                                        {imgCopy && imgCopy.idx === idx ? (
+                                            imgCopy.state === 'busy' ? (
+                                                '复制中…'
+                                            ) : imgCopy.state === 'ok' ? (
+                                                <>
+                                                    <CheckIcon size={12} /> 已复制
+                                                </>
+                                            ) : (
+                                                '复制失败'
+                                            )
+                                        ) : (
+                                            '复制'
+                                        )}
                                     </Button>
                                     <Button size="small" style={{ flex: 1 }} onClick={() => doDownload(it, idx)}>
                                         下载
@@ -327,11 +344,17 @@ export default function RecvHistoryModal({
                             </div>
                             <Space size={4}>
                                 <Button size="small" onClick={() => doCopyText(t, idx)}>
-                                    {copyState && copyState.idx === idx
-                                        ? copyState.ok
-                                            ? '✓ 已复制'
-                                            : '复制失败'
-                                        : '复制'}
+                                    {copyState && copyState.idx === idx ? (
+                                        copyState.ok ? (
+                                            <>
+                                                <CheckIcon size={12} /> 已复制
+                                            </>
+                                        ) : (
+                                            '复制失败'
+                                        )
+                                    ) : (
+                                        '复制'
+                                    )}
                                 </Button>
                                 <Button size="small" danger onClick={() => onRemoveText(idx)}>
                                     ×
