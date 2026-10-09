@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Modal, Button, Empty, Space, Spin, Typography } from 'antd';
 import {
     CHANGELOG_DEFAULT_LIMIT,
-    CHANGELOG_PAGE_URL,
+    getChangelogPageUrl,
     loadChangelog,
     mdToPlain,
     type ChangelogEntry,
@@ -57,7 +57,7 @@ export default function ChangelogModal({ open, onClose }: ChangelogModalProps) {
             destroyOnHidden
             footer={
                 <Space>
-                    <Button onClick={() => window.open(CHANGELOG_PAGE_URL, '_blank')}>获取更多日志</Button>
+                    <Button onClick={() => window.open(getChangelogPageUrl(), '_blank')}>获取更多日志</Button>
                     <Button color="primary" variant="solid" onClick={onClose}>
                         关闭
                     </Button>
@@ -72,7 +72,7 @@ export default function ChangelogModal({ open, onClose }: ChangelogModalProps) {
                     <Text type="danger">读取失败：{err}</Text>
                     <div style={{ marginTop: 8 }}>
                         <Text type="secondary" style={{ fontSize: 12 }}>
-                            可点下方「获取更多日志」在浏览器中打开 CHANGELOG.md 查看。
+                            可点下方「获取更多日志」在浏览器中打开当月日志文件查看。
                         </Text>
                     </div>
                 </>

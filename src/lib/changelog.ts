@@ -1,5 +1,7 @@
 /**
- * 更新日志：拉取仓库根的 CHANGELOG.md → 解析成条目（v26.10.06-v13 起渲染层交给 antd Modal）。
+ * 更新日志：按当前年月动态定位 changelogs/ 目录下的当月日志文件 → 解析成条目。
+ * （v26.10.06-v13 起渲染层交给 antd Modal；自日志迁移到「changelogs/ 按月分文件」后，
+ *  数据源从固定的根 CHANGELOG.md 改为运行时按当前年月拼 `changelogs/YYYY-MM.md`。）
  *
  * 变化：原实现自己拼 DOM 弹窗（fixed 全屏 overlay + 白盒 + × + ESC + z-index 拉满，为对抗
  * 税务页的 CSS/transform 污染）。现在统一用 antd（见 `ui/ChangelogModal.tsx`）：
@@ -10,11 +12,22 @@
 import { addLog } from '@/lib/logger';
 import { resolveGithubUrl } from '@/lib/utils';
 
-/** CHANGELOG 数据源（raw 原始直链形式；resolveGithubUrl 会按 useCdn 决定是否走 CDN 镜像） */
-export const CHANGELOG_RAW_URL = 'https://raw.githubusercontent.com/Run-os/znhd-service/refs/heads/main/CHANGELOG.md';
+/** 当前年月的 `YYYY-MM`（changelogs/ 目录下当月日志文件的命名） */
+function currentMonth(): string {
+    const d = new Date();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    return d.getFullYear() + '-' + mm;
+}
 
-/** 「获取更多日志」按钮跳转的网页地址 */
-export const CHANGELOG_PAGE_URL = 'https://github.com/Run-os/znhd-service/blob/main/CHANGELOG.md';
+/** 当月日志文件数据源（raw 原始直链形式；resolveGithubUrl 会按 useCdn 决定是否走 CDN 镜像） */
+export function getChangelogRawUrl(): string {
+    return 'https://raw.githubusercontent.com/Run-os/znhd-service/refs/heads/main/changelogs/' + currentMonth() + '.md';
+}
+
+/** 「获取更多日志」按钮跳转的当月日志文件网页地址 */
+export function getChangelogPageUrl(): string {
+    return 'https://github.com/Run-os/znhd-service/blob/main/changelogs/' + currentMonth() + '.md';
+}
 
 /** 弹窗默认展示的条数 */
 export const CHANGELOG_DEFAULT_LIMIT = 10;
@@ -77,7 +90,7 @@ export function mdToPlain(md: string): string {
 let _changelogCache: ChangelogEntry[] | null = null;
 
 /**
- * 拉取并解析 CHANGELOG.md（命中会话缓存则直接回调，不发请求）。
+ * 拉取并解析当月的日志文件（changelogs/YYYY-MM.md；命中会话缓存则直接回调，不发请求）。
  * @param {(entries: ChangelogEntry[]|null, errMsg?: string) => void} done - 完成回调；失败时 entries 为 null
  * @returns {void}
  */
@@ -88,7 +101,7 @@ export function loadChangelog(done: (entries: ChangelogEntry[] | null, errMsg?: 
     }
     GM_xmlhttpRequest({
         method: 'GET',
-        url: resolveGithubUrl(CHANGELOG_RAW_URL),
+        url: resolveGithubUrl(getChangelogRawUrl()),
         timeout: 15000, // raw.githubusercontent 在国内常被黑洞，必须给超时，否则弹窗永远停在「读取中」
         onload: function (response) {
             if (response.status !== 200) {

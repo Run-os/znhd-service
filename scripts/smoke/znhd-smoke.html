@@ -188,8 +188,8 @@
           reply(details, PHRASES_YAML);
           return { abort: () => {} };
         }
-        // 更新日志 CHANGELOG.md：走成功路径
-        if (url.includes('CHANGELOG.md')) {
+        // 更新日志 changelogs/YYYY-MM.md（当月文件）：走成功路径
+        if (url.includes('changelogs/')) {
           reply(details, CHANGELOG_MD);
           return { abort: () => {} };
         }

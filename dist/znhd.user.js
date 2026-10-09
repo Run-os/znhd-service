@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name                征纳互动人数和在线监控v2
 // @namespace           https://scriptcat.org/
-// @version             26.10.10-v1
+// @version             26.10.10-v2
 // @description         实时监控征纳互动等待人数和在线状态，支持语音播报、自定义常用语
 // @author              runos
 // @license             MIT
@@ -68691,7 +68691,9 @@ function LogModal({ open, onClose, logEntries, onClear, autoRefresh, onAutoRefre
 
 ;// ./src/lib/changelog.ts
 /**
- * 更新日志：拉取仓库根的 CHANGELOG.md → 解析成条目（v26.10.06-v13 起渲染层交给 antd Modal）。
+ * 更新日志：按当前年月动态定位 changelogs/ 目录下的当月日志文件 → 解析成条目。
+ * （v26.10.06-v13 起渲染层交给 antd Modal；自日志迁移到「changelogs/ 按月分文件」后，
+ *  数据源从固定的根 CHANGELOG.md 改为运行时按当前年月拼 `changelogs/YYYY-MM.md`。）
  *
  * 变化：原实现自己拼 DOM 弹窗（fixed 全屏 overlay + 白盒 + × + ESC + z-index 拉满，为对抗
  * 税务页的 CSS/transform 污染）。现在统一用 antd（见 `ui/ChangelogModal.tsx`）：
@@ -68700,10 +68702,20 @@ function LogModal({ open, onClose, logEntries, onClear, autoRefresh, onAutoRefre
  */
 
 
-/** CHANGELOG 数据源（raw 原始直链形式；resolveGithubUrl 会按 useCdn 决定是否走 CDN 镜像） */
-const CHANGELOG_RAW_URL = 'https://raw.githubusercontent.com/Run-os/znhd-service/refs/heads/main/CHANGELOG.md';
-/** 「获取更多日志」按钮跳转的网页地址 */
-const CHANGELOG_PAGE_URL = 'https://github.com/Run-os/znhd-service/blob/main/CHANGELOG.md';
+/** 当前年月的 `YYYY-MM`（changelogs/ 目录下当月日志文件的命名） */
+function currentMonth() {
+    const d = new Date();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    return d.getFullYear() + '-' + mm;
+}
+/** 当月日志文件数据源（raw 原始直链形式；resolveGithubUrl 会按 useCdn 决定是否走 CDN 镜像） */
+function getChangelogRawUrl() {
+    return 'https://raw.githubusercontent.com/Run-os/znhd-service/refs/heads/main/changelogs/' + currentMonth() + '.md';
+}
+/** 「获取更多日志」按钮跳转的当月日志文件网页地址 */
+function getChangelogPageUrl() {
+    return 'https://github.com/Run-os/znhd-service/blob/main/changelogs/' + currentMonth() + '.md';
+}
 /** 弹窗默认展示的条数 */
 const CHANGELOG_DEFAULT_LIMIT = 10;
 /**
@@ -68756,7 +68768,7 @@ function mdToPlain(md) {
 /** 本次会话内的日志缓存（同一次浏览里重复打开弹窗不再发请求） */
 let _changelogCache = null;
 /**
- * 拉取并解析 CHANGELOG.md（命中会话缓存则直接回调，不发请求）。
+ * 拉取并解析当月的日志文件（changelogs/YYYY-MM.md；命中会话缓存则直接回调，不发请求）。
  * @param {(entries: ChangelogEntry[]|null, errMsg?: string) => void} done - 完成回调；失败时 entries 为 null
  * @returns {void}
  */
@@ -68767,7 +68779,7 @@ function loadChangelog(done) {
     }
     GM_xmlhttpRequest({
         method: 'GET',
-        url: resolveGithubUrl(CHANGELOG_RAW_URL),
+        url: resolveGithubUrl(getChangelogRawUrl()),
         timeout: 15000, // raw.githubusercontent 在国内常被黑洞，必须给超时，否则弹窗永远停在「读取中」
         onload: function (response) {
             if (response.status !== 200) {
@@ -68838,7 +68850,7 @@ function ChangelogModal({ open, onClose }) {
         };
     }, [open]);
     const shown = entries ? entries.slice(0, (/* inlined export .CHANGELOG_DEFAULT_LIMIT */10)) : [];
-    return ((0,react_jsx_runtime_production_namespaceFn().jsx)(modal, { open: open, title: '更新日志（最新 ' + (/* inlined export .CHANGELOG_DEFAULT_LIMIT */10) + ' 条）', onCancel: onClose, getContainer: getOverlayContainer, width: 620, styles: { body: { textAlign: 'left' } }, destroyOnHidden: true, footer: (0,react_jsx_runtime_production_namespaceFn().jsxs)(es_space, { children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { onClick: () => window.open(CHANGELOG_PAGE_URL, '_blank'), children: "\u83B7\u53D6\u66F4\u591A\u65E5\u5FD7" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { color: "primary", variant: "solid", onClick: onClose, children: "\u5173\u95ED" })] }), children: loading ? ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { textAlign: 'center', padding: 24 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(spin, {}), " ", (0,react_jsx_runtime_production_namespaceFn().jsx)(ChangelogModal_Text, { type: "secondary", children: "\u8BFB\u53D6\u4E2D\u2026" })] })) : err ? ((0,react_jsx_runtime_production_namespaceFn().jsxs)((react_jsx_runtime_production_namespaceFn().Fragment), { children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)(ChangelogModal_Text, { type: "danger", children: ["\u8BFB\u53D6\u5931\u8D25\uFF1A", err] }), (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { marginTop: 8 }, children: (0,react_jsx_runtime_production_namespaceFn().jsx)(ChangelogModal_Text, { type: "secondary", style: { fontSize: 12 }, children: "\u53EF\u70B9\u4E0B\u65B9\u300C\u83B7\u53D6\u66F4\u591A\u65E5\u5FD7\u300D\u5728\u6D4F\u89C8\u5668\u4E2D\u6253\u5F00 CHANGELOG.md \u67E5\u770B\u3002" }) })] })) : !entries || entries.length === 0 ? ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_empty, { description: "\u6682\u65E0\u66F4\u65B0\u65E5\u5FD7" })) : ((0,react_jsx_runtime_production_namespaceFn().jsxs)((react_jsx_runtime_production_namespaceFn().Fragment), { children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { maxHeight: '60vh', overflow: 'auto', paddingRight: 4 }, children: shown.map((en) => ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { marginBottom: 14 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { fontSize: 14, fontWeight: 'bold', color: '#1890ff', marginBottom: 6 }, children: en.title }), (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: {
+    return ((0,react_jsx_runtime_production_namespaceFn().jsx)(modal, { open: open, title: '更新日志（最新 ' + (/* inlined export .CHANGELOG_DEFAULT_LIMIT */10) + ' 条）', onCancel: onClose, getContainer: getOverlayContainer, width: 620, styles: { body: { textAlign: 'left' } }, destroyOnHidden: true, footer: (0,react_jsx_runtime_production_namespaceFn().jsxs)(es_space, { children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { onClick: () => window.open(getChangelogPageUrl(), '_blank'), children: "\u83B7\u53D6\u66F4\u591A\u65E5\u5FD7" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { color: "primary", variant: "solid", onClick: onClose, children: "\u5173\u95ED" })] }), children: loading ? ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { textAlign: 'center', padding: 24 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(spin, {}), " ", (0,react_jsx_runtime_production_namespaceFn().jsx)(ChangelogModal_Text, { type: "secondary", children: "\u8BFB\u53D6\u4E2D\u2026" })] })) : err ? ((0,react_jsx_runtime_production_namespaceFn().jsxs)((react_jsx_runtime_production_namespaceFn().Fragment), { children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)(ChangelogModal_Text, { type: "danger", children: ["\u8BFB\u53D6\u5931\u8D25\uFF1A", err] }), (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { marginTop: 8 }, children: (0,react_jsx_runtime_production_namespaceFn().jsx)(ChangelogModal_Text, { type: "secondary", style: { fontSize: 12 }, children: "\u53EF\u70B9\u4E0B\u65B9\u300C\u83B7\u53D6\u66F4\u591A\u65E5\u5FD7\u300D\u5728\u6D4F\u89C8\u5668\u4E2D\u6253\u5F00\u5F53\u6708\u65E5\u5FD7\u6587\u4EF6\u67E5\u770B\u3002" }) })] })) : !entries || entries.length === 0 ? ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_empty, { description: "\u6682\u65E0\u66F4\u65B0\u65E5\u5FD7" })) : ((0,react_jsx_runtime_production_namespaceFn().jsxs)((react_jsx_runtime_production_namespaceFn().Fragment), { children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { maxHeight: '60vh', overflow: 'auto', paddingRight: 4 }, children: shown.map((en) => ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { marginBottom: 14 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { fontSize: 14, fontWeight: 'bold', color: '#1890ff', marginBottom: 6 }, children: en.title }), (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: {
                                     fontSize: 13,
                                     lineHeight: 1.6,
                                     color: '#333',
