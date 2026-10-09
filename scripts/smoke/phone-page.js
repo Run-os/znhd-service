@@ -19,9 +19,30 @@ const zlib = require('zlib');
 const { spawn } = require('child_process');
 
 const ROOT = path.resolve(__dirname, '..', '..');
-const BROWSERS = [process.env.PUPPETEER_EXECUTABLE_PATH, 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe'].filter(
-    (p) => p && fs.existsSync(p)
-);
+/**
+ * 浏览器可执行文件探测：与 `scripts/smoke/run.js` **用同一份清单**。
+ *
+ * ⚠️ 这里以前只写了 Windows 路径（`C:\Program Files\...`），于是 CI 上必然红：
+ *    `.github/workflows/webpack.yml` 设了 `PUPPETEER_SKIP_DOWNLOAD: 'true'`（省 ~150MB 下载），
+ *    改依赖 runner 镜像预装的 Google Chrome —— 而它在 Linux 上是 `/usr/bin/google-chrome`，
+ *    不在旧清单里 ⇒ puppeteer 回退去找没下载过的自带 Chromium ⇒
+ *    `Could not find Chrome (ver. 154.0.8037.57)`。
+ *    实证：`npm run verify` 的**第一段**（run.js，用下面这份全平台清单）在 CI 上是绿的，
+ *    只有本文件这段红 —— 即失败原因就是清单不全，与代码无关。
+ *    该失败在 v26.10.08-v13（177791e）就已经存在，属历史遗留（2026-10-09 排查确认）。
+ */
+const BROWSERS = [
+    process.env.PUPPETEER_EXECUTABLE_PATH,
+    '/usr/bin/google-chrome',
+    '/usr/bin/google-chrome-stable',
+    '/usr/bin/chromium-browser',
+    '/usr/bin/chromium',
+    '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+    'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
+    'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
+    'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
+    'C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe',
+].filter((p) => p && fs.existsSync(p));
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 function freePort() {
