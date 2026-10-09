@@ -1,5 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import { Button, Card, Space, Switch, Tooltip } from 'antd';
+import {
+    AimOutlined,
+    CommentOutlined,
+    LaptopOutlined,
+    PictureOutlined,
+    SettingOutlined,
+    SoundOutlined,
+} from '@ant-design/icons';
 import { DEFAULTS, PHRASES_CACHE_TTL } from '@/lib/constants';
 import { addLog, addLogDebounced, setLogEntriesSink, clearLogs, type LogEntry } from '@/lib/logger';
 import { loadPhrasesCache, savePhrasesCache, saveAllvalue, type Allvalue } from '@/lib/storage';
@@ -27,25 +35,28 @@ let phrasesRequestSeq = 0;
 const BRAND_ICON = 'https://znhd.hunan.chinatax.gov.cn:8443/favicon.ico';
 
 /**
- * 品牌图标：优先用 favicon（与油猴脚本 @icon 同源），加载失败（离线/被拦）时回退到 emoji，
+ * 品牌图标：优先用 favicon（与油猴脚本 @icon 同源），加载失败（离线/被拦）时回退到 SVG 图标，
  * 避免面板头部出现空白块。
  */
 function BrandIcon({ size = 26 }: { size?: number }) {
     const [failed, setFailed] = useState(false);
     const box = { width: size, height: size, borderRadius: 6, flex: '0 0 auto' } as const;
     if (failed) {
+        // ⚠️ v26.10.09-v1：原为 emoji '🎯'，同样是字体字形 → Win7 上乱码。改用 SVG 图标 + 白底蓝字。
         return (
             <span
                 style={{
                     ...box,
                     background: '#1677ff',
                     color: '#fff',
-                    fontSize: Math.round(size * 0.55),
                     display: 'inline-flex',
                     alignItems: 'center',
                     justifyContent: 'center',
+                    fontSize: Math.round(size * 0.62),
                 }}>
-                🎯
+                <IconBox>
+                    <AimOutlined />
+                </IconBox>
             </span>
         );
     }
@@ -68,14 +79,19 @@ function BrandIcon({ size = 26 }: { size?: number }) {
  *   · 宽度不足 → **只留图标**（当前面板就落在这一档，文案靠 hover Tooltip 给出）；
  *   · 两种状态下悬停都有 Tooltip（见下方 JSX）。
  *
- * 阈值为什么取 68px（实测：Chrome 154）：
+ * 阈值为什么取 65px（实测：Chrome 154）：
  *   容器查询的尺寸按**内容盒**算 —— 按钮宽度减去内边距 4×2 与边框 1×2 才是被查询的尺寸。
- *   横排所需宽度 = emoji 18px + 间距 2px + 「历史记录」4 字 × 11px = **64px**，
- *   正好卡在边界会折成两行，故阈值取 68px（留 4px 余量）。
+ *   横排所需宽度 = SVG 图标 15px + 间距 2px + 「历史记录」4 字 × 11px = **61px**，
+ *   留 4px 余量故阈值取 65px；正好卡在边界会折成两行。
+ *   ⚠️ v26.10.09-v1：图标从 emoji 换成 @ant-design/icons 的 SVG 后，阈值由 **68px 复算为 65px**
+ *      —— antd 图标是 `width:1em;height:1em` 的正方形，字号 15px ⇒ 实际占宽 15px，
+ *      比原来 emoji 的 18px 窄 3px，故阈值也可下调 3px。
  *   ⚠️ 该阈值与面板宽度无关，只取决于按钮自身宽度：
- *      · 面板 340px 时四列各 74px（内容盒 64px）→ 刚好在阈值下，只显示图标；
- *      · 面板缩到 238px 后四列各 48.5px（内容盒 38.5px）→ 更在阈值下，仍是只显示图标；
- *      · 面板加宽到约 78px/按钮以上，文字会自动出现，**无需改代码**。
+ *      · 当前面板 238px 时四列各 48.5px（内容盒 38.5px）→ 在阈值下，只显示图标；
+ *      · 面板加宽到约 75px/按钮以上，文字会自动出现，**无需改代码**。
+ *
+ * ⚠️ 若日后改 PANEL_ACTIONS 的标签字数或图标字号，**必须回来重算这个阈值**，
+ *    否则文字会在按钮刚好放不下时才折行（表现为「图标和字挤成两行」）。
  *
  * ⚠️ 文字用 `display: none` 隐藏，**不是条件渲染**：文字必须留在 DOM 里 ——
  *    冒烟测试是按 textContent 找面板按钮的（`clickByText('设置')`），
@@ -91,20 +107,53 @@ const PANEL_CSS = `
 .znhd-panel-btn-text {
   display: none;
 }
-@container (min-width: 68px) {
+@container (min-width: 65px) {
   .znhd-panel-btn-text {
     display: inline;
   }
 }
 `;
 
-/** 底部四个入口：key + 图标 + 文案（文案同时用于 hover Tooltip；点击行为见组件内 actionHandlers） */
+/**
+ * 底部四个入口：key + 图标组件 + 文案（文案同时用于 hover Tooltip；点击行为见组件内 actionHandlers）
+ *
+ * ⚠️ v26.10.09-v1：图标由 emoji 字符（'⚙️' '💬' '🖼️' '💻'）改为 @ant-design/icons 的 SVG 组件。
+ * **原因**：Win7 没有 Segoe UI Emoji 字体（Win8.1 才引入），浏览器回退 Segoe UI Symbol 后
+ * 仍无这些码位的字形 → 四个按钮图标在 Win7 上全是豆腐块/乱码。
+ * SVG 是矢量路径、不经字体系统，全平台渲染一致，且依赖本就已装（devDependencies ^6.3.4，
+ * RecvHistoryModal 早就在用 PrinterOutlined），产物 dist/znhd.user.js 里已含 anticon/viewBox ⇒ 零新增体积。
+ *
+ * `icon` 存组件类型而非实例，配合下面 IconBox 统一控制尺寸。
+ */
 const PANEL_ACTIONS = [
-    { key: 'settings', icon: '⚙️', label: '设置' },
-    { key: 'phrases', icon: '💬', label: '常用语' },
-    { key: 'history', icon: '🖼️', label: '历史记录' },
-    { key: 'phone', icon: '💻', label: '设备互联' },
+    { key: 'settings', icon: SettingOutlined, label: '设置' },
+    { key: 'phrases', icon: CommentOutlined, label: '常用语' },
+    { key: 'history', icon: PictureOutlined, label: '历史记录' },
+    { key: 'phone', icon: LaptopOutlined, label: '设备互联' },
 ] as const;
+
+/**
+ * 面板内所有图标的统一外框（v26.10.09-v1）。
+ *
+ * 为什么要包一层而不是直接 <Icon />：
+ *   antd 图标默认 `display: inline-block` + `vertical-align: -0.125em`，直接放进 Button
+ *   会随宿主页面的 svg 规则上下漂（见 UI_RESET_CSS 里专门压 svg margin 的那段注释）。
+ *   固定成 `inline-flex` + 居中后，图标在按钮里的垂直位置在任何宿主页面下都一致。
+ */
+function IconBox({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) {
+    return (
+        <span
+            style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flex: '0 0 auto',
+                ...style,
+            }}>
+            {children}
+        </span>
+    );
+}
 
 /** 状态点 */
 function Dot({ color }: { color: string }) {
@@ -587,7 +636,20 @@ export default function MainPanel({ host }: MainPanelProps) {
                     marginBottom: 10,
                 }}>
                 <Space size={6}>
-                    <span>{voiceEnabled ? '🔊' : '🔇'}</span>
+                    {/* ⚠️ v26.10.09-v1：原为 emoji '🔊'/'🔇'，Win7 上乱码。
+                        改用同一个 SoundOutlined + 透明度/颜色区分开关态（开=实色蓝，静音=灰色半透明），
+                        语义完全等价，且省掉一次字体回退。
+                        ⚠️ 样式挂在 IconBox 外层而非 <SoundOutlined /> 上：@ant-design/icons 的
+                        组件 props（AntdIconProps）只认 className/style 等少数几项，直接传 style
+                        会报 TS2322（实测）。IconBox 本身就是 inline-flex，套一层即可控色。 */}
+                    <IconBox
+                        style={{
+                            fontSize: 15,
+                            color: voiceEnabled ? '#1677ff' : '#bfbfbf',
+                            opacity: voiceEnabled ? 1 : 0.7,
+                        }}>
+                        <SoundOutlined />
+                    </IconBox>
                     <span style={{ fontSize: 13 }}>语音播报</span>
                 </Space>
                 <Switch checked={!!voiceEnabled} onChange={toggleVoice} />
@@ -602,7 +664,9 @@ export default function MainPanel({ host }: MainPanelProps) {
                             size="large"
                             style={{ padding: '0 4px' }}
                             onClick={actionHandlers[a.key]}>
-                            <span style={{ fontSize: 13, lineHeight: 1 }}>{a.icon}</span>
+                            <IconBox style={{ fontSize: 15, color: '#1677ff' }}>
+                                <a.icon />
+                            </IconBox>
                             <span className="znhd-panel-btn-text" style={{ fontSize: 11, marginLeft: 2 }}>
                                 {a.label}
                             </span>

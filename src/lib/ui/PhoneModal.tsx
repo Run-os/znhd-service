@@ -334,7 +334,9 @@ export default function PhoneModal({ open, onClose, relayServer, phones }: Phone
                 total,
                 busy: false,
                 failed: true,
-                text: '❌ 已发送 ' + sent + '/' + total + '，已停止',
+                // ⚠️ v26.10.09-v5：原本前缀一个 emoji '❌'，Win7 上会渲染成豆腐块（缺字形）。
+                // 失败语义已由 failed:true 驱动样式（红色 Progress 状态），去掉符号即可。
+                text: '已发送 ' + sent + '/' + total + '，已停止',
             });
         };
 
@@ -382,7 +384,7 @@ export default function PhoneModal({ open, onClose, relayServer, phones }: Phone
                         total,
                         busy: false,
                         failed: true,
-                        text: '❌ 已发送 ' + sent + '/' + total + '，已停止',
+                        text: '已发送 ' + sent + '/' + total + '，已停止',
                     });
                     return;
                 }

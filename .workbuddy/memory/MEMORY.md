@@ -44,6 +44,19 @@
 - 日志去重：`RECENT_LOG_COUNT=5` 最近 N 条窗口（原为只比对上一条，间隔性重复会刷屏）。
 - 主面板组件 `MainPanel`（原 `DM`，v26.9.6 重命名）；掉线检测双选择器 `:nth-child(2)`/`nth-of-type(2)` 是互补兜底，勿合并。
 
+## UI 图标一律用 SVG，禁止 emoji（v26.10.09-v5 确立）
+- **Win7 没有 Segoe UI Emoji 字体**（Win8.1 才有）→ emoji 字符（`⚙️💬🖼️💻🔊🔇🎯❌📱`）在 Win7 全渲染成豆腐块。
+  这类字符在 **U+1F300+ 补充平面**，Win7 无字形；而 `✓✕→≈≥×` 在 **BMP U+2190–U+2BFF**（Segoe UI/Arial 自带）**可以留**。
+  判断依据是**码位所在平面**，不是「看起来像不像图标」。
+- 统一用 `@ant-design/icons`（已在 devDependencies，产物里本就有 `anticon`/`viewBox` ⇒ 零新增体积），
+  外层套 `MainPanel.tsx` 的 `IconBox`（inline-flex + 居中）防宿主税务页的 svg 规则顶偏图标。
+- ⚠️ **`@ant-design/icons` 的组件 props 不接受 `style`**（`AntdIconProps` 只认 className 等少数几项），
+  直接 `<IconOutlined style={...}/>` 报 **TS2322**。样式必须挂 IconBox 外层 span。
+- 面板按钮的容器查询阈值（`PANEL_CSS`，65px）与**图标字号/标签字数**耦合：antd 图标是 `1em` 正方形，
+  字号 15px ⇒ 占宽 15px。**改这两者任一个都要回来重算阈值**，否则文字会在将满时折行。
+- 实测夹具 `tmp/check-icons.js`：起 `scripts/smoke/server.js` + 真实 Chromium 加载**构建产物**量 DOM。
+  ⚠️ 面板**默认展开**（宿主有 `.ant-card`），圆球才是收起态；测试页路径是 **`/smoke.html`**。
+
 ## 写图片到剪贴板（硬性，唯一可靠路径）
 - `GM_setClipboard(data)` 在 ScriptCat **只支持文本**，传 Blob 不报错但**不真正写图**→假成功。图片分支已彻底移除。
 - 唯一可靠路径 = 页面主世界 `unsafeWindow.navigator.clipboard.write` + `unsafeWindow.ClipboardItem`（隔离世界里 ClipboardItem 常 undefined）。

@@ -242,7 +242,7 @@ const DEFAULTS = {
 |--------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------|
 | JavaScript (ES6+)                                                                    | 脚本主语言                                                                                                                         |
 | [React 19](https://react.dev/) + [Ant Design v6](https://ant.design/)                | 全部 UI（面板与各弹窗）：组件、主题、消息提示；随产物打包，无第三方运行时请求                                                      |
-| [@ant-design/icons](https://github.com/ant-design/ant-design-icons)                 | antd 配套图标（v6）：放大预览工具栏末尾的「打印」图标等；从包根按需导入，可 tree-shaking                                          |
+| [@ant-design/icons](https://github.com/ant-design/ant-design-icons)                 | antd 配套图标（v6）：**主面板四个入口按钮**（设置/常用语/历史记录/设备互联）、语音播报开关、面板品牌图标回退、放大预览工具栏末尾的「打印」图标等；从包根按需导入，可 tree-shaking。**用 SVG 而非 emoji 是为兼容 Win7**（无 Segoe UI Emoji 字体，emoji 字符会渲染成豆腐块） |
 | [react-to-print](https://github.com/MatthewHerbst/react-to-print)                    | 放大预览工具栏「打印」：建隐藏 iframe、等图片加载完再调 `print()` 打印原图（随产物打包）                                             |
 | [js-yaml](https://github.com/nodeca/js-yaml)                                         | 解析 YAML 格式的常用语配置文件                                                                                                     |
 | [qrcodejs](https://github.com/davidshimjs/qrcodejs)                                  | 「本机上传链接」二维码由脚本端本地生成（无需服务器参与）                                                                           |

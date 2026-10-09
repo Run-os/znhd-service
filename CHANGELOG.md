@@ -11,6 +11,65 @@
 
 ---
 
+### znhd.user.js v26.10.09-v5
+- **修复 Win7 上主面板四个入口按钮图标显示乱码**（用户实测反馈；`src/lib/ui/MainPanel.tsx`）：
+  - **根因不是渲染 bug，是字体缺字形**：`PANEL_ACTIONS` 的 `icon` 字段原本直接存 **emoji 字符**
+    （`'⚙️' '💬' '🖼️' '💻'`）。**Win7 没有 Segoe UI Emoji 字体**（Win8.1 才随系统引入），
+    浏览器按字体回退链退到 Segoe UI Symbol，而这几个码位在 Symbol 字体里同样没有字形
+    → 四个按钮的图标在 Win7 上全渲染成豆腐块/乱码。与 CAT_UI / React / z-index / Shadow DOM 无关。
+  - **修法**：改用 `@ant-design/icons` 的 SVG 图标组件
+    （`SettingOutlined` / `CommentOutlined` / `PictureOutlined` / `LaptopOutlined`）。
+    SVG 是矢量路径、**不经字体系统**，全平台渲染一致，且任意缩放都清晰。
+  - **零新增依赖 / 零新增体积**：该依赖本就在 devDependencies（`^6.3.4`），
+    `RecvHistoryModal.tsx` 早就在用 `PrinterOutlined`，产物 `dist/znhd.user.js` 里本就能搜到
+    `anticon` + 8 处 `viewBox` —— 只是把已打包的图标拿来用。
+- **顺带修同源问题**（同属 emoji 字形，Win7 上一样乱码）：
+  - 语音播报开关的 `'🔊'` / `'🔇'` → 同一个 `SoundOutlined`，用**颜色 + 透明度**区分开关态
+    （开 = 实色蓝 `#1677ff`，静音 = 灰色 `#bfbfbf` 半透明），语义等价且省掉一次字体回退；
+  - 品牌图标 favicon 加载失败时的回退字符 `'🎯'` → `AimOutlined`（SVG）配蓝底白字；
+  - 「发送到手机」进度失败文案的前缀 `'❌'`（`PhoneModal.tsx` 两处）→ 直接去掉。
+    失败语义本就由 `failed: true` 驱动 Progress 的红色状态表达，那个符号是冗余的。
+  - **新增 `IconBox` 统一外框**：antd 图标默认 `display:inline-block` + `vertical-align:-0.125em`，
+    直接放进 Button 会随宿主税务页面的 svg 规则上下漂（详见 `uiReset.ts` 里专门压 svg margin
+    的那段注释及其踩坑记录）。固定成 `inline-flex` + 居中后，图标在按钮里的垂直位置
+    在任何宿主页面下都一致。
+  - ⚠️ **容器查询阈值由 68px 复算为 65px**：该阈值决定「面板加宽后按钮文字自动出现」，
+    原值是按「emoji 18px + 间距 2px + 4 字 × 11px = 64px」算的；换成 SVG 后
+    antd 图标是 `width:1em;height:1em` 的正方形、字号 15px ⇒ 实际占宽 15px（比 emoji 窄 3px），
+    故阈值同步下调。**已在代码注释里写明：日后若改标签字数或图标字号，必须回来重算此值**，
+    否则文字会在按钮刚好放不下时才折行（表现为「图标和字挤成两行」）。
+- **有意没动的**（判断依据：Win7 到底缺不缺字形）：
+  - `'✓'`（已复制）、`'✕'`（收起）、`'→'`（查看日志）、`'≈'` `'≥'` `'×'`（注释/文案里的数学符号）
+    都落在 **BMP 的 U+2190–U+2BFF 区**，属于 Segoe UI / Arial 自带的通用符号，Win7 一定有字形；
+    真正缺字形的是 emoji 那类 **U+1F300+ 补充平面**字符（本次全部清掉了）。故保留不动。
+  - 手机上传页（`📱` 等）只在手机浏览器里跑，不涉及 Win7 场景，同样保留。
+- **实测验证（不止看代码）**：起本地静态服务器 + 真实 Chromium 加载**构建产物**，
+  展开面板后量 DOM：四个按钮各含 1 个真实 `<svg>`（15×15px、`color: rgb(22,119,255)`、
+  分别含 1/3/1/1 条 `<path>`），`textContent` 里无任何 emoji 码位；
+  语音开关处实测 class 为 `anticon anticon-sound`。
+  （面板默认是**展开**态、圆形悬浮球才是收起态；测试页路径是 `/smoke.html`，用错会拿到 404 的 `<pre>`。）
+- **（同一版一并发布）常用语抽屉：悬停显示对应正文**（按用户要求；`src/lib/ui/PhrasesDrawer.tsx`）：
+  - 现象/动机：按钮上只有**标题**（YAML 的 key），正文常是整段话 —— 不悬停就得「点下去才知道内容是什么」，
+    点错还得关窗重来；这一条正是回滚时丢掉的（Tailwind/shadcn 版 v26.10.08-v14 加过，antd 版没有）。
+  - 做法：每条常用语外面包一层 antd `Tooltip`（`title={value}`），三个取值都不是随手写的：
+    - `placement="left"`：抽屉贴右侧，提示向左展开才不会顶出视口；
+    - `styles.root.maxWidth = 360`：不给上限时长正文会被拉成一条超长单行；
+    - `styles.container = { whiteSpace: 'pre-wrap', wordBreak: 'break-word', textAlign: 'left' }`：
+      保留 YAML 里的换行，并把文字**强行拉回左对齐** —— 提示 portal 到 `documentElement`
+      （见 `PanelApp` 的 `getPopupContainer`），**不在** `.znhd-root` 隔离层里，税务页的全局
+      `text-align: center` 会把它居中。
+  - `mouseEnterDelay` 由默认 0.1s 放缓到 0.15s：快速划过一整列按钮时不会一路连弹。
+  - **不额外挂原生 `title`**：antd Tooltip 与浏览器原生提示会同时弹出两条；键盘可达性由
+    Tooltip 默认的 `hover + focus` 触发覆盖。
+  - 点击行为、复制内容、`appendToTinyMCE` 一律未改（hover 只影响「看」，不影响「用」）。
+- ⚠️ **本版是两项改动的合并发布**：Win7 图标修复 + 常用语悬停显示正文是两条并行开发线在同一工作区
+  完成的，一并发布，故合并进同一条目（版本号由 `v4` 顺延为 `v5`，`v4` 已被先写入的 hover 条目占用）。
+- 验证（合并后整树复跑）：`npm run typecheck` 0 错、`npm run build` 结论行 `compiled`、
+  `npm run check` 通过、`npm run verify` 三段全绿、`antd lint ./src` `issues: []`。
+  **常用语 hover 的实机验证**：真实鼠标悬停抽屉里一条多行常用语 → `.ant-tooltip-placement-left` 弹出，
+  内容为该条正文（非标题）、`text-align: left`、`white-space: pre-wrap`（实测按 4 行盒渲染）、
+  `max-width: 360px`；移开鼠标后提示消失。
+
 ### znhd.user.js v26.10.08-v13
 - **抽出跨端共享层 `shared/`：图片压缩与图片预览通用件只维护一份**（按用户要求「至少预览图片和压缩图片保持同步」）：
   - **为什么值得做**：这两块原本是「复制式同步」，而且**已经漂移了** —— 脚本端跳过 GIF（canvas 只取首帧会把动图压成静态图），手机页没跳过，同一张动图两端行为不同；压缩参数（1600 / 0.75）与 A4 打印版式也各写了一份。

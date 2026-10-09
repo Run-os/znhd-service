@@ -1,4 +1,4 @@
-import { Button, Drawer, Empty, Input, Space, Spin, Typography } from 'antd';
+import { Button, Drawer, Empty, Input, Space, Spin, Tooltip, Typography } from 'antd';
 import { DEFAULTS } from '@/lib/constants';
 import { addLog } from '@/lib/logger';
 import { resolveGithubUrl, safeDecodeURIComponent } from '@/lib/utils';
@@ -92,18 +92,48 @@ export default function PhrasesDrawer({
             ) : (
                 <Space orientation="vertical" size={8} style={{ width: '100%' }}>
                     {filtered.map(([key, value]) => (
-                        <Button
+                        /**
+                         * hover 显示**正文**（v26.10.09-v4 新增，按用户要求）。
+                         *
+                         * 为什么值得加：按钮上只放标题（key），而常用语正文（value）常是整段话 ——
+                         * 不 hover 的话只能「点下去才知道内容是什么」，点错就得关窗重来。
+                         *
+                         * ⚠️ 三个取值都不是随手写的：
+                         *   · `placement="left"`：抽屉贴右侧，提示向左展开才不会顶出视口。
+                         *   · `styles.root.maxWidth`：不给上限时长正文会拉成一条超长单行（很难读）。
+                         *   · `styles.container.textAlign: 'left'`：提示 portal 到 `documentElement`
+                         *     （见 PanelApp 的 getPopupContainer），**不在** `.znhd-root` 隔离层里，
+                         *     税务页的全局 `text-align: center` 会把正文居中 —— 必须显式压回来。
+                         *
+                         * ⚠️ 这里**不**再额外挂原生 `title`：antd Tooltip 与浏览器原生提示会同时弹两个。
+                         *     键盘可达性由 Tooltip 默认的 `hover + focus` 触发覆盖。
+                         */
+                        <Tooltip
                             key={key}
-                            block
-                            onClick={() => {
-                                safeCopyText(value);
-                                onClose();
-                                appendToTinyMCE(value);
-                                addLog(`添加文本: ${value}`, 'success');
-                                notify.success('添加文本: ' + value);
+                            title={value}
+                            placement="left"
+                            // 默认 0.1s 在快速划过一整列按钮时会「一路连弹」，稍微放缓
+                            mouseEnterDelay={0.15}
+                            styles={{
+                                root: { maxWidth: 360 },
+                                container: {
+                                    whiteSpace: 'pre-wrap',
+                                    wordBreak: 'break-word',
+                                    textAlign: 'left',
+                                },
                             }}>
-                            {key}
-                        </Button>
+                            <Button
+                                block
+                                onClick={() => {
+                                    safeCopyText(value);
+                                    onClose();
+                                    appendToTinyMCE(value);
+                                    addLog(`添加文本: ${value}`, 'success');
+                                    notify.success('添加文本: ' + value);
+                                }}>
+                                {key}
+                            </Button>
+                        </Tooltip>
                     ))}
                 </Space>
             )}
