@@ -1,14 +1,14 @@
 /**
- * 面板宿主：把 React 面板挂到税务页上，并负责「位置 + 拖拽」。
+ * 面板宿主：把 React + Ant Design 面板挂到税务页上，并负责「位置 + 拖拽」。
  *
  * 三个关键取舍（都影响能不能用，改之前先读）：
  *  1) **挂 documentElement 而不是 body**：税务页 body 常被加 transform/filter 形成独立层叠上下文，
  *     会把 position:fixed 的浮层困在里面（仓库既有结论，gallery 弹窗当年也是因此挂 html）。
  *  2) **定位用 left/top，不用 transform**：transform 会让后代 position:fixed 改以本元素为包含块，
  *     弹窗会被「困」在面板里；CAT_UI 当年用 react-draggable 的 transform，本实现不再沿用。
- *  3) **不再使用 Shadow DOM**：Tailwind 的工具类靠**全局 CSS 类**生效，若把组件塞进 shadow root，
- *     样式进不去 → 全部变成无样式裸 DOM。故这里用普通容器 + 注入到 document 的样式表，
- *     浮层统一 portal 到 documentElement（见 shared/ui/zindex.ts 的 getOverlayHost）。
+ *  3) **不再使用 Shadow DOM**：antd 的弹窗/浮层默认 portal 到 body，样式走 document.head 的
+ *     CSS-in-JS；若把组件塞进 shadow root，两者都进不去 → 弹窗会变成无样式裸 DOM。
+ *     故这里用普通容器 + antd 全局样式，浮层统一 portal 到 documentElement（见 getOverlayContainer）。
  *     ⚠️ CAT_UI 当年是 Shadow DOM 方案，`panelPosition.ts` 里「穿透 shadowRoot 找面板」的代码随之作废。
  *
  * 拖拽：只允许标题栏拖动（HANDLE），指针事件实现，落点做视口裁剪，保证「可抓取区」始终可见。
@@ -20,10 +20,14 @@ import PanelApp from './PanelApp';
 import { loadPanelPoint, savePanelPoint } from '@/lib/storage';
 import { PANEL_HOST_ID, PANEL_WIDTH } from '@/lib/ui/panelIds';
 import { injectUiReset } from '@/lib/ui/uiReset';
-import { PANEL_Z } from '../../../shared/ui/zindex';
 
 // 面板宿主 id 定义在 panelIds（供 uiReset 共用，避免循环依赖）；此处转出，保持既有 import 路径可用
 export { PANEL_HOST_ID };
+
+/** 浮层容器：所有弹窗/浮层统一挂到 documentElement，避开 body 的层叠上下文 */
+export function getOverlayContainer(): HTMLElement {
+    return document.documentElement;
+}
 
 // 边界约束：标题栏是唯一可抓取区，必须始终露出一部分，否则拖出去就抓不回来
 const MIN_VISIBLE = 48; // 水平方向至少留在视口内的像素
@@ -103,15 +107,15 @@ let root: Root | null = null;
 
 /** 创建宿主并挂载 React 面板，返回宿主元素 */
 export function mountPanel(): HTMLElement {
-    // 先注入样式：Tailwind 编译产物 + 宿主隔离层（宿主页面的全局 CSS 会污染我们的 UI，
-    // 详见 uiReset.ts）。（必须在渲染前，避免第一帧无样式的抖动）
+    // 先注入样式隔离层：宿主页面的全局 CSS（居中、非 border-box、svg 对齐等）会污染 antd 组件外观，
+    // 详见 uiReset.ts。（必须在渲染前，避免第一帧抖动）
     injectUiReset();
     const host = document.createElement('div');
     host.id = PANEL_HOST_ID;
-    // 层级：面板本身高于宿主页面自身内容（页面弹窗多在 1000~9999），
-    // 但**低于浮层基线**（见 shared/ui/zindex.ts 的 OVERLAY_Z）——
-    // 于是 Modal / Drawer / Toast 都会盖在面板之上（弹窗遮罩也会遮住面板，符合常规层级直觉）。
-    host.style.cssText = `position:fixed;z-index:${PANEL_Z};left:0;top:0;`;
+    // 方案 B（v26.10.06-v15）：面板层级仍高于宿主页面自身内容（页面弹窗多在 1000~9999），
+    // 但**低于 antd 浮层的基数**（见 PanelApp 的 zIndexPopupBase=1000000）——
+    // 于是 Modal / Drawer / message 都会盖在面板之上（弹窗遮罩也会遮住面板，符合常规层级直觉）。
+    host.style.cssText = 'position:fixed;z-index:999999;left:0;top:0;';
     const pt = initialPoint();
     host.style.left = Math.round(pt.x) + 'px';
     host.style.top = Math.round(pt.y) + 'px';

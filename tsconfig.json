@@ -17,10 +17,8 @@
     //   ⚠️ bundler 需要 TS ≥5.0：本仓库 TypeScript 已随之升到 6.x（见 .vscode 的 typescript.tsdk 绑定）。
     "module": "esnext",
     "moduleResolution": "bundler",
-    "resolvePackageJsonImports": true,
     "paths": {
-      "@/*": ["./src/*"],
-      "#ui/*": ["./shared/ui/*"]
+      "@/*": ["./src/*"]
     },
     "types": ["tampermonkey"],
     "allowUmdGlobalAccess": true,

@@ -78,7 +78,6 @@ const baseOptions = {
       },
       {
         test: /\.css$/,
-        // 第三方库自带的 CSS：只做解析，不走 Tailwind（避免我们的 postcss 插件去动它们）
         use: ['style-loader', 'css-loader'],
         include: /node_modules/,
       },
@@ -87,20 +86,19 @@ const baseOptions = {
         // 使用哪些 loader 进行处理
         use: [
           // use 数组中 loader 执行顺序：从右到左，从下到上 依次执行
-          // 把 css 变成 JS 模块，导出**样式字符串**（uiReset.ts 用 GM_addStyle 注入，
-          // 因为宿主页面可能有 CSP style-src，页面内 <style> 落地不可靠）
-          {
-            loader: 'css-loader',
-            options: {
-              // ⚠️ esModule 必须保持默认 true：uiReset.ts 走 `import css from './x.css'`。
-              //    （早年的 esModule:false + GM_addStyle 组合已随 style-loader 一起删除）
-              esModule: true,
-            },
-          },
-          // Tailwind v4 由 @tailwindcss/postcss 编译（配置见仓库根 postcss.config.js）。
-          // 放在 css-loader **右侧**（loader 从右到左执行 ⇒ 先 postcss 再 css），
-          // 这样拿到的是 Tailwind 编译并 tree-shake 后的 CSS，而不是未处理的指令。
-          'postcss-loader',
+          // 创建 style 标签，将 js 中的样式资源插入进行，添加到 head 中生效
+          'style-loader',
+          'css-loader',
+          // 'to-string-loader',
+          // 将 css 文件变成 commonjs 模块加载 js 中，里面内容是样式字符串
+          // GM_addStyle 不需要 style-loader
+          // esModule: false 时可以 toString() 后使用 GM_addStyle 插入 css
+          // {
+          //   loader: 'css-loader',
+          //   options: {
+          //     esModule: false,
+          //   },
+          // },
         ],
         include: [src, shared],
       },
@@ -125,14 +123,12 @@ const baseOptions = {
     ],
   },
   optimization: {
-    // v26.10.09-v2：**关闭 Terser 压缩**（v26.10.06-v19 曾设为 true，v26.10.09-v2 按用户要求改回 false）。
-    // 实测（26.10.09-v1 产物）：minimize=true 425.4 KB，false 1218.0 KB（1.19 MiB），压缩比 2.86×。
-    // ⚠️ 下面是完整的 Terser 配置（含保住 `==UserScript==` 头与 `@`/eslint/spell-checker 注释的
-    //    comments 白名单），**故意保留不删**：白名单是脚本元信息的保险，日后想开启只需把
-    //    minimize 改回 true 即可，不必重写。
-    //    （脚本元信息不是"注释"，是运行时的解析依据，压掉脚本直接废掉。）
-    // ⚠️ dev 侧在 webpack.dev.js 里也显式设 false：调试产物要可读、构建要快。
-    minimize: false,
+    // v26.10.06-v19：开启 Terser 压缩（原为 false，产物一直未压缩）。
+    // 依据：`dist/znhd.user.js` 是**打包发布物**（油猴安装/更新的下载对象），压缩后体积明显下降。
+    // 下面 minimizer 的 comments 白名单负责保住 `==UserScript==` 头与 `@`/eslint/spell-checker 注释 ——
+    // 脚本元信息不是"注释"，是运行时的解析依据，压掉脚本直接废掉。
+    // ⚠️ dev 侧已在 webpack.dev.js 里显式关回 false：本地调试产物要可读、构建要快。
+    minimize: true,
     minimizer: [
       new TerserPlugin({
         terserOptions: {
@@ -151,9 +147,6 @@ const baseOptions = {
     extensions: ['.tsx', '.ts', '.js', '.jsx', '.json'],
     alias: {
       '@': src,
-      // v26.10.09-v3：shadcn 组件落 shared/ui/（两端共用），components.json 里 alias 前缀写作 `@ui`。
-      // webpack 不读 tsconfig.paths，必须在这里显式补一条，否则 `import { cn } from '@ui/utils'` 解析失败。
-      '#ui': path.join(shared, 'ui'),
     },
   },
   plugins: [],

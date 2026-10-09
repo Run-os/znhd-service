@@ -1,9 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Button, Empty, Progress, Tag, Textarea } from '../../shared/ui/controls';
-import { Tooltip } from '../../shared/ui/feedback';
-import { Modal } from '../../shared/ui/OverlayModal';
-import { ImagePreview, PRINT_ICON, type PreviewItem } from '../../shared/ui/ImagePreview';
-import { cn } from '../../shared/ui/cn';
+import { App as AntApp, Badge, Button, Card, Col, Empty, Image, Input, Modal, Progress, Row, Space, Tag, Typography } from 'antd';
+import { PrinterOutlined } from '@ant-design/icons';
 import { useReactToPrint } from 'react-to-print';
 import {
     blobToBase64,
@@ -15,10 +12,13 @@ import {
     type RecvItem,
 } from './lib/relay';
 import { prepareImage } from './lib/image';
-// 打印版式与脚本端**共用同一份**（见仓库根 shared/）；
-// ⚠️ 「预览期间压掉下层遮罩」由 shared/ui/ImagePreview 内部调用 syncPreviewMask 自动处理，
-//    这里不需要也不应该再手动调一次（重复调虽幂等，但会让人误以为必须手动接）。
+// 预览相关的通用件与脚本端**共用同一份**（v26.10.08-v13 起，见仓库根 shared/preview/）
+import { appendPreviewActions } from '../../shared/preview/actions';
+import { getPreviewHost } from '../../shared/preview/host';
+import { syncPreviewMask } from '../../shared/preview/mask';
 import { buildA4ImageNode, PRINT_PAGE_STYLE } from '../../shared/preview/print';
+
+const { Title, Text, Paragraph } = Typography;
 
 /** 收件画廊上限：与脚本端 MAX_GALLERY=27 对齐，超出丢最旧（收件项是 base64 大字符串，无上限会持续吃内存） */
 const MAX_RECV = 27;
@@ -50,29 +50,8 @@ interface ProgressState {
 let seq = 0;
 const uid = () => 'z' + ++seq + '-' + Date.now().toString(36);
 
-/**
- * 卡片容器（替换前是 antd Card；标题行 + 内容）。
- *
- * ⚠️ `data-znhd-card` 是冒烟断言的稳定钩子（scripts/smoke/phone-page.js 靠它定位卡片、
- *    再断言「发送提示落在哪张卡片里」）。Tailwind 工具类不进 DOM 属性、当契约太脆，故用它。
- */
-function Card({ title, children }: { title: string; children: React.ReactNode }) {
-    return (
-        <section data-znhd-card="" data-znhd-card-title={title} className="rounded-lg border border-ink-6 bg-white">
-            <h2 className="border-b border-ink-6 px-3.5 py-2.5 text-sm font-semibold leading-6 text-ink-1">{title}</h2>
-            <div className="px-3.5 py-3">{children}</div>
-        </section>
-    );
-}
-
-/** 状态提示条（成功绿 / 失败红），两处流程各回各的卡片（见 imgStatus / textStatus 的注释） */
-function StatusLine({ ok, msg }: { ok: boolean; msg: string }) {
-    return (
-        <p className={cn('mt-3 mb-0 text-center text-[13px]', ok ? 'text-success-700' : 'text-danger-600')}>{msg}</p>
-    );
-}
-
 export default function App() {
+    const { message } = AntApp.useApp();
     const deviceId = useMemo(() => parseDeviceId(window.location.pathname), []);
     // 本机（手机）设备 ID：持久化在 localStorage，用于让电脑端区分「哪台手机在线」
     const phoneId = useMemo(() => getPhoneId(), []);
@@ -95,32 +74,33 @@ export default function App() {
     const [textStatus, setTextStatus] = useState<{ ok: boolean; msg: string } | null>(null);
     const [recvImages, setRecvImages] = useState<RecvImage[]>([]);
     const [galleryOpen, setGalleryOpen] = useState(false);
-    /** 当前预览项下标；-1 表示未打开 */
-    const [previewIdx, setPreviewIdx] = useState(-1);
     const [recvText, setRecvText] = useState<{ id: string; text: string } | null>(null);
-    /** 「复制文本」的结果反馈（替换前走 antd message；现挂在弹窗内，避免与发送流程的状态混在一起） */
-    const [copyTextState, setCopyTextState] = useState('');
     const fileRef = useRef<HTMLInputElement>(null);
 
     // ===== 收到的内容（电脑 → 手机）=====
-    const onItem = useCallback((item: RecvItem) => {
-        if (item.type === 'image' && item.data) {
-            const img: RecvImage = {
-                id: uid(),
-                url: 'data:' + (item.mime || 'image/jpeg') + ';base64,' + item.data,
-                mime: item.mime || 'image/jpeg',
-                name: item.name,
-            };
-            setRecvImages((prev) => {
-                const next = prev.concat(img);
-                return next.length > MAX_RECV ? next.slice(next.length - MAX_RECV) : next;
-            });
-            setGalleryOpen(true);
-        } else if (item.type === 'text') {
-            // 同屏只留最新一条：新文本替换旧弹窗（旧实现会叠加多个全屏遮罩）
-            setRecvText({ id: uid(), text: item.text || '' });
-        }
-    }, []);
+    const onItem = useCallback(
+        (item: RecvItem) => {
+            if (item.type === 'image' && item.data) {
+                const img: RecvImage = {
+                    id: uid(),
+                    url: 'data:' + (item.mime || 'image/jpeg') + ';base64,' + item.data,
+                    mime: item.mime || 'image/jpeg',
+                    name: item.name,
+                };
+                setRecvImages((prev) => {
+                    const next = prev.concat(img);
+                    return next.length > MAX_RECV ? next.slice(next.length - MAX_RECV) : next;
+                });
+                setGalleryOpen(true);
+                message.success('收到电脑发来的图片');
+            } else if (item.type === 'text') {
+                // 同屏只留最新一条：新文本替换旧弹窗（旧实现会叠加多个全屏遮罩）
+                setRecvText({ id: uid(), text: item.text || '' });
+                message.success('收到电脑发来的文本');
+            }
+        },
+        [message]
+    );
 
     // 心跳 + 长轮询：挂载时启动，卸载时停止（StrictMode 下会 mount→unmount→mount，靠 cleanup 保证不重复）
     useEffect(() => {
@@ -148,6 +128,7 @@ export default function App() {
             }
         } finally {
             setPreparing(false);
+            message.success('已加入待发送列表');
         }
     };
 
@@ -190,6 +171,7 @@ export default function App() {
             const res = await postItem({ name: it.name, mime: it.mime, data: b64 });
             if (res && res.ok) {
                 done += 1;
+                removePending(it.id);
                 setPending((prev) => prev.filter((p) => p.id !== it.id)); // 立即从列表移除，避免重复发送
                 setProgress({
                     done,
@@ -249,9 +231,9 @@ export default function App() {
                 out = await new Promise<Blob>((r) => cv.toBlob((b) => r(b || blob), 'image/png'));
             }
             await navigator.clipboard.write([new CI({ 'image/png': out })]);
-            setImgStatus({ ok: true, msg: '✅ 已复制到剪贴板' });
+            message.success('已复制到剪贴板');
         } catch (e: any) {
-            setImgStatus({ ok: false, msg: '复制失败：' + ((e && e.message) || '未知错误') + '，可长按图片保存' });
+            message.error('复制失败：' + ((e && e.message) || '未知错误') + '，可长按图片保存');
         }
     };
 
@@ -267,8 +249,9 @@ export default function App() {
             a.click();
             a.remove();
             window.setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+            message.success('已开始下载');
         } catch (e: any) {
-            setImgStatus({ ok: false, msg: '保存失败：' + ((e && e.message) || '未知错误') });
+            message.error('保存失败：' + ((e && e.message) || '未知错误'));
         }
     };
 
@@ -296,273 +279,277 @@ export default function App() {
         const t = recvText ? recvText.text : '';
         try {
             await navigator.clipboard.writeText(t);
-            setCopyTextState('✅ 已复制文本');
+            message.success('已复制文本');
         } catch {
-            // 失败要给明确反馈（复制在 iOS Safari / 非 HTTPS 下常被拒）
-            setCopyTextState('复制失败，请长按文本手动复制');
+            message.warning('复制失败，请长按文本手动复制');
         }
     };
 
     const connBadge = () => {
-        if (conn.state === 'online')
-            return (
-                <span className="inline-flex items-center gap-1.5 text-xs text-success-700">
-                    <span className="h-2 w-2 rounded-full bg-success-500" />
-                    已连接，可接收电脑发送
-                </span>
-            );
-        if (conn.state === 'error')
-            return (
-                <span className="inline-flex items-center gap-1.5 text-xs text-danger-600">
-                    <span className="h-2 w-2 rounded-full bg-danger-500" />
-                    {conn.msg || '连接失败'}
-                </span>
-            );
-        return (
-            <span className="inline-flex items-center gap-1.5 text-xs text-ink-3">
-                <span className="h-2 w-2 rounded-full bg-ink-4" />
-                未连接（电脑端将提示无法发送）
-            </span>
-        );
+        if (conn.state === 'online') return <Badge status="success" text="已连接，可接收电脑发送" />;
+        if (conn.state === 'error') return <Badge status="error" text={conn.msg || '连接失败'} />;
+        return <Badge status="default" text="未连接（电脑端将提示无法发送）" />;
     };
 
     const percent = progress && progress.total ? Math.round((progress.done / progress.total) * 100) : 0;
 
-    /** 预览的 items：按 recvImages 顺序 */
-    const previewItems: PreviewItem[] = recvImages.map((i) => ({ url: i.url, name: i.name }));
-
     return (
         <div className="znhd-page">
-            <header className="mb-4">
-                <div className="flex flex-wrap items-center gap-2">
-                    <h1 className="m-0 text-lg font-semibold leading-7 text-ink-1">📷 上传到电脑</h1>
-                    <Tag color="blue">v{__APP_VERSION__}</Tag>
-                </div>
-                <p className="mb-1 mt-2 text-[13px] text-ink-3">
+            <header style={{ marginBottom: 16 }}>
+                <Space align="center" wrap>
+                    <Title level={4} style={{ margin: 0 }}>
+                        📷 上传到电脑
+                    </Title>
+                    <Tag color="green" variant="filled">
+                        v{__APP_VERSION__}
+                    </Tag>
+                </Space>
+                <Paragraph type="secondary" style={{ margin: '8px 0 4px', fontSize: 13 }}>
                     选择/拍摄图片自动压缩后发送，或直接输入文本发送到电脑剪贴板。
-                </p>
-                <div className="text-xs">{connBadge()}</div>
-                <p className="mt-1 text-[11px] break-all text-ink-3">
+                </Paragraph>
+                <div style={{ fontSize: 12 }}>{connBadge()}</div>
+                <Text type="secondary" style={{ fontSize: 11, wordBreak: 'break-all' }}>
                     本机（手机）ID：{phoneId}
                     <br />
                     已连接的脚本端设备ID：{deviceId || '未识别，请重新生成二维码'}
-                </p>
+                </Text>
             </header>
 
-            {/* 手机单列；md 及以上放宽并变两列（替换前是 antd Row/Col，现用 CSS grid） */}
-            <div className="grid grid-cols-1 items-start gap-4 md:grid-cols-2">
+            <Row gutter={[16, 16]} align="top">
                 {/* 左：发送图片 */}
-                <Card title="发送图片到电脑">
-                    <Button
-                        block
-                        size="large"
-                        variant="primary"
-                        loading={preparing}
-                        onClick={() => fileRef.current?.click()}>
-                        点击选择图片 / 拍照（可多选）
-                    </Button>
-                    <input
-                        ref={fileRef}
-                        type="file"
-                        accept="image/*"
-                        multiple
-                        hidden
-                        onChange={(e) => {
-                            void onPick(e.target.files);
-                            e.target.value = ''; // 允许再次选同一批
-                        }}
-                    />
-
-                    {pending.length > 0 && (
-                        <>
-                            {/* 待发送缩略图：手机 3 列、桌面 6 列 */}
-                            <div className="mt-3 grid grid-cols-3 gap-2 md:grid-cols-6">
-                                {pending.map((p) => (
-                                    <div key={p.id} className="relative aspect-square overflow-hidden rounded-lg border border-[#eee] bg-white">
-                                        <img src={p.url} alt={p.name} className="block h-full w-full object-cover" />
-                                        <Button
-                                            size="small"
-                                            danger
-                                            className="absolute right-0.5 top-0.5 min-w-[22px] rounded-full px-1.5 leading-5"
-                                            disabled={sending}
-                                            onClick={() => removePending(p.id)}>
-                                            ×
-                                        </Button>
-                                    </div>
-                                ))}
-                            </div>
-                            <p className="mt-1.5 text-xs text-ink-3">
-                                已选 {pending.length} 张，共约{' '}
-                                {pending.reduce((s, p) => s + p.blob.size, 0) / 1024 > 0
-                                    ? Math.round(pending.reduce((s, p) => s + p.blob.size, 0) / 1024)
-                                    : 0}{' '}
-                                KB
-                            </p>
-                        </>
-                    )}
-
-                    {progress && (
-                        <div className="mt-3">
-                            <Progress percent={percent} status={progress.failed ? 'exception' : 'normal'} />
-                            <p className="mt-1 block text-center text-xs text-ink-3">{progress.text}</p>
-                        </div>
-                    )}
-
-                    <Button
-                        block
-                        size="large"
-                        variant="primary"
-                        className="mt-3"
-                        disabled={pending.length === 0 || sending || preparing}
-                        loading={sending}
-                        onClick={() => void confirmSend()}>
-                        {pending.length > 1 ? '发送 ' + pending.length + ' 张图片到电脑' : '发送图片到电脑'}
-                    </Button>
-                    {/* 图片流程的提示**必须留在图片卡片里**（v26.10.08-v13 修）：原先共用 status 且只渲染在文本卡片，
-                        于是图片发完的「x 张已全部发送到电脑」出现在「发送文本到电脑」下面 */}
-                    {imgStatus && <StatusLine ok={imgStatus.ok} msg={imgStatus.msg} />}
-                    {recvImages.length > 0 && (
-                        <Button block size="large" className="mt-2" onClick={() => setGalleryOpen(true)}>
-                            🖼 查看收到的图片（{recvImages.length}）
+                <Col xs={24} md={12}>
+                    <Card title="发送图片到电脑" size="small">
+                        <Button
+                            block
+                            size="large"
+                            color="primary"
+                            variant="solid"
+                            loading={preparing}
+                            onClick={() => fileRef.current?.click()}
+                        >
+                            点击选择图片 / 拍照（可多选）
                         </Button>
-                    )}
-                </Card>
+                        <input
+                            ref={fileRef}
+                            type="file"
+                            accept="image/*"
+                            multiple
+                            hidden
+                            onChange={(e) => {
+                                void onPick(e.target.files);
+                                e.target.value = ''; // 允许再次选同一批
+                            }}
+                        />
 
-                {/* 右：发送文本 */}
-                <Card title="发送文本到电脑">
-                    <Textarea
-                        rows={4}
-                        value={text}
-                        placeholder="输入要发送到电脑的文本…"
-                        onChange={(e) => setText(e.target.value)}
-                    />
-                    <Button
-                        block
-                        size="large"
-                        variant="primary"
-                        className="mt-3"
-                        loading={sendTextBusy}
-                        disabled={sendTextBusy}
-                        onClick={() => void confirmSendText()}>
-                        发送文本到电脑
-                    </Button>
-                    {textStatus && <StatusLine ok={textStatus.ok} msg={textStatus.msg} />}
-                </Card>
-            </div>
+                        {pending.length > 0 && (
+                            <>
+                                <div className="znhd-preview-grid" style={{ marginTop: 12 }}>
+                                    {pending.map((p) => (
+                                        <div key={p.id} className="znhd-thumb">
+                                            <img src={p.url} alt={p.name} className="znhd-thumb-img" />
+                                            <Button
+                                                size="small"
+                                                danger
+                                                className="znhd-thumb-del"
+                                                disabled={sending}
+                                                onClick={() => removePending(p.id)}
+                                            >
+                                                ×
+                                            </Button>
+                                        </div>
+                                    ))}
+                                </div>
+                                <Text type="secondary" style={{ fontSize: 12 }}>
+                                    已选 {pending.length} 张，共约{' '}
+                                    {pending.reduce((s, p) => s + p.blob.size, 0) / 1024 > 0
+                                        ? Math.round(pending.reduce((s, p) => s + p.blob.size, 0) / 1024)
+                                        : 0}{' '}
+                                    KB
+                                </Text>
+                            </>
+                        )}
 
-            {/* 收到的图片：画廊 + 共享预览（多图左右切换、放大、旋转由 shared/ui/ImagePreview 提供） */}
+                        {progress && (
+                            <div style={{ marginTop: 12 }}>
+                                <Progress
+                                    percent={percent}
+                                    size="small"
+                                    strokeColor={progress.failed ? '#e4393c' : '#007e44'}
+                                    railColor="#eeeeee"
+                                    status={progress.failed ? 'exception' : 'normal'}
+                                />
+                                <Text
+                                    type={progress.failed ? 'danger' : undefined}
+                                    style={{ fontSize: 12, display: 'block', textAlign: 'center' }}
+                                >
+                                    {progress.text}
+                                </Text>
+                            </div>
+                        )}
+
+                        <Button
+                            block
+                            size="large"
+                            color="primary"
+                            variant="solid"
+                            style={{ marginTop: 12 }}
+                            disabled={pending.length === 0 || sending || preparing}
+                            loading={sending}
+                            onClick={() => void confirmSend()}
+                        >
+                            {pending.length > 1 ? '发送 ' + pending.length + ' 张图片到电脑' : '发送图片到电脑'}
+                        </Button>
+                        {/* 图片流程的提示**必须留在图片卡片里**（v26.10.08-v13 修）：原先共用 status 且只渲染在文本卡片，
+                            于是图片发完的「x 张已全部发送到电脑」出现在「发送文本到电脑」下面 */}
+                        {imgStatus && (
+                            <Paragraph
+                                type={imgStatus.ok ? 'success' : 'danger'}
+                                style={{ marginTop: 12, marginBottom: 0, fontSize: 13, textAlign: 'center' }}
+                            >
+                                {imgStatus.msg}
+                            </Paragraph>
+                        )}
+                        {recvImages.length > 0 && (
+                            <Button block size="large" style={{ marginTop: 8 }} onClick={() => setGalleryOpen(true)}>
+                                🖼 查看收到的图片（{recvImages.length}）
+                            </Button>
+                        )}
+                    </Card>
+                </Col>
+
+                {/* 右：发送文本 + 说明 */}
+                <Col xs={24} md={12}>
+                    <Card title="发送文本到电脑" size="small" style={{ marginBottom: 16 }}>
+                        <Input.TextArea
+                            rows={4}
+                            value={text}
+                            placeholder="输入要发送到电脑的文本…"
+                            onChange={(e) => setText(e.target.value)}
+                        />
+                        <Button
+                            block
+                            size="large"
+                            color="primary"
+                            variant="solid"
+                            style={{ marginTop: 12 }}
+                            loading={sendTextBusy}
+                            disabled={sendTextBusy}
+                            onClick={() => void confirmSendText()}
+                        >
+                            发送文本到电脑
+                        </Button>
+                        {textStatus && (
+                            <Paragraph
+                                type={textStatus.ok ? 'success' : 'danger'}
+                                style={{ marginTop: 12, marginBottom: 0, fontSize: 13, textAlign: 'center' }}
+                            >
+                                {textStatus.msg}
+                            </Paragraph>
+                        )}
+                    </Card>
+                </Col>
+            </Row>
+
+            {/* 收到的图片：画廊 + antd Image 预览（多图左右切换、放大、旋转由 antd 接管，不再依赖 Viewer.js） */}
             <Modal
                 open={galleryOpen}
                 title={'收到的图片（' + recvImages.length + '）· 单击放大'}
+                onCancel={() => setGalleryOpen(false)}
+                footer={[
+                    <Button
+                        key="clear"
+                        danger
+                        onClick={() => {
+                            setRecvImages([]);
+                            setGalleryOpen(false);
+                        }}
+                    >
+                        清空全部
+                    </Button>,
+                    <Button key="close" color="primary" variant="solid" onClick={() => setGalleryOpen(false)}>
+                        关闭
+                    </Button>,
+                ]}
                 width={620}
-                showMask={previewIdx < 0}
-                onClose={() => setGalleryOpen(false)}
-                footer={
-                    <>
-                        <Button
-                            danger
-                            onClick={() => {
-                                setRecvImages([]);
-                                setGalleryOpen(false);
-                            }}>
-                            清空全部
-                        </Button>
-                        <Button variant="primary" onClick={() => setGalleryOpen(false)}>
-                            关闭
-                        </Button>
-                    </>
-                }>
+                destroyOnHidden
+            >
                 {recvImages.length === 0 ? (
                     <Empty description="暂无图片" />
                 ) : (
-                    /* 收到的图片九宫格 */
-                    <div className="grid max-h-[62vh] grid-cols-3 content-start gap-2 overflow-auto">
-                        {recvImages.map((img, idx) => (
-                            <div key={img.id} className="flex flex-col">
-                                <img
-                                    src={img.url}
-                                    alt={img.name || 'image'}
-                                    className="w-full cursor-zoom-in rounded-lg bg-[#f2f2f2] object-cover"
-                                    style={{ aspectRatio: '1 / 1' }}
-                                    onClick={() => setPreviewIdx(idx)}
-                                />
-                                <div className="mt-1 flex w-full gap-1">
-                                    <Button size="small" className="flex-1" onClick={() => void copyRecvImage(img)}>
-                                        复制
-                                    </Button>
-                                    <Button size="small" className="flex-1" onClick={() => void downloadRecvImage(img)}>
-                                        下载
-                                    </Button>
-                                    <Button
-                                        size="small"
-                                        danger
-                                        onClick={() => setRecvImages((prev) => prev.filter((p) => p.id !== img.id))}>
-                                        ×
-                                    </Button>
+                    <Image.PreviewGroup
+                        items={recvImages.map((i) => ({ src: i.url }))}
+                        preview={{
+                            /**
+                             * 三个通用件全部走**与脚本端同一份**共享实现（v26.10.08-v13 起）：
+                             *  · getPreviewHost：预览是 fixed 浮层，挂到 body 会被宿主页 transform 困住；
+                             *  · onOpenChange + syncPreviewMask：预览期间压掉下层弹窗/抽屉遮罩，
+                             *    否则两层 rgba(0,0,0,0.45) 叠成 0.6975、画面明显发暗（脚本端踩过）；
+                             *  · actionsRender + appendPreviewActions：把「打印」按钮追加进 antd 的工具栏胶囊。
+                             */
+                            getContainer: getPreviewHost,
+                            onOpenChange: (o: boolean) => syncPreviewMask(o),
+                            actionsRender: (originalNode, info) => {
+                                const at = typeof info.current === 'number' ? info.current : 0;
+                                const printBtn = (
+                                    <button
+                                        key="znhd-print"
+                                        type="button"
+                                        className="ant-image-preview-actions-action"
+                                        aria-label="print"
+                                        title="打印原图"
+                                        onClick={() => {
+                                            const img = recvImages[at];
+                                            if (img) printRecvImage(img);
+                                        }}>
+                                        <PrinterOutlined />
+                                    </button>
+                                );
+                                return appendPreviewActions(originalNode, printBtn);
+                            },
+                        }}>
+                        <div className="znhd-recv-grid">
+                            {recvImages.map((img) => (
+                                <div key={img.id} className="znhd-recv-cell">
+                                    <Image src={img.url} alt={img.name || 'image'} className="znhd-recv-img" />
+                                    <Space size={4} orientation="horizontal" style={{ marginTop: 4, width: '100%' }}>
+                                        <Button size="small" block onClick={() => void copyRecvImage(img)}>
+                                            复制
+                                        </Button>
+                                        <Button size="small" block onClick={() => void downloadRecvImage(img)}>
+                                            下载
+                                        </Button>
+                                        <Button
+                                            size="small"
+                                            danger
+                                            onClick={() => setRecvImages((prev) => prev.filter((p) => p.id !== img.id))}
+                                        >
+                                            ×
+                                        </Button>
+                                    </Space>
                                 </div>
-                            </div>
-                        ))}
-                    </div>
+                            ))}
+                        </div>
+                    </Image.PreviewGroup>
                 )}
             </Modal>
-
-            {/* 图片放大预览：全屏浮层，层级高于上面的画廊弹窗 */}
-            <ImagePreview
-                index={previewIdx}
-                items={previewItems}
-                onIndexChange={setPreviewIdx}
-                onClose={() => setPreviewIdx(-1)}
-                caption={(_it, i, total) => `图片 ${i + 1} / ${total}`}
-                extraActions={(_item, i) => {
-                    const img = recvImages[i];
-                    if (!img) return null;
-                    return (
-                        <Tooltip content="打印原图" side="top">
-                            <button
-                                type="button"
-                                className="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-full text-white transition-colors hover:bg-white/20"
-                                aria-label="print"
-                                title="打印原图"
-                                onClick={() => printRecvImage(img)}>
-                                {PRINT_ICON}
-                            </button>
-                        </Tooltip>
-                    );
-                }}
-            />
 
             {/* 收到的文本：独立弹窗，同屏只留最新一条 */}
             <Modal
                 open={!!recvText}
                 title="收到电脑发来的文本"
+                onCancel={() => setRecvText(null)}
+                footer={[
+                    <Button key="copy" color="primary" variant="solid" onClick={() => void copyRecvText()}>
+                        复制文本
+                    </Button>,
+                    <Button key="close" onClick={() => setRecvText(null)}>
+                        关闭
+                    </Button>,
+                ]}
                 width={520}
-                onClose={() => {
-                    setCopyTextState('');
-                    setRecvText(null);
-                }}
-                footer={
-                    <>
-                        <Button
-                            variant="primary"
-                            onClick={() => {
-                                setCopyTextState('复制中…');
-                                void copyRecvText();
-                            }}>
-                            {copyTextState && copyTextState !== '复制中…' ? copyTextState : '复制文本'}
-                        </Button>
-                        <Button
-                            onClick={() => {
-                                setCopyTextState('');
-                                setRecvText(null);
-                            }}>
-                            关闭
-                        </Button>
-                    </>
-                }>
-                {/* 收到的文本 */}
-                <pre className="m-0 max-h-[60vh] overflow-auto whitespace-pre-wrap break-words font-sans text-[15px] leading-[1.6]">
-                    {recvText ? recvText.text : ''}
-                </pre>
+                destroyOnHidden
+            >
+                <pre className="znhd-recv-text">{recvText ? recvText.text : ''}</pre>
             </Modal>
         </div>
     );

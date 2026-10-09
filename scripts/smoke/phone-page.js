@@ -134,13 +134,12 @@ async function main() {
         const page = await browser.newPage();
         await page.setViewport({ width: 1100, height: 900 });
         await page.goto(`http://127.0.0.1:${port}/u/test-device-0001`, { waitUntil: 'load', timeout: 60000 });
-        await page.waitForSelector('[data-znhd-card]', { timeout: 30000 });
+        await page.waitForSelector('.ant-card', { timeout: 30000 });
         await sleep(500);
 
         // ① 两张卡片都在；② 已删除的「来自电脑」卡片不得出现
         const titles = await page.evaluate(() =>
-            // v26.10.08-v14：卡片钩子换成 data-znhd-card-title（标题直接做成属性，省一层元素查询）
-            Array.from(document.querySelectorAll('[data-znhd-card]')).map((el) => el.getAttribute('data-znhd-card-title') || '')
+            Array.from(document.querySelectorAll('.ant-card-head-title')).map((el) => el.textContent.trim())
         );
         check('手机页正常加载出「发送图片到电脑」与「发送文本到电脑」两张卡片', titles.includes('发送图片到电脑') && titles.includes('发送文本到电脑'));
         check('「来自电脑」卡片已删除（页面不再出现该卡片）', !titles.some((t) => t.includes('来自电脑')));
@@ -174,10 +173,11 @@ async function main() {
                 const msg = Array.from(document.querySelectorAll('p,span,div')).find(
                     (el) => (el.textContent || '').includes('已全部发送到电脑') && el.children.length === 0
                 );
-                const card = msg ? msg.closest('[data-znhd-card]') : null;
+                const card = msg ? msg.closest('.ant-card') : null;
+                const titleEl = card ? card.querySelector('.ant-card-head-title') : null;
                 return {
                     text: msg ? msg.textContent.trim() : '',
-                    cardTitle: card ? card.getAttribute('data-znhd-card-title') || '' : '',
+                    cardTitle: titleEl ? titleEl.textContent.trim() : '',
                 };
             });
             check(
@@ -209,20 +209,18 @@ async function main() {
             if (b) b.click();
         });
         // 点缩略图打开放大预览
-        // v26.10.08-v14：收件九宫格改用 Tailwind（不再是独立的 znhd-recv-img 类），
-        // 缩略图就是画廊内容区里的裸 <img>（antd 的 Image 组件那层包装没有了）
-        await page.waitForSelector('[data-znhd-modal-body] img[src^="data:image"]', { timeout: 15000 });
+        await page.waitForSelector('.znhd-recv-img img, .znhd-recv-cell .ant-image img', { timeout: 15000 });
         await page.evaluate(() => {
-            const img = document.querySelector('[data-znhd-modal-body] img[src^="data:image"]');
+            const img = document.querySelector('.znhd-recv-cell .ant-image img') || document.querySelector('.znhd-recv-img img');
             if (img) img.dispatchEvent(new MouseEvent('click', { bubbles: true }));
         });
-        await page.waitForSelector('[data-znhd-preview]', { timeout: 15000 });
+        await page.waitForSelector('.ant-image-preview', { timeout: 15000 });
         await sleep(500);
 
         const previewInfo = await page.evaluate(() => {
-            const root = document.querySelector('[data-znhd-preview]');
+            const root = document.querySelector('.ant-image-preview');
             const host = document.getElementById('__znhd_preview_host__');
-            const actions = root ? root.querySelector('.znhd-preview-actions') : null;
+            const actions = root ? root.querySelector('.ant-image-preview-actions') : null;
             const printBtn = root ? root.querySelector('button[aria-label="print"]') : null;
             const hidden = (sel) =>
                 Array.from(document.querySelectorAll(sel)).every((el) => {
@@ -232,8 +230,7 @@ async function main() {
             return {
                 mountedInSharedHost: !!(root && host && host.contains(root)),
                 toolbarHasPrint: !!(actions && printBtn && actions.contains(printBtn)),
-                // v26.10.08-v14：弹窗与抽屉共用一种遮罩，统一用 data-znhd-mask 标记
-                masksHidden: hidden('[data-znhd-mask]'),
+                masksHidden: hidden('.ant-modal-mask') && hidden('.ant-drawer-mask'),
             };
         });
         check('预览浮层挂在共享宿主 div #__znhd_preview_host__ 里（不是 body）', previewInfo.mountedInSharedHost);
@@ -275,7 +272,7 @@ async function main() {
             obs.observe(document.documentElement, { childList: true, subtree: true });
         });
         await page.evaluate(() => {
-            const b = document.querySelector('[data-znhd-preview] button[aria-label="print"]');
+            const b = document.querySelector('.ant-image-preview button[aria-label="print"]');
             if (b) b.click();
         });
         try {
