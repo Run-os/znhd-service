@@ -24,9 +24,40 @@ import { injectUiReset } from '@/lib/ui/uiReset';
 // 面板宿主 id 定义在 panelIds（供 uiReset 共用，避免循环依赖）；此处转出，保持既有 import 路径可用
 export { PANEL_HOST_ID };
 
-/** 浮层容器：所有弹窗/浮层统一挂到 documentElement，避开 body 的层叠上下文 */
+/** 浮层宿主 div 的 id（v26.10.09-v6 起；自建、挂在 documentElement 下、自身不影响布局） */
+export const OVERLAY_HOST_ID = '__znhd_overlay_host__';
+
+/**
+ * 浮层容器（antd 的 `getContainer` / `ConfigProvider.getPopupContainer` 都指向它）：
+ * **自建的宿主 div**，而**不是 `documentElement` 本身**。
+ *
+ * ⚠️ 为什么不能直接返回 `documentElement`（v26.10.09-v6 修，实测证据在下面）：
+ *   实测（Chrome 154 + React 19）把 `documentElement` 交给 antd/rc-util 的 Portal 时，
+ *   浮层**最终仍落在 `<body>` 里**（`document.querySelector('.ant-drawer').parentElement === body`）。
+ *   而税务页 `body` 常被加 `transform`/`filter` 形成独立层叠上下文 ⇒ `position:fixed` 的浮层
+ *   改以 **body 的盒子**为包含块：
+ *     · 抽屉/弹窗的 `inset-y-0` / `h-full` / `top:1/2` 全按 body 的高度算 ——
+ *       冒烟 harness 里 `body` 只有 117px 高，实测 `.ant-drawer` 的 rect 就是 `[0,0,1000,117]`
+ *       （应为 `[0,0,1000,800]`），常用语按钮落在抽屉盒子之外、**鼠标事件根本到不了**；
+ *     · 顺带把浮层压到面板宿主（z-index 999999）**之下** —— body 那个层叠上下文整体先被绘制，
+ *       浮层自己的 `zIndexPopupBase=1000000` 出不了 body 的层叠上下文。
+ *   换成「自建 div」后包含块回到**视口**，两个问题一起消失（这正是预览层当年用的办法，
+ *   见 `shared/preview/host.ts` 的 `getPreviewHost` 与 v26.10.08-v7/8 的踩坑记录）。
+ *
+ * ⚠️ 宿主 div 自身**不带任何样式**：它在 `<html>` 的普通流里、没有尺寸（子节点全是 fixed/absolute），
+ *   既不创建层叠上下文也不影响布局；antd 浮层的 z-index 因此在**根层叠上下文**里生效，
+ *   能正确盖住面板宿主。
+ *
+ * ⚠️ 隔离层（`uiReset.ts`）用的是 `.ant-*` 类选择器而不是容器前缀，浮层换容器后复位规则照旧命中。
+ */
 export function getOverlayContainer(): HTMLElement {
-    return document.documentElement;
+    let el = document.getElementById(OVERLAY_HOST_ID);
+    if (!el) {
+        el = document.createElement('div');
+        el.id = OVERLAY_HOST_ID;
+        document.documentElement.appendChild(el);
+    }
+    return el;
 }
 
 // 边界约束：标题栏是唯一可抓取区，必须始终露出一部分，否则拖出去就抓不回来

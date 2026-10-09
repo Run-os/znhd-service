@@ -79,6 +79,7 @@ const CHECKS = [
   ['logAutoScrollBottom', '日志更新后自动滚到底部'],
   ['logDarkTerminalOk', '日志区为暗色终端风（底色/三栏/状态栏）'],
   ['overlayAbovePanel', 'antd 弹窗/侧边栏盖在面板之上（方案 B）'],
+  ['overlayViewportSized', '浮层按视口定尺寸（不被宿主 body 的 transform 囚住）'],
   ['changelogPopup', '更新日志弹窗（最新 10 条）'],
   ['viewerZoomOk', '缩略图放大显示主图（antd 预览）'],
   ['copyOk', '图片复制只尝试写 PNG'],

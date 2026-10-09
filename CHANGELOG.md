@@ -11,6 +11,28 @@
 
 ---
 
+### znhd.user.js v26.10.09-v6
+- **修复：宿主页 `body` 带 transform 时，浮层（弹窗/抽屉/提示）被「囚」在 body 的盒子里**
+  （`src/lib/ui/panelHost.tsx` 的 `getOverlayContainer`）：
+  - **症状**：浮层的高度/位置按 `body` 的盒子算而不是视口。冒烟 harness 里 `body` 只有 117px 高，
+    实测 `.ant-drawer` 的 rect 就是 `[0, 0, 1000, 117]`（应为 `[0, 0, 1000, 800]`）——
+    常用语按钮因此落在抽屉盒子之外，**鼠标事件根本到不了**（悬停测不出来，点击区域也错位）。
+    顺带浮层还会被压到面板宿主（z-index 999999）**之下**：body 那个层叠上下文整体先被绘制，
+    浮层自己的 `zIndexPopupBase = 1000000` 出不了 body 的层叠上下文。
+  - **根因**：`getOverlayContainer()` 返回的是 `documentElement` **本身**；而实测（Chrome 154 / React 19）
+    antd 的 Portal 收到 `documentElement` 后**最终仍把浮层挂进 `<body>`**
+    （`document.querySelector('.ant-drawer').parentElement === body`），于是 body 的 transform 生效。
+  - **修法**：改为返回**自建的宿主 div** `#__znhd_overlay_host__`（挂在 documentElement 下、自身无任何样式）。
+    包含块回到**视口**，上述两个问题一起消失 —— 这与预览层当年用的办法是同一个
+    （`getPreviewHost`，见 v26.10.08-v7/v8 的踩坑记录）。
+  - **影响面**：所有走 `getContainer` / `ConfigProvider.getPopupContainer` 的浮层一次性生效
+    （设置、运行日志、设备互联、历史记录、更新日志、常用语抽屉、收到文本，以及 message 与 Tooltip）。
+    `uiReset.ts` 用的是 `.ant-*` 类选择器（不是容器前缀），浮层换容器后隔离规则照旧命中。
+- 验证：`npm run typecheck` 0 错、`npm run build` 结论行 `compiled`、`npm run check` 通过、
+  `npm run verify` 三段全绿、`antd lint ./src` `issues: []`；
+  另在**带 `body{transform:translateZ(0)}` 的敌意 harness** 上实测：抽屉 rect 由 117px 恢复为 800px、
+  常用语按钮能被 `elementFromPoint` 命中，常用语 hover 校验 8 项全过（改之前同样条件下必然失败）。
+
 ### znhd.user.js v26.10.09-v5
 - **修复 Win7 上主面板四个入口按钮图标显示乱码**（用户实测反馈；`src/lib/ui/MainPanel.tsx`）：
   - **根因不是渲染 bug，是字体缺字形**：`PANEL_ACTIONS` 的 `icon` 字段原本直接存 **emoji 字符**

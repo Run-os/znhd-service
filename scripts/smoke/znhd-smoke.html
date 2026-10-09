@@ -773,6 +773,25 @@
             const z = (el) => parseInt(getComputedStyle(el).zIndex, 10) || 0;
             return z(modalWrap) > z(host);
           })(),
+          // 浮层必须按**视口**定尺寸（v26.10.09-v6 回归断言）。
+          //
+          // 本页常驻 `body { transform: translateZ(0) }`（模拟税务页）：若浮层的 portal 目标是
+          // `documentElement` 而不是「挂在 documentElement 下的自建 div」，antd/rc-util 的 Portal
+          // 会**实际落进 body** ⇒ `position:fixed` 改以 body 的盒子为包含块 ⇒
+          // 抽屉/弹窗的高度塌成 body 的高度（实测 117px，应为视口高 800），按钮落在盒子之外、
+          // 鼠标事件到不了（表现为「常用语 hover 测不出来 / 点击区域错位」）。
+          // ⚠️ 判据用**几何**而不是「容器是谁」：portal 落点会随 React/antd 版本变化，
+          //    而「开着的浮层必须有视口那么高」是用户可观察的契约。
+          // ⚠️ 只统计**可见**的浮层：antd 会把关闭过的浮层留在 DOM 里（display:none），
+          //    直接量它们会量到 0 高（假红）。
+          overlayViewportSized: (() => {
+            const visible = Array.from(document.querySelectorAll('.ant-drawer, .ant-modal-wrap')).filter((el) => {
+              const cs = getComputedStyle(el);
+              return cs.display !== 'none' && cs.visibility !== 'hidden' && el.getBoundingClientRect().width > 0;
+            });
+            if (!visible.length) return false; // 报告时刻必须有浮层开着，否则本断言形同虚设
+            return visible.every((el) => el.getBoundingClientRect().height >= window.innerHeight - 2);
+          })(),
           panel: text.includes('征纳互动监控'),
           // 版本号只从「面板宿主」里取：弹窗（更新日志/日志/常用语…）都 portal 到 documentElement，
           // 里面有各自的版本号文本，读全页会串台（v26.10.6-v1 踩过）。
@@ -986,6 +1005,7 @@
         document.title =
           'znhd-smoke:' +
           (report.panel &&
+          report.overlayViewportSized &&
           report.textPopup &&
           report.galleryText &&
           report.phrasesLoaded &&
