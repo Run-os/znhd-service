@@ -28,7 +28,7 @@ npm run verify        # 无头端到端冒烟（puppeteer）；期望：全绿 A
 ```
 
 - 改了 antd 代码再补一项：`cd web && npx -y @ant-design/cli lint ./src --format json` 或仓库根 `npx -y @ant-design/cli lint ./src --format json`，**必须 `issues: []`**。
-- 改了 `web/`（手机页）再补：`npm run typecheck:web` + `npm run build:web`，并确认 `git status --short relay-server/public` 为空（产物已提交且无漂移）。
+- 改了 `web/`（手机页）再补：`npm run typecheck:web` + `npm run build:web`，并确认**内容**无漂移 —— ⚠️ 本机（Windows）`git status` 有 **stat 假阳性**，不要只看它：用 `git hash-object --path=<f> <f>` 与 `git rev-parse HEAD:<f>` 逐文件比对，或确认 `git diff --raw -- relay-server/public` 为空（原因见 AGENT.md 踩坑索引「本地 Windows 构建误报产物漂移」）。
 
 ## 每项必须亲眼确认的点（否则等于没跑）
 
