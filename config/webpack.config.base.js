@@ -41,7 +41,7 @@ const shared = relativePath('shared');
 const baseOptions = {
   entry: './src/index.ts',
   output: {
-    // 默认输出到 dist/（开发产物）；生产产物在 webpack.prod.js 里改到仓库根
+    // 输出到 dist/：生产产物 dist/znhd.user.js（提交进仓库）、开发产物 dist/znhd.dev.user.js（忽略）
     path: resolve(__dirname, '../dist'),
   },
   externals: {},

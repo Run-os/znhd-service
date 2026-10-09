@@ -7,7 +7,7 @@
  *   · 构建产物缺失时给一个可读的兜底页，而不是 500。
  * 静态资源（/assets/*）由 server.js 直接托管 —— 运行时不装依赖、不构建。
  *
- * ⚠️ 改了 web/ 下的代码后必须 `npm run build:web`（或 `npm run build`）重新产出 public/，
+ * ⚠️ 改了 web/ 下的代码后必须 `npm run build:web` 重新产出 public/（根 `npm run build` 只产出脚本，不重建本页），
  *    CI 有产物漂移检查（见 .github/workflows/webpack.yml）。
  */
 
@@ -33,7 +33,7 @@ function fallbackHtml() {
         "<body style=\"font:14px -apple-system,BlinkMacSystemFont,'PingFang SC',sans-serif;padding:24px;line-height:1.7\">" +
         '<h3 style="color:#e4393c;margin:0 0 8px">页面资源未生成</h3>' +
         '<p>中继服务找不到 <code>relay-server/public/index.html</code>。</p>' +
-        '<p>请在仓库根执行 <code>npm run build:web</code>（或 <code>npm run build</code>）后重新部署。</p>' +
+        '<p>请在仓库根执行 <code>npm run build:web</code> 后重新部署（根 <code>npm run build</code> 只产出脚本，不重建本页）。</p>' +
         '</body></html>'
     );
 }

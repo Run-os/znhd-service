@@ -77,7 +77,6 @@
 | 文件 | AI 需知的事实 |
 |---|---|
 | `dist/znhd.user.js` | **构建产物，禁止直接编辑**（下次构建会覆盖）。由 `npm run build` 从 `src/` 生成，**提交进仓库**（模板同款做法）。`==UserScript==` 头由 `config/common.meta.json` 生成。 |
-| `znhd.user.js`（仓库根） | ⚠️ **迁移期过渡跳板，不是产物输出位置**：`dist/znhd.user.js` 的**字节副本**（**每次发版都要重新拷一份**，让滞留的老用户直接升到最新版；用 `Copy-Item` 即可）。存在理由：老安装的 `@updateURL` 指向根路径，拿到带新 `@updateURL` 的版本后就会自动改走 dist。**不要编辑它、也不要纳入构建/校验**；待确认老用户都已升级后，下一个版本**删除此文件**（届时同步清理本行与 ReadMe 对应说明）。 |
 | `CHANGELOG.md` | **更新日志唯一来源**（2026-10-06 起，从 ReadMe 整段迁出）。脚本内「设置菜单 → [更新日志]」运行时读取它（`src/lib/changelog.ts`），默认展示最新 10 条。**新增日志一律追加到文件顶部**，见「更新日志约定」。 |
 | `config/common.meta.json` | 脚本元信息唯一来源（`@version`/`@grant`/`@require`/`@updateURL` 等）——**改版本号改这里，不改产物**。 |
 | `config/dev.meta.json` | 开发态元信息覆盖（`-dev` 名、localhost `@match`、`GM_addValueChangeListener`、`@require file://.../dist/znhd.dev.user.js`）。⚠️ 数组字段是**整体覆盖**而非追加，故 `require` 必须写全量列表。 |
@@ -85,7 +84,7 @@
 | `src/index.ts` | 入口：生产直接 `app()`；开发动态 import `devTools`（热重载 / 首次自动安装）。 |
 | `src/app.ts` | **入口装配**（~60 行）：`mountPanel()`（挂载 React+antd 面板；位置恢复与拖拽都在 `ui/panelHost` 内） → beforeunload 清理 → 启动监控。业务实现全在 `src/lib/`。 |
 | `src/lib/*.ts` | 业务模块：`constants`（CONFIG/DEFAULTS/存储键）、`logger`（addLog/防抖/`setLogEntriesSink`）、`storage`（localStorage 读写）、`state`（`runtime` 运行时缓存）、`utils`（链接解析/转义/时间换算）、`speech`（语音队列）、`monitor`（人数·掉线·工作时间）、`tinymce`（编辑器写入）、`clipboard`（提示音+安全复制）、`relay`（中继客户端+图片剪贴板）、`gallery`（收图/收文的数据类型 + 上限常量 + 命名工具；渲染在 ui/RecvHistoryModal）、`changelog`（更新日志拉取/解析；渲染在 ui/ChangelogModal）、`qrcode`（二维码 dataURL）。 |
-| `src/lib/ui/*.tsx` | UI 组件（React 19 + Ant Design v6，**全部以弹窗形态呈现**）：`MainPanel`（主面板：人数/状态卡 + 语音开关 + 一行四入口按钮 + 查看日志）、`SettingsModal`、`PhrasesModal`、`LogModal`、`PhoneModal`、`ChangelogModal`、`RecvHistoryModal`（「历史记录」：图片 / 文本**两个页签**，图片页签放大用 antd `Image.PreviewGroup`、其预览工具栏用 `actionsRender` 加了「打印」）、`RecvTextModal`；基础设施：`panelHost`（宿主挂载 + 自研指针拖拽 + 位置持久化）、`panelIds`、`notify`（antd message 桥）、`uiReset`（样式隔离层）。 |
+| `src/lib/ui/*.tsx` | UI 组件（React 19 + Ant Design v6，**全部以弹窗形态呈现**）：`MainPanel`（主面板：人数/状态卡 + 语音开关 + 一行四入口按钮 + 查看日志）、`SettingsModal`、`PhrasesDrawer`、`LogModal`、`PhoneModal`、`ChangelogModal`、`RecvHistoryModal`（「历史记录」：图片 / 文本**两个页签**，图片页签放大用 antd `Image.PreviewGroup`、其预览工具栏用 `actionsRender` 加了「打印」）、`RecvTextModal`；基础设施：`panelHost`（宿主挂载 + 自研指针拖拽 + 位置持久化）、`panelIds`、`notify`（antd message 桥）、`uiReset`（样式隔离层）、`icons`（内联 SVG 图标，替代 emoji 以规避 Win7 无字形）。 |
 
 > **有意未拆出的模块**：`phrases`（常用语加载/缓存/请求序号）。`loadPhrasesData` 直接读写 React 状态（`phrasesData`/`setPhrasesData`/`setPhrasesLoading`）与 `phrasesRequestSeq`，抽成独立模块必须引入 `getData/setData` 桥接，属于「为拆而拆」，与约束 3「不得无理由重构可运行逻辑」冲突，故保留在 `src/lib/ui/MainPanel.tsx` 内。如日后要拆，请连同组件状态一起改成自定义 hook。
 | `src/global.d.ts` | 全局声明：`PRODUCTION`/`FILENAME`（DefinePlugin 注入）+ `jsyaml`/`QRCode`/`heic2any`（`@require` 注入）。GM_* 由 `@types/tampermonkey` 提供。 |
@@ -101,14 +100,11 @@
 
 ## 构建与模块化（对齐 Eished/douyu-helper 模板）
 
-- **唯一真源**：`src/`（源码）+ `config/*.meta.json`（元信息）；`znhd.user.js` 是产物。
+- **唯一真源**：`src/`（源码）+ `config/*.meta.json`（元信息）；`dist/znhd.user.js` 是产物。
 - **常用命令**：`npm install` → `npm run build`（生产）/ `npm run dev`（watch 到 `dist/`）/ `npm start`（devServer :8080）/ `npm run typecheck`（strict）/ `npm run lint` / `npm run check` / `npm run verify`（三段：脚本冒烟 + 中继 HTTP + 手机页端到端）/ `npm run build:web` + `npm run typecheck:web`（手机上传页，见 `web/`，改完记得 `npm run verify:web`）。VSCode 里 `Ctrl+Shift+B` 选 `start & dev`。
-- **发布链路**：生产产物写 `dist/znhd.user.js`（模板默认位置），并提交进仓库；`@updateURL`/`@downloadURL` 指向 **raw.githubusercontent.com 上的 `.../refs/heads/main/dist/znhd.user.js`**（2026-10-06 从 jsDelivr 改回 raw，避免 jsDelivr 对分支引用的长缓存导致用户收不到更新）。⚠️ **这两个字段由油猴管理器直接请求，不经过 `resolveGithubUrl()`** —— 设置里的「使用 CDN 加速」开关对「脚本自动更新」无效，写死什么就是什么。⚠️ **2026-10-05 起产物路径由仓库根迁到 `dist/`**：老安装的脚本头部仍指向根路径，为此仓库根**临时保留一份过渡跳板 `znhd.user.js`**（= 产物副本，见文件表，**每次发版都要重新拷贝**），老用户轮询根路径即可拿到本版本并自动换到 dist 地址；同时仍应在 ScriptCat 的「源代码同步」里把地址改到 `dist/znhd.user.js`（详见 `CHANGELOG.md` v26.10.5-v1）。
-- ⚠️ **发版后要核对两条 URL**（新旧用户走的是不同来源，缓存行为也不同）：
-  1. **新装 / 已迁移用户**走 `@updateURL`（raw）：拉 `https://raw.githubusercontent.com/Run-os/znhd-service/refs/heads/main/dist/znhd.user.js` 对 `@version`。raw 走 Fastly 短 TTL，一般秒级生效。
-  2. **尚未迁移的老安装**仍轮询仓库根跳板（jsDelivr）：`https://cdn.jsdelivr.net/gh/Run-os/znhd-service@refs/heads/main/znhd.user.js`。jsDelivr 对 `@refs/heads/main` 带较长缓存，2026-10-06 出现过「根跳板已刷新、`dist/` 仍返回上一版」；未刷新就调 purge：
-     `https://purge.jsdelivr.net/gh/Run-os/znhd-service@refs/heads/main/znhd.user.js`（返回 JSON，秒级生效，无需登录）。
-  3. 老用户全部迁移完成后，仓库根跳板即可删除，届时对 jsDelivr 的依赖也随之消失。
+- **发布链路**：生产产物写 `dist/znhd.user.js`（模板默认位置），并提交进仓库；`@updateURL`/`@downloadURL` 指向 **raw.githubusercontent.com 上的 `.../refs/heads/main/dist/znhd.user.js`**（2026-10-06 从 jsDelivr 改回 raw，避免 jsDelivr 对分支引用的长缓存导致用户收不到更新）。⚠️ **这两个字段由油猴管理器直接请求，不经过 `resolveGithubUrl()`** —— 设置里的「使用 CDN 加速」开关对「脚本自动更新」无效，写死什么就是什么。⚠️ **2026-10-05 起产物路径由仓库根迁到 `dist/`**；**2026-10-09 起仓库根的过渡跳板 `znhd.user.js` 已删除**（它原是让滞留老安装自动换到 dist 的临时副本，使命已完成）。仍应在 ScriptCat 的「源代码同步」里把地址指向 `dist/znhd.user.js`（详见 `CHANGELOG.md` v26.10.5-v1）。
+- ⚠️ **发版后核对 `@updateURL`**（现在所有用户只剩这一条来源）：拉 `https://raw.githubusercontent.com/Run-os/znhd-service/refs/heads/main/dist/znhd.user.js` 对 `@version`。raw 走 Fastly 短 TTL，一般秒级生效。
+  - 仓库根过渡跳板已于 2026-10-09 删除（原为让滞留老安装自动换到 dist 的临时副本）；仍把 ScriptCat「源代码同步」指向仓库根 `znhd.user.js` 的用户需手动改到 `dist/znhd.user.js`，该路径现在会 404。
 - **模块化约定**：一次只搬一个模块，搬完必须 `npm run build && npm run typecheck && npm run verify` 通过；模块间共享可变状态一律走 `src/lib/state.ts` 的 `runtime` 对象（ES module 的 import 绑定只读，不能用 `export let` 让外部赋值）。新模块一律带类型，**不再写 `@ts-nocheck`**。
 - **为什么只有 `.prettierignore`、没有 `.eslintignore`**：`npm run lint` 的 glob 只覆盖 `src/**/*.{ts,tsx}`，本来就碰不到 `dist/`、`relay-server/`、仓库根，故 `.eslintignore` 属冗余已删除。`.prettierignore` 保留，是为了挡住「有人手动 `npx prettier --write .`」把**提交进仓库的产物 `dist/znhd.user.js`** 与 `relay-server/server.js` 重排（prettier 是全局格式化，不像 eslint 有 glob 限制）。
 - **迁移等价性是怎么证明的（工具已按需删除，勿再重建）**：`26.10.5-v1` 迁移期做了两层验证——① AST 级「顶层语句零丢失」比对（对迁移前快照，89 条，丢失 0，6 条已登记的有意重组）；② 差异对照：同一 harness 分别跑「迁移前原版」与「当前构建产物」，报告字段 / 6 条 XHR 路径 / `localStorage` 三个键 / GM 设备 ID / 面板 ShadowDOM 文本 / 两个弹窗文本**逐字节一致**。两层均已完成并记录在 `.workbuddy/memory/2026-10-0{5,6}.md`；工具与 151KB 快照已删除（它们会让日后的正常修改误报，且是为「迁移」而非「回归」服务的）。
@@ -178,7 +174,7 @@
 
 ### 监控/语音（内部要点；对外细节见 ReadMe）
 - `startMonitoring` 每 `CHECK_INTERVAL=3000ms`；非工作时段跳过；人数取自 `.count:nth-child(2)`。
-- 语音走 `speak` + `processSpeechQueue`（去重 / TTL 30s / 上限 10 / 开关切换清空）。
+- 语音走 `speak` + `processSpeechQueue`（**无去重** / TTL 30s / 上限 10 / 开关切换清空）；去重只在日志侧（`logger.ts` 的最近 5 条窗口）。⚠️ 人数 > 0 期间每 3s 都会入队一次播报，`speech.ts` 本身不做去重。
 
 ### 部署/生效（指针，勿另写流程）
 - 生产：push `main` → `deploy.yml` 自动同步并重启容器，**不热更**；本地调试改 `server.js` 后 `docker restart znhd`。

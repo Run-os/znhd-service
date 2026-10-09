@@ -18,7 +18,7 @@ env:
   #     关键：挂载源是 /opt/znhd-service/relay-server（= 容器 /app），
   #     所以请把整个仓库克隆到其父目录 /opt/znhd-service，
   #     这样它的子目录 relay-server/ 正好是挂载源，git pull 即更新 /app。
-  #     即：服务器上 /opt/znhd-service 是 git 仓库根（含 relay-server/、znhd.user.js 等），
+  #     即：服务器上 /opt/znhd-service 是 git 仓库根（含 relay-server/ 等），
   #     而 /opt/znhd-service/relay-server 被 1panel 挂载为容器 /app（server.js 在其根）。
   DEPLOY_PATH: /opt/znhd-service
   # ↓↓↓ 容器名（已通过 docker inspect 确认为 znhd），无需改动

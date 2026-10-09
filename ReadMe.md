@@ -37,9 +37,12 @@ znhd-service/
 │       ├── speech（语音队列）/ monitor（人数·掉线·工作时间）
 │       ├── tinymce / clipboard（提示音+安全复制）/ relay（中继+图片剪贴板）
 │       ├── gallery（收图/收文数据 + 命名工具 + 上限常量）/ changelog（更新日志拉取解析）/ qrcode（二维码）
-│       └── ui/                   # MainPanel（主面板）+ 各弹窗：SettingsModal / PhrasesModal / LogModal /
+│       └── ui/                   # MainPanel（主面板）+ 各弹窗：SettingsModal / PhrasesDrawer / LogModal /
 │                                 #   PhoneModal / ChangelogModal / RecvHistoryModal（历史记录：图片/文本）/ RecvTextModal
 │                                 #   + panelHost（挂载/拖拽）/ uiReset（样式隔离）/ notify
+├── shared/                       # 脚本端与手机上传页共用的纯逻辑/纯 DOM 层（零宿主依赖，约束见 AGENT.md）
+│   ├── image/                    # 图片压缩：resizeToJpeg / prepareForTransfer
+│   └── preview/                  # 预览宿主 / A4 打印 / 遮罩压制 / 预览动作按钮
 ├── dist/                         # 构建产物
 │   ├── znhd.user.js              # ⚠️ 发布产物（由 npm run build 生成，提交进仓库，勿手改）
 │   └── znhd.dev.user.js          # 开发产物（不提交）
@@ -55,8 +58,7 @@ znhd-service/
 ├── scripts/smoke/                # 无头端到端冒烟（puppeteer + GM 桩测试页）：npm run verify
 ├── package.json / tsconfig.json / .eslintrc.js / .prettierrc.js
 ├── ReadMe.md                     # 项目说明文档（使用/配置/排障）
-├── CHANGELOG.md                  # 更新日志唯一来源（按版本倒序；脚本内「设置 →[更新日志]」就是读它）
-└── znhd.user.js                  # ⚠️ 迁移期「过渡跳板」= dist 产物的副本（见 CHANGELOG.md），不是产物输出位置
+└── CHANGELOG.md                  # 更新日志唯一来源（按版本倒序；脚本内「设置 →[更新日志]」就是读它）
 ```
 
 ## 快速开始
