@@ -123,12 +123,15 @@ const baseOptions = {
     ],
   },
   optimization: {
-    // v26.10.06-v19：开启 Terser 压缩（原为 false，产物一直未压缩）。
-    // 依据：`dist/znhd.user.js` 是**打包发布物**（油猴安装/更新的下载对象），压缩后体积明显下降。
+    // v26.10.10-v1：关闭产物压缩（v26.10.06-v19 曾用 Terser 压到 0.85MiB）。
+    // 现状：dev 与 prod **都不压缩** —— `dist/znhd.user.js` 与源码同样可读（约 2.2MiB）。
+    // 取舍：线上排障/断点更省事、构建更快；代价是用户经 @updateURL 下载的体积约 3 倍。
+    // minimizer 保留未删：将来重新开压缩，把 minimize 改回 true 即可（脚本元信息由白名单保住）。
     // 下面 minimizer 的 comments 白名单负责保住 `==UserScript==` 头与 `@`/eslint/spell-checker 注释 ——
     // 脚本元信息不是"注释"，是运行时的解析依据，压掉脚本直接废掉。
-    // ⚠️ dev 侧已在 webpack.dev.js 里显式关回 false：本地调试产物要可读、构建要快。
-    minimize: true,
+    // ⚠️ dev 侧（webpack.dev.js）仍显式写了一遍 minimize=false：现与 base 一致，
+    // 留着是为了将来 base 重新开压缩时不把本地调试产物一起带上。
+    minimize: false,
     minimizer: [
       new TerserPlugin({
         terserOptions: {

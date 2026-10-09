@@ -11,6 +11,26 @@
 
 ---
 
+### znhd.user.js v26.10.10-v1
+- **关闭产物压缩（`optimization.minimize`: `true` → `false`）**：按用户 2026-10-10 的要求，改
+  `config/webpack.config.base.js` 里的开关 ⇒ **dev 与 prod 产物都不再压缩**，`dist/znhd.user.js` 变回可读的未压缩代码。
+  - **影响面（可量化）**：产物 **853,389 B（0.81 MiB）→ 2,494,048 B（2.38 MiB）**，约 **2.9 倍**（净增 1,640,659 B）；
+    这个文件正是油猴 `@updateURL` / `@downloadURL` 指向的下载对象，安装与自动更新时客户端要拉的就是它。
+  - **为什么**：压缩后线上排障基本没法做（税务页里看堆栈、断点、搜源码都不可读）；本轮用体积换可读性与构建速度，
+    属**有意取舍**，不是配置失误。v26.10.06-v19 那次「开压缩 −65.4%」的收益按本条回退。
+  - **回退路径保留**：`TerserPlugin` 及其 comments 白名单**没有删**，将来要重新开压缩，把 `minimize` 改回 `true` 即可
+    （脚本元信息由白名单保住，v26.10.06-v19 已验证）。
+  - **注释同步**：`webpack.config.base.js` / `webpack.dev.js` 里「base 已为发布物开启 Terser」的旧注释已改写，
+    防止后续维护者被过期说明带偏。dev 侧仍显式写 `minimize=false`，以免将来 base 重新开压缩时把调试产物一起带上。
+- 版本递增到 `26.10.10-v1`（`config/common.meta.json` + `package.json`）：**只有 `@version` 真的变大，已安装的用户才会收到这次更新**。
+- 验证：`npm run typecheck` 0 错 / `npm run build` `compiled`（产物 2.38 MiB）/ `npm run check` 通过 / `npm run verify` 三段全绿；
+  产物头部 `==UserScript==` 成对、`@version 26.10.10-v1`，并能在产物里搜到 `MainPanel`、`[监控]` 等原始标识符与中文
+  ⇒ 确认「真的没压缩」。**本次只做本地提交，未 push**（按用户 2026-10-10 的选择）。
+  - ⚠️ **关压缩后的一处新现象（已核实无影响）**：Terser 在的时候会把所有换行抹平，关掉之后**模板字符串会原样保留源文件的换行** ——
+    本机（Windows，`core.autocrlf=true`）的工作区源码是 CRLF，于是本地产物里出现 **118 个 CR**（全部落在 CSS 模板串内，功能无影响）。
+    `git add` 入库时会把它们归一为 LF：实测 `git hash-object --path=dist/znhd.user.js` 与「把产物 CR 全部去掉」的哈希同为
+    `bc09c1f…` ⇒ **提交进仓库的 blob 与 CI（LF 源码）构建出来的产物一致**，这不是产物漂移。
+
 ### znhd.user.js v26.10.09-v7
 - **重做 Win7 图标方案：改用「内联 SVG」，不再依赖 emoji，也不再依赖图标库**
   （新增 `src/lib/ui/icons.tsx`；改 `src/lib/ui/MainPanel.tsx`、`src/lib/ui/PhoneModal.tsx`）：
