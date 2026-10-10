@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name                征纳互动人数和在线监控v2
 // @namespace           https://scriptcat.org/
-// @version             26.10.10-v10
+// @version             26.10.10-v11
 // @description         实时监控征纳互动等待人数和在线状态，支持语音播报、自定义常用语
 // @author              runos
 // @license             MIT
@@ -82443,6 +82443,25 @@ function contentToText(content) {
         .join('');
 }
 /**
+ * 把思考过程归一成字符串。
+ *
+ * ⚠️ 只有 `chat()` / 流式分片累加出来的是**字符串**；`getMessages()` 返回的历史消息里
+ * `thinking` 是**对象**（官方 `ThinkingBlock = { content: string }`，见 scriptcat
+ * `core/types.ts:94-96` 与 `tool_loop_orchestrator.ts:696` 的
+ * `thinking: result.thinking ? { content: result.thinking } : undefined`）。
+ * 直接把对象交给 React 渲染会抛
+ * `Objects are not valid as a React child (found: object with keys {content})`，
+ * 而面板没有错误边界 ⇒ 整棵面板树被卸载（v26.10.10-v11 之前线上真实踩到：
+ * 对话过后关弹窗再打开，主面板整个消失且不自愈）。
+ */
+function thinkingToText(thinking) {
+    if (typeof thinking === 'string')
+        return thinking;
+    if (thinking && typeof thinking === 'object' && typeof thinking.content === 'string')
+        return thinking.content;
+    return '';
+}
+/**
  * 工具名既可能是裸名（`read_file`），也可能带服务端命名空间（`mcp__xxx__read_file`）。
  * 面板上只显示最后一段，避免超长名把按钮撑破。
  */
@@ -88393,7 +88412,9 @@ function AgentModal({ open, onClose }) {
                     key: nextKey(),
                     role: message.role,
                     content: contentToText(message.content),
-                    thinking: message.thinking,
+                    // 历史消息的 thinking 是官方 ThinkingBlock（对象 { content }），
+                    // 必须归一成字符串再交给 React，否则整棵树会被卸载（v26.10.10-v11）。
+                    thinking: thinkingToText(message.thinking),
                     toolCalls: message.toolCalls,
                 })));
             }

@@ -14,7 +14,7 @@ import {
     readConversationMessages,
     streamConversation,
 } from '@/lib/agent/api';
-import { contentToText, toolDisplayName } from '@/lib/agent/types';
+import { contentToText, thinkingToText, toolDisplayName } from '@/lib/agent/types';
 import type { AgentConversation, AgentModelSummary, AgentToolCall } from '@/lib/agent/types';
 import SkillsPanel from '@/lib/ui/agent/SkillsPanel';
 import TaskPanel from '@/lib/ui/agent/TaskPanel';
@@ -177,7 +177,9 @@ export default function AgentModal({ open, onClose }: AgentModalProps) {
                             key: nextKey(),
                             role: message.role as 'user' | 'assistant',
                             content: contentToText(message.content),
-                            thinking: message.thinking,
+                            // 历史消息的 thinking 是官方 ThinkingBlock（对象 { content }），
+                            // 必须归一成字符串再交给 React，否则整棵树会被卸载（v26.10.10-v11）。
+                            thinking: thinkingToText(message.thinking),
                             toolCalls: message.toolCalls,
                         }))
                 );

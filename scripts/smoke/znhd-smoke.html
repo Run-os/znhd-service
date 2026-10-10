@@ -385,7 +385,7 @@
         window.__catAgentCalls = [];
         const log = (name) => window.__catAgentCalls.push(name);
 
-        const makeStream = (text) => {
+        const makeStream = (text, onDone) => {
           const chunks = [
             { type: 'thinking_delta', content: '（桩）先想一下' },
             { type: 'content_delta', content: text },
@@ -402,6 +402,10 @@
                 if (i > 0) await wait(15);
                 if (i < chunks.length) {
                   const value = chunks[i++];
+                  // 真实环境里 assistant 消息是这一轮**结束时**才落库的（`tool_loop_orchestrator`
+                  // 里的 `chatRepo.appendMessage`），所以「历史」必须等 done 之后才有 ——
+                  // 这样桩只在「关弹窗再打开」那条路径上给出 object 形状的 thinking，用例聚焦。
+                  if (value.type === 'done' && onDone) onDone();
                   window.__catAgentCalls.push('chunk:' + value.type);
                   return { value: value, done: false };
                 }
@@ -415,19 +419,41 @@
           };
         };
 
+        // 已完成的对话轮次：真实环境里一轮对话过后 OPFS 里就有持久化消息了，
+        // getMessages() 也必须开始返回它们（否则「关弹窗再打开」这条回归用例是空跑）。
+        let chatRounds = 0;
         const makeConversation = (id) => ({
           id: id,
           title: '桩对话',
           modelId: 'stub-model-1',
           chatStream: async () => {
             log('conversation.chatStream');
-            return makeStream('（桩回答）');
+            return makeStream('（桩回答）', () => {
+              chatRounds += 1;
+            });
           },
           chat: async () => {
             log('conversation.chat');
             return { content: '（桩回答）', usage: { inputTokens: 1, outputTokens: 2 } };
           },
-          getMessages: async () => [],
+          getMessages: async () => {
+            log('conversation.getMessages');
+            if (!chatRounds) return [];
+            return [
+              { id: 'm1', conversationId: id, role: 'user', content: '你好' },
+              {
+                id: 'm2',
+                conversationId: id,
+                role: 'assistant',
+                content: '（桩回答）',
+                // ⚠️ 必须用真实持久化形状：ScriptCat 存的是**对象**
+                // （官方 ThinkingBlock = { content }，见 tool_loop_orchestrator.ts 的
+                //  `thinking: result.thinking ? { content: result.thinking } : undefined`）。
+                // v26.10.10-v11 修的正是「对象被当字符串渲染 → 整棵面板树被卸载」。
+                thinking: { content: '（桩）历史思考' },
+              },
+            ];
+          },
           clear: async () => {},
           save: async () => {},
           attach: async () => ({ attachmentId: 'a1', mimeType: 'image/png' }),
@@ -996,6 +1022,13 @@
           replySeen: false,
           errorSeen: false,
           calls: [],
+          // 「对话过后关弹窗再打开」回归（v26.10.10-v11）
+          reopenEntryClicked: false,
+          reopenModalSeen: false,
+          reopenHistorySeen: false,
+          panelAliveAfterReopen: false,
+          panelStateAfterReopen: null,
+          reopenReactChildErrors: [],
         };
         window.__agentSnap = snap;
 
@@ -1086,12 +1119,92 @@
           snap.errorText = errEl ? (errEl.textContent || '').slice(0, 200) : '';
           snap.calls = (window.__catAgentCalls || []).slice();
           snap.replyTries = tries;
-          if ((snap.replySeen && snap.userMsgSeen) || tries <= 0) {
-            snap.stageReached = snap.replySeen ? 'reply-seen' : 'reply-timeout';
+          if (snap.replySeen && snap.userMsgSeen) {
+            snap.stageReached = 'reply-seen';
+            closeAndReopen();
+            return;
+          }
+          if (tries <= 0) {
+            snap.stageReached = 'reply-timeout';
             finish();
             return;
           }
           setTimeout(() => stageReply(tries - 1), 100);
+        };
+
+        /* ===== 回归用例（v26.10.10-v11）：对话过后关闭弹窗再打开 =====================
+           背景：历史消息里的 `thinking` 是**对象**（官方 ThinkingBlock = { content }），
+           而流式对话时是字符串。若把对象直接交给 React 渲染，会抛
+           `Objects are not valid as a React child (found: object with keys {content})`；
+           面板没有错误边界 ⇒ 整棵面板树被卸载，宿主 div 还在、自愈也救不回来，
+           表现为「主面板整个消失」。所以这条用例的判据不是「弹窗能开」，而是
+           **面板本体仍在**（容器有高度、收起按钮与 Agent 入口都还在）+ 历史思考文本已渲染。 */
+        const panelState = () => {
+          const host = document.getElementById('__znhd_panel_host__');
+          if (!host) return { alive: false, buttons: 0, height: 0 };
+          const buttons = Array.from(host.querySelectorAll('button'));
+          return {
+            alive: true,
+            buttons: buttons.length,
+            height: Math.round(host.getBoundingClientRect().height),
+            hasCollapse: !!host.querySelector('button[aria-label="收起面板"]'),
+            hasAgentEntry: buttons.some((b) => (b.textContent || '').indexOf('Agent') >= 0),
+          };
+        };
+
+        const closeAndReopen = () => {
+          const m = findAgentModal();
+          if (m) clickBtnWithText(m, '关闭');
+          setTimeout(() => waitModalGone(25), 150);
+        };
+
+        const waitModalGone = (tries) => {
+          if (!findAgentModal()) {
+            snap.reopenEntryClicked = clickEntry();
+            setTimeout(() => waitModalBack(30), 250);
+            return;
+          }
+          if (tries <= 0) {
+            snap.stageReached = 'reopen-close-timeout';
+            finish();
+            return;
+          }
+          setTimeout(() => waitModalGone(tries - 1), 100);
+        };
+
+        const waitModalBack = (tries) => {
+          if (findAgentModal()) {
+            snap.reopenModalSeen = true;
+            // 等历史回填 effect 跑完并渲染（崩溃就发生在这两拍之间）
+            setTimeout(checkReopen, 250);
+            return;
+          }
+          if (tries <= 0) {
+            snap.stageReached = 'reopen-no-modal';
+            finish();
+            return;
+          }
+          setTimeout(() => waitModalBack(tries - 1), 100);
+        };
+
+        const checkReopen = () => {
+          const state = panelState();
+          snap.panelStateAfterReopen = state;
+          snap.panelAliveAfterReopen = !!(
+            state.alive &&
+            state.height > 0 &&
+            state.hasCollapse &&
+            state.hasAgentEntry
+          );
+          const m = findAgentModal();
+          const t = m ? m.textContent || '' : '';
+          // 历史里的思考文本只可能来自 getMessages() 回填（流式那条是「先想一下」）
+          snap.reopenHistorySeen = t.indexOf('（桩）历史思考') >= 0;
+          snap.reopenReactChildErrors = (window.__errors || [])
+            .filter((e) => /React child|not valid as a React child/i.test(e))
+            .slice(0, 2);
+          snap.stageReached = 'reopen-checked';
+          finish();
         };
 
         const finish = () => {
@@ -1615,6 +1728,14 @@
             window.__agentSnap.userMsgSeen &&
             window.__agentSnap.replySeen &&
             !window.__agentSnap.errorSeen
+          ),
+          // v26.10.10-v11：对话过后关弹窗再打开 —— 历史 thinking 是对象，渲染不当会让整个面板消失
+          agentReopenOk: !!(
+            window.__agentSnap &&
+            window.__agentSnap.reopenEntryClicked &&
+            window.__agentSnap.reopenModalSeen &&
+            window.__agentSnap.reopenHistorySeen &&
+            window.__agentSnap.panelAliveAfterReopen
           ),
           agentSnap: window.__agentSnap || null,
           sniffSnap: window.__sniffSnap || null,

@@ -77,6 +77,24 @@ export function contentToText(content: AgentMessageContent): string {
         .join('');
 }
 
+/**
+ * 把思考过程归一成字符串。
+ *
+ * ⚠️ 只有 `chat()` / 流式分片累加出来的是**字符串**；`getMessages()` 返回的历史消息里
+ * `thinking` 是**对象**（官方 `ThinkingBlock = { content: string }`，见 scriptcat
+ * `core/types.ts:94-96` 与 `tool_loop_orchestrator.ts:696` 的
+ * `thinking: result.thinking ? { content: result.thinking } : undefined`）。
+ * 直接把对象交给 React 渲染会抛
+ * `Objects are not valid as a React child (found: object with keys {content})`，
+ * 而面板没有错误边界 ⇒ 整棵面板树被卸载（v26.10.10-v11 之前线上真实踩到：
+ * 对话过后关弹窗再打开，主面板整个消失且不自愈）。
+ */
+export function thinkingToText(thinking: string | { content?: string } | null | undefined): string {
+    if (typeof thinking === 'string') return thinking;
+    if (thinking && typeof thinking === 'object' && typeof thinking.content === 'string') return thinking.content;
+    return '';
+}
+
 /* ============================================================ 模型 */
 
 export interface AgentModelSummary {
@@ -179,7 +197,11 @@ export interface AgentChatMessage {
     content: AgentMessageContent;
     toolCalls?: AgentToolCall[];
     toolCallId?: string;
-    thinking?: string;
+    /**
+     * 历史消息里是官方 `ThinkingBlock`（对象 `{ content }`），只有 `chat()` 的返回值是字符串。
+     * 渲染前必须过 `thinkingToText()`，否则整棵 React 树会被对象子节点炸掉。
+     */
+    thinking?: string | { content: string };
     createtime?: number;
 }
 
