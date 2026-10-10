@@ -268,11 +268,21 @@ export default function App() {
         pageStyle: PRINT_PAGE_STYLE,
     });
 
-    /** 打印「当前预览的那张图」的原图，自适应 A4（与脚本端行为一致：等比缩放居中、不裁切、不跨页） */
+    /** 打印「当前预览的那张图」的原图，自适应 A4（横图自动旋转 90° 铺满，与脚本端行为一致；不裁切、不跨页） */
     const printRecvImage = (img: RecvImage) => {
         const fname = img.name || 'image.jpg';
         printTitleRef.current = fname;
-        doPrint(() => buildA4ImageNode(img.url, fname));
+        // v26.10.10-v2：先探测图片自然尺寸，横图旋转 90° 铺满纵向 A4
+        const probe = document.createElement('img');
+        probe.onload = () =>
+            doPrint(() =>
+                buildA4ImageNode(img.url, fname, {
+                    width: probe.naturalWidth,
+                    height: probe.naturalHeight,
+                })
+            );
+        probe.onerror = () => doPrint(() => buildA4ImageNode(img.url, fname));
+        probe.src = img.url;
     };
 
     const copyRecvText = async () => {

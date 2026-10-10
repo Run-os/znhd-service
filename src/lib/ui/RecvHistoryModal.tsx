@@ -141,11 +141,23 @@ export default function RecvHistoryModal({
      */
     const printImage = (it: GalleryImage, idx: number) => {
         const fname = downloadFileName(it.name, it.mime, idx);
-        const node = buildA4ImageNode(it.previewUrl, fname);
 
         printTitleRef.current = fname;
         addLog('打印图片: ' + fname, 'success');
-        doPrint(() => node);
+        // v26.10.10-v2：打印前先探测图片自然尺寸，横图自动旋转 90° 铺满纵向 A4。
+        // ⚠️ 不能依赖 img.onload 改样式：react-to-print 克隆的是独立节点，原始节点的 onload
+        //    改动不会带到克隆里。所以这里用临时的 Image() 先量出宽高，再构造好节点交给 doPrint。
+        const probe = document.createElement('img');
+        probe.onload = () => {
+            doPrint(() =>
+                buildA4ImageNode(it.previewUrl, fname, {
+                    width: probe.naturalWidth,
+                    height: probe.naturalHeight,
+                })
+            );
+        };
+        probe.onerror = () => doPrint(() => buildA4ImageNode(it.previewUrl, fname));
+        probe.src = it.previewUrl;
     };
 
     const [imgCopy, setImgCopy] = useState<{ idx: number; state: 'busy' | 'ok' | 'fail' } | null>(null);

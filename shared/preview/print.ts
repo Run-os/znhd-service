@@ -24,6 +24,9 @@ export const A4_PAD_MM = 10;
 export const PRINT_BOX_W_MM = A4_W_MM;
 /** 内容框高度 = A4 减 3mm 余量（含内边距） */
 export const PRINT_BOX_H_MM = A4_H_MM - 3;
+/** 图片真正可用的区域 = 内容框内沿（不含 padding），横图旋转后按此铺满 */
+export const IMG_AREA_W_MM = PRINT_BOX_W_MM - 2 * A4_PAD_MM; // 190mm
+export const IMG_AREA_H_MM = PRINT_BOX_H_MM - 2 * A4_PAD_MM; // 274mm
 
 /**
  * 注入打印窗口的页面样式（`react-to-print` 的 `pageStyle`）。
@@ -35,16 +38,32 @@ export const PRINT_PAGE_STYLE =
     '@page { size: A4 portrait; margin: 0; } html, body { margin: 0; padding: 0; }';
 
 /**
+ * 图片的自然尺寸（用于判断横/竖，决定打印方向）。
+ */
+export interface ImageNaturalSize {
+    width: number;
+    height: number;
+}
+
+/**
  * 构造「打印用」的游离节点：固定成 A4 可用区的图片框 + `object-fit: contain` 等比居中。
  *
  * ⚠️ 为什么用**游离节点**（不挂进 DOM）：`react-to-print` 的 `cloneNode` 会把**内联样式**一起克隆，
  *    所以「`display:none` / 挪到视口外的隐藏容器」在打印 iframe 里同样不可见 ⇒ 打出来是空白。
  *    游离节点只带我们给的打印样式，没有这个坑；而且不进渲染树，也就不会「闪一下大图」。
  *
+ * **打印方向自适应（v26.10.10-v2）**：传入 `natural`（图片真实宽高）后，横图（宽>高）自动旋转 90°，
+ * 用满纵向 A4 的高度；竖图保持现状。横图旋转的铺满逻辑：
+ *   · 旋转后 width = 可用区高度、height = 可用区宽度（宽高互换），再 `object-fit: contain`；
+ *   · 容器转成 flex 居中，`transform: rotate(90deg)` 绕自身中心旋转 ⇒ 视觉上竖版、占满 A4 高度；
+ *   · 不裁切内容（contain），极端比例时宽度方向保留等比留白，避免横图被压成小图。
+ * 不传 `natural` 时行为不变（向后兼容）。
+ *
  * @param src 打印的图片地址（**用原分辨率地址**，不要用预览里缩放/旋转后的画面，清晰度最好）
  * @param alt 无障碍替代文字（同时用于下载/打印对话框的标题）
+ * @param natural 图片自然尺寸（可选，用于横图自动旋转铺满）
  */
-export function buildA4ImageNode(src: string, alt: string): HTMLElement {
+export function buildA4ImageNode(src: string, alt: string, natural?: ImageNaturalSize): HTMLElement {
     const node = document.createElement('div');
     // ⚠️ `box-sizing: border-box` 不能省：width 已按 A4 取 210mm，若按 content-box 再加 10mm padding，
     //    实际宽度会变成 230mm ⇒ 溢出纸张、多吐空白页。
@@ -52,8 +71,23 @@ export function buildA4ImageNode(src: string, alt: string): HTMLElement {
     const img = document.createElement('img');
     img.src = src;
     img.alt = alt;
-    // 图片区域 = 内容框 padding 的内沿（190 × 274mm），等比缩放居中
-    img.style.cssText = 'display:block;width:100%;height:100%;object-fit:contain;';
+
+    const isLandscape = !!natural && natural.width > natural.height;
+    if (isLandscape) {
+        // 横图：旋转 90° 铺满纵向 A4 —— 宽高互换 + flex 居中 + 绕自身中心旋转
+        node.style.display = 'flex';
+        node.style.alignItems = 'center';
+        node.style.justifyContent = 'center';
+        img.style.width = IMG_AREA_H_MM + 'mm';
+        img.style.height = IMG_AREA_W_MM + 'mm';
+        img.style.transform = 'rotate(90deg)';
+    } else {
+        // 竖图/未知：等比缩放居中（图片区域 = 内容框 padding 的内沿，190 × 274mm）
+        img.style.width = '100%';
+        img.style.height = '100%';
+    }
+    img.style.objectFit = 'contain';
+    img.style.display = 'block';
     node.appendChild(img);
     return node;
 }
