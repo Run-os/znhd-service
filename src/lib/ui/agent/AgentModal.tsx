@@ -1,0 +1,543 @@
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Alert, Button, Empty, Input, Modal, Select, Space, Tooltip, Typography, theme } from 'antd';
+import type { TextAreaRef } from 'antd/es/input/TextArea';
+import { addLog } from '@/lib/logger';
+import { getOverlayContainer } from '@/lib/ui/panelHost';
+import { BotIcon, CloseIcon } from '@/lib/ui/icons';
+import {
+    agentErrorMessage,
+    createConversation,
+    describeAgentError,
+    detectCatAgent,
+    listModels,
+    pickDefaultModelId,
+    readConversationMessages,
+    streamConversation,
+} from '@/lib/agent/api';
+import { contentToText, toolDisplayName } from '@/lib/agent/types';
+import type { AgentConversation, AgentModelSummary, AgentToolCall } from '@/lib/agent/types';
+import SkillsPanel from '@/lib/ui/agent/SkillsPanel';
+import TaskPanel from '@/lib/ui/agent/TaskPanel';
+
+/** 界面上的消息（与后端 ChatMessage 解耦：多了本地的 pending/cancelled 等展示态） */
+interface UiMessage {
+    key: number;
+    role: 'user' | 'assistant';
+    content: string;
+    thinking?: string;
+    toolCalls?: AgentToolCall[];
+    /** 本轮失败时的错误文案 */
+    error?: string;
+    /** 被用户中止 */
+    cancelled?: boolean;
+    /** 仍在流式接收中 */
+    pending?: boolean;
+}
+
+export interface AgentModalProps {
+    open: boolean;
+    onClose: () => void;
+}
+
+/** 面板宽度 238px 放不下的内容都进这个弹窗，故给到 720px */
+const MODAL_WIDTH = 720;
+/** 消息区高度：弹窗固定高度，输入框永远留在视口内，不随消息变长而抖 */
+const MESSAGES_HEIGHT = 360;
+
+type TabKey = 'chat' | 'skills' | 'tasks';
+
+/**
+ * 交代脚本自身的上下文，让 Agent 知道「自己在哪、能干什么」。刻意写短：
+ * 太长会与用户的真实问题抢注意力，而且它是每轮都要付的 token。
+ */
+const SYSTEM_PROMPT = [
+    '你是「征纳互动人数和在线监控」油猴脚本内置的助手。',
+    '这个脚本运行在税务人员的工作电脑上：监控征纳互动的等待人数与掉线弹窗、语音播报提醒、',
+    '还有常用语、历史记录、设备互联（手机传图到电脑）、图片嗅探几个面板入口。',
+    '回答请用简体中文，尽量简短直接；涉及操作步骤时说清楚点哪个按钮。',
+].join('\n');
+
+/**
+ * Agent 弹窗（v26.10.10-v10）。
+ *
+ * ── 为什么是「弹窗 + 页签」而不是面板里再开一层 ──────────────────────────────
+ * 主面板宽度固定 238px（`PANEL_WIDTH`），塞不下对话流。弹窗沿用本仓库既有做法
+ * （`getOverlayContainer`，见 PhoneModal / SniffModal）挂到宿主页 body 之外的 overlay 容器，
+ * 避免宿主页 `body { transform }` 把浮层限制在盒子内。
+ *
+ * ── 可用性 ─────────────────────────────────────────────────────────────────
+ * `CAT.agent.*` 只在 ScriptCat v1.4+ 存在。探测在 render 期做（纯内存判空，无异步），
+ * 不可用时**照常打开弹窗**并显示原因，而不是把按钮藏起来 —— 用户至少要知道「为什么点不动」。
+ */
+export default function AgentModal({ open, onClose }: AgentModalProps) {
+    const { token } = theme.useToken();
+    // 探测是纯内存判空，每次 render 重算也无所谓（不缓存，避免 ScriptCat 热重载后状态过期）
+    const availability = detectCatAgent();
+    const api = availability.api;
+
+    const [tab, setTab] = useState<TabKey>('chat');
+    const [models, setModels] = useState<AgentModelSummary[]>([]);
+    const [modelId, setModelId] = useState<string>('');
+    const [messages, setMessages] = useState<UiMessage[]>([]);
+    const [input, setInput] = useState<string>('');
+    const [streaming, setStreaming] = useState<boolean>(false);
+    const [conversationId, setConversationId] = useState<string>('');
+    const [fatalError, setFatalError] = useState<string>('');
+
+    const [conversation, setConversation] = useState<AgentConversation | null>(null);
+    const [skillsVersion, setSkillsVersion] = useState<number>(0);
+    const [tasksVersion, setTasksVersion] = useState<number>(0);
+
+    const keyRef = useRef<number>(0);
+    const scrollRef = useRef<HTMLDivElement | null>(null);
+    const streamTokenRef = useRef<number>(0);
+    // antd 的 Input.TextArea ref 不是原生 textarea，而是带 nativeElement 的 TextAreaRef（rc-textarea 约定）
+    const inputRef = useRef<TextAreaRef | null>(null);
+
+    const nextKey = useCallback(() => {
+        keyRef.current += 1;
+        return keyRef.current;
+    }, []);
+
+    /* ---------------------------------------------------------- 模型列表 */
+    useEffect(() => {
+        if (!open || !api) return;
+        let alive = true;
+        void (async () => {
+            const [list, preferred] = await Promise.all([listModels(api), pickDefaultModelId(api)]);
+            if (!alive) return;
+            setModels(list);
+            setModelId((current) => current || preferred || list[0]?.id || '');
+        })();
+        return () => {
+            alive = false;
+        };
+    }, [open, api]);
+
+    /* ---------------------------------------------------------- 输入框自适应高度 */
+    useEffect(() => {
+        const el = inputRef.current?.nativeElement;
+        if (!el) return;
+        el.style.height = 'auto';
+        el.style.height = Math.min(el.scrollHeight, 96) + 'px';
+    }, [input, tab, open]);
+
+    /* ---------------------------------------------------------- 消息区自动滚到底 */
+    useEffect(() => {
+        const el = scrollRef.current;
+        if (!el) return;
+        el.scrollTop = el.scrollHeight;
+    }, [messages]);
+
+    const patchLast = useCallback((patch: Partial<UiMessage>) => {
+        setMessages((prev) => {
+            if (!prev.length) return prev;
+            const next = prev.slice();
+            const last = next[next.length - 1];
+            if (last.role !== 'assistant') return prev;
+            next[next.length - 1] = { ...last, ...patch };
+            return next;
+        });
+    }, []);
+
+    /** 把流式分片里的工具调用合并进最后一条助手消息（同名 id 只保留一份，状态取最新） */
+    const mergeToolCall = useCallback((toolCall: AgentToolCall) => {
+        setMessages((prev) => {
+            if (!prev.length) return prev;
+            const next = prev.slice();
+            const last = next[next.length - 1];
+            if (last.role !== 'assistant') return prev;
+            const list = last.toolCalls ? last.toolCalls.slice() : [];
+            const id = toolCall.id || toolCall.name;
+            const index = list.findIndex((item) => (item.id || item.name) === id);
+            if (index >= 0) list[index] = { ...list[index], ...toolCall };
+            else list.push(toolCall);
+            next[next.length - 1] = { ...last, toolCalls: list };
+            return next;
+        });
+    }, []);
+
+    const stopStreaming = useCallback(() => {
+        // 递增令牌即可让正在跑的消费循环在下一个分片处 break（并走 finally → iterator.return()）
+        streamTokenRef.current += 1;
+    }, []);
+
+    /** 打开弹窗时把该对话已有的历史拉回来，关掉再开仍能接着看 */
+    useEffect(() => {
+        if (!open || !conversation) return;
+        let alive = true;
+        void (async () => {
+            try {
+                const history = await readConversationMessages(conversation);
+                if (!alive || !history.length) return;
+                setMessages(
+                    history
+                        .filter((message) => message.role === 'user' || message.role === 'assistant')
+                        .map((message) => ({
+                            key: nextKey(),
+                            role: message.role as 'user' | 'assistant',
+                            content: contentToText(message.content),
+                            thinking: message.thinking,
+                            toolCalls: message.toolCalls,
+                        }))
+                );
+            } catch (error) {
+                if (alive) addLog('[Agent] 读取对话历史失败: ' + agentErrorMessage(error), 'warning');
+            }
+        })();
+        return () => {
+            alive = false;
+        };
+        // conversation 变化（新建对话）时也要重新拉
+    }, [open, conversation, nextKey]);
+
+    const send = useCallback(async () => {
+        const text = input.trim();
+        if (!api || !text || streaming) return;
+
+        let conv = conversation;
+        if (!conv) {
+            try {
+                conv = await createConversation(api, {
+                    system: SYSTEM_PROMPT,
+                    model: modelId || undefined,
+                    skills: 'auto',
+                });
+                setConversation(conv);
+                setConversationId(conv.id || '');
+                addLog('[Agent] 已创建对话 ' + (conv.id || ''), 'info');
+            } catch (error) {
+                const message = describeAgentError(error);
+                setFatalError('无法创建对话：' + message);
+                addLog('[Agent] 创建对话失败: ' + message, 'error');
+                return;
+            }
+        }
+
+        const token = streamTokenRef.current + 1;
+        streamTokenRef.current = token;
+        setFatalError('');
+        setStreaming(true);
+        setInput('');
+        setMessages((prev) => [
+            ...prev,
+            { key: nextKey(), role: 'user', content: text },
+            { key: nextKey(), role: 'assistant', content: '', pending: true },
+        ]);
+
+        try {
+            // ⚠️ 分片回调会在 streamConversation 的 Promise resolve 之前就被调用，那一刻
+            // `const outcome = await ...` 还处于 TDZ，读它会抛 ReferenceError（表现为「对话异常」
+            // 且回答永远不落地）。所以增量累加用独立对象承载，不依赖返回值。
+            const live = { content: '', thinking: '' };
+            const outcome = await streamConversation(conv, text, {
+                onContent: (delta) => {
+                    if (streamTokenRef.current !== token) return;
+                    live.content += delta;
+                    patchLast({ content: live.content, pending: true });
+                },
+                onThinking: (delta) => {
+                    if (streamTokenRef.current !== token) return;
+                    live.thinking += delta;
+                    patchLast({ thinking: live.thinking, pending: true });
+                },
+                onToolCall: (toolCall) => {
+                    if (streamTokenRef.current !== token) return;
+                    mergeToolCall(toolCall);
+                },
+                onWarning: (warning) => {
+                    if (streamTokenRef.current !== token) return;
+                    addLog('[Agent] ' + warning, 'warning');
+                },
+            });
+
+            if (streamTokenRef.current !== token) {
+                patchLast({ pending: false, cancelled: true, content: live.content, thinking: live.thinking });
+                return;
+            }
+            patchLast({
+                pending: false,
+                content: live.content,
+                thinking: live.thinking,
+                error: outcome.error,
+            });
+            if (outcome.error) {
+                addLog('[Agent] 对话出错: ' + outcome.error, 'error');
+            } else if (outcome.usage) {
+                addLog(
+                    '[Agent] 本轮完成：输入 ' +
+                        outcome.usage.inputTokens +
+                        ' / 输出 ' +
+                        outcome.usage.outputTokens +
+                        ' tokens',
+                    'info'
+                );
+            }
+        } catch (error) {
+            const message = describeAgentError(error);
+            if (streamTokenRef.current === token) patchLast({ pending: false, error: message });
+            addLog('[Agent] 对话异常: ' + message, 'error');
+        } finally {
+            setStreaming(false);
+        }
+    }, [api, input, streaming, conversation, modelId, nextKey, patchLast, mergeToolCall]);
+
+    const newChat = useCallback(() => {
+        stopStreaming();
+        setStreaming(false);
+        setConversation(null);
+        setConversationId('');
+        setMessages([]);
+        setFatalError('');
+        addLog('[Agent] 已新建对话', 'info');
+    }, [stopStreaming]);
+
+    const handleClose = useCallback(() => {
+        stopStreaming();
+        setStreaming(false);
+        onClose();
+    }, [stopStreaming, onClose]);
+
+    const renderMessage = (message: UiMessage) => {
+        const isUser = message.role === 'user';
+        return (
+            <div
+                key={message.key}
+                style={{ display: 'flex', justifyContent: isUser ? 'flex-end' : 'flex-start', marginBottom: 10 }}>
+                <div
+                    style={{
+                        maxWidth: '86%',
+                        padding: '8px 10px',
+                        borderRadius: 8,
+                        fontSize: 13,
+                        lineHeight: 1.6,
+                        whiteSpace: 'pre-wrap',
+                        wordBreak: 'break-word',
+                        background: isUser ? token.colorPrimaryBg : token.colorFillQuaternary,
+                        border: '1px solid ' + (isUser ? token.colorPrimaryBorder : token.colorBorderSecondary),
+                    }}>
+                    {!isUser && message.toolCalls?.length ? (
+                        <div style={{ marginBottom: 6, display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                            {message.toolCalls.map((toolCall, index) => (
+                                <Tooltip
+                                    key={(toolCall.id || toolCall.name) + '-' + index}
+                                    title={toolCall.arguments ? toolCall.arguments.slice(0, 300) : toolCall.name}>
+                                    <span
+                                        style={{
+                                            fontSize: 11,
+                                            padding: '1px 6px',
+                                            borderRadius: 9,
+                                            background: token.colorFillTertiary,
+                                            color: token.colorTextSecondary,
+                                        }}>
+                                        {toolDisplayName(toolCall.name)}
+                                        {toolCall.status === 'running' ? ' …' : ''}
+                                    </span>
+                                </Tooltip>
+                            ))}
+                        </div>
+                    ) : null}
+                    {!isUser && message.thinking ? (
+                        <details style={{ marginBottom: 6 }}>
+                            <summary style={{ cursor: 'pointer', fontSize: 12, color: token.colorTextTertiary }}>
+                                思考过程
+                            </summary>
+                            <div style={{ fontSize: 12, color: token.colorTextSecondary, marginTop: 4 }}>
+                                {message.thinking}
+                            </div>
+                        </details>
+                    ) : null}
+                    {message.content ? (
+                        <span>{message.content}</span>
+                    ) : message.pending ? (
+                        <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                            正在思考…
+                        </Typography.Text>
+                    ) : null}
+                    {message.cancelled ? (
+                        <div style={{ fontSize: 12, color: token.colorTextTertiary, marginTop: 4 }}>（已中止）</div>
+                    ) : null}
+                    {message.error ? (
+                        <div style={{ fontSize: 12, color: token.colorError, marginTop: 6 }}>{message.error}</div>
+                    ) : null}
+                </div>
+            </div>
+        );
+    };
+
+    const renderChat = () => {
+        if (!api) {
+            return (
+                <Alert
+                    type="warning"
+                    showIcon
+                    icon={<BotIcon size={16} />}
+                    message="Agent 功能不可用"
+                    description={availability.reason}
+                />
+            );
+        }
+        return (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                    <Select
+                        size="small"
+                        style={{ minWidth: 200, flex: '1 1 200px' }}
+                        value={modelId || undefined}
+                        placeholder={models.length ? '选择模型' : '未配置模型'}
+                        disabled={streaming}
+                        options={models.map((model) => ({
+                            value: model.id,
+                            label: model.name + '（' + model.provider + '）',
+                        }))}
+                        onChange={(value) => setModelId(value)}
+                    />
+                    <Tooltip title="清空当前对话并重新开始">
+                        <Button size="small" onClick={newChat} disabled={streaming && !conversation}>
+                            新建对话
+                        </Button>
+                    </Tooltip>
+                    {conversationId ? (
+                        <Typography.Text type="secondary" style={{ fontSize: 11 }}>
+                            对话 {conversationId.slice(0, 8)}
+                        </Typography.Text>
+                    ) : null}
+                </div>
+
+                {models.length ? null : (
+                    <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                        还没有在 ScriptCat 里配置模型：请打开 ScriptCat 的 Agent 设置添加一个模型（支持 OpenAI 兼容 /
+                        Anthropic / 智谱），之后这里会列出可选模型。
+                    </Typography.Text>
+                )}
+
+                {fatalError ? <Alert type="error" showIcon message={fatalError} /> : null}
+
+                <div
+                    ref={scrollRef}
+                    className="znhd-agent-messages"
+                    style={{
+                        height: MESSAGES_HEIGHT,
+                        overflowY: 'auto',
+                        overflowX: 'hidden',
+                        padding: '8px 4px',
+                        border: '1px solid ' + token.colorBorderSecondary,
+                        borderRadius: 6,
+                        background: token.colorBgContainer,
+                    }}>
+                    {messages.length ? (
+                        messages.map(renderMessage)
+                    ) : (
+                        <Empty
+                            image={Empty.PRESENTED_IMAGE_SIMPLE}
+                            description={
+                                <span style={{ fontSize: 12 }}>
+                                    直接提问即可。可以试试「帮我总结这个页面能做什么」「征纳互动掉线提醒没声音怎么办」
+                                </span>
+                            }
+                        />
+                    )}
+                </div>
+
+                <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
+                    <Input.TextArea
+                        ref={inputRef}
+                        value={input}
+                        onChange={(event) => setInput(event.target.value)}
+                        onPressEnter={(event) => {
+                            if (event.shiftKey) return;
+                            event.preventDefault();
+                            void send();
+                        }}
+                        placeholder="输入问题，Enter 发送，Shift+Enter 换行"
+                        autoSize={{ minRows: 1, maxRows: 4 }}
+                        disabled={!api}
+                        style={{ resize: 'none' }}
+                    />
+                    {streaming ? (
+                        <Button danger icon={<CloseIcon size={13} />} onClick={stopStreaming}>
+                            中止
+                        </Button>
+                    ) : (
+                        <Button color="primary" variant="solid" onClick={() => void send()} disabled={!input.trim()}>
+                            发送
+                        </Button>
+                    )}
+                </div>
+                <Typography.Text type="secondary" style={{ fontSize: 11 }}>
+                    {'对话保存在 ScriptCat 的本地存储（OPFS）里，关掉弹窗不会丢；「新建对话」才会另起一个。'}
+                </Typography.Text>
+            </div>
+        );
+    };
+
+    const tabs: Array<{ key: TabKey; label: string }> = [
+        { key: 'chat', label: '对话' },
+        { key: 'skills', label: '技能' },
+        { key: 'tasks', label: '定时任务' },
+    ];
+
+    return (
+        <Modal
+            open={open}
+            title={
+                <Space size={6}>
+                    <BotIcon size={16} color={token.colorPrimary} />
+                    <span>Agent 助手</span>
+                </Space>
+            }
+            width={MODAL_WIDTH}
+            getContainer={getOverlayContainer}
+            onCancel={handleClose}
+            destroyOnHidden
+            footer={
+                <Space>
+                    <Button onClick={handleClose}>关闭</Button>
+                </Space>
+            }>
+            <div style={{ display: 'flex', gap: 4, borderBottom: '1px solid ' + token.colorBorderSecondary }}>
+                {tabs.map((item) => (
+                    <Button
+                        key={item.key}
+                        type="text"
+                        size="small"
+                        onClick={() => setTab(item.key)}
+                        style={{
+                            padding: '4px 10px',
+                            fontSize: 13,
+                            borderBottom: '2px solid ' + (tab === item.key ? token.colorPrimary : 'transparent'),
+                            borderRadius: 0,
+                        }}>
+                        {item.label}
+                    </Button>
+                ))}
+            </div>
+
+            <div style={{ paddingTop: 10 }}>
+                {tab === 'chat' ? renderChat() : null}
+                {tab === 'skills' ? (
+                    api ? (
+                        <SkillsPanel
+                            api={api}
+                            version={skillsVersion}
+                            onChange={() => setSkillsVersion((value) => value + 1)}
+                        />
+                    ) : (
+                        <Alert type="warning" showIcon message="技能不可用" description={availability.reason} />
+                    )
+                ) : null}
+                {tab === 'tasks' ? (
+                    api ? (
+                        <TaskPanel
+                            api={api}
+                            version={tasksVersion}
+                            onChange={() => setTasksVersion((value) => value + 1)}
+                        />
+                    ) : (
+                        <Alert type="warning" showIcon message="定时任务不可用" description={availability.reason} />
+                    )
+                ) : null}
+            </div>
+        </Modal>
+    );
+}

@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactElement } from 'react';
 import { Button, Card, Space, Switch, Tooltip, theme } from 'antd';
 import {
+    BotIcon,
     CloseIcon,
     CrosshairIcon,
     DeviceIcon,
@@ -10,6 +11,7 @@ import {
     SniffIcon,
     VolumeOffIcon,
     VolumeOnIcon,
+    type IconProps,
 } from '@/lib/ui/icons';
 import { DEFAULTS, PHRASES_CACHE_TTL } from '@/lib/constants';
 import { addLog, addLogDebounced, setLogEntriesSink, clearLogs, type LogEntry } from '@/lib/logger';
@@ -31,6 +33,7 @@ import ChangelogModal from '@/lib/ui/ChangelogModal';
 import RecvHistoryModal from '@/lib/ui/RecvHistoryModal';
 import RecvTextModal from '@/lib/ui/RecvTextModal';
 import SniffModal from '@/lib/ui/SniffModal';
+import AgentModal from '@/lib/ui/agent/AgentModal';
 
 // 常用语请求序号（loadPhrasesData 用）：仅最新一次请求可落地结果，防慢的旧响应后到覆盖新数据
 let phrasesRequestSeq = 0;
@@ -128,6 +131,10 @@ const PANEL_CSS = `
  * 图形来源与许可见 `lib/ui/icons.tsx` 头部注释（Lucide / ISC）。
  *
  * `icon` 存组件类型而非实例，便于统一控制尺寸与颜色。
+ *
+ * ⚠️ v26.10.10-v10：**Agent 入口不放进这个数组**。用户要求「每行只需 5 个按钮、Agent 另起一行」，
+ * 故数组严格保持 5 项 = 第一行的 5 个入口；Agent 由下面的 AGENT_ACTION 单独渲染在第二行，
+ * 这样第一行的列宽（`repeat(5, minmax(0,1fr))`）与按钮位置和加 Agent 之前完全一致。
  */
 const PANEL_ACTIONS = [
     { key: 'settings', icon: SettingsIcon, label: '设置' },
@@ -136,6 +143,44 @@ const PANEL_ACTIONS = [
     { key: 'phone', icon: DeviceIcon, label: '设备互联' },
     { key: 'sniff', icon: SniffIcon, label: '图片嗅探' },
 ] as const;
+
+/**
+ * Agent 入口（v26.10.10-v10，ScriptCat v1.4+ 专属）。
+ *
+ * 为什么不并进 PANEL_ACTIONS：面板宽 PANEL_WIDTH=238px，5 列每列约 38px（只够放图标）；
+ * 6 列会挤到 ~31px，而「Agent」是**英文**、比中文标签更宽，复用 65px 容器查询阈值必然显示不全。
+ * 用户拍板的版式是「第一行原 5 个 + 第二行只有 Agent 一个」，所以这里单独一行、宽度走 5 列同宽。
+ *
+ * ⚠️ 文案必须保持 "Agent"：scripts/smoke/znhd-smoke.html 的 panelAgentBtnOk 按 textContent === 'Agent' 定位。
+ */
+const AGENT_ACTION = { key: 'agent', icon: BotIcon, label: 'Agent' } as const;
+
+/**
+ * 主面板入口按钮（图标 + 文案）。第一行 5 个与第二行的 Agent 共用同一结构，
+ * 只允许传「图标 / 文案 / 主题色 / 点击」，不接收任意属性透传 —— 样式完全由 .znhd-panel-btn 决定。
+ */
+function PanelEntryButton({
+    icon: Icon,
+    label,
+    onClick,
+    color,
+}: {
+    icon: (p: IconProps) => ReactElement;
+    label: string;
+    onClick?: () => void;
+    color?: string;
+}) {
+    return (
+        <Tooltip title={label} placement="bottom">
+            <Button className="znhd-panel-btn" size="large" style={{ padding: '0 4px' }} onClick={onClick}>
+                <Icon size={15} color={color} />
+                <span className="znhd-panel-btn-text" style={{ fontSize: 11, marginLeft: 2 }}>
+                    {label}
+                </span>
+            </Button>
+        </Tooltip>
+    );
+}
 
 /** 状态点 */
 function Dot({ color }: { color: string }) {
@@ -189,6 +234,8 @@ export default function MainPanel({ host }: MainPanelProps) {
     const [changelogOpen, setChangelogOpen] = useState(false);
     /** 图片嗅探（v26.10.10-v4）：扫描当前页面上的图片，筛选/预览/下载/打印 */
     const [sniffOpen, setSniffOpen] = useState(false);
+    /** Agent 助手（v26.10.10-v10）：对话 / 技能盘点 / 定时任务，需 ScriptCat v1.4+ 的 CAT.agent */
+    const [agentOpen, setAgentOpen] = useState(false);
     // 收到图片/文本（v26.10.06-v13：由原来的命令式 DOM 弹窗改为 React state 驱动 antd 弹窗）
     const [recvImages, setRecvImages] = useState<GalleryImage[]>([]);
     /** 历史记录里的文本（可回看，上限 MAX_TEXT）；与下面「收到即自动弹出的最新一条」是两条独立路径 */
@@ -505,7 +552,7 @@ export default function MainPanel({ host }: MainPanelProps) {
         );
     }
 
-    // 五个入口的点击行为（key 与 PANEL_ACTIONS 对齐）
+    // 入口的点击行为（key 与 PANEL_ACTIONS / AGENT_ACTION 对齐）
     const actionHandlers: Record<string, () => void> = {
         settings: () => setSettingsOpen(true),
         phrases: () => setPhrasesOpen(true),
@@ -516,6 +563,7 @@ export default function MainPanel({ host }: MainPanelProps) {
         },
         phone: () => setPhoneOpen(true),
         sniff: () => setSniffOpen(true),
+        agent: () => setAgentOpen(true),
     };
 
     return (
@@ -643,22 +691,28 @@ export default function MainPanel({ host }: MainPanelProps) {
                 <Switch checked={!!voiceEnabled} onChange={toggleVoice} />
             </div>
 
-            {/* 五个入口合并到一行：宽度自适应（不够时只留图标），悬停给出完整文案 */}
+            {/* 第一行：原 5 个入口（v26.10.10-v10 起布局不变）。宽度自适应（不够时只留图标），悬停给出完整文案 */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', gap: 6 }}>
                 {PANEL_ACTIONS.map((a) => (
-                    <Tooltip key={a.key} title={a.label} placement="bottom">
-                        <Button
-                            className="znhd-panel-btn"
-                            size="large"
-                            style={{ padding: '0 4px' }}
-                            onClick={actionHandlers[a.key]}>
-                            <a.icon size={15} color={token.colorPrimary} />
-                            <span className="znhd-panel-btn-text" style={{ fontSize: 11, marginLeft: 2 }}>
-                                {a.label}
-                            </span>
-                        </Button>
-                    </Tooltip>
+                    <PanelEntryButton
+                        key={a.key}
+                        icon={a.icon}
+                        label={a.label}
+                        color={token.colorPrimary}
+                        onClick={actionHandlers[a.key]}
+                    />
                 ))}
+            </div>
+
+            {/* 第二行：只有 Agent 一个（v26.10.10-v10，按用户要求）。
+                宽度取 1/5 与上一行列宽一致，Agent 按钮因此落在第一列正下方，视觉上与上行对齐。 */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', gap: 6, marginTop: 6 }}>
+                <PanelEntryButton
+                    icon={AGENT_ACTION.icon}
+                    label={AGENT_ACTION.label}
+                    color={token.colorPrimary}
+                    onClick={actionHandlers[AGENT_ACTION.key]}
+                />
             </div>
 
             {/* 底部：上次播报 + 查看日志 */}
@@ -798,6 +852,9 @@ export default function MainPanel({ host }: MainPanelProps) {
             />
 
             <RecvTextModal text={recvText} onClose={() => setRecvText(null)} />
+
+            {/* Agent 助手（v26.10.10-v10）：ScriptCat v1.4+ 专有；不可用时弹窗内自会显示原因，故入口不置灰 */}
+            <AgentModal open={agentOpen} onClose={() => setAgentOpen(false)} />
         </Card>
     );
 }

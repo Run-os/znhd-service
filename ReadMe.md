@@ -15,6 +15,7 @@
 - **工作时间限定**：仅在工作时间段（默认上午 9:00-12:00，下午 13:30-18:00，可在设置面板调整）内执行监控，非工作时间自动暂停
 - **设备互联到电脑（图片→剪贴板）**：手机扫码或打开本机专属链接，选图（前端自动压缩）后图片经中继服务器转发到本机，点「复制到剪贴板」即可在征纳互动 Ctrl+V 粘贴；每台电脑有稳定独立的设备 ID，A、B 各自链接互不影响
 - **网页图片嗅探**：主面板「图片嗅探」一键扫描当前网页上的图片（普通图片与懒加载属性、CSS 背景图；内联 SVG 也在采集范围内，但默认被后缀规则排除），按体积分组展示，可放大预览、单张下载、批量下载，或按 A4 版式打印；最小体积阈值（默认 20 KB）可在面板内调整并记住（小于阈值的图只被过滤，不显示也不参与全选/批量下载），大小未探明的图片折叠保留不丢；名字含 `znhd-sniff` / `user-woman` / `user-man` 或以 `.svg` 结尾（含内联 SVG）的图片在扫描阶段即被排除（面板显示排除计数）
+- **内置 AI 助手（Agent）**：主面板第二行的「Agent」入口打开助手弹窗，可对话提问、盘点与卸载 ScriptCat 技能、创建 crontab 定时任务（到点在后台执行，关掉网页也照跑）；对话历史存在 ScriptCat 本地存储（OPFS）里，关掉弹窗不会丢。**需要 ScriptCat v1.4 及以上**——其它脚本管理器（如 Tampermonkey）仍显示该入口，但打开后会说明不可用的原因
 - **操作日志**：面板内嵌日志查看器，按类型（信息/警告/成功/错误）着色显示
 - **提示音反馈**：复制常用语时播放提示音，提供操作确认
 
@@ -39,9 +40,12 @@ znhd-service/
 │       ├── tinymce / clipboard（提示音+安全复制）/ relay（中继+图片剪贴板）
 │       ├── gallery（收图/收文数据 + 命名工具 + 上限常量）/ changelog（更新日志拉取解析）/ qrcode（二维码）
 │       ├── sniffer（网页图片嗅探：DOM/CSS/资源表三路采集 + 体积测量阶梯）
+│       ├── agent（ScriptCat Agent 接入：types 类型契约 / api 是 UI 唯一入口：能力探测、
+│       │                        流式消费、技能与定时任务包装）
 │       └── ui/                   # MainPanel（主面板）+ 各弹窗：SettingsModal / PhrasesDrawer / LogModal /
 │                                 #   PhoneModal / ChangelogModal / RecvHistoryModal（历史记录：图片/文本）/ RecvTextModal
-│                                 #   / SniffModal（图片嗅探）
+│                                 #   / SniffModal（图片嗅探）/ agent/（AgentModal 对话·技能·定时任务三个页签）
+│                                 #   + panelHost（挂载/拖拽）/ uiReset（样式隔离）/ notify
 │                                 #   + panelHost（挂载/拖拽）/ uiReset（样式隔离）/ notify
 ├── shared/                       # 脚本端与手机上传页共用的纯逻辑/纯 DOM 层（零宿主依赖，约束见 AGENT.md）
 │   ├── image/                    # 图片压缩：resizeToJpeg / prepareForTransfer
@@ -189,6 +193,18 @@ npm run verify         # 无头 Chromium 端到端冒烟（面板/弹窗/画廊/
 
 > **手机页行为**：电脑端「发送到手机」的内容在手机上**自动弹出**（图片弹窗里点缩略图可放大 / 旋转 / 多图切换 / **打印**；文本同样自动弹出，可一键复制）。手机页两张卡片各管各的提示：**图片**发完的「x 张已全部发送到电脑，请在电脑端接收」显示在**发送图片到电脑**卡片内，**文本**的发送结果显示在**发送文本到电脑**卡片内。
 
+### 内置 AI 助手（Agent）
+
+主面板第二行的 **Agent** 按钮打开助手弹窗（第一行仍是原来的 5 个入口），弹窗分三个页签：
+
+1. **对话**：直接输入问题，回车发送（`Shift+Enter` 换行），回答按流式增量显示；模型下拉列出 ScriptCat 里已配置的模型，默认选中 ScriptCat 的默认模型。请求进行中「发送」变成「中止」，点一下即可中断本轮（已收到的内容保留）。回答气泡里若有工具调用会显示成小标签，模型的思考过程折叠在「思考过程」里。
+2. **技能**：只读盘点 ScriptCat 里已安装的技能（名称、版本、启用状态、工具与参考资料数量、更新时间），可**卸载**（有二次确认）。本面板**不提供安装入口**——安装走 ScriptCat 自己的技能市场与管理页，避免和官方流程重复；对话时已启用的技能会自动加载，不需要逐个勾选。
+3. **定时任务**：用 crontab（五段：分 时 日 月 周，本机时区）创建任务，例如 `0 9 * * *` 每天 9 点、`30 8 * * 1-5` 每个工作日 8:30；每个任务可以**立即执行**、**停用/启用**、**删除**，列表里能看到上次/下次运行时间与上次的报错。任务由 ScriptCat 的调度器在后台执行，**关掉弹窗或关闭网页都不影响**。
+
+> **前提**：Agent 能力由 ScriptCat v1.4+ 提供（`CAT.agent.*`），脚本需要 `CAT.agent.conversation` / `CAT.agent.model` / `CAT.agent.skills` / `CAT.agent.task` 四项授权。**升级脚本后请在 ScriptCat 里重新安装或允许对应授权**，否则弹窗会提示权限不可用；在 Tampermonkey 等其它管理器下没有这套 API，弹窗会直接说明「需要 ScriptCat v1.4 及以上」。
+
+> **对话存在哪**：对话与历史由 ScriptCat 存在本地 OPFS 里（不是本脚本的 localStorage），点「新建对话」才会另起一个，关掉弹窗再打开会把历史拉回来。模型与 API Key 都在 ScriptCat 的 Agent 设置里配置，脚本不接触密钥。
+
 ## 配置说明
 
 ### 脚本内部配置
@@ -254,6 +270,7 @@ const DEFAULTS = {
 | [heic2any](https://github.com/alexcorvi/heic2any)（手机上传页 CDN 加载）             | 手机端把 HEIC/HEIF 解码转 JPEG 后压缩上传；CDN 不可达时回退原样直传                                                                |
 | [Web Speech API](https://developer.mozilla.org/en-US/docs/Web/API/Web_Speech_API)    | 语音合成播报                                                                                                                       |
 | [GM API](https://www.tampermonkey.net/documentation.php)                             | `GM_xmlhttpRequest`、`GM_setClipboard`、`GM_notification`、`GM_getValue`/`GM_setValue` 等油猴扩展 API                              |
+| [ScriptCat Agent API](https://docs.scriptcat.org/docs/dev/agent/)                    | 内置 AI 助手：`CAT.agent.conversation` / `.model` / `.skills` / `.task` 四项能力由宿主（ScriptCat v1.4+）提供，**不打包进产物**，缺失时该入口弹窗内降级说明 |
 | [relay-server](relay-server/server.js:1)                                             | 设备互联配套中继服务：纯 Node 内置 `http`（零依赖），手机上传页内联、电脑端长轮询取图；需部署到公网                                |
 | [Webpack 5](https://webpack.js.org/) + [TypeScript](https://www.typescriptlang.org/) | 构建与开发环境（脚手架对齐 [Eished/douyu-helper](https://github.com/Eished/douyu-helper)）：`src/` 打包成单文件产物 `znhd.user.js` |
 | [ESLint](https://eslint.org/) + [Prettier](https://prettier.io/)                     | 代码规范与格式化（`npm run lint` / `npm run build` 自动修复）                                                                      |

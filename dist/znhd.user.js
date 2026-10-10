@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name                征纳互动人数和在线监控v2
 // @namespace           https://scriptcat.org/
-// @version             26.10.10-v9
+// @version             26.10.10-v10
 // @description         实时监控征纳互动等待人数和在线状态，支持语音播报、自定义常用语
 // @author              runos
 // @license             MIT
@@ -14,6 +14,10 @@
 // @grant               GM_setClipboard
 // @grant               GM_getValue
 // @grant               GM_setValue
+// @grant               CAT.agent.conversation
+// @grant               CAT.agent.model
+// @grant               CAT.agent.skills
+// @grant               CAT.agent.task
 // @connect             *
 // @homepageURL         https://github.com/Run-os/znhd-service
 // @updateURL           https://raw.githubusercontent.com/Run-os/znhd-service/refs/heads/main/dist/znhd.user.js
@@ -35841,7 +35845,6 @@ const useMergedMask = (mask, contextMask, prefixCls, maskClosable) => {
   }, [mask, contextMask, prefixCls, maskClosable]);
 };
 ;// ./node_modules/antd/es/_util/motion.js
-/* unused harmony import specifier */ var motion_isTransitionEvent;
 
 
 // ================== Collapse Motion ==================
@@ -35857,7 +35860,7 @@ const getCurrentHeight = node => ({
   height: node?.offsetHeight ?? 0
 });
 const skipOpacityTransition = (_, event) => {
-  return event?.deadline === true || motion_isTransitionEvent(event) && event.propertyName === 'height';
+  return event?.deadline === true || isTransitionEvent(event) && event.propertyName === 'height';
 };
 const initCollapseMotion = (rootCls = (/* inlined export .defaultPrefixCls */"ant")) => ({
   motionName: `${rootCls}-motion-collapse`,
@@ -35880,7 +35883,7 @@ const motion_getTransitionName = (rootPrefixCls, motion, transitionName) => {
   return `${rootPrefixCls}-${motion}`;
 };
 
-/* harmony default export */ const motion = ((/* unused pure expression or super */ null && (initCollapseMotion)));
+/* harmony default export */ const motion = (initCollapseMotion);
 ;// ./node_modules/antd/es/locale/useLocale.js
 
 
@@ -43169,31 +43172,28 @@ RefForm.List = es_List;
 RefForm.useForm = hooks_useForm;
 RefForm.useWatch = hooks_useWatch;
 
-/* harmony default export */ const form_es = ((/* unused pure expression or super */ null && (RefForm)));
+/* harmony default export */ const form_es = (RefForm);
 ;// ./node_modules/antd/es/form/context.js
-/* unused harmony import specifier */ var context_React;
-/* unused harmony import specifier */ var RcFormProvider;
-/* unused harmony import specifier */ var context_omit;
 "use client";
 
 
 
 
-const context_FormContext = /*#__PURE__*/(/* unused pure expression or super */ null && (context_React.createContext({
+const context_FormContext = /*#__PURE__*/(react_production_namespaceFn().createContext)({
   labelAlign: 'right',
   layout: 'horizontal',
   itemRef: () => {}
-})));
-const NoStyleItemContext = /*#__PURE__*/(/* unused pure expression or super */ null && (context_React.createContext(null)));
+});
+const NoStyleItemContext = /*#__PURE__*/(react_production_namespaceFn().createContext)(null);
 const context_FormProvider = props => {
-  const providerProps = context_omit(props, ['prefixCls']);
-  return /*#__PURE__*/context_React.createElement(RcFormProvider, {
+  const providerProps = omit(props, ['prefixCls']);
+  return /*#__PURE__*/(react_production_namespaceFn().createElement)(FormProvider, {
     ...providerProps
   });
 };
-const FormItemPrefixContext = /*#__PURE__*/(/* unused pure expression or super */ null && (context_React.createContext({
+const FormItemPrefixContext = /*#__PURE__*/(react_production_namespaceFn().createContext)({
   prefixCls: ''
-})));
+});
 const FormItemInputContext = /*#__PURE__*/(react_production_namespaceFn().createContext)({});
 if (false) // removed by dead control flow
 {}
@@ -46858,6 +46858,1243 @@ const theme = {
   _internalContext: DesignTokenContext
 };
 /* harmony default export */ const es_theme = (theme);
+;// ./node_modules/@rc-component/tooltip/es/Popup.js
+
+
+const Popup_Popup = props => {
+  const {
+    children,
+    prefixCls,
+    id,
+    classNames,
+    styles,
+    className,
+    style
+  } = props;
+  return /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
+    id: id,
+    className: clsx(`${prefixCls}-container`, classNames?.container, className),
+    style: {
+      ...styles?.container,
+      ...style
+    },
+    role: "tooltip"
+  }, typeof children === 'function' ? children() : children);
+};
+/* harmony default export */ const tooltip_es_Popup = (Popup_Popup);
+;// ./node_modules/@rc-component/tooltip/es/placements.js
+const autoAdjustOverflowTopBottom = {
+  shiftX: 64,
+  adjustY: 1
+};
+const autoAdjustOverflowLeftRight = {
+  adjustX: 1,
+  shiftY: true
+};
+const targetOffset = [0, 0];
+const placements = {
+  left: {
+    points: ['cr', 'cl'],
+    overflow: autoAdjustOverflowLeftRight,
+    offset: [-4, 0],
+    targetOffset
+  },
+  right: {
+    points: ['cl', 'cr'],
+    overflow: autoAdjustOverflowLeftRight,
+    offset: [4, 0],
+    targetOffset
+  },
+  top: {
+    points: ['bc', 'tc'],
+    overflow: autoAdjustOverflowTopBottom,
+    offset: [0, -4],
+    targetOffset
+  },
+  bottom: {
+    points: ['tc', 'bc'],
+    overflow: autoAdjustOverflowTopBottom,
+    offset: [0, 4],
+    targetOffset
+  },
+  topLeft: {
+    points: ['bl', 'tl'],
+    overflow: autoAdjustOverflowTopBottom,
+    offset: [0, -4],
+    targetOffset
+  },
+  leftTop: {
+    points: ['tr', 'tl'],
+    overflow: autoAdjustOverflowLeftRight,
+    offset: [-4, 0],
+    targetOffset
+  },
+  topRight: {
+    points: ['br', 'tr'],
+    overflow: autoAdjustOverflowTopBottom,
+    offset: [0, -4],
+    targetOffset
+  },
+  rightTop: {
+    points: ['tl', 'tr'],
+    overflow: autoAdjustOverflowLeftRight,
+    offset: [4, 0],
+    targetOffset
+  },
+  bottomRight: {
+    points: ['tr', 'br'],
+    overflow: autoAdjustOverflowTopBottom,
+    offset: [0, 4],
+    targetOffset
+  },
+  rightBottom: {
+    points: ['bl', 'br'],
+    overflow: autoAdjustOverflowLeftRight,
+    offset: [4, 0],
+    targetOffset
+  },
+  bottomLeft: {
+    points: ['tl', 'bl'],
+    overflow: autoAdjustOverflowTopBottom,
+    offset: [0, 4],
+    targetOffset
+  },
+  leftBottom: {
+    points: ['br', 'bl'],
+    overflow: autoAdjustOverflowLeftRight,
+    offset: [-4, 0],
+    targetOffset
+  }
+};
+/* harmony default export */ const es_placements = ((/* unused pure expression or super */ null && (placements)));
+;// ./node_modules/@rc-component/tooltip/es/Tooltip.js
+function Tooltip_extends() { Tooltip_extends = Object.assign ? Object.assign.bind() : function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; }; return Tooltip_extends.apply(this, arguments); }
+;
+
+
+
+
+
+
+const Tooltip = /*#__PURE__*/(react_production_namespaceFn().forwardRef)((props, ref) => {
+  const {
+    trigger = ['hover', 'focus'],
+    mouseEnterDelay = 0,
+    mouseLeaveDelay = 0.1,
+    prefixCls = 'rc-tooltip',
+    children,
+    onVisibleChange,
+    afterVisibleChange,
+    motion,
+    placement = 'right',
+    align = {},
+    destroyOnHidden = false,
+    defaultVisible,
+    getTooltipContainer,
+    arrowContent,
+    overlay,
+    id,
+    showArrow = true,
+    classNames,
+    styles,
+    ...restProps
+  } = props;
+  const mergedId = hooks_useId(id);
+  const triggerRef = (0,react_production_namespaceFn().useRef)(null);
+  (0,react_production_namespaceFn().useImperativeHandle)(ref, () => triggerRef.current);
+  const extraProps = {
+    ...restProps
+  };
+  if ('visible' in props) {
+    extraProps.popupVisible = props.visible;
+  }
+
+  // ========================= Arrow ==========================
+  // Process arrow configuration
+  const mergedArrow = (react_production_namespaceFn().useMemo)(() => {
+    if (!showArrow) {
+      return false;
+    }
+
+    // Convert true to object for unified processing
+    const arrowConfig = showArrow === true ? {} : showArrow;
+
+    // Apply semantic styles with unified logic
+    return {
+      ...arrowConfig,
+      className: clsx(arrowConfig.className, classNames?.arrow),
+      style: {
+        ...arrowConfig.style,
+        ...styles?.arrow
+      },
+      content: arrowConfig.content ?? arrowContent
+    };
+  }, [showArrow, classNames?.arrow, styles?.arrow, arrowContent]);
+
+  // ======================== Children ========================
+  const getChildren = ({
+    open
+  }) => {
+    const child = (react_production_namespaceFn().Children).only(children);
+    const childAriaDescribedBy = child.props['aria-describedby'];
+    const ariaDescribedBy = [childAriaDescribedBy, overlay && open ? mergedId : undefined].filter(Boolean).join(' ');
+    const ariaProps = {
+      'aria-describedby': ariaDescribedBy || undefined
+    };
+    return /*#__PURE__*/(react_production_namespaceFn().cloneElement)(child, ariaProps);
+  };
+
+  // ========================= Render =========================
+  return /*#__PURE__*/(react_production_namespaceFn().createElement)(trigger_es, Tooltip_extends({
+    popupClassName: classNames?.root,
+    prefixCls: prefixCls,
+    popup: /*#__PURE__*/(react_production_namespaceFn().createElement)(tooltip_es_Popup, {
+      key: "content",
+      prefixCls: prefixCls,
+      id: mergedId,
+      classNames: classNames,
+      styles: styles
+    }, overlay),
+    action: trigger,
+    builtinPlacements: placements,
+    popupPlacement: placement,
+    ref: triggerRef,
+    popupAlign: align,
+    getPopupContainer: getTooltipContainer,
+    onOpenChange: onVisibleChange,
+    afterOpenChange: afterVisibleChange,
+    popupMotion: motion,
+    defaultPopupVisible: defaultVisible,
+    autoDestroy: destroyOnHidden,
+    mouseLeaveDelay: mouseLeaveDelay,
+    popupStyle: styles?.root,
+    mouseEnterDelay: mouseEnterDelay,
+    arrow: mergedArrow,
+    uniqueContainerClassName: classNames?.uniqueContainer,
+    uniqueContainerStyle: styles?.uniqueContainer
+  }, extraProps), getChildren);
+});
+/* harmony default export */ const es_Tooltip = (Tooltip);
+;// ./node_modules/@rc-component/tooltip/es/index.js
+
+
+
+/* harmony default export */ const tooltip_es = (es_Tooltip);
+;// ./node_modules/antd/es/style/roundedArrow.js
+
+function getArrowToken(token) {
+  const {
+    sizePopupArrow,
+    borderRadiusXS,
+    borderRadiusOuter
+  } = token;
+  const unitWidth = sizePopupArrow / 2;
+  const ax = 0;
+  const ay = unitWidth;
+  const bx = borderRadiusOuter * 1 / Math.sqrt(2);
+  const by = unitWidth - borderRadiusOuter * (1 - 1 / Math.sqrt(2));
+  const cx = unitWidth - borderRadiusXS * (1 / Math.sqrt(2));
+  const cy = borderRadiusOuter * (Math.sqrt(2) - 1) + borderRadiusXS * (1 / Math.sqrt(2));
+  const dx = 2 * unitWidth - cx;
+  const dy = cy;
+  const ex = 2 * unitWidth - bx;
+  const ey = by;
+  const fx = 2 * unitWidth - ax;
+  const fy = ay;
+  const shadowWidth = unitWidth * Math.sqrt(2) + borderRadiusOuter * (Math.sqrt(2) - 2);
+  const polygonOffset = borderRadiusOuter * (Math.sqrt(2) - 1);
+  const arrowPolygon = `polygon(${polygonOffset}px 100%, 50% ${polygonOffset}px, ${2 * unitWidth - polygonOffset}px 100%, ${polygonOffset}px 100%)`;
+  const arrowPath = `path('M ${ax} ${ay} A ${borderRadiusOuter} ${borderRadiusOuter} 0 0 0 ${bx} ${by} L ${cx} ${cy} A ${borderRadiusXS} ${borderRadiusXS} 0 0 1 ${dx} ${dy} L ${ex} ${ey} A ${borderRadiusOuter} ${borderRadiusOuter} 0 0 0 ${fx} ${fy} Z')`;
+  return {
+    arrowShadowWidth: shadowWidth,
+    arrowPath,
+    arrowPolygon
+  };
+}
+const genRoundedArrow = (token, bgColor, boxShadow) => {
+  const {
+    sizePopupArrow,
+    arrowPolygon,
+    arrowPath,
+    arrowShadowWidth,
+    borderRadiusXS,
+    calc
+  } = token;
+  const afterStyle = {
+    content: '""',
+    position: 'absolute',
+    width: arrowShadowWidth,
+    height: arrowShadowWidth,
+    bottom: 0,
+    insetInline: 0,
+    margin: 'auto',
+    borderRadius: {
+      _skip_check_: true,
+      value: `0 0 ${util_unit(borderRadiusXS)} 0`
+    },
+    transform: 'translateY(50%) rotate(-135deg)',
+    zIndex: 0,
+    background: 'transparent'
+  };
+  if (boxShadow) {
+    afterStyle.boxShadow = boxShadow;
+  }
+  return {
+    pointerEvents: 'none',
+    width: sizePopupArrow,
+    height: sizePopupArrow,
+    overflow: 'hidden',
+    '&::before': {
+      position: 'absolute',
+      bottom: 0,
+      insetInlineStart: 0,
+      width: sizePopupArrow,
+      height: calc(sizePopupArrow).div(2).equal(),
+      background: bgColor,
+      clipPath: {
+        _multi_value_: true,
+        value: [arrowPolygon, arrowPath]
+      },
+      content: '""'
+    },
+    '&::after': afterStyle
+  };
+};
+;// ./node_modules/antd/es/style/placementArrow.js
+
+
+
+const MAX_VERTICAL_CONTENT_RADIUS = 8;
+function getArrowOffsetToken(options) {
+  const {
+    contentRadius,
+    limitVerticalRadius
+  } = options;
+  const arrowOffset = contentRadius > 12 ? contentRadius + 2 : 12;
+  const arrowOffsetVertical = limitVerticalRadius ? MAX_VERTICAL_CONTENT_RADIUS : arrowOffset;
+  return {
+    arrowOffsetHorizontal: arrowOffset,
+    arrowOffsetVertical
+  };
+}
+const getArrowStyle = (token, colorBg, options) => {
+  const {
+    componentCls,
+    boxShadowPopoverArrow,
+    arrowOffsetVertical,
+    arrowOffsetHorizontal,
+    antCls
+  } = token;
+  const [varName] = genCssVar(antCls, 'tooltip');
+  const {
+    arrowDistance = 0,
+    arrowShadow = true
+  } = options || {};
+  return {
+    [componentCls]: {
+      // ============================ Basic ============================
+      [`${componentCls}-arrow`]: [{
+        position: 'absolute',
+        zIndex: 1,
+        // lift it up so the menu wouldn't cask shadow on it
+        display: 'block',
+        ...genRoundedArrow(token, colorBg, arrowShadow ? boxShadowPopoverArrow : false),
+        '&:before': {
+          background: colorBg
+        }
+      }],
+      // ========================== Placement ==========================
+      // Here handle the arrow position and rotate stuff
+      // >>>>> Top
+      [[`&-placement-top > ${componentCls}-arrow`, `&-placement-topLeft > ${componentCls}-arrow`, `&-placement-topRight > ${componentCls}-arrow`].join(',')]: {
+        bottom: arrowDistance,
+        transform: 'translateY(100%) rotate(180deg)'
+      },
+      [`&-placement-top > ${componentCls}-arrow`]: {
+        left: {
+          _skip_check_: true,
+          value: '50%'
+        },
+        transform: 'translateX(-50%) translateY(100%) rotate(180deg)'
+      },
+      '&-placement-topLeft': {
+        [varName('arrow-offset-x')]: arrowOffsetHorizontal,
+        [`> ${componentCls}-arrow`]: {
+          left: {
+            _skip_check_: true,
+            value: arrowOffsetHorizontal
+          }
+        }
+      },
+      '&-placement-topRight': {
+        [varName('arrow-offset-x')]: `calc(100% - ${util_unit(arrowOffsetHorizontal)})`,
+        [`> ${componentCls}-arrow`]: {
+          right: {
+            _skip_check_: true,
+            value: arrowOffsetHorizontal
+          }
+        }
+      },
+      // >>>>> Bottom
+      [[`&-placement-bottom > ${componentCls}-arrow`, `&-placement-bottomLeft > ${componentCls}-arrow`, `&-placement-bottomRight > ${componentCls}-arrow`].join(',')]: {
+        top: arrowDistance,
+        transform: `translateY(-100%)`
+      },
+      [`&-placement-bottom > ${componentCls}-arrow`]: {
+        left: {
+          _skip_check_: true,
+          value: '50%'
+        },
+        transform: `translateX(-50%) translateY(-100%)`
+      },
+      '&-placement-bottomLeft': {
+        [varName('arrow-offset-x')]: arrowOffsetHorizontal,
+        [`> ${componentCls}-arrow`]: {
+          left: {
+            _skip_check_: true,
+            value: arrowOffsetHorizontal
+          }
+        }
+      },
+      '&-placement-bottomRight': {
+        [varName('arrow-offset-x')]: `calc(100% - ${util_unit(arrowOffsetHorizontal)})`,
+        [`> ${componentCls}-arrow`]: {
+          right: {
+            _skip_check_: true,
+            value: arrowOffsetHorizontal
+          }
+        }
+      },
+      // >>>>> Left
+      [[`&-placement-left > ${componentCls}-arrow`, `&-placement-leftTop > ${componentCls}-arrow`, `&-placement-leftBottom > ${componentCls}-arrow`].join(',')]: {
+        right: {
+          _skip_check_: true,
+          value: arrowDistance
+        },
+        transform: 'translateX(100%) rotate(90deg)'
+      },
+      [`&-placement-left > ${componentCls}-arrow`]: {
+        top: {
+          _skip_check_: true,
+          value: '50%'
+        },
+        transform: 'translateY(-50%) translateX(100%) rotate(90deg)'
+      },
+      [`&-placement-leftTop > ${componentCls}-arrow`]: {
+        top: arrowOffsetVertical
+      },
+      [`&-placement-leftBottom > ${componentCls}-arrow`]: {
+        bottom: arrowOffsetVertical
+      },
+      // >>>>> Right
+      [[`&-placement-right > ${componentCls}-arrow`, `&-placement-rightTop > ${componentCls}-arrow`, `&-placement-rightBottom > ${componentCls}-arrow`].join(',')]: {
+        left: {
+          _skip_check_: true,
+          value: arrowDistance
+        },
+        transform: 'translateX(-100%) rotate(-90deg)'
+      },
+      [`&-placement-right > ${componentCls}-arrow`]: {
+        top: {
+          _skip_check_: true,
+          value: '50%'
+        },
+        transform: 'translateY(-50%) translateX(-100%) rotate(-90deg)'
+      },
+      [`&-placement-rightTop > ${componentCls}-arrow`]: {
+        top: arrowOffsetVertical
+      },
+      [`&-placement-rightBottom > ${componentCls}-arrow`]: {
+        bottom: arrowOffsetVertical
+      }
+    }
+  };
+};
+/* harmony default export */ const placementArrow = (getArrowStyle);
+;// ./node_modules/antd/es/_util/placements.js
+
+
+function getOverflowOptions(placement, arrowOffset, arrowWidth, autoAdjustOverflow) {
+  if (autoAdjustOverflow === false) {
+    return {
+      adjustX: false,
+      adjustY: false
+    };
+  }
+  const overflow = isPlainObject(autoAdjustOverflow) ? autoAdjustOverflow : {};
+  const baseOverflow = {};
+  switch (placement) {
+    case 'top':
+    case 'bottom':
+      baseOverflow.shiftX = arrowOffset.arrowOffsetHorizontal * 2 + arrowWidth;
+      baseOverflow.shiftY = true;
+      baseOverflow.adjustY = true;
+      break;
+    case 'left':
+    case 'right':
+      baseOverflow.shiftY = arrowOffset.arrowOffsetVertical * 2 + arrowWidth;
+      baseOverflow.shiftX = true;
+      baseOverflow.adjustX = true;
+      break;
+  }
+  const mergedOverflow = {
+    ...baseOverflow,
+    ...overflow
+  };
+  // Support auto shift
+  if (!mergedOverflow.shiftX) {
+    mergedOverflow.adjustX = true;
+  }
+  if (!mergedOverflow.shiftY) {
+    mergedOverflow.adjustY = true;
+  }
+  return mergedOverflow;
+}
+const PlacementAlignMap = {
+  left: {
+    points: ['cr', 'cl']
+  },
+  right: {
+    points: ['cl', 'cr']
+  },
+  top: {
+    points: ['bc', 'tc']
+  },
+  bottom: {
+    points: ['tc', 'bc']
+  },
+  topLeft: {
+    points: ['bl', 'tl']
+  },
+  leftTop: {
+    points: ['tr', 'tl']
+  },
+  topRight: {
+    points: ['br', 'tr']
+  },
+  rightTop: {
+    points: ['tl', 'tr']
+  },
+  bottomRight: {
+    points: ['tr', 'br']
+  },
+  rightBottom: {
+    points: ['bl', 'br']
+  },
+  bottomLeft: {
+    points: ['tl', 'bl']
+  },
+  leftBottom: {
+    points: ['br', 'bl']
+  }
+};
+const ArrowCenterPlacementAlignMap = {
+  topLeft: {
+    points: ['bl', 'tc']
+  },
+  leftTop: {
+    points: ['tr', 'cl']
+  },
+  topRight: {
+    points: ['br', 'tc']
+  },
+  rightTop: {
+    points: ['tl', 'cr']
+  },
+  bottomRight: {
+    points: ['tr', 'bc']
+  },
+  rightBottom: {
+    points: ['bl', 'cr']
+  },
+  bottomLeft: {
+    points: ['tl', 'bc']
+  },
+  leftBottom: {
+    points: ['br', 'cl']
+  }
+};
+const DisableAutoArrowList = new Set(['topLeft', 'topRight', 'bottomLeft', 'bottomRight', 'leftTop', 'leftBottom', 'rightTop', 'rightBottom']);
+function getPlacements(config) {
+  const {
+    arrowWidth,
+    autoAdjustOverflow,
+    arrowPointAtCenter,
+    offset,
+    borderRadius,
+    visibleFirst
+  } = config;
+  const halfArrowWidth = arrowWidth / 2;
+  const placementMap = {};
+  // Dynamic offset
+  const arrowOffset = getArrowOffsetToken({
+    contentRadius: borderRadius,
+    limitVerticalRadius: true
+  });
+  Object.keys(PlacementAlignMap).forEach(key => {
+    const template = arrowPointAtCenter && ArrowCenterPlacementAlignMap[key] || PlacementAlignMap[key];
+    const placementInfo = {
+      ...template,
+      offset: [0, 0],
+      dynamicInset: true
+    };
+    placementMap[key] = placementInfo;
+    // Disable autoArrow since design is fixed position
+    if (DisableAutoArrowList.has(key)) {
+      placementInfo.autoArrow = false;
+    }
+    // Static offset
+    switch (key) {
+      case 'top':
+      case 'topLeft':
+      case 'topRight':
+        placementInfo.offset[1] = -halfArrowWidth - offset;
+        break;
+      case 'bottom':
+      case 'bottomLeft':
+      case 'bottomRight':
+        placementInfo.offset[1] = halfArrowWidth + offset;
+        break;
+      case 'left':
+      case 'leftTop':
+      case 'leftBottom':
+        placementInfo.offset[0] = -halfArrowWidth - offset;
+        break;
+      case 'right':
+      case 'rightTop':
+      case 'rightBottom':
+        placementInfo.offset[0] = halfArrowWidth + offset;
+        break;
+    }
+    if (arrowPointAtCenter) {
+      switch (key) {
+        case 'topLeft':
+        case 'bottomLeft':
+          placementInfo.offset[0] = -arrowOffset.arrowOffsetHorizontal - halfArrowWidth;
+          break;
+        case 'topRight':
+        case 'bottomRight':
+          placementInfo.offset[0] = arrowOffset.arrowOffsetHorizontal + halfArrowWidth;
+          break;
+        case 'leftTop':
+        case 'rightTop':
+          placementInfo.offset[1] = -arrowOffset.arrowOffsetHorizontal * 2 + halfArrowWidth;
+          break;
+        case 'leftBottom':
+        case 'rightBottom':
+          placementInfo.offset[1] = arrowOffset.arrowOffsetHorizontal * 2 - halfArrowWidth;
+          break;
+      }
+    }
+    // Overflow
+    placementInfo.overflow = getOverflowOptions(key, arrowOffset, arrowWidth, autoAdjustOverflow);
+    // VisibleFirst
+    if (visibleFirst) {
+      placementInfo.htmlRegion = 'visibleFirst';
+    }
+  });
+  return placementMap;
+}
+;// ./node_modules/antd/es/table/TableMeasureRowContext.js
+
+const TableMeasureRowContext = /*#__PURE__*/(react_production_namespaceFn().createContext)(false);
+/* harmony default export */ const table_TableMeasureRowContext = (TableMeasureRowContext);
+;// ./node_modules/antd/es/tooltip/hook/useMergedArrow.js
+
+const useMergedArrow = (providedArrow, providedContextArrow) => {
+  const toConfig = arrow => typeof arrow === 'boolean' ? {
+    show: arrow
+  } : arrow || {};
+  return (react_production_namespaceFn().useMemo)(() => {
+    const arrowConfig = toConfig(providedArrow);
+    const contextArrowConfig = toConfig(providedContextArrow);
+    return {
+      ...contextArrowConfig,
+      ...arrowConfig,
+      show: arrowConfig.show ?? contextArrowConfig.show ?? true
+    };
+  }, [providedArrow, providedContextArrow]);
+};
+/* harmony default export */ const hook_useMergedArrow = (useMergedArrow);
+;// ./node_modules/antd/es/theme/util/genPresetColor.js
+
+function genPresetColor_genPresetColor(token, genCss) {
+  return PresetColors.reduce((prev, colorKey) => {
+    const lightColor = token[`${colorKey}1`];
+    const lightBorderColor = token[`${colorKey}3`];
+    const darkColor = token[`${colorKey}6`];
+    const textColor = token[`${colorKey}7`];
+    return {
+      ...prev,
+      ...genCss(colorKey, {
+        lightColor,
+        lightBorderColor,
+        darkColor,
+        textColor
+      })
+    };
+  }, {});
+}
+;// ./node_modules/antd/es/tooltip/style/index.js
+
+
+
+
+
+
+
+const FALL_BACK_ORIGIN = '50%';
+const genTooltipStyle = token => {
+  const {
+    calc,
+    componentCls,
+    // ant-tooltip
+    tooltipMaxWidth,
+    tooltipColor,
+    tooltipBg,
+    tooltipBorderRadius,
+    zIndexPopup,
+    controlHeight,
+    dropShadowPopover,
+    paddingSM,
+    paddingXS,
+    arrowOffsetHorizontal,
+    sizePopupArrow,
+    antCls
+  } = token;
+  const [varName, varRef] = genCssVar(antCls, 'tooltip');
+  // arrowOffsetHorizontal + arrowWidth + borderRadius
+  const edgeAlignMinWidth = calc(tooltipBorderRadius).add(sizePopupArrow).add(arrowOffsetHorizontal).equal();
+  // borderRadius * 2 + arrowWidth
+  const centerAlignMinWidth = calc(tooltipBorderRadius).mul(2).add(sizePopupArrow).equal();
+  const sharedBodyStyle = {
+    minWidth: centerAlignMinWidth,
+    minHeight: controlHeight,
+    padding: `${util_unit(token.calc(paddingSM).div(2).equal())} ${util_unit(paddingXS)}`,
+    color: varRef('overlay-color', tooltipColor),
+    textAlign: 'start',
+    textDecoration: 'none',
+    wordWrap: 'break-word',
+    backgroundColor: tooltipBg,
+    borderRadius: tooltipBorderRadius,
+    boxSizing: 'border-box'
+  };
+  const sharedTransformOrigin = {
+    // When use `autoArrow`, origin will follow the arrow position
+    [varName('valid-offset-x')]: varRef('arrow-offset-x', 'var(--arrow-x)'),
+    transformOrigin: [varRef('valid-offset-x', FALL_BACK_ORIGIN), `var(--arrow-y, ${FALL_BACK_ORIGIN})`].join(' ')
+  };
+  return [{
+    [componentCls]: {
+      ...resetComponent(token),
+      position: 'absolute',
+      zIndex: zIndexPopup,
+      display: 'block',
+      width: 'max-content',
+      maxWidth: tooltipMaxWidth,
+      visibility: 'visible',
+      filter: dropShadowPopover,
+      ...sharedTransformOrigin,
+      '&-hidden': {
+        display: 'none'
+      },
+      [varName('arrow-background-color')]: tooltipBg,
+      // Wrapper for the tooltip content
+      [`${componentCls}-container`]: [sharedBodyStyle, initFadeMotion(token, true)],
+      [`&:has(~ ${componentCls}-unique-container)`]: {
+        [`${componentCls}-container`]: {
+          border: 'none',
+          background: 'transparent'
+        }
+      },
+      // Align placement should have another min width
+      [[`&-placement-topLeft`, `&-placement-topRight`, `&-placement-bottomLeft`, `&-placement-bottomRight`].join(',')]: {
+        minWidth: edgeAlignMinWidth
+      },
+      // Limit left and right placement radius
+      [[`&-placement-left`, `&-placement-leftTop`, `&-placement-leftBottom`, `&-placement-right`, `&-placement-rightTop`, `&-placement-rightBottom`].join(',')]: {
+        [`${componentCls}-inner`]: {
+          borderRadius: token.min(tooltipBorderRadius, (/* inlined export .MAX_VERTICAL_CONTENT_RADIUS */8))
+        }
+      },
+      [`${componentCls}-content`]: {
+        position: 'relative'
+      },
+      // generator for preset color
+      ...genPresetColor_genPresetColor(token, (colorKey, {
+        darkColor
+      }) => ({
+        [`&${componentCls}-${colorKey}`]: {
+          [`${componentCls}-container`]: {
+            backgroundColor: darkColor
+          },
+          [`${componentCls}-arrow`]: {
+            [varName('arrow-background-color')]: darkColor
+          }
+        }
+      })),
+      // RTL
+      '&-rtl': {
+        direction: 'rtl'
+      }
+    }
+  },
+  // Arrow Style
+  placementArrow(token, varRef('arrow-background-color'), {
+    arrowShadow: false
+  }),
+  // Pure Render
+  {
+    [`${componentCls}-pure`]: {
+      position: 'relative',
+      maxWidth: 'none',
+      margin: token.sizePopupArrow
+    }
+  },
+  // Unique Body
+  {
+    [`${componentCls}-unique-container`]: {
+      ...sharedBodyStyle,
+      ...sharedTransformOrigin,
+      position: 'absolute',
+      zIndex: calc(zIndexPopup).sub(1).equal(),
+      filter: dropShadowPopover,
+      '&-hidden': {
+        display: 'none'
+      },
+      '&-visible': {
+        transition: `all ${token.motionDurationSlow}`
+      }
+    }
+  }];
+};
+// ============================== Export ==============================
+const tooltip_style_prepareComponentToken = token => ({
+  zIndexPopup: token.zIndexPopupBase + 70,
+  maxWidth: 250,
+  ...getArrowOffsetToken({
+    contentRadius: token.borderRadius,
+    limitVerticalRadius: true
+  }),
+  ...getArrowToken(statistic_merge(token, {
+    borderRadiusOuter: Math.min(token.borderRadiusOuter, 4)
+  }))
+});
+/* harmony default export */ const tooltip_style = ((prefixCls, rootCls, injectStyle = true) => {
+  const useStyle = genStyleHooks('Tooltip', token => {
+    const {
+      borderRadius,
+      colorTextLightSolid,
+      colorBgSpotlight,
+      maxWidth
+    } = token;
+    const TooltipToken = statistic_merge(token, {
+      // default variables
+      tooltipMaxWidth: maxWidth,
+      tooltipColor: colorTextLightSolid,
+      tooltipBorderRadius: borderRadius,
+      tooltipBg: colorBgSpotlight
+    });
+    return [genTooltipStyle(TooltipToken), initZoomMotion(token, 'zoom-big-fast')];
+  }, tooltip_style_prepareComponentToken, {
+    resetStyle: false,
+    // Popover use Tooltip as internal component. We do not need to handle this.
+    injectStyle
+  });
+  return useStyle(prefixCls, rootCls);
+});
+__webpack_require__.dn(tooltip_style);
+;// ./node_modules/antd/es/_util/colors.js
+
+
+const inverseColors = PresetColors.map(color => `${color}-inverse`);
+const PresetStatusColors = ['success', 'processing', 'error', 'default', 'warning'];
+/**
+ * determine if the color keyword belongs to the `Ant Design` {@link PresetColors}.
+ * @param color color to be judged
+ * @param includeInverse whether to include reversed colors
+ */
+function isPresetColor(color, includeInverse = true) {
+  if (includeInverse) {
+    return [].concat(_toConsumableArray(inverseColors), _toConsumableArray(PresetColors)).includes(color);
+  }
+  return PresetColors.includes(color);
+}
+function isPresetStatusColor(color) {
+  return PresetStatusColors.includes(color);
+}
+;// ./node_modules/antd/es/color-picker/util.js
+/* unused harmony import specifier */ var util_toConsumableArray;
+/* unused harmony import specifier */ var RcColor;
+
+
+
+const util_generateColor = color => {
+  if (color instanceof AggregationColor) {
+    return color;
+  }
+  return new AggregationColor(color);
+};
+const util_getRoundNumber = value => Math.round(Number(value || 0));
+const getColorAlpha = color => util_getRoundNumber(color.toHsb().a * 100);
+/** Return the color whose `alpha` is 1 */
+const genAlphaColor = (color, alpha) => {
+  const rgba = color.toRgb();
+  // Color from hsb input may get `rgb` is (0/0/0) when `hsb.b` is 0
+  // So if rgb is empty, we should get from hsb
+  if (!rgba.r && !rgba.g && !rgba.b) {
+    const hsba = color.toHsb();
+    hsba.a = alpha || 1;
+    return util_generateColor(hsba);
+  }
+  rgba.a = alpha || 1;
+  return util_generateColor(rgba);
+};
+/**
+ * Get percent position color. e.g. [10%-#fff, 20%-#000], 15% => #888
+ */
+const getGradientPercentColor = (colors, percent) => {
+  const filledColors = [{
+    percent: 0,
+    color: colors[0].color
+  }].concat(util_toConsumableArray(colors), [{
+    percent: 100,
+    color: colors[colors.length - 1].color
+  }]);
+  for (let i = 0; i < filledColors.length - 1; i += 1) {
+    const startPtg = filledColors[i].percent;
+    const endPtg = filledColors[i + 1].percent;
+    const startColor = filledColors[i].color;
+    const endColor = filledColors[i + 1].color;
+    if (startPtg <= percent && percent <= endPtg) {
+      const dist = endPtg - startPtg;
+      if (dist === 0) {
+        return startColor;
+      }
+      const ratio = (percent - startPtg) / dist * 100;
+      const startRcColor = new RcColor(startColor);
+      const endRcColor = new RcColor(endColor);
+      return startRcColor.mix(endRcColor, ratio).toRgbString();
+    }
+  }
+  // This will never reach
+  /* istanbul ignore next */
+  return '';
+};
+;// ./node_modules/antd/es/tooltip/util.js
+
+
+
+
+const parseColor = (rootPrefixCls, prefixCls, color) => {
+  const isInternalColor = isPresetColor(color);
+  const [varName] = genCssVar(rootPrefixCls, 'tooltip');
+  const className = clsx({
+    [`${prefixCls}-${color}`]: color && isInternalColor
+  });
+  const overlayStyle = {};
+  const arrowStyle = {};
+  const rgb = util_generateColor(color).toRgb();
+  const luminance = (0.299 * rgb.r + 0.587 * rgb.g + 0.114 * rgb.b) / 255;
+  const textColor = luminance < 0.5 ? '#FFF' : '#000';
+  if (color && !isInternalColor) {
+    overlayStyle.background = color;
+    overlayStyle[varName('overlay-color')] = textColor;
+    arrowStyle[varName('arrow-background-color')] = color;
+  }
+  return {
+    className,
+    overlayStyle,
+    arrowStyle
+  };
+};
+;// ./node_modules/antd/es/tooltip/PurePanel.js
+"use client";
+
+
+
+
+
+
+
+
+
+/** @private Internal Component. Do not use in your production. */
+const tooltip_PurePanel_PurePanel = props => {
+  const {
+    prefixCls: customizePrefixCls,
+    className,
+    placement = 'top',
+    title,
+    color,
+    overlayInnerStyle,
+    classNames,
+    styles
+  } = props;
+  const {
+    getPrefixCls
+  } = (react_production_namespaceFn().useContext)(ConfigContext);
+  const prefixCls = getPrefixCls('tooltip', customizePrefixCls);
+  const rootPrefixCls = getPrefixCls();
+  const rootCls = hooks_useCSSVarCls(prefixCls);
+  const [hashId, cssVarCls] = tooltip_style(prefixCls, rootCls);
+  // Color
+  const colorInfo = parseColor(rootPrefixCls, prefixCls, color);
+  const arrowContentStyle = colorInfo.arrowStyle;
+  const innerStyles = (react_production_namespaceFn().useMemo)(() => {
+    const mergedStyle = {
+      ...overlayInnerStyle,
+      ...colorInfo.overlayStyle
+    };
+    return {
+      container: mergedStyle
+    };
+  }, [overlayInnerStyle, colorInfo.overlayStyle]);
+  const mergedProps = {
+    ...props,
+    placement
+  };
+  const [mergedClassNames, mergedStyles] = useMergeSemantic([classNames], [innerStyles, styles], {
+    props: mergedProps
+  });
+  const rootClassName = clsx(rootCls, hashId, cssVarCls, prefixCls, `${prefixCls}-pure`, `${prefixCls}-placement-${placement}`, className, colorInfo.className);
+  return /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
+    className: rootClassName,
+    style: arrowContentStyle
+  }, /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
+    className: `${prefixCls}-arrow`
+  }), /*#__PURE__*/(react_production_namespaceFn().createElement)(tooltip_es_Popup, {
+    ...props,
+    className: hashId,
+    prefixCls: prefixCls,
+    classNames: mergedClassNames,
+    styles: mergedStyles
+  }, title));
+};
+/* harmony default export */ const tooltip_PurePanel = (tooltip_PurePanel_PurePanel);
+;// ./node_modules/antd/es/tooltip/index.js
+"use client";
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+const InternalTooltip = /*#__PURE__*/(react_production_namespaceFn().forwardRef)((props, ref) => {
+  const {
+    prefixCls: customizePrefixCls,
+    openClassName,
+    getTooltipContainer,
+    color,
+    children,
+    afterOpenChange,
+    arrow: tooltipArrow,
+    destroyTooltipOnHide,
+    destroyOnHidden,
+    title,
+    overlay,
+    trigger,
+    builtinPlacements,
+    autoAdjustOverflow = true,
+    motion,
+    getPopupContainer,
+    placement = 'top',
+    mouseEnterDelay,
+    mouseLeaveDelay,
+    rootClassName,
+    styles,
+    classNames,
+    onOpenChange,
+    // Legacy
+    overlayInnerStyle,
+    overlayStyle,
+    overlayClassName,
+    ...restProps
+  } = props;
+  const [, token] = useToken();
+  const injectFromPopover = props['data-popover-inject'];
+  const {
+    getPopupContainer: getContextPopupContainer,
+    getPrefixCls,
+    direction,
+    ...semanticConfig
+  } = useComponentConfig('tooltip');
+  // When injected from Popover/Popconfirm, skip tooltip-specific semantic config
+  // to prevent ConfigProvider tooltip config from leaking into those components
+  const {
+    className: contextClassName,
+    style: contextStyle,
+    classNames: contextClassNames,
+    styles: contextStyles,
+    arrow: contextArrow,
+    trigger: contextTrigger,
+    mouseEnterDelay: contextMouseEnterDelay,
+    mouseLeaveDelay: contextMouseLeaveDelay
+  } = injectFromPopover ? {} : semanticConfig;
+  const mergedMouseEnterDelay = mouseEnterDelay ?? contextMouseEnterDelay ?? 0.1;
+  const mergedMouseLeaveDelay = mouseLeaveDelay ?? contextMouseLeaveDelay ?? 0.1;
+  const mergedArrow = hook_useMergedArrow(tooltipArrow, contextArrow);
+  const mergedShowArrow = mergedArrow.show;
+  const mergedTrigger = trigger || contextTrigger || 'hover';
+  const mergedGetPopupContainer = getPopupContainer || getTooltipContainer || getContextPopupContainer;
+  const mergedDestroyOnHidden = destroyOnHidden ?? !!destroyTooltipOnHide;
+  const inTableMeasureRow = (react_production_namespaceFn().useContext)(table_TableMeasureRowContext);
+  // ============================== Ref ===============================
+  const warning = devUseWarning('Tooltip');
+  const tooltipRef = (react_production_namespaceFn().useRef)(null);
+  const forceAlign = () => {
+    tooltipRef.current?.forceAlign();
+  };
+  (react_production_namespaceFn().useImperativeHandle)(ref, () => ({
+    forceAlign,
+    nativeElement: tooltipRef.current?.nativeElement,
+    popupElement: tooltipRef.current?.popupElement
+  }));
+  // ============================== Warn ==============================
+  if (false) // removed by dead control flow
+{}
+  // ============================== Open ==============================
+  const [open, setOpen] = useControlledState(props.defaultOpen ?? false, props.open);
+  const noTitle = !title && !overlay && title !== 0; // overlay for old version compatibility
+  const onInternalOpenChange = nextOpen => {
+    setOpen(noTitle ? false : nextOpen);
+    if (!noTitle && onOpenChange) {
+      onOpenChange(nextOpen);
+    }
+  };
+  const tooltipPlacements = (react_production_namespaceFn().useMemo)(() => {
+    return builtinPlacements || getPlacements({
+      arrowPointAtCenter: mergedArrow?.pointAtCenter ?? false,
+      autoAdjustOverflow,
+      arrowWidth: mergedShowArrow ? token.sizePopupArrow : 0,
+      borderRadius: token.borderRadius,
+      offset: token.marginXXS,
+      visibleFirst: true
+    });
+  }, [mergedArrow, builtinPlacements, token, mergedShowArrow, autoAdjustOverflow]);
+  const memoOverlay = (react_production_namespaceFn().useMemo)(() => {
+    if (title === 0) {
+      return title;
+    }
+    return overlay || title || '';
+  }, [overlay, title]);
+  const memoOverlayWrapper = /*#__PURE__*/(react_production_namespaceFn().createElement)(_util_ContextIsolator, {
+    space: true,
+    form: true
+  }, isFunction(memoOverlay) ? memoOverlay() : memoOverlay);
+  // =========== Merged Props for Semantic ===========
+  const mergedProps = {
+    ...props,
+    trigger: mergedTrigger,
+    builtinPlacements: tooltipPlacements,
+    getPopupContainer: mergedGetPopupContainer,
+    destroyOnHidden: mergedDestroyOnHidden,
+    mouseEnterDelay: mergedMouseEnterDelay,
+    mouseLeaveDelay: mergedMouseLeaveDelay
+  };
+  const contextStyleRoot = useSemanticRootStyle(contextStyle);
+  const overlayStyleRoot = useSemanticRootStyle(overlayStyle);
+  const [mergedClassNames, mergedStyles] = useMergeSemantic([contextClassNames, classNames], [contextStyles, contextStyleRoot, styles, overlayStyleRoot], {
+    props: mergedProps
+  });
+  const prefixCls = getPrefixCls('tooltip', customizePrefixCls);
+  const rootPrefixCls = getPrefixCls();
+  let tempOpen = open;
+  // Hide tooltip when there is no title or in table measure row
+  if (!('open' in props) && noTitle || inTableMeasureRow) {
+    tempOpen = false;
+  }
+  // ============================= Render =============================
+  const child = /*#__PURE__*/(react_production_namespaceFn().isValidElement)(children) && !reactNode_isFragment(children) ? children : /*#__PURE__*/(react_production_namespaceFn().createElement)("span", null, children);
+  const childProps = child.props;
+  const childCls = !childProps.className || typeof childProps.className === 'string' ? clsx(childProps.className, openClassName || `${prefixCls}-open`) : childProps.className;
+  // Style
+  const rootCls = hooks_useCSSVarCls(prefixCls);
+  const [hashId, cssVarCls] = tooltip_style(prefixCls, rootCls, !injectFromPopover);
+  // Color
+  const colorInfo = parseColor(rootPrefixCls, prefixCls, color);
+  const arrowContentStyle = colorInfo.arrowStyle;
+  const themeCls = clsx(rootCls, hashId, cssVarCls);
+  const rootClassNames = clsx(overlayClassName, {
+    [`${prefixCls}-rtl`]: direction === 'rtl'
+  }, colorInfo.className, rootClassName, themeCls, contextClassName, mergedClassNames.root);
+  // ============================ zIndex ============================
+  const [zIndex, contextZIndex] = useZIndex('Tooltip', restProps.zIndex);
+  const containerStyle = {
+    ...mergedStyles.container,
+    ...overlayInnerStyle,
+    ...colorInfo.overlayStyle
+  };
+  const content = /*#__PURE__*/(react_production_namespaceFn().createElement)(tooltip_es, {
+    unique: true,
+    ...restProps,
+    zIndex: zIndex,
+    showArrow: mergedShowArrow,
+    placement: placement,
+    mouseEnterDelay: mergedMouseEnterDelay,
+    mouseLeaveDelay: mergedMouseLeaveDelay,
+    prefixCls: prefixCls,
+    classNames: {
+      root: rootClassNames,
+      container: mergedClassNames.container,
+      arrow: mergedClassNames.arrow,
+      uniqueContainer: clsx(themeCls, mergedClassNames.container)
+    },
+    styles: {
+      root: {
+        ...arrowContentStyle,
+        ...mergedStyles.root
+      },
+      container: containerStyle,
+      uniqueContainer: containerStyle,
+      arrow: mergedStyles.arrow
+    },
+    ref: tooltipRef,
+    overlay: memoOverlayWrapper,
+    visible: tempOpen,
+    onVisibleChange: onInternalOpenChange,
+    afterVisibleChange: afterOpenChange,
+    arrowContent: /*#__PURE__*/(react_production_namespaceFn().createElement)("span", {
+      className: `${prefixCls}-arrow-content`
+    }),
+    motion: {
+      motionName: motion_getTransitionName(rootPrefixCls, 'zoom-big-fast', typeof motion?.motionName === 'string' ? motion?.motionName : undefined),
+      motionDeadline: 1000
+    },
+    trigger: mergedTrigger,
+    builtinPlacements: tooltipPlacements,
+    getTooltipContainer: mergedGetPopupContainer,
+    destroyOnHidden: mergedDestroyOnHidden
+  }, tempOpen && !restProps.disabled ? cloneElement(child, {
+    className: childCls
+  }) : child);
+  return /*#__PURE__*/(react_production_namespaceFn().createElement)(zindexContext.Provider, {
+    value: contextZIndex
+  }, content);
+});
+const tooltip_Tooltip = InternalTooltip;
+if (false) // removed by dead control flow
+{}
+tooltip_Tooltip._InternalPanelDoNotUseOrYouWillBeFired = tooltip_PurePanel;
+tooltip_Tooltip.UniqueProvider = tooltip_UniqueProvider;
+/* harmony default export */ const es_tooltip = (tooltip_Tooltip);
 ;// ./node_modules/antd/es/button/index.js
 "use client";
 
@@ -47512,46 +48749,46 @@ const autoAdjustOverflow = {
   adjustX: 1,
   adjustY: 1
 };
-const targetOffset = [0, 0];
-const placements = {
+const placements_targetOffset = [0, 0];
+const placements_placements = {
   topLeft: {
     points: ['bl', 'tl'],
     overflow: autoAdjustOverflow,
     offset: [0, -4],
-    targetOffset
+    targetOffset: placements_targetOffset
   },
   top: {
     points: ['bc', 'tc'],
     overflow: autoAdjustOverflow,
     offset: [0, -4],
-    targetOffset
+    targetOffset: placements_targetOffset
   },
   topRight: {
     points: ['br', 'tr'],
     overflow: autoAdjustOverflow,
     offset: [0, -4],
-    targetOffset
+    targetOffset: placements_targetOffset
   },
   bottomLeft: {
     points: ['tl', 'bl'],
     overflow: autoAdjustOverflow,
     offset: [0, 4],
-    targetOffset
+    targetOffset: placements_targetOffset
   },
   bottom: {
     points: ['tc', 'bc'],
     overflow: autoAdjustOverflow,
     offset: [0, 4],
-    targetOffset
+    targetOffset: placements_targetOffset
   },
   bottomRight: {
     points: ['tr', 'br'],
     overflow: autoAdjustOverflow,
     offset: [0, 4],
-    targetOffset
+    targetOffset: placements_targetOffset
   }
 };
-/* harmony default export */ const es_placements = (placements);
+/* harmony default export */ const dropdown_es_placements = (placements_placements);
 ;// ./node_modules/@rc-component/dropdown/es/Dropdown.js
 function Dropdown_extends() { Dropdown_extends = Object.assign ? Object.assign.bind() : function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; }; return Dropdown_extends.apply(this, arguments); }
 ;
@@ -47569,7 +48806,7 @@ const Dropdown = /*#__PURE__*/(react_production_namespaceFn().forwardRef)((props
     animation,
     align,
     placement = 'bottomLeft',
-    placements = es_placements,
+    placements = dropdown_es_placements,
     getPopupContainer,
     showAction,
     hideAction,
@@ -48992,7 +50229,7 @@ const placements_autoAdjustOverflow = {
   adjustX: 1,
   adjustY: 1
 };
-const placements_placements = {
+const es_placements_placements = {
   topLeft: {
     points: ['bl', 'tl'],
     overflow: placements_autoAdjustOverflow
@@ -49060,7 +50297,7 @@ const placementsRtl = {
     overflow: placements_autoAdjustOverflow
   }
 };
-/* harmony default export */ const menu_es_placements = ((/* unused pure expression or super */ null && (placements_placements)));
+/* harmony default export */ const menu_es_placements = ((/* unused pure expression or super */ null && (es_placements_placements)));
 ;// ./node_modules/@rc-component/menu/es/utils/motionUtil.js
 function motionUtil_getMotion(mode, motion, defaultMotions) {
   if (motion) {
@@ -49115,7 +50352,7 @@ function PopupTrigger({
     ...placementsRtl,
     ...builtinPlacements
   } : {
-    ...placements_placements,
+    ...es_placements_placements,
     ...builtinPlacements
   };
   const popupPlacement = popupPlacementMap[mode];
@@ -54368,1243 +55605,6 @@ switch_Switch.__ANT_SWITCH = true;
 if (false) // removed by dead control flow
 {}
 /* harmony default export */ const es_switch = (switch_Switch);
-;// ./node_modules/@rc-component/tooltip/es/Popup.js
-
-
-const Popup_Popup = props => {
-  const {
-    children,
-    prefixCls,
-    id,
-    classNames,
-    styles,
-    className,
-    style
-  } = props;
-  return /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
-    id: id,
-    className: clsx(`${prefixCls}-container`, classNames?.container, className),
-    style: {
-      ...styles?.container,
-      ...style
-    },
-    role: "tooltip"
-  }, typeof children === 'function' ? children() : children);
-};
-/* harmony default export */ const tooltip_es_Popup = (Popup_Popup);
-;// ./node_modules/@rc-component/tooltip/es/placements.js
-const autoAdjustOverflowTopBottom = {
-  shiftX: 64,
-  adjustY: 1
-};
-const autoAdjustOverflowLeftRight = {
-  adjustX: 1,
-  shiftY: true
-};
-const placements_targetOffset = [0, 0];
-const es_placements_placements = {
-  left: {
-    points: ['cr', 'cl'],
-    overflow: autoAdjustOverflowLeftRight,
-    offset: [-4, 0],
-    targetOffset: placements_targetOffset
-  },
-  right: {
-    points: ['cl', 'cr'],
-    overflow: autoAdjustOverflowLeftRight,
-    offset: [4, 0],
-    targetOffset: placements_targetOffset
-  },
-  top: {
-    points: ['bc', 'tc'],
-    overflow: autoAdjustOverflowTopBottom,
-    offset: [0, -4],
-    targetOffset: placements_targetOffset
-  },
-  bottom: {
-    points: ['tc', 'bc'],
-    overflow: autoAdjustOverflowTopBottom,
-    offset: [0, 4],
-    targetOffset: placements_targetOffset
-  },
-  topLeft: {
-    points: ['bl', 'tl'],
-    overflow: autoAdjustOverflowTopBottom,
-    offset: [0, -4],
-    targetOffset: placements_targetOffset
-  },
-  leftTop: {
-    points: ['tr', 'tl'],
-    overflow: autoAdjustOverflowLeftRight,
-    offset: [-4, 0],
-    targetOffset: placements_targetOffset
-  },
-  topRight: {
-    points: ['br', 'tr'],
-    overflow: autoAdjustOverflowTopBottom,
-    offset: [0, -4],
-    targetOffset: placements_targetOffset
-  },
-  rightTop: {
-    points: ['tl', 'tr'],
-    overflow: autoAdjustOverflowLeftRight,
-    offset: [4, 0],
-    targetOffset: placements_targetOffset
-  },
-  bottomRight: {
-    points: ['tr', 'br'],
-    overflow: autoAdjustOverflowTopBottom,
-    offset: [0, 4],
-    targetOffset: placements_targetOffset
-  },
-  rightBottom: {
-    points: ['bl', 'br'],
-    overflow: autoAdjustOverflowLeftRight,
-    offset: [4, 0],
-    targetOffset: placements_targetOffset
-  },
-  bottomLeft: {
-    points: ['tl', 'bl'],
-    overflow: autoAdjustOverflowTopBottom,
-    offset: [0, 4],
-    targetOffset: placements_targetOffset
-  },
-  leftBottom: {
-    points: ['br', 'bl'],
-    overflow: autoAdjustOverflowLeftRight,
-    offset: [-4, 0],
-    targetOffset: placements_targetOffset
-  }
-};
-/* harmony default export */ const tooltip_es_placements = ((/* unused pure expression or super */ null && (es_placements_placements)));
-;// ./node_modules/@rc-component/tooltip/es/Tooltip.js
-function Tooltip_extends() { Tooltip_extends = Object.assign ? Object.assign.bind() : function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; }; return Tooltip_extends.apply(this, arguments); }
-;
-
-
-
-
-
-
-const Tooltip = /*#__PURE__*/(react_production_namespaceFn().forwardRef)((props, ref) => {
-  const {
-    trigger = ['hover', 'focus'],
-    mouseEnterDelay = 0,
-    mouseLeaveDelay = 0.1,
-    prefixCls = 'rc-tooltip',
-    children,
-    onVisibleChange,
-    afterVisibleChange,
-    motion,
-    placement = 'right',
-    align = {},
-    destroyOnHidden = false,
-    defaultVisible,
-    getTooltipContainer,
-    arrowContent,
-    overlay,
-    id,
-    showArrow = true,
-    classNames,
-    styles,
-    ...restProps
-  } = props;
-  const mergedId = hooks_useId(id);
-  const triggerRef = (0,react_production_namespaceFn().useRef)(null);
-  (0,react_production_namespaceFn().useImperativeHandle)(ref, () => triggerRef.current);
-  const extraProps = {
-    ...restProps
-  };
-  if ('visible' in props) {
-    extraProps.popupVisible = props.visible;
-  }
-
-  // ========================= Arrow ==========================
-  // Process arrow configuration
-  const mergedArrow = (react_production_namespaceFn().useMemo)(() => {
-    if (!showArrow) {
-      return false;
-    }
-
-    // Convert true to object for unified processing
-    const arrowConfig = showArrow === true ? {} : showArrow;
-
-    // Apply semantic styles with unified logic
-    return {
-      ...arrowConfig,
-      className: clsx(arrowConfig.className, classNames?.arrow),
-      style: {
-        ...arrowConfig.style,
-        ...styles?.arrow
-      },
-      content: arrowConfig.content ?? arrowContent
-    };
-  }, [showArrow, classNames?.arrow, styles?.arrow, arrowContent]);
-
-  // ======================== Children ========================
-  const getChildren = ({
-    open
-  }) => {
-    const child = (react_production_namespaceFn().Children).only(children);
-    const childAriaDescribedBy = child.props['aria-describedby'];
-    const ariaDescribedBy = [childAriaDescribedBy, overlay && open ? mergedId : undefined].filter(Boolean).join(' ');
-    const ariaProps = {
-      'aria-describedby': ariaDescribedBy || undefined
-    };
-    return /*#__PURE__*/(react_production_namespaceFn().cloneElement)(child, ariaProps);
-  };
-
-  // ========================= Render =========================
-  return /*#__PURE__*/(react_production_namespaceFn().createElement)(trigger_es, Tooltip_extends({
-    popupClassName: classNames?.root,
-    prefixCls: prefixCls,
-    popup: /*#__PURE__*/(react_production_namespaceFn().createElement)(tooltip_es_Popup, {
-      key: "content",
-      prefixCls: prefixCls,
-      id: mergedId,
-      classNames: classNames,
-      styles: styles
-    }, overlay),
-    action: trigger,
-    builtinPlacements: es_placements_placements,
-    popupPlacement: placement,
-    ref: triggerRef,
-    popupAlign: align,
-    getPopupContainer: getTooltipContainer,
-    onOpenChange: onVisibleChange,
-    afterOpenChange: afterVisibleChange,
-    popupMotion: motion,
-    defaultPopupVisible: defaultVisible,
-    autoDestroy: destroyOnHidden,
-    mouseLeaveDelay: mouseLeaveDelay,
-    popupStyle: styles?.root,
-    mouseEnterDelay: mouseEnterDelay,
-    arrow: mergedArrow,
-    uniqueContainerClassName: classNames?.uniqueContainer,
-    uniqueContainerStyle: styles?.uniqueContainer
-  }, extraProps), getChildren);
-});
-/* harmony default export */ const es_Tooltip = (Tooltip);
-;// ./node_modules/@rc-component/tooltip/es/index.js
-
-
-
-/* harmony default export */ const tooltip_es = (es_Tooltip);
-;// ./node_modules/antd/es/style/roundedArrow.js
-
-function getArrowToken(token) {
-  const {
-    sizePopupArrow,
-    borderRadiusXS,
-    borderRadiusOuter
-  } = token;
-  const unitWidth = sizePopupArrow / 2;
-  const ax = 0;
-  const ay = unitWidth;
-  const bx = borderRadiusOuter * 1 / Math.sqrt(2);
-  const by = unitWidth - borderRadiusOuter * (1 - 1 / Math.sqrt(2));
-  const cx = unitWidth - borderRadiusXS * (1 / Math.sqrt(2));
-  const cy = borderRadiusOuter * (Math.sqrt(2) - 1) + borderRadiusXS * (1 / Math.sqrt(2));
-  const dx = 2 * unitWidth - cx;
-  const dy = cy;
-  const ex = 2 * unitWidth - bx;
-  const ey = by;
-  const fx = 2 * unitWidth - ax;
-  const fy = ay;
-  const shadowWidth = unitWidth * Math.sqrt(2) + borderRadiusOuter * (Math.sqrt(2) - 2);
-  const polygonOffset = borderRadiusOuter * (Math.sqrt(2) - 1);
-  const arrowPolygon = `polygon(${polygonOffset}px 100%, 50% ${polygonOffset}px, ${2 * unitWidth - polygonOffset}px 100%, ${polygonOffset}px 100%)`;
-  const arrowPath = `path('M ${ax} ${ay} A ${borderRadiusOuter} ${borderRadiusOuter} 0 0 0 ${bx} ${by} L ${cx} ${cy} A ${borderRadiusXS} ${borderRadiusXS} 0 0 1 ${dx} ${dy} L ${ex} ${ey} A ${borderRadiusOuter} ${borderRadiusOuter} 0 0 0 ${fx} ${fy} Z')`;
-  return {
-    arrowShadowWidth: shadowWidth,
-    arrowPath,
-    arrowPolygon
-  };
-}
-const genRoundedArrow = (token, bgColor, boxShadow) => {
-  const {
-    sizePopupArrow,
-    arrowPolygon,
-    arrowPath,
-    arrowShadowWidth,
-    borderRadiusXS,
-    calc
-  } = token;
-  const afterStyle = {
-    content: '""',
-    position: 'absolute',
-    width: arrowShadowWidth,
-    height: arrowShadowWidth,
-    bottom: 0,
-    insetInline: 0,
-    margin: 'auto',
-    borderRadius: {
-      _skip_check_: true,
-      value: `0 0 ${util_unit(borderRadiusXS)} 0`
-    },
-    transform: 'translateY(50%) rotate(-135deg)',
-    zIndex: 0,
-    background: 'transparent'
-  };
-  if (boxShadow) {
-    afterStyle.boxShadow = boxShadow;
-  }
-  return {
-    pointerEvents: 'none',
-    width: sizePopupArrow,
-    height: sizePopupArrow,
-    overflow: 'hidden',
-    '&::before': {
-      position: 'absolute',
-      bottom: 0,
-      insetInlineStart: 0,
-      width: sizePopupArrow,
-      height: calc(sizePopupArrow).div(2).equal(),
-      background: bgColor,
-      clipPath: {
-        _multi_value_: true,
-        value: [arrowPolygon, arrowPath]
-      },
-      content: '""'
-    },
-    '&::after': afterStyle
-  };
-};
-;// ./node_modules/antd/es/style/placementArrow.js
-
-
-
-const MAX_VERTICAL_CONTENT_RADIUS = 8;
-function getArrowOffsetToken(options) {
-  const {
-    contentRadius,
-    limitVerticalRadius
-  } = options;
-  const arrowOffset = contentRadius > 12 ? contentRadius + 2 : 12;
-  const arrowOffsetVertical = limitVerticalRadius ? MAX_VERTICAL_CONTENT_RADIUS : arrowOffset;
-  return {
-    arrowOffsetHorizontal: arrowOffset,
-    arrowOffsetVertical
-  };
-}
-const getArrowStyle = (token, colorBg, options) => {
-  const {
-    componentCls,
-    boxShadowPopoverArrow,
-    arrowOffsetVertical,
-    arrowOffsetHorizontal,
-    antCls
-  } = token;
-  const [varName] = genCssVar(antCls, 'tooltip');
-  const {
-    arrowDistance = 0,
-    arrowShadow = true
-  } = options || {};
-  return {
-    [componentCls]: {
-      // ============================ Basic ============================
-      [`${componentCls}-arrow`]: [{
-        position: 'absolute',
-        zIndex: 1,
-        // lift it up so the menu wouldn't cask shadow on it
-        display: 'block',
-        ...genRoundedArrow(token, colorBg, arrowShadow ? boxShadowPopoverArrow : false),
-        '&:before': {
-          background: colorBg
-        }
-      }],
-      // ========================== Placement ==========================
-      // Here handle the arrow position and rotate stuff
-      // >>>>> Top
-      [[`&-placement-top > ${componentCls}-arrow`, `&-placement-topLeft > ${componentCls}-arrow`, `&-placement-topRight > ${componentCls}-arrow`].join(',')]: {
-        bottom: arrowDistance,
-        transform: 'translateY(100%) rotate(180deg)'
-      },
-      [`&-placement-top > ${componentCls}-arrow`]: {
-        left: {
-          _skip_check_: true,
-          value: '50%'
-        },
-        transform: 'translateX(-50%) translateY(100%) rotate(180deg)'
-      },
-      '&-placement-topLeft': {
-        [varName('arrow-offset-x')]: arrowOffsetHorizontal,
-        [`> ${componentCls}-arrow`]: {
-          left: {
-            _skip_check_: true,
-            value: arrowOffsetHorizontal
-          }
-        }
-      },
-      '&-placement-topRight': {
-        [varName('arrow-offset-x')]: `calc(100% - ${util_unit(arrowOffsetHorizontal)})`,
-        [`> ${componentCls}-arrow`]: {
-          right: {
-            _skip_check_: true,
-            value: arrowOffsetHorizontal
-          }
-        }
-      },
-      // >>>>> Bottom
-      [[`&-placement-bottom > ${componentCls}-arrow`, `&-placement-bottomLeft > ${componentCls}-arrow`, `&-placement-bottomRight > ${componentCls}-arrow`].join(',')]: {
-        top: arrowDistance,
-        transform: `translateY(-100%)`
-      },
-      [`&-placement-bottom > ${componentCls}-arrow`]: {
-        left: {
-          _skip_check_: true,
-          value: '50%'
-        },
-        transform: `translateX(-50%) translateY(-100%)`
-      },
-      '&-placement-bottomLeft': {
-        [varName('arrow-offset-x')]: arrowOffsetHorizontal,
-        [`> ${componentCls}-arrow`]: {
-          left: {
-            _skip_check_: true,
-            value: arrowOffsetHorizontal
-          }
-        }
-      },
-      '&-placement-bottomRight': {
-        [varName('arrow-offset-x')]: `calc(100% - ${util_unit(arrowOffsetHorizontal)})`,
-        [`> ${componentCls}-arrow`]: {
-          right: {
-            _skip_check_: true,
-            value: arrowOffsetHorizontal
-          }
-        }
-      },
-      // >>>>> Left
-      [[`&-placement-left > ${componentCls}-arrow`, `&-placement-leftTop > ${componentCls}-arrow`, `&-placement-leftBottom > ${componentCls}-arrow`].join(',')]: {
-        right: {
-          _skip_check_: true,
-          value: arrowDistance
-        },
-        transform: 'translateX(100%) rotate(90deg)'
-      },
-      [`&-placement-left > ${componentCls}-arrow`]: {
-        top: {
-          _skip_check_: true,
-          value: '50%'
-        },
-        transform: 'translateY(-50%) translateX(100%) rotate(90deg)'
-      },
-      [`&-placement-leftTop > ${componentCls}-arrow`]: {
-        top: arrowOffsetVertical
-      },
-      [`&-placement-leftBottom > ${componentCls}-arrow`]: {
-        bottom: arrowOffsetVertical
-      },
-      // >>>>> Right
-      [[`&-placement-right > ${componentCls}-arrow`, `&-placement-rightTop > ${componentCls}-arrow`, `&-placement-rightBottom > ${componentCls}-arrow`].join(',')]: {
-        left: {
-          _skip_check_: true,
-          value: arrowDistance
-        },
-        transform: 'translateX(-100%) rotate(-90deg)'
-      },
-      [`&-placement-right > ${componentCls}-arrow`]: {
-        top: {
-          _skip_check_: true,
-          value: '50%'
-        },
-        transform: 'translateY(-50%) translateX(-100%) rotate(-90deg)'
-      },
-      [`&-placement-rightTop > ${componentCls}-arrow`]: {
-        top: arrowOffsetVertical
-      },
-      [`&-placement-rightBottom > ${componentCls}-arrow`]: {
-        bottom: arrowOffsetVertical
-      }
-    }
-  };
-};
-/* harmony default export */ const placementArrow = (getArrowStyle);
-;// ./node_modules/antd/es/_util/placements.js
-
-
-function getOverflowOptions(placement, arrowOffset, arrowWidth, autoAdjustOverflow) {
-  if (autoAdjustOverflow === false) {
-    return {
-      adjustX: false,
-      adjustY: false
-    };
-  }
-  const overflow = isPlainObject(autoAdjustOverflow) ? autoAdjustOverflow : {};
-  const baseOverflow = {};
-  switch (placement) {
-    case 'top':
-    case 'bottom':
-      baseOverflow.shiftX = arrowOffset.arrowOffsetHorizontal * 2 + arrowWidth;
-      baseOverflow.shiftY = true;
-      baseOverflow.adjustY = true;
-      break;
-    case 'left':
-    case 'right':
-      baseOverflow.shiftY = arrowOffset.arrowOffsetVertical * 2 + arrowWidth;
-      baseOverflow.shiftX = true;
-      baseOverflow.adjustX = true;
-      break;
-  }
-  const mergedOverflow = {
-    ...baseOverflow,
-    ...overflow
-  };
-  // Support auto shift
-  if (!mergedOverflow.shiftX) {
-    mergedOverflow.adjustX = true;
-  }
-  if (!mergedOverflow.shiftY) {
-    mergedOverflow.adjustY = true;
-  }
-  return mergedOverflow;
-}
-const PlacementAlignMap = {
-  left: {
-    points: ['cr', 'cl']
-  },
-  right: {
-    points: ['cl', 'cr']
-  },
-  top: {
-    points: ['bc', 'tc']
-  },
-  bottom: {
-    points: ['tc', 'bc']
-  },
-  topLeft: {
-    points: ['bl', 'tl']
-  },
-  leftTop: {
-    points: ['tr', 'tl']
-  },
-  topRight: {
-    points: ['br', 'tr']
-  },
-  rightTop: {
-    points: ['tl', 'tr']
-  },
-  bottomRight: {
-    points: ['tr', 'br']
-  },
-  rightBottom: {
-    points: ['bl', 'br']
-  },
-  bottomLeft: {
-    points: ['tl', 'bl']
-  },
-  leftBottom: {
-    points: ['br', 'bl']
-  }
-};
-const ArrowCenterPlacementAlignMap = {
-  topLeft: {
-    points: ['bl', 'tc']
-  },
-  leftTop: {
-    points: ['tr', 'cl']
-  },
-  topRight: {
-    points: ['br', 'tc']
-  },
-  rightTop: {
-    points: ['tl', 'cr']
-  },
-  bottomRight: {
-    points: ['tr', 'bc']
-  },
-  rightBottom: {
-    points: ['bl', 'cr']
-  },
-  bottomLeft: {
-    points: ['tl', 'bc']
-  },
-  leftBottom: {
-    points: ['br', 'cl']
-  }
-};
-const DisableAutoArrowList = new Set(['topLeft', 'topRight', 'bottomLeft', 'bottomRight', 'leftTop', 'leftBottom', 'rightTop', 'rightBottom']);
-function getPlacements(config) {
-  const {
-    arrowWidth,
-    autoAdjustOverflow,
-    arrowPointAtCenter,
-    offset,
-    borderRadius,
-    visibleFirst
-  } = config;
-  const halfArrowWidth = arrowWidth / 2;
-  const placementMap = {};
-  // Dynamic offset
-  const arrowOffset = getArrowOffsetToken({
-    contentRadius: borderRadius,
-    limitVerticalRadius: true
-  });
-  Object.keys(PlacementAlignMap).forEach(key => {
-    const template = arrowPointAtCenter && ArrowCenterPlacementAlignMap[key] || PlacementAlignMap[key];
-    const placementInfo = {
-      ...template,
-      offset: [0, 0],
-      dynamicInset: true
-    };
-    placementMap[key] = placementInfo;
-    // Disable autoArrow since design is fixed position
-    if (DisableAutoArrowList.has(key)) {
-      placementInfo.autoArrow = false;
-    }
-    // Static offset
-    switch (key) {
-      case 'top':
-      case 'topLeft':
-      case 'topRight':
-        placementInfo.offset[1] = -halfArrowWidth - offset;
-        break;
-      case 'bottom':
-      case 'bottomLeft':
-      case 'bottomRight':
-        placementInfo.offset[1] = halfArrowWidth + offset;
-        break;
-      case 'left':
-      case 'leftTop':
-      case 'leftBottom':
-        placementInfo.offset[0] = -halfArrowWidth - offset;
-        break;
-      case 'right':
-      case 'rightTop':
-      case 'rightBottom':
-        placementInfo.offset[0] = halfArrowWidth + offset;
-        break;
-    }
-    if (arrowPointAtCenter) {
-      switch (key) {
-        case 'topLeft':
-        case 'bottomLeft':
-          placementInfo.offset[0] = -arrowOffset.arrowOffsetHorizontal - halfArrowWidth;
-          break;
-        case 'topRight':
-        case 'bottomRight':
-          placementInfo.offset[0] = arrowOffset.arrowOffsetHorizontal + halfArrowWidth;
-          break;
-        case 'leftTop':
-        case 'rightTop':
-          placementInfo.offset[1] = -arrowOffset.arrowOffsetHorizontal * 2 + halfArrowWidth;
-          break;
-        case 'leftBottom':
-        case 'rightBottom':
-          placementInfo.offset[1] = arrowOffset.arrowOffsetHorizontal * 2 - halfArrowWidth;
-          break;
-      }
-    }
-    // Overflow
-    placementInfo.overflow = getOverflowOptions(key, arrowOffset, arrowWidth, autoAdjustOverflow);
-    // VisibleFirst
-    if (visibleFirst) {
-      placementInfo.htmlRegion = 'visibleFirst';
-    }
-  });
-  return placementMap;
-}
-;// ./node_modules/antd/es/table/TableMeasureRowContext.js
-
-const TableMeasureRowContext = /*#__PURE__*/(react_production_namespaceFn().createContext)(false);
-/* harmony default export */ const table_TableMeasureRowContext = (TableMeasureRowContext);
-;// ./node_modules/antd/es/tooltip/hook/useMergedArrow.js
-
-const useMergedArrow = (providedArrow, providedContextArrow) => {
-  const toConfig = arrow => typeof arrow === 'boolean' ? {
-    show: arrow
-  } : arrow || {};
-  return (react_production_namespaceFn().useMemo)(() => {
-    const arrowConfig = toConfig(providedArrow);
-    const contextArrowConfig = toConfig(providedContextArrow);
-    return {
-      ...contextArrowConfig,
-      ...arrowConfig,
-      show: arrowConfig.show ?? contextArrowConfig.show ?? true
-    };
-  }, [providedArrow, providedContextArrow]);
-};
-/* harmony default export */ const hook_useMergedArrow = (useMergedArrow);
-;// ./node_modules/antd/es/theme/util/genPresetColor.js
-
-function genPresetColor_genPresetColor(token, genCss) {
-  return PresetColors.reduce((prev, colorKey) => {
-    const lightColor = token[`${colorKey}1`];
-    const lightBorderColor = token[`${colorKey}3`];
-    const darkColor = token[`${colorKey}6`];
-    const textColor = token[`${colorKey}7`];
-    return {
-      ...prev,
-      ...genCss(colorKey, {
-        lightColor,
-        lightBorderColor,
-        darkColor,
-        textColor
-      })
-    };
-  }, {});
-}
-;// ./node_modules/antd/es/tooltip/style/index.js
-
-
-
-
-
-
-
-const FALL_BACK_ORIGIN = '50%';
-const genTooltipStyle = token => {
-  const {
-    calc,
-    componentCls,
-    // ant-tooltip
-    tooltipMaxWidth,
-    tooltipColor,
-    tooltipBg,
-    tooltipBorderRadius,
-    zIndexPopup,
-    controlHeight,
-    dropShadowPopover,
-    paddingSM,
-    paddingXS,
-    arrowOffsetHorizontal,
-    sizePopupArrow,
-    antCls
-  } = token;
-  const [varName, varRef] = genCssVar(antCls, 'tooltip');
-  // arrowOffsetHorizontal + arrowWidth + borderRadius
-  const edgeAlignMinWidth = calc(tooltipBorderRadius).add(sizePopupArrow).add(arrowOffsetHorizontal).equal();
-  // borderRadius * 2 + arrowWidth
-  const centerAlignMinWidth = calc(tooltipBorderRadius).mul(2).add(sizePopupArrow).equal();
-  const sharedBodyStyle = {
-    minWidth: centerAlignMinWidth,
-    minHeight: controlHeight,
-    padding: `${util_unit(token.calc(paddingSM).div(2).equal())} ${util_unit(paddingXS)}`,
-    color: varRef('overlay-color', tooltipColor),
-    textAlign: 'start',
-    textDecoration: 'none',
-    wordWrap: 'break-word',
-    backgroundColor: tooltipBg,
-    borderRadius: tooltipBorderRadius,
-    boxSizing: 'border-box'
-  };
-  const sharedTransformOrigin = {
-    // When use `autoArrow`, origin will follow the arrow position
-    [varName('valid-offset-x')]: varRef('arrow-offset-x', 'var(--arrow-x)'),
-    transformOrigin: [varRef('valid-offset-x', FALL_BACK_ORIGIN), `var(--arrow-y, ${FALL_BACK_ORIGIN})`].join(' ')
-  };
-  return [{
-    [componentCls]: {
-      ...resetComponent(token),
-      position: 'absolute',
-      zIndex: zIndexPopup,
-      display: 'block',
-      width: 'max-content',
-      maxWidth: tooltipMaxWidth,
-      visibility: 'visible',
-      filter: dropShadowPopover,
-      ...sharedTransformOrigin,
-      '&-hidden': {
-        display: 'none'
-      },
-      [varName('arrow-background-color')]: tooltipBg,
-      // Wrapper for the tooltip content
-      [`${componentCls}-container`]: [sharedBodyStyle, initFadeMotion(token, true)],
-      [`&:has(~ ${componentCls}-unique-container)`]: {
-        [`${componentCls}-container`]: {
-          border: 'none',
-          background: 'transparent'
-        }
-      },
-      // Align placement should have another min width
-      [[`&-placement-topLeft`, `&-placement-topRight`, `&-placement-bottomLeft`, `&-placement-bottomRight`].join(',')]: {
-        minWidth: edgeAlignMinWidth
-      },
-      // Limit left and right placement radius
-      [[`&-placement-left`, `&-placement-leftTop`, `&-placement-leftBottom`, `&-placement-right`, `&-placement-rightTop`, `&-placement-rightBottom`].join(',')]: {
-        [`${componentCls}-inner`]: {
-          borderRadius: token.min(tooltipBorderRadius, (/* inlined export .MAX_VERTICAL_CONTENT_RADIUS */8))
-        }
-      },
-      [`${componentCls}-content`]: {
-        position: 'relative'
-      },
-      // generator for preset color
-      ...genPresetColor_genPresetColor(token, (colorKey, {
-        darkColor
-      }) => ({
-        [`&${componentCls}-${colorKey}`]: {
-          [`${componentCls}-container`]: {
-            backgroundColor: darkColor
-          },
-          [`${componentCls}-arrow`]: {
-            [varName('arrow-background-color')]: darkColor
-          }
-        }
-      })),
-      // RTL
-      '&-rtl': {
-        direction: 'rtl'
-      }
-    }
-  },
-  // Arrow Style
-  placementArrow(token, varRef('arrow-background-color'), {
-    arrowShadow: false
-  }),
-  // Pure Render
-  {
-    [`${componentCls}-pure`]: {
-      position: 'relative',
-      maxWidth: 'none',
-      margin: token.sizePopupArrow
-    }
-  },
-  // Unique Body
-  {
-    [`${componentCls}-unique-container`]: {
-      ...sharedBodyStyle,
-      ...sharedTransformOrigin,
-      position: 'absolute',
-      zIndex: calc(zIndexPopup).sub(1).equal(),
-      filter: dropShadowPopover,
-      '&-hidden': {
-        display: 'none'
-      },
-      '&-visible': {
-        transition: `all ${token.motionDurationSlow}`
-      }
-    }
-  }];
-};
-// ============================== Export ==============================
-const tooltip_style_prepareComponentToken = token => ({
-  zIndexPopup: token.zIndexPopupBase + 70,
-  maxWidth: 250,
-  ...getArrowOffsetToken({
-    contentRadius: token.borderRadius,
-    limitVerticalRadius: true
-  }),
-  ...getArrowToken(statistic_merge(token, {
-    borderRadiusOuter: Math.min(token.borderRadiusOuter, 4)
-  }))
-});
-/* harmony default export */ const tooltip_style = ((prefixCls, rootCls, injectStyle = true) => {
-  const useStyle = genStyleHooks('Tooltip', token => {
-    const {
-      borderRadius,
-      colorTextLightSolid,
-      colorBgSpotlight,
-      maxWidth
-    } = token;
-    const TooltipToken = statistic_merge(token, {
-      // default variables
-      tooltipMaxWidth: maxWidth,
-      tooltipColor: colorTextLightSolid,
-      tooltipBorderRadius: borderRadius,
-      tooltipBg: colorBgSpotlight
-    });
-    return [genTooltipStyle(TooltipToken), initZoomMotion(token, 'zoom-big-fast')];
-  }, tooltip_style_prepareComponentToken, {
-    resetStyle: false,
-    // Popover use Tooltip as internal component. We do not need to handle this.
-    injectStyle
-  });
-  return useStyle(prefixCls, rootCls);
-});
-__webpack_require__.dn(tooltip_style);
-;// ./node_modules/antd/es/_util/colors.js
-
-
-const inverseColors = PresetColors.map(color => `${color}-inverse`);
-const PresetStatusColors = ['success', 'processing', 'error', 'default', 'warning'];
-/**
- * determine if the color keyword belongs to the `Ant Design` {@link PresetColors}.
- * @param color color to be judged
- * @param includeInverse whether to include reversed colors
- */
-function isPresetColor(color, includeInverse = true) {
-  if (includeInverse) {
-    return [].concat(_toConsumableArray(inverseColors), _toConsumableArray(PresetColors)).includes(color);
-  }
-  return PresetColors.includes(color);
-}
-function isPresetStatusColor(color) {
-  return PresetStatusColors.includes(color);
-}
-;// ./node_modules/antd/es/color-picker/util.js
-/* unused harmony import specifier */ var util_toConsumableArray;
-/* unused harmony import specifier */ var RcColor;
-
-
-
-const util_generateColor = color => {
-  if (color instanceof AggregationColor) {
-    return color;
-  }
-  return new AggregationColor(color);
-};
-const util_getRoundNumber = value => Math.round(Number(value || 0));
-const getColorAlpha = color => util_getRoundNumber(color.toHsb().a * 100);
-/** Return the color whose `alpha` is 1 */
-const genAlphaColor = (color, alpha) => {
-  const rgba = color.toRgb();
-  // Color from hsb input may get `rgb` is (0/0/0) when `hsb.b` is 0
-  // So if rgb is empty, we should get from hsb
-  if (!rgba.r && !rgba.g && !rgba.b) {
-    const hsba = color.toHsb();
-    hsba.a = alpha || 1;
-    return util_generateColor(hsba);
-  }
-  rgba.a = alpha || 1;
-  return util_generateColor(rgba);
-};
-/**
- * Get percent position color. e.g. [10%-#fff, 20%-#000], 15% => #888
- */
-const getGradientPercentColor = (colors, percent) => {
-  const filledColors = [{
-    percent: 0,
-    color: colors[0].color
-  }].concat(util_toConsumableArray(colors), [{
-    percent: 100,
-    color: colors[colors.length - 1].color
-  }]);
-  for (let i = 0; i < filledColors.length - 1; i += 1) {
-    const startPtg = filledColors[i].percent;
-    const endPtg = filledColors[i + 1].percent;
-    const startColor = filledColors[i].color;
-    const endColor = filledColors[i + 1].color;
-    if (startPtg <= percent && percent <= endPtg) {
-      const dist = endPtg - startPtg;
-      if (dist === 0) {
-        return startColor;
-      }
-      const ratio = (percent - startPtg) / dist * 100;
-      const startRcColor = new RcColor(startColor);
-      const endRcColor = new RcColor(endColor);
-      return startRcColor.mix(endRcColor, ratio).toRgbString();
-    }
-  }
-  // This will never reach
-  /* istanbul ignore next */
-  return '';
-};
-;// ./node_modules/antd/es/tooltip/util.js
-
-
-
-
-const parseColor = (rootPrefixCls, prefixCls, color) => {
-  const isInternalColor = isPresetColor(color);
-  const [varName] = genCssVar(rootPrefixCls, 'tooltip');
-  const className = clsx({
-    [`${prefixCls}-${color}`]: color && isInternalColor
-  });
-  const overlayStyle = {};
-  const arrowStyle = {};
-  const rgb = util_generateColor(color).toRgb();
-  const luminance = (0.299 * rgb.r + 0.587 * rgb.g + 0.114 * rgb.b) / 255;
-  const textColor = luminance < 0.5 ? '#FFF' : '#000';
-  if (color && !isInternalColor) {
-    overlayStyle.background = color;
-    overlayStyle[varName('overlay-color')] = textColor;
-    arrowStyle[varName('arrow-background-color')] = color;
-  }
-  return {
-    className,
-    overlayStyle,
-    arrowStyle
-  };
-};
-;// ./node_modules/antd/es/tooltip/PurePanel.js
-"use client";
-
-
-
-
-
-
-
-
-
-/** @private Internal Component. Do not use in your production. */
-const tooltip_PurePanel_PurePanel = props => {
-  const {
-    prefixCls: customizePrefixCls,
-    className,
-    placement = 'top',
-    title,
-    color,
-    overlayInnerStyle,
-    classNames,
-    styles
-  } = props;
-  const {
-    getPrefixCls
-  } = (react_production_namespaceFn().useContext)(ConfigContext);
-  const prefixCls = getPrefixCls('tooltip', customizePrefixCls);
-  const rootPrefixCls = getPrefixCls();
-  const rootCls = hooks_useCSSVarCls(prefixCls);
-  const [hashId, cssVarCls] = tooltip_style(prefixCls, rootCls);
-  // Color
-  const colorInfo = parseColor(rootPrefixCls, prefixCls, color);
-  const arrowContentStyle = colorInfo.arrowStyle;
-  const innerStyles = (react_production_namespaceFn().useMemo)(() => {
-    const mergedStyle = {
-      ...overlayInnerStyle,
-      ...colorInfo.overlayStyle
-    };
-    return {
-      container: mergedStyle
-    };
-  }, [overlayInnerStyle, colorInfo.overlayStyle]);
-  const mergedProps = {
-    ...props,
-    placement
-  };
-  const [mergedClassNames, mergedStyles] = useMergeSemantic([classNames], [innerStyles, styles], {
-    props: mergedProps
-  });
-  const rootClassName = clsx(rootCls, hashId, cssVarCls, prefixCls, `${prefixCls}-pure`, `${prefixCls}-placement-${placement}`, className, colorInfo.className);
-  return /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
-    className: rootClassName,
-    style: arrowContentStyle
-  }, /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
-    className: `${prefixCls}-arrow`
-  }), /*#__PURE__*/(react_production_namespaceFn().createElement)(tooltip_es_Popup, {
-    ...props,
-    className: hashId,
-    prefixCls: prefixCls,
-    classNames: mergedClassNames,
-    styles: mergedStyles
-  }, title));
-};
-/* harmony default export */ const tooltip_PurePanel = (tooltip_PurePanel_PurePanel);
-;// ./node_modules/antd/es/tooltip/index.js
-"use client";
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-const InternalTooltip = /*#__PURE__*/(react_production_namespaceFn().forwardRef)((props, ref) => {
-  const {
-    prefixCls: customizePrefixCls,
-    openClassName,
-    getTooltipContainer,
-    color,
-    children,
-    afterOpenChange,
-    arrow: tooltipArrow,
-    destroyTooltipOnHide,
-    destroyOnHidden,
-    title,
-    overlay,
-    trigger,
-    builtinPlacements,
-    autoAdjustOverflow = true,
-    motion,
-    getPopupContainer,
-    placement = 'top',
-    mouseEnterDelay,
-    mouseLeaveDelay,
-    rootClassName,
-    styles,
-    classNames,
-    onOpenChange,
-    // Legacy
-    overlayInnerStyle,
-    overlayStyle,
-    overlayClassName,
-    ...restProps
-  } = props;
-  const [, token] = useToken();
-  const injectFromPopover = props['data-popover-inject'];
-  const {
-    getPopupContainer: getContextPopupContainer,
-    getPrefixCls,
-    direction,
-    ...semanticConfig
-  } = useComponentConfig('tooltip');
-  // When injected from Popover/Popconfirm, skip tooltip-specific semantic config
-  // to prevent ConfigProvider tooltip config from leaking into those components
-  const {
-    className: contextClassName,
-    style: contextStyle,
-    classNames: contextClassNames,
-    styles: contextStyles,
-    arrow: contextArrow,
-    trigger: contextTrigger,
-    mouseEnterDelay: contextMouseEnterDelay,
-    mouseLeaveDelay: contextMouseLeaveDelay
-  } = injectFromPopover ? {} : semanticConfig;
-  const mergedMouseEnterDelay = mouseEnterDelay ?? contextMouseEnterDelay ?? 0.1;
-  const mergedMouseLeaveDelay = mouseLeaveDelay ?? contextMouseLeaveDelay ?? 0.1;
-  const mergedArrow = hook_useMergedArrow(tooltipArrow, contextArrow);
-  const mergedShowArrow = mergedArrow.show;
-  const mergedTrigger = trigger || contextTrigger || 'hover';
-  const mergedGetPopupContainer = getPopupContainer || getTooltipContainer || getContextPopupContainer;
-  const mergedDestroyOnHidden = destroyOnHidden ?? !!destroyTooltipOnHide;
-  const inTableMeasureRow = (react_production_namespaceFn().useContext)(table_TableMeasureRowContext);
-  // ============================== Ref ===============================
-  const warning = devUseWarning('Tooltip');
-  const tooltipRef = (react_production_namespaceFn().useRef)(null);
-  const forceAlign = () => {
-    tooltipRef.current?.forceAlign();
-  };
-  (react_production_namespaceFn().useImperativeHandle)(ref, () => ({
-    forceAlign,
-    nativeElement: tooltipRef.current?.nativeElement,
-    popupElement: tooltipRef.current?.popupElement
-  }));
-  // ============================== Warn ==============================
-  if (false) // removed by dead control flow
-{}
-  // ============================== Open ==============================
-  const [open, setOpen] = useControlledState(props.defaultOpen ?? false, props.open);
-  const noTitle = !title && !overlay && title !== 0; // overlay for old version compatibility
-  const onInternalOpenChange = nextOpen => {
-    setOpen(noTitle ? false : nextOpen);
-    if (!noTitle && onOpenChange) {
-      onOpenChange(nextOpen);
-    }
-  };
-  const tooltipPlacements = (react_production_namespaceFn().useMemo)(() => {
-    return builtinPlacements || getPlacements({
-      arrowPointAtCenter: mergedArrow?.pointAtCenter ?? false,
-      autoAdjustOverflow,
-      arrowWidth: mergedShowArrow ? token.sizePopupArrow : 0,
-      borderRadius: token.borderRadius,
-      offset: token.marginXXS,
-      visibleFirst: true
-    });
-  }, [mergedArrow, builtinPlacements, token, mergedShowArrow, autoAdjustOverflow]);
-  const memoOverlay = (react_production_namespaceFn().useMemo)(() => {
-    if (title === 0) {
-      return title;
-    }
-    return overlay || title || '';
-  }, [overlay, title]);
-  const memoOverlayWrapper = /*#__PURE__*/(react_production_namespaceFn().createElement)(_util_ContextIsolator, {
-    space: true,
-    form: true
-  }, isFunction(memoOverlay) ? memoOverlay() : memoOverlay);
-  // =========== Merged Props for Semantic ===========
-  const mergedProps = {
-    ...props,
-    trigger: mergedTrigger,
-    builtinPlacements: tooltipPlacements,
-    getPopupContainer: mergedGetPopupContainer,
-    destroyOnHidden: mergedDestroyOnHidden,
-    mouseEnterDelay: mergedMouseEnterDelay,
-    mouseLeaveDelay: mergedMouseLeaveDelay
-  };
-  const contextStyleRoot = useSemanticRootStyle(contextStyle);
-  const overlayStyleRoot = useSemanticRootStyle(overlayStyle);
-  const [mergedClassNames, mergedStyles] = useMergeSemantic([contextClassNames, classNames], [contextStyles, contextStyleRoot, styles, overlayStyleRoot], {
-    props: mergedProps
-  });
-  const prefixCls = getPrefixCls('tooltip', customizePrefixCls);
-  const rootPrefixCls = getPrefixCls();
-  let tempOpen = open;
-  // Hide tooltip when there is no title or in table measure row
-  if (!('open' in props) && noTitle || inTableMeasureRow) {
-    tempOpen = false;
-  }
-  // ============================= Render =============================
-  const child = /*#__PURE__*/(react_production_namespaceFn().isValidElement)(children) && !reactNode_isFragment(children) ? children : /*#__PURE__*/(react_production_namespaceFn().createElement)("span", null, children);
-  const childProps = child.props;
-  const childCls = !childProps.className || typeof childProps.className === 'string' ? clsx(childProps.className, openClassName || `${prefixCls}-open`) : childProps.className;
-  // Style
-  const rootCls = hooks_useCSSVarCls(prefixCls);
-  const [hashId, cssVarCls] = tooltip_style(prefixCls, rootCls, !injectFromPopover);
-  // Color
-  const colorInfo = parseColor(rootPrefixCls, prefixCls, color);
-  const arrowContentStyle = colorInfo.arrowStyle;
-  const themeCls = clsx(rootCls, hashId, cssVarCls);
-  const rootClassNames = clsx(overlayClassName, {
-    [`${prefixCls}-rtl`]: direction === 'rtl'
-  }, colorInfo.className, rootClassName, themeCls, contextClassName, mergedClassNames.root);
-  // ============================ zIndex ============================
-  const [zIndex, contextZIndex] = useZIndex('Tooltip', restProps.zIndex);
-  const containerStyle = {
-    ...mergedStyles.container,
-    ...overlayInnerStyle,
-    ...colorInfo.overlayStyle
-  };
-  const content = /*#__PURE__*/(react_production_namespaceFn().createElement)(tooltip_es, {
-    unique: true,
-    ...restProps,
-    zIndex: zIndex,
-    showArrow: mergedShowArrow,
-    placement: placement,
-    mouseEnterDelay: mergedMouseEnterDelay,
-    mouseLeaveDelay: mergedMouseLeaveDelay,
-    prefixCls: prefixCls,
-    classNames: {
-      root: rootClassNames,
-      container: mergedClassNames.container,
-      arrow: mergedClassNames.arrow,
-      uniqueContainer: clsx(themeCls, mergedClassNames.container)
-    },
-    styles: {
-      root: {
-        ...arrowContentStyle,
-        ...mergedStyles.root
-      },
-      container: containerStyle,
-      uniqueContainer: containerStyle,
-      arrow: mergedStyles.arrow
-    },
-    ref: tooltipRef,
-    overlay: memoOverlayWrapper,
-    visible: tempOpen,
-    onVisibleChange: onInternalOpenChange,
-    afterVisibleChange: afterOpenChange,
-    arrowContent: /*#__PURE__*/(react_production_namespaceFn().createElement)("span", {
-      className: `${prefixCls}-arrow-content`
-    }),
-    motion: {
-      motionName: motion_getTransitionName(rootPrefixCls, 'zoom-big-fast', typeof motion?.motionName === 'string' ? motion?.motionName : undefined),
-      motionDeadline: 1000
-    },
-    trigger: mergedTrigger,
-    builtinPlacements: tooltipPlacements,
-    getTooltipContainer: mergedGetPopupContainer,
-    destroyOnHidden: mergedDestroyOnHidden
-  }, tempOpen && !restProps.disabled ? cloneElement(child, {
-    className: childCls
-  }) : child);
-  return /*#__PURE__*/(react_production_namespaceFn().createElement)(zindexContext.Provider, {
-    value: contextZIndex
-  }, content);
-});
-const tooltip_Tooltip = InternalTooltip;
-if (false) // removed by dead control flow
-{}
-tooltip_Tooltip._InternalPanelDoNotUseOrYouWillBeFired = tooltip_PurePanel;
-tooltip_Tooltip.UniqueProvider = tooltip_UniqueProvider;
-/* harmony default export */ const es_tooltip = (tooltip_Tooltip);
 ;// ./src/lib/ui/icons.tsx
 
 /**
@@ -55618,7 +55618,7 @@ tooltip_Tooltip.UniqueProvider = tooltip_UniqueProvider;
 function SvgIcon({ size = 16, color, style, className, children }) {
     return ((0,react_jsx_runtime_production_namespaceFn().jsx)("svg", { xmlns: "http://www.w3.org/2000/svg", width: size, height: size, viewBox: "0 0 24 24", fill: "none", stroke: color || 'currentColor', strokeWidth: 2, strokeLinecap: "round", strokeLinejoin: "round", "aria-hidden": "true", focusable: "false", className: className, style: { display: 'block', flex: '0 0 auto', ...style }, children: children }));
 }
-/* ============================================================ 主面板入口（v26.10.10-v4 起 5 个） */
+/* ============================================================ 主面板入口（v26.10.10-v4 起 5 个；v26.10.10-v10 加入 Agent 共 6 个） */
 /** 设置（Lucide `settings`：齿轮 + 圆心） */
 function SettingsIcon(p) {
     return ((0,react_jsx_runtime_production_namespaceFn().jsxs)(SvgIcon, { ...p, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("path", { d: "M9.671 4.136a2.34 2.34 0 0 1 4.659 0 2.34 2.34 0 0 0 3.319 1.915 2.34 2.34 0 0 1 2.33 4.033 2.34 2.34 0 0 0 0 3.831 2.34 2.34 0 0 1-2.33 4.033 2.34 2.34 0 0 0-3.319 1.915 2.34 2.34 0 0 1-4.659 0 2.34 2.34 0 0 0-3.32-1.915 2.34 2.34 0 0 1-2.33-4.033 2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915" }), (0,react_jsx_runtime_production_namespaceFn().jsx)("circle", { cx: "12", cy: "12", r: "3" })] }));
@@ -55644,6 +55644,10 @@ function SniffIcon(p) {
 /** 设备互联（Lucide `monitor`：显示器 + 底座） */
 function DeviceIcon(p) {
     return ((0,react_jsx_runtime_production_namespaceFn().jsxs)(SvgIcon, { ...p, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("rect", { width: "20", height: "14", x: "2", y: "3", rx: "2" }), (0,react_jsx_runtime_production_namespaceFn().jsx)("line", { x1: "8", x2: "16", y1: "21", y2: "21" }), (0,react_jsx_runtime_production_namespaceFn().jsx)("line", { x1: "12", x2: "12", y1: "17", y2: "21" })] }));
+}
+/** Agent 助手（Lucide `bot`：机器人头 + 两侧天线接口） */
+function BotIcon(p) {
+    return ((0,react_jsx_runtime_production_namespaceFn().jsxs)(SvgIcon, { ...p, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("path", { d: "M12 8V4H8" }), (0,react_jsx_runtime_production_namespaceFn().jsx)("rect", { width: "16", height: "12", x: "4", y: "8", rx: "2" }), (0,react_jsx_runtime_production_namespaceFn().jsx)("path", { d: "M2 14h2" }), (0,react_jsx_runtime_production_namespaceFn().jsx)("path", { d: "M20 14h2" }), (0,react_jsx_runtime_production_namespaceFn().jsx)("path", { d: "M15 13v2" }), (0,react_jsx_runtime_production_namespaceFn().jsx)("path", { d: "M9 13v2" })] }));
 }
 /* ============================================================ 面板其它位置 */
 /** 语音开（Lucide `volume-2`） */
@@ -61158,9 +61162,6 @@ es_typography_Typography.Title = typography_Title;
 es_typography_Typography.Paragraph = typography_Paragraph;
 /* harmony default export */ const typography = (es_typography_Typography);
 ;// ./node_modules/antd/es/_util/PurePanel.js
-/* unused harmony import specifier */ var _util_PurePanel_React;
-/* unused harmony import specifier */ var PurePanel_useControlledState;
-/* unused harmony import specifier */ var _util_PurePanel_ConfigContext;
 "use client";
 
 
@@ -61185,15 +61186,15 @@ const genPurePanel = (Component, alignPropName, postProps, defaultPrefixCls, get
       prefixCls: customizePrefixCls,
       style
     } = props;
-    const holderRef = _util_PurePanel_React.useRef(null);
-    const [popupHeight, setPopupHeight] = _util_PurePanel_React.useState(0);
-    const [popupWidth, setPopupWidth] = _util_PurePanel_React.useState(0);
-    const [open, setOpen] = PurePanel_useControlledState(false, props.open);
+    const holderRef = (react_production_namespaceFn().useRef)(null);
+    const [popupHeight, setPopupHeight] = (react_production_namespaceFn().useState)(0);
+    const [popupWidth, setPopupWidth] = (react_production_namespaceFn().useState)(0);
+    const [open, setOpen] = useControlledState(false, props.open);
     const {
       getPrefixCls
-    } = _util_PurePanel_React.useContext(_util_PurePanel_ConfigContext);
+    } = (react_production_namespaceFn().useContext)(ConfigContext);
     const prefixCls = getPrefixCls(defaultPrefixCls || 'select', customizePrefixCls);
-    _util_PurePanel_React.useEffect(() => {
+    (react_production_namespaceFn().useEffect)(() => {
       // We do not care about ssr
       setOpen(true);
       if (typeof ResizeObserver !== 'undefined') {
@@ -61244,16 +61245,16 @@ const genPurePanel = (Component, alignPropName, postProps, defaultPrefixCls, get
       position: 'relative',
       minWidth: popupWidth
     };
-    return /*#__PURE__*/_util_PurePanel_React.createElement("div", {
+    return /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
       ref: holderRef,
       style: mergedStyle
-    }, /*#__PURE__*/_util_PurePanel_React.createElement(Component, {
+    }, /*#__PURE__*/(react_production_namespaceFn().createElement)(Component, {
       ...mergedProps
     }));
   };
   return withPureRenderTheme(PurePanel);
 };
-/* harmony default export */ const _util_PurePanel = ((/* unused pure expression or super */ null && (genPurePanel)));
+/* harmony default export */ const _util_PurePanel = (genPurePanel);
 ;// ./node_modules/antd/es/modal/PurePanel.js
 "use client";
 
@@ -75418,7 +75419,13158 @@ function SniffModal({ open, onClose, minKB, onMinKBChange }) {
                         }, children: (0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { maxHeight: '58vh', overflow: 'auto' }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: GRID_STYLE, children: known.map((it, idx) => renderCard(it, idx)) }), unknownOpen && unknown.length > 0 ? ((0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { ...GRID_STYLE, marginTop: 8 }, children: unknown.map((it, idx) => renderCard(it, known.length + idx)) })) : null] }) }), unknown.length > 0 ? ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { marginTop: 6 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)(es_button, { type: "link", size: "small", style: { padding: 0 }, onClick: () => setUnknownOpen(!unknownOpen), children: [unknownOpen ? '▾' : '▸', " ", '大小未知（' + unknown.length + '）'] }), (0,react_jsx_runtime_production_namespaceFn().jsx)(SniffModal_Text, { type: "secondary", style: { fontSize: 11, marginLeft: 6 }, children: "\u91CF\u4E0D\u51FA\u5B57\u8282\u6570\uFF08\u8DE8\u57DF\u54CD\u5E94\u5934\u88AB\u62D2\u7B49\uFF09\uFF0C\u53EF\u80FD\u6709\u5927\u56FE\uFF0C\u5DF2\u4FDD\u7559" })] })) : null] })), (0,react_jsx_runtime_production_namespaceFn().jsx)(SniffModal_Text, { type: "secondary", style: { fontSize: 12, display: 'block', marginTop: 8 }, children: "\u63D0\u793A\uFF1A\u5355\u51FB\u7F29\u7565\u56FE\u53EF\u653E\u5927 / \u591A\u56FE\u5207\u6362\uFF0C\u653E\u5927\u540E\u5DE5\u5177\u680F\u4E0A\u7684\u300C\u6253\u5370\u300D\u6309 A4 \u6253\u5370\u539F\u56FE\uFF08\u6A2A\u56FE\u81EA\u52A8\u65CB\u8F6C 90 \u5EA6\uFF09\uFF1B \u52FE\u9009\u540E\u53EF\u6279\u91CF\u4E0B\u8F7D\u3002\u89C6\u9891\u5DF2\u5728\u626B\u63CF\u9636\u6BB5\u6392\u9664\uFF0C\u52A8\u56FE\uFF08gif\uFF09\u6309\u56FE\u7247\u4FDD\u7559\u3002" })] }));
 }
 
+;// ./node_modules/antd/es/alert/style/index.js
+
+
+
+const genAlertTypeStyle = (bgColor, iconColor, alertCls) => ({
+  background: bgColor,
+  [`${alertCls}-icon`]: {
+    color: iconColor
+  }
+});
+const alert_style_genBaseStyle = token => {
+  const {
+    componentCls,
+    motionDurationSlow: duration,
+    marginXS,
+    marginSM,
+    fontSize,
+    fontSizeLG,
+    lineHeight,
+    motionEaseInOutCirc,
+    borderRadius,
+    withDescriptionIconSize,
+    colorText,
+    colorTextHeading,
+    withDescriptionPadding,
+    defaultPadding,
+    lineWidth,
+    lineType,
+    colorSuccessBorder,
+    colorWarningBorder,
+    colorErrorBorder,
+    colorInfoBorder
+  } = token;
+  return {
+    [componentCls]: {
+      ...resetComponent(token),
+      position: 'relative',
+      display: 'flex',
+      alignItems: 'center',
+      padding: defaultPadding,
+      wordWrap: 'break-word',
+      borderRadius,
+      borderWidth: util_unit(lineWidth),
+      borderStyle: lineType,
+      [`&${componentCls}-success`]: {
+        borderColor: colorSuccessBorder
+      },
+      [`&${componentCls}-info`]: {
+        borderColor: colorInfoBorder
+      },
+      [`&${componentCls}-warning`]: {
+        borderColor: colorWarningBorder
+      },
+      [`&${componentCls}-error`]: {
+        borderColor: colorErrorBorder
+      },
+      [`&${componentCls}-filled`]: {
+        borderColor: 'transparent'
+      },
+      [`&${componentCls}-rtl`]: {
+        direction: 'rtl'
+      },
+      [`${componentCls}-section`]: {
+        flex: 1,
+        minWidth: 0
+      },
+      [`${componentCls}-icon`]: {
+        marginInlineEnd: marginXS,
+        lineHeight: 0
+      },
+      '&-description': {
+        display: 'none',
+        fontSize,
+        lineHeight
+      },
+      '&-title': {
+        color: colorTextHeading
+      },
+      [`&${componentCls}-motion-leave`]: {
+        overflow: 'hidden',
+        opacity: 1,
+        transition: [`max-height`, `opacity`, `padding-top`, `padding-bottom`, `margin-bottom`].map(prop => `${prop} ${duration} ${motionEaseInOutCirc}`).join(', ')
+      },
+      [`&${componentCls}-motion-leave-active`]: {
+        maxHeight: 0,
+        marginBottom: '0 !important',
+        paddingTop: 0,
+        paddingBottom: 0,
+        opacity: 0
+      },
+      [`&${componentCls}-with-description`]: {
+        alignItems: 'flex-start',
+        padding: withDescriptionPadding,
+        [`${componentCls}-icon`]: {
+          marginInlineEnd: marginSM,
+          fontSize: withDescriptionIconSize,
+          lineHeight: 0
+        },
+        [`${componentCls}-title`]: {
+          display: 'block',
+          marginBottom: marginXS,
+          color: colorTextHeading,
+          fontSize: fontSizeLG
+        },
+        [`${componentCls}-description`]: {
+          display: 'block',
+          color: colorText
+        }
+      },
+      [`&${componentCls}-banner`]: {
+        marginBottom: 0,
+        border: '0 !important',
+        borderRadius: 0
+      }
+    }
+  };
+};
+const genTypeStyle = token => {
+  const {
+    componentCls,
+    colorSuccess,
+    colorSuccessBg,
+    colorWarning,
+    colorWarningBg,
+    colorError,
+    colorErrorBg,
+    colorInfo,
+    colorInfoBg
+  } = token;
+  return {
+    [componentCls]: {
+      '&-success': genAlertTypeStyle(colorSuccessBg, colorSuccess, componentCls),
+      '&-info': genAlertTypeStyle(colorInfoBg, colorInfo, componentCls),
+      '&-warning': genAlertTypeStyle(colorWarningBg, colorWarning, componentCls),
+      '&-error': {
+        ...genAlertTypeStyle(colorErrorBg, colorError, componentCls),
+        [`${componentCls}-description > pre`]: {
+          margin: 0,
+          padding: 0
+        }
+      }
+    }
+  };
+};
+const genActionStyle = token => {
+  const {
+    componentCls,
+    iconCls,
+    motionDurationMid,
+    marginXS,
+    fontSizeIcon,
+    colorIcon,
+    colorIconHover
+  } = token;
+  return {
+    [componentCls]: {
+      [`${componentCls}-actions`]: {
+        marginInlineStart: marginXS
+      },
+      [`${componentCls}-close-icon`]: {
+        marginInlineStart: marginXS,
+        padding: 0,
+        overflow: 'hidden',
+        fontSize: fontSizeIcon,
+        lineHeight: util_unit(fontSizeIcon),
+        backgroundColor: 'transparent',
+        border: 'none',
+        cursor: 'pointer',
+        ...genFocusStyle(token),
+        [`${iconCls}-close`]: {
+          color: colorIcon,
+          transition: `color ${motionDurationMid}`,
+          '&:hover': {
+            color: colorIconHover
+          }
+        }
+      },
+      '&-close-text': {
+        color: colorIcon,
+        transition: `color ${motionDurationMid}`,
+        '&:hover': {
+          color: colorIconHover
+        }
+      }
+    }
+  };
+};
+const alert_style_prepareComponentToken = token => {
+  const paddingHorizontal = 12; // Fixed value here.
+  return {
+    borderRadius: token.borderRadiusLG,
+    withDescriptionIconSize: token.fontSizeHeading3,
+    defaultPadding: `${token.paddingContentVerticalSM}px ${paddingHorizontal}px`,
+    withDescriptionPadding: `${token.paddingMD}px ${token.paddingContentHorizontalLG}px`
+  };
+};
+/* harmony default export */ const alert_style = (genStyleHooks('Alert', token => [alert_style_genBaseStyle(token), genTypeStyle(token), genActionStyle(token)], alert_style_prepareComponentToken));
+;// ./node_modules/antd/es/alert/Alert.js
+"use client";
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+const IconNode = props => {
+  const {
+    icon,
+    type,
+    className,
+    style,
+    successIcon,
+    infoIcon,
+    warningIcon,
+    errorIcon
+  } = props;
+  const iconMapFilled = {
+    success: successIcon ?? /*#__PURE__*/(react_production_namespaceFn().createElement)(icons_CheckCircleFilled, null),
+    info: infoIcon ?? /*#__PURE__*/(react_production_namespaceFn().createElement)(icons_InfoCircleFilled, null),
+    error: errorIcon ?? /*#__PURE__*/(react_production_namespaceFn().createElement)(icons_CloseCircleFilled, null),
+    warning: warningIcon ?? /*#__PURE__*/(react_production_namespaceFn().createElement)(icons_ExclamationCircleFilled, null)
+  };
+  return /*#__PURE__*/(react_production_namespaceFn().createElement)("span", {
+    className: className,
+    style: style
+  }, icon ?? iconMapFilled[type]);
+};
+const CloseIconNode = props => {
+  const {
+    isClosable,
+    prefixCls,
+    closeIcon,
+    handleClose,
+    ariaProps,
+    className,
+    style
+  } = props;
+  const mergedCloseIcon = closeIcon === true || closeIcon === undefined ? /*#__PURE__*/(react_production_namespaceFn().createElement)(icons_CloseOutlined, null) : closeIcon;
+  return isClosable ? (/*#__PURE__*/(react_production_namespaceFn().createElement)("button", {
+    type: "button",
+    onClick: handleClose,
+    className: clsx(`${prefixCls}-close-icon`, className),
+    tabIndex: 0,
+    style: style,
+    ...ariaProps
+  }, mergedCloseIcon)) : null;
+};
+const Alert = /*#__PURE__*/(react_production_namespaceFn().forwardRef)((props, ref) => {
+  const {
+    description,
+    prefixCls: customizePrefixCls,
+    message,
+    title,
+    banner,
+    className,
+    rootClassName,
+    style,
+    onMouseEnter,
+    onMouseLeave,
+    onClick,
+    afterClose,
+    showIcon,
+    closable,
+    closeText,
+    closeIcon,
+    action,
+    id,
+    styles,
+    classNames,
+    ...otherProps
+  } = props;
+  const mergedTitle = title ?? message;
+  const [closed, setClosed] = (react_production_namespaceFn().useState)(false);
+  if (false) // removed by dead control flow
+{}
+  const internalRef = (react_production_namespaceFn().useRef)(null);
+  (react_production_namespaceFn().useImperativeHandle)(ref, () => ({
+    nativeElement: internalRef.current
+  }));
+  const {
+    getPrefixCls,
+    direction,
+    variant: contextVariant,
+    closable: contextClosable,
+    closeIcon: contextCloseIcon,
+    className: contextClassName,
+    style: contextStyle,
+    classNames: contextClassNames,
+    styles: contextStyles,
+    successIcon,
+    infoIcon,
+    warningIcon,
+    errorIcon
+  } = useComponentConfig('alert');
+  const prefixCls = getPrefixCls('alert', customizePrefixCls);
+  const [hashId, cssVarCls] = alert_style(prefixCls);
+  const {
+    onClose: closableOnClose,
+    afterClose: closableAfterClose
+  } = isPlainObject(closable) ? closable : {};
+  const handleClose = e => {
+    setClosed(true);
+    (closableOnClose ?? props.onClose)?.(e);
+  };
+  const type = (react_production_namespaceFn().useMemo)(() => {
+    if (props.type !== undefined) {
+      return props.type;
+    }
+    // banner mode defaults to 'warning'
+    return banner ? 'warning' : 'info';
+  }, [props.type, banner]);
+  const mergedVariant = props.variant ?? contextVariant ?? 'outlined';
+  // closeable when closeText or closeIcon is assigned
+  const isClosable = (react_production_namespaceFn().useMemo)(() => {
+    if (isPlainObject(closable)) {
+      return true;
+    }
+    if (closeText) {
+      return true;
+    }
+    if (typeof closable === 'boolean') {
+      return closable;
+    }
+    // should be true when closeIcon is 0 or ''
+    if (closeIcon !== false && isNonNullable(closeIcon)) {
+      return true;
+    }
+    return !!contextClosable;
+  }, [closeText, closeIcon, closable, contextClosable]);
+  // banner mode defaults to Icon
+  const isShowIcon = banner && showIcon === undefined ? true : showIcon;
+  // =========== Merged Props for Semantic ==========
+  const mergedProps = {
+    ...props,
+    prefixCls,
+    variant: mergedVariant,
+    type,
+    showIcon: isShowIcon,
+    closable: isClosable
+  };
+  const contextStyleRoot = useSemanticRootStyle(contextStyle);
+  const styleRoot = useSemanticRootStyle(style);
+  const [mergedClassNames, mergedStyles] = useMergeSemantic([contextClassNames, classNames], [contextStyles, contextStyleRoot, styles, styleRoot], {
+    props: mergedProps
+  });
+  const alertCls = clsx(prefixCls, `${prefixCls}-${type}`, `${prefixCls}-${mergedVariant}`, {
+    [`${prefixCls}-with-description`]: isReactRenderable(description),
+    [`${prefixCls}-no-icon`]: !isShowIcon,
+    [`${prefixCls}-banner`]: !!banner,
+    [`${prefixCls}-rtl`]: direction === 'rtl'
+  }, contextClassName, className, rootClassName, mergedClassNames.root, cssVarCls, hashId);
+  const restProps = pickAttrs(otherProps, {
+    aria: true,
+    data: true
+  });
+  const mergedCloseIcon = (react_production_namespaceFn().useMemo)(() => {
+    if (isPlainObject(closable) && closable.closeIcon) {
+      return closable.closeIcon;
+    }
+    if (closeText) {
+      return closeText;
+    }
+    if (closeIcon !== undefined) {
+      return closeIcon;
+    }
+    if (isPlainObject(contextClosable) && contextClosable.closeIcon) {
+      return contextClosable.closeIcon;
+    }
+    return contextCloseIcon;
+  }, [closeIcon, closable, contextClosable, closeText, contextCloseIcon]);
+  const mergedAriaProps = (react_production_namespaceFn().useMemo)(() => {
+    const merged = closable ?? contextClosable;
+    if (isPlainObject(merged)) {
+      return pickAttrs(merged, {
+        data: true,
+        aria: true
+      });
+    }
+    return {};
+  }, [closable, contextClosable]);
+  return /*#__PURE__*/(react_production_namespaceFn().createElement)(es, {
+    visible: !closed,
+    motionName: `${prefixCls}-motion`,
+    motionAppear: false,
+    motionEnter: false,
+    onLeaveStart: node => ({
+      maxHeight: node.offsetHeight
+    }),
+    onLeaveEnd: closableAfterClose ?? afterClose
+  }, ({
+    className: motionClassName,
+    style: motionStyle
+  }, setRef) => (/*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
+    id: id,
+    ref: composeRef(internalRef, setRef),
+    "data-show": !closed,
+    className: clsx(alertCls, motionClassName),
+    style: {
+      ...mergedStyles.root,
+      ...motionStyle
+    },
+    onMouseEnter: onMouseEnter,
+    onMouseLeave: onMouseLeave,
+    onClick: onClick,
+    role: "alert",
+    ...restProps
+  }, isShowIcon ? (/*#__PURE__*/(react_production_namespaceFn().createElement)(IconNode, {
+    className: clsx(`${prefixCls}-icon`, mergedClassNames.icon),
+    style: mergedStyles.icon,
+    description: description,
+    icon: props.icon,
+    prefixCls: prefixCls,
+    type: type,
+    successIcon: successIcon,
+    infoIcon: infoIcon,
+    warningIcon: warningIcon,
+    errorIcon: errorIcon
+  })) : null, /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
+    className: clsx(`${prefixCls}-section`, mergedClassNames.section),
+    style: mergedStyles.section
+  }, isReactRenderable(mergedTitle) ? (/*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
+    className: clsx(`${prefixCls}-title`, mergedClassNames.title),
+    style: mergedStyles.title
+  }, mergedTitle)) : null, isReactRenderable(description) ? (/*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
+    className: clsx(`${prefixCls}-description`, mergedClassNames.description),
+    style: mergedStyles.description
+  }, description)) : null), isReactRenderable(action) ? (/*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
+    className: clsx(`${prefixCls}-actions`, mergedClassNames.actions),
+    style: mergedStyles.actions
+  }, action)) : null, /*#__PURE__*/(react_production_namespaceFn().createElement)(CloseIconNode, {
+    className: mergedClassNames.close,
+    style: mergedStyles.close,
+    isClosable: isClosable,
+    prefixCls: prefixCls,
+    closeIcon: mergedCloseIcon,
+    handleClose: handleClose,
+    ariaProps: mergedAriaProps
+  }))));
+});
+if (false) // removed by dead control flow
+{}
+/* harmony default export */ const alert_Alert = (Alert);
+;// ./node_modules/@babel/runtime/helpers/esm/callSuper.js
+
+
+
+function _callSuper(t, o, e) {
+  return o = _getPrototypeOf(o), _possibleConstructorReturn(t, _isNativeReflectConstruct() ? Reflect.construct(o, e || [], _getPrototypeOf(t).constructor) : o.apply(t, e));
+}
+
+;// ./node_modules/antd/es/alert/ErrorBoundary.js
+"use client";
+
+
+
+
+
+
+
+
+let ErrorBoundary = /*#__PURE__*/function (_React$PureComponent) {
+  function ErrorBoundary() {
+    var _this;
+    _classCallCheck(this, ErrorBoundary);
+    _this = _callSuper(this, ErrorBoundary, arguments);
+    _this.state = {
+      error: undefined,
+      info: {}
+    };
+    return _this;
+  }
+  _inherits(ErrorBoundary, _React$PureComponent);
+  return _createClass(ErrorBoundary, [{
+    key: "componentDidCatch",
+    value: function componentDidCatch(error, info) {
+      this.setState({
+        error,
+        info
+      });
+    }
+  }, {
+    key: "render",
+    value: function render() {
+      const {
+        message,
+        title,
+        description,
+        id,
+        children
+      } = this.props;
+      const {
+        error,
+        info
+      } = this.state;
+      const mergedTitle = title ?? message;
+      const componentStack = info?.componentStack || null;
+      const errorMessage = isNonNullable(mergedTitle) ? mergedTitle : error?.toString();
+      const errorDescription = isNonNullable(description) ? description : componentStack;
+      if (error) {
+        return /*#__PURE__*/(react_production_namespaceFn().createElement)(alert_Alert, {
+          id: id,
+          type: "error",
+          title: errorMessage,
+          description: /*#__PURE__*/(react_production_namespaceFn().createElement)("pre", {
+            style: {
+              fontSize: '0.9em',
+              overflowX: 'auto'
+            }
+          }, errorDescription)
+        });
+      }
+      return children;
+    }
+  }]);
+}((react_production_namespaceFn().PureComponent));
+/* harmony default export */ const alert_ErrorBoundary = (ErrorBoundary);
+;// ./node_modules/antd/es/alert/index.js
+"use client";
+
+
+
+const es_alert_Alert = alert_Alert;
+es_alert_Alert.ErrorBoundary = alert_ErrorBoundary;
+/* harmony default export */ const es_alert = (es_alert_Alert);
+;// ./node_modules/@rc-component/select/es/hooks/useAllowClear.js
+
+const useAllowClear_useAllowClear = (prefixCls, displayValues, allowClear, clearIcon, disabled = false, mergedSearchValue, mode) => {
+  // Convert boolean to object first
+  const allowClearConfig = (0,react_production_namespaceFn().useMemo)(() => {
+    if (typeof allowClear === 'boolean') {
+      return {
+        allowClear
+      };
+    }
+    if (allowClear && typeof allowClear === 'object') {
+      return allowClear;
+    }
+    return {
+      allowClear: false
+    };
+  }, [allowClear]);
+  return (0,react_production_namespaceFn().useMemo)(() => {
+    const mergedAllowClear = !disabled && allowClearConfig.allowClear !== false && (displayValues.length || mergedSearchValue) && !(mode === 'combobox' && mergedSearchValue === '');
+    return {
+      allowClear: mergedAllowClear,
+      clearIcon: mergedAllowClear ? allowClearConfig.clearIcon || clearIcon || '×' : null,
+      label: mergedAllowClear ? allowClearConfig.label ?? 'Clear' : ''
+    };
+  }, [allowClearConfig, clearIcon, disabled, displayValues.length, mergedSearchValue, mode]);
+};
+;// ./node_modules/@rc-component/select/es/hooks/useBaseProps.js
+/**
+ * BaseSelect provide some parsed data into context.
+ * You can use this hooks to get them.
+ */
+
+
+const BaseSelectContext = /*#__PURE__*/(react_production_namespaceFn().createContext)(null);
+function useBaseProps() {
+  return (react_production_namespaceFn().useContext)(BaseSelectContext);
+}
+;// ./node_modules/@rc-component/select/es/hooks/useLock.js
+
+
+/**
+ * Locker return cached mark.
+ * If set to `true`, will return `true` in a short time even if set `false`.
+ * If set to `false` and then set to `true`, will change to `true`.
+ * And after time duration, it will back to `null` automatically.
+ */
+function useLock(duration = 250) {
+  const lockRef = (react_production_namespaceFn().useRef)(null);
+  const timeoutRef = (react_production_namespaceFn().useRef)(null);
+
+  // Clean up
+  (react_production_namespaceFn().useEffect)(() => () => {
+    window.clearTimeout(timeoutRef.current);
+  }, []);
+  function doLock(locked) {
+    if (locked || lockRef.current === null) {
+      lockRef.current = locked;
+    }
+    window.clearTimeout(timeoutRef.current);
+    timeoutRef.current = window.setTimeout(() => {
+      lockRef.current = null;
+    }, duration);
+  }
+  return [() => lockRef.current, doLock];
+}
+;// ./node_modules/@rc-component/select/es/hooks/useSelectTriggerControl.js
+
+
+function isInside(elements, target) {
+  return elements.filter(element => element).some(element => element.contains(target) || element === target);
+}
+function useSelectTriggerControl(elements, open, triggerOpen, customizedTrigger) {
+  const onGlobalMouseDown = hooks_useEvent(event => {
+    // If trigger is customized, Trigger will take control of popupVisible
+    if (customizedTrigger) {
+      return;
+    }
+    let target = event.target;
+    if (target.shadowRoot && event.composed) {
+      target = event.composedPath()[0] || target;
+    }
+    if (event._ori_target) {
+      target = event._ori_target;
+    }
+    if (open &&
+    // Marked by SelectInput mouseDown event
+    !isInside(elements(), target)) {
+      // Should trigger close
+      triggerOpen(false);
+    }
+  });
+  (react_production_namespaceFn().useEffect)(() => {
+    window.addEventListener('mousedown', onGlobalMouseDown);
+    return () => window.removeEventListener('mousedown', onGlobalMouseDown);
+  }, [onGlobalMouseDown]);
+}
+;// ./node_modules/@rc-component/select/es/SelectTrigger.js
+function SelectTrigger_extends() { SelectTrigger_extends = Object.assign ? Object.assign.bind() : function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; }; return SelectTrigger_extends.apply(this, arguments); }
+;
+
+
+const getBuiltInPlacements = popupMatchSelectWidth => {
+  // Enable horizontal overflow auto-adjustment when a custom dropdown width is provided
+  const adjustX = popupMatchSelectWidth === true ? 0 : 1;
+  return {
+    bottomLeft: {
+      points: ['tl', 'bl'],
+      offset: [0, 4],
+      overflow: {
+        adjustX,
+        adjustY: 1
+      },
+      htmlRegion: 'scroll'
+    },
+    bottomRight: {
+      points: ['tr', 'br'],
+      offset: [0, 4],
+      overflow: {
+        adjustX,
+        adjustY: 1
+      },
+      htmlRegion: 'scroll'
+    },
+    topLeft: {
+      points: ['bl', 'tl'],
+      offset: [0, -4],
+      overflow: {
+        adjustX,
+        adjustY: 1
+      },
+      htmlRegion: 'scroll'
+    },
+    topRight: {
+      points: ['br', 'tr'],
+      offset: [0, -4],
+      overflow: {
+        adjustX,
+        adjustY: 1
+      },
+      htmlRegion: 'scroll'
+    }
+  };
+};
+const SelectTrigger = (props, ref) => {
+  const {
+    prefixCls,
+    disabled,
+    visible,
+    children,
+    popupElement,
+    animation,
+    transitionName,
+    popupStyle,
+    popupClassName,
+    direction = 'ltr',
+    placement,
+    builtinPlacements,
+    popupMatchSelectWidth,
+    popupRender,
+    popupAlign,
+    getPopupContainer,
+    empty,
+    onPopupVisibleChange,
+    onPopupMouseEnter,
+    onPopupMouseDown,
+    onPopupBlur,
+    ...restProps
+  } = props;
+
+  // We still use `dropdown` className to keep compatibility
+  // This is used for:
+  // 1. Styles
+  // 2. Animation
+  // 3. Theme customization
+  // Please do not modify this since it's a breaking change
+  const popupPrefixCls = `${prefixCls}-dropdown`;
+  let popupNode = popupElement;
+  if (popupRender) {
+    popupNode = popupRender(popupElement);
+  }
+  const mergedBuiltinPlacements = (react_production_namespaceFn().useMemo)(() => builtinPlacements || getBuiltInPlacements(popupMatchSelectWidth), [builtinPlacements, popupMatchSelectWidth]);
+
+  // ===================== Motion ======================
+  const mergedTransitionName = animation ? `${popupPrefixCls}-${animation}` : transitionName;
+
+  // =================== Popup Width ===================
+  const isNumberPopupWidth = typeof popupMatchSelectWidth === 'number';
+  const stretch = (react_production_namespaceFn().useMemo)(() => {
+    return popupMatchSelectWidth === false || isNumberPopupWidth ? 'minWidth' : 'width';
+  }, [popupMatchSelectWidth, isNumberPopupWidth]);
+  let mergedPopupStyle = popupStyle;
+  if (isNumberPopupWidth) {
+    mergedPopupStyle = {
+      ...popupStyle,
+      width: popupMatchSelectWidth
+    };
+  }
+
+  // ======================= Ref =======================
+  const triggerPopupRef = (react_production_namespaceFn().useRef)(null);
+  (react_production_namespaceFn().useImperativeHandle)(ref, () => ({
+    getPopupElement: () => triggerPopupRef.current?.popupElement
+  }));
+  return /*#__PURE__*/(react_production_namespaceFn().createElement)(trigger_es, SelectTrigger_extends({}, restProps, {
+    showAction: onPopupVisibleChange ? ['click'] : [],
+    hideAction: onPopupVisibleChange ? ['click'] : [],
+    popupPlacement: placement || (direction === 'rtl' ? 'bottomRight' : 'bottomLeft'),
+    builtinPlacements: mergedBuiltinPlacements,
+    prefixCls: popupPrefixCls,
+    popupMotion: {
+      motionName: mergedTransitionName
+    },
+    popup: /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
+      onMouseEnter: onPopupMouseEnter,
+      onMouseDown: onPopupMouseDown,
+      onBlur: onPopupBlur
+    }, popupNode),
+    ref: triggerPopupRef,
+    stretch: stretch,
+    popupAlign: popupAlign,
+    popupVisible: visible,
+    getPopupContainer: getPopupContainer,
+    popupClassName: clsx(popupClassName, {
+      [`${popupPrefixCls}-empty`]: empty
+    }),
+    popupStyle: mergedPopupStyle,
+    onPopupVisibleChange: onPopupVisibleChange
+  }), children);
+};
+const RefSelectTrigger = /*#__PURE__*/(react_production_namespaceFn().forwardRef)(SelectTrigger);
+if (false) // removed by dead control flow
+{}
+/* harmony default export */ const es_SelectTrigger = (RefSelectTrigger);
+;// ./node_modules/@rc-component/select/es/utils/valueUtil.js
+
+function getKey(data, index) {
+  const {
+    key
+  } = data;
+  let value;
+  if ('value' in data) {
+    ({
+      value
+    } = data);
+  }
+  if (key !== null && key !== undefined) {
+    return key;
+  }
+  if (value !== undefined) {
+    return value;
+  }
+  return `rc-index-key-${index}`;
+}
+function isValidCount(value) {
+  return typeof value !== 'undefined' && !Number.isNaN(value);
+}
+function fillFieldNames(fieldNames, childrenAsData) {
+  const {
+    label,
+    value,
+    options,
+    groupLabel
+  } = fieldNames || {};
+  const mergedLabel = label || (childrenAsData ? 'children' : 'label');
+  return {
+    label: mergedLabel,
+    value: value || 'value',
+    options: options || 'options',
+    groupLabel: groupLabel || mergedLabel
+  };
+}
+
+/**
+ * Flat options into flatten list.
+ * We use `optionOnly` here is aim to avoid user use nested option group.
+ * Here is simply set `key` to the index if not provided.
+ */
+function flattenOptions(options, {
+  fieldNames,
+  childrenAsData
+} = {}) {
+  const flattenList = [];
+  const {
+    label: fieldLabel,
+    value: fieldValue,
+    options: fieldOptions,
+    groupLabel
+  } = fillFieldNames(fieldNames, false);
+  function dig(list, isGroupOption) {
+    if (!Array.isArray(list)) {
+      return;
+    }
+    list.forEach(data => {
+      if (isGroupOption || !(fieldOptions in data)) {
+        const value = data[fieldValue];
+
+        // Option
+        flattenList.push({
+          key: getKey(data, flattenList.length),
+          groupOption: isGroupOption,
+          data,
+          label: data[fieldLabel],
+          value
+        });
+      } else {
+        let grpLabel = data[groupLabel];
+        if (grpLabel === undefined && childrenAsData) {
+          grpLabel = data.label;
+        }
+
+        // Option Group
+        flattenList.push({
+          key: getKey(data, flattenList.length),
+          group: true,
+          data,
+          label: grpLabel
+        });
+        dig(data[fieldOptions], true);
+      }
+    });
+  }
+  dig(options, false);
+  return flattenList;
+}
+
+/**
+ * Inject `props` into `option` for legacy usage
+ */
+function injectPropsWithOption(option) {
+  const newOption = {
+    ...option
+  };
+  if (!('props' in newOption)) {
+    Object.defineProperty(newOption, 'props', {
+      get() {
+        es_warning(false, 'Return type is option instead of Option instance. Please read value directly instead of reading from `props`.');
+        return newOption;
+      }
+    });
+  }
+  return newOption;
+}
+const getSeparatedContent = (text, tokens, end) => {
+  if (!tokens || !tokens.length) {
+    return null;
+  }
+  let match = false;
+  const separate = (str, [token, ...restTokens]) => {
+    if (!token) {
+      return [str];
+    }
+    const list = str.split(token);
+    match = match || list.length > 1;
+    return list.reduce((prevList, unitStr) => [...prevList, ...separate(unitStr, restTokens)], []).filter(Boolean);
+  };
+  const list = separate(text, tokens);
+  if (match) {
+    return typeof end !== 'undefined' ? list.slice(0, end) : list;
+  } else {
+    return null;
+  }
+};
+;// ./node_modules/@rc-component/select/es/BaseSelect/Polite.js
+
+function Polite(props) {
+  const {
+    visible,
+    values
+  } = props;
+  if (!visible) {
+    return null;
+  }
+
+  // Only cut part of values since it's a screen reader
+  const MAX_COUNT = 50;
+  return /*#__PURE__*/(react_production_namespaceFn().createElement)("span", {
+    "aria-live": "polite",
+    style: {
+      width: 0,
+      height: 0,
+      position: 'absolute',
+      overflow: 'hidden',
+      opacity: 0
+    }
+  }, `${values.slice(0, MAX_COUNT).map(({
+    label,
+    value
+  }) => ['number', 'string'].includes(typeof label) ? label : value).join(', ')}`, values.length > MAX_COUNT ? ', ...' : null);
+}
+;// ./node_modules/@rc-component/select/es/hooks/useOpen.js
+
+
+const internalMacroTask = fn => {
+  const channel = new MessageChannel();
+  channel.port1.onmessage = fn;
+  channel.port2.postMessage(null);
+};
+const useOpen_macroTask = (fn, times = 1) => {
+  if (times <= 0) {
+    fn();
+    return;
+  }
+  internalMacroTask(() => {
+    useOpen_macroTask(fn, times - 1);
+  });
+};
+
+/**
+ * Trigger by latest open call, if nextOpen is undefined, means toggle.
+ * `weak` means this call can be ignored if previous call exists.
+ */
+
+/**
+ * When `open` is controlled, follow the controlled value;
+ * Otherwise use uncontrolled logic.
+ * Setting `open` takes effect immediately,
+ * but setting it to `false` is delayed via MessageChannel.
+ *
+ * SSR handling: During SSR, `open` is always false to avoid Portal issues.
+ * On client-side hydration, it syncs with the actual open state.
+ */
+function useOpen(defaultOpen, propOpen, onOpen, postOpen) {
+  // SSR not support Portal which means we need delay `open` for the first time render
+  const [rendered, setRendered] = (0,react_production_namespaceFn().useState)(false);
+  (0,react_production_namespaceFn().useEffect)(() => {
+    setRendered(true);
+  }, []);
+  const [stateOpen, internalSetOpen] = useControlledState(defaultOpen, propOpen);
+
+  // Lock for options update
+  const [lock, setLock] = (0,react_production_namespaceFn().useState)(false);
+
+  // During SSR, always return false for open state
+  const ssrSafeOpen = rendered ? stateOpen : false;
+  const mergedOpen = postOpen(ssrSafeOpen);
+  const taskIdRef = (0,react_production_namespaceFn().useRef)(0);
+  const triggerEvent = hooks_useEvent(nextOpen => {
+    if (onOpen && mergedOpen !== nextOpen) {
+      onOpen(nextOpen);
+    }
+    internalSetOpen(nextOpen);
+  });
+  const toggleOpen = hooks_useEvent((nextOpen, config = {}) => {
+    const {
+      cancelFun
+    } = config;
+    taskIdRef.current += 1;
+    const id = taskIdRef.current;
+    const nextOpenVal = typeof nextOpen === 'boolean' ? nextOpen : !mergedOpen;
+    setLock(!nextOpenVal);
+    function triggerUpdate() {
+      if (
+      // Always check if id is match
+      id === taskIdRef.current &&
+      // Check if need to cancel
+      !cancelFun?.()) {
+        triggerEvent(nextOpenVal);
+        setLock(false);
+      }
+    }
+
+    // Weak update can be ignored
+    if (nextOpenVal) {
+      triggerUpdate();
+    } else {
+      useOpen_macroTask(() => {
+        triggerUpdate();
+      });
+    }
+  });
+  return [ssrSafeOpen, mergedOpen, toggleOpen, lock];
+}
+;// ./node_modules/@rc-component/select/es/SelectInput/Affix.js
+
+// Affix is a simple wrapper which should not read context or logical props
+function Affix(props) {
+  const {
+    children,
+    ...restProps
+  } = props;
+  if (!children) {
+    return null;
+  }
+  return /*#__PURE__*/(react_production_namespaceFn().createElement)("div", restProps, children);
+}
+;// ./node_modules/@rc-component/select/es/SelectInput/context.js
+
+const SelectInputContext = /*#__PURE__*/(react_production_namespaceFn().createContext)(null);
+function useSelectInputContext() {
+  return (react_production_namespaceFn().useContext)(SelectInputContext);
+}
+/* harmony default export */ const SelectInput_context = (SelectInputContext);
+;// ./node_modules/@rc-component/select/es/SelectInput/Input.js
+
+
+
+
+
+const SelectInput_Input_Input = /*#__PURE__*/(react_production_namespaceFn().forwardRef)((props, ref) => {
+  const {
+    onChange,
+    onKeyDown,
+    onBlur,
+    style,
+    syncWidth,
+    value,
+    className,
+    autoComplete,
+    ...restProps
+  } = props;
+  const {
+    prefixCls,
+    mode,
+    onSearch,
+    onSearchSubmit,
+    onInputBlur,
+    autoFocus,
+    tokenWithEnter,
+    placeholder,
+    components: {
+      input: InputComponent = 'input'
+    }
+  } = useSelectInputContext();
+  const {
+    id,
+    classNames,
+    styles,
+    open,
+    activeDescendantId,
+    role,
+    disabled
+  } = useBaseProps() || {};
+  const inputCls = clsx(`${prefixCls}-input`, classNames?.input, className);
+
+  // Used to handle input method composition status
+  const compositionStatusRef = (react_production_namespaceFn().useRef)(false);
+
+  // Used to handle paste content, similar to original Selector implementation
+  const pastedTextRef = (react_production_namespaceFn().useRef)(null);
+
+  // ============================== Refs ==============================
+  const inputRef = (react_production_namespaceFn().useRef)(null);
+  (react_production_namespaceFn().useImperativeHandle)(ref, () => inputRef.current);
+
+  // ============================== Data ==============================
+  // Handle input changes
+  const handleChange = event => {
+    let {
+      value: nextVal
+    } = event.target;
+
+    // Handle pasted text with tokenWithEnter, similar to original Selector implementation
+    if (tokenWithEnter && pastedTextRef.current && /[\r\n]/.test(pastedTextRef.current)) {
+      // CRLF will be treated as a single space for input element
+      const replacedText = pastedTextRef.current.replace(/[\r\n]+$/, '').replace(/\r\n/g, ' ').replace(/[\r\n]/g, ' ');
+      nextVal = nextVal.replace(replacedText, pastedTextRef.current);
+    }
+
+    // Reset pasted text reference
+    pastedTextRef.current = null;
+
+    // Call onSearch callback
+    if (onSearch) {
+      onSearch(nextVal, true, compositionStatusRef.current);
+    }
+
+    // Call original onChange callback
+    onChange?.(event);
+  };
+
+  // ============================ Keyboard ============================
+  // Handle keyboard events
+  const handleKeyDown = event => {
+    const {
+      key
+    } = event;
+    const {
+      value: nextVal
+    } = event.currentTarget;
+
+    // Handle Enter key submission - referencing Selector implementation
+    if (key === 'Enter' && mode === 'tags' && !open && !compositionStatusRef.current && onSearchSubmit) {
+      onSearchSubmit(nextVal);
+    }
+
+    // Call original onKeyDown callback
+    onKeyDown?.(event);
+  };
+
+  // Handle blur events
+  const handleBlur = event => {
+    // Call onInputBlur callback
+    onInputBlur?.();
+
+    // Call original onBlur callback
+    onBlur?.(event);
+  };
+
+  // Handle input method composition start
+  const handleCompositionStart = () => {
+    compositionStatusRef.current = true;
+  };
+
+  // Handle input method composition end
+  const handleCompositionEnd = event => {
+    compositionStatusRef.current = false;
+
+    // Trigger search when input method composition ends, similar to original Selector
+    if (mode !== 'combobox') {
+      const {
+        value: nextVal
+      } = event.currentTarget;
+      onSearch?.(nextVal, true, false);
+    }
+  };
+
+  // Handle paste events to track pasted content
+  const handlePaste = event => {
+    const {
+      clipboardData
+    } = event;
+    const pastedValue = clipboardData?.getData('text');
+    pastedTextRef.current = pastedValue || '';
+  };
+
+  // ============================= Width ==============================
+  const [widthCssVar, setWidthCssVar] = (react_production_namespaceFn().useState)(undefined);
+
+  // When syncWidth is enabled, adjust input width based on content
+  hooks_useLayoutEffect(() => {
+    const input = inputRef.current;
+    if (syncWidth && input) {
+      input.style.width = '0px';
+      const scrollWidth = input.scrollWidth;
+      setWidthCssVar(scrollWidth);
+
+      // Reset input style
+      input.style.width = '';
+    }
+  }, [syncWidth, value]);
+
+  // ============================= Render =============================
+  // Extract shared input props
+  const sharedInputProps = {
+    id,
+    type: 'text',
+    ...restProps,
+    ref: inputRef,
+    style: {
+      ...styles?.input,
+      ...style,
+      '--select-input-width': widthCssVar
+    },
+    autoFocus,
+    autoComplete: autoComplete || 'new-password',
+    className: inputCls,
+    disabled,
+    value: value || '',
+    onChange: handleChange,
+    onKeyDown: handleKeyDown,
+    onBlur: handleBlur,
+    onPaste: handlePaste,
+    onCompositionStart: handleCompositionStart,
+    onCompositionEnd: handleCompositionEnd,
+    // Accessibility attributes
+    role: role || 'combobox',
+    'aria-expanded': open || false,
+    'aria-haspopup': 'listbox',
+    'aria-owns': open ? `${id}_list` : undefined,
+    'aria-autocomplete': 'list',
+    'aria-controls': open ? `${id}_list` : undefined,
+    'aria-activedescendant': open ? activeDescendantId : undefined
+  };
+
+  // Handle different InputComponent types
+  if ( /*#__PURE__*/(react_production_namespaceFn().isValidElement)(InputComponent)) {
+    // If InputComponent is a ReactElement, use cloneElement with merged props
+    const existingProps = InputComponent.props || {};
+
+    // Start with shared props as base
+    const mergedProps = {
+      placeholder: props.placeholder || placeholder,
+      ...sharedInputProps,
+      ...existingProps
+    };
+
+    // Batch update function calls
+    Object.keys(existingProps).forEach(key => {
+      const existingValue = existingProps[key];
+      if (typeof existingValue === 'function') {
+        // Merge event handlers
+        mergedProps[key] = (...args) => {
+          existingValue(...args);
+          sharedInputProps[key]?.(...args);
+        };
+      }
+    });
+
+    // Update ref
+    mergedProps.ref = composeRef(InputComponent.ref, sharedInputProps.ref);
+    return /*#__PURE__*/(react_production_namespaceFn().cloneElement)(InputComponent, mergedProps);
+  }
+
+  // If InputComponent is a component type, render normally
+  const Component = InputComponent;
+  return /*#__PURE__*/(react_production_namespaceFn().createElement)(Component, sharedInputProps);
+});
+/* harmony default export */ const SelectInput_Input = (SelectInput_Input_Input);
+;// ./node_modules/@rc-component/select/es/SelectInput/Content/Placeholder.js
+
+
+
+
+function Placeholder(props) {
+  const {
+    prefixCls,
+    placeholder,
+    displayValues
+  } = useSelectInputContext();
+  const {
+    classNames,
+    styles
+  } = useBaseProps();
+  const {
+    show = true
+  } = props;
+  if (displayValues.length) {
+    return null;
+  }
+  return /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
+    className: clsx(`${prefixCls}-placeholder`, classNames?.placeholder),
+    style: {
+      ...(show ? {} : {
+        visibility: 'hidden'
+      }),
+      ...styles?.placeholder
+    }
+  }, placeholder);
+}
+;// ./node_modules/@rc-component/select/es/SelectContext.js
+
+
+// Use any here since we do not get the type during compilation
+/**
+ * SelectContext is only used for Select. BaseSelect should not consume this context.
+ */
+
+const SelectContext = /*#__PURE__*/(react_production_namespaceFn().createContext)(null);
+/* harmony default export */ const es_SelectContext = (SelectContext);
+;// ./node_modules/@rc-component/select/es/utils/commonUtil.js
+function commonUtil_toArray(value) {
+  if (Array.isArray(value)) {
+    return value;
+  }
+  return value !== undefined ? [value] : [];
+}
+const isClient = typeof window !== 'undefined' && window.document && window.document.documentElement;
+
+/** Is client side and not jsdom */
+const isBrowserClient = (/* unused pure expression or super */ null && ( true && isClient));
+function commonUtil_hasValue(value) {
+  return value !== undefined && value !== null;
+}
+
+/** combo mode no value judgment function */
+function isComboNoValue(value) {
+  return !value && value !== 0;
+}
+function isTitleType(title) {
+  return ['string', 'number'].includes(typeof title);
+}
+function getTitle(item) {
+  let title = undefined;
+  if (item) {
+    if (isTitleType(item.title)) {
+      title = item.title.toString();
+    } else if (isTitleType(item.label)) {
+      title = item.label.toString();
+    }
+  }
+  return title;
+}
+;// ./node_modules/@rc-component/select/es/SelectInput/Content/SingleContent.js
+function SingleContent_extends() { SingleContent_extends = Object.assign ? Object.assign.bind() : function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; }; return SingleContent_extends.apply(this, arguments); }
+;
+
+
+
+
+
+
+
+const SingleContent = /*#__PURE__*/(react_production_namespaceFn().forwardRef)(({
+  inputProps
+}, ref) => {
+  const {
+    prefixCls,
+    searchValue,
+    activeValue,
+    displayValues,
+    maxLength,
+    mode,
+    components
+  } = useSelectInputContext();
+  const {
+    triggerOpen,
+    title: rootTitle,
+    showSearch,
+    classNames,
+    styles
+  } = useBaseProps();
+  const selectContext = (react_production_namespaceFn().useContext)(es_SelectContext);
+  const [inputChanged, setInputChanged] = (react_production_namespaceFn().useState)(false);
+  const combobox = mode === 'combobox';
+  const displayValue = displayValues[0];
+
+  // Implement the same logic as the old SingleSelector
+  const mergedSearchValue = (react_production_namespaceFn().useMemo)(() => {
+    if (combobox && activeValue && !inputChanged && triggerOpen) {
+      return activeValue;
+    }
+    return showSearch ? searchValue : '';
+  }, [combobox, activeValue, inputChanged, triggerOpen, searchValue, showSearch]);
+  const [optionClassName, optionStyle, optionTitle, hasOptionStyle] = (react_production_namespaceFn().useMemo)(() => {
+    let className;
+    let style;
+    let titleValue;
+    if (displayValue && selectContext?.flattenOptions) {
+      const option = selectContext.flattenOptions.find(opt => opt.value === displayValue.value);
+      if (option?.data) {
+        className = option.data.className;
+        style = option.data.style;
+        titleValue = getTitle(option.data);
+      }
+    }
+    if (displayValue && !titleValue) {
+      titleValue = getTitle(displayValue);
+    }
+    if (rootTitle !== undefined) {
+      titleValue = rootTitle;
+    }
+    const nextHasStyle = !!className || !!style;
+    return [className, style, titleValue, nextHasStyle];
+  }, [displayValue, selectContext?.flattenOptions, rootTitle]);
+  (react_production_namespaceFn().useEffect)(() => {
+    if (combobox) {
+      setInputChanged(false);
+    }
+  }, [combobox, activeValue]);
+
+  // ========================== Render ==========================
+  const showHasValueCls = displayValue && displayValue.label !== null && displayValue.label !== undefined && String(displayValue.label).trim() !== '';
+
+  // Render value
+  // Only render value when not using custom input in combobox mode
+  const shouldRenderValue = !(combobox && components?.input);
+  const renderValue = shouldRenderValue ? displayValue ? hasOptionStyle ? /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
+    className: clsx(`${prefixCls}-content-value`, optionClassName),
+    style: {
+      ...(mergedSearchValue ? {
+        visibility: 'hidden'
+      } : {}),
+      ...optionStyle
+    },
+    title: optionTitle
+  }, displayValue.label) : displayValue.label : /*#__PURE__*/(react_production_namespaceFn().createElement)(Placeholder, {
+    show: !mergedSearchValue
+  }) : null;
+  // Render
+  return /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
+    className: clsx(`${prefixCls}-content`, showHasValueCls && `${prefixCls}-content-has-value`, mergedSearchValue && `${prefixCls}-content-has-search-value`, hasOptionStyle && `${prefixCls}-content-has-option-style`, classNames?.content),
+    style: styles?.content,
+    title: hasOptionStyle ? undefined : optionTitle
+  }, renderValue, /*#__PURE__*/(react_production_namespaceFn().createElement)(SelectInput_Input, SingleContent_extends({
+    ref: ref
+  }, inputProps, {
+    value: mergedSearchValue,
+    maxLength: mode === 'combobox' ? maxLength : undefined,
+    onChange: e => {
+      setInputChanged(true);
+      inputProps.onChange?.(e);
+    }
+  })));
+});
+/* harmony default export */ const Content_SingleContent = (SingleContent);
+;// ./node_modules/@rc-component/select/es/TransBtn.js
+
+
+/**
+ * Small wrapper for Select icons (clear/arrow/etc.).
+ * Prevents default mousedown to avoid blurring or caret moves, and
+ * renders a custom icon or a fallback icon span.
+ *
+ * DOM structure:
+ * <span className={className} ...>
+ *   { icon || <span className={`${className}-icon`}>{children}</span> }
+ * </span>
+ */
+const TransBtn = props => {
+  const {
+    className,
+    style,
+    customizeIcon,
+    customizeIconProps,
+    children,
+    onMouseDown,
+    onClick
+  } = props;
+  const icon = typeof customizeIcon === 'function' ? customizeIcon(customizeIconProps) : customizeIcon;
+  return /*#__PURE__*/(react_production_namespaceFn().createElement)("span", {
+    className: className,
+    onMouseDown: event => {
+      event.preventDefault();
+      onMouseDown?.(event);
+    },
+    style: {
+      userSelect: 'none',
+      WebkitUserSelect: 'none',
+      ...style
+    },
+    unselectable: "on",
+    onClick: onClick,
+    "aria-hidden": true
+  }, icon !== undefined ? icon : /*#__PURE__*/(react_production_namespaceFn().createElement)("span", {
+    className: clsx(className.split(/\s+/).map(cls => `${cls}-icon`))
+  }, children));
+};
+/* harmony default export */ const es_TransBtn = (TransBtn);
+;// ./node_modules/@rc-component/select/es/SelectInput/Content/MultipleContent.js
+function MultipleContent_extends() { MultipleContent_extends = Object.assign ? Object.assign.bind() : function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; }; return MultipleContent_extends.apply(this, arguments); }
+;
+
+
+
+
+
+
+
+
+function itemKey(value) {
+  return value.key ?? value.value;
+}
+const onPreventMouseDown = event => {
+  event.preventDefault();
+  event.stopPropagation();
+};
+/* harmony default export */ const MultipleContent = (/*#__PURE__*/(react_production_namespaceFn().forwardRef)(function MultipleContent({
+  inputProps
+}, ref) {
+  const {
+    prefixCls,
+    displayValues,
+    searchValue,
+    mode,
+    onSelectorRemove,
+    removeIcon: removeIconFromContext
+  } = useSelectInputContext();
+  const {
+    disabled,
+    showSearch,
+    triggerOpen,
+    rawOpen,
+    toggleOpen,
+    autoClearSearchValue,
+    tagRender: tagRenderFromContext,
+    maxTagPlaceholder: maxTagPlaceholderFromContext,
+    maxTagTextLength,
+    maxTagCount,
+    classNames,
+    styles
+  } = useBaseProps();
+  const selectionItemPrefixCls = `${prefixCls}-selection-item`;
+
+  // ===================== Search ======================
+  // Apply autoClearSearchValue logic: when dropdown is closed and autoClearSearchValue is not false (default true), clear search value
+  // Use rawOpen to avoid clearing search when emptyListContent blocks open
+  let computedSearchValue = searchValue;
+  if (!rawOpen && mode === 'multiple' && autoClearSearchValue !== false) {
+    computedSearchValue = '';
+  }
+  const inputValue = showSearch ? computedSearchValue || '' : '';
+  const inputEditable = showSearch && !disabled;
+
+  // Props from context with safe defaults
+  const removeIcon = removeIconFromContext ?? '×';
+  const maxTagPlaceholder = maxTagPlaceholderFromContext ?? (omittedValues => `+ ${omittedValues.length} ...`);
+  const tagRender = tagRenderFromContext;
+  const onToggleOpen = newOpen => {
+    toggleOpen(newOpen);
+  };
+  const onRemove = value => {
+    onSelectorRemove?.(value);
+  };
+
+  // ======================== Item ========================
+  // >>> Render Selector Node. Includes Item & Rest
+  const defaultRenderSelector = (item, content, itemDisabled, closable, onClose) => /*#__PURE__*/(react_production_namespaceFn().createElement)("span", {
+    title: getTitle(item),
+    className: clsx(selectionItemPrefixCls, {
+      [`${selectionItemPrefixCls}-disabled`]: itemDisabled
+    }, classNames?.item),
+    style: styles?.item
+  }, /*#__PURE__*/(react_production_namespaceFn().createElement)("span", {
+    className: clsx(`${selectionItemPrefixCls}-content`, classNames?.itemContent),
+    style: styles?.itemContent
+  }, content), closable && /*#__PURE__*/(react_production_namespaceFn().createElement)(es_TransBtn, {
+    className: clsx(`${selectionItemPrefixCls}-remove`, classNames?.itemRemove),
+    style: styles?.itemRemove,
+    onMouseDown: onPreventMouseDown,
+    onClick: onClose,
+    customizeIcon: removeIcon
+  }, "\xD7"));
+  const customizeRenderSelector = (value, content, itemDisabled, closable, onClose, isMaxTag, info) => {
+    const onMouseDown = e => {
+      onPreventMouseDown(e);
+      onToggleOpen(!triggerOpen);
+    };
+    return /*#__PURE__*/(react_production_namespaceFn().createElement)("span", {
+      onMouseDown: onMouseDown
+    }, tagRender({
+      label: content,
+      value,
+      index: info?.index,
+      disabled: itemDisabled,
+      closable,
+      onClose,
+      isMaxTag: !!isMaxTag
+    }));
+  };
+
+  // ====================== Overflow ======================
+  const renderItem = (valueItem, info) => {
+    const {
+      disabled: itemDisabled,
+      label,
+      value
+    } = valueItem;
+    const closable = !disabled && !itemDisabled;
+    let displayLabel = label;
+    if (typeof maxTagTextLength === 'number') {
+      if (typeof label === 'string' || typeof label === 'number') {
+        const strLabel = String(displayLabel);
+        if (strLabel.length > maxTagTextLength) {
+          displayLabel = `${strLabel.slice(0, maxTagTextLength)}...`;
+        }
+      }
+    }
+    const onClose = event => {
+      if (event) {
+        event.stopPropagation();
+      }
+      onRemove(valueItem);
+    };
+    return typeof tagRender === 'function' ? customizeRenderSelector(value, displayLabel, itemDisabled, closable, onClose, undefined, info) : defaultRenderSelector(valueItem, displayLabel, itemDisabled, closable, onClose);
+  };
+  const renderRest = omittedValues => {
+    // https://github.com/ant-design/ant-design/issues/48930
+    if (!displayValues.length) {
+      return null;
+    }
+    const content = typeof maxTagPlaceholder === 'function' ? maxTagPlaceholder(omittedValues) : maxTagPlaceholder;
+    return typeof tagRender === 'function' ? customizeRenderSelector(undefined, content, false, false, undefined, true) : defaultRenderSelector({
+      title: content
+    }, content, false);
+  };
+
+  // ======================= Render =======================
+  return /*#__PURE__*/(react_production_namespaceFn().createElement)(overflow_es, {
+    prefixCls: `${prefixCls}-content`,
+    className: classNames?.content,
+    style: styles?.content,
+    prefix: !displayValues.length && !inputValue && /*#__PURE__*/(react_production_namespaceFn().createElement)(Placeholder, null),
+    data: displayValues,
+    renderItem: renderItem,
+    renderRest: renderRest,
+    suffix: /*#__PURE__*/(react_production_namespaceFn().createElement)(SelectInput_Input, MultipleContent_extends({
+      ref: ref,
+      disabled: disabled,
+      readOnly: !inputEditable
+    }, inputProps, {
+      value: inputValue || '',
+      syncWidth: true
+    })),
+    itemKey: itemKey,
+    maxCount: maxTagCount
+  });
+}));
+;// ./node_modules/@rc-component/select/es/SelectInput/Content/index.js
+
+
+
+
+
+
+const SelectContent = /*#__PURE__*/(react_production_namespaceFn().forwardRef)(function SelectContent(_, ref) {
+  const {
+    multiple,
+    onInputKeyDown,
+    tabIndex
+  } = useSelectInputContext();
+  const baseProps = useBaseProps();
+  const {
+    showSearch
+  } = baseProps;
+  const ariaProps = pickAttrs(baseProps, {
+    aria: true
+  });
+  const sharedInputProps = {
+    ...ariaProps,
+    onKeyDown: onInputKeyDown,
+    readOnly: !showSearch,
+    tabIndex
+  };
+  if (multiple) {
+    return /*#__PURE__*/(react_production_namespaceFn().createElement)(MultipleContent, {
+      ref: ref,
+      inputProps: sharedInputProps
+    });
+  }
+  return /*#__PURE__*/(react_production_namespaceFn().createElement)(Content_SingleContent, {
+    ref: ref,
+    inputProps: sharedInputProps
+  });
+});
+/* harmony default export */ const SelectInput_Content = (SelectContent);
+;// ./node_modules/@rc-component/select/es/utils/keyUtil.js
+
+
+/** keyCode Judgment function */
+function isValidateOpenKey(currentKeyCode) {
+  return (
+    // Undefined for Edge bug:
+    // https://github.com/ant-design/ant-design/issues/51292
+    currentKeyCode &&
+    // Other keys
+    ![
+    // System function button
+    es_KeyCode.ESC, es_KeyCode.SHIFT, es_KeyCode.BACKSPACE, es_KeyCode.TAB, es_KeyCode.WIN_KEY, es_KeyCode.ALT, es_KeyCode.META, es_KeyCode.WIN_KEY_RIGHT, es_KeyCode.CTRL, es_KeyCode.SEMICOLON, es_KeyCode.EQUALS, es_KeyCode.CAPS_LOCK, es_KeyCode.CONTEXT_MENU,
+    // Arrow keys - should not trigger open when navigating in input
+    es_KeyCode.UP,
+    // KeyCode.DOWN,
+    es_KeyCode.LEFT, es_KeyCode.RIGHT,
+    // F1-F12
+    es_KeyCode.F1, es_KeyCode.F2, es_KeyCode.F3, es_KeyCode.F4, es_KeyCode.F5, es_KeyCode.F6, es_KeyCode.F7, es_KeyCode.F8, es_KeyCode.F9, es_KeyCode.F10, es_KeyCode.F11, es_KeyCode.F12].includes(currentKeyCode)
+  );
+}
+;// ./node_modules/@rc-component/select/es/SelectInput/index.js
+function SelectInput_extends() { SelectInput_extends = Object.assign ? Object.assign.bind() : function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; }; return SelectInput_extends.apply(this, arguments); }
+;
+
+
+
+
+
+
+
+const DEFAULT_OMIT_PROPS = ['value', 'onChange', 'removeIcon', 'placeholder', 'maxTagCount', 'maxTagTextLength', 'maxTagPlaceholder', 'choiceTransitionName', 'onInputKeyDown', 'onPopupScroll', 'tabIndex', 'activeValue', 'onSelectorRemove', 'focused'];
+/* harmony default export */ const SelectInput = (/*#__PURE__*/(react_production_namespaceFn().forwardRef)(function SelectInput(props, ref) {
+  const {
+    // Style
+    prefixCls,
+    className,
+    style,
+    // UI
+    prefix,
+    suffix,
+    clearIcon,
+    clearLabel,
+    children,
+    // Data
+    multiple,
+    displayValues,
+    placeholder,
+    mode,
+    // Search
+    searchValue,
+    onSearch,
+    onSearchSubmit,
+    onInputBlur,
+    // Input
+    maxLength,
+    autoFocus,
+    // Events
+    onMouseDown,
+    onClearMouseDown,
+    onInputKeyDown,
+    onSelectorRemove,
+    // Token handling
+    tokenWithEnter,
+    // Components
+    components,
+    ...restProps
+  } = props;
+  const {
+    triggerOpen,
+    toggleOpen,
+    showSearch,
+    disabled,
+    loading,
+    classNames,
+    styles
+  } = useBaseProps();
+  const rootRef = (react_production_namespaceFn().useRef)(null);
+  const inputRef = (react_production_namespaceFn().useRef)(null);
+
+  // Handle keyboard events similar to original Selector
+  const onInternalInputKeyDown = hooks_useEvent(event => {
+    const {
+      which
+    } = event;
+
+    // Compatible with multiple lines in TextArea
+    const isTextAreaElement = inputRef.current instanceof HTMLTextAreaElement;
+
+    // Prevent default behavior for up/down arrows when dropdown is open
+    if (!isTextAreaElement && triggerOpen && (which === es_KeyCode.UP || which === es_KeyCode.DOWN)) {
+      event.preventDefault();
+    }
+
+    // Call the original onInputKeyDown callback
+    if (onInputKeyDown) {
+      onInputKeyDown(event);
+    }
+
+    // Move within the text box for TextArea
+    if (isTextAreaElement && !triggerOpen && ~[es_KeyCode.UP, es_KeyCode.DOWN, es_KeyCode.LEFT, es_KeyCode.RIGHT].indexOf(which)) {
+      return;
+    }
+
+    // Open dropdown when a valid open key is pressed
+    const isModifier = event.ctrlKey || event.altKey || event.metaKey;
+    if (!isModifier && isValidateOpenKey(which)) {
+      toggleOpen(true);
+    }
+  });
+
+  // ====================== Refs ======================
+  (react_production_namespaceFn().useImperativeHandle)(ref, () => {
+    return {
+      focus: options => {
+        // Focus the inner input if available, otherwise fall back to root div.
+        (inputRef.current || rootRef.current).focus?.(options);
+      },
+      blur: () => {
+        (inputRef.current || rootRef.current).blur?.();
+      },
+      // Use getDOM to handle nested nativeElement structure (e.g., when RootComponent is antd Input)
+      nativeElement: getDOM(rootRef.current)
+    };
+  });
+
+  // ====================== Open ======================
+  const onInternalMouseDown = hooks_useEvent(event => {
+    if (!disabled) {
+      const inputDOM = getDOM(inputRef.current);
+
+      // https://github.com/ant-design/ant-design/issues/56002
+      // Tell `useSelectTriggerControl` to ignore this event
+      // When icon is dynamic render, the parentNode will miss
+      // so we need to mark the event directly
+      event.nativeEvent._ori_target = inputDOM;
+      const isClickOnInput = inputDOM === event.target || inputDOM?.contains(event.target);
+      if (inputDOM && !isClickOnInput) {
+        event.preventDefault();
+      }
+
+      // Check if we should prevent closing when clicking on selector
+      // Don't close if: open && not multiple && (combobox mode || showSearch)
+      const shouldPreventCloseOnSingle = triggerOpen && !multiple && (mode === 'combobox' || showSearch);
+
+      // Don't close if: open && multiple && click on input
+      const shouldPreventCloseOnMultipleInput = triggerOpen && multiple && isClickOnInput;
+      const shouldPreventClose = shouldPreventCloseOnSingle || shouldPreventCloseOnMultipleInput;
+      if (!event.nativeEvent._select_lazy) {
+        inputRef.current?.focus();
+
+        // Only toggle open if we should not prevent close
+        if (!shouldPreventClose) {
+          toggleOpen();
+        }
+      } else if (triggerOpen && !multiple) {
+        // Lazy should also close when click clear icon in single select.
+        toggleOpen(false);
+      }
+    }
+    onMouseDown?.(event);
+  });
+
+  // ===================== Clear ======================
+  // The clear button lives inside the select root, whose `onKeyDown` treats
+  // Enter/Space as "open the dropdown" and calls `preventDefault` on them.
+  // That would cancel the native button activation, so keyboard users would
+  // never get the `click` event which performs the clear. Keep the activation
+  // keys scoped to the button itself.
+  const onClearKeyDown = event => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.stopPropagation();
+    }
+  };
+
+  // =================== Components ===================
+  const {
+    root: RootComponent
+  } = components;
+
+  // ===================== Render =====================
+  const domProps = omit(restProps, DEFAULT_OMIT_PROPS);
+  const ariaProps = pickAttrs(domProps, {
+    aria: true
+  });
+  const ariaKeys = Object.keys(ariaProps);
+
+  // Create context value with wrapped callbacks
+  const contextValue = {
+    ...props,
+    onInputKeyDown: onInternalInputKeyDown
+  };
+  if (RootComponent) {
+    const originProps = RootComponent.props || {};
+    const mergedProps = {
+      ...originProps,
+      ...domProps
+    };
+    Object.keys(originProps).forEach(key => {
+      const originVal = originProps[key];
+      const domVal = domProps[key];
+      if (typeof originVal === 'function' && typeof domVal === 'function') {
+        mergedProps[key] = (...args) => {
+          domVal(...args);
+          originVal(...args);
+        };
+      }
+    });
+    if ( /*#__PURE__*/(react_production_namespaceFn().isValidElement)(RootComponent)) {
+      return /*#__PURE__*/(react_production_namespaceFn().cloneElement)(RootComponent, {
+        ...mergedProps,
+        ref: composeRef(RootComponent.ref, rootRef)
+      });
+    }
+    return /*#__PURE__*/(react_production_namespaceFn().createElement)(RootComponent, SelectInput_extends({}, mergedProps, {
+      ref: rootRef
+    }));
+  }
+  return /*#__PURE__*/(react_production_namespaceFn().createElement)(SelectInput_context.Provider, {
+    value: contextValue
+  }, /*#__PURE__*/(react_production_namespaceFn().createElement)("div", SelectInput_extends({}, omit(domProps, ariaKeys), {
+    // Style
+    ref: rootRef,
+    className: className,
+    style: style
+    // Mouse Events
+    ,
+    onMouseDown: onInternalMouseDown
+  }), /*#__PURE__*/(react_production_namespaceFn().createElement)(Affix, {
+    className: clsx(`${prefixCls}-prefix`, classNames?.prefix),
+    style: styles?.prefix
+  }, prefix), /*#__PURE__*/(react_production_namespaceFn().createElement)(SelectInput_Content, {
+    ref: inputRef
+  }), /*#__PURE__*/(react_production_namespaceFn().createElement)(Affix, {
+    className: clsx(`${prefixCls}-suffix`, {
+      [`${prefixCls}-suffix-loading`]: loading
+    }, classNames?.suffix),
+    style: styles?.suffix
+  }, suffix), clearIcon && /*#__PURE__*/(react_production_namespaceFn().createElement)("button", {
+    type: "button",
+    "aria-label": clearLabel,
+    className: clsx(`${prefixCls}-clear`, classNames?.clear),
+    style: styles?.clear,
+    onMouseDown: e => {
+      // Keep focus on the input and mark the native event so the root
+      // `onInternalMouseDown` handler does not open the dropdown.
+      // This must run on mousedown because the root handler fires
+      // before the button's onClick.
+      e.preventDefault();
+      e.nativeEvent._select_lazy = true;
+    },
+    onKeyDown: onClearKeyDown
+    // Clearing happens on click so it works for both pointer and
+    // keyboard (Enter/Space) activation.
+    ,
+    onClick: onClearMouseDown
+  }, clearIcon), children));
+}));
+;// ./node_modules/@rc-component/select/es/hooks/useComponents.js
+
+function useComponents(components, getInputElement, getRawInputElement) {
+  return (react_production_namespaceFn().useMemo)(() => {
+    let {
+      root,
+      input
+    } = components || {};
+
+    // root: getRawInputElement
+    if (getRawInputElement) {
+      root = getRawInputElement();
+    }
+
+    // input: getInputElement
+    if (getInputElement) {
+      input = getInputElement();
+    }
+    return {
+      root,
+      input
+    };
+  }, [components, getInputElement, getRawInputElement]);
+}
+;// ./node_modules/@rc-component/select/es/BaseSelect/index.js
+function BaseSelect_extends() { BaseSelect_extends = Object.assign ? Object.assign.bind() : function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; }; return BaseSelect_extends.apply(this, arguments); }
+;
+
+
+
+
+
+
+
+
+
+
+
+
+
+/**
+ * ZombieJ:
+ * We are currently refactoring the semantic structure of the component. Changelog:
+ * - Remove `suffixIcon` and change to `suffix`.
+ * - Add `components.root` for replacing response element.
+ *   - Remove `getInputElement` and `getRawInputElement` since we can use `components.input` instead.
+ */
+
+const isMultiple = mode => mode === 'tags' || mode === 'multiple';
+const BaseSelect = /*#__PURE__*/(react_production_namespaceFn().forwardRef)((props, ref) => {
+  const {
+    id,
+    prefixCls,
+    className,
+    styles,
+    classNames,
+    showSearch,
+    tagRender,
+    showScrollBar = 'optional',
+    direction,
+    omitDomProps,
+    // Value
+    displayValues,
+    onDisplayValuesChange,
+    emptyOptions,
+    notFoundContent = 'Not Found',
+    onClear,
+    maxCount,
+    placeholder,
+    // Mode
+    mode,
+    // Status
+    disabled,
+    loading,
+    // Customize Input
+    getInputElement,
+    getRawInputElement,
+    // Open
+    open,
+    defaultOpen,
+    onPopupVisibleChange,
+    // Active
+    activeValue,
+    onActiveValueChange,
+    activeDescendantId,
+    // Search
+    searchValue,
+    autoClearSearchValue,
+    onSearch,
+    onSearchSplit,
+    tokenSeparators,
+    // Icons
+    allowClear,
+    prefix,
+    suffix,
+    suffixIcon,
+    clearIcon,
+    // Dropdown
+    OptionList,
+    animation,
+    transitionName,
+    popupStyle,
+    popupClassName,
+    popupMatchSelectWidth,
+    popupRender,
+    popupAlign,
+    placement,
+    builtinPlacements,
+    getPopupContainer,
+    // Focus
+    showAction = [],
+    onFocus,
+    onBlur,
+    // Rest Events
+    onKeyUp,
+    onKeyDown,
+    onMouseDown,
+    // Components
+    components,
+    // Rest Props
+    ...restProps
+  } = props;
+
+  // ============================== MISC ==============================
+  const multiple = isMultiple(mode);
+
+  // ============================== Refs ==============================
+  const containerRef = (react_production_namespaceFn().useRef)(null);
+  const triggerRef = (react_production_namespaceFn().useRef)(null);
+  const listRef = (react_production_namespaceFn().useRef)(null);
+
+  /** Used for component focused management */
+  const [focused, setFocused] = (react_production_namespaceFn().useState)(false);
+
+  // =========================== Imperative ===========================
+  (react_production_namespaceFn().useImperativeHandle)(ref, () => ({
+    focus: containerRef.current?.focus,
+    blur: containerRef.current?.blur,
+    scrollTo: arg => listRef.current?.scrollTo(arg),
+    nativeElement: getDOM(containerRef.current)
+  }));
+
+  // =========================== Components ===========================
+  const mergedComponents = useComponents(components, getInputElement, getRawInputElement);
+
+  // ========================== Search Value ==========================
+  const mergedSearchValue = (react_production_namespaceFn().useMemo)(() => {
+    if (mode !== 'combobox') {
+      return searchValue;
+    }
+    const val = displayValues[0]?.value;
+    return typeof val === 'string' || typeof val === 'number' ? String(val) : '';
+  }, [searchValue, mode, displayValues]);
+
+  // ========================== Custom Input ==========================
+  // Only works in `combobox`
+  const customizeInputElement = mode === 'combobox' && typeof getInputElement === 'function' && getInputElement() || null;
+
+  // ============================== Open ==============================
+  // Not trigger `open` when `notFoundContent` is empty
+  const emptyListContent = !notFoundContent && emptyOptions;
+  const [rawOpen, mergedOpen, triggerOpen, lockOptions] = useOpen(defaultOpen || false, open, onPopupVisibleChange, nextOpen => disabled || emptyListContent ? false : nextOpen);
+
+  // ============================= Search =============================
+  const tokenWithEnter = (react_production_namespaceFn().useMemo)(() => typeof tokenSeparators === 'function' || (tokenSeparators || []).some(tokenSeparator => ['\n', '\r\n'].includes(tokenSeparator)), [tokenSeparators]);
+  const splitByTokenSeparators = (react_production_namespaceFn().useMemo)(() => {
+    if (typeof tokenSeparators === 'function') {
+      return (input, end) => {
+        const tokens = tokenSeparators(input);
+        const isUnchanged = Array.isArray(tokens) && tokens.length === 1 && tokens[0] === input;
+        if (!Array.isArray(tokens) || !tokens.length || isUnchanged) {
+          return null;
+        }
+        return typeof end !== 'undefined' ? tokens.slice(0, end) : tokens;
+      };
+    }
+    return (input, end) => getSeparatedContent(input, tokenSeparators, end);
+  }, [tokenSeparators]);
+  const onInternalSearch = (searchText, fromTyping, isCompositing) => {
+    if (multiple && isValidCount(maxCount) && displayValues.length >= maxCount) {
+      return;
+    }
+    let ret = true;
+    let newSearchText = searchText;
+    onActiveValueChange?.(null);
+    const cap = isValidCount(maxCount) ? maxCount - displayValues.length : undefined;
+    const patchLabels = isCompositing ? null : splitByTokenSeparators(searchText, cap);
+
+    // Ignore combobox since it's not split-able
+    if (mode !== 'combobox' && patchLabels) {
+      newSearchText = '';
+      onSearchSplit?.(patchLabels);
+
+      // Should close when paste finish
+      triggerOpen(false);
+
+      // Tell Selector that break next actions
+      ret = false;
+    }
+    if (onSearch && mergedSearchValue !== newSearchText) {
+      onSearch(newSearchText, {
+        source: fromTyping ? 'typing' : 'effect'
+      });
+    }
+
+    // Open if from typing
+    if (searchText && fromTyping && ret) {
+      triggerOpen(true);
+    }
+    return ret;
+  };
+
+  // Only triggered when menu is closed & mode is tags
+  // If menu is open, OptionList will take charge
+  // If mode isn't tags, press enter is not meaningful when you can't see any option
+  const onInternalSearchSubmit = searchText => {
+    // prevent empty tags from appearing when you click the Enter button
+    if (!searchText || !searchText.trim()) {
+      return;
+    }
+    onSearch(searchText, {
+      source: 'submit'
+    });
+  };
+
+  // Clean up search value when the dropdown is closed.
+  // We use `rawOpen` here to avoid clearing the search input when the dropdown is
+  // programmatically closed due to `notFoundContent={null}` and no matching options.
+  // This allows the user to continue typing their search query.
+  (react_production_namespaceFn().useEffect)(() => {
+    if (!rawOpen && !multiple && mode !== 'combobox') {
+      onInternalSearch('', false, false);
+    }
+  }, [rawOpen]);
+
+  // ============================ Disabled ============================
+  // Close dropdown & remove focus state when disabled change
+  (react_production_namespaceFn().useEffect)(() => {
+    // After onBlur is triggered, the focused does not need to be reset
+    if (disabled) {
+      triggerOpen(false);
+      setFocused(false);
+    }
+  }, [disabled, mergedOpen]);
+
+  // ============================ Keyboard ============================
+  /**
+   * We record input value here to check if can press to clean up by backspace
+   * - null: Key is not down, this is reset by key up
+   * - true: Search text is empty when first time backspace down
+   * - false: Search text is not empty when first time backspace down
+   */
+  const [getClearLock, setClearLock] = useLock();
+  const keyLockRef = (react_production_namespaceFn().useRef)(false);
+
+  // KeyDown
+  const onInternalKeyDown = event => {
+    const clearLock = getClearLock();
+    const {
+      key
+    } = event;
+    const isEnterKey = key === 'Enter';
+    const isSpaceKey = key === ' ';
+
+    // Enter or Space opens dropdown (ARIA combobox: spacebar should open)
+    if (isEnterKey || isSpaceKey) {
+      // Do not submit form when type in the input; prevent Space from scrolling page
+      const isCombobox = mode === 'combobox';
+      const isEditable = isCombobox || showSearch;
+      if (isSpaceKey && !isEditable || isEnterKey && !isCombobox) {
+        event.preventDefault();
+      }
+
+      // We only manage open state here, close logic should handle by list component
+      if (!mergedOpen) {
+        triggerOpen(true);
+      }
+    }
+    setClearLock(!!mergedSearchValue);
+
+    // Remove value by `backspace`
+    if (key === 'Backspace' && !clearLock && multiple && !mergedSearchValue && displayValues.length) {
+      const cloneDisplayValues = [...displayValues];
+      let removedDisplayValue = null;
+      for (let i = cloneDisplayValues.length - 1; i >= 0; i -= 1) {
+        const current = cloneDisplayValues[i];
+        if (!current.disabled) {
+          cloneDisplayValues.splice(i, 1);
+          removedDisplayValue = current;
+          break;
+        }
+      }
+      if (removedDisplayValue) {
+        onDisplayValuesChange(cloneDisplayValues, {
+          type: 'remove',
+          values: [removedDisplayValue]
+        });
+      }
+    }
+    if (mergedOpen && (!isEnterKey || !keyLockRef.current) && !isSpaceKey) {
+      // Lock the Enter key after it is pressed to avoid repeated triggering of the onChange event.
+      if (isEnterKey) {
+        keyLockRef.current = true;
+      }
+      listRef.current?.onKeyDown(event);
+    }
+    onKeyDown?.(event);
+  };
+
+  // KeyUp
+  const onInternalKeyUp = (event, ...rest) => {
+    if (mergedOpen) {
+      listRef.current?.onKeyUp(event, ...rest);
+    }
+    if (event.key === 'Enter') {
+      keyLockRef.current = false;
+    }
+    onKeyUp?.(event, ...rest);
+  };
+
+  // ============================ Selector ============================
+  const onSelectorRemove = hooks_useEvent(val => {
+    const newValues = displayValues.filter(i => i !== val);
+    onDisplayValuesChange(newValues, {
+      type: 'remove',
+      values: [val]
+    });
+  });
+  const onInputBlur = () => {
+    // Unlock the Enter key after the input blur; otherwise, the Enter key needs to be pressed twice to trigger the correct effect.
+    keyLockRef.current = false;
+  };
+
+  // ========================== Focus / Blur ==========================
+  const getSelectElements = () => [getDOM(containerRef.current), triggerRef.current?.getPopupElement()];
+
+  // Close when click on non-select element
+  useSelectTriggerControl(getSelectElements, mergedOpen, triggerOpen, !!mergedComponents.root);
+
+  // ========================== Focus / Blur ==========================
+  const internalMouseDownRef = (react_production_namespaceFn().useRef)(false);
+  const onInternalFocus = event => {
+    setFocused(true);
+    if (!disabled) {
+      // `showAction` should handle `focus` if set
+      if (showAction.includes('focus')) {
+        triggerOpen(true);
+      }
+      onFocus?.(event);
+    }
+  };
+  const onRootBlur = () => {
+    // Delay close should check the activeElement
+    if (mergedOpen && !internalMouseDownRef.current) {
+      triggerOpen(false, {
+        cancelFun: () => isInside(getSelectElements(), document.activeElement)
+      });
+    }
+  };
+  const onInternalBlur = event => {
+    setFocused(false);
+    if (mergedSearchValue) {
+      // `tags` mode should move `searchValue` into values
+      if (mode === 'tags') {
+        onSearch(mergedSearchValue, {
+          source: 'submit'
+        });
+      } else if (mode === 'multiple') {
+        // `multiple` mode only clean the search value but not trigger event
+        onSearch('', {
+          source: 'blur'
+        });
+      }
+    }
+    onRootBlur();
+    if (!disabled) {
+      onBlur?.(event);
+    }
+  };
+  const onRootMouseDown = (event, ...restArgs) => {
+    const {
+      target
+    } = event;
+    const popupElement = triggerRef.current?.getPopupElement();
+
+    // We should give focus back to selector if clicked item is not focusable
+    if (popupElement?.contains(target) && triggerOpen) {
+      // Tell `open` not to close since it's safe in the popup
+      triggerOpen(true);
+    }
+    onMouseDown?.(event, ...restArgs);
+    internalMouseDownRef.current = true;
+    useOpen_macroTask(() => {
+      internalMouseDownRef.current = false;
+    });
+  };
+
+  // ============================ Dropdown ============================
+  const [, forceUpdate] = (react_production_namespaceFn().useState)({});
+  // We need force update here since popup dom is render async
+  function onPopupMouseEnter() {
+    forceUpdate({});
+  }
+
+  // Used for raw custom input trigger
+  let onTriggerVisibleChange;
+  if (!!mergedComponents.root) {
+    onTriggerVisibleChange = newOpen => {
+      triggerOpen(newOpen);
+    };
+  }
+
+  // ============================ Context =============================
+  const baseSelectContext = (react_production_namespaceFn().useMemo)(() => ({
+    ...props,
+    notFoundContent,
+    open: mergedOpen,
+    triggerOpen: mergedOpen,
+    rawOpen,
+    id,
+    showSearch,
+    multiple,
+    toggleOpen: triggerOpen,
+    showScrollBar,
+    styles,
+    classNames,
+    lockOptions
+  }), [props, notFoundContent, triggerOpen, id, showSearch, multiple, mergedOpen, rawOpen, showScrollBar, styles, classNames, lockOptions]);
+
+  // ==================================================================
+  // ==                            Render                            ==
+  // ==================================================================
+
+  // ============================= Suffix =============================
+  const mergedSuffixIcon = (react_production_namespaceFn().useMemo)(() => {
+    const nextSuffix = suffix ?? suffixIcon;
+    if (typeof nextSuffix === 'function') {
+      return nextSuffix({
+        searchValue: mergedSearchValue,
+        open: mergedOpen,
+        focused,
+        showSearch,
+        loading
+      });
+    }
+    return nextSuffix;
+  }, [suffix, suffixIcon, mergedSearchValue, mergedOpen, focused, showSearch, loading]);
+
+  // ============================= Clear ==============================
+  const onClearMouseDown = () => {
+    onClear?.();
+    containerRef.current?.focus();
+    onDisplayValuesChange([], {
+      type: 'clear',
+      values: displayValues
+    });
+    onInternalSearch('', false, false);
+  };
+  const {
+    allowClear: mergedAllowClear,
+    clearIcon: clearNode,
+    label: clearLabel
+  } = useAllowClear_useAllowClear(prefixCls, displayValues, allowClear, clearIcon, disabled, mergedSearchValue, mode);
+
+  // =========================== OptionList ===========================
+  const optionList = /*#__PURE__*/(react_production_namespaceFn().createElement)(OptionList, {
+    ref: listRef
+  });
+
+  // ============================= Select =============================
+  const mergedClassName = clsx(prefixCls, className, {
+    [`${prefixCls}-focused`]: focused,
+    [`${prefixCls}-multiple`]: multiple,
+    [`${prefixCls}-single`]: !multiple,
+    [`${prefixCls}-allow-clear`]: mergedAllowClear,
+    [`${prefixCls}-show-arrow`]: mergedSuffixIcon !== undefined && mergedSuffixIcon !== null,
+    [`${prefixCls}-disabled`]: disabled,
+    [`${prefixCls}-loading`]: loading,
+    [`${prefixCls}-open`]: mergedOpen,
+    [`${prefixCls}-customize-input`]: customizeInputElement,
+    [`${prefixCls}-show-search`]: showSearch
+  });
+
+  // >>> Render
+  let renderNode = /*#__PURE__*/(react_production_namespaceFn().createElement)(SelectInput, BaseSelect_extends({}, restProps, {
+    // Ref
+    ref: containerRef
+    // Style
+    ,
+    prefixCls: prefixCls,
+    className: mergedClassName
+    // Focus state
+    ,
+    focused: focused
+    // UI
+    ,
+    prefix: prefix,
+    suffix: mergedSuffixIcon,
+    clearIcon: clearNode,
+    clearLabel: clearLabel
+    // Type or mode
+    ,
+    multiple: multiple,
+    mode: mode
+    // Values
+    ,
+    displayValues: displayValues,
+    placeholder: placeholder,
+    searchValue: mergedSearchValue,
+    activeValue: activeValue,
+    onSearch: onInternalSearch,
+    onSearchSubmit: onInternalSearchSubmit,
+    onInputBlur: onInputBlur,
+    onFocus: onInternalFocus,
+    onBlur: onInternalBlur,
+    onClearMouseDown: onClearMouseDown,
+    onKeyDown: onInternalKeyDown,
+    onKeyUp: onInternalKeyUp,
+    onSelectorRemove: onSelectorRemove
+    // Token handling
+    ,
+    tokenWithEnter: tokenWithEnter
+    // Open
+    ,
+    onMouseDown: onRootMouseDown
+    // Components
+    ,
+    components: mergedComponents
+  }));
+  renderNode = /*#__PURE__*/(react_production_namespaceFn().createElement)(es_SelectTrigger, {
+    ref: triggerRef,
+    disabled: disabled,
+    prefixCls: prefixCls,
+    visible: mergedOpen,
+    popupElement: optionList,
+    animation: animation,
+    transitionName: transitionName,
+    popupStyle: popupStyle,
+    popupClassName: popupClassName,
+    direction: direction,
+    popupMatchSelectWidth: popupMatchSelectWidth,
+    popupRender: popupRender,
+    popupAlign: popupAlign,
+    placement: placement,
+    builtinPlacements: builtinPlacements,
+    getPopupContainer: getPopupContainer,
+    empty: emptyOptions,
+    onPopupVisibleChange: onTriggerVisibleChange,
+    onPopupMouseEnter: onPopupMouseEnter,
+    onPopupMouseDown: onRootMouseDown,
+    onPopupBlur: onRootBlur
+  }, renderNode);
+  return /*#__PURE__*/(react_production_namespaceFn().createElement)(BaseSelectContext.Provider, {
+    value: baseSelectContext
+  }, /*#__PURE__*/(react_production_namespaceFn().createElement)(Polite, {
+    visible: focused && !mergedOpen,
+    values: displayValues
+  }), renderNode);
+});
+
+// Set display name for dev
+if (false) // removed by dead control flow
+{}
+/* harmony default export */ const es_BaseSelect = (BaseSelect);
+;// ./node_modules/@rc-component/select/es/OptGroup.js
+/* istanbul ignore file */
+
+/** This is a placeholder, not real render in dom */
+const OptGroup = () => null;
+OptGroup.isSelectOptGroup = true;
+/* harmony default export */ const es_OptGroup = (OptGroup);
+;// ./node_modules/@rc-component/select/es/Option.js
+/* istanbul ignore file */
+
+/** This is a placeholder, not real render in dom */
+const Option = () => null;
+Option.isSelectOption = true;
+/* harmony default export */ const es_Option = (Option);
+;// ./node_modules/@rc-component/virtual-list/es/Filler.js
+function Filler_extends() { Filler_extends = Object.assign ? Object.assign.bind() : function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; }; return Filler_extends.apply(this, arguments); }
+;
+
+
+/**
+ * Fill component to provided the scroll content real height.
+ */
+const Filler = /*#__PURE__*/(react_production_namespaceFn().forwardRef)(({
+  height,
+  offsetY,
+  offsetX,
+  children,
+  prefixCls,
+  onInnerResize,
+  innerProps,
+  rtl,
+  extra
+}, ref) => {
+  let outerStyle = {};
+  let innerStyle = {
+    display: 'flex',
+    flexDirection: 'column'
+  };
+  if (offsetY !== undefined) {
+    // Not set `width` since this will break `sticky: right`
+    outerStyle = {
+      height,
+      position: 'relative',
+      overflow: 'hidden'
+    };
+    innerStyle = {
+      ...innerStyle,
+      transform: `translateY(${offsetY}px)`,
+      [rtl ? 'marginRight' : 'marginLeft']: -offsetX || 0,
+      position: 'absolute',
+      left: 0,
+      right: 0,
+      top: 0
+    };
+  }
+  return /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
+    style: outerStyle
+  }, /*#__PURE__*/(react_production_namespaceFn().createElement)(resize_observer_es, {
+    onResize: ({
+      offsetHeight
+    }) => {
+      if (offsetHeight && onInnerResize) {
+        onInnerResize();
+      }
+    }
+  }, /*#__PURE__*/(react_production_namespaceFn().createElement)("div", Filler_extends({
+    style: innerStyle,
+    className: clsx({
+      [`${prefixCls}-holder-inner`]: prefixCls
+    }),
+    ref: ref
+  }, innerProps), children, extra)));
+});
+Filler.displayName = 'Filler';
+/* harmony default export */ const es_Filler = (Filler);
+;// ./node_modules/@rc-component/virtual-list/es/Item.js
+
+function es_Item_Item({
+  children,
+  setRef
+}) {
+  const refFunc = (react_production_namespaceFn().useCallback)(node => {
+    setRef(node);
+  }, [setRef]);
+  return /*#__PURE__*/(react_production_namespaceFn().cloneElement)(children, {
+    ref: refFunc
+  });
+}
+;// ./node_modules/@rc-component/virtual-list/es/hooks/useChildren.js
+
+
+function useChildren(list, startIndex, endIndex, scrollWidth, offsetX, setNodeRef, renderFunc, {
+  getKey
+}) {
+  return list.slice(startIndex, endIndex + 1).map((item, index) => {
+    const eleIndex = startIndex + index;
+    const node = renderFunc(item, eleIndex, {
+      style: {
+        width: scrollWidth
+      },
+      offsetX
+    });
+    const key = getKey(item);
+    return /*#__PURE__*/(react_production_namespaceFn().createElement)(es_Item_Item, {
+      key: key,
+      setRef: ele => setNodeRef(item, ele)
+    }, node);
+  });
+}
+;// ./node_modules/@rc-component/virtual-list/es/utils/algorithmUtil.js
+/**
+ * Get index with specific start index one by one. e.g.
+ * min: 3, max: 9, start: 6
+ *
+ * Return index is:
+ * [0]: 6
+ * [1]: 7
+ * [2]: 5
+ * [3]: 8
+ * [4]: 4
+ * [5]: 9
+ * [6]: 3
+ */
+function getIndexByStartLoc(min, max, start, index) {
+  const beforeCount = start - min;
+  const afterCount = max - start;
+  const balanceCount = Math.min(beforeCount, afterCount) * 2;
+
+  // Balance
+  if (index <= balanceCount) {
+    const stepIndex = Math.floor(index / 2);
+    if (index % 2) {
+      return start + stepIndex + 1;
+    }
+    return start - stepIndex;
+  }
+
+  // One is out of range
+  if (beforeCount > afterCount) {
+    return start - (index - afterCount);
+  }
+  return start + (index - beforeCount);
+}
+
+/**
+ * We assume that 2 list has only 1 item diff and others keeping the order.
+ * So we can use dichotomy algorithm to find changed one.
+ */
+function findListDiffIndex(originList, targetList, getKey) {
+  const originLen = originList.length;
+  const targetLen = targetList.length;
+  let shortList;
+  let longList;
+  if (originLen === 0 && targetLen === 0) {
+    return null;
+  }
+  if (originLen < targetLen) {
+    shortList = originList;
+    longList = targetList;
+  } else {
+    shortList = targetList;
+    longList = originList;
+  }
+  const notExistKey = {
+    __EMPTY_ITEM__: true
+  };
+  function getItemKey(item) {
+    if (item !== undefined) {
+      return getKey(item);
+    }
+    return notExistKey;
+  }
+
+  // Loop to find diff one
+  let diffIndex = null;
+  let multiple = Math.abs(originLen - targetLen) !== 1;
+  for (let i = 0; i < longList.length; i += 1) {
+    const shortKey = getItemKey(shortList[i]);
+    const longKey = getItemKey(longList[i]);
+    if (shortKey !== longKey) {
+      diffIndex = i;
+      multiple = multiple || shortKey !== getItemKey(longList[i + 1]);
+      break;
+    }
+  }
+  return diffIndex === null ? null : {
+    index: diffIndex,
+    multiple
+  };
+}
+;// ./node_modules/@rc-component/virtual-list/es/hooks/useDiffItem.js
+
+
+function useDiffItem(data, getKey, onDiff) {
+  const [prevData, setPrevData] = (react_production_namespaceFn().useState)(data);
+  const [diffItem, setDiffItem] = (react_production_namespaceFn().useState)(null);
+  (react_production_namespaceFn().useEffect)(() => {
+    const diff = findListDiffIndex(prevData || [], data || [], getKey);
+    if (diff?.index !== undefined) {
+      onDiff?.(diff.index);
+      setDiffItem(data[diff.index]);
+    }
+    setPrevData(data);
+  }, [data]);
+  return [diffItem];
+}
+;// ./node_modules/@rc-component/virtual-list/es/utils/isFirefox.js
+const isFF = typeof navigator === 'object' && /Firefox/i.test(navigator.userAgent);
+/* harmony default export */ const isFirefox = (isFF);
+;// ./node_modules/@rc-component/virtual-list/es/hooks/useOriginScroll.js
+
+/* harmony default export */ const useOriginScroll = ((isScrollAtTop, isScrollAtBottom, isScrollAtLeft, isScrollAtRight) => {
+  // Do lock for a wheel when scrolling
+  const lockRef = (0,react_production_namespaceFn().useRef)(false);
+  const lockTimeoutRef = (0,react_production_namespaceFn().useRef)(null);
+  function lockScroll() {
+    clearTimeout(lockTimeoutRef.current);
+    lockRef.current = true;
+    lockTimeoutRef.current = setTimeout(() => {
+      lockRef.current = false;
+    }, 50);
+  }
+
+  // Pass to ref since global add is in closure
+  const scrollPingRef = (0,react_production_namespaceFn().useRef)({
+    top: isScrollAtTop,
+    bottom: isScrollAtBottom,
+    left: isScrollAtLeft,
+    right: isScrollAtRight
+  });
+  scrollPingRef.current.top = isScrollAtTop;
+  scrollPingRef.current.bottom = isScrollAtBottom;
+  scrollPingRef.current.left = isScrollAtLeft;
+  scrollPingRef.current.right = isScrollAtRight;
+  return (isHorizontal, delta, smoothOffset = false) => {
+    const originScroll = isHorizontal ?
+    // Pass origin wheel when on the left
+    delta < 0 && scrollPingRef.current.left ||
+    // Pass origin wheel when on the right
+    delta > 0 && scrollPingRef.current.right // Pass origin wheel when on the top
+    : delta < 0 && scrollPingRef.current.top ||
+    // Pass origin wheel when on the bottom
+    delta > 0 && scrollPingRef.current.bottom;
+    if (smoothOffset && originScroll) {
+      // No need lock anymore when it's smooth offset from touchMove interval
+      clearTimeout(lockTimeoutRef.current);
+      lockRef.current = false;
+    } else if (!originScroll || lockRef.current) {
+      lockScroll();
+    }
+    return !lockRef.current && originScroll;
+  };
+});
+__webpack_require__.dn(useOriginScroll);
+;// ./node_modules/@rc-component/virtual-list/es/hooks/useFrameWheel.js
+
+
+
+
+function useFrameWheel(inVirtual, isScrollAtTop, isScrollAtBottom, isScrollAtLeft, isScrollAtRight, horizontalScroll,
+/***
+ * Return `true` when you need to prevent default event
+ */
+onWheelDelta) {
+  const offsetRef = (0,react_production_namespaceFn().useRef)(0);
+  const nextFrameRef = (0,react_production_namespaceFn().useRef)(null);
+
+  // Firefox patch
+  const wheelValueRef = (0,react_production_namespaceFn().useRef)(null);
+  const isMouseScrollRef = (0,react_production_namespaceFn().useRef)(false);
+
+  // Scroll status sync
+  const originScroll = useOriginScroll(isScrollAtTop, isScrollAtBottom, isScrollAtLeft, isScrollAtRight);
+  function onWheelY(e, deltaY) {
+    es_raf.cancel(nextFrameRef.current);
+
+    // Do nothing when scroll at the edge, Skip check when is in scroll
+    if (originScroll(false, deltaY)) return;
+
+    // Skip if nest List has handled this event
+    const event = e;
+    if (!event._virtualHandled) {
+      event._virtualHandled = true;
+    } else {
+      return;
+    }
+    offsetRef.current += deltaY;
+    wheelValueRef.current = deltaY;
+
+    // Proxy of scroll events
+    if (!isFirefox) {
+      event.preventDefault();
+    }
+    nextFrameRef.current = es_raf(() => {
+      // Patch a multiple for Firefox to fix wheel number too small
+      // ref: https://github.com/ant-design/ant-design/issues/26372#issuecomment-679460266
+      const patchMultiple = isMouseScrollRef.current ? 10 : 1;
+      onWheelDelta(offsetRef.current * patchMultiple, false);
+      offsetRef.current = 0;
+    });
+  }
+  function onWheelX(event, deltaX) {
+    onWheelDelta(deltaX, true);
+    if (!isFirefox) {
+      event.preventDefault();
+    }
+  }
+
+  // Check for which direction does wheel do. `sx` means `shift + wheel`
+  const wheelDirectionRef = (0,react_production_namespaceFn().useRef)(null);
+  const wheelDirectionCleanRef = (0,react_production_namespaceFn().useRef)(null);
+  function onWheel(event) {
+    if (!inVirtual) return;
+
+    // Wait for 2 frame to clean direction
+    es_raf.cancel(wheelDirectionCleanRef.current);
+    wheelDirectionCleanRef.current = es_raf(() => {
+      wheelDirectionRef.current = null;
+    }, 2);
+    const {
+      deltaX,
+      deltaY,
+      shiftKey
+    } = event;
+    let mergedDeltaX = deltaX;
+    let mergedDeltaY = deltaY;
+    if (wheelDirectionRef.current === 'sx' || !wheelDirectionRef.current && (shiftKey || false) && deltaY && !deltaX) {
+      mergedDeltaX = deltaY;
+      mergedDeltaY = 0;
+      wheelDirectionRef.current = 'sx';
+    }
+    const absX = Math.abs(mergedDeltaX);
+    const absY = Math.abs(mergedDeltaY);
+    if (wheelDirectionRef.current === null) {
+      wheelDirectionRef.current = horizontalScroll && absX > absY ? 'x' : 'y';
+    }
+    if (wheelDirectionRef.current === 'y') {
+      onWheelY(event, mergedDeltaY);
+    } else {
+      onWheelX(event, mergedDeltaX);
+    }
+  }
+
+  // A patch for firefox
+  function onFireFoxScroll(event) {
+    if (!inVirtual) return;
+    isMouseScrollRef.current = event.detail === wheelValueRef.current;
+  }
+  return [onWheel, onFireFoxScroll];
+}
+;// ./node_modules/@rc-component/virtual-list/es/hooks/useGetSize.js
+
+
+/**
+ * Size info need loop query for the `heights` which will has the perf issue.
+ * Let cache result for each render phase.
+ */
+function useGetSize(mergedData, getKey, heights, itemHeight) {
+  const [key2Index, bottomList] = (react_production_namespaceFn().useMemo)(() => [new Map(), []], [mergedData, heights.id, itemHeight]);
+  const getSize = (startKey, endKey = startKey) => {
+    // Get from cache first
+    let startIndex = key2Index.get(startKey);
+    let endIndex = key2Index.get(endKey);
+
+    // Loop to fill the cache
+    if (startIndex === undefined || endIndex === undefined) {
+      const dataLen = mergedData.length;
+      for (let i = bottomList.length; i < dataLen; i += 1) {
+        const item = mergedData[i];
+        const key = getKey(item);
+        key2Index.set(key, i);
+        const cacheHeight = heights.get(key) ?? itemHeight;
+        bottomList[i] = (bottomList[i - 1] || 0) + cacheHeight;
+        if (key === startKey) {
+          startIndex = i;
+        }
+        if (key === endKey) {
+          endIndex = i;
+        }
+        if (startIndex !== undefined && endIndex !== undefined) {
+          break;
+        }
+      }
+    }
+    return {
+      top: bottomList[startIndex - 1] || 0,
+      bottom: bottomList[endIndex]
+    };
+  };
+  return getSize;
+}
+;// ./node_modules/@rc-component/virtual-list/es/utils/CacheMap.js
+// Firefox has low performance of map.
+class CacheMap {
+  maps;
+
+  // Used for cache key
+  // `useMemo` no need to update if `id` not change
+  id = 0;
+  diffRecords = new Map();
+  constructor() {
+    this.maps = Object.create(null);
+  }
+  set(key, value) {
+    // Record prev value
+    this.diffRecords.set(key, this.maps[key]);
+    this.maps[key] = value;
+    this.id += 1;
+  }
+  get(key) {
+    return this.maps[key];
+  }
+
+  /**
+   * CacheMap will record the key changed.
+   * To help to know what's update in the next render.
+   */
+  resetRecord() {
+    this.diffRecords.clear();
+  }
+  getRecord() {
+    return this.diffRecords;
+  }
+}
+/* harmony default export */ const utils_CacheMap = (CacheMap);
+;// ./node_modules/@rc-component/virtual-list/es/hooks/useHeights.js
+
+
+
+function parseNumber(value) {
+  const num = parseFloat(value);
+  return isNaN(num) ? 0 : num;
+}
+function useHeights(getKey, onItemAdd, onItemRemove) {
+  const [updatedMark, setUpdatedMark] = (react_production_namespaceFn().useState)(0);
+  const instanceRef = (0,react_production_namespaceFn().useRef)(new Map());
+  const heightsRef = (0,react_production_namespaceFn().useRef)(new utils_CacheMap());
+  const promiseIdRef = (0,react_production_namespaceFn().useRef)(0);
+  function cancelRaf() {
+    promiseIdRef.current += 1;
+  }
+  function collectHeight(sync = false) {
+    cancelRaf();
+    const doCollect = () => {
+      let changed = false;
+      instanceRef.current.forEach((element, key) => {
+        if (element && element.offsetParent) {
+          const {
+            offsetHeight
+          } = element;
+          const {
+            marginTop,
+            marginBottom
+          } = getComputedStyle(element);
+          const marginTopNum = parseNumber(marginTop);
+          const marginBottomNum = parseNumber(marginBottom);
+          const totalHeight = offsetHeight + marginTopNum + marginBottomNum;
+          if (heightsRef.current.get(key) !== totalHeight) {
+            heightsRef.current.set(key, totalHeight);
+            changed = true;
+          }
+        }
+      });
+
+      // Always trigger update mark to tell parent that should re-calculate heights when resized
+      if (changed) {
+        setUpdatedMark(c => c + 1);
+      }
+    };
+    if (sync) {
+      doCollect();
+    } else {
+      promiseIdRef.current += 1;
+      const id = promiseIdRef.current;
+      Promise.resolve().then(() => {
+        if (id === promiseIdRef.current) {
+          doCollect();
+        }
+      });
+    }
+  }
+  function setInstanceRef(item, instance) {
+    const key = getKey(item);
+    const origin = instanceRef.current.get(key);
+    if (instance) {
+      instanceRef.current.set(key, instance);
+      collectHeight();
+    } else {
+      instanceRef.current.delete(key);
+    }
+
+    // Instance changed
+    if (!origin !== !instance) {
+      if (instance) {
+        onItemAdd?.(item);
+      } else {
+        onItemRemove?.(item);
+      }
+    }
+  }
+  ;(0,react_production_namespaceFn().useEffect)(() => {
+    return cancelRaf;
+  }, []);
+  return [setInstanceRef, collectHeight, heightsRef.current, updatedMark];
+}
+;// ./node_modules/@rc-component/virtual-list/es/hooks/useMobileTouchMove.js
+
+
+const SMOOTH_PTG = 14 / 15;
+function useMobileTouchMove(inVirtual, listRef, callback) {
+  const touchedRef = (0,react_production_namespaceFn().useRef)(false);
+  const touchXRef = (0,react_production_namespaceFn().useRef)(0);
+  const touchYRef = (0,react_production_namespaceFn().useRef)(0);
+  const elementRef = (0,react_production_namespaceFn().useRef)(null);
+
+  // Smooth scroll
+  const intervalRef = (0,react_production_namespaceFn().useRef)(null);
+
+  /* eslint-disable prefer-const */
+  let cleanUpEvents;
+  const onTouchMove = e => {
+    if (touchedRef.current) {
+      const currentX = Math.ceil(e.touches[0].pageX);
+      const currentY = Math.ceil(e.touches[0].pageY);
+      let offsetX = touchXRef.current - currentX;
+      let offsetY = touchYRef.current - currentY;
+      const isHorizontal = Math.abs(offsetX) > Math.abs(offsetY);
+      if (isHorizontal) {
+        touchXRef.current = currentX;
+      } else {
+        touchYRef.current = currentY;
+      }
+      const scrollHandled = callback(isHorizontal, isHorizontal ? offsetX : offsetY, false, e);
+      if (scrollHandled) {
+        e.preventDefault();
+      }
+
+      // Smooth interval
+      clearInterval(intervalRef.current);
+      if (scrollHandled) {
+        intervalRef.current = setInterval(() => {
+          if (isHorizontal) {
+            offsetX *= SMOOTH_PTG;
+          } else {
+            offsetY *= SMOOTH_PTG;
+          }
+          const offset = Math.floor(isHorizontal ? offsetX : offsetY);
+          if (!callback(isHorizontal, offset, true) || Math.abs(offset) <= 0.1) {
+            clearInterval(intervalRef.current);
+          }
+        }, 16);
+      }
+    }
+  };
+  const onTouchEnd = () => {
+    touchedRef.current = false;
+    cleanUpEvents();
+  };
+  const onTouchStart = e => {
+    cleanUpEvents();
+    if (e.touches.length === 1 && !touchedRef.current) {
+      touchedRef.current = true;
+      touchXRef.current = Math.ceil(e.touches[0].pageX);
+      touchYRef.current = Math.ceil(e.touches[0].pageY);
+      elementRef.current = e.target;
+      elementRef.current.addEventListener('touchmove', onTouchMove, {
+        passive: false
+      });
+      elementRef.current.addEventListener('touchend', onTouchEnd, {
+        passive: true
+      });
+    }
+  };
+  cleanUpEvents = () => {
+    if (elementRef.current) {
+      elementRef.current.removeEventListener('touchmove', onTouchMove);
+      elementRef.current.removeEventListener('touchend', onTouchEnd);
+    }
+  };
+  hooks_useLayoutEffect(() => {
+    if (inVirtual) {
+      listRef.current.addEventListener('touchstart', onTouchStart, {
+        passive: true
+      });
+    }
+    return () => {
+      listRef.current?.removeEventListener('touchstart', onTouchStart);
+      cleanUpEvents();
+      clearInterval(intervalRef.current);
+    };
+  }, [inVirtual]);
+}
+;// ./node_modules/@rc-component/virtual-list/es/hooks/useScrollDrag.js
+
+
+function smoothScrollOffset(offset) {
+  return Math.floor(offset ** 0.5);
+}
+function getPageXY(e, horizontal) {
+  const obj = 'touches' in e ? e.touches[0] : e;
+  return obj[horizontal ? 'pageX' : 'pageY'] - window[horizontal ? 'scrollX' : 'scrollY'];
+}
+
+/**
+ * Check the element itself or any of its ancestors is draggable.
+ * Use the IDL attribute instead of `[draggable]` selector so that
+ * implicitly draggable elements (`a[href]`, `img`) are also covered.
+ */
+function isDraggable(ele) {
+  let current = ele;
+  while (current) {
+    if (current.draggable) {
+      return true;
+    }
+    current = current.parentElement;
+  }
+  return false;
+}
+function useScrollDrag(inVirtual, componentRef, onScrollOffset) {
+  ;(react_production_namespaceFn().useEffect)(() => {
+    const ele = componentRef.current;
+    if (inVirtual && ele) {
+      let mouseDownLock = false;
+      let rafId;
+      let offset;
+      const stopScroll = () => {
+        es_raf.cancel(rafId);
+      };
+      const continueScroll = () => {
+        stopScroll();
+        rafId = es_raf(() => {
+          onScrollOffset(offset);
+          continueScroll();
+        });
+      };
+      const clearDragState = () => {
+        mouseDownLock = false;
+        stopScroll();
+      };
+      const onMouseDown = e => {
+        // Skip if element set draggable
+        // Note the mousedown target is the deepest node in the event path (e.g. the
+        // title span inside a Tree node), while `draggable` is set on the ancestor.
+        if (isDraggable(e.target) || e.button !== 0) {
+          return;
+        }
+        // Skip if nest List has handled this event
+        const event = e;
+        if (!event._virtualHandled) {
+          event._virtualHandled = true;
+          mouseDownLock = true;
+        }
+      };
+      const onMouseMove = e => {
+        if (mouseDownLock) {
+          const mouseY = getPageXY(e, false);
+          const {
+            top,
+            bottom
+          } = ele.getBoundingClientRect();
+          if (mouseY <= top) {
+            const diff = top - mouseY;
+            offset = -smoothScrollOffset(diff);
+            continueScroll();
+          } else if (mouseY >= bottom) {
+            const diff = mouseY - bottom;
+            offset = smoothScrollOffset(diff);
+            continueScroll();
+          } else {
+            stopScroll();
+          }
+        }
+      };
+      ele.addEventListener('mousedown', onMouseDown);
+      ele.ownerDocument.addEventListener('mouseup', clearDragState);
+      ele.ownerDocument.addEventListener('mousemove', onMouseMove);
+      ele.ownerDocument.addEventListener('dragend', clearDragState);
+      return () => {
+        ele.removeEventListener('mousedown', onMouseDown);
+        ele.ownerDocument.removeEventListener('mouseup', clearDragState);
+        ele.ownerDocument.removeEventListener('mousemove', onMouseMove);
+        ele.ownerDocument.removeEventListener('dragend', clearDragState);
+        stopScroll();
+      };
+    }
+  }, [inVirtual]);
+}
+;// ./node_modules/@rc-component/virtual-list/es/hooks/useScrollTo.js
+
+
+const MAX_TIMES = 10;
+function useScrollTo_getOffset(rawOffset, info) {
+  const resolvedOffset = typeof rawOffset === 'function' ? rawOffset(info) : rawOffset;
+  return Number.isFinite(resolvedOffset) ? resolvedOffset : 0;
+}
+function useScrollTo(containerRef, data, heights, itemHeight, getKey, getSize, collectHeight, syncScrollTop, triggerFlash) {
+  const scrollRef = (react_production_namespaceFn().useRef)(undefined);
+  const [syncState, setSyncState] = (react_production_namespaceFn().useState)(null);
+
+  // ========================== Sync Scroll ==========================
+  hooks_useLayoutEffect(() => {
+    if (syncState && syncState.times < MAX_TIMES) {
+      // Never reach
+      if (!containerRef.current) {
+        setSyncState(ori => ({
+          ...ori
+        }));
+        return;
+      }
+      collectHeight();
+      const {
+        targetAlign,
+        originAlign,
+        offset: rawOffset
+      } = syncState;
+      const index = syncState.index >= 0 ? syncState.index : data.findIndex(item => getKey(item) === syncState.key);
+      const mergedAlign = targetAlign || originAlign;
+      const offset = useScrollTo_getOffset(rawOffset, {
+        getSize,
+        align: mergedAlign
+      });
+      const height = containerRef.current.clientHeight;
+      let needCollectHeight = index < 0;
+      let newTargetAlign = targetAlign;
+      let targetTop = null;
+
+      // Go to next frame if height not exist
+      if (height && index >= 0) {
+        // Get top & bottom
+        let stackTop = 0;
+        let itemTop = 0;
+        let itemBottom = 0;
+        const maxLen = Math.min(data.length - 1, index);
+        for (let i = 0; i <= maxLen; i += 1) {
+          const key = getKey(data[i]);
+          itemTop = stackTop;
+          const cacheHeight = heights.get(key);
+          itemBottom = itemTop + (cacheHeight === undefined ? itemHeight : cacheHeight);
+          stackTop = itemBottom;
+        }
+
+        // Check if need sync height (visible range has item not record height)
+        let leftHeight = mergedAlign === 'top' ? offset : height - offset;
+        for (let i = maxLen; i >= 0; i -= 1) {
+          const key = getKey(data[i]);
+          const cacheHeight = heights.get(key);
+          if (cacheHeight === undefined) {
+            needCollectHeight = true;
+            break;
+          }
+          leftHeight -= cacheHeight;
+          if (leftHeight <= 0) {
+            break;
+          }
+        }
+
+        // Scroll to
+        switch (mergedAlign) {
+          case 'top':
+            targetTop = itemTop - offset;
+            break;
+          case 'bottom':
+            targetTop = itemBottom - height + offset;
+            break;
+          default:
+            {
+              const {
+                scrollTop
+              } = containerRef.current;
+              const scrollBottom = scrollTop + height;
+              if (itemTop < scrollTop) {
+                newTargetAlign = 'top';
+              } else if (itemBottom > scrollBottom) {
+                newTargetAlign = 'bottom';
+              }
+            }
+        }
+        if (targetTop !== null) {
+          syncScrollTop(targetTop);
+        }
+
+        // One more time for sync
+        if (targetTop !== syncState.lastTop) {
+          needCollectHeight = true;
+        }
+      }
+
+      // Trigger next effect
+      if (needCollectHeight) {
+        setSyncState(prev => ({
+          ...prev,
+          times: prev.times + 1,
+          index,
+          targetAlign: newTargetAlign,
+          lastTop: targetTop
+        }));
+      }
+    } else if (false) // removed by dead control flow
+{}
+  }, [syncState, containerRef.current]);
+
+  // =========================== Scroll To ===========================
+  return arg => {
+    // When not argument provided, we think dev may want to show the scrollbar
+    if (arg === null || arg === undefined) {
+      triggerFlash();
+      return;
+    }
+
+    // Normal scroll logic
+    es_raf.cancel(scrollRef.current);
+    if (typeof arg === 'number') {
+      syncScrollTop(arg);
+    } else if (arg && typeof arg === 'object') {
+      let index;
+      let key;
+      const {
+        align
+      } = arg;
+      if ('index' in arg) {
+        ({
+          index
+        } = arg);
+      } else {
+        key = arg.key;
+        index = data.findIndex(item => getKey(item) === key);
+      }
+      const {
+        offset: rawOffset = 0
+      } = arg;
+      setSyncState({
+        times: 0,
+        index,
+        key,
+        offset: rawOffset,
+        originAlign: align
+      });
+    }
+  };
+}
+;// ./node_modules/@rc-component/virtual-list/es/ScrollBar.js
+
+
+
+
+function getScrollOffsetByThumbTop(thumbTop, enabledScrollRange, enabledOffsetRange) {
+  if (enabledScrollRange <= 0 || enabledOffsetRange <= 0) {
+    return 0;
+  }
+  const mergedThumbTop = Math.max(Math.min(thumbTop, enabledOffsetRange), 0);
+  const ptg = mergedThumbTop / enabledOffsetRange;
+  let nextScrollOffset = Math.ceil(ptg * enabledScrollRange);
+  nextScrollOffset = Math.max(nextScrollOffset, 0);
+  nextScrollOffset = Math.min(nextScrollOffset, enabledScrollRange);
+  return nextScrollOffset;
+}
+const ScrollBar = /*#__PURE__*/(react_production_namespaceFn().forwardRef)((props, ref) => {
+  const {
+    prefixCls,
+    rtl,
+    scrollOffset,
+    scrollRange,
+    onStartMove,
+    onStopMove,
+    onScroll,
+    horizontal,
+    spinSize,
+    containerSize,
+    style,
+    thumbStyle: propsThumbStyle,
+    showScrollBar
+  } = props;
+  const [dragging, setDragging] = (react_production_namespaceFn().useState)(false);
+  const [pageXY, setPageXY] = (react_production_namespaceFn().useState)(null);
+  const [startTop, setStartTop] = (react_production_namespaceFn().useState)(null);
+  const isLTR = !rtl;
+
+  // ========================= Refs =========================
+  const scrollbarRef = (react_production_namespaceFn().useRef)(null);
+  const thumbRef = (react_production_namespaceFn().useRef)(null);
+
+  // ======================= Visible ========================
+  const [visible, setVisible] = (react_production_namespaceFn().useState)(showScrollBar);
+  const visibleTimeoutRef = (react_production_namespaceFn().useRef)(undefined);
+  const delayHidden = () => {
+    if (showScrollBar === true || showScrollBar === false) return;
+    clearTimeout(visibleTimeoutRef.current);
+    setVisible(true);
+    visibleTimeoutRef.current = setTimeout(() => {
+      setVisible(false);
+    }, 3000);
+  };
+
+  // ======================== Range =========================
+  const enableScrollRange = scrollRange - containerSize || 0;
+  const enableOffsetRange = containerSize - spinSize || 0;
+
+  // ========================= Top ==========================
+  const top = (react_production_namespaceFn().useMemo)(() => {
+    if (scrollOffset === 0 || enableScrollRange === 0) {
+      return 0;
+    }
+    const ptg = scrollOffset / enableScrollRange;
+    return ptg * enableOffsetRange;
+  }, [scrollOffset, enableScrollRange, enableOffsetRange]);
+
+  // ====================== Container =======================
+  const isThumbTarget = target => {
+    return !!target && thumbRef.current?.contains(target);
+  };
+  const scrollToTrackPosition = e => {
+    const scrollbarEle = scrollbarRef.current;
+    if (!scrollbarEle) {
+      return;
+    }
+    const rect = scrollbarEle.getBoundingClientRect();
+    const pagePosition = getPageXY(e, horizontal);
+    let nextTop;
+    if (!Number.isFinite(pagePosition)) {
+      return;
+    }
+    if (horizontal) {
+      const horizontalStart = isLTR ? rect.left : rect.right;
+      if (!Number.isFinite(horizontalStart)) {
+        return;
+      }
+      nextTop = (isLTR ? pagePosition - horizontalStart : horizontalStart - pagePosition) - spinSize / 2;
+    } else {
+      if (!Number.isFinite(rect.top)) {
+        return;
+      }
+      nextTop = pagePosition - rect.top - spinSize / 2;
+    }
+    onScroll(getScrollOffsetByThumbTop(nextTop, enableScrollRange, enableOffsetRange), horizontal);
+  };
+  const onContainerMouseDown = e => {
+    e.stopPropagation();
+    e.preventDefault();
+    if (e.button !== 0 || isThumbTarget(e.target)) {
+      return;
+    }
+    scrollToTrackPosition(e);
+  };
+
+  // ======================== Thumb =========================
+  const stateRef = (react_production_namespaceFn().useRef)({
+    top,
+    dragging,
+    pageY: pageXY,
+    startTop
+  });
+  stateRef.current = {
+    top,
+    dragging,
+    pageY: pageXY,
+    startTop
+  };
+  const onThumbMouseDown = hooks_useEvent(e => {
+    setDragging(true);
+    setPageXY(getPageXY(e, horizontal));
+    setStartTop(stateRef.current.top);
+    onStartMove();
+    e.stopPropagation();
+    e.preventDefault();
+  });
+
+  // ======================== Effect ========================
+
+  // React make event as passive, but we need to preventDefault
+  // Add event on dom directly instead.
+  // ref: https://github.com/facebook/react/issues/9809
+  (react_production_namespaceFn().useEffect)(() => {
+    const onScrollbarTouchStart = e => {
+      e.preventDefault();
+    };
+    const scrollbarEle = scrollbarRef.current;
+    const thumbEle = thumbRef.current;
+    scrollbarEle.addEventListener('touchstart', onScrollbarTouchStart, {
+      passive: false
+    });
+    thumbEle.addEventListener('touchstart', onThumbMouseDown, {
+      passive: false
+    });
+    return () => {
+      scrollbarEle.removeEventListener('touchstart', onScrollbarTouchStart);
+      thumbEle.removeEventListener('touchstart', onThumbMouseDown);
+    };
+  }, [onThumbMouseDown]);
+
+  // Pass to effect
+  const enableScrollRangeRef = (react_production_namespaceFn().useRef)(undefined);
+  enableScrollRangeRef.current = enableScrollRange;
+  const enableOffsetRangeRef = (react_production_namespaceFn().useRef)(undefined);
+  enableOffsetRangeRef.current = enableOffsetRange;
+  (react_production_namespaceFn().useEffect)(() => {
+    if (dragging) {
+      let moveRafId;
+      const onMouseMove = e => {
+        const {
+          dragging: stateDragging,
+          pageY: statePageY,
+          startTop: stateStartTop
+        } = stateRef.current;
+        es_raf.cancel(moveRafId);
+        const rect = scrollbarRef.current.getBoundingClientRect();
+        const scale = containerSize / (horizontal ? rect.width : rect.height);
+        if (stateDragging) {
+          const offset = (getPageXY(e, horizontal) - statePageY) * scale;
+          let newTop = stateStartTop;
+          if (!isLTR && horizontal) {
+            newTop -= offset;
+          } else {
+            newTop += offset;
+          }
+          const tmpEnableScrollRange = enableScrollRangeRef.current;
+          const tmpEnableOffsetRange = enableOffsetRangeRef.current;
+          const newScrollTop = getScrollOffsetByThumbTop(newTop, tmpEnableScrollRange, tmpEnableOffsetRange);
+          moveRafId = es_raf(() => {
+            onScroll(newScrollTop, horizontal);
+          });
+        }
+      };
+      const onMouseUp = () => {
+        setDragging(false);
+        onStopMove();
+      };
+      window.addEventListener('mousemove', onMouseMove, {
+        passive: true
+      });
+      window.addEventListener('touchmove', onMouseMove, {
+        passive: true
+      });
+      window.addEventListener('mouseup', onMouseUp, {
+        passive: true
+      });
+      window.addEventListener('touchend', onMouseUp, {
+        passive: true
+      });
+      return () => {
+        window.removeEventListener('mousemove', onMouseMove);
+        window.removeEventListener('touchmove', onMouseMove);
+        window.removeEventListener('mouseup', onMouseUp);
+        window.removeEventListener('touchend', onMouseUp);
+        es_raf.cancel(moveRafId);
+      };
+    }
+  }, [dragging]);
+  (react_production_namespaceFn().useEffect)(() => {
+    delayHidden();
+    return () => {
+      clearTimeout(visibleTimeoutRef.current);
+    };
+  }, [scrollOffset]);
+
+  // ====================== Imperative ======================
+  (react_production_namespaceFn().useImperativeHandle)(ref, () => ({
+    delayHidden
+  }));
+
+  // ======================== Render ========================
+  const scrollbarPrefixCls = `${prefixCls}-scrollbar`;
+  const containerStyle = {
+    position: 'absolute',
+    visibility: visible ? null : 'hidden'
+  };
+  const thumbStyle = {
+    position: 'absolute',
+    borderRadius: 99,
+    background: 'var(--rc-virtual-list-scrollbar-bg, rgba(0, 0, 0, 0.5))',
+    cursor: 'pointer',
+    userSelect: 'none'
+  };
+  if (horizontal) {
+    Object.assign(containerStyle, {
+      height: 8,
+      left: 0,
+      right: 0,
+      bottom: 0
+    });
+    Object.assign(thumbStyle, {
+      height: '100%',
+      width: spinSize,
+      [isLTR ? 'left' : 'right']: top
+    });
+  } else {
+    Object.assign(containerStyle, {
+      width: 8,
+      top: 0,
+      bottom: 0,
+      [isLTR ? 'right' : 'left']: 0
+    });
+    Object.assign(thumbStyle, {
+      width: '100%',
+      height: spinSize,
+      top
+    });
+  }
+  return /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
+    ref: scrollbarRef,
+    className: clsx(scrollbarPrefixCls, {
+      [`${scrollbarPrefixCls}-horizontal`]: horizontal,
+      [`${scrollbarPrefixCls}-vertical`]: !horizontal,
+      [`${scrollbarPrefixCls}-visible`]: visible
+    }),
+    style: {
+      ...containerStyle,
+      ...style
+    },
+    onMouseDown: onContainerMouseDown,
+    onMouseMove: delayHidden
+  }, /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
+    ref: thumbRef,
+    className: clsx(`${scrollbarPrefixCls}-thumb`, {
+      [`${scrollbarPrefixCls}-thumb-moving`]: dragging
+    }),
+    style: {
+      ...thumbStyle,
+      ...propsThumbStyle
+    },
+    onMouseDown: onThumbMouseDown
+  }));
+});
+if (false) // removed by dead control flow
+{}
+/* harmony default export */ const es_ScrollBar = (ScrollBar);
+;// ./node_modules/@rc-component/virtual-list/es/utils/scrollbarUtil.js
+const MIN_SIZE = 20;
+function getSpinSize(containerSize = 0, scrollRange = 0) {
+  let baseSize = containerSize / scrollRange * containerSize;
+  if (isNaN(baseSize)) {
+    baseSize = 0;
+  }
+  baseSize = Math.max(baseSize, MIN_SIZE);
+  return Math.floor(baseSize);
+}
+;// ./node_modules/@rc-component/virtual-list/es/List.js
+function List_extends() { List_extends = Object.assign ? Object.assign.bind() : function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; }; return List_extends.apply(this, arguments); }
+;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+const EMPTY_DATA = [];
+const ScrollStyle = {
+  overflowY: 'auto',
+  overflowAnchor: 'none'
+};
+function RawList(props, ref) {
+  const {
+    prefixCls = 'rc-virtual-list',
+    className,
+    height,
+    itemHeight,
+    fullHeight = true,
+    style,
+    data,
+    children,
+    itemKey,
+    virtual,
+    direction,
+    scrollWidth,
+    component: Component = 'div',
+    onScroll,
+    onVirtualScroll,
+    onVisibleChange,
+    innerProps,
+    extraRender,
+    styles,
+    showScrollBar = 'optional',
+    ...restProps
+  } = props;
+
+  // =============================== Item Key ===============================
+  const getKey = (react_production_namespaceFn().useCallback)(item => {
+    if (typeof itemKey === 'function') {
+      return itemKey(item);
+    }
+    return item?.[itemKey];
+  }, [itemKey]);
+
+  // ================================ Height ================================
+  const [setInstanceRef, collectHeight, heights, heightUpdatedMark] = useHeights(getKey, null, null);
+
+  // ================================= MISC =================================
+  const useVirtual = !!(virtual !== false && height && itemHeight);
+  const containerHeight = (react_production_namespaceFn().useMemo)(() => Object.values(heights.maps).reduce((total, curr) => total + curr, 0), [heights.id, heights.maps]);
+  const inVirtual = useVirtual && data && (Math.max(itemHeight * data.length, containerHeight) > height || !!scrollWidth);
+  const isRTL = direction === 'rtl';
+  const mergedClassName = clsx(prefixCls, {
+    [`${prefixCls}-rtl`]: isRTL
+  }, className);
+  const mergedData = data || EMPTY_DATA;
+  const componentRef = (0,react_production_namespaceFn().useRef)(null);
+  const fillerInnerRef = (0,react_production_namespaceFn().useRef)(null);
+  const containerRef = (0,react_production_namespaceFn().useRef)(null);
+
+  // =============================== Item Key ===============================
+
+  const [offsetTop, setOffsetTop] = (0,react_production_namespaceFn().useState)(0);
+  const [offsetLeft, setOffsetLeft] = (0,react_production_namespaceFn().useState)(0);
+  const [scrollMoving, setScrollMoving] = (0,react_production_namespaceFn().useState)(false);
+  const onScrollbarStartMove = () => {
+    setScrollMoving(true);
+  };
+  const onScrollbarStopMove = () => {
+    setScrollMoving(false);
+  };
+  const sharedConfig = {
+    getKey
+  };
+
+  // ================================ Scroll ================================
+  function syncScrollTop(newTop) {
+    setOffsetTop(origin => {
+      let value;
+      if (typeof newTop === 'function') {
+        value = newTop(origin);
+      } else {
+        value = newTop;
+      }
+      const alignedTop = keepInRange(value);
+      componentRef.current.scrollTop = alignedTop;
+      return alignedTop;
+    });
+  }
+
+  // ================================ Legacy ================================
+  // Put ref here since the range is generate by follow
+  const rangeRef = (0,react_production_namespaceFn().useRef)({
+    start: 0,
+    end: mergedData.length
+  });
+  const diffItemRef = (0,react_production_namespaceFn().useRef)(undefined);
+  const [diffItem] = useDiffItem(mergedData, getKey);
+  diffItemRef.current = diffItem;
+
+  // ========================== Visible Calculation =========================
+  const {
+    scrollHeight,
+    start,
+    end,
+    offset: fillerOffset
+  } = (react_production_namespaceFn().useMemo)(() => {
+    if (!useVirtual) {
+      return {
+        scrollHeight: undefined,
+        start: 0,
+        end: mergedData.length - 1,
+        offset: undefined
+      };
+    }
+
+    // Always use virtual scroll bar in avoid shaking
+    if (!inVirtual) {
+      return {
+        scrollHeight: fillerInnerRef.current?.offsetHeight || 0,
+        start: 0,
+        end: mergedData.length - 1,
+        offset: undefined
+      };
+    }
+    let itemTop = 0;
+    let startIndex;
+    let startOffset;
+    let endIndex;
+    const dataLen = mergedData.length;
+    for (let i = 0; i < dataLen; i += 1) {
+      const item = mergedData[i];
+      const key = getKey(item);
+      const cacheHeight = heights.get(key);
+      const currentItemBottom = itemTop + (cacheHeight === undefined ? itemHeight : cacheHeight);
+
+      // Check item top in the range
+      if (currentItemBottom >= offsetTop && startIndex === undefined) {
+        startIndex = i;
+        startOffset = itemTop;
+      }
+
+      // Check item bottom in the range. We will render additional one item for motion usage
+      if (currentItemBottom > offsetTop + height && endIndex === undefined) {
+        endIndex = i;
+      }
+      itemTop = currentItemBottom;
+    }
+
+    // When scrollTop at the end but data cut to small count will reach this
+    if (startIndex === undefined) {
+      startIndex = 0;
+      startOffset = 0;
+      endIndex = Math.ceil(height / itemHeight);
+    }
+    if (endIndex === undefined) {
+      endIndex = mergedData.length - 1;
+    }
+
+    // Give cache to improve scroll experience
+    endIndex = Math.min(endIndex + 1, mergedData.length - 1);
+    return {
+      scrollHeight: itemTop,
+      start: startIndex,
+      end: endIndex,
+      offset: startOffset
+    };
+  }, [inVirtual, useVirtual, offsetTop, mergedData, heightUpdatedMark, height]);
+  rangeRef.current.start = start;
+  rangeRef.current.end = end;
+
+  // When scroll up, first visible item get real height may not same as `itemHeight`,
+  // Which will make scroll jump.
+  // Let's sync scroll top to avoid jump
+  (react_production_namespaceFn().useLayoutEffect)(() => {
+    const changedRecord = heights.getRecord();
+    if (changedRecord.size === 1) {
+      const recordKey = Array.from(changedRecord.keys())[0];
+      const prevCacheHeight = changedRecord.get(recordKey);
+
+      // Quick switch data may cause `start` not in `mergedData` anymore
+      const startItem = mergedData[start];
+      if (startItem && prevCacheHeight === undefined) {
+        const startIndexKey = getKey(startItem);
+        if (startIndexKey === recordKey) {
+          const realStartHeight = heights.get(recordKey);
+          const diffHeight = realStartHeight - itemHeight;
+          syncScrollTop(ori => {
+            return ori + diffHeight;
+          });
+        }
+      }
+    }
+    heights.resetRecord();
+  }, [scrollHeight]);
+
+  // ================================= Size =================================
+  const [size, setSize] = (react_production_namespaceFn().useState)({
+    width: 0,
+    height
+  });
+  const onHolderResize = sizeInfo => {
+    setSize({
+      width: sizeInfo.offsetWidth,
+      height: sizeInfo.offsetHeight
+    });
+  };
+
+  // Hack on scrollbar to enable flash call
+  const verticalScrollBarRef = (0,react_production_namespaceFn().useRef)(null);
+  const horizontalScrollBarRef = (0,react_production_namespaceFn().useRef)(null);
+  const horizontalScrollBarSpinSize = (react_production_namespaceFn().useMemo)(() => getSpinSize(size.width, scrollWidth), [size.width, scrollWidth]);
+  const verticalScrollBarSpinSize = (react_production_namespaceFn().useMemo)(() => getSpinSize(size.height, scrollHeight), [size.height, scrollHeight]);
+
+  // =============================== In Range ===============================
+  const maxScrollHeight = scrollHeight - height;
+  const maxScrollHeightRef = (0,react_production_namespaceFn().useRef)(maxScrollHeight);
+  maxScrollHeightRef.current = maxScrollHeight;
+  function keepInRange(newScrollTop) {
+    let newTop = newScrollTop;
+    if (!Number.isNaN(maxScrollHeightRef.current)) {
+      newTop = Math.min(newTop, maxScrollHeightRef.current);
+    }
+    newTop = Math.max(newTop, 0);
+    return newTop;
+  }
+  const isScrollAtTop = offsetTop <= 0;
+  const isScrollAtBottom = offsetTop >= maxScrollHeight;
+  const isScrollAtLeft = offsetLeft <= 0;
+  const isScrollAtRight = offsetLeft >= scrollWidth;
+  const originScroll = useOriginScroll(isScrollAtTop, isScrollAtBottom, isScrollAtLeft, isScrollAtRight);
+
+  // ================================ Scroll ================================
+  const getVirtualScrollInfo = () => ({
+    x: isRTL ? -offsetLeft : offsetLeft,
+    y: offsetTop
+  });
+  const lastVirtualScrollInfoRef = (0,react_production_namespaceFn().useRef)(getVirtualScrollInfo());
+  const triggerScroll = hooks_useEvent(params => {
+    if (onVirtualScroll) {
+      const nextInfo = {
+        ...getVirtualScrollInfo(),
+        ...params
+      };
+
+      // Trigger when offset changed
+      if (lastVirtualScrollInfoRef.current.x !== nextInfo.x || lastVirtualScrollInfoRef.current.y !== nextInfo.y) {
+        onVirtualScroll(nextInfo);
+        lastVirtualScrollInfoRef.current = nextInfo;
+      }
+    }
+  });
+  function onScrollBar(newScrollOffset, horizontal) {
+    const newOffset = newScrollOffset;
+    if (horizontal) {
+      (0,react_dom_production_namespaceFn().flushSync)(() => {
+        setOffsetLeft(newOffset);
+      });
+      triggerScroll();
+    } else {
+      syncScrollTop(newOffset);
+    }
+  }
+
+  // When data size reduce. It may trigger native scroll event back to fit scroll position
+  function onFallbackScroll(e) {
+    const {
+      scrollTop: newScrollTop
+    } = e.currentTarget;
+    if (newScrollTop !== offsetTop) {
+      syncScrollTop(newScrollTop);
+    }
+
+    // Trigger origin onScroll
+    onScroll?.(e);
+    triggerScroll();
+  }
+  const keepInHorizontalRange = nextOffsetLeft => {
+    let tmpOffsetLeft = nextOffsetLeft;
+    const max = !!scrollWidth ? scrollWidth - size.width : 0;
+    tmpOffsetLeft = Math.max(tmpOffsetLeft, 0);
+    tmpOffsetLeft = Math.min(tmpOffsetLeft, max);
+    return tmpOffsetLeft;
+  };
+  const onWheelDelta = hooks_useEvent((offsetXY, fromHorizontal) => {
+    if (fromHorizontal) {
+      (0,react_dom_production_namespaceFn().flushSync)(() => {
+        setOffsetLeft(left => {
+          const nextOffsetLeft = left + (isRTL ? -offsetXY : offsetXY);
+          return keepInHorizontalRange(nextOffsetLeft);
+        });
+      });
+      triggerScroll();
+    } else {
+      syncScrollTop(top => {
+        const newTop = top + offsetXY;
+        return newTop;
+      });
+    }
+  });
+
+  // Since this added in global,should use ref to keep update
+  const [onRawWheel, onFireFoxScroll] = useFrameWheel(useVirtual, isScrollAtTop, isScrollAtBottom, isScrollAtLeft, isScrollAtRight, !!scrollWidth, onWheelDelta);
+
+  // Mobile touch move
+  useMobileTouchMove(useVirtual, componentRef, (isHorizontal, delta, smoothOffset, e) => {
+    const event = e;
+    if (originScroll(isHorizontal, delta, smoothOffset)) {
+      return false;
+    }
+
+    // Fix nest List trigger TouchMove event
+    if (!event || !event._virtualHandled) {
+      if (event) {
+        event._virtualHandled = true;
+      }
+      onRawWheel({
+        preventDefault() {},
+        deltaX: isHorizontal ? delta : 0,
+        deltaY: isHorizontal ? 0 : delta
+      });
+      return true;
+    }
+    return false;
+  });
+
+  // MouseDown drag for scroll
+  useScrollDrag(inVirtual, componentRef, offset => {
+    syncScrollTop(top => top + offset);
+  });
+  hooks_useLayoutEffect(() => {
+    // Firefox only
+    function onMozMousePixelScroll(e) {
+      // scrolling at top/bottom limit
+      const scrollingUpAtTop = isScrollAtTop && e.detail < 0;
+      const scrollingDownAtBottom = isScrollAtBottom && e.detail > 0;
+      if (useVirtual && !scrollingUpAtTop && !scrollingDownAtBottom) {
+        e.preventDefault();
+      }
+    }
+    const componentEle = componentRef.current;
+    componentEle.addEventListener('wheel', onRawWheel, {
+      passive: false
+    });
+    componentEle.addEventListener('DOMMouseScroll', onFireFoxScroll, {
+      passive: true
+    });
+    componentEle.addEventListener('MozMousePixelScroll', onMozMousePixelScroll, {
+      passive: false
+    });
+    return () => {
+      componentEle.removeEventListener('wheel', onRawWheel);
+      componentEle.removeEventListener('DOMMouseScroll', onFireFoxScroll);
+      componentEle.removeEventListener('MozMousePixelScroll', onMozMousePixelScroll);
+    };
+  }, [useVirtual, isScrollAtTop, isScrollAtBottom]);
+
+  // Sync scroll left
+  hooks_useLayoutEffect(() => {
+    if (scrollWidth) {
+      const newOffsetLeft = keepInHorizontalRange(offsetLeft);
+      setOffsetLeft(newOffsetLeft);
+      triggerScroll({
+        x: newOffsetLeft
+      });
+    }
+  }, [size.width, scrollWidth]);
+
+  // ================================= Ref ==================================
+  const delayHideScrollBar = () => {
+    verticalScrollBarRef.current?.delayHidden();
+    horizontalScrollBarRef.current?.delayHidden();
+  };
+  const getSize = useGetSize(mergedData, getKey, heights, itemHeight);
+  const scrollTo = useScrollTo(componentRef, mergedData, heights, itemHeight, getKey, getSize, () => collectHeight(true), syncScrollTop, delayHideScrollBar);
+  (react_production_namespaceFn().useImperativeHandle)(ref, () => ({
+    nativeElement: containerRef.current,
+    getScrollInfo: getVirtualScrollInfo,
+    scrollTo: config => {
+      function isPosScroll(arg) {
+        return arg && typeof arg === 'object' && ('left' in arg || 'top' in arg);
+      }
+      if (isPosScroll(config)) {
+        // Scroll X
+        if (config.left !== undefined) {
+          setOffsetLeft(keepInHorizontalRange(config.left));
+        }
+
+        // Scroll Y
+        scrollTo(config.top);
+      } else {
+        scrollTo(config);
+      }
+    }
+  }));
+
+  // ================================ Effect ================================
+  /** We need told outside that some list not rendered */
+  hooks_useLayoutEffect(() => {
+    if (onVisibleChange) {
+      const renderList = mergedData.slice(start, end + 1);
+      onVisibleChange(renderList, mergedData);
+    }
+  }, [start, end, mergedData]);
+
+  // ================================ Extra =================================
+  const extraContent = extraRender?.({
+    start,
+    end,
+    virtual: inVirtual,
+    offsetX: offsetLeft,
+    scrollTop: offsetTop,
+    offsetY: fillerOffset,
+    rtl: isRTL,
+    getSize
+  });
+
+  // ================================ Render ================================
+  const listChildren = useChildren(mergedData, start, end, scrollWidth, offsetLeft, setInstanceRef, children, sharedConfig);
+  let componentStyle = null;
+  if (height) {
+    componentStyle = {
+      [fullHeight ? 'height' : 'maxHeight']: height,
+      ...ScrollStyle
+    };
+    if (useVirtual) {
+      componentStyle.overflowY = 'hidden';
+      if (scrollWidth) {
+        componentStyle.overflowX = 'hidden';
+      }
+      if (scrollMoving) {
+        componentStyle.pointerEvents = 'none';
+      }
+    }
+  }
+  const containerProps = {};
+  if (isRTL) {
+    containerProps.dir = 'rtl';
+  }
+  return /*#__PURE__*/(react_production_namespaceFn().createElement)("div", List_extends({
+    ref: containerRef,
+    style: {
+      ...style,
+      position: 'relative'
+    },
+    className: mergedClassName
+  }, containerProps, restProps), /*#__PURE__*/(react_production_namespaceFn().createElement)(resize_observer_es, {
+    onResize: onHolderResize
+  }, /*#__PURE__*/(react_production_namespaceFn().createElement)(Component, {
+    className: `${prefixCls}-holder`,
+    style: componentStyle,
+    ref: componentRef,
+    onScroll: onFallbackScroll,
+    onMouseEnter: delayHideScrollBar
+  }, /*#__PURE__*/(react_production_namespaceFn().createElement)(es_Filler, {
+    prefixCls: prefixCls,
+    height: scrollHeight,
+    offsetX: offsetLeft,
+    offsetY: fillerOffset,
+    scrollWidth: scrollWidth,
+    onInnerResize: collectHeight,
+    ref: fillerInnerRef,
+    innerProps: innerProps,
+    rtl: isRTL,
+    extra: extraContent
+  }, listChildren))), inVirtual && scrollHeight > height && /*#__PURE__*/(react_production_namespaceFn().createElement)(es_ScrollBar, {
+    ref: verticalScrollBarRef,
+    prefixCls: prefixCls,
+    scrollOffset: offsetTop,
+    scrollRange: scrollHeight,
+    rtl: isRTL,
+    onScroll: onScrollBar,
+    onStartMove: onScrollbarStartMove,
+    onStopMove: onScrollbarStopMove,
+    spinSize: verticalScrollBarSpinSize,
+    containerSize: size.height,
+    style: styles?.verticalScrollBar,
+    thumbStyle: styles?.verticalScrollBarThumb,
+    showScrollBar: showScrollBar
+  }), inVirtual && scrollWidth > size.width && /*#__PURE__*/(react_production_namespaceFn().createElement)(es_ScrollBar, {
+    ref: horizontalScrollBarRef,
+    prefixCls: prefixCls,
+    scrollOffset: offsetLeft,
+    scrollRange: scrollWidth,
+    rtl: isRTL,
+    onScroll: onScrollBar,
+    onStartMove: onScrollbarStartMove,
+    onStopMove: onScrollbarStopMove,
+    spinSize: horizontalScrollBarSpinSize,
+    containerSize: size.width,
+    horizontal: true,
+    style: styles?.horizontalScrollBar,
+    thumbStyle: styles?.horizontalScrollBarThumb,
+    showScrollBar: showScrollBar
+  }));
+}
+const List_List = /*#__PURE__*/(react_production_namespaceFn().forwardRef)(RawList);
+List_List.displayName = 'List';
+/* harmony default export */ const virtual_list_es_List = (List_List);
+;// ./node_modules/@rc-component/virtual-list/es/mock.js
+
+
+const mock_List = /*#__PURE__*/(react_production_namespaceFn().forwardRef)((props, ref) => RawList({
+  ...props,
+  virtual: false
+}, ref));
+mock_List.displayName = 'List';
+/* harmony default export */ const mock = ((/* unused pure expression or super */ null && (mock_List)));
+;// ./node_modules/@rc-component/virtual-list/es/index.js
+
+
+/* harmony default export */ const virtual_list_es = (virtual_list_es_List);
+;// ./node_modules/@rc-component/select/es/utils/platformUtil.js
+/* istanbul ignore file */
+function isPlatformMac() {
+  return /(mac\sos|macintosh)/i.test(navigator.appVersion);
+}
+;// ./node_modules/@rc-component/select/es/OptionList.js
+function OptionList_extends() { OptionList_extends = Object.assign ? Object.assign.bind() : function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; }; return OptionList_extends.apply(this, arguments); }
+;
+
+
+
+
+
+
+
+
+
+
+// export interface OptionListProps<OptionsType extends object[]> {
+
+function OptionList_isTitleType(content) {
+  return typeof content === 'string' || typeof content === 'number';
+}
+
+/**
+ * Using virtual list of option display.
+ * Will fallback to dom if use customize render.
+ */
+const OptionList = (_, ref) => {
+  const {
+    prefixCls,
+    id,
+    open,
+    multiple,
+    mode,
+    searchValue,
+    toggleOpen,
+    notFoundContent,
+    onPopupScroll,
+    showScrollBar,
+    lockOptions
+  } = useBaseProps();
+  const {
+    maxCount,
+    flattenOptions,
+    onActiveValue,
+    defaultActiveFirstOption,
+    onSelect,
+    menuItemSelectedIcon,
+    rawValues,
+    fieldNames,
+    virtual,
+    direction,
+    listHeight,
+    listItemHeight,
+    optionRender,
+    classNames: contextClassNames,
+    styles: contextStyles
+  } = (react_production_namespaceFn().useContext)(es_SelectContext);
+  const itemPrefixCls = `${prefixCls}-item`;
+  const memoFlattenOptions = useMemo_useMemo(() => flattenOptions, [open, lockOptions], (prev, next) => next[0] && !next[1]);
+
+  // =========================== List ===========================
+  const listRef = (react_production_namespaceFn().useRef)(null);
+  const overMaxCount = (react_production_namespaceFn().useMemo)(() => multiple && isValidCount(maxCount) && rawValues?.size >= maxCount, [multiple, maxCount, rawValues?.size]);
+  const onListMouseDown = event => {
+    event.preventDefault();
+  };
+  const scrollIntoView = args => {
+    listRef.current?.scrollTo(typeof args === 'number' ? {
+      index: args
+    } : args);
+  };
+
+  // https://github.com/ant-design/ant-design/issues/34975
+  const isSelected = (react_production_namespaceFn().useCallback)(value => {
+    if (mode === 'combobox') {
+      return false;
+    }
+    return rawValues.has(value);
+  }, [mode, [...rawValues].toString(), rawValues.size]);
+
+  // ========================== Active ==========================
+  const getEnabledActiveIndex = (index, offset = 1) => {
+    const len = memoFlattenOptions.length;
+    for (let i = 0; i < len; i += 1) {
+      const current = (index + i * offset + len) % len;
+      const {
+        group,
+        data
+      } = memoFlattenOptions[current] || {};
+      if (!group && !data?.disabled && (isSelected(data.value) || !overMaxCount)) {
+        return current;
+      }
+    }
+    return -1;
+  };
+  const [activeIndex, setActiveIndex] = (react_production_namespaceFn().useState)(() => getEnabledActiveIndex(0));
+  const setActive = (index, fromKeyboard = false) => {
+    setActiveIndex(index);
+    const info = {
+      source: fromKeyboard ? 'keyboard' : 'mouse'
+    };
+
+    // Trigger active event
+    const flattenItem = memoFlattenOptions[index];
+    if (!flattenItem) {
+      onActiveValue(null, -1, info);
+      return;
+    }
+    onActiveValue(flattenItem.value, index, info);
+  };
+
+  // Auto active first item when list length or searchValue changed
+  (0,react_production_namespaceFn().useEffect)(() => {
+    setActive(defaultActiveFirstOption !== false ? getEnabledActiveIndex(0) : -1);
+  }, [memoFlattenOptions.length, searchValue]);
+
+  // https://github.com/ant-design/ant-design/issues/48036
+  const isAriaSelected = (react_production_namespaceFn().useCallback)(value => {
+    if (mode === 'combobox') {
+      return String(value).toLowerCase() === searchValue.toLowerCase();
+    }
+    return rawValues.has(value);
+  }, [mode, searchValue, [...rawValues].toString(), rawValues.size]);
+
+  // Auto scroll to item position in single mode
+  (0,react_production_namespaceFn().useEffect)(() => {
+    /**
+     * React will skip `onChange` when component update.
+     * `setActive` function will call root accessibility state update which makes re-render.
+     * So we need to delay to let Input component trigger onChange first.
+     */
+    let timeoutId;
+    if (!multiple && open && rawValues.size === 1) {
+      const value = Array.from(rawValues)[0];
+      // Scroll to the option closest to the searchValue if searching.
+      const index = memoFlattenOptions.findIndex(({
+        data
+      }) => searchValue ? String(data.value).startsWith(searchValue) : data.value === value);
+      if (index !== -1) {
+        setActive(index);
+        timeoutId = setTimeout(() => {
+          scrollIntoView(index);
+        });
+      }
+    }
+
+    // Force trigger scrollbar visible when open
+    if (open) {
+      listRef.current?.scrollTo(undefined);
+    }
+    return () => clearTimeout(timeoutId);
+  }, [open, searchValue]);
+
+  // ========================== Values ==========================
+  const onSelectValue = value => {
+    if (value !== undefined) {
+      onSelect(value, {
+        selected: !rawValues.has(value)
+      });
+    }
+
+    // Single mode should always close by select
+    if (!multiple) {
+      toggleOpen(false);
+    }
+  };
+
+  // ========================= Keyboard =========================
+  (react_production_namespaceFn().useImperativeHandle)(ref, () => ({
+    onKeyDown: event => {
+      const {
+        which,
+        ctrlKey
+      } = event;
+      switch (which) {
+        // >>> Arrow keys & ctrl + n/p on Mac
+        case es_KeyCode.N:
+        case es_KeyCode.P:
+        case es_KeyCode.UP:
+        case es_KeyCode.DOWN:
+          {
+            let offset = 0;
+            if (which === es_KeyCode.UP) {
+              offset = -1;
+            } else if (which === es_KeyCode.DOWN) {
+              offset = 1;
+            } else if (isPlatformMac() && ctrlKey) {
+              if (which === es_KeyCode.N) {
+                offset = 1;
+              } else if (which === es_KeyCode.P) {
+                offset = -1;
+              }
+            }
+            if (offset !== 0) {
+              const nextActiveIndex = getEnabledActiveIndex(activeIndex + offset, offset);
+              scrollIntoView(nextActiveIndex);
+              setActive(nextActiveIndex, true);
+            }
+            break;
+          }
+
+        // >>> Select (Tab / Enter)
+        case es_KeyCode.TAB:
+        case es_KeyCode.ENTER:
+          {
+            // value
+            const item = memoFlattenOptions[activeIndex];
+            if (!item || item.data.disabled) {
+              return onSelectValue(undefined);
+            }
+            if (!overMaxCount || rawValues.has(item.value)) {
+              onSelectValue(item.value);
+            } else {
+              onSelectValue(undefined);
+            }
+            if (open) {
+              event.preventDefault();
+            }
+            break;
+          }
+
+        // >>> Close
+        case es_KeyCode.ESC:
+          {
+            toggleOpen(false);
+            if (open) {
+              event.stopPropagation();
+            }
+          }
+      }
+    },
+    onKeyUp: () => {},
+    scrollTo: index => {
+      scrollIntoView(index);
+    }
+  }));
+
+  // ========================== Render ==========================
+  if (memoFlattenOptions.length === 0) {
+    return /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
+      role: "listbox",
+      id: `${id}_list`,
+      className: `${itemPrefixCls}-empty`,
+      onMouseDown: onListMouseDown
+    }, notFoundContent);
+  }
+  const omitFieldNameList = Object.keys(fieldNames).map(key => fieldNames[key]);
+  const getLabel = item => item.label;
+  function getItemAriaProps(item, index) {
+    const {
+      group
+    } = item;
+    return {
+      role: group ? 'presentation' : 'option',
+      id: `${id}_list_${index}`
+    };
+  }
+  const renderItem = index => {
+    const item = memoFlattenOptions[index];
+    if (!item) {
+      return null;
+    }
+    const itemData = item.data || {};
+    const {
+      value,
+      disabled
+    } = itemData;
+    const {
+      group
+    } = item;
+    const attrs = pickAttrs(itemData, true);
+    const mergedLabel = getLabel(item);
+    return item ? /*#__PURE__*/(react_production_namespaceFn().createElement)("div", OptionList_extends({
+      "aria-label": typeof mergedLabel === 'string' && !group ? mergedLabel : null
+    }, attrs, {
+      key: index
+    }, getItemAriaProps(item, index), {
+      "aria-selected": isAriaSelected(value),
+      "aria-disabled": disabled
+    }), value) : null;
+  };
+  const a11yProps = {
+    role: 'listbox',
+    id: `${id}_list`
+  };
+  return /*#__PURE__*/(react_production_namespaceFn().createElement)((react_production_namespaceFn().Fragment), null, virtual && /*#__PURE__*/(react_production_namespaceFn().createElement)("div", OptionList_extends({}, a11yProps, {
+    style: {
+      height: 0,
+      width: 0,
+      overflow: 'hidden'
+    }
+  }), renderItem(activeIndex - 1), renderItem(activeIndex), renderItem(activeIndex + 1)), /*#__PURE__*/(react_production_namespaceFn().createElement)(virtual_list_es, {
+    prefixCls: `${prefixCls}-dropdown-list`,
+    itemKey: "key",
+    ref: listRef,
+    data: memoFlattenOptions,
+    height: listHeight,
+    itemHeight: listItemHeight,
+    fullHeight: false,
+    onMouseDown: onListMouseDown,
+    onScroll: onPopupScroll,
+    virtual: virtual,
+    direction: direction,
+    innerProps: virtual ? null : a11yProps,
+    showScrollBar: showScrollBar,
+    className: contextClassNames?.popup?.list,
+    style: contextStyles?.popup?.list
+  }, (item, itemIndex) => {
+    const {
+      group,
+      groupOption,
+      data,
+      label,
+      value
+    } = item;
+    const {
+      key
+    } = data;
+
+    // Group
+    if (group) {
+      const groupTitle = data.title ?? (OptionList_isTitleType(label) ? label.toString() : undefined);
+      return /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
+        className: clsx(itemPrefixCls, `${itemPrefixCls}-group`, data.className),
+        title: groupTitle
+      }, label !== undefined ? label : key);
+    }
+    const {
+      disabled,
+      title,
+      children,
+      style,
+      className,
+      ...otherProps
+    } = data;
+    const passedProps = omit(otherProps, omitFieldNameList);
+
+    // Option
+    const selected = isSelected(value);
+    const mergedDisabled = disabled || !selected && overMaxCount;
+    const optionPrefixCls = `${itemPrefixCls}-option`;
+    const optionClassName = clsx(itemPrefixCls, optionPrefixCls, className, contextClassNames?.popup?.listItem, {
+      [`${optionPrefixCls}-grouped`]: groupOption,
+      [`${optionPrefixCls}-active`]: activeIndex === itemIndex && !mergedDisabled,
+      [`${optionPrefixCls}-disabled`]: mergedDisabled,
+      [`${optionPrefixCls}-selected`]: selected
+    });
+    const mergedLabel = getLabel(item);
+    const iconVisible = !menuItemSelectedIcon || typeof menuItemSelectedIcon === 'function' || selected;
+
+    // https://github.com/ant-design/ant-design/issues/34145
+    const content = typeof mergedLabel === 'number' ? mergedLabel : mergedLabel || value;
+    // https://github.com/ant-design/ant-design/issues/26717
+    let optionTitle = OptionList_isTitleType(content) ? content.toString() : undefined;
+    if (title !== undefined) {
+      optionTitle = title;
+    }
+    return /*#__PURE__*/(react_production_namespaceFn().createElement)("div", OptionList_extends({}, pickAttrs(passedProps), !virtual ? getItemAriaProps(item, itemIndex) : {}, {
+      "aria-selected": virtual ? undefined : isAriaSelected(value),
+      "aria-disabled": mergedDisabled,
+      className: optionClassName,
+      title: optionTitle,
+      onMouseMove: () => {
+        if (activeIndex === itemIndex || mergedDisabled) {
+          return;
+        }
+        setActive(itemIndex);
+      },
+      onClick: () => {
+        if (!mergedDisabled) {
+          onSelectValue(value);
+        }
+      },
+      style: {
+        ...contextStyles?.popup?.listItem,
+        ...style
+      }
+    }), /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
+      className: `${optionPrefixCls}-content`
+    }, typeof optionRender === 'function' ? optionRender(item, {
+      index: itemIndex
+    }) : content), /*#__PURE__*/(react_production_namespaceFn().isValidElement)(menuItemSelectedIcon) || selected, iconVisible && /*#__PURE__*/(react_production_namespaceFn().createElement)(es_TransBtn, {
+      className: `${itemPrefixCls}-option-state`,
+      customizeIcon: menuItemSelectedIcon,
+      customizeIconProps: {
+        value,
+        disabled: mergedDisabled,
+        isSelected: selected
+      }
+    }, selected ? '✓' : null));
+  }));
+};
+const RefOptionList = /*#__PURE__*/(react_production_namespaceFn().forwardRef)(OptionList);
+if (false) // removed by dead control flow
+{}
+/* harmony default export */ const es_OptionList = (RefOptionList);
+;// ./node_modules/@rc-component/select/es/hooks/useCache.js
+
+/**
+ * Cache `value` related LabeledValue & options.
+ */
+/* harmony default export */ const useCache = ((labeledValues, valueOptions) => {
+  const cacheRef = (react_production_namespaceFn().useRef)({
+    values: new Map(),
+    options: new Map()
+  });
+  const filledLabeledValues = (react_production_namespaceFn().useMemo)(() => {
+    const {
+      values: prevValueCache,
+      options: prevOptionCache
+    } = cacheRef.current;
+
+    // Fill label by cache
+    const patchedValues = labeledValues.map(item => {
+      if (item.label === undefined) {
+        return {
+          ...item,
+          label: prevValueCache.get(item.value)?.label
+        };
+      }
+      return item;
+    });
+
+    // Refresh cache
+    const valueCache = new Map();
+    const optionCache = new Map();
+    patchedValues.forEach(item => {
+      valueCache.set(item.value, item);
+      optionCache.set(item.value, valueOptions.get(item.value) || prevOptionCache.get(item.value));
+    });
+    cacheRef.current.values = valueCache;
+    cacheRef.current.options = optionCache;
+    return patchedValues;
+  }, [labeledValues, valueOptions]);
+  const getOption = (react_production_namespaceFn().useCallback)(val => valueOptions.get(val) || cacheRef.current.options.get(val), [valueOptions]);
+  return [filledLabeledValues, getOption];
+});
+__webpack_require__.dn(useCache);
+;// ./node_modules/@rc-component/select/es/hooks/useFilterOptions.js
+
+
+
+function includes(test, search) {
+  return commonUtil_toArray(test).join('').toUpperCase().includes(search);
+}
+/* harmony default export */ const useFilterOptions = ((options, fieldNames, searchValue, filterOption, optionFilterProp) => {
+  return (react_production_namespaceFn().useMemo)(() => {
+    if (!searchValue || filterOption === false) {
+      return options;
+    }
+    const {
+      options: fieldOptions,
+      label: fieldLabel,
+      value: fieldValue
+    } = fieldNames;
+    const filteredOptions = [];
+    const customizeFilter = typeof filterOption === 'function';
+    const upperSearch = searchValue.toUpperCase();
+    const filterFunc = customizeFilter ? filterOption : (_, option) => {
+      // Use provided `optionFilterProp`
+      if (optionFilterProp && optionFilterProp.length) {
+        return optionFilterProp.some(prop => includes(option[prop], upperSearch));
+      }
+
+      // Auto select `label` or `value` by option type
+      if (option[fieldOptions]) {
+        // hack `fieldLabel` since `OptionGroup` children is not `label`
+        return includes(option[fieldLabel !== 'children' ? fieldLabel : 'label'], upperSearch);
+      }
+      return includes(option[fieldValue], upperSearch);
+    };
+    const wrapOption = customizeFilter ? opt => injectPropsWithOption(opt) : opt => opt;
+    options.forEach(item => {
+      // Group should check child options
+      if (item[fieldOptions]) {
+        // Check group first
+        const matchGroup = filterFunc(searchValue, wrapOption(item));
+        if (matchGroup) {
+          filteredOptions.push(item);
+        } else {
+          // Check option
+          const subOptions = item[fieldOptions].filter(subItem => filterFunc(searchValue, wrapOption(subItem)));
+          if (subOptions.length) {
+            filteredOptions.push({
+              ...item,
+              [fieldOptions]: subOptions
+            });
+          }
+        }
+        return;
+      }
+      if (filterFunc(searchValue, wrapOption(item))) {
+        filteredOptions.push(item);
+      }
+    });
+    return filteredOptions;
+  }, [options, filterOption, optionFilterProp, searchValue, fieldNames]);
+});
+__webpack_require__.dn(useFilterOptions);
+;// ./node_modules/@rc-component/select/es/utils/legacyUtil.js
+
+
+function convertNodeToOption(node) {
+  const {
+    key,
+    props: {
+      children,
+      value,
+      ...restProps
+    }
+  } = node;
+  return {
+    key,
+    value: value !== undefined ? value : key,
+    children,
+    ...restProps
+  };
+}
+function convertChildrenToData(nodes, optionOnly = false) {
+  return toArray_toArray(nodes).map((node, index) => {
+    if (! /*#__PURE__*/(react_production_namespaceFn().isValidElement)(node) || !node.type) {
+      return null;
+    }
+    const {
+      type: {
+        isSelectOptGroup
+      },
+      key,
+      props: {
+        children,
+        ...restProps
+      }
+    } = node;
+    if (optionOnly || !isSelectOptGroup) {
+      return convertNodeToOption(node);
+    }
+    return {
+      key: `__RC_SELECT_GRP__${key === null ? index : key}__`,
+      label: key,
+      ...restProps,
+      options: convertChildrenToData(children)
+    };
+  }).filter(data => data);
+}
+;// ./node_modules/@rc-component/select/es/hooks/useOptions.js
+
+
+
+/**
+ * Parse `children` to `options` if `options` is not provided.
+ * Then flatten the `options`.
+ */
+const useOptions = (options, children, fieldNames, optionFilterProp, optionLabelProp) => {
+  return (react_production_namespaceFn().useMemo)(() => {
+    let mergedOptions = options;
+    const childrenAsData = !options;
+    if (childrenAsData) {
+      mergedOptions = convertChildrenToData(children);
+    }
+    const valueOptions = new Map();
+    const labelOptions = new Map();
+    const setLabelOptions = (labelOptionsMap, option, key) => {
+      if (key && typeof key === 'string') {
+        labelOptionsMap.set(option[key], option);
+      }
+    };
+    const dig = (optionList, isChildren = false) => {
+      // for loop to speed up collection speed
+      for (let i = 0; i < optionList.length; i += 1) {
+        const option = optionList[i];
+        if (!option[fieldNames.options] || isChildren) {
+          valueOptions.set(option[fieldNames.value], option);
+          setLabelOptions(labelOptions, option, fieldNames.label);
+          // https://github.com/ant-design/ant-design/issues/35304
+          optionFilterProp.forEach(prop => {
+            setLabelOptions(labelOptions, option, prop);
+          });
+          setLabelOptions(labelOptions, option, optionLabelProp);
+        } else {
+          dig(option[fieldNames.options], true);
+        }
+      }
+    };
+    dig(mergedOptions);
+    return {
+      options: mergedOptions,
+      valueOptions,
+      labelOptions
+    };
+  }, [options, children, fieldNames, optionFilterProp, optionLabelProp]);
+};
+/* harmony default export */ const hooks_useOptions = (useOptions);
+;// ./node_modules/@rc-component/select/es/hooks/useRefFunc.js
+
+
+/**
+ * Same as `React.useCallback` but always return a memoized function
+ * but redirect to real function.
+ */
+function useRefFunc(callback) {
+  const funcRef = (react_production_namespaceFn().useRef)(callback);
+  funcRef.current = callback;
+  const cacheFn = (react_production_namespaceFn().useCallback)((...args) => {
+    return funcRef.current(...args);
+  }, []);
+  return cacheFn;
+}
+;// ./node_modules/@rc-component/select/es/utils/warningPropsUtil.js
+/* unused harmony import specifier */ var warningPropsUtil_warning;
+/* unused harmony import specifier */ var warningPropsUtil_noteOnce;
+/* unused harmony import specifier */ var toNodeArray;
+/* unused harmony import specifier */ var warningPropsUtil_React;
+/* unused harmony import specifier */ var warningPropsUtil_isMultiple;
+/* unused harmony import specifier */ var warningPropsUtil_toArray;
+/* unused harmony import specifier */ var warningPropsUtil_convertChildrenToData;
+
+
+
+
+
+function warningProps(props) {
+  const {
+    mode,
+    options,
+    children,
+    backfill,
+    allowClear,
+    placeholder,
+    getInputElement,
+    showSearch,
+    onSearch,
+    defaultOpen,
+    autoFocus,
+    labelInValue,
+    value,
+    optionLabelProp
+  } = props;
+  const multiple = warningPropsUtil_isMultiple(mode);
+  const mergedShowSearch = showSearch !== undefined ? showSearch : multiple || mode === 'combobox';
+  const mergedOptions = options || warningPropsUtil_convertChildrenToData(children);
+
+  // `tags` should not set option as disabled
+  warningPropsUtil_warning(mode !== 'tags' || mergedOptions.every(opt => !opt.disabled), 'Please avoid setting option to disabled in tags mode since user can always type text as tag.');
+
+  // `combobox` & `tags` should option be `string` type
+  if (mode === 'tags' || mode === 'combobox') {
+    const hasNumberValue = mergedOptions.some(item => {
+      if (item.options) {
+        return item.options.some(opt => typeof ('value' in opt ? opt.value : opt.key) === 'number');
+      }
+      return typeof ('value' in item ? item.value : item.key) === 'number';
+    });
+    warningPropsUtil_warning(!hasNumberValue, '`value` of Option should not use number type when `mode` is `tags` or `combobox`.');
+  }
+
+  // `combobox` should not use `optionLabelProp`
+  warningPropsUtil_warning(mode !== 'combobox' || !optionLabelProp, '`combobox` mode not support `optionLabelProp`. Please set `value` on Option directly.');
+
+  // Only `combobox` support `backfill`
+  warningPropsUtil_warning(mode === 'combobox' || !backfill, '`backfill` only works with `combobox` mode.');
+
+  // Only `combobox` support `getInputElement`
+  warningPropsUtil_warning(mode === 'combobox' || !getInputElement, '`getInputElement` only work with `combobox` mode.');
+
+  // Customize `getInputElement` should not use `allowClear` & `placeholder`
+  warningPropsUtil_noteOnce(mode !== 'combobox' || !getInputElement || !allowClear || !placeholder, 'Customize `getInputElement` should customize clear and placeholder logic instead of configuring `allowClear` and `placeholder`.');
+
+  // `onSearch` should use in `combobox` or `showSearch`
+  if (onSearch && !mergedShowSearch && mode !== 'combobox' && mode !== 'tags') {
+    warningPropsUtil_warning(false, '`onSearch` should work with `showSearch` instead of use alone.');
+  }
+  warningPropsUtil_noteOnce(!defaultOpen || autoFocus, '`defaultOpen` makes Select open without focus which means it will not close by click outside. You can set `autoFocus` if needed.');
+  if (value !== undefined && value !== null) {
+    const values = warningPropsUtil_toArray(value);
+    warningPropsUtil_warning(!labelInValue || values.every(val => typeof val === 'object' && ('key' in val || 'value' in val)), '`value` should in shape of `{ value: string | number, label?: ReactNode }` when you set `labelInValue` to `true`');
+    warningPropsUtil_warning(!multiple || Array.isArray(value), '`value` should be array when `mode` is `multiple` or `tags`');
+  }
+
+  // Syntactic sugar should use correct children type
+  if (children) {
+    let invalidateChildType = null;
+    toNodeArray(children).some(node => {
+      if (! /*#__PURE__*/warningPropsUtil_React.isValidElement(node) || !node.type) {
+        return false;
+      }
+      const {
+        type
+      } = node;
+      if (type.isSelectOption) {
+        return false;
+      }
+      if (type.isSelectOptGroup) {
+        const allChildrenValid = toNodeArray(node.props.children).every(subNode => {
+          if (! /*#__PURE__*/warningPropsUtil_React.isValidElement(subNode) || !node.type || subNode.type.isSelectOption) {
+            return true;
+          }
+          invalidateChildType = subNode.type;
+          return false;
+        });
+        if (allChildrenValid) {
+          return false;
+        }
+        return true;
+      }
+      invalidateChildType = type;
+      return true;
+    });
+    if (invalidateChildType) {
+      warningPropsUtil_warning(false, `\`children\` should be \`Select.Option\` or \`Select.OptGroup\` instead of \`${invalidateChildType.displayName || invalidateChildType.name || invalidateChildType}\`.`);
+    }
+  }
+}
+
+// value in Select option should not be null
+// note: OptGroup has options too
+function warningNullOptions(options, fieldNames) {
+  if (options) {
+    const recursiveOptions = (optionsList, inGroup = false) => {
+      for (let i = 0; i < optionsList.length; i++) {
+        const option = optionsList[i];
+        if (option[fieldNames?.value] === null) {
+          warningPropsUtil_warning(false, '`value` in Select options should not be `null`.');
+          return true;
+        }
+        if (!inGroup && Array.isArray(option[fieldNames?.options]) && recursiveOptions(option[fieldNames?.options], true)) {
+          break;
+        }
+      }
+    };
+    recursiveOptions(options);
+  }
+}
+/* harmony default export */ const warningPropsUtil = ((/* unused pure expression or super */ null && (warningProps)));
+;// ./node_modules/@rc-component/select/es/hooks/useSearchConfig.js
+
+
+// Convert `showSearch` to unique config
+function useSearchConfig(showSearch, props, mode) {
+  const {
+    filterOption,
+    searchValue,
+    optionFilterProp,
+    filterSort,
+    onSearch,
+    autoClearSearchValue
+  } = props;
+  return (react_production_namespaceFn().useMemo)(() => {
+    const isObject = typeof showSearch === 'object';
+    const searchConfig = {
+      filterOption,
+      searchValue,
+      optionFilterProp,
+      filterSort,
+      onSearch,
+      autoClearSearchValue,
+      ...(isObject ? showSearch : {})
+    };
+    return [isObject || mode === 'combobox' || mode === 'tags' || mode === 'multiple' && showSearch === undefined ? true : showSearch, searchConfig];
+  }, [mode, showSearch, filterOption, searchValue, optionFilterProp, filterSort, onSearch, autoClearSearchValue]);
+}
+;// ./node_modules/@rc-component/select/es/Select.js
+function Select_extends() { Select_extends = Object.assign ? Object.assign.bind() : function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; }; return Select_extends.apply(this, arguments); }
+/**
+ * To match accessibility requirement, we always provide an input in the component.
+ * Other element will not set `tabIndex` to avoid `onBlur` sequence problem.
+ * For focused select, we set `aria-live="polite"` to update the accessibility content.
+ *
+ * ref:
+ * - keyboard: https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Roles/listbox_role#Keyboard_interactions
+ *
+ * New api:
+ * - listHeight
+ * - listItemHeight
+ * - component
+ *
+ * Remove deprecated api:
+ * - multiple
+ * - tags
+ * - combobox
+ * - firstActiveValue
+ * - dropdownMenuStyle
+ * - openClassName (Not list in api)
+ *
+ * Update:
+ * - `backfill` only support `combobox` mode
+ * - `combobox` mode not support `labelInValue` since it's meaningless
+ * - `getInputElement` only support `combobox` mode
+ * - `onChange` return OptionData instead of ReactNode
+ * - `filterOption` `onChange` `onSelect` accept OptionData instead of ReactNode
+ * - `combobox` mode trigger `onChange` will get `undefined` if no `value` match in Option
+ * - `combobox` mode not support `optionLabelProp`
+ */
+
+;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+const OMIT_DOM_PROPS = ['inputValue'];
+function isRawValue(value) {
+  return !value || typeof value !== 'object';
+}
+const Select = /*#__PURE__*/(react_production_namespaceFn().forwardRef)((props, ref) => {
+  const {
+    id,
+    mode,
+    prefixCls = 'rc-select',
+    backfill,
+    fieldNames,
+    // Search
+    showSearch,
+    searchValue: legacySearchValue,
+    onSearch: legacyOnSearch,
+    autoClearSearchValue: legacyAutoClearSearchValue,
+    filterOption: legacyFilterOption,
+    optionFilterProp: legacyOptionFilterProp,
+    filterSort: legacyFilterSort,
+    // Select
+    onSelect,
+    onDeselect,
+    onActive,
+    popupMatchSelectWidth = true,
+    optionLabelProp,
+    options,
+    optionRender,
+    children,
+    defaultActiveFirstOption,
+    menuItemSelectedIcon,
+    virtual,
+    direction,
+    listHeight = 200,
+    listItemHeight = 20,
+    labelRender,
+    // Value
+    value,
+    defaultValue,
+    labelInValue,
+    onChange,
+    maxCount,
+    classNames,
+    styles,
+    ...restProps
+  } = props;
+  const searchProps = {
+    searchValue: legacySearchValue,
+    onSearch: legacyOnSearch,
+    autoClearSearchValue: legacyAutoClearSearchValue,
+    filterOption: legacyFilterOption,
+    optionFilterProp: legacyOptionFilterProp,
+    filterSort: legacyFilterSort
+  };
+  const [mergedShowSearch, searchConfig] = useSearchConfig(showSearch, searchProps, mode);
+  const {
+    filterOption,
+    searchValue,
+    optionFilterProp,
+    filterSort,
+    onSearch,
+    autoClearSearchValue = true
+  } = searchConfig;
+  const normalizedOptionFilterProp = (react_production_namespaceFn().useMemo)(() => {
+    if (!optionFilterProp) return [];
+    return Array.isArray(optionFilterProp) ? optionFilterProp : [optionFilterProp];
+  }, [optionFilterProp]);
+  const mergedId = hooks_useId(id);
+  const multiple = isMultiple(mode);
+  const childrenAsData = !!(!options && children);
+  const mergedFilterOption = (react_production_namespaceFn().useMemo)(() => {
+    if (filterOption === undefined && mode === 'combobox') {
+      return false;
+    }
+    return filterOption;
+  }, [filterOption, mode]);
+
+  // ========================= FieldNames =========================
+  const mergedFieldNames = (react_production_namespaceFn().useMemo)(() => fillFieldNames(fieldNames, childrenAsData), /* eslint-disable react-hooks/exhaustive-deps */
+  [
+  // We stringify fieldNames to avoid unnecessary re-renders.
+  JSON.stringify(fieldNames), childrenAsData]
+  /* eslint-enable react-hooks/exhaustive-deps */);
+
+  // =========================== Search ===========================
+  const [internalSearchValue, setSearchValue] = useControlledState('', searchValue);
+  const mergedSearchValue = internalSearchValue || '';
+
+  // =========================== Option ===========================
+  const parsedOptions = hooks_useOptions(options, children, mergedFieldNames, normalizedOptionFilterProp, optionLabelProp);
+  const {
+    valueOptions,
+    labelOptions,
+    options: mergedOptions
+  } = parsedOptions;
+
+  // ========================= Wrap Value =========================
+  const convert2LabelValues = (react_production_namespaceFn().useCallback)(draftValues => {
+    // Convert to array
+    const valueList = commonUtil_toArray(draftValues);
+
+    // Convert to labelInValue type
+    return valueList.map(val => {
+      let rawValue;
+      let rawLabel;
+      let rawDisabled;
+      let rawTitle;
+
+      // Fill label & value
+      if (isRawValue(val)) {
+        rawValue = val;
+      } else {
+        rawLabel = val.label;
+        rawValue = val.value;
+      }
+      const option = valueOptions.get(rawValue);
+      if (option) {
+        // Fill missing props
+        if (rawLabel === undefined) rawLabel = option?.[optionLabelProp || mergedFieldNames.label];
+        rawDisabled = option?.disabled;
+        rawTitle = option?.title;
+
+        // Warning if label not same as provided
+        if (false) // removed by dead control flow
+{}
+      }
+      return {
+        label: rawLabel,
+        value: rawValue,
+        key: rawValue,
+        disabled: rawDisabled,
+        title: rawTitle
+      };
+    });
+  }, [mergedFieldNames, optionLabelProp, valueOptions]);
+
+  // =========================== Values ===========================
+  const [internalValue, setInternalValue] = useControlledState(defaultValue, value);
+
+  // Merged value with LabelValueType
+  const rawLabeledValues = (react_production_namespaceFn().useMemo)(() => {
+    const newInternalValue = multiple && internalValue === null ? [] : internalValue;
+    const values = convert2LabelValues(newInternalValue);
+
+    // combobox no need save value when it's no value (exclude value equal 0)
+    if (mode === 'combobox' && isComboNoValue(values[0]?.value)) {
+      return [];
+    }
+    return values;
+  }, [internalValue, convert2LabelValues, mode, multiple]);
+
+  // Fill label with cache to avoid option remove
+  const [mergedValues, getMixedOption] = useCache(rawLabeledValues, valueOptions);
+  const displayValues = (react_production_namespaceFn().useMemo)(() => {
+    // `null` need show as placeholder instead
+    // https://github.com/ant-design/ant-design/issues/25057
+    if (!mode && mergedValues.length === 1) {
+      const firstValue = mergedValues[0];
+      if (firstValue.value === null && (firstValue.label === null || firstValue.label === undefined)) {
+        return [];
+      }
+    }
+    return mergedValues.map(item => ({
+      ...item,
+      label: (typeof labelRender === 'function' ? labelRender(item) : item.label) ?? item.value
+    }));
+  }, [mode, mergedValues, labelRender]);
+
+  /** Convert `displayValues` to raw value type set */
+  const rawValues = (react_production_namespaceFn().useMemo)(() => new Set(mergedValues.map(val => val.value)), [mergedValues]);
+  (react_production_namespaceFn().useEffect)(() => {
+    if (mode === 'combobox') {
+      const strValue = mergedValues[0]?.value;
+      setSearchValue(commonUtil_hasValue(strValue) ? String(strValue) : '');
+    }
+  }, [mergedValues]);
+
+  // ======================= Display Option =======================
+  // Create a placeholder item if not exist in `options`
+  const createTagOption = useRefFunc((val, label) => {
+    const mergedLabel = label ?? val;
+    return {
+      [mergedFieldNames.value]: val,
+      [mergedFieldNames.label]: mergedLabel
+    };
+  });
+
+  // Fill tag as option if mode is `tags`
+  const filledTagOptions = (react_production_namespaceFn().useMemo)(() => {
+    if (mode !== 'tags') {
+      return mergedOptions;
+    }
+
+    // >>> Tag mode
+    const cloneOptions = [...mergedOptions];
+
+    // Check if value exist in options (include new patch item)
+    const existOptions = val => valueOptions.has(val);
+
+    // Fill current value as option
+    [...mergedValues].sort((a, b) => a.value < b.value ? -1 : 1).forEach(item => {
+      const val = item.value;
+      if (!existOptions(val)) {
+        cloneOptions.push(createTagOption(val, item.label));
+      }
+    });
+    return cloneOptions;
+  }, [createTagOption, mergedOptions, valueOptions, mergedValues, mode]);
+  const filteredOptions = useFilterOptions(filledTagOptions, mergedFieldNames, mergedSearchValue, mergedFilterOption, normalizedOptionFilterProp);
+
+  // Fill options with search value if needed
+  const filledSearchOptions = (react_production_namespaceFn().useMemo)(() => {
+    const hasItemMatchingSearch = item => {
+      if (normalizedOptionFilterProp.length) {
+        return normalizedOptionFilterProp.some(prop => item?.[prop] === mergedSearchValue);
+      }
+      return item?.value === mergedSearchValue;
+    };
+    if (mode !== 'tags' || !mergedSearchValue || filteredOptions.some(item => hasItemMatchingSearch(item))) {
+      return filteredOptions;
+    }
+    // ignore when search value equal select input value
+    if (filteredOptions.some(item => item[mergedFieldNames.value] === mergedSearchValue)) {
+      return filteredOptions;
+    }
+    // Skip creating temp tag option if it matches a disabled option value
+    if (valueOptions.get(mergedSearchValue)?.disabled) {
+      return filteredOptions;
+    }
+    // Fill search value as option
+    return [createTagOption(mergedSearchValue), ...filteredOptions];
+  }, [createTagOption, normalizedOptionFilterProp, mode, filteredOptions, mergedSearchValue, mergedFieldNames, valueOptions]);
+  const sorter = inputOptions => {
+    const sortedOptions = [...inputOptions].sort((a, b) => filterSort(a, b, {
+      searchValue: mergedSearchValue
+    }));
+    return sortedOptions.map(item => {
+      if (Array.isArray(item.options)) {
+        return {
+          ...item,
+          options: item.options.length > 0 ? sorter(item.options) : item.options
+        };
+      }
+      return item;
+    });
+  };
+  const orderedFilteredOptions = (react_production_namespaceFn().useMemo)(() => {
+    if (!filterSort) {
+      return filledSearchOptions;
+    }
+    return sorter(filledSearchOptions);
+  }, [filledSearchOptions, filterSort, mergedSearchValue]);
+  const displayOptions = (react_production_namespaceFn().useMemo)(() => flattenOptions(orderedFilteredOptions, {
+    fieldNames: mergedFieldNames,
+    childrenAsData
+  }), [orderedFilteredOptions, mergedFieldNames, childrenAsData]);
+
+  // =========================== Change ===========================
+  const triggerChange = values => {
+    const labeledValues = convert2LabelValues(values);
+    setInternalValue(labeledValues);
+    if (onChange && (
+    // Trigger event only when value changed
+    labeledValues.length !== mergedValues.length || labeledValues.some((newVal, index) => mergedValues[index]?.value !== newVal?.value))) {
+      const returnValues = labelInValue ? labeledValues.map(({
+        label: l,
+        value: v
+      }) => ({
+        label: l,
+        value: v
+      })) : labeledValues.map(v => v.value);
+      const returnOptions = labeledValues.map(v => injectPropsWithOption(getMixedOption(v.value)));
+      onChange(
+      // Value
+      multiple ? returnValues : returnValues[0],
+      // Option
+      multiple ? returnOptions : returnOptions[0]);
+    }
+  };
+
+  // ======================= Accessibility ========================
+  const [activeValue, setActiveValue] = (react_production_namespaceFn().useState)(null);
+  const [accessibilityIndex, setAccessibilityIndex] = (react_production_namespaceFn().useState)(0);
+  const mergedDefaultActiveFirstOption = defaultActiveFirstOption !== undefined ? defaultActiveFirstOption : mode !== 'combobox';
+  const activeEventRef = (react_production_namespaceFn().useRef)(undefined);
+  const onActiveValue = (react_production_namespaceFn().useCallback)((active, index, {
+    source = 'keyboard'
+  } = {}) => {
+    setAccessibilityIndex(index);
+    if (backfill && mode === 'combobox' && active !== null && source === 'keyboard') {
+      setActiveValue(String(active));
+    }
+
+    // Active will call multiple times.
+    // We only need trigger the last one.
+    const promise = Promise.resolve().then(() => {
+      if (activeEventRef.current === promise) {
+        onActive?.(active);
+      }
+    });
+    activeEventRef.current = promise;
+  }, [backfill, mode, onActive]);
+
+  // ========================= OptionList =========================
+  const triggerSelect = (val, selected, type) => {
+    const getSelectEnt = () => {
+      const option = getMixedOption(val);
+      return [labelInValue ? {
+        label: option?.[mergedFieldNames.label],
+        value: val
+      } : val, injectPropsWithOption(option)];
+    };
+    if (selected && onSelect) {
+      const [wrappedValue, option] = getSelectEnt();
+      onSelect(wrappedValue, option);
+    } else if (!selected && onDeselect && type !== 'clear') {
+      const [wrappedValue, option] = getSelectEnt();
+      onDeselect(wrappedValue, option);
+    }
+  };
+
+  // Used for OptionList selection
+  const onInternalSelect = useRefFunc((val, info) => {
+    let cloneValues;
+
+    // Single mode always trigger select only with option list
+    const mergedSelect = multiple ? info.selected : true;
+    if (mergedSelect) {
+      cloneValues = multiple ? [...mergedValues, val] : [val];
+    } else {
+      cloneValues = mergedValues.filter(v => v.value !== val);
+    }
+    triggerChange(cloneValues);
+    triggerSelect(val, mergedSelect);
+
+    // Clean search value if single or configured
+    if (mode === 'combobox') {
+      setActiveValue('');
+    } else if (!isMultiple || autoClearSearchValue) {
+      setSearchValue('');
+      setActiveValue('');
+    }
+  });
+
+  // ======================= Display Change =======================
+  // BaseSelect display values change
+  const onDisplayValuesChange = (nextValues, info) => {
+    triggerChange(nextValues);
+    const {
+      type,
+      values
+    } = info;
+    if (type === 'remove' || type === 'clear') {
+      values.forEach(item => {
+        triggerSelect(item.value, false, type);
+      });
+    }
+  };
+
+  // =========================== Search ===========================
+  const onInternalSearch = (searchText, info) => {
+    setSearchValue(searchText);
+    setActiveValue(null);
+
+    // [Submit] Tag mode should flush input
+    if (info.source === 'submit') {
+      const formatted = (searchText || '').trim();
+      // prevent empty tags from appearing when you click the Enter button
+      if (formatted) {
+        // Skip disabled options in tags mode
+        if (valueOptions.get(formatted)?.disabled) {
+          setSearchValue('');
+          return;
+        }
+        const newRawValues = Array.from(new Set([...rawValues, formatted]));
+        triggerChange(newRawValues);
+        triggerSelect(formatted, true);
+        setSearchValue('');
+      }
+      return;
+    }
+    if (info.source !== 'blur') {
+      if (mode === 'combobox') {
+        triggerChange(searchText);
+      }
+      onSearch?.(searchText);
+    }
+  };
+  const onInternalSearchSplit = words => {
+    let patchValues = words;
+    if (mode !== 'tags') {
+      patchValues = words.map(word => {
+        const opt = labelOptions.get(word);
+        return opt?.value;
+      }).filter(val => val !== undefined);
+    }
+
+    // Filter out disabled option values in tags mode
+    if (mode === 'tags') {
+      patchValues = patchValues.filter(val => !valueOptions.get(val)?.disabled);
+    }
+    const newRawValues = Array.from(new Set([...rawValues, ...patchValues]));
+    triggerChange(newRawValues);
+    newRawValues.forEach(newRawValue => {
+      triggerSelect(newRawValue, true);
+    });
+  };
+
+  // ========================== Context ===========================
+  const selectContext = (react_production_namespaceFn().useMemo)(() => {
+    const realVirtual = virtual !== false && popupMatchSelectWidth !== false;
+    return {
+      ...parsedOptions,
+      flattenOptions: displayOptions,
+      onActiveValue,
+      defaultActiveFirstOption: mergedDefaultActiveFirstOption,
+      onSelect: onInternalSelect,
+      menuItemSelectedIcon,
+      rawValues,
+      fieldNames: mergedFieldNames,
+      virtual: realVirtual,
+      direction,
+      listHeight,
+      listItemHeight,
+      childrenAsData,
+      maxCount,
+      optionRender,
+      classNames,
+      styles
+    };
+  }, [maxCount, parsedOptions, displayOptions, onActiveValue, mergedDefaultActiveFirstOption, onInternalSelect, menuItemSelectedIcon, rawValues, mergedFieldNames, virtual, popupMatchSelectWidth, direction, listHeight, listItemHeight, childrenAsData, optionRender, classNames, styles]);
+
+  // ========================== Warning ===========================
+  if (false) // removed by dead control flow
+{}
+
+  // ==============================================================
+  // ==                          Render                          ==
+  // ==============================================================
+  return /*#__PURE__*/(react_production_namespaceFn().createElement)(es_SelectContext.Provider, {
+    value: selectContext
+  }, /*#__PURE__*/(react_production_namespaceFn().createElement)(es_BaseSelect, Select_extends({}, restProps, {
+    // >>> MISC
+    id: mergedId,
+    prefixCls: prefixCls,
+    ref: ref,
+    omitDomProps: OMIT_DOM_PROPS,
+    mode: mode
+    // >>> Style
+    ,
+    classNames: classNames,
+    styles: styles
+    // >>> Values
+    ,
+    displayValues: displayValues,
+    onDisplayValuesChange: onDisplayValuesChange,
+    maxCount: maxCount
+    // >>> Trigger
+    ,
+    direction: direction
+    // >>> Search
+    ,
+    showSearch: mergedShowSearch,
+    searchValue: mergedSearchValue,
+    onSearch: onInternalSearch,
+    autoClearSearchValue: autoClearSearchValue,
+    onSearchSplit: onInternalSearchSplit,
+    popupMatchSelectWidth: popupMatchSelectWidth
+    // >>> OptionList
+    ,
+    OptionList: es_OptionList,
+    emptyOptions: !displayOptions.length
+    // >>> Accessibility
+    ,
+    activeValue: activeValue,
+    activeDescendantId: `${mergedId}_list_${accessibilityIndex}`
+  })));
+});
+if (false) // removed by dead control flow
+{}
+const TypedSelect = Select;
+TypedSelect.Option = es_Option;
+TypedSelect.OptGroup = es_OptGroup;
+/* harmony default export */ const es_Select = (TypedSelect);
+;// ./node_modules/@rc-component/select/es/index.js
+
+
+
+
+
+
+/* harmony default export */ const select_es = (es_Select);
+;// ./node_modules/antd/es/_util/normalizeIcon.js
+const normalizeIcon = (value, key, fallback) => {
+  if (value === false) {
+    return null; // Explicitly return null when value is false
+  }
+  if (value === true) {
+    return fallback; // Return fallback when value is true
+  }
+  // More explicit if statement, avoiding inline if
+  if (value && key && value[key] !== undefined) {
+    return value[key]; // Return value[key] if it's explicitly defined
+  }
+  return fallback; // Return fallback when no value is found
+};
+/* harmony default export */ const _util_normalizeIcon = (normalizeIcon);
+;// ./node_modules/antd/es/config-provider/defaultRenderEmpty.js
+"use client";
+
+
+
+
+const DefaultRenderEmpty = props => {
+  const {
+    componentName
+  } = props;
+  const {
+    getPrefixCls
+  } = (0,react_production_namespaceFn().useContext)(ConfigContext);
+  const prefix = getPrefixCls('empty');
+  switch (componentName) {
+    case 'Table':
+    case 'List':
+      return /*#__PURE__*/(react_production_namespaceFn().createElement)(es_empty, {
+        image: es_empty.PRESENTED_IMAGE_SIMPLE
+      });
+    case 'Select':
+    case 'TreeSelect':
+    case 'Cascader':
+    case 'Transfer':
+    case 'Mentions':
+      return /*#__PURE__*/(react_production_namespaceFn().createElement)(es_empty, {
+        image: es_empty.PRESENTED_IMAGE_SIMPLE,
+        className: `${prefix}-small`
+      });
+    /**
+     * This type of component should satisfy the nullish coalescing operator(??) on the left-hand side.
+     * to let the component itself implement the logic.
+     * For example `Table.filter`.
+     */
+    case 'Table.filter':
+      // why `null`? legacy react16 node type `undefined` is not allowed.
+      return null;
+    default:
+      // Should never hit if we take all the component into consider.
+      return /*#__PURE__*/(react_production_namespaceFn().createElement)(es_empty, null);
+  }
+};
+/* harmony default export */ const defaultRenderEmpty = (DefaultRenderEmpty);
+;// ./node_modules/antd/es/select/mergedBuiltinPlacements.js
+const mergedBuiltinPlacements_getBuiltInPlacements = popupOverflow => {
+  const htmlRegion = popupOverflow === 'scroll' ? 'scroll' : 'visible';
+  const sharedConfig = {
+    overflow: {
+      adjustX: true,
+      adjustY: true,
+      shiftY: true
+    },
+    htmlRegion,
+    dynamicInset: true
+  };
+  return {
+    bottomLeft: {
+      ...sharedConfig,
+      points: ['tl', 'bl'],
+      offset: [0, 4]
+    },
+    bottomRight: {
+      ...sharedConfig,
+      points: ['tr', 'br'],
+      offset: [0, 4]
+    },
+    topLeft: {
+      ...sharedConfig,
+      points: ['bl', 'tl'],
+      offset: [0, -4]
+    },
+    topRight: {
+      ...sharedConfig,
+      points: ['br', 'tr'],
+      offset: [0, -4]
+    }
+  };
+};
+function mergedBuiltinPlacements(buildInPlacements, popupOverflow) {
+  return buildInPlacements || mergedBuiltinPlacements_getBuiltInPlacements(popupOverflow);
+}
+/* harmony default export */ const select_mergedBuiltinPlacements = (mergedBuiltinPlacements);
+;// ./node_modules/antd/es/style/motion/move.js
+
+
+const moveDownIn = new Keyframes('antMoveDownIn', {
+  '0%': {
+    transform: 'translate3d(0, 100%, 0)',
+    transformOrigin: '0 0',
+    opacity: 0
+  },
+  '100%': {
+    transform: 'translate3d(0, 0, 0)',
+    transformOrigin: '0 0',
+    opacity: 1
+  }
+});
+const moveDownOut = new Keyframes('antMoveDownOut', {
+  '0%': {
+    transform: 'translate3d(0, 0, 0)',
+    transformOrigin: '0 0',
+    opacity: 1
+  },
+  '100%': {
+    transform: 'translate3d(0, 100%, 0)',
+    transformOrigin: '0 0',
+    opacity: 0
+  }
+});
+const moveLeftIn = new Keyframes('antMoveLeftIn', {
+  '0%': {
+    transform: 'translate3d(-100%, 0, 0)',
+    transformOrigin: '0 0',
+    opacity: 0
+  },
+  '100%': {
+    transform: 'translate3d(0, 0, 0)',
+    transformOrigin: '0 0',
+    opacity: 1
+  }
+});
+const moveLeftOut = new Keyframes('antMoveLeftOut', {
+  '0%': {
+    transform: 'translate3d(0, 0, 0)',
+    transformOrigin: '0 0',
+    opacity: 1
+  },
+  '100%': {
+    transform: 'translate3d(-100%, 0, 0)',
+    transformOrigin: '0 0',
+    opacity: 0
+  }
+});
+const moveRightIn = new Keyframes('antMoveRightIn', {
+  '0%': {
+    transform: 'translate3d(100%, 0, 0)',
+    transformOrigin: '0 0',
+    opacity: 0
+  },
+  '100%': {
+    transform: 'translate3d(0, 0, 0)',
+    transformOrigin: '0 0',
+    opacity: 1
+  }
+});
+const moveRightOut = new Keyframes('antMoveRightOut', {
+  '0%': {
+    transform: 'translate3d(0, 0, 0)',
+    transformOrigin: '0 0',
+    opacity: 1
+  },
+  '100%': {
+    transform: 'translate3d(100%, 0, 0)',
+    transformOrigin: '0 0',
+    opacity: 0
+  }
+});
+const moveUpIn = new Keyframes('antMoveUpIn', {
+  '0%': {
+    transform: 'translate3d(0, -100%, 0)',
+    transformOrigin: '0 0',
+    opacity: 0
+  },
+  '100%': {
+    transform: 'translate3d(0, 0, 0)',
+    transformOrigin: '0 0',
+    opacity: 1
+  }
+});
+const moveUpOut = new Keyframes('antMoveUpOut', {
+  '0%': {
+    transform: 'translate3d(0, 0, 0)',
+    transformOrigin: '0 0',
+    opacity: 1
+  },
+  '100%': {
+    transform: 'translate3d(0, -100%, 0)',
+    transformOrigin: '0 0',
+    opacity: 0
+  }
+});
+const moveMotion = {
+  'move-up': {
+    inKeyframes: moveUpIn,
+    outKeyframes: moveUpOut
+  },
+  'move-down': {
+    inKeyframes: moveDownIn,
+    outKeyframes: moveDownOut
+  },
+  'move-left': {
+    inKeyframes: moveLeftIn,
+    outKeyframes: moveLeftOut
+  },
+  'move-right': {
+    inKeyframes: moveRightIn,
+    outKeyframes: moveRightOut
+  }
+};
+const initMoveMotion = (token, motionName) => {
+  const {
+    antCls
+  } = token;
+  const motionCls = `${antCls}-${motionName}`;
+  const {
+    inKeyframes,
+    outKeyframes
+  } = moveMotion[motionName];
+  return [initMotion(motionCls, inKeyframes, outKeyframes, token.motionDurationMid), {
+    [`
+        ${motionCls}-enter,
+        ${motionCls}-appear
+      `]: {
+      opacity: 0,
+      animationTimingFunction: token.motionEaseOutCirc
+    },
+    [`${motionCls}-leave`]: {
+      animationTimingFunction: token.motionEaseInOutCirc
+    }
+  }];
+};
+;// ./node_modules/antd/es/select/style/dropdown.js
+
+
+const genItemStyle = token => {
+  const {
+    optionHeight,
+    optionFontSize,
+    optionLineHeight,
+    optionPadding
+  } = token;
+  return {
+    position: 'relative',
+    display: 'block',
+    minHeight: optionHeight,
+    padding: optionPadding,
+    color: token.colorText,
+    fontWeight: 'normal',
+    fontSize: optionFontSize,
+    lineHeight: optionLineHeight,
+    boxSizing: 'border-box'
+  };
+};
+const genSingleStyle = token => {
+  const {
+    antCls,
+    componentCls
+  } = token;
+  const selectItemCls = `${componentCls}-item`;
+  const slideUpEnterActive = `&${antCls}-slide-up-enter${antCls}-slide-up-enter-active`;
+  const slideUpAppearActive = `&${antCls}-slide-up-appear${antCls}-slide-up-appear-active`;
+  const slideUpLeaveActive = `&${antCls}-slide-up-leave${antCls}-slide-up-leave-active`;
+  const dropdownPlacementCls = `${componentCls}-dropdown-placement-`;
+  const selectedItemCls = `${selectItemCls}-option-selected`;
+  return [{
+    [`${componentCls}-dropdown`]: {
+      // ========================== Popup ==========================
+      ...resetComponent(token),
+      position: 'absolute',
+      top: -9999,
+      zIndex: token.zIndexPopup,
+      boxSizing: 'border-box',
+      padding: token.paddingXXS,
+      overflow: 'hidden',
+      fontSize: token.fontSize,
+      // Fix select render lag of long text in chrome
+      // https://github.com/ant-design/ant-design/issues/11456
+      // https://github.com/ant-design/ant-design/issues/11843
+      fontVariant: 'initial',
+      backgroundColor: token.colorBgElevated,
+      borderRadius: token.borderRadiusLG,
+      outline: 'none',
+      boxShadow: token.boxShadowSecondary,
+      [`
+          ${slideUpEnterActive}${dropdownPlacementCls}bottomLeft,
+          ${slideUpAppearActive}${dropdownPlacementCls}bottomLeft
+        `]: {
+        animationName: slideUpIn
+      },
+      [`
+          ${slideUpEnterActive}${dropdownPlacementCls}topLeft,
+          ${slideUpAppearActive}${dropdownPlacementCls}topLeft,
+          ${slideUpEnterActive}${dropdownPlacementCls}topRight,
+          ${slideUpAppearActive}${dropdownPlacementCls}topRight
+        `]: {
+        animationName: slideDownIn
+      },
+      [`${slideUpLeaveActive}${dropdownPlacementCls}bottomLeft`]: {
+        animationName: slideUpOut
+      },
+      [`
+          ${slideUpLeaveActive}${dropdownPlacementCls}topLeft,
+          ${slideUpLeaveActive}${dropdownPlacementCls}topRight
+        `]: {
+        animationName: slideDownOut
+      },
+      '&-hidden': {
+        display: 'none'
+      },
+      [`${componentCls}-dropdown-list-scrollbar`]: {
+        cursor: 'pointer',
+        '&:hover': {
+          backgroundColor: token.colorFillQuaternary
+        }
+      },
+      [selectItemCls]: {
+        ...genItemStyle(token),
+        cursor: 'pointer',
+        transition: `background-color ${token.motionDurationSlow} ease`,
+        borderRadius: token.borderRadiusSM,
+        // =========== Group ============
+        '&-group': {
+          color: token.colorTextDescription,
+          fontSize: token.fontSizeSM,
+          cursor: 'default'
+        },
+        // =========== Option ===========
+        '&-option': {
+          display: 'flex',
+          '&-content': {
+            flex: 'auto',
+            ...textEllipsis
+          },
+          '&-state': {
+            flex: 'none',
+            display: 'flex',
+            alignItems: 'center'
+          },
+          [`&-selected:not(${selectItemCls}-option-disabled)`]: {
+            color: token.optionSelectedColor,
+            fontWeight: token.optionSelectedFontWeight,
+            backgroundColor: token.optionSelectedBg,
+            [`${selectItemCls}-option-state`]: {
+              color: token.colorPrimary
+            }
+          },
+          [`&-active:not(${selectItemCls}-option-disabled)`]: {
+            backgroundColor: token.optionActiveBg
+          },
+          [`&-selected${selectItemCls}-option-active:not(${selectItemCls}-option-disabled)`]: {
+            backgroundColor: token.controlItemBgActiveHover
+          },
+          '&-disabled': {
+            [`&${selectItemCls}-option-selected`]: {
+              backgroundColor: token.colorBgContainerDisabled
+            },
+            color: token.colorTextDisabled,
+            cursor: 'not-allowed'
+          },
+          '&-grouped': {
+            paddingInlineStart: token.calc(token.controlPaddingHorizontal).mul(2).equal()
+          }
+        },
+        '&-empty': {
+          ...genItemStyle(token),
+          color: token.colorTextDisabled
+        }
+      },
+      // https://github.com/ant-design/ant-design/pull/46646
+      [`${selectedItemCls}:has(+ ${selectedItemCls})`]: {
+        borderEndStartRadius: 0,
+        borderEndEndRadius: 0,
+        [`& + ${selectedItemCls}`]: {
+          borderStartStartRadius: 0,
+          borderStartEndRadius: 0
+        }
+      },
+      // =========================== RTL ===========================
+      '&-rtl': {
+        direction: 'rtl'
+      }
+    }
+  },
+  // Follow code may reuse in other components
+  initSlideMotion(token, 'slide-up'), initSlideMotion(token, 'slide-down'), initMoveMotion(token, 'move-up'), initMoveMotion(token, 'move-down')];
+};
+/* harmony default export */ const dropdown = (genSingleStyle);
+;// ./node_modules/antd/es/select/style/select-input-customize.js
+const genSelectInputCustomizeStyle = token => {
+  const {
+    antCls,
+    componentCls
+  } = token;
+  const transparentBackground = {
+    background: 'transparent'
+  };
+  const disabledCustomizedInputSelector = ['> input[disabled]', '> textarea[disabled]', `> ${componentCls}-input`, `> ${antCls}-input-affix-wrapper-disabled`, `> ${antCls}-input-search`].join(', ');
+  return {
+    [`&${componentCls}-customize`]: {
+      border: 0,
+      padding: 0,
+      fontSize: 'inherit',
+      lineHeight: 'inherit',
+      [`${componentCls}-placeholder`]: {
+        display: 'none'
+      },
+      [`${componentCls}-content`]: {
+        margin: 0,
+        padding: 0,
+        '&-value': {
+          display: 'none'
+        }
+      },
+      [`&${componentCls}-filled ${componentCls}-content`]: {
+        [`${antCls}-input-filled`]: transparentBackground
+      },
+      [`&${componentCls}-disabled ${componentCls}-content`]: {
+        [disabledCustomizedInputSelector]: transparentBackground,
+        'input[disabled], textarea[disabled]': transparentBackground
+      }
+    }
+  };
+};
+/* harmony default export */ const select_input_customize = (genSelectInputCustomizeStyle);
+;// ./node_modules/antd/es/select/style/select-input-multiple.js
+
+
+const FIXED_INPUT_MIN_WIDTH = 4;
+const genSelectInputMultipleStyle = token => {
+  const {
+    componentCls,
+    calc,
+    iconCls,
+    paddingXS,
+    paddingXXS,
+    INTERNAL_FIXED_ITEM_MARGIN,
+    lineWidth,
+    lineType,
+    colorIcon,
+    colorIconHover,
+    inputPaddingHorizontalBase,
+    antCls
+  } = token;
+  const [varName, varRef] = genCssVar(antCls, 'select');
+  return {
+    '&-multiple': {
+      [varName('multi-item-background')]: token.multipleItemBg,
+      [varName('multi-item-border-color')]: 'transparent',
+      [varName('multi-item-border-radius')]: token.borderRadiusSM,
+      [varName('multi-item-height')]: token.multipleItemHeight,
+      [varName('multi-padding-base')]: `calc((${varRef('height')} - ${varRef('multi-item-height')}) / 2)`,
+      [varName('multi-padding-vertical')]: `calc(${varRef('multi-padding-base')} - ${INTERNAL_FIXED_ITEM_MARGIN} - ${lineWidth})`,
+      [varName('multi-item-padding-horizontal')]: `calc(${inputPaddingHorizontalBase} - ${varRef('multi-padding-vertical')} - ${lineWidth} * 2)`,
+      // ========================================================
+      // ==                        Base                        ==
+      // ========================================================
+      // ========================= Root =========================
+      paddingBlock: varRef('multi-padding-vertical'),
+      paddingInlineStart: `calc(${varRef('multi-padding-base')} - ${lineWidth})`,
+      // ======================== Prefix ========================
+      [`${componentCls}-prefix`]: {
+        marginInlineStart: varRef('multi-item-padding-horizontal')
+      },
+      [`${componentCls}-prefix + ${componentCls}-content`]: {
+        [`${componentCls}-placeholder`]: {
+          insetInlineStart: 0
+        },
+        [`${componentCls}-content-item${componentCls}-content-item-suffix`]: {
+          marginInlineStart: 0
+        }
+      },
+      // ===================== Placeholder ======================
+      [`${componentCls}-placeholder`]: {
+        position: 'absolute',
+        lineHeight: varRef('line-height'),
+        insetInlineStart: varRef('multi-item-padding-horizontal'),
+        width: `calc(100% - ${varRef('multi-item-padding-horizontal')})`,
+        top: '50%',
+        transform: 'translateY(-50%)'
+      },
+      // ======================= Content ========================
+      [`${componentCls}-content`]: {
+        flexWrap: 'wrap',
+        alignItems: 'center',
+        lineHeight: 1,
+        '&-item-prefix': {
+          height: varRef('font-size')
+        },
+        '&-item': {
+          lineHeight: 1,
+          maxWidth: `calc(100% - ${FIXED_INPUT_MIN_WIDTH}px)`
+        },
+        [`${componentCls}-content-item-prefix + ${componentCls}-content-item-suffix,
+          ${componentCls}-content-item-suffix:first-child`]: {
+          marginInlineStart: varRef('multi-item-padding-horizontal')
+        },
+        [`${componentCls}-selection-item`]: {
+          lineHeight: `calc(${varRef('multi-item-height')} - ${lineWidth} * 2)`,
+          border: `${lineWidth} ${lineType} ${varRef('multi-item-border-color')}`,
+          display: 'flex',
+          marginBlock: INTERNAL_FIXED_ITEM_MARGIN,
+          marginInlineEnd: calc(INTERNAL_FIXED_ITEM_MARGIN).mul(2).equal(),
+          background: varRef('multi-item-background'),
+          borderRadius: varRef('multi-item-border-radius'),
+          paddingInlineStart: paddingXS,
+          paddingInlineEnd: paddingXXS,
+          transition: ['height', 'line-height', 'padding'].map(key => `${key} ${token.motionDurationSlow}`).join(','),
+          // >>> Content
+          '&-content': {
+            ...textEllipsis,
+            marginInlineEnd: paddingXXS
+          },
+          // >>> Remove
+          '&-remove': {
+            ...resetIcon(),
+            display: 'inline-flex',
+            alignItems: 'center',
+            color: colorIcon,
+            fontWeight: 'bold',
+            fontSize: 10,
+            lineHeight: 'inherit',
+            cursor: 'pointer',
+            [`> ${iconCls}`]: {
+              verticalAlign: '-0.2em'
+            },
+            '&:hover': {
+              color: colorIconHover
+            }
+          }
+        },
+        [`${componentCls}-input`]: {
+          lineHeight: calc(INTERNAL_FIXED_ITEM_MARGIN).mul(2).add(varRef('multi-item-height')).equal(),
+          width: `calc(var(--select-input-width, 0) * 1px)`,
+          minWidth: FIXED_INPUT_MIN_WIDTH,
+          maxWidth: '100%',
+          transition: `line-height ${token.motionDurationSlow}`
+        }
+      },
+      // ========================================================
+      // ==                        Size                        ==
+      // ========================================================
+      [`&${componentCls}-sm`]: {
+        [varName('multi-item-height')]: token.multipleItemHeightSM,
+        [varName('multi-item-border-radius')]: token.borderRadiusXS
+      },
+      [`&${componentCls}-lg`]: {
+        [varName('multi-item-height')]: token.multipleItemHeightLG,
+        [varName('multi-item-border-radius')]: token.borderRadius
+      },
+      // ========================================================
+      // ==                      Variants                      ==
+      // ========================================================
+      [`&${componentCls}-filled`]: {
+        [varName('multi-item-border-color')]: token.colorSplit,
+        [varName('multi-item-background')]: token.colorBgContainer,
+        [`&${componentCls}-disabled`]: {
+          [varName('multi-item-border-color')]: 'transparent'
+        }
+      }
+    }
+  };
+};
+/* harmony default export */ const select_input_multiple = (genSelectInputMultipleStyle);
+;// ./node_modules/antd/es/select/style/select-input.js
+
+
+
+
+
+/** Set CSS variables and hover/focus styles for a Select input based on provided colors. */
+const genSelectInputVariableStyle = (token, colors) => {
+  const {
+    componentCls,
+    antCls
+  } = token;
+  const [varName] = genCssVar(antCls, 'select');
+  const {
+    border,
+    borderHover,
+    borderActive,
+    borderOutline
+  } = colors;
+  const baseBG = colors.background || token.selectorBg || token.colorBgContainer;
+  return {
+    [varName('border-color')]: border,
+    [varName('background-color')]: baseBG,
+    [varName('affix-color')]: colors.affixColor,
+    [`&:not(${componentCls}-disabled)`]: {
+      '&:hover': {
+        [varName('border-color')]: borderHover,
+        [varName('background-color')]: colors.backgroundHover || baseBG
+      },
+      [`&${componentCls}-focused`]: {
+        [varName('border-color')]: borderActive,
+        [varName('background-color')]: colors.backgroundActive || baseBG,
+        boxShadow: `0 0 0 ${util_unit(token.controlOutlineWidth)} ${borderOutline}`
+      }
+    },
+    [`&${componentCls}-disabled`]: {
+      [varName('border-color')]: colors.borderDisabled || colors.border,
+      [varName('background-color')]: colors.backgroundDisabled || colors.background
+    }
+  };
+};
+/** Generate variant-scoped variable styles and status overrides for a Select input */
+const genSelectInputVariantStyle = (token, variant, colors, errorColors, warningColors, patchStyle) => {
+  const {
+    componentCls
+  } = token;
+  return {
+    [`&${componentCls}-${variant}`]: [genSelectInputVariableStyle(token, colors), {
+      [`&${componentCls}-status-error`]: genSelectInputVariableStyle(token, {
+        ...colors,
+        ...errorColors
+      }),
+      [`&${componentCls}-status-warning`]: genSelectInputVariableStyle(token, {
+        ...colors,
+        ...warningColors
+      })
+    }, patchStyle]
+  };
+};
+const genSelectInputFocusVisibleStyle = (token, outlineColor) => ({
+  outline: `${util_unit(token.lineWidthFocus)} ${token.lineType} ${outlineColor}`,
+  outlineOffset: util_unit(token.calc(token.lineWidth).mul(-1).equal()),
+  transition: [`outline-offset`, `outline`].map(prop => `${prop} 0s`).join(', ')
+});
+const genSelectInputStyle = token => {
+  const {
+    componentCls,
+    fontHeight,
+    controlHeight,
+    fontSizeIcon,
+    showArrowPaddingInlineEnd,
+    iconCls,
+    antCls,
+    max,
+    calc
+  } = token;
+  const [varName, varRef] = genCssVar(antCls, 'select');
+  const contentMarginInlineEnd = max(calc(showArrowPaddingInlineEnd).sub(fontSizeIcon).equal(), 0);
+  return {
+    [componentCls]: [{
+      // Border
+      [varName('border-radius')]: token.borderRadius,
+      [varName('border-color')]: '#000',
+      [varName('border-size')]: token.lineWidth,
+      // Background
+      [varName('background-color')]: token.colorBgContainer,
+      // Font
+      [varName('font-size')]: token.fontSize,
+      [varName('line-height')]: token.lineHeight,
+      [varName('font-height')]: fontHeight,
+      [varName('color')]: token.colorText,
+      [varName('affix-color')]: token.colorText,
+      // Size
+      [varName('height')]: controlHeight,
+      [varName('padding-horizontal')]: calc(token.paddingSM).sub(token.lineWidth).equal(),
+      [varName('padding-vertical')]: `calc((${varRef('height')} - ${varRef('font-height')}) / 2 - ${varRef('border-size')})`,
+      // ==========================================================
+      // ==                         Base                         ==
+      // ==========================================================
+      ...resetComponent(token),
+      display: 'inline-flex',
+      // gap: calc(token.paddingXXS).mul(1.5).equal(),
+      flexWrap: 'nowrap',
+      position: 'relative',
+      transition: `all ${token.motionDurationSlow}`,
+      alignItems: 'flex-start',
+      outline: 0,
+      cursor: 'pointer',
+      // Border
+      borderRadius: varRef('border-radius'),
+      borderWidth: varRef('border-size'),
+      borderStyle: token.lineType,
+      borderColor: varRef('border-color'),
+      // Background
+      background: varRef('background-color'),
+      // Font
+      fontSize: varRef('font-size'),
+      lineHeight: varRef('line-height'),
+      color: varRef('color'),
+      // Padding
+      paddingInline: varRef('padding-horizontal'),
+      paddingBlock: varRef('padding-vertical'),
+      // ========================= Prefix =========================
+      [`${componentCls}-prefix`]: {
+        color: varRef('affix-color'),
+        flex: 'none',
+        lineHeight: 1
+      },
+      // ====================== Placeholder =======================
+      [`${componentCls}-placeholder`]: {
+        ...textEllipsis,
+        color: token.colorTextPlaceholder,
+        pointerEvents: 'none',
+        zIndex: 1
+      },
+      // ======================== Content =========================
+      [`${componentCls}-content`]: {
+        flex: 'auto',
+        minWidth: 0,
+        position: 'relative',
+        display: 'flex',
+        marginInlineEnd: contentMarginInlineEnd,
+        '&:before': {
+          content: '"\\a0"',
+          width: 0,
+          overflow: 'hidden'
+        },
+        // >>> Value
+        '&-value': {
+          visibility: 'inherit'
+        },
+        // >>> Input: should only take effect for not customize mode
+        // input element with readOnly use cursor pointer
+        'input[readonly]': {
+          cursor: 'inherit',
+          caretColor: 'transparent'
+        }
+      },
+      // ========================= Suffix =========================
+      [`${componentCls}-suffix`]: {
+        flex: 'none',
+        color: token.colorTextQuaternary,
+        fontSize: token.fontSizeIcon,
+        lineHeight: 1,
+        transition: ['opacity', 'color'].map(prop => `${prop} ${token.motionDurationMid} ease`).join(', '),
+        '> :not(:last-child)': {
+          marginInlineEnd: token.marginXS
+        }
+      },
+      [`${componentCls}-prefix, ${componentCls}-suffix`]: {
+        alignSelf: 'center',
+        [iconCls]: {
+          verticalAlign: 'top'
+        }
+      },
+      // ==========================================================
+      // ==                       Disabled                       ==
+      // ==========================================================
+      '&-disabled': {
+        background: token.colorBgContainerDisabled,
+        [varName('color')]: token.colorTextDisabled,
+        cursor: 'not-allowed',
+        input: {
+          cursor: 'not-allowed'
+        }
+      },
+      // ==========================================================
+      // ==                         Size                         ==
+      // ==========================================================
+      '&-sm': {
+        [varName('height')]: token.controlHeightSM,
+        [varName('padding-horizontal')]: calc(token.paddingXS).sub(token.lineWidth).equal(),
+        [varName('border-radius')]: token.borderRadiusSM,
+        [`${componentCls}-clear`]: {
+          insetInlineEnd: varRef('padding-horizontal')
+        }
+      },
+      '&-lg': {
+        [varName('height')]: token.controlHeightLG,
+        [varName('font-size')]: token.fontSizeLG,
+        [varName('line-height')]: token.lineHeightLG,
+        [varName('font-height')]: token.fontHeightLG,
+        [varName('border-radius')]: token.borderRadiusLG
+      }
+    },
+    // ============================================================
+    // ==                         Input                          ==
+    // ============================================================
+    {
+      [`&:not(${componentCls}-customize)`]: {
+        [`${componentCls}-input`]: {
+          outline: 'none',
+          background: 'transparent',
+          appearance: 'none',
+          border: 0,
+          margin: 0,
+          padding: 0,
+          color: varRef('color'),
+          fontFamily: 'inherit',
+          fontSize: 'inherit',
+          '&::-webkit-search-cancel-button': {
+            display: 'none',
+            appearance: 'none'
+          }
+        }
+      }
+    },
+    // ============================================================
+    // ==                         Single                         ==
+    // ============================================================
+    {
+      [`&-single:not(${componentCls}-customize)`]: {
+        [`${componentCls}-input`]: {
+          position: 'absolute',
+          inset: 0,
+          lineHeight: 'inherit'
+        },
+        // Content center align
+        [`${componentCls}-content`]: {
+          ...textEllipsis,
+          alignSelf: 'center',
+          '&-has-value': {
+            display: 'block',
+            '&:before': {
+              display: 'none'
+            }
+          },
+          '&-has-search-value': {
+            color: 'transparent',
+            [`> *:not(${componentCls}-input)`]: {
+              opacity: 0
+            }
+          },
+          // >>> Value
+          '&-value': {
+            transition: `all ${token.motionDurationMid} ${token.motionEaseInOut}`,
+            zIndex: 1,
+            opacity: 1
+          }
+        },
+        // Dim the selected content while the dropdown is open. Shared by all select-like
+        // components (Select / Cascader / TreeSelect) since they render through the same
+        // `content` structure.
+        [`&${componentCls}-open ${componentCls}-content`]: {
+          '&-has-value': {
+            opacity: 0.25
+          },
+          '&-has-search-value': {
+            opacity: 1,
+            transition: `opacity ${token.motionDurationMid} ${token.motionEaseInOut}`,
+            color: 'transparent',
+            [`> *:not(${componentCls}-input)`]: {
+              opacity: 0
+            }
+          }
+        }
+      }
+    },
+    // ======================== Show Search =======================
+    {
+      [`&-show-search:not(${componentCls}-customize-input):not(${componentCls}-disabled)`]: {
+        cursor: 'text'
+      }
+    },
+    // ============================================================
+    // ==                        Multiple                        ==
+    // ============================================================
+    select_input_multiple(token),
+    // ========================= Variant ==========================
+    // >>> Outlined
+    genSelectInputVariantStyle(token, 'outlined', {
+      border: token.colorBorder,
+      borderHover: token.hoverBorderColor,
+      borderActive: token.activeBorderColor,
+      borderOutline: token.activeOutlineColor,
+      borderDisabled: token.colorBorderDisabled
+    },
+    // Error
+    {
+      border: token.colorError,
+      borderHover: token.colorErrorBorderHover,
+      borderActive: token.colorError,
+      borderOutline: token.colorErrorOutline,
+      affixColor: token.colorErrorAffix
+    },
+    // Warning
+    {
+      border: token.colorWarning,
+      borderHover: token.colorWarningHover,
+      borderActive: token.colorWarning,
+      borderOutline: token.colorWarningOutline,
+      affixColor: token.colorWarningAffix
+    }),
+    // >>> Filled
+    genSelectInputVariantStyle(token, 'filled', {
+      border: 'transparent',
+      borderHover: 'transparent',
+      borderActive: token.activeBorderColor,
+      borderOutline: 'transparent',
+      borderDisabled: token.colorBorderDisabled,
+      background: token.colorFillTertiary,
+      backgroundHover: token.colorFillSecondary,
+      backgroundActive: token.colorBgContainer
+    },
+    // Error
+    {
+      color: token.colorErrorText,
+      background: token.colorErrorBg,
+      backgroundHover: token.colorErrorBgHover,
+      borderActive: token.colorError
+    },
+    // Warning
+    {
+      background: token.colorWarningBg,
+      backgroundHover: token.colorWarningBgHover,
+      borderActive: token.colorWarning
+    }),
+    // >>> Borderless
+    genSelectInputVariantStyle(token, 'borderless', {
+      border: 'transparent',
+      borderHover: 'transparent',
+      borderActive: 'transparent',
+      borderOutline: 'transparent',
+      background: 'transparent'
+    }, {}, {}, {
+      [`&:not(${componentCls}-disabled):has(input:focus-visible), &:not(${componentCls}-disabled):has(textarea:focus-visible)`]: genSelectInputFocusVisibleStyle(token, token.activeBorderColor),
+      [`&${componentCls}-status-error:not(${componentCls}-disabled):has(input:focus-visible), &${componentCls}-status-error:not(${componentCls}-disabled):has(textarea:focus-visible)`]: genSelectInputFocusVisibleStyle(token, token.colorError),
+      [`&${componentCls}-status-warning:not(${componentCls}-disabled):has(input:focus-visible), &${componentCls}-status-warning:not(${componentCls}-disabled):has(textarea:focus-visible)`]: genSelectInputFocusVisibleStyle(token, token.colorWarning)
+    }),
+    // Underlined
+    genSelectInputVariantStyle(token, 'underlined', {
+      border: token.colorBorder,
+      borderHover: token.hoverBorderColor,
+      borderActive: token.activeBorderColor,
+      borderOutline: 'transparent'
+    },
+    // Error
+    {
+      border: token.colorError,
+      borderHover: token.colorErrorBorderHover,
+      borderActive: token.colorError
+    },
+    // Warning
+    {
+      border: token.colorWarning,
+      borderHover: token.colorWarningHover,
+      borderActive: token.colorWarning
+    }, {
+      borderRadius: 0,
+      borderTopColor: 'transparent',
+      borderInlineColor: 'transparent'
+    }),
+    // ============================================================
+    // ==                         Custom                         ==
+    // ============================================================
+    select_input_customize(token)]
+  };
+};
+/* harmony default export */ const select_input = (genSelectInputStyle);
+;// ./node_modules/antd/es/select/style/token.js
+const select_style_token_prepareComponentToken = token => {
+  const {
+    fontSize,
+    lineHeight,
+    lineWidth,
+    lineWidthFocus,
+    controlHeight,
+    controlHeightSM,
+    controlHeightLG,
+    paddingXXS,
+    controlPaddingHorizontal,
+    zIndexPopupBase,
+    colorText,
+    fontWeightStrong,
+    controlItemBgActive,
+    controlItemBgHover,
+    colorBgContainer,
+    colorFillSecondary,
+    colorBgContainerDisabled,
+    colorTextDisabled,
+    colorPrimaryHover,
+    colorPrimary,
+    controlOutline
+  } = token;
+  // Item height default use `controlHeight - 2 * paddingXXS`,
+  // but some case `paddingXXS=0`.
+  // Let's fallback it.
+  const dblPaddingXXS = paddingXXS * 2;
+  const dblLineWidth = lineWidth * 2;
+  const multipleItemHeight = Math.min(controlHeight - dblPaddingXXS, controlHeight - dblLineWidth);
+  const multipleItemHeightSM = Math.min(controlHeightSM - dblPaddingXXS, controlHeightSM - dblLineWidth);
+  const multipleItemHeightLG = Math.min(controlHeightLG - dblPaddingXXS, controlHeightLG - dblLineWidth);
+  // FIXED_ITEM_MARGIN is a hardcode calculation since calc not support rounding
+  const INTERNAL_FIXED_ITEM_MARGIN = Math.floor(paddingXXS / 2);
+  const componentToken = {
+    lineWidthFocus: lineWidthFocus === 0 ? 0 : lineWidth,
+    INTERNAL_FIXED_ITEM_MARGIN,
+    zIndexPopup: zIndexPopupBase + 50,
+    optionSelectedColor: colorText,
+    optionSelectedFontWeight: fontWeightStrong,
+    optionSelectedBg: controlItemBgActive,
+    optionActiveBg: controlItemBgHover,
+    optionPadding: `${(controlHeight - fontSize * lineHeight) / 2}px ${controlPaddingHorizontal}px`,
+    optionFontSize: fontSize,
+    optionLineHeight: lineHeight,
+    optionHeight: controlHeight,
+    selectorBg: colorBgContainer,
+    clearBg: colorBgContainer,
+    singleItemHeightLG: controlHeightLG,
+    multipleItemBg: colorFillSecondary,
+    multipleItemBorderColor: 'transparent',
+    multipleItemHeight,
+    multipleItemHeightSM,
+    multipleItemHeightLG,
+    multipleSelectorBgDisabled: colorBgContainerDisabled,
+    multipleItemColorDisabled: colorTextDisabled,
+    multipleItemBorderColorDisabled: 'transparent',
+    showArrowPaddingInlineEnd: Math.ceil(token.fontSize * 1.25),
+    hoverBorderColor: colorPrimaryHover,
+    activeBorderColor: colorPrimary,
+    activeOutlineColor: controlOutline,
+    selectAffixPadding: paddingXXS
+  };
+  return componentToken;
+};
+;// ./node_modules/antd/es/select/style/index.js
+
+
+
+
+
+
+// =============================== Base ===============================
+const select_style_genBaseStyle = token => {
+  const {
+    antCls,
+    componentCls,
+    motionDurationMid,
+    inputPaddingHorizontalBase
+  } = token;
+  const hoverShowClearStyle = {
+    [`${componentCls}-clear`]: {
+      opacity: 1
+    },
+    [`${componentCls}-suffix:not(:last-child)`]: {
+      opacity: 0,
+      pointerEvents: 'none'
+    },
+    [`&${componentCls}-allow-clear:not(${componentCls}-show-arrow):not(${componentCls}-customize) ${componentCls}-content`]: {
+      marginInlineEnd: token.showArrowPaddingInlineEnd
+    }
+  };
+  return {
+    [componentCls]: {
+      ...resetComponent(token),
+      // ======================== Selection ========================
+      [`${componentCls}-selection-item`]: {
+        flex: 1,
+        fontWeight: 'normal',
+        position: 'relative',
+        userSelect: 'none',
+        ...textEllipsis,
+        // https://github.com/ant-design/ant-design/issues/40421
+        [`> ${antCls}-typography`]: {
+          display: 'inline'
+        }
+      },
+      // ========================= Prefix ==========================
+      [`${componentCls}-prefix`]: {
+        flex: 'none',
+        marginInlineEnd: token.selectAffixPadding
+      },
+      // ========================== Clear ==========================
+      [`${componentCls}-clear`]: {
+        position: 'absolute',
+        top: '50%',
+        insetInlineStart: 'auto',
+        insetInlineEnd: inputPaddingHorizontalBase,
+        zIndex: 1,
+        display: 'inline-block',
+        width: token.fontSizeIcon,
+        height: token.fontSizeIcon,
+        marginTop: token.calc(token.fontSizeIcon).mul(-1).div(2).equal(),
+        padding: 0,
+        background: 'transparent',
+        color: token.colorTextQuaternary,
+        fontSize: token.fontSizeIcon,
+        fontFamily: 'inherit',
+        fontStyle: 'normal',
+        lineHeight: 1,
+        textAlign: 'center',
+        textTransform: 'none',
+        appearance: 'none',
+        border: 0,
+        cursor: 'pointer',
+        opacity: 0,
+        transition: ['color', 'opacity'].map(prop => `${prop} ${motionDurationMid} ease`).join(', '),
+        textRendering: 'auto',
+        // https://github.com/ant-design/ant-design/issues/54205
+        // Force GPU compositing on Safari to prevent flickering on opacity/transform transitions
+        transform: 'translateZ(0)',
+        '&:before': {
+          display: 'block'
+        },
+        '&:hover': {
+          color: token.colorIcon
+        }
+      },
+      '@media(hover:none)': hoverShowClearStyle,
+      '&:hover': hoverShowClearStyle
+    },
+    // ========================= Feedback ==========================
+    [`${componentCls}-status`]: {
+      '&-error, &-warning, &-success, &-validating': {
+        [`&${componentCls}-has-feedback`]: {
+          [`${componentCls}-clear`]: {
+            insetInlineEnd: token.calc(inputPaddingHorizontalBase).add(token.fontSize).add(token.paddingXS).equal()
+          }
+        }
+      }
+    }
+  };
+};
+// ============================== Styles ==============================
+const genSelectStyle = token => {
+  const {
+    componentCls
+  } = token;
+  return [{
+    [componentCls]: {
+      // ==================== In Form ====================
+      [`&${componentCls}-in-form-item`]: {
+        width: '100%'
+      }
+    }
+  },
+  // =====================================================
+  // ==                       LTR                       ==
+  // =====================================================
+  // Base
+  select_style_genBaseStyle(token),
+  // Dropdown
+  dropdown(token),
+  // =====================================================
+  // ==                       RTL                       ==
+  // =====================================================
+  {
+    [`${componentCls}-rtl`]: {
+      direction: 'rtl'
+    }
+  },
+  // =====================================================
+  // ==             Space Compact                       ==
+  // =====================================================
+  genCompactItemStyle(token, {
+    focusElCls: `${componentCls}-focused`
+  })];
+};
+// ============================== Export ==============================
+/* harmony default export */ const select_style = (genStyleHooks('Select', (token, {
+  rootPrefixCls
+}) => {
+  const selectToken = statistic_merge(token, {
+    rootPrefixCls,
+    inputPaddingHorizontalBase: token.calc(token.paddingSM).sub(token.lineWidth).equal(),
+    multipleSelectItemHeight: token.multipleItemHeight,
+    selectHeight: token.controlHeight
+  });
+  return [genSelectStyle(selectToken), select_input(selectToken)];
+}, select_style_token_prepareComponentToken, {
+  unitless: {
+    optionLineHeight: true,
+    optionSelectedFontWeight: true
+  }
+}));
+;// ./node_modules/antd/es/select/useIcons.js
+"use client";
+
+
+
+
+
+
+
+
+
+
+function useIcons({
+  suffixIcon,
+  contextSuffixIcon,
+  clearIcon,
+  contextClearIcon,
+  menuItemSelectedIcon,
+  contextMenuItemSelectedIcon,
+  removeIcon,
+  contextRemoveIcon,
+  loading,
+  loadingIcon,
+  contextLoadingIcon,
+  searchIcon,
+  contextSearchIcon,
+  multiple,
+  hasFeedback,
+  showSuffixIcon,
+  feedbackIcon,
+  showArrow,
+  componentName
+}) {
+  if (false) // removed by dead control flow
+{}
+  return (react_production_namespaceFn().useMemo)(() => {
+    // Clear Icon
+    const mergedClearIcon = fallbackProp(clearIcon, contextClearIcon, /*#__PURE__*/(react_production_namespaceFn().createElement)(icons_CloseCircleFilled, null));
+    // Validation Feedback Icon
+    const getSuffixIconNode = arrowIcon => {
+      if (suffixIcon === null && !hasFeedback && !showArrow) {
+        return null;
+      }
+      return /*#__PURE__*/(react_production_namespaceFn().createElement)((react_production_namespaceFn().Fragment), null, showSuffixIcon !== false && arrowIcon, hasFeedback && feedbackIcon);
+    };
+    // Arrow item icon
+    let mergedSuffixIcon = null;
+    if (suffixIcon !== undefined) {
+      mergedSuffixIcon = getSuffixIconNode(suffixIcon);
+    } else if (loading) {
+      mergedSuffixIcon = getSuffixIconNode(fallbackProp(loadingIcon, contextLoadingIcon, /*#__PURE__*/(react_production_namespaceFn().createElement)(icons_LoadingOutlined, {
+        spin: true
+      })));
+    } else {
+      mergedSuffixIcon = ({
+        open,
+        showSearch
+      }) => {
+        if (open && showSearch) {
+          return getSuffixIconNode(fallbackProp(searchIcon, contextSearchIcon, /*#__PURE__*/(react_production_namespaceFn().createElement)(icons_SearchOutlined, null)));
+        }
+        return getSuffixIconNode(fallbackProp(contextSuffixIcon, /*#__PURE__*/(react_production_namespaceFn().createElement)(icons_DownOutlined, null)));
+      };
+    }
+    // Checked item icon
+    const mergedItemIcon = fallbackProp(menuItemSelectedIcon, contextMenuItemSelectedIcon, multiple ? /*#__PURE__*/(react_production_namespaceFn().createElement)(icons_CheckOutlined, null) : null);
+    const mergedRemoveIcon = fallbackProp(removeIcon, contextRemoveIcon, /*#__PURE__*/(react_production_namespaceFn().createElement)(icons_CloseOutlined, null));
+    return {
+      clearIcon: mergedClearIcon,
+      suffixIcon: mergedSuffixIcon,
+      itemIcon: mergedItemIcon,
+      removeIcon: mergedRemoveIcon
+    };
+  }, [suffixIcon, contextSuffixIcon, clearIcon, contextClearIcon, menuItemSelectedIcon, contextMenuItemSelectedIcon, removeIcon, contextRemoveIcon, loading, loadingIcon, contextLoadingIcon, searchIcon, contextSearchIcon, multiple, hasFeedback, showSuffixIcon, feedbackIcon, showArrow]);
+}
+;// ./node_modules/antd/es/select/usePopupRender.js
+"use client";
+
+
+
+function usePopupRender(renderFn) {
+  return (react_production_namespaceFn().useMemo)(() => {
+    if (!renderFn) {
+      return undefined;
+    }
+    return (...args) => /*#__PURE__*/(react_production_namespaceFn().createElement)(_util_ContextIsolator, {
+      space: true
+    }, renderFn.apply(void 0, args));
+  }, [renderFn]);
+}
+/* harmony default export */ const select_usePopupRender = (usePopupRender);
+;// ./node_modules/antd/es/select/useShowArrow.js
+/**
+ * Since Select, TreeSelect, Cascader is same Select like component.
+ * We just use same hook to handle this logic.
+ *
+ * If `suffixIcon` is not equal to `null`, always show it.
+ */
+function useShowArrow(suffixIcon, showArrow) {
+  return showArrow !== undefined ? showArrow : suffixIcon !== null;
+}
+;// ./node_modules/antd/es/select/index.js
+"use client";
+
+// TODO: 4.0 - codemod should help to change `filterOption` to support node props.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+const SECRET_COMBOBOX_MODE_DO_NOT_USE = 'SECRET_COMBOBOX_MODE_DO_NOT_USE';
+const InternalSelect = (props, ref) => {
+  const {
+    prefixCls: customizePrefixCls,
+    bordered,
+    className,
+    rootClassName,
+    getPopupContainer,
+    popupClassName,
+    dropdownClassName,
+    listHeight = 256,
+    placement,
+    listItemHeight: customListItemHeight,
+    size: customizeSize,
+    disabled: customDisabled,
+    notFoundContent,
+    status: customStatus,
+    builtinPlacements,
+    dropdownMatchSelectWidth,
+    popupMatchSelectWidth,
+    direction: propDirection,
+    style,
+    allowClear,
+    variant: customizeVariant,
+    popupStyle,
+    dropdownStyle,
+    transitionName,
+    tagRender,
+    maxCount,
+    prefix,
+    dropdownRender,
+    /**
+     * @since 5.25.0
+     */
+    popupRender,
+    onDropdownVisibleChange,
+    onOpenChange,
+    styles,
+    classNames,
+    clearIcon,
+    showSearch,
+    ...rest
+  } = props;
+  const {
+    getPopupContainer: getContextPopupContainer,
+    getPrefixCls,
+    renderEmpty,
+    direction: contextDirection,
+    virtual,
+    popupMatchSelectWidth: contextPopupMatchSelectWidth,
+    popupOverflow
+  } = (react_production_namespaceFn().useContext)(ConfigContext);
+  const {
+    showSearch: contextShowSearch,
+    allowClear: contextAllowClear,
+    style: contextStyle,
+    styles: contextStyles,
+    className: contextClassName,
+    classNames: contextClassNames,
+    clearIcon: contextClearIcon,
+    loadingIcon: contextLoadingIcon,
+    menuItemSelectedIcon: contextMenuItemSelectedIcon,
+    removeIcon: contextRemoveIcon,
+    suffixIcon: contextSuffixIcon
+  } = useComponentConfig('select');
+  const [, token] = useToken();
+  const listItemHeight = customListItemHeight ?? token?.controlHeight;
+  const prefixCls = getPrefixCls('select', customizePrefixCls);
+  const rootPrefixCls = getPrefixCls();
+  const direction = propDirection ?? contextDirection;
+  const {
+    compactSize,
+    compactItemClassnames
+  } = useCompactItemContext(prefixCls, direction);
+  const [variant, enableVariantCls] = useVariants('select', customizeVariant, bordered);
+  const rootCls = hooks_useCSSVarCls(prefixCls);
+  const [hashId, cssVarCls] = select_style(prefixCls, rootCls);
+  const mode = (react_production_namespaceFn().useMemo)(() => {
+    const {
+      mode: m
+    } = props;
+    if (m === 'combobox') {
+      return undefined;
+    }
+    if (m === SECRET_COMBOBOX_MODE_DO_NOT_USE) {
+      return 'combobox';
+    }
+    return m;
+  }, [props.mode]);
+  const isMultiple = mode === 'multiple' || mode === 'tags';
+  const showSuffixIcon = useShowArrow(props.suffixIcon, props.showArrow);
+  const mergedPopupMatchSelectWidth = popupMatchSelectWidth ?? dropdownMatchSelectWidth ?? contextPopupMatchSelectWidth;
+  const mergedPopupRender = select_usePopupRender(popupRender || dropdownRender);
+  const mergedOnOpenChange = onOpenChange || onDropdownVisibleChange;
+  // ===================== Form Status =====================
+  const {
+    status: contextStatus,
+    hasFeedback,
+    isFormItemInput,
+    feedbackIcon
+  } = (react_production_namespaceFn().useContext)(FormItemInputContext);
+  const mergedStatus = getMergedStatus(contextStatus, customStatus);
+  // ===================== Empty =====================
+  let mergedNotFound;
+  if (notFoundContent !== undefined) {
+    mergedNotFound = notFoundContent;
+  } else if (mode === 'combobox') {
+    mergedNotFound = null;
+  } else {
+    mergedNotFound = renderEmpty?.('Select') || /*#__PURE__*/(react_production_namespaceFn().createElement)(defaultRenderEmpty, {
+      componentName: "Select"
+    });
+  }
+  // ===================== Icons =====================
+  const {
+    suffixIcon,
+    itemIcon,
+    removeIcon,
+    clearIcon: mergedClearIcon
+  } = useIcons({
+    ...rest,
+    multiple: isMultiple,
+    hasFeedback,
+    feedbackIcon,
+    showSuffixIcon,
+    prefixCls,
+    componentName: 'Select',
+    clearIcon,
+    searchIcon: _util_normalizeIcon(showSearch, 'searchIcon'),
+    contextClearIcon,
+    contextLoadingIcon,
+    contextMenuItemSelectedIcon,
+    contextRemoveIcon,
+    contextSearchIcon: _util_normalizeIcon(contextShowSearch, 'searchIcon'),
+    contextSuffixIcon
+  });
+  const finalAllowClear = allowClear ?? contextAllowClear;
+  const mergedAllowClear = finalAllowClear === true ? {
+    clearIcon: mergedClearIcon
+  } : finalAllowClear;
+  const mergedShowSearch = showSearch ?? contextShowSearch;
+  const selectProps = omit(rest, ['suffixIcon', 'itemIcon']);
+  const mergedSize = hooks_useSize(ctx => customizeSize ?? compactSize ?? ctx);
+  // ===================== Disabled =====================
+  const disabled = (react_production_namespaceFn().useContext)(config_provider_DisabledContext);
+  const mergedDisabled = customDisabled ?? disabled;
+  // ========== Merged Props for Semantic ==================
+  const mergedProps = {
+    ...props,
+    variant,
+    status: mergedStatus,
+    disabled: mergedDisabled,
+    size: mergedSize
+  };
+  const contextStyleRoot = useSemanticRootStyle(contextStyle);
+  const styleRoot = useSemanticRootStyle(style);
+  const [mergedClassNames, mergedStyles] = useMergeSemantic([contextClassNames, classNames], [contextStyles, contextStyleRoot, styles, styleRoot], {
+    props: mergedProps
+  }, {
+    popup: {
+      _default: 'root'
+    }
+  });
+  const mergedPopupClassName = clsx(mergedClassNames.popup.root, popupClassName, dropdownClassName, {
+    [`${prefixCls}-dropdown-${direction}`]: direction === 'rtl'
+  }, rootClassName, cssVarCls, rootCls, hashId);
+  const mergedPopupStyle = {
+    ...mergedStyles.popup?.root,
+    ...(popupStyle ?? dropdownStyle)
+  };
+  const mergedClassName = clsx({
+    [`${prefixCls}-lg`]: mergedSize === 'large',
+    [`${prefixCls}-sm`]: mergedSize === 'small',
+    [`${prefixCls}-rtl`]: direction === 'rtl',
+    [`${prefixCls}-${variant}`]: enableVariantCls,
+    [`${prefixCls}-in-form-item`]: isFormItemInput
+  }, getStatusClassNames(prefixCls, mergedStatus, hasFeedback), compactItemClassnames, contextClassName, className, mergedClassNames.root, rootClassName, cssVarCls, rootCls, hashId);
+  // ===================== Placement =====================
+  const memoPlacement = (react_production_namespaceFn().useMemo)(() => {
+    if (placement !== undefined) {
+      return placement;
+    }
+    return direction === 'rtl' ? 'bottomRight' : 'bottomLeft';
+  }, [placement, direction]);
+  // ====================== Warning ======================
+  if (false) // removed by dead control flow
+{}
+  // ====================== zIndex =========================
+  const [zIndex] = useZIndex('SelectLike', mergedStyles.popup.root?.zIndex ?? mergedPopupStyle.zIndex);
+  // ====================== Render =======================
+  return /*#__PURE__*/(react_production_namespaceFn().createElement)(select_es, {
+    ref: ref,
+    virtual: virtual,
+    classNames: mergedClassNames,
+    styles: mergedStyles,
+    showSearch: mergedShowSearch,
+    ...selectProps,
+    style: mergedStyles.root,
+    popupMatchSelectWidth: mergedPopupMatchSelectWidth,
+    transitionName: motion_getTransitionName(rootPrefixCls, 'slide-up', transitionName),
+    builtinPlacements: select_mergedBuiltinPlacements(builtinPlacements, popupOverflow),
+    listHeight: listHeight,
+    listItemHeight: listItemHeight,
+    mode: mode,
+    prefixCls: prefixCls,
+    placement: memoPlacement,
+    direction: direction,
+    prefix: prefix,
+    suffixIcon: suffixIcon,
+    menuItemSelectedIcon: itemIcon,
+    removeIcon: removeIcon,
+    allowClear: mergedAllowClear,
+    notFoundContent: mergedNotFound,
+    className: mergedClassName,
+    getPopupContainer: getPopupContainer || getContextPopupContainer,
+    popupClassName: mergedPopupClassName,
+    disabled: mergedDisabled,
+    popupStyle: {
+      ...mergedStyles.popup.root,
+      ...mergedPopupStyle,
+      zIndex
+    },
+    maxCount: isMultiple ? maxCount : undefined,
+    tagRender: isMultiple ? tagRender : undefined,
+    popupRender: mergedPopupRender,
+    onPopupVisibleChange: mergedOnOpenChange
+  });
+};
+if (false) // removed by dead control flow
+{}
+const select_Select = /*#__PURE__*/(react_production_namespaceFn().forwardRef)(InternalSelect);
+// We don't care debug panel
+/* istanbul ignore next */
+const select_PurePanel = _util_PurePanel(select_Select, 'popupAlign');
+select_Select.SECRET_COMBOBOX_MODE_DO_NOT_USE = SECRET_COMBOBOX_MODE_DO_NOT_USE;
+select_Select.Option = es_Option;
+select_Select.OptGroup = es_OptGroup;
+select_Select._InternalPanelDoNotUseOrYouWillBeFired = select_PurePanel;
+if (false) // removed by dead control flow
+{}
+/* harmony default export */ const es_select = (select_Select);
+;// ./src/lib/agent/types.ts
+/**
+ * ScriptCat Agent API（`CAT.agent.*`）的类型声明与纯工具函数。
+ *
+ * ── 为什么这里自己声明（v26.10.10-v10）──────────────────────────────────────
+ * 官方 d.ts 随 ScriptCat 仓库发布（`src/app/service/agent/core/types.ts` 与
+ * `src/types/scriptcat.d.ts`），**不进本仓库的 node_modules**：本脚本是油猴脚本，
+ * `npm run typecheck` 用的是本仓库 tsconfig，拿不到 `declare const CAT`。
+ * 故此处按官方类型等价声明一份，唯一约束是「只声明 UI 真正用到的字段」。
+ *
+ * ⚠️ **本文件按官方源码（而非官方文档）对齐**，三处文档与实现不一致已在下方逐条标注
+ * `[与文档不符]`。改这里之前建议先回看官方 `src/app/service/agent/core/types.ts`。
+ *
+ * ── 可用性前提 ─────────────────────────────────────────────────────────────
+ * 整套 `CAT.agent.*` 是 **ScriptCat v1.4+** 才有的能力，且需逐项 `@grant`
+ * （见 `config/common.meta.json`）。Tampermonkey 等其它管理器里 `CAT` 全局根本不存在，
+ * 故所有调用都必须先过 `src/lib/agent/api.ts` 的探测，**绝不能直接摸 `CAT.agent`**。
+ *
+ * ── 本文件不做任何运行时副作用 ─────────────────────────────────────────────
+ * 只有类型 + 纯函数（内容压平 / 工具名去命名空间），可被 UI 复用。
+ */
+/** 把正文压成一行可显示文本（图片/文件/音频退化成占位标记） */
+function contentToText(content) {
+    if (typeof content === 'string')
+        return content;
+    if (!Array.isArray(content))
+        return '';
+    return content
+        .map((block) => {
+        if (!block || typeof block !== 'object')
+            return '';
+        switch (block.type) {
+            case 'text':
+                return typeof block.text === 'string' ? block.text : '';
+            case 'image':
+                return '[图片]';
+            case 'file':
+                return '[文件 ' + (typeof block.filename === 'string' ? block.filename : '') + ']';
+            case 'audio':
+                return '[音频]';
+            default:
+                return '';
+        }
+    })
+        .join('');
+}
+/**
+ * 工具名既可能是裸名（`read_file`），也可能带服务端命名空间（`mcp__xxx__read_file`）。
+ * 面板上只显示最后一段，避免超长名把按钮撑破。
+ */
+function toolDisplayName(name) {
+    const raw = typeof name === 'string' ? name : '';
+    const parts = raw.split('__').filter((segment) => segment.length > 0);
+    return parts.length > 1 ? parts[parts.length - 1] : raw || '工具';
+}
+/** 四个子能力，用于逐项探测可用性（顺序即面板提示里的列出顺序） */
+const CAT_AGENT_PARTS = ['conversation', 'model', 'skills', 'task'];
+
+;// ./src/lib/agent/api.ts
+/**
+ * ScriptCat Agent 服务层：能力探测 + 四个子 API 的薄封装（v26.10.10-v10）。
+ *
+ * ── 为什么要有这一层，而不是让 UI 直接摸 `CAT.agent` ─────────────────────────
+ * ① `CAT` 全局**只在 ScriptCat 里存在**。本脚本同时支持 Tampermonkey（`@match` 含税务页与
+ *    example.com），在 TM 里访问 `CAT.agent` 是 ReferenceError —— 直接写就是「打开面板即崩」。
+ * ② 就算在 ScriptCat 里，四个子能力也是**逐项 `@grant`** 的：老版本 ScriptCat（< 1.4）、
+ *    或用户在管理页里拒绝某项授权，都会让单个子 API 缺失。故这里按能力逐个探测，
+ *    缺哪块只在对应页签里提示，不牵连其它功能。
+ * ③ 官方 API 的返回形状有 3 处文档与实现不一致（见 types.ts 的 `[与文档不符]`），
+ *    纠偏逻辑集中放在这里，UI 只面对规整后的数据。
+ *
+ * ── 探测时机与代价 ─────────────────────────────────────────────────────────
+ * `detectCatAgent()` 是**纯内存判空**（`typeof` + 逐层取属性），不发起任何异步调用，
+ * 因此可以放心在组件 render 期调用；真正的 `model.list()` / `conversation.create()`
+ * 等异步动作只在用户打开弹窗时才发生。
+ *
+ * ── ephemeral 之外的对话会落到 OPFS ───────────────────────────────────────
+ * 本脚本用的是**非 ephemeral** 对话（持久化、带内置工具），关掉弹窗再打开仍能接着聊；
+ * 「新建对话」走 `conversation.create()` 换新实例，不是 `clear()`。
+ */
+
+
+const MISSING_CAT_REASON = '当前脚本管理器没有 Agent 能力：需要 ScriptCat v1.4 及以上（Tampermonkey 等其它管理器不支持）。';
+/** 探测 `CAT.agent.*`。纯内存判空，可安全重复调用（不缓存，避免脚本管理器热重载后状态过期） */
+function detectCatAgent() {
+    const unavailable = (reason) => ({
+        api: null,
+        parts: { conversation: false, model: false, skills: false, task: false },
+        reason,
+    });
+    if (typeof CAT === 'undefined' || !CAT)
+        return unavailable(MISSING_CAT_REASON);
+    let agent;
+    try {
+        agent = CAT.agent;
+    }
+    catch {
+        // 极端情况下 getter 抛错（不该发生），当作不可用而不是让整个面板崩掉
+        return unavailable(MISSING_CAT_REASON);
+    }
+    if (!agent || typeof agent !== 'object') {
+        return unavailable('当前 ScriptCat 版本未提供 Agent 功能，请升级到 v1.4 及以上。');
+    }
+    const record = agent;
+    const parts = {};
+    const missing = [];
+    for (const part of CAT_AGENT_PARTS) {
+        const ok = !!record[part] && typeof record[part] === 'object';
+        parts[part] = ok;
+        if (!ok)
+            missing.push(part);
+    }
+    if (missing.length) {
+        return {
+            api: null,
+            parts,
+            reason: 'Agent 的「' +
+                missing.join(' / ') +
+                '」权限不可用：请在 ScriptCat 里重新安装脚本并允许对应授权（脚本需要 CAT.agent.conversation / model / skills / task 四项）。',
+        };
+    }
+    return { api: agent, parts, reason: '' };
+}
+/* ============================================================ 错误文案 */
+const ERROR_CODE_TEXT = {
+    rate_limit: '触发模型限流，请稍后重试。',
+    auth: '模型鉴权失败：请在 ScriptCat 设置里检查该模型的 API Key。',
+    tool_timeout: '工具执行超时。',
+    context_too_large: '对话上下文超出模型窗口，请新建对话或清空历史。',
+    api_error: '模型接口报错。',
+};
+/** 把任意抛出物压成一句话（供日志与界面共用） */
+function agentErrorMessage(error) {
+    if (error instanceof Error)
+        return error.message || error.name || '未知错误';
+    if (typeof error === 'string')
+        return error;
+    if (error && typeof error === 'object') {
+        const maybe = error;
+        if (typeof maybe.message === 'string' && maybe.message)
+            return maybe.message;
+        if (typeof maybe.error === 'string' && maybe.error)
+            return maybe.error;
+        try {
+            return JSON.stringify(error);
+        }
+        catch {
+            return '未知错误';
+        }
+    }
+    return String(error);
+}
+/** 按 errorCode 补充中文提示，界面统一走这个 */
+function describeAgentError(error, errorCode) {
+    const raw = agentErrorMessage(error);
+    const hint = errorCode ? ERROR_CODE_TEXT[errorCode] : '';
+    if (!hint)
+        return raw;
+    return raw && raw !== hint ? hint + '（' + raw + '）' : hint;
+}
+/* ============================================================ 模型 */
+function isModelSummary(value) {
+    if (!value || typeof value !== 'object')
+        return false;
+    const model = value;
+    return typeof model.id === 'string';
+}
+/** 列出可用模型；任何一步失败都返回空数组（界面显示「未配置模型」而不是报错弹窗） */
+async function listModels(api) {
+    try {
+        const list = await api.model.list();
+        return Array.isArray(list) ? list.filter(isModelSummary) : [];
+    }
+    catch (error) {
+        addLog('[Agent] 读取模型列表失败: ' + agentErrorMessage(error), 'warning');
+        return [];
+    }
+}
+/**
+ * 取默认模型 id。⚠️ `model.getDefault()` 的返回形状在官方 d.ts / 文档 / 实现之间不一致：
+ * 可能是字符串、ModelSummary、或 {modelId}/{id}/{name} 包装对象，故逐一判型后兜底。
+ */
+async function pickDefaultModelId(api) {
+    let value;
+    try {
+        value = await api.model.getDefault();
+    }
+    catch (error) {
+        addLog('[Agent] 读取默认模型失败: ' + agentErrorMessage(error), 'warning');
+        return '';
+    }
+    if (typeof value === 'string')
+        return value;
+    if (isModelSummary(value))
+        return value.id;
+    if (value && typeof value === 'object') {
+        const wrapper = value;
+        if (typeof wrapper.modelId === 'string')
+            return wrapper.modelId;
+        if (typeof wrapper.id === 'string')
+            return wrapper.id;
+        if (typeof wrapper.summary === 'string')
+            return wrapper.summary;
+        if (isModelSummary(wrapper.summary))
+            return wrapper.summary.id;
+    }
+    return '';
+}
+/* ============================================================ 对话 */
+/** 新建对话。system 用于交代脚本自身上下文；不传 model 时由 ScriptCat 用默认模型 */
+async function createConversation(api, options) {
+    return api.conversation.create(options);
+}
+/** 读取历史消息并统一成界面结构（跳过 system 消息：那是脚本自己注入的提示词） */
+async function readConversationMessages(conversation) {
+    const messages = await conversation.getMessages();
+    if (!Array.isArray(messages))
+        return [];
+    return messages.filter((message) => message && message.role !== 'system');
+}
+/** 消费一次流式对话；`timeoutMs` 是**静默看门狗**（默认 2 分钟无任何分片即中止） */
+async function streamConversation(conversation, content, handlers = {}, timeoutMs = 120_000) {
+    const outcome = { content: '', thinking: '' };
+    const stream = await conversation.chatStream(content);
+    const iterator = stream[Symbol.asyncIterator]();
+    let timedOut = false;
+    try {
+        for (;;) {
+            let timer;
+            const guard = new Promise((resolve) => {
+                timer = setTimeout(() => resolve('timeout'), timeoutMs);
+            });
+            const next = await Promise.race([iterator.next(), guard]);
+            if (timer)
+                clearTimeout(timer);
+            if (next === 'timeout') {
+                timedOut = true;
+                break;
+            }
+            if (next.done)
+                break;
+            const chunk = next.value;
+            if (!chunk || typeof chunk !== 'object')
+                continue;
+            switch (chunk.type) {
+                case 'content_delta':
+                    if (chunk.content) {
+                        outcome.content += chunk.content;
+                        handlers.onContent?.(chunk.content);
+                    }
+                    break;
+                case 'thinking_delta':
+                    if (chunk.content) {
+                        outcome.thinking += chunk.content;
+                        handlers.onThinking?.(chunk.content);
+                    }
+                    break;
+                case 'tool_call':
+                case 'tool_call_complete':
+                    if (chunk.toolCall)
+                        handlers.onToolCall?.(chunk.toolCall);
+                    break;
+                case 'system_warning':
+                    if (chunk.warning)
+                        handlers.onWarning?.(chunk.warning);
+                    break;
+                case 'done':
+                    outcome.usage = chunk.usage;
+                    outcome.durationMs = chunk.durationMs;
+                    if (chunk.warning)
+                        handlers.onWarning?.(chunk.warning);
+                    break;
+                case 'error':
+                    outcome.error = describeAgentError(chunk.error || '模型返回错误', chunk.errorCode);
+                    outcome.errorCode = chunk.errorCode;
+                    outcome.usage = chunk.usage;
+                    break;
+                default:
+                    // content_block / new_message 等：本轮 UI 不做区分展示
+                    break;
+            }
+        }
+    }
+    finally {
+        // 正常 `done` 之后迭代器自己已断开连接；提前 break / 超时 / 抛错时必须显式 return()，
+        // 否则 SW 侧的 port 会一直挂着（官方 processStream 的注释专门写了这一点）
+        await iterator.return?.();
+    }
+    if (timedOut && !outcome.content && !outcome.error) {
+        outcome.error = '等待模型响应超过 ' + Math.round(timeoutMs / 1000) + ' 秒，已中止本次请求。';
+        outcome.errorCode = 'timeout';
+    }
+    return outcome;
+}
+/* ============================================================ 技能 */
+async function listSkills(api) {
+    const list = await api.skills.list();
+    return Array.isArray(list) ? list : [];
+}
+async function removeSkill(api, name) {
+    return api.skills.remove(name);
+}
+/* ============================================================ 定时任务 */
+async function listTasks(api) {
+    const list = await api.task.list();
+    return Array.isArray(list) ? list : [];
+}
+/** 任务动作的薄封装：把「哪个动作失败」写进日志，便于用户回看运行日志定位 */
+async function runTaskAction(api, action, run) {
+    try {
+        await run(api.task);
+        addLog('[Agent] 定时任务' + action + '成功', 'success');
+    }
+    catch (error) {
+        const message = agentErrorMessage(error);
+        addLog('[Agent] 定时任务' + action + '失败: ' + message, 'error');
+        throw error;
+    }
+}
+function buildTaskInput(draft) {
+    return {
+        name: draft.name.trim(),
+        crontab: draft.crontab.trim(),
+        prompt: draft.prompt.trim(),
+        mode: 'internal',
+        enabled: true,
+        notify: false,
+    };
+}
+/**
+ * 五字段 crontab 的**轻量**校验（分 时 日 月 周）。
+ * 只挡明显写错（字段数不对、出现非法字符），不做完整 cron 语义校验 ——
+ * 真正的合法性由 ScriptCat 的 TaskScheduler 判定，这里的作用是让用户尽早得到反馈。
+ */
+function validateCrontab(expression) {
+    const text = expression.trim();
+    if (!text)
+        return '请填写 crontab（五段：分 时 日 月 周）';
+    const fields = text.split(/\s+/);
+    if (fields.length !== 5)
+        return 'crontab 需要 5 段（分 时 日 月 周），当前 ' + fields.length + ' 段';
+    for (const field of fields) {
+        if (!/^[\d*,\-/]+$/.test(field))
+            return 'crontab 里有不支持的字符：' + field;
+    }
+    return '';
+}
+/** 判断某个已安装技能是否被 agent 对话自动加载（仅用于界面提示措辞） */
+function skillToolSummary(skill) {
+    const tools = Array.isArray(skill.toolNames) ? skill.toolNames : [];
+    if (!tools.length)
+        return '无工具';
+    const shown = tools.slice(0, 3).map(toolDisplayName).join('、');
+    return tools.length > 3 ? shown + ' 等 ' + tools.length + ' 个' : shown;
+}
+
+;// ./node_modules/antd/es/_util/responsiveObserver.js
+
+
+
+const responsiveArray = ['xxxl', 'xxl', 'xl', 'lg', 'md', 'sm', 'xs'];
+const responsiveArrayReversed = [].concat(responsiveArray).reverse();
+const getResponsiveMap = token => ({
+  xs: `(max-width: ${token.screenXSMax}px)`,
+  sm: `(min-width: ${token.screenSM}px)`,
+  md: `(min-width: ${token.screenMD}px)`,
+  lg: `(min-width: ${token.screenLG}px)`,
+  xl: `(min-width: ${token.screenXL}px)`,
+  xxl: `(min-width: ${token.screenXXL}px)`,
+  xxxl: `(min-width: ${token.screenXXXL}px)`
+});
+/**
+ * Ensures that the breakpoints token are valid, in good order
+ * For each breakpoint : screenMin <= screen <= screenMax and screenMax <= nextScreenMin
+ */
+const validateBreakpoints = token => {
+  const indexableToken = token;
+  const revBreakpoints = [].concat(responsiveArray).reverse();
+  revBreakpoints.forEach((breakpoint, i) => {
+    const breakpointUpper = breakpoint.toUpperCase();
+    const screenMin = `screen${breakpointUpper}Min`;
+    const screen = `screen${breakpointUpper}`;
+    if (!(indexableToken[screenMin] <= indexableToken[screen])) {
+      throw new Error(`${screenMin}<=${screen} fails : !(${indexableToken[screenMin]}<=${indexableToken[screen]})`);
+    }
+    if (i < revBreakpoints.length - 1) {
+      const screenMax = `screen${breakpointUpper}Max`;
+      if (!(indexableToken[screen] <= indexableToken[screenMax])) {
+        throw new Error(`${screen}<=${screenMax} fails : !(${indexableToken[screen]}<=${indexableToken[screenMax]})`);
+      }
+      const nextBreakpointUpperMin = revBreakpoints[i + 1].toUpperCase();
+      const nextScreenMin = `screen${nextBreakpointUpperMin}Min`;
+      if (!(indexableToken[screenMax] <= indexableToken[nextScreenMin])) {
+        throw new Error(`${screenMax}<=${nextScreenMin} fails : !(${indexableToken[screenMax]}<=${indexableToken[nextScreenMin]})`);
+      }
+    }
+  });
+  return token;
+};
+const matchScreen = (screens, screenSizes) => {
+  if (!screenSizes) {
+    return;
+  }
+  for (const breakpoint of responsiveArray) {
+    if (screens[breakpoint] && screenSizes?.[breakpoint] !== undefined) {
+      return screenSizes[breakpoint];
+    }
+  }
+};
+const useResponsiveObserver = () => {
+  const [, token] = useToken();
+  const responsiveMap = getResponsiveMap(validateBreakpoints(token));
+  // To avoid repeat create instance, we add `useMemo` here.
+  return (react_production_namespaceFn().useMemo)(() => {
+    const subscribers = new Map();
+    let subUid = -1;
+    let screens = {};
+    return {
+      responsiveMap,
+      matchHandlers: {},
+      dispatch(pointMap) {
+        screens = pointMap;
+        subscribers.forEach(func => {
+          func(screens);
+        });
+        return subscribers.size >= 1;
+      },
+      subscribe(func) {
+        if (!subscribers.size) {
+          this.register();
+        }
+        subUid += 1;
+        subscribers.set(subUid, func);
+        func(screens);
+        return subUid;
+      },
+      unsubscribe(paramToken) {
+        subscribers.delete(paramToken);
+        if (!subscribers.size) {
+          this.unregister();
+        }
+      },
+      register() {
+        Object.entries(responsiveMap).forEach(([screen, mediaQuery]) => {
+          const listener = ({
+            matches
+          }) => {
+            this.dispatch({
+              ...screens,
+              [screen]: matches
+            });
+          };
+          const mql = window.matchMedia(mediaQuery);
+          if (isFunction(mql.addEventListener)) {
+            mql.addEventListener('change', listener);
+          }
+          this.matchHandlers[mediaQuery] = {
+            mql,
+            listener
+          };
+          listener(mql);
+        });
+      },
+      unregister() {
+        Object.values(responsiveMap).forEach(mediaQuery => {
+          const handler = this.matchHandlers[mediaQuery];
+          if (isFunction(handler?.mql.removeEventListener)) {
+            handler.mql.removeEventListener('change', handler?.listener);
+          }
+        });
+        subscribers.clear();
+      }
+    };
+  }, [responsiveMap]);
+};
+/* harmony default export */ const _util_responsiveObserver = (useResponsiveObserver);
+;// ./node_modules/antd/es/_util/hooks/useForceUpdate.js
+
+const useForceUpdate = () => {
+  return (react_production_namespaceFn().useReducer)(ori => ori + 1, 0);
+};
+;// ./node_modules/antd/es/grid/hooks/useBreakpoint.js
+"use client";
+
+
+
+
+
+function useBreakpoint(refreshOnChange = true, defaultScreens = {}) {
+  const screensRef = (0,react_production_namespaceFn().useRef)(defaultScreens);
+  const [, forceUpdate] = useForceUpdate();
+  const responsiveObserver = _util_responsiveObserver();
+  hooks_useLayoutEffect(() => {
+    const token = responsiveObserver.subscribe(supportScreens => {
+      screensRef.current = supportScreens;
+      if (refreshOnChange) {
+        forceUpdate();
+      }
+    });
+    return () => responsiveObserver.unsubscribe(token);
+  }, [refreshOnChange]);
+  return screensRef.current;
+}
+/* harmony default export */ const hooks_useBreakpoint = (useBreakpoint);
+;// ./node_modules/antd/es/grid/hooks/useGutter.js
+
+
+function useGutter(gutter, screens) {
+  const results = [undefined, undefined];
+  const normalizedGutter = Array.isArray(gutter) ? gutter : [gutter, undefined];
+  // By default use as `xs`
+  const mergedScreens = screens || {
+    xs: true,
+    sm: true,
+    md: true,
+    lg: true,
+    xl: true,
+    xxl: true,
+    xxxl: true
+  };
+  normalizedGutter.forEach((g, index) => {
+    if (isPlainObject(g)) {
+      for (let i = 0; i < responsiveArray.length; i++) {
+        const breakpoint = responsiveArray[i];
+        if (mergedScreens[breakpoint] && g[breakpoint] !== undefined) {
+          results[index] = g[breakpoint];
+          break;
+        }
+      }
+    } else {
+      results[index] = g;
+    }
+  });
+  return results;
+}
+;// ./node_modules/antd/es/grid/RowContext.js
+
+const RowContext = /*#__PURE__*/(0,react_production_namespaceFn().createContext)({});
+/* harmony default export */ const grid_RowContext = (RowContext);
+;// ./node_modules/antd/es/grid/row.js
+"use client";
+
+
+
+
+
+
+
+
+
+
+const _RowAligns = (/* unused pure expression or super */ null && (['top', 'middle', 'bottom', 'stretch']));
+const _RowJustify = (/* unused pure expression or super */ null && (['start', 'end', 'center', 'space-around', 'space-between', 'space-evenly']));
+const getMergedPropByScreen = (oriProp, screen) => {
+  if (isString(oriProp)) {
+    return oriProp;
+  }
+  if (isPlainObject(oriProp)) {
+    for (let i = 0; i < responsiveArray.length; i++) {
+      const breakpoint = responsiveArray[i];
+      if (!screen || !screen[breakpoint]) {
+        continue;
+      }
+      const curVal = oriProp[breakpoint];
+      if (curVal !== undefined) {
+        return curVal;
+      }
+    }
+  }
+  return '';
+};
+const Row = /*#__PURE__*/(react_production_namespaceFn().forwardRef)((props, ref) => {
+  const {
+    prefixCls: customizePrefixCls,
+    justify,
+    align,
+    className,
+    style,
+    children,
+    gutter = 0,
+    wrap,
+    ...others
+  } = props;
+  const {
+    getPrefixCls,
+    direction
+  } = (react_production_namespaceFn().useContext)(ConfigContext);
+  const screens = hooks_useBreakpoint(true, null);
+  const mergedAlign = getMergedPropByScreen(align, screens);
+  const mergedJustify = getMergedPropByScreen(justify, screens);
+  const prefixCls = getPrefixCls('row', customizePrefixCls);
+  const [hashId, cssVarCls] = useRowStyle(prefixCls);
+  const gutters = useGutter(gutter, screens);
+  const classes = clsx(prefixCls, {
+    [`${prefixCls}-no-wrap`]: wrap === false,
+    [`${prefixCls}-${mergedJustify}`]: mergedJustify,
+    [`${prefixCls}-${mergedAlign}`]: mergedAlign,
+    [`${prefixCls}-rtl`]: direction === 'rtl'
+  }, className, hashId, cssVarCls);
+  // Add gutter related style
+  const rowStyle = {};
+  if (gutters?.[0]) {
+    const horizontalGutter = isNumber(gutters[0]) ? `${gutters[0] / -2}px` : `calc(${gutters[0]} / -2)`;
+    rowStyle.marginInline = horizontalGutter;
+  }
+  // "gutters" is a new array in each rendering phase, it'll make 'React.useMemo' effectless.
+  // So we deconstruct "gutters" variable here.
+  const [gutterH, gutterV] = gutters;
+  rowStyle.rowGap = gutterV;
+  const rowContext = (react_production_namespaceFn().useMemo)(() => ({
+    gutter: [gutterH, gutterV],
+    wrap
+  }), [gutterH, gutterV, wrap]);
+  return /*#__PURE__*/(react_production_namespaceFn().createElement)(grid_RowContext.Provider, {
+    value: rowContext
+  }, /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
+    ...others,
+    className: classes,
+    style: {
+      ...rowStyle,
+      ...style
+    },
+    ref: ref
+  }, children));
+});
+if (false) // removed by dead control flow
+{}
+/* harmony default export */ const grid_row = (Row);
+;// ./node_modules/@ant-design/icons-svg/es/asn/DoubleLeftOutlined.js
+// This icon file is generated automatically.
+var DoubleLeftOutlined = { "icon": { "tag": "svg", "attrs": { "viewBox": "64 64 896 896", "focusable": "false" }, "children": [{ "tag": "path", "attrs": { "d": "M272.9 512l265.4-339.1c4.1-5.2.4-12.9-6.3-12.9h-77.3c-4.9 0-9.6 2.3-12.6 6.1L186.8 492.3a31.99 31.99 0 000 39.5l255.3 326.1c3 3.9 7.7 6.1 12.6 6.1H532c6.7 0 10.4-7.7 6.3-12.9L272.9 512zm304 0l265.4-339.1c4.1-5.2.4-12.9-6.3-12.9h-77.3c-4.9 0-9.6 2.3-12.6 6.1L490.8 492.3a31.99 31.99 0 000 39.5l255.3 326.1c3 3.9 7.7 6.1 12.6 6.1H836c6.7 0 10.4-7.7 6.3-12.9L576.9 512z" } }] }, "name": "double-left", "theme": "outlined" };
+/* harmony default export */ const asn_DoubleLeftOutlined = (DoubleLeftOutlined);
+
+;// ./node_modules/@ant-design/icons/es/icons/DoubleLeftOutlined.js
+function DoubleLeftOutlined_extends() { DoubleLeftOutlined_extends = Object.assign ? Object.assign.bind() : function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; }; return DoubleLeftOutlined_extends.apply(this, arguments); }
+// GENERATED BY ./scripts/generate.ts
+// DO NOT EDIT IT MANUALLY
+
+;
+
+
+const DoubleLeftOutlined_DoubleLeftOutlined = (props, ref) => /*#__PURE__*/(react_production_namespaceFn().createElement)(AntdIconLight, DoubleLeftOutlined_extends({}, props, {
+  ref: ref,
+  icon: asn_DoubleLeftOutlined
+}));
+
+/**![double-left](data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTAiIGhlaWdodD0iNTAiIGZpbGw9IiNjYWNhY2EiIHZpZXdCb3g9IjY0IDY0IDg5NiA4OTYiIGZvY3VzYWJsZT0iZmFsc2UiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHBhdGggZD0iTTI3Mi45IDUxMmwyNjUuNC0zMzkuMWM0LjEtNS4yLjQtMTIuOS02LjMtMTIuOWgtNzcuM2MtNC45IDAtOS42IDIuMy0xMi42IDYuMUwxODYuOCA0OTIuM2EzMS45OSAzMS45OSAwIDAwMCAzOS41bDI1NS4zIDMyNi4xYzMgMy45IDcuNyA2LjEgMTIuNiA2LjFINTMyYzYuNyAwIDEwLjQtNy43IDYuMy0xMi45TDI3Mi45IDUxMnptMzA0IDBsMjY1LjQtMzM5LjFjNC4xLTUuMi40LTEyLjktNi4zLTEyLjloLTc3LjNjLTQuOSAwLTkuNiAyLjMtMTIuNiA2LjFMNDkwLjggNDkyLjNhMzEuOTkgMzEuOTkgMCAwMDAgMzkuNWwyNTUuMyAzMjYuMWMzIDMuOSA3LjcgNi4xIDEyLjYgNi4xSDgzNmM2LjcgMCAxMC40LTcuNyA2LjMtMTIuOUw1NzYuOSA1MTJ6IiAvPjwvc3ZnPg==) */
+const DoubleLeftOutlined_RefIcon = /*#__PURE__*/(react_production_namespaceFn().forwardRef)(DoubleLeftOutlined_DoubleLeftOutlined);
+if (false) // removed by dead control flow
+{}
+/* harmony default export */ const icons_DoubleLeftOutlined = (DoubleLeftOutlined_RefIcon);
+;// ./node_modules/@ant-design/icons-svg/es/asn/DoubleRightOutlined.js
+// This icon file is generated automatically.
+var DoubleRightOutlined = { "icon": { "tag": "svg", "attrs": { "viewBox": "64 64 896 896", "focusable": "false" }, "children": [{ "tag": "path", "attrs": { "d": "M533.2 492.3L277.9 166.1c-3-3.9-7.7-6.1-12.6-6.1H188c-6.7 0-10.4 7.7-6.3 12.9L447.1 512 181.7 851.1A7.98 7.98 0 00188 864h77.3c4.9 0 9.6-2.3 12.6-6.1l255.3-326.1c9.1-11.7 9.1-27.9 0-39.5zm304 0L581.9 166.1c-3-3.9-7.7-6.1-12.6-6.1H492c-6.7 0-10.4 7.7-6.3 12.9L751.1 512 485.7 851.1A7.98 7.98 0 00492 864h77.3c4.9 0 9.6-2.3 12.6-6.1l255.3-326.1c9.1-11.7 9.1-27.9 0-39.5z" } }] }, "name": "double-right", "theme": "outlined" };
+/* harmony default export */ const asn_DoubleRightOutlined = (DoubleRightOutlined);
+
+;// ./node_modules/@ant-design/icons/es/icons/DoubleRightOutlined.js
+function DoubleRightOutlined_extends() { DoubleRightOutlined_extends = Object.assign ? Object.assign.bind() : function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; }; return DoubleRightOutlined_extends.apply(this, arguments); }
+// GENERATED BY ./scripts/generate.ts
+// DO NOT EDIT IT MANUALLY
+
+;
+
+
+const DoubleRightOutlined_DoubleRightOutlined = (props, ref) => /*#__PURE__*/(react_production_namespaceFn().createElement)(AntdIconLight, DoubleRightOutlined_extends({}, props, {
+  ref: ref,
+  icon: asn_DoubleRightOutlined
+}));
+
+/**![double-right](data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTAiIGhlaWdodD0iNTAiIGZpbGw9IiNjYWNhY2EiIHZpZXdCb3g9IjY0IDY0IDg5NiA4OTYiIGZvY3VzYWJsZT0iZmFsc2UiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHBhdGggZD0iTTUzMy4yIDQ5Mi4zTDI3Ny45IDE2Ni4xYy0zLTMuOS03LjctNi4xLTEyLjYtNi4xSDE4OGMtNi43IDAtMTAuNCA3LjctNi4zIDEyLjlMNDQ3LjEgNTEyIDE4MS43IDg1MS4xQTcuOTggNy45OCAwIDAwMTg4IDg2NGg3Ny4zYzQuOSAwIDkuNi0yLjMgMTIuNi02LjFsMjU1LjMtMzI2LjFjOS4xLTExLjcgOS4xLTI3LjkgMC0zOS41em0zMDQgMEw1ODEuOSAxNjYuMWMtMy0zLjktNy43LTYuMS0xMi42LTYuMUg0OTJjLTYuNyAwLTEwLjQgNy43LTYuMyAxMi45TDc1MS4xIDUxMiA0ODUuNyA4NTEuMUE3Ljk4IDcuOTggMCAwMDQ5MiA4NjRoNzcuM2M0LjkgMCA5LjYtMi4zIDEyLjYtNi4xbDI1NS4zLTMyNi4xYzkuMS0xMS43IDkuMS0yNy45IDAtMzkuNXoiIC8+PC9zdmc+) */
+const DoubleRightOutlined_RefIcon = /*#__PURE__*/(react_production_namespaceFn().forwardRef)(DoubleRightOutlined_DoubleRightOutlined);
+if (false) // removed by dead control flow
+{}
+/* harmony default export */ const icons_DoubleRightOutlined = (DoubleRightOutlined_RefIcon);
+;// ./node_modules/@rc-component/pagination/es/locale/zh_CN.js
+const zh_CN_locale = {
+  // Options
+  items_per_page: '条/页',
+  jump_to: '跳至',
+  jump_to_confirm: '确定',
+  page: '页',
+  // Pagination
+  prev_page: '上一页',
+  next_page: '下一页',
+  prev_5: '向前 5 页',
+  next_5: '向后 5 页',
+  prev_3: '向前 3 页',
+  next_3: '向后 3 页',
+  page_size: '页码'
+};
+/* harmony default export */ const locale_zh_CN = (zh_CN_locale);
+;// ./node_modules/@rc-component/pagination/es/Options.js
+
+
+const defaultPageSizeOptions = [10, 20, 50, 100];
+const Options_Options = props => {
+  const {
+    pageSizeOptions = defaultPageSizeOptions,
+    locale,
+    changeSize,
+    pageSize,
+    goButton,
+    quickGo,
+    rootPrefixCls,
+    disabled,
+    buildOptionText,
+    showSizeChanger,
+    sizeChangerRender
+  } = props;
+  const [goInputText, setGoInputText] = (react_production_namespaceFn().useState)('');
+  const getValidValue = (react_production_namespaceFn().useMemo)(() => {
+    return !goInputText || Number.isNaN(goInputText) ? undefined : Number(goInputText);
+  }, [goInputText]);
+  const mergeBuildOptionText = typeof buildOptionText === 'function' ? buildOptionText : value => `${value} ${locale.items_per_page}`;
+  const handleChange = e => {
+    const value = e.target.value;
+    if (/^\d*$/.test(value)) {
+      setGoInputText(value);
+    }
+  };
+  const handleBlur = e => {
+    if (goButton || goInputText === '') {
+      return;
+    }
+    setGoInputText('');
+    if (e.relatedTarget && (e.relatedTarget.className.includes(`${rootPrefixCls}-item-link`) || e.relatedTarget.className.includes(`${rootPrefixCls}-item`))) {
+      return;
+    }
+    quickGo?.(getValidValue);
+  };
+  const go = e => {
+    if (goInputText === '') {
+      return;
+    }
+    if (e.keyCode === es_KeyCode.ENTER || e.type === 'click') {
+      setGoInputText('');
+      quickGo?.(getValidValue);
+    }
+  };
+  const getPageSizeOptions = () => {
+    if (pageSizeOptions.some(option => option.toString() === pageSize.toString())) {
+      return pageSizeOptions;
+    }
+    return pageSizeOptions.concat([pageSize]).sort((a, b) => {
+      const numberA = Number.isNaN(Number(a)) ? 0 : Number(a);
+      const numberB = Number.isNaN(Number(b)) ? 0 : Number(b);
+      return numberA - numberB;
+    });
+  };
+  // ============== cls ==============
+  const prefixCls = `${rootPrefixCls}-options`;
+
+  // ============== render ==============
+
+  if (!showSizeChanger && !quickGo) {
+    return null;
+  }
+  let changeSelect = null;
+  let goInput = null;
+  let gotoButton = null;
+
+  // >>>>> Size Changer
+  if (showSizeChanger && sizeChangerRender) {
+    changeSelect = sizeChangerRender({
+      disabled,
+      size: pageSize,
+      onSizeChange: nextValue => {
+        changeSize?.(Number(nextValue));
+      },
+      'aria-label': locale.page_size,
+      className: `${prefixCls}-size-changer`,
+      options: getPageSizeOptions().map(opt => ({
+        label: mergeBuildOptionText(opt),
+        value: opt
+      }))
+    });
+  }
+
+  // >>>>> Quick Go
+  if (quickGo) {
+    if (goButton) {
+      gotoButton = typeof goButton === 'boolean' ? /*#__PURE__*/(react_production_namespaceFn().createElement)("button", {
+        type: "button",
+        onClick: go,
+        onKeyUp: go,
+        disabled: disabled,
+        className: `${prefixCls}-quick-jumper-button`
+      }, locale.jump_to_confirm) : /*#__PURE__*/(react_production_namespaceFn().createElement)("span", {
+        onClick: go,
+        onKeyUp: go
+      }, goButton);
+    }
+    goInput = /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
+      className: `${prefixCls}-quick-jumper`
+    }, locale.jump_to, /*#__PURE__*/(react_production_namespaceFn().createElement)("input", {
+      disabled: disabled,
+      type: "text",
+      value: goInputText,
+      onChange: handleChange,
+      onKeyUp: go,
+      onBlur: handleBlur,
+      "aria-label": locale.page
+    }), locale.page, gotoButton);
+  }
+  return /*#__PURE__*/(react_production_namespaceFn().createElement)("li", {
+    className: prefixCls
+  }, changeSelect, goInput);
+};
+if (false) // removed by dead control flow
+{}
+/* harmony default export */ const es_Options = (Options_Options);
+;// ./node_modules/@rc-component/pagination/es/Pager.js
+/* eslint react/prop-types: 0 */
+
+
+const Pager = props => {
+  const {
+    rootPrefixCls,
+    page,
+    active,
+    className,
+    style,
+    showTitle,
+    onClick,
+    onKeyPress,
+    itemRender
+  } = props;
+  const prefixCls = `${rootPrefixCls}-item`;
+  const cls = clsx(prefixCls, `${prefixCls}-${page}`, {
+    [`${prefixCls}-active`]: active,
+    [`${prefixCls}-disabled`]: !page
+  }, className);
+  const handleClick = () => {
+    onClick(page);
+  };
+  const handleKeyPress = e => {
+    onKeyPress(e, onClick, page);
+  };
+  const pager = itemRender(page, 'page', /*#__PURE__*/(react_production_namespaceFn().createElement)("a", {
+    rel: "nofollow"
+  }, page));
+  return pager ? /*#__PURE__*/(react_production_namespaceFn().createElement)("li", {
+    title: showTitle ? String(page) : null,
+    className: cls,
+    style: style,
+    onClick: handleClick,
+    onKeyDown: handleKeyPress,
+    tabIndex: 0
+  }, pager) : null;
+};
+if (false) // removed by dead control flow
+{}
+/* harmony default export */ const es_Pager = (Pager);
+;// ./node_modules/@rc-component/pagination/es/Pagination.js
+function Pagination_extends() { Pagination_extends = Object.assign ? Object.assign.bind() : function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; }; return Pagination_extends.apply(this, arguments); }
+;
+
+
+
+
+
+const defaultItemRender = (_, __, element) => element;
+function Pagination_noop() {}
+function isInteger(v) {
+  const value = Number(v);
+  return typeof value === 'number' && !Number.isNaN(value) && isFinite(value) && Math.floor(value) === value;
+}
+function calculatePage(p, pageSize, total) {
+  const _pageSize = typeof p === 'undefined' ? pageSize : p;
+  return Math.floor((total - 1) / _pageSize) + 1;
+}
+const Pagination_Pagination = props => {
+  const {
+    // cls
+    prefixCls = 'rc-pagination',
+    selectPrefixCls = 'rc-select',
+    className,
+    classNames: paginationClassNames,
+    styles,
+    // control
+    current: currentProp,
+    defaultCurrent = 1,
+    total = 0,
+    pageSize: pageSizeProp,
+    defaultPageSize = 10,
+    onChange = Pagination_noop,
+    // config
+    hideOnSinglePage,
+    align,
+    showPrevNextJumpers = true,
+    showQuickJumper,
+    showLessItems,
+    showTitle = true,
+    onShowSizeChange = Pagination_noop,
+    locale = locale_zh_CN,
+    style,
+    totalBoundaryShowSizeChanger = 50,
+    disabled,
+    simple,
+    showTotal,
+    showSizeChanger = total > totalBoundaryShowSizeChanger,
+    sizeChangerRender,
+    pageSizeOptions,
+    // render
+    itemRender = defaultItemRender,
+    jumpPrevIcon,
+    jumpNextIcon,
+    prevIcon,
+    nextIcon
+  } = props;
+  const paginationRef = (react_production_namespaceFn().useRef)(null);
+  const [pageSize, setPageSize] = useControlledState(defaultPageSize, pageSizeProp);
+  const [internalCurrent, setCurrent] = useControlledState(defaultCurrent, currentProp);
+  const current = Math.max(1, Math.min(internalCurrent, calculatePage(undefined, pageSize, total)));
+  const [internalInputVal, setInternalInputVal] = (react_production_namespaceFn().useState)(current);
+  (0,react_production_namespaceFn().useEffect)(() => {
+    setInternalInputVal(current);
+  }, [current]);
+  const hasOnChange = onChange !== Pagination_noop;
+  const hasCurrent = ('current' in props);
+  if (false) // removed by dead control flow
+{}
+  const jumpPrevPage = Math.max(1, current - (showLessItems ? 3 : 5));
+  const jumpNextPage = Math.min(calculatePage(undefined, pageSize, total), current + (showLessItems ? 3 : 5));
+  function getItemIcon(icon, label) {
+    let iconNode = icon || /*#__PURE__*/(react_production_namespaceFn().createElement)("button", {
+      type: "button",
+      "aria-label": label,
+      className: `${prefixCls}-item-link`
+    });
+    if (typeof icon === 'function') {
+      iconNode = /*#__PURE__*/(react_production_namespaceFn().createElement)(icon, props);
+    }
+    return iconNode;
+  }
+  function getValidValue(e) {
+    const inputValue = e.target.value;
+    const allPages = calculatePage(undefined, pageSize, total);
+    let value;
+    if (inputValue === '') {
+      value = inputValue;
+    } else if (Number.isNaN(Number(inputValue))) {
+      value = internalInputVal;
+    } else if (inputValue >= allPages) {
+      value = allPages;
+    } else {
+      value = Number(inputValue);
+    }
+    return value;
+  }
+  function isValid(page) {
+    return isInteger(page) && page !== current && isInteger(total) && total > 0;
+  }
+  const shouldDisplayQuickJumper = total > pageSize ? showQuickJumper : false;
+
+  /**
+   * prevent "up arrow" key reseting cursor position within textbox
+   * @see https://stackoverflow.com/a/1081114
+   */
+  function handleKeyDown(event) {
+    if (event.keyCode === es_KeyCode.UP || event.keyCode === es_KeyCode.DOWN) {
+      event.preventDefault();
+    }
+  }
+  function handleKeyUp(event) {
+    const value = getValidValue(event);
+    if (value !== internalInputVal) {
+      setInternalInputVal(value);
+    }
+    switch (event.keyCode) {
+      case es_KeyCode.ENTER:
+        handleChange(value);
+        break;
+      case es_KeyCode.UP:
+        handleChange(value - 1);
+        break;
+      case es_KeyCode.DOWN:
+        handleChange(value + 1);
+        break;
+      default:
+        break;
+    }
+  }
+  function handleBlur(event) {
+    handleChange(getValidValue(event));
+  }
+  function changePageSize(size) {
+    const newCurrent = calculatePage(size, pageSize, total);
+    const nextCurrent = current > newCurrent && newCurrent !== 0 ? newCurrent : current;
+    setPageSize(size);
+    setInternalInputVal(nextCurrent);
+    onShowSizeChange?.(current, size);
+    setCurrent(nextCurrent);
+    onChange?.(nextCurrent, size);
+  }
+  function handleChange(page) {
+    if (isValid(page) && !disabled) {
+      const currentPage = calculatePage(undefined, pageSize, total);
+      let newPage = page;
+      if (page > currentPage) {
+        newPage = currentPage;
+      } else if (page < 1) {
+        newPage = 1;
+      }
+      if (newPage !== internalInputVal) {
+        setInternalInputVal(newPage);
+      }
+      setCurrent(newPage);
+      onChange?.(newPage, pageSize);
+      return newPage;
+    }
+    return current;
+  }
+  const hasPrev = current > 1;
+  const hasNext = current < calculatePage(undefined, pageSize, total);
+  function prevHandle() {
+    if (hasPrev) handleChange(current - 1);
+  }
+  function nextHandle() {
+    if (hasNext) handleChange(current + 1);
+  }
+  function jumpPrevHandle() {
+    handleChange(jumpPrevPage);
+  }
+  function jumpNextHandle() {
+    handleChange(jumpNextPage);
+  }
+  function runIfEnter(event, callback, ...restParams) {
+    if (event.key === 'Enter' || event.charCode === es_KeyCode.ENTER || event.keyCode === es_KeyCode.ENTER) {
+      callback(...restParams);
+    }
+  }
+  function runIfEnterPrev(event) {
+    runIfEnter(event, prevHandle);
+  }
+  function runIfEnterNext(event) {
+    runIfEnter(event, nextHandle);
+  }
+  function runIfEnterJumpPrev(event) {
+    runIfEnter(event, jumpPrevHandle);
+  }
+  function runIfEnterJumpNext(event) {
+    runIfEnter(event, jumpNextHandle);
+  }
+  function renderPrev(prevPage) {
+    const prevButton = itemRender(prevPage, 'prev', getItemIcon(prevIcon, 'prev page'));
+    return /*#__PURE__*/(react_production_namespaceFn().isValidElement)(prevButton) ? /*#__PURE__*/(react_production_namespaceFn().cloneElement)(prevButton, {
+      disabled: !hasPrev
+    }) : prevButton;
+  }
+  function renderNext(nextPage) {
+    const nextButton = itemRender(nextPage, 'next', getItemIcon(nextIcon, 'next page'));
+    return /*#__PURE__*/(react_production_namespaceFn().isValidElement)(nextButton) ? /*#__PURE__*/(react_production_namespaceFn().cloneElement)(nextButton, {
+      disabled: !hasNext
+    }) : nextButton;
+  }
+  function handleGoTO(event) {
+    if (event.type === 'click' || event.keyCode === es_KeyCode.ENTER) {
+      handleChange(internalInputVal);
+    }
+  }
+  let jumpPrev = null;
+  const dataOrAriaAttributeProps = pickAttrs(props, {
+    aria: true,
+    data: true
+  });
+  const totalText = showTotal && /*#__PURE__*/(react_production_namespaceFn().createElement)("li", {
+    className: `${prefixCls}-total-text`
+  }, showTotal(total, [total === 0 ? 0 : (current - 1) * pageSize + 1, current * pageSize > total ? total : current * pageSize]));
+  let jumpNext = null;
+  const allPages = calculatePage(undefined, pageSize, total);
+
+  // ================== Render ==================
+  // When hideOnSinglePage is true and there is only 1 page, hide the pager
+  if (hideOnSinglePage && total <= pageSize) {
+    return null;
+  }
+  const pagerList = [];
+  const pagerProps = {
+    rootPrefixCls: prefixCls,
+    onClick: handleChange,
+    onKeyPress: runIfEnter,
+    showTitle,
+    itemRender,
+    page: -1,
+    className: paginationClassNames?.item,
+    style: styles?.item
+  };
+  const prevPage = current - 1 > 0 ? current - 1 : 0;
+  const nextPage = current + 1 < allPages ? current + 1 : allPages;
+  const goButton = showQuickJumper && showQuickJumper.goButton;
+
+  // ================== Simple ==================
+  // FIXME: ts type
+  const isReadOnly = typeof simple === 'object' ? simple.readOnly : !simple;
+  let gotoButton = goButton;
+  let simplePager = null;
+  if (simple) {
+    // ====== Simple quick jump ======
+    if (goButton) {
+      if (typeof goButton === 'boolean') {
+        gotoButton = /*#__PURE__*/(react_production_namespaceFn().createElement)("button", {
+          type: "button",
+          onClick: handleGoTO,
+          onKeyUp: handleGoTO
+        }, locale.jump_to_confirm);
+      } else {
+        gotoButton = /*#__PURE__*/(react_production_namespaceFn().createElement)("span", {
+          onClick: handleGoTO,
+          onKeyUp: handleGoTO
+        }, goButton);
+      }
+      gotoButton = /*#__PURE__*/(react_production_namespaceFn().createElement)("li", {
+        title: showTitle ? `${locale.jump_to}${current}/${allPages}` : null,
+        className: `${prefixCls}-simple-pager`
+      }, gotoButton);
+    }
+    simplePager = /*#__PURE__*/(react_production_namespaceFn().createElement)("li", {
+      title: showTitle ? `${current}/${allPages}` : null,
+      className: clsx(`${prefixCls}-simple-pager`, paginationClassNames?.item),
+      style: styles?.item
+    }, isReadOnly ? internalInputVal : /*#__PURE__*/(react_production_namespaceFn().createElement)("input", {
+      type: "text",
+      "aria-label": locale.jump_to,
+      value: internalInputVal,
+      disabled: disabled,
+      onKeyDown: handleKeyDown,
+      onKeyUp: handleKeyUp,
+      onChange: handleKeyUp,
+      onBlur: handleBlur,
+      size: 3
+    }), /*#__PURE__*/(react_production_namespaceFn().createElement)("span", {
+      className: `${prefixCls}-slash`
+    }, "/"), allPages);
+  }
+
+  // ====================== Normal ======================
+  const pageBufferSize = showLessItems ? 1 : 2;
+  if (allPages <= 3 + pageBufferSize * 2) {
+    if (!allPages) {
+      pagerList.push( /*#__PURE__*/(react_production_namespaceFn().createElement)(es_Pager, Pagination_extends({}, pagerProps, {
+        key: "noPager",
+        page: 1,
+        className: `${prefixCls}-item-disabled`
+      })));
+    }
+    for (let i = 1; i <= allPages; i += 1) {
+      pagerList.push( /*#__PURE__*/(react_production_namespaceFn().createElement)(es_Pager, Pagination_extends({}, pagerProps, {
+        key: i,
+        page: i,
+        active: current === i
+      })));
+    }
+  } else {
+    const prevItemTitle = showLessItems ? locale.prev_3 : locale.prev_5;
+    const nextItemTitle = showLessItems ? locale.next_3 : locale.next_5;
+    const jumpPrevContent = itemRender(jumpPrevPage, 'jump-prev', getItemIcon(jumpPrevIcon, 'prev page'));
+    const jumpNextContent = itemRender(jumpNextPage, 'jump-next', getItemIcon(jumpNextIcon, 'next page'));
+    if (showPrevNextJumpers) {
+      jumpPrev = jumpPrevContent ? /*#__PURE__*/(react_production_namespaceFn().createElement)("li", {
+        title: showTitle ? prevItemTitle : null,
+        key: "prev",
+        onClick: jumpPrevHandle,
+        tabIndex: 0,
+        onKeyDown: runIfEnterJumpPrev,
+        className: clsx(`${prefixCls}-jump-prev`, {
+          [`${prefixCls}-jump-prev-custom-icon`]: !!jumpPrevIcon
+        })
+      }, jumpPrevContent) : null;
+      jumpNext = jumpNextContent ? /*#__PURE__*/(react_production_namespaceFn().createElement)("li", {
+        title: showTitle ? nextItemTitle : null,
+        key: "next",
+        onClick: jumpNextHandle,
+        tabIndex: 0,
+        onKeyDown: runIfEnterJumpNext,
+        className: clsx(`${prefixCls}-jump-next`, {
+          [`${prefixCls}-jump-next-custom-icon`]: !!jumpNextIcon
+        })
+      }, jumpNextContent) : null;
+    }
+    let left = Math.max(1, current - pageBufferSize);
+    let right = Math.min(current + pageBufferSize, allPages);
+    if (current - 1 <= pageBufferSize) {
+      right = 1 + pageBufferSize * 2;
+    }
+    if (allPages - current <= pageBufferSize) {
+      left = allPages - pageBufferSize * 2;
+    }
+    const hasJumpPrev = !!jumpPrev && current - 1 >= pageBufferSize * 2 && current !== 1 + 2;
+    const hasJumpNext = !!jumpNext && allPages - current >= pageBufferSize * 2 && current !== allPages - 2;
+    if (!showLessItems && hasJumpPrev && right !== allPages) {
+      left += 1;
+    }
+    if (!showLessItems && hasJumpNext && left !== 1) {
+      right -= 1;
+    }
+    for (let i = left; i <= right; i += 1) {
+      pagerList.push( /*#__PURE__*/(react_production_namespaceFn().createElement)(es_Pager, Pagination_extends({}, pagerProps, {
+        key: i,
+        page: i,
+        active: current === i
+      })));
+    }
+    if (hasJumpPrev) {
+      pagerList[0] = /*#__PURE__*/(react_production_namespaceFn().cloneElement)(pagerList[0], {
+        className: clsx(`${prefixCls}-item-after-jump-prev`, pagerList[0].props.className)
+      });
+      pagerList.unshift(jumpPrev);
+    }
+    if (hasJumpNext) {
+      const lastOne = pagerList[pagerList.length - 1];
+      pagerList[pagerList.length - 1] = /*#__PURE__*/(react_production_namespaceFn().cloneElement)(lastOne, {
+        className: clsx(`${prefixCls}-item-before-jump-next`, lastOne.props.className)
+      });
+      pagerList.push(jumpNext);
+    }
+    if (left !== 1) {
+      pagerList.unshift( /*#__PURE__*/(react_production_namespaceFn().createElement)(es_Pager, Pagination_extends({}, pagerProps, {
+        key: 1,
+        page: 1
+      })));
+    }
+    if (right !== allPages) {
+      pagerList.push( /*#__PURE__*/(react_production_namespaceFn().createElement)(es_Pager, Pagination_extends({}, pagerProps, {
+        key: allPages,
+        page: allPages
+      })));
+    }
+  }
+  let prev = renderPrev(prevPage);
+  if (prev) {
+    const prevDisabled = !hasPrev || !allPages;
+    prev = /*#__PURE__*/(react_production_namespaceFn().createElement)("li", {
+      title: showTitle ? locale.prev_page : null,
+      onClick: prevHandle,
+      tabIndex: prevDisabled ? null : 0,
+      onKeyDown: runIfEnterPrev,
+      className: clsx(`${prefixCls}-prev`, paginationClassNames?.item, {
+        [`${prefixCls}-disabled`]: prevDisabled
+      }),
+      style: styles?.item,
+      "aria-disabled": prevDisabled
+    }, prev);
+  }
+  let next = renderNext(nextPage);
+  if (next) {
+    let nextDisabled, nextTabIndex;
+    if (simple) {
+      nextDisabled = !hasNext;
+      nextTabIndex = hasPrev ? 0 : null;
+    } else {
+      nextDisabled = !hasNext || !allPages;
+      nextTabIndex = nextDisabled ? null : 0;
+    }
+    next = /*#__PURE__*/(react_production_namespaceFn().createElement)("li", {
+      title: showTitle ? locale.next_page : null,
+      onClick: nextHandle,
+      tabIndex: nextTabIndex,
+      onKeyDown: runIfEnterNext,
+      className: clsx(`${prefixCls}-next`, paginationClassNames?.item, {
+        [`${prefixCls}-disabled`]: nextDisabled
+      }),
+      style: styles?.item,
+      "aria-disabled": nextDisabled
+    }, next);
+  }
+  const cls = clsx(prefixCls, className, {
+    [`${prefixCls}-start`]: align === 'start',
+    [`${prefixCls}-center`]: align === 'center',
+    [`${prefixCls}-end`]: align === 'end',
+    [`${prefixCls}-simple`]: simple,
+    [`${prefixCls}-disabled`]: disabled
+  });
+  return /*#__PURE__*/(react_production_namespaceFn().createElement)("ul", Pagination_extends({
+    className: cls,
+    style: style,
+    ref: paginationRef
+  }, dataOrAriaAttributeProps), totalText, prev, simple ? simplePager : pagerList, next, /*#__PURE__*/(react_production_namespaceFn().createElement)(es_Options, {
+    locale: locale,
+    rootPrefixCls: prefixCls,
+    disabled: disabled,
+    selectPrefixCls: selectPrefixCls,
+    changeSize: changePageSize,
+    pageSize: pageSize,
+    pageSizeOptions: pageSizeOptions,
+    quickGo: shouldDisplayQuickJumper ? handleChange : null,
+    goButton: gotoButton,
+    showSizeChanger: showSizeChanger,
+    sizeChangerRender: sizeChangerRender
+  }));
+};
+if (false) // removed by dead control flow
+{}
+/* harmony default export */ const es_Pagination = (Pagination_Pagination);
+;// ./node_modules/@rc-component/pagination/es/index.js
+
+;// ./node_modules/antd/es/pagination/style/index.js
+
+
+
+
+
+
+const genPaginationDisabledStyle = token => {
+  const {
+    componentCls
+  } = token;
+  return {
+    [`${componentCls}-disabled`]: {
+      '&, &:hover': {
+        cursor: 'not-allowed',
+        [`${componentCls}-item-link`]: {
+          color: token.colorTextDisabled,
+          cursor: 'not-allowed'
+        }
+      },
+      '&:focus-visible': {
+        cursor: 'not-allowed',
+        [`${componentCls}-item-link`]: {
+          color: token.colorTextDisabled,
+          cursor: 'not-allowed'
+        }
+      }
+    },
+    [`&${componentCls}-disabled`]: {
+      cursor: 'not-allowed',
+      [`${componentCls}-item`]: {
+        cursor: 'not-allowed',
+        backgroundColor: 'transparent',
+        '&:hover, &:active': {
+          backgroundColor: 'transparent'
+        },
+        a: {
+          color: token.colorTextDisabled,
+          backgroundColor: 'transparent',
+          border: 'none',
+          cursor: 'not-allowed'
+        },
+        '&-active': {
+          borderColor: token.colorBorder,
+          backgroundColor: token.itemActiveBgDisabled,
+          '&:hover, &:active': {
+            backgroundColor: token.itemActiveBgDisabled
+          },
+          a: {
+            color: token.itemActiveColorDisabled
+          }
+        }
+      },
+      [`${componentCls}-item-link`]: {
+        color: token.colorTextDisabled,
+        cursor: 'not-allowed',
+        '&:hover, &:active': {
+          backgroundColor: 'transparent'
+        },
+        [`${componentCls}-simple&`]: {
+          backgroundColor: 'transparent',
+          '&:hover, &:active': {
+            backgroundColor: 'transparent'
+          }
+        }
+      },
+      [`${componentCls}-simple-pager`]: {
+        color: token.colorTextDisabled
+      },
+      [`${componentCls}-jump-prev, ${componentCls}-jump-next`]: {
+        [`${componentCls}-item-link-icon`]: {
+          opacity: 0
+        },
+        [`${componentCls}-item-ellipsis`]: {
+          opacity: 1
+        }
+      }
+    }
+  };
+};
+const genPaginationSmallStyle = token => {
+  const {
+    componentCls
+  } = token;
+  return {
+    [`&${componentCls}-small ${componentCls}-options`]: {
+      marginInlineStart: token.paginationMiniOptionsMarginInlineStart,
+      '&-quick-jumper': {
+        input: {
+          ...genInputSmallStyle(token),
+          width: token.paginationMiniQuickJumperInputWidth
+        }
+      }
+    }
+  };
+};
+const genPaginationLargeStyle = token => {
+  const {
+    componentCls
+  } = token;
+  return {
+    [`&${componentCls}-large ${componentCls}-options`]: {
+      '&-quick-jumper': {
+        input: {
+          ...genInputLargeStyle(token)
+        }
+      }
+    }
+  };
+};
+const genPaginationSimpleStyle = token => {
+  const {
+    componentCls,
+    antCls
+  } = token;
+  const [, varRef] = genCssVar(antCls, 'pagination');
+  return {
+    [`&${componentCls}-simple`]: {
+      [`${componentCls}-prev, ${componentCls}-next`]: {
+        height: varRef(`item-size-actual`),
+        lineHeight: varRef(`item-size-actual`),
+        verticalAlign: 'top',
+        [`${componentCls}-item-link`]: {
+          height: varRef(`item-size-actual`),
+          backgroundColor: 'transparent',
+          border: 0,
+          '&:hover': {
+            backgroundColor: token.colorBgTextHover
+          },
+          '&:active': {
+            backgroundColor: token.colorBgTextActive
+          },
+          '&::after': {
+            height: varRef(`item-size-actual`),
+            lineHeight: varRef(`item-size-actual`)
+          }
+        }
+      },
+      [`${componentCls}-simple-pager`]: {
+        display: 'inline-flex',
+        alignItems: 'center',
+        height: varRef(`item-size-actual`),
+        marginInlineEnd: varRef(`item-spacing-actual`),
+        input: {
+          boxSizing: 'border-box',
+          height: '100%',
+          width: token.quickJumperInputWidth,
+          padding: `0 ${util_unit(token.paginationItemPaddingInline)}`,
+          textAlign: 'center',
+          backgroundColor: token.itemInputBg,
+          border: `${util_unit(token.lineWidth)} ${token.lineType} ${token.colorBorder}`,
+          borderRadius: token.borderRadius,
+          outline: 'none',
+          transition: `border-color ${token.motionDurationMid}`,
+          color: 'inherit',
+          '&:hover': {
+            borderColor: token.colorPrimary
+          },
+          '&:focus': {
+            borderColor: token.colorPrimaryHover,
+            boxShadow: `${util_unit(token.inputOutlineOffset)} 0 ${util_unit(token.controlOutlineWidth)} ${token.controlOutline}`
+          },
+          '&[disabled]': {
+            color: token.colorTextDisabled,
+            backgroundColor: token.colorBgContainerDisabled,
+            borderColor: token.colorBorder,
+            cursor: 'not-allowed'
+          }
+        }
+      },
+      [`&${componentCls}-disabled`]: {
+        [`${componentCls}-prev, ${componentCls}-next`]: {
+          [`${componentCls}-item-link`]: {
+            '&:hover, &:active': {
+              backgroundColor: 'transparent'
+            }
+          }
+        }
+      },
+      [`&${componentCls}-small`]: {
+        [`${componentCls}-simple-pager`]: {
+          input: {
+            width: token.paginationMiniQuickJumperInputWidth
+          }
+        }
+      }
+    }
+  };
+};
+const genPaginationInputVariantStyle = token => {
+  const {
+    componentCls
+  } = token;
+  const inputSelector = `${componentCls}-options-quick-jumper input, ${componentCls}-simple-pager input`;
+  return {
+    [`&${componentCls}-filled`]: {
+      [inputSelector]: {
+        background: token.colorFillTertiary,
+        borderColor: 'transparent',
+        '&:hover': {
+          background: token.colorFillSecondary
+        },
+        '&:focus': {
+          borderColor: token.activeBorderColor,
+          outline: 0,
+          backgroundColor: token.activeBg
+        },
+        '&[disabled]': {
+          ...genDisabledStyle(token)
+        }
+      }
+    },
+    [`&${componentCls}-borderless`]: {
+      [inputSelector]: {
+        background: 'transparent',
+        border: 'none',
+        '&:focus': {
+          outline: 'none',
+          boxShadow: 'none'
+        },
+        '&[disabled]': {
+          color: token.colorTextDisabled,
+          cursor: 'not-allowed'
+        }
+      }
+    },
+    [`&${componentCls}-underlined`]: {
+      [inputSelector]: {
+        background: token.colorBgContainer,
+        borderWidth: `${util_unit(token.lineWidth)} 0`,
+        borderStyle: `${token.lineType} none`,
+        borderColor: `transparent transparent ${token.colorBorder} transparent`,
+        borderRadius: 0,
+        '&:hover': {
+          borderColor: `transparent transparent ${token.hoverBorderColor} transparent`,
+          backgroundColor: token.hoverBg
+        },
+        '&:focus': {
+          borderColor: `transparent transparent ${token.activeBorderColor} transparent`,
+          outline: 0,
+          backgroundColor: token.activeBg
+        },
+        '&[disabled]': {
+          color: token.colorTextDisabled,
+          boxShadow: 'none',
+          cursor: 'not-allowed'
+        }
+      }
+    }
+  };
+};
+const genPaginationJumpStyle = token => {
+  const {
+    componentCls,
+    iconCls,
+    sizeLG,
+    antCls
+  } = token;
+  const [, varRef] = genCssVar(antCls, 'pagination');
+  return {
+    [`${componentCls}-jump-prev, ${componentCls}-jump-next`]: {
+      outline: 0,
+      [`${componentCls}-item-container`]: {
+        position: 'relative',
+        [`${componentCls}-item-link-icon`]: {
+          color: token.colorPrimary,
+          fontSize: token.fontSizeSM,
+          opacity: 0,
+          transition: `all ${token.motionDurationMid}`,
+          '&-svg': {
+            top: 0,
+            insetInlineEnd: 0,
+            bottom: 0,
+            insetInlineStart: 0,
+            margin: 'auto'
+          }
+        },
+        [`${componentCls}-item-ellipsis`]: {
+          position: 'absolute',
+          inset: 0,
+          display: 'inline-flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          margin: 'auto',
+          color: token.colorTextDisabled,
+          textAlign: 'center',
+          opacity: 1,
+          transition: `all ${token.motionDurationMid}`,
+          [`${iconCls}-ellipsis > svg`]: {
+            width: sizeLG,
+            height: sizeLG
+          }
+        }
+      },
+      '&:hover': {
+        [`${componentCls}-item-link-icon`]: {
+          opacity: 1
+        },
+        [`${componentCls}-item-ellipsis`]: {
+          opacity: 0
+        }
+      }
+    },
+    [`
+    ${componentCls}-prev,
+    ${componentCls}-jump-prev,
+    ${componentCls}-jump-next
+    `]: {
+      marginInlineEnd: varRef(`item-spacing-actual`)
+    },
+    [`
+    ${componentCls}-prev,
+    ${componentCls}-next,
+    ${componentCls}-jump-prev,
+    ${componentCls}-jump-next
+    `]: {
+      display: 'inline-block',
+      minWidth: varRef(`item-size-actual`),
+      height: varRef(`item-size-actual`),
+      color: token.colorText,
+      fontFamily: token.fontFamily,
+      lineHeight: varRef(`item-size-actual`),
+      textAlign: 'center',
+      verticalAlign: 'middle',
+      listStyle: 'none',
+      borderRadius: token.borderRadius,
+      cursor: 'pointer',
+      transition: `all ${token.motionDurationMid}`
+    },
+    [`${componentCls}-prev, ${componentCls}-next`]: {
+      outline: 0,
+      button: {
+        color: token.colorText,
+        cursor: 'pointer',
+        userSelect: 'none'
+      },
+      [`${componentCls}-item-link`]: {
+        display: 'block',
+        width: '100%',
+        height: '100%',
+        padding: 0,
+        fontSize: token.fontSizeSM,
+        textAlign: 'center',
+        backgroundColor: 'transparent',
+        border: `${util_unit(token.lineWidth)} ${token.lineType} transparent`,
+        borderRadius: token.borderRadius,
+        outline: 'none',
+        transition: `all ${token.motionDurationMid}`
+      },
+      [`&:hover ${componentCls}-item-link`]: {
+        backgroundColor: token.colorBgTextHover
+      },
+      [`&:active ${componentCls}-item-link`]: {
+        backgroundColor: token.colorBgTextActive
+      },
+      [`&${componentCls}-disabled:hover`]: {
+        [`${componentCls}-item-link`]: {
+          backgroundColor: 'transparent'
+        }
+      }
+    },
+    [`${componentCls}-slash`]: {
+      marginInlineEnd: token.paginationSlashMarginInlineEnd,
+      marginInlineStart: token.paginationSlashMarginInlineStart
+    },
+    [`${componentCls}-options`]: {
+      display: 'inline-block',
+      marginInlineStart: token.margin,
+      verticalAlign: 'middle',
+      [`&-size-changer, &-size-changer${componentCls}-options-size-changer-select`]: {
+        width: 'auto'
+      },
+      '&-quick-jumper': {
+        display: 'inline-block',
+        height: varRef(`item-size-actual`),
+        marginInlineStart: token.marginXS,
+        lineHeight: varRef(`item-size-actual`),
+        verticalAlign: 'baseline',
+        input: {
+          ...genBasicInputStyle(token),
+          ...genBaseOutlinedStyle(token, {
+            borderColor: token.colorBorder,
+            hoverBorderColor: token.colorPrimaryHover,
+            activeBorderColor: token.colorPrimary,
+            activeShadow: token.activeShadow
+          }),
+          '&[disabled]': {
+            ...genDisabledStyle(token)
+          },
+          width: token.quickJumperInputWidth,
+          height: varRef(`item-size-actual`),
+          boxSizing: 'border-box',
+          margin: 0,
+          marginInlineStart: varRef(`item-spacing-actual`),
+          marginInlineEnd: varRef(`item-spacing-actual`)
+        }
+      }
+    }
+  };
+};
+const genPaginationItemStyle = token => {
+  const {
+    componentCls,
+    antCls
+  } = token;
+  const [, varRef] = genCssVar(antCls, 'pagination');
+  return {
+    [`${componentCls}-item`]: {
+      display: 'inline-block',
+      minWidth: varRef(`item-size-actual`),
+      height: varRef(`item-size-actual`),
+      marginInlineEnd: varRef(`item-spacing-actual`),
+      fontFamily: token.fontFamily,
+      lineHeight: util_unit(token.calc(varRef('item-size-actual')).sub(2).equal()),
+      textAlign: 'center',
+      verticalAlign: 'middle',
+      listStyle: 'none',
+      backgroundColor: token.itemBg,
+      border: `${util_unit(token.lineWidth)} ${token.lineType} transparent`,
+      borderRadius: token.borderRadius,
+      outline: 0,
+      cursor: 'pointer',
+      userSelect: 'none',
+      a: {
+        display: 'block',
+        padding: `0 ${util_unit(token.paginationItemPaddingInline)}`,
+        color: token.colorText,
+        '&:hover': {
+          textDecoration: 'none'
+        }
+      },
+      [`&:not(${componentCls}-item-active)`]: {
+        '&:hover': {
+          transition: `all ${token.motionDurationMid}`,
+          backgroundColor: token.colorBgTextHover
+        },
+        '&:active': {
+          backgroundColor: token.colorBgTextActive
+        }
+      },
+      '&-active': {
+        fontWeight: token.fontWeightStrong,
+        backgroundColor: token.itemActiveBg,
+        borderColor: token.colorPrimary,
+        a: {
+          color: token.itemActiveColor
+        },
+        '&:hover': {
+          borderColor: token.colorPrimaryHover
+        },
+        '&:hover a': {
+          color: token.itemActiveColorHover
+        }
+      }
+    }
+  };
+};
+const genPaginationStyle = token => {
+  const {
+    componentCls,
+    antCls
+  } = token;
+  const [varName, varRef] = genCssVar(antCls, 'pagination');
+  return {
+    [componentCls]: {
+      [varName(`item-size-actual`)]: util_unit(token.itemSize),
+      [varName(`item-spacing-actual`)]: util_unit(token.marginXS),
+      '&-small': {
+        [varName(`item-size-actual`)]: util_unit(token.itemSizeSM),
+        [varName(`item-spacing-actual`)]: util_unit(token.marginXXS)
+      },
+      '&-large': {
+        [varName(`item-size-actual`)]: util_unit(token.itemSizeLG),
+        [varName(`item-spacing-actual`)]: util_unit(token.marginSM)
+      },
+      ...resetComponent(token),
+      display: 'flex',
+      alignItems: 'center',
+      '&-start': {
+        justifyContent: 'start'
+      },
+      '&-center': {
+        justifyContent: 'center'
+      },
+      '&-end': {
+        justifyContent: 'end'
+      },
+      'ul, ol': {
+        margin: 0,
+        padding: 0,
+        listStyle: 'none'
+      },
+      '&::after': {
+        display: 'block',
+        clear: 'both',
+        height: 0,
+        overflow: 'hidden',
+        visibility: 'hidden',
+        content: '""'
+      },
+      [`${componentCls}-total-text`]: {
+        display: 'inline-block',
+        height: varRef(`item-size-actual`),
+        marginInlineEnd: varRef(`item-spacing-actual`),
+        lineHeight: util_unit(token.calc(varRef(`item-size-actual`)).sub(2).equal()),
+        verticalAlign: 'middle'
+      },
+      // item style
+      ...genPaginationItemStyle(token),
+      // jump btn style
+      ...genPaginationJumpStyle(token),
+      // simple style
+      ...genPaginationSimpleStyle(token),
+      // input variant style
+      ...genPaginationInputVariantStyle(token),
+      // size style
+      ...genPaginationSmallStyle(token),
+      ...genPaginationLargeStyle(token),
+      // disabled style
+      ...genPaginationDisabledStyle(token),
+      // media query style
+      [`@media only screen and (max-width: ${token.screenLG}px)`]: {
+        [`${componentCls}-item`]: {
+          '&-after-jump-prev, &-before-jump-next': {
+            display: 'none'
+          }
+        }
+      },
+      [`@media only screen and (max-width: ${token.screenSM}px)`]: {
+        [`${componentCls}-options`]: {
+          display: 'none'
+        }
+      }
+    },
+    // rtl style
+    [`&${token.componentCls}-rtl`]: {
+      direction: 'rtl'
+    }
+  };
+};
+const genPaginationFocusStyle = token => {
+  const {
+    componentCls
+  } = token;
+  return {
+    [`${componentCls}:not(${componentCls}-disabled)`]: {
+      [`${componentCls}-item`]: {
+        ...genFocusStyle(token)
+      },
+      [`${componentCls}-jump-prev, ${componentCls}-jump-next`]: {
+        '&:focus-visible': {
+          [`${componentCls}-item-link-icon`]: {
+            opacity: 1
+          },
+          [`${componentCls}-item-ellipsis`]: {
+            opacity: 0
+          },
+          ...genFocusOutline(token)
+        }
+      },
+      [`${componentCls}-prev, ${componentCls}-next`]: {
+        [`&:focus-visible ${componentCls}-item-link`]: genFocusOutline(token)
+      }
+    }
+  };
+};
+const pagination_style_prepareComponentToken = token => ({
+  itemBg: token.colorBgContainer,
+  itemSize: token.controlHeight,
+  itemSizeSM: token.controlHeightSM,
+  itemSizeLG: token.controlHeightLG,
+  itemActiveBg: token.colorBgContainer,
+  itemActiveColor: token.colorPrimary,
+  itemActiveColorHover: token.colorPrimaryHover,
+  itemLinkBg: token.colorBgContainer,
+  itemActiveColorDisabled: token.colorTextDisabled,
+  itemActiveBgDisabled: token.controlItemBgActiveDisabled,
+  itemInputBg: token.colorBgContainer,
+  miniOptionsSizeChangerTop: 0,
+  ...initComponentToken(token)
+});
+const pagination_style_prepareToken = token => statistic_merge(token, {
+  inputOutlineOffset: 0,
+  quickJumperInputWidth: token.calc(token.controlHeightLG).mul(1.25).equal(),
+  paginationMiniOptionsMarginInlineStart: token.calc(token.marginXXS).div(2).equal(),
+  paginationMiniQuickJumperInputWidth: token.calc(token.controlHeightLG).mul(1.1).equal(),
+  paginationItemPaddingInline: token.calc(token.marginXXS).mul(1.5).equal(),
+  paginationEllipsisLetterSpacing: token.calc(token.marginXXS).div(2).equal(),
+  paginationSlashMarginInlineStart: token.marginSM,
+  paginationSlashMarginInlineEnd: token.marginSM,
+  paginationEllipsisTextIndent: '0.13em' // magic for ui experience
+}, initInputToken(token));
+// ============================== Export ==============================
+/* harmony default export */ const pagination_style = (genStyleHooks('Pagination', token => {
+  const paginationToken = pagination_style_prepareToken(token);
+  return [genPaginationStyle(paginationToken), genPaginationFocusStyle(paginationToken)];
+}, pagination_style_prepareComponentToken));
+;// ./node_modules/antd/es/pagination/style/bordered.js
+
+
+
+const genBorderedStyle = token => {
+  const {
+    componentCls
+  } = token;
+  return {
+    [`${componentCls}${componentCls}-bordered${componentCls}-disabled`]: {
+      '&, &:hover': {
+        [`${componentCls}-item-link`]: {
+          borderColor: token.colorBorder
+        }
+      },
+      '&:focus-visible': {
+        [`${componentCls}-item-link`]: {
+          borderColor: token.colorBorder
+        }
+      },
+      [`${componentCls}-item, ${componentCls}-item-link`]: {
+        backgroundColor: token.colorBgContainerDisabled,
+        borderColor: token.colorBorder,
+        [`&:hover:not(${componentCls}-item-active)`]: {
+          backgroundColor: token.colorBgContainerDisabled,
+          borderColor: token.colorBorder,
+          a: {
+            color: token.colorTextDisabled
+          }
+        },
+        [`&${componentCls}-item-active`]: {
+          backgroundColor: token.itemActiveBgDisabled
+        }
+      },
+      [`${componentCls}-prev, ${componentCls}-next`]: {
+        '&:hover button': {
+          backgroundColor: token.colorBgContainerDisabled,
+          borderColor: token.colorBorder,
+          color: token.colorTextDisabled
+        },
+        [`${componentCls}-item-link`]: {
+          backgroundColor: token.colorBgContainerDisabled,
+          borderColor: token.colorBorder
+        }
+      }
+    },
+    [`${componentCls}${componentCls}-bordered`]: {
+      [`${componentCls}-prev, ${componentCls}-next`]: {
+        '&:hover button': {
+          borderColor: token.colorPrimaryHover,
+          backgroundColor: token.itemBg
+        },
+        [`${componentCls}-item-link`]: {
+          backgroundColor: token.itemLinkBg,
+          borderColor: token.colorBorder
+        },
+        [`&:hover ${componentCls}-item-link`]: {
+          borderColor: token.colorPrimary,
+          backgroundColor: token.itemBg,
+          color: token.colorPrimary
+        },
+        [`&${componentCls}-disabled`]: {
+          [`${componentCls}-item-link`]: {
+            borderColor: token.colorBorder,
+            color: token.colorTextDisabled
+          }
+        }
+      },
+      [`${componentCls}-item`]: {
+        backgroundColor: token.itemBg,
+        border: `${util_unit(token.lineWidth)} ${token.lineType} ${token.colorBorder}`,
+        [`&:hover:not(${componentCls}-item-active)`]: {
+          borderColor: token.colorPrimary,
+          backgroundColor: token.itemBg,
+          a: {
+            color: token.colorPrimary
+          }
+        },
+        '&-active': {
+          borderColor: token.colorPrimary
+        }
+      }
+    }
+  };
+};
+/* harmony default export */ const bordered = (genSubStyleComponent(['Pagination', 'bordered'], token => {
+  const paginationToken = pagination_style_prepareToken(token);
+  return genBorderedStyle(paginationToken);
+}, pagination_style_prepareComponentToken));
+;// ./node_modules/antd/es/pagination/useShowSizeChanger.js
+
+
+function useShowSizeChanger(showSizeChanger) {
+  return (0,react_production_namespaceFn().useMemo)(() => {
+    if (typeof showSizeChanger === 'boolean') {
+      return [showSizeChanger, {}];
+    }
+    if (isPlainObject(showSizeChanger)) {
+      return [true, showSizeChanger];
+    }
+    return [undefined, undefined];
+  }, [showSizeChanger]);
+}
+;// ./node_modules/antd/es/pagination/Pagination.js
+"use client";
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+const pagination_Pagination_Pagination = props => {
+  const {
+    align,
+    prefixCls: customizePrefixCls,
+    selectPrefixCls: customizeSelectPrefixCls,
+    className,
+    rootClassName,
+    style,
+    size: customizeSize,
+    locale: customLocale,
+    responsive,
+    showSizeChanger,
+    components,
+    selectComponentClass,
+    pageSizeOptions,
+    styles,
+    classNames,
+    ...restProps
+  } = props;
+  const {
+    xs
+  } = hooks_useBreakpoint(responsive);
+  const [, token] = useToken();
+  const {
+    getPrefixCls,
+    direction,
+    showSizeChanger: contextShowSizeChangerConfig,
+    className: contextClassName,
+    style: contextStyle,
+    classNames: contextClassNames,
+    styles: contextStyles,
+    totalBoundaryShowSizeChanger: contextTotalBoundaryShowSizeChanger
+  } = useComponentConfig('pagination');
+  const prefixCls = getPrefixCls('pagination', customizePrefixCls);
+  // Style
+  const [hashId, cssVarCls] = pagination_style(prefixCls);
+  // ============================== Size ==============================
+  const mergedSize = hooks_useSize(customizeSize);
+  const isSmall = mergedSize === 'small' || !!(xs && !mergedSize && responsive);
+  const [inputVariant, enableInputVariantCls] = useVariants('input');
+  // =========== Merged Props for Semantic ==========
+  const mergedProps = {
+    ...props,
+    size: mergedSize
+  };
+  // ========================= Style ==========================
+  const contextStyleRoot = useSemanticRootStyle(contextStyle);
+  const styleRoot = useSemanticRootStyle(style);
+  const [mergedClassNames, mergedStyles] = useMergeSemantic([contextClassNames, classNames], [contextStyles, contextStyleRoot, styles, styleRoot], {
+    props: mergedProps
+  });
+  // ============================= Locale =============================
+  const [contextLocale] = locale_useLocale('Pagination', en_US);
+  const locale = {
+    ...contextLocale,
+    ...customLocale
+  };
+  // ========================== Size Changer ==========================
+  // Merge the props showSizeChanger
+  const [propShowSizeChanger, propSizeChangerSelectProps] = useShowSizeChanger(showSizeChanger);
+  const [contextShowSizeChanger, contextSizeChangerSelectProps] = useShowSizeChanger(contextShowSizeChangerConfig);
+  const mergedShowSizeChanger = propShowSizeChanger ?? contextShowSizeChanger;
+  const mergedShowSizeChangerSelectProps = propSizeChangerSelectProps ?? contextSizeChangerSelectProps;
+  const SizeChanger = selectComponentClass || es_select;
+  // Generate options
+  const mergedPageSizeOptions = (react_production_namespaceFn().useMemo)(() => {
+    return pageSizeOptions ? pageSizeOptions.map(Number) : undefined;
+  }, [pageSizeOptions]);
+  // Render size changer
+  const sizeChangerRender = info => {
+    const {
+      disabled,
+      size: pageSize,
+      onSizeChange,
+      'aria-label': ariaLabel,
+      className: sizeChangerClassName,
+      options
+    } = info;
+    const SizeChangerComponent = components?.sizeChanger;
+    if (SizeChangerComponent) {
+      return /*#__PURE__*/(react_production_namespaceFn().createElement)(SizeChangerComponent, {
+        value: pageSize,
+        onChange: onSizeChange,
+        disabled: !!disabled,
+        className: sizeChangerClassName
+      });
+    }
+    const {
+      className: propSizeChangerClassName,
+      onChange: propSizeChangerOnChange
+    } = mergedShowSizeChangerSelectProps || {};
+    // Origin Select is using Select.Option,
+    // So it make the option value must be string
+    // Just for compatible
+    const selectedValue = options.find(option => String(option.value) === String(pageSize))?.value;
+    return /*#__PURE__*/(react_production_namespaceFn().createElement)(SizeChanger, {
+      disabled: disabled,
+      showSearch: true,
+      popupMatchSelectWidth: false,
+      getPopupContainer: triggerNode => triggerNode.parentNode,
+      "aria-label": ariaLabel,
+      options: options,
+      ...mergedShowSizeChangerSelectProps,
+      value: selectedValue,
+      onChange: (nextSize, option) => {
+        onSizeChange?.(nextSize);
+        propSizeChangerOnChange?.(nextSize, option);
+      },
+      size: mergedSize,
+      className: clsx(`${prefixCls}-options-size-changer-select`, sizeChangerClassName, propSizeChangerClassName)
+    });
+  };
+  if (false) // removed by dead control flow
+{}
+  // ============================= Render =============================
+  const iconsProps = (react_production_namespaceFn().useMemo)(() => {
+    const ellipsis = /*#__PURE__*/(react_production_namespaceFn().createElement)("span", {
+      className: `${prefixCls}-item-ellipsis`
+    }, /*#__PURE__*/(react_production_namespaceFn().createElement)(icons_EllipsisOutlined, null));
+    const prevIcon = /*#__PURE__*/(react_production_namespaceFn().createElement)("button", {
+      className: `${prefixCls}-item-link`,
+      type: "button",
+      tabIndex: -1
+    }, direction === 'rtl' ? /*#__PURE__*/(react_production_namespaceFn().createElement)(icons_RightOutlined, null) : /*#__PURE__*/(react_production_namespaceFn().createElement)(icons_LeftOutlined, null));
+    const nextIcon = /*#__PURE__*/(react_production_namespaceFn().createElement)("button", {
+      className: `${prefixCls}-item-link`,
+      type: "button",
+      tabIndex: -1
+    }, direction === 'rtl' ? /*#__PURE__*/(react_production_namespaceFn().createElement)(icons_LeftOutlined, null) : /*#__PURE__*/(react_production_namespaceFn().createElement)(icons_RightOutlined, null));
+    const jumpPrevIcon = /*#__PURE__*/(react_production_namespaceFn().createElement)("a", {
+      className: `${prefixCls}-item-link`
+    }, /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
+      className: `${prefixCls}-item-container`
+    }, direction === 'rtl' ? (/*#__PURE__*/(react_production_namespaceFn().createElement)(icons_DoubleRightOutlined, {
+      className: `${prefixCls}-item-link-icon`
+    })) : (/*#__PURE__*/(react_production_namespaceFn().createElement)(icons_DoubleLeftOutlined, {
+      className: `${prefixCls}-item-link-icon`
+    })), ellipsis));
+    const jumpNextIcon = /*#__PURE__*/(react_production_namespaceFn().createElement)("a", {
+      className: `${prefixCls}-item-link`
+    }, /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
+      className: `${prefixCls}-item-container`
+    }, direction === 'rtl' ? (/*#__PURE__*/(react_production_namespaceFn().createElement)(icons_DoubleLeftOutlined, {
+      className: `${prefixCls}-item-link-icon`
+    })) : (/*#__PURE__*/(react_production_namespaceFn().createElement)(icons_DoubleRightOutlined, {
+      className: `${prefixCls}-item-link-icon`
+    })), ellipsis));
+    return {
+      prevIcon,
+      nextIcon,
+      jumpPrevIcon,
+      jumpNextIcon
+    };
+  }, [direction, prefixCls]);
+  const selectPrefixCls = getPrefixCls('select', customizeSelectPrefixCls);
+  const extendedClassName = clsx({
+    [`${prefixCls}-${align}`]: !!align,
+    [`${prefixCls}-${mergedSize}`]: mergedSize,
+    [`${prefixCls}-${inputVariant}`]: enableInputVariantCls && inputVariant !== 'outlined',
+    /** @deprecated Should be removed in v7 */
+    [`${prefixCls}-mini`]: isSmall,
+    [`${prefixCls}-rtl`]: direction === 'rtl',
+    [`${prefixCls}-bordered`]: token.wireframe
+  }, contextClassName, className, rootClassName, mergedClassNames.root, hashId, cssVarCls);
+  const mergedStyle = {
+    ...mergedStyles.root
+  };
+  return /*#__PURE__*/(react_production_namespaceFn().createElement)((react_production_namespaceFn().Fragment), null, token.wireframe && /*#__PURE__*/(react_production_namespaceFn().createElement)(bordered, {
+    prefixCls: prefixCls
+  }), /*#__PURE__*/(react_production_namespaceFn().createElement)(es_Pagination, {
+    ...iconsProps,
+    ...restProps,
+    styles: mergedStyles,
+    classNames: mergedClassNames,
+    style: mergedStyle,
+    prefixCls: prefixCls,
+    selectPrefixCls: selectPrefixCls,
+    className: extendedClassName,
+    locale: locale,
+    pageSizeOptions: mergedPageSizeOptions,
+    showSizeChanger: mergedShowSizeChanger,
+    totalBoundaryShowSizeChanger: restProps.totalBoundaryShowSizeChanger ?? contextTotalBoundaryShowSizeChanger,
+    sizeChangerRender: sizeChangerRender
+  }));
+};
+if (false) // removed by dead control flow
+{}
+/* harmony default export */ const pagination_Pagination = (pagination_Pagination_Pagination);
+;// ./node_modules/antd/es/pagination/index.js
+"use client";
+
+
+/* harmony default export */ const es_pagination = (pagination_Pagination);
+;// ./node_modules/antd/es/list/context.js
+
+const context_ListContext = /*#__PURE__*/(react_production_namespaceFn().createContext)({});
+const ListConsumer = context_ListContext.Consumer;
+;// ./node_modules/antd/es/grid/col.js
+"use client";
+
+
+
+
+
+
+
+
+
+
+function parseFlex(flex) {
+  if (flex === 'auto') {
+    return '1 1 auto';
+  }
+  if (isNumber(flex)) {
+    return `${flex} ${flex} auto`;
+  }
+  if (/^\d+(\.\d+)?(px|em|rem|%)$/.test(flex)) {
+    return `0 0 ${flex}`;
+  }
+  return flex;
+}
+const Col = /*#__PURE__*/(react_production_namespaceFn().forwardRef)((props, ref) => {
+  const {
+    getPrefixCls,
+    direction
+  } = (react_production_namespaceFn().useContext)(ConfigContext);
+  const {
+    gutter,
+    wrap
+  } = (react_production_namespaceFn().useContext)(grid_RowContext);
+  const {
+    prefixCls: customizePrefixCls,
+    span,
+    order,
+    offset,
+    push,
+    pull,
+    className,
+    children,
+    flex,
+    style,
+    ...others
+  } = props;
+  const prefixCls = getPrefixCls('col', customizePrefixCls);
+  const rootPrefixCls = getPrefixCls();
+  const [hashId, cssVarCls] = useColStyle(prefixCls);
+  const [varName] = genCssVar(rootPrefixCls, 'col');
+  // ===================== Size ======================
+  const sizeStyle = {};
+  let sizeClassObj = {};
+  responsiveArrayReversed.forEach(size => {
+    let sizeProps = {};
+    const propSize = props[size];
+    if (isNumber(propSize)) {
+      sizeProps.span = propSize;
+    } else if (isPlainObject(propSize)) {
+      sizeProps = propSize || {};
+    }
+    delete others[size];
+    sizeClassObj = {
+      ...sizeClassObj,
+      [`${prefixCls}-${size}-${sizeProps.span}`]: isNonNullable(sizeProps.span),
+      [`${prefixCls}-${size}-order-${sizeProps.order}`]: sizeProps.order || sizeProps.order === 0,
+      [`${prefixCls}-${size}-offset-${sizeProps.offset}`]: sizeProps.offset || sizeProps.offset === 0,
+      [`${prefixCls}-${size}-push-${sizeProps.push}`]: sizeProps.push || sizeProps.push === 0,
+      [`${prefixCls}-${size}-pull-${sizeProps.pull}`]: sizeProps.pull || sizeProps.pull === 0,
+      [`${prefixCls}-rtl`]: direction === 'rtl'
+    };
+    // Responsive flex layout
+    if (sizeProps.flex || sizeProps.flex === 0) {
+      sizeClassObj[`${prefixCls}-${size}-flex`] = true;
+      sizeStyle[varName(`${size}-flex`)] = parseFlex(sizeProps.flex);
+    }
+  });
+  // ==================== Normal =====================
+  const classes = clsx(prefixCls, {
+    [`${prefixCls}-${span}`]: span !== undefined,
+    [`${prefixCls}-order-${order}`]: order,
+    [`${prefixCls}-offset-${offset}`]: offset,
+    [`${prefixCls}-push-${push}`]: push,
+    [`${prefixCls}-pull-${pull}`]: pull
+  }, className, sizeClassObj, hashId, cssVarCls);
+  const mergedStyle = {};
+  // Horizontal gutter use padding
+  if (gutter?.[0]) {
+    const horizontalGutter = isNumber(gutter[0]) ? `${gutter[0] / 2}px` : `calc(${gutter[0]} / 2)`;
+    mergedStyle.paddingInline = horizontalGutter;
+  }
+  if (flex || flex === 0) {
+    mergedStyle.flex = parseFlex(flex);
+    // Hack for Firefox to avoid size issue
+    // https://github.com/ant-design/ant-design/pull/20023#issuecomment-564389553
+    if (wrap === false && !mergedStyle.minWidth) {
+      mergedStyle.minWidth = 0;
+    }
+  }
+  // ==================== Render =====================
+  return /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
+    ...others,
+    style: {
+      ...mergedStyle,
+      ...style,
+      ...sizeStyle
+    },
+    className: classes,
+    ref: ref
+  }, children);
+});
+if (false) // removed by dead control flow
+{}
+/* harmony default export */ const grid_col = (Col);
+;// ./node_modules/antd/es/list/Item.js
+"use client";
+
+
+
+
+
+
+
+
+
+const Item_Meta = /*#__PURE__*/(react_production_namespaceFn().forwardRef)((props, ref) => {
+  const {
+    prefixCls: customizePrefixCls,
+    className,
+    avatar,
+    title,
+    description,
+    ...others
+  } = props;
+  const {
+    getPrefixCls
+  } = (0,react_production_namespaceFn().useContext)(ConfigContext);
+  const prefixCls = getPrefixCls('list', customizePrefixCls);
+  const classString = clsx(`${prefixCls}-item-meta`, className);
+  const nativeElementRef = (react_production_namespaceFn().useRef)(null);
+  (react_production_namespaceFn().useImperativeHandle)(ref, () => ({
+    nativeElement: nativeElementRef.current
+  }));
+  const content = /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
+    className: `${prefixCls}-item-meta-content`
+  }, title && /*#__PURE__*/(react_production_namespaceFn().createElement)("h4", {
+    className: `${prefixCls}-item-meta-title`
+  }, title), description && /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
+    className: `${prefixCls}-item-meta-description`
+  }, description));
+  return /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
+    ref: nativeElementRef,
+    ...others,
+    className: classString
+  }, avatar && /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
+    className: `${prefixCls}-item-meta-avatar`
+  }, avatar), (title || description) && content);
+});
+const Item_InternalItem = /*#__PURE__*/(react_production_namespaceFn().forwardRef)((props, ref) => {
+  const {
+    prefixCls: customizePrefixCls,
+    children,
+    actions,
+    extra,
+    styles,
+    className,
+    classNames: customizeClassNames,
+    colStyle,
+    ...others
+  } = props;
+  const {
+    grid,
+    itemLayout
+  } = (0,react_production_namespaceFn().useContext)(context_ListContext);
+  const {
+    getPrefixCls,
+    list
+  } = (0,react_production_namespaceFn().useContext)(ConfigContext);
+  const moduleClass = moduleName => clsx(list?.item?.classNames?.[moduleName], customizeClassNames?.[moduleName]);
+  const moduleStyle = moduleName => ({
+    ...list?.item?.styles?.[moduleName],
+    ...styles?.[moduleName]
+  });
+  const isItemContainsTextNodeAndNotSingular = () => {
+    const childNodes = toArray_toArray(children);
+    const hasTextNode = childNodes.some(isString);
+    return hasTextNode && childNodes.length > 1;
+  };
+  const isFlexMode = () => {
+    if (itemLayout === 'vertical') {
+      return !!extra;
+    }
+    return !isItemContainsTextNodeAndNotSingular();
+  };
+  const prefixCls = getPrefixCls('list', customizePrefixCls);
+  const actionsContent = actions && actions.length > 0 && (/*#__PURE__*/(react_production_namespaceFn().createElement)("ul", {
+    className: clsx(`${prefixCls}-item-action`, moduleClass('actions')),
+    key: "actions",
+    style: moduleStyle('actions')
+  }, actions.map((action, i) => (/*#__PURE__*/(react_production_namespaceFn().createElement)("li", {
+    key: `${prefixCls}-item-action-${i}`
+  }, action, i !== actions.length - 1 && /*#__PURE__*/(react_production_namespaceFn().createElement)("em", {
+    className: `${prefixCls}-item-action-split`
+  }))))));
+  const Element = grid ? 'div' : 'li';
+  const itemChildren = /*#__PURE__*/(react_production_namespaceFn().createElement)(Element, {
+    ...others,
+    ...(!grid ? {
+      ref
+    } : {}),
+    className: clsx(`${prefixCls}-item`, {
+      [`${prefixCls}-item-no-flex`]: !isFlexMode()
+    }, className)
+  }, itemLayout === 'vertical' && extra ? [/*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
+    className: `${prefixCls}-item-main`,
+    key: "content"
+  }, children, actionsContent), /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
+    className: clsx(`${prefixCls}-item-extra`, moduleClass('extra')),
+    key: "extra",
+    style: moduleStyle('extra')
+  }, extra)] : [children, actionsContent, cloneElement(extra, {
+    key: 'extra'
+  })]);
+  return grid ? (/*#__PURE__*/(react_production_namespaceFn().createElement)(grid_col, {
+    ref: ref,
+    flex: 1,
+    style: colStyle
+  }, itemChildren)) : itemChildren;
+});
+const list_Item_Item = Item_InternalItem;
+list_Item_Item.Meta = Item_Meta;
+/* harmony default export */ const list_Item = (list_Item_Item);
+;// ./node_modules/antd/es/list/style/index.js
+
+
+
+const style_genBorderedStyle = token => {
+  const {
+    listBorderedCls,
+    componentCls,
+    paddingLG,
+    margin,
+    itemPaddingSM,
+    itemPaddingLG,
+    marginLG,
+    borderRadiusLG
+  } = token;
+  const innerCornerBorderRadius = util_unit(token.calc(borderRadiusLG).sub(token.lineWidth).equal());
+  return {
+    [listBorderedCls]: {
+      border: `${util_unit(token.lineWidth)} ${token.lineType} ${token.colorBorder}`,
+      borderRadius: borderRadiusLG,
+      [`${componentCls}-header`]: {
+        borderRadius: `${innerCornerBorderRadius} ${innerCornerBorderRadius} 0 0`
+      },
+      [`${componentCls}-footer`]: {
+        borderRadius: `0 0 ${innerCornerBorderRadius} ${innerCornerBorderRadius}`
+      },
+      [`${componentCls}-header,${componentCls}-footer,${componentCls}-item`]: {
+        paddingInline: paddingLG
+      },
+      [`${componentCls}-pagination`]: {
+        margin: `${util_unit(margin)} ${util_unit(marginLG)}`
+      }
+    },
+    [`${listBorderedCls}${componentCls}-sm`]: {
+      [`${componentCls}-item,${componentCls}-header,${componentCls}-footer`]: {
+        padding: itemPaddingSM
+      }
+    },
+    [`${listBorderedCls}${componentCls}-lg`]: {
+      [`${componentCls}-item,${componentCls}-header,${componentCls}-footer`]: {
+        padding: itemPaddingLG
+      }
+    }
+  };
+};
+const genResponsiveStyle = token => {
+  const {
+    componentCls,
+    screenSM,
+    screenMD,
+    marginLG,
+    marginSM,
+    margin
+  } = token;
+  return {
+    [`@media screen and (max-width:${screenMD}px)`]: {
+      [componentCls]: {
+        [`${componentCls}-item`]: {
+          [`${componentCls}-item-action`]: {
+            marginInlineStart: marginLG
+          }
+        }
+      },
+      [`${componentCls}-vertical`]: {
+        [`${componentCls}-item`]: {
+          [`${componentCls}-item-extra`]: {
+            marginInlineStart: marginLG
+          }
+        }
+      }
+    },
+    [`@media screen and (max-width: ${screenSM}px)`]: {
+      [componentCls]: {
+        [`${componentCls}-item`]: {
+          flexWrap: 'wrap',
+          [`${componentCls}-action`]: {
+            marginInlineStart: marginSM
+          }
+        }
+      },
+      [`${componentCls}-vertical`]: {
+        [`${componentCls}-item`]: {
+          flexWrap: 'wrap-reverse',
+          [`${componentCls}-item-main`]: {
+            minWidth: token.contentWidth
+          },
+          [`${componentCls}-item-extra`]: {
+            margin: `auto auto ${util_unit(margin)}`
+          }
+        }
+      }
+    }
+  };
+};
+// =============================== Base ===============================
+const list_style_genBaseStyle = token => {
+  const {
+    componentCls,
+    antCls,
+    controlHeight,
+    minHeight,
+    paddingSM,
+    marginLG,
+    padding,
+    itemPadding,
+    colorPrimary,
+    itemPaddingSM,
+    itemPaddingLG,
+    paddingXS,
+    margin,
+    colorText,
+    colorTextDescription,
+    motionDurationSlow,
+    lineWidth,
+    headerBg,
+    footerBg,
+    emptyTextPadding,
+    metaMarginBottom,
+    avatarMarginRight,
+    titleMarginBottom,
+    descriptionFontSize
+  } = token;
+  return {
+    [componentCls]: {
+      ...resetComponent(token),
+      position: 'relative',
+      // fix https://github.com/ant-design/ant-design/issues/46177
+      ['--rc-virtual-list-scrollbar-bg']: token.colorSplit,
+      '*': {
+        outline: 'none'
+      },
+      [`${componentCls}-header`]: {
+        background: headerBg
+      },
+      [`${componentCls}-footer`]: {
+        background: footerBg
+      },
+      [`${componentCls}-header, ${componentCls}-footer`]: {
+        paddingBlock: paddingSM
+      },
+      [`${componentCls}-pagination`]: {
+        marginBlockStart: marginLG,
+        // https://github.com/ant-design/ant-design/issues/20037
+        [`${antCls}-pagination-options`]: {
+          textAlign: 'start'
+        }
+      },
+      [`${componentCls}-spin`]: {
+        minHeight,
+        textAlign: 'center'
+      },
+      [`${componentCls}-items`]: {
+        margin: 0,
+        padding: 0,
+        listStyle: 'none'
+      },
+      [`${componentCls}-item`]: {
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: itemPadding,
+        color: colorText,
+        [`${componentCls}-item-meta`]: {
+          display: 'flex',
+          flex: 1,
+          alignItems: 'flex-start',
+          maxWidth: '100%',
+          [`${componentCls}-item-meta-avatar`]: {
+            marginInlineEnd: avatarMarginRight
+          },
+          [`${componentCls}-item-meta-content`]: {
+            flex: '1 0',
+            width: 0,
+            color: colorText
+          },
+          [`${componentCls}-item-meta-title`]: {
+            margin: `0 0 ${util_unit(token.marginXXS)} 0`,
+            color: colorText,
+            fontSize: token.fontSize,
+            lineHeight: token.lineHeight,
+            '> a': {
+              color: colorText,
+              transition: `all ${motionDurationSlow}`,
+              '&:hover': {
+                color: colorPrimary
+              }
+            }
+          },
+          [`${componentCls}-item-meta-description`]: {
+            color: colorTextDescription,
+            fontSize: descriptionFontSize,
+            lineHeight: token.lineHeight
+          }
+        },
+        [`${componentCls}-item-action`]: {
+          flex: '0 0 auto',
+          marginInlineStart: token.marginXXL,
+          padding: 0,
+          fontSize: 0,
+          listStyle: 'none',
+          '& > li': {
+            position: 'relative',
+            display: 'inline-block',
+            padding: `0 ${util_unit(paddingXS)}`,
+            color: colorTextDescription,
+            fontSize: token.fontSize,
+            lineHeight: token.lineHeight,
+            textAlign: 'center',
+            '&:first-child': {
+              paddingInlineStart: 0
+            }
+          },
+          [`${componentCls}-item-action-split`]: {
+            position: 'absolute',
+            insetBlockStart: '50%',
+            insetInlineEnd: 0,
+            width: lineWidth,
+            height: token.calc(token.fontHeight).sub(token.calc(token.marginXXS).mul(2)).equal(),
+            transform: 'translateY(-50%)',
+            backgroundColor: token.colorSplit
+          }
+        }
+      },
+      [`${componentCls}-empty`]: {
+        padding: `${util_unit(padding)} 0`,
+        color: colorTextDescription,
+        fontSize: token.fontSizeSM,
+        textAlign: 'center'
+      },
+      [`${componentCls}-empty-text`]: {
+        padding: emptyTextPadding,
+        color: token.colorTextDisabled,
+        fontSize: token.fontSize,
+        textAlign: 'center'
+      },
+      // ============================ without flex ============================
+      [`${componentCls}-item-no-flex`]: {
+        display: 'block'
+      }
+    },
+    [`${componentCls}-grid ${antCls}-col > ${componentCls}-item`]: {
+      display: 'block',
+      maxWidth: '100%',
+      marginBlockEnd: margin,
+      paddingBlock: 0,
+      borderBlockEnd: 'none'
+    },
+    [`${componentCls}-vertical ${componentCls}-item`]: {
+      alignItems: 'initial',
+      [`${componentCls}-item-main`]: {
+        display: 'block',
+        flex: 1
+      },
+      [`${componentCls}-item-extra`]: {
+        marginInlineStart: marginLG
+      },
+      [`${componentCls}-item-meta`]: {
+        marginBlockEnd: metaMarginBottom,
+        [`${componentCls}-item-meta-title`]: {
+          marginBlockStart: 0,
+          marginBlockEnd: titleMarginBottom,
+          color: colorText,
+          fontSize: token.fontSizeLG,
+          lineHeight: token.lineHeightLG
+        }
+      },
+      [`${componentCls}-item-action`]: {
+        marginBlockStart: padding,
+        marginInlineStart: 'auto',
+        '> li': {
+          padding: `0 ${util_unit(padding)}`,
+          '&:first-child': {
+            paddingInlineStart: 0
+          }
+        }
+      }
+    },
+    [`${componentCls}-split ${componentCls}-item`]: {
+      borderBlockEnd: `${util_unit(token.lineWidth)} ${token.lineType} ${token.colorSplit}`,
+      '&:last-child': {
+        borderBlockEnd: 'none'
+      }
+    },
+    [`${componentCls}-split ${componentCls}-header`]: {
+      borderBlockEnd: `${util_unit(token.lineWidth)} ${token.lineType} ${token.colorSplit}`
+    },
+    [`${componentCls}-split${componentCls}-empty ${componentCls}-footer`]: {
+      borderTop: `${util_unit(token.lineWidth)} ${token.lineType} ${token.colorSplit}`
+    },
+    [`${componentCls}-loading ${componentCls}-spin-nested-loading`]: {
+      minHeight: controlHeight
+    },
+    [`${componentCls}-split${componentCls}-something-after-last-item ${antCls}-spin-container > ${componentCls}-items > ${componentCls}-item:last-child`]: {
+      borderBlockEnd: `${util_unit(token.lineWidth)} ${token.lineType} ${token.colorSplit}`
+    },
+    [`${componentCls}-lg ${componentCls}-item`]: {
+      padding: itemPaddingLG
+    },
+    [`${componentCls}-sm ${componentCls}-item`]: {
+      padding: itemPaddingSM
+    },
+    // Horizontal
+    [`${componentCls}:not(${componentCls}-vertical)`]: {
+      [`${componentCls}-item-no-flex`]: {
+        [`${componentCls}-item-action`]: {
+          float: 'right'
+        }
+      }
+    }
+  };
+};
+const list_style_prepareComponentToken = token => ({
+  contentWidth: 220,
+  itemPadding: `${util_unit(token.paddingContentVertical)} 0`,
+  itemPaddingSM: `${util_unit(token.paddingContentVerticalSM)} ${util_unit(token.paddingContentHorizontal)}`,
+  itemPaddingLG: `${util_unit(token.paddingContentVerticalLG)} ${util_unit(token.paddingContentHorizontalLG)}`,
+  headerBg: 'transparent',
+  footerBg: 'transparent',
+  emptyTextPadding: token.padding,
+  metaMarginBottom: token.padding,
+  avatarMarginRight: token.padding,
+  titleMarginBottom: token.paddingSM,
+  descriptionFontSize: token.fontSize
+});
+// ============================== Export ==============================
+/* harmony default export */ const list_style = (genStyleHooks('List', token => {
+  const listToken = statistic_merge(token, {
+    listBorderedCls: `${token.componentCls}-bordered`,
+    minHeight: token.controlHeightLG
+  });
+  return [list_style_genBaseStyle(listToken), style_genBorderedStyle(listToken), genResponsiveStyle(listToken)];
+}, list_style_prepareComponentToken, {
+  extraCssVarPrefixCls: ({
+    prefixCls
+  }) => [`${prefixCls}-container`]
+}));
+;// ./node_modules/antd/es/list/index.js
+"use client";
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+const InternalList = (props, ref) => {
+  const {
+    pagination = false,
+    prefixCls: customizePrefixCls,
+    bordered = false,
+    split = true,
+    className,
+    rootClassName,
+    style,
+    children,
+    itemLayout,
+    loadMore,
+    grid,
+    dataSource = [],
+    size: customizeSize,
+    header,
+    footer,
+    loading = false,
+    rowKey,
+    renderItem,
+    locale,
+    ...rest
+  } = props;
+  const paginationObj = isPlainObject(pagination) ? pagination : {};
+  const [paginationCurrent, setPaginationCurrent] = (react_production_namespaceFn().useState)(paginationObj.defaultCurrent || 1);
+  const [paginationSize, setPaginationSize] = (react_production_namespaceFn().useState)(paginationObj.defaultPageSize || 10);
+  const {
+    getPrefixCls,
+    direction,
+    className: contextClassName,
+    style: contextStyle
+  } = useComponentConfig('list');
+  const {
+    renderEmpty
+  } = (react_production_namespaceFn().useContext)(ConfigContext);
+  const defaultPaginationProps = {
+    current: 1,
+    total: 0,
+    position: 'bottom'
+  };
+  const triggerPaginationEvent = eventName => (page, pageSize) => {
+    setPaginationCurrent(page);
+    setPaginationSize(pageSize);
+    if (pagination) {
+      pagination?.[eventName]?.(page, pageSize);
+    }
+  };
+  const onPaginationChange = triggerPaginationEvent('onChange');
+  const onPaginationShowSizeChange = triggerPaginationEvent('onShowSizeChange');
+  const renderInternalItem = (item, index) => {
+    if (!renderItem) {
+      return null;
+    }
+    let key;
+    if (isFunction(rowKey)) {
+      key = rowKey(item);
+    } else if (rowKey) {
+      key = item[rowKey];
+    } else {
+      key = item.key;
+    }
+    key ?? (key = `list-item-${index}`);
+    return /*#__PURE__*/(react_production_namespaceFn().createElement)((react_production_namespaceFn().Fragment), {
+      key: key
+    }, renderItem(item, index));
+  };
+  const isSomethingAfterLastItem = !!(loadMore || pagination || footer);
+  const prefixCls = getPrefixCls('list', customizePrefixCls);
+  // Style
+  const [hashId, cssVarCls] = list_style(prefixCls);
+  let loadingProp = loading;
+  if (typeof loadingProp === 'boolean') {
+    loadingProp = {
+      spinning: loadingProp
+    };
+  }
+  const isLoading = !!loadingProp?.spinning;
+  const mergedSize = hooks_useSize(customizeSize);
+  // large => lg
+  // small => sm
+  let sizeCls = '';
+  switch (mergedSize) {
+    case 'large':
+      sizeCls = 'lg';
+      break;
+    case 'small':
+      sizeCls = 'sm';
+      break;
+    default:
+      break;
+  }
+  const classString = clsx(prefixCls, {
+    [`${prefixCls}-vertical`]: itemLayout === 'vertical',
+    [`${prefixCls}-${sizeCls}`]: sizeCls,
+    [`${prefixCls}-split`]: split,
+    [`${prefixCls}-bordered`]: bordered,
+    [`${prefixCls}-loading`]: isLoading,
+    [`${prefixCls}-grid`]: !!grid,
+    [`${prefixCls}-something-after-last-item`]: isSomethingAfterLastItem,
+    [`${prefixCls}-rtl`]: direction === 'rtl'
+  }, contextClassName, className, rootClassName, hashId, cssVarCls);
+  const containerCls = `${prefixCls}-container`;
+  const paginationProps = es_mergeProps(defaultPaginationProps, {
+    total: dataSource.length,
+    current: paginationCurrent,
+    pageSize: paginationSize
+  }, pagination || {});
+  const largestPage = Math.ceil(paginationProps.total / paginationProps.pageSize);
+  paginationProps.current = Math.min(paginationProps.current, largestPage);
+  const paginationContent = pagination && (/*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
+    className: clsx(`${prefixCls}-pagination`)
+  }, /*#__PURE__*/(react_production_namespaceFn().createElement)(es_pagination, {
+    align: "end",
+    ...paginationProps,
+    onChange: onPaginationChange,
+    onShowSizeChange: onPaginationShowSizeChange
+  })));
+  let splitDataSource = _toConsumableArray(dataSource);
+  if (pagination) {
+    if (dataSource.length > (paginationProps.current - 1) * paginationProps.pageSize) {
+      splitDataSource = _toConsumableArray(dataSource).splice((paginationProps.current - 1) * paginationProps.pageSize, paginationProps.pageSize);
+    }
+  }
+  const needResponsive = Object.keys(grid || {}).some(key => responsiveArray.includes(key));
+  const screens = hooks_useBreakpoint(needResponsive);
+  const currentBreakpoint = (react_production_namespaceFn().useMemo)(() => {
+    for (let i = 0; i < responsiveArray.length; i += 1) {
+      const breakpoint = responsiveArray[i];
+      if (screens[breakpoint]) {
+        return breakpoint;
+      }
+    }
+    return undefined;
+  }, [screens]);
+  const colStyle = (react_production_namespaceFn().useMemo)(() => {
+    if (!grid) {
+      return undefined;
+    }
+    const columnCount = currentBreakpoint && grid[currentBreakpoint] ? grid[currentBreakpoint] : grid.column;
+    if (columnCount) {
+      return {
+        width: `${100 / columnCount}%`,
+        maxWidth: `${100 / columnCount}%`
+      };
+    }
+  }, [JSON.stringify(grid), currentBreakpoint]);
+  let childrenContent = isLoading && /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
+    style: {
+      minHeight: 53
+    }
+  });
+  if (splitDataSource.length > 0) {
+    const items = splitDataSource.map(renderInternalItem);
+    childrenContent = grid ? (/*#__PURE__*/(react_production_namespaceFn().createElement)(grid_row, {
+      className: clsx(containerCls, cssVarCls),
+      gutter: grid.gutter
+    }, (react_production_namespaceFn().Children).map(items, child => (/*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
+      key: child?.key,
+      style: colStyle
+    }, child))))) : (/*#__PURE__*/(react_production_namespaceFn().createElement)("ul", {
+      className: clsx(`${prefixCls}-items`, containerCls, cssVarCls)
+    }, items));
+  } else if (!children && !isLoading) {
+    childrenContent = /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
+      className: `${prefixCls}-empty-text`
+    }, locale?.emptyText || renderEmpty?.('List') || /*#__PURE__*/(react_production_namespaceFn().createElement)(defaultRenderEmpty, {
+      componentName: "List"
+    }));
+  }
+  const paginationPosition = paginationProps.position;
+  const contextValue = (react_production_namespaceFn().useMemo)(() => ({
+    grid,
+    itemLayout
+  }), [JSON.stringify(grid), itemLayout]);
+  if (false) // removed by dead control flow
+{}
+  return /*#__PURE__*/(react_production_namespaceFn().createElement)(context_ListContext.Provider, {
+    value: contextValue
+  }, /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
+    ref: ref,
+    style: {
+      ...contextStyle,
+      ...style
+    },
+    className: classString,
+    ...rest
+  }, (paginationPosition === 'top' || paginationPosition === 'both') && paginationContent, header && /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
+    className: `${prefixCls}-header`
+  }, header), /*#__PURE__*/(react_production_namespaceFn().createElement)(spin, {
+    ...loadingProp
+  }, childrenContent, children), footer && /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
+    className: `${prefixCls}-footer`
+  }, footer), loadMore || (paginationPosition === 'bottom' || paginationPosition === 'both') && paginationContent));
+};
+const ListWithForwardRef = /*#__PURE__*/(react_production_namespaceFn().forwardRef)(InternalList);
+if (false) // removed by dead control flow
+{}
+const list_List = ListWithForwardRef;
+list_List.Item = list_Item;
+/* harmony default export */ const es_list = (list_List);
+;// ./node_modules/antd/es/_util/getRenderPropValue.js
+
+
+const getRenderPropValue = propValue => {
+  if (!isReactRenderable(propValue)) {
+    return null;
+  }
+  return isFunction(propValue) ? propValue() : propValue;
+};
+;// ./node_modules/antd/es/popover/style/index.js
+
+
+
+
+
+
+const style_FALL_BACK_ORIGIN = '50%';
+const popover_style_genBaseStyle = token => {
+  const {
+    componentCls,
+    popoverColor,
+    titleMinWidth,
+    fontWeightStrong,
+    innerPadding,
+    dropShadowPopover,
+    colorTextHeading,
+    borderRadiusLG,
+    zIndexPopup,
+    titleMarginBottom,
+    colorBgElevated,
+    popoverBg,
+    titleBorderBottom,
+    innerContentPadding,
+    titlePadding,
+    antCls
+  } = token;
+  const [varName, varRef] = genCssVar(antCls, 'tooltip');
+  return [{
+    [componentCls]: {
+      ...resetComponent(token),
+      position: 'absolute',
+      top: 0,
+      // use `left` to fix https://github.com/ant-design/ant-design/issues/39195
+      left: {
+        _skip_check_: true,
+        value: 0
+      },
+      zIndex: zIndexPopup,
+      fontWeight: 'normal',
+      whiteSpace: 'normal',
+      textAlign: 'start',
+      cursor: 'auto',
+      userSelect: 'text',
+      filter: dropShadowPopover,
+      // When use `autoArrow`, origin will follow the arrow position
+      [varName('valid-offset-x')]: varRef('arrow-offset-x', 'var(--arrow-x)'),
+      transformOrigin: [varRef('valid-offset-x', style_FALL_BACK_ORIGIN), `var(--arrow-y, ${style_FALL_BACK_ORIGIN})`].join(' '),
+      [varName('arrow-background-color')]: colorBgElevated,
+      width: 'max-content',
+      maxWidth: '100vw',
+      '&-rtl': {
+        direction: 'rtl'
+      },
+      '&-hidden': {
+        display: 'none'
+      },
+      [`${componentCls}-content`]: {
+        position: 'relative'
+      },
+      [`${componentCls}-container`]: {
+        backgroundColor: popoverBg,
+        backgroundClip: 'padding-box',
+        borderRadius: borderRadiusLG,
+        padding: innerPadding
+      },
+      [`${componentCls}-title`]: {
+        minWidth: titleMinWidth,
+        marginBottom: titleMarginBottom,
+        color: colorTextHeading,
+        fontWeight: fontWeightStrong,
+        borderBottom: titleBorderBottom,
+        padding: titlePadding
+      },
+      [`${componentCls}-content`]: {
+        color: popoverColor,
+        padding: innerContentPadding
+      }
+    }
+  },
+  // Arrow Style
+  placementArrow(token, varRef('arrow-background-color'), {
+    arrowShadow: false
+  }),
+  // Pure Render
+  {
+    [`${componentCls}-pure`]: {
+      position: 'relative',
+      maxWidth: 'none',
+      margin: token.sizePopupArrow,
+      display: 'inline-block'
+    }
+  }];
+};
+const genColorStyle = token => {
+  const {
+    componentCls,
+    antCls
+  } = token;
+  const [varName] = genCssVar(antCls, 'tooltip');
+  return {
+    [componentCls]: PresetColors.map(colorKey => {
+      const lightColor = token[`${colorKey}6`];
+      return {
+        [`&${componentCls}-${colorKey}`]: {
+          [varName('arrow-background-color')]: lightColor,
+          [`${componentCls}-inner`]: {
+            backgroundColor: lightColor
+          },
+          [`${componentCls}-arrow`]: {
+            background: 'transparent'
+          }
+        }
+      };
+    })
+  };
+};
+const popover_style_prepareComponentToken = token => {
+  const {
+    lineWidth,
+    controlHeight,
+    fontHeight,
+    padding,
+    wireframe,
+    zIndexPopupBase,
+    borderRadiusLG,
+    marginXS,
+    lineType,
+    colorSplit,
+    paddingSM
+  } = token;
+  const titlePaddingBlockDist = controlHeight - fontHeight;
+  const popoverTitlePaddingBlockTop = titlePaddingBlockDist / 2;
+  const popoverTitlePaddingBlockBottom = titlePaddingBlockDist / 2 - lineWidth;
+  const popoverPaddingHorizontal = padding;
+  return {
+    titleMinWidth: 177,
+    zIndexPopup: zIndexPopupBase + 30,
+    ...getArrowToken(token),
+    ...getArrowOffsetToken({
+      contentRadius: borderRadiusLG,
+      limitVerticalRadius: true
+    }),
+    // internal
+    innerPadding: wireframe ? 0 : 12,
+    titleMarginBottom: wireframe ? 0 : marginXS,
+    titlePadding: wireframe ? `${popoverTitlePaddingBlockTop}px ${popoverPaddingHorizontal}px ${popoverTitlePaddingBlockBottom}px` : 0,
+    titleBorderBottom: wireframe ? `${lineWidth}px ${lineType} ${colorSplit}` : 'none',
+    innerContentPadding: wireframe ? `${paddingSM}px ${popoverPaddingHorizontal}px` : 0
+  };
+};
+/* harmony default export */ const popover_style = (genStyleHooks('Popover', token => {
+  const {
+    colorBgElevated,
+    colorText
+  } = token;
+  const popoverToken = statistic_merge(token, {
+    popoverBg: colorBgElevated,
+    popoverColor: colorText
+  });
+  return [popover_style_genBaseStyle(popoverToken), genColorStyle(popoverToken), initZoomMotion(popoverToken, 'zoom-big')];
+}, popover_style_prepareComponentToken, {
+  resetStyle: false,
+  deprecatedTokens: [['width', 'titleMinWidth'], ['minWidth', 'titleMinWidth']]
+}));
+;// ./node_modules/antd/es/popover/PurePanel.js
+"use client";
+
+
+
+
+
+
+
+
+
+const PurePanel_Overlay = props => {
+  const {
+    title,
+    content,
+    prefixCls,
+    classNames,
+    styles
+  } = props;
+  if (!isReactRenderable(title) && !isReactRenderable(content)) {
+    return null;
+  }
+  return /*#__PURE__*/(react_production_namespaceFn().createElement)((react_production_namespaceFn().Fragment), null, isReactRenderable(title) && (/*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
+    className: clsx(`${prefixCls}-title`, classNames?.title),
+    style: styles?.title
+  }, title)), isReactRenderable(content) && (/*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
+    className: clsx(`${prefixCls}-content`, classNames?.content),
+    style: styles?.content
+  }, content)));
+};
+const RawPurePanel = props => {
+  const {
+    hashId,
+    prefixCls,
+    className,
+    style,
+    placement = 'top',
+    title,
+    content,
+    children,
+    classNames,
+    styles
+  } = props;
+  const titleNode = getRenderPropValue(title);
+  const contentNode = getRenderPropValue(content);
+  const mergedProps = {
+    ...props,
+    placement
+  };
+  const [mergedClassNames, mergedStyles] = useMergeSemantic([classNames], [styles], {
+    props: mergedProps
+  });
+  const rootClassName = clsx(hashId, prefixCls, `${prefixCls}-pure`, `${prefixCls}-placement-${placement}`, className);
+  return /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
+    className: rootClassName,
+    style: style
+  }, /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
+    className: `${prefixCls}-arrow`
+  }), /*#__PURE__*/(react_production_namespaceFn().createElement)(tooltip_es_Popup, {
+    ...props,
+    className: hashId,
+    prefixCls: prefixCls,
+    classNames: mergedClassNames,
+    styles: mergedStyles
+  }, children || (/*#__PURE__*/(react_production_namespaceFn().createElement)(PurePanel_Overlay, {
+    prefixCls: prefixCls,
+    title: titleNode,
+    content: contentNode,
+    classNames: mergedClassNames,
+    styles: mergedStyles
+  }))));
+};
+const popover_PurePanel_PurePanel = props => {
+  const {
+    prefixCls: customizePrefixCls,
+    className,
+    ...restProps
+  } = props;
+  const {
+    getPrefixCls
+  } = (react_production_namespaceFn().useContext)(ConfigContext);
+  const prefixCls = getPrefixCls('popover', customizePrefixCls);
+  const [hashId, cssVarCls] = popover_style(prefixCls);
+  return /*#__PURE__*/(react_production_namespaceFn().createElement)(RawPurePanel, {
+    ...restProps,
+    prefixCls: prefixCls,
+    hashId: hashId,
+    className: clsx(className, cssVarCls)
+  });
+};
+/* harmony default export */ const popover_PurePanel = (popover_PurePanel_PurePanel);
+;// ./node_modules/antd/es/popover/index.js
+"use client";
+
+
+
+
+
+
+
+
+
+
+
+
+// CSSINJS
+
+const InternalPopover = /*#__PURE__*/(react_production_namespaceFn().forwardRef)((props, ref) => {
+  const {
+    prefixCls: customizePrefixCls,
+    title,
+    content,
+    overlayClassName,
+    placement = 'top',
+    trigger,
+    children,
+    mouseEnterDelay,
+    mouseLeaveDelay,
+    onOpenChange,
+    overlayStyle = {},
+    styles,
+    classNames,
+    motion,
+    arrow: popoverArrow,
+    ...restProps
+  } = props;
+  const {
+    getPrefixCls,
+    className: contextClassName,
+    style: contextStyle,
+    classNames: contextClassNames,
+    styles: contextStyles,
+    arrow: contextArrow,
+    trigger: contextTrigger,
+    mouseEnterDelay: contextMouseEnterDelay,
+    mouseLeaveDelay: contextMouseLeaveDelay
+  } = useComponentConfig('popover');
+  const mergedMouseEnterDelay = mouseEnterDelay ?? contextMouseEnterDelay ?? 0.1;
+  const mergedMouseLeaveDelay = mouseLeaveDelay ?? contextMouseLeaveDelay ?? 0.1;
+  const prefixCls = getPrefixCls('popover', customizePrefixCls);
+  const [hashId, cssVarCls] = popover_style(prefixCls);
+  const rootPrefixCls = getPrefixCls();
+  const mergedArrow = hook_useMergedArrow(popoverArrow, contextArrow);
+  const mergedTrigger = trigger || contextTrigger || 'hover';
+  // ========================== Warning ===========================
+  if (false) // removed by dead control flow
+{}
+  // ============================= Styles =============================
+  const mergedProps = {
+    ...props,
+    placement,
+    trigger: mergedTrigger,
+    mouseEnterDelay: mergedMouseEnterDelay,
+    mouseLeaveDelay: mergedMouseLeaveDelay,
+    overlayStyle,
+    styles,
+    classNames
+  };
+  const contextStyleRoot = useSemanticRootStyle(contextStyle);
+  const overlayStyleRoot = useSemanticRootStyle(overlayStyle);
+  const [mergedClassNames, mergedStyles] = useMergeSemantic([contextClassNames, classNames], [contextStyles, contextStyleRoot, styles, overlayStyleRoot], {
+    props: mergedProps
+  });
+  const rootClassNames = clsx(overlayClassName, hashId, cssVarCls, contextClassName, mergedClassNames.root);
+  const [open, setOpen] = useControlledState(props.defaultOpen ?? false, props.open);
+  const settingOpen = nextOpen => {
+    setOpen(nextOpen);
+    onOpenChange?.(nextOpen);
+  };
+  const titleNode = getRenderPropValue(title);
+  const contentNode = getRenderPropValue(content);
+  return /*#__PURE__*/(react_production_namespaceFn().createElement)(es_tooltip, {
+    unique: false,
+    arrow: mergedArrow,
+    placement: placement,
+    trigger: mergedTrigger,
+    mouseEnterDelay: mergedMouseEnterDelay,
+    mouseLeaveDelay: mergedMouseLeaveDelay,
+    ...restProps,
+    prefixCls: prefixCls,
+    classNames: {
+      root: rootClassNames,
+      container: mergedClassNames.container,
+      arrow: mergedClassNames.arrow
+    },
+    styles: {
+      root: mergedStyles.root,
+      container: mergedStyles.container,
+      arrow: mergedStyles.arrow
+    },
+    ref: ref,
+    open: open,
+    onOpenChange: settingOpen,
+    overlay: isReactRenderable(titleNode) || isReactRenderable(contentNode) ? (/*#__PURE__*/(react_production_namespaceFn().createElement)(PurePanel_Overlay, {
+      prefixCls: prefixCls,
+      title: titleNode,
+      content: contentNode,
+      classNames: mergedClassNames,
+      styles: mergedStyles
+    })) : null,
+    motion: {
+      motionName: motion_getTransitionName(rootPrefixCls, 'zoom-big', typeof motion?.motionName === 'string' ? motion?.motionName : undefined)
+    },
+    "data-popover-inject": true
+  }, children);
+});
+const Popover = InternalPopover;
+Popover._InternalPanelDoNotUseOrYouWillBeFired = popover_PurePanel;
+if (false) // removed by dead control flow
+{}
+/* harmony default export */ const es_popover = (Popover);
+;// ./node_modules/antd/es/popconfirm/style/index.js
+
+// =============================== Base ===============================
+const popconfirm_style_genBaseStyle = token => {
+  const {
+    componentCls,
+    iconCls,
+    antCls,
+    zIndexPopup,
+    colorText,
+    colorWarning,
+    marginXXS,
+    marginXS,
+    fontSize,
+    fontWeightStrong,
+    colorTextHeading
+  } = token;
+  return {
+    [componentCls]: {
+      zIndex: zIndexPopup,
+      [`&${antCls}-popover`]: {
+        fontSize
+      },
+      [`${componentCls}-message`]: {
+        marginBottom: marginXS,
+        display: 'flex',
+        flexWrap: 'nowrap',
+        alignItems: 'start',
+        [`> ${componentCls}-message-icon`]: {
+          color: colorWarning
+        },
+        [`> ${componentCls}-message-icon ${iconCls}`]: {
+          fontSize,
+          lineHeight: 1,
+          marginInlineEnd: marginXS
+        },
+        [`${componentCls}-title`]: {
+          fontWeight: fontWeightStrong,
+          color: colorTextHeading,
+          '&:only-child': {
+            fontWeight: 'normal'
+          }
+        },
+        [`${componentCls}-description`]: {
+          marginTop: marginXXS,
+          color: colorText
+        }
+      },
+      [`${componentCls}-buttons`]: {
+        textAlign: 'end',
+        whiteSpace: 'nowrap',
+        button: {
+          marginInlineStart: marginXS
+        }
+      }
+    }
+  };
+};
+// ============================== Export ==============================
+const popconfirm_style_prepareComponentToken = token => {
+  const {
+    zIndexPopupBase
+  } = token;
+  return {
+    zIndexPopup: zIndexPopupBase + 60
+  };
+};
+/* harmony default export */ const popconfirm_style = (genStyleHooks('Popconfirm', popconfirm_style_genBaseStyle, popconfirm_style_prepareComponentToken, {
+  resetStyle: false
+}));
+;// ./node_modules/antd/es/popconfirm/PurePanel.js
+"use client";
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+const popconfirm_PurePanel_Overlay = props => {
+  const {
+    prefixCls,
+    okButtonProps,
+    cancelButtonProps,
+    title,
+    description,
+    cancelText,
+    okText,
+    okType = 'primary',
+    icon = /*#__PURE__*/(react_production_namespaceFn().createElement)(icons_ExclamationCircleFilled, null),
+    showCancel = true,
+    close,
+    onConfirm,
+    onCancel,
+    onPopupClick,
+    classNames,
+    styles
+  } = props;
+  const {
+    getPrefixCls
+  } = (react_production_namespaceFn().useContext)(ConfigContext);
+  const [contextLocale] = locale_useLocale('Popconfirm', es_locale_en_US.Popconfirm);
+  const titleNode = getRenderPropValue(title);
+  const descriptionNode = getRenderPropValue(description);
+  return /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
+    className: `${prefixCls}-inner-content`,
+    onClick: onPopupClick
+  }, /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
+    className: `${prefixCls}-message`
+  }, icon && (/*#__PURE__*/(react_production_namespaceFn().createElement)("span", {
+    className: clsx(`${prefixCls}-message-icon`, classNames?.icon),
+    style: styles?.icon
+  }, icon)), /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
+    className: `${prefixCls}-message-text`
+  }, isReactRenderable(titleNode) && (/*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
+    className: clsx(`${prefixCls}-title`, classNames?.title),
+    style: styles?.title
+  }, titleNode)), isReactRenderable(descriptionNode) && (/*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
+    className: clsx(`${prefixCls}-description`, classNames?.content),
+    style: styles?.content
+  }, descriptionNode)))), /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
+    className: `${prefixCls}-buttons`
+  }, showCancel && (/*#__PURE__*/(react_production_namespaceFn().createElement)(button_Button, {
+    onClick: onCancel,
+    size: "small",
+    ...cancelButtonProps
+  }, cancelText || contextLocale?.cancelText)), /*#__PURE__*/(react_production_namespaceFn().createElement)(_util_ActionButton, {
+    buttonProps: {
+      size: 'small',
+      ...convertLegacyProps(okType),
+      ...okButtonProps
+    },
+    actionFn: onConfirm,
+    close: close,
+    prefixCls: getPrefixCls('btn'),
+    quitOnNullishReturnValue: true,
+    emitEvent: true
+  }, okText || contextLocale?.okText)));
+};
+const popconfirm_PurePanel_PurePanel = props => {
+  const {
+    prefixCls: customizePrefixCls,
+    placement,
+    className,
+    style,
+    ...restProps
+  } = props;
+  const {
+    getPrefixCls
+  } = (react_production_namespaceFn().useContext)(ConfigContext);
+  const prefixCls = getPrefixCls('popconfirm', customizePrefixCls);
+  popconfirm_style(prefixCls);
+  return /*#__PURE__*/(react_production_namespaceFn().createElement)(popover_PurePanel, {
+    placement: placement,
+    className: clsx(prefixCls, className),
+    style: style,
+    content: /*#__PURE__*/(react_production_namespaceFn().createElement)(popconfirm_PurePanel_Overlay, {
+      prefixCls: prefixCls,
+      ...restProps
+    })
+  });
+};
+/* harmony default export */ const popconfirm_PurePanel = (popconfirm_PurePanel_PurePanel);
+;// ./node_modules/antd/es/popconfirm/index.js
+"use client";
+
+
+
+
+
+
+
+
+
+
+
+
+const InternalPopconfirm = /*#__PURE__*/(react_production_namespaceFn().forwardRef)((props, ref) => {
+  const {
+    prefixCls: customizePrefixCls,
+    placement = 'top',
+    trigger,
+    okType = 'primary',
+    icon = /*#__PURE__*/(react_production_namespaceFn().createElement)(icons_ExclamationCircleFilled, null),
+    children,
+    overlayClassName,
+    onOpenChange,
+    overlayStyle,
+    styles,
+    arrow: popconfirmArrow,
+    classNames,
+    disabled = false,
+    mouseEnterDelay,
+    mouseLeaveDelay,
+    ...restProps
+  } = props;
+  const {
+    getPrefixCls,
+    className: contextClassName,
+    style: contextStyle,
+    classNames: contextClassNames,
+    styles: contextStyles,
+    arrow: contextArrow,
+    trigger: contextTrigger,
+    mouseEnterDelay: contextMouseEnterDelay,
+    mouseLeaveDelay: contextMouseLeaveDelay
+  } = useComponentConfig('popconfirm');
+  const [open, setOpen] = useControlledState(props.defaultOpen ?? false, props.open);
+  const mergedArrow = hook_useMergedArrow(popconfirmArrow, contextArrow);
+  const mergedTrigger = trigger || contextTrigger || 'click';
+  const mergedMouseEnterDelay = mouseEnterDelay ?? contextMouseEnterDelay ?? 0.1;
+  const mergedMouseLeaveDelay = mouseLeaveDelay ?? contextMouseLeaveDelay ?? 0.1;
+  // ========================== Warning ===========================
+  if (false) // removed by dead control flow
+{}
+  const settingOpen = nextOpen => {
+    setOpen(nextOpen);
+    onOpenChange?.(nextOpen);
+  };
+  const close = () => {
+    settingOpen(false);
+  };
+  const onConfirm = e => props.onConfirm?.call(undefined, e);
+  const onCancel = e => {
+    settingOpen(false);
+    props.onCancel?.call(undefined, e);
+  };
+  const onInternalOpenChange = nextOpen => {
+    if (disabled) {
+      return;
+    }
+    settingOpen(nextOpen);
+  };
+  const prefixCls = getPrefixCls('popconfirm', customizePrefixCls);
+  const mergedProps = {
+    ...props,
+    placement,
+    trigger: mergedTrigger,
+    okType,
+    overlayStyle,
+    styles,
+    classNames,
+    mouseEnterDelay: mergedMouseEnterDelay,
+    mouseLeaveDelay: mergedMouseLeaveDelay
+  };
+  const contextStyleRoot = useSemanticRootStyle(contextStyle);
+  const overlayStyleRoot = useSemanticRootStyle(overlayStyle);
+  const [mergedClassNames, mergedStyles] = useMergeSemantic([contextClassNames, classNames], [contextStyles, contextStyleRoot, styles, overlayStyleRoot], {
+    props: mergedProps
+  });
+  const rootClassNames = clsx(prefixCls, contextClassName, overlayClassName, mergedClassNames.root);
+  popconfirm_style(prefixCls);
+  return /*#__PURE__*/(react_production_namespaceFn().createElement)(es_popover, {
+    arrow: mergedArrow,
+    ...omit(restProps, ['title']),
+    trigger: mergedTrigger,
+    placement: placement,
+    onOpenChange: onInternalOpenChange,
+    open: open,
+    ref: ref,
+    mouseEnterDelay: mergedMouseEnterDelay,
+    mouseLeaveDelay: mergedMouseLeaveDelay,
+    classNames: {
+      root: rootClassNames,
+      container: mergedClassNames.container,
+      arrow: mergedClassNames.arrow
+    },
+    styles: {
+      root: mergedStyles.root,
+      container: mergedStyles.container,
+      arrow: mergedStyles.arrow
+    },
+    content: /*#__PURE__*/(react_production_namespaceFn().createElement)(popconfirm_PurePanel_Overlay, {
+      okType: okType,
+      icon: icon,
+      ...props,
+      prefixCls: prefixCls,
+      close: close,
+      onConfirm: onConfirm,
+      onCancel: onCancel,
+      classNames: mergedClassNames,
+      styles: mergedStyles
+    }),
+    "data-popover-inject": true
+  }, children);
+});
+const popconfirm_Popconfirm = InternalPopconfirm;
+// We don't care debug panel
+/* istanbul ignore next */
+popconfirm_Popconfirm._InternalPanelDoNotUseOrYouWillBeFired = popconfirm_PurePanel;
+if (false) // removed by dead control flow
+{}
+/* harmony default export */ const popconfirm = (popconfirm_Popconfirm);
+;// ./src/lib/ui/agent/SkillsPanel.tsx
+
+
+
+
+
+
+function formatTime(value) {
+    if (!value || !Number.isFinite(value))
+        return '';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime()))
+        return '';
+    const pad = (num) => String(num).padStart(2, '0');
+    return (date.getFullYear() +
+        '-' +
+        pad(date.getMonth() + 1) +
+        '-' +
+        pad(date.getDate()) +
+        ' ' +
+        pad(date.getHours()) +
+        ':' +
+        pad(date.getMinutes()));
+}
+/**
+ * 已安装技能列表（v26.10.10-v10）。
+ *
+ * 定位：**只做只读盘点 + 卸载**。技能的安装属于 ScriptCat 自己那套流程（技能市场 / 管理页），
+ * 在面板里再实现一套「粘贴 skillMd 安装」既重复又容易与官方流程打架，故此处不放安装入口，
+ * 只在没有技能时把「去哪儿装」写清楚。对话页创建会话时用的是 `skills: 'auto'`，
+ * 也就是已启用的技能会被 Agent 自动加载并自行决定何时调用，不需要在这里逐个勾选。
+ */
+function SkillsPanel({ api, version, onChange }) {
+    const [skills, setSkills] = (0,react_production_namespaceFn().useState)([]);
+    const [loading, setLoading] = (0,react_production_namespaceFn().useState)(false);
+    const [error, setError] = (0,react_production_namespaceFn().useState)('');
+    const reload = (0,react_production_namespaceFn().useCallback)(async () => {
+        setLoading(true);
+        try {
+            const list = await listSkills(api);
+            setSkills(list);
+            setError('');
+        }
+        catch (err) {
+            setError(agentErrorMessage(err));
+        }
+        finally {
+            setLoading(false);
+        }
+    }, [api]);
+    (0,react_production_namespaceFn().useEffect)(() => {
+        void reload();
+    }, [reload, version]);
+    const handleRemove = (0,react_production_namespaceFn().useCallback)(async (name) => {
+        try {
+            await removeSkill(api, name);
+            notify.success('已卸载技能 ' + name);
+            addLog('[Agent] 已卸载技能 ' + name, 'info');
+            await reload();
+            onChange();
+        }
+        catch (err) {
+            const message = agentErrorMessage(err);
+            notify.error('卸载失败：' + message);
+            addLog('[Agent] 卸载技能失败: ' + message, 'error');
+        }
+    }, [api, reload, onChange]);
+    if (error) {
+        return ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', flexDirection: 'column', gap: 8 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(es_alert, { type: "error", showIcon: true, message: '读取技能失败：' + error }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { size: "small", onClick: () => void reload(), children: "\u91CD\u8BD5" })] }));
+    }
+    return ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', flexDirection: 'column', gap: 8 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(typography.Text, { type: "secondary", style: { fontSize: 12 }, children: '已安装 ' + skills.length + ' 个技能；对话时已启用的技能会自动加载。' }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { size: "small", loading: loading, onClick: () => void reload(), children: "\u5237\u65B0" })] }), loading && !skills.length ? ((0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { padding: '24px 0', textAlign: 'center' }, children: (0,react_jsx_runtime_production_namespaceFn().jsx)(spin, { size: "small" }) })) : skills.length ? ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_list, { size: "small", bordered: true, dataSource: skills, style: { maxHeight: 380, overflowY: 'auto' }, renderItem: (skill) => ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_list.Item, { actions: [
+                        (0,react_jsx_runtime_production_namespaceFn().jsx)(popconfirm, { title: '卸载技能 ' + skill.name + '？', description: "\u5378\u8F7D\u540E Agent \u4E0D\u518D\u4F7F\u7528\u8BE5\u6280\u80FD\u3002", okText: "\u5378\u8F7D", cancelText: "\u53D6\u6D88", onConfirm: () => void handleRemove(skill.name), children: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { type: "link", size: "small", danger: true, children: "\u5378\u8F7D" }) }, "remove"),
+                    ], children: (0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(typography.Text, { strong: true, style: { fontSize: 13 }, children: skill.name }), skill.version ? ((0,react_jsx_runtime_production_namespaceFn().jsxs)(es_tag, { color: "blue", style: { marginInlineEnd: 0 }, children: ["v", skill.version] })) : null, (0,react_jsx_runtime_production_namespaceFn().jsx)(es_tag, { color: skill.enabled ? 'green' : 'default', style: { marginInlineEnd: 0 }, children: skill.enabled ? '已启用' : '已停用' }), skill.hasConfig ? ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_tooltip, { title: "\u8BE5\u6280\u80FD\u6709\u53EF\u914D\u7F6E\u9879\uFF0C\u8BF7\u5728 ScriptCat \u7684\u6280\u80FD\u8BBE\u7F6E\u91CC\u8C03\u6574", children: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_tag, { style: { marginInlineEnd: 0 }, children: "\u53EF\u914D\u7F6E" }) })) : null] }), skill.description ? ((0,react_jsx_runtime_production_namespaceFn().jsx)(typography.Text, { type: "secondary", style: { fontSize: 12 }, children: skill.description })) : null, (0,react_jsx_runtime_production_namespaceFn().jsx)(typography.Text, { type: "secondary", style: { fontSize: 11 }, children: '工具：' +
+                                    skillToolSummary(skill) +
+                                    (skill.referenceNames?.length
+                                        ? '　参考资料：' + skill.referenceNames.length + ' 份'
+                                        : '') +
+                                    (formatTime(skill.updatetime)
+                                        ? '　更新于 ' + formatTime(skill.updatetime)
+                                        : '') })] }) })) })) : ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_empty, { image: es_empty.PRESENTED_IMAGE_SIMPLE, description: (0,react_jsx_runtime_production_namespaceFn().jsx)("span", { style: { fontSize: 12 }, children: "\u8FD8\u6CA1\u6709\u5B89\u88C5\u4EFB\u4F55\u6280\u80FD\u3002\u6280\u80FD\u53EF\u5728 ScriptCat \u7684\u6280\u80FD\u5E02\u573A / \u7BA1\u7406\u9875\u5B89\u88C5\uFF0C\u88C5\u597D\u540E\u56DE\u5230\u8FD9\u91CC\u5237\u65B0\u5373\u53EF\u3002" }) })), (0,react_jsx_runtime_production_namespaceFn().jsx)(typography.Text, { type: "secondary", style: { fontSize: 11 }, children: "\u63D0\u793A\uFF1A\u6280\u80FD\u7531 ScriptCat \u7EDF\u4E00\u7BA1\u7406\uFF0C\u672C\u9762\u677F\u53EA\u505A\u76D8\u70B9\u4E0E\u5378\u8F7D\uFF0C\u4E0D\u63D0\u4F9B\u5B89\u88C5\u5165\u53E3\uFF08\u907F\u514D\u4E0E\u5B98\u65B9\u6D41\u7A0B\u91CD\u590D\uFF09\u3002" })] }));
+}
+
+;// ./node_modules/antd/es/form/hooks/useDebounce.js
+
+
+function useDebounce(value) {
+  const [cacheValue, setCacheValue] = useDelayState(value);
+  (react_production_namespaceFn().useEffect)(() => {
+    setCacheValue(value, {
+      ms: value.length ? 0 : 10
+    });
+  }, [value]);
+  return cacheValue;
+}
+;// ./node_modules/antd/es/style/motion/collapse.js
+const genCollapseMotion = token => {
+  const {
+    componentCls,
+    antCls,
+    motionDurationMid,
+    motionEaseInOut
+  } = token;
+  return {
+    [componentCls]: {
+      // For common/openAnimation
+      [`${antCls}-motion-collapse-legacy`]: {
+        overflow: 'hidden',
+        '&-active': {
+          transition: `${['height', 'opacity'].map(prop => `${prop} ${motionDurationMid} ${motionEaseInOut}`).join(', ')} !important`
+        }
+      },
+      [`${antCls}-motion-collapse`]: {
+        overflow: 'hidden',
+        transition: `${['height', 'opacity'].map(prop => `${prop} ${motionDurationMid} ${motionEaseInOut}`).join(', ')} !important`
+      }
+    }
+  };
+};
+/* harmony default export */ const motion_collapse = (genCollapseMotion);
+;// ./node_modules/antd/es/form/style/explain.js
+const genFormValidateMotionStyle = token => {
+  const {
+    componentCls,
+    motionDurationFast,
+    motionEaseInOut
+  } = token;
+  const helpCls = `${componentCls}-show-help`;
+  const helpItemCls = `${componentCls}-show-help-item`;
+  return {
+    [helpCls]: {
+      // Explain holder
+      transition: `opacity ${motionDurationFast} ${motionEaseInOut}`,
+      '&-appear, &-enter': {
+        opacity: 0,
+        '&-active': {
+          opacity: 1
+        }
+      },
+      '&-leave': {
+        opacity: 1,
+        '&-active': {
+          opacity: 0
+        }
+      },
+      // Explain
+      [helpItemCls]: {
+        overflow: 'hidden',
+        transition: `${['height', 'opacity', 'transform'].map(prop => `${prop} ${motionDurationFast} ${motionEaseInOut}`).join(', ')} !important`,
+        [`&${helpItemCls}-appear, &${helpItemCls}-enter`]: {
+          transform: `translateY(-5px)`,
+          opacity: 0,
+          '&-active': {
+            transform: 'translateY(0)',
+            opacity: 1
+          }
+        },
+        [`&${helpItemCls}-leave-active`]: {
+          transform: `translateY(-5px)`
+        }
+      }
+    }
+  };
+};
+/* harmony default export */ const explain = (genFormValidateMotionStyle);
+;// ./node_modules/antd/es/form/style/index.js
+
+
+
+
+
+
+const resetForm = token => ({
+  legend: {
+    display: 'block',
+    width: '100%',
+    marginBottom: token.marginLG,
+    padding: 0,
+    color: token.colorTextDescription,
+    fontSize: token.fontSizeLG,
+    lineHeight: 'inherit',
+    border: 0,
+    borderBottom: `${util_unit(token.lineWidth)} ${token.lineType} ${token.colorBorder}`
+  },
+  'input[type="search"]': {
+    boxSizing: 'border-box'
+  },
+  // Position radios and checkboxes better
+  'input[type="radio"], input[type="checkbox"]': {
+    lineHeight: 'normal'
+  },
+  'input[type="file"]': {
+    display: 'block'
+  },
+  // Make range inputs behave like textual form controls
+  'input[type="range"]': {
+    display: 'block',
+    width: '100%'
+  },
+  // Make multiple select elements height not fixed
+  'select[multiple], select[size]': {
+    height: 'auto'
+  },
+  // Focus for file, radio, and checkbox
+  "input[type='file']:focus, input[type='radio']:focus, input[type='checkbox']:focus": {
+    outline: 0,
+    boxShadow: `0 0 0 ${util_unit(token.controlOutlineWidth)} ${token.controlOutline}`
+  },
+  // Adjust output element
+  output: {
+    display: 'block',
+    paddingTop: 15,
+    color: token.colorText,
+    fontSize: token.fontSize,
+    lineHeight: token.lineHeight
+  }
+});
+const genFormSize = (token, height) => {
+  const {
+    formItemCls
+  } = token;
+  return {
+    [formItemCls]: {
+      [`${formItemCls}-label > label`]: {
+        height
+      },
+      [`${formItemCls}-control-input`]: {
+        minHeight: height
+      }
+    }
+  };
+};
+const genFormStyle = token => {
+  const {
+    componentCls
+  } = token;
+  return {
+    [componentCls]: {
+      ...resetComponent(token),
+      ...resetForm(token),
+      [`${componentCls}-text`]: {
+        display: 'inline-block',
+        paddingInlineEnd: token.paddingSM
+      },
+      // ================================================================
+      // =                             Size                             =
+      // ================================================================
+      '&-small': {
+        ...genFormSize(token, token.controlHeightSM)
+      },
+      '&-large': {
+        ...genFormSize(token, token.controlHeightLG)
+      }
+    }
+  };
+};
+const genFormItemStyle = token => {
+  const {
+    formItemCls,
+    iconCls,
+    rootPrefixCls,
+    antCls,
+    labelRequiredMarkColor,
+    labelColor,
+    labelFontSize,
+    labelHeight,
+    labelColonMarginInlineStart,
+    labelColonMarginInlineEnd,
+    itemMarginBottom
+  } = token;
+  const [varName] = genCssVar(antCls, 'grid');
+  return {
+    [formItemCls]: {
+      ...resetComponent(token),
+      marginBottom: itemMarginBottom,
+      verticalAlign: 'top',
+      '&-with-help': {
+        transition: 'none'
+      },
+      [`&-hidden,
+        &-hidden${antCls}-row`]: {
+        // https://github.com/ant-design/ant-design/issues/26141
+        display: 'none'
+      },
+      // ==============================================================
+      // =                            Label                           =
+      // ==============================================================
+      [`${formItemCls}-label`]: {
+        flexGrow: 0,
+        overflow: 'hidden',
+        whiteSpace: 'nowrap',
+        textAlign: 'end',
+        verticalAlign: 'middle',
+        '&-left': {
+          textAlign: 'start'
+        },
+        '&-wrap': {
+          overflow: 'unset',
+          lineHeight: token.lineHeight,
+          whiteSpace: 'unset',
+          '> label': {
+            verticalAlign: 'middle',
+            textWrap: 'balance'
+          }
+        },
+        '> label': {
+          position: 'relative',
+          display: 'inline-flex',
+          alignItems: 'center',
+          maxWidth: '100%',
+          height: labelHeight,
+          color: labelColor,
+          fontSize: labelFontSize,
+          [`> ${iconCls}`]: {
+            fontSize: token.fontSize,
+            verticalAlign: 'top'
+          },
+          [`&${formItemCls}-required`]: {
+            '&::before': {
+              display: 'inline-block',
+              marginInlineEnd: token.marginXXS,
+              color: labelRequiredMarkColor,
+              fontSize: token.fontSize,
+              fontFamily: 'sans-serif',
+              lineHeight: 1,
+              content: '"*"'
+            },
+            [`&${formItemCls}-required-mark-hidden, &${formItemCls}-required-mark-optional`]: {
+              '&::before': {
+                display: 'none'
+              }
+            }
+          },
+          // Optional mark
+          [`${formItemCls}-optional`]: {
+            display: 'inline-block',
+            marginInlineStart: token.marginXXS,
+            color: token.colorTextDescription,
+            [`&${formItemCls}-required-mark-hidden`]: {
+              display: 'none'
+            }
+          },
+          // Optional mark
+          [`${formItemCls}-tooltip`]: {
+            color: token.colorTextDescription,
+            cursor: 'help',
+            writingMode: 'horizontal-tb',
+            marginInlineStart: token.marginXXS
+          },
+          '&::after': {
+            content: '":"',
+            position: 'relative',
+            marginBlock: 0,
+            marginInlineStart: labelColonMarginInlineStart,
+            marginInlineEnd: labelColonMarginInlineEnd
+          },
+          [`&${formItemCls}-no-colon::after`]: {
+            content: '"\\a0"'
+          }
+        }
+      },
+      // ==============================================================
+      // =                            Input                           =
+      // ==============================================================
+      [`${formItemCls}-control`]: {
+        [varName('display')]: 'flex',
+        flexDirection: 'column',
+        flexGrow: 1,
+        [`&:first-child:not([class^="'${rootPrefixCls}-col-'"]):not([class*="' ${rootPrefixCls}-col-'"])`]: {
+          width: '100%'
+        },
+        '&-input': {
+          position: 'relative',
+          display: 'flex',
+          alignItems: 'center',
+          minHeight: token.controlHeight,
+          '&-content': {
+            flex: 'auto',
+            maxWidth: '100%',
+            // Fix https://github.com/ant-design/ant-design/issues/54042
+            // Remove impact of whitespaces
+            [`&:has(> ${antCls}-switch:only-child, > ${antCls}-rate:only-child)`]: {
+              display: 'flex',
+              alignItems: 'center'
+            }
+          }
+        }
+      },
+      // ==============================================================
+      // =                           Explain                          =
+      // ==============================================================
+      [formItemCls]: {
+        '&-additional': {
+          display: 'flex',
+          flexDirection: 'column'
+        },
+        '&-explain, &-extra': {
+          clear: 'both',
+          color: token.colorTextDescription,
+          fontSize: token.fontSize,
+          lineHeight: token.lineHeight
+        },
+        '&-explain-connected': {
+          width: '100%'
+        },
+        '&-extra': {
+          minHeight: token.controlHeightSM,
+          transition: `color ${token.motionDurationMid} ${token.motionEaseOut}` // sync input color transition
+        },
+        '&-explain': {
+          '&-error': {
+            color: token.colorError
+          },
+          '&-warning': {
+            color: token.colorWarning
+          }
+        }
+      },
+      [`&-with-help ${formItemCls}-explain`]: {
+        height: 'auto',
+        opacity: 1
+      },
+      // ==============================================================
+      // =                        Feedback Icon                       =
+      // ==============================================================
+      [`${formItemCls}-feedback-icon`]: {
+        fontSize: token.fontSize,
+        textAlign: 'center',
+        visibility: 'visible',
+        animationName: zoomIn,
+        animationDuration: token.motionDurationMid,
+        animationTimingFunction: token.motionEaseOutBack,
+        pointerEvents: 'none',
+        '&-success': {
+          color: token.colorSuccess
+        },
+        '&-error': {
+          color: token.colorError
+        },
+        '&-warning': {
+          color: token.colorWarning
+        },
+        '&-validating': {
+          color: token.colorPrimary
+        }
+      }
+    }
+  };
+};
+const makeVerticalLayoutLabelBase = token => ({
+  padding: token.verticalLabelPadding,
+  whiteSpace: 'initial',
+  textAlign: 'start',
+  '> label': {
+    margin: 0,
+    '&::after': {
+      // https://github.com/ant-design/ant-design/issues/43538
+      visibility: 'hidden'
+    }
+  }
+});
+const makeVerticalLayoutLabel = token => ({
+  ...makeVerticalLayoutLabelBase(token),
+  margin: token.verticalLabelMargin
+});
+const makeVerticalLayoutLabelWithOffset = token => {
+  const [formVarName] = genCssVar(token.antCls, 'form');
+  return {
+    ...makeVerticalLayoutLabelBase(token),
+    [formVarName('item-label-margin')]: token.verticalLabelMargin
+  };
+};
+const genHorizontalStyle = token => {
+  const {
+    antCls,
+    formItemCls
+  } = token;
+  return {
+    [`${formItemCls}-horizontal`]: {
+      [`${formItemCls}-label`]: {
+        flexGrow: 0
+      },
+      [`${formItemCls}-control`]: {
+        flex: '1 1 0',
+        // https://github.com/ant-design/ant-design/issues/32777
+        // https://github.com/ant-design/ant-design/issues/33773
+        minWidth: 0
+      },
+      // Do not change this to `ant-col-24`! `-24` match all the responsive rules
+      // https://github.com/ant-design/ant-design/issues/32980
+      // https://github.com/ant-design/ant-design/issues/34903
+      // https://github.com/ant-design/ant-design/issues/44538
+      [`${formItemCls}-label[class$='-24'], ${formItemCls}-label[class*='-24 ']`]: {
+        [`& + ${formItemCls}-control`]: {
+          minWidth: 'unset'
+        }
+      },
+      [`> ${formItemCls}-row > ${antCls}-col-24${formItemCls}-label,
+        > ${formItemCls}-row > ${antCls}-col-xl-24${formItemCls}-label`]: makeVerticalLayoutLabel(token)
+    }
+  };
+};
+const genInlineStyle = token => {
+  const {
+    componentCls,
+    formItemCls,
+    inlineItemMarginBottom
+  } = token;
+  return {
+    [`${componentCls}-inline`]: {
+      display: 'flex',
+      flexWrap: 'wrap',
+      [`${formItemCls}-inline`]: {
+        flex: 'none',
+        marginInlineEnd: token.margin,
+        marginBottom: inlineItemMarginBottom,
+        '&-row': {
+          flexWrap: 'nowrap'
+        },
+        [`> ${formItemCls}-label,
+        > ${formItemCls}-control`]: {
+          display: 'inline-block',
+          verticalAlign: 'top'
+        },
+        [`> ${formItemCls}-label`]: {
+          flex: 'none'
+        },
+        [`${componentCls}-text`]: {
+          display: 'inline-block'
+        },
+        [`${formItemCls}-has-feedback`]: {
+          display: 'inline-block'
+        }
+      }
+    }
+  };
+};
+const makeVerticalLayout = token => {
+  const {
+    componentCls,
+    formItemCls,
+    rootPrefixCls
+  } = token;
+  return {
+    [`${formItemCls}:not(${formItemCls}-vertical) > ${formItemCls}-row > ${formItemCls}-label`]: makeVerticalLayoutLabel(token),
+    // ref: https://github.com/ant-design/ant-design/issues/45122
+    [`${componentCls}:not(${componentCls}-inline)`]: {
+      [formItemCls]: {
+        flexWrap: 'wrap',
+        [`${formItemCls}-label, ${formItemCls}-control`]: {
+          // When developer pass `xs: { span }`,
+          // It should follow the `xs` screen config
+          // ref: https://github.com/ant-design/ant-design/issues/44386
+          [`&:not([class*=" ${rootPrefixCls}-col-xs"])`]: {
+            flex: '0 0 100%',
+            maxWidth: '100%'
+          }
+        }
+      }
+    }
+  };
+};
+const genVerticalStyle = token => {
+  const {
+    componentCls,
+    formItemCls,
+    antCls,
+    verticalLabelHeight
+  } = token;
+  const [formVarName, formVarRef] = genCssVar(antCls, 'form');
+  return {
+    [formItemCls]: {
+      [formVarName('item-label-margin')]: 'initial'
+    },
+    [`${formItemCls}-label`]: {
+      margin: formVarRef('item-label-margin')
+    },
+    [`${formItemCls}-vertical`]: {
+      [`${formItemCls}-row`]: {
+        flexDirection: 'column'
+      },
+      [`${formItemCls}-label > label`]: {
+        height: verticalLabelHeight
+      },
+      [`${formItemCls}-control`]: {
+        width: '100%',
+        flex: 'none'
+      },
+      [`> ${formItemCls}-row > ${formItemCls}-label,
+        > ${formItemCls}-row > ${antCls}-col-24${formItemCls}-label,
+        > ${formItemCls}-row > ${antCls}-col-xl-24${formItemCls}-label`]: makeVerticalLayoutLabelWithOffset(token)
+    },
+    [`@media (max-width: ${util_unit(token.screenXSMax)})`]: [makeVerticalLayout(token), {
+      [componentCls]: {
+        [`${formItemCls}:not(${formItemCls}-horizontal):not(${formItemCls}-vertical)`]: {
+          [`> ${formItemCls}-row > ${antCls}-col-xs-24${formItemCls}-label`]: makeVerticalLayoutLabel(token)
+        }
+      }
+    }],
+    [`@media (max-width: ${util_unit(token.screenSMMax)})`]: {
+      [componentCls]: {
+        [`${formItemCls}:not(${formItemCls}-horizontal):not(${formItemCls}-vertical)`]: {
+          [`> ${formItemCls}-row > ${antCls}-col-sm-24${formItemCls}-label`]: makeVerticalLayoutLabel(token)
+        }
+      }
+    },
+    [`@media (max-width: ${util_unit(token.screenMDMax)})`]: {
+      [componentCls]: {
+        [`${formItemCls}:not(${formItemCls}-horizontal):not(${formItemCls}-vertical)`]: {
+          [`> ${formItemCls}-row > ${antCls}-col-md-24${formItemCls}-label`]: makeVerticalLayoutLabel(token)
+        }
+      }
+    },
+    [`@media (max-width: ${util_unit(token.screenLGMax)})`]: {
+      [componentCls]: {
+        [`${formItemCls}:not(${formItemCls}-horizontal):not(${formItemCls}-vertical)`]: {
+          [`> ${formItemCls}-row > ${antCls}-col-lg-24${formItemCls}-label`]: makeVerticalLayoutLabel(token)
+        }
+      }
+    }
+  };
+};
+// ============================== Export ==============================
+const form_style_prepareComponentToken = token => ({
+  labelRequiredMarkColor: token.colorError,
+  labelColor: token.colorTextHeading,
+  labelFontSize: token.fontSize,
+  labelHeight: token.controlHeight,
+  verticalLabelHeight: token.labelHeight ?? 'auto',
+  labelColonMarginInlineStart: token.marginXXS / 2,
+  labelColonMarginInlineEnd: token.marginXS,
+  itemMarginBottom: token.marginLG,
+  verticalLabelPadding: `0 0 ${token.paddingXS}px`,
+  verticalLabelMargin: 0,
+  inlineItemMarginBottom: 0
+});
+const form_style_prepareToken = (token, rootPrefixCls) => {
+  const formToken = statistic_merge(token, {
+    formItemCls: `${token.componentCls}-item`,
+    rootPrefixCls
+  });
+  return formToken;
+};
+/* harmony default export */ const form_style = (genStyleHooks('Form', (token, {
+  rootPrefixCls
+}) => {
+  const formToken = form_style_prepareToken(token, rootPrefixCls);
+  return [genFormStyle(formToken), genFormItemStyle(formToken), explain(formToken), genHorizontalStyle(formToken), genInlineStyle(formToken), genVerticalStyle(formToken), motion_collapse(formToken), zoomIn];
+}, form_style_prepareComponentToken, {
+  // Let From style before the Grid
+  // ref https://github.com/ant-design/ant-design/issues/44386
+  order: -1000
+}));
+;// ./node_modules/antd/es/form/ErrorList.js
+"use client";
+
+
+
+
+
+
+
+
+
+
+
+const ErrorList_EMPTY_LIST = [];
+function toErrorEntity(error, prefix, errorStatus, index = 0) {
+  return {
+    key: typeof error === 'string' ? error : `${prefix}-${index}`,
+    error,
+    errorStatus
+  };
+}
+const ErrorList = ({
+  help,
+  helpStatus,
+  errors = ErrorList_EMPTY_LIST,
+  warnings = ErrorList_EMPTY_LIST,
+  className: rootClassName,
+  fieldId,
+  onVisibleChanged
+}) => {
+  const {
+    prefixCls
+  } = (react_production_namespaceFn().useContext)(FormItemPrefixContext);
+  const {
+    classNames: contextClassNames,
+    styles: contextStyles
+  } = (react_production_namespaceFn().useContext)(context_FormContext);
+  const baseClassName = `${prefixCls}-item-explain`;
+  const rootCls = hooks_useCSSVarCls(prefixCls);
+  const [hashId, cssVarCls] = form_style(prefixCls, rootCls);
+  const collapseMotion = (react_production_namespaceFn().useMemo)(() => motion(prefixCls), [prefixCls]);
+  // We have to debounce here again since somewhere use ErrorList directly still need no shaking
+  // ref: https://github.com/ant-design/ant-design/issues/36336
+  const debounceErrors = useDebounce(errors);
+  const debounceWarnings = useDebounce(warnings);
+  const hasHelp = isNonNullable(help);
+  const fullKeyList = (react_production_namespaceFn().useMemo)(() => {
+    if (hasHelp) {
+      return [toErrorEntity(help, 'help', helpStatus)];
+    }
+    return [].concat(_toConsumableArray(debounceErrors.map((error, index) => toErrorEntity(error, 'error', 'error', index))), _toConsumableArray(debounceWarnings.map((warning, index) => toErrorEntity(warning, 'warning', 'warning', index))));
+  }, [help, helpStatus, hasHelp, debounceErrors, debounceWarnings]);
+  const filledKeyFullKeyList = (react_production_namespaceFn().useMemo)(() => {
+    const keysCount = {};
+    fullKeyList.forEach(({
+      key
+    }) => {
+      keysCount[key] = (keysCount[key] || 0) + 1;
+    });
+    return fullKeyList.map((entity, index) => ({
+      ...entity,
+      key: keysCount[entity.key] > 1 ? `${entity.key}-fallback-${index}` : entity.key
+    }));
+  }, [fullKeyList]);
+  const helpProps = {};
+  if (fieldId) {
+    helpProps.id = `${fieldId}_help`;
+  }
+  return /*#__PURE__*/(react_production_namespaceFn().createElement)(es, {
+    motionDeadline: collapseMotion.motionDeadline,
+    motionName: `${prefixCls}-show-help`,
+    visible: !!filledKeyFullKeyList.length,
+    onVisibleChanged: onVisibleChanged
+  }, holderProps => {
+    const {
+      className: holderClassName,
+      style: holderStyle
+    } = holderProps;
+    return /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
+      ...helpProps,
+      className: clsx(baseClassName, holderClassName, contextClassNames?.help, cssVarCls, rootCls, rootClassName, hashId),
+      style: {
+        ...contextStyles?.help,
+        ...holderStyle
+      }
+    }, /*#__PURE__*/(react_production_namespaceFn().createElement)(CSSMotionList, {
+      keys: filledKeyFullKeyList,
+      ...motion(prefixCls),
+      motionName: `${prefixCls}-show-help-item`,
+      component: false
+    }, itemProps => {
+      const {
+        key,
+        error,
+        errorStatus,
+        className: itemClassName,
+        style: itemStyle
+      } = itemProps;
+      return /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
+        key: key,
+        className: clsx(itemClassName, contextClassNames?.helpItem, {
+          [`${baseClassName}-${errorStatus}`]: errorStatus
+        }),
+        style: {
+          ...contextStyles?.helpItem,
+          ...itemStyle
+        }
+      }, error);
+    }));
+  });
+};
+/* harmony default export */ const form_ErrorList = (ErrorList);
+;// ./node_modules/compute-scroll-into-view/dist/index.js
+const dist_t=t=>"object"==typeof t&&null!=t&&1===t.nodeType,dist_e=(t,e)=>(!e||"hidden"!==t)&&("visible"!==t&&"clip"!==t),dist_n=(t,n)=>{if(t.clientHeight<t.scrollHeight||t.clientWidth<t.scrollWidth){const o=getComputedStyle(t,null);return dist_e(o.overflowY,n)||dist_e(o.overflowX,n)||(t=>{const e=(t=>{if(!t.ownerDocument||!t.ownerDocument.defaultView)return null;try{return t.ownerDocument.defaultView.frameElement}catch(t){return null}})(t);return!!e&&(e.clientHeight<t.scrollHeight||e.clientWidth<t.scrollWidth)})(t)}return!1},dist_o=(t,e,n,o,l,r,i,s)=>r<t&&i>e||r>t&&i<e?0:r<=t&&s<=n||i>=e&&s>=n?r-t-o:i>e&&s<n||r<t&&s>n?i-e+l:0,l=t=>{const e=t.parentElement;return null==e?t.getRootNode().host||null:e},dist_r=(e,r)=>{var i,s,d,h;if("undefined"==typeof document)return[];const{scrollMode:c,block:f,inline:u,boundary:a,skipOverflowHiddenElements:g}=r,p="function"==typeof a?a:t=>t!==a;if(!dist_t(e))throw new TypeError("Invalid target");const m=document.scrollingElement||document.documentElement,w=[];let W=e;for(;dist_t(W)&&p(W);){if(W=l(W),W===m){w.push(W);break}null!=W&&W===document.body&&dist_n(W)&&!dist_n(document.documentElement)||null!=W&&dist_n(W,g)&&w.push(W)}const b=null!=(s=null==(i=window.visualViewport)?void 0:i.width)?s:innerWidth,H=null!=(h=null==(d=window.visualViewport)?void 0:d.height)?h:innerHeight,{scrollX:y,scrollY:M}=window,{height:v,width:E,top:x,right:C,bottom:I,left:R}=e.getBoundingClientRect(),{top:T,right:B,bottom:F,left:V}=(t=>{const e=window.getComputedStyle(t);return{top:parseFloat(e.scrollMarginTop)||0,right:parseFloat(e.scrollMarginRight)||0,bottom:parseFloat(e.scrollMarginBottom)||0,left:parseFloat(e.scrollMarginLeft)||0}})(e);let k="start"===f||"nearest"===f?x-T:"end"===f?I+F:x+v/2-T+F,D="center"===u?R+E/2-V+B:"end"===u?C+B:R-V;const L=[];for(let t=0;t<w.length;t++){const e=w[t],{height:l,width:r,top:i,right:s,bottom:d,left:h}=e.getBoundingClientRect();if("if-needed"===c&&x>=0&&R>=0&&I<=H&&C<=b&&(e===m&&!dist_n(e)||x>=i&&I<=d&&R>=h&&C<=s))return L;const a=getComputedStyle(e),g=parseInt(a.borderLeftWidth,10),p=parseInt(a.borderTopWidth,10),W=parseInt(a.borderRightWidth,10),T=parseInt(a.borderBottomWidth,10);let B=0,F=0;const V="offsetWidth"in e?e.offsetWidth-e.clientWidth-g-W:0,S="offsetHeight"in e?e.offsetHeight-e.clientHeight-p-T:0,X="offsetWidth"in e?0===e.offsetWidth?0:r/e.offsetWidth:0,Y="offsetHeight"in e?0===e.offsetHeight?0:l/e.offsetHeight:0;if(m===e)B="start"===f?k:"end"===f?k-H:"nearest"===f?dist_o(M,M+H,H,p,T,M+k,M+k+v,v):k-H/2,F="start"===u?D:"center"===u?D-b/2:"end"===u?D-b:dist_o(y,y+b,b,g,W,y+D,y+D+E,E),B=Math.max(0,B+M),F=Math.max(0,F+y);else{B="start"===f?k-i-p:"end"===f?k-d+T+S:"nearest"===f?dist_o(i,d,l,p,T+S,k,k+v,v):k-(i+l/2)+S/2,F="start"===u?D-h-g:"center"===u?D-(h+r/2)+V/2:"end"===u?D-s+W+V:dist_o(h,s,r,g,W+V,D,D+E,E);const{scrollLeft:t,scrollTop:n}=e;B=0===Y?0:Math.max(0,Math.min(n+B/Y,e.scrollHeight-l/Y+S)),F=0===X?0:Math.max(0,Math.min(t+F/X,e.scrollWidth-r/X+V)),k+=n-B,D+=t-F}L.push({el:e,top:B,left:F})}return L};//# sourceMappingURL=index.js.map
+
+;// ./node_modules/scroll-into-view-if-needed/dist/index.js
+const scroll_into_view_if_needed_dist_o=t=>!1===t?{block:"end",inline:"nearest"}:(t=>t===Object(t)&&0!==Object.keys(t).length)(t)?t:{block:"start",inline:"nearest"};function scroll_into_view_if_needed_dist_e(e,r){if(!e.isConnected||!(t=>{let o=t;for(;o&&o.parentNode;){if(o.parentNode===document)return!0;o=o.parentNode instanceof ShadowRoot?o.parentNode.host:o.parentNode}return!1})(e))return;const n=(t=>{const o=window.getComputedStyle(t);return{top:parseFloat(o.scrollMarginTop)||0,right:parseFloat(o.scrollMarginRight)||0,bottom:parseFloat(o.scrollMarginBottom)||0,left:parseFloat(o.scrollMarginLeft)||0}})(e);if((t=>"object"==typeof t&&"function"==typeof t.behavior)(r))return r.behavior(dist_r(e,r));const l="boolean"==typeof r||null==r?void 0:r.behavior;for(const{el:a,top:i,left:s}of dist_r(e,scroll_into_view_if_needed_dist_o(r))){const t=i-n.top+n.bottom,o=s-n.left+n.right;a.scroll({top:t,left:o,behavior:l})}}//# sourceMappingURL=index.js.map
+
+;// ./node_modules/antd/es/form/util.js
+// form item name black list.  in form ,you can use form.id get the form item element.
+// use object hasOwnProperty will get better performance if black list is longer.
+const formItemNameBlackList = ['parentNode'];
+// default form item id prefix.
+const defaultItemNamePrefixCls = 'form_item';
+function util_toArray(candidate) {
+  if (candidate === undefined || candidate === false) {
+    return [];
+  }
+  return Array.isArray(candidate) ? candidate : [candidate];
+}
+function getFieldId(namePath, formName) {
+  if (!namePath.length) {
+    return undefined;
+  }
+  const mergedId = namePath.join('_');
+  if (formName) {
+    return `${formName}_${mergedId}`;
+  }
+  const isIllegalName = formItemNameBlackList.includes(mergedId);
+  return isIllegalName ? `${defaultItemNamePrefixCls}_${mergedId}` : mergedId;
+}
+/**
+ * Get merged status by meta or passed `validateStatus`.
+ */
+function getStatus(errors, warnings, meta, defaultValidateStatus, hasFeedback, validateStatus) {
+  let status = defaultValidateStatus;
+  if (validateStatus !== undefined) {
+    status = validateStatus;
+  } else if (meta.validating) {
+    status = 'validating';
+  } else if (errors.length) {
+    status = 'error';
+  } else if (warnings.length) {
+    status = 'warning';
+  } else if (meta.touched || hasFeedback && meta.validated) {
+    // success feedback should display when pass hasFeedback prop and current value is valid value
+    status = 'success';
+  }
+  return status;
+}
+;// ./node_modules/antd/es/form/hooks/useForm.js
+
+
+
+
+
+
+function toNamePathStr(name) {
+  const namePath = util_toArray(name);
+  return namePath.join('_');
+}
+function getFieldDOMNode(name, wrapForm) {
+  const field = wrapForm.getFieldInstance(name);
+  const fieldDom = getDOM(field);
+  if (fieldDom) {
+    return fieldDom;
+  }
+  const fieldId = getFieldId(util_toArray(name), wrapForm.__INTERNAL__.name);
+  if (fieldId) {
+    return document.getElementById(fieldId);
+  }
+}
+function useForm_useForm(form) {
+  const [rcForm] = hooks_useForm();
+  const itemsRef = (react_production_namespaceFn().useRef)({});
+  const wrapForm = (react_production_namespaceFn().useMemo)(() => form ?? {
+    ...rcForm,
+    __INTERNAL__: {
+      itemRef: name => node => {
+        const namePathStr = toNamePathStr(name);
+        if (node) {
+          itemsRef.current[namePathStr] = node;
+        } else {
+          delete itemsRef.current[namePathStr];
+        }
+      }
+    },
+    scrollToField: (name, options = {}) => {
+      const {
+        focus,
+        ...restOpt
+      } = options;
+      const node = getFieldDOMNode(name, wrapForm);
+      if (node) {
+        scroll_into_view_if_needed_dist_e(node, {
+          scrollMode: 'if-needed',
+          block: 'nearest',
+          ...restOpt
+        });
+        // Focus if scroll success
+        if (focus) {
+          wrapForm.focusField(name);
+        }
+      }
+    },
+    focusField: name => {
+      const itemRef = wrapForm.getFieldInstance(name);
+      if (isFunction(itemRef?.focus)) {
+        itemRef.focus();
+      } else {
+        getFieldDOMNode(name, wrapForm)?.focus?.();
+      }
+    },
+    getFieldInstance: name => {
+      const namePathStr = toNamePathStr(name);
+      return itemsRef.current[namePathStr];
+    }
+  }, [form, rcForm]);
+  return [wrapForm];
+}
+;// ./node_modules/antd/es/form/Form.js
+"use client";
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+const Form_InternalForm = (props, ref) => {
+  const contextDisabled = (react_production_namespaceFn().useContext)(config_provider_DisabledContext);
+  const {
+    getPrefixCls,
+    direction,
+    requiredMark: contextRequiredMark,
+    colon: contextColon,
+    scrollToFirstError: contextScrollToFirstError,
+    className: contextClassName,
+    style: contextStyle,
+    styles: contextStyles,
+    classNames: contextClassNames,
+    tooltip: contextTooltip,
+    labelAlign: contextLabelAlign,
+    labelWrap: contextLabelWrap
+  } = useComponentConfig('form');
+  const {
+    prefixCls: customizePrefixCls,
+    className,
+    rootClassName,
+    size,
+    disabled = contextDisabled,
+    form,
+    colon,
+    labelAlign,
+    labelWrap,
+    labelCol,
+    wrapperCol,
+    layout = 'horizontal',
+    scrollToFirstError,
+    requiredMark,
+    onFinishFailed,
+    name,
+    style,
+    feedbackIcons,
+    variant,
+    classNames,
+    styles,
+    tooltip,
+    ...restFormProps
+  } = props;
+  const mergedSize = hooks_useSize(size);
+  const contextValidateMessages = (react_production_namespaceFn().useContext)(validateMessagesContext);
+  if (false) // removed by dead control flow
+{}
+  const mergedRequiredMark = (react_production_namespaceFn().useMemo)(() => {
+    if (requiredMark !== undefined) {
+      return requiredMark;
+    }
+    if (contextRequiredMark !== undefined) {
+      return contextRequiredMark;
+    }
+    return true;
+  }, [requiredMark, contextRequiredMark]);
+  const mergedColon = colon ?? contextColon;
+  const mergedLabelAlign = labelAlign ?? contextLabelAlign;
+  const mergedLabelWrap = labelWrap ?? contextLabelWrap;
+  const mergedTooltip = {
+    ...contextTooltip,
+    ...tooltip
+  };
+  const prefixCls = getPrefixCls('form', customizePrefixCls);
+  // Style
+  const rootCls = hooks_useCSSVarCls(prefixCls);
+  const [hashId, cssVarCls] = form_style(prefixCls, rootCls);
+  // =========== Merged Props for Semantic ===========
+  const mergedProps = {
+    ...props,
+    size: mergedSize,
+    disabled,
+    layout,
+    colon: mergedColon,
+    requiredMark: mergedRequiredMark,
+    labelAlign: mergedLabelAlign,
+    labelWrap: mergedLabelWrap
+  };
+  const contextStyleRoot = useSemanticRootStyle(contextStyle);
+  const styleRoot = useSemanticRootStyle(style);
+  const [mergedClassNames, mergedStyles] = useMergeSemantic([contextClassNames, classNames], [contextStyles, contextStyleRoot, styles, styleRoot], {
+    props: mergedProps
+  });
+  const formClassName = clsx(prefixCls, `${prefixCls}-${layout}`, {
+    [`${prefixCls}-hide-required-mark`]: mergedRequiredMark === false,
+    // todo: remove in next major version
+    [`${prefixCls}-rtl`]: direction === 'rtl',
+    [`${prefixCls}-large`]: mergedSize === 'large',
+    [`${prefixCls}-small`]: mergedSize === 'small'
+  }, cssVarCls, rootCls, hashId, contextClassName, className, rootClassName, mergedClassNames.root);
+  const [wrapForm] = useForm_useForm(form);
+  const {
+    __INTERNAL__
+  } = wrapForm;
+  __INTERNAL__.name = name;
+  const formContextValue = (react_production_namespaceFn().useMemo)(() => ({
+    name,
+    labelAlign: mergedLabelAlign,
+    labelCol,
+    labelWrap: mergedLabelWrap,
+    wrapperCol,
+    layout,
+    colon: mergedColon,
+    requiredMark: mergedRequiredMark,
+    itemRef: __INTERNAL__.itemRef,
+    form: wrapForm,
+    feedbackIcons,
+    tooltip: mergedTooltip,
+    classNames: mergedClassNames,
+    styles: mergedStyles
+  }), [name, mergedLabelAlign, mergedLabelWrap, labelCol, wrapperCol, layout, mergedColon, mergedRequiredMark, wrapForm, feedbackIcons, mergedClassNames, mergedStyles, mergedTooltip]);
+  const nativeElementRef = (react_production_namespaceFn().useRef)(null);
+  (react_production_namespaceFn().useImperativeHandle)(ref, () => ({
+    ...wrapForm,
+    nativeElement: nativeElementRef.current?.nativeElement
+  }));
+  const scrollToField = (options, fieldName) => {
+    if (options) {
+      let defaultScrollToFirstError = {
+        block: 'nearest'
+      };
+      if (isPlainObject(options)) {
+        defaultScrollToFirstError = {
+          ...defaultScrollToFirstError,
+          ...options
+        };
+      }
+      wrapForm.scrollToField(fieldName, defaultScrollToFirstError);
+    }
+  };
+  const onInternalFinishFailed = errorInfo => {
+    onFinishFailed?.(errorInfo);
+    if (errorInfo.errorFields.length) {
+      const fieldName = errorInfo.errorFields[0].name;
+      if (scrollToFirstError !== undefined) {
+        scrollToField(scrollToFirstError, fieldName);
+        return;
+      }
+      if (contextScrollToFirstError !== undefined) {
+        scrollToField(contextScrollToFirstError, fieldName);
+      }
+    }
+  };
+  return /*#__PURE__*/(react_production_namespaceFn().createElement)(VariantContext.Provider, {
+    value: variant
+  }, /*#__PURE__*/(react_production_namespaceFn().createElement)(DisabledContextProvider, {
+    disabled: disabled
+  }, /*#__PURE__*/(react_production_namespaceFn().createElement)(config_provider_SizeContext.Provider, {
+    value: mergedSize
+  }, /*#__PURE__*/(react_production_namespaceFn().createElement)(context_FormProvider, {
+    // This is not list in API, we pass with spread
+    validateMessages: contextValidateMessages
+  }, /*#__PURE__*/(react_production_namespaceFn().createElement)(context_FormContext.Provider, {
+    value: formContextValue
+  }, /*#__PURE__*/(react_production_namespaceFn().createElement)(NoFormStyle, {
+    status: true
+  }, /*#__PURE__*/(react_production_namespaceFn().createElement)(form_es, {
+    id: name,
+    ...restFormProps,
+    name: name,
+    onFinishFailed: onInternalFinishFailed,
+    form: wrapForm,
+    ref: nativeElementRef,
+    style: mergedStyles?.root,
+    className: formClassName
+  })))))));
+};
+const form_Form_Form = /*#__PURE__*/(react_production_namespaceFn().forwardRef)(Form_InternalForm);
+if (false) // removed by dead control flow
+{}
+
+/* harmony default export */ const form_Form = (form_Form_Form);
+;// ./node_modules/antd/es/form/hooks/useChildren.js
+
+
+const useChildren_useChildren = children => {
+  if (isFunction(children)) {
+    return children;
+  }
+  const childList = toArray_toArray(children);
+  return childList.length <= 1 ? childList[0] : childList;
+};
+/* harmony default export */ const hooks_useChildren = (useChildren_useChildren);
+;// ./node_modules/antd/es/form/hooks/useFormItemStatus.js
+
+
+
+const useFormItemStatus = () => {
+  const {
+    status,
+    errors = [],
+    warnings = []
+  } = (react_production_namespaceFn().useContext)(FormItemInputContext);
+  if (false) // removed by dead control flow
+{}
+  return {
+    status,
+    errors,
+    warnings
+  };
+};
+// Only used for compatible package. Not promise this will work on future version.
+useFormItemStatus.Context = FormItemInputContext;
+/* harmony default export */ const hooks_useFormItemStatus = (useFormItemStatus);
+;// ./node_modules/antd/es/form/hooks/useFrameState.js
+
+
+function useFrameState(defaultValue) {
+  const [value, setValue] = (react_production_namespaceFn().useState)(defaultValue);
+  const frameRef = (react_production_namespaceFn().useRef)(null);
+  const batchRef = (react_production_namespaceFn().useRef)([]);
+  const destroyRef = (react_production_namespaceFn().useRef)(false);
+  (react_production_namespaceFn().useEffect)(() => {
+    destroyRef.current = false;
+    return () => {
+      destroyRef.current = true;
+      es_raf.cancel(frameRef.current);
+      frameRef.current = null;
+    };
+  }, []);
+  function setFrameValue(updater) {
+    if (destroyRef.current) {
+      return;
+    }
+    if (frameRef.current === null) {
+      batchRef.current = [];
+      frameRef.current = es_raf(() => {
+        frameRef.current = null;
+        setValue(prevValue => {
+          let current = prevValue;
+          batchRef.current.forEach(func => {
+            current = func(current);
+          });
+          return current;
+        });
+      });
+    }
+    batchRef.current.push(updater);
+  }
+  return [value, setFrameValue];
+}
+;// ./node_modules/antd/es/form/hooks/useItemRef.js
+
+
+
+
+const useItemRef = () => {
+  const {
+    itemRef
+  } = (react_production_namespaceFn().useContext)(context_FormContext);
+  const cacheRef = (react_production_namespaceFn().useRef)({});
+  const getRef = (name, children) => {
+    // Outer caller already check the `supportRef`
+    const childrenRef = children && isPlainObject(children) && getNodeRef(children);
+    const nameStr = name.join('_');
+    if (cacheRef.current.name !== nameStr || cacheRef.current.originRef !== childrenRef) {
+      cacheRef.current.name = nameStr;
+      cacheRef.current.originRef = childrenRef;
+      cacheRef.current.ref = composeRef(itemRef(name), childrenRef);
+    }
+    return cacheRef.current.ref;
+  };
+  return getRef;
+};
+/* harmony default export */ const hooks_useItemRef = (useItemRef);
+;// ./node_modules/antd/es/form/style/fallbackCmp.js
+/**
+ * Fallback of IE.
+ * Safe to remove.
+ */
+
+
+// ============================= Fallback =============================
+const genFallbackStyle = token => {
+  const {
+    formItemCls
+  } = token;
+  return {
+    '@media screen and (-ms-high-contrast: active), (-ms-high-contrast: none)': {
+      // Fallback for IE, safe to remove we not support it anymore
+      [`${formItemCls}-control`]: {
+        display: 'flex'
+      }
+    }
+  };
+};
+// ============================== Export ==============================
+/* harmony default export */ const fallbackCmp = (genSubStyleComponent(['Form', 'item-item'], (token, {
+  rootPrefixCls
+}) => {
+  const formToken = form_style_prepareToken(token, rootPrefixCls);
+  return genFallbackStyle(formToken);
+}));
+;// ./node_modules/antd/es/form/FormItemInput.js
+"use client";
+
+
+
+
+
+
+
+
+
+
+
+const GRID_MAX = 24;
+const FormItemInput = props => {
+  const {
+    prefixCls,
+    status,
+    labelCol,
+    wrapperCol,
+    children,
+    errors,
+    warnings,
+    _internalItemRender: formItemRender,
+    extra,
+    help,
+    fieldId,
+    marginBottom,
+    onErrorVisibleChanged,
+    label
+  } = props;
+  const baseClassName = `${prefixCls}-item`;
+  const formContext = (react_production_namespaceFn().useContext)(context_FormContext);
+  const {
+    classNames: contextClassNames,
+    styles: contextStyles
+  } = formContext;
+  const mergedWrapperCol = (react_production_namespaceFn().useMemo)(() => {
+    let mergedWrapper = {
+      ...(wrapperCol || formContext.wrapperCol || {})
+    };
+    if (label === null && !labelCol && !wrapperCol && formContext.labelCol) {
+      const list = [undefined].concat(_toConsumableArray(responsiveArrayReversed));
+      list.forEach(size => {
+        const _size = size ? [size] : [];
+        const formLabel = get_get(formContext.labelCol, _size);
+        const formLabelObj = isPlainObject(formLabel) ? formLabel : {};
+        const wrapper = get_get(mergedWrapper, _size);
+        const wrapperObj = isPlainObject(wrapper) ? wrapper : {};
+        if ('span' in formLabelObj && !('offset' in wrapperObj) && formLabelObj.span < GRID_MAX) {
+          mergedWrapper = set_set(mergedWrapper, [].concat(_size, ['offset']), formLabelObj.span);
+        }
+      });
+    }
+    return mergedWrapper;
+  }, [wrapperCol, formContext.wrapperCol, formContext.labelCol, label, labelCol]);
+  const className = clsx(`${baseClassName}-control`, mergedWrapperCol.className);
+  // Pass to sub FormItem should not with col info
+  const subFormContext = (react_production_namespaceFn().useMemo)(() => {
+    const {
+      labelCol: _labelCol,
+      wrapperCol: _wrapperCol,
+      ...rest
+    } = formContext;
+    return rest;
+  }, [formContext]);
+  const extraRef = (react_production_namespaceFn().useRef)(null);
+  const [extraHeight, setExtraHeight] = (react_production_namespaceFn().useState)(0);
+  const hasExtra = isReactRenderable(extra);
+  hooks_useLayoutEffect(() => {
+    if (hasExtra && extraRef.current) {
+      setExtraHeight(extraRef.current.clientHeight);
+    } else {
+      setExtraHeight(0);
+    }
+  }, [extra, hasExtra]);
+  const inputDom = /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
+    className: `${baseClassName}-control-input`
+  }, /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
+    className: clsx(`${baseClassName}-control-input-content`, contextClassNames?.content),
+    style: contextStyles?.content
+  }, children));
+  const formItemContext = (react_production_namespaceFn().useMemo)(() => ({
+    prefixCls,
+    status
+  }), [prefixCls, status]);
+  const errorListDom = marginBottom !== null || errors.length || warnings.length ? (/*#__PURE__*/(react_production_namespaceFn().createElement)(FormItemPrefixContext.Provider, {
+    value: formItemContext
+  }, /*#__PURE__*/(react_production_namespaceFn().createElement)(form_ErrorList, {
+    fieldId: fieldId,
+    errors: errors,
+    warnings: warnings,
+    help: help,
+    helpStatus: status,
+    className: `${baseClassName}-explain-connected`,
+    onVisibleChanged: onErrorVisibleChanged
+  }))) : null;
+  const extraProps = {};
+  if (fieldId) {
+    extraProps.id = `${fieldId}_extra`;
+  }
+  const extraDom = hasExtra ? (/*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
+    ...extraProps,
+    className: clsx(`${baseClassName}-extra`, contextClassNames?.extra),
+    style: contextStyles?.extra,
+    ref: extraRef
+  }, extra)) : null;
+  const additionalDom = errorListDom || extraDom ? (/*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
+    className: `${baseClassName}-additional`,
+    style: marginBottom ? {
+      minHeight: marginBottom + extraHeight
+    } : {}
+  }, errorListDom, extraDom)) : null;
+  const dom = formItemRender && formItemRender.mark === 'pro_table_render' && formItemRender.render ? formItemRender.render(props, {
+    input: inputDom,
+    errorList: errorListDom,
+    extra: extraDom
+  }) : (/*#__PURE__*/(react_production_namespaceFn().createElement)((react_production_namespaceFn().Fragment), null, inputDom, additionalDom));
+  return /*#__PURE__*/(react_production_namespaceFn().createElement)(context_FormContext.Provider, {
+    value: subFormContext
+  }, /*#__PURE__*/(react_production_namespaceFn().createElement)(grid_col, {
+    ...mergedWrapperCol,
+    className: className
+  }, dom), /*#__PURE__*/(react_production_namespaceFn().createElement)(fallbackCmp, {
+    prefixCls: prefixCls
+  }));
+};
+/* harmony default export */ const form_FormItemInput = (FormItemInput);
+;// ./node_modules/@ant-design/icons-svg/es/asn/QuestionCircleOutlined.js
+// This icon file is generated automatically.
+var QuestionCircleOutlined = { "icon": { "tag": "svg", "attrs": { "viewBox": "64 64 896 896", "focusable": "false" }, "children": [{ "tag": "path", "attrs": { "d": "M512 64C264.6 64 64 264.6 64 512s200.6 448 448 448 448-200.6 448-448S759.4 64 512 64zm0 820c-205.4 0-372-166.6-372-372s166.6-372 372-372 372 166.6 372 372-166.6 372-372 372z" } }, { "tag": "path", "attrs": { "d": "M623.6 316.7C593.6 290.4 554 276 512 276s-81.6 14.5-111.6 40.7C369.2 344 352 380.7 352 420v7.6c0 4.4 3.6 8 8 8h48c4.4 0 8-3.6 8-8V420c0-44.1 43.1-80 96-80s96 35.9 96 80c0 31.1-22 59.6-56.1 72.7-21.2 8.1-39.2 22.3-52.1 40.9-13.1 19-19.9 41.8-19.9 64.9V620c0 4.4 3.6 8 8 8h48c4.4 0 8-3.6 8-8v-22.7a48.3 48.3 0 0130.9-44.8c59-22.7 97.1-74.7 97.1-132.5.1-39.3-17.1-76-48.3-103.3zM472 732a40 40 0 1080 0 40 40 0 10-80 0z" } }] }, "name": "question-circle", "theme": "outlined" };
+/* harmony default export */ const asn_QuestionCircleOutlined = (QuestionCircleOutlined);
+
+;// ./node_modules/@ant-design/icons/es/icons/QuestionCircleOutlined.js
+function QuestionCircleOutlined_extends() { QuestionCircleOutlined_extends = Object.assign ? Object.assign.bind() : function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; }; return QuestionCircleOutlined_extends.apply(this, arguments); }
+// GENERATED BY ./scripts/generate.ts
+// DO NOT EDIT IT MANUALLY
+
+;
+
+
+const QuestionCircleOutlined_QuestionCircleOutlined = (props, ref) => /*#__PURE__*/(react_production_namespaceFn().createElement)(AntdIconLight, QuestionCircleOutlined_extends({}, props, {
+  ref: ref,
+  icon: asn_QuestionCircleOutlined
+}));
+
+/**![question-circle](data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTAiIGhlaWdodD0iNTAiIGZpbGw9IiNjYWNhY2EiIHZpZXdCb3g9IjY0IDY0IDg5NiA4OTYiIGZvY3VzYWJsZT0iZmFsc2UiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHBhdGggZD0iTTUxMiA2NEMyNjQuNiA2NCA2NCAyNjQuNiA2NCA1MTJzMjAwLjYgNDQ4IDQ0OCA0NDggNDQ4LTIwMC42IDQ0OC00NDhTNzU5LjQgNjQgNTEyIDY0em0wIDgyMGMtMjA1LjQgMC0zNzItMTY2LjYtMzcyLTM3MnMxNjYuNi0zNzIgMzcyLTM3MiAzNzIgMTY2LjYgMzcyIDM3Mi0xNjYuNiAzNzItMzcyIDM3MnoiIC8+PHBhdGggZD0iTTYyMy42IDMxNi43QzU5My42IDI5MC40IDU1NCAyNzYgNTEyIDI3NnMtODEuNiAxNC41LTExMS42IDQwLjdDMzY5LjIgMzQ0IDM1MiAzODAuNyAzNTIgNDIwdjcuNmMwIDQuNCAzLjYgOCA4IDhoNDhjNC40IDAgOC0zLjYgOC04VjQyMGMwLTQ0LjEgNDMuMS04MCA5Ni04MHM5NiAzNS45IDk2IDgwYzAgMzEuMS0yMiA1OS42LTU2LjEgNzIuNy0yMS4yIDguMS0zOS4yIDIyLjMtNTIuMSA0MC45LTEzLjEgMTktMTkuOSA0MS44LTE5LjkgNjQuOVY2MjBjMCA0LjQgMy42IDggOCA4aDQ4YzQuNCAwIDgtMy42IDgtOHYtMjIuN2E0OC4zIDQ4LjMgMCAwMTMwLjktNDQuOGM1OS0yMi43IDk3LjEtNzQuNyA5Ny4xLTEzMi41LjEtMzkuMy0xNy4xLTc2LTQ4LjMtMTAzLjN6TTQ3MiA3MzJhNDAgNDAgMCAxMDgwIDAgNDAgNDAgMCAxMC04MCAweiIgLz48L3N2Zz4=) */
+const QuestionCircleOutlined_RefIcon = /*#__PURE__*/(react_production_namespaceFn().forwardRef)(QuestionCircleOutlined_QuestionCircleOutlined);
+if (false) // removed by dead control flow
+{}
+/* harmony default export */ const icons_QuestionCircleOutlined = (QuestionCircleOutlined_RefIcon);
+;// ./node_modules/antd/es/_util/convertToTooltipProps.js
+
+
+
+const convertToTooltipProps = (tooltip, context) => {
+  if (!isReactRenderable(tooltip)) {
+    return null;
+  }
+  if (isPlainObject(tooltip) && ! /*#__PURE__*/(0,react_production_namespaceFn().isValidElement)(tooltip)) {
+    return {
+      ...context,
+      ...tooltip
+    };
+  }
+  return {
+    ...context,
+    title: tooltip
+  };
+};
+/* harmony default export */ const _util_convertToTooltipProps = (convertToTooltipProps);
+;// ./node_modules/antd/es/form/FormItemLabel.js
+"use client";
+
+
+
+
+
+
+
+
+
+
+
+
+const FormItemLabel = ({
+  prefixCls,
+  label,
+  htmlFor,
+  labelCol,
+  labelAlign,
+  colon,
+  required,
+  requiredMark,
+  tooltip,
+  vertical
+}) => {
+  const [formLocale] = locale_useLocale('Form');
+  const {
+    labelAlign: contextLabelAlign,
+    labelCol: contextLabelCol,
+    labelWrap,
+    colon: contextColon,
+    classNames: contextClassNames,
+    styles: contextStyles,
+    tooltip: contextTooltip
+  } = (react_production_namespaceFn().useContext)(context_FormContext);
+  if (!isReactRenderable(label)) {
+    return null;
+  }
+  const mergedLabelCol = labelCol || contextLabelCol || {};
+  const mergedLabelAlign = labelAlign || contextLabelAlign;
+  const labelClsBasic = `${prefixCls}-item-label`;
+  const labelColClassName = clsx(labelClsBasic, mergedLabelAlign === 'left' && `${labelClsBasic}-left`, mergedLabelCol.className, {
+    [`${labelClsBasic}-wrap`]: !!labelWrap
+  });
+  let labelChildren = label;
+  // Keep label is original where there should have no colon
+  const computedColon = colon === true || contextColon !== false && colon !== false;
+  const haveColon = computedColon && !vertical;
+  // Remove duplicated user input colon
+  if (haveColon && typeof label === 'string' && label.trim()) {
+    labelChildren = label.replace(/[:|：]\s*$/, '');
+  }
+  const tooltipProps = _util_convertToTooltipProps(tooltip, contextTooltip);
+  if (tooltipProps) {
+    const tooltipNode = /*#__PURE__*/(react_production_namespaceFn().createElement)(es_tooltip, {
+      ...tooltipProps
+    }, /*#__PURE__*/(react_production_namespaceFn().createElement)("span", {
+      className: `${prefixCls}-item-tooltip`,
+      onClick: e => {
+        e.preventDefault();
+      },
+      tabIndex: -1
+    }, tooltipProps.icon || tooltipProps.children || /*#__PURE__*/(react_production_namespaceFn().createElement)(icons_QuestionCircleOutlined, null)));
+    labelChildren = /*#__PURE__*/(react_production_namespaceFn().createElement)((react_production_namespaceFn().Fragment), null, labelChildren, tooltipNode);
+  }
+  // Required Mark
+  const isOptionalMark = requiredMark === 'optional';
+  const isRenderMark = isFunction(requiredMark);
+  const hideRequiredMark = requiredMark === false;
+  if (isRenderMark) {
+    labelChildren = requiredMark(labelChildren, {
+      required: !!required
+    });
+  } else if (isOptionalMark && !required) {
+    labelChildren = /*#__PURE__*/(react_production_namespaceFn().createElement)((react_production_namespaceFn().Fragment), null, labelChildren, /*#__PURE__*/(react_production_namespaceFn().createElement)("span", {
+      className: `${prefixCls}-item-optional`
+    }, formLocale?.optional || es_locale_en_US.Form?.optional));
+  }
+  // https://github.com/ant-design/ant-design/pull/52950#discussion_r1980880316
+  let markType;
+  if (hideRequiredMark) {
+    markType = 'hidden';
+  } else if (isOptionalMark || isRenderMark) {
+    markType = 'optional';
+  }
+  const labelClassName = clsx(contextClassNames?.label, {
+    [`${prefixCls}-item-required`]: required,
+    [`${prefixCls}-item-required-mark-${markType}`]: markType,
+    [`${prefixCls}-item-no-colon`]: !computedColon
+  });
+  return /*#__PURE__*/(react_production_namespaceFn().createElement)(grid_col, {
+    ...mergedLabelCol,
+    className: labelColClassName
+  }, /*#__PURE__*/(react_production_namespaceFn().createElement)("label", {
+    htmlFor: htmlFor,
+    className: labelClassName,
+    style: contextStyles?.label,
+    title: typeof label === 'string' ? label : undefined
+  }, labelChildren));
+};
+/* harmony default export */ const form_FormItemLabel = (FormItemLabel);
+;// ./node_modules/antd/es/form/FormItem/StatusProvider.js
+"use client";
+
+
+
+
+
+
+
+
+
+const iconMap = {
+  success: icons_CheckCircleFilled,
+  warning: icons_ExclamationCircleFilled,
+  error: icons_CloseCircleFilled,
+  validating: icons_LoadingOutlined
+};
+function StatusProvider({
+  children,
+  errors,
+  warnings,
+  hasFeedback,
+  validateStatus,
+  prefixCls,
+  meta,
+  noStyle,
+  name
+}) {
+  const itemPrefixCls = `${prefixCls}-item`;
+  const {
+    feedbackIcons
+  } = (react_production_namespaceFn().useContext)(context_FormContext);
+  const mergedValidateStatus = getStatus(errors, warnings, meta, null, !!hasFeedback, validateStatus);
+  const {
+    isFormItemInput: parentIsFormItemInput,
+    status: parentStatus,
+    hasFeedback: parentHasFeedback,
+    feedbackIcon: parentFeedbackIcon,
+    name: parentName
+  } = (react_production_namespaceFn().useContext)(FormItemInputContext);
+  // ====================== Context =======================
+  const formItemStatusContext = (react_production_namespaceFn().useMemo)(() => {
+    let feedbackIcon;
+    if (hasFeedback) {
+      const customIcons = hasFeedback !== true && hasFeedback.icons || feedbackIcons;
+      const customIconNode = mergedValidateStatus && customIcons?.({
+        status: mergedValidateStatus,
+        errors,
+        warnings
+      })?.[mergedValidateStatus];
+      const IconNode = mergedValidateStatus ? iconMap[mergedValidateStatus] : null;
+      feedbackIcon = customIconNode !== false && IconNode ? (/*#__PURE__*/(react_production_namespaceFn().createElement)("span", {
+        className: clsx(`${itemPrefixCls}-feedback-icon`, `${itemPrefixCls}-feedback-icon-${mergedValidateStatus}`)
+      }, customIconNode || /*#__PURE__*/(react_production_namespaceFn().createElement)(IconNode, null))) : null;
+    }
+    const context = {
+      status: mergedValidateStatus || '',
+      errors,
+      warnings,
+      hasFeedback: !!hasFeedback,
+      feedbackIcon,
+      isFormItemInput: true,
+      name
+    };
+    // No style will follow parent context
+    if (noStyle) {
+      context.status = (mergedValidateStatus ?? parentStatus) || '';
+      context.isFormItemInput = parentIsFormItemInput;
+      context.hasFeedback = !!(hasFeedback ?? parentHasFeedback);
+      context.feedbackIcon = hasFeedback !== undefined ? context.feedbackIcon : parentFeedbackIcon;
+      context.name = name ?? parentName;
+    }
+    return context;
+  }, [mergedValidateStatus, errors, warnings, hasFeedback, feedbackIcons, noStyle, name, parentIsFormItemInput, parentStatus, itemPrefixCls, parentHasFeedback, parentFeedbackIcon, parentName]);
+  // ======================= Render =======================
+  return /*#__PURE__*/(react_production_namespaceFn().createElement)(FormItemInputContext.Provider, {
+    value: formItemStatusContext
+  }, children);
+}
+/* harmony default export */ const FormItem_StatusProvider = (StatusProvider);
+;// ./node_modules/antd/es/form/FormItem/ItemHolder.js
+"use client";
+
+
+
+
+
+
+
+
+
+
+
+function ItemHolder(props) {
+  const {
+    prefixCls,
+    className,
+    rootClassName,
+    style,
+    help,
+    errors,
+    warnings,
+    validateStatus,
+    meta,
+    hasFeedback,
+    hidden,
+    children,
+    fieldId,
+    required,
+    isRequired,
+    onSubItemMetaChange,
+    layout: propsLayout,
+    name,
+    ...restProps
+  } = props;
+  const itemPrefixCls = `${prefixCls}-item`;
+  const {
+    requiredMark,
+    layout: formLayout
+  } = (react_production_namespaceFn().useContext)(context_FormContext);
+  const layout = propsLayout || formLayout;
+  const vertical = layout === 'vertical';
+  // ======================== Margin ========================
+  const itemRef = (react_production_namespaceFn().useRef)(null);
+  const debounceErrors = useDebounce(errors);
+  const debounceWarnings = useDebounce(warnings);
+  const hasHelp = isNonNullable(help);
+  const hasError = !!(hasHelp || debounceErrors.length || debounceWarnings.length);
+  const isOnScreen = !!itemRef.current && isVisible(itemRef.current);
+  const [marginBottom, setMarginBottom] = (react_production_namespaceFn().useState)(null);
+  hooks_useLayoutEffect(() => {
+    if (hasError && itemRef.current) {
+      // The element must be part of the DOMTree to use getComputedStyle
+      // https://stackoverflow.com/questions/35360711/getcomputedstyle-returns-a-cssstyledeclaration-but-all-properties-are-empty-on-a
+      const itemStyle = getComputedStyle(itemRef.current);
+      setMarginBottom(Number.parseInt(itemStyle.marginBottom, 10));
+    }
+  }, [hasError, isOnScreen]);
+  const onErrorVisibleChanged = nextVisible => {
+    if (!nextVisible && !hasError) {
+      setMarginBottom(null);
+    }
+  };
+  // ======================== Status ========================
+  const getValidateState = (isDebounce = false) => {
+    const _errors = isDebounce ? debounceErrors : meta.errors;
+    const _warnings = isDebounce ? debounceWarnings : meta.warnings;
+    return getStatus(_errors, _warnings, meta, '', !!hasFeedback, validateStatus);
+  };
+  const mergedValidateStatus = getValidateState();
+  // ======================== Render ========================
+  const itemClassName = clsx(itemPrefixCls, className, rootClassName, {
+    [`${itemPrefixCls}-with-help`]: hasHelp || debounceErrors.length || debounceWarnings.length,
+    // Status
+    [`${itemPrefixCls}-has-feedback`]: mergedValidateStatus && hasFeedback,
+    [`${itemPrefixCls}-has-success`]: mergedValidateStatus === 'success',
+    [`${itemPrefixCls}-has-warning`]: mergedValidateStatus === 'warning',
+    [`${itemPrefixCls}-has-error`]: mergedValidateStatus === 'error',
+    [`${itemPrefixCls}-is-validating`]: mergedValidateStatus === 'validating',
+    [`${itemPrefixCls}-hidden`]: hidden,
+    // Layout
+    [`${itemPrefixCls}-${layout}`]: layout
+  });
+  return /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
+    className: itemClassName,
+    style: style,
+    ref: itemRef
+  }, /*#__PURE__*/(react_production_namespaceFn().createElement)(grid_row, {
+    className: `${itemPrefixCls}-row`,
+    ...omit(restProps, ['_internalItemRender', 'colon', 'dependencies', 'extra', 'fieldKey', 'getValueFromEvent', 'getValueProps', 'htmlFor', 'id',
+    // It is deprecated because `htmlFor` is its replacement.
+    'initialValue', 'isListField', 'label', 'labelAlign', 'labelCol', 'labelWrap', 'messageVariables', 'name', 'normalize', 'noStyle', 'preserve', 'requiredMark', 'rules', 'shouldUpdate', 'trigger', 'tooltip', 'validateFirst', 'validateTrigger', 'valuePropName', 'wrapperCol', 'validateDebounce'])
+  }, /*#__PURE__*/(react_production_namespaceFn().createElement)(form_FormItemLabel, {
+    htmlFor: fieldId,
+    ...props,
+    requiredMark: requiredMark,
+    required: required ?? isRequired,
+    prefixCls: prefixCls,
+    vertical: vertical
+  }), /*#__PURE__*/(react_production_namespaceFn().createElement)(form_FormItemInput, {
+    ...props,
+    ...meta,
+    errors: debounceErrors,
+    warnings: debounceWarnings,
+    prefixCls: prefixCls,
+    status: mergedValidateStatus,
+    help: help,
+    marginBottom: marginBottom,
+    onErrorVisibleChanged: onErrorVisibleChanged
+  }, /*#__PURE__*/(react_production_namespaceFn().createElement)(NoStyleItemContext.Provider, {
+    value: onSubItemMetaChange
+  }, /*#__PURE__*/(react_production_namespaceFn().createElement)(FormItem_StatusProvider, {
+    prefixCls: prefixCls,
+    meta: meta,
+    errors: meta.errors,
+    warnings: meta.warnings,
+    hasFeedback: hasFeedback,
+    // Already calculated
+    validateStatus: mergedValidateStatus,
+    name: name
+  }, children)))), !!marginBottom && (/*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
+    className: `${itemPrefixCls}-margin-offset`,
+    style: {
+      marginBottom: -marginBottom
+    }
+  })));
+}
+;// ./node_modules/antd/es/form/FormItem/index.js
+"use client";
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+const NAME_SPLIT = '__SPLIT__';
+const _ValidateStatuses = (/* unused pure expression or super */ null && (['success', 'warning', 'error', 'validating', '']));
+// https://github.com/ant-design/ant-design/issues/46417
+// `getValueProps` may modify the value props name,
+// we should check if the control is similar.
+function isSimilarControl(a, b) {
+  const keysA = Object.keys(a);
+  const keysB = Object.keys(b);
+  return keysA.length === keysB.length && keysA.every(key => {
+    const propValueA = a[key];
+    const propValueB = b[key];
+    return propValueA === propValueB || isFunction(propValueA) || isFunction(propValueB);
+  });
+}
+const MemoInput = /*#__PURE__*/(react_production_namespaceFn().memo)(props => props.children, (prev, next) => isSimilarControl(prev.control, next.control) && prev.update === next.update && prev.childProps.length === next.childProps.length && prev.childProps.every((value, index) => value === next.childProps[index]));
+function genEmptyMeta() {
+  return {
+    errors: [],
+    warnings: [],
+    touched: false,
+    validating: false,
+    name: [],
+    validated: false
+  };
+}
+function InternalFormItem(props) {
+  const {
+    name,
+    noStyle,
+    className,
+    dependencies,
+    prefixCls: customizePrefixCls,
+    shouldUpdate,
+    rules,
+    children,
+    required,
+    label,
+    messageVariables,
+    trigger = 'onChange',
+    validateTrigger,
+    hidden,
+    help,
+    layout
+  } = props;
+  const {
+    getPrefixCls
+  } = (react_production_namespaceFn().useContext)(ConfigContext);
+  const {
+    name: formName
+  } = (react_production_namespaceFn().useContext)(context_FormContext);
+  const mergedChildren = hooks_useChildren(children);
+  const isRenderProps = isFunction(mergedChildren);
+  const notifyParentMetaChange = (react_production_namespaceFn().useContext)(NoStyleItemContext);
+  const {
+    validateTrigger: contextValidateTrigger
+  } = (react_production_namespaceFn().useContext)(FieldContext);
+  const mergedValidateTrigger = isNonNullable(validateTrigger) ? validateTrigger : contextValidateTrigger;
+  const hasName = isNonNullable(name);
+  const prefixCls = getPrefixCls('form', customizePrefixCls);
+  // Style
+  const rootCls = hooks_useCSSVarCls(prefixCls);
+  const [hashId, cssVarCls] = form_style(prefixCls, rootCls);
+  // ========================= Warn =========================
+  const warning = useDevWarning('Form.Item');
+  if (false) // removed by dead control flow
+{}
+  // ========================= MISC =========================
+  // Get `noStyle` required info
+  const listContext = (react_production_namespaceFn().useContext)(es_ListContext);
+  const fieldKeyPathRef = (react_production_namespaceFn().useRef)(null);
+  // ======================== Errors ========================
+  // >>>>> Collect sub field errors
+  const [subFieldErrors, setSubFieldErrors] = useFrameState({});
+  // >>>>> Current field errors
+  const [meta, setMeta] = hooks_useState(() => genEmptyMeta());
+  const onMetaChange = nextMeta => {
+    // This keyInfo is not correct when field is removed
+    // Since origin keyManager no longer keep the origin key anymore
+    // Which means we need cache origin one and reuse when removed
+    const keyInfo = listContext?.getKey(nextMeta.name);
+    // Destroy will reset all the meta
+    setMeta(nextMeta.destroy ? genEmptyMeta() : nextMeta, true);
+    // Bump to parent since noStyle
+    if (noStyle && help !== false && notifyParentMetaChange) {
+      let namePath = nextMeta.name;
+      if (!nextMeta.destroy) {
+        if (keyInfo !== undefined) {
+          const [fieldKey, restPath] = keyInfo;
+          namePath = [fieldKey].concat(_toConsumableArray(restPath));
+          fieldKeyPathRef.current = namePath;
+        }
+      } else {
+        // Use origin cache data
+        namePath = fieldKeyPathRef.current || namePath;
+      }
+      notifyParentMetaChange(nextMeta, namePath);
+    }
+  };
+  // >>>>> Collect noStyle Field error to the top FormItem
+  const onSubItemMetaChange = (subMeta, uniqueKeys) => {
+    // Only `noStyle` sub item will trigger
+    setSubFieldErrors(prevSubFieldErrors => {
+      const clone = {
+        ...prevSubFieldErrors
+      };
+      // name: ['user', 1] + key: [4] = ['user', 4]
+      const mergedNamePath = [].concat(_toConsumableArray(subMeta.name.slice(0, -1)), _toConsumableArray(uniqueKeys));
+      const mergedNameKey = mergedNamePath.join(NAME_SPLIT);
+      if (subMeta.destroy) {
+        // Remove
+        delete clone[mergedNameKey];
+      } else {
+        // Update
+        clone[mergedNameKey] = subMeta;
+      }
+      return clone;
+    });
+  };
+  // >>>>> Get merged errors
+  const [mergedErrors, mergedWarnings] = (react_production_namespaceFn().useMemo)(() => {
+    const errorList = _toConsumableArray(meta.errors);
+    const warningList = _toConsumableArray(meta.warnings);
+    Object.values(subFieldErrors).forEach(subFieldError => {
+      errorList.push.apply(errorList, _toConsumableArray(subFieldError.errors || []));
+      warningList.push.apply(warningList, _toConsumableArray(subFieldError.warnings || []));
+    });
+    return [errorList, warningList];
+  }, [subFieldErrors, meta.errors, meta.warnings]);
+  // ===================== Children Ref =====================
+  const getItemRef = hooks_useItemRef();
+  // ======================== Render ========================
+  function renderLayout(baseChildren, fieldId, isRequired) {
+    if (noStyle && !hidden) {
+      return /*#__PURE__*/(react_production_namespaceFn().createElement)(FormItem_StatusProvider, {
+        prefixCls: prefixCls,
+        hasFeedback: props.hasFeedback,
+        validateStatus: props.validateStatus,
+        meta: meta,
+        errors: mergedErrors,
+        warnings: mergedWarnings,
+        noStyle: true,
+        name: name
+      }, baseChildren);
+    }
+    return /*#__PURE__*/(react_production_namespaceFn().createElement)(ItemHolder, {
+      key: "row",
+      ...props,
+      className: clsx(className, cssVarCls, rootCls, hashId),
+      prefixCls: prefixCls,
+      fieldId: fieldId,
+      isRequired: isRequired,
+      errors: mergedErrors,
+      warnings: mergedWarnings,
+      meta: meta,
+      onSubItemMetaChange: onSubItemMetaChange,
+      layout: layout,
+      name: name
+    }, baseChildren);
+  }
+  if (!hasName && !isRenderProps && !dependencies) {
+    return renderLayout(mergedChildren);
+  }
+  let variables = {};
+  if (typeof label === 'string') {
+    variables.label = label;
+  } else if (name) {
+    variables.label = String(name);
+  }
+  if (messageVariables) {
+    variables = {
+      ...variables,
+      ...messageVariables
+    };
+  }
+  // >>>>> With Field
+  return /*#__PURE__*/(react_production_namespaceFn().createElement)(es_Field, {
+    ...props,
+    messageVariables: variables,
+    trigger: trigger,
+    validateTrigger: mergedValidateTrigger,
+    onMetaChange: onMetaChange
+  }, (control, renderMeta, context) => {
+    const mergedName = util_toArray(name).length && renderMeta ? renderMeta.name : [];
+    const fieldId = getFieldId(mergedName, formName);
+    const isRequired = required !== undefined ? required : rules?.some(rule => {
+      if (isPlainObject(rule) && rule.required && !rule.warningOnly) {
+        return true;
+      }
+      if (isFunction(rule)) {
+        const ruleEntity = rule(context);
+        return ruleEntity?.required && !ruleEntity?.warningOnly;
+      }
+      return false;
+    });
+    // ======================= Children =======================
+    const mergedControl = {
+      ...control
+    };
+    let childNode = null;
+     false ? 0 : void 0;
+    if (Array.isArray(mergedChildren) && hasName) {
+       false ? 0 : void 0;
+      childNode = mergedChildren;
+    } else if (isRenderProps && (!(shouldUpdate || dependencies) || hasName)) {
+       false ? 0 : void 0;
+       false ? 0 : void 0;
+    } else if (dependencies && !isRenderProps && !hasName) {
+       false ? 0 : void 0;
+    } else if (/*#__PURE__*/(react_production_namespaceFn().isValidElement)(mergedChildren)) {
+       false ? 0 : void 0;
+      const childProps = {
+        ...mergedChildren.props,
+        ...mergedControl
+      };
+      if (!childProps.id) {
+        childProps.id = fieldId;
+      }
+      const hasExtra = isReactRenderable(props.extra);
+      if (help || mergedErrors.length > 0 || mergedWarnings.length > 0 || hasExtra) {
+        const describedbyArr = [];
+        if (help || mergedErrors.length > 0) {
+          describedbyArr.push(`${fieldId}_help`);
+        }
+        if (hasExtra) {
+          describedbyArr.push(`${fieldId}_extra`);
+        }
+        childProps['aria-describedby'] = describedbyArr.join(' ');
+      }
+      if (mergedErrors.length > 0) {
+        childProps['aria-invalid'] = 'true';
+      }
+      if (isRequired) {
+        childProps['aria-required'] = 'true';
+      }
+      if (supportRef(mergedChildren)) {
+        childProps.ref = getItemRef(mergedName, mergedChildren);
+      }
+      // We should keep user origin event handler
+      const triggers = new Set([].concat(_toConsumableArray(util_toArray(trigger)), _toConsumableArray(util_toArray(mergedValidateTrigger))));
+      triggers.forEach(eventName => {
+        childProps[eventName] = (...args) => {
+          mergedControl[eventName]?.(...args);
+          mergedChildren.props[eventName]?.(...args);
+        };
+      });
+      // List of props that need to be watched for changes -> if changes are detected in MemoInput -> rerender
+      const watchingChildProps = [childProps['aria-required'], childProps['aria-invalid'], childProps['aria-describedby']];
+      childNode = /*#__PURE__*/(react_production_namespaceFn().createElement)(MemoInput, {
+        control: mergedControl,
+        update: mergedChildren,
+        childProps: watchingChildProps
+      }, cloneElement(mergedChildren, childProps));
+    } else if (isRenderProps && (shouldUpdate || dependencies) && !hasName) {
+      childNode = mergedChildren(context);
+    } else {
+       false ? 0 : void 0;
+      childNode = mergedChildren;
+    }
+    return renderLayout(childNode, fieldId, isRequired);
+  });
+}
+const FormItem = InternalFormItem;
+FormItem.useStatus = hooks_useFormItemStatus;
+/* harmony default export */ const form_FormItem = (FormItem);
+;// ./node_modules/antd/es/form/FormList.js
+"use client";
+
+
+
+
+
+
+
+const FormList = ({
+  prefixCls: customizePrefixCls,
+  children,
+  ...props
+}) => {
+  if (false) // removed by dead control flow
+{}
+  const {
+    getPrefixCls
+  } = (react_production_namespaceFn().useContext)(ConfigContext);
+  const prefixCls = getPrefixCls('form', customizePrefixCls);
+  const contextValue = (react_production_namespaceFn().useMemo)(() => ({
+    prefixCls,
+    status: 'error'
+  }), [prefixCls]);
+  return /*#__PURE__*/(react_production_namespaceFn().createElement)(es_List, {
+    ...props
+  }, (fields, operation, meta) => (/*#__PURE__*/(react_production_namespaceFn().createElement)(FormItemPrefixContext.Provider, {
+    value: contextValue
+  }, children(fields.map(field => ({
+    ...field,
+    fieldKey: field.key
+  })), operation, {
+    errors: meta.errors,
+    warnings: meta.warnings
+  }))));
+};
+/* harmony default export */ const form_FormList = (FormList);
+;// ./node_modules/antd/es/form/hooks/useFormInstance.js
+
+
+function useFormInstance() {
+  const {
+    form
+  } = (react_production_namespaceFn().useContext)(context_FormContext);
+  return form;
+}
+;// ./node_modules/antd/es/form/index.js
+"use client";
+
+
+
+
+
+
+
+const es_form_Form = form_Form;
+es_form_Form.Item = form_FormItem;
+es_form_Form.List = form_FormList;
+es_form_Form.ErrorList = form_ErrorList;
+es_form_Form.useForm = useForm_useForm;
+es_form_Form.useFormInstance = useFormInstance;
+es_form_Form.useWatch = hooks_useWatch;
+es_form_Form.Provider = context_FormProvider;
+/* harmony default export */ const es_form = (es_form_Form);
+;// ./src/lib/ui/agent/TaskPanel.tsx
+
+
+
+
+
+const STATUS_COLOR = {
+    success: 'green',
+    failed: 'red',
+    running: 'blue',
+};
+const STATUS_TEXT = {
+    success: '成功',
+    failed: '失败',
+    running: '运行中',
+    skipped: '已跳过',
+};
+function statusColor(status) {
+    return (status && STATUS_COLOR[status]) || 'default';
+}
+function statusText(status) {
+    if (!status)
+        return '未运行';
+    return STATUS_TEXT[status] || status;
+}
+function TaskPanel_formatTime(value) {
+    if (!value || !Number.isFinite(value))
+        return '—';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime()))
+        return '—';
+    const pad = (num) => String(num).padStart(2, '0');
+    return (pad(date.getMonth() + 1) + '-' + pad(date.getDate()) + ' ' + pad(date.getHours()) + ':' + pad(date.getMinutes()));
+}
+/**
+ * 定时任务面板（v26.10.10-v10）。
+ *
+ * 任务由 ScriptCat 的 TaskScheduler 在后台按 crontab 触发，即便这个弹窗关着、甚至宿主页关掉，
+ * 到点仍会执行（`mode: 'internal'`）。所以这里只负责「增删改查 + 立即跑一次」。
+ *
+ * 时间显示一律用本地时区（`new Date(ms)`），因为用户填的 crontab 也是本地时间语义。
+ */
+function TaskPanel({ api, version, onChange }) {
+    const { token } = es_theme.useToken();
+    const [tasks, setTasks] = (0,react_production_namespaceFn().useState)([]);
+    const [loading, setLoading] = (0,react_production_namespaceFn().useState)(false);
+    const [error, setError] = (0,react_production_namespaceFn().useState)('');
+    const [form] = es_form.useForm();
+    const [submitting, setSubmitting] = (0,react_production_namespaceFn().useState)(false);
+    const reload = (0,react_production_namespaceFn().useCallback)(async () => {
+        setLoading(true);
+        try {
+            const list = await listTasks(api);
+            setTasks(list);
+            setError('');
+        }
+        catch (err) {
+            setError(agentErrorMessage(err));
+        }
+        finally {
+            setLoading(false);
+        }
+    }, [api]);
+    (0,react_production_namespaceFn().useEffect)(() => {
+        void reload();
+    }, [reload, version]);
+    const handleCreate = (0,react_production_namespaceFn().useCallback)(async (values) => {
+        const cronError = validateCrontab(values.crontab);
+        if (cronError) {
+            notify.warning(cronError);
+            return;
+        }
+        const payload = buildTaskInput(values);
+        if (!payload.name) {
+            notify.warning('请填写任务名称');
+            return;
+        }
+        if (!payload.prompt) {
+            notify.warning('请填写任务要执行的内容');
+            return;
+        }
+        setSubmitting(true);
+        try {
+            await runTaskAction(api, '创建', (task) => task.create(payload));
+            notify.success('已创建定时任务 ' + payload.name);
+            form.resetFields();
+            await reload();
+            onChange();
+        }
+        catch (err) {
+            notify.error('创建失败：' + agentErrorMessage(err));
+        }
+        finally {
+            setSubmitting(false);
+        }
+    }, [api, form, reload, onChange]);
+    const patchTask = (0,react_production_namespaceFn().useCallback)(async (id, patch, action) => {
+        try {
+            await runTaskAction(api, action, (task) => task.update(id, patch));
+            await reload();
+            onChange();
+        }
+        catch (err) {
+            notify.error(action + '失败：' + agentErrorMessage(err));
+        }
+    }, [api, reload, onChange]);
+    const handleRunNow = (0,react_production_namespaceFn().useCallback)(async (task) => {
+        try {
+            await runTaskAction(api, '立即执行', (apiTask) => apiTask.runNow(task.id));
+            notify.success('已触发「' + task.name + '」，结果会写进运行日志');
+        }
+        catch (err) {
+            notify.error('触发失败：' + agentErrorMessage(err));
+        }
+    }, [api]);
+    const handleRemove = (0,react_production_namespaceFn().useCallback)(async (task) => {
+        try {
+            await runTaskAction(api, '删除', (apiTask) => apiTask.remove(task.id));
+            notify.success('已删除任务 ' + task.name);
+            await reload();
+            onChange();
+        }
+        catch (err) {
+            notify.error('删除失败：' + agentErrorMessage(err));
+        }
+    }, [api, reload, onChange]);
+    if (error) {
+        return ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', flexDirection: 'column', gap: 8 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(es_alert, { type: "error", showIcon: true, message: '读取定时任务失败：' + error }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { size: "small", onClick: () => void reload(), children: "\u91CD\u8BD5" })] }));
+    }
+    return ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', flexDirection: 'column', gap: 10 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)(es_form, { form: form, layout: "vertical", size: "small", requiredMark: false, onFinish: (values) => void handleCreate(values), children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(es_form.Item, { name: "name", label: "\u4EFB\u52A1\u540D\u79F0", rules: [{ required: true, message: '请填写任务名称' }], style: { marginBottom: 8 }, children: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_input, { placeholder: "\u4F8B\u5982\uFF1A\u6BCF\u5929\u4E0A\u73ED\u524D\u63D0\u9192\u6211\u68C0\u67E5\u76D1\u63A7", maxLength: 40 }) }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_form.Item, { name: "crontab", label: "\u6267\u884C\u65F6\u95F4\uFF08crontab\uFF1A\u5206 \u65F6 \u65E5 \u6708 \u5468\uFF09", rules: [{ required: true, message: '请填写 crontab' }], extra: "\u4F8B\uFF1A9 \u70B9\u6574 \u2192 0 9 * * *\u3000\uFF1B\u6BCF\u4E2A\u5DE5\u4F5C\u65E5 8:30 \u2192 30 8 * * 1-5", style: { marginBottom: 8 }, children: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_input, { placeholder: "0 9 * * *" }) }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_form.Item, { name: "prompt", label: "\u8BA9 Agent \u505A\u4EC0\u4E48", rules: [{ required: true, message: '请填写要执行的内容' }], extra: "\u4EFB\u52A1\u5230\u70B9\u4F1A\u628A\u8FD9\u53E5\u8BDD\u4EA4\u7ED9 Agent \u6267\u884C\uFF0C\u7ED3\u679C\u5199\u8FDB\u8FD0\u884C\u65E5\u5FD7\u3002", style: { marginBottom: 8 }, children: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_input.TextArea, { placeholder: "\u4F8B\u5982\uFF1A\u6C47\u603B\u5F53\u524D\u9875\u9762\u4E0A\u7684\u7B49\u5F85\u4EBA\u6570\u5E76\u63D0\u9192\u6211", autoSize: { minRows: 2, maxRows: 4 } }) }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { type: "primary", htmlType: "submit", size: "small", loading: submitting, children: "\u521B\u5EFA\u4EFB\u52A1" })] }), (0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(typography.Text, { type: "secondary", style: { fontSize: 12 }, children: '已有 ' + tasks.length + ' 个任务' }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { size: "small", loading: loading, onClick: () => void reload(), children: "\u5237\u65B0" })] }), loading && !tasks.length ? ((0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { padding: '24px 0', textAlign: 'center' }, children: (0,react_jsx_runtime_production_namespaceFn().jsx)(spin, { size: "small" }) })) : tasks.length ? ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_list, { size: "small", bordered: true, dataSource: tasks, style: { maxHeight: 300, overflowY: 'auto' }, renderItem: (task) => ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_list.Item, { actions: [
+                        (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { type: "link", size: "small", onClick: () => void handleRunNow(task), children: "\u7ACB\u5373\u6267\u884C" }, "run"),
+                        (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { type: "link", size: "small", onClick: () => void patchTask(task.id, { enabled: !task.enabled }, task.enabled ? '停用' : '启用'), children: task.enabled ? '停用' : '启用' }, "toggle"),
+                        (0,react_jsx_runtime_production_namespaceFn().jsx)(popconfirm, { title: '删除任务 ' + task.name + '？', description: "\u5220\u9664\u540E\u4E0D\u518D\u6309\u8BA1\u5212\u6267\u884C\u3002", okText: "\u5220\u9664", cancelText: "\u53D6\u6D88", onConfirm: () => void handleRemove(task), children: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { type: "link", size: "small", danger: true, children: "\u5220\u9664" }) }, "remove"),
+                    ], children: (0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(typography.Text, { strong: true, style: { fontSize: 13 }, children: task.name }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_tag, { color: task.enabled ? 'blue' : 'default', style: { marginInlineEnd: 0 }, children: task.crontab }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_tag, { color: statusColor(task.lastRunStatus), style: { marginInlineEnd: 0 }, children: statusText(task.lastRunStatus) })] }), (0,react_jsx_runtime_production_namespaceFn().jsx)(typography.Text, { type: "secondary", style: { fontSize: 11 }, children: '上次：' +
+                                    TaskPanel_formatTime(task.lastruntime) +
+                                    '　下次：' +
+                                    TaskPanel_formatTime(task.nextruntime) +
+                                    (task.lastRunError ? '　错误：' + task.lastRunError : '') })] }) })) })) : ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_empty, { image: es_empty.PRESENTED_IMAGE_SIMPLE, description: (0,react_jsx_runtime_production_namespaceFn().jsx)("span", { style: { fontSize: 12 }, children: "\u8FD8\u6CA1\u6709\u5B9A\u65F6\u4EFB\u52A1\uFF0C\u7528\u4E0A\u9762\u7684\u8868\u5355\u5EFA\u4E00\u4E2A\u3002" }) })), (0,react_jsx_runtime_production_namespaceFn().jsx)(typography.Text, { type: "secondary", style: { fontSize: 11 }, children: (0,react_jsx_runtime_production_namespaceFn().jsx)("span", { style: { color: token.colorTextTertiary }, children: '任务由 ScriptCat 在后台按计划触发，关闭本弹窗或关掉网页也会照常执行。' }) })] }));
+}
+
+;// ./src/lib/ui/agent/AgentModal.tsx
+
+
+
+
+
+
+
+
+
+
+/** 面板宽度 238px 放不下的内容都进这个弹窗，故给到 720px */
+const MODAL_WIDTH = 720;
+/** 消息区高度：弹窗固定高度，输入框永远留在视口内，不随消息变长而抖 */
+const MESSAGES_HEIGHT = 360;
+/**
+ * 交代脚本自身的上下文，让 Agent 知道「自己在哪、能干什么」。刻意写短：
+ * 太长会与用户的真实问题抢注意力，而且它是每轮都要付的 token。
+ */
+const SYSTEM_PROMPT = [
+    '你是「征纳互动人数和在线监控」油猴脚本内置的助手。',
+    '这个脚本运行在税务人员的工作电脑上：监控征纳互动的等待人数与掉线弹窗、语音播报提醒、',
+    '还有常用语、历史记录、设备互联（手机传图到电脑）、图片嗅探几个面板入口。',
+    '回答请用简体中文，尽量简短直接；涉及操作步骤时说清楚点哪个按钮。',
+].join('\n');
+/**
+ * Agent 弹窗（v26.10.10-v10）。
+ *
+ * ── 为什么是「弹窗 + 页签」而不是面板里再开一层 ──────────────────────────────
+ * 主面板宽度固定 238px（`PANEL_WIDTH`），塞不下对话流。弹窗沿用本仓库既有做法
+ * （`getOverlayContainer`，见 PhoneModal / SniffModal）挂到宿主页 body 之外的 overlay 容器，
+ * 避免宿主页 `body { transform }` 把浮层限制在盒子内。
+ *
+ * ── 可用性 ─────────────────────────────────────────────────────────────────
+ * `CAT.agent.*` 只在 ScriptCat v1.4+ 存在。探测在 render 期做（纯内存判空，无异步），
+ * 不可用时**照常打开弹窗**并显示原因，而不是把按钮藏起来 —— 用户至少要知道「为什么点不动」。
+ */
+function AgentModal({ open, onClose }) {
+    const { token } = es_theme.useToken();
+    // 探测是纯内存判空，每次 render 重算也无所谓（不缓存，避免 ScriptCat 热重载后状态过期）
+    const availability = detectCatAgent();
+    const api = availability.api;
+    const [tab, setTab] = (0,react_production_namespaceFn().useState)('chat');
+    const [models, setModels] = (0,react_production_namespaceFn().useState)([]);
+    const [modelId, setModelId] = (0,react_production_namespaceFn().useState)('');
+    const [messages, setMessages] = (0,react_production_namespaceFn().useState)([]);
+    const [input, setInput] = (0,react_production_namespaceFn().useState)('');
+    const [streaming, setStreaming] = (0,react_production_namespaceFn().useState)(false);
+    const [conversationId, setConversationId] = (0,react_production_namespaceFn().useState)('');
+    const [fatalError, setFatalError] = (0,react_production_namespaceFn().useState)('');
+    const [conversation, setConversation] = (0,react_production_namespaceFn().useState)(null);
+    const [skillsVersion, setSkillsVersion] = (0,react_production_namespaceFn().useState)(0);
+    const [tasksVersion, setTasksVersion] = (0,react_production_namespaceFn().useState)(0);
+    const keyRef = (0,react_production_namespaceFn().useRef)(0);
+    const scrollRef = (0,react_production_namespaceFn().useRef)(null);
+    const streamTokenRef = (0,react_production_namespaceFn().useRef)(0);
+    // antd 的 Input.TextArea ref 不是原生 textarea，而是带 nativeElement 的 TextAreaRef（rc-textarea 约定）
+    const inputRef = (0,react_production_namespaceFn().useRef)(null);
+    const nextKey = (0,react_production_namespaceFn().useCallback)(() => {
+        keyRef.current += 1;
+        return keyRef.current;
+    }, []);
+    /* ---------------------------------------------------------- 模型列表 */
+    (0,react_production_namespaceFn().useEffect)(() => {
+        if (!open || !api)
+            return;
+        let alive = true;
+        void (async () => {
+            const [list, preferred] = await Promise.all([listModels(api), pickDefaultModelId(api)]);
+            if (!alive)
+                return;
+            setModels(list);
+            setModelId((current) => current || preferred || list[0]?.id || '');
+        })();
+        return () => {
+            alive = false;
+        };
+    }, [open, api]);
+    /* ---------------------------------------------------------- 输入框自适应高度 */
+    (0,react_production_namespaceFn().useEffect)(() => {
+        const el = inputRef.current?.nativeElement;
+        if (!el)
+            return;
+        el.style.height = 'auto';
+        el.style.height = Math.min(el.scrollHeight, 96) + 'px';
+    }, [input, tab, open]);
+    /* ---------------------------------------------------------- 消息区自动滚到底 */
+    (0,react_production_namespaceFn().useEffect)(() => {
+        const el = scrollRef.current;
+        if (!el)
+            return;
+        el.scrollTop = el.scrollHeight;
+    }, [messages]);
+    const patchLast = (0,react_production_namespaceFn().useCallback)((patch) => {
+        setMessages((prev) => {
+            if (!prev.length)
+                return prev;
+            const next = prev.slice();
+            const last = next[next.length - 1];
+            if (last.role !== 'assistant')
+                return prev;
+            next[next.length - 1] = { ...last, ...patch };
+            return next;
+        });
+    }, []);
+    /** 把流式分片里的工具调用合并进最后一条助手消息（同名 id 只保留一份，状态取最新） */
+    const mergeToolCall = (0,react_production_namespaceFn().useCallback)((toolCall) => {
+        setMessages((prev) => {
+            if (!prev.length)
+                return prev;
+            const next = prev.slice();
+            const last = next[next.length - 1];
+            if (last.role !== 'assistant')
+                return prev;
+            const list = last.toolCalls ? last.toolCalls.slice() : [];
+            const id = toolCall.id || toolCall.name;
+            const index = list.findIndex((item) => (item.id || item.name) === id);
+            if (index >= 0)
+                list[index] = { ...list[index], ...toolCall };
+            else
+                list.push(toolCall);
+            next[next.length - 1] = { ...last, toolCalls: list };
+            return next;
+        });
+    }, []);
+    const stopStreaming = (0,react_production_namespaceFn().useCallback)(() => {
+        // 递增令牌即可让正在跑的消费循环在下一个分片处 break（并走 finally → iterator.return()）
+        streamTokenRef.current += 1;
+    }, []);
+    /** 打开弹窗时把该对话已有的历史拉回来，关掉再开仍能接着看 */
+    (0,react_production_namespaceFn().useEffect)(() => {
+        if (!open || !conversation)
+            return;
+        let alive = true;
+        void (async () => {
+            try {
+                const history = await readConversationMessages(conversation);
+                if (!alive || !history.length)
+                    return;
+                setMessages(history
+                    .filter((message) => message.role === 'user' || message.role === 'assistant')
+                    .map((message) => ({
+                    key: nextKey(),
+                    role: message.role,
+                    content: contentToText(message.content),
+                    thinking: message.thinking,
+                    toolCalls: message.toolCalls,
+                })));
+            }
+            catch (error) {
+                if (alive)
+                    addLog('[Agent] 读取对话历史失败: ' + agentErrorMessage(error), 'warning');
+            }
+        })();
+        return () => {
+            alive = false;
+        };
+        // conversation 变化（新建对话）时也要重新拉
+    }, [open, conversation, nextKey]);
+    const send = (0,react_production_namespaceFn().useCallback)(async () => {
+        const text = input.trim();
+        if (!api || !text || streaming)
+            return;
+        let conv = conversation;
+        if (!conv) {
+            try {
+                conv = await createConversation(api, {
+                    system: SYSTEM_PROMPT,
+                    model: modelId || undefined,
+                    skills: 'auto',
+                });
+                setConversation(conv);
+                setConversationId(conv.id || '');
+                addLog('[Agent] 已创建对话 ' + (conv.id || ''), 'info');
+            }
+            catch (error) {
+                const message = describeAgentError(error);
+                setFatalError('无法创建对话：' + message);
+                addLog('[Agent] 创建对话失败: ' + message, 'error');
+                return;
+            }
+        }
+        const token = streamTokenRef.current + 1;
+        streamTokenRef.current = token;
+        setFatalError('');
+        setStreaming(true);
+        setInput('');
+        setMessages((prev) => [
+            ...prev,
+            { key: nextKey(), role: 'user', content: text },
+            { key: nextKey(), role: 'assistant', content: '', pending: true },
+        ]);
+        try {
+            // ⚠️ 分片回调会在 streamConversation 的 Promise resolve 之前就被调用，那一刻
+            // `const outcome = await ...` 还处于 TDZ，读它会抛 ReferenceError（表现为「对话异常」
+            // 且回答永远不落地）。所以增量累加用独立对象承载，不依赖返回值。
+            const live = { content: '', thinking: '' };
+            const outcome = await streamConversation(conv, text, {
+                onContent: (delta) => {
+                    if (streamTokenRef.current !== token)
+                        return;
+                    live.content += delta;
+                    patchLast({ content: live.content, pending: true });
+                },
+                onThinking: (delta) => {
+                    if (streamTokenRef.current !== token)
+                        return;
+                    live.thinking += delta;
+                    patchLast({ thinking: live.thinking, pending: true });
+                },
+                onToolCall: (toolCall) => {
+                    if (streamTokenRef.current !== token)
+                        return;
+                    mergeToolCall(toolCall);
+                },
+                onWarning: (warning) => {
+                    if (streamTokenRef.current !== token)
+                        return;
+                    addLog('[Agent] ' + warning, 'warning');
+                },
+            });
+            if (streamTokenRef.current !== token) {
+                patchLast({ pending: false, cancelled: true, content: live.content, thinking: live.thinking });
+                return;
+            }
+            patchLast({
+                pending: false,
+                content: live.content,
+                thinking: live.thinking,
+                error: outcome.error,
+            });
+            if (outcome.error) {
+                addLog('[Agent] 对话出错: ' + outcome.error, 'error');
+            }
+            else if (outcome.usage) {
+                addLog('[Agent] 本轮完成：输入 ' +
+                    outcome.usage.inputTokens +
+                    ' / 输出 ' +
+                    outcome.usage.outputTokens +
+                    ' tokens', 'info');
+            }
+        }
+        catch (error) {
+            const message = describeAgentError(error);
+            if (streamTokenRef.current === token)
+                patchLast({ pending: false, error: message });
+            addLog('[Agent] 对话异常: ' + message, 'error');
+        }
+        finally {
+            setStreaming(false);
+        }
+    }, [api, input, streaming, conversation, modelId, nextKey, patchLast, mergeToolCall]);
+    const newChat = (0,react_production_namespaceFn().useCallback)(() => {
+        stopStreaming();
+        setStreaming(false);
+        setConversation(null);
+        setConversationId('');
+        setMessages([]);
+        setFatalError('');
+        addLog('[Agent] 已新建对话', 'info');
+    }, [stopStreaming]);
+    const handleClose = (0,react_production_namespaceFn().useCallback)(() => {
+        stopStreaming();
+        setStreaming(false);
+        onClose();
+    }, [stopStreaming, onClose]);
+    const renderMessage = (message) => {
+        const isUser = message.role === 'user';
+        return ((0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { display: 'flex', justifyContent: isUser ? 'flex-end' : 'flex-start', marginBottom: 10 }, children: (0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: {
+                    maxWidth: '86%',
+                    padding: '8px 10px',
+                    borderRadius: 8,
+                    fontSize: 13,
+                    lineHeight: 1.6,
+                    whiteSpace: 'pre-wrap',
+                    wordBreak: 'break-word',
+                    background: isUser ? token.colorPrimaryBg : token.colorFillQuaternary,
+                    border: '1px solid ' + (isUser ? token.colorPrimaryBorder : token.colorBorderSecondary),
+                }, children: [!isUser && message.toolCalls?.length ? ((0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { marginBottom: 6, display: 'flex', flexWrap: 'wrap', gap: 4 }, children: message.toolCalls.map((toolCall, index) => ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_tooltip, { title: toolCall.arguments ? toolCall.arguments.slice(0, 300) : toolCall.name, children: (0,react_jsx_runtime_production_namespaceFn().jsxs)("span", { style: {
+                                    fontSize: 11,
+                                    padding: '1px 6px',
+                                    borderRadius: 9,
+                                    background: token.colorFillTertiary,
+                                    color: token.colorTextSecondary,
+                                }, children: [toolDisplayName(toolCall.name), toolCall.status === 'running' ? ' …' : ''] }) }, (toolCall.id || toolCall.name) + '-' + index))) })) : null, !isUser && message.thinking ? ((0,react_jsx_runtime_production_namespaceFn().jsxs)("details", { style: { marginBottom: 6 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("summary", { style: { cursor: 'pointer', fontSize: 12, color: token.colorTextTertiary }, children: "\u601D\u8003\u8FC7\u7A0B" }), (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { fontSize: 12, color: token.colorTextSecondary, marginTop: 4 }, children: message.thinking })] })) : null, message.content ? ((0,react_jsx_runtime_production_namespaceFn().jsx)("span", { children: message.content })) : message.pending ? ((0,react_jsx_runtime_production_namespaceFn().jsx)(typography.Text, { type: "secondary", style: { fontSize: 12 }, children: "\u6B63\u5728\u601D\u8003\u2026" })) : null, message.cancelled ? ((0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { fontSize: 12, color: token.colorTextTertiary, marginTop: 4 }, children: "\uFF08\u5DF2\u4E2D\u6B62\uFF09" })) : null, message.error ? ((0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { fontSize: 12, color: token.colorError, marginTop: 6 }, children: message.error })) : null] }) }, message.key));
+    };
+    const renderChat = () => {
+        if (!api) {
+            return ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_alert, { type: "warning", showIcon: true, icon: (0,react_jsx_runtime_production_namespaceFn().jsx)(BotIcon, { size: 16 }), message: "Agent \u529F\u80FD\u4E0D\u53EF\u7528", description: availability.reason }));
+        }
+        return ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', flexDirection: 'column', gap: 8 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(es_select, { size: "small", style: { minWidth: 200, flex: '1 1 200px' }, value: modelId || undefined, placeholder: models.length ? '选择模型' : '未配置模型', disabled: streaming, options: models.map((model) => ({
+                                value: model.id,
+                                label: model.name + '（' + model.provider + '）',
+                            })), onChange: (value) => setModelId(value) }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_tooltip, { title: "\u6E05\u7A7A\u5F53\u524D\u5BF9\u8BDD\u5E76\u91CD\u65B0\u5F00\u59CB", children: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { size: "small", onClick: newChat, disabled: streaming && !conversation, children: "\u65B0\u5EFA\u5BF9\u8BDD" }) }), conversationId ? ((0,react_jsx_runtime_production_namespaceFn().jsxs)(typography.Text, { type: "secondary", style: { fontSize: 11 }, children: ["\u5BF9\u8BDD ", conversationId.slice(0, 8)] })) : null] }), models.length ? null : ((0,react_jsx_runtime_production_namespaceFn().jsx)(typography.Text, { type: "secondary", style: { fontSize: 12 }, children: "\u8FD8\u6CA1\u6709\u5728 ScriptCat \u91CC\u914D\u7F6E\u6A21\u578B\uFF1A\u8BF7\u6253\u5F00 ScriptCat \u7684 Agent \u8BBE\u7F6E\u6DFB\u52A0\u4E00\u4E2A\u6A21\u578B\uFF08\u652F\u6301 OpenAI \u517C\u5BB9 / Anthropic / \u667A\u8C31\uFF09\uFF0C\u4E4B\u540E\u8FD9\u91CC\u4F1A\u5217\u51FA\u53EF\u9009\u6A21\u578B\u3002" })), fatalError ? (0,react_jsx_runtime_production_namespaceFn().jsx)(es_alert, { type: "error", showIcon: true, message: fatalError }) : null, (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { ref: scrollRef, className: "znhd-agent-messages", style: {
+                        height: MESSAGES_HEIGHT,
+                        overflowY: 'auto',
+                        overflowX: 'hidden',
+                        padding: '8px 4px',
+                        border: '1px solid ' + token.colorBorderSecondary,
+                        borderRadius: 6,
+                        background: token.colorBgContainer,
+                    }, children: messages.length ? (messages.map(renderMessage)) : ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_empty, { image: es_empty.PRESENTED_IMAGE_SIMPLE, description: (0,react_jsx_runtime_production_namespaceFn().jsx)("span", { style: { fontSize: 12 }, children: "\u76F4\u63A5\u63D0\u95EE\u5373\u53EF\u3002\u53EF\u4EE5\u8BD5\u8BD5\u300C\u5E2E\u6211\u603B\u7ED3\u8FD9\u4E2A\u9875\u9762\u80FD\u505A\u4EC0\u4E48\u300D\u300C\u5F81\u7EB3\u4E92\u52A8\u6389\u7EBF\u63D0\u9192\u6CA1\u58F0\u97F3\u600E\u4E48\u529E\u300D" }) })) }), (0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', gap: 8, alignItems: 'flex-end' }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(es_input.TextArea, { ref: inputRef, value: input, onChange: (event) => setInput(event.target.value), onPressEnter: (event) => {
+                                if (event.shiftKey)
+                                    return;
+                                event.preventDefault();
+                                void send();
+                            }, placeholder: "\u8F93\u5165\u95EE\u9898\uFF0CEnter \u53D1\u9001\uFF0CShift+Enter \u6362\u884C", autoSize: { minRows: 1, maxRows: 4 }, disabled: !api, style: { resize: 'none' } }), streaming ? ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { danger: true, icon: (0,react_jsx_runtime_production_namespaceFn().jsx)(CloseIcon, { size: 13 }), onClick: stopStreaming, children: "\u4E2D\u6B62" })) : ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { color: "primary", variant: "solid", onClick: () => void send(), disabled: !input.trim(), children: "\u53D1\u9001" }))] }), (0,react_jsx_runtime_production_namespaceFn().jsx)(typography.Text, { type: "secondary", style: { fontSize: 11 }, children: '对话保存在 ScriptCat 的本地存储（OPFS）里，关掉弹窗不会丢；「新建对话」才会另起一个。' })] }));
+    };
+    const tabs = [
+        { key: 'chat', label: '对话' },
+        { key: 'skills', label: '技能' },
+        { key: 'tasks', label: '定时任务' },
+    ];
+    return ((0,react_jsx_runtime_production_namespaceFn().jsxs)(modal, { open: open, title: (0,react_jsx_runtime_production_namespaceFn().jsxs)(es_space, { size: 6, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(BotIcon, { size: 16, color: token.colorPrimary }), (0,react_jsx_runtime_production_namespaceFn().jsx)("span", { children: "Agent \u52A9\u624B" })] }), width: MODAL_WIDTH, getContainer: getOverlayContainer, onCancel: handleClose, destroyOnHidden: true, footer: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_space, { children: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { onClick: handleClose, children: "\u5173\u95ED" }) }), children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { display: 'flex', gap: 4, borderBottom: '1px solid ' + token.colorBorderSecondary }, children: tabs.map((item) => ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { type: "text", size: "small", onClick: () => setTab(item.key), style: {
+                        padding: '4px 10px',
+                        fontSize: 13,
+                        borderBottom: '2px solid ' + (tab === item.key ? token.colorPrimary : 'transparent'),
+                        borderRadius: 0,
+                    }, children: item.label }, item.key))) }), (0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { paddingTop: 10 }, children: [tab === 'chat' ? renderChat() : null, tab === 'skills' ? (api ? ((0,react_jsx_runtime_production_namespaceFn().jsx)(SkillsPanel, { api: api, version: skillsVersion, onChange: () => setSkillsVersion((value) => value + 1) })) : ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_alert, { type: "warning", showIcon: true, message: "\u6280\u80FD\u4E0D\u53EF\u7528", description: availability.reason }))) : null, tab === 'tasks' ? (api ? ((0,react_jsx_runtime_production_namespaceFn().jsx)(TaskPanel, { api: api, version: tasksVersion, onChange: () => setTasksVersion((value) => value + 1) })) : ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_alert, { type: "warning", showIcon: true, message: "\u5B9A\u65F6\u4EFB\u52A1\u4E0D\u53EF\u7528", description: availability.reason }))) : null] })] }));
+}
+
 ;// ./src/lib/ui/MainPanel.tsx
+
 
 
 
@@ -75522,6 +88674,10 @@ const PANEL_CSS = `
  * 图形来源与许可见 `lib/ui/icons.tsx` 头部注释（Lucide / ISC）。
  *
  * `icon` 存组件类型而非实例，便于统一控制尺寸与颜色。
+ *
+ * ⚠️ v26.10.10-v10：**Agent 入口不放进这个数组**。用户要求「每行只需 5 个按钮、Agent 另起一行」，
+ * 故数组严格保持 5 项 = 第一行的 5 个入口；Agent 由下面的 AGENT_ACTION 单独渲染在第二行，
+ * 这样第一行的列宽（`repeat(5, minmax(0,1fr))`）与按钮位置和加 Agent 之前完全一致。
  */
 const PANEL_ACTIONS = [
     { key: 'settings', icon: SettingsIcon, label: '设置' },
@@ -75530,6 +88686,23 @@ const PANEL_ACTIONS = [
     { key: 'phone', icon: DeviceIcon, label: '设备互联' },
     { key: 'sniff', icon: SniffIcon, label: '图片嗅探' },
 ];
+/**
+ * Agent 入口（v26.10.10-v10，ScriptCat v1.4+ 专属）。
+ *
+ * 为什么不并进 PANEL_ACTIONS：面板宽 PANEL_WIDTH=238px，5 列每列约 38px（只够放图标）；
+ * 6 列会挤到 ~31px，而「Agent」是**英文**、比中文标签更宽，复用 65px 容器查询阈值必然显示不全。
+ * 用户拍板的版式是「第一行原 5 个 + 第二行只有 Agent 一个」，所以这里单独一行、宽度走 5 列同宽。
+ *
+ * ⚠️ 文案必须保持 "Agent"：scripts/smoke/znhd-smoke.html 的 panelAgentBtnOk 按 textContent === 'Agent' 定位。
+ */
+const AGENT_ACTION = { key: 'agent', icon: BotIcon, label: 'Agent' };
+/**
+ * 主面板入口按钮（图标 + 文案）。第一行 5 个与第二行的 Agent 共用同一结构，
+ * 只允许传「图标 / 文案 / 主题色 / 点击」，不接收任意属性透传 —— 样式完全由 .znhd-panel-btn 决定。
+ */
+function PanelEntryButton({ icon: Icon, label, onClick, color, }) {
+    return ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_tooltip, { title: label, placement: "bottom", children: (0,react_jsx_runtime_production_namespaceFn().jsxs)(es_button, { className: "znhd-panel-btn", size: "large", style: { padding: '0 4px' }, onClick: onClick, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(Icon, { size: 15, color: color }), (0,react_jsx_runtime_production_namespaceFn().jsx)("span", { className: "znhd-panel-btn-text", style: { fontSize: 11, marginLeft: 2 }, children: label })] }) }));
+}
 /** 状态点 */
 function Dot({ color }) {
     return ((0,react_jsx_runtime_production_namespaceFn().jsx)("span", { style: {
@@ -75570,6 +88743,8 @@ function MainPanel({ host }) {
     const [changelogOpen, setChangelogOpen] = (0,react_production_namespaceFn().useState)(false);
     /** 图片嗅探（v26.10.10-v4）：扫描当前页面上的图片，筛选/预览/下载/打印 */
     const [sniffOpen, setSniffOpen] = (0,react_production_namespaceFn().useState)(false);
+    /** Agent 助手（v26.10.10-v10）：对话 / 技能盘点 / 定时任务，需 ScriptCat v1.4+ 的 CAT.agent */
+    const [agentOpen, setAgentOpen] = (0,react_production_namespaceFn().useState)(false);
     // 收到图片/文本（v26.10.06-v13：由原来的命令式 DOM 弹窗改为 React state 驱动 antd 弹窗）
     const [recvImages, setRecvImages] = (0,react_production_namespaceFn().useState)([]);
     /** 历史记录里的文本（可回看，上限 MAX_TEXT）；与下面「收到即自动弹出的最新一条」是两条独立路径 */
@@ -75872,7 +89047,7 @@ function MainPanel({ host }) {
                 touchAction: 'none',
             }, children: (0,react_jsx_runtime_production_namespaceFn().jsx)(BrandIcon, { size: 20 }) }));
     }
-    // 五个入口的点击行为（key 与 PANEL_ACTIONS 对齐）
+    // 入口的点击行为（key 与 PANEL_ACTIONS / AGENT_ACTION 对齐）
     const actionHandlers = {
         settings: () => setSettingsOpen(true),
         phrases: () => setPhrasesOpen(true),
@@ -75883,6 +89058,7 @@ function MainPanel({ host }) {
         },
         phone: () => setPhoneOpen(true),
         sniff: () => setSniffOpen(true),
+        agent: () => setAgentOpen(true),
     };
     return ((0,react_jsx_runtime_production_namespaceFn().jsxs)(card, { size: "small", style: { width: (/* inlined export .PANEL_WIDTH */238), boxShadow: '0 6px 24px rgba(0,0,0,0.18)' }, styles: { body: { padding: 12 }, header: { padding: '8px 10px', minHeight: 46 } }, title: (0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { ...dragHandlers, style: {
                 cursor: 'move',
@@ -75931,7 +89107,7 @@ function MainPanel({ host }) {
                     alignItems: 'center',
                     justifyContent: 'space-between',
                     marginBottom: 10,
-                }, children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)(es_space, { size: 6, children: [voiceEnabled ? ((0,react_jsx_runtime_production_namespaceFn().jsx)(VolumeOnIcon, { size: 15, color: token.colorPrimary })) : ((0,react_jsx_runtime_production_namespaceFn().jsx)(VolumeOffIcon, { size: 15, color: token.colorTextQuaternary })), (0,react_jsx_runtime_production_namespaceFn().jsx)("span", { style: { fontSize: 13 }, children: "\u8BED\u97F3\u64AD\u62A5" })] }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_switch, { checked: !!voiceEnabled, onChange: toggleVoice })] }), (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { display: 'grid', gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', gap: 6 }, children: PANEL_ACTIONS.map((a) => ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_tooltip, { title: a.label, placement: "bottom", children: (0,react_jsx_runtime_production_namespaceFn().jsxs)(es_button, { className: "znhd-panel-btn", size: "large", style: { padding: '0 4px' }, onClick: actionHandlers[a.key], children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(a.icon, { size: 15, color: token.colorPrimary }), (0,react_jsx_runtime_production_namespaceFn().jsx)("span", { className: "znhd-panel-btn-text", style: { fontSize: 11, marginLeft: 2 }, children: a.label })] }) }, a.key))) }), (0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: {
+                }, children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)(es_space, { size: 6, children: [voiceEnabled ? ((0,react_jsx_runtime_production_namespaceFn().jsx)(VolumeOnIcon, { size: 15, color: token.colorPrimary })) : ((0,react_jsx_runtime_production_namespaceFn().jsx)(VolumeOffIcon, { size: 15, color: token.colorTextQuaternary })), (0,react_jsx_runtime_production_namespaceFn().jsx)("span", { style: { fontSize: 13 }, children: "\u8BED\u97F3\u64AD\u62A5" })] }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_switch, { checked: !!voiceEnabled, onChange: toggleVoice })] }), (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { display: 'grid', gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', gap: 6 }, children: PANEL_ACTIONS.map((a) => ((0,react_jsx_runtime_production_namespaceFn().jsx)(PanelEntryButton, { icon: a.icon, label: a.label, color: token.colorPrimary, onClick: actionHandlers[a.key] }, a.key))) }), (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { display: 'grid', gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', gap: 6, marginTop: 6 }, children: (0,react_jsx_runtime_production_namespaceFn().jsx)(PanelEntryButton, { icon: AGENT_ACTION.icon, label: AGENT_ACTION.label, color: token.colorPrimary, onClick: actionHandlers[AGENT_ACTION.key] }) }), (0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: {
                     marginTop: 10,
                     display: 'flex',
                     alignItems: 'center',
@@ -75987,7 +89163,7 @@ function MainPanel({ host }) {
                         }
                     });
                     return [];
-                }), onRemoveText: (idx) => setRecvTexts((prev) => prev.filter((_, i) => i !== idx)), onClearTexts: () => setRecvTexts([]) }), (0,react_jsx_runtime_production_namespaceFn().jsx)(RecvTextModal, { text: recvText, onClose: () => setRecvText(null) })] }));
+                }), onRemoveText: (idx) => setRecvTexts((prev) => prev.filter((_, i) => i !== idx)), onClearTexts: () => setRecvTexts([]) }), (0,react_jsx_runtime_production_namespaceFn().jsx)(RecvTextModal, { text: recvText, onClose: () => setRecvText(null) }), (0,react_jsx_runtime_production_namespaceFn().jsx)(AgentModal, { open: agentOpen, onClose: () => setAgentOpen(false) })] }));
 }
 
 ;// ./src/lib/ui/PanelApp.tsx

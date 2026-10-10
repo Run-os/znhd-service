@@ -374,6 +374,141 @@
       });
     </script>
 
+    <!-- ===== ScriptCat Agent 桩（v26.10.10-v10）=====
+      只在 ScriptCat v1.4+ 存在的 `CAT.agent.*`。这里给出**全量可用的最小实现**，用来断言
+      「入口 → 弹窗 → 建会话 → 流式收分片」这条链路；真实环境里的 LLM / OPFS 不在本 harness 职责内。
+      ⚠️ 桩必须在**被测脚本之前**注入：AgentModal 在 render 期就调 detectCatAgent()（纯内存判空）。
+      ⚠️ 每条子能力都必须是对象：detectCatAgent 只认 object，缺一项就会整体降级为「不可用」。 -->
+    <script>
+      (function () {
+        const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+        window.__catAgentCalls = [];
+        const log = (name) => window.__catAgentCalls.push(name);
+
+        const makeStream = (text) => {
+          const chunks = [
+            { type: 'thinking_delta', content: '（桩）先想一下' },
+            { type: 'content_delta', content: text },
+            { type: 'done', usage: { inputTokens: 1, outputTokens: 2 } },
+          ];
+          let i = 0;
+          return {
+            [Symbol.asyncIterator]() {
+              return this;
+            },
+            next: async () => {
+              // 分片之间给一点间隔，模拟真实的流式节奏（也保证「正在思考…」这类中间态能被渲染出来）
+              try {
+                if (i > 0) await wait(15);
+                if (i < chunks.length) {
+                  const value = chunks[i++];
+                  window.__catAgentCalls.push('chunk:' + value.type);
+                  return { value: value, done: false };
+                }
+              } catch (e) {
+                window.__catAgentCalls.push('next-throw:' + String((e && e.message) || e));
+                throw e;
+              }
+              return { value: undefined, done: true };
+            },
+            return: async () => ({ value: undefined, done: true }),
+          };
+        };
+
+        const makeConversation = (id) => ({
+          id: id,
+          title: '桩对话',
+          modelId: 'stub-model-1',
+          chatStream: async () => {
+            log('conversation.chatStream');
+            return makeStream('（桩回答）');
+          },
+          chat: async () => {
+            log('conversation.chat');
+            return { content: '（桩回答）', usage: { inputTokens: 1, outputTokens: 2 } };
+          },
+          getMessages: async () => [],
+          clear: async () => {},
+          save: async () => {},
+          attach: async () => ({ attachmentId: 'a1', mimeType: 'image/png' }),
+        });
+
+        window.CAT = {
+          agent: {
+            conversation: {
+              create: async (options) => {
+                log('conversation.create');
+                window.__catAgentCreateOptions = options || {};
+                return makeConversation('stub-conv-1');
+              },
+              get: async () => null,
+            },
+            model: {
+              list: async () => {
+                log('model.list');
+                return [
+                  {
+                    id: 'stub-model-1',
+                    name: '桩模型',
+                    provider: 'openai',
+                    apiBaseUrl: 'https://example.invalid/v1',
+                    model: 'stub',
+                    maxTokens: 4096,
+                    contextWindow: 128000,
+                    supportsVision: false,
+                    supportsImageOutput: false,
+                  },
+                ];
+              },
+              getDefault: async () => 'stub-model-1',
+              getSummary: async () => '桩摘要',
+            },
+            skills: {
+              list: async () => {
+                log('skills.list');
+                return [
+                  {
+                    name: 'stub-skill',
+                    description: '桩技能',
+                    version: '1.0.0',
+                    toolNames: ['stub_tool'],
+                    referenceNames: [],
+                    hasConfig: false,
+                    enabled: true,
+                    updatetime: 1700000000000,
+                  },
+                ];
+              },
+              remove: async () => {
+                log('skills.remove');
+                return true;
+              },
+              call: async () => null,
+            },
+            task: {
+              list: async () => {
+                log('task.list');
+                return [];
+              },
+              create: async (input) => {
+                log('task.create');
+                window.__catAgentTaskInput = input;
+                return { id: 'stub-task-1', name: input && input.name };
+              },
+              get: async () => null,
+              update: async () => ({}),
+              remove: async () => true,
+              runNow: async () => {
+                log('task.runNow');
+              },
+              addListener: () => {},
+              removeListener: () => {},
+            },
+          },
+        };
+      })();
+    </script>
+
     <!-- ===== 被测对象：构建产物 ===== -->
     <script src="/znhd.user.js"></script>
 
@@ -825,6 +960,172 @@
         poll(30, 0);
       }, 9700);
 
+      // ===== Agent 助手（v26.10.10-v10）=====
+      // 前置：CAT.agent 桩（见本文件「ScriptCat Agent 桩」）。
+      // 覆盖链路：面板第二行的 Agent 入口 → 弹窗（可用态）→ 三个页签切换 → 发消息 → 流式回答落地。
+      // ⚠️ 发消息会真的走 streamConversation：分片是桩造的（thinking_delta → content_delta → done）。
+      setTimeout(() => {
+        const findAgentModal = () =>
+          Array.from(document.querySelectorAll('.ant-modal')).find((el) =>
+            ((el.querySelector('.ant-modal-title') || {}).textContent || '').includes('Agent 助手')
+          );
+        const clickBtnWithText = (root, text) => {
+          const btn = Array.from(root.querySelectorAll('button')).find(
+            (b) => (b.textContent || '').indexOf(text) >= 0
+          );
+          if (btn) btn.click();
+          return !!btn;
+        };
+        const race = (promise, ms) =>
+          Promise.race([
+            promise,
+            new Promise((resolve) => setTimeout(() => resolve('__timeout__'), ms)),
+          ]);
+
+        const snap = {
+          entrySeen: false,
+          panelFellBack: false,
+          modalSeen: false,
+          tabsOk: false,
+          skillsPanelSeen: false,
+          skillsListed: false,
+          tasksPanelSeen: false,
+          createOptions: null,
+          sendClicked: false,
+          userMsgSeen: false,
+          replySeen: false,
+          errorSeen: false,
+          calls: [],
+        };
+        window.__agentSnap = snap;
+
+        const clickEntry = () => {
+          const host = document.getElementById('__znhd_panel_host__');
+          if (!host) return false;
+          const btn = Array.from(host.querySelectorAll('button')).find(
+            (b) => (b.textContent || '').indexOf('Agent') >= 0
+          );
+          if (!btn) return false;
+          btn.click();
+          return true;
+        };
+
+        const stageSkills = (tries) => {
+          const m = findAgentModal();
+          if (!m) {
+            if (tries > 0) setTimeout(() => stageSkills(tries - 1), 75);
+            else {
+              snap.stageReached = 'skills-no-modal';
+              finish();
+            }
+            return;
+          }
+          snap.tabsOk = clickBtnWithText(m, '技能');
+          setTimeout(() => {
+            if (!snap.tabsOk) {
+              snap.stageReached = 'tab-skills-miss';
+              finish();
+              return;
+            }
+            snap.skillsPanelSeen = (m.textContent || '').indexOf('已安装') >= 0;
+            snap.skillsListed = (m.textContent || '').indexOf('stub-skill') >= 0;
+            clickBtnWithText(m, '定时任务');
+            setTimeout(() => {
+              snap.tasksPanelSeen = (m.textContent || '').indexOf('crontab') >= 0;
+              clickBtnWithText(m, '对话');
+              setTimeout(() => stageSend(0), 300);
+            }, 300);
+          }, 300);
+        };
+
+        const stageSend = (tries) => {
+          const m = findAgentModal();
+          if (!m) {
+            if (tries > 0) {
+              setTimeout(() => stageSend(tries - 1), 100);
+              return;
+            }
+            snap.stageReached = 'send-no-modal';
+            finish();
+            return;
+          }
+          const ta = m.querySelector('textarea');
+          snap.taFound = !!ta;
+          if (!ta) {
+            if (tries > 0) {
+              setTimeout(() => stageSend(tries - 1), 100);
+              return;
+            }
+            snap.stageReached = 'send-no-textarea';
+            finish();
+            return;
+          }
+          // 用原型上的 setter 赋值再派发 input：React 的受控输入依赖原生 setter 触发的 value 跟踪
+          // （直接 `ta.value = x` 会被 React 缓存的 value 覆盖掉；input 事件必须冒泡到 root）
+          const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value').set;
+          setter.call(ta, '你好');
+          ta.dispatchEvent(new Event('input', { bubbles: true }));
+          snap.taValue = ta.value;
+          snap.stageReached = 'send';
+          snap.sendButtons = Array.from(m.querySelectorAll('button'))
+            .map((b) => (b.textContent || '').trim())
+            .filter(Boolean);
+          snap.sendClicked = clickBtnWithText(m, '发送');
+          setTimeout(() => stageReply(35), 250);
+        };
+
+        const stageReply = (tries) => {
+          const m = findAgentModal();
+          const t = m ? m.textContent || '' : '';
+          snap.userMsgSeen = t.indexOf('你好') >= 0;
+          snap.replySeen = t.indexOf('（桩回答）') >= 0;
+          snap.thinkingSeen = t.indexOf('先想一下') >= 0;
+          // 助手气泡的错误态直接查类名，并把错误原文带进快照（失败时不必再猜）
+          const errEl = m ? m.querySelector('.znhd-agent-msg-error') : null;
+          snap.errorSeen = !!errEl;
+          snap.errorText = errEl ? (errEl.textContent || '').slice(0, 200) : '';
+          snap.calls = (window.__catAgentCalls || []).slice();
+          snap.replyTries = tries;
+          if ((snap.replySeen && snap.userMsgSeen) || tries <= 0) {
+            snap.stageReached = snap.replySeen ? 'reply-seen' : 'reply-timeout';
+            finish();
+            return;
+          }
+          setTimeout(() => stageReply(tries - 1), 100);
+        };
+
+        const finish = () => {
+          snap.calls = (window.__catAgentCalls || []).slice();
+          snap.createOptions = window.__catAgentCreateOptions || null;
+          const host = document.getElementById('__znhd_panel_host__');
+          if (host) {
+            const rows = {};
+            Array.from(host.querySelectorAll('button')).forEach((b) => {
+              const label = (b.textContent || '').trim().split(/\s+/)[0];
+              rows[label] = Math.round(b.getBoundingClientRect().top);
+            });
+            snap.rows = rows;
+          }
+        };
+
+        snap.entrySeen = clickEntry();
+        if (!snap.entrySeen) {
+          // 入口都没点到：记录面板退出按钮是否存在，便于区分「没渲染」与「点击没生效」
+          const host = document.getElementById('__znhd_panel_host__');
+          snap.panelFellBack = !!host;
+          finish();
+          return;
+        }
+        setTimeout(() => {
+          snap.modalSeen = !!findAgentModal();
+          if (!snap.modalSeen) {
+            finish();
+            return;
+          }
+          stageSkills(30);
+        }, 450);
+      }, 7300);
+
       // 打开「运行日志」弹窗：验证「日志从上到下生成、最新在最上方」（v26.10.06-v23 需求）。
       // 放在 10600ms（报告在 11000ms 采集），留 400ms 给 React 渲染。
       setTimeout(() => {
@@ -961,6 +1262,48 @@
             //    Win7 的 Segoe UI Symbol 对其覆盖不确定 —— v26.10.09-v7 已把它们换成内联 SVG。
             const noDingbats = !/[\u2700-\u27BF]/.test(host.textContent || '');
             return allSvg && noAstral && noDingbats;
+          })(),
+          // Agent 入口（v26.10.10-v10）：按用户要求**另起一行**，且那一行只有它一个按钮。
+          // 判据拆成两半，失败时能一眼看出是「没有按钮」还是「跑到第一行去了」：
+          //   ① 文案为 Agent 的按钮存在，且是真实 SVG 图标（与其它入口同规格）；
+          //   ② 原 5 个入口仍在第一行（旧断言已覆盖），Agent 的 top **严格大于**它们的 top。
+          panelAgentBtnOk: (() => {
+            const host = document.getElementById('__znhd_panel_host__');
+            if (!host) return false;
+            const btnText = (b) => (b.textContent || '').trim();
+            const agent = Array.from(host.querySelectorAll('button')).find((b) => btnText(b) === 'Agent');
+            if (!agent) return false;
+            const svg = agent.querySelector('svg');
+            if (!svg || svg.children.length === 0) return false;
+            const labels = ['设置', '常用语', '历史记录', '设备互联', '图片嗅探'];
+            const btns = Array.from(host.querySelectorAll('button')).filter((b) =>
+              labels.some((t) => (b.textContent || '').indexOf(t) >= 0)
+            );
+            if (btns.length !== 5) return false;
+            const firstRowTop = Math.round(btns[0].getBoundingClientRect().top);
+            const sameRow = btns.every((b) => Math.round(b.getBoundingClientRect().top) === firstRowTop);
+            return sameRow && Math.round(agent.getBoundingClientRect().top) > firstRowTop;
+          })(),
+          // Agent 入口行（v26.10.10-v10）：**第二行只有它一个** —— 除原 5 个入口与 Agent 之外，
+          // 该行不得再出现任何按钮（防止日后有人顺手往第二行塞第 7 个入口，破掉「每行 5 个」的约定）。
+          // ⚠️ 判据先用**已知的 5 个中文标签**锁定第一行（它们的文案不会变），再单独取 Agent 的 top。
+          //    不要按 top 像素自己分组：第二行的 top 与第一行只差一个按钮高度，角像素取整后完全可能
+          //    与某个中文按钮同值，那样分组就会把 Agent 并进第一行（v26.10.10-v10 首跑踩过）。
+          panelAgentRowsOk: (() => {
+            const host = document.getElementById('__znhd_panel_host__');
+            if (!host) return false;
+            const labelOf = (b) => (b.textContent || '').trim().split(/\s+/)[0];
+            const all = Array.from(host.querySelectorAll('button'));
+            const want = ['设置', '常用语', '历史记录', '设备互联', '图片嗅探'];
+            const firstRow = all.filter((b) => want.indexOf(labelOf(b)) >= 0);
+            if (firstRow.length !== want.length) return false;
+            const tops = firstRow.map((b) => Math.round(b.getBoundingClientRect().top));
+            const firstRowTop = tops[0];
+            if (!tops.every((t) => t === firstRowTop)) return false;
+            const agents = all.filter((b) => labelOf(b) === 'Agent');
+            if (agents.length !== 1) return false;
+            const agentTop = Math.round(agents[0].getBoundingClientRect().top);
+            return agentTop > firstRowTop;
           })(),
 
           // 二维码必须无圆角（v26.10.06-v21 按用户要求；圆角会切掉定位角标影响识别）
@@ -1253,6 +1596,27 @@
             !window.__sniffSnap.svgInTitles &&
             window.__sniffSnap.excludedCount >= 4
           ),
+          // ===== Agent 助手（v26.10.10-v10）=====
+          // 链路：面板第二行的 Agent 入口 → 弹窗 → 三个页签 → 发消息 → 流式回答。
+          // ⚠️ 这些断言在 CAT.agent 桩下跑「可用态」；不可用态（无 CAT）由 buildAgentSnap 的
+          //    panelFellBack/entrySeen 两条覆盖不了 —— 那条路径的判据是弹窗里的 Alert 文案，
+          //    本 harness 不再单独造一份「无 CAT」环境（会与桩冲突）。
+          agentEntryOk: !!(window.__agentSnap && window.__agentSnap.entrySeen && window.__agentSnap.modalSeen),
+          agentTabsOk: !!(
+            window.__agentSnap &&
+            window.__agentSnap.tabsOk &&
+            window.__agentSnap.skillsPanelSeen &&
+            window.__agentSnap.skillsListed &&
+            window.__agentSnap.tasksPanelSeen
+          ),
+          agentChatOk: !!(
+            window.__agentSnap &&
+            window.__agentSnap.sendClicked &&
+            window.__agentSnap.userMsgSeen &&
+            window.__agentSnap.replySeen &&
+            !window.__agentSnap.errorSeen
+          ),
+          agentSnap: window.__agentSnap || null,
           sniffSnap: window.__sniffSnap || null,
           relevantErrors: relevant,
         };

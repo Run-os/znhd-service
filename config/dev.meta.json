@@ -9,7 +9,11 @@
     "GM_getValue",
     "GM_setValue",
     "GM_getResourceText",
-    "GM_addValueChangeListener"
+    "GM_addValueChangeListener",
+    "CAT.agent.conversation",
+    "CAT.agent.model",
+    "CAT.agent.skills",
+    "CAT.agent.task"
   ],
   "match": [
     "https://znhd.hunan.chinatax.gov.cn:8443/*",

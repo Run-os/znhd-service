@@ -73,6 +73,8 @@ const CHECKS = [
   ['panelBtnsUniform', '入口按钮样式一致（无主色实心按钮，v26.10.10-v4 起 5 个）'],
   ['panelBtnsOneRow', '入口按钮排在同一行（v26.10.10-v4 起 5 个）'],
   ['panelIconsAreSvg', '面板图标是真实 SVG 且无补充平面 emoji（Win7 兼容）'],
+  ['panelAgentBtnOk', 'Agent 入口另起一行且该行只有它一个（v26.10.10-v10）'],
+  ['panelAgentRowsOk', '第一行仍是原 5 个入口、第二行只有 Agent（v26.10.10-v10）'],
   ['ballDragOk', '悬浮球可拖动移动（且拖完不误触展开）'],
   ['logListNotReversed', '日志列表仍是 column（非 column-reverse）'],
   ['logNewestOnBottom', '日志最新一条在最下方'],
@@ -111,6 +113,10 @@ const CHECKS = [
   ['sniffSvgExcludedOk', '按后缀排除 SVG（.svg 与内联 SVG 都不进面板）'],
   // v26.10.10-v8：面板被宿主页重绘删除后必须自愈（watchPanelHost 的回归断言）
   ['selfHeal', '面板被宿主页删除后自动挂回（且不重复挂载）'],
+  // v26.10.10-v10：Agent 助手（CAT.agent 桩下跑可用态）
+  ['agentEntryOk', 'Agent 入口能打开弹窗（可用态）'],
+  ['agentTabsOk', 'Agent 弹窗三个页签可切换且技能/任务面板渲染（桩数据）'],
+  ['agentChatOk', 'Agent 对话能发出并落地流式回答（桩分片）'],
 ];
 
 /**
@@ -288,6 +294,10 @@ async function main() {
       !checkPass('sniffSelectScopeOk')
     ) {
       console.log('      嗅探快照：' + JSON.stringify(report.sniffSnap));
+    }
+    // Agent 三条断言失败时打快照：能区分「入口没点到」「弹窗没开」「桩没被调用」「分片没落到 UI」
+    if (!checkPass('agentEntryOk') || !checkPass('agentTabsOk') || !checkPass('agentChatOk')) {
+      console.log('      Agent 快照：' + JSON.stringify(report.agentSnap));
     }
 
     const allErrors = (report.relevantErrors || []).concat(pageErrors);

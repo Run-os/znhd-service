@@ -63,7 +63,7 @@ function SvgIcon({ size = 16, color, style, className, children }: IconProps & {
     );
 }
 
-/* ============================================================ 主面板入口（v26.10.10-v4 起 5 个） */
+/* ============================================================ 主面板入口（v26.10.10-v4 起 5 个；v26.10.10-v10 加入 Agent 共 6 个） */
 
 /** 设置（Lucide `settings`：齿轮 + 圆心） */
 export function SettingsIcon(p: IconProps) {
@@ -120,6 +120,20 @@ export function DeviceIcon(p: IconProps) {
             <rect width="20" height="14" x="2" y="3" rx="2" />
             <line x1="8" x2="16" y1="21" y2="21" />
             <line x1="12" x2="12" y1="17" y2="21" />
+        </SvgIcon>
+    );
+}
+
+/** Agent 助手（Lucide `bot`：机器人头 + 两侧天线接口） */
+export function BotIcon(p: IconProps) {
+    return (
+        <SvgIcon {...p}>
+            <path d="M12 8V4H8" />
+            <rect width="16" height="12" x="4" y="8" rx="2" />
+            <path d="M2 14h2" />
+            <path d="M20 14h2" />
+            <path d="M15 13v2" />
+            <path d="M9 13v2" />
         </SvgIcon>
     );
 }
