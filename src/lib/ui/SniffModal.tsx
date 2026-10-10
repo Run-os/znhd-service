@@ -48,6 +48,10 @@ const { Text } = Typography;
  * 名称排除（v26.10.10-v5）：名字含 EXCLUDED_NAME_PATTERNS 的图在**收集阶段**就被丢掉（不测大小、不发请求），
  * 面板顶部给出「已按文件名排除 N 张」的提示 —— 否则用户删不掉页面上那些头像/无名字的噪声图。
  *
+ * 阈值的作用范围（v26.10.10-v6，用户反馈后收紧）：小于阈值的图**只被过滤掉，不再出现在任何计数里**
+ * （此前头部会写「另有 N 张小于阈值」），并且**全选 / 批量下载的范围只含未被过滤的图**（达标 + 大小未知）。
+ * 旧实现里「全选」选的是 kept（含被阈值挡下的那批），于是「下载所选」会把用户根本看不到的小图一起下载。
+ *
  * 大小测量阶梯、视频排除规则、去重与 URL 归一化都在 src/lib/sniffer.ts（纯函数，便于单测）；
  * 本文件只负责「合批渲染 + 交互」。测量是异步逐张回来的，所以：
  *  · 结果按 150ms 合批推给状态（300 张图逐张 setState 会把主线程拖哭）；
@@ -243,8 +247,11 @@ export default function SniffModal({ open, onClose, minKB, onMinKBChange }: Snif
     }, [kept, minBytes]);
     /** 大小未知：保留、折叠 */
     const unknown = useMemo(() => kept.filter((i) => i.size === null), [kept]);
-    /** 达标但被阈值挡掉的张数（给用户一个「调低阈值能看到更多」的线索） */
-    const belowCount = kept.length - known.length - unknown.length;
+    /**
+     * 未被阈值过滤的图（达标 + 大小未知）：**标题计数、全选、批量下载的唯一范围**。
+     * 小于阈值的图只影响「列表里没有它」，不该被任何计数或批量动作带上（v26.10.10-v6）。
+     */
+    const pickable = useMemo(() => known.concat(unknown), [known, unknown]);
     /** 「测出来不是图片」被丢弃的张数 */
     const droppedCount = probed.length - kept.length;
     /** 实际渲染的列表：展开未知组时追加在后面（顺序 = 预览 items 的顺序，必须一致） */
@@ -259,15 +266,18 @@ export default function SniffModal({ open, onClose, minKB, onMinKBChange }: Snif
         });
     }, []);
 
-    const allSelected = kept.length > 0 && kept.every((i) => selected.has(i.key));
+    const allSelected = pickable.length > 0 && pickable.every((i) => selected.has(i.key));
 
-    /** 全选 / 取消全选：范围是**全部达标 + 未知**（不止当前可见的那批） */
+    /**
+     * 全选 / 取消全选：范围是**全部达标 + 未知**（不止当前可见的那批），
+     * 但**不含被阈值过滤掉的图** —— 它们不在列表里，被一起选上再下载就是「下了看不到的图」（v26.10.10-v6）。
+     */
     const toggleAll = useCallback(() => {
         setSelected((prev) => {
-            const all = kept.every((i) => prev.has(i.key));
-            return all ? new Set<string>() : new Set<string>(kept.map((i) => i.key));
+            const all = pickable.every((i) => prev.has(i.key));
+            return all ? new Set<string>() : new Set<string>(pickable.map((i) => i.key));
         });
-    }, [kept]);
+    }, [pickable]);
 
     /** 打印对话框上的文档标题（react-to-print 会临时改写 document.title 再还原） */
     const printTitleRef = useRef('图片');
@@ -319,9 +329,13 @@ export default function SniffModal({ open, onClose, minKB, onMinKBChange }: Snif
         }
     }, []);
 
-    /** 批量下载：串行 + 间隔，避免浏览器把连续下载当弹窗拦截 / 静默丢弃 */
+    /**
+     * 批量下载：串行 + 间隔，避免浏览器把连续下载当弹窗拦截 / 静默丢弃。
+     * 范围是 pickable（未被阈值过滤的图）∩ 选中集：即使用户调高阈值后 selection 里残留了失效的 key，
+     * 也不会把已经被过滤掉的图下载下来（v26.10.10-v6）。
+     */
     const doDownloadSelected = useCallback(async () => {
-        const list = kept.filter((i) => selected.has(i.key));
+        const list = pickable.filter((i) => selected.has(i.key));
         if (!list.length) return;
         setBatch({ done: 0, total: list.length });
         let ok = 0;
@@ -338,7 +352,10 @@ export default function SniffModal({ open, onClose, minKB, onMinKBChange }: Snif
         } finally {
             setBatch(null);
         }
-    }, [kept, selected, shown]);
+    }, [pickable, selected, shown]);
+
+    /** 选中的、**未被阈值过滤**的张数：按钮文案与禁用态都用它（选中集里可能残留已失效的 key） */
+    const selectedCount = useMemo(() => pickable.filter((i) => selected.has(i.key)).length, [pickable, selected]);
 
     /** 单张卡片的元信息（来源、测量方式）合成一句话，hover 可见 */
     const metaOf = (it: SniffedImage) =>
@@ -392,7 +409,7 @@ export default function SniffModal({ open, onClose, minKB, onMinKBChange }: Snif
             open={open}
             title={
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                    <span>{'图片嗅探（共 ' + kept.length + ' 张）'}</span>
+                    <span>{'图片嗅探（共 ' + pickable.length + ' 张）'}</span>
                     <Button size="small" loading={phase === 'measuring'} onClick={startScan}>
                         {phase === 'measuring' ? '扫描中…' : '重新扫描'}
                     </Button>
@@ -408,10 +425,10 @@ export default function SniffModal({ open, onClose, minKB, onMinKBChange }: Snif
             footer={
                 <Space>
                     <Button
-                        disabled={!selected.size || !!batch}
+                        disabled={!selectedCount || !!batch}
                         loading={!!batch}
                         onClick={() => void doDownloadSelected()}>
-                        {batch ? '下载中 ' + batch.done + '/' + batch.total : '下载所选（' + selected.size + '）'}
+                        {batch ? '下载中 ' + batch.done + '/' + batch.total : '下载所选（' + selectedCount + '）'}
                     </Button>
                     <Button disabled={!selected.size || !!batch} onClick={() => setSelected(new Set<string>())}>
                         清空选择
@@ -437,12 +454,9 @@ export default function SniffModal({ open, onClose, minKB, onMinKBChange }: Snif
                         onMinKBChange(Number.isFinite(v) && !!v && v > 0 ? Math.round(v as number) : DEFAULT_MIN_KB)
                     }
                 />
+                {/* 不写「另有 N 张小于阈值」（用户 v26.10.10-v6 要求）：小于阈值的图既不显示也不参与勾选 */}
                 <Text type="secondary" style={{ fontSize: 12 }}>
-                    {'的图片（显示 ' +
-                        known.length +
-                        ' 张' +
-                        (belowCount > 0 ? '，另有 ' + belowCount + ' 张小于阈值' : '') +
-                        '）'}
+                    {'的图片（显示 ' + known.length + ' 张）'}
                 </Text>
                 <Checkbox checked={allSelected} disabled={!kept.length} onChange={toggleAll}>
                     全选

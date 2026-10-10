@@ -105,7 +105,8 @@ const CHECKS = [
   ['iconVerticallyCentered', '图标与控件同一水平线（清空×/关闭图标）'],
   ['sniffEntryOk', '主面板有「图片嗅探」入口且能打开嗅探弹窗'],
   ['sniffScanOk', '嗅探覆盖三路来源（DOM/内联 SVG/CSS 背景）并量出大小（HEAD 与 Range 两条阶梯）'],
-  ['sniffUnknownKeptOk', '大小未知的图片不丢弃（折叠保留）且小于阈值的另有计数'],
+  ['sniffUnknownKeptOk', '大小未知的图片不丢弃（折叠保留）'],
+  ['sniffSelectScopeOk', '全选/批量下载只覆盖未被阈值过滤的图（小于阈值的不计数、不可选）'],
   ['sniffExcludeOk', '按文件名排除（znhd-sniff / user-woman / user-man）且面板给出排除计数'],
 ];
 
@@ -239,7 +240,8 @@ async function main() {
       !checkPass('sniffEntryOk') ||
       !checkPass('sniffScanOk') ||
       !checkPass('sniffUnknownKeptOk') ||
-      !checkPass('sniffExcludeOk')
+      !checkPass('sniffExcludeOk') ||
+      !checkPass('sniffSelectScopeOk')
     ) {
       console.log('      嗅探快照：' + JSON.stringify(report.sniffSnap));
     }

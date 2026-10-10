@@ -291,7 +291,7 @@
           });
           return { abort: () => {} };
         }
-        // ⑦ 10 KB 的普通 http 图（名字不命中排除规则）→ 只计入「另有 N 张小于阈值」（v26.10.10-v5）
+        // ⑦ 10 KB 的普通 http 图（名字不命中排除规则）→ 低于阈值：不显示卡片、不计数、不进全选范围（v26.10.10-v6）
         if (url.indexOf('/sniff-small.png') >= 0) {
           reply(details, '', { responseHeaders: 'content-type: image/png\ncontent-length: 10240' });
           return { abort: () => {} };
@@ -328,12 +328,12 @@
     <!-- ===== 图片嗅探夹具（v26.10.10-v4）=====
          全部由本页或 GM 桩作答（域名 *.test 不解析、从不出网），每一种「来源 / 尺寸阶梯」各一条：
            ① data: 大图（>20KB 阈值，本地按 base64 长度算）      → 兜底名 znhd-sniff-N ⇒ 被名称规则排除（v26.10.10-v5）
-           ② data: 小图（<20KB）                                → 同上（也被排除，故「小于阈值」改由 ⑦ 提供）
+           ② data: 小图（<20KB）                                → 同上（也被名称规则排除）
            ③ CSS background-image → 桩 HEAD 回 content-length   → HEAD 阶梯（30 KB）
            ④ CSS background-image → 桩 HEAD 不给长度、Range GET → Range 阶梯（40 KB）
            ⑤ 内联 <svg>（运行时补足图元，>20KB）                → svg 来源；因单列命名 inline-svg-N.svg 而不被排除
            ⑥ 懒加载 data-src 指向 HEAD 404 的地址               → 尺寸未知，必须保留在「大小未知」折叠组
-         ⑦ 10 KB 的普通 http 图（名字不命中排除规则）         → 只计入「另有 N 张小于阈值」
+         ⑦ 10 KB 的普通 http 图（名字不命中排除规则）         → 被阈值过滤：不显示、不计数、不进全选范围
              ⑧ URL 末段含 user-man 的图                           → 必须被名称规则排除，不出现卡片
            ①②⑤ 的内容在下面用脚本现造，避免在 HTML 里塞几十 KB base64。 -->
     <div id="sniff-fixtures" aria-hidden="true">
@@ -347,7 +347,7 @@
         id="sniff-css-range"
         style="width: 40px; height: 40px; background-image: url('https://sniff-smoke.test/sniff-range.png')"></div>
       <svg id="sniff-inline-svg" xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48"></svg>
-      <!-- ⑦ 10 KB（< 20KB 阈值）且名字普通：v26.10.10-v5 起 data: 图被名称规则排除，「小于阈值」计数靠它 -->
+      <!-- ⑦ 10 KB（< 20KB 阈值）且名字普通：用来验证「被阈值过滤的图不出现在列表、也不进全选/下载范围」 -->
       <img id="sniff-small-http" src="https://sniff-smoke.test/sniff-small.png" alt="" />
       <!-- ⑧ 名字命中排除规则（URL 末段 user-man.png）：必须被丢掉、不进卡片，只体现在排除计数里 -->
       <img id="sniff-excluded-name" src="https://sniff-smoke.test/media/user-man.png" alt="" />
@@ -744,7 +744,7 @@
       // 快照必须在 11000ms 的报告采集**之前**完成，故最多再等 6s。
       setTimeout(() => {
         window.__clickedSniff = clickByText('图片嗅探');
-        const poll = (tries) => {
+        const poll = (tries, stage) => {
           const m = Array.from(document.querySelectorAll('.ant-modal')).find((el) =>
             ((el.querySelector('.ant-modal-title') || {}).textContent || '').includes('图片嗅探')
           );
@@ -759,8 +759,15 @@
           const hay = t + ' || ' + titles;
           const cards = m ? m.querySelectorAll('.ant-image').length : 0;
           const unknown = /大小未知（(\d+)）/.exec(t);
-          const below = /另有\s*(\d+)\s*张小于阈值/.exec(t);
           const excludedNotice = /已按文件名排除\s*(\d+)\s*张/.exec(t);
+          // 全选后的按钮文案「下载所选（N）」= 全选范围（v26.10.10-v6 起必须等于「卡片 + 大小未知」）
+          const dlBtn = m
+            ? Array.from(m.querySelectorAll('.ant-modal-footer button')).find(
+                (b) => ((b.textContent || '').indexOf('下载所选') >= 0)
+              )
+            : null;
+          const dlText = dlBtn ? dlBtn.textContent || '' : '';
+          const dlCount = /下载所选（(\d+)）/.exec(dlText);
           const btns = document.querySelectorAll('#__znhd_panel_host__ .znhd-panel-btn');
           const snap = {
             entrySeen: !!window.__clickedSniff,
@@ -774,20 +781,37 @@
             headSize: t.indexOf('30 KB') >= 0,
             rangeSize: t.indexOf('40 KB') >= 0,
             unknownCount: unknown ? Number(unknown[1]) : -1,
-            belowCount: below ? Number(below[1]) : -1,
+            // v26.10.10-v6：界面不再出现「另有 N 张小于阈值」这类计数
+            belowNoticeShown: t.indexOf('小于阈值') >= 0,
+            // 10 KB 的 ⑦ 被阈值过滤 ⇒ 它不该出现在任何卡片标题里
+            smallInTitles: titles.indexOf('sniff-small.png') >= 0,
+            selectAllClicked: !!window.__sniffSelectAllClicked,
+            selectAllLabel: dlText,
+            selectAllCount: dlCount ? Number(dlCount[1]) : -1,
             excludedCount: excludedNotice ? Number(excludedNotice[1]) : -1,
             // 只看**卡片标题**（文件名 / 来源提示），不看弹窗正文：排除提示里本身就含这些字样
             excludedNameInTitles: /znhd-sniff|user-man|user-woman/.test(titles),
           };
           // v26.10.10-v5 起 data: 大/小图被名称规则排除，达标卡片只剩「CSS 背景 ×2 + 内联 SVG」
           const done = snap.modalSeen && cards >= 3 && snap.headSize && snap.rangeSize;
-          if (done || tries <= 0) {
+          // 第一阶段：等扫描/测量完成；第二阶段：点「全选」后重取快照，看「下载所选（N）」的范围
+          if (done && stage === 0 && m) {
+            const box = Array.from(m.querySelectorAll('.ant-checkbox-wrapper')).find(
+              (el) => ((el.textContent || '').indexOf('全选') >= 0)
+            );
+            const input = box ? box.querySelector('input') : null;
+            if (input) input.click();
+            window.__sniffSelectAllClicked = !!input;
+            setTimeout(() => poll(Math.max(tries - 1, 1), 1), 250);
+            return;
+          }
+          if ((done && stage === 1) || tries <= 0) {
             window.__sniffSnap = snap;
             return;
           }
-          setTimeout(() => poll(tries - 1), 200);
+          setTimeout(() => poll(tries - 1, stage), 200);
         };
-        poll(30);
+        poll(30, 0);
       }, 9700);
 
       // 打开「运行日志」弹窗：验证「日志从上到下生成、最新在最上方」（v26.10.06-v23 需求）。
@@ -1189,10 +1213,18 @@
             window.__sniffSnap.headSize &&
             window.__sniffSnap.rangeSize
           ),
-          sniffUnknownKeptOk: !!(
+          sniffUnknownKeptOk: !!(window.__sniffSnap && window.__sniffSnap.unknownCount >= 1),
+          // 图片嗅探（v26.10.10-v6，用户反馈）：小于阈值的图不显示、不计数、也不进全选/批量下载范围。
+          // 判据：① 面板不再出现「小于阈值」字样；② 10 KB 的 ⑦ 不在任何卡片标题里；
+          // ③ 点「全选」后按钮文案的张数 === 已渲染卡片数 + 大小未知数（含被阈值过滤的那张就会多 1）。
+          sniffSelectScopeOk: !!(
             window.__sniffSnap &&
-            window.__sniffSnap.unknownCount >= 1 &&
-            window.__sniffSnap.belowCount >= 1
+            window.__sniffSnap.selectAllClicked &&
+            !window.__sniffSnap.belowNoticeShown &&
+            !window.__sniffSnap.smallInTitles &&
+            window.__sniffSnap.selectAllCount ===
+              window.__sniffSnap.cards + window.__sniffSnap.unknownCount &&
+            window.__sniffSnap.selectAllCount >= 1
           ),
           // 图片嗅探（v26.10.10-v5）：名称排除——命中规则的图不进候选（连请求都不发），
           // 面板给出排除计数，且被排除的名字一个都不许出现在卡片标题里。
@@ -1235,7 +1267,8 @@
           report.sniffEntryOk &&
           report.sniffScanOk &&
           report.sniffUnknownKeptOk &&
-          report.sniffExcludeOk
+          report.sniffExcludeOk &&
+          report.sniffSelectScopeOk
             ? 'ALL-OK'
             : 'PARTIAL');
       }, 11000);
