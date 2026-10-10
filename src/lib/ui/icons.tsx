@@ -261,3 +261,31 @@ export function TrashIcon(p: IconProps) {
         </SvgIcon>
     );
 }
+
+/* ============================================================ 图片格子上的悬浮按钮（v26.10.10-v16） */
+
+/**
+ * 复制（Lucide `copy`）：历史记录图片格子右下角的复制按钮。
+ *
+ * 这些按钮**没有文字**（用户要求「只显示图标」），语义只由 `aria-label` 承担：
+ * 读屏靠它，冒烟夹具也按 `button[aria-label="复制"]` 找按钮（不能再按文案找）。
+ */
+export function CopyIcon(p: IconProps) {
+    return (
+        <SvgIcon {...p}>
+            <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
+            <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
+        </SvgIcon>
+    );
+}
+
+/** 下载（Lucide `download`）：图片格子右下角的下载按钮 */
+export function DownloadIcon(p: IconProps) {
+    return (
+        <SvgIcon {...p}>
+            <path d="M12 15V3" />
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+            <path d="m7 10 5 5 5-5" />
+        </SvgIcon>
+    );
+}

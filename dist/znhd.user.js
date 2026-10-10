@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name                征纳互动人数和在线监控v2
 // @namespace           https://scriptcat.org/
-// @version             26.10.10-v15
+// @version             26.10.10-v16
 // @description         实时监控征纳互动等待人数和在线状态，支持语音播报、自定义常用语
 // @author              runos
 // @license             MIT
@@ -56269,6 +56269,20 @@ function PlusIcon(p) {
 function TrashIcon(p) {
     return ((0,react_jsx_runtime_production_namespaceFn().jsxs)(SvgIcon, { ...p, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("path", { d: "M3 6h18" }), (0,react_jsx_runtime_production_namespaceFn().jsx)("path", { d: "M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" }), (0,react_jsx_runtime_production_namespaceFn().jsx)("path", { d: "M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" }), (0,react_jsx_runtime_production_namespaceFn().jsx)("line", { x1: "10", x2: "10", y1: "11", y2: "17" }), (0,react_jsx_runtime_production_namespaceFn().jsx)("line", { x1: "14", x2: "14", y1: "11", y2: "17" })] }));
 }
+/* ============================================================ 图片格子上的悬浮按钮（v26.10.10-v16） */
+/**
+ * 复制（Lucide `copy`）：历史记录图片格子右下角的复制按钮。
+ *
+ * 这些按钮**没有文字**（用户要求「只显示图标」），语义只由 `aria-label` 承担：
+ * 读屏靠它，冒烟夹具也按 `button[aria-label="复制"]` 找按钮（不能再按文案找）。
+ */
+function CopyIcon(p) {
+    return ((0,react_jsx_runtime_production_namespaceFn().jsxs)(SvgIcon, { ...p, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("rect", { width: "14", height: "14", x: "8", y: "8", rx: "2", ry: "2" }), (0,react_jsx_runtime_production_namespaceFn().jsx)("path", { d: "M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" })] }));
+}
+/** 下载（Lucide `download`）：图片格子右下角的下载按钮 */
+function DownloadIcon(p) {
+    return ((0,react_jsx_runtime_production_namespaceFn().jsxs)(SvgIcon, { ...p, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("path", { d: "M12 15V3" }), (0,react_jsx_runtime_production_namespaceFn().jsx)("path", { d: "M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" }), (0,react_jsx_runtime_production_namespaceFn().jsx)("path", { d: "m7 10 5 5 5-5" })] }));
+}
 
 ;// ./src/lib/constants.ts
 /**
@@ -72537,6 +72551,60 @@ function downloadFileName(name, mime, idx = 0) {
     return n;
 }
 
+;// ./src/lib/ui/ImageOverlayActions.tsx
+
+/**
+ * 图片右下角的悬浮功能按钮条（v26.10.10-v16 新增）。
+ *
+ * ── 它解决什么问题 ─────────────────────────────────────────────────────────
+ * 历史记录窗口与图片嗅探窗口原先把「复制 / 下载 / 删除」等按钮**排在图片下方**，
+ * 每个格子要占掉一行按钮的高度，图片本身被压得很小。用户要求（v26.10.10-v16）：
+ * 按钮挪到**图片内部右下角**、**只显示图标不显示文字**、**鼠标移到图片上才出现**、
+ * hover 时才用 tooltip 显示文字。
+ *
+ * ── 为什么用 state 而不是 CSS `:hover` ──────────────────────────────────────
+ * 宿主税务页有自己的样式表，我们不想为了这个悬浮效果往页面里注入全局 CSS 规则
+ * （`:hover` 只能靠样式表实现）。这里沿用 `AgentModal.tsx` 侧栏「hover 才出现的删除图标」
+ * 的既有做法：`onMouseEnter/onMouseLeave` 改 React state，样式全部内联。
+ *
+ * ── 为什么隐藏时按钮仍留在 DOM 里 ───────────────────────────────────────────
+ * 隐藏只改 `opacity / visibility / pointerEvents`，**不卸载按钮**：
+ * ① 冒烟夹具（`scripts/smoke/znhd-smoke.html`）是按 `button[aria-label="复制"]` 找按钮再
+ *    程序化 `.click()` 的，元素被卸载就找不到（`visibility: hidden` 不影响 `.click()` 派发）；
+ * ② 读屏/键盘用户仍能 Tab 到这些按钮。
+ *
+ * ── 无障碍 ─────────────────────────────────────────────────────────────────
+ * 按钮内没有文字，语义**只由 `aria-label` 承担**（读屏靠它，冒烟测试也按它定位）。
+ * tooltip 文案与 `aria-label` 用同一个 `label`，两者不会漂移。
+ */
+
+
+function ImageOverlayActions({ children, actions }) {
+    const [hover, setHover] = (0,react_production_namespaceFn().useState)(false);
+    return ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { className: "znhd-img-hover", style: { position: 'relative', width: '100%', minWidth: 0 }, onMouseEnter: () => setHover(true), onMouseLeave: () => setHover(false), children: [children, (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { className: "znhd-img-actions", style: {
+                    position: 'absolute',
+                    right: 6,
+                    bottom: 6,
+                    display: 'flex',
+                    gap: 2,
+                    padding: 2,
+                    borderRadius: 6,
+                    // 半透明黑底：图片本身深浅不定，没有底衬时白色图标会看不清
+                    background: 'rgba(0, 0, 0, 0.55)',
+                    zIndex: 2,
+                    opacity: hover ? 1 : 0,
+                    visibility: hover ? 'visible' : 'hidden',
+                    // 隐藏时不吃鼠标事件，避免挡住图片本身的点击（antd Image 点开预览）
+                    pointerEvents: hover ? 'auto' : 'none',
+                    transition: 'opacity 0.15s',
+                }, children: actions.map((a) => ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_tooltip, { title: a.tooltip ?? a.label, children: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { size: "small", type: "text", "aria-label": a.label, loading: a.loading, onClick: a.onClick, style: {
+                            color: a.danger ? '#ff7875' : '#fff',
+                            padding: 0,
+                            width: 22,
+                            height: 22,
+                        }, children: a.icon }) }, a.label))) })] }));
+}
+
 ;// ./shared/preview/actions.tsx
 /**
  * 往 antd 图片预览的工具栏里追加按钮 —— 两端共用（v26.10.08-v13 起）。
@@ -72735,6 +72803,7 @@ function buildA4ImageNode(src, alt, natural) {
 
 
 
+
 // 预览相关的通用件全部来自共享层（与手机上传页同一份，v26.10.08-v13 起）
 
 
@@ -72857,7 +72926,9 @@ function RecvHistoryModal({ open, onClose, relayServer, images, texts, onRemoveI
      * ⚠️ v26.10.09-v7：原实现是**命令式改 `btn.textContent`**（`'复制中…'` → `'✓ 已复制'`）。
      * 因为反馈文案里的 `✓`(U+2713) 属 Dingbats、Win7 字形覆盖不确定，要把它换成内联 SVG
      * 就必须由 React 渲染，故改为 state 驱动。行为与原来一致：1.5s 后回到「复制」。
-     * ⚠️ 冒烟测试是按 `textContent.trim() === '复制'` 找这个按钮的，所以**空闲态文案必须仍是「复制」**。
+     * ⚠️ v26.10.10-v16：按钮改成图片右下角的图标按钮后**按钮里已经没有文字**，
+     * 反馈改走 hover 提示（`copyHint`），而 `aria-label` **恒为「复制」**——
+     * 冒烟夹具就是按 `button[aria-label="复制"]` 找这个按钮的（不能再按 textContent 找）。
      */
     const doCopy = (it, idx) => {
         setImgCopy({ idx, state: 'busy' });
@@ -72867,6 +72938,14 @@ function RecvHistoryModal({ open, onClose, relayServer, images, texts, onRemoveI
                 addLog('图片已复制到剪贴板: ' + (it.name || ''), 'success');
             window.setTimeout(() => setImgCopy(null), 1500);
         });
+    };
+    /** 复制按钮的 hover 提示：随结果切换（按钮内不再有文字，反馈只能靠它） */
+    const copyHint = (idx) => {
+        if (!imgCopy || imgCopy.idx !== idx)
+            return '复制';
+        if (imgCopy.state === 'busy')
+            return '复制中…';
+        return imgCopy.state === 'ok' ? '已复制' : '复制失败';
     };
     const doDownload = (it, idx) => {
         const fname = downloadFileName(it.name, it.mime, idx);
@@ -72953,7 +73032,31 @@ function RecvHistoryModal({ open, onClose, relayServer, images, texts, onRemoveI
                         maxHeight: '60vh',
                         overflow: 'auto',
                         alignContent: 'start',
-                    }, children: images.map((it, idx) => ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', flexDirection: 'column' }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(es_image, { src: it.previewUrl, alt: it.name || 'image', style: { width: '100%', aspectRatio: '1 / 1', objectFit: 'cover', borderRadius: 8 } }), (0,react_jsx_runtime_production_namespaceFn().jsxs)(es_space, { size: 4, style: { marginTop: 4, width: '100%' }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { size: "small", style: { flex: 1 }, onClick: () => doCopy(it, idx), children: imgCopy && imgCopy.idx === idx ? (imgCopy.state === 'busy' ? ('复制中…') : imgCopy.state === 'ok' ? ((0,react_jsx_runtime_production_namespaceFn().jsxs)((react_jsx_runtime_production_namespaceFn().Fragment), { children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(CheckIcon, { size: 12 }), " \u5DF2\u590D\u5236"] })) : ('复制失败')) : ('复制') }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { size: "small", style: { flex: 1 }, onClick: () => doDownload(it, idx), children: "\u4E0B\u8F7D" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { size: "small", danger: true, onClick: () => onRemoveImage(idx), children: "\u00D7" })] })] }, it.previewUrl))) }) })) : ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_empty, { description: "\u6682\u65E0\u56FE\u7247" })),
+                    }, children: images.map((it, idx) => ((0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { display: 'flex', flexDirection: 'column' }, children: (0,react_jsx_runtime_production_namespaceFn().jsx)(ImageOverlayActions, { actions: [
+                                {
+                                    label: '复制',
+                                    tooltip: copyHint(idx),
+                                    icon: imgCopy && imgCopy.idx === idx && imgCopy.state === 'ok' ? ((0,react_jsx_runtime_production_namespaceFn().jsx)(CheckIcon, { size: 13 })) : ((0,react_jsx_runtime_production_namespaceFn().jsx)(CopyIcon, { size: 13 })),
+                                    loading: !!(imgCopy && imgCopy.idx === idx && imgCopy.state === 'busy'),
+                                    onClick: () => doCopy(it, idx),
+                                },
+                                {
+                                    label: '下载',
+                                    icon: (0,react_jsx_runtime_production_namespaceFn().jsx)(DownloadIcon, { size: 13 }),
+                                    onClick: () => doDownload(it, idx),
+                                },
+                                {
+                                    label: '删除',
+                                    danger: true,
+                                    icon: (0,react_jsx_runtime_production_namespaceFn().jsx)(TrashIcon, { size: 13 }),
+                                    onClick: () => onRemoveImage(idx),
+                                },
+                            ], children: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_image, { src: it.previewUrl, alt: it.name || 'image', style: {
+                                    width: '100%',
+                                    aspectRatio: '1 / 1',
+                                    objectFit: 'cover',
+                                    borderRadius: 8,
+                                } }) }) }, it.previewUrl))) }) })) : ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_empty, { description: "\u6682\u65E0\u56FE\u7247" })),
         },
         {
             key: 'text',
@@ -75702,6 +75805,8 @@ async function downloadImage(url, filename) {
 
 
 
+
+
 // 预览相关通用件全部来自共享层（与「历史记录」、手机上传页同一份实现）
 
 
@@ -75982,7 +76087,19 @@ function SniffModal({ open, onClose, minKB, onMinKBChange }) {
     const metaOf = (it) => '来源：' + it.sources.map((s) => SOURCE_LABEL[s]).join(' / ') + '；大小来源：' + VIA_LABEL[it.sizeVia];
     const renderCard = (it, idx) => {
         const fname = sniffFileName(it.url, it.mime, idx);
-        return ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', flexDirection: 'column', minWidth: 0 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { position: 'relative' }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(es_image, { src: it.url, alt: fname, style: { width: '100%', aspectRatio: '1 / 1', objectFit: 'cover', borderRadius: 8 } }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_checkbox, { checked: selected.has(it.key), onChange: () => toggleOne(it.key), style: { position: 'absolute', left: 6, top: 6, zIndex: 2 } })] }), (0,react_jsx_runtime_production_namespaceFn().jsx)(SniffModal_Text, { ellipsis: true, style: { fontSize: 11, marginTop: 4 }, title: fname, children: fname }), (0,react_jsx_runtime_production_namespaceFn().jsxs)(SniffModal_Text, { type: "secondary", style: { fontSize: 11 }, title: metaOf(it), children: [formatBytes(it.size), it.width && it.height ? ' · ' + it.width + '×' + it.height : ''] }), (0,react_jsx_runtime_production_namespaceFn().jsxs)(es_space, { size: 4, style: { marginTop: 4, width: '100%' }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { size: "small", style: { flex: 1 }, loading: busyKey === it.key, onClick: () => void doDownloadOne(it, idx), children: "\u4E0B\u8F7D" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { size: "small", style: { flex: 1 }, onClick: () => printImage(it, idx), children: "\u6253\u5370" })] })] }, it.key));
+        return ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', flexDirection: 'column', minWidth: 0 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { position: 'relative' }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(ImageOverlayActions, { actions: [
+                                {
+                                    label: '下载',
+                                    icon: (0,react_jsx_runtime_production_namespaceFn().jsx)(DownloadIcon, { size: 13 }),
+                                    loading: busyKey === it.key,
+                                    onClick: () => void doDownloadOne(it, idx),
+                                },
+                                {
+                                    label: '打印',
+                                    icon: (0,react_jsx_runtime_production_namespaceFn().jsx)(icons_PrinterOutlined, { style: { fontSize: 13 } }),
+                                    onClick: () => printImage(it, idx),
+                                },
+                            ], children: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_image, { src: it.url, alt: fname, style: { width: '100%', aspectRatio: '1 / 1', objectFit: 'cover', borderRadius: 8 } }) }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_checkbox, { checked: selected.has(it.key), onChange: () => toggleOne(it.key), style: { position: 'absolute', left: 6, top: 6, zIndex: 2 } })] }), (0,react_jsx_runtime_production_namespaceFn().jsx)(SniffModal_Text, { ellipsis: true, style: { fontSize: 11, marginTop: 4 }, title: fname, children: fname }), (0,react_jsx_runtime_production_namespaceFn().jsxs)(SniffModal_Text, { type: "secondary", style: { fontSize: 11 }, title: metaOf(it), children: [formatBytes(it.size), it.width && it.height ? ' · ' + it.width + '×' + it.height : ''] })] }, it.key));
     };
     /** 进度：已测 / 总数 */
     const percent = total > 0 ? Math.min(100, Math.round((probed.length / total) * 100)) : 0;

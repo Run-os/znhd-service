@@ -8,6 +8,8 @@ import { addLog } from '@/lib/logger';
 // 命中 TDZ（Cannot access 'OVERLAY_HOST_ID' before initialization），脚本启动即挂（v26.10.10-v4 踩过）。
 import { getOverlayContainer } from '@/lib/ui/panelHost';
 import { OVERLAY_HOST_ID, PANEL_HOST_ID } from '@/lib/ui/panelIds';
+import { DownloadIcon } from '@/lib/ui/icons';
+import ImageOverlayActions from '@/lib/ui/ImageOverlayActions';
 import {
     EXCLUDED_NAME_PATTERNS,
     EXCLUDED_NAME_SUFFIXES,
@@ -369,11 +371,27 @@ export default function SniffModal({ open, onClose, minKB, onMinKBChange }: Snif
         return (
             <div key={it.key} style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
                 <div style={{ position: 'relative' }}>
-                    <Image
-                        src={it.url}
-                        alt={fname}
-                        style={{ width: '100%', aspectRatio: '1 / 1', objectFit: 'cover', borderRadius: 8 }}
-                    />
+                    {/* v26.10.10-v16：下载/打印从图片下方挪到图片右下角，只显示图标、hover 才出现 */}
+                    <ImageOverlayActions
+                        actions={[
+                            {
+                                label: '下载',
+                                icon: <DownloadIcon size={13} />,
+                                loading: busyKey === it.key,
+                                onClick: () => void doDownloadOne(it, idx),
+                            },
+                            {
+                                label: '打印',
+                                icon: <PrinterOutlined style={{ fontSize: 13 }} />,
+                                onClick: () => printImage(it, idx),
+                            },
+                        ]}>
+                        <Image
+                            src={it.url}
+                            alt={fname}
+                            style={{ width: '100%', aspectRatio: '1 / 1', objectFit: 'cover', borderRadius: 8 }}
+                        />
+                    </ImageOverlayActions>
                     {/* 勾选框压在缩略图左上角：点它只切换勾选，不会触发 Image 自己的放大预览 */}
                     <Checkbox
                         checked={selected.has(it.key)}
@@ -388,18 +406,6 @@ export default function SniffModal({ open, onClose, minKB, onMinKBChange }: Snif
                     {formatBytes(it.size)}
                     {it.width && it.height ? ' · ' + it.width + '×' + it.height : ''}
                 </Text>
-                <Space size={4} style={{ marginTop: 4, width: '100%' }}>
-                    <Button
-                        size="small"
-                        style={{ flex: 1 }}
-                        loading={busyKey === it.key}
-                        onClick={() => void doDownloadOne(it, idx)}>
-                        下载
-                    </Button>
-                    <Button size="small" style={{ flex: 1 }} onClick={() => printImage(it, idx)}>
-                        打印
-                    </Button>
-                </Space>
             </div>
         );
     };

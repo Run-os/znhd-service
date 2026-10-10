@@ -7,7 +7,8 @@ import { safeCopyText } from '@/lib/clipboard';
 import { addLog } from '@/lib/logger';
 import { downloadFileName, type GalleryImage, type GalleryText } from '@/lib/gallery';
 import { getOverlayContainer } from '@/lib/ui/panelHost';
-import { CheckIcon } from '@/lib/ui/icons';
+import { CheckIcon, CopyIcon, DownloadIcon, TrashIcon } from '@/lib/ui/icons';
+import ImageOverlayActions from '@/lib/ui/ImageOverlayActions';
 // 预览相关的通用件全部来自共享层（与手机上传页同一份，v26.10.08-v13 起）
 import { appendPreviewActions } from '../../../shared/preview/actions';
 import { getPreviewHost } from '../../../shared/preview/host';
@@ -168,7 +169,9 @@ export default function RecvHistoryModal({
      * ⚠️ v26.10.09-v7：原实现是**命令式改 `btn.textContent`**（`'复制中…'` → `'✓ 已复制'`）。
      * 因为反馈文案里的 `✓`(U+2713) 属 Dingbats、Win7 字形覆盖不确定，要把它换成内联 SVG
      * 就必须由 React 渲染，故改为 state 驱动。行为与原来一致：1.5s 后回到「复制」。
-     * ⚠️ 冒烟测试是按 `textContent.trim() === '复制'` 找这个按钮的，所以**空闲态文案必须仍是「复制」**。
+     * ⚠️ v26.10.10-v16：按钮改成图片右下角的图标按钮后**按钮里已经没有文字**，
+     * 反馈改走 hover 提示（`copyHint`），而 `aria-label` **恒为「复制」**——
+     * 冒烟夹具就是按 `button[aria-label="复制"]` 找这个按钮的（不能再按 textContent 找）。
      */
     const doCopy = (it: GalleryImage, idx: number) => {
         setImgCopy({ idx, state: 'busy' });
@@ -177,6 +180,13 @@ export default function RecvHistoryModal({
             if (ok) addLog('图片已复制到剪贴板: ' + (it.name || ''), 'success');
             window.setTimeout(() => setImgCopy(null), 1500);
         });
+    };
+
+    /** 复制按钮的 hover 提示：随结果切换（按钮内不再有文字，反馈只能靠它） */
+    const copyHint = (idx: number): string => {
+        if (!imgCopy || imgCopy.idx !== idx) return '复制';
+        if (imgCopy.state === 'busy') return '复制中…';
+        return imgCopy.state === 'ok' ? '已复制' : '复制失败';
     };
 
     const doDownload = (it: GalleryImage, idx: number) => {
@@ -286,34 +296,44 @@ export default function RecvHistoryModal({
                         }}>
                         {images.map((it, idx) => (
                             <div key={it.previewUrl} style={{ display: 'flex', flexDirection: 'column' }}>
-                                <Image
-                                    src={it.previewUrl}
-                                    alt={it.name || 'image'}
-                                    style={{ width: '100%', aspectRatio: '1 / 1', objectFit: 'cover', borderRadius: 8 }}
-                                />
-                                <Space size={4} style={{ marginTop: 4, width: '100%' }}>
-                                    <Button size="small" style={{ flex: 1 }} onClick={() => doCopy(it, idx)}>
-                                        {imgCopy && imgCopy.idx === idx ? (
-                                            imgCopy.state === 'busy' ? (
-                                                '复制中…'
-                                            ) : imgCopy.state === 'ok' ? (
-                                                <>
-                                                    <CheckIcon size={12} /> 已复制
-                                                </>
-                                            ) : (
-                                                '复制失败'
-                                            )
-                                        ) : (
-                                            '复制'
-                                        )}
-                                    </Button>
-                                    <Button size="small" style={{ flex: 1 }} onClick={() => doDownload(it, idx)}>
-                                        下载
-                                    </Button>
-                                    <Button size="small" danger onClick={() => onRemoveImage(idx)}>
-                                        ×
-                                    </Button>
-                                </Space>
+                                {/* v26.10.10-v16：功能按钮从图片下方挪到图片右下角，只显示图标、hover 才出现 */}
+                                <ImageOverlayActions
+                                    actions={[
+                                        {
+                                            label: '复制',
+                                            tooltip: copyHint(idx),
+                                            icon:
+                                                imgCopy && imgCopy.idx === idx && imgCopy.state === 'ok' ? (
+                                                    <CheckIcon size={13} />
+                                                ) : (
+                                                    <CopyIcon size={13} />
+                                                ),
+                                            loading: !!(imgCopy && imgCopy.idx === idx && imgCopy.state === 'busy'),
+                                            onClick: () => doCopy(it, idx),
+                                        },
+                                        {
+                                            label: '下载',
+                                            icon: <DownloadIcon size={13} />,
+                                            onClick: () => doDownload(it, idx),
+                                        },
+                                        {
+                                            label: '删除',
+                                            danger: true,
+                                            icon: <TrashIcon size={13} />,
+                                            onClick: () => onRemoveImage(idx),
+                                        },
+                                    ]}>
+                                    <Image
+                                        src={it.previewUrl}
+                                        alt={it.name || 'image'}
+                                        style={{
+                                            width: '100%',
+                                            aspectRatio: '1 / 1',
+                                            objectFit: 'cover',
+                                            borderRadius: 8,
+                                        }}
+                                    />
+                                </ImageOverlayActions>
                             </div>
                         ))}
                     </div>

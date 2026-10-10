@@ -703,9 +703,10 @@
 
       // 点画廊里的「复制」，验证剪贴板写入路径（v26.10.06-v4 回归断言）。
       // 用程序化 click 而非真实鼠标点击：此时放大预览/其它弹窗可能盖在画廊上（真实点击会打偏）。
+      // ⚠️ v26.10.10-v16：按钮改成图片右下角的**图标按钮**后里面没有文字了，
+      //    只能按 aria-label 找（图标按钮的语义全在 aria-label 上，见 ImageOverlayActions.tsx）。
       setTimeout(() => {
-        const btns = Array.from(document.querySelectorAll('.ant-modal-body button'));
-        const b = btns.find((x) => (x.textContent || '').trim() === '复制');
+        const b = document.querySelector('.ant-modal-body button[aria-label="复制"]');
         window.__clickedCopy = !!b;
         if (b) b.click();
       }, 5200);
@@ -749,6 +750,106 @@
         Array.from(document.querySelectorAll('.ant-modal')).find((el) =>
           ((el.querySelector('.ant-modal-title') || {}).textContent || '').includes('历史记录')
         );
+
+      // ===== 图片格子右下角的悬浮按钮（v26.10.10-v16）=====
+      // 用户要求：按钮挪到图片**右下角**、**只显示图标**、**鼠标移到图片上才出现**、hover 才用 tooltip 显字。
+      // 下面两个 helper 供 historyImgActionsOk / sniffImgActionsOk 取值。
+      window.__findSniffModal = () =>
+        Array.from(document.querySelectorAll('.ant-modal')).find((el) =>
+          ((el.querySelector('.ant-modal-title') || {}).textContent || '').includes('图片嗅探')
+        );
+
+      /**
+       * 嗅探夹具的两张卡片图 URL 是 `https://sniff-smoke.test/*.png`（尺寸探测走 GM 桩，从不出网），
+       * `<img>` 真加载必然失败 ⇒ 卡片盒子只剩破图的高度（实测 24px），比按钮条（26px）还矮，
+       * 「按钮落在图片矩形内」这条几何断言必然假红。测量前把卡片里的 `<img>` 直接指向能加载的图：
+       * React 只在与上一次 props 不同时才写 DOM，`src` 属性没变 ⇒ 不会把这里改回去。
+       * 嗅探的尺寸结论（HEAD 30 KB / Range 40 KB）在扫描阶段就已经算完，不受影响。
+       */
+      window.__renderSniffCardImages = (root) => {
+        const modal = root || window.__findSniffModal();
+        if (!modal) return 0;
+        let n = 0;
+        Array.from(modal.querySelectorAll('.ant-image img')).forEach((img) => {
+          img.src = 'data:image/jpeg;base64,' + SMOKE_IMG_B64;
+          n++;
+        });
+        return n;
+      };
+
+      /**
+       * 读「图片右下角悬浮按钮」的静态事实，并派发一次合成 mouseover（hover 后的可见性稍后由
+       * `imgActionsVisible` 补读）。返回：
+       *  · btns        —— 按 aria-label 取到的按钮数
+       *  · iconOnly    —— 每个按钮都有 svg 且 textContent 为空（「只显示图标，不显示文字」）
+       *  · hidden      —— 未 hover 时 visibility === 'hidden'（「鼠标移到图片上才显示」）
+       *  · inside      —— 按钮条矩形完全落在图片（.ant-image）矩形内（「放在图片右下角」）
+       *  · bottomRight —— 按钮条贴图片右下角（右/下边距不超过图片短边的 1/4）
+       */
+      const imgActionsFacts = (root, labels) => {
+        const empty = { labels: labels, btns: 0, iconOnly: false, hidden: false, inside: false, bottomRight: false };
+        if (!root) return empty;
+        const img = root.querySelector('.ant-image');
+        const wrap = img ? img.closest('.znhd-img-hover') : null;
+        const bar = wrap ? wrap.querySelector('.znhd-img-actions') : null;
+        if (!img || !wrap || !bar) return empty;
+        const btns = labels.map((l) => bar.querySelector('button[aria-label="' + l + '"]'));
+        const ir = img.getBoundingClientRect();
+        const br = bar.getBoundingClientRect();
+        // 按钮条离图片右下角固定 6px（组件里 right/bottom: 6），这里留到 12px 容差。
+        // 不用「图片短边的几分之一」当容差：那样图片一大，按钮跑到图片外 40px 也算「贴着角」。
+        const margin = 12;
+        const facts = {
+          labels: labels,
+          btns: btns.filter(Boolean).length,
+          iconOnly: btns.every((b) => !!b && !!b.querySelector('svg') && (b.textContent || '').trim() === ''),
+          hidden: btns.every((b) => !!b && getComputedStyle(b).visibility === 'hidden'),
+          inside:
+            br.width > 0 &&
+            br.left >= ir.left - 1 &&
+            br.right <= ir.right + 1 &&
+            br.top >= ir.top - 1 &&
+            br.bottom <= ir.bottom + 1,
+          // 用绝对值：按钮既不能离右下角太远（inside 会先挡住「跑到图片外」），也不能缩在图片中间
+          bottomRight: Math.abs(ir.right - br.right) <= margin && Math.abs(ir.bottom - br.bottom) <= margin,
+          imgRect: { w: Math.round(ir.width), h: Math.round(ir.height) },
+          barRect: { x: Math.round(br.x), y: Math.round(br.y), w: Math.round(br.width), h: Math.round(br.height) },
+          imgs: Array.from(root.querySelectorAll('.ant-image'))
+            .slice(0, 3)
+            .map((el) => {
+              const r = el.getBoundingClientRect();
+              return { w: Math.round(r.width), h: Math.round(r.height), x: Math.round(r.x), y: Math.round(r.y) };
+            }),
+        };
+        // 合成 hover：这几个弹窗上真实鼠标点击会打偏（放大预览/其它弹窗盖着），
+        // 走 mouseover → React 的 onMouseEnter，与真实 hover 是同一条代码路径。
+        wrap.dispatchEvent(new MouseEvent('mouseover', { bubbles: true, relatedTarget: document.body }));
+        return facts;
+      };
+
+      /** hover 之后的可见性（必须等 React 重渲染完再读）；读完派发 mouseout 复位 */
+      const imgActionsVisible = (root, labels) => {
+        const wrap = root ? root.querySelector('.znhd-img-hover') : null;
+        const bar = wrap ? wrap.querySelector('.znhd-img-actions') : null;
+        if (!bar) return false;
+        const ok = labels.every((l) => {
+          const b = bar.querySelector('button[aria-label="' + l + '"]');
+          return !!b && getComputedStyle(b).visibility === 'visible';
+        });
+        wrap.dispatchEvent(new MouseEvent('mouseout', { bubbles: true, relatedTarget: document.body }));
+        return ok;
+      };
+
+      // ⚠️ 历史记录页签在 7200ms 会被切到「文本」（图片页签隐藏后矩形全是 0），
+      //    所以这三个按钮必须在 6500ms 测；hover 后的可见性要等重渲染，6700ms 补读。
+      setTimeout(() => {
+        window.__historyImgActions = imgActionsFacts(findHistoryModal(), ['复制', '下载', '删除']);
+      }, 6500);
+      setTimeout(() => {
+        window.__historyImgActions = Object.assign({}, window.__historyImgActions || {}, {
+          hovered: imgActionsVisible(findHistoryModal(), ['复制', '下载', '删除']),
+        });
+      }, 6700);
       setTimeout(() => {
         window.__clickedHistory = clickByText('历史记录');
         const m = findHistoryModal();
@@ -1000,7 +1101,18 @@
             return;
           }
           if ((done && stage === 1) || tries <= 0) {
+            // v26.10.10-v16：卡片右下角的悬浮按钮（下载/打印）——静态事实 + 派发 hover。
+            // 先让卡片图真的渲染出方盒子（原因见 __renderSniffCardImages 注释），等图片 load 完再测。
+            snap.renderedCards = window.__renderSniffCardImages(m);
             window.__sniffSnap = snap;
+            setTimeout(() => {
+              const m2 = window.__findSniffModal() || m;
+              snap.imgActions = imgActionsFacts(m2, ['下载', '打印']);
+              // hover 后的可见性要等 React 重渲染完（异步），补读后写回同一个对象
+              setTimeout(() => {
+                snap.imgActionsHovered = imgActionsVisible(m2, ['下载', '打印']);
+              }, 150);
+            }, 300);
             return;
           }
           setTimeout(() => poll(tries - 1, stage), 200);
@@ -1970,6 +2082,25 @@
             !window.__agentSnap.mdRawStars
           ),
           agentSnap: window.__agentSnap || null,
+          // v26.10.10-v16：图片格子上的功能按钮改成「压在图片右下角、只有图标、hover 才出现」。
+          // 历史记录（复制/下载/删除）与图片嗅探（下载/打印）两个窗口都要满足同一组几何与可见性约束。
+          historyImgActionsOk: (() => {
+            const s = window.__historyImgActions;
+            return !!(s && s.btns === 3 && s.iconOnly && s.hidden && s.inside && s.bottomRight && s.hovered);
+          })(),
+          sniffImgActionsOk: (() => {
+            const s = window.__sniffSnap && window.__sniffSnap.imgActions;
+            return !!(
+              s &&
+              s.btns === 2 &&
+              s.iconOnly &&
+              s.hidden &&
+              s.inside &&
+              s.bottomRight &&
+              window.__sniffSnap.imgActionsHovered
+            );
+          })(),
+          historyImgActions: window.__historyImgActions || null,
           sniffSnap: window.__sniffSnap || null,
           relevantErrors: relevant,
         };

@@ -128,6 +128,9 @@ const CHECKS = [
   ['agentMarkdownOk', 'Agent 消息按 Markdown 渲染：加粗/列表/行内代码出成 DOM 且文本里不再有字面量 **（v26.10.10-v14）'],
   // v26.10.10-v15：输入框高度不能「打一个字再删掉就变高」（重开弹窗后的初始高度 = 删空后的高度）
   ['agentInputHeightOk', 'Agent 输入框高度稳定：空着/打过字/删空之后一样高（v26.10.10-v15）'],
+  // v26.10.10-v16：历史记录/图片嗅探的功能按钮挪到图片右下角（只有图标、hover 才出现、hover 出 tooltip）
+  ['historyImgActionsOk', '历史记录图片格子：复制/下载/删除是图片右下角的图标按钮（未 hover 隐藏，hover 出现）'],
+  ['sniffImgActionsOk', '图片嗅探卡片：下载/打印是图片右下角的图标按钮（未 hover 隐藏，hover 出现）'],
 ];
 
 /**
@@ -432,9 +435,14 @@ async function main() {
       !checkPass('sniffUnknownKeptOk') ||
       !checkPass('sniffExcludeOk') ||
       !checkPass('sniffSvgExcludedOk') ||
-      !checkPass('sniffSelectScopeOk')
+      !checkPass('sniffSelectScopeOk') ||
+      !checkPass('sniffImgActionsOk')
     ) {
       console.log('      嗅探快照：' + JSON.stringify(report.sniffSnap));
+    }
+    // v26.10.10-v16：图片格子悬浮按钮的几何/可见性事实（只在失败时打）
+    if (!checkPass('historyImgActionsOk')) {
+      console.log('      历史记录悬浮按钮快照：' + JSON.stringify(report.historyImgActions));
     }
     // Agent 断言失败时打快照：能区分「入口没点到」「弹窗没开」「桩没被调用」「分片没落到 UI」
     // 以及 v26.10.10-v11 的「重开弹窗后面板是否还在」、v26.10.10-v12 的「会话索引/切换」
