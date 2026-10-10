@@ -140,7 +140,8 @@
         /* 忽略：不支持 MutationObserver 时断言会因「从未见到 iframe」而失败，属预期 */
       }
 
-      const reply = (details, payload) => {
+      // extra 用来覆盖默认字段（status/responseHeaders/response），图片嗅探夹具要用到
+      const reply = (details, payload, extra) => {
         setTimeout(() => {
           if (typeof details.onload === 'function') {
             details.onload({
@@ -149,6 +150,7 @@
               responseText: typeof payload === 'string' ? payload : JSON.stringify(payload),
               responseHeaders: '',
               finalUrl: details.url,
+              ...(extra || {}),
             });
           }
         }, 40);
@@ -270,6 +272,30 @@
           else reply(details, { empty: true });
           return { abort: () => {} };
         }
+        // ===== 图片嗅探夹具（v26.10.10-v4）：按 URL 分支作答，覆盖测量阶梯 =====
+        // ③ HEAD 给 content-length（走「HEAD 响应头」阶梯 → 30720 B = 30 KB）
+        if (url.indexOf('/sniff-head.png') >= 0) {
+          reply(details, '', { responseHeaders: 'content-type: image/png\ncontent-length: 30720' });
+          return { abort: () => {} };
+        }
+        // ④ HEAD 故意不给 content-length（逼出 Range 阶梯）→ Range GET 回 40960 B 的 Blob = 40 KB
+        if (url.indexOf('/sniff-range.png') >= 0) {
+          if (String(details.method || 'GET').toUpperCase() === 'HEAD') {
+            reply(details, '', { responseHeaders: 'content-type: image/png' });
+            return { abort: () => {} };
+          }
+          reply(details, '', {
+            response: new Blob([new Uint8Array(40960)], { type: 'image/png' }),
+            responseText: '',
+            responseHeaders: 'content-type: image/png',
+          });
+          return { abort: () => {} };
+        }
+        // ⑥ HEAD 404：尺寸测不到，但仍是图片 URL ⇒ 必须留在「大小未知」组（不丢）
+        if (url.indexOf('/sniff-missing.png') >= 0) {
+          reply(details, '', { status: 404, statusText: 'Not Found' });
+          return { abort: () => {} };
+        }
         // 其它一律失败，观察脚本是否优雅降级
         setTimeout(() => {
           if (details && typeof details.onerror === 'function') {
@@ -293,6 +319,28 @@
 
     <!-- 人数监控取 .count:nth-child(2)：本题为 body 的第 2 个子节点 -->
     <div class="count"><span>等待人数</span><span>0</span></div>
+
+    <!-- ===== 图片嗅探夹具（v26.10.10-v4）=====
+         全部由本页或 GM 桩作答（域名 *.test 不解析、从不出网），每一种「来源 / 尺寸阶梯」各一条：
+           ① data: 大图（>20KB 阈值，本地按 base64 长度算）      → 达标卡片（来源「页面元素」）
+           ② data: 小图（<20KB）                                → 只计入「小于阈值」，不进列表
+           ③ CSS background-image → 桩 HEAD 回 content-length   → HEAD 阶梯（30 KB）
+           ④ CSS background-image → 桩 HEAD 不给长度、Range GET → Range 阶梯（40 KB）
+           ⑤ 内联 <svg>（运行时补足图元，>20KB）                → svg 来源（本地按文本字节算）
+           ⑥ 懒加载 data-src 指向 HEAD 404 的地址               → 尺寸未知，必须保留在「大小未知」折叠组
+         ①②⑤ 的内容在下面用脚本现造，避免在 HTML 里塞几十 KB base64。 -->
+    <div id="sniff-fixtures" aria-hidden="true">
+      <img id="sniff-data-big" alt="" />
+      <img id="sniff-data-small" alt="" />
+      <img id="sniff-lazy-unknown" data-src="https://sniff-smoke.test/sniff-missing.png" alt="" />
+      <div
+        id="sniff-css-head"
+        style="width: 40px; height: 40px; background-image: url('https://sniff-smoke.test/sniff-head.png')"></div>
+      <div
+        id="sniff-css-range"
+        style="width: 40px; height: 40px; background-image: url('https://sniff-smoke.test/sniff-range.png')"></div>
+      <svg id="sniff-inline-svg" xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48"></svg>
+    </div>
 
     <pre id="smoke-result" style="margin-top: 40px">running…</pre>
 
@@ -381,6 +429,47 @@
           }
           cv.toBlob((b) => res(new File([b], 'smoke-big.jpg', { type: 'image/jpeg' })), 'image/jpeg', 0.95);
         });
+
+      // 图片嗅探夹具内容（v26.10.10-v4）：
+      //   ① data: 大图用**定种子伪随机**填像素 —— 纯色/规则渐变会被 PNG 压到几 KB，噪声才稳定 >20KB；
+      //   ② data: 小图用 8x8 纯色，稳定 <20KB；
+      //   ⑤ 内联 SVG 补 600 个 circle（序列化后约 35KB），否则不够阈值、不会出现在列表里。
+      (function () {
+        let seed = 123456789;
+        const rnd = () => ((seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648);
+        const cv = document.createElement('canvas');
+        cv.width = 160;
+        cv.height = 160;
+        const ctx = cv.getContext('2d');
+        const px = ctx.createImageData(160, 160);
+        for (let i = 0; i < px.data.length; i += 4) {
+          px.data[i] = Math.floor(rnd() * 256);
+          px.data[i + 1] = Math.floor(rnd() * 256);
+          px.data[i + 2] = Math.floor(rnd() * 256);
+          px.data[i + 3] = 255;
+        }
+        ctx.putImageData(px, 0, 0);
+        document.getElementById('sniff-data-big').src = cv.toDataURL('image/png');
+
+        const cv2 = document.createElement('canvas');
+        cv2.width = 8;
+        cv2.height = 8;
+        const c2 = cv2.getContext('2d');
+        c2.fillStyle = '#1677ff';
+        c2.fillRect(0, 0, 8, 8);
+        document.getElementById('sniff-data-small').src = cv2.toDataURL('image/png');
+
+        const NS = 'http://www.w3.org/2000/svg';
+        const svg = document.getElementById('sniff-inline-svg');
+        for (let i = 0; i < 600; i++) {
+          const c = document.createElementNS(NS, 'circle');
+          c.setAttribute('cx', String(i % 48));
+          c.setAttribute('cy', String((i * 7) % 48));
+          c.setAttribute('r', '1');
+          c.setAttribute('fill', '#1677ff');
+          svg.appendChild(c);
+        }
+      })();
 
       setTimeout(() => {
         window.__clickedPhrases = clickByText('常用语');
@@ -638,6 +727,53 @@
         }
       }, 10300);
 
+      // ===== 图片嗅探（v26.10.10-v4）=====
+      // 点面板第 5 个入口 → 弹窗自动扫描页面（夹具见 #sniff-fixtures）。
+      // 扫描是异步的（每张 HEAD/Range 各 40ms 桩延迟），故用轮询等「卡片出来且已量到大小」再快照；
+      // 快照必须在 11000ms 的报告采集**之前**完成，故最多再等 6s。
+      setTimeout(() => {
+        window.__clickedSniff = clickByText('图片嗅探');
+        const poll = (tries) => {
+          const m = Array.from(document.querySelectorAll('.ant-modal')).find((el) =>
+            ((el.querySelector('.ant-modal-title') || {}).textContent || '').includes('图片嗅探')
+          );
+          const t = m ? m.textContent || '' : '';
+          // ⚠️ 「来源」是卡片下方的 title（hover 提示）而不是可见文本：SniffModal 的 metaOf()
+          //    只把它写进 title 属性，故 DOM 断言必须把 title 一并纳入匹配面（v26.10.10-v4 踩过）。
+          const titles = m
+            ? Array.from(m.querySelectorAll('[title]'))
+                .map((el) => el.getAttribute('title') || '')
+                .join(' | ')
+            : '';
+          const hay = t + ' || ' + titles;
+          const cards = m ? m.querySelectorAll('.ant-image').length : 0;
+          const unknown = /大小未知（(\d+)）/.exec(t);
+          const below = /另有\s*(\d+)\s*张小于阈值/.exec(t);
+          const btns = document.querySelectorAll('#__znhd_panel_host__ .znhd-panel-btn');
+          const snap = {
+            entrySeen: !!window.__clickedSniff,
+            panelBtns: btns.length,
+            panelHasSniffLabel: collectText().indexOf('图片嗅探') >= 0,
+            modalSeen: !!m,
+            cards: cards,
+            sourcesCss: hay.indexOf('CSS 背景') >= 0,
+            sourcesSvg: hay.indexOf('内联 SVG') >= 0,
+            titlesSample: titles.slice(0, 300),
+            headSize: t.indexOf('30 KB') >= 0,
+            rangeSize: t.indexOf('40 KB') >= 0,
+            unknownCount: unknown ? Number(unknown[1]) : -1,
+            belowCount: below ? Number(below[1]) : -1,
+          };
+          const done = snap.modalSeen && cards >= 4 && snap.headSize && snap.rangeSize;
+          if (done || tries <= 0) {
+            window.__sniffSnap = snap;
+            return;
+          }
+          setTimeout(() => poll(tries - 1), 200);
+        };
+        poll(30);
+      }, 9700);
+
       // 打开「运行日志」弹窗：验证「日志从上到下生成、最新在最上方」（v26.10.06-v23 需求）。
       // 放在 10600ms（报告在 11000ms 采集），留 400ms 给 React 渲染。
       setTimeout(() => {
@@ -729,11 +865,11 @@
           panelBtnsUniform: (() => {
             const host = document.getElementById('__znhd_panel_host__');
             if (!host) return false;
-            const labels = ['设置', '常用语', '历史记录', '设备互联'];
+            const labels = ['设置', '常用语', '历史记录', '设备互联', '图片嗅探'];
             const btns = Array.from(host.querySelectorAll('button')).filter((b) =>
               labels.some((t) => (b.textContent || '').indexOf(t) >= 0)
             );
-            if (btns.length !== 4) return false;
+            if (btns.length !== 5) return false;
             const bg = btns.map((b) => getComputedStyle(b).backgroundColor);
             return bg.every((c) => c === bg[0]) && bg[0] !== 'rgb(22, 119, 255)';
           })(),
@@ -741,11 +877,11 @@
           panelBtnsOneRow: (() => {
             const host = document.getElementById('__znhd_panel_host__');
             if (!host) return false;
-            const labels = ['设置', '常用语', '历史记录', '设备互联'];
+            const labels = ['设置', '常用语', '历史记录', '设备互联', '图片嗅探'];
             const btns = Array.from(host.querySelectorAll('button')).filter((b) =>
               labels.some((t) => (b.textContent || '').indexOf(t) >= 0)
             );
-            if (btns.length !== 4) return false;
+            if (btns.length !== 5) return false;
             return new Set(btns.map((b) => Math.round(b.getBoundingClientRect().top))).size === 1;
           })(),
           // 面板图标必须是**真实 SVG**，且面板可见文本里不能残留「Win7 缺字形」的 emoji（v26.10.09-v7）。
@@ -758,11 +894,11 @@
           panelIconsAreSvg: (() => {
             const host = document.getElementById('__znhd_panel_host__');
             if (!host) return false;
-            const labels = ['设置', '常用语', '历史记录', '设备互联'];
+            const labels = ['设置', '常用语', '历史记录', '设备互联', '图片嗅探'];
             const btns = Array.from(host.querySelectorAll('button')).filter((b) =>
               labels.some((t) => (b.textContent || '').indexOf(t) >= 0)
             );
-            if (btns.length !== 4) return false;
+            if (btns.length !== 5) return false;
             // ① 每个按钮都得有一个带图元的 <svg>（emoji 是文本节点，不会有 svg）
             const allSvg = btns.every((b) => {
               const svg = b.querySelector('svg');
@@ -1027,6 +1163,22 @@
             }
             return false;
           })(),
+          // 图片嗅探（v26.10.10-v4）：入口 + 三路来源 + 整条尺寸阶梯 + 未知不丢 + 阈值过滤
+          sniffEntryOk: !!(window.__sniffSnap && window.__sniffSnap.entrySeen && window.__sniffSnap.modalSeen),
+          sniffScanOk: !!(
+            window.__sniffSnap &&
+            window.__sniffSnap.cards >= 4 &&
+            window.__sniffSnap.sourcesCss &&
+            window.__sniffSnap.sourcesSvg &&
+            window.__sniffSnap.headSize &&
+            window.__sniffSnap.rangeSize
+          ),
+          sniffUnknownKeptOk: !!(
+            window.__sniffSnap &&
+            window.__sniffSnap.unknownCount >= 1 &&
+            window.__sniffSnap.belowCount >= 1
+          ),
+          sniffSnap: window.__sniffSnap || null,
           relevantErrors: relevant,
         };
         document.getElementById('smoke-result').textContent = JSON.stringify(report, null, 2);
@@ -1056,7 +1208,10 @@
           report.phoneListOk &&
           report.phoneMultiPickOk &&
           report.phoneIdColorOk &&
-          report.phoneSendCompressedOk
+          report.phoneSendCompressedOk &&
+          report.sniffEntryOk &&
+          report.sniffScanOk &&
+          report.sniffUnknownKeptOk
             ? 'ALL-OK'
             : 'PARTIAL');
       }, 11000);

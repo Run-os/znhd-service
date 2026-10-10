@@ -14,6 +14,7 @@
 - **常用语管理**：从远程 YAML 配置文件加载常用语，数据源地址可在设置面板自定义，支持关键字搜索过滤，一键复制并填入 TinyMCE 编辑器；内置 2 小时本地缓存，相同数据源在有效期内打开弹窗不再重复请求
 - **工作时间限定**：仅在工作时间段（默认上午 9:00-12:00，下午 13:30-18:00，可在设置面板调整）内执行监控，非工作时间自动暂停
 - **设备互联到电脑（图片→剪贴板）**：手机扫码或打开本机专属链接，选图（前端自动压缩）后图片经中继服务器转发到本机，点「复制到剪贴板」即可在征纳互动 Ctrl+V 粘贴；每台电脑有稳定独立的设备 ID，A、B 各自链接互不影响
+- **网页图片嗅探**：主面板「图片嗅探」一键扫描当前网页上的图片（含普通图片与懒加载属性、内联 SVG、CSS 背景图），按体积分组展示，可放大预览、单张下载、批量下载，或按 A4 版式打印；最小体积阈值（默认 20 KB）可在面板内调整并记住，大小未探明的图片折叠保留不丢
 - **操作日志**：面板内嵌日志查看器，按类型（信息/警告/成功/错误）着色显示
 - **提示音反馈**：复制常用语时播放提示音，提供操作确认
 
@@ -37,8 +38,10 @@ znhd-service/
 │       ├── speech（语音队列）/ monitor（人数·掉线·工作时间）
 │       ├── tinymce / clipboard（提示音+安全复制）/ relay（中继+图片剪贴板）
 │       ├── gallery（收图/收文数据 + 命名工具 + 上限常量）/ changelog（更新日志拉取解析）/ qrcode（二维码）
+│       ├── sniffer（网页图片嗅探：DOM/CSS/资源表三路采集 + 体积测量阶梯）
 │       └── ui/                   # MainPanel（主面板）+ 各弹窗：SettingsModal / PhrasesDrawer / LogModal /
 │                                 #   PhoneModal / ChangelogModal / RecvHistoryModal（历史记录：图片/文本）/ RecvTextModal
+│                                 #   / SniffModal（图片嗅探）
 │                                 #   + panelHost（挂载/拖拽）/ uiReset（样式隔离）/ notify
 ├── shared/                       # 脚本端与手机上传页共用的纯逻辑/纯 DOM 层（零宿主依赖，约束见 AGENT.md）
 │   ├── image/                    # 图片压缩：resizeToJpeg / prepareForTransfer
@@ -87,7 +90,7 @@ znhd-service/
 
 ### 4. 开发与构建（改源码时）
 
-脚本采用 Webpack + TypeScript 工程化开发（脚手架与 [douyu-helper](https://github.com/Eished/douyu-helper) 一致）。**源码在 `src/`，仓库根的 `znhd.user.js` 是构建产物，请勿直接编辑**（下次构建会覆盖）。
+脚本采用 Webpack + TypeScript 工程化开发（脚手架与 [douyu-helper](https://github.com/Eished/douyu-helper) 一致）。**源码在 `src/`，`dist/znhd.user.js` 是构建产物，请勿直接编辑**（下次构建会覆盖）。
 
 ```bash
 npm install            # 首次：安装开发依赖
@@ -157,8 +160,8 @@ npm run verify         # 无头 Chromium 端到端冒烟（面板/弹窗/画廊/
 ### 更新日志查看
 
 - 面板「设置」→ 在 `[更新脚本]` 旁边的 **[更新日志]** 按钮，点击即在网页正中弹窗展示**最新 10 条**更新日志（右上角 × / ESC / 点空白处均可关闭）
-- 日志内容来自仓库根的 [`CHANGELOG.md`](./CHANGELOG.md)：脚本运行时用 `GM_xmlhttpRequest` 拉取，遵循设置里的「使用 CDN 加速」开关（开 = jsDelivr，关 = raw.githubusercontent）
-- 弹窗底部「获取更多日志」跳转到 `CHANGELOG.md` 网页查看全部历史；弹窗底部会提示「共 N 条，已显示最新 10 条」
+- 日志内容来自 [`changelogs/`](./changelogs/) 目录下的**当月**日志文件（如 `changelogs/2026-10.md`）：脚本运行时用 `GM_xmlhttpRequest` 拉取，遵循设置里的「使用 CDN 加速」开关（开 = jsDelivr，关 = raw.githubusercontent）
+- 弹窗底部「获取更多日志」跳转到当月日志文件的网页查看（历史月份见 `changelogs/` 目录）；弹窗底部会提示「共 N 条，已显示最新 10 条」
 - 拉取失败（断网 / CDN 不可达）时弹窗内提示具体原因，仍可点「获取更多日志」在浏览器打开
 
 ### 设备互联到电脑（图片→剪贴板）

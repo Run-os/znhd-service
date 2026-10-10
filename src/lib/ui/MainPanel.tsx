@@ -7,6 +7,7 @@ import {
     HistoryIcon,
     PhrasesIcon,
     SettingsIcon,
+    SniffIcon,
     VolumeOffIcon,
     VolumeOnIcon,
 } from '@/lib/ui/icons';
@@ -29,6 +30,7 @@ import LogModal from '@/lib/ui/LogModal';
 import ChangelogModal from '@/lib/ui/ChangelogModal';
 import RecvHistoryModal from '@/lib/ui/RecvHistoryModal';
 import RecvTextModal from '@/lib/ui/RecvTextModal';
+import SniffModal from '@/lib/ui/SniffModal';
 
 // 常用语请求序号（loadPhrasesData 用）：仅最新一次请求可落地结果，防慢的旧响应后到覆盖新数据
 let phrasesRequestSeq = 0;
@@ -73,21 +75,22 @@ function BrandIcon({ size = 26 }: { size?: number }) {
 }
 
 /**
- * 底部四入口按钮的自适应样式（v26.10.07-v3）。
+ * 底部入口按钮的自适应样式（v26.10.07-v3；v26.10.10-v4 起由 4 个增至 5 个）。
  *
- * 需求：4 个入口合并到一行，并随宽度自适应——
+ * 需求：5 个入口合并到一行，并随宽度自适应——
  *   · 宽度足够 → 图标 + 文字同排；
  *   · 宽度不足 → **只留图标**（当前面板就落在这一档，文案靠 hover Tooltip 给出）；
  *   · 两种状态下悬停都有 Tooltip（见下方 JSX）。
  *
  * 阈值为什么取 65px（实测：Chrome 154）：
  *   容器查询的尺寸按**内容盒**算 —— 按钮宽度减去内边距 4×2 与边框 1×2 才是被查询的尺寸。
- *   横排所需宽度 = 图标 15px + 间距 2px + 「历史记录」4 字 × 11px = **61px**，
+ *   横排所需宽度 = 图标 15px + 间距 2px + 4 字 × 11px = **61px**
+ *   （最长标签「历史记录」「图片嗅探」同为 4 字，故 v26.10.10-v4 新增入口后阈值不变），
  *   留 4px 余量故阈值取 65px；正好卡在边界会折成两行。
  *   ⚠️ v26.10.09-v7：图标由 emoji（约 18px 宽）换成内联 SVG（`size={15}` ⇒ 15px 宽）后，
  *      阈值由 **68px 复算为 65px**（窄 3px）。换图标尺寸/标签字数后必须回来重算。
  *   ⚠️ 该阈值与面板宽度无关，只取决于按钮自身宽度：
- *      · 当前面板 238px 时四列各 48.5px（内容盒 38.5px）→ 在阈值下，只显示图标；
+ *      · 当前面板 238px 时五列各 38px（内容盒 28px）→ 在阈值下，只显示图标；
  *      · 面板加宽到约 75px/按钮以上，文字会自动出现，**无需改代码**。
  *
  * ⚠️ 若日后改 PANEL_ACTIONS 的标签字数或图标字号，**必须回来重算这个阈值**，
@@ -115,11 +118,11 @@ const PANEL_CSS = `
 `;
 
 /**
- * 底部四个入口：key + 图标组件 + 文案（文案同时用于 hover Tooltip；点击行为见组件内 actionHandlers）
+ * 底部入口（v26.10.10-v4 起 5 个）：key + 图标组件 + 文案（文案同时用于 hover Tooltip；点击行为见组件内 actionHandlers）
  *
  * ⚠️ v26.10.09-v7：图标由 emoji 字符（'⚙️' '💬' '🖼️' '💻'）改为**内联 SVG 组件**。
  * **原因**：Win7 没有 Segoe UI Emoji 字体（Win8.1 才引入），`💬 U+1F4AC` / `🖼 U+1F5BC` /
- * `💻 U+1F4BB` 这些补充平面码位在 Win7 任何系统字体里都没有字形 ⇒ 四个按钮全是豆腐块/乱码。
+ * `💻 U+1F4BB` 这些补充平面码位在 Win7 任何系统字体里都没有字形 ⇒ 按钮全是豆腐块/乱码。
  * **为什么是内联 SVG 而不是图标库**：路径不经字体系统、全平台一致；且不引入任何运行时依赖
  * （`@ant-design/icons` 只是 antd 的传递依赖，在 src/ 里 import 它属于「运行时 import devDependency」）。
  * 图形来源与许可见 `lib/ui/icons.tsx` 头部注释（Lucide / ISC）。
@@ -131,6 +134,7 @@ const PANEL_ACTIONS = [
     { key: 'phrases', icon: PhrasesIcon, label: '常用语' },
     { key: 'history', icon: HistoryIcon, label: '历史记录' },
     { key: 'phone', icon: DeviceIcon, label: '设备互联' },
+    { key: 'sniff', icon: SniffIcon, label: '图片嗅探' },
 ] as const;
 
 /** 状态点 */
@@ -183,6 +187,8 @@ export default function MainPanel({ host }: MainPanelProps) {
     const [phoneOpen, setPhoneOpen] = useState(false);
     const [logOpen, setLogOpen] = useState(false);
     const [changelogOpen, setChangelogOpen] = useState(false);
+    /** 图片嗅探（v26.10.10-v4）：扫描当前页面上的图片，筛选/预览/下载/打印 */
+    const [sniffOpen, setSniffOpen] = useState(false);
     // 收到图片/文本（v26.10.06-v13：由原来的命令式 DOM 弹窗改为 React state 驱动 antd 弹窗）
     const [recvImages, setRecvImages] = useState<GalleryImage[]>([]);
     /** 历史记录里的文本（可回看，上限 MAX_TEXT）；与下面「收到即自动弹出的最新一条」是两条独立路径 */
@@ -497,7 +503,7 @@ export default function MainPanel({ host }: MainPanelProps) {
         );
     }
 
-    // 四个入口的点击行为（key 与 PANEL_ACTIONS 对齐）
+    // 五个入口的点击行为（key 与 PANEL_ACTIONS 对齐）
     const actionHandlers: Record<string, () => void> = {
         settings: () => setSettingsOpen(true),
         phrases: () => setPhrasesOpen(true),
@@ -507,6 +513,7 @@ export default function MainPanel({ host }: MainPanelProps) {
             setHistoryOpen(true);
         },
         phone: () => setPhoneOpen(true),
+        sniff: () => setSniffOpen(true),
     };
 
     return (
@@ -634,8 +641,8 @@ export default function MainPanel({ host }: MainPanelProps) {
                 <Switch checked={!!voiceEnabled} onChange={toggleVoice} />
             </div>
 
-            {/* 四个入口合并到一行：宽度自适应（不够时只留图标），悬停给出完整文案 */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 6 }}>
+            {/* 五个入口合并到一行：宽度自适应（不够时只留图标），悬停给出完整文案 */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', gap: 6 }}>
                 {PANEL_ACTIONS.map((a) => (
                     <Tooltip key={a.key} title={a.label} placement="bottom">
                         <Button
@@ -743,6 +750,14 @@ export default function MainPanel({ host }: MainPanelProps) {
             />
 
             <ChangelogModal open={changelogOpen} onClose={() => setChangelogOpen(false)} />
+
+            {/* 图片嗅探（v26.10.10-v4）：阈值持久化在 Allvalue，故改设置即写 localStorage */}
+            <SniffModal
+                open={sniffOpen}
+                onClose={() => setSniffOpen(false)}
+                minKB={Allvalue.sniffMinKB}
+                onMinKBChange={(kb) => patchAllvalue({ sniffMinKB: kb })}
+            />
 
             <RecvHistoryModal
                 open={historyOpen}

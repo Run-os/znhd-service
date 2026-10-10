@@ -70,8 +70,8 @@ const CHECKS = [
   ['phrasesIsDrawer', '常用语是 antd Drawer 侧边栏（非 Modal）'],
   ['qrNoRadius', '二维码无圆角（定位角标不被裁切）'],
   ['primaryTokenBlue', '主色 token 为 antd 蓝 blue-6 #1677FF'],
-  ['panelBtnsUniform', '四个入口按钮样式一致（无主色实心按钮）'],
-  ['panelBtnsOneRow', '四个入口按钮排在同一行'],
+  ['panelBtnsUniform', '入口按钮样式一致（无主色实心按钮，v26.10.10-v4 起 5 个）'],
+  ['panelBtnsOneRow', '入口按钮排在同一行（v26.10.10-v4 起 5 个）'],
   ['panelIconsAreSvg', '面板图标是真实 SVG 且无补充平面 emoji（Win7 兼容）'],
   ['ballDragOk', '悬浮球可拖动移动（且拖完不误触展开）'],
   ['logListNotReversed', '日志列表仍是 column（非 column-reverse）'],
@@ -103,6 +103,9 @@ const CHECKS = [
   ['modalTextAlignLeft', '弹窗内容左对齐（不被宿主 CSS 污染）'],
   ['timeInputsOk', '时间段为 4 个原生 time 输入（HH:mm，无 antd TimePicker）'],
   ['iconVerticallyCentered', '图标与控件同一水平线（清空×/关闭图标）'],
+  ['sniffEntryOk', '主面板有「图片嗅探」入口且能打开嗅探弹窗'],
+  ['sniffScanOk', '嗅探覆盖三路来源（DOM/内联 SVG/CSS 背景）并量出大小（HEAD 与 Range 两条阶梯）'],
+  ['sniffUnknownKeptOk', '大小未知的图片不丢弃（折叠保留）且小于阈值的另有计数'],
 ];
 
 /**
@@ -229,6 +232,12 @@ async function main() {
         `  ${value ? '✅' : '❌'} ${label}${key === 'version' ? '（' + report.version + ' ← 产物 ' + scriptVersion + '）' : ''}`
       );
     }
+    // 嗅探三条断言失败时把快照原样打出来：卡片数/来源/尺寸阶梯/分组计数都在里面，
+    // 否则只能看到「❌」，还得改代码才知道是没扫到、没量到还是分组没渲染（v26.10.10-v4 调试用）。
+    if (!checkPass('sniffEntryOk') || !checkPass('sniffScanOk') || !checkPass('sniffUnknownKeptOk')) {
+      console.log('      嗅探快照：' + JSON.stringify(report.sniffSnap));
+    }
+
     const allErrors = (report.relevantErrors || []).concat(pageErrors);
     const benign = allErrors.filter(isBenign);
     const scriptErrors = allErrors.filter((e) => !isBenign(e));

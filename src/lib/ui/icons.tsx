@@ -63,7 +63,7 @@ function SvgIcon({ size = 16, color, style, className, children }: IconProps & {
     );
 }
 
-/* ============================================================ 主面板四个入口 */
+/* ============================================================ 主面板入口（v26.10.10-v4 起 5 个） */
 
 /** 设置（Lucide `settings`：齿轮 + 圆心） */
 export function SettingsIcon(p: IconProps) {
@@ -91,6 +91,24 @@ export function HistoryIcon(p: IconProps) {
             <rect width="18" height="18" x="3" y="3" rx="2" ry="2" />
             <circle cx="9" cy="9" r="2" />
             <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" />
+        </SvgIcon>
+    );
+}
+
+/**
+ * 图片嗅探（Lucide `image-down`：相框 + 太阳 + 山 + 向下箭头）。
+ *
+ * 与 `HistoryIcon`（Lucide `image`）同源、只多一支向下箭头，故面板里两个入口图标**长得很像**；
+ * 这里刻意不改形状：换别的图形就得脱离 Lucide 规格自己画，反而更容易画歪。
+ * 区分靠的是按钮下方文案（「历史记录」/「图片嗅探」）与 Tooltip。
+ */
+export function SniffIcon(p: IconProps) {
+    return (
+        <SvgIcon {...p}>
+            <path d="M10.3 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v10l-3.1-3.1a2 2 0 0 0-2.814.014L6 21" />
+            <path d="m14 19 3 3v-5.5" />
+            <path d="m17 22 3-3" />
+            <circle cx="9" cy="9" r="2" />
         </SvgIcon>
     );
 }

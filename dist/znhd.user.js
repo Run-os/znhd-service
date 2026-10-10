@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name                征纳互动人数和在线监控v2
 // @namespace           https://scriptcat.org/
-// @version             26.10.10-v3
+// @version             26.10.10-v4
 // @description         实时监控征纳互动等待人数和在线状态，支持语音播报、自定义常用语
 // @author              runos
 // @license             MIT
@@ -55618,7 +55618,7 @@ tooltip_Tooltip.UniqueProvider = tooltip_UniqueProvider;
 function SvgIcon({ size = 16, color, style, className, children }) {
     return ((0,react_jsx_runtime_production_namespaceFn().jsx)("svg", { xmlns: "http://www.w3.org/2000/svg", width: size, height: size, viewBox: "0 0 24 24", fill: "none", stroke: color || 'currentColor', strokeWidth: 2, strokeLinecap: "round", strokeLinejoin: "round", "aria-hidden": "true", focusable: "false", className: className, style: { display: 'block', flex: '0 0 auto', ...style }, children: children }));
 }
-/* ============================================================ 主面板四个入口 */
+/* ============================================================ 主面板入口（v26.10.10-v4 起 5 个） */
 /** 设置（Lucide `settings`：齿轮 + 圆心） */
 function SettingsIcon(p) {
     return ((0,react_jsx_runtime_production_namespaceFn().jsxs)(SvgIcon, { ...p, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("path", { d: "M9.671 4.136a2.34 2.34 0 0 1 4.659 0 2.34 2.34 0 0 0 3.319 1.915 2.34 2.34 0 0 1 2.33 4.033 2.34 2.34 0 0 0 0 3.831 2.34 2.34 0 0 1-2.33 4.033 2.34 2.34 0 0 0-3.319 1.915 2.34 2.34 0 0 1-4.659 0 2.34 2.34 0 0 0-3.32-1.915 2.34 2.34 0 0 1-2.33-4.033 2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915" }), (0,react_jsx_runtime_production_namespaceFn().jsx)("circle", { cx: "12", cy: "12", r: "3" })] }));
@@ -55630,6 +55630,16 @@ function PhrasesIcon(p) {
 /** 历史记录（Lucide `image`：相框 + 太阳 + 山） */
 function HistoryIcon(p) {
     return ((0,react_jsx_runtime_production_namespaceFn().jsxs)(SvgIcon, { ...p, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("rect", { width: "18", height: "18", x: "3", y: "3", rx: "2", ry: "2" }), (0,react_jsx_runtime_production_namespaceFn().jsx)("circle", { cx: "9", cy: "9", r: "2" }), (0,react_jsx_runtime_production_namespaceFn().jsx)("path", { d: "m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" })] }));
+}
+/**
+ * 图片嗅探（Lucide `image-down`：相框 + 太阳 + 山 + 向下箭头）。
+ *
+ * 与 `HistoryIcon`（Lucide `image`）同源、只多一支向下箭头，故面板里两个入口图标**长得很像**；
+ * 这里刻意不改形状：换别的图形就得脱离 Lucide 规格自己画，反而更容易画歪。
+ * 区分靠的是按钮下方文案（「历史记录」/「图片嗅探」）与 Tooltip。
+ */
+function SniffIcon(p) {
+    return ((0,react_jsx_runtime_production_namespaceFn().jsxs)(SvgIcon, { ...p, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("path", { d: "M10.3 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v10l-3.1-3.1a2 2 0 0 0-2.814.014L6 21" }), (0,react_jsx_runtime_production_namespaceFn().jsx)("path", { d: "m14 19 3 3v-5.5" }), (0,react_jsx_runtime_production_namespaceFn().jsx)("path", { d: "m17 22 3-3" }), (0,react_jsx_runtime_production_namespaceFn().jsx)("circle", { cx: "9", cy: "9", r: "2" })] }));
 }
 /** 设备互联（Lucide `monitor`：显示器 + 底座） */
 function DeviceIcon(p) {
@@ -55718,6 +55728,10 @@ const DEFAULTS = {
     // 开：新日志持续进来，并自动滚到底部看最新内容；关：列表冻结在关闭那一刻的快照，便于往上翻看历史。
     // 持久化（存进 STORAGE_KEY），下次打开弹窗保持上次的选择。
     logAutoRefresh: true,
+    // 「图片嗅探」面板的最小图片体积阈值（单位：KB，v26.10.10-v4）。
+    // 只影响**显示与批量下载**的筛选，不影响网络请求策略（不会先探测再决定要不要请求；扫描阶段一律测量）。
+    // 消费点在 SniffModal：storage.ts 只对 workingHours 做字段级校验，故那边自行兜非数字/非正数（回退 20）。
+    sniffMinKB: 20,
 };
 
 ;// ./src/lib/logger.ts
@@ -71947,13 +71961,14 @@ function appendPreviewActions(originalNode, extra) {
  *
  * ⚠️ 共享层约束：本文件只碰 DOM，不得 import 任何宿主相关模块（见 `shared/image/compress.ts` 头部说明）。
  */
-const HOST_ID = '__znhd_preview_host__';
+/** 宿主 div 的 id（v26.10.10-v4 起对外导出：图片嗅探要把它整棵子树排除在扫描之外） */
+const PREVIEW_HOST_ID = '__znhd_preview_host__';
 /** 取得（必要时创建）预览浮层的宿主 div —— 传给 antd 的 `preview.getContainer` */
 function getPreviewHost() {
-    let el = document.getElementById(HOST_ID);
+    let el = document.getElementById(PREVIEW_HOST_ID);
     if (!el) {
         el = document.createElement('div');
-        el.id = HOST_ID;
+        el.id = PREVIEW_HOST_ID;
         document.documentElement.appendChild(el);
     }
     return el;
@@ -72394,7 +72409,2936 @@ function RecvTextModal({ text, onClose }) {
             }, children: text || '' }) }));
 }
 
+;// ./node_modules/@ant-design/icons-svg/es/asn/DownOutlined.js
+// This icon file is generated automatically.
+var DownOutlined = { "icon": { "tag": "svg", "attrs": { "viewBox": "64 64 896 896", "focusable": "false" }, "children": [{ "tag": "path", "attrs": { "d": "M884 256h-75c-5.1 0-9.9 2.5-12.9 6.6L512 654.2 227.9 262.6c-3-4.1-7.8-6.6-12.9-6.6h-75c-6.5 0-10.3 7.4-6.5 12.7l352.6 486.1c12.8 17.6 39 17.6 51.7 0l352.6-486.1c3.9-5.3.1-12.7-6.4-12.7z" } }] }, "name": "down", "theme": "outlined" };
+/* harmony default export */ const asn_DownOutlined = (DownOutlined);
+
+;// ./node_modules/@ant-design/icons/es/icons/DownOutlined.js
+function DownOutlined_extends() { DownOutlined_extends = Object.assign ? Object.assign.bind() : function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; }; return DownOutlined_extends.apply(this, arguments); }
+// GENERATED BY ./scripts/generate.ts
+// DO NOT EDIT IT MANUALLY
+
+;
+
+
+const DownOutlined_DownOutlined = (props, ref) => /*#__PURE__*/(react_production_namespaceFn().createElement)(AntdIconLight, DownOutlined_extends({}, props, {
+  ref: ref,
+  icon: asn_DownOutlined
+}));
+
+/**![down](data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTAiIGhlaWdodD0iNTAiIGZpbGw9IiNjYWNhY2EiIHZpZXdCb3g9IjY0IDY0IDg5NiA4OTYiIGZvY3VzYWJsZT0iZmFsc2UiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHBhdGggZD0iTTg4NCAyNTZoLTc1Yy01LjEgMC05LjkgMi41LTEyLjkgNi42TDUxMiA2NTQuMiAyMjcuOSAyNjIuNmMtMy00LjEtNy44LTYuNi0xMi45LTYuNmgtNzVjLTYuNSAwLTEwLjMgNy40LTYuNSAxMi43bDM1Mi42IDQ4Ni4xYzEyLjggMTcuNiAzOSAxNy42IDUxLjcgMGwzNTIuNi00ODYuMWMzLjktNS4zLjEtMTIuNy02LjQtMTIuN3oiIC8+PC9zdmc+) */
+const DownOutlined_RefIcon = /*#__PURE__*/(react_production_namespaceFn().forwardRef)(DownOutlined_DownOutlined);
+if (false) // removed by dead control flow
+{}
+/* harmony default export */ const icons_DownOutlined = (DownOutlined_RefIcon);
+;// ./node_modules/@ant-design/icons-svg/es/asn/MinusOutlined.js
+// This icon file is generated automatically.
+var MinusOutlined = { "icon": { "tag": "svg", "attrs": { "viewBox": "64 64 896 896", "focusable": "false" }, "children": [{ "tag": "path", "attrs": { "d": "M872 474H152c-4.4 0-8 3.6-8 8v60c0 4.4 3.6 8 8 8h720c4.4 0 8-3.6 8-8v-60c0-4.4-3.6-8-8-8z" } }] }, "name": "minus", "theme": "outlined" };
+/* harmony default export */ const asn_MinusOutlined = (MinusOutlined);
+
+;// ./node_modules/@ant-design/icons/es/icons/MinusOutlined.js
+function MinusOutlined_extends() { MinusOutlined_extends = Object.assign ? Object.assign.bind() : function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; }; return MinusOutlined_extends.apply(this, arguments); }
+// GENERATED BY ./scripts/generate.ts
+// DO NOT EDIT IT MANUALLY
+
+;
+
+
+const MinusOutlined_MinusOutlined = (props, ref) => /*#__PURE__*/(react_production_namespaceFn().createElement)(AntdIconLight, MinusOutlined_extends({}, props, {
+  ref: ref,
+  icon: asn_MinusOutlined
+}));
+
+/**![minus](data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTAiIGhlaWdodD0iNTAiIGZpbGw9IiNjYWNhY2EiIHZpZXdCb3g9IjY0IDY0IDg5NiA4OTYiIGZvY3VzYWJsZT0iZmFsc2UiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHBhdGggZD0iTTg3MiA0NzRIMTUyYy00LjQgMC04IDMuNi04IDh2NjBjMCA0LjQgMy42IDggOCA4aDcyMGM0LjQgMCA4LTMuNiA4LTh2LTYwYzAtNC40LTMuNi04LTgtOHoiIC8+PC9zdmc+) */
+const MinusOutlined_RefIcon = /*#__PURE__*/(react_production_namespaceFn().forwardRef)(MinusOutlined_MinusOutlined);
+if (false) // removed by dead control flow
+{}
+/* harmony default export */ const icons_MinusOutlined = (MinusOutlined_RefIcon);
+;// ./node_modules/@ant-design/icons-svg/es/asn/UpOutlined.js
+// This icon file is generated automatically.
+var UpOutlined = { "icon": { "tag": "svg", "attrs": { "viewBox": "64 64 896 896", "focusable": "false" }, "children": [{ "tag": "path", "attrs": { "d": "M890.5 755.3L537.9 269.2c-12.8-17.6-39-17.6-51.7 0L133.5 755.3A8 8 0 00140 768h75c5.1 0 9.9-2.5 12.9-6.6L512 369.8l284.1 391.6c3 4.1 7.8 6.6 12.9 6.6h75c6.5 0 10.3-7.4 6.5-12.7z" } }] }, "name": "up", "theme": "outlined" };
+/* harmony default export */ const asn_UpOutlined = (UpOutlined);
+
+;// ./node_modules/@ant-design/icons/es/icons/UpOutlined.js
+function UpOutlined_extends() { UpOutlined_extends = Object.assign ? Object.assign.bind() : function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; }; return UpOutlined_extends.apply(this, arguments); }
+// GENERATED BY ./scripts/generate.ts
+// DO NOT EDIT IT MANUALLY
+
+;
+
+
+const UpOutlined_UpOutlined = (props, ref) => /*#__PURE__*/(react_production_namespaceFn().createElement)(AntdIconLight, UpOutlined_extends({}, props, {
+  ref: ref,
+  icon: asn_UpOutlined
+}));
+
+/**![up](data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTAiIGhlaWdodD0iNTAiIGZpbGw9IiNjYWNhY2EiIHZpZXdCb3g9IjY0IDY0IDg5NiA4OTYiIGZvY3VzYWJsZT0iZmFsc2UiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHBhdGggZD0iTTg5MC41IDc1NS4zTDUzNy45IDI2OS4yYy0xMi44LTE3LjYtMzktMTcuNi01MS43IDBMMTMzLjUgNzU1LjNBOCA4IDAgMDAxNDAgNzY4aDc1YzUuMSAwIDkuOS0yLjUgMTIuOS02LjZMNTEyIDM2OS44bDI4NC4xIDM5MS42YzMgNC4xIDcuOCA2LjYgMTIuOSA2LjZoNzVjNi41IDAgMTAuMy03LjQgNi41LTEyLjd6IiAvPjwvc3ZnPg==) */
+const UpOutlined_RefIcon = /*#__PURE__*/(react_production_namespaceFn().forwardRef)(UpOutlined_UpOutlined);
+if (false) // removed by dead control flow
+{}
+/* harmony default export */ const icons_UpOutlined = (UpOutlined_RefIcon);
+;// ./node_modules/@rc-component/mini-decimal/es/supportUtil.js
+function supportBigInt() {
+  return typeof BigInt === 'function';
+}
+;// ./node_modules/@rc-component/mini-decimal/es/numberUtil.js
+
+
+function isEmpty(value) {
+  return !value && value !== 0 && !Number.isNaN(value) || !String(value).trim();
+}
+
+/**
+ * Format string number to readable number
+ */
+function trimNumber(numStr) {
+  var str = numStr.trim();
+  var negative = str.startsWith('-');
+  if (negative) {
+    str = str.slice(1);
+  }
+  str = str
+  // Remove decimal 0. `1.000` => `1.`, `1.100` => `1.1`
+  .replace(/(\.\d*[^0])0*$/, '$1')
+  // Remove useless decimal. `1.` => `1`
+  .replace(/\.0*$/, '')
+  // Remove integer 0. `0001` => `1`, 000.1' => `.1`
+  .replace(/^0+/, '');
+  if (str.startsWith('.')) {
+    str = "0".concat(str);
+  }
+  var trimStr = str || '0';
+  var splitNumber = trimStr.split('.');
+  var integerStr = splitNumber[0] || '0';
+  var decimalStr = splitNumber[1] || '0';
+  if (integerStr === '0' && decimalStr === '0') {
+    negative = false;
+  }
+  var negativeStr = negative ? '-' : '';
+  return {
+    negative: negative,
+    negativeStr: negativeStr,
+    trimStr: trimStr,
+    integerStr: integerStr,
+    decimalStr: decimalStr,
+    fullStr: "".concat(negativeStr).concat(trimStr)
+  };
+}
+function isE(number) {
+  var str = String(number);
+  return !Number.isNaN(Number(str)) && str.includes('e');
+}
+/**
+ * Parse a scientific-notation string into reusable parts.
+ *
+ * The idea is to split the value into mantissa and exponent first, then
+ * normalize the mantissa into sign, integer/decimal segments, and a compact
+ * digit sequence so later logic can move the decimal point without re-parsing.
+ */
+function parseScientificNotation(numStr) {
+  var _numStr$toLowerCase$s = numStr.toLowerCase().split('e'),
+    _numStr$toLowerCase$s2 = _slicedToArray(_numStr$toLowerCase$s, 2),
+    mantissa = _numStr$toLowerCase$s2[0],
+    _numStr$toLowerCase$s3 = _numStr$toLowerCase$s2[1],
+    exponent = _numStr$toLowerCase$s3 === void 0 ? '0' : _numStr$toLowerCase$s3;
+  var negative = mantissa.startsWith('-');
+  var unsignedMantissa = negative ? mantissa.slice(1) : mantissa;
+  var _unsignedMantissa$spl = unsignedMantissa.split('.'),
+    _unsignedMantissa$spl2 = _slicedToArray(_unsignedMantissa$spl, 2),
+    _unsignedMantissa$spl3 = _unsignedMantissa$spl2[0],
+    integer = _unsignedMantissa$spl3 === void 0 ? '0' : _unsignedMantissa$spl3,
+    _unsignedMantissa$spl4 = _unsignedMantissa$spl2[1],
+    decimal = _unsignedMantissa$spl4 === void 0 ? '' : _unsignedMantissa$spl4;
+  var digits = "".concat(integer).concat(decimal).replace(/^0+/, '') || '0';
+  return {
+    decimal: decimal,
+    digits: digits,
+    exponent: Number(exponent),
+    integer: integer,
+    negative: negative
+  };
+}
+
+/**
+ * Expand parsed scientific notation into a plain decimal string.
+ *
+ * The core idea is to calculate where the decimal point lands after applying
+ * the exponent, then rebuild the string by either padding zeros or inserting
+ * the decimal point inside the normalized digit sequence.
+ */
+function expandScientificNotation(parsed) {
+  var decimal = parsed.decimal,
+    digits = parsed.digits,
+    exponent = parsed.exponent,
+    integer = parsed.integer,
+    negative = parsed.negative;
+  if (digits === '0') {
+    return '0';
+  }
+  var integerDigits = integer.replace(/^0+/, '').length;
+  var leadingDecimalZeros = (decimal.match(/^0*/) || [''])[0].length;
+  var initialDecimalIndex = integerDigits || -leadingDecimalZeros;
+  var decimalIndex = initialDecimalIndex + exponent;
+  var expanded = '';
+  if (decimalIndex <= 0) {
+    expanded = "0.".concat('0'.repeat(-decimalIndex)).concat(digits);
+  } else if (decimalIndex >= digits.length) {
+    expanded = "".concat(digits).concat('0'.repeat(decimalIndex - digits.length));
+  } else {
+    expanded = "".concat(digits.slice(0, decimalIndex), ".").concat(digits.slice(decimalIndex));
+  }
+  return "".concat(negative ? '-' : '').concat(expanded);
+}
+function getScientificPrecision(parsed) {
+  if (parsed.exponent >= 0) {
+    return Math.max(0, parsed.decimal.length - parsed.exponent);
+  }
+  return Math.abs(parsed.exponent) + parsed.decimal.length;
+}
+
+/**
+ * [Legacy] Convert 1e-9 to 0.000000001.
+ * This may lose some precision if user really want 1e-9.
+ */
+function getNumberPrecision(number) {
+  var numStr = String(number);
+  if (isE(number)) {
+    return getScientificPrecision(parseScientificNotation(numStr));
+  }
+  return numStr.includes('.') && validateNumber(numStr) ? numStr.length - numStr.indexOf('.') - 1 : 0;
+}
+
+/**
+ * Convert number (includes scientific notation) to -xxx.yyy format
+ */
+function num2str(number) {
+  var numStr = String(number);
+  if (isE(number)) {
+    if (number > Number.MAX_SAFE_INTEGER) {
+      return String(supportBigInt() ? BigInt(number).toString() : Number.MAX_SAFE_INTEGER);
+    }
+    if (number < Number.MIN_SAFE_INTEGER) {
+      return String(supportBigInt() ? BigInt(number).toString() : Number.MIN_SAFE_INTEGER);
+    }
+    var parsed = parseScientificNotation(numStr);
+    var precision = getScientificPrecision(parsed);
+    numStr = precision > 100 ? expandScientificNotation(parsed) : number.toFixed(precision);
+  }
+  return trimNumber(numStr).fullStr;
+}
+function validateNumber(num) {
+  if (typeof num === 'number') {
+    return !Number.isNaN(num);
+  }
+
+  // Empty
+  if (!num) {
+    return false;
+  }
+  return (
+    // Normal type: 11.28
+    /^\s*-?\d+(\.\d+)?\s*$/.test(num) ||
+    // Pre-number: 1.
+    /^\s*-?\d+\.\s*$/.test(num) ||
+    // Post-number: .1
+    /^\s*-?\.\d+\s*$/.test(num)
+  );
+}
+;// ./node_modules/@rc-component/mini-decimal/es/BigIntDecimal.js
+
+
+
+
+var BigIntDecimal = /*#__PURE__*/function () {
+  function BigIntDecimal(value) {
+    _classCallCheck(this, BigIntDecimal);
+    _defineProperty(this, "origin", '');
+    _defineProperty(this, "negative", void 0);
+    _defineProperty(this, "integer", void 0);
+    _defineProperty(this, "decimal", void 0);
+    /** BigInt will convert `0009` to `9`. We need record the len of decimal */
+    _defineProperty(this, "decimalLen", void 0);
+    _defineProperty(this, "empty", void 0);
+    _defineProperty(this, "nan", void 0);
+    if (isEmpty(value)) {
+      this.empty = true;
+      return;
+    }
+    this.origin = String(value);
+
+    // Act like Number convert
+    if (value === '-' || Number.isNaN(value)) {
+      this.nan = true;
+      return;
+    }
+    var mergedValue = value;
+
+    // We need convert back to Number since it require `toFixed` to handle this
+    if (isE(mergedValue)) {
+      mergedValue = Number(mergedValue);
+    }
+    mergedValue = typeof mergedValue === 'string' ? mergedValue : num2str(mergedValue);
+    if (validateNumber(mergedValue)) {
+      var trimRet = trimNumber(mergedValue);
+      this.negative = trimRet.negative;
+      var numbers = trimRet.trimStr.split('.');
+      this.integer = BigInt(numbers[0]);
+      var decimalStr = numbers[1] || '0';
+      this.decimal = BigInt(decimalStr);
+      this.decimalLen = decimalStr.length;
+    } else {
+      this.nan = true;
+    }
+  }
+  _createClass(BigIntDecimal, [{
+    key: "getMark",
+    value: function getMark() {
+      return this.negative ? '-' : '';
+    }
+  }, {
+    key: "getIntegerStr",
+    value: function getIntegerStr() {
+      return this.integer.toString();
+    }
+
+    /**
+     * @private get decimal string
+     */
+  }, {
+    key: "getDecimalStr",
+    value: function getDecimalStr() {
+      return this.decimal.toString().padStart(this.decimalLen, '0');
+    }
+
+    /**
+     * @private Align BigIntDecimal with same decimal length. e.g. 12.3 + 5 = 1230000
+     * This is used for add function only.
+     */
+  }, {
+    key: "alignDecimal",
+    value: function alignDecimal(decimalLength) {
+      var str = "".concat(this.getMark()).concat(this.getIntegerStr()).concat(this.getDecimalStr().padEnd(decimalLength, '0'));
+      return BigInt(str);
+    }
+  }, {
+    key: "negate",
+    value: function negate() {
+      var clone = new BigIntDecimal(this.toString());
+      clone.negative = !clone.negative;
+      return clone;
+    }
+  }, {
+    key: "cal",
+    value: function cal(offset, calculator, calDecimalLen) {
+      var maxDecimalLength = Math.max(this.getDecimalStr().length, offset.getDecimalStr().length);
+      var myAlignedDecimal = this.alignDecimal(maxDecimalLength);
+      var offsetAlignedDecimal = offset.alignDecimal(maxDecimalLength);
+      var valueStr = calculator(myAlignedDecimal, offsetAlignedDecimal).toString();
+      var nextDecimalLength = calDecimalLen(maxDecimalLength);
+
+      // We need fill string length back to `maxDecimalLength` to avoid parser failed
+      var _trimNumber = trimNumber(valueStr),
+        negativeStr = _trimNumber.negativeStr,
+        trimStr = _trimNumber.trimStr;
+      var hydrateValueStr = "".concat(negativeStr).concat(trimStr.padStart(nextDecimalLength + 1, '0'));
+      return new BigIntDecimal("".concat(hydrateValueStr.slice(0, -nextDecimalLength), ".").concat(hydrateValueStr.slice(-nextDecimalLength)));
+    }
+  }, {
+    key: "add",
+    value: function add(value) {
+      if (this.isInvalidate()) {
+        return new BigIntDecimal(value);
+      }
+      var offset = new BigIntDecimal(value);
+      if (offset.isInvalidate()) {
+        return this;
+      }
+      return this.cal(offset, function (num1, num2) {
+        return num1 + num2;
+      }, function (len) {
+        return len;
+      });
+    }
+  }, {
+    key: "multi",
+    value: function multi(value) {
+      var target = new BigIntDecimal(value);
+      if (this.isInvalidate() || target.isInvalidate()) {
+        return new BigIntDecimal(NaN);
+      }
+      return this.cal(target, function (num1, num2) {
+        return num1 * num2;
+      }, function (len) {
+        return len * 2;
+      });
+    }
+  }, {
+    key: "isEmpty",
+    value: function isEmpty() {
+      return this.empty;
+    }
+  }, {
+    key: "isNaN",
+    value: function isNaN() {
+      return this.nan;
+    }
+  }, {
+    key: "isInvalidate",
+    value: function isInvalidate() {
+      return this.isEmpty() || this.isNaN();
+    }
+  }, {
+    key: "equals",
+    value: function equals(target) {
+      return this.toString() === (target === null || target === void 0 ? void 0 : target.toString());
+    }
+  }, {
+    key: "lessEquals",
+    value: function lessEquals(target) {
+      return this.add(target.negate().toString()).toNumber() <= 0;
+    }
+  }, {
+    key: "toNumber",
+    value: function toNumber() {
+      if (this.isNaN()) {
+        return NaN;
+      }
+      return Number(this.toString());
+    }
+  }, {
+    key: "toString",
+    value: function toString() {
+      var safe = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : true;
+      if (!safe) {
+        return this.origin;
+      }
+      if (this.isInvalidate()) {
+        return '';
+      }
+      return trimNumber("".concat(this.getMark()).concat(this.getIntegerStr(), ".").concat(this.getDecimalStr())).fullStr;
+    }
+  }]);
+  return BigIntDecimal;
+}();
+
+;// ./node_modules/@rc-component/mini-decimal/es/NumberDecimal.js
+
+
+
+
+
+/**
+ * We can remove this when IE not support anymore
+ */
+var NumberDecimal = /*#__PURE__*/function () {
+  function NumberDecimal(value) {
+    _classCallCheck(this, NumberDecimal);
+    _defineProperty(this, "origin", '');
+    _defineProperty(this, "number", void 0);
+    _defineProperty(this, "empty", void 0);
+    if (isEmpty(value)) {
+      this.empty = true;
+      return;
+    }
+    this.origin = String(value);
+    this.number = Number(value);
+  }
+  _createClass(NumberDecimal, [{
+    key: "negate",
+    value: function negate() {
+      return new NumberDecimal(-this.toNumber());
+    }
+  }, {
+    key: "add",
+    value: function add(value) {
+      if (this.isInvalidate()) {
+        return new NumberDecimal(value);
+      }
+      var target = Number(value);
+      if (Number.isNaN(target)) {
+        return this;
+      }
+      var number = this.number + target;
+
+      // [Legacy] Back to safe integer
+      if (number > Number.MAX_SAFE_INTEGER) {
+        return new NumberDecimal(Number.MAX_SAFE_INTEGER);
+      }
+      if (number < Number.MIN_SAFE_INTEGER) {
+        return new NumberDecimal(Number.MIN_SAFE_INTEGER);
+      }
+      var maxPrecision = Math.max(getNumberPrecision(this.number), getNumberPrecision(target));
+      return new NumberDecimal(number.toFixed(maxPrecision));
+    }
+  }, {
+    key: "multi",
+    value: function multi(value) {
+      var target = Number(value);
+      if (this.isInvalidate() || Number.isNaN(target)) {
+        return new NumberDecimal(NaN);
+      }
+      var number = this.number * target;
+
+      // [Legacy] Back to safe integer
+      if (number > Number.MAX_SAFE_INTEGER) {
+        return new NumberDecimal(Number.MAX_SAFE_INTEGER);
+      }
+      if (number < Number.MIN_SAFE_INTEGER) {
+        return new NumberDecimal(Number.MIN_SAFE_INTEGER);
+      }
+      var maxPrecision = Math.max(getNumberPrecision(this.number), getNumberPrecision(target));
+      return new NumberDecimal(number.toFixed(maxPrecision));
+    }
+  }, {
+    key: "isEmpty",
+    value: function isEmpty() {
+      return this.empty;
+    }
+  }, {
+    key: "isNaN",
+    value: function isNaN() {
+      return Number.isNaN(this.number);
+    }
+  }, {
+    key: "isInvalidate",
+    value: function isInvalidate() {
+      return this.isEmpty() || this.isNaN();
+    }
+  }, {
+    key: "equals",
+    value: function equals(target) {
+      return this.toNumber() === (target === null || target === void 0 ? void 0 : target.toNumber());
+    }
+  }, {
+    key: "lessEquals",
+    value: function lessEquals(target) {
+      return this.add(target.negate().toString()).toNumber() <= 0;
+    }
+  }, {
+    key: "toNumber",
+    value: function toNumber() {
+      return this.number;
+    }
+  }, {
+    key: "toString",
+    value: function toString() {
+      var safe = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : true;
+      if (!safe) {
+        return this.origin;
+      }
+      if (this.isInvalidate()) {
+        return '';
+      }
+      if (isE(this.number) && getNumberPrecision(this.number) > 100) {
+        return String(this.number);
+      }
+      return num2str(this.number);
+    }
+  }]);
+  return NumberDecimal;
+}();
+
+;// ./node_modules/@rc-component/mini-decimal/es/MiniDecimal.js
+/* eslint-disable max-classes-per-file */
+
+
+
+
+
+
+// Still support origin export
+
+function getMiniDecimal(value) {
+  // We use BigInt here.
+  // Will fallback to Number if not support.
+  if (supportBigInt()) {
+    return new BigIntDecimal(value);
+  }
+  return new NumberDecimal(value);
+}
+
+/**
+ * Align the logic of toFixed to around like 1.5 => 2.
+ * If set `cutOnly`, will just remove the over decimal part.
+ */
+function toFixed(numStr, separatorStr, precision) {
+  var cutOnly = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : false;
+  if (numStr === '') {
+    return '';
+  }
+  var _trimNumber = trimNumber(numStr),
+    negativeStr = _trimNumber.negativeStr,
+    integerStr = _trimNumber.integerStr,
+    decimalStr = _trimNumber.decimalStr;
+  var precisionDecimalStr = "".concat(separatorStr).concat(decimalStr);
+  var numberWithoutDecimal = "".concat(negativeStr).concat(integerStr);
+  if (precision >= 0) {
+    // We will get last + 1 number to check if need advanced number
+    var advancedNum = Number(decimalStr[precision]);
+    if (advancedNum >= 5 && !cutOnly) {
+      var advancedDecimal = getMiniDecimal(numStr).add("".concat(negativeStr, "0.").concat('0'.repeat(precision)).concat(10 - advancedNum));
+      return toFixed(advancedDecimal.toString(), separatorStr, precision, cutOnly);
+    }
+    if (precision === 0) {
+      return numberWithoutDecimal;
+    }
+    return "".concat(numberWithoutDecimal).concat(separatorStr).concat(decimalStr.padEnd(precision, '0').slice(0, precision));
+  }
+  if (precisionDecimalStr === '.0') {
+    return numberWithoutDecimal;
+  }
+  return "".concat(numberWithoutDecimal).concat(precisionDecimalStr);
+}
+;// ./node_modules/@rc-component/mini-decimal/es/index.js
+
+
+
+
+/* harmony default export */ const mini_decimal_es = (getMiniDecimal);
+;// ./node_modules/@rc-component/util/es/proxyObject.js
+/**
+ * Proxy object if environment supported
+ */
+function proxyObject(obj, extendProps) {
+  if (typeof Proxy !== 'undefined' && obj) {
+    return new Proxy(obj, {
+      get(target, prop) {
+        if (extendProps[prop]) {
+          return extendProps[prop];
+        }
+
+        // Proxy origin property
+        const originProp = target[prop];
+        return typeof originProp === 'function' ? originProp.bind(target) : originProp;
+      }
+    });
+  }
+  return obj;
+}
+;// ./node_modules/@rc-component/input-number/es/hooks/useCursor.js
+
+
+/**
+ * Keep input cursor in the correct position if possible.
+ * Is this necessary since we have `formatter` which may mass the content?
+ */
+function useCursor(input, focused) {
+  const selectionRef = (0,react_production_namespaceFn().useRef)(null);
+  function recordCursor() {
+    // Record position
+    try {
+      const {
+        selectionStart: start,
+        selectionEnd: end,
+        value
+      } = input;
+      const beforeTxt = value.substring(0, start);
+      const afterTxt = value.substring(end);
+      selectionRef.current = {
+        start,
+        end,
+        value,
+        beforeTxt,
+        afterTxt
+      };
+    } catch (e) {
+      // Fix error in Chrome:
+      // Failed to read the 'selectionStart' property from 'HTMLInputElement'
+      // http://stackoverflow.com/q/21177489/3040605
+    }
+  }
+
+  /**
+   * Restore logic:
+   *  1. back string same
+   *  2. start string same
+   */
+  function restoreCursor() {
+    if (input && selectionRef.current && focused) {
+      try {
+        const {
+          value
+        } = input;
+        const {
+          beforeTxt,
+          afterTxt,
+          start
+        } = selectionRef.current;
+        let startPos = value.length;
+        if (value.startsWith(beforeTxt)) {
+          startPos = beforeTxt.length;
+        } else if (value.endsWith(afterTxt)) {
+          startPos = value.length - selectionRef.current.afterTxt.length;
+        } else {
+          const beforeLastChar = beforeTxt[start - 1];
+          const newIndex = value.indexOf(beforeLastChar, start - 1);
+          if (newIndex !== -1) {
+            startPos = newIndex + 1;
+          }
+        }
+        input.setSelectionRange(startPos, startPos);
+      } catch (e) {
+        es_warning(false, `Something warning of cursor restore. Please fire issue about this: ${e.message}`);
+      }
+    }
+  }
+  return [recordCursor, restoreCursor];
+}
+;// ./node_modules/@rc-component/input-number/es/StepHandler.js
+/* eslint-disable react/no-unknown-property */
+
+
+
+
+/**
+ * When click and hold on a button - the speed of auto changing the value.
+ */
+const STEP_INTERVAL = 200;
+
+/**
+ * When click and hold on a button - the delay before auto changing the value.
+ */
+const STEP_DELAY = 600;
+function StepHandler({
+  prefixCls,
+  action,
+  children,
+  disabled,
+  className,
+  style,
+  onStep
+}) {
+  // ======================== MISC ========================
+  const isUpAction = action === 'up';
+
+  // ======================== Step ========================
+  const stepTimeoutRef = (react_production_namespaceFn().useRef)();
+  const frameIds = (react_production_namespaceFn().useRef)([]);
+  const onStopStep = () => {
+    clearTimeout(stepTimeoutRef.current);
+  };
+
+  // We will interval update step when hold mouse down
+  const onStepMouseDown = e => {
+    e.preventDefault();
+    onStopStep();
+    onStep(isUpAction, 'handler');
+
+    // Loop step for interval
+    function loopStep() {
+      onStep(isUpAction, 'handler');
+      stepTimeoutRef.current = setTimeout(loopStep, STEP_INTERVAL);
+    }
+
+    // First time press will wait some time to trigger loop step update
+    stepTimeoutRef.current = setTimeout(loopStep, STEP_DELAY);
+  };
+  (react_production_namespaceFn().useEffect)(() => () => {
+    onStopStep();
+    frameIds.current.forEach(id => {
+      es_raf.cancel(id);
+    });
+  }, []);
+
+  // ======================= Render =======================
+  const actionClassName = `${prefixCls}-action`;
+  const mergedClassName = clsx(actionClassName, `${actionClassName}-${action}`, {
+    [`${actionClassName}-${action}-disabled`]: disabled
+  }, className);
+
+  // fix: https://github.com/ant-design/ant-design/issues/43088
+  // In Safari, When we fire onmousedown and onmouseup events in quick succession,
+  // there may be a problem that the onmouseup events are executed first,
+  // resulting in a disordered program execution.
+  // So, we need to use requestAnimationFrame to ensure that the onmouseup event is executed after the onmousedown event.
+  const safeOnStopStep = () => frameIds.current.push(es_raf(onStopStep));
+  return /*#__PURE__*/(react_production_namespaceFn().createElement)("span", {
+    unselectable: "on",
+    role: "button",
+    onMouseUp: safeOnStopStep,
+    onMouseLeave: safeOnStopStep,
+    onMouseDown: e => {
+      onStepMouseDown(e);
+    },
+    "aria-label": isUpAction ? 'Increase Value' : 'Decrease Value',
+    "aria-disabled": disabled,
+    className: mergedClassName,
+    style: style
+  }, children || /*#__PURE__*/(react_production_namespaceFn().createElement)("span", {
+    unselectable: "on",
+    className: `${prefixCls}-action-${action}-inner`
+  }));
+}
+;// ./node_modules/@rc-component/input-number/es/utils/numberUtil.js
+
+function getDecupleSteps(step) {
+  const stepStr = typeof step === 'number' ? num2str(step) : trimNumber(step).fullStr;
+  const hasPoint = stepStr.includes('.');
+  if (!hasPoint) {
+    return step + '0';
+  }
+  return trimNumber(stepStr.replace(/(\d)\.(\d)/g, '$1$2.')).fullStr;
+}
+;// ./node_modules/@rc-component/input-number/es/hooks/useFrame.js
+
+
+
+/**
+ * Always trigger latest once when call multiple time
+ */
+/* harmony default export */ const useFrame = (() => {
+  const idRef = (0,react_production_namespaceFn().useRef)(0);
+  const cleanUp = () => {
+    es_raf.cancel(idRef.current);
+  };
+  (0,react_production_namespaceFn().useEffect)(() => cleanUp, []);
+  return callback => {
+    cleanUp();
+    idRef.current = es_raf(() => {
+      callback();
+    });
+  };
+});
+__webpack_require__.dn(useFrame);
+;// ./node_modules/@rc-component/input-number/es/InputNumber.js
+function InputNumber_extends() { InputNumber_extends = Object.assign ? Object.assign.bind() : function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; }; return InputNumber_extends.apply(this, arguments); }
+;
+
+
+
+
+
+
+
+
+
+
+/**
+ * We support `stringMode` which need handle correct type when user call in onChange
+ * format max or min value
+ * 1. if isInvalid return null
+ * 2. if precision is undefined, return decimal
+ * 3. format with precision
+ *    I. if max > 0, round down with precision. Example: max= 3.5, precision=0  afterFormat: 3
+ *    II. if max < 0, round up with precision. Example: max= -3.5, precision=0  afterFormat: -4
+ *    III. if min > 0, round up with precision. Example: min= 3.5, precision=0  afterFormat: 4
+ *    IV. if min < 0, round down with precision. Example: max= -3.5, precision=0  afterFormat: -3
+ */
+const getDecimalValue = (stringMode, decimalValue) => {
+  if (stringMode || decimalValue.isEmpty()) {
+    return decimalValue.toString();
+  }
+  return decimalValue.toNumber();
+};
+const getDecimalIfValidate = value => {
+  const decimal = mini_decimal_es(value);
+  return decimal.isInvalidate() ? null : decimal;
+};
+const InputNumber = /*#__PURE__*/(react_production_namespaceFn().forwardRef)((props, ref) => {
+  const {
+    mode = 'input',
+    prefixCls = 'rc-input-number',
+    className,
+    style,
+    classNames,
+    styles,
+    min,
+    max,
+    step = 1,
+    defaultValue,
+    value,
+    disabled,
+    readOnly,
+    upHandler,
+    downHandler,
+    keyboard,
+    changeOnWheel = false,
+    controls = true,
+    prefix,
+    suffix,
+    stringMode,
+    parser,
+    formatter,
+    precision,
+    decimalSeparator,
+    onChange,
+    onInput,
+    onPressEnter,
+    onStep,
+    // Mouse Events
+    onMouseDown,
+    onClick,
+    onMouseUp,
+    onMouseLeave,
+    onMouseMove,
+    onMouseEnter,
+    onMouseOut,
+    changeOnBlur = true,
+    ...restProps
+  } = props;
+  const [focus, setFocus] = (react_production_namespaceFn().useState)(false);
+  const userTypingRef = (react_production_namespaceFn().useRef)(false);
+  const compositionRef = (react_production_namespaceFn().useRef)(false);
+  const shiftKeyRef = (react_production_namespaceFn().useRef)(false);
+
+  // ============================= Refs =============================
+  const rootRef = (react_production_namespaceFn().useRef)(null);
+  const inputRef = (react_production_namespaceFn().useRef)(null);
+  (react_production_namespaceFn().useImperativeHandle)(ref, () => proxyObject(inputRef.current, {
+    focus: option => {
+      triggerFocus(inputRef.current, option);
+    },
+    blur: () => {
+      inputRef.current?.blur();
+    },
+    nativeElement: rootRef.current
+  }));
+
+  // ============================ Value =============================
+  // Real value control
+  const [decimalValue, setDecimalValue] = (react_production_namespaceFn().useState)(() => mini_decimal_es(value ?? defaultValue));
+  function setUncontrolledDecimalValue(newDecimal) {
+    if (value === undefined) {
+      setDecimalValue(newDecimal);
+    }
+  }
+
+  // ====================== Parser & Formatter ======================
+  /**
+   * `precision` is used for formatter & onChange.
+   * It will auto generate by `value` & `step`.
+   * But it will not block user typing.
+   *
+   * Note: Auto generate `precision` is used for legacy logic.
+   * We should remove this since we already support high precision with BigInt.
+   *
+   * @param number  Provide which number should calculate precision
+   * @param userTyping  Change by user typing
+   */
+  const getPrecision = (react_production_namespaceFn().useCallback)((numStr, userTyping) => {
+    if (userTyping) {
+      return undefined;
+    }
+    if (precision >= 0) {
+      return precision;
+    }
+    return Math.max(getNumberPrecision(numStr), getNumberPrecision(step));
+  }, [precision, step]);
+
+  // >>> Parser
+  const mergedParser = (react_production_namespaceFn().useCallback)(num => {
+    const numStr = String(num);
+    if (parser) {
+      return parser(numStr);
+    }
+    let parsedStr = numStr;
+    if (decimalSeparator) {
+      parsedStr = parsedStr.replace(decimalSeparator, '.');
+    }
+
+    // [Legacy] We still support auto convert `$ 123,456` to `123456`
+    return parsedStr.replace(/[^\w.-]+/g, '');
+  }, [parser, decimalSeparator]);
+
+  // >>> Formatter
+  const inputValueRef = (react_production_namespaceFn().useRef)('');
+  const mergedFormatter = (react_production_namespaceFn().useCallback)((number, userTyping) => {
+    if (formatter) {
+      return formatter(number, {
+        userTyping,
+        input: String(inputValueRef.current)
+      });
+    }
+    let str = typeof number === 'number' ? num2str(number) : number;
+
+    // User typing will not auto format with precision directly
+    if (!userTyping) {
+      const mergedPrecision = getPrecision(str, userTyping);
+      if (validateNumber(str) && (decimalSeparator || mergedPrecision >= 0)) {
+        // Separator
+        const separatorStr = decimalSeparator || '.';
+        str = toFixed(str, separatorStr, mergedPrecision);
+      }
+    }
+    return str;
+  }, [formatter, getPrecision, decimalSeparator]);
+
+  // ========================== InputValue ==========================
+  /**
+   * Input text value control
+   *
+   * User can not update input content directly. It updates with follow rules by priority:
+   *  1. controlled `value` changed
+   *    * [SPECIAL] Typing like `1.` should not immediately convert to `1`
+   *  2. User typing with format (not precision)
+   *  3. Blur or Enter trigger revalidate
+   */
+  const [inputValue, setInternalInputValue] = (react_production_namespaceFn().useState)(() => {
+    const initValue = defaultValue ?? value;
+    if (decimalValue.isInvalidate() && ['string', 'number'].includes(typeof initValue)) {
+      return Number.isNaN(initValue) ? '' : initValue;
+    }
+    return mergedFormatter(decimalValue.toString(), false);
+  });
+  inputValueRef.current = inputValue;
+
+  // Should always be string
+  function setInputValue(newValue, userTyping) {
+    setInternalInputValue(mergedFormatter(
+    // Invalidate number is sometime passed by external control, we should let it go
+    // Otherwise is controlled by internal interactive logic which check by userTyping
+    // You can ref 'show limited value when input is not focused' test for more info.
+    newValue.isInvalidate() ? newValue.toString(false) : newValue.toString(!userTyping), userTyping));
+  }
+
+  // >>> Max & Min limit
+  const maxDecimal = (react_production_namespaceFn().useMemo)(() => getDecimalIfValidate(max), [max, precision]);
+  const minDecimal = (react_production_namespaceFn().useMemo)(() => getDecimalIfValidate(min), [min, precision]);
+  const upDisabled = (react_production_namespaceFn().useMemo)(() => {
+    if (!maxDecimal || !decimalValue || decimalValue.isInvalidate()) {
+      return false;
+    }
+    return maxDecimal.lessEquals(decimalValue);
+  }, [maxDecimal, decimalValue]);
+  const downDisabled = (react_production_namespaceFn().useMemo)(() => {
+    if (!minDecimal || !decimalValue || decimalValue.isInvalidate()) {
+      return false;
+    }
+    return decimalValue.lessEquals(minDecimal);
+  }, [minDecimal, decimalValue]);
+
+  // Cursor controller
+  const [recordCursor, restoreCursor] = useCursor(inputRef.current, focus);
+
+  // ============================= Data =============================
+  /**
+   * Find target value closet within range.
+   * e.g. [11, 28]:
+   *    3  => 11
+   *    23 => 23
+   *    99 => 28
+   */
+  const getRangeValue = target => {
+    // target > max
+    if (maxDecimal && !target.lessEquals(maxDecimal)) {
+      return maxDecimal;
+    }
+
+    // target < min
+    if (minDecimal && !minDecimal.lessEquals(target)) {
+      return minDecimal;
+    }
+    return null;
+  };
+
+  /**
+   * Check value is in [min, max] range
+   */
+  const isInRange = target => !getRangeValue(target);
+
+  /**
+   * Trigger `onChange` if value validated and not equals of origin.
+   * Return the value that re-align in range.
+   */
+  const triggerValueUpdate = (newValue, userTyping) => {
+    let updateValue = newValue;
+    let isRangeValidate = isInRange(updateValue) || updateValue.isEmpty();
+
+    // Skip align value when trigger value is empty.
+    // We just trigger onChange(null)
+    // This should not block user typing
+    if (!updateValue.isEmpty() && !userTyping) {
+      // Revert value in range if needed
+      updateValue = getRangeValue(updateValue) || updateValue;
+      isRangeValidate = true;
+    }
+    if (!readOnly && !disabled && isRangeValidate) {
+      const numStr = updateValue.toString();
+      const mergedPrecision = getPrecision(numStr, userTyping);
+      if (mergedPrecision >= 0) {
+        updateValue = mini_decimal_es(toFixed(numStr, '.', mergedPrecision));
+
+        // When to fixed. The value may out of min & max range.
+        // 4 in [0, 3.8] => 3.8 => 4 (toFixed)
+        if (!isInRange(updateValue)) {
+          updateValue = mini_decimal_es(toFixed(numStr, '.', mergedPrecision, true));
+        }
+      }
+
+      // Trigger event
+      if (!updateValue.equals(decimalValue)) {
+        setUncontrolledDecimalValue(updateValue);
+        onChange?.(updateValue.isEmpty() ? null : getDecimalValue(stringMode, updateValue));
+
+        // Reformat input if value is not controlled
+        if (value === undefined) {
+          setInputValue(updateValue, userTyping);
+        }
+      }
+      return updateValue;
+    }
+    return decimalValue;
+  };
+
+  // ========================== User Input ==========================
+  const onNextPromise = useFrame();
+
+  // >>> Collect input value
+  const collectInputValue = inputStr => {
+    recordCursor();
+
+    // Update inputValue in case input can not parse as number
+    // Refresh ref value immediately since it may used by formatter
+    inputValueRef.current = inputStr;
+    setInternalInputValue(inputStr);
+
+    // Parse number
+    if (!compositionRef.current) {
+      const finalValue = mergedParser(inputStr);
+      const finalDecimal = mini_decimal_es(finalValue);
+      if (!finalDecimal.isNaN()) {
+        triggerValueUpdate(finalDecimal, true);
+      }
+    }
+
+    // Trigger onInput later to let user customize value if they want to handle something after onChange
+    onInput?.(inputStr);
+
+    // optimize for chinese input experience
+    // https://github.com/ant-design/ant-design/issues/8196
+    onNextPromise(() => {
+      let nextInputStr = inputStr;
+      if (!parser) {
+        nextInputStr = inputStr.replace(/。/g, '.');
+      }
+      if (nextInputStr !== inputStr) {
+        collectInputValue(nextInputStr);
+      }
+    });
+  };
+
+  // >>> Composition
+  const onCompositionStart = () => {
+    compositionRef.current = true;
+  };
+  const onCompositionEnd = () => {
+    compositionRef.current = false;
+    collectInputValue(inputRef.current.value);
+  };
+
+  // >>> Input
+  const onInternalInput = e => {
+    collectInputValue(e.target.value);
+  };
+
+  // ============================= Step =============================
+  const onInternalStep = hooks_useEvent((up, emitter) => {
+    // Ignore step since out of range
+    if (up && upDisabled || !up && downDisabled) {
+      return;
+    }
+
+    // Clear typing status since it may be caused by up & down key.
+    // We should sync with input value.
+    userTypingRef.current = false;
+    let stepDecimal = mini_decimal_es(shiftKeyRef.current ? getDecupleSteps(step) : step);
+    if (!up) {
+      stepDecimal = stepDecimal.negate();
+    }
+    const target = (decimalValue || mini_decimal_es(0)).add(stepDecimal.toString());
+    const updatedValue = triggerValueUpdate(target, false);
+    onStep?.(getDecimalValue(stringMode, updatedValue), {
+      offset: shiftKeyRef.current ? getDecupleSteps(step) : step,
+      type: up ? 'up' : 'down',
+      emitter
+    });
+    inputRef.current?.focus();
+  });
+
+  // ============================ Flush =============================
+  /**
+   * Flush current input content to trigger value change & re-formatter input if needed.
+   * This will always flush input value for update.
+   * If it's invalidate, will fallback to last validate value.
+   */
+  const flushInputValue = userTyping => {
+    const parsedValue = mini_decimal_es(mergedParser(inputValue));
+    let formatValue;
+    if (!parsedValue.isNaN()) {
+      // Only validate value or empty value can be re-fill to inputValue
+      // Reassign the formatValue within ranged of trigger control
+      formatValue = triggerValueUpdate(parsedValue, userTyping);
+    } else {
+      formatValue = triggerValueUpdate(decimalValue, userTyping);
+    }
+    if (value !== undefined) {
+      // Reset back with controlled value first
+      setInputValue(decimalValue, false);
+    } else if (!formatValue.isNaN()) {
+      // Reset input back since no validate value
+      setInputValue(formatValue, false);
+    }
+  };
+
+  // Solve the issue of the event triggering sequence when entering numbers in chinese input (Safari)
+  const onBeforeInput = () => {
+    userTypingRef.current = true;
+  };
+  const onKeyDown = event => {
+    const {
+      key,
+      shiftKey
+    } = event;
+    userTypingRef.current = true;
+    shiftKeyRef.current = shiftKey;
+    if (key === 'Enter') {
+      if (!compositionRef.current) {
+        userTypingRef.current = false;
+      }
+      flushInputValue(false);
+      onPressEnter?.(event);
+    }
+    if (keyboard === false) {
+      return;
+    }
+
+    // Do step
+    if (!compositionRef.current && ['Up', 'ArrowUp', 'Down', 'ArrowDown'].includes(key)) {
+      onInternalStep(key === 'Up' || key === 'ArrowUp', 'keyboard');
+      event.preventDefault();
+    }
+  };
+  const onKeyUp = () => {
+    userTypingRef.current = false;
+    shiftKeyRef.current = false;
+  };
+  (react_production_namespaceFn().useEffect)(() => {
+    if (changeOnWheel && focus) {
+      const onWheel = event => {
+        // moving mouse wheel rises wheel event with deltaY < 0
+        // scroll value grows from top to bottom, as screen Y coordinate
+        onInternalStep(event.deltaY < 0, 'wheel');
+        event.preventDefault();
+      };
+      const input = inputRef.current;
+      if (input) {
+        // React onWheel is passive and we can't preventDefault() in it.
+        // That's why we should subscribe with DOM listener
+        // https://stackoverflow.com/questions/63663025/react-onwheel-handler-cant-preventdefault-because-its-a-passive-event-listenev
+        input.addEventListener('wheel', onWheel, {
+          passive: false
+        });
+        return () => input.removeEventListener('wheel', onWheel);
+      }
+    }
+  });
+
+  // >>> Focus & Blur
+  const onBlur = () => {
+    if (changeOnBlur) {
+      flushInputValue(false);
+    }
+    setFocus(false);
+    userTypingRef.current = false;
+  };
+
+  // >>> Mouse events
+  const onInternalMouseDown = event => {
+    if (inputRef.current && event.target !== inputRef.current) {
+      inputRef.current.focus();
+      event.preventDefault();
+    }
+    onMouseDown?.(event);
+  };
+
+  // ========================== Controlled ==========================
+  // Input by precision & formatter
+  useLayoutUpdateEffect(() => {
+    if (!decimalValue.isInvalidate()) {
+      setInputValue(decimalValue, false);
+    }
+  }, [precision, formatter]);
+
+  // Input by value
+  useLayoutUpdateEffect(() => {
+    const newValue = mini_decimal_es(value);
+    setDecimalValue(newValue);
+    const currentParsedValue = mini_decimal_es(mergedParser(inputValue));
+
+    // When user typing from `1.2` to `1.`, we should not convert to `1` immediately.
+    // But let it go if user set `formatter`
+    if (!newValue.equals(currentParsedValue) || !userTypingRef.current || formatter) {
+      // Update value as effect
+      setInputValue(newValue, userTypingRef.current);
+    }
+  }, [value]);
+
+  // ============================ Cursor ============================
+  useLayoutUpdateEffect(() => {
+    if (formatter) {
+      restoreCursor();
+    }
+  }, [inputValue]);
+
+  // ============================ Render ============================
+  // >>>>>> Handler
+  const sharedHandlerProps = {
+    prefixCls,
+    onStep: onInternalStep,
+    className: classNames?.action,
+    style: styles?.action
+  };
+  const upNode = /*#__PURE__*/(react_production_namespaceFn().createElement)(StepHandler, InputNumber_extends({}, sharedHandlerProps, {
+    action: "up",
+    disabled: upDisabled
+  }), upHandler);
+  const downNode = /*#__PURE__*/(react_production_namespaceFn().createElement)(StepHandler, InputNumber_extends({}, sharedHandlerProps, {
+    action: "down",
+    disabled: downDisabled
+  }), downHandler);
+
+  // >>>>>> Render
+  return /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
+    ref: rootRef,
+    className: clsx(prefixCls, `${prefixCls}-mode-${mode}`, className, classNames?.root, {
+      [`${prefixCls}-focused`]: focus,
+      [`${prefixCls}-disabled`]: disabled,
+      [`${prefixCls}-readonly`]: readOnly,
+      [`${prefixCls}-not-a-number`]: decimalValue.isNaN(),
+      [`${prefixCls}-out-of-range`]: !decimalValue.isInvalidate() && !isInRange(decimalValue)
+    }),
+    style: {
+      ...styles?.root,
+      ...style
+    },
+    onMouseDown: onInternalMouseDown,
+    onMouseUp: onMouseUp,
+    onMouseLeave: onMouseLeave,
+    onMouseMove: onMouseMove,
+    onMouseEnter: onMouseEnter,
+    onMouseOut: onMouseOut,
+    onClick: onClick,
+    onFocus: () => {
+      setFocus(true);
+    },
+    onBlur: onBlur,
+    onKeyDown: onKeyDown,
+    onKeyUp: onKeyUp,
+    onCompositionStart: onCompositionStart,
+    onCompositionEnd: onCompositionEnd,
+    onBeforeInput: onBeforeInput
+  }, mode === 'spinner' && controls && downNode, prefix !== undefined && /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
+    className: clsx(`${prefixCls}-prefix`, classNames?.prefix),
+    style: styles?.prefix
+  }, prefix), /*#__PURE__*/(react_production_namespaceFn().createElement)("input", InputNumber_extends({
+    autoComplete: "off",
+    role: "spinbutton",
+    "aria-valuemin": min,
+    "aria-valuemax": max,
+    "aria-valuenow": decimalValue.isInvalidate() ? null : decimalValue.toString(),
+    step: step,
+    ref: inputRef,
+    className: clsx(`${prefixCls}-input`, classNames?.input),
+    style: styles?.input,
+    value: inputValue,
+    onChange: onInternalInput,
+    disabled: disabled,
+    readOnly: readOnly
+  }, restProps)), suffix !== undefined && /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
+    className: clsx(`${prefixCls}-suffix`, classNames?.suffix),
+    style: styles?.suffix
+  }, suffix), mode === 'spinner' && controls && upNode, mode === 'input' && controls && /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
+    className: clsx(`${prefixCls}-actions`, classNames?.actions),
+    style: styles?.actions
+  }, upNode, downNode));
+});
+if (false) // removed by dead control flow
+{}
+/* harmony default export */ const es_InputNumber = (InputNumber);
+;// ./node_modules/@rc-component/input-number/es/index.js
+
+/* harmony default export */ const input_number_es = (es_InputNumber);
+;// ./node_modules/antd/es/input-number/style/token.js
+
+
+const style_token_prepareComponentToken = token => {
+  const handleVisible = token.handleVisible ?? 'auto';
+  const handleWidth = token.controlHeightSM - token.lineWidth * 2;
+  return {
+    ...initComponentToken(token),
+    controlWidth: 90,
+    handleWidth,
+    handleFontSize: token.fontSize / 2,
+    handleVisible,
+    handleActiveBg: token.colorFillAlter,
+    handleBg: token.colorBgContainer,
+    filledHandleBg: new FastColor(token.colorFillSecondary).onBackground(token.colorBgContainer).toHexString(),
+    handleHoverColor: token.colorPrimary,
+    handleBorderColor: token.colorBorder,
+    handleOpacity: handleVisible === true ? 1 : 0,
+    handleVisibleWidth: handleVisible === true ? handleWidth : 0
+  };
+};
+;// ./node_modules/antd/es/input-number/style/index.js
+
+
+
+
+
+
+
+
+const genInputNumberStyles = token => {
+  const {
+    componentCls,
+    lineWidth,
+    lineType,
+    borderRadius,
+    inputFontSizeSM,
+    inputFontSizeLG,
+    colorError,
+    paddingInlineSM,
+    paddingBlockSM,
+    paddingBlockLG,
+    paddingInlineLG,
+    colorIcon,
+    colorTextDisabled,
+    motionDurationMid,
+    handleHoverColor,
+    handleOpacity,
+    paddingInline,
+    paddingBlock,
+    handleBg,
+    handleActiveBg,
+    inputAffixPadding,
+    borderRadiusSM,
+    controlWidth,
+    handleBorderColor,
+    filledHandleBg,
+    lineHeightLG,
+    antCls
+  } = token;
+  const borderStyle = `${util_unit(lineWidth)} ${lineType} ${handleBorderColor}`;
+  const [varName, varRef] = genCssVar(antCls, 'input-number');
+  return [
+  // ==========================================================
+  // ==                         Base                         ==
+  // ==========================================================
+  {
+    [componentCls]: {
+      ...resetComponent(token),
+      ...genBasicInputStyle(token),
+      [varName('input-padding-block')]: util_unit(paddingBlock),
+      [varName('input-padding-inline')]: util_unit(paddingInline),
+      display: 'inline-flex',
+      width: controlWidth,
+      margin: 0,
+      paddingBlock: 0,
+      borderRadius,
+      // ======================= Variants =======================
+      ...genOutlinedStyle(token, {
+        [`${componentCls}-actions`]: {
+          background: handleBg,
+          [`${componentCls}-action-down`]: {
+            borderBlockStart: borderStyle
+          }
+        }
+      }),
+      ...genFilledStyle(token, {
+        [`${componentCls}-actions`]: {
+          background: filledHandleBg,
+          [`${componentCls}-action-down`]: {
+            borderBlockStart: borderStyle
+          }
+        },
+        '&:focus-within': {
+          [`${componentCls}-actions`]: {
+            background: handleBg
+          }
+        }
+      }),
+      ...genUnderlinedStyle(token, {
+        [`${componentCls}-actions`]: {
+          background: handleBg,
+          [`${componentCls}-action-down`]: {
+            borderBlockStart: borderStyle
+          }
+        }
+      }),
+      ...genBorderlessStyle(token),
+      // InputNumber 两层结构：borderless 补偿只加在内层 input 的 CSS 变量上，避免外层+内层双重 padding 导致高度异常
+      [`&${componentCls}-borderless`]: {
+        paddingBlock: 0,
+        [varName('input-padding-block')]: util_unit(token.calc(paddingBlock).add(lineWidth).equal())
+      },
+      [`&${componentCls}-borderless${componentCls}-sm`]: {
+        paddingBlock: 0,
+        [varName('input-padding-block')]: util_unit(token.calc(paddingBlockSM).add(lineWidth).equal())
+      },
+      [`&${componentCls}-borderless${componentCls}-lg`]: {
+        paddingBlock: 0,
+        [varName('input-padding-block')]: util_unit(token.calc(paddingBlockLG).add(lineWidth).equal())
+      },
+      // ========================= RTL ==========================
+      '&-rtl': {
+        direction: 'rtl',
+        [`${componentCls}-input`]: {
+          direction: 'rtl'
+        }
+      },
+      // ===================== Out Of Range =====================
+      [`&${componentCls}-out-of-range`]: {
+        [`${componentCls}-input`]: {
+          color: colorError
+        }
+      },
+      // ======================== Input =========================
+      [`${componentCls}-input`]: {
+        ...resetComponent(token),
+        width: '100%',
+        paddingBlock: varRef('input-padding-block'),
+        textAlign: 'start',
+        backgroundColor: 'transparent',
+        border: 0,
+        borderRadius: 0,
+        outline: 0,
+        transition: `all ${motionDurationMid} linear`,
+        appearance: 'textfield',
+        fontSize: 'inherit',
+        lineHeight: 'inherit',
+        ...genPlaceholderStyle(token.colorTextPlaceholder),
+        '&[type="number"]::-webkit-inner-spin-button, &[type="number"]::-webkit-outer-spin-button': {
+          margin: 0,
+          appearance: 'none'
+        }
+      },
+      [`&:hover ${componentCls}-handler-wrap, &-focused ${componentCls}-handler-wrap`]: {
+        width: token.handleWidth,
+        opacity: 1
+      },
+      // ======================= Disabled =======================
+      [`&-disabled ${componentCls}-input`]: {
+        cursor: 'not-allowed',
+        color: token.colorTextDisabled
+      }
+    }
+  },
+  // ==========================================================
+  // ==                        Action                        ==
+  // ==========================================================
+  {
+    [componentCls]: {
+      // ======================= Shared =======================
+      [`${componentCls}-action`]: {
+        ...resetIcon(),
+        userSelect: 'none',
+        overflow: 'hidden',
+        fontWeight: 'bold',
+        lineHeight: 0,
+        textAlign: 'center',
+        cursor: 'pointer',
+        transition: `all ${motionDurationMid} linear`,
+        // Active: change background not disabled only;
+        [`&:active:not(${componentCls}-action-up-disabled):not(${componentCls}-action-down-disabled)`]: {
+          background: handleActiveBg
+        },
+        // Hover: change color not disabled only;
+        [`&:hover:not(${componentCls}-action-up-disabled):not(${componentCls}-action-down-disabled)`]: {
+          color: handleHoverColor
+        },
+        [`&${componentCls}-action-up-disabled, &${componentCls}-action-down-disabled`]: {
+          cursor: 'not-allowed',
+          color: colorTextDisabled
+        }
+      },
+      // ===================== Input Mode =====================
+      '&-mode-input': {
+        overflow: 'hidden',
+        [`${componentCls}-actions`]: {
+          position: 'absolute',
+          insetBlockStart: 0,
+          insetInlineEnd: 0,
+          width: token.handleVisibleWidth,
+          opacity: handleOpacity,
+          height: '100%',
+          borderRadius: 0,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'stretch',
+          transition: `all ${motionDurationMid}`,
+          overflow: 'hidden',
+          // Fix input number inside Menu makes icon too large
+          // We arise the selector priority by nest selector here
+          // https://github.com/ant-design/ant-design/issues/14367
+          [`${componentCls}-action`]: {
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flex: 'auto',
+            height: '40%',
+            marginInlineEnd: 0,
+            fontSize: token.handleFontSize
+          }
+        },
+        [`&:hover ${componentCls}-actions, &-focused ${componentCls}-actions`]: {
+          width: token.handleWidth,
+          opacity: 1
+        },
+        [`${componentCls}-action`]: {
+          color: colorIcon,
+          height: '50%',
+          borderInlineStart: borderStyle,
+          // Hover: change height not disabled only;
+          [`&:hover:not(${componentCls}-action-up-disabled):not(${componentCls}-action-down-disabled)`]: {
+            height: `60%`
+          }
+        },
+        [`&${componentCls}-disabled, &${componentCls}-readonly`]: {
+          [`${componentCls}-actions`]: {
+            display: 'none'
+          }
+        }
+      },
+      // ==================== Spinner Mode ====================
+      [`&${componentCls}-mode-spinner`]: {
+        padding: 0,
+        width: 'auto',
+        [`${componentCls}-action`]: {
+          flex: 'none',
+          paddingInline: varRef('input-padding-inline'),
+          '&-up': {
+            borderInlineStart: borderStyle
+          },
+          '&-down': {
+            borderInlineEnd: borderStyle
+          }
+        },
+        [`${componentCls}-input`]: {
+          textAlign: 'center',
+          paddingInline: varRef('input-padding-inline')
+        }
+      }
+    }
+  },
+  // ==========================================================
+  // ==                         Size                         ==
+  // ==========================================================
+  {
+    [componentCls]: {
+      '&-lg': {
+        [varName('input-padding-block')]: util_unit(paddingBlockLG),
+        [varName('input-padding-inline')]: util_unit(paddingInlineLG),
+        paddingBlock: 0,
+        fontSize: inputFontSizeLG,
+        lineHeight: lineHeightLG
+      },
+      '&-sm': {
+        [varName('input-padding-block')]: util_unit(paddingBlockSM),
+        [varName('input-padding-inline')]: util_unit(paddingInlineSM),
+        paddingBlock: 0,
+        fontSize: inputFontSizeSM,
+        borderRadius: borderRadiusSM
+      }
+    }
+  },
+  // ==========================================================
+  // ==                      Pre/Suffix                      ==
+  // ==========================================================
+  {
+    [componentCls]: {
+      [`${componentCls}-prefix, ${componentCls}-suffix`]: {
+        display: 'flex',
+        flex: 'none',
+        alignItems: 'center',
+        alignSelf: 'center',
+        pointerEvents: 'none'
+      },
+      [`${componentCls}-prefix`]: {
+        marginInlineEnd: inputAffixPadding
+      },
+      [`${componentCls}-suffix`]: {
+        height: '100%',
+        marginInlineStart: inputAffixPadding,
+        transition: `margin ${motionDurationMid}`
+      },
+      [`&:hover:not(${componentCls}-without-controls)`]: {
+        [`${componentCls}-suffix`]: {
+          marginInlineEnd: token.handleWidth
+        }
+      }
+    }
+  }];
+};
+const genCompatibleStyles = token => {
+  const {
+    componentCls,
+    antCls
+  } = token;
+  return {
+    [`${componentCls}-addon`]: {
+      [`&:has(${antCls}-select)`]: {
+        border: 0,
+        padding: 0
+      }
+    }
+  };
+};
+/* harmony default export */ const input_number_style = (genStyleHooks('InputNumber', token => {
+  const inputNumberToken = statistic_merge(token, initInputToken(token));
+  return [genInputNumberStyles(inputNumberToken), genCompatibleStyles(inputNumberToken),
+  // =====================================================
+  // ==             Space Compact                       ==
+  // =====================================================
+  genCompactItemStyle(inputNumberToken)];
+}, style_token_prepareComponentToken, {
+  unitless: {
+    handleOpacity: true
+  },
+  resetFont: false
+}));
+;// ./node_modules/antd/es/input-number/index.js
+"use client";
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+const InternalInputNumber = /*#__PURE__*/(react_production_namespaceFn().forwardRef)((props, ref) => {
+  const inputRef = (react_production_namespaceFn().useRef)(null);
+  (react_production_namespaceFn().useImperativeHandle)(ref, () => inputRef.current);
+  const {
+    rootClassName,
+    size: customizeSize,
+    disabled: customDisabled,
+    prefixCls,
+    addonBefore: _addonBefore,
+    addonAfter: _addonAfter,
+    prefix,
+    suffix,
+    bordered,
+    readOnly,
+    status,
+    controls = true,
+    variant: customVariant,
+    className,
+    style,
+    classNames,
+    styles,
+    mode,
+    ...others
+  } = props;
+  const {
+    direction,
+    className: contextClassName,
+    style: contextStyle,
+    styles: contextStyles,
+    classNames: contextClassNames
+  } = useComponentConfig('inputNumber');
+  // ===================== Disabled =====================
+  const disabled = (react_production_namespaceFn().useContext)(config_provider_DisabledContext);
+  const mergedDisabled = customDisabled ?? disabled;
+  // controls && !mergedDisabled && !readOnly;
+  const mergedControls = (react_production_namespaceFn().useMemo)(() => {
+    if (!controls || mergedDisabled || readOnly) {
+      return false;
+    }
+    return controls;
+  }, [controls, mergedDisabled, readOnly]);
+  const {
+    compactSize,
+    compactItemClassnames
+  } = useCompactItemContext(prefixCls, direction);
+  let upIcon = mode === 'spinner' ? /*#__PURE__*/(react_production_namespaceFn().createElement)(icons_PlusOutlined, null) : /*#__PURE__*/(react_production_namespaceFn().createElement)(icons_UpOutlined, null);
+  let downIcon = mode === 'spinner' ? /*#__PURE__*/(react_production_namespaceFn().createElement)(icons_MinusOutlined, null) : /*#__PURE__*/(react_production_namespaceFn().createElement)(icons_DownOutlined, null);
+  const controlsTemp = typeof mergedControls === 'boolean' ? mergedControls : undefined;
+  if (isPlainObject(mergedControls)) {
+    upIcon = mergedControls.upIcon || upIcon;
+    downIcon = mergedControls.downIcon || downIcon;
+  }
+  const {
+    hasFeedback,
+    isFormItemInput,
+    feedbackIcon
+  } = (react_production_namespaceFn().useContext)(FormItemInputContext);
+  const mergedSize = hooks_useSize(ctx => customizeSize ?? compactSize ?? ctx);
+  const [variant, enableVariantCls] = useVariants('inputNumber', customVariant, bordered);
+  const suffixNode = (hasFeedback || suffix) && (/*#__PURE__*/(react_production_namespaceFn().createElement)((react_production_namespaceFn().Fragment), null, suffix, hasFeedback && feedbackIcon));
+  // =========== Merged Props for Semantic ==========
+  const mergedProps = {
+    ...props,
+    size: mergedSize,
+    disabled: mergedDisabled,
+    controls: mergedControls
+  };
+  const contextStyleRoot = useSemanticRootStyle(contextStyle);
+  const styleRoot = useSemanticRootStyle(style);
+  const [mergedClassNames, mergedStyles] = useMergeSemantic([contextClassNames, classNames], [contextStyles, contextStyleRoot, styles, styleRoot], {
+    props: mergedProps
+  });
+  return /*#__PURE__*/(react_production_namespaceFn().createElement)(input_number_es, {
+    ref: inputRef,
+    mode: mode,
+    disabled: mergedDisabled,
+    className: clsx(className, rootClassName, mergedClassNames.root, contextClassName, compactItemClassnames, getStatusClassNames(prefixCls, status, hasFeedback), {
+      [`${prefixCls}-${variant}`]: enableVariantCls,
+      [`${prefixCls}-lg`]: mergedSize === 'large',
+      [`${prefixCls}-sm`]: mergedSize === 'small',
+      [`${prefixCls}-rtl`]: direction === 'rtl',
+      [`${prefixCls}-in-form-item`]: isFormItemInput,
+      [`${prefixCls}-without-controls`]: !mergedControls
+    }),
+    style: mergedStyles.root,
+    upHandler: upIcon,
+    downHandler: downIcon,
+    prefixCls: prefixCls,
+    readOnly: readOnly,
+    controls: controlsTemp,
+    prefix: prefix,
+    suffix: suffixNode,
+    classNames: mergedClassNames,
+    styles: mergedStyles,
+    ...others
+  });
+});
+// ===================================================================
+// ==                          InputNumber                          ==
+// ===================================================================
+const input_number_InputNumber = /*#__PURE__*/(react_production_namespaceFn().forwardRef)((props, ref) => {
+  const {
+    addonBefore,
+    addonAfter,
+    prefixCls: customizePrefixCls,
+    className,
+    status: customStatus,
+    rootClassName,
+    ...rest
+  } = props;
+  const {
+    getPrefixCls
+  } = useComponentConfig('inputNumber');
+  const prefixCls = getPrefixCls('input-number', customizePrefixCls);
+  const {
+    status: contextStatus
+  } = (react_production_namespaceFn().useContext)(FormItemInputContext);
+  const mergedStatus = getMergedStatus(contextStatus, customStatus);
+  const rootCls = hooks_useCSSVarCls(prefixCls);
+  const [hashId, cssVarCls] = input_number_style(prefixCls, rootCls);
+  const hasLegacyAddon = addonBefore || addonAfter;
+  // ======================= Warn =======================
+  if (false) // removed by dead control flow
+{}
+  // ====================== Render ======================
+  const inputNumberNode = /*#__PURE__*/(react_production_namespaceFn().createElement)(InternalInputNumber, {
+    ref: ref,
+    ...rest,
+    prefixCls: prefixCls,
+    status: mergedStatus,
+    className: clsx(cssVarCls, rootCls, hashId, className),
+    rootClassName: !hasLegacyAddon ? rootClassName : undefined
+  });
+  if (hasLegacyAddon) {
+    const renderAddon = node => {
+      if (!node) {
+        return null;
+      }
+      return /*#__PURE__*/(react_production_namespaceFn().createElement)(Addon, {
+        className: clsx(`${prefixCls}-addon`, cssVarCls, hashId),
+        variant: props.variant,
+        disabled: props.disabled,
+        status: mergedStatus
+      }, /*#__PURE__*/(react_production_namespaceFn().createElement)(_util_ContextIsolator, {
+        form: true
+      }, node));
+    };
+    const addonBeforeNode = renderAddon(addonBefore);
+    const addonAfterNode = renderAddon(addonAfter);
+    return /*#__PURE__*/(react_production_namespaceFn().createElement)(space_Compact, {
+      rootClassName: rootClassName
+    }, addonBeforeNode, inputNumberNode, addonAfterNode);
+  }
+  return inputNumberNode;
+});
+const TypedInputNumber = input_number_InputNumber;
+/** @private Internal Component. Do not use in your production. */
+const PureInputNumber = props => (/*#__PURE__*/(react_production_namespaceFn().createElement)(config_provider, {
+  theme: {
+    components: {
+      InputNumber: {
+        handleVisible: true
+      }
+    }
+  }
+}, /*#__PURE__*/(react_production_namespaceFn().createElement)(input_number_InputNumber, {
+  ...props
+})));
+if (false) // removed by dead control flow
+{}
+TypedInputNumber._InternalPanelDoNotUseOrYouWillBeFired = PureInputNumber;
+/* harmony default export */ const input_number = (TypedInputNumber);
+;// ./src/lib/ui/panelIds.ts
+/**
+ * 本脚本 UI 的共享常量。
+ * 单独成文件是为了让 uiReset（样式隔离）与 panelHost（宿主/挂载）都能引用，
+ * 避免两者互相 import 形成循环依赖。
+ */
+/** 面板宿主元素 id */
+const PANEL_HOST_ID = '__znhd_panel_host__';
+/**
+ * 浮层宿主元素 id（antd 弹窗/抽屉的 portal 容器，见 panelHost 的 `getOverlayContainer`）。
+ *
+ * ⚠️ **为什么定义在这里而不是 panelHost.tsx**（v26.10.10-v4 修）：
+ * 原先它是 panelHost 顶层的 `const`。MainPanel → SniffModal → panelHost 存在真实的循环 import
+ * （panelHost → PanelApp → MainPanel），webpack 按依赖顺序求值时 SniffModal 的**模块级常量**
+ * `SNIFF_EXCLUDE_SELECTOR` 会先读到这里 → 运行时报
+ * `Uncaught ReferenceError: Cannot access 'OVERLAY_HOST_ID' before initialization`（TDZ），整个脚本启动即挂。
+ * 放到 panelIds 这个**叶子模块**（uiReset/panelHost 都只 import 它、它不 import 任何东西）才是根治；
+ * 与 PANEL_HOST_ID 当初「单独成文件避免循环依赖」是同一个理由。
+ * panelHost 仍转出该常量，保持既有 import 路径可用。
+ */
+const OVERLAY_HOST_ID = '__znhd_overlay_host__';
+/**
+ * 主面板宽度（px）。
+ *
+ * v26.10.07-v3 按用户要求**缩到原来的 70%**（340 → 238）。
+ * 放在这里而不是 MainPanel 内部，是因为 panelHost 的 `initialPoint()` 也要用它做初始坐标粗裁剪 ——
+ * 若两边各写一份字面量，改宽度时必漏一处，表现为「存档在右侧的面板每次加载都往左漂」
+ * （旧代码就是硬编码 340，见 panelHost 的 initialPoint）。
+ */
+const PANEL_WIDTH = 238;
+
+;// ./src/lib/sniffer.ts
+/**
+ * 网页图片嗅探（v26.10.10-v4 新增，配合 `ui/SniffModal.tsx`）。
+ *
+ * 目标：把**当前页面上的图片**收集起来，让用户能「下载」或「打印」，等价于暴力猴图片提取脚本
+ * （参考 52pojie 的《SVG & 图片 & 视频资源提取器》），但按本仓库的约束做了三处裁剪：
+ *   1. **只要图片，不要视频**（扩展名黑名单 + Content-Type 判定 + 资源表 initiatorType 三重排除）；
+ *   2. 默认**只展示 ≧ 阈值（默认 20KB）**的图，未知大小的单独折叠保留（用户 2026-10-10 拍板）；
+ *   3. **不对宿主页打任何桩**：不 patch fetch / XMLHttpRequest / URL.createObjectURL，不注入样式，
+ *      只读 DOM、读计算样式、读 performance 资源表 —— 税务页是生产页面，任何侵入都可能影响报税。
+ *      代价是「页面用 fetch/XHR 自己下载、且从未进过 DOM 的图」抓不到（v1 明确不做，见 CHANGELOG）。
+ *
+ * 三路来源（同一张图会合并、按归一化 URL 去重，sources 记录它从哪几路来）：
+ *   · dom  —— <img>（currentSrc / src / srcset 取最大档 / data-* 懒加载属性）+ <picture><source>；
+ *   · svg  —— 内联 <svg>（序列化成 data: URL，见下方「内联 SVG」说明）；
+ *   · css  —— 所有元素的 background-image（getComputedStyle 全量遍历，元素数有上限防卡死）；
+ *   · perf —— performance.getEntriesByType('resource')（能拿到已移出 DOM 的图；⚠️ 默认缓冲区只有
+ *            250 条，且只覆盖「已经开始加载」的资源，故只当加分项，不作为唯一来源）。
+ *
+ * 尺寸测量阶梯（先命中先用，见 probeOne）：
+ *   kind==='data' → 本地按 base64/百分号编码算字节；kind==='svg' → 序列化文本的 UTF-8 字节；
+ *   kind==='blob' → 页面上下文 fetch(blob:) 拿真实字节与 MIME（CSP 拦截就退回未知）；
+ *   资源表 encodedBodySize > 0 → 直接用（零成本、绝对准确）；
+ *   GM_xmlhttpRequest HEAD → content-length / content-type；
+ *   仍无 → GM_xmlhttpRequest GET + 'Range: bytes=0-0' → content-range 的 total；
+ *           服务器忽略 Range（回 200 整份）时用返回 Blob 的 size；
+ *   全失败 → size=null（UI 显示「大小未知」并保留，不是丢弃）。
+ *
+ * 内联 SVG：序列化后**补 xmlns** 再包成 data:image/svg+xml，于是预览/打印/下载三处都能直接用，
+ * 不必维护 objectURL 的创建与 revoke。已知局限：靠 <use xlink:href="#id"> 引用同文档 symbol 的
+ * 雪碧图，在脱离文档后会渲染成空白（这类 sprite 通常只有几 KB，会被 20KB 阈值先筛掉）。
+ *
+ * ⚠️ 跨域取图必须用 GM_xmlhttpRequest 而不是 fetch：税务页 CSP 限 connect-src
+ * （结论见 CHANGELOG.md 2026-10 的「跨域取图」条）。本文件不新增任何 @grant。
+ */
+
+/** getComputedStyle 遍历的元素数上限：超大页面（上万节点）遍历到底会明显卡顿 */
+const CSS_SCAN_LIMIT = 3000;
+/** 候选数量上限：防极端页面把内存吃爆 */
+const MAX_SNIFF = 300;
+/** 懒加载属性（顺序即优先级；与参考脚本的 imageAttributes 一致，另加 data-echo） */
+const LAZY_ATTRS = [
+    'data-src',
+    'data-lazy-src',
+    'data-original',
+    'data-actual',
+    'data-lazy',
+    'data-defer-src',
+    'data-load-src',
+    'data-echo',
+];
+/** 图片扩展名：用于识别「没有 <img> 标签」的图（CSS 背景、资源表条目） */
+const IMG_EXT_RE = /\.(?:jpe?g|png|gif|webp|bmp|ico|avif|tiff?|svg)(?:[?#]|$)/i;
+/**
+ * 视频扩展名：命中即排除（用户要求「只图片不要视频」）。
+ * ⚠️ 不列 `.ts`（那边既可能是 MPEG-TS 视频，也可能是前端源码，误伤面大于收益）。
+ */
+const VIDEO_EXT_RE = /\.(?:mp4|m4v|webm|ogv|ogg|avi|mov|flv|mkv|wmv|3gp|mpe?g|m3u8|mpd)(?:[?#]|$)/i;
+/** 资源表里这些 initiatorType 明确不是图片 */
+const VIDEO_INITIATORS = ['video', 'audio'];
+/** URL 里取 url(...)（计算样式里的 background-image，可能有多层） */
+const CSS_URL_RE = /url\((['"]?)([^'")]+)\1\)/g;
+/** HEAD 请求超时（毫秒） */
+const HEAD_TIMEOUT = 8000;
+/** Range 请求超时（毫秒） */
+const RANGE_TIMEOUT = 15000;
+/** 下载超时（毫秒） */
+const DOWNLOAD_TIMEOUT = 30000;
+/** blob: 探测超时（毫秒） */
+const LOCAL_FETCH_TIMEOUT = 5000;
+/** 嗅探到的尺寸怎么显示（1KB=1024B；未知返回「大小未知」） */
+function formatBytes(n) {
+    if (n === null || !Number.isFinite(n) || n < 0)
+        return '大小未知';
+    if (n < 1024)
+        return n + ' B';
+    if (n < 1024 * 1024)
+        return (n / 1024).toFixed(n < 10 * 1024 ? 1 : 0) + ' KB';
+    return (n / 1024 / 1024).toFixed(2) + ' MB';
+}
+/** 去掉文件名里的非法字符（Windows/浏览器都会拿它当保存名）并截断到 100 字 */
+function sanitizeFileName(name) {
+    return (String(name || '')
+        // eslint-disable-next-line no-control-regex -- 控制字符（\u0000-\u001f）也要消毒：它们会让文件名在 Windows 上打不开
+        .replace(/[<>:"/\\|?*\u0000-\u001f]/g, '_')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .slice(0, 100));
+}
+/**
+ * 嗅探结果的下载文件名：取 URL 最后一段（解码 + 消毒），无扩展名时按 MIME 补、兜底 .jpg。
+ * 复用「历史记录」那套 downloadFileName，避免两处各维护一份 MIME→扩展名映射。
+ */
+function sniffFileName(url, mime, idx = 0) {
+    let base = '';
+    if (!/^(?:data|blob):/i.test(url)) {
+        try {
+            const u = new URL(url, location.href);
+            const seg = u.pathname.split('/').filter(Boolean).pop() || '';
+            base = sanitizeFileName(decodeURIComponent(seg));
+        }
+        catch (e) {
+            base = '';
+        }
+    }
+    return downloadFileName(base || 'znhd-sniff-' + (idx + 1), mime, idx);
+}
+/** URL 归一化：非 http(s)/data/blob 一律丢弃；data: 只接受 data:image/* */
+function normalizeUrl(raw) {
+    const s = String(raw || '').trim();
+    if (!s)
+        return null;
+    if (/^data:/i.test(s))
+        return /^data:image\//i.test(s) ? s : null;
+    if (/^blob:/i.test(s))
+        return s;
+    try {
+        const abs = new URL(s, location.href);
+        return /^https?:$/i.test(abs.protocol) ? abs.href : null;
+    }
+    catch (e) {
+        return null;
+    }
+}
+/** 这个 URL 看起来是视频吗 */
+function isVideoUrl(url) {
+    return /^data:video\//i.test(url) || VIDEO_EXT_RE.test(url);
+}
+/** 这个 URL 看起来是图片吗（用于「没有 <img> 标签」的来源） */
+function looksLikeImageUrl(url) {
+    return /^data:image\//i.test(url) || /^blob:/i.test(url) || IMG_EXT_RE.test(url);
+}
+/** Content-Type 明确不是图片（text/、video/、json 等）；application/octet-stream 不算明确，保留 */
+function isClearlyNotImage(mime) {
+    if (!mime)
+        return false;
+    const m = mime.toLowerCase().split(';')[0].trim();
+    if (m.startsWith('image/'))
+        return false;
+    return (m.startsWith('video/') ||
+        m.startsWith('audio/') ||
+        m.startsWith('text/') ||
+        m === 'application/json' ||
+        m === 'application/xml');
+}
+/** 字符串的 UTF-8 字节数（data: 的百分号编码段、内联 SVG 文本要用） */
+function utf8Bytes(s) {
+    try {
+        return new TextEncoder().encode(s).length;
+    }
+    catch (e) {
+        return s.length;
+    }
+}
+/** data: URL 的字节数（base64 按 3/4 估算并减去补位 '='，百分号编码按 UTF-8 长度） */
+function dataUrlBytes(url) {
+    const i = url.indexOf(',');
+    if (i < 0)
+        return null;
+    const meta = url.slice(0, i);
+    const payload = url.slice(i + 1);
+    if (/;base64/i.test(meta)) {
+        const clean = payload.replace(/\s+/g, '');
+        const pad = (clean.match(/=+$/) || [''])[0].length;
+        return Math.max(0, Math.floor((clean.length * 3) / 4) - pad);
+    }
+    try {
+        return utf8Bytes(decodeURIComponent(payload));
+    }
+    catch (e) {
+        return utf8Bytes(payload);
+    }
+}
+/** data: URL 的 MIME */
+function dataUrlMime(url) {
+    const m = /^data:([^;,]+)/i.exec(url);
+    return m ? m[1].toLowerCase() : null;
+}
+/** 内联 SVG 尺寸：优先 width/height 属性，其次 viewBox，最后退到布局盒 */
+function svgDims(el) {
+    const num = (v) => {
+        const n = parseFloat(String(v || ''));
+        return Number.isFinite(n) && n > 0 ? n : null;
+    };
+    let width = num(el.getAttribute('width'));
+    let height = num(el.getAttribute('height'));
+    if (!width || !height) {
+        const vb = String(el.getAttribute('viewBox') || '')
+            .trim()
+            .split(/[\s,]+/);
+        if (vb.length === 4) {
+            width = width || num(vb[2]);
+            height = height || num(vb[3]);
+        }
+    }
+    if (!width || !height) {
+        try {
+            const r = el.getBoundingClientRect();
+            width = width || Math.round(r.width) || null;
+            height = height || Math.round(r.height) || null;
+        }
+        catch (e) {
+            /* 取不到就留 null */
+        }
+    }
+    return { width, height };
+}
+/** 序列化内联 SVG 并补 xmlns（缺了它 data: URL 里的 SVG 不会被渲染） */
+function serializeSvg(el) {
+    let text = '';
+    try {
+        text = el.outerHTML || '';
+    }
+    catch (e) {
+        text = '';
+    }
+    if (!text)
+        return '';
+    if (!/\sxmlns=/.test(text))
+        text = text.replace(/^<svg/i, '<svg xmlns="http://www.w3.org/2000/svg"');
+    return text;
+}
+/** srcset 取最大一档（要下载/打印，取最高分辨率最合适） */
+function pickFromSrcset(srcset) {
+    const parts = String(srcset || '')
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean);
+    let best = '';
+    let bestV = -1;
+    for (const p of parts) {
+        const seg = p.split(/\s+/);
+        const url = seg[0];
+        if (!url)
+            continue;
+        const d = String(seg[1] || '');
+        let v = 1;
+        if (/^\d+(\.\d+)?w$/.test(d))
+            v = parseFloat(d);
+        else if (/^\d+(\.\d+)?x$/.test(d))
+            v = parseFloat(d) * 1000;
+        if (v > bestV) {
+            bestV = v;
+            best = url;
+        }
+    }
+    return best;
+}
+/** 计算样式的 background-image 里所有的 url() */
+function backgroundUrls(bg) {
+    const out = [];
+    if (!bg || bg === 'none')
+        return out;
+    CSS_URL_RE.lastIndex = 0;
+    let m;
+    while ((m = CSS_URL_RE.exec(bg))) {
+        if (m[2])
+            out.push(m[2]);
+    }
+    return out;
+}
+/**
+ * 收集候选（纯读，无网络）。同一个 URL 只留一份，`sources` 记来源。
+ * MutationObserver / 手动「重新扫描」都直接再调它一次即可。
+ */
+function collectCandidates(opts = {}) {
+    const root = opts.root || document;
+    const exclude = String(opts.excludeSelector || '');
+    const cssLimit = opts.cssLimit && opts.cssLimit > 0 ? opts.cssLimit : CSS_SCAN_LIMIT;
+    const maxItems = opts.maxItems && opts.maxItems > 0 ? opts.maxItems : MAX_SNIFF;
+    const map = new Map();
+    let truncated = false;
+    const skipped = (el) => {
+        if (!exclude)
+            return false;
+        try {
+            return !!el.closest(exclude);
+        }
+        catch (e) {
+            return false;
+        }
+    };
+    const add = (raw, source, dims, extra) => {
+        const url = normalizeUrl(raw);
+        if (!url)
+            return;
+        if (isVideoUrl(url))
+            return;
+        // <img>/<picture> 这类「标签本身就是图片」的来源不必猜扩展名；其余来源（CSS/资源表）要猜
+        if (!extra?.force && !looksLikeImageUrl(url))
+            return;
+        const key = url;
+        const found = map.get(key);
+        if (found) {
+            if (found.sources.indexOf(source) < 0)
+                found.sources.push(source);
+            if (!found.width && dims && dims.width)
+                found.width = dims.width;
+            if (!found.height && dims && dims.height)
+                found.height = dims.height;
+            if (!found.mime && extra?.mime)
+                found.mime = extra.mime;
+            if (!found.perfBytes && extra?.perfBytes)
+                found.perfBytes = extra.perfBytes;
+            return;
+        }
+        if (map.size >= maxItems) {
+            truncated = true;
+            return;
+        }
+        map.set(key, {
+            key: key,
+            url: url,
+            kind: /^data:/i.test(url) ? 'data' : /^blob:/i.test(url) ? 'blob' : 'http',
+            sources: [source],
+            svgText: extra?.svgText,
+            width: dims?.width ?? null,
+            height: dims?.height ?? null,
+            perfBytes: extra?.perfBytes ?? null,
+            mime: extra?.mime ?? null,
+        });
+    };
+    // ① <img>：currentSrc（浏览器实际选中的那一档）优先，其次 src，再退 srcset / 懒加载属性
+    let imgs = [];
+    try {
+        imgs = Array.from(root.querySelectorAll('img'));
+    }
+    catch (e) {
+        imgs = [];
+    }
+    for (const el of imgs) {
+        if (skipped(el))
+            continue;
+        const img = el;
+        const dims = {
+            width: img.naturalWidth || img.width || null,
+            height: img.naturalHeight || img.height || null,
+        };
+        const cands = [];
+        if (img.currentSrc)
+            cands.push(img.currentSrc);
+        if (img.getAttribute('src'))
+            cands.push(img.getAttribute('src'));
+        const ss = pickFromSrcset(img.getAttribute('srcset') || '');
+        if (ss)
+            cands.push(ss);
+        for (const a of LAZY_ATTRS) {
+            const v = img.getAttribute(a);
+            if (v)
+                cands.push(v);
+        }
+        for (const c of cands)
+            add(c, 'dom', dims, { force: true });
+    }
+    // ② <picture><source>（srcset 取最大档；<source type="video/*"> 由 isVideoUrl 兜住）
+    let sources = [];
+    try {
+        sources = Array.from(root.querySelectorAll('picture source'));
+    }
+    catch (e) {
+        sources = [];
+    }
+    for (const el of sources) {
+        if (skipped(el))
+            continue;
+        const ss = pickFromSrcset(el.getAttribute('srcset') || '');
+        if (ss)
+            add(ss, 'dom', undefined, { force: true });
+        const s = el.getAttribute('src');
+        if (s)
+            add(s, 'dom', undefined, { force: true });
+    }
+    // ③ 内联 <svg>：序列化后包成 data:image/svg+xml，预览/打印/下载都能直接用
+    let svgs = [];
+    try {
+        svgs = Array.from(root.querySelectorAll('svg'));
+    }
+    catch (e) {
+        svgs = [];
+    }
+    for (const el of svgs) {
+        if (skipped(el))
+            continue;
+        const text = serializeSvg(el);
+        if (!text)
+            continue;
+        const dims = svgDims(el);
+        add('data:image/svg+xml;charset=utf-8,' + encodeURIComponent(text), 'svg', dims, {
+            svgText: text,
+            mime: 'image/svg+xml',
+            force: true,
+        });
+    }
+    // ④ background-image：全量遍历（元素数有上限）；顺表补 <picture>/<video poster> 之外的 CSS 图
+    const scanRoot = root instanceof Document ? root.body || root.documentElement : root;
+    if (scanRoot) {
+        let els = [];
+        try {
+            els = Array.from(scanRoot.querySelectorAll('*'));
+        }
+        catch (e) {
+            els = [];
+        }
+        if (els.length > cssLimit)
+            truncated = true;
+        for (let i = 0; i < els.length && i < cssLimit; i++) {
+            const el = els[i];
+            const tag = el.tagName ? el.tagName.toLowerCase() : '';
+            if (tag === 'script' || tag === 'style' || tag === 'link' || tag === 'meta' || tag === 'noscript')
+                continue;
+            if (skipped(el))
+                continue;
+            let bg = '';
+            try {
+                bg = getComputedStyle(el).backgroundImage;
+            }
+            catch (e) {
+                continue;
+            }
+            if (!bg || bg === 'none')
+                continue;
+            for (const u of backgroundUrls(bg))
+                add(u, 'css');
+        }
+    }
+    // ⑤ 资源表：能捞到「已经加载过但已移出 DOM」的图；blob: 也算（预览/下载在页面上下文里可用）
+    try {
+        if (typeof performance !== 'undefined' && performance.getEntriesByType) {
+            const entries = performance.getEntriesByType('resource');
+            for (const e of entries) {
+                const it = String(e.initiatorType || '');
+                if (VIDEO_INITIATORS.indexOf(it) >= 0)
+                    continue;
+                const name = String(e.name || '');
+                if (!looksLikeImageUrl(name))
+                    continue;
+                const bytes = Number(e.encodedBodySize || 0) || Number(e.transferSize || 0) || 0;
+                add(name, 'perf', undefined, { perfBytes: bytes > 0 ? bytes : null });
+            }
+        }
+    }
+    catch (e) {
+        /* 资源表不可用就当没有这一路 */
+    }
+    // 保持文档顺序：尺寸是异步补上的，顺序若在这里动过，UI 会边测边跳（排序交给展示层，量完再排）
+    return { items: Array.from(map.values()), truncated: truncated };
+}
+/** 用 GM_xmlhttpRequest 发一次请求（GM_* 在个别管理器里可能不存在，故包一层） */
+function gmRequest(details) {
+    return new Promise((resolve, reject) => {
+        if (typeof GM_xmlhttpRequest !== 'function') {
+            reject(new Error('GM_xmlhttpRequest 不可用'));
+            return;
+        }
+        try {
+            GM_xmlhttpRequest({
+                ...details,
+                onload: (resp) => resolve(resp),
+                onerror: (resp) => reject(new Error((resp && (resp.error || resp.statusText)) || '请求失败')),
+                ontimeout: () => reject(new Error('请求超时')),
+                onabort: () => reject(new Error('请求已取消')),
+            });
+        }
+        catch (e) {
+            reject(e);
+        }
+    });
+}
+/** 从响应头里取某个头（大小写不敏感；GM 给的是原始头字符串） */
+function headerOf(rawHeaders, name) {
+    const lines = String(rawHeaders || '').split(/\r?\n/);
+    const want = name.toLowerCase() + ':';
+    for (const line of lines) {
+        const i = line.indexOf(':');
+        if (i < 0)
+            continue;
+        if (line.slice(0, i + 1).toLowerCase() === want)
+            return line.slice(i + 1).trim();
+    }
+    return null;
+}
+/** 响应头里的 MIME */
+function mimeOf(headers) {
+    const ct = headerOf(headers, 'content-type');
+    return ct ? ct.toLowerCase().split(';')[0].trim() || null : null;
+}
+/** HEAD：只读 content-length；服务器 405/403 或没给长度就走下一阶梯 */
+async function probeHead(url) {
+    try {
+        const resp = await gmRequest({ method: 'HEAD', url: url, timeout: HEAD_TIMEOUT });
+        const mime = mimeOf(resp.responseHeaders);
+        if (resp.status >= 400)
+            return { size: null, mime: mime, via: 'unknown', drop: false };
+        if (isClearlyNotImage(mime))
+            return { size: null, mime: mime, via: 'unknown', drop: true };
+        const len = Number(headerOf(resp.responseHeaders, 'content-length'));
+        if (Number.isFinite(len) && len > 0)
+            return { size: len, mime: mime, via: 'head', drop: false };
+        return { size: null, mime: mime, via: 'unknown', drop: false };
+    }
+    catch (e) {
+        return { size: null, mime: null, via: 'unknown', drop: false };
+    }
+}
+/**
+ * Range GET：'bytes=0-0' 只下 1 个字节，从 content-range 里读总大小。
+ * 服务器忽略 Range（回 200 整份）时退用返回 Blob 的 size —— 这时确实把整张图下下来了，
+ * 但既然拿到准确字节数，就不再多发一次 HEAD。
+ */
+async function probeRange(url) {
+    try {
+        const resp = await gmRequest({
+            method: 'GET',
+            url: url,
+            headers: { Range: 'bytes=0-0' },
+            responseType: 'blob',
+            timeout: RANGE_TIMEOUT,
+        });
+        const blob = resp.response;
+        const mime = mimeOf(resp.responseHeaders) || (blob && blob.type ? blob.type.toLowerCase() : null);
+        if (isClearlyNotImage(mime))
+            return { size: null, mime: mime, via: 'unknown', drop: true };
+        const cr = headerOf(resp.responseHeaders, 'content-range');
+        const m = cr ? /\/(\d+)\s*$/.exec(cr) : null;
+        if (m) {
+            const total = Number(m[1]);
+            if (Number.isFinite(total) && total > 0)
+                return { size: total, mime: mime, via: 'range', drop: false };
+        }
+        if (blob && blob.size > 0)
+            return { size: blob.size, mime: mime, via: 'range', drop: false };
+        return { size: null, mime: mime, via: 'unknown', drop: false };
+    }
+    catch (e) {
+        return { size: null, mime: null, via: 'unknown', drop: false };
+    }
+}
+/** blob: 只能在页面上下文里 fetch（GM_xhr 打不开）；CSP 拦截就返回未知，不报错 */
+async function probeBlobUrl(url) {
+    const blob = await fetchBlobInPage(url);
+    if (!blob)
+        return { size: null, mime: null, via: 'unknown', drop: false };
+    const mime = blob.type ? blob.type.toLowerCase() : null;
+    if (isClearlyNotImage(mime))
+        return { size: null, mime: mime, via: 'local', drop: true };
+    return { size: blob.size || null, mime: mime, via: 'local', drop: false };
+}
+/** 页面上下文取 Blob（blob: 图专用；带超时，任何失败都返回 null） */
+function fetchBlobInPage(url) {
+    return new Promise((resolve) => {
+        let done = false;
+        const finish = (b) => {
+            if (done)
+                return;
+            done = true;
+            resolve(b);
+        };
+        const timer = setTimeout(() => finish(null), LOCAL_FETCH_TIMEOUT);
+        try {
+            if (typeof fetch !== 'function') {
+                clearTimeout(timer);
+                finish(null);
+                return;
+            }
+            fetch(url)
+                .then((r) => r.blob())
+                .then((b) => {
+                clearTimeout(timer);
+                finish(b && b.size ? b : null);
+            })
+                .catch(() => {
+                clearTimeout(timer);
+                finish(null);
+            });
+        }
+        catch (e) {
+            clearTimeout(timer);
+            finish(null);
+        }
+    });
+}
+/** 单张图走一遍测量阶梯 */
+async function probeOne(it) {
+    if (it.kind === 'svg') {
+        const bytes = it.svgText ? utf8Bytes(it.svgText) : null;
+        return { size: bytes, mime: 'image/svg+xml', via: bytes ? 'local' : 'unknown', drop: false };
+    }
+    if (it.kind === 'data') {
+        const bytes = dataUrlBytes(it.url);
+        return { size: bytes, mime: dataUrlMime(it.url), via: bytes ? 'local' : 'unknown', drop: false };
+    }
+    if (it.perfBytes && it.perfBytes > 0) {
+        return { size: it.perfBytes, mime: it.mime, via: 'perf', drop: false };
+    }
+    if (it.kind === 'blob')
+        return probeBlobUrl(it.url);
+    const head = await probeHead(it.url);
+    if (head.drop || head.size)
+        return head;
+    const range = await probeRange(it.url);
+    return { size: range.size, mime: range.mime || head.mime, via: range.via, drop: range.drop };
+}
+/** 并发池：固定 concurrency 条协程抢同一个下标 */
+async function runPool(total, concurrency, worker) {
+    let next = 0;
+    const run = async () => {
+        while (next < total) {
+            const i = next;
+            next++;
+            await worker(i);
+        }
+    };
+    const n = Math.max(1, Math.min(concurrency, total));
+    const runners = [];
+    for (let i = 0; i < n; i++)
+        runners.push(run());
+    await Promise.all(runners);
+}
+/** 量所有候选的尺寸（并发 + 逐张回调），返回完成顺序的结果数组 */
+async function resolveSizes(items, opts = {}) {
+    const out = [];
+    const concurrency = opts.concurrency && opts.concurrency > 0 ? opts.concurrency : 5;
+    const stopped = () => !!(opts.shouldStop && opts.shouldStop());
+    await runPool(items.length, concurrency, async (i) => {
+        const it = items[i];
+        if (stopped())
+            return;
+        let probe;
+        try {
+            probe = await probeOne(it);
+        }
+        catch (e) {
+            probe = { size: null, mime: it.mime, via: 'unknown', drop: false };
+        }
+        if (stopped())
+            return;
+        const img = {
+            ...it,
+            size: probe.size,
+            mime: probe.mime || it.mime,
+            sizeVia: probe.via,
+            drop: probe.drop,
+        };
+        out.push(img);
+        if (opts.onItem)
+            opts.onItem(img);
+    });
+    return out;
+}
+/** 触发一次下载（隐藏 <a download>）。跨域 URL 直接给 a 会被忽略 download 而变成导航，故调用方先用 GM_xhr 取 Blob */
+function anchorDownload(href, name) {
+    try {
+        const a = document.createElement('a');
+        a.href = href;
+        a.download = name || '';
+        a.rel = 'noopener';
+        a.style.display = 'none';
+        const parent = document.body || document.documentElement;
+        parent.appendChild(a);
+        a.click();
+        a.remove();
+        return true;
+    }
+    catch (e) {
+        return false;
+    }
+}
+/**
+ * 下载一张图：GM_xhr 取二进制 → objectURL → <a download>（这样跨域也能存成文件），
+ * 失败或 blob:/data: 则退回直接给 <a href download>。
+ * @returns 是否成功触发下载
+ */
+async function downloadImage(url, filename) {
+    if (/^data:/i.test(url))
+        return anchorDownload(url, filename);
+    if (/^blob:/i.test(url)) {
+        const blob = await fetchBlobInPage(url);
+        if (blob) {
+            const objUrl = URL.createObjectURL(blob);
+            const ok = anchorDownload(objUrl, filename);
+            setTimeout(() => URL.revokeObjectURL(objUrl), 1000);
+            return ok;
+        }
+        return anchorDownload(url, filename);
+    }
+    try {
+        const resp = await gmRequest({ method: 'GET', url: url, responseType: 'blob', timeout: DOWNLOAD_TIMEOUT });
+        const blob = resp.response;
+        if (blob && blob.size > 0) {
+            const objUrl = URL.createObjectURL(blob);
+            const ok = anchorDownload(objUrl, filename);
+            setTimeout(() => URL.revokeObjectURL(objUrl), 1000);
+            return ok;
+        }
+    }
+    catch (e) {
+        /* 落到回退路径 */
+    }
+    return anchorDownload(url, filename);
+}
+
+;// ./src/lib/ui/SniffModal.tsx
+
+
+
+
+
+
+// ⚠️ 三个宿主 id 必须来自**叶子模块**：本文件的 `SNIFF_EXCLUDE_SELECTOR` 是模块级常量，
+// 若从 panelHost 取 OVERLAY_HOST_ID，会因 MainPanel → SniffModal → panelHost 的循环 import
+// 命中 TDZ（Cannot access 'OVERLAY_HOST_ID' before initialization），脚本启动即挂（v26.10.10-v4 踩过）。
+
+
+
+// 预览相关通用件全部来自共享层（与「历史记录」、手机上传页同一份实现）
+
+
+
+
+const { Text: SniffModal_Text } = typography;
+/**
+ * 扫描时要跳过的子树：本脚本自己的三个宿主。
+ * 它们都挂在 documentElement 下（见 panelHost.tsx 与 shared/preview/host.ts 的取舍说明），
+ * 故这里是三个 id 的并集，而不是一个前缀匹配。
+ */
+const SNIFF_EXCLUDE_SELECTOR = ['#' + PANEL_HOST_ID, '#' + OVERLAY_HOST_ID, '#' + PREVIEW_HOST_ID].join(',');
+/** 每完成这么多毫秒把测好的图推给界面一次（合批，避免逐张 setState） */
+const FLUSH_MS = 150;
+/** 批量下载之间的间隔：浏览器对同一页面连续触发下载有节流，太快会静默丢文件 */
+const BATCH_GAP_MS = 400;
+/**
+ * 阈值兜底（KB）。storage.ts 的 loadAllvalue 只对 workingHours 做字段级校验，
+ * 存量数据里 sniffMinKB 完全可能是坏值（字符串 / null / 负数），故消费点自己兜一次。
+ */
+const DEFAULT_MIN_KB = 20;
+const SOURCE_LABEL = {
+    dom: '页面元素',
+    svg: '内联 SVG',
+    css: 'CSS 背景',
+    perf: '资源表',
+};
+const VIA_LABEL = {
+    perf: '资源表读数',
+    local: '本地计算',
+    head: 'HEAD 响应头',
+    range: 'Range 响应头',
+    unknown: '未测到',
+};
+const GRID_STYLE = {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(3, minmax(0,1fr))',
+    gap: 8,
+    alignContent: 'start',
+};
+function sleep(ms) {
+    return new Promise((resolve) => {
+        window.setTimeout(resolve, ms);
+    });
+}
+function SniffModal({ open, onClose, minKB, onMinKBChange }) {
+    /** 本轮扫描到哪一步：测量中 / 测完（测量中显示进度条） */
+    const [phase, setPhase] = (0,react_production_namespaceFn().useState)('done');
+    /** 已量完的图（**完成顺序**，不是文档顺序；展示时才排序） */
+    const [probed, setProbed] = (0,react_production_namespaceFn().useState)([]);
+    /** 本轮候选总数（进度条分母） */
+    const [total, setTotal] = (0,react_production_namespaceFn().useState)(0);
+    /** 候选被上限截断（CSS 遍历元素数 / MAX_SNIFF）—— 必须明确告诉用户「不止这些」 */
+    const [truncated, setTruncated] = (0,react_production_namespaceFn().useState)(false);
+    /** 「大小未知」分组是否展开（默认折叠） */
+    const [unknownOpen, setUnknownOpen] = (0,react_production_namespaceFn().useState)(false);
+    /** 勾选（存 key，不用下标：结果集是异步增长的，下标会错位） */
+    const [selected, setSelected] = (0,react_production_namespaceFn().useState)(() => new Set());
+    /** 放大预览是否打开（用于撤掉下层遮罩，同「历史记录」） */
+    const [previewOpen, setPreviewOpen] = (0,react_production_namespaceFn().useState)(false);
+    /** 正在下载的单张 key（按钮 loading） */
+    const [busyKey, setBusyKey] = (0,react_production_namespaceFn().useState)(null);
+    /** 批量下载进度（null = 空闲） */
+    const [batch, setBatch] = (0,react_production_namespaceFn().useState)(null);
+    /** 本轮扫描编号：关闭弹窗 / 重新扫描时自增，作废在飞请求的结果 */
+    const runIdRef = (0,react_production_namespaceFn().useRef)(0);
+    /** 待推送到界面的缓冲 */
+    const bufRef = (0,react_production_namespaceFn().useRef)([]);
+    /** 合批定时器 */
+    const timerRef = (0,react_production_namespaceFn().useRef)(null);
+    /** 把缓冲推给界面（立刻，并清掉未触发的定时器） */
+    const flush = (0,react_production_namespaceFn().useCallback)(() => {
+        if (timerRef.current !== null) {
+            window.clearTimeout(timerRef.current);
+            timerRef.current = null;
+        }
+        const buf = bufRef.current;
+        if (!buf.length)
+            return;
+        bufRef.current = [];
+        setProbed((prev) => prev.concat(buf));
+    }, []);
+    /** 合批调度：150ms 内的多张合并成一次 setState */
+    const scheduleFlush = (0,react_production_namespaceFn().useCallback)(() => {
+        if (timerRef.current !== null)
+            return;
+        timerRef.current = window.setTimeout(() => {
+            timerRef.current = null;
+            flush();
+        }, FLUSH_MS);
+    }, [flush]);
+    /**
+     * 扫一轮：收集候选（同步、零网络）→ 异步测量大小（按需发 HEAD/Range）。
+     * 收集阶段是同步的，超大页面可能耗时几十毫秒，故放在用户点按钮 / 打开弹窗之后。
+     */
+    const startScan = (0,react_production_namespaceFn().useCallback)(() => {
+        const runId = ++runIdRef.current;
+        bufRef.current = [];
+        setProbed([]);
+        setTotal(0);
+        setTruncated(false);
+        setSelected(new Set());
+        setUnknownOpen(false);
+        setBusyKey(null);
+        setBatch(null);
+        setPhase('measuring');
+        addLog('[图片嗅探] 开始扫描当前页面的图片…', 'info');
+        const res = collectCandidates({ excludeSelector: SNIFF_EXCLUDE_SELECTOR });
+        if (runIdRef.current !== runId)
+            return;
+        setTotal(res.items.length);
+        setTruncated(res.truncated);
+        if (!res.items.length) {
+            setPhase('done');
+            addLog('[图片嗅探] 本页未发现图片（可先滚动页面让懒加载的图出现）', 'info');
+            return;
+        }
+        addLog('[图片嗅探] 候选 ' + res.items.length + ' 张，正在测量大小…', 'info');
+        void resolveSizes(res.items, {
+            onItem: (it) => {
+                if (runIdRef.current !== runId)
+                    return;
+                bufRef.current.push(it);
+                scheduleFlush();
+            },
+            // 面板已关闭 / 重扫：在飞请求拦不住，但结果会被丢弃
+            shouldStop: () => runIdRef.current !== runId,
+        }).then(() => {
+            if (runIdRef.current !== runId)
+                return;
+            flush();
+            setPhase('done');
+            addLog('[图片嗅探] 测量完成，共 ' + res.items.length + ' 张候选', 'success');
+        });
+    }, [flush, scheduleFlush]);
+    /**
+     * 打开即扫；关闭时作废在飞结果。
+     * ⚠️ 关闭不能只清状态：测量是异步的，不递增 runId 的话「关掉再打开」会被上一轮回调污染。
+     */
+    (0,react_production_namespaceFn().useEffect)(() => {
+        if (!open) {
+            runIdRef.current++;
+            if (timerRef.current !== null) {
+                window.clearTimeout(timerRef.current);
+                timerRef.current = null;
+            }
+            bufRef.current = [];
+            return;
+        }
+        startScan();
+    }, [open, startScan]);
+    /** 预览开关 → 压掉/恢复所有下层浮层遮罩（幂等，CSS 只在共享层注入一份） */
+    (0,react_production_namespaceFn().useEffect)(() => {
+        syncPreviewMask(previewOpen);
+        return () => syncPreviewMask(false);
+    }, [previewOpen]);
+    /** 阈值（KB → 字节），坏值兜底 */
+    const minBytes = (0,react_production_namespaceFn().useMemo)(() => {
+        const kb = Number.isFinite(minKB) && minKB > 0 ? minKB : DEFAULT_MIN_KB;
+        return kb * 1024;
+    }, [minKB]);
+    /** 丢掉「测出来根本不是图片」的条目（Content-Type 明确是 text/video/json 等） */
+    const kept = (0,react_production_namespaceFn().useMemo)(() => probed.filter((i) => !i.drop), [probed]);
+    /** 达标（已知大小且不小于阈值），按体积从大到小 */
+    const known = (0,react_production_namespaceFn().useMemo)(() => {
+        const list = kept.filter((i) => i.size !== null && i.size >= minBytes);
+        list.sort((a, b) => b.size - a.size);
+        return list;
+    }, [kept, minBytes]);
+    /** 大小未知：保留、折叠 */
+    const unknown = (0,react_production_namespaceFn().useMemo)(() => kept.filter((i) => i.size === null), [kept]);
+    /** 达标但被阈值挡掉的张数（给用户一个「调低阈值能看到更多」的线索） */
+    const belowCount = kept.length - known.length - unknown.length;
+    /** 「测出来不是图片」被丢弃的张数 */
+    const droppedCount = probed.length - kept.length;
+    /** 实际渲染的列表：展开未知组时追加在后面（顺序 = 预览 items 的顺序，必须一致） */
+    const shown = (0,react_production_namespaceFn().useMemo)(() => (unknownOpen ? known.concat(unknown) : known), [known, unknown, unknownOpen]);
+    const toggleOne = (0,react_production_namespaceFn().useCallback)((key) => {
+        setSelected((prev) => {
+            const next = new Set(prev);
+            if (next.has(key))
+                next.delete(key);
+            else
+                next.add(key);
+            return next;
+        });
+    }, []);
+    const allSelected = kept.length > 0 && kept.every((i) => selected.has(i.key));
+    /** 全选 / 取消全选：范围是**全部达标 + 未知**（不止当前可见的那批） */
+    const toggleAll = (0,react_production_namespaceFn().useCallback)(() => {
+        setSelected((prev) => {
+            const all = kept.every((i) => prev.has(i.key));
+            return all ? new Set() : new Set(kept.map((i) => i.key));
+        });
+    }, [kept]);
+    /** 打印对话框上的文档标题（react-to-print 会临时改写 document.title 再还原） */
+    const printTitleRef = (0,react_production_namespaceFn().useRef)('图片');
+    /**
+     * 打印能力来自 react-to-print，参数与「历史记录」完全一致 ——
+     * ignoreGlobalStyles 必须显式 true（否则宿主页的全部样式会被抄进打印 iframe），
+     * A4 版式来自共享层 PRINT_PAGE_STYLE（@page 直接注入打印窗口最可靠）。
+     */
+    const doPrint = Z({
+        ignoreGlobalStyles: true,
+        documentTitle: () => printTitleRef.current,
+        pageStyle: PRINT_PAGE_STYLE,
+    });
+    /**
+     * 打印某一张图的**原图**并按 A4 自适应（横图自动旋转 90 度，见 shared/preview/print.ts）。
+     * ⚠️ 不能依赖 <img> 的 onLoad 改样式：react-to-print 克隆的是独立节点，
+     *    故先用游离 Image 量出自然宽高，再构造好节点交给 doPrint（同「历史记录」的做法）。
+     */
+    const printImage = (0,react_production_namespaceFn().useCallback)((it, idx) => {
+        const fname = sniffFileName(it.url, it.mime, idx);
+        printTitleRef.current = fname;
+        addLog('打印图片: ' + fname, 'success');
+        const probe = document.createElement('img');
+        probe.onload = () => doPrint(() => buildA4ImageNode(it.url, fname, {
+            width: probe.naturalWidth,
+            height: probe.naturalHeight,
+        }));
+        probe.onerror = () => doPrint(() => buildA4ImageNode(it.url, fname));
+        probe.src = it.url;
+    }, [doPrint]);
+    /** 单张下载：跨域图走 GM_xhr 取二进制（直接给 <a download> 会被忽略而变成导航） */
+    const doDownloadOne = (0,react_production_namespaceFn().useCallback)(async (it, idx) => {
+        const fname = sniffFileName(it.url, it.mime, idx);
+        setBusyKey(it.key);
+        try {
+            const ok = await downloadImage(it.url, fname);
+            addLog(ok ? '图片已下载: ' + fname : '[图片嗅探] 下载失败: ' + fname, ok ? 'success' : 'error');
+        }
+        finally {
+            setBusyKey(null);
+        }
+    }, []);
+    /** 批量下载：串行 + 间隔，避免浏览器把连续下载当弹窗拦截 / 静默丢弃 */
+    const doDownloadSelected = (0,react_production_namespaceFn().useCallback)(async () => {
+        const list = kept.filter((i) => selected.has(i.key));
+        if (!list.length)
+            return;
+        setBatch({ done: 0, total: list.length });
+        let ok = 0;
+        try {
+            for (let i = 0; i < list.length; i++) {
+                const it = list[i];
+                // 文件名里的序号用**展示顺序**，与用户看到的一致
+                const at = shown.indexOf(it);
+                if (await downloadImage(it.url, sniffFileName(it.url, it.mime, at >= 0 ? at : i)))
+                    ok++;
+                setBatch({ done: i + 1, total: list.length });
+                if (i < list.length - 1)
+                    await sleep(BATCH_GAP_MS);
+            }
+            addLog('[图片嗅探] 批量下载完成：' + ok + '/' + list.length, ok ? 'success' : 'error');
+        }
+        finally {
+            setBatch(null);
+        }
+    }, [kept, selected, shown]);
+    /** 单张卡片的元信息（来源、测量方式）合成一句话，hover 可见 */
+    const metaOf = (it) => '来源：' + it.sources.map((s) => SOURCE_LABEL[s]).join(' / ') + '；大小来源：' + VIA_LABEL[it.sizeVia];
+    const renderCard = (it, idx) => {
+        const fname = sniffFileName(it.url, it.mime, idx);
+        return ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', flexDirection: 'column', minWidth: 0 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { position: 'relative' }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(es_image, { src: it.url, alt: fname, style: { width: '100%', aspectRatio: '1 / 1', objectFit: 'cover', borderRadius: 8 } }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_checkbox, { checked: selected.has(it.key), onChange: () => toggleOne(it.key), style: { position: 'absolute', left: 6, top: 6, zIndex: 2 } })] }), (0,react_jsx_runtime_production_namespaceFn().jsx)(SniffModal_Text, { ellipsis: true, style: { fontSize: 11, marginTop: 4 }, title: fname, children: fname }), (0,react_jsx_runtime_production_namespaceFn().jsxs)(SniffModal_Text, { type: "secondary", style: { fontSize: 11 }, title: metaOf(it), children: [formatBytes(it.size), it.width && it.height ? ' · ' + it.width + '×' + it.height : ''] }), (0,react_jsx_runtime_production_namespaceFn().jsxs)(es_space, { size: 4, style: { marginTop: 4, width: '100%' }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { size: "small", style: { flex: 1 }, loading: busyKey === it.key, onClick: () => void doDownloadOne(it, idx), children: "\u4E0B\u8F7D" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { size: "small", style: { flex: 1 }, onClick: () => printImage(it, idx), children: "\u6253\u5370" })] })] }, it.key));
+    };
+    /** 进度：已测 / 总数 */
+    const percent = total > 0 ? Math.min(100, Math.round((probed.length / total) * 100)) : 0;
+    return ((0,react_jsx_runtime_production_namespaceFn().jsxs)(modal, { open: open, title: (0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("span", { children: '图片嗅探（共 ' + kept.length + ' 张）' }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { size: "small", loading: phase === 'measuring', onClick: startScan, children: phase === 'measuring' ? '扫描中…' : '重新扫描' })] }), onCancel: onClose, getContainer: getOverlayContainer, width: 720, styles: { body: { textAlign: 'left' } }, destroyOnHidden: true, 
+        // 预览打开时撤掉本弹窗遮罩：预览是全屏浮层，这层遮罩只会让画面多暗一层（同「历史记录」）
+        mask: !previewOpen, footer: (0,react_jsx_runtime_production_namespaceFn().jsxs)(es_space, { children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { disabled: !selected.size || !!batch, loading: !!batch, onClick: () => void doDownloadSelected(), children: batch ? '下载中 ' + batch.done + '/' + batch.total : '下载所选（' + selected.size + '）' }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { disabled: !selected.size || !!batch, onClick: () => setSelected(new Set()), children: "\u6E05\u7A7A\u9009\u62E9" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { color: "primary", variant: "solid", onClick: onClose, children: "\u5173\u95ED" })] }), children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 8 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(SniffModal_Text, { type: "secondary", style: { fontSize: 12 }, children: "\u53EA\u5217\u51FA \u2265" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(input_number, { size: "small", min: 1, max: 10240, step: 10, value: minKB, addonAfter: "KB", style: { width: 132 }, onChange: (v) => onMinKBChange(Number.isFinite(v) && !!v && v > 0 ? Math.round(v) : DEFAULT_MIN_KB) }), (0,react_jsx_runtime_production_namespaceFn().jsx)(SniffModal_Text, { type: "secondary", style: { fontSize: 12 }, children: '的图片（显示 ' +
+                            known.length +
+                            ' 张' +
+                            (belowCount > 0 ? '，另有 ' + belowCount + ' 张小于阈值' : '') +
+                            '）' }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_checkbox, { checked: allSelected, disabled: !kept.length, onChange: toggleAll, children: "\u5168\u9009" })] }), truncated ? ((0,react_jsx_runtime_production_namespaceFn().jsx)(SniffModal_Text, { type: "warning", style: { fontSize: 12, display: 'block', marginBottom: 8 }, children: '页面元素太多或图片超过 ' + (/* inlined export .MAX_SNIFF */300) + ' 张，本次只扫描了前一部分 —— 结果可能不完整。' })) : null, droppedCount > 0 ? ((0,react_jsx_runtime_production_namespaceFn().jsx)(SniffModal_Text, { type: "secondary", style: { fontSize: 12, display: 'block', marginBottom: 8 }, children: '已排除 ' + droppedCount + ' 个响应不是图片的地址（视频 / 网页 / JSON 等）。' })) : null, phase === 'measuring' && !probed.length ? ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { padding: '24px 0', textAlign: 'center' }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(es_progress, { percent: percent, size: "small", style: { maxWidth: 320 } }), (0,react_jsx_runtime_production_namespaceFn().jsx)(SniffModal_Text, { type: "secondary", style: { fontSize: 12, display: 'block', marginTop: 8 }, children: '正在测量大小…（' + probed.length + '/' + total + '）' })] })) : !kept.length ? ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_empty, { description: phase === 'measuring'
+                    ? '正在测量大小…'
+                    : total
+                        ? '扫描到 ' + total + ' 个候选，但都被阈值或类型过滤掉了（可调低阈值再试）'
+                        : '未在当前页面发现图片' })) : ((0,react_jsx_runtime_production_namespaceFn().jsxs)((react_jsx_runtime_production_namespaceFn().Fragment), { children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(es_image.PreviewGroup, { items: shown.map((i) => i.url), preview: {
+                            /**
+                             * ⚠️ 必须显式指定挂载容器（原因见 shared/preview/host.ts）：
+                             * 税务页 body 带 transform 时，antd 默认 portal 到 body 会把预览困在 body 盒子里。
+                             */
+                            getContainer: getPreviewHost,
+                            onOpenChange: (o) => setPreviewOpen(o),
+                            /** 工具栏追加「打印」（走共享层的 appendPreviewActions，与手机页同一份） */
+                            actionsRender: (originalNode, info) => {
+                                const printBtn = ((0,react_jsx_runtime_production_namespaceFn().jsx)("button", { type: "button", className: "ant-image-preview-actions-action", "aria-label": "print", title: "\u6253\u5370\u539F\u56FE", onClick: () => {
+                                        const found = shown.findIndex((i) => i.url === info.image?.url);
+                                        const at = found >= 0 ? found : info.current;
+                                        if (shown[at])
+                                            printImage(shown[at], at);
+                                    }, children: (0,react_jsx_runtime_production_namespaceFn().jsx)(icons_PrinterOutlined, {}) }, "znhd-print"));
+                                return appendPreviewActions(originalNode, printBtn);
+                            },
+                        }, children: (0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { maxHeight: '58vh', overflow: 'auto' }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: GRID_STYLE, children: known.map((it, idx) => renderCard(it, idx)) }), unknownOpen && unknown.length > 0 ? ((0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { ...GRID_STYLE, marginTop: 8 }, children: unknown.map((it, idx) => renderCard(it, known.length + idx)) })) : null] }) }), unknown.length > 0 ? ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { marginTop: 6 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)(es_button, { type: "link", size: "small", style: { padding: 0 }, onClick: () => setUnknownOpen(!unknownOpen), children: [unknownOpen ? '▾' : '▸', " ", '大小未知（' + unknown.length + '）'] }), (0,react_jsx_runtime_production_namespaceFn().jsx)(SniffModal_Text, { type: "secondary", style: { fontSize: 11, marginLeft: 6 }, children: "\u91CF\u4E0D\u51FA\u5B57\u8282\u6570\uFF08\u8DE8\u57DF\u54CD\u5E94\u5934\u88AB\u62D2\u7B49\uFF09\uFF0C\u53EF\u80FD\u6709\u5927\u56FE\uFF0C\u5DF2\u4FDD\u7559" })] })) : null] })), (0,react_jsx_runtime_production_namespaceFn().jsx)(SniffModal_Text, { type: "secondary", style: { fontSize: 12, display: 'block', marginTop: 8 }, children: "\u63D0\u793A\uFF1A\u5355\u51FB\u7F29\u7565\u56FE\u53EF\u653E\u5927 / \u591A\u56FE\u5207\u6362\uFF0C\u653E\u5927\u540E\u5DE5\u5177\u680F\u4E0A\u7684\u300C\u6253\u5370\u300D\u6309 A4 \u6253\u5370\u539F\u56FE\uFF08\u6A2A\u56FE\u81EA\u52A8\u65CB\u8F6C 90 \u5EA6\uFF09\uFF1B \u52FE\u9009\u540E\u53EF\u6279\u91CF\u4E0B\u8F7D\u3002\u89C6\u9891\u5DF2\u5728\u626B\u63CF\u9636\u6BB5\u6392\u9664\uFF0C\u52A8\u56FE\uFF08gif\uFF09\u6309\u56FE\u7247\u4FDD\u7559\u3002" })] }));
+}
+
 ;// ./src/lib/ui/MainPanel.tsx
+
 
 
 
@@ -72445,21 +75389,22 @@ function BrandIcon({ size = 26 }) {
     return ((0,react_jsx_runtime_production_namespaceFn().jsx)("img", { src: BRAND_ICON, alt: "", draggable: false, style: { ...box, display: 'block' }, onError: () => setFailed(true) }));
 }
 /**
- * 底部四入口按钮的自适应样式（v26.10.07-v3）。
+ * 底部入口按钮的自适应样式（v26.10.07-v3；v26.10.10-v4 起由 4 个增至 5 个）。
  *
- * 需求：4 个入口合并到一行，并随宽度自适应——
+ * 需求：5 个入口合并到一行，并随宽度自适应——
  *   · 宽度足够 → 图标 + 文字同排；
  *   · 宽度不足 → **只留图标**（当前面板就落在这一档，文案靠 hover Tooltip 给出）；
  *   · 两种状态下悬停都有 Tooltip（见下方 JSX）。
  *
  * 阈值为什么取 65px（实测：Chrome 154）：
  *   容器查询的尺寸按**内容盒**算 —— 按钮宽度减去内边距 4×2 与边框 1×2 才是被查询的尺寸。
- *   横排所需宽度 = 图标 15px + 间距 2px + 「历史记录」4 字 × 11px = **61px**，
+ *   横排所需宽度 = 图标 15px + 间距 2px + 4 字 × 11px = **61px**
+ *   （最长标签「历史记录」「图片嗅探」同为 4 字，故 v26.10.10-v4 新增入口后阈值不变），
  *   留 4px 余量故阈值取 65px；正好卡在边界会折成两行。
  *   ⚠️ v26.10.09-v7：图标由 emoji（约 18px 宽）换成内联 SVG（`size={15}` ⇒ 15px 宽）后，
  *      阈值由 **68px 复算为 65px**（窄 3px）。换图标尺寸/标签字数后必须回来重算。
  *   ⚠️ 该阈值与面板宽度无关，只取决于按钮自身宽度：
- *      · 当前面板 238px 时四列各 48.5px（内容盒 38.5px）→ 在阈值下，只显示图标；
+ *      · 当前面板 238px 时五列各 38px（内容盒 28px）→ 在阈值下，只显示图标；
  *      · 面板加宽到约 75px/按钮以上，文字会自动出现，**无需改代码**。
  *
  * ⚠️ 若日后改 PANEL_ACTIONS 的标签字数或图标字号，**必须回来重算这个阈值**，
@@ -72486,11 +75431,11 @@ const PANEL_CSS = `
 }
 `;
 /**
- * 底部四个入口：key + 图标组件 + 文案（文案同时用于 hover Tooltip；点击行为见组件内 actionHandlers）
+ * 底部入口（v26.10.10-v4 起 5 个）：key + 图标组件 + 文案（文案同时用于 hover Tooltip；点击行为见组件内 actionHandlers）
  *
  * ⚠️ v26.10.09-v7：图标由 emoji 字符（'⚙️' '💬' '🖼️' '💻'）改为**内联 SVG 组件**。
  * **原因**：Win7 没有 Segoe UI Emoji 字体（Win8.1 才引入），`💬 U+1F4AC` / `🖼 U+1F5BC` /
- * `💻 U+1F4BB` 这些补充平面码位在 Win7 任何系统字体里都没有字形 ⇒ 四个按钮全是豆腐块/乱码。
+ * `💻 U+1F4BB` 这些补充平面码位在 Win7 任何系统字体里都没有字形 ⇒ 按钮全是豆腐块/乱码。
  * **为什么是内联 SVG 而不是图标库**：路径不经字体系统、全平台一致；且不引入任何运行时依赖
  * （`@ant-design/icons` 只是 antd 的传递依赖，在 src/ 里 import 它属于「运行时 import devDependency」）。
  * 图形来源与许可见 `lib/ui/icons.tsx` 头部注释（Lucide / ISC）。
@@ -72502,6 +75447,7 @@ const PANEL_ACTIONS = [
     { key: 'phrases', icon: PhrasesIcon, label: '常用语' },
     { key: 'history', icon: HistoryIcon, label: '历史记录' },
     { key: 'phone', icon: DeviceIcon, label: '设备互联' },
+    { key: 'sniff', icon: SniffIcon, label: '图片嗅探' },
 ];
 /** 状态点 */
 function Dot({ color }) {
@@ -72541,6 +75487,8 @@ function MainPanel({ host }) {
     const [phoneOpen, setPhoneOpen] = (0,react_production_namespaceFn().useState)(false);
     const [logOpen, setLogOpen] = (0,react_production_namespaceFn().useState)(false);
     const [changelogOpen, setChangelogOpen] = (0,react_production_namespaceFn().useState)(false);
+    /** 图片嗅探（v26.10.10-v4）：扫描当前页面上的图片，筛选/预览/下载/打印 */
+    const [sniffOpen, setSniffOpen] = (0,react_production_namespaceFn().useState)(false);
     // 收到图片/文本（v26.10.06-v13：由原来的命令式 DOM 弹窗改为 React state 驱动 antd 弹窗）
     const [recvImages, setRecvImages] = (0,react_production_namespaceFn().useState)([]);
     /** 历史记录里的文本（可回看，上限 MAX_TEXT）；与下面「收到即自动弹出的最新一条」是两条独立路径 */
@@ -72841,7 +75789,7 @@ function MainPanel({ host }) {
                 touchAction: 'none',
             }, children: (0,react_jsx_runtime_production_namespaceFn().jsx)(BrandIcon, { size: 20 }) }));
     }
-    // 四个入口的点击行为（key 与 PANEL_ACTIONS 对齐）
+    // 五个入口的点击行为（key 与 PANEL_ACTIONS 对齐）
     const actionHandlers = {
         settings: () => setSettingsOpen(true),
         phrases: () => setPhrasesOpen(true),
@@ -72851,6 +75799,7 @@ function MainPanel({ host }) {
             setHistoryOpen(true);
         },
         phone: () => setPhoneOpen(true),
+        sniff: () => setSniffOpen(true),
     };
     return ((0,react_jsx_runtime_production_namespaceFn().jsxs)(card, { size: "small", style: { width: (/* inlined export .PANEL_WIDTH */238), boxShadow: '0 6px 24px rgba(0,0,0,0.18)' }, styles: { body: { padding: 12 }, header: { padding: '8px 10px', minHeight: 46 } }, title: (0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { ...dragHandlers, style: {
                 cursor: 'move',
@@ -72899,7 +75848,7 @@ function MainPanel({ host }) {
                     alignItems: 'center',
                     justifyContent: 'space-between',
                     marginBottom: 10,
-                }, children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)(es_space, { size: 6, children: [voiceEnabled ? ((0,react_jsx_runtime_production_namespaceFn().jsx)(VolumeOnIcon, { size: 15, color: token.colorPrimary })) : ((0,react_jsx_runtime_production_namespaceFn().jsx)(VolumeOffIcon, { size: 15, color: token.colorTextQuaternary })), (0,react_jsx_runtime_production_namespaceFn().jsx)("span", { style: { fontSize: 13 }, children: "\u8BED\u97F3\u64AD\u62A5" })] }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_switch, { checked: !!voiceEnabled, onChange: toggleVoice })] }), (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 6 }, children: PANEL_ACTIONS.map((a) => ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_tooltip, { title: a.label, placement: "bottom", children: (0,react_jsx_runtime_production_namespaceFn().jsxs)(es_button, { className: "znhd-panel-btn", size: "large", style: { padding: '0 4px' }, onClick: actionHandlers[a.key], children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(a.icon, { size: 15, color: token.colorPrimary }), (0,react_jsx_runtime_production_namespaceFn().jsx)("span", { className: "znhd-panel-btn-text", style: { fontSize: 11, marginLeft: 2 }, children: a.label })] }) }, a.key))) }), (0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: {
+                }, children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)(es_space, { size: 6, children: [voiceEnabled ? ((0,react_jsx_runtime_production_namespaceFn().jsx)(VolumeOnIcon, { size: 15, color: token.colorPrimary })) : ((0,react_jsx_runtime_production_namespaceFn().jsx)(VolumeOffIcon, { size: 15, color: token.colorTextQuaternary })), (0,react_jsx_runtime_production_namespaceFn().jsx)("span", { style: { fontSize: 13 }, children: "\u8BED\u97F3\u64AD\u62A5" })] }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_switch, { checked: !!voiceEnabled, onChange: toggleVoice })] }), (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { display: 'grid', gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', gap: 6 }, children: PANEL_ACTIONS.map((a) => ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_tooltip, { title: a.label, placement: "bottom", children: (0,react_jsx_runtime_production_namespaceFn().jsxs)(es_button, { className: "znhd-panel-btn", size: "large", style: { padding: '0 4px' }, onClick: actionHandlers[a.key], children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(a.icon, { size: 15, color: token.colorPrimary }), (0,react_jsx_runtime_production_namespaceFn().jsx)("span", { className: "znhd-panel-btn-text", style: { fontSize: 11, marginLeft: 2 }, children: a.label })] }) }, a.key))) }), (0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: {
                     marginTop: 10,
                     display: 'flex',
                     alignItems: 'center',
@@ -72933,7 +75882,7 @@ function MainPanel({ host }) {
                     // 只改设置、不写日志：这是「看日志的方式」，不是被监控的业务动作，
                     // 记一条日志反而会在冻结列表时制造困惑。
                     patchAllvalue({ logAutoRefresh: !!v });
-                } }), (0,react_jsx_runtime_production_namespaceFn().jsx)(ChangelogModal, { open: changelogOpen, onClose: () => setChangelogOpen(false) }), (0,react_jsx_runtime_production_namespaceFn().jsx)(RecvHistoryModal, { open: historyOpen, onClose: () => setHistoryOpen(false), relayServer: Allvalue.relayServer || '', images: recvImages, texts: recvTexts, onRemoveImage: (idx) => setRecvImages((prev) => {
+                } }), (0,react_jsx_runtime_production_namespaceFn().jsx)(ChangelogModal, { open: changelogOpen, onClose: () => setChangelogOpen(false) }), (0,react_jsx_runtime_production_namespaceFn().jsx)(SniffModal, { open: sniffOpen, onClose: () => setSniffOpen(false), minKB: Allvalue.sniffMinKB, onMinKBChange: (kb) => patchAllvalue({ sniffMinKB: kb }) }), (0,react_jsx_runtime_production_namespaceFn().jsx)(RecvHistoryModal, { open: historyOpen, onClose: () => setHistoryOpen(false), relayServer: Allvalue.relayServer || '', images: recvImages, texts: recvTexts, onRemoveImage: (idx) => setRecvImages((prev) => {
                     const next = prev.slice();
                     const removed = next.splice(idx, 1)[0];
                     if (removed) {
@@ -72998,24 +75947,6 @@ function PanelApp({ host }) {
         //（config-provider/index.d.ts 明确标注 autoInsertSpaceInButton 已弃用）。
         button: { autoInsertSpace: false }, children: (0,react_jsx_runtime_production_namespaceFn().jsxs)(app, { children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(MessageBridge, {}), (0,react_jsx_runtime_production_namespaceFn().jsx)(MainPanel, { host: host })] }) }));
 }
-
-;// ./src/lib/ui/panelIds.ts
-/**
- * 本脚本 UI 的共享常量。
- * 单独成文件是为了让 uiReset（样式隔离）与 panelHost（宿主/挂载）都能引用，
- * 避免两者互相 import 形成循环依赖。
- */
-/** 面板宿主元素 id */
-const PANEL_HOST_ID = '__znhd_panel_host__';
-/**
- * 主面板宽度（px）。
- *
- * v26.10.07-v3 按用户要求**缩到原来的 70%**（340 → 238）。
- * 放在这里而不是 MainPanel 内部，是因为 panelHost 的 `initialPoint()` 也要用它做初始坐标粗裁剪 ——
- * 若两边各写一份字面量，改宽度时必漏一处，表现为「存档在右侧的面板每次加载都往左漂」
- * （旧代码就是硬编码 340，见 panelHost 的 initialPoint）。
- */
-const PANEL_WIDTH = 238;
 
 ;// ./src/lib/ui/uiReset.ts
 /**
@@ -73179,10 +76110,10 @@ function injectUiReset() {
 
 
 
-// 面板宿主 id 定义在 panelIds（供 uiReset 共用，避免循环依赖）；此处转出，保持既有 import 路径可用
+// 面板/浮层宿主 id 都定义在 panelIds（叶子模块，供 uiReset 共用、避免循环依赖，也避免 TDZ）；
+// 此处转出，保持既有 import 路径可用。
+// 浮层宿主 div：v26.10.09-v6 起自建、挂在 documentElement 下、自身不影响布局。
 
-/** 浮层宿主 div 的 id（v26.10.09-v6 起；自建、挂在 documentElement 下、自身不影响布局） */
-const OVERLAY_HOST_ID = '__znhd_overlay_host__';
 /**
  * 浮层容器（antd 的 `getContainer` / `ConfigProvider.getPopupContainer` 都指向它）：
  * **自建的宿主 div**，而**不是 `documentElement` 本身**。

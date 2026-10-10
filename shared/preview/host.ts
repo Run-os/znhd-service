@@ -14,14 +14,15 @@
  * ⚠️ 共享层约束：本文件只碰 DOM，不得 import 任何宿主相关模块（见 `shared/image/compress.ts` 头部说明）。
  */
 
-const HOST_ID = '__znhd_preview_host__';
+/** 宿主 div 的 id（v26.10.10-v4 起对外导出：图片嗅探要把它整棵子树排除在扫描之外） */
+export const PREVIEW_HOST_ID = '__znhd_preview_host__';
 
 /** 取得（必要时创建）预览浮层的宿主 div —— 传给 antd 的 `preview.getContainer` */
 export function getPreviewHost(): HTMLElement {
-    let el = document.getElementById(HOST_ID);
+    let el = document.getElementById(PREVIEW_HOST_ID);
     if (!el) {
         el = document.createElement('div');
-        el.id = HOST_ID;
+        el.id = PREVIEW_HOST_ID;
         document.documentElement.appendChild(el);
     }
     return el;

@@ -18,14 +18,13 @@ import { createRoot, type Root } from 'react-dom/client';
 import { useCallback, useEffect, useRef } from 'react';
 import PanelApp from './PanelApp';
 import { loadPanelPoint, savePanelPoint } from '@/lib/storage';
-import { PANEL_HOST_ID, PANEL_WIDTH } from '@/lib/ui/panelIds';
+import { OVERLAY_HOST_ID, PANEL_HOST_ID, PANEL_WIDTH } from '@/lib/ui/panelIds';
 import { injectUiReset } from '@/lib/ui/uiReset';
 
-// 面板宿主 id 定义在 panelIds（供 uiReset 共用，避免循环依赖）；此处转出，保持既有 import 路径可用
-export { PANEL_HOST_ID };
-
-/** 浮层宿主 div 的 id（v26.10.09-v6 起；自建、挂在 documentElement 下、自身不影响布局） */
-export const OVERLAY_HOST_ID = '__znhd_overlay_host__';
+// 面板/浮层宿主 id 都定义在 panelIds（叶子模块，供 uiReset 共用、避免循环依赖，也避免 TDZ）；
+// 此处转出，保持既有 import 路径可用。
+// 浮层宿主 div：v26.10.09-v6 起自建、挂在 documentElement 下、自身不影响布局。
+export { OVERLAY_HOST_ID, PANEL_HOST_ID };
 
 /**
  * 浮层容器（antd 的 `getContainer` / `ConfigProvider.getPopupContainer` 都指向它）：
