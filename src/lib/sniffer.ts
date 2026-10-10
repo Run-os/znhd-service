@@ -2,7 +2,7 @@
  * 网页图片嗅探（v26.10.10-v4 新增，配合 `ui/SniffModal.tsx`）。
  *
  * 目标：把**当前页面上的图片**收集起来，让用户能「下载」或「打印」，等价于暴力猴图片提取脚本
- * （参考 52pojie 的《SVG & 图片 & 视频资源提取器》），但按本仓库的约束做了四处裁剪：
+ * （参考 52pojie 的《SVG & 图片 & 视频资源提取器》），但按本仓库的约束做了五处裁剪：
  *   1. **只要图片，不要视频**（扩展名黑名单 + Content-Type 判定 + 资源表 initiatorType 三重排除）；
  *   2. 默认**只展示 ≧ 阈值（默认 20KB）**的图，未知大小的单独折叠保留（用户 2026-10-10 拍板）；
  *   3. **不对宿主页打任何桩**：不 patch fetch / XMLHttpRequest / URL.createObjectURL，不注入样式，
@@ -11,8 +11,11 @@
  *   4. **按文件名排除**（v26.10.10-v5，用户指定）：名字里含 `znhd-sniff` / `user-woman` / `user-man`
  *      的图直接不进候选，见 EXCLUDED_NAME_PATTERNS。判定用的是**面板上显示的那个名字**（sniffFileName），
  *      所以「没有 URL 文件名、兜底叫 znhd-sniff-N」的 data: / blob: 图会被一并排除 —— 用户在面板里
- *      看到的正是这些名字，规则要跟他看到的一致。内联 SVG 因此改用 `inline-svg-N.svg` 命名，不受影响
- *      （否则「排除 znhd-sniff」会把内联 SVG 这整路来源一起打掉）。
+ *      看到的正是这些名字，规则要跟他看到的一致。
+ *   5. **按后缀排除 SVG**（v26.10.10-v7，用户指定）：名字以 `.svg` 结尾的图同样在收集阶段丢掉，见
+ *      EXCLUDED_NAME_SUFFIXES。税务页上的图标/插图大量是 SVG，占着面板位置却不是用户要存的东西。
+ *      内联 <svg> 的显示名就是 `inline-svg-N.svg`（见 sniffFileName），因此**内联 SVG 这一路也随之
+ *      不再显示**（有意为之：用户要的是「排除 svg 文件」，而它在面板里就是一个 .svg 文件）。
  *
  * 三路来源（同一张图会合并、按归一化 URL 去重，sources 记录它从哪几路来）：
  *   · dom  —— <img>（currentSrc / src / srcset 取最大档 / data-* 懒加载属性）+ <picture><source>；
@@ -122,15 +125,25 @@ export const MAX_SNIFF = 300;
  * 而不是原始 URL 字符串 —— 用户是照着面板里的文件名提需求的：
  *   · `user-man` / `user-woman` 命中页面上的头像类图片（URL 末段即文件名）；
  *   · `znhd-sniff` 命中**没有 URL 文件名**的 data: / blob: 图（它们的兜底显示名就是 znhd-sniff-N）。
- * 内联 SVG 走 `inline-svg-N.svg`（见 sniffFileName），不受第三条影响。
  */
 export const EXCLUDED_NAME_PATTERNS = ['znhd-sniff', 'user-woman', 'user-man'];
 
-/** 名字（大小写不敏感）是否命中某条排除片段；空名字返回 false */
+/**
+ * 按**后缀**排除的文件类型（v26.10.10-v7，用户 2026-10-10 指定）。
+ *
+ * 与 EXCLUDED_NAME_PATTERNS 同一套判定入口（同一个显示名、同样在收集阶段丢掉），区别只是「包含某片段」
+ * 与「以某后缀结尾」。用后缀而不是「包含 .svg」：`a.svg.png`、`icon.svg?x` 这类名字不该误伤，
+ * 而真正要排掉的正是「文件后缀是 svg」的那些。
+ * ⚠️ 内联 <svg> 的显示名是 `inline-svg-N.svg`，所以它也会被这条排掉（用户明确要排除 svg 文件）。
+ */
+export const EXCLUDED_NAME_SUFFIXES = ['.svg'];
+
+/** 名字（大小写不敏感）是否命中排除规则（片段包含 或 后缀结尾）；空名字返回 false */
 export function isExcludedName(name: string): boolean {
     const n = String(name || '').toLowerCase();
     if (!n) return false;
-    return EXCLUDED_NAME_PATTERNS.some((p) => n.indexOf(p) >= 0);
+    if (EXCLUDED_NAME_PATTERNS.some((p) => n.indexOf(p) >= 0)) return true;
+    return EXCLUDED_NAME_SUFFIXES.some((s) => n.endsWith(s));
 }
 
 /** 懒加载属性（顺序即优先级；与参考脚本的 imageAttributes 一致，另加 data-echo） */
@@ -194,8 +207,9 @@ export function sanitizeFileName(name: string): string {
  * 复用「历史记录」那套 downloadFileName，避免两处各维护一份 MIME→扩展名映射。
  */
 export function sniffFileName(url: string, mime: string | null, idx = 0): string {
-    // 内联 SVG（data:image/svg+xml）单独命名：它没有 URL 文件名，若沿用 znhd-sniff-N 兜底，
-    // 用户「排除文件名含 znhd-sniff」那条规则会把内联 SVG 这整路来源一起排掉（v26.10.10-v5）。
+    // 内联 SVG（data:image/svg+xml）单独命名：它没有 URL 文件名，若沿用 znhd-sniff-N 兜底就只剩一串
+    // 无意义的名字（v26.10.10-v5 加的）。⚠️ 这个 .svg 名字同时命中 EXCLUDED_NAME_SUFFIXES ⇒
+    // 自 v26.10.10-v7 起内联 SVG 不再出现在面板里（用户要求排除 svg 文件，见文件头第 5 条）。
     if (/^data:image\/svg\+xml/i.test(url)) return downloadFileName('inline-svg-' + (idx + 1), 'image/svg+xml', idx);
     let base = '';
     if (!/^(?:data|blob):/i.test(url)) {
@@ -391,7 +405,7 @@ export function collectCandidates(opts: CollectOptions = {}): CollectResult {
         const url = normalizeUrl(raw);
         if (!url) return;
         if (isVideoUrl(url)) return;
-        // 用户指定的「文件名排除」（v26.10.10-v5）：用**显示名**判定，与面板里看到的保持一致
+        // 用户指定的「名称排除」（v26.10.10-v5 片段、v26.10.10-v7 后缀）：用**显示名**判定，与面板里看到的保持一致
         if (isExcludedName(sniffFileName(url, extra?.mime ?? null, 0))) {
             excludedKeys.add(url);
             return;

@@ -291,6 +291,11 @@
           });
           return { abort: () => {} };
         }
+        // ⑨ .svg 文件（v26.10.10-v7）：后缀命中排除规则 ⇒ 连请求都不会发（桩留着是为了反向验证时看得出来）
+        if (url.indexOf('/media/icon.svg') >= 0) {
+          reply(details, '', { responseHeaders: 'content-type: image/svg+xml\ncontent-length: 30720' });
+          return { abort: () => {} };
+        }
         // ⑦ 10 KB 的普通 http 图（名字不命中排除规则）→ 低于阈值：不显示卡片、不计数、不进全选范围（v26.10.10-v6）
         if (url.indexOf('/sniff-small.png') >= 0) {
           reply(details, '', { responseHeaders: 'content-type: image/png\ncontent-length: 10240' });
@@ -331,10 +336,11 @@
            ② data: 小图（<20KB）                                → 同上（也被名称规则排除）
            ③ CSS background-image → 桩 HEAD 回 content-length   → HEAD 阶梯（30 KB）
            ④ CSS background-image → 桩 HEAD 不给长度、Range GET → Range 阶梯（40 KB）
-           ⑤ 内联 <svg>（运行时补足图元，>20KB）                → svg 来源；因单列命名 inline-svg-N.svg 而不被排除
+           ⑤ 内联 <svg>（运行时补足图元，>20KB）                → 显示名 inline-svg-N.svg ⇒ 被后缀规则排除（v26.10.10-v7）
            ⑥ 懒加载 data-src 指向 HEAD 404 的地址               → 尺寸未知，必须保留在「大小未知」折叠组
          ⑦ 10 KB 的普通 http 图（名字不命中排除规则）         → 被阈值过滤：不显示、不计数、不进全选范围
              ⑧ URL 末段含 user-man 的图                           → 必须被名称规则排除，不出现卡片
+             ⑨ URL 末段是 icon.svg 的图                           → 必须被**后缀**规则排除，不出现卡片
            ①②⑤ 的内容在下面用脚本现造，避免在 HTML 里塞几十 KB base64。 -->
     <div id="sniff-fixtures" aria-hidden="true">
       <img id="sniff-data-big" alt="" />
@@ -351,6 +357,8 @@
       <img id="sniff-small-http" src="https://sniff-smoke.test/sniff-small.png" alt="" />
       <!-- ⑧ 名字命中排除规则（URL 末段 user-man.png）：必须被丢掉、不进卡片，只体现在排除计数里 -->
       <img id="sniff-excluded-name" src="https://sniff-smoke.test/media/user-man.png" alt="" />
+      <!-- ⑨ 后缀命中排除规则（.svg，v26.10.10-v7）：同样在收集阶段就丢掉，连 HEAD 都不会发 -->
+      <img id="sniff-svg-http" src="https://sniff-smoke.test/media/icon.svg" alt="" />
     </div>
 
     <pre id="smoke-result" style="margin-top: 40px">running…</pre>
@@ -791,9 +799,12 @@
             excludedCount: excludedNotice ? Number(excludedNotice[1]) : -1,
             // 只看**卡片标题**（文件名 / 来源提示），不看弹窗正文：排除提示里本身就含这些字样
             excludedNameInTitles: /znhd-sniff|user-man|user-woman/.test(titles),
+            // v26.10.10-v7：SVG 一律不进面板 —— 后缀规则要同时挡住「URL 就是 .svg」与「内联 SVG」两路
+            svgUrlInTitles: titles.indexOf('icon.svg') >= 0,
+            svgInTitles: /\.svg/i.test(titles),
           };
-          // v26.10.10-v5 起 data: 大/小图被名称规则排除，达标卡片只剩「CSS 背景 ×2 + 内联 SVG」
-          const done = snap.modalSeen && cards >= 3 && snap.headSize && snap.rangeSize;
+          // v26.10.10-v7 起 SVG 全被后缀规则排除，达标卡片只剩「CSS 背景 ×2」
+          const done = snap.modalSeen && cards >= 2 && snap.headSize && snap.rangeSize;
           // 第一阶段：等扫描/测量完成；第二阶段：点「全选」后重取快照，看「下载所选（N）」的范围
           if (done && stage === 0 && m) {
             const box = Array.from(m.querySelectorAll('.ant-checkbox-wrapper')).find(
@@ -1207,11 +1218,12 @@
           sniffEntryOk: !!(window.__sniffSnap && window.__sniffSnap.entrySeen && window.__sniffSnap.modalSeen),
           sniffScanOk: !!(
             window.__sniffSnap &&
-            window.__sniffSnap.cards >= 3 &&
+            window.__sniffSnap.cards >= 2 &&
             window.__sniffSnap.sourcesCss &&
-            window.__sniffSnap.sourcesSvg &&
             window.__sniffSnap.headSize &&
-            window.__sniffSnap.rangeSize
+            window.__sniffSnap.rangeSize &&
+            // v26.10.10-v7：SVG 全被后缀规则挡在面板外，故这里反过来要求「面板里没有 SVG 来源」
+            !window.__sniffSnap.sourcesSvg
           ),
           sniffUnknownKeptOk: !!(window.__sniffSnap && window.__sniffSnap.unknownCount >= 1),
           // 图片嗅探（v26.10.10-v6，用户反馈）：小于阈值的图不显示、不计数、也不进全选/批量下载范围。
@@ -1232,6 +1244,14 @@
             window.__sniffSnap &&
             window.__sniffSnap.excludedCount >= 2 &&
             !window.__sniffSnap.excludedNameInTitles
+          ),
+          // 后缀排除（v26.10.10-v7）：URL 是 .svg 的与内联 SVG 都不进面板。
+          // excludedCount >= 4 = 名称规则那 3 张（data 大/小 + user-man）+ 至少 1 张 SVG。
+          sniffSvgExcludedOk: !!(
+            window.__sniffSnap &&
+            !window.__sniffSnap.svgUrlInTitles &&
+            !window.__sniffSnap.svgInTitles &&
+            window.__sniffSnap.excludedCount >= 4
           ),
           sniffSnap: window.__sniffSnap || null,
           relevantErrors: relevant,
@@ -1268,6 +1288,7 @@
           report.sniffScanOk &&
           report.sniffUnknownKeptOk &&
           report.sniffExcludeOk &&
+          report.sniffSvgExcludedOk &&
           report.sniffSelectScopeOk
             ? 'ALL-OK'
             : 'PARTIAL');

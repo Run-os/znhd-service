@@ -10,6 +10,7 @@ import { getOverlayContainer } from '@/lib/ui/panelHost';
 import { OVERLAY_HOST_ID, PANEL_HOST_ID } from '@/lib/ui/panelIds';
 import {
     EXCLUDED_NAME_PATTERNS,
+    EXCLUDED_NAME_SUFFIXES,
     MAX_SNIFF,
     collectCandidates,
     downloadImage,
@@ -47,6 +48,8 @@ const { Text } = Typography;
  *
  * 名称排除（v26.10.10-v5）：名字含 EXCLUDED_NAME_PATTERNS 的图在**收集阶段**就被丢掉（不测大小、不发请求），
  * 面板顶部给出「已按文件名排除 N 张」的提示 —— 否则用户删不掉页面上那些头像/无名字的噪声图。
+ * 后缀排除（v26.10.10-v7）：名字以 EXCLUDED_NAME_SUFFIXES（`.svg`）结尾的图同样在收集阶段丢掉。
+ * ⚠️ 内联 <svg> 的显示名是 inline-svg-N.svg，因此**内联 SVG 一路也不再有卡片**（有意为之）。
  *
  * 阈值的作用范围（v26.10.10-v6，用户反馈后收紧）：小于阈值的图**只被过滤掉，不再出现在任何计数里**
  * （此前头部会写「另有 N 张小于阈值」），并且**全选 / 批量下载的范围只含未被过滤的图**（达标 + 大小未知）。
@@ -120,7 +123,7 @@ export default function SniffModal({ open, onClose, minKB, onMinKBChange }: Snif
     const [total, setTotal] = useState(0);
     /** 候选被上限截断（CSS 遍历元素数 / MAX_SNIFF）—— 必须明确告诉用户「不止这些」 */
     const [truncated, setTruncated] = useState(false);
-    /** 被文件名规则（EXCLUDED_NAME_PATTERNS）排除的张数 —— 让用户知道「不是没扫到，是按规则排掉了」 */
+    /** 被名称规则（EXCLUDED_NAME_PATTERNS + EXCLUDED_NAME_SUFFIXES）排除的张数 —— 让用户知道「不是没扫到，是按规则排掉了」 */
     const [excluded, setExcluded] = useState(0);
     /** 「大小未知」分组是否展开（默认折叠） */
     const [unknownOpen, setUnknownOpen] = useState(false);
@@ -475,7 +478,11 @@ export default function SniffModal({ open, onClose, minKB, onMinKBChange }: Snif
             ) : null}
             {excluded > 0 ? (
                 <Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 8 }}>
-                    {'已按文件名排除 ' + excluded + ' 张（' + EXCLUDED_NAME_PATTERNS.join(' / ') + '）。'}
+                    {'已按文件名排除 ' +
+                        excluded +
+                        ' 张（' +
+                        EXCLUDED_NAME_PATTERNS.concat(EXCLUDED_NAME_SUFFIXES).join(' / ') +
+                        '）。'}
                 </Text>
             ) : null}
 

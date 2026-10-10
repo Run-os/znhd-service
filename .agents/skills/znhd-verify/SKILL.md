@@ -35,7 +35,7 @@ npm run verify        # 无头端到端冒烟（puppeteer）；期望：全绿 A
 1. **构建成功不能被截断的输出掩盖**：`npm run build` 后用 `Select-String -Pattern 'compiled|ERROR'` 之类看**结论行**，别只看最后一行。
 2. **产物里真的包含本次改动**：改 JS 就搜个独有字符串、改 CSS 就搜对应属性名、改版本号就核对 `@version`。**只跑命令不验证产物 = 未验证。**
 3. **脚本元信息完整**（开压缩后尤其重要）：`==UserScript==` 成对，`@version`/`@require`/`@grant`/`@match`/`@icon`/`@updateURL` 齐全——元信息被压掉脚本直接装不上。
-4. **冒烟断言数只增不减**：当前 `run.js` **47 项**（另有 `relay.js` 13 项、`phone-page.js` 10 项）；新增功能应顺手加断言，而不是删掉碍事的断言。若某条断言因**被测对象消失**而失效（如组件被替换），要把它**改到同类对象上**而不是删除。
+4. **冒烟断言数只增不减**：当前 `run.js` **48 项**（另有 `relay.js` 13 项、`phone-page.js` 10 项）；新增功能应顺手加断言，而不是删掉碍事的断言。若某条断言因**被测对象消失**而失效（如组件被替换），要把它**改到同类对象上**而不是删除。
 5. **DOM 断言前先 dump 真实类名**：antd v6 与 v5 的类名多处不同（`.ant-drawer-content`→`.ant-drawer-section`、`.ant-modal-content` 亦已改名）。优先用 v5/v6 通用的 `.ant-modal-body`/`.ant-modal-wrap`/`.ant-drawer-body`。
 6. **失败先分清是产物问题还是测试问题**：本仓库多次出现「断言写错元素 → 假通过/假失败」（量外层 span 而非 svg、用旧类名）。**能反向验证就反向验证**（临时关掉修复 → 断言应变红），这是区分二者的最可靠手段。
 
