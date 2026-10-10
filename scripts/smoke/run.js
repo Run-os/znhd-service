@@ -124,6 +124,8 @@ const CHECKS = [
   ['agentChatsOk', '多会话：会话在左侧栏列出、索引落盘、新建后点侧栏切回上一个对话仍看到自己的历史'],
   // v26.10.10-v13：borderless 输入框聚焦时 antd 会自己在文本域上画 outline 聚焦框（= 看起来像蓝框）
   ['agentInputNoRingOk', '输入框聚焦时没有 antd borderless 变体自带的 outline 蓝框（v26.10.10-v13）'],
+  // v26.10.10-v14：回答里的 Markdown 渲染成 DOM（`**加粗**`→<strong>、列表→<li>、行内代码→<code>）
+  ['agentMarkdownOk', 'Agent 消息按 Markdown 渲染：加粗/列表/行内代码出成 DOM 且文本里不再有字面量 **（v26.10.10-v14）'],
 ];
 
 /**
@@ -389,7 +391,8 @@ async function main() {
       !checkPass('agentChatOk') ||
       !checkPass('agentReopenOk') ||
       !checkPass('agentChatsOk') ||
-      !checkPass('agentInputNoRingOk')
+      !checkPass('agentInputNoRingOk') ||
+      !checkPass('agentMarkdownOk')
     ) {
       console.log('      Agent 快照：' + JSON.stringify(report.agentSnap));
     }

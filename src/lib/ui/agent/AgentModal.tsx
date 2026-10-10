@@ -27,6 +27,7 @@ import {
 import type { AgentChatSession } from '@/lib/agent/sessions';
 import { contentToText, thinkingToText, toolDisplayName } from '@/lib/agent/types';
 import type { AgentConversation, AgentModelSummary, AgentToolCall } from '@/lib/agent/types';
+import MarkdownBody from '@/lib/ui/agent/MarkdownBody';
 import SkillsPanel from '@/lib/ui/agent/SkillsPanel';
 import TaskPanel from '@/lib/ui/agent/TaskPanel';
 
@@ -461,7 +462,6 @@ export default function AgentModal({ open, onClose }: AgentModalProps) {
                         borderRadius: 8,
                         fontSize: 13,
                         lineHeight: 1.6,
-                        whiteSpace: 'pre-wrap',
                         wordBreak: 'break-word',
                         background: isUser ? token.colorPrimaryBg : token.colorFillQuaternary,
                         border: '1px solid ' + (isUser ? token.colorPrimaryBorder : token.colorBorderSecondary),
@@ -498,7 +498,9 @@ export default function AgentModal({ open, onClose }: AgentModalProps) {
                         </details>
                     ) : null}
                     {message.content ? (
-                        <span>{message.content}</span>
+                        // v26.10.10-v14 起两侧都按 Markdown 渲染（见 MarkdownBody 的注释）：
+                        // 用户消息里的单换行由 remark-breaks 兜住，不会再被并成一行
+                        <MarkdownBody content={message.content} />
                     ) : message.pending ? (
                         <Typography.Text type="secondary" style={{ fontSize: 12 }}>
                             正在思考…

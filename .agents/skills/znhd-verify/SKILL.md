@@ -35,7 +35,7 @@ npm run verify        # 无头端到端冒烟（puppeteer）；期望：全绿 A
 1. **构建成功不能被截断的输出掩盖**：`npm run build` 后用 `Select-String -Pattern 'compiled|ERROR'` 之类看**结论行**，别只看最后一行。
 2. **产物里真的包含本次改动**：改 JS 就搜个独有字符串、改 CSS 就搜对应属性名、改版本号就核对 `@version`。**只跑命令不验证产物 = 未验证。**
 3. **脚本元信息完整**（开压缩后尤其重要）：`==UserScript==` 成对，`@version`/`@require`/`@grant`/`@match`/`@icon`/`@updateURL` 齐全——元信息被压掉脚本直接装不上。
-4. **冒烟断言数只增不减**：当前 `run.js` **57 项**（另有 `relay.js` 13 项、`phone-page.js` 10 项）——这个数用 `grep -c "^  \['" scripts/smoke/run.js` 数，**不要靠数输出里的 ✅ 行**（那还含一行「页面无脚本自身报错」，会多数 1）；新增功能应顺手加断言，而不是删掉碍事的断言。若某条断言因**被测对象消失**而失效（如组件被替换），要把它**改到同类对象上**而不是删除。⚠️ 动 Agent 弹窗 DOM 时注意两点（v26.10.10-v13 踩过）：**消息级断言只能看 `.znhd-agent-messages`**（左侧会话栏会一直显示会话标题 = 各会话首条消息，拿整个弹窗的 `textContent` 判断「某条消息在不在」会假阳性、断言假绿），**无文字的图标按钮（发送/中止）必须靠 `aria-label` 才能被 `clickBtnWithText` 找到**（找不到是静默 `return false`，表现成「消息没发出去」的假红）。
+4. **冒烟断言数只增不减**：当前 `run.js` **58 项**（另有 `relay.js` 13 项、`phone-page.js` 10 项）——这个数用 `grep -c "^  \['" scripts/smoke/run.js` 数，**不要靠数输出里的 ✅ 行**（那还含一行「页面无脚本自身报错」，会多数 1）；新增功能应顺手加断言，而不是删掉碍事的断言。若某条断言因**被测对象消失**而失效（如组件被替换），要把它**改到同类对象上**而不是删除。⚠️ 动 Agent 弹窗 DOM 时注意两点（v26.10.10-v13 踩过）：**消息级断言只能看 `.znhd-agent-messages`**（左侧会话栏会一直显示会话标题 = 各会话首条消息，拿整个弹窗的 `textContent` 判断「某条消息在不在」会假阳性、断言假绿），**无文字的图标按钮（发送/中止）必须靠 `aria-label` 才能被 `clickBtnWithText` 找到**（找不到是静默 `return false`，表现成「消息没发出去」的假红）。⚠️ v26.10.10-v14 起**判「Markdown 渲染了没有」要看渲染后的 DOM**（`strong` 文本 / `ul li` 条数 / `p code` 条数，外加「消息文本里没有字面量 `**`」这条反向保险），别只查文本内容。
 5. **DOM 断言前先 dump 真实类名**：antd v6 与 v5 的类名多处不同（`.ant-drawer-content`→`.ant-drawer-section`、`.ant-modal-content` 亦已改名）。优先用 v5/v6 通用的 `.ant-modal-body`/`.ant-modal-wrap`/`.ant-drawer-body`。
 6. **失败先分清是产物问题还是测试问题**：本仓库多次出现「断言写错元素 → 假通过/假失败」（量外层 span 而非 svg、用旧类名）。**能反向验证就反向验证**（临时关掉修复 → 断言应变红），这是区分二者的最可靠手段。
 

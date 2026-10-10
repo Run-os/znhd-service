@@ -198,7 +198,7 @@ npm run verify         # 无头 Chromium 端到端冒烟（面板/弹窗/画廊/
 
 主面板第二行的 **Agent** 按钮打开助手弹窗（第一行仍是原来的 5 个入口），弹窗分三个页签：
 
-1. **对话**：界面左边是**会话栏**——聊过的对话一条条列在这里（显示标题与最近时间，当前对话高亮），点一下就切过去，鼠标移到某一条上会出现**删除**按钮（点了还要再确认一次）；栏顶的**新的聊天**按钮用来另起一个对话。右边是聊天区：直接输入问题，`Enter` 发送、`Shift+Enter` 换行，回答按流式增量显示；**模型在输入框右下角选择**（列出 ScriptCat 里已配置的模型，默认选中 ScriptCat 的默认模型），**发送是输入框里的向上箭头按钮**，回答生成中它会变成方形的**停止**按钮，点一下中断本轮（已收到的内容保留）。回答气泡里若有工具调用会显示成小标签，模型的思考过程折叠在「思考过程」里。
+1. **对话**：界面左边是**会话栏**——聊过的对话一条条列在这里（显示标题与最近时间，当前对话高亮），点一下就切过去，鼠标移到某一条上会出现**删除**按钮（点了还要再确认一次）；栏顶的**新的聊天**按钮用来另起一个对话。右边是聊天区：直接输入问题，`Enter` 发送、`Shift+Enter` 换行，回答按流式增量显示；**模型在输入框右下角选择**（列出 ScriptCat 里已配置的模型，默认选中 ScriptCat 的默认模型），**发送是输入框里的向上箭头按钮**，回答生成中它会变成方形的**停止**按钮，点一下中断本轮（已收到的内容保留）。回答气泡里若有工具调用会显示成小标签，模型的思考过程折叠在「思考过程」里。**回答按 Markdown 排版显示**（标题、加粗、列表、表格、引用、代码块与链接都正常渲染；`Shift+Enter` 换的行原样保留），自己发出去的消息同样按 Markdown 显示。
 2. **技能**：只读盘点 ScriptCat 里已安装的技能（名称、版本、启用状态、工具与参考资料数量、更新时间），可**卸载**（有二次确认）。本面板**不提供安装入口**——安装走 ScriptCat 自己的技能市场与管理页，避免和官方流程重复；对话时已启用的技能会自动加载，不需要逐个勾选。
 3. **定时任务**：用 crontab（五段：分 时 日 月 周，本机时区）创建任务，例如 `0 9 * * *` 每天 9 点、`30 8 * * 1-5` 每个工作日 8:30；每个任务可以**立即执行**、**停用/启用**、**删除**，列表里能看到上次/下次运行时间与上次的报错。任务由 ScriptCat 的调度器在后台执行，**关掉弹窗或关闭网页都不影响**。
 
@@ -266,6 +266,7 @@ const DEFAULTS = {
 | [React 19](https://react.dev/) + [Ant Design v6](https://ant.design/)                | 全部 UI（面板与各弹窗）：组件、主题、消息提示；随产物打包，无第三方运行时请求                                                      |
 | [@ant-design/icons](https://github.com/ant-design/ant-design-icons)                 | antd 配套图标（v6）：放大预览工具栏末尾的「打印」图标等；从包根按需导入，可 tree-shaking                                          |
 | [react-to-print](https://github.com/MatthewHerbst/react-to-print)                    | 放大预览工具栏「打印」：建隐藏 iframe、等图片加载完再调 `print()` 打印原图（随产物打包）                                             |
+| [react-markdown](https://github.com/remarkjs/react-markdown) + [remark-gfm](https://github.com/remarkjs/remark-gfm) + [remark-breaks](https://github.com/remarkjs/remark-breaks) | Agent 对话里双方消息按 Markdown 排版（标题/加粗/列表/表格/引用/代码块/链接，GFM 任务列表；单换行原样保留）；**默认不渲染原始 HTML，因此不引入消毒库**，也不做代码高亮（随产物打包） |
 | [js-yaml](https://github.com/nodeca/js-yaml)                                         | 解析 YAML 格式的常用语配置文件                                                                                                     |
 | [qrcodejs](https://github.com/davidshimjs/qrcodejs)                                  | 「本机上传链接」二维码由脚本端本地生成（无需服务器参与）                                                                           |
 | [heic2any](https://github.com/alexcorvi/heic2any)（手机上传页 CDN 加载）             | 手机端把 HEIC/HEIF 解码转 JPEG 后压缩上传；CDN 不可达时回退原样直传                                                                |
@@ -343,7 +344,7 @@ const DEFAULTS = {
 
 即：可自由使用、修改、分发（含商用），只需保留版权声明与许可证声明；软件按「原样」提供，作者不提供任何担保、不承担使用后果。
 
-随本项目分发与加载的第三方依赖均为 **MIT** 许可（React、ReactDOM、Ant Design、@ant-design/icons、react-to-print、js-yaml，以及运行时按需加载的 qrcodejs、heic2any），与本许可证相互兼容。
+随本项目分发与加载的第三方依赖均为 **MIT** 许可（React、ReactDOM、Ant Design、@ant-design/icons、react-to-print、react-markdown、remark-gfm、remark-breaks、js-yaml，以及运行时按需加载的 qrcodejs、heic2any），与本许可证相互兼容。
 
 ## 联系方式
 

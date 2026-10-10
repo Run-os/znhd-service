@@ -385,6 +385,12 @@
         window.__catAgentCalls = [];
         const log = (name) => window.__catAgentCalls.push(name);
 
+        // v26.10.10-v14：桩回答带上真实形状的 Markdown，用来断言**渲染后**的 DOM。
+        // 既有断言只认子串「（桩回答）」，渲染后 `**` 会被吃掉、文本变成「（桩回答）加粗」，
+        // 所以这里既能被老断言命中，又能证明 Markdown 真的被解析了。
+        const STUB_REPLY =
+          '（桩回答）**加粗**\n\n- 列表甲\n- 列表乙\n\n行内 `code` 片段，还有 [链接](https://example.com/md)。';
+
         const makeStream = (text, onDone) => {
           const chunks = [
             { type: 'thinking_delta', content: '（桩）先想一下' },
@@ -431,7 +437,7 @@
           modelId: 'stub-model-1',
           chatStream: async (content) => {
             log('conversation.chatStream');
-            return makeStream('（桩回答）', () => {
+            return makeStream(STUB_REPLY, () => {
               // 真实环境里 user/assistant 消息是这一轮**结束时**才落库的
               // （`tool_loop_orchestrator` 里的 `chatRepo.appendMessage`），所以「历史」必须等 done 之后才有 ——
               // 这样桩只在「关弹窗再打开 / 切换会话」这些路径上给出对象形状的 thinking，用例聚焦。
@@ -441,7 +447,7 @@
                 id: id + '-a' + list.length,
                 conversationId: id,
                 role: 'assistant',
-                content: '（桩回答）',
+                content: STUB_REPLY,
                 // ⚠️ 必须用真实持久化形状：ScriptCat 存的是**对象**
                 // （官方 ThinkingBlock = { content }，见 tool_loop_orchestrator.ts 的
                 //  `thinking: result.thinking ? { content: result.thinking } : undefined`）。
@@ -453,7 +459,7 @@
           },
           chat: async () => {
             log('conversation.chat');
-            return { content: '（桩回答）', usage: { inputTokens: 1, outputTokens: 2 } };
+            return { content: STUB_REPLY, usage: { inputTokens: 1, outputTokens: 2 } };
           },
           getMessages: async () => {
             log('conversation.getMessages');
@@ -1077,6 +1083,11 @@
           sidebarItemCount: 0,
           sidebarTitles: [],
           sidebarNewChatSeen: false,
+          // v26.10.10-v14：助手/用户消息按 Markdown 渲染（渲染后的 DOM 证据）
+          mdStrongText: null,
+          mdListItemCount: 0,
+          mdInlineCodeCount: 0,
+          mdRawStars: null,
         };
         window.__agentSnap = snap;
 
@@ -1173,6 +1184,13 @@
           const errEl = m ? m.querySelector('.znhd-agent-msg-error') : null;
           snap.errorSeen = !!errEl;
           snap.errorText = errEl ? (errEl.textContent || '').slice(0, 200) : '';
+          // v26.10.10-v14：Markdown 渲染证据 —— 只看渲染后的 DOM，不看原始文本。
+          // `mdRawStars` 表示消息文本里还残留字面量 `**`（即根本没被解析）。
+          const strongEl = m ? m.querySelector('.znhd-agent-messages strong') : null;
+          snap.mdStrongText = strongEl ? strongEl.textContent || '' : null;
+          snap.mdListItemCount = m ? m.querySelectorAll('.znhd-agent-messages ul li').length : 0;
+          snap.mdInlineCodeCount = m ? m.querySelectorAll('.znhd-agent-messages p code').length : 0;
+          snap.mdRawStars = t.indexOf('**') >= 0;
           snap.calls = (window.__catAgentCalls || []).slice();
           snap.replyTries = tries;
           if (snap.replySeen && snap.userMsgSeen) {
@@ -1943,6 +1961,14 @@
               sidebarHas('第二个问题')
             );
           })(),
+          // v26.10.10-v14：回答里的 Markdown 真的渲染成了 DOM（而不是把 `**` 原样显示出来）
+          agentMarkdownOk: !!(
+            window.__agentSnap &&
+            window.__agentSnap.mdStrongText === '加粗' &&
+            window.__agentSnap.mdListItemCount >= 2 &&
+            window.__agentSnap.mdInlineCodeCount >= 1 &&
+            !window.__agentSnap.mdRawStars
+          ),
           agentSnap: window.__agentSnap || null,
           sniffSnap: window.__sniffSnap || null,
           relevantErrors: relevant,
