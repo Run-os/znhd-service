@@ -16,6 +16,12 @@ export const CONFIG = {
     MAX_SPEECH_QUEUE: 10,
     // 语音队列消息有效期（毫秒），超过该时长的陈旧消息在入队/播放前被剔除，避免播报过时内容
     SPEECH_QUEUE_TTL: 30000,
+    // Agent 会话索引最多保留多少条（v26.10.10-v12）。官方 conversation API 只开放 create/get，
+    // 会话列表由脚本自己记账（见 lib/agent/sessions.ts），故给个上限防止索引无限增长。
+    MAX_AGENT_CHATS: 30,
+    // Agent 会话标题的截断长度，与 ScriptCat 官方的自动标题规则保持一致
+    // （chat_service.ts 里 `titleText.slice(0, 30)`），这样本地记的标题和 ScriptCat 侧看到的是同一个。
+    AGENT_CHAT_TITLE_LENGTH: 30,
 };
 
 // ==========存储管理==========
@@ -26,6 +32,9 @@ export const PANEL_POINT_KEY = 'scriptCat_PanelPoint';
 // 常用语缓存（2 小时内且 URL 未变则跳过网络请求，直接复用本地数据）
 export const PHRASES_CACHE_KEY = 'scriptCat_PhrasesCache';
 export const PHRASES_CACHE_TTL = 2 * 60 * 60 * 1000; // 缓存有效期：2 小时（毫秒）
+// Agent 会话索引（v26.10.10-v12）：官方 conversation API 没有 list/delete，脚本只能自己记
+// 「有哪些对话、叫什么名字、上次打开的是哪个」。只存索引，对话消息仍在 ScriptCat 的 OPFS 里。
+export const AGENT_CHATS_KEY = 'scriptCat_AgentChats';
 export const DEFAULTS = {
     voiceEnabled: true,
     // 监控时间段（单位：小时，可含小数，如 13.5 表示 13:30）

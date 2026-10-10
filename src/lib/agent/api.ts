@@ -18,6 +18,8 @@
  * ── ephemeral 之外的对话会落到 OPFS ───────────────────────────────────────
  * 本脚本用的是**非 ephemeral** 对话（持久化、带内置工具），关掉弹窗再打开仍能接着聊；
  * 「新建对话」走 `conversation.create()` 换新实例，不是 `clear()`。
+ * v26.10.10-v12 起多了「会话列表」：官方只开放 `create`/`get`，没有 list/delete，
+ * 列表由脚本自己记账（见 `lib/agent/sessions.ts`），`clear()` 只在「删除」时用来清消息。
  */
 
 import { addLog } from '@/lib/logger';
@@ -189,6 +191,39 @@ export async function readConversationMessages(conversation: AgentConversation):
     const messages = await conversation.getMessages();
     if (!Array.isArray(messages)) return [];
     return messages.filter((message) => message && message.role !== 'system');
+}
+
+/**
+ * 按 id 接回已有对话（打开弹窗时恢复上次的会话、或切换会话）。
+ * 官方签名是「不存在返回 null」，这里把抛错也一并折成 null —— 界面按「已失效」提示，
+ * 不能因为一个取不到的 id 就把对话页签打挂。
+ */
+export async function getConversation(api: CatAgentApi, id: string): Promise<AgentConversation | null> {
+    if (!id) return null;
+    try {
+        const conversation = await api.conversation.get(id);
+        return conversation || null;
+    } catch (error) {
+        addLog('[Agent] 打开对话失败: ' + agentErrorMessage(error), 'warning');
+        return null;
+    }
+}
+
+/**
+ * 删对话时清空该对话的消息。
+ * ⚠️ 官方没有开放删除会话的接口（`deleteConversation` 只存在于内部 repo 层），
+ * `clear()` 的语义是「清空消息历史」（映射到 `{action:"clearMessages"}`），**不删会话记录**。
+ * 所以本脚本的「删除」= 这里清消息 + 从本地索引移除，ScriptCat 里会留一条空记录。
+ * 返回是否清空成功（没成功也照样从索引移除：对用户来说「看不见了」才算删掉）。
+ */
+export async function clearConversation(conversation: AgentConversation): Promise<boolean> {
+    try {
+        await conversation.clear();
+        return true;
+    } catch (error) {
+        addLog('[Agent] 清空对话消息失败: ' + agentErrorMessage(error), 'warning');
+        return false;
+    }
 }
 
 export interface AgentStreamHandlers {

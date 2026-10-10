@@ -1,19 +1,30 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Alert, Button, Empty, Input, Modal, Select, Space, Tooltip, Typography, theme } from 'antd';
+import { Alert, Button, Empty, Input, Modal, Popconfirm, Select, Space, Tooltip, Typography, theme } from 'antd';
 import type { TextAreaRef } from 'antd/es/input/TextArea';
 import { addLog } from '@/lib/logger';
 import { getOverlayContainer } from '@/lib/ui/panelHost';
 import { BotIcon, CloseIcon } from '@/lib/ui/icons';
 import {
     agentErrorMessage,
+    clearConversation,
     createConversation,
     describeAgentError,
     detectCatAgent,
+    getConversation,
     listModels,
     pickDefaultModelId,
     readConversationMessages,
     streamConversation,
 } from '@/lib/agent/api';
+import {
+    agentChatLabel,
+    agentChatTitle,
+    loadAgentChatStore,
+    removeAgentChat,
+    saveAgentChatStore,
+    upsertAgentChat,
+} from '@/lib/agent/sessions';
+import type { AgentChatSession } from '@/lib/agent/sessions';
 import { contentToText, thinkingToText, toolDisplayName } from '@/lib/agent/types';
 import type { AgentConversation, AgentModelSummary, AgentToolCall } from '@/lib/agent/types';
 import SkillsPanel from '@/lib/ui/agent/SkillsPanel';
@@ -81,14 +92,19 @@ export default function AgentModal({ open, onClose }: AgentModalProps) {
     const [messages, setMessages] = useState<UiMessage[]>([]);
     const [input, setInput] = useState<string>('');
     const [streaming, setStreaming] = useState<boolean>(false);
-    const [conversationId, setConversationId] = useState<string>('');
     const [fatalError, setFatalError] = useState<string>('');
 
     const [conversation, setConversation] = useState<AgentConversation | null>(null);
+    /** 会话索引（v26.10.10-v12）：官方 conversation API 没有 list/delete，列表由脚本自己记账 */
+    const [chats, setChats] = useState<AgentChatSession[]>([]);
+    /** 当前会话 id；空串 = 空白对话（发第一条消息时才会真正创建） */
+    const [activeChatId, setActiveChatId] = useState<string>('');
     const [skillsVersion, setSkillsVersion] = useState<number>(0);
     const [tasksVersion, setTasksVersion] = useState<number>(0);
 
     const keyRef = useRef<number>(0);
+    /** 会话索引的最新值：回调里要读它，不能依赖 state 快照（否则连发两条会用同一份旧列表去 upsert） */
+    const chatsRef = useRef<AgentChatSession[]>([]);
     const scrollRef = useRef<HTMLDivElement | null>(null);
     const streamTokenRef = useRef<number>(0);
     // antd 的 Input.TextArea ref 不是原生 textarea，而是带 nativeElement 的 TextAreaRef（rc-textarea 约定）
@@ -97,6 +113,17 @@ export default function AgentModal({ open, onClose }: AgentModalProps) {
     const nextKey = useCallback(() => {
         keyRef.current += 1;
         return keyRef.current;
+    }, []);
+
+    /**
+     * 会话索引的唯一写入口：同时更新 ref（回调里读最新值）、state（触发渲染）与 localStorage。
+     * activeId 用空串表示「当前没有活动对话」，落盘时统一换成 null。
+     */
+    const persistChats = useCallback((items: AgentChatSession[], activeId: string) => {
+        chatsRef.current = items;
+        setChats(items);
+        setActiveChatId(activeId);
+        saveAgentChatStore({ activeId: activeId || null, items });
     }, []);
 
     /* ---------------------------------------------------------- 模型列表 */
@@ -108,6 +135,44 @@ export default function AgentModal({ open, onClose }: AgentModalProps) {
             if (!alive) return;
             setModels(list);
             setModelId((current) => current || preferred || list[0]?.id || '');
+        })();
+        return () => {
+            alive = false;
+        };
+    }, [open, api]);
+
+    /* ---------------------------------------------------------- 接回上次的会话 */
+    /**
+     * 打开弹窗时先把本地会话索引读出来，再按上次的 activeId 把那个对话接回去。
+     * 这一步就是「刷新网页 / 关掉弹窗后对话还在」的关键：对话本体一直在 ScriptCat 的 OPFS 里，
+     * 缺的只是脚本这边记住「上次聊的是哪一个」。
+     */
+    useEffect(() => {
+        if (!open) return;
+        const store = loadAgentChatStore();
+        chatsRef.current = store.items;
+        setChats(store.items);
+        if (!store.activeId) {
+            // 上次停在「新建但还没发第一条消息」的空白对话：保持空白，不接任何历史
+            setActiveChatId('');
+            setConversation(null);
+            return;
+        }
+        if (!api) return;
+        let alive = true;
+        void (async () => {
+            const conv = await getConversation(api, store.activeId as string);
+            if (!alive) return;
+            if (!conv) {
+                // ScriptCat 侧已经找不到这个对话（用户在 Agent 设置里清过数据）：回到空白对话，
+                // 索引条目留着让用户自己删，但绝不因为取不到就报错或让面板崩掉。
+                setActiveChatId('');
+                setConversation(null);
+                addLog('[Agent] 上次的对话已不存在，已回到空白对话', 'warning');
+                return;
+            }
+            setActiveChatId(conv.id || (store.activeId as string));
+            setConversation(conv);
         })();
         return () => {
             alive = false;
@@ -206,7 +271,6 @@ export default function AgentModal({ open, onClose }: AgentModalProps) {
                     skills: 'auto',
                 });
                 setConversation(conv);
-                setConversationId(conv.id || '');
                 addLog('[Agent] 已创建对话 ' + (conv.id || ''), 'info');
             } catch (error) {
                 const message = describeAgentError(error);
@@ -215,6 +279,20 @@ export default function AgentModal({ open, onClose }: AgentModalProps) {
                 return;
             }
         }
+
+        // 登记进本地会话索引：新对话用首条消息当标题（规则对齐官方自动标题），
+        // 已有对话只更新时间戳并把原标题留住 —— 否则接着聊会把标题改成最新那条消息。
+        const now = Date.now();
+        const known = chatsRef.current.find((item) => item.id === conv.id);
+        persistChats(
+            upsertAgentChat(chatsRef.current, {
+                id: conv.id,
+                title: known && known.title ? known.title : agentChatTitle(text),
+                createtime: known && known.createtime ? known.createtime : now,
+                updatetime: now,
+            }),
+            conv.id
+        );
 
         const token = streamTokenRef.current + 1;
         streamTokenRef.current = token;
@@ -282,17 +360,59 @@ export default function AgentModal({ open, onClose }: AgentModalProps) {
         } finally {
             setStreaming(false);
         }
-    }, [api, input, streaming, conversation, modelId, nextKey, patchLast, mergeToolCall]);
+    }, [api, input, streaming, conversation, modelId, nextKey, patchLast, mergeToolCall, persistChats]);
 
     const newChat = useCallback(() => {
         stopStreaming();
         setStreaming(false);
         setConversation(null);
-        setConversationId('');
         setMessages([]);
         setFatalError('');
-        addLog('[Agent] 已新建对话', 'info');
-    }, [stopStreaming]);
+        // 只清指针：真正的对话等第一条消息发出去时才创建，避免列表里堆一堆没内容的空对话
+        persistChats(chatsRef.current, '');
+        addLog('[Agent] 已新建对话（发出第一条消息后才会出现在会话列表里）', 'info');
+    }, [persistChats, stopStreaming]);
+
+    /** 切换会话：先中止正在跑的流，再按 id 把那个对话接回来 */
+    const switchChat = useCallback(
+        async (id: string) => {
+            if (!api || !id || id === activeChatId) return;
+            stopStreaming();
+            setStreaming(false);
+            setFatalError('');
+            const conv = await getConversation(api, id);
+            // 先清空消息：目标对话没有历史时，不能把上一个对话的内容留在屏幕上
+            setMessages([]);
+            setConversation(conv);
+            setActiveChatId(id);
+            saveAgentChatStore({ activeId: id, items: chatsRef.current });
+            if (!conv) {
+                setFatalError(
+                    '这个对话在 ScriptCat 里已经不存在了（可能被清理过）。可以删掉它，或直接发消息另起一个。'
+                );
+                addLog('[Agent] 切换对话失败：ScriptCat 里找不到 ' + id, 'warning');
+                return;
+            }
+            addLog('[Agent] 已切换到对话「' + agentChatLabel(chatsRef.current, id) + '」', 'info');
+        },
+        [api, activeChatId, stopStreaming]
+    );
+
+    /** 删除当前会话：清空它的消息 + 从本地索引移除（官方没有删除会话的接口，见 sessions.ts） */
+    const deleteChat = useCallback(async () => {
+        const id = activeChatId;
+        if (!id) return;
+        const label = agentChatLabel(chatsRef.current, id);
+        stopStreaming();
+        setStreaming(false);
+        // 只有手里正拿着的实例才能 clear；索引里那条在 ScriptCat 侧已失效时本来也没有消息可清
+        if (conversation && conversation.id === id) await clearConversation(conversation);
+        persistChats(removeAgentChat(chatsRef.current, id), '');
+        setConversation(null);
+        setMessages([]);
+        setFatalError('');
+        addLog('[Agent] 已删除对话「' + label + '」', 'info');
+    }, [activeChatId, conversation, persistChats, stopStreaming]);
 
     const handleClose = useCallback(() => {
         stopStreaming();
@@ -394,16 +514,34 @@ export default function AgentModal({ open, onClose }: AgentModalProps) {
                         }))}
                         onChange={(value) => setModelId(value)}
                     />
-                    <Tooltip title="清空当前对话并重新开始">
+                    <Select
+                        size="small"
+                        style={{ minWidth: 160, flex: '1 1 160px' }}
+                        value={activeChatId || undefined}
+                        placeholder={chats.length ? '选择历史对话' : '还没有历史对话'}
+                        disabled={streaming}
+                        options={chats.map((item) => ({
+                            value: item.id,
+                            label: agentChatLabel(chats, item.id),
+                        }))}
+                        onChange={(value) => void switchChat(value)}
+                    />
+                    <Tooltip title="清空当前视图，发出下一条消息时另起一个对话">
                         <Button size="small" onClick={newChat} disabled={streaming && !conversation}>
                             新建对话
                         </Button>
                     </Tooltip>
-                    {conversationId ? (
-                        <Typography.Text type="secondary" style={{ fontSize: 11 }}>
-                            对话 {conversationId.slice(0, 8)}
-                        </Typography.Text>
-                    ) : null}
+                    <Popconfirm
+                        title="删除这个对话？"
+                        description="会清空该对话的消息记录，并从会话列表里移除。"
+                        okText="删除"
+                        cancelText="取消"
+                        okButtonProps={{ danger: true }}
+                        onConfirm={() => void deleteChat()}>
+                        <Button size="small" danger disabled={!activeChatId}>
+                            删除
+                        </Button>
+                    </Popconfirm>
                 </div>
 
                 {models.length ? null : (
@@ -467,7 +605,9 @@ export default function AgentModal({ open, onClose }: AgentModalProps) {
                     )}
                 </div>
                 <Typography.Text type="secondary" style={{ fontSize: 11 }}>
-                    {'对话保存在 ScriptCat 的本地存储（OPFS）里，关掉弹窗不会丢；「新建对话」才会另起一个。'}
+                    {
+                        '对话存在 ScriptCat 的本地存储（OPFS）里，刷新网页也能从上面的下拉接回；「新建对话」另起一个，删除会清空该对话的消息。'
+                    }
                 </Typography.Text>
             </div>
         );

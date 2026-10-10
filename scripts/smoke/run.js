@@ -119,6 +119,8 @@ const CHECKS = [
   ['agentChatOk', 'Agent 对话能发出并落地流式回答（桩分片）'],
   // v26.10.10-v11：历史消息的 thinking 是对象，渲染不当会让整棵面板树被卸载
   ['agentReopenOk', '对话后关弹窗再打开：历史思考正常渲染且主面板仍在（v26.10.10-v11）'],
+  // v26.10.10-v12：官方 conversation API 只有 create/get，会话列表是脚本自记的本地索引
+  ['agentChatsOk', '多会话：会话索引落盘、新建后切回上一个对话仍看到自己的历史（v26.10.10-v12）'],
 ];
 
 /**
@@ -298,12 +300,13 @@ async function main() {
       console.log('      嗅探快照：' + JSON.stringify(report.sniffSnap));
     }
     // Agent 断言失败时打快照：能区分「入口没点到」「弹窗没开」「桩没被调用」「分片没落到 UI」
-    // 以及 v26.10.10-v11 的「重开弹窗后面板是否还在」
+    // 以及 v26.10.10-v11 的「重开弹窗后面板是否还在」、v26.10.10-v12 的「会话索引/切换」
     if (
       !checkPass('agentEntryOk') ||
       !checkPass('agentTabsOk') ||
       !checkPass('agentChatOk') ||
-      !checkPass('agentReopenOk')
+      !checkPass('agentReopenOk') ||
+      !checkPass('agentChatsOk')
     ) {
       console.log('      Agent 快照：' + JSON.stringify(report.agentSnap));
     }

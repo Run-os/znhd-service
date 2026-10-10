@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name                征纳互动人数和在线监控v2
 // @namespace           https://scriptcat.org/
-// @version             26.10.10-v11
+// @version             26.10.10-v12
 // @description         实时监控征纳互动等待人数和在线状态，支持语音播报、自定义常用语
 // @author              runos
 // @license             MIT
@@ -55700,6 +55700,12 @@ const CONFIG = {
     MAX_SPEECH_QUEUE: 10,
     // 语音队列消息有效期（毫秒），超过该时长的陈旧消息在入队/播放前被剔除，避免播报过时内容
     SPEECH_QUEUE_TTL: 30000,
+    // Agent 会话索引最多保留多少条（v26.10.10-v12）。官方 conversation API 只开放 create/get，
+    // 会话列表由脚本自己记账（见 lib/agent/sessions.ts），故给个上限防止索引无限增长。
+    MAX_AGENT_CHATS: 30,
+    // Agent 会话标题的截断长度，与 ScriptCat 官方的自动标题规则保持一致
+    // （chat_service.ts 里 `titleText.slice(0, 30)`），这样本地记的标题和 ScriptCat 侧看到的是同一个。
+    AGENT_CHAT_TITLE_LENGTH: 30,
 };
 // ==========存储管理==========
 // 存储键名
@@ -55709,6 +55715,9 @@ const PANEL_POINT_KEY = 'scriptCat_PanelPoint';
 // 常用语缓存（2 小时内且 URL 未变则跳过网络请求，直接复用本地数据）
 const PHRASES_CACHE_KEY = 'scriptCat_PhrasesCache';
 const PHRASES_CACHE_TTL = 2 * 60 * 60 * 1000; // 缓存有效期：2 小时（毫秒）
+// Agent 会话索引（v26.10.10-v12）：官方 conversation API 没有 list/delete，脚本只能自己记
+// 「有哪些对话、叫什么名字、上次打开的是哪个」。只存索引，对话消息仍在 ScriptCat 的 OPFS 里。
+const AGENT_CHATS_KEY = 'scriptCat_AgentChats';
 const DEFAULTS = {
     voiceEnabled: true,
     // 监控时间段（单位：小时，可含小数，如 13.5 表示 13:30）
@@ -82396,6 +82405,691 @@ select_Select._InternalPanelDoNotUseOrYouWillBeFired = select_PurePanel;
 if (false) // removed by dead control flow
 {}
 /* harmony default export */ const es_select = (select_Select);
+;// ./node_modules/antd/es/_util/getRenderPropValue.js
+
+
+const getRenderPropValue = propValue => {
+  if (!isReactRenderable(propValue)) {
+    return null;
+  }
+  return isFunction(propValue) ? propValue() : propValue;
+};
+;// ./node_modules/antd/es/popover/style/index.js
+
+
+
+
+
+
+const style_FALL_BACK_ORIGIN = '50%';
+const popover_style_genBaseStyle = token => {
+  const {
+    componentCls,
+    popoverColor,
+    titleMinWidth,
+    fontWeightStrong,
+    innerPadding,
+    dropShadowPopover,
+    colorTextHeading,
+    borderRadiusLG,
+    zIndexPopup,
+    titleMarginBottom,
+    colorBgElevated,
+    popoverBg,
+    titleBorderBottom,
+    innerContentPadding,
+    titlePadding,
+    antCls
+  } = token;
+  const [varName, varRef] = genCssVar(antCls, 'tooltip');
+  return [{
+    [componentCls]: {
+      ...resetComponent(token),
+      position: 'absolute',
+      top: 0,
+      // use `left` to fix https://github.com/ant-design/ant-design/issues/39195
+      left: {
+        _skip_check_: true,
+        value: 0
+      },
+      zIndex: zIndexPopup,
+      fontWeight: 'normal',
+      whiteSpace: 'normal',
+      textAlign: 'start',
+      cursor: 'auto',
+      userSelect: 'text',
+      filter: dropShadowPopover,
+      // When use `autoArrow`, origin will follow the arrow position
+      [varName('valid-offset-x')]: varRef('arrow-offset-x', 'var(--arrow-x)'),
+      transformOrigin: [varRef('valid-offset-x', style_FALL_BACK_ORIGIN), `var(--arrow-y, ${style_FALL_BACK_ORIGIN})`].join(' '),
+      [varName('arrow-background-color')]: colorBgElevated,
+      width: 'max-content',
+      maxWidth: '100vw',
+      '&-rtl': {
+        direction: 'rtl'
+      },
+      '&-hidden': {
+        display: 'none'
+      },
+      [`${componentCls}-content`]: {
+        position: 'relative'
+      },
+      [`${componentCls}-container`]: {
+        backgroundColor: popoverBg,
+        backgroundClip: 'padding-box',
+        borderRadius: borderRadiusLG,
+        padding: innerPadding
+      },
+      [`${componentCls}-title`]: {
+        minWidth: titleMinWidth,
+        marginBottom: titleMarginBottom,
+        color: colorTextHeading,
+        fontWeight: fontWeightStrong,
+        borderBottom: titleBorderBottom,
+        padding: titlePadding
+      },
+      [`${componentCls}-content`]: {
+        color: popoverColor,
+        padding: innerContentPadding
+      }
+    }
+  },
+  // Arrow Style
+  placementArrow(token, varRef('arrow-background-color'), {
+    arrowShadow: false
+  }),
+  // Pure Render
+  {
+    [`${componentCls}-pure`]: {
+      position: 'relative',
+      maxWidth: 'none',
+      margin: token.sizePopupArrow,
+      display: 'inline-block'
+    }
+  }];
+};
+const genColorStyle = token => {
+  const {
+    componentCls,
+    antCls
+  } = token;
+  const [varName] = genCssVar(antCls, 'tooltip');
+  return {
+    [componentCls]: PresetColors.map(colorKey => {
+      const lightColor = token[`${colorKey}6`];
+      return {
+        [`&${componentCls}-${colorKey}`]: {
+          [varName('arrow-background-color')]: lightColor,
+          [`${componentCls}-inner`]: {
+            backgroundColor: lightColor
+          },
+          [`${componentCls}-arrow`]: {
+            background: 'transparent'
+          }
+        }
+      };
+    })
+  };
+};
+const popover_style_prepareComponentToken = token => {
+  const {
+    lineWidth,
+    controlHeight,
+    fontHeight,
+    padding,
+    wireframe,
+    zIndexPopupBase,
+    borderRadiusLG,
+    marginXS,
+    lineType,
+    colorSplit,
+    paddingSM
+  } = token;
+  const titlePaddingBlockDist = controlHeight - fontHeight;
+  const popoverTitlePaddingBlockTop = titlePaddingBlockDist / 2;
+  const popoverTitlePaddingBlockBottom = titlePaddingBlockDist / 2 - lineWidth;
+  const popoverPaddingHorizontal = padding;
+  return {
+    titleMinWidth: 177,
+    zIndexPopup: zIndexPopupBase + 30,
+    ...getArrowToken(token),
+    ...getArrowOffsetToken({
+      contentRadius: borderRadiusLG,
+      limitVerticalRadius: true
+    }),
+    // internal
+    innerPadding: wireframe ? 0 : 12,
+    titleMarginBottom: wireframe ? 0 : marginXS,
+    titlePadding: wireframe ? `${popoverTitlePaddingBlockTop}px ${popoverPaddingHorizontal}px ${popoverTitlePaddingBlockBottom}px` : 0,
+    titleBorderBottom: wireframe ? `${lineWidth}px ${lineType} ${colorSplit}` : 'none',
+    innerContentPadding: wireframe ? `${paddingSM}px ${popoverPaddingHorizontal}px` : 0
+  };
+};
+/* harmony default export */ const popover_style = (genStyleHooks('Popover', token => {
+  const {
+    colorBgElevated,
+    colorText
+  } = token;
+  const popoverToken = statistic_merge(token, {
+    popoverBg: colorBgElevated,
+    popoverColor: colorText
+  });
+  return [popover_style_genBaseStyle(popoverToken), genColorStyle(popoverToken), initZoomMotion(popoverToken, 'zoom-big')];
+}, popover_style_prepareComponentToken, {
+  resetStyle: false,
+  deprecatedTokens: [['width', 'titleMinWidth'], ['minWidth', 'titleMinWidth']]
+}));
+;// ./node_modules/antd/es/popover/PurePanel.js
+"use client";
+
+
+
+
+
+
+
+
+
+const PurePanel_Overlay = props => {
+  const {
+    title,
+    content,
+    prefixCls,
+    classNames,
+    styles
+  } = props;
+  if (!isReactRenderable(title) && !isReactRenderable(content)) {
+    return null;
+  }
+  return /*#__PURE__*/(react_production_namespaceFn().createElement)((react_production_namespaceFn().Fragment), null, isReactRenderable(title) && (/*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
+    className: clsx(`${prefixCls}-title`, classNames?.title),
+    style: styles?.title
+  }, title)), isReactRenderable(content) && (/*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
+    className: clsx(`${prefixCls}-content`, classNames?.content),
+    style: styles?.content
+  }, content)));
+};
+const RawPurePanel = props => {
+  const {
+    hashId,
+    prefixCls,
+    className,
+    style,
+    placement = 'top',
+    title,
+    content,
+    children,
+    classNames,
+    styles
+  } = props;
+  const titleNode = getRenderPropValue(title);
+  const contentNode = getRenderPropValue(content);
+  const mergedProps = {
+    ...props,
+    placement
+  };
+  const [mergedClassNames, mergedStyles] = useMergeSemantic([classNames], [styles], {
+    props: mergedProps
+  });
+  const rootClassName = clsx(hashId, prefixCls, `${prefixCls}-pure`, `${prefixCls}-placement-${placement}`, className);
+  return /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
+    className: rootClassName,
+    style: style
+  }, /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
+    className: `${prefixCls}-arrow`
+  }), /*#__PURE__*/(react_production_namespaceFn().createElement)(tooltip_es_Popup, {
+    ...props,
+    className: hashId,
+    prefixCls: prefixCls,
+    classNames: mergedClassNames,
+    styles: mergedStyles
+  }, children || (/*#__PURE__*/(react_production_namespaceFn().createElement)(PurePanel_Overlay, {
+    prefixCls: prefixCls,
+    title: titleNode,
+    content: contentNode,
+    classNames: mergedClassNames,
+    styles: mergedStyles
+  }))));
+};
+const popover_PurePanel_PurePanel = props => {
+  const {
+    prefixCls: customizePrefixCls,
+    className,
+    ...restProps
+  } = props;
+  const {
+    getPrefixCls
+  } = (react_production_namespaceFn().useContext)(ConfigContext);
+  const prefixCls = getPrefixCls('popover', customizePrefixCls);
+  const [hashId, cssVarCls] = popover_style(prefixCls);
+  return /*#__PURE__*/(react_production_namespaceFn().createElement)(RawPurePanel, {
+    ...restProps,
+    prefixCls: prefixCls,
+    hashId: hashId,
+    className: clsx(className, cssVarCls)
+  });
+};
+/* harmony default export */ const popover_PurePanel = (popover_PurePanel_PurePanel);
+;// ./node_modules/antd/es/popover/index.js
+"use client";
+
+
+
+
+
+
+
+
+
+
+
+
+// CSSINJS
+
+const InternalPopover = /*#__PURE__*/(react_production_namespaceFn().forwardRef)((props, ref) => {
+  const {
+    prefixCls: customizePrefixCls,
+    title,
+    content,
+    overlayClassName,
+    placement = 'top',
+    trigger,
+    children,
+    mouseEnterDelay,
+    mouseLeaveDelay,
+    onOpenChange,
+    overlayStyle = {},
+    styles,
+    classNames,
+    motion,
+    arrow: popoverArrow,
+    ...restProps
+  } = props;
+  const {
+    getPrefixCls,
+    className: contextClassName,
+    style: contextStyle,
+    classNames: contextClassNames,
+    styles: contextStyles,
+    arrow: contextArrow,
+    trigger: contextTrigger,
+    mouseEnterDelay: contextMouseEnterDelay,
+    mouseLeaveDelay: contextMouseLeaveDelay
+  } = useComponentConfig('popover');
+  const mergedMouseEnterDelay = mouseEnterDelay ?? contextMouseEnterDelay ?? 0.1;
+  const mergedMouseLeaveDelay = mouseLeaveDelay ?? contextMouseLeaveDelay ?? 0.1;
+  const prefixCls = getPrefixCls('popover', customizePrefixCls);
+  const [hashId, cssVarCls] = popover_style(prefixCls);
+  const rootPrefixCls = getPrefixCls();
+  const mergedArrow = hook_useMergedArrow(popoverArrow, contextArrow);
+  const mergedTrigger = trigger || contextTrigger || 'hover';
+  // ========================== Warning ===========================
+  if (false) // removed by dead control flow
+{}
+  // ============================= Styles =============================
+  const mergedProps = {
+    ...props,
+    placement,
+    trigger: mergedTrigger,
+    mouseEnterDelay: mergedMouseEnterDelay,
+    mouseLeaveDelay: mergedMouseLeaveDelay,
+    overlayStyle,
+    styles,
+    classNames
+  };
+  const contextStyleRoot = useSemanticRootStyle(contextStyle);
+  const overlayStyleRoot = useSemanticRootStyle(overlayStyle);
+  const [mergedClassNames, mergedStyles] = useMergeSemantic([contextClassNames, classNames], [contextStyles, contextStyleRoot, styles, overlayStyleRoot], {
+    props: mergedProps
+  });
+  const rootClassNames = clsx(overlayClassName, hashId, cssVarCls, contextClassName, mergedClassNames.root);
+  const [open, setOpen] = useControlledState(props.defaultOpen ?? false, props.open);
+  const settingOpen = nextOpen => {
+    setOpen(nextOpen);
+    onOpenChange?.(nextOpen);
+  };
+  const titleNode = getRenderPropValue(title);
+  const contentNode = getRenderPropValue(content);
+  return /*#__PURE__*/(react_production_namespaceFn().createElement)(es_tooltip, {
+    unique: false,
+    arrow: mergedArrow,
+    placement: placement,
+    trigger: mergedTrigger,
+    mouseEnterDelay: mergedMouseEnterDelay,
+    mouseLeaveDelay: mergedMouseLeaveDelay,
+    ...restProps,
+    prefixCls: prefixCls,
+    classNames: {
+      root: rootClassNames,
+      container: mergedClassNames.container,
+      arrow: mergedClassNames.arrow
+    },
+    styles: {
+      root: mergedStyles.root,
+      container: mergedStyles.container,
+      arrow: mergedStyles.arrow
+    },
+    ref: ref,
+    open: open,
+    onOpenChange: settingOpen,
+    overlay: isReactRenderable(titleNode) || isReactRenderable(contentNode) ? (/*#__PURE__*/(react_production_namespaceFn().createElement)(PurePanel_Overlay, {
+      prefixCls: prefixCls,
+      title: titleNode,
+      content: contentNode,
+      classNames: mergedClassNames,
+      styles: mergedStyles
+    })) : null,
+    motion: {
+      motionName: motion_getTransitionName(rootPrefixCls, 'zoom-big', typeof motion?.motionName === 'string' ? motion?.motionName : undefined)
+    },
+    "data-popover-inject": true
+  }, children);
+});
+const Popover = InternalPopover;
+Popover._InternalPanelDoNotUseOrYouWillBeFired = popover_PurePanel;
+if (false) // removed by dead control flow
+{}
+/* harmony default export */ const es_popover = (Popover);
+;// ./node_modules/antd/es/popconfirm/style/index.js
+
+// =============================== Base ===============================
+const popconfirm_style_genBaseStyle = token => {
+  const {
+    componentCls,
+    iconCls,
+    antCls,
+    zIndexPopup,
+    colorText,
+    colorWarning,
+    marginXXS,
+    marginXS,
+    fontSize,
+    fontWeightStrong,
+    colorTextHeading
+  } = token;
+  return {
+    [componentCls]: {
+      zIndex: zIndexPopup,
+      [`&${antCls}-popover`]: {
+        fontSize
+      },
+      [`${componentCls}-message`]: {
+        marginBottom: marginXS,
+        display: 'flex',
+        flexWrap: 'nowrap',
+        alignItems: 'start',
+        [`> ${componentCls}-message-icon`]: {
+          color: colorWarning
+        },
+        [`> ${componentCls}-message-icon ${iconCls}`]: {
+          fontSize,
+          lineHeight: 1,
+          marginInlineEnd: marginXS
+        },
+        [`${componentCls}-title`]: {
+          fontWeight: fontWeightStrong,
+          color: colorTextHeading,
+          '&:only-child': {
+            fontWeight: 'normal'
+          }
+        },
+        [`${componentCls}-description`]: {
+          marginTop: marginXXS,
+          color: colorText
+        }
+      },
+      [`${componentCls}-buttons`]: {
+        textAlign: 'end',
+        whiteSpace: 'nowrap',
+        button: {
+          marginInlineStart: marginXS
+        }
+      }
+    }
+  };
+};
+// ============================== Export ==============================
+const popconfirm_style_prepareComponentToken = token => {
+  const {
+    zIndexPopupBase
+  } = token;
+  return {
+    zIndexPopup: zIndexPopupBase + 60
+  };
+};
+/* harmony default export */ const popconfirm_style = (genStyleHooks('Popconfirm', popconfirm_style_genBaseStyle, popconfirm_style_prepareComponentToken, {
+  resetStyle: false
+}));
+;// ./node_modules/antd/es/popconfirm/PurePanel.js
+"use client";
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+const popconfirm_PurePanel_Overlay = props => {
+  const {
+    prefixCls,
+    okButtonProps,
+    cancelButtonProps,
+    title,
+    description,
+    cancelText,
+    okText,
+    okType = 'primary',
+    icon = /*#__PURE__*/(react_production_namespaceFn().createElement)(icons_ExclamationCircleFilled, null),
+    showCancel = true,
+    close,
+    onConfirm,
+    onCancel,
+    onPopupClick,
+    classNames,
+    styles
+  } = props;
+  const {
+    getPrefixCls
+  } = (react_production_namespaceFn().useContext)(ConfigContext);
+  const [contextLocale] = locale_useLocale('Popconfirm', es_locale_en_US.Popconfirm);
+  const titleNode = getRenderPropValue(title);
+  const descriptionNode = getRenderPropValue(description);
+  return /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
+    className: `${prefixCls}-inner-content`,
+    onClick: onPopupClick
+  }, /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
+    className: `${prefixCls}-message`
+  }, icon && (/*#__PURE__*/(react_production_namespaceFn().createElement)("span", {
+    className: clsx(`${prefixCls}-message-icon`, classNames?.icon),
+    style: styles?.icon
+  }, icon)), /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
+    className: `${prefixCls}-message-text`
+  }, isReactRenderable(titleNode) && (/*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
+    className: clsx(`${prefixCls}-title`, classNames?.title),
+    style: styles?.title
+  }, titleNode)), isReactRenderable(descriptionNode) && (/*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
+    className: clsx(`${prefixCls}-description`, classNames?.content),
+    style: styles?.content
+  }, descriptionNode)))), /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
+    className: `${prefixCls}-buttons`
+  }, showCancel && (/*#__PURE__*/(react_production_namespaceFn().createElement)(button_Button, {
+    onClick: onCancel,
+    size: "small",
+    ...cancelButtonProps
+  }, cancelText || contextLocale?.cancelText)), /*#__PURE__*/(react_production_namespaceFn().createElement)(_util_ActionButton, {
+    buttonProps: {
+      size: 'small',
+      ...convertLegacyProps(okType),
+      ...okButtonProps
+    },
+    actionFn: onConfirm,
+    close: close,
+    prefixCls: getPrefixCls('btn'),
+    quitOnNullishReturnValue: true,
+    emitEvent: true
+  }, okText || contextLocale?.okText)));
+};
+const popconfirm_PurePanel_PurePanel = props => {
+  const {
+    prefixCls: customizePrefixCls,
+    placement,
+    className,
+    style,
+    ...restProps
+  } = props;
+  const {
+    getPrefixCls
+  } = (react_production_namespaceFn().useContext)(ConfigContext);
+  const prefixCls = getPrefixCls('popconfirm', customizePrefixCls);
+  popconfirm_style(prefixCls);
+  return /*#__PURE__*/(react_production_namespaceFn().createElement)(popover_PurePanel, {
+    placement: placement,
+    className: clsx(prefixCls, className),
+    style: style,
+    content: /*#__PURE__*/(react_production_namespaceFn().createElement)(popconfirm_PurePanel_Overlay, {
+      prefixCls: prefixCls,
+      ...restProps
+    })
+  });
+};
+/* harmony default export */ const popconfirm_PurePanel = (popconfirm_PurePanel_PurePanel);
+;// ./node_modules/antd/es/popconfirm/index.js
+"use client";
+
+
+
+
+
+
+
+
+
+
+
+
+const InternalPopconfirm = /*#__PURE__*/(react_production_namespaceFn().forwardRef)((props, ref) => {
+  const {
+    prefixCls: customizePrefixCls,
+    placement = 'top',
+    trigger,
+    okType = 'primary',
+    icon = /*#__PURE__*/(react_production_namespaceFn().createElement)(icons_ExclamationCircleFilled, null),
+    children,
+    overlayClassName,
+    onOpenChange,
+    overlayStyle,
+    styles,
+    arrow: popconfirmArrow,
+    classNames,
+    disabled = false,
+    mouseEnterDelay,
+    mouseLeaveDelay,
+    ...restProps
+  } = props;
+  const {
+    getPrefixCls,
+    className: contextClassName,
+    style: contextStyle,
+    classNames: contextClassNames,
+    styles: contextStyles,
+    arrow: contextArrow,
+    trigger: contextTrigger,
+    mouseEnterDelay: contextMouseEnterDelay,
+    mouseLeaveDelay: contextMouseLeaveDelay
+  } = useComponentConfig('popconfirm');
+  const [open, setOpen] = useControlledState(props.defaultOpen ?? false, props.open);
+  const mergedArrow = hook_useMergedArrow(popconfirmArrow, contextArrow);
+  const mergedTrigger = trigger || contextTrigger || 'click';
+  const mergedMouseEnterDelay = mouseEnterDelay ?? contextMouseEnterDelay ?? 0.1;
+  const mergedMouseLeaveDelay = mouseLeaveDelay ?? contextMouseLeaveDelay ?? 0.1;
+  // ========================== Warning ===========================
+  if (false) // removed by dead control flow
+{}
+  const settingOpen = nextOpen => {
+    setOpen(nextOpen);
+    onOpenChange?.(nextOpen);
+  };
+  const close = () => {
+    settingOpen(false);
+  };
+  const onConfirm = e => props.onConfirm?.call(undefined, e);
+  const onCancel = e => {
+    settingOpen(false);
+    props.onCancel?.call(undefined, e);
+  };
+  const onInternalOpenChange = nextOpen => {
+    if (disabled) {
+      return;
+    }
+    settingOpen(nextOpen);
+  };
+  const prefixCls = getPrefixCls('popconfirm', customizePrefixCls);
+  const mergedProps = {
+    ...props,
+    placement,
+    trigger: mergedTrigger,
+    okType,
+    overlayStyle,
+    styles,
+    classNames,
+    mouseEnterDelay: mergedMouseEnterDelay,
+    mouseLeaveDelay: mergedMouseLeaveDelay
+  };
+  const contextStyleRoot = useSemanticRootStyle(contextStyle);
+  const overlayStyleRoot = useSemanticRootStyle(overlayStyle);
+  const [mergedClassNames, mergedStyles] = useMergeSemantic([contextClassNames, classNames], [contextStyles, contextStyleRoot, styles, overlayStyleRoot], {
+    props: mergedProps
+  });
+  const rootClassNames = clsx(prefixCls, contextClassName, overlayClassName, mergedClassNames.root);
+  popconfirm_style(prefixCls);
+  return /*#__PURE__*/(react_production_namespaceFn().createElement)(es_popover, {
+    arrow: mergedArrow,
+    ...omit(restProps, ['title']),
+    trigger: mergedTrigger,
+    placement: placement,
+    onOpenChange: onInternalOpenChange,
+    open: open,
+    ref: ref,
+    mouseEnterDelay: mergedMouseEnterDelay,
+    mouseLeaveDelay: mergedMouseLeaveDelay,
+    classNames: {
+      root: rootClassNames,
+      container: mergedClassNames.container,
+      arrow: mergedClassNames.arrow
+    },
+    styles: {
+      root: mergedStyles.root,
+      container: mergedStyles.container,
+      arrow: mergedStyles.arrow
+    },
+    content: /*#__PURE__*/(react_production_namespaceFn().createElement)(popconfirm_PurePanel_Overlay, {
+      okType: okType,
+      icon: icon,
+      ...props,
+      prefixCls: prefixCls,
+      close: close,
+      onConfirm: onConfirm,
+      onCancel: onCancel,
+      classNames: mergedClassNames,
+      styles: mergedStyles
+    }),
+    "data-popover-inject": true
+  }, children);
+});
+const popconfirm_Popconfirm = InternalPopconfirm;
+// We don't care debug panel
+/* istanbul ignore next */
+popconfirm_Popconfirm._InternalPanelDoNotUseOrYouWillBeFired = popconfirm_PurePanel;
+if (false) // removed by dead control flow
+{}
+/* harmony default export */ const popconfirm = (popconfirm_Popconfirm);
 ;// ./src/lib/agent/types.ts
 /**
  * ScriptCat Agent API（`CAT.agent.*`）的类型声明与纯工具函数。
@@ -82494,6 +83188,8 @@ const CAT_AGENT_PARTS = ['conversation', 'model', 'skills', 'task'];
  * ── ephemeral 之外的对话会落到 OPFS ───────────────────────────────────────
  * 本脚本用的是**非 ephemeral** 对话（持久化、带内置工具），关掉弹窗再打开仍能接着聊；
  * 「新建对话」走 `conversation.create()` 换新实例，不是 `clear()`。
+ * v26.10.10-v12 起多了「会话列表」：官方只开放 `create`/`get`，没有 list/delete，
+ * 列表由脚本自己记账（见 `lib/agent/sessions.ts`），`clear()` 只在「删除」时用来清消息。
  */
 
 
@@ -82635,6 +83331,40 @@ async function readConversationMessages(conversation) {
         return [];
     return messages.filter((message) => message && message.role !== 'system');
 }
+/**
+ * 按 id 接回已有对话（打开弹窗时恢复上次的会话、或切换会话）。
+ * 官方签名是「不存在返回 null」，这里把抛错也一并折成 null —— 界面按「已失效」提示，
+ * 不能因为一个取不到的 id 就把对话页签打挂。
+ */
+async function getConversation(api, id) {
+    if (!id)
+        return null;
+    try {
+        const conversation = await api.conversation.get(id);
+        return conversation || null;
+    }
+    catch (error) {
+        addLog('[Agent] 打开对话失败: ' + agentErrorMessage(error), 'warning');
+        return null;
+    }
+}
+/**
+ * 删对话时清空该对话的消息。
+ * ⚠️ 官方没有开放删除会话的接口（`deleteConversation` 只存在于内部 repo 层），
+ * `clear()` 的语义是「清空消息历史」（映射到 `{action:"clearMessages"}`），**不删会话记录**。
+ * 所以本脚本的「删除」= 这里清消息 + 从本地索引移除，ScriptCat 里会留一条空记录。
+ * 返回是否清空成功（没成功也照样从索引移除：对用户来说「看不见了」才算删掉）。
+ */
+async function clearConversation(conversation) {
+    try {
+        await conversation.clear();
+        return true;
+    }
+    catch (error) {
+        addLog('[Agent] 清空对话消息失败: ' + agentErrorMessage(error), 'warning');
+        return false;
+    }
+}
 /** 消费一次流式对话；`timeoutMs` 是**静默看门狗**（默认 2 分钟无任何分片即中止） */
 async function streamConversation(conversation, content, handlers = {}, timeoutMs = 120_000) {
     const outcome = { content: '', thinking: '' };
@@ -82769,6 +83499,106 @@ function skillToolSummary(skill) {
         return '无工具';
     const shown = tools.slice(0, 3).map(toolDisplayName).join('、');
     return tools.length > 3 ? shown + ' 等 ' + tools.length + ' 个' : shown;
+}
+
+;// ./src/lib/agent/sessions.ts
+/**
+ * Agent 会话索引（v26.10.10-v12）。
+ *
+ * ── 为什么脚本要自己记一份会话列表 ───────────────────────────────────────────
+ * 官方 `CAT.agent.conversation` 只对脚本开放两个方法：`create()` 和 `get(id)`
+ * （ScriptCat 侧 `src/types/scriptcat.d.ts:1104-1115`，内容侧实现
+ * `src/app/service/content/gm_api/cat_agent.ts:924-960`）。内部的
+ * `listConversations()` / `deleteConversation()`（`src/app/repo/agent_chat.ts:173`、`:237`）
+ * 没有对应的 `@GMContext.API` 出口，而脚本侧的 `sendMessage` 是 `protected`，绕不过去。
+ * 所以「有哪些对话、叫什么名字、上次打开的是哪个」只能由脚本自己记账 —— 就是本模块。
+ *
+ * ── 这里存的**只是索引** ───────────────────────────────────────────────────
+ * 对话消息本体一直在 ScriptCat 的 OPFS 里（本脚本用的是非 ephemeral 对话）。
+ * 索引丢了最多是「列表看不到」，消息不会丢；切回某个对话时仍走 `conversation.get(id)` 取历史。
+ * 反过来，索引里的 id 在 ScriptCat 侧被清掉时 `get()` 会返回 null，调用方按「已失效」处理。
+ *
+ * ── 为什么对话 id 是 ScriptCat 生成的 ──────────────────────────────────────
+ * `create()` 支持传自定义 id，但没必要：id 拿到就存下来即可，少一处自造 id 的撞号风险。
+ */
+
+
+const EMPTY_STORE = { activeId: null, items: [] };
+function isSession(value) {
+    if (!value || typeof value !== 'object')
+        return false;
+    const item = value;
+    return typeof item.id === 'string' && !!item.id && typeof item.title === 'string';
+}
+/**
+ * 读索引。任何异常（localStorage 不可用、JSON 被别的东西写坏）都退化成空列表 ——
+ * 弹窗打开时读它，绝不能因为一份索引解析失败就整块面板报错。
+ */
+function loadAgentChatStore() {
+    try {
+        const raw = localStorage.getItem(AGENT_CHATS_KEY);
+        if (!raw)
+            return EMPTY_STORE;
+        const parsed = JSON.parse(raw);
+        if (!parsed || typeof parsed !== 'object')
+            return EMPTY_STORE;
+        const record = parsed;
+        const items = (Array.isArray(record.items) ? record.items : [])
+            .filter(isSession)
+            .slice(0, CONFIG.MAX_AGENT_CHATS)
+            .map((item) => ({
+            id: item.id,
+            title: item.title,
+            createtime: typeof item.createtime === 'number' ? item.createtime : 0,
+            updatetime: typeof item.updatetime === 'number' ? item.updatetime : 0,
+        }));
+        const activeId = typeof record.activeId === 'string' && record.activeId ? record.activeId : null;
+        // activeId 指向的条目不在索引里（索引被手改过 / 写入中断）：当作没有活动对话，避免界面显示一个点不开的选项
+        return { activeId: items.some((item) => item.id === activeId) ? activeId : null, items };
+    }
+    catch (error) {
+        addLog('[Agent] 读取会话列表失败: ' + (error instanceof Error ? error.message : String(error)), 'warning');
+        return EMPTY_STORE;
+    }
+}
+/** 写索引。失败只记日志：会话列表写不进去不该打断正在进行的对话。 */
+function saveAgentChatStore(store) {
+    try {
+        localStorage.setItem(AGENT_CHATS_KEY, JSON.stringify(store));
+    }
+    catch (error) {
+        addLog('[Agent] 保存会话列表失败: ' + (error instanceof Error ? error.message : String(error)), 'warning');
+    }
+}
+/**
+ * 由首条用户消息生成会话标题，规则与官方一致（截断长度见 CONFIG.AGENT_CHAT_TITLE_LENGTH）。
+ * 换行/连续空白压成单个空格，否则列表里会出现莫名其妙的空白。
+ */
+function agentChatTitle(text) {
+    const flat = text.replace(/\s+/g, ' ').trim();
+    const limit = CONFIG.AGENT_CHAT_TITLE_LENGTH;
+    if (flat.length <= limit)
+        return flat || '新对话';
+    return flat.slice(0, limit) + '…';
+}
+/**
+ * 写入/更新一条会话，并把它提到列表最前（最近使用）。
+ * 已存在时以传入的 session 为准整条替换，调用方负责决定是否保留原标题。
+ */
+function upsertAgentChat(items, session) {
+    const rest = items.filter((item) => item.id !== session.id);
+    return [session, ...rest].slice(0, CONFIG.MAX_AGENT_CHATS);
+}
+/** 从索引里移除一条（删对话时用）。官方没有删除会话的接口，这里只动本地索引。 */
+function removeAgentChat(items, id) {
+    return items.filter((item) => item.id !== id);
+}
+/** 取一条会话的标题，取不到时回退成 id 前 8 位（界面上总得显示点东西） */
+function agentChatLabel(items, id) {
+    const found = items.find((item) => item.id === id);
+    if (found && found.title)
+        return found.title;
+    return id ? id.slice(0, 8) : '新对话';
 }
 
 ;// ./node_modules/antd/es/_util/responsiveObserver.js
@@ -85421,691 +86251,6 @@ if (false) // removed by dead control flow
 const list_List = ListWithForwardRef;
 list_List.Item = list_Item;
 /* harmony default export */ const es_list = (list_List);
-;// ./node_modules/antd/es/_util/getRenderPropValue.js
-
-
-const getRenderPropValue = propValue => {
-  if (!isReactRenderable(propValue)) {
-    return null;
-  }
-  return isFunction(propValue) ? propValue() : propValue;
-};
-;// ./node_modules/antd/es/popover/style/index.js
-
-
-
-
-
-
-const style_FALL_BACK_ORIGIN = '50%';
-const popover_style_genBaseStyle = token => {
-  const {
-    componentCls,
-    popoverColor,
-    titleMinWidth,
-    fontWeightStrong,
-    innerPadding,
-    dropShadowPopover,
-    colorTextHeading,
-    borderRadiusLG,
-    zIndexPopup,
-    titleMarginBottom,
-    colorBgElevated,
-    popoverBg,
-    titleBorderBottom,
-    innerContentPadding,
-    titlePadding,
-    antCls
-  } = token;
-  const [varName, varRef] = genCssVar(antCls, 'tooltip');
-  return [{
-    [componentCls]: {
-      ...resetComponent(token),
-      position: 'absolute',
-      top: 0,
-      // use `left` to fix https://github.com/ant-design/ant-design/issues/39195
-      left: {
-        _skip_check_: true,
-        value: 0
-      },
-      zIndex: zIndexPopup,
-      fontWeight: 'normal',
-      whiteSpace: 'normal',
-      textAlign: 'start',
-      cursor: 'auto',
-      userSelect: 'text',
-      filter: dropShadowPopover,
-      // When use `autoArrow`, origin will follow the arrow position
-      [varName('valid-offset-x')]: varRef('arrow-offset-x', 'var(--arrow-x)'),
-      transformOrigin: [varRef('valid-offset-x', style_FALL_BACK_ORIGIN), `var(--arrow-y, ${style_FALL_BACK_ORIGIN})`].join(' '),
-      [varName('arrow-background-color')]: colorBgElevated,
-      width: 'max-content',
-      maxWidth: '100vw',
-      '&-rtl': {
-        direction: 'rtl'
-      },
-      '&-hidden': {
-        display: 'none'
-      },
-      [`${componentCls}-content`]: {
-        position: 'relative'
-      },
-      [`${componentCls}-container`]: {
-        backgroundColor: popoverBg,
-        backgroundClip: 'padding-box',
-        borderRadius: borderRadiusLG,
-        padding: innerPadding
-      },
-      [`${componentCls}-title`]: {
-        minWidth: titleMinWidth,
-        marginBottom: titleMarginBottom,
-        color: colorTextHeading,
-        fontWeight: fontWeightStrong,
-        borderBottom: titleBorderBottom,
-        padding: titlePadding
-      },
-      [`${componentCls}-content`]: {
-        color: popoverColor,
-        padding: innerContentPadding
-      }
-    }
-  },
-  // Arrow Style
-  placementArrow(token, varRef('arrow-background-color'), {
-    arrowShadow: false
-  }),
-  // Pure Render
-  {
-    [`${componentCls}-pure`]: {
-      position: 'relative',
-      maxWidth: 'none',
-      margin: token.sizePopupArrow,
-      display: 'inline-block'
-    }
-  }];
-};
-const genColorStyle = token => {
-  const {
-    componentCls,
-    antCls
-  } = token;
-  const [varName] = genCssVar(antCls, 'tooltip');
-  return {
-    [componentCls]: PresetColors.map(colorKey => {
-      const lightColor = token[`${colorKey}6`];
-      return {
-        [`&${componentCls}-${colorKey}`]: {
-          [varName('arrow-background-color')]: lightColor,
-          [`${componentCls}-inner`]: {
-            backgroundColor: lightColor
-          },
-          [`${componentCls}-arrow`]: {
-            background: 'transparent'
-          }
-        }
-      };
-    })
-  };
-};
-const popover_style_prepareComponentToken = token => {
-  const {
-    lineWidth,
-    controlHeight,
-    fontHeight,
-    padding,
-    wireframe,
-    zIndexPopupBase,
-    borderRadiusLG,
-    marginXS,
-    lineType,
-    colorSplit,
-    paddingSM
-  } = token;
-  const titlePaddingBlockDist = controlHeight - fontHeight;
-  const popoverTitlePaddingBlockTop = titlePaddingBlockDist / 2;
-  const popoverTitlePaddingBlockBottom = titlePaddingBlockDist / 2 - lineWidth;
-  const popoverPaddingHorizontal = padding;
-  return {
-    titleMinWidth: 177,
-    zIndexPopup: zIndexPopupBase + 30,
-    ...getArrowToken(token),
-    ...getArrowOffsetToken({
-      contentRadius: borderRadiusLG,
-      limitVerticalRadius: true
-    }),
-    // internal
-    innerPadding: wireframe ? 0 : 12,
-    titleMarginBottom: wireframe ? 0 : marginXS,
-    titlePadding: wireframe ? `${popoverTitlePaddingBlockTop}px ${popoverPaddingHorizontal}px ${popoverTitlePaddingBlockBottom}px` : 0,
-    titleBorderBottom: wireframe ? `${lineWidth}px ${lineType} ${colorSplit}` : 'none',
-    innerContentPadding: wireframe ? `${paddingSM}px ${popoverPaddingHorizontal}px` : 0
-  };
-};
-/* harmony default export */ const popover_style = (genStyleHooks('Popover', token => {
-  const {
-    colorBgElevated,
-    colorText
-  } = token;
-  const popoverToken = statistic_merge(token, {
-    popoverBg: colorBgElevated,
-    popoverColor: colorText
-  });
-  return [popover_style_genBaseStyle(popoverToken), genColorStyle(popoverToken), initZoomMotion(popoverToken, 'zoom-big')];
-}, popover_style_prepareComponentToken, {
-  resetStyle: false,
-  deprecatedTokens: [['width', 'titleMinWidth'], ['minWidth', 'titleMinWidth']]
-}));
-;// ./node_modules/antd/es/popover/PurePanel.js
-"use client";
-
-
-
-
-
-
-
-
-
-const PurePanel_Overlay = props => {
-  const {
-    title,
-    content,
-    prefixCls,
-    classNames,
-    styles
-  } = props;
-  if (!isReactRenderable(title) && !isReactRenderable(content)) {
-    return null;
-  }
-  return /*#__PURE__*/(react_production_namespaceFn().createElement)((react_production_namespaceFn().Fragment), null, isReactRenderable(title) && (/*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
-    className: clsx(`${prefixCls}-title`, classNames?.title),
-    style: styles?.title
-  }, title)), isReactRenderable(content) && (/*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
-    className: clsx(`${prefixCls}-content`, classNames?.content),
-    style: styles?.content
-  }, content)));
-};
-const RawPurePanel = props => {
-  const {
-    hashId,
-    prefixCls,
-    className,
-    style,
-    placement = 'top',
-    title,
-    content,
-    children,
-    classNames,
-    styles
-  } = props;
-  const titleNode = getRenderPropValue(title);
-  const contentNode = getRenderPropValue(content);
-  const mergedProps = {
-    ...props,
-    placement
-  };
-  const [mergedClassNames, mergedStyles] = useMergeSemantic([classNames], [styles], {
-    props: mergedProps
-  });
-  const rootClassName = clsx(hashId, prefixCls, `${prefixCls}-pure`, `${prefixCls}-placement-${placement}`, className);
-  return /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
-    className: rootClassName,
-    style: style
-  }, /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
-    className: `${prefixCls}-arrow`
-  }), /*#__PURE__*/(react_production_namespaceFn().createElement)(tooltip_es_Popup, {
-    ...props,
-    className: hashId,
-    prefixCls: prefixCls,
-    classNames: mergedClassNames,
-    styles: mergedStyles
-  }, children || (/*#__PURE__*/(react_production_namespaceFn().createElement)(PurePanel_Overlay, {
-    prefixCls: prefixCls,
-    title: titleNode,
-    content: contentNode,
-    classNames: mergedClassNames,
-    styles: mergedStyles
-  }))));
-};
-const popover_PurePanel_PurePanel = props => {
-  const {
-    prefixCls: customizePrefixCls,
-    className,
-    ...restProps
-  } = props;
-  const {
-    getPrefixCls
-  } = (react_production_namespaceFn().useContext)(ConfigContext);
-  const prefixCls = getPrefixCls('popover', customizePrefixCls);
-  const [hashId, cssVarCls] = popover_style(prefixCls);
-  return /*#__PURE__*/(react_production_namespaceFn().createElement)(RawPurePanel, {
-    ...restProps,
-    prefixCls: prefixCls,
-    hashId: hashId,
-    className: clsx(className, cssVarCls)
-  });
-};
-/* harmony default export */ const popover_PurePanel = (popover_PurePanel_PurePanel);
-;// ./node_modules/antd/es/popover/index.js
-"use client";
-
-
-
-
-
-
-
-
-
-
-
-
-// CSSINJS
-
-const InternalPopover = /*#__PURE__*/(react_production_namespaceFn().forwardRef)((props, ref) => {
-  const {
-    prefixCls: customizePrefixCls,
-    title,
-    content,
-    overlayClassName,
-    placement = 'top',
-    trigger,
-    children,
-    mouseEnterDelay,
-    mouseLeaveDelay,
-    onOpenChange,
-    overlayStyle = {},
-    styles,
-    classNames,
-    motion,
-    arrow: popoverArrow,
-    ...restProps
-  } = props;
-  const {
-    getPrefixCls,
-    className: contextClassName,
-    style: contextStyle,
-    classNames: contextClassNames,
-    styles: contextStyles,
-    arrow: contextArrow,
-    trigger: contextTrigger,
-    mouseEnterDelay: contextMouseEnterDelay,
-    mouseLeaveDelay: contextMouseLeaveDelay
-  } = useComponentConfig('popover');
-  const mergedMouseEnterDelay = mouseEnterDelay ?? contextMouseEnterDelay ?? 0.1;
-  const mergedMouseLeaveDelay = mouseLeaveDelay ?? contextMouseLeaveDelay ?? 0.1;
-  const prefixCls = getPrefixCls('popover', customizePrefixCls);
-  const [hashId, cssVarCls] = popover_style(prefixCls);
-  const rootPrefixCls = getPrefixCls();
-  const mergedArrow = hook_useMergedArrow(popoverArrow, contextArrow);
-  const mergedTrigger = trigger || contextTrigger || 'hover';
-  // ========================== Warning ===========================
-  if (false) // removed by dead control flow
-{}
-  // ============================= Styles =============================
-  const mergedProps = {
-    ...props,
-    placement,
-    trigger: mergedTrigger,
-    mouseEnterDelay: mergedMouseEnterDelay,
-    mouseLeaveDelay: mergedMouseLeaveDelay,
-    overlayStyle,
-    styles,
-    classNames
-  };
-  const contextStyleRoot = useSemanticRootStyle(contextStyle);
-  const overlayStyleRoot = useSemanticRootStyle(overlayStyle);
-  const [mergedClassNames, mergedStyles] = useMergeSemantic([contextClassNames, classNames], [contextStyles, contextStyleRoot, styles, overlayStyleRoot], {
-    props: mergedProps
-  });
-  const rootClassNames = clsx(overlayClassName, hashId, cssVarCls, contextClassName, mergedClassNames.root);
-  const [open, setOpen] = useControlledState(props.defaultOpen ?? false, props.open);
-  const settingOpen = nextOpen => {
-    setOpen(nextOpen);
-    onOpenChange?.(nextOpen);
-  };
-  const titleNode = getRenderPropValue(title);
-  const contentNode = getRenderPropValue(content);
-  return /*#__PURE__*/(react_production_namespaceFn().createElement)(es_tooltip, {
-    unique: false,
-    arrow: mergedArrow,
-    placement: placement,
-    trigger: mergedTrigger,
-    mouseEnterDelay: mergedMouseEnterDelay,
-    mouseLeaveDelay: mergedMouseLeaveDelay,
-    ...restProps,
-    prefixCls: prefixCls,
-    classNames: {
-      root: rootClassNames,
-      container: mergedClassNames.container,
-      arrow: mergedClassNames.arrow
-    },
-    styles: {
-      root: mergedStyles.root,
-      container: mergedStyles.container,
-      arrow: mergedStyles.arrow
-    },
-    ref: ref,
-    open: open,
-    onOpenChange: settingOpen,
-    overlay: isReactRenderable(titleNode) || isReactRenderable(contentNode) ? (/*#__PURE__*/(react_production_namespaceFn().createElement)(PurePanel_Overlay, {
-      prefixCls: prefixCls,
-      title: titleNode,
-      content: contentNode,
-      classNames: mergedClassNames,
-      styles: mergedStyles
-    })) : null,
-    motion: {
-      motionName: motion_getTransitionName(rootPrefixCls, 'zoom-big', typeof motion?.motionName === 'string' ? motion?.motionName : undefined)
-    },
-    "data-popover-inject": true
-  }, children);
-});
-const Popover = InternalPopover;
-Popover._InternalPanelDoNotUseOrYouWillBeFired = popover_PurePanel;
-if (false) // removed by dead control flow
-{}
-/* harmony default export */ const es_popover = (Popover);
-;// ./node_modules/antd/es/popconfirm/style/index.js
-
-// =============================== Base ===============================
-const popconfirm_style_genBaseStyle = token => {
-  const {
-    componentCls,
-    iconCls,
-    antCls,
-    zIndexPopup,
-    colorText,
-    colorWarning,
-    marginXXS,
-    marginXS,
-    fontSize,
-    fontWeightStrong,
-    colorTextHeading
-  } = token;
-  return {
-    [componentCls]: {
-      zIndex: zIndexPopup,
-      [`&${antCls}-popover`]: {
-        fontSize
-      },
-      [`${componentCls}-message`]: {
-        marginBottom: marginXS,
-        display: 'flex',
-        flexWrap: 'nowrap',
-        alignItems: 'start',
-        [`> ${componentCls}-message-icon`]: {
-          color: colorWarning
-        },
-        [`> ${componentCls}-message-icon ${iconCls}`]: {
-          fontSize,
-          lineHeight: 1,
-          marginInlineEnd: marginXS
-        },
-        [`${componentCls}-title`]: {
-          fontWeight: fontWeightStrong,
-          color: colorTextHeading,
-          '&:only-child': {
-            fontWeight: 'normal'
-          }
-        },
-        [`${componentCls}-description`]: {
-          marginTop: marginXXS,
-          color: colorText
-        }
-      },
-      [`${componentCls}-buttons`]: {
-        textAlign: 'end',
-        whiteSpace: 'nowrap',
-        button: {
-          marginInlineStart: marginXS
-        }
-      }
-    }
-  };
-};
-// ============================== Export ==============================
-const popconfirm_style_prepareComponentToken = token => {
-  const {
-    zIndexPopupBase
-  } = token;
-  return {
-    zIndexPopup: zIndexPopupBase + 60
-  };
-};
-/* harmony default export */ const popconfirm_style = (genStyleHooks('Popconfirm', popconfirm_style_genBaseStyle, popconfirm_style_prepareComponentToken, {
-  resetStyle: false
-}));
-;// ./node_modules/antd/es/popconfirm/PurePanel.js
-"use client";
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-const popconfirm_PurePanel_Overlay = props => {
-  const {
-    prefixCls,
-    okButtonProps,
-    cancelButtonProps,
-    title,
-    description,
-    cancelText,
-    okText,
-    okType = 'primary',
-    icon = /*#__PURE__*/(react_production_namespaceFn().createElement)(icons_ExclamationCircleFilled, null),
-    showCancel = true,
-    close,
-    onConfirm,
-    onCancel,
-    onPopupClick,
-    classNames,
-    styles
-  } = props;
-  const {
-    getPrefixCls
-  } = (react_production_namespaceFn().useContext)(ConfigContext);
-  const [contextLocale] = locale_useLocale('Popconfirm', es_locale_en_US.Popconfirm);
-  const titleNode = getRenderPropValue(title);
-  const descriptionNode = getRenderPropValue(description);
-  return /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
-    className: `${prefixCls}-inner-content`,
-    onClick: onPopupClick
-  }, /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
-    className: `${prefixCls}-message`
-  }, icon && (/*#__PURE__*/(react_production_namespaceFn().createElement)("span", {
-    className: clsx(`${prefixCls}-message-icon`, classNames?.icon),
-    style: styles?.icon
-  }, icon)), /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
-    className: `${prefixCls}-message-text`
-  }, isReactRenderable(titleNode) && (/*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
-    className: clsx(`${prefixCls}-title`, classNames?.title),
-    style: styles?.title
-  }, titleNode)), isReactRenderable(descriptionNode) && (/*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
-    className: clsx(`${prefixCls}-description`, classNames?.content),
-    style: styles?.content
-  }, descriptionNode)))), /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
-    className: `${prefixCls}-buttons`
-  }, showCancel && (/*#__PURE__*/(react_production_namespaceFn().createElement)(button_Button, {
-    onClick: onCancel,
-    size: "small",
-    ...cancelButtonProps
-  }, cancelText || contextLocale?.cancelText)), /*#__PURE__*/(react_production_namespaceFn().createElement)(_util_ActionButton, {
-    buttonProps: {
-      size: 'small',
-      ...convertLegacyProps(okType),
-      ...okButtonProps
-    },
-    actionFn: onConfirm,
-    close: close,
-    prefixCls: getPrefixCls('btn'),
-    quitOnNullishReturnValue: true,
-    emitEvent: true
-  }, okText || contextLocale?.okText)));
-};
-const popconfirm_PurePanel_PurePanel = props => {
-  const {
-    prefixCls: customizePrefixCls,
-    placement,
-    className,
-    style,
-    ...restProps
-  } = props;
-  const {
-    getPrefixCls
-  } = (react_production_namespaceFn().useContext)(ConfigContext);
-  const prefixCls = getPrefixCls('popconfirm', customizePrefixCls);
-  popconfirm_style(prefixCls);
-  return /*#__PURE__*/(react_production_namespaceFn().createElement)(popover_PurePanel, {
-    placement: placement,
-    className: clsx(prefixCls, className),
-    style: style,
-    content: /*#__PURE__*/(react_production_namespaceFn().createElement)(popconfirm_PurePanel_Overlay, {
-      prefixCls: prefixCls,
-      ...restProps
-    })
-  });
-};
-/* harmony default export */ const popconfirm_PurePanel = (popconfirm_PurePanel_PurePanel);
-;// ./node_modules/antd/es/popconfirm/index.js
-"use client";
-
-
-
-
-
-
-
-
-
-
-
-
-const InternalPopconfirm = /*#__PURE__*/(react_production_namespaceFn().forwardRef)((props, ref) => {
-  const {
-    prefixCls: customizePrefixCls,
-    placement = 'top',
-    trigger,
-    okType = 'primary',
-    icon = /*#__PURE__*/(react_production_namespaceFn().createElement)(icons_ExclamationCircleFilled, null),
-    children,
-    overlayClassName,
-    onOpenChange,
-    overlayStyle,
-    styles,
-    arrow: popconfirmArrow,
-    classNames,
-    disabled = false,
-    mouseEnterDelay,
-    mouseLeaveDelay,
-    ...restProps
-  } = props;
-  const {
-    getPrefixCls,
-    className: contextClassName,
-    style: contextStyle,
-    classNames: contextClassNames,
-    styles: contextStyles,
-    arrow: contextArrow,
-    trigger: contextTrigger,
-    mouseEnterDelay: contextMouseEnterDelay,
-    mouseLeaveDelay: contextMouseLeaveDelay
-  } = useComponentConfig('popconfirm');
-  const [open, setOpen] = useControlledState(props.defaultOpen ?? false, props.open);
-  const mergedArrow = hook_useMergedArrow(popconfirmArrow, contextArrow);
-  const mergedTrigger = trigger || contextTrigger || 'click';
-  const mergedMouseEnterDelay = mouseEnterDelay ?? contextMouseEnterDelay ?? 0.1;
-  const mergedMouseLeaveDelay = mouseLeaveDelay ?? contextMouseLeaveDelay ?? 0.1;
-  // ========================== Warning ===========================
-  if (false) // removed by dead control flow
-{}
-  const settingOpen = nextOpen => {
-    setOpen(nextOpen);
-    onOpenChange?.(nextOpen);
-  };
-  const close = () => {
-    settingOpen(false);
-  };
-  const onConfirm = e => props.onConfirm?.call(undefined, e);
-  const onCancel = e => {
-    settingOpen(false);
-    props.onCancel?.call(undefined, e);
-  };
-  const onInternalOpenChange = nextOpen => {
-    if (disabled) {
-      return;
-    }
-    settingOpen(nextOpen);
-  };
-  const prefixCls = getPrefixCls('popconfirm', customizePrefixCls);
-  const mergedProps = {
-    ...props,
-    placement,
-    trigger: mergedTrigger,
-    okType,
-    overlayStyle,
-    styles,
-    classNames,
-    mouseEnterDelay: mergedMouseEnterDelay,
-    mouseLeaveDelay: mergedMouseLeaveDelay
-  };
-  const contextStyleRoot = useSemanticRootStyle(contextStyle);
-  const overlayStyleRoot = useSemanticRootStyle(overlayStyle);
-  const [mergedClassNames, mergedStyles] = useMergeSemantic([contextClassNames, classNames], [contextStyles, contextStyleRoot, styles, overlayStyleRoot], {
-    props: mergedProps
-  });
-  const rootClassNames = clsx(prefixCls, contextClassName, overlayClassName, mergedClassNames.root);
-  popconfirm_style(prefixCls);
-  return /*#__PURE__*/(react_production_namespaceFn().createElement)(es_popover, {
-    arrow: mergedArrow,
-    ...omit(restProps, ['title']),
-    trigger: mergedTrigger,
-    placement: placement,
-    onOpenChange: onInternalOpenChange,
-    open: open,
-    ref: ref,
-    mouseEnterDelay: mergedMouseEnterDelay,
-    mouseLeaveDelay: mergedMouseLeaveDelay,
-    classNames: {
-      root: rootClassNames,
-      container: mergedClassNames.container,
-      arrow: mergedClassNames.arrow
-    },
-    styles: {
-      root: mergedStyles.root,
-      container: mergedStyles.container,
-      arrow: mergedStyles.arrow
-    },
-    content: /*#__PURE__*/(react_production_namespaceFn().createElement)(popconfirm_PurePanel_Overlay, {
-      okType: okType,
-      icon: icon,
-      ...props,
-      prefixCls: prefixCls,
-      close: close,
-      onConfirm: onConfirm,
-      onCancel: onCancel,
-      classNames: mergedClassNames,
-      styles: mergedStyles
-    }),
-    "data-popover-inject": true
-  }, children);
-});
-const popconfirm_Popconfirm = InternalPopconfirm;
-// We don't care debug panel
-/* istanbul ignore next */
-popconfirm_Popconfirm._InternalPanelDoNotUseOrYouWillBeFired = popconfirm_PurePanel;
-if (false) // removed by dead control flow
-{}
-/* harmony default export */ const popconfirm = (popconfirm_Popconfirm);
 ;// ./src/lib/ui/agent/SkillsPanel.tsx
 
 
@@ -88278,6 +88423,7 @@ function TaskPanel({ api, version, onChange }) {
 
 
 
+
 /** 面板宽度 238px 放不下的内容都进这个弹窗，故给到 720px */
 const MODAL_WIDTH = 720;
 /** 消息区高度：弹窗固定高度，输入框永远留在视口内，不随消息变长而抖 */
@@ -88315,12 +88461,17 @@ function AgentModal({ open, onClose }) {
     const [messages, setMessages] = (0,react_production_namespaceFn().useState)([]);
     const [input, setInput] = (0,react_production_namespaceFn().useState)('');
     const [streaming, setStreaming] = (0,react_production_namespaceFn().useState)(false);
-    const [conversationId, setConversationId] = (0,react_production_namespaceFn().useState)('');
     const [fatalError, setFatalError] = (0,react_production_namespaceFn().useState)('');
     const [conversation, setConversation] = (0,react_production_namespaceFn().useState)(null);
+    /** 会话索引（v26.10.10-v12）：官方 conversation API 没有 list/delete，列表由脚本自己记账 */
+    const [chats, setChats] = (0,react_production_namespaceFn().useState)([]);
+    /** 当前会话 id；空串 = 空白对话（发第一条消息时才会真正创建） */
+    const [activeChatId, setActiveChatId] = (0,react_production_namespaceFn().useState)('');
     const [skillsVersion, setSkillsVersion] = (0,react_production_namespaceFn().useState)(0);
     const [tasksVersion, setTasksVersion] = (0,react_production_namespaceFn().useState)(0);
     const keyRef = (0,react_production_namespaceFn().useRef)(0);
+    /** 会话索引的最新值：回调里要读它，不能依赖 state 快照（否则连发两条会用同一份旧列表去 upsert） */
+    const chatsRef = (0,react_production_namespaceFn().useRef)([]);
     const scrollRef = (0,react_production_namespaceFn().useRef)(null);
     const streamTokenRef = (0,react_production_namespaceFn().useRef)(0);
     // antd 的 Input.TextArea ref 不是原生 textarea，而是带 nativeElement 的 TextAreaRef（rc-textarea 约定）
@@ -88328,6 +88479,16 @@ function AgentModal({ open, onClose }) {
     const nextKey = (0,react_production_namespaceFn().useCallback)(() => {
         keyRef.current += 1;
         return keyRef.current;
+    }, []);
+    /**
+     * 会话索引的唯一写入口：同时更新 ref（回调里读最新值）、state（触发渲染）与 localStorage。
+     * activeId 用空串表示「当前没有活动对话」，落盘时统一换成 null。
+     */
+    const persistChats = (0,react_production_namespaceFn().useCallback)((items, activeId) => {
+        chatsRef.current = items;
+        setChats(items);
+        setActiveChatId(activeId);
+        saveAgentChatStore({ activeId: activeId || null, items });
     }, []);
     /* ---------------------------------------------------------- 模型列表 */
     (0,react_production_namespaceFn().useEffect)(() => {
@@ -88340,6 +88501,46 @@ function AgentModal({ open, onClose }) {
                 return;
             setModels(list);
             setModelId((current) => current || preferred || list[0]?.id || '');
+        })();
+        return () => {
+            alive = false;
+        };
+    }, [open, api]);
+    /* ---------------------------------------------------------- 接回上次的会话 */
+    /**
+     * 打开弹窗时先把本地会话索引读出来，再按上次的 activeId 把那个对话接回去。
+     * 这一步就是「刷新网页 / 关掉弹窗后对话还在」的关键：对话本体一直在 ScriptCat 的 OPFS 里，
+     * 缺的只是脚本这边记住「上次聊的是哪一个」。
+     */
+    (0,react_production_namespaceFn().useEffect)(() => {
+        if (!open)
+            return;
+        const store = loadAgentChatStore();
+        chatsRef.current = store.items;
+        setChats(store.items);
+        if (!store.activeId) {
+            // 上次停在「新建但还没发第一条消息」的空白对话：保持空白，不接任何历史
+            setActiveChatId('');
+            setConversation(null);
+            return;
+        }
+        if (!api)
+            return;
+        let alive = true;
+        void (async () => {
+            const conv = await getConversation(api, store.activeId);
+            if (!alive)
+                return;
+            if (!conv) {
+                // ScriptCat 侧已经找不到这个对话（用户在 Agent 设置里清过数据）：回到空白对话，
+                // 索引条目留着让用户自己删，但绝不因为取不到就报错或让面板崩掉。
+                setActiveChatId('');
+                setConversation(null);
+                addLog('[Agent] 上次的对话已不存在，已回到空白对话', 'warning');
+                return;
+            }
+            setActiveChatId(conv.id || store.activeId);
+            setConversation(conv);
         })();
         return () => {
             alive = false;
@@ -88441,7 +88642,6 @@ function AgentModal({ open, onClose }) {
                     skills: 'auto',
                 });
                 setConversation(conv);
-                setConversationId(conv.id || '');
                 addLog('[Agent] 已创建对话 ' + (conv.id || ''), 'info');
             }
             catch (error) {
@@ -88451,6 +88651,16 @@ function AgentModal({ open, onClose }) {
                 return;
             }
         }
+        // 登记进本地会话索引：新对话用首条消息当标题（规则对齐官方自动标题），
+        // 已有对话只更新时间戳并把原标题留住 —— 否则接着聊会把标题改成最新那条消息。
+        const now = Date.now();
+        const known = chatsRef.current.find((item) => item.id === conv.id);
+        persistChats(upsertAgentChat(chatsRef.current, {
+            id: conv.id,
+            title: known && known.title ? known.title : agentChatTitle(text),
+            createtime: known && known.createtime ? known.createtime : now,
+            updatetime: now,
+        }), conv.id);
         const token = streamTokenRef.current + 1;
         streamTokenRef.current = token;
         setFatalError('');
@@ -88520,16 +88730,54 @@ function AgentModal({ open, onClose }) {
         finally {
             setStreaming(false);
         }
-    }, [api, input, streaming, conversation, modelId, nextKey, patchLast, mergeToolCall]);
+    }, [api, input, streaming, conversation, modelId, nextKey, patchLast, mergeToolCall, persistChats]);
     const newChat = (0,react_production_namespaceFn().useCallback)(() => {
         stopStreaming();
         setStreaming(false);
         setConversation(null);
-        setConversationId('');
         setMessages([]);
         setFatalError('');
-        addLog('[Agent] 已新建对话', 'info');
-    }, [stopStreaming]);
+        // 只清指针：真正的对话等第一条消息发出去时才创建，避免列表里堆一堆没内容的空对话
+        persistChats(chatsRef.current, '');
+        addLog('[Agent] 已新建对话（发出第一条消息后才会出现在会话列表里）', 'info');
+    }, [persistChats, stopStreaming]);
+    /** 切换会话：先中止正在跑的流，再按 id 把那个对话接回来 */
+    const switchChat = (0,react_production_namespaceFn().useCallback)(async (id) => {
+        if (!api || !id || id === activeChatId)
+            return;
+        stopStreaming();
+        setStreaming(false);
+        setFatalError('');
+        const conv = await getConversation(api, id);
+        // 先清空消息：目标对话没有历史时，不能把上一个对话的内容留在屏幕上
+        setMessages([]);
+        setConversation(conv);
+        setActiveChatId(id);
+        saveAgentChatStore({ activeId: id, items: chatsRef.current });
+        if (!conv) {
+            setFatalError('这个对话在 ScriptCat 里已经不存在了（可能被清理过）。可以删掉它，或直接发消息另起一个。');
+            addLog('[Agent] 切换对话失败：ScriptCat 里找不到 ' + id, 'warning');
+            return;
+        }
+        addLog('[Agent] 已切换到对话「' + agentChatLabel(chatsRef.current, id) + '」', 'info');
+    }, [api, activeChatId, stopStreaming]);
+    /** 删除当前会话：清空它的消息 + 从本地索引移除（官方没有删除会话的接口，见 sessions.ts） */
+    const deleteChat = (0,react_production_namespaceFn().useCallback)(async () => {
+        const id = activeChatId;
+        if (!id)
+            return;
+        const label = agentChatLabel(chatsRef.current, id);
+        stopStreaming();
+        setStreaming(false);
+        // 只有手里正拿着的实例才能 clear；索引里那条在 ScriptCat 侧已失效时本来也没有消息可清
+        if (conversation && conversation.id === id)
+            await clearConversation(conversation);
+        persistChats(removeAgentChat(chatsRef.current, id), '');
+        setConversation(null);
+        setMessages([]);
+        setFatalError('');
+        addLog('[Agent] 已删除对话「' + label + '」', 'info');
+    }, [activeChatId, conversation, persistChats, stopStreaming]);
     const handleClose = (0,react_production_namespaceFn().useCallback)(() => {
         stopStreaming();
         setStreaming(false);
@@ -88562,7 +88810,10 @@ function AgentModal({ open, onClose }) {
         return ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', flexDirection: 'column', gap: 8 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(es_select, { size: "small", style: { minWidth: 200, flex: '1 1 200px' }, value: modelId || undefined, placeholder: models.length ? '选择模型' : '未配置模型', disabled: streaming, options: models.map((model) => ({
                                 value: model.id,
                                 label: model.name + '（' + model.provider + '）',
-                            })), onChange: (value) => setModelId(value) }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_tooltip, { title: "\u6E05\u7A7A\u5F53\u524D\u5BF9\u8BDD\u5E76\u91CD\u65B0\u5F00\u59CB", children: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { size: "small", onClick: newChat, disabled: streaming && !conversation, children: "\u65B0\u5EFA\u5BF9\u8BDD" }) }), conversationId ? ((0,react_jsx_runtime_production_namespaceFn().jsxs)(typography.Text, { type: "secondary", style: { fontSize: 11 }, children: ["\u5BF9\u8BDD ", conversationId.slice(0, 8)] })) : null] }), models.length ? null : ((0,react_jsx_runtime_production_namespaceFn().jsx)(typography.Text, { type: "secondary", style: { fontSize: 12 }, children: "\u8FD8\u6CA1\u6709\u5728 ScriptCat \u91CC\u914D\u7F6E\u6A21\u578B\uFF1A\u8BF7\u6253\u5F00 ScriptCat \u7684 Agent \u8BBE\u7F6E\u6DFB\u52A0\u4E00\u4E2A\u6A21\u578B\uFF08\u652F\u6301 OpenAI \u517C\u5BB9 / Anthropic / \u667A\u8C31\uFF09\uFF0C\u4E4B\u540E\u8FD9\u91CC\u4F1A\u5217\u51FA\u53EF\u9009\u6A21\u578B\u3002" })), fatalError ? (0,react_jsx_runtime_production_namespaceFn().jsx)(es_alert, { type: "error", showIcon: true, message: fatalError }) : null, (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { ref: scrollRef, className: "znhd-agent-messages", style: {
+                            })), onChange: (value) => setModelId(value) }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_select, { size: "small", style: { minWidth: 160, flex: '1 1 160px' }, value: activeChatId || undefined, placeholder: chats.length ? '选择历史对话' : '还没有历史对话', disabled: streaming, options: chats.map((item) => ({
+                                value: item.id,
+                                label: agentChatLabel(chats, item.id),
+                            })), onChange: (value) => void switchChat(value) }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_tooltip, { title: "\u6E05\u7A7A\u5F53\u524D\u89C6\u56FE\uFF0C\u53D1\u51FA\u4E0B\u4E00\u6761\u6D88\u606F\u65F6\u53E6\u8D77\u4E00\u4E2A\u5BF9\u8BDD", children: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { size: "small", onClick: newChat, disabled: streaming && !conversation, children: "\u65B0\u5EFA\u5BF9\u8BDD" }) }), (0,react_jsx_runtime_production_namespaceFn().jsx)(popconfirm, { title: "\u5220\u9664\u8FD9\u4E2A\u5BF9\u8BDD\uFF1F", description: "\u4F1A\u6E05\u7A7A\u8BE5\u5BF9\u8BDD\u7684\u6D88\u606F\u8BB0\u5F55\uFF0C\u5E76\u4ECE\u4F1A\u8BDD\u5217\u8868\u91CC\u79FB\u9664\u3002", okText: "\u5220\u9664", cancelText: "\u53D6\u6D88", okButtonProps: { danger: true }, onConfirm: () => void deleteChat(), children: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { size: "small", danger: true, disabled: !activeChatId, children: "\u5220\u9664" }) })] }), models.length ? null : ((0,react_jsx_runtime_production_namespaceFn().jsx)(typography.Text, { type: "secondary", style: { fontSize: 12 }, children: "\u8FD8\u6CA1\u6709\u5728 ScriptCat \u91CC\u914D\u7F6E\u6A21\u578B\uFF1A\u8BF7\u6253\u5F00 ScriptCat \u7684 Agent \u8BBE\u7F6E\u6DFB\u52A0\u4E00\u4E2A\u6A21\u578B\uFF08\u652F\u6301 OpenAI \u517C\u5BB9 / Anthropic / \u667A\u8C31\uFF09\uFF0C\u4E4B\u540E\u8FD9\u91CC\u4F1A\u5217\u51FA\u53EF\u9009\u6A21\u578B\u3002" })), fatalError ? (0,react_jsx_runtime_production_namespaceFn().jsx)(es_alert, { type: "error", showIcon: true, message: fatalError }) : null, (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { ref: scrollRef, className: "znhd-agent-messages", style: {
                         height: MESSAGES_HEIGHT,
                         overflowY: 'auto',
                         overflowX: 'hidden',
@@ -88575,7 +88826,7 @@ function AgentModal({ open, onClose }) {
                                     return;
                                 event.preventDefault();
                                 void send();
-                            }, placeholder: "\u8F93\u5165\u95EE\u9898\uFF0CEnter \u53D1\u9001\uFF0CShift+Enter \u6362\u884C", autoSize: { minRows: 1, maxRows: 4 }, disabled: !api, style: { resize: 'none' } }), streaming ? ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { danger: true, icon: (0,react_jsx_runtime_production_namespaceFn().jsx)(CloseIcon, { size: 13 }), onClick: stopStreaming, children: "\u4E2D\u6B62" })) : ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { color: "primary", variant: "solid", onClick: () => void send(), disabled: !input.trim(), children: "\u53D1\u9001" }))] }), (0,react_jsx_runtime_production_namespaceFn().jsx)(typography.Text, { type: "secondary", style: { fontSize: 11 }, children: '对话保存在 ScriptCat 的本地存储（OPFS）里，关掉弹窗不会丢；「新建对话」才会另起一个。' })] }));
+                            }, placeholder: "\u8F93\u5165\u95EE\u9898\uFF0CEnter \u53D1\u9001\uFF0CShift+Enter \u6362\u884C", autoSize: { minRows: 1, maxRows: 4 }, disabled: !api, style: { resize: 'none' } }), streaming ? ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { danger: true, icon: (0,react_jsx_runtime_production_namespaceFn().jsx)(CloseIcon, { size: 13 }), onClick: stopStreaming, children: "\u4E2D\u6B62" })) : ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { color: "primary", variant: "solid", onClick: () => void send(), disabled: !input.trim(), children: "\u53D1\u9001" }))] }), (0,react_jsx_runtime_production_namespaceFn().jsx)(typography.Text, { type: "secondary", style: { fontSize: 11 }, children: '对话存在 ScriptCat 的本地存储（OPFS）里，刷新网页也能从上面的下拉接回；「新建对话」另起一个，删除会清空该对话的消息。' })] }));
     };
     const tabs = [
         { key: 'chat', label: '对话' },

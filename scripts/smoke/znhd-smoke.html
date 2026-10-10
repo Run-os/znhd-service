@@ -419,30 +419,26 @@
           };
         };
 
-        // 已完成的对话轮次：真实环境里一轮对话过后 OPFS 里就有持久化消息了，
-        // getMessages() 也必须开始返回它们（否则「关弹窗再打开」这条回归用例是空跑）。
-        let chatRounds = 0;
+        // 每个对话各自一张消息表（真实环境里 ScriptCat 在 OPFS 里按 conversationId 分开存）。
+        // v26.10.10-v12 起桩必须支持多对话：切换会话要能各自看到自己的历史。
+        const convStore = new Map();
+        let convSeq = 0;
+
         const makeConversation = (id) => ({
           id: id,
+          // 官方会在第一条消息之后把标题设成消息前 30 字；桩给个对象形状即可
           title: '桩对话',
           modelId: 'stub-model-1',
-          chatStream: async () => {
+          chatStream: async (content) => {
             log('conversation.chatStream');
             return makeStream('（桩回答）', () => {
-              chatRounds += 1;
-            });
-          },
-          chat: async () => {
-            log('conversation.chat');
-            return { content: '（桩回答）', usage: { inputTokens: 1, outputTokens: 2 } };
-          },
-          getMessages: async () => {
-            log('conversation.getMessages');
-            if (!chatRounds) return [];
-            return [
-              { id: 'm1', conversationId: id, role: 'user', content: '你好' },
-              {
-                id: 'm2',
+              // 真实环境里 user/assistant 消息是这一轮**结束时**才落库的
+              // （`tool_loop_orchestrator` 里的 `chatRepo.appendMessage`），所以「历史」必须等 done 之后才有 ——
+              // 这样桩只在「关弹窗再打开 / 切换会话」这些路径上给出对象形状的 thinking，用例聚焦。
+              const list = convStore.get(id) || [];
+              list.push({ id: id + '-u' + list.length, conversationId: id, role: 'user', content: content });
+              list.push({
+                id: id + '-a' + list.length,
                 conversationId: id,
                 role: 'assistant',
                 content: '（桩回答）',
@@ -451,10 +447,22 @@
                 //  `thinking: result.thinking ? { content: result.thinking } : undefined`）。
                 // v26.10.10-v11 修的正是「对象被当字符串渲染 → 整棵面板树被卸载」。
                 thinking: { content: '（桩）历史思考' },
-              },
-            ];
+              });
+              convStore.set(id, list);
+            });
           },
-          clear: async () => {},
+          chat: async () => {
+            log('conversation.chat');
+            return { content: '（桩回答）', usage: { inputTokens: 1, outputTokens: 2 } };
+          },
+          getMessages: async () => {
+            log('conversation.getMessages');
+            return (convStore.get(id) || []).slice();
+          },
+          clear: async () => {
+            log('conversation.clear');
+            convStore.set(id, []);
+          },
           save: async () => {},
           attach: async () => ({ attachmentId: 'a1', mimeType: 'image/png' }),
         });
@@ -465,9 +473,17 @@
               create: async (options) => {
                 log('conversation.create');
                 window.__catAgentCreateOptions = options || {};
-                return makeConversation('stub-conv-1');
+                convSeq += 1;
+                const id = 'stub-conv-' + convSeq;
+                convStore.set(id, []);
+                return makeConversation(id);
               },
-              get: async () => null,
+              // 不存在返回 null（官方语义）：脚本要按「已失效」处理而不是崩掉
+              get: async (id) => {
+                log('conversation.get:' + id);
+                if (!convStore.has(id)) return null;
+                return makeConversation(id);
+              },
             },
             model: {
               list: async () => {
@@ -1029,6 +1045,23 @@
           panelAliveAfterReopen: false,
           panelStateAfterReopen: null,
           reopenReactChildErrors: [],
+          // 「会话索引 + 多会话切换」回归（v26.10.10-v12）
+          chatsStored: null,
+          newChatClicked: false,
+          firstChatCleared: false,
+          sendClicked2: false,
+          secondUserMsgSeen: false,
+          secondReplySeen: false,
+          switchedToFirst: false,
+          switchSelectCount: 0,
+          switchOptionCount: 0,
+          switchOptionTexts: [],
+          switchHistorySeen: false,
+          switchSecondGone: false,
+          switchHistoryThinkingSeen: false,
+          panelAliveAfterSwitch: false,
+          panelStateAfterSwitch: null,
+          chatsStoredAfterSwitch: null,
         };
         window.__agentSnap = snap;
 
@@ -1071,6 +1104,18 @@
           }, 300);
         };
 
+        // 用原型上的 setter 赋值再派发 input：React 的受控输入依赖原生 setter 触发的 value 跟踪
+        // （直接 `ta.value = x` 会被 React 缓存的 value 覆盖掉；input 事件必须冒泡到 root）
+        const typeMessage = (text) => {
+          const m = findAgentModal();
+          const ta = m ? m.querySelector('textarea') : null;
+          if (!ta) return null;
+          const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value').set;
+          setter.call(ta, text);
+          ta.dispatchEvent(new Event('input', { bubbles: true }));
+          return ta;
+        };
+
         const stageSend = (tries) => {
           const m = findAgentModal();
           if (!m) {
@@ -1093,11 +1138,7 @@
             finish();
             return;
           }
-          // 用原型上的 setter 赋值再派发 input：React 的受控输入依赖原生 setter 触发的 value 跟踪
-          // （直接 `ta.value = x` 会被 React 缓存的 value 覆盖掉；input 事件必须冒泡到 root）
-          const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value').set;
-          setter.call(ta, '你好');
-          ta.dispatchEvent(new Event('input', { bubbles: true }));
+          typeMessage('你好');
           snap.taValue = ta.value;
           snap.stageReached = 'send';
           snap.sendButtons = Array.from(m.querySelectorAll('button'))
@@ -1204,6 +1245,133 @@
             .filter((e) => /React child|not valid as a React child/i.test(e))
             .slice(0, 2);
           snap.stageReached = 'reopen-checked';
+          // 接着验证 v26.10.10-v12 的多会话：新建 → 切换回上一个
+          stageNewChat(30);
+        };
+
+        /* ===== 回归用例（v26.10.10-v12）：会话索引持久化 + 多会话切换 =============
+           官方 CAT.agent.conversation 只开放 create/get（没有 list/delete），所以「会话列表」
+           是脚本自己记在 localStorage 的 scriptCat_AgentChats 里的。这条用例覆盖：
+           ① 发完一轮后索引里就有这个对话（id + 用首条消息当标题）
+           ② 点「新建对话」再发一条 → 第二个对话进索引，视图里看不到上一个对话的内容
+           ③ 用顶部下拉切回第一个对话 → 又看到它自己的历史（含对象形状 thinking 的回填），面板仍在 */
+        const readChatStore = () => {
+          try {
+            return JSON.parse(localStorage.getItem('scriptCat_AgentChats') || 'null');
+          } catch (e) {
+            return { parseError: String((e && e.message) || e) };
+          }
+        };
+
+        const stageNewChat = (tries) => {
+          const m = findAgentModal();
+          if (!m) {
+            snap.stageReached = 'v12-no-modal';
+            finish();
+            return;
+          }
+          snap.chatsStored = readChatStore();
+          snap.newChatClicked = clickBtnWithText(m, '新建对话');
+          if (!snap.newChatClicked && tries > 0) {
+            setTimeout(() => stageNewChat(tries - 1), 100);
+            return;
+          }
+          setTimeout(() => {
+            const text = (findAgentModal() || {}).textContent || '';
+            // 「新建对话」只是把视图清空、下次发送时才真正 create（不留空会话）
+            snap.firstChatCleared = text.indexOf('你好') < 0;
+            const ta = typeMessage('第二个问题');
+            snap.taFound2 = !!ta;
+            snap.sendClicked2 = clickBtnWithText(findAgentModal(), '发送');
+            setTimeout(() => stageSecondReply(35), 250);
+          }, 300);
+        };
+
+        const stageSecondReply = (tries) => {
+          const m = findAgentModal();
+          const t = m ? m.textContent || '' : '';
+          snap.secondUserMsgSeen = t.indexOf('第二个问题') >= 0;
+          snap.secondReplySeen = t.indexOf('（桩回答）') >= 0;
+          snap.chatsStored = readChatStore();
+          if (snap.secondUserMsgSeen && snap.secondReplySeen) {
+            snap.stageReached = 'second-reply-seen';
+            stageSwitchBack(30);
+            return;
+          }
+          if (tries <= 0) {
+            snap.stageReached = 'second-reply-timeout';
+            finish();
+            return;
+          }
+          setTimeout(() => stageSecondReply(tries - 1), 100);
+        };
+
+        // 切换会话：antd Select 靠 mousedown 打开下拉，选项渲染在 body 下的浮层里
+        const stageSwitchBack = (tries) => {
+          const m = findAgentModal();
+          if (!m) {
+            snap.stageReached = 'switch-no-modal';
+            finish();
+            return;
+          }
+          const selects = Array.from(m.querySelectorAll('.ant-select'));
+          snap.switchSelectCount = selects.length;
+          // 第 1 个是模型下拉，第 2 个是会话下拉
+          const target = selects[1];
+          if (!target) {
+            if (tries > 0) {
+              setTimeout(() => stageSwitchBack(tries - 1), 100);
+              return;
+            }
+            snap.stageReached = 'switch-no-select';
+            finish();
+            return;
+          }
+          const selector = target.querySelector('.ant-select-selector') || target;
+          selector.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }));
+          setTimeout(() => openChatOption(tries), 200);
+        };
+
+        const openChatOption = (tries) => {
+          const options = Array.from(document.querySelectorAll('.ant-select-item-option'));
+          snap.switchOptionCount = options.length;
+          snap.switchOptionTexts = options.map((el) => (el.textContent || '').trim()).slice(0, 6);
+          // 第一个对话在列表里的名字就是它的第一条消息
+          const option = options.find((el) => (el.textContent || '').trim() === '你好');
+          if (option) {
+            snap.stageReached = 'switch-option-clicked';
+            option.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }));
+            option.click();
+            setTimeout(checkSwitch, 400);
+            return;
+          }
+          if (tries <= 0) {
+            snap.stageReached = 'switch-no-option';
+            finish();
+            return;
+          }
+          setTimeout(() => openChatOption(tries - 1), 150);
+        };
+
+        const checkSwitch = () => {
+          const m = findAgentModal();
+          const t = m ? m.textContent || '' : '';
+          snap.switchedToFirst = !!m;
+          snap.switchHistorySeen = t.indexOf('你好') >= 0;
+          // 少了这条，用例可能只是「没换视图」也判过
+          snap.switchSecondGone = t.indexOf('第二个问题') < 0;
+          // 只有切回第一个对话并重新回填历史，才会出现 getMessages() 里的思考文本
+          snap.switchHistoryThinkingSeen = t.indexOf('（桩）历史思考') >= 0;
+          const state = panelState();
+          snap.panelStateAfterSwitch = state;
+          snap.panelAliveAfterSwitch = !!(
+            state.alive &&
+            state.height > 0 &&
+            state.hasCollapse &&
+            state.hasAgentEntry
+          );
+          snap.chatsStoredAfterSwitch = readChatStore();
+          snap.stageReached = 'switch-checked';
           finish();
         };
 
@@ -1737,6 +1905,29 @@
             window.__agentSnap.reopenHistorySeen &&
             window.__agentSnap.panelAliveAfterReopen
           ),
+          // v26.10.10-v12：会话索引持久化 + 多会话切换（官方只有 create/get，列表是脚本自记的）
+          agentChatsOk: (() => {
+            const s = window.__agentSnap;
+            if (!s) return false;
+            const store = s.chatsStored;
+            const items = (store && Array.isArray(store.items) && store.items) || [];
+            const titles = items.map((i) => i && i.title);
+            return !!(
+              items.length >= 2 &&
+              titles.indexOf('你好') >= 0 &&
+              titles.indexOf('第二个问题') >= 0 &&
+              s.newChatClicked &&
+              s.firstChatCleared &&
+              s.sendClicked2 &&
+              s.secondUserMsgSeen &&
+              s.secondReplySeen &&
+              s.switchedToFirst &&
+              s.switchHistorySeen &&
+              s.switchSecondGone &&
+              s.switchHistoryThinkingSeen &&
+              s.panelAliveAfterSwitch
+            );
+          })(),
           agentSnap: window.__agentSnap || null,
           sniffSnap: window.__sniffSnap || null,
           relevantErrors: relevant,
