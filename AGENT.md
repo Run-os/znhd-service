@@ -251,6 +251,9 @@
 | **验收「产物漂移」的正确判据（本机）** | ⚠️ 别只看 `git status`：本机索引 `dev:0 ino:0`，刚构建出的产物会**报 stat 假阳性 `M`**（`git diff --raw` 为空、两边 blob 哈希相同、`git add` 刷新后即消失）。用内容判据：`git hash-object --path=<f> <f>` 与 `git rev-parse HEAD:<f>` 逐文件比对，或确认 `git diff --raw -- relay-server/public` 为空 | 2026-10-09 |
 | **关压缩后本机 CRLF 会进产物** | `minimize:false` 起（v26.10.10-v1），**模板字符串原样保留源换行**：本机 CRLF 工作区（`core.autocrlf=true`，53 个 tracked 文件都是 CRLF）会让 `dist/znhd.user.js` 里出现 118 个 CR（全在 CSS 模板串内，无功能影响）。⚠️ **这不是漂移**：`git add` 会归一成 LF，入库 blob 与 CI（LF 源码）构建一致 —— 判据同上（比 blob 哈希，不看工作区字节）。想彻底消除，得给含模板串的源码钉 `eol=lf`，属仓库级约定变更，需单独评估 | **v26.10.10-v1** |
 
+| **`web/node_modules` 被掏空 → 与源码无关的类型洪水错** | 症状：`npm run typecheck:web` 一次报几十条莫名其妙的错（`error TS2488: Type '[number, string]' must have a '[Symbol.iterator]()' method`、`Argument of type 'ReactNode[]' is not assignable to parameter of type 'ReactNode'`、`Argument of type 'Timeout' is not assignable to parameter of type 'number'`），而根 `npm run typecheck` 全绿、`npm run verify:web` 也全绿。根因：`web/node_modules` 又被掏空 —— 本次实测 `typescript/lib` 99 → 125 个文件、`web/node_modules` 17251 → 19671 个文件，`lib.es2015.symbol.d.ts` 等 lib 文件缺失 ⇒ `Symbol.iterator` 在程序里消失。判据：在 `web/src/` 放一个纯 `const [a, b] = tuple` 探针同样报 TS2488（与 React 无关）。处置：`npm --prefix web ci` 重装后复跑即恢复全绿；**不要为此改源码**，也别 `git stash` 怀疑自己的改动 | 2026-10-10 |
+| **循环 import 的 TDZ：宿主 id 常量必须放叶子模块** | 新弹窗若在**模块级**常量里读 `panelHost` 的顶层 `const`（如 `SNIFF_EXCLUDE_SELECTOR = '#' + OVERLAY_HOST_ID`），一旦形成 `MainPanel → 新弹窗 → panelHost → PanelApp → MainPanel` 的循环 import，webpack 求值新弹窗时那个 const 还在 TDZ ⇒ **脚本启动即崩**（`Uncaught ReferenceError: Cannot access 'OVERLAY_HOST_ID' before initialization`）。⚠️ `npm run typecheck` / `npm run build` **全绿也照样崩**（类型检查看不到运行期求值顺序），只有 `npm run verify:smoke` 能抓到。正解：id 常量放不 import 任何东西的叶子模块 `src/lib/ui/panelIds.ts`，`panelHost` 再 `export { … }` 保留既有 import 路径 | **v26.10.10-v4** |
+
 ## 技术债务
 
 - **FingerprintJS**：`@require` 已删除（v26.9.6-v7 清理死依赖），此项已关闭。

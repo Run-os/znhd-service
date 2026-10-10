@@ -39,6 +39,11 @@ npm run verify        # 无头端到端冒烟（puppeteer）；期望：全绿 A
 5. **DOM 断言前先 dump 真实类名**：antd v6 与 v5 的类名多处不同（`.ant-drawer-content`→`.ant-drawer-section`、`.ant-modal-content` 亦已改名）。优先用 v5/v6 通用的 `.ant-modal-body`/`.ant-modal-wrap`/`.ant-drawer-body`。
 6. **失败先分清是产物问题还是测试问题**：本仓库多次出现「断言写错元素 → 假通过/假失败」（量外层 span 而非 svg、用旧类名）。**能反向验证就反向验证**（临时关掉修复 → 断言应变红），这是区分二者的最可靠手段。
 
+## 假红 / 假绿的两种已知形态（先查这里，别改源码）
+
+- **`npm run typecheck:web` 报一大堆与源码无关的错**（`TS2488 … must have a '[Symbol.iterator]()' method`、`ReactNode[]` 不可赋给 `ReactNode`、`Timeout` 不可赋给 `number`，而根 `typecheck` 与 `verify:web` 都是绿的）⇒ 十有八九是 `web/node_modules` 又被掏空（`typescript/lib` 文件缺失 ⇒ `Symbol.iterator` 从程序里消失）。先在 `web/src/` 放一个纯元组解构探针确认（也会报 TS2488），再 `npm --prefix web ci` 重装、复跑即绿；**不要为此改源码**。
+- **`npm run verify:smoke` 全红、页面报 `Cannot access 'XXX' before initialization`** ⇒ 循环 import 的 TDZ（模块级常量读了 `panelHost` 的顶层 const）。const 必须放叶子模块 `src/lib/ui/panelIds.ts`；`typecheck` / `build` 都不会报，只有这条门禁抓得到。
+
 ## 输出要求
 
 - 给用户的结论里必须包含：**跑了哪些检查、每项结果、以及没有覆盖到的部分**（例如真实税务页需登录，本地无法覆盖）。
