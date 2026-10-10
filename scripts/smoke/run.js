@@ -109,6 +109,8 @@ const CHECKS = [
   ['sniffSelectScopeOk', '全选/批量下载只覆盖未被阈值过滤的图（小于阈值的不计数、不可选）'],
   ['sniffExcludeOk', '按文件名排除（znhd-sniff / user-woman / user-man）且面板给出排除计数'],
   ['sniffSvgExcludedOk', '按后缀排除 SVG（.svg 与内联 SVG 都不进面板）'],
+  // v26.10.10-v8：面板被宿主页重绘删除后必须自愈（watchPanelHost 的回归断言）
+  ['selfHeal', '面板被宿主页删除后自动挂回（且不重复挂载）'],
 ];
 
 /**
@@ -224,6 +226,46 @@ async function main() {
         return moved && stillCollapsed;
       }, start);
     })();
+
+    // ——— 面板自愈（v26.10.10-v8）：模拟宿主页重绘把面板容器连同 React 树一起删掉 ———
+    // 放在**报告采集之后**：删掉宿主会重建 React 子树（面板内存态重置），
+    // 若排在前面会污染后面所有依赖面板状态/弹窗的用例，所以只在最后做一次破坏性实验。
+    // ⚠️ 判据是「旧宿主被删 → 仍然只有一个宿主、它在文档里、且有尺寸」：
+    //    没有 watchdog 的旧实现会永久缺失宿主，因此同一断言在改动前后是可区分的。
+    const selfHeal = await (async () => {
+      const before = await page.evaluate(
+        () => !!document.getElementById('__znhd_panel_host__')?.isConnected
+      );
+      if (!before) return { before, ok: false };
+      await page.evaluate(() => {
+        const host = document.getElementById('__znhd_panel_host__');
+        if (host) host.remove();
+      });
+      await page
+        .waitForFunction(
+          () => {
+            const h = document.getElementById('__znhd_panel_host__');
+            return !!h && h.isConnected && h.offsetWidth > 0;
+          },
+          { timeout: 5000 }
+        )
+        .catch(() => {});
+      // 再多等约 1.2s（≈10 个宏任务）：自愈若写成回环，这里会长出第 3 个宿主
+      await sleep(1200);
+      return await page.evaluate(() => {
+        const els = Array.from(document.querySelectorAll('#__znhd_panel_host__'));
+        const h = els[0];
+        return {
+          before: true,
+          count: els.length,
+          connected: !!(h && h.isConnected),
+          sized: !!(h && h.offsetWidth > 0 && h.offsetHeight > 0),
+          ok: els.length === 1 && !!h && h.isConnected && h.offsetWidth > 0,
+        };
+      });
+    })();
+    console.log('  面板自愈用例：' + JSON.stringify(selfHeal));
+    report.selfHeal = selfHeal;
 
     // version 检查改为「渲染值 === 产物 @version」的精确比对
     const checkPass = (key) => (key === 'version' ? report.version === 'v' + scriptVersion : !!report[key]);

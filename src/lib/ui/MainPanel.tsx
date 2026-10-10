@@ -19,7 +19,7 @@ import { resolveGithubUrl, hoursToHHmm } from '@/lib/utils';
 import { getDeviceId, startPhoneReceive } from '@/lib/relay';
 import { MAX_GALLERY, MAX_TEXT, type GalleryImage, type GalleryText } from '@/lib/gallery';
 import { clearSpeechQueue } from '@/lib/speech';
-import { getMonitorState, setMonitorStateSink, type MonitorState } from '@/lib/monitor';
+import { getMonitorState, resetWaitCountBaseline, setMonitorStateSink, type MonitorState } from '@/lib/monitor';
 import { notify } from '@/lib/ui/notify';
 import { clampHostIntoView, usePanelDrag } from '@/lib/ui/panelHost';
 import { PANEL_WIDTH } from '@/lib/ui/panelIds';
@@ -468,6 +468,8 @@ export default function MainPanel({ host }: MainPanelProps) {
         if (next && 'speechSynthesis' in window) {
             // 播放一个静默语音激活语音合成（绕过浏览器 not-allowed 限制）
             window.speechSynthesis.speak(new SpeechSynthesisUtterance(''));
+            // 关闭期间人数上升沿被 speak() 的静音判断吃掉，复位基线让下一次轮询补播当前人数（v26.10.10-v9）
+            resetWaitCountBaseline();
             notify.success('语音功能已启用');
         } else if (!next) {
             clearSpeechQueue();

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name                征纳互动人数和在线监控v2
 // @namespace           https://scriptcat.org/
-// @version             26.10.10-v7
+// @version             26.10.10-v9
 // @description         实时监控征纳互动等待人数和在线状态，支持语音播报、自定义常用语
 // @author              runos
 // @license             MIT
@@ -18,9 +18,9 @@
 // @homepageURL         https://github.com/Run-os/znhd-service
 // @updateURL           https://raw.githubusercontent.com/Run-os/znhd-service/refs/heads/main/dist/znhd.user.js
 // @downloadURL         https://raw.githubusercontent.com/Run-os/znhd-service/refs/heads/main/dist/znhd.user.js
-// @require             https://fastly.jsdelivr.net/npm/js-yaml@4.1.0/dist/js-yaml.min.js
-// @require             https://fastly.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js
-// @require             https://fastly.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.js
+// @require             https://fastly.jsdelivr.net/npm/js-yaml@4.1.0/dist/js-yaml.min.js#md5=99f96803d123239c14d61d54de76a2bf
+// @require             https://fastly.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js#md5=517b55d3688ce9ef1085a3d9632bcb97
+// @require             https://fastly.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.js#md5=a2cc4c2e524eb36ffb9396800bf07719
 
 // ==/UserScript==
 /* eslint-disable */ /* spell-checker: disable */
@@ -57106,6 +57106,15 @@ const domCache = {
 };
 // 记录上一次的等待人数，用于检测状态变化
 let lastWaitCount = null;
+/**
+ * 复位「上次等待人数」基线：让下一次检测重新按上升沿播报一次。
+ * 语音关闭期间 speak() 直接 return（src/lib/speech.ts:70-72），上升沿会被无声吃掉；
+ * 若不复位，用户中途开启语音时若人数未变就永远等不到播报（v26.10.10-v9 修）。
+ * @returns {void}
+ */
+function resetWaitCountBaseline() {
+    lastWaitCount = null;
+}
 let monitorState = { waiting: null, online: true, inWorkingHours: true, lastSpeak: null };
 let monitorStateSink = null;
 /** 读取当前监控状态（面板首次渲染用） */
@@ -57169,7 +57178,14 @@ function checkCount() {
             return;
         }
         publishState({ waiting: currentCount });
-        // 人数状态处理：仅在状态变化时记录日志，避免日志被重复内容填满
+        // 人数状态处理：仅在状态变化时记录/播报，避免日志与语音被重复内容填满
+        // ⚠️ 语音必须判上升沿（v26.10.10-v8 修）：3s 轮询期间人数不变时若每 tick 都 speak，
+        //    语音队列（speak 内部上限 10 条）会被同一句话占满并循环播出，真正的「掉线」提醒
+        //    要排在约 10 句之后，甚至超过 30s TTL 被丢弃 ⇒ 掉线不播报。
+        //    判定用 lastWaitCount 而非 lastWaitCount === 0：null（页面加载后首次取到人数，
+        //    此时页面上可能已经有人在等）也要播报一次；从 0 变正、或等待数变化时同样播报。
+        // ⚠️ 静音期间 speak() 直接 return（src/lib/speech.ts:70-72），该轮上升沿会被无声吃掉；
+        //    因此「开启语音」时必须调 resetWaitCountBaseline() 复位基线，否则人数未变就再不播报（v26.10.10-v9）。
         if (currentCount === 0) {
             // 仅在从 >0 变为 0 时记录
             if (lastWaitCount !== 0) {
@@ -57177,7 +57193,9 @@ function checkCount() {
             }
         }
         else {
-            speakAndTrack('有人进入', '征纳互动有人来了');
+            if (currentCount !== lastWaitCount) {
+                speakAndTrack('有人进入', '征纳互动有人来了');
+            }
             addLog(`当前等待人数: ${currentCount}`, 'info');
         }
         lastWaitCount = currentCount;
@@ -75828,6 +75846,8 @@ function MainPanel({ host }) {
         if (next && 'speechSynthesis' in window) {
             // 播放一个静默语音激活语音合成（绕过浏览器 not-allowed 限制）
             window.speechSynthesis.speak(new SpeechSynthesisUtterance(''));
+            // 关闭期间人数上升沿被 speak() 的静音判断吃掉，复位基线让下一次轮询补播当前人数（v26.10.10-v9）
+            resetWaitCountBaseline();
             notify.success('语音功能已启用');
         }
         else if (!next) {
@@ -76150,7 +76170,6 @@ function injectUiReset() {
 }
 
 ;// ./src/lib/ui/panelHost.tsx
-/* unused harmony import specifier */ var panelHost_PANEL_HOST_ID;
 
 /**
  * 面板宿主：把 React + Ant Design 面板挂到税务页上，并负责「位置 + 拖拽」。
@@ -76302,9 +76321,66 @@ function unmountPanel() {
         /* 忽略重复卸载 */
     }
     panelHost_root = null;
-    const ex = document.getElementById(panelHost_PANEL_HOST_ID);
+    const ex = document.getElementById(PANEL_HOST_ID);
     if (ex && ex.parentNode)
         ex.parentNode.removeChild(ex);
+}
+// 面板自愈（v26.10.10-v8 新增）
+let panelWatcher = null;
+/**
+ * 面板被宿主页删除时立即重新挂回（幂等），供自愈监听器复用。
+ *
+ * ⚠️ 自己删除并重建：宿主页删掉的只是**容器 div**，若直接按同一个 root 再 render，
+ *   组件树会继续挂在已脱离文档的旧宿主上（位置/拖拽都失效）。而 createRoot 在旧 root
+ *   尚存时会对同一容器报 warning，所以这里先正规卸载旧 root、再走 mountPanel() 重建。
+ * ⚠️ 卸载会触发面板自身的 cleanup（设备互联长轮询/手机在线轮询被停掉），重建后全新实例会重启它们，
+ *   故不要改成「只 appendChild 旧节点」的写法。
+ */
+function remountPanel() {
+    unmountPanel();
+    mountPanel();
+}
+/**
+ * 监听面板宿主被宿主页删除并自动重挂。
+ *
+ * 税务页是单页应用：路由切换或框架重绘 `documentElement` 子树时，会把我们 append 进去的
+ * `PANEL_HOST_ID` 容器（以及 antd 浮层宿主）一并删掉，而挂载只在 `app.ts` 启动时发生一次 ⇒
+ * 面板与悬浮球永久消失、用户失去唯一入口，但监控/语音/长轮询都还在后台跑（静默故障）。
+ *
+ * 策略（对应油猴指南 `02.实用知识库/01.JavaScript 知识篇/09.MutationObserve 知识/03.MutationObserve实战.md`：
+ * 「如果在 removedNodes 属性中的数组中找到 button 元素，就再次执行插入操作」、
+ * `01.油猴教程/01.入门篇/07.使用脚本向页面上添加新元素.md`：
+ * 「反复监听重新渲染判断是否存在，如果不存在就再次插入」「提前判断了按钮是否存在」）：
+ *  - 只观察 `documentElement` 的**直接子节点**增删。面板自身 DOM 变化都在宿主容器**内部**，
+ *    不会命中这个目标；自家浮层（`#__znhd_overlay_host__`、antd 弹窗）的进出会附带触发回调，
+ *    但回调里「先判存在再补挂」是幂等的，没有副作用（回调也不会与观察目标相互触发）。
+ *  - 在**微任务**里判断（flag + queueMicrotask），等本轮 DOM 变更结算完，避免中途误判。
+ * @returns {void}
+ */
+function watchPanelHost() {
+    if (panelWatcher)
+        return; // 幂等：重复调用不叠加观察器
+    let pending = false;
+    panelWatcher = new MutationObserver(() => {
+        if (pending)
+            return;
+        pending = true;
+        queueMicrotask(() => {
+            pending = false;
+            // ⚠️ 只信「还在不在文档里」，且必须重新查 DOM：模块级的 host 引用可能是已脱离文档的旧节点
+            if (!document.getElementById(PANEL_HOST_ID)?.isConnected) {
+                remountPanel();
+            }
+        });
+    });
+    panelWatcher.observe(document.documentElement, { childList: true });
+}
+/** 停止面板自愈监听（页面卸载时调用，对应 watchPanelHost） */
+function unwatchPanelHost() {
+    if (panelWatcher) {
+        panelWatcher.disconnect();
+        panelWatcher = null;
+    }
 }
 /**
  * 面板拖拽：把事件绑到可抓取区即可 —— 展开态绑标题栏，收起态绑悬浮球。
@@ -76402,6 +76478,8 @@ const app_app = () => {
     // ========== 挂载主面板 ==========
     try {
         mountPanel();
+        // 面板被宿主页重绘（单页应用切路由等）连带删除时自动挂回，见 watchPanelHost 注释（v26.10.10-v8）
+        watchPanelHost();
     }
     catch (error) {
         // UI 面板挂载失败时，至少不连累监控逻辑
@@ -76415,6 +76493,7 @@ const app_app = () => {
         flushSaveAllvalue(); // 落盘防抖窗口内的最后一笔设置，避免关页丢改动
         stopMonitoring();
         clearSpeechTimer();
+        unwatchPanelHost();
     });
     // ========== 页面启动 ==========
     if (document.readyState === 'loading') {

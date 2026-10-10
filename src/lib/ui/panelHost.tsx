@@ -167,6 +167,65 @@ export function unmountPanel(): void {
     if (ex && ex.parentNode) ex.parentNode.removeChild(ex);
 }
 
+// 面板自愈（v26.10.10-v8 新增）
+let panelWatcher: MutationObserver | null = null;
+
+/**
+ * 面板被宿主页删除时立即重新挂回（幂等），供自愈监听器复用。
+ *
+ * ⚠️ 自己删除并重建：宿主页删掉的只是**容器 div**，若直接按同一个 root 再 render，
+ *   组件树会继续挂在已脱离文档的旧宿主上（位置/拖拽都失效）。而 createRoot 在旧 root
+ *   尚存时会对同一容器报 warning，所以这里先正规卸载旧 root、再走 mountPanel() 重建。
+ * ⚠️ 卸载会触发面板自身的 cleanup（设备互联长轮询/手机在线轮询被停掉），重建后全新实例会重启它们，
+ *   故不要改成「只 appendChild 旧节点」的写法。
+ */
+function remountPanel(): void {
+    unmountPanel();
+    mountPanel();
+}
+
+/**
+ * 监听面板宿主被宿主页删除并自动重挂。
+ *
+ * 税务页是单页应用：路由切换或框架重绘 `documentElement` 子树时，会把我们 append 进去的
+ * `PANEL_HOST_ID` 容器（以及 antd 浮层宿主）一并删掉，而挂载只在 `app.ts` 启动时发生一次 ⇒
+ * 面板与悬浮球永久消失、用户失去唯一入口，但监控/语音/长轮询都还在后台跑（静默故障）。
+ *
+ * 策略（对应油猴指南 `02.实用知识库/01.JavaScript 知识篇/09.MutationObserve 知识/03.MutationObserve实战.md`：
+ * 「如果在 removedNodes 属性中的数组中找到 button 元素，就再次执行插入操作」、
+ * `01.油猴教程/01.入门篇/07.使用脚本向页面上添加新元素.md`：
+ * 「反复监听重新渲染判断是否存在，如果不存在就再次插入」「提前判断了按钮是否存在」）：
+ *  - 只观察 `documentElement` 的**直接子节点**增删。面板自身 DOM 变化都在宿主容器**内部**，
+ *    不会命中这个目标；自家浮层（`#__znhd_overlay_host__`、antd 弹窗）的进出会附带触发回调，
+ *    但回调里「先判存在再补挂」是幂等的，没有副作用（回调也不会与观察目标相互触发）。
+ *  - 在**微任务**里判断（flag + queueMicrotask），等本轮 DOM 变更结算完，避免中途误判。
+ * @returns {void}
+ */
+export function watchPanelHost(): void {
+    if (panelWatcher) return; // 幂等：重复调用不叠加观察器
+    let pending = false;
+    panelWatcher = new MutationObserver(() => {
+        if (pending) return;
+        pending = true;
+        queueMicrotask(() => {
+            pending = false;
+            // ⚠️ 只信「还在不在文档里」，且必须重新查 DOM：模块级的 host 引用可能是已脱离文档的旧节点
+            if (!document.getElementById(PANEL_HOST_ID)?.isConnected) {
+                remountPanel();
+            }
+        });
+    });
+    panelWatcher.observe(document.documentElement, { childList: true });
+}
+
+/** 停止面板自愈监听（页面卸载时调用，对应 watchPanelHost） */
+export function unwatchPanelHost(): void {
+    if (panelWatcher) {
+        panelWatcher.disconnect();
+        panelWatcher = null;
+    }
+}
+
 /**
  * 面板拖拽：把事件绑到可抓取区即可 —— 展开态绑标题栏，收起态绑悬浮球。
  * @param host 面板宿主元素（定位写它的 left/top）

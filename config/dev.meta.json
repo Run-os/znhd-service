@@ -19,8 +19,8 @@
   ],
   "require": [
     "file:///D:/文档/GitHub/znhd-service/dist/znhd.dev.user.js",
-    "https://fastly.jsdelivr.net/npm/js-yaml@4.1.0/dist/js-yaml.min.js",
-    "https://fastly.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js",
-    "https://fastly.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.js"
+    "https://fastly.jsdelivr.net/npm/js-yaml@4.1.0/dist/js-yaml.min.js#md5=99f96803d123239c14d61d54de76a2bf",
+    "https://fastly.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js#md5=517b55d3688ce9ef1085a3d9632bcb97",
+    "https://fastly.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.js#md5=a2cc4c2e524eb36ffb9396800bf07719"
   ]
 }

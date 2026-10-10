@@ -44,6 +44,16 @@ const domCache: { ocurrentElement: Element | null } = {
 // 记录上一次的等待人数，用于检测状态变化
 let lastWaitCount: number | null = null;
 
+/**
+ * 复位「上次等待人数」基线：让下一次检测重新按上升沿播报一次。
+ * 语音关闭期间 speak() 直接 return（src/lib/speech.ts:70-72），上升沿会被无声吃掉；
+ * 若不复位，用户中途开启语音时若人数未变就永远等不到播报（v26.10.10-v9 修）。
+ * @returns {void}
+ */
+export function resetWaitCountBaseline(): void {
+    lastWaitCount = null;
+}
+
 // ===== 面板展示用的运行时状态（v26.10.06-v9 新增：主面板要显示人数/在线/工作时段/上次播报）=====
 export interface MonitorState {
     /** 当前等待人数；null = 尚未取到 */
@@ -129,14 +139,23 @@ function checkCount() {
         }
         publishState({ waiting: currentCount });
 
-        // 人数状态处理：仅在状态变化时记录日志，避免日志被重复内容填满
+        // 人数状态处理：仅在状态变化时记录/播报，避免日志与语音被重复内容填满
+        // ⚠️ 语音必须判上升沿（v26.10.10-v8 修）：3s 轮询期间人数不变时若每 tick 都 speak，
+        //    语音队列（speak 内部上限 10 条）会被同一句话占满并循环播出，真正的「掉线」提醒
+        //    要排在约 10 句之后，甚至超过 30s TTL 被丢弃 ⇒ 掉线不播报。
+        //    判定用 lastWaitCount 而非 lastWaitCount === 0：null（页面加载后首次取到人数，
+        //    此时页面上可能已经有人在等）也要播报一次；从 0 变正、或等待数变化时同样播报。
+        // ⚠️ 静音期间 speak() 直接 return（src/lib/speech.ts:70-72），该轮上升沿会被无声吃掉；
+        //    因此「开启语音」时必须调 resetWaitCountBaseline() 复位基线，否则人数未变就再不播报（v26.10.10-v9）。
         if (currentCount === 0) {
             // 仅在从 >0 变为 0 时记录
             if (lastWaitCount !== 0) {
                 addLog('当前等待人数为0', 'success');
             }
         } else {
-            speakAndTrack('有人进入', '征纳互动有人来了');
+            if (currentCount !== lastWaitCount) {
+                speakAndTrack('有人进入', '征纳互动有人来了');
+            }
             addLog(`当前等待人数: ${currentCount}`, 'info');
         }
         lastWaitCount = currentCount;

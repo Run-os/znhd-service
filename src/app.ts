@@ -1,5 +1,5 @@
 // ========== 依赖（模块化抽出的 lib / ui 模块） ==========
-import { mountPanel } from '@/lib/ui/panelHost';
+import { mountPanel, watchPanelHost, unwatchPanelHost } from '@/lib/ui/panelHost';
 import { flushSaveAllvalue } from '@/lib/storage';
 import { addLog } from '@/lib/logger';
 import { startMonitoring, stopMonitoring } from '@/lib/monitor';
@@ -17,6 +17,8 @@ const app = () => {
     // ========== 挂载主面板 ==========
     try {
         mountPanel();
+        // 面板被宿主页重绘（单页应用切路由等）连带删除时自动挂回，见 watchPanelHost 注释（v26.10.10-v8）
+        watchPanelHost();
     } catch (error) {
         // UI 面板挂载失败时，至少不连累监控逻辑
         console.error('[监控] 面板挂载失败:', error);
@@ -30,6 +32,7 @@ const app = () => {
         flushSaveAllvalue(); // 落盘防抖窗口内的最后一笔设置，避免关页丢改动
         stopMonitoring();
         clearSpeechTimer();
+        unwatchPanelHost();
     });
 
     // ========== 页面启动 ==========
