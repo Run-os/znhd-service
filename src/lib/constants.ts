@@ -8,8 +8,9 @@
 export const CONFIG = {
     CHECK_INTERVAL: 3000,
     MAX_LOG_ENTRIES: 20,
-    // 提示音地址（GitHub 网页链接，运行时由 resolveGithubUrl() 按 useCdn 决定是否转 CDN）
-    didaUrl: 'https://github.com/Run-os/znhd-service/blob/refs/heads/main/public/dida.mp3',
+    // 提示音地址（cnb.cool 的 raw 直链，v26.10.10-v17 起）。非 GitHub 链接 ⇒ resolveGithubUrl() 原样返回，
+    // 「使用 CDN 加速」开关对它不再有影响（旧地址是 GitHub 网页链接，会转 jsDelivr/raw）。
+    didaUrl: 'https://cnb.cool/bbbbaa/work-about/-/git/raw/main/znhd/dida.mp3',
     // 语音播报超时保护（毫秒），防止 onend/onerror 不触发导致队列卡死
     SPEECH_TIMEOUT: 15000,
     // 语音队列最大长度，超过时丢弃最早（最旧）的消息，防止内存堆积
@@ -44,14 +45,16 @@ export const DEFAULTS = {
         afternoonStart: 13.5,
         afternoonEnd: 18,
     },
-    // 是否使用 CDN 加速（jsDelivr）加载项目内的 GitHub 资源（常用语 YAML、提示音 mp3 等）。
+    // 是否使用 CDN 加速（jsDelivr）加载项目内的 GitHub 资源。
+    // 目前实际受它影响的只有「更新日志」changelogs/*.md（changelog.ts）；常用语 YAML 与提示音 mp3
+    // 自 v26.10.10-v17 起走 cnb.cool 直链（非 GitHub 链接，resolveGithubUrl 原样返回，不受此开关影响）。
     // true=经 jsDelivr 加速；false=直接走 GitHub 原始链接（raw.githubusercontent.com）。
     useCdn: true,
     // 常用语数据源（可配置；留空时回退此默认地址）。
-    // 存「raw 原始直链」（resolveGithubUrl 形式二）：useCdn=true 时仍会转 jsDelivr 加速，false 时直连 raw。
-    // 不用「github.com/blob 网页链接」作规范值——若用户把该字段误填成网页/仓库页面，请求会拉回整页 HTML
+    // v26.10.10-v17 起默认指向 cnb.cool 的 raw 直链：非 GitHub 链接，resolveGithubUrl() 原样返回。
+    // 仍要求是「raw 原始直链」——若用户把该字段误填成网页/仓库页面，请求会拉回整页 HTML
     // （如 --fontStack-monospace 的 CSS），jsyaml 解析即报「document separator expected」（v26.9.6-v5 起因）。
-    commonPhrasesUrl: 'https://raw.githubusercontent.com/Run-os/znhd-service/refs/heads/main/public/commonPhrases.yaml',
+    commonPhrasesUrl: 'https://cnb.cool/bbbbaa/work-about/-/git/raw/main/znhd/commonPhrases.yaml',
     // 手机图片→电脑剪贴板 中继服务器地址（需为公网可访问的 http(s):// 地址，末尾不带 /）
     relayServer: 'https://znhd.122050.xyz',
     // 「运行日志」弹窗的自动刷新开关（v26.10.07-v4）。
@@ -63,3 +66,10 @@ export const DEFAULTS = {
     // 消费点在 SniffModal：storage.ts 只对 workingHours 做字段级校验，故那边自行兜非数字/非正数（回退 20）。
     sniffMinKB: 20,
 };
+
+// 常用语数据源的旧默认地址（v26.10.10-v17 之前）。存量用户的 localStorage 里可能冻结着它：
+// saveAllvalue 存的是**整份** Allvalue，用户只要改过任何一个设置，当时的默认值就被一起写进去了，
+// 光改 DEFAULTS 顶不掉它（loadAllvalue 是「已存值覆盖默认值」）。故 loadAllvalue 把「恰好等于旧默认值」
+// 视为「没设置过」并迁到新默认；用户自己填的其它地址一律尊重、不迁移。
+export const LEGACY_COMMON_PHRASES_URL =
+    'https://raw.githubusercontent.com/Run-os/znhd-service/refs/heads/main/public/commonPhrases.yaml';

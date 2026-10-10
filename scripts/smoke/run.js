@@ -131,6 +131,9 @@ const CHECKS = [
   // v26.10.10-v16：历史记录/图片嗅探的功能按钮挪到图片右下角（只有图标、hover 才出现、hover 出 tooltip）
   ['historyImgActionsOk', '历史记录图片格子：复制/下载/删除是图片右下角的图标按钮（未 hover 隐藏，hover 出现）'],
   ['sniffImgActionsOk', '图片嗅探卡片：下载/打印是图片右下角的图标按钮（未 hover 隐藏，hover 出现）'],
+  // v26.10.10-v17：常用语数据源迁到 cnb.cool，且存量存储里的**旧默认值**要被自动迁移
+  // （夹具在脚本加载前预置了旧默认地址，故这里必须看到 cnb.cool，否则就是迁移没生效）
+  ['phrasesSourceOk', '常用语数据源用 cnb.cool 新默认（存量存储里的旧默认地址已自动迁移，v26.10.10-v17）'],
 ];
 
 /**
@@ -323,6 +326,10 @@ async function main() {
     // 输入框高度：空着 / 打过字 / 删空之后必须一样高（用户报告过「打一个字再删掉就变高」）
     report.agentInputHeightOk = !!(report.agentInputRing.found && report.agentInputRing.heightStable);
 
+    // 常用语数据源（v26.10.10-v17）：夹具预置了**旧默认**地址，故实际请求必须落在 cnb.cool 新默认上。
+    // 只认「迁移后的默认值」——若哪天有人把 DEFAULTS 改回旧地址、或迁移被删掉，这条会变红。
+    report.phrasesSourceOk = /cnb\.cool\/[^ ]*commonPhrases\.yaml/.test(report.phrasesSourceUrl || '');
+
     // —— 悬浮球拖拽（v26.10.07-v3）——
     // 拖拽必须由**真实指针事件**驱动（合成 PointerEvent 会让 setPointerCapture 抛 NotFoundError），
     // 只能在 puppeteer 侧做，故放在页面报告生成之后单独跑，结果并入 report。
@@ -460,6 +467,10 @@ async function main() {
     }
     if (!checkPass('agentInputNoRingOk') || !checkPass('agentInputHeightOk')) {
       console.log('      输入框快照（真实鼠标点击后）：' + JSON.stringify(report.agentInputRing));
+    }
+    // v26.10.10-v17：常用语数据源迁移失败时把实际请求地址打出来（区分「没请求」与「请求了旧地址」）
+    if (!checkPass('phrasesSourceOk')) {
+      console.log('      常用语数据源快照：' + JSON.stringify(report.phrasesSourceUrl));
     }
 
     const allErrors = (report.relevantErrors || []).concat(pageErrors);

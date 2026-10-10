@@ -220,7 +220,7 @@
 3. **不得无理由重构可运行逻辑**（尤其弹窗布局、长轮询/广播机制、antd 用法与 `uiReset` 隔离层）。改前先读 `CHANGELOG.md` 对应条目——多数"诡异写法"是真实浏览器实测结论。
 4. **新依赖必须记录**：同步更新 ReadMe「技术栈」与「项目结构」（依赖清单唯一归属 ReadMe，agent 不另存）。
 5. **硬编码尽量迁移配置**：脚本端用户可配置项进 `DEFAULTS`，常量进 `CONFIG`。
-6. **GitHub 资源引用存「GitHub 网页链接」**，运行时经 `resolveGithubUrl()` + `useCdn` 转 jsDelivr/raw；勿在 `DEFAULTS` 存 CDN 成品链接。（例外：`commonPhrasesUrl` 自 v26.9.6-v5 起规范值改存 **raw 原始直链**——用户误填网页/仓库页面会把整页 HTML 当 YAML 解析失败；raw 属 `resolveGithubUrl` 形式二，`useCdn` 开仍转 jsDelivr。其余如 `didaUrl` 仍存网页链接。）
+6. **GitHub 资源引用存「GitHub 网页链接」**，运行时经 `resolveGithubUrl()` + `useCdn` 转 jsDelivr/raw；勿在 `DEFAULTS` 存 CDN 成品链接。（**v26.10.10-v17 起两个资源都已迁出 GitHub**：`commonPhrasesUrl` 与 `CONFIG.didaUrl` 都指向 **cnb.cool 的 raw 直链**（`https://cnb.cool/bbbbaa/work-about/-/git/raw/main/znhd/…`）。`resolveGithubUrl()` 只认 github.com / raw.githubusercontent.com 两种形式，**非 GitHub 链接原样返回** ⇒ 这两个资源不再受 `useCdn` 开关影响，该开关目前只对「更新日志」`changelogs/*.md` 生效。仍须存 **raw 直链**、勿存网页/仓库页面：误填会把整页 HTML 当 YAML 解析，报「document separator expected」（v26.9.6-v5 起因）。⚠️ 旧默认地址仍冻结在存量用户的 localStorage 里（`saveAllvalue` 存整份 Allvalue，改过任一设置就会把当时的默认值一起写进去），故 `loadAllvalue()` 用 `LEGACY_COMMON_PHRASES_URL` 把「恰好等于旧默认值」迁到新默认，用户自定义的地址不动。）
 7. **新增 GM API 必须补 `@grant`**；`@match` 含税务页与 example.com（调试宿主），勿乱动。
 8. **保持现有风格**：中文注释/日志、语义前缀（`[监控]` `[设备互联]` 等）、JSDoc。提交前必须依次通过：`npm run build`（= `lint:fix` + webpack）、`npm run typecheck`（strict）、`npm run check`（产物 + 服务端 `node --check`）、`npm run verify`（三段：脚本冒烟 + 中继 HTTP + 手机页端到端；**改了 `web/` 还要 `npm run typecheck:web` + `npm run build:web` 并提交 `relay-server/public` 产物**）。**禁止手改 `dist/znhd.user.js`**（构建会覆盖）。
 9. **双向互传类改动 = 两端同步 + 重启 + 版本说明**（脚本 `@version`、服务端 version 各自递增）。

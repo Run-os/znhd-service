@@ -142,7 +142,7 @@ npm run verify         # 无头 Chromium 端到端冒烟（面板/弹窗/画廊/
 
 ### 常用语功能
 
-1. 点击"常用语"按钮打开弹窗，自动从**设置面板中配置的常用语数据源**加载（默认 [`public/commonPhrases.yaml`](public/commonPhrases.yaml:1)，可在「设置 → 常用语数据源」处修改地址）
+1. 点击"常用语"按钮打开弹窗，自动从**设置面板中配置的常用语数据源**加载（默认 <https://cnb.cool/bbbbaa/work-about/-/git/raw/main/znhd/commonPhrases.yaml>，可在「设置 → 常用语数据源」处修改地址；仓库里的 [`public/commonPhrases.yaml`](public/commonPhrases.yaml:1) 是同步到该地址的源文件）
 2. 支持**关键字搜索**：可按按键名称或内容过滤常用语
 3. 点击常用语按钮后：
    - 自动复制文本到剪贴板（优先使用 `GM_setClipboard`，降级到 `navigator.clipboard`）
@@ -216,7 +216,7 @@ npm run verify         # 无头 Chromium 端到端冒烟（面板/弹窗/画廊/
 const CONFIG = {
     CHECK_INTERVAL: 3000,      // 监控检查间隔（毫秒）
     MAX_LOG_ENTRIES: 20,       // 面板最大日志条目数
-    didaUrl: 'https://github.com/Run-os/znhd-service/blob/refs/heads/main/public/dida.mp3', // 提示音文件（GitHub 网页链接，运行时按 useCdn 转 CDN/raw）
+    didaUrl: 'https://cnb.cool/bbbbaa/work-about/-/git/raw/main/znhd/dida.mp3', // 提示音文件（cnb.cool raw 直链，非 GitHub 链接 ⇒ resolveGithubUrl 原样返回）
     SPEECH_TIMEOUT: 15000,     // 单条语音播报超时保护（毫秒），防止队列卡死
     MAX_SPEECH_QUEUE: 10,      // 语音队列最大长度，超出丢弃最早
     SPEECH_QUEUE_TTL: 30000    // 语音队列消息有效期（毫秒），入队/播放前剔除过期内容
@@ -232,17 +232,17 @@ const DEFAULTS = {
         morningStart: 9, morningEnd: 12,
         afternoonStart: 13.5, afternoonEnd: 18
     },
-    useCdn: true,         // 使用 CDN 加速（jsDelivr）加载项目内 GitHub 资源
-    // 注意：常用语数据源存「raw 原始直链」，运行时由 resolveGithubUrl() 按 useCdn 转 jsDelivr（开）/ raw（关）。
-    // 勿填成 github.com 网页/仓库页面，否则会拉回整页 HTML 导致 YAML 解析失败。
-    commonPhrasesUrl: 'https://raw.githubusercontent.com/Run-os/znhd-service/refs/heads/main/public/commonPhrases.yaml',
+    useCdn: true,         // 使用 CDN 加速（jsDelivr）加载项目内 GitHub 资源（目前实际生效的只有「更新日志」文件）
+    // 注意：常用语数据源与提示音自 v26.10.10-v17 起都指向 cnb.cool 的 raw 直链（非 GitHub 链接，
+    // resolveGithubUrl 原样返回、不受 useCdn 影响）。仍勿填成网页/仓库页面，否则会拉回整页 HTML 导致 YAML 解析失败。
+    commonPhrasesUrl: 'https://cnb.cool/bbbbaa/work-about/-/git/raw/main/znhd/commonPhrases.yaml',
     relayServer: 'https://znhd.122050.xyz' // 设备互联中继服务器公网地址，留空则该功能不可用
 };
 ```
 
 ### 常用语配置
 
-常用语配置文件为 [`public/commonPhrases.yaml`](public/commonPhrases.yaml:1)，采用 YAML 格式。每个键为按钮显示名称，值为点击后填入编辑器的文本内容。
+常用语配置文件为 [`public/commonPhrases.yaml`](public/commonPhrases.yaml:1)（同步到上面那个 cnb.cool 地址，脚本运行时从该地址拉取），采用 YAML 格式。每个键为按钮显示名称，值为点击后填入编辑器的文本内容。
 
 配置示例：
 

@@ -40,7 +40,17 @@
       // 先落一份干净的配置（脚本读 localStorage，不读 GM_getValue）
       localStorage.removeItem('scriptCat_PhrasesCache');
       localStorage.removeItem('scriptCat_PanelPoint');
-      localStorage.setItem('scriptCat_Allvalue', JSON.stringify({ voiceEnabled: false, useCdn: true }));
+      // v26.10.10-v17：故意预置**旧默认**常用语数据源地址，验证 loadAllvalue 会把它迁到新默认
+      // （存量用户只要改过任何设置，当时的默认值就会被整份 Allvalue 一起落盘，光改 DEFAULTS 顶不掉）。
+      localStorage.setItem(
+        'scriptCat_Allvalue',
+        JSON.stringify({
+          voiceEnabled: false,
+          useCdn: true,
+          commonPhrasesUrl:
+            'https://raw.githubusercontent.com/Run-os/znhd-service/refs/heads/main/public/commonPhrases.yaml',
+        })
+      );
 
       window.__gmXhrLog = [];
       const PNG_1x1 =
@@ -1949,6 +1959,14 @@
             window.__phoneSendCheck.bytes < (window.__phoneSendCheck.originalBytes || Infinity)
           ),
           xhr: window.__gmXhrLog.slice(0, 6),
+          // v26.10.10-v17：常用语实际请求的数据源地址（用来断言「旧默认值被迁移到 cnb.cool 新默认」）。
+          // 夹具在脚本加载前预置了旧默认地址，所以这里必须看到 cnb.cool；否则说明迁移没生效。
+          phrasesSourceUrl: (function () {
+            const hit = window.__gmXhrLog.find(function (line) {
+              return line.indexOf('commonPhrases.yaml') >= 0;
+            });
+            return hit || '';
+          })(),
           // ===== 样式隔离断言（v26.10.06-v11）=====
           // 宿主页面把 html/body 设成 text-align:center、且要求 content-box，
           // 面板/弹窗必须仍保持左对齐、盒模型正确 —— 否则就是隔离层失效（用户实测反馈过）。

@@ -1,6 +1,6 @@
 import { addLog } from '@/lib/logger';
 import { notify } from '@/lib/ui/notify';
-import { DEFAULTS, PANEL_POINT_KEY, PHRASES_CACHE_KEY, STORAGE_KEY } from '@/lib/constants';
+import { DEFAULTS, LEGACY_COMMON_PHRASES_URL, PANEL_POINT_KEY, PHRASES_CACHE_KEY, STORAGE_KEY } from '@/lib/constants';
 
 /**
  * 全部用户配置的形状（= DEFAULTS 的结构）。
@@ -128,6 +128,12 @@ export function loadAllvalue(): Allvalue {
                     afternoonStart: Number.isFinite(wh.afternoonStart) ? wh.afternoonStart : defWh.afternoonStart,
                     afternoonEnd: Number.isFinite(wh.afternoonEnd) ? wh.afternoonEnd : defWh.afternoonEnd,
                 };
+            }
+            // 旧默认数据源地址迁移（v26.10.10-v17）：存量存储里可能冻结着旧默认值（原因见 constants.ts
+            // 的 LEGACY_COMMON_PHRASES_URL 注释）。只把「恰好等于旧默认值」的迁到新默认，
+            // 用户自定义的地址不动——那才是这个可配置项的意义。
+            if (merged.commonPhrasesUrl === LEGACY_COMMON_PHRASES_URL) {
+                merged.commonPhrasesUrl = DEFAULTS.commonPhrasesUrl;
             }
             return merged;
         }
