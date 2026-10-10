@@ -2,12 +2,17 @@
  * 网页图片嗅探（v26.10.10-v4 新增，配合 `ui/SniffModal.tsx`）。
  *
  * 目标：把**当前页面上的图片**收集起来，让用户能「下载」或「打印」，等价于暴力猴图片提取脚本
- * （参考 52pojie 的《SVG & 图片 & 视频资源提取器》），但按本仓库的约束做了三处裁剪：
+ * （参考 52pojie 的《SVG & 图片 & 视频资源提取器》），但按本仓库的约束做了四处裁剪：
  *   1. **只要图片，不要视频**（扩展名黑名单 + Content-Type 判定 + 资源表 initiatorType 三重排除）；
  *   2. 默认**只展示 ≧ 阈值（默认 20KB）**的图，未知大小的单独折叠保留（用户 2026-10-10 拍板）；
  *   3. **不对宿主页打任何桩**：不 patch fetch / XMLHttpRequest / URL.createObjectURL，不注入样式，
  *      只读 DOM、读计算样式、读 performance 资源表 —— 税务页是生产页面，任何侵入都可能影响报税。
  *      代价是「页面用 fetch/XHR 自己下载、且从未进过 DOM 的图」抓不到（v1 明确不做，见 CHANGELOG）。
+ *   4. **按文件名排除**（v26.10.10-v5，用户指定）：名字里含 `znhd-sniff` / `user-woman` / `user-man`
+ *      的图直接不进候选，见 EXCLUDED_NAME_PATTERNS。判定用的是**面板上显示的那个名字**（sniffFileName），
+ *      所以「没有 URL 文件名、兜底叫 znhd-sniff-N」的 data: / blob: 图会被一并排除 —— 用户在面板里
+ *      看到的正是这些名字，规则要跟他看到的一致。内联 SVG 因此改用 `inline-svg-N.svg` 命名，不受影响
+ *      （否则「排除 znhd-sniff」会把内联 SVG 这整路来源一起打掉）。
  *
  * 三路来源（同一张图会合并、按归一化 URL 去重，sources 记录它从哪几路来）：
  *   · dom  —— <img>（currentSrc / src / srcset 取最大档 / data-* 懒加载属性）+ <picture><source>；
@@ -90,6 +95,8 @@ export interface CollectResult {
     items: SniffCandidate[];
     /** 因为元素数/候选数上限被截断（UI 给出提示，避免用户以为「就这些」） */
     truncated: boolean;
+    /** 因为文件名命中 EXCLUDED_NAME_PATTERNS 而被丢掉的数量（按 URL 去重，UI 给出提示） */
+    excluded: number;
 }
 
 /** 测量参数 */
@@ -107,6 +114,24 @@ export const CSS_SCAN_LIMIT = 3000;
 
 /** 候选数量上限：防极端页面把内存吃爆 */
 export const MAX_SNIFF = 300;
+
+/**
+ * 按文件名排除的字符片段（v26.10.10-v5，用户 2026-10-10 指定的三条）。
+ *
+ * 判定对象是**面板上显示/下载时用的那个名字**（sniffFileName 的返回值，小写后做子串匹配），
+ * 而不是原始 URL 字符串 —— 用户是照着面板里的文件名提需求的：
+ *   · `user-man` / `user-woman` 命中页面上的头像类图片（URL 末段即文件名）；
+ *   · `znhd-sniff` 命中**没有 URL 文件名**的 data: / blob: 图（它们的兜底显示名就是 znhd-sniff-N）。
+ * 内联 SVG 走 `inline-svg-N.svg`（见 sniffFileName），不受第三条影响。
+ */
+export const EXCLUDED_NAME_PATTERNS = ['znhd-sniff', 'user-woman', 'user-man'];
+
+/** 名字（大小写不敏感）是否命中某条排除片段；空名字返回 false */
+export function isExcludedName(name: string): boolean {
+    const n = String(name || '').toLowerCase();
+    if (!n) return false;
+    return EXCLUDED_NAME_PATTERNS.some((p) => n.indexOf(p) >= 0);
+}
 
 /** 懒加载属性（顺序即优先级；与参考脚本的 imageAttributes 一致，另加 data-echo） */
 const LAZY_ATTRS = [
@@ -169,6 +194,9 @@ export function sanitizeFileName(name: string): string {
  * 复用「历史记录」那套 downloadFileName，避免两处各维护一份 MIME→扩展名映射。
  */
 export function sniffFileName(url: string, mime: string | null, idx = 0): string {
+    // 内联 SVG（data:image/svg+xml）单独命名：它没有 URL 文件名，若沿用 znhd-sniff-N 兜底，
+    // 用户「排除文件名含 znhd-sniff」那条规则会把内联 SVG 这整路来源一起排掉（v26.10.10-v5）。
+    if (/^data:image\/svg\+xml/i.test(url)) return downloadFileName('inline-svg-' + (idx + 1), 'image/svg+xml', idx);
     let base = '';
     if (!/^(?:data|blob):/i.test(url)) {
         try {
@@ -342,6 +370,8 @@ export function collectCandidates(opts: CollectOptions = {}): CollectResult {
     const maxItems = opts.maxItems && opts.maxItems > 0 ? opts.maxItems : MAX_SNIFF;
     const map = new Map<string, SniffCandidate>();
     let truncated = false;
+    /** 被文件名规则排除的 URL（Set 去重：同一张图可能从 DOM / CSS / 资源表各来一遍） */
+    const excludedKeys = new Set<string>();
 
     const skipped = (el: Element): boolean => {
         if (!exclude) return false;
@@ -361,6 +391,11 @@ export function collectCandidates(opts: CollectOptions = {}): CollectResult {
         const url = normalizeUrl(raw);
         if (!url) return;
         if (isVideoUrl(url)) return;
+        // 用户指定的「文件名排除」（v26.10.10-v5）：用**显示名**判定，与面板里看到的保持一致
+        if (isExcludedName(sniffFileName(url, extra?.mime ?? null, 0))) {
+            excludedKeys.add(url);
+            return;
+        }
         // <img>/<picture> 这类「标签本身就是图片」的来源不必猜扩展名；其余来源（CSS/资源表）要猜
         if (!extra?.force && !looksLikeImageUrl(url)) return;
         const key = url;
@@ -494,7 +529,7 @@ export function collectCandidates(opts: CollectOptions = {}): CollectResult {
     }
 
     // 保持文档顺序：尺寸是异步补上的，顺序若在这里动过，UI 会边测边跳（排序交给展示层，量完再排）
-    return { items: Array.from(map.values()), truncated: truncated };
+    return { items: Array.from(map.values()), truncated: truncated, excluded: excludedKeys.size };
 }
 
 /** 用 GM_xmlhttpRequest 发一次请求（GM_* 在个别管理器里可能不存在，故包一层） */

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name                征纳互动人数和在线监控v2
 // @namespace           https://scriptcat.org/
-// @version             26.10.10-v4
+// @version             26.10.10-v5
 // @description         实时监控征纳互动等待人数和在线状态，支持语音播报、自定义常用语
 // @author              runos
 // @license             MIT
@@ -74330,12 +74330,17 @@ const PANEL_WIDTH = 238;
  * 网页图片嗅探（v26.10.10-v4 新增，配合 `ui/SniffModal.tsx`）。
  *
  * 目标：把**当前页面上的图片**收集起来，让用户能「下载」或「打印」，等价于暴力猴图片提取脚本
- * （参考 52pojie 的《SVG & 图片 & 视频资源提取器》），但按本仓库的约束做了三处裁剪：
+ * （参考 52pojie 的《SVG & 图片 & 视频资源提取器》），但按本仓库的约束做了四处裁剪：
  *   1. **只要图片，不要视频**（扩展名黑名单 + Content-Type 判定 + 资源表 initiatorType 三重排除）；
  *   2. 默认**只展示 ≧ 阈值（默认 20KB）**的图，未知大小的单独折叠保留（用户 2026-10-10 拍板）；
  *   3. **不对宿主页打任何桩**：不 patch fetch / XMLHttpRequest / URL.createObjectURL，不注入样式，
  *      只读 DOM、读计算样式、读 performance 资源表 —— 税务页是生产页面，任何侵入都可能影响报税。
  *      代价是「页面用 fetch/XHR 自己下载、且从未进过 DOM 的图」抓不到（v1 明确不做，见 CHANGELOG）。
+ *   4. **按文件名排除**（v26.10.10-v5，用户指定）：名字里含 `znhd-sniff` / `user-woman` / `user-man`
+ *      的图直接不进候选，见 EXCLUDED_NAME_PATTERNS。判定用的是**面板上显示的那个名字**（sniffFileName），
+ *      所以「没有 URL 文件名、兜底叫 znhd-sniff-N」的 data: / blob: 图会被一并排除 —— 用户在面板里
+ *      看到的正是这些名字，规则要跟他看到的一致。内联 SVG 因此改用 `inline-svg-N.svg` 命名，不受影响
+ *      （否则「排除 znhd-sniff」会把内联 SVG 这整路来源一起打掉）。
  *
  * 三路来源（同一张图会合并、按归一化 URL 去重，sources 记录它从哪几路来）：
  *   · dom  —— <img>（currentSrc / src / srcset 取最大档 / data-* 懒加载属性）+ <picture><source>；
@@ -74365,6 +74370,23 @@ const PANEL_WIDTH = 238;
 const CSS_SCAN_LIMIT = 3000;
 /** 候选数量上限：防极端页面把内存吃爆 */
 const MAX_SNIFF = 300;
+/**
+ * 按文件名排除的字符片段（v26.10.10-v5，用户 2026-10-10 指定的三条）。
+ *
+ * 判定对象是**面板上显示/下载时用的那个名字**（sniffFileName 的返回值，小写后做子串匹配），
+ * 而不是原始 URL 字符串 —— 用户是照着面板里的文件名提需求的：
+ *   · `user-man` / `user-woman` 命中页面上的头像类图片（URL 末段即文件名）；
+ *   · `znhd-sniff` 命中**没有 URL 文件名**的 data: / blob: 图（它们的兜底显示名就是 znhd-sniff-N）。
+ * 内联 SVG 走 `inline-svg-N.svg`（见 sniffFileName），不受第三条影响。
+ */
+const EXCLUDED_NAME_PATTERNS = ['znhd-sniff', 'user-woman', 'user-man'];
+/** 名字（大小写不敏感）是否命中某条排除片段；空名字返回 false */
+function isExcludedName(name) {
+    const n = String(name || '').toLowerCase();
+    if (!n)
+        return false;
+    return EXCLUDED_NAME_PATTERNS.some((p) => n.indexOf(p) >= 0);
+}
 /** 懒加载属性（顺序即优先级；与参考脚本的 imageAttributes 一致，另加 data-echo） */
 const LAZY_ATTRS = [
     'data-src',
@@ -74419,6 +74441,10 @@ function sanitizeFileName(name) {
  * 复用「历史记录」那套 downloadFileName，避免两处各维护一份 MIME→扩展名映射。
  */
 function sniffFileName(url, mime, idx = 0) {
+    // 内联 SVG（data:image/svg+xml）单独命名：它没有 URL 文件名，若沿用 znhd-sniff-N 兜底，
+    // 用户「排除文件名含 znhd-sniff」那条规则会把内联 SVG 这整路来源一起排掉（v26.10.10-v5）。
+    if (/^data:image\/svg\+xml/i.test(url))
+        return downloadFileName('inline-svg-' + (idx + 1), 'image/svg+xml', idx);
     let base = '';
     if (!/^(?:data|blob):/i.test(url)) {
         try {
@@ -74597,6 +74623,8 @@ function collectCandidates(opts = {}) {
     const maxItems = opts.maxItems && opts.maxItems > 0 ? opts.maxItems : MAX_SNIFF;
     const map = new Map();
     let truncated = false;
+    /** 被文件名规则排除的 URL（Set 去重：同一张图可能从 DOM / CSS / 资源表各来一遍） */
+    const excludedKeys = new Set();
     const skipped = (el) => {
         if (!exclude)
             return false;
@@ -74613,6 +74641,11 @@ function collectCandidates(opts = {}) {
             return;
         if (isVideoUrl(url))
             return;
+        // 用户指定的「文件名排除」（v26.10.10-v5）：用**显示名**判定，与面板里看到的保持一致
+        if (isExcludedName(sniffFileName(url, extra?.mime ?? null, 0))) {
+            excludedKeys.add(url);
+            return;
+        }
         // <img>/<picture> 这类「标签本身就是图片」的来源不必猜扩展名；其余来源（CSS/资源表）要猜
         if (!extra?.force && !looksLikeImageUrl(url))
             return;
@@ -74770,7 +74803,7 @@ function collectCandidates(opts = {}) {
         /* 资源表不可用就当没有这一路 */
     }
     // 保持文档顺序：尺寸是异步补上的，顺序若在这里动过，UI 会边测边跳（排序交给展示层，量完再排）
-    return { items: Array.from(map.values()), truncated: truncated };
+    return { items: Array.from(map.values()), truncated: truncated, excluded: excludedKeys.size };
 }
 /** 用 GM_xmlhttpRequest 发一次请求（GM_* 在个别管理器里可能不存在，故包一层） */
 function gmRequest(details) {
@@ -75093,6 +75126,8 @@ function SniffModal({ open, onClose, minKB, onMinKBChange }) {
     const [total, setTotal] = (0,react_production_namespaceFn().useState)(0);
     /** 候选被上限截断（CSS 遍历元素数 / MAX_SNIFF）—— 必须明确告诉用户「不止这些」 */
     const [truncated, setTruncated] = (0,react_production_namespaceFn().useState)(false);
+    /** 被文件名规则（EXCLUDED_NAME_PATTERNS）排除的张数 —— 让用户知道「不是没扫到，是按规则排掉了」 */
+    const [excluded, setExcluded] = (0,react_production_namespaceFn().useState)(0);
     /** 「大小未知」分组是否展开（默认折叠） */
     const [unknownOpen, setUnknownOpen] = (0,react_production_namespaceFn().useState)(false);
     /** 勾选（存 key，不用下标：结果集是异步增长的，下标会错位） */
@@ -75140,6 +75175,7 @@ function SniffModal({ open, onClose, minKB, onMinKBChange }) {
         setProbed([]);
         setTotal(0);
         setTruncated(false);
+        setExcluded(0);
         setSelected(new Set());
         setUnknownOpen(false);
         setBusyKey(null);
@@ -75151,6 +75187,7 @@ function SniffModal({ open, onClose, minKB, onMinKBChange }) {
             return;
         setTotal(res.items.length);
         setTruncated(res.truncated);
+        setExcluded(res.excluded);
         if (!res.items.length) {
             setPhase('done');
             addLog('[图片嗅探] 本页未发现图片（可先滚动页面让懒加载的图出现）', 'info');
@@ -75313,7 +75350,7 @@ function SniffModal({ open, onClose, minKB, onMinKBChange }) {
                             known.length +
                             ' 张' +
                             (belowCount > 0 ? '，另有 ' + belowCount + ' 张小于阈值' : '') +
-                            '）' }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_checkbox, { checked: allSelected, disabled: !kept.length, onChange: toggleAll, children: "\u5168\u9009" })] }), truncated ? ((0,react_jsx_runtime_production_namespaceFn().jsx)(SniffModal_Text, { type: "warning", style: { fontSize: 12, display: 'block', marginBottom: 8 }, children: '页面元素太多或图片超过 ' + (/* inlined export .MAX_SNIFF */300) + ' 张，本次只扫描了前一部分 —— 结果可能不完整。' })) : null, droppedCount > 0 ? ((0,react_jsx_runtime_production_namespaceFn().jsx)(SniffModal_Text, { type: "secondary", style: { fontSize: 12, display: 'block', marginBottom: 8 }, children: '已排除 ' + droppedCount + ' 个响应不是图片的地址（视频 / 网页 / JSON 等）。' })) : null, phase === 'measuring' && !probed.length ? ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { padding: '24px 0', textAlign: 'center' }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(es_progress, { percent: percent, size: "small", style: { maxWidth: 320 } }), (0,react_jsx_runtime_production_namespaceFn().jsx)(SniffModal_Text, { type: "secondary", style: { fontSize: 12, display: 'block', marginTop: 8 }, children: '正在测量大小…（' + probed.length + '/' + total + '）' })] })) : !kept.length ? ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_empty, { description: phase === 'measuring'
+                            '）' }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_checkbox, { checked: allSelected, disabled: !kept.length, onChange: toggleAll, children: "\u5168\u9009" })] }), truncated ? ((0,react_jsx_runtime_production_namespaceFn().jsx)(SniffModal_Text, { type: "warning", style: { fontSize: 12, display: 'block', marginBottom: 8 }, children: '页面元素太多或图片超过 ' + (/* inlined export .MAX_SNIFF */300) + ' 张，本次只扫描了前一部分 —— 结果可能不完整。' })) : null, droppedCount > 0 ? ((0,react_jsx_runtime_production_namespaceFn().jsx)(SniffModal_Text, { type: "secondary", style: { fontSize: 12, display: 'block', marginBottom: 8 }, children: '已排除 ' + droppedCount + ' 个响应不是图片的地址（视频 / 网页 / JSON 等）。' })) : null, excluded > 0 ? ((0,react_jsx_runtime_production_namespaceFn().jsx)(SniffModal_Text, { type: "secondary", style: { fontSize: 12, display: 'block', marginBottom: 8 }, children: '已按文件名排除 ' + excluded + ' 张（' + EXCLUDED_NAME_PATTERNS.join(' / ') + '）。' })) : null, phase === 'measuring' && !probed.length ? ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { padding: '24px 0', textAlign: 'center' }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(es_progress, { percent: percent, size: "small", style: { maxWidth: 320 } }), (0,react_jsx_runtime_production_namespaceFn().jsx)(SniffModal_Text, { type: "secondary", style: { fontSize: 12, display: 'block', marginTop: 8 }, children: '正在测量大小…（' + probed.length + '/' + total + '）' })] })) : !kept.length ? ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_empty, { description: phase === 'measuring'
                     ? '正在测量大小…'
                     : total
                         ? '扫描到 ' + total + ' 个候选，但都被阈值或类型过滤掉了（可调低阈值再试）'

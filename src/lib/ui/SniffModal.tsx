@@ -9,6 +9,7 @@ import { addLog } from '@/lib/logger';
 import { getOverlayContainer } from '@/lib/ui/panelHost';
 import { OVERLAY_HOST_ID, PANEL_HOST_ID } from '@/lib/ui/panelIds';
 import {
+    EXCLUDED_NAME_PATTERNS,
     MAX_SNIFF,
     collectCandidates,
     downloadImage,
@@ -43,6 +44,9 @@ const { Text } = Typography;
  *     反过来「先探测每条 URL 再决定要不要列出来」的话，一个页面就是几百个请求。
  *  3) **大小未知的图不丢**：跨域 HEAD/Range 被拒、blob: 图、部分懒加载图都量不出字节数，
  *     但它们完全可能是用户真正想要的大图，故折叠保留、可照常预览/下载/打印。
+ *
+ * 名称排除（v26.10.10-v5）：名字含 EXCLUDED_NAME_PATTERNS 的图在**收集阶段**就被丢掉（不测大小、不发请求），
+ * 面板顶部给出「已按文件名排除 N 张」的提示 —— 否则用户删不掉页面上那些头像/无名字的噪声图。
  *
  * 大小测量阶梯、视频排除规则、去重与 URL 归一化都在 src/lib/sniffer.ts（纯函数，便于单测）；
  * 本文件只负责「合批渲染 + 交互」。测量是异步逐张回来的，所以：
@@ -112,6 +116,8 @@ export default function SniffModal({ open, onClose, minKB, onMinKBChange }: Snif
     const [total, setTotal] = useState(0);
     /** 候选被上限截断（CSS 遍历元素数 / MAX_SNIFF）—— 必须明确告诉用户「不止这些」 */
     const [truncated, setTruncated] = useState(false);
+    /** 被文件名规则（EXCLUDED_NAME_PATTERNS）排除的张数 —— 让用户知道「不是没扫到，是按规则排掉了」 */
+    const [excluded, setExcluded] = useState(0);
     /** 「大小未知」分组是否展开（默认折叠） */
     const [unknownOpen, setUnknownOpen] = useState(false);
     /** 勾选（存 key，不用下标：结果集是异步增长的，下标会错位） */
@@ -161,6 +167,7 @@ export default function SniffModal({ open, onClose, minKB, onMinKBChange }: Snif
         setProbed([]);
         setTotal(0);
         setTruncated(false);
+        setExcluded(0);
         setSelected(new Set<string>());
         setUnknownOpen(false);
         setBusyKey(null);
@@ -172,6 +179,7 @@ export default function SniffModal({ open, onClose, minKB, onMinKBChange }: Snif
         if (runIdRef.current !== runId) return;
         setTotal(res.items.length);
         setTruncated(res.truncated);
+        setExcluded(res.excluded);
 
         if (!res.items.length) {
             setPhase('done');
@@ -449,6 +457,11 @@ export default function SniffModal({ open, onClose, minKB, onMinKBChange }: Snif
             {droppedCount > 0 ? (
                 <Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 8 }}>
                     {'已排除 ' + droppedCount + ' 个响应不是图片的地址（视频 / 网页 / JSON 等）。'}
+                </Text>
+            ) : null}
+            {excluded > 0 ? (
+                <Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 8 }}>
+                    {'已按文件名排除 ' + excluded + ' 张（' + EXCLUDED_NAME_PATTERNS.join(' / ') + '）。'}
                 </Text>
             ) : null}
 

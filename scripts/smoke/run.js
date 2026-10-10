@@ -106,6 +106,7 @@ const CHECKS = [
   ['sniffEntryOk', '主面板有「图片嗅探」入口且能打开嗅探弹窗'],
   ['sniffScanOk', '嗅探覆盖三路来源（DOM/内联 SVG/CSS 背景）并量出大小（HEAD 与 Range 两条阶梯）'],
   ['sniffUnknownKeptOk', '大小未知的图片不丢弃（折叠保留）且小于阈值的另有计数'],
+  ['sniffExcludeOk', '按文件名排除（znhd-sniff / user-woman / user-man）且面板给出排除计数'],
 ];
 
 /**
@@ -234,7 +235,12 @@ async function main() {
     }
     // 嗅探三条断言失败时把快照原样打出来：卡片数/来源/尺寸阶梯/分组计数都在里面，
     // 否则只能看到「❌」，还得改代码才知道是没扫到、没量到还是分组没渲染（v26.10.10-v4 调试用）。
-    if (!checkPass('sniffEntryOk') || !checkPass('sniffScanOk') || !checkPass('sniffUnknownKeptOk')) {
+    if (
+      !checkPass('sniffEntryOk') ||
+      !checkPass('sniffScanOk') ||
+      !checkPass('sniffUnknownKeptOk') ||
+      !checkPass('sniffExcludeOk')
+    ) {
       console.log('      嗅探快照：' + JSON.stringify(report.sniffSnap));
     }
 

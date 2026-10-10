@@ -291,6 +291,11 @@
           });
           return { abort: () => {} };
         }
+        // ⑦ 10 KB 的普通 http 图（名字不命中排除规则）→ 只计入「另有 N 张小于阈值」（v26.10.10-v5）
+        if (url.indexOf('/sniff-small.png') >= 0) {
+          reply(details, '', { responseHeaders: 'content-type: image/png\ncontent-length: 10240' });
+          return { abort: () => {} };
+        }
         // ⑥ HEAD 404：尺寸测不到，但仍是图片 URL ⇒ 必须留在「大小未知」组（不丢）
         if (url.indexOf('/sniff-missing.png') >= 0) {
           reply(details, '', { status: 404, statusText: 'Not Found' });
@@ -322,13 +327,15 @@
 
     <!-- ===== 图片嗅探夹具（v26.10.10-v4）=====
          全部由本页或 GM 桩作答（域名 *.test 不解析、从不出网），每一种「来源 / 尺寸阶梯」各一条：
-           ① data: 大图（>20KB 阈值，本地按 base64 长度算）      → 达标卡片（来源「页面元素」）
-           ② data: 小图（<20KB）                                → 只计入「小于阈值」，不进列表
+           ① data: 大图（>20KB 阈值，本地按 base64 长度算）      → 兜底名 znhd-sniff-N ⇒ 被名称规则排除（v26.10.10-v5）
+           ② data: 小图（<20KB）                                → 同上（也被排除，故「小于阈值」改由 ⑦ 提供）
            ③ CSS background-image → 桩 HEAD 回 content-length   → HEAD 阶梯（30 KB）
            ④ CSS background-image → 桩 HEAD 不给长度、Range GET → Range 阶梯（40 KB）
-           ⑤ 内联 <svg>（运行时补足图元，>20KB）                → svg 来源（本地按文本字节算）
+           ⑤ 内联 <svg>（运行时补足图元，>20KB）                → svg 来源；因单列命名 inline-svg-N.svg 而不被排除
            ⑥ 懒加载 data-src 指向 HEAD 404 的地址               → 尺寸未知，必须保留在「大小未知」折叠组
-         ①②⑤ 的内容在下面用脚本现造，避免在 HTML 里塞几十 KB base64。 -->
+         ⑦ 10 KB 的普通 http 图（名字不命中排除规则）         → 只计入「另有 N 张小于阈值」
+             ⑧ URL 末段含 user-man 的图                           → 必须被名称规则排除，不出现卡片
+           ①②⑤ 的内容在下面用脚本现造，避免在 HTML 里塞几十 KB base64。 -->
     <div id="sniff-fixtures" aria-hidden="true">
       <img id="sniff-data-big" alt="" />
       <img id="sniff-data-small" alt="" />
@@ -340,6 +347,10 @@
         id="sniff-css-range"
         style="width: 40px; height: 40px; background-image: url('https://sniff-smoke.test/sniff-range.png')"></div>
       <svg id="sniff-inline-svg" xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48"></svg>
+      <!-- ⑦ 10 KB（< 20KB 阈值）且名字普通：v26.10.10-v5 起 data: 图被名称规则排除，「小于阈值」计数靠它 -->
+      <img id="sniff-small-http" src="https://sniff-smoke.test/sniff-small.png" alt="" />
+      <!-- ⑧ 名字命中排除规则（URL 末段 user-man.png）：必须被丢掉、不进卡片，只体现在排除计数里 -->
+      <img id="sniff-excluded-name" src="https://sniff-smoke.test/media/user-man.png" alt="" />
     </div>
 
     <pre id="smoke-result" style="margin-top: 40px">running…</pre>
@@ -749,6 +760,7 @@
           const cards = m ? m.querySelectorAll('.ant-image').length : 0;
           const unknown = /大小未知（(\d+)）/.exec(t);
           const below = /另有\s*(\d+)\s*张小于阈值/.exec(t);
+          const excludedNotice = /已按文件名排除\s*(\d+)\s*张/.exec(t);
           const btns = document.querySelectorAll('#__znhd_panel_host__ .znhd-panel-btn');
           const snap = {
             entrySeen: !!window.__clickedSniff,
@@ -763,8 +775,12 @@
             rangeSize: t.indexOf('40 KB') >= 0,
             unknownCount: unknown ? Number(unknown[1]) : -1,
             belowCount: below ? Number(below[1]) : -1,
+            excludedCount: excludedNotice ? Number(excludedNotice[1]) : -1,
+            // 只看**卡片标题**（文件名 / 来源提示），不看弹窗正文：排除提示里本身就含这些字样
+            excludedNameInTitles: /znhd-sniff|user-man|user-woman/.test(titles),
           };
-          const done = snap.modalSeen && cards >= 4 && snap.headSize && snap.rangeSize;
+          // v26.10.10-v5 起 data: 大/小图被名称规则排除，达标卡片只剩「CSS 背景 ×2 + 内联 SVG」
+          const done = snap.modalSeen && cards >= 3 && snap.headSize && snap.rangeSize;
           if (done || tries <= 0) {
             window.__sniffSnap = snap;
             return;
@@ -1167,7 +1183,7 @@
           sniffEntryOk: !!(window.__sniffSnap && window.__sniffSnap.entrySeen && window.__sniffSnap.modalSeen),
           sniffScanOk: !!(
             window.__sniffSnap &&
-            window.__sniffSnap.cards >= 4 &&
+            window.__sniffSnap.cards >= 3 &&
             window.__sniffSnap.sourcesCss &&
             window.__sniffSnap.sourcesSvg &&
             window.__sniffSnap.headSize &&
@@ -1177,6 +1193,13 @@
             window.__sniffSnap &&
             window.__sniffSnap.unknownCount >= 1 &&
             window.__sniffSnap.belowCount >= 1
+          ),
+          // 图片嗅探（v26.10.10-v5）：名称排除——命中规则的图不进候选（连请求都不发），
+          // 面板给出排除计数，且被排除的名字一个都不许出现在卡片标题里。
+          sniffExcludeOk: !!(
+            window.__sniffSnap &&
+            window.__sniffSnap.excludedCount >= 2 &&
+            !window.__sniffSnap.excludedNameInTitles
           ),
           sniffSnap: window.__sniffSnap || null,
           relevantErrors: relevant,
@@ -1211,7 +1234,8 @@
           report.phoneSendCompressedOk &&
           report.sniffEntryOk &&
           report.sniffScanOk &&
-          report.sniffUnknownKeptOk
+          report.sniffUnknownKeptOk &&
+          report.sniffExcludeOk
             ? 'ALL-OK'
             : 'PARTIAL');
       }, 11000);
