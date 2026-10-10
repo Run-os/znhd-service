@@ -1011,12 +1011,23 @@
           Array.from(document.querySelectorAll('.ant-modal')).find((el) =>
             ((el.querySelector('.ant-modal-title') || {}).textContent || '').includes('Agent 助手')
           );
+        // v26.10.10-v13 起「发送 / 中止」是没有文字的图标按钮，语义写在 aria-label 上，
+        // 所以这里按「文案包含」或「aria-label 完全相等」两条路找。aria-label 用完全相等而不是
+        // 包含：否则 `clickBtnWithText(m, '对话')` 会先命中侧栏删除按钮的 aria-label「删除对话」。
         const clickBtnWithText = (root, text) => {
           const btn = Array.from(root.querySelectorAll('button')).find(
-            (b) => (b.textContent || '').indexOf(text) >= 0
+            (b) =>
+              (b.textContent || '').indexOf(text) >= 0 || (b.getAttribute('aria-label') || '') === text
           );
           if (btn) btn.click();
           return !!btn;
+        };
+        // 消息区文本：v26.10.10-v13 起左侧会话栏会一直列出会话标题，而标题就是该会话的第一条
+        // 消息 —— 再拿整个弹窗的 textContent 判断「某条消息在不在」就会假阳性（新建后仍看到
+        // 「你好」、切走后仍认为「第二个问题」在）。所有消息级断言一律只看 .znhd-agent-messages。
+        const messagesText = (m) => {
+          const box = m ? m.querySelector('.znhd-agent-messages') : null;
+          return box ? box.textContent || '' : '';
         };
         const race = (promise, ms) =>
           Promise.race([
@@ -1062,6 +1073,10 @@
           panelAliveAfterSwitch: false,
           panelStateAfterSwitch: null,
           chatsStoredAfterSwitch: null,
+          // v26.10.10-v13：会话搬到左侧栏，断言改成「侧栏真的列出了这几条」
+          sidebarItemCount: 0,
+          sidebarTitles: [],
+          sidebarNewChatSeen: false,
         };
         window.__agentSnap = snap;
 
@@ -1150,7 +1165,7 @@
 
         const stageReply = (tries) => {
           const m = findAgentModal();
-          const t = m ? m.textContent || '' : '';
+          const t = messagesText(m);
           snap.userMsgSeen = t.indexOf('你好') >= 0;
           snap.replySeen = t.indexOf('（桩回答）') >= 0;
           snap.thinkingSeen = t.indexOf('先想一下') >= 0;
@@ -1238,7 +1253,7 @@
             state.hasAgentEntry
           );
           const m = findAgentModal();
-          const t = m ? m.textContent || '' : '';
+          const t = messagesText(m);
           // 历史里的思考文本只可能来自 getMessages() 回填（流式那条是「先想一下」）
           snap.reopenHistorySeen = t.indexOf('（桩）历史思考') >= 0;
           snap.reopenReactChildErrors = (window.__errors || [])
@@ -1271,14 +1286,15 @@
             return;
           }
           snap.chatsStored = readChatStore();
-          snap.newChatClicked = clickBtnWithText(m, '新建对话');
+          // v26.10.10-v13：「新建对话」搬到左侧栏顶部，文案改为「新的聊天」
+          snap.newChatClicked = clickBtnWithText(m, '新的聊天');
           if (!snap.newChatClicked && tries > 0) {
             setTimeout(() => stageNewChat(tries - 1), 100);
             return;
           }
           setTimeout(() => {
-            const text = (findAgentModal() || {}).textContent || '';
-            // 「新建对话」只是把视图清空、下次发送时才真正 create（不留空会话）
+            const text = messagesText(findAgentModal());
+            // 「新的聊天」只是把视图清空、下次发送时才真正 create（不留空会话）
             snap.firstChatCleared = text.indexOf('你好') < 0;
             const ta = typeMessage('第二个问题');
             snap.taFound2 = !!ta;
@@ -1289,7 +1305,7 @@
 
         const stageSecondReply = (tries) => {
           const m = findAgentModal();
-          const t = m ? m.textContent || '' : '';
+          const t = messagesText(m);
           snap.secondUserMsgSeen = t.indexOf('第二个问题') >= 0;
           snap.secondReplySeen = t.indexOf('（桩回答）') >= 0;
           snap.chatsStored = readChatStore();
@@ -1306,7 +1322,7 @@
           setTimeout(() => stageSecondReply(tries - 1), 100);
         };
 
-        // 切换会话：antd Select 靠 mousedown 打开下拉，选项渲染在 body 下的浮层里
+        // 切换会话：v26.10.10-v13 起会话列在左侧栏，直接点卡片就行（不再有会话下拉，也就不用等浮层）
         const stageSwitchBack = (tries) => {
           const m = findAgentModal();
           if (!m) {
@@ -1314,49 +1330,40 @@
             finish();
             return;
           }
-          const selects = Array.from(m.querySelectorAll('.ant-select'));
-          snap.switchSelectCount = selects.length;
-          // 第 1 个是模型下拉，第 2 个是会话下拉
-          const target = selects[1];
-          if (!target) {
-            if (tries > 0) {
-              setTimeout(() => stageSwitchBack(tries - 1), 100);
-              return;
-            }
-            snap.stageReached = 'switch-no-select';
-            finish();
-            return;
-          }
-          const selector = target.querySelector('.ant-select-selector') || target;
-          selector.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }));
-          setTimeout(() => openChatOption(tries), 200);
-        };
-
-        const openChatOption = (tries) => {
-          const options = Array.from(document.querySelectorAll('.ant-select-item-option'));
-          snap.switchOptionCount = options.length;
-          snap.switchOptionTexts = options.map((el) => (el.textContent || '').trim()).slice(0, 6);
-          // 第一个对话在列表里的名字就是它的第一条消息
-          const option = options.find((el) => (el.textContent || '').trim() === '你好');
-          if (option) {
-            snap.stageReached = 'switch-option-clicked';
-            option.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }));
-            option.click();
+          const items = Array.from(m.querySelectorAll('.znhd-agent-chat-item'));
+          // 字段名沿用 v12 的（switchSelectCount / switchOption*），语义改成「侧栏卡片数与标题」
+          snap.switchSelectCount = items.length;
+          snap.switchOptionCount = items.length;
+          snap.switchOptionTexts = items.map((el) => (el.textContent || '').trim()).slice(0, 6);
+          // 第一个对话在侧栏里的名字就是它的第一条消息
+          const target = items.find((el) => (el.textContent || '').indexOf('你好') >= 0);
+          if (target) {
+            snap.stageReached = 'switch-item-clicked';
+            target.click();
             setTimeout(checkSwitch, 400);
             return;
           }
           if (tries <= 0) {
-            snap.stageReached = 'switch-no-option';
+            snap.stageReached = 'switch-no-item';
             finish();
             return;
           }
-          setTimeout(() => openChatOption(tries - 1), 150);
+          setTimeout(() => stageSwitchBack(tries - 1), 150);
         };
 
         const checkSwitch = () => {
           const m = findAgentModal();
-          const t = m ? m.textContent || '' : '';
+          const t = messagesText(m);
           snap.switchedToFirst = !!m;
+          // 侧栏此时应仍列出两个会话，且顶部有「新的聊天」按钮（v26.10.10-v13 的布局判据）
+          const items = m ? Array.from(m.querySelectorAll('.znhd-agent-chat-item')) : [];
+          snap.sidebarItemCount = items.length;
+          snap.sidebarTitles = items.map((el) => (el.textContent || '').replace(/\s+/g, ' ').trim()).slice(0, 6);
+          snap.sidebarNewChatSeen = !!(
+            m &&
+            m.querySelector('.znhd-agent-sidebar') &&
+            Array.from(m.querySelectorAll('button')).some((b) => (b.textContent || '').indexOf('新的聊天') >= 0)
+          );
           snap.switchHistorySeen = t.indexOf('你好') >= 0;
           // 少了这条，用例可能只是「没换视图」也判过
           snap.switchSecondGone = t.indexOf('第二个问题') < 0;
@@ -1371,6 +1378,7 @@
             state.hasAgentEntry
           );
           snap.chatsStoredAfterSwitch = readChatStore();
+          // 输入框聚焦蓝框由 run.js 用**真实鼠标点击**验证（页面内 JS focus() 在 antd Modal 下静默失效）
           snap.stageReached = 'switch-checked';
           finish();
         };
@@ -1906,12 +1914,15 @@
             window.__agentSnap.panelAliveAfterReopen
           ),
           // v26.10.10-v12：会话索引持久化 + 多会话切换（官方只有 create/get，列表是脚本自记的）
+          // v26.10.10-v13：会话改为列在弹窗左侧栏，这里补「侧栏真的列出了两条 + 顶部有『新的聊天』」
           agentChatsOk: (() => {
             const s = window.__agentSnap;
             if (!s) return false;
             const store = s.chatsStored;
             const items = (store && Array.isArray(store.items) && store.items) || [];
             const titles = items.map((i) => i && i.title);
+            const sidebarTitles = s.sidebarTitles || [];
+            const sidebarHas = (text) => sidebarTitles.some((x) => (x || '').indexOf(text) >= 0);
             return !!(
               items.length >= 2 &&
               titles.indexOf('你好') >= 0 &&
@@ -1925,7 +1936,11 @@
               s.switchHistorySeen &&
               s.switchSecondGone &&
               s.switchHistoryThinkingSeen &&
-              s.panelAliveAfterSwitch
+              s.panelAliveAfterSwitch &&
+              s.sidebarItemCount >= 2 &&
+              s.sidebarNewChatSeen &&
+              sidebarHas('你好') &&
+              sidebarHas('第二个问题')
             );
           })(),
           agentSnap: window.__agentSnap || null,

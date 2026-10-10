@@ -211,3 +211,53 @@ export function CheckIcon(p: IconProps) {
         </SvgIcon>
     );
 }
+
+/* ============================================================ Agent 对话界面（v26.10.10-v13） */
+
+/**
+ * 发送（Lucide `arrow-up`：向上的箭头）。
+ *
+ * 按用户要求把发送按钮做成输入框内的向上箭头（参考 ChatGPT / Chatbox 的输入框样式），
+ * 于是这个按钮**没有文字**，只剩图形 —— 语义由 `aria-label="发送"` 承担：
+ * 读屏靠它，冒烟测试也按它找按钮（`znhd-smoke.html` 里按文案找按钮的 helper 已扩到 aria-label）。
+ */
+export function SendIcon(p: IconProps) {
+    return (
+        <SvgIcon {...p}>
+            <path d="m5 12 7-7 7 7" />
+            <path d="M12 19V5" />
+        </SvgIcon>
+    );
+}
+
+/** 中止（Lucide `square`：圆角方块）：流式生成中占据发送按钮的同一个位置 */
+export function StopIcon(p: IconProps) {
+    return (
+        <SvgIcon {...p}>
+            <rect width="18" height="18" x="3" y="3" rx="2" />
+        </SvgIcon>
+    );
+}
+
+/** 新建（Lucide `plus`）：侧栏「新的聊天」按钮 */
+export function PlusIcon(p: IconProps) {
+    return (
+        <SvgIcon {...p}>
+            <path d="M5 12h14" />
+            <path d="M12 5v14" />
+        </SvgIcon>
+    );
+}
+
+/** 删除会话（Lucide `trash-2`）：侧栏每条会话 hover 时出现的图标按钮 */
+export function TrashIcon(p: IconProps) {
+    return (
+        <SvgIcon {...p}>
+            <path d="M3 6h18" />
+            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
+            <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+            <line x1="10" x2="10" y1="11" y2="17" />
+            <line x1="14" x2="14" y1="11" y2="17" />
+        </SvgIcon>
+    );
+}

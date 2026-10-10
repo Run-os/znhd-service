@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name                征纳互动人数和在线监控v2
 // @namespace           https://scriptcat.org/
-// @version             26.10.10-v12
+// @version             26.10.10-v13
 // @description         实时监控征纳互动等待人数和在线状态，支持语音播报、自定义常用语
 // @author              runos
 // @license             MIT
@@ -55681,6 +55681,29 @@ function CloseIcon(p) {
 function CheckIcon(p) {
     return ((0,react_jsx_runtime_production_namespaceFn().jsx)(SvgIcon, { ...p, children: (0,react_jsx_runtime_production_namespaceFn().jsx)("path", { d: "M20 6 9 17l-5-5" }) }));
 }
+/* ============================================================ Agent 对话界面（v26.10.10-v13） */
+/**
+ * 发送（Lucide `arrow-up`：向上的箭头）。
+ *
+ * 按用户要求把发送按钮做成输入框内的向上箭头（参考 ChatGPT / Chatbox 的输入框样式），
+ * 于是这个按钮**没有文字**，只剩图形 —— 语义由 `aria-label="发送"` 承担：
+ * 读屏靠它，冒烟测试也按它找按钮（`znhd-smoke.html` 里按文案找按钮的 helper 已扩到 aria-label）。
+ */
+function SendIcon(p) {
+    return ((0,react_jsx_runtime_production_namespaceFn().jsxs)(SvgIcon, { ...p, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("path", { d: "m5 12 7-7 7 7" }), (0,react_jsx_runtime_production_namespaceFn().jsx)("path", { d: "M12 19V5" })] }));
+}
+/** 中止（Lucide `square`：圆角方块）：流式生成中占据发送按钮的同一个位置 */
+function StopIcon(p) {
+    return ((0,react_jsx_runtime_production_namespaceFn().jsx)(SvgIcon, { ...p, children: (0,react_jsx_runtime_production_namespaceFn().jsx)("rect", { width: "18", height: "18", x: "3", y: "3", rx: "2" }) }));
+}
+/** 新建（Lucide `plus`）：侧栏「新的聊天」按钮 */
+function PlusIcon(p) {
+    return ((0,react_jsx_runtime_production_namespaceFn().jsxs)(SvgIcon, { ...p, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("path", { d: "M5 12h14" }), (0,react_jsx_runtime_production_namespaceFn().jsx)("path", { d: "M12 5v14" })] }));
+}
+/** 删除会话（Lucide `trash-2`）：侧栏每条会话 hover 时出现的图标按钮 */
+function TrashIcon(p) {
+    return ((0,react_jsx_runtime_production_namespaceFn().jsxs)(SvgIcon, { ...p, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("path", { d: "M3 6h18" }), (0,react_jsx_runtime_production_namespaceFn().jsx)("path", { d: "M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" }), (0,react_jsx_runtime_production_namespaceFn().jsx)("path", { d: "M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" }), (0,react_jsx_runtime_production_namespaceFn().jsx)("line", { x1: "10", x2: "10", y1: "11", y2: "17" }), (0,react_jsx_runtime_production_namespaceFn().jsx)("line", { x1: "14", x2: "14", y1: "11", y2: "17" })] }));
+}
 
 ;// ./src/lib/constants.ts
 /**
@@ -75428,6 +75451,691 @@ function SniffModal({ open, onClose, minKB, onMinKBChange }) {
                         }, children: (0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { maxHeight: '58vh', overflow: 'auto' }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: GRID_STYLE, children: known.map((it, idx) => renderCard(it, idx)) }), unknownOpen && unknown.length > 0 ? ((0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { ...GRID_STYLE, marginTop: 8 }, children: unknown.map((it, idx) => renderCard(it, known.length + idx)) })) : null] }) }), unknown.length > 0 ? ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { marginTop: 6 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)(es_button, { type: "link", size: "small", style: { padding: 0 }, onClick: () => setUnknownOpen(!unknownOpen), children: [unknownOpen ? '▾' : '▸', " ", '大小未知（' + unknown.length + '）'] }), (0,react_jsx_runtime_production_namespaceFn().jsx)(SniffModal_Text, { type: "secondary", style: { fontSize: 11, marginLeft: 6 }, children: "\u91CF\u4E0D\u51FA\u5B57\u8282\u6570\uFF08\u8DE8\u57DF\u54CD\u5E94\u5934\u88AB\u62D2\u7B49\uFF09\uFF0C\u53EF\u80FD\u6709\u5927\u56FE\uFF0C\u5DF2\u4FDD\u7559" })] })) : null] })), (0,react_jsx_runtime_production_namespaceFn().jsx)(SniffModal_Text, { type: "secondary", style: { fontSize: 12, display: 'block', marginTop: 8 }, children: "\u63D0\u793A\uFF1A\u5355\u51FB\u7F29\u7565\u56FE\u53EF\u653E\u5927 / \u591A\u56FE\u5207\u6362\uFF0C\u653E\u5927\u540E\u5DE5\u5177\u680F\u4E0A\u7684\u300C\u6253\u5370\u300D\u6309 A4 \u6253\u5370\u539F\u56FE\uFF08\u6A2A\u56FE\u81EA\u52A8\u65CB\u8F6C 90 \u5EA6\uFF09\uFF1B \u52FE\u9009\u540E\u53EF\u6279\u91CF\u4E0B\u8F7D\u3002\u89C6\u9891\u5DF2\u5728\u626B\u63CF\u9636\u6BB5\u6392\u9664\uFF0C\u52A8\u56FE\uFF08gif\uFF09\u6309\u56FE\u7247\u4FDD\u7559\u3002" })] }));
 }
 
+;// ./node_modules/antd/es/_util/getRenderPropValue.js
+
+
+const getRenderPropValue = propValue => {
+  if (!isReactRenderable(propValue)) {
+    return null;
+  }
+  return isFunction(propValue) ? propValue() : propValue;
+};
+;// ./node_modules/antd/es/popover/style/index.js
+
+
+
+
+
+
+const style_FALL_BACK_ORIGIN = '50%';
+const popover_style_genBaseStyle = token => {
+  const {
+    componentCls,
+    popoverColor,
+    titleMinWidth,
+    fontWeightStrong,
+    innerPadding,
+    dropShadowPopover,
+    colorTextHeading,
+    borderRadiusLG,
+    zIndexPopup,
+    titleMarginBottom,
+    colorBgElevated,
+    popoverBg,
+    titleBorderBottom,
+    innerContentPadding,
+    titlePadding,
+    antCls
+  } = token;
+  const [varName, varRef] = genCssVar(antCls, 'tooltip');
+  return [{
+    [componentCls]: {
+      ...resetComponent(token),
+      position: 'absolute',
+      top: 0,
+      // use `left` to fix https://github.com/ant-design/ant-design/issues/39195
+      left: {
+        _skip_check_: true,
+        value: 0
+      },
+      zIndex: zIndexPopup,
+      fontWeight: 'normal',
+      whiteSpace: 'normal',
+      textAlign: 'start',
+      cursor: 'auto',
+      userSelect: 'text',
+      filter: dropShadowPopover,
+      // When use `autoArrow`, origin will follow the arrow position
+      [varName('valid-offset-x')]: varRef('arrow-offset-x', 'var(--arrow-x)'),
+      transformOrigin: [varRef('valid-offset-x', style_FALL_BACK_ORIGIN), `var(--arrow-y, ${style_FALL_BACK_ORIGIN})`].join(' '),
+      [varName('arrow-background-color')]: colorBgElevated,
+      width: 'max-content',
+      maxWidth: '100vw',
+      '&-rtl': {
+        direction: 'rtl'
+      },
+      '&-hidden': {
+        display: 'none'
+      },
+      [`${componentCls}-content`]: {
+        position: 'relative'
+      },
+      [`${componentCls}-container`]: {
+        backgroundColor: popoverBg,
+        backgroundClip: 'padding-box',
+        borderRadius: borderRadiusLG,
+        padding: innerPadding
+      },
+      [`${componentCls}-title`]: {
+        minWidth: titleMinWidth,
+        marginBottom: titleMarginBottom,
+        color: colorTextHeading,
+        fontWeight: fontWeightStrong,
+        borderBottom: titleBorderBottom,
+        padding: titlePadding
+      },
+      [`${componentCls}-content`]: {
+        color: popoverColor,
+        padding: innerContentPadding
+      }
+    }
+  },
+  // Arrow Style
+  placementArrow(token, varRef('arrow-background-color'), {
+    arrowShadow: false
+  }),
+  // Pure Render
+  {
+    [`${componentCls}-pure`]: {
+      position: 'relative',
+      maxWidth: 'none',
+      margin: token.sizePopupArrow,
+      display: 'inline-block'
+    }
+  }];
+};
+const genColorStyle = token => {
+  const {
+    componentCls,
+    antCls
+  } = token;
+  const [varName] = genCssVar(antCls, 'tooltip');
+  return {
+    [componentCls]: PresetColors.map(colorKey => {
+      const lightColor = token[`${colorKey}6`];
+      return {
+        [`&${componentCls}-${colorKey}`]: {
+          [varName('arrow-background-color')]: lightColor,
+          [`${componentCls}-inner`]: {
+            backgroundColor: lightColor
+          },
+          [`${componentCls}-arrow`]: {
+            background: 'transparent'
+          }
+        }
+      };
+    })
+  };
+};
+const popover_style_prepareComponentToken = token => {
+  const {
+    lineWidth,
+    controlHeight,
+    fontHeight,
+    padding,
+    wireframe,
+    zIndexPopupBase,
+    borderRadiusLG,
+    marginXS,
+    lineType,
+    colorSplit,
+    paddingSM
+  } = token;
+  const titlePaddingBlockDist = controlHeight - fontHeight;
+  const popoverTitlePaddingBlockTop = titlePaddingBlockDist / 2;
+  const popoverTitlePaddingBlockBottom = titlePaddingBlockDist / 2 - lineWidth;
+  const popoverPaddingHorizontal = padding;
+  return {
+    titleMinWidth: 177,
+    zIndexPopup: zIndexPopupBase + 30,
+    ...getArrowToken(token),
+    ...getArrowOffsetToken({
+      contentRadius: borderRadiusLG,
+      limitVerticalRadius: true
+    }),
+    // internal
+    innerPadding: wireframe ? 0 : 12,
+    titleMarginBottom: wireframe ? 0 : marginXS,
+    titlePadding: wireframe ? `${popoverTitlePaddingBlockTop}px ${popoverPaddingHorizontal}px ${popoverTitlePaddingBlockBottom}px` : 0,
+    titleBorderBottom: wireframe ? `${lineWidth}px ${lineType} ${colorSplit}` : 'none',
+    innerContentPadding: wireframe ? `${paddingSM}px ${popoverPaddingHorizontal}px` : 0
+  };
+};
+/* harmony default export */ const popover_style = (genStyleHooks('Popover', token => {
+  const {
+    colorBgElevated,
+    colorText
+  } = token;
+  const popoverToken = statistic_merge(token, {
+    popoverBg: colorBgElevated,
+    popoverColor: colorText
+  });
+  return [popover_style_genBaseStyle(popoverToken), genColorStyle(popoverToken), initZoomMotion(popoverToken, 'zoom-big')];
+}, popover_style_prepareComponentToken, {
+  resetStyle: false,
+  deprecatedTokens: [['width', 'titleMinWidth'], ['minWidth', 'titleMinWidth']]
+}));
+;// ./node_modules/antd/es/popover/PurePanel.js
+"use client";
+
+
+
+
+
+
+
+
+
+const PurePanel_Overlay = props => {
+  const {
+    title,
+    content,
+    prefixCls,
+    classNames,
+    styles
+  } = props;
+  if (!isReactRenderable(title) && !isReactRenderable(content)) {
+    return null;
+  }
+  return /*#__PURE__*/(react_production_namespaceFn().createElement)((react_production_namespaceFn().Fragment), null, isReactRenderable(title) && (/*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
+    className: clsx(`${prefixCls}-title`, classNames?.title),
+    style: styles?.title
+  }, title)), isReactRenderable(content) && (/*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
+    className: clsx(`${prefixCls}-content`, classNames?.content),
+    style: styles?.content
+  }, content)));
+};
+const RawPurePanel = props => {
+  const {
+    hashId,
+    prefixCls,
+    className,
+    style,
+    placement = 'top',
+    title,
+    content,
+    children,
+    classNames,
+    styles
+  } = props;
+  const titleNode = getRenderPropValue(title);
+  const contentNode = getRenderPropValue(content);
+  const mergedProps = {
+    ...props,
+    placement
+  };
+  const [mergedClassNames, mergedStyles] = useMergeSemantic([classNames], [styles], {
+    props: mergedProps
+  });
+  const rootClassName = clsx(hashId, prefixCls, `${prefixCls}-pure`, `${prefixCls}-placement-${placement}`, className);
+  return /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
+    className: rootClassName,
+    style: style
+  }, /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
+    className: `${prefixCls}-arrow`
+  }), /*#__PURE__*/(react_production_namespaceFn().createElement)(tooltip_es_Popup, {
+    ...props,
+    className: hashId,
+    prefixCls: prefixCls,
+    classNames: mergedClassNames,
+    styles: mergedStyles
+  }, children || (/*#__PURE__*/(react_production_namespaceFn().createElement)(PurePanel_Overlay, {
+    prefixCls: prefixCls,
+    title: titleNode,
+    content: contentNode,
+    classNames: mergedClassNames,
+    styles: mergedStyles
+  }))));
+};
+const popover_PurePanel_PurePanel = props => {
+  const {
+    prefixCls: customizePrefixCls,
+    className,
+    ...restProps
+  } = props;
+  const {
+    getPrefixCls
+  } = (react_production_namespaceFn().useContext)(ConfigContext);
+  const prefixCls = getPrefixCls('popover', customizePrefixCls);
+  const [hashId, cssVarCls] = popover_style(prefixCls);
+  return /*#__PURE__*/(react_production_namespaceFn().createElement)(RawPurePanel, {
+    ...restProps,
+    prefixCls: prefixCls,
+    hashId: hashId,
+    className: clsx(className, cssVarCls)
+  });
+};
+/* harmony default export */ const popover_PurePanel = (popover_PurePanel_PurePanel);
+;// ./node_modules/antd/es/popover/index.js
+"use client";
+
+
+
+
+
+
+
+
+
+
+
+
+// CSSINJS
+
+const InternalPopover = /*#__PURE__*/(react_production_namespaceFn().forwardRef)((props, ref) => {
+  const {
+    prefixCls: customizePrefixCls,
+    title,
+    content,
+    overlayClassName,
+    placement = 'top',
+    trigger,
+    children,
+    mouseEnterDelay,
+    mouseLeaveDelay,
+    onOpenChange,
+    overlayStyle = {},
+    styles,
+    classNames,
+    motion,
+    arrow: popoverArrow,
+    ...restProps
+  } = props;
+  const {
+    getPrefixCls,
+    className: contextClassName,
+    style: contextStyle,
+    classNames: contextClassNames,
+    styles: contextStyles,
+    arrow: contextArrow,
+    trigger: contextTrigger,
+    mouseEnterDelay: contextMouseEnterDelay,
+    mouseLeaveDelay: contextMouseLeaveDelay
+  } = useComponentConfig('popover');
+  const mergedMouseEnterDelay = mouseEnterDelay ?? contextMouseEnterDelay ?? 0.1;
+  const mergedMouseLeaveDelay = mouseLeaveDelay ?? contextMouseLeaveDelay ?? 0.1;
+  const prefixCls = getPrefixCls('popover', customizePrefixCls);
+  const [hashId, cssVarCls] = popover_style(prefixCls);
+  const rootPrefixCls = getPrefixCls();
+  const mergedArrow = hook_useMergedArrow(popoverArrow, contextArrow);
+  const mergedTrigger = trigger || contextTrigger || 'hover';
+  // ========================== Warning ===========================
+  if (false) // removed by dead control flow
+{}
+  // ============================= Styles =============================
+  const mergedProps = {
+    ...props,
+    placement,
+    trigger: mergedTrigger,
+    mouseEnterDelay: mergedMouseEnterDelay,
+    mouseLeaveDelay: mergedMouseLeaveDelay,
+    overlayStyle,
+    styles,
+    classNames
+  };
+  const contextStyleRoot = useSemanticRootStyle(contextStyle);
+  const overlayStyleRoot = useSemanticRootStyle(overlayStyle);
+  const [mergedClassNames, mergedStyles] = useMergeSemantic([contextClassNames, classNames], [contextStyles, contextStyleRoot, styles, overlayStyleRoot], {
+    props: mergedProps
+  });
+  const rootClassNames = clsx(overlayClassName, hashId, cssVarCls, contextClassName, mergedClassNames.root);
+  const [open, setOpen] = useControlledState(props.defaultOpen ?? false, props.open);
+  const settingOpen = nextOpen => {
+    setOpen(nextOpen);
+    onOpenChange?.(nextOpen);
+  };
+  const titleNode = getRenderPropValue(title);
+  const contentNode = getRenderPropValue(content);
+  return /*#__PURE__*/(react_production_namespaceFn().createElement)(es_tooltip, {
+    unique: false,
+    arrow: mergedArrow,
+    placement: placement,
+    trigger: mergedTrigger,
+    mouseEnterDelay: mergedMouseEnterDelay,
+    mouseLeaveDelay: mergedMouseLeaveDelay,
+    ...restProps,
+    prefixCls: prefixCls,
+    classNames: {
+      root: rootClassNames,
+      container: mergedClassNames.container,
+      arrow: mergedClassNames.arrow
+    },
+    styles: {
+      root: mergedStyles.root,
+      container: mergedStyles.container,
+      arrow: mergedStyles.arrow
+    },
+    ref: ref,
+    open: open,
+    onOpenChange: settingOpen,
+    overlay: isReactRenderable(titleNode) || isReactRenderable(contentNode) ? (/*#__PURE__*/(react_production_namespaceFn().createElement)(PurePanel_Overlay, {
+      prefixCls: prefixCls,
+      title: titleNode,
+      content: contentNode,
+      classNames: mergedClassNames,
+      styles: mergedStyles
+    })) : null,
+    motion: {
+      motionName: motion_getTransitionName(rootPrefixCls, 'zoom-big', typeof motion?.motionName === 'string' ? motion?.motionName : undefined)
+    },
+    "data-popover-inject": true
+  }, children);
+});
+const Popover = InternalPopover;
+Popover._InternalPanelDoNotUseOrYouWillBeFired = popover_PurePanel;
+if (false) // removed by dead control flow
+{}
+/* harmony default export */ const es_popover = (Popover);
+;// ./node_modules/antd/es/popconfirm/style/index.js
+
+// =============================== Base ===============================
+const popconfirm_style_genBaseStyle = token => {
+  const {
+    componentCls,
+    iconCls,
+    antCls,
+    zIndexPopup,
+    colorText,
+    colorWarning,
+    marginXXS,
+    marginXS,
+    fontSize,
+    fontWeightStrong,
+    colorTextHeading
+  } = token;
+  return {
+    [componentCls]: {
+      zIndex: zIndexPopup,
+      [`&${antCls}-popover`]: {
+        fontSize
+      },
+      [`${componentCls}-message`]: {
+        marginBottom: marginXS,
+        display: 'flex',
+        flexWrap: 'nowrap',
+        alignItems: 'start',
+        [`> ${componentCls}-message-icon`]: {
+          color: colorWarning
+        },
+        [`> ${componentCls}-message-icon ${iconCls}`]: {
+          fontSize,
+          lineHeight: 1,
+          marginInlineEnd: marginXS
+        },
+        [`${componentCls}-title`]: {
+          fontWeight: fontWeightStrong,
+          color: colorTextHeading,
+          '&:only-child': {
+            fontWeight: 'normal'
+          }
+        },
+        [`${componentCls}-description`]: {
+          marginTop: marginXXS,
+          color: colorText
+        }
+      },
+      [`${componentCls}-buttons`]: {
+        textAlign: 'end',
+        whiteSpace: 'nowrap',
+        button: {
+          marginInlineStart: marginXS
+        }
+      }
+    }
+  };
+};
+// ============================== Export ==============================
+const popconfirm_style_prepareComponentToken = token => {
+  const {
+    zIndexPopupBase
+  } = token;
+  return {
+    zIndexPopup: zIndexPopupBase + 60
+  };
+};
+/* harmony default export */ const popconfirm_style = (genStyleHooks('Popconfirm', popconfirm_style_genBaseStyle, popconfirm_style_prepareComponentToken, {
+  resetStyle: false
+}));
+;// ./node_modules/antd/es/popconfirm/PurePanel.js
+"use client";
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+const popconfirm_PurePanel_Overlay = props => {
+  const {
+    prefixCls,
+    okButtonProps,
+    cancelButtonProps,
+    title,
+    description,
+    cancelText,
+    okText,
+    okType = 'primary',
+    icon = /*#__PURE__*/(react_production_namespaceFn().createElement)(icons_ExclamationCircleFilled, null),
+    showCancel = true,
+    close,
+    onConfirm,
+    onCancel,
+    onPopupClick,
+    classNames,
+    styles
+  } = props;
+  const {
+    getPrefixCls
+  } = (react_production_namespaceFn().useContext)(ConfigContext);
+  const [contextLocale] = locale_useLocale('Popconfirm', es_locale_en_US.Popconfirm);
+  const titleNode = getRenderPropValue(title);
+  const descriptionNode = getRenderPropValue(description);
+  return /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
+    className: `${prefixCls}-inner-content`,
+    onClick: onPopupClick
+  }, /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
+    className: `${prefixCls}-message`
+  }, icon && (/*#__PURE__*/(react_production_namespaceFn().createElement)("span", {
+    className: clsx(`${prefixCls}-message-icon`, classNames?.icon),
+    style: styles?.icon
+  }, icon)), /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
+    className: `${prefixCls}-message-text`
+  }, isReactRenderable(titleNode) && (/*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
+    className: clsx(`${prefixCls}-title`, classNames?.title),
+    style: styles?.title
+  }, titleNode)), isReactRenderable(descriptionNode) && (/*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
+    className: clsx(`${prefixCls}-description`, classNames?.content),
+    style: styles?.content
+  }, descriptionNode)))), /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
+    className: `${prefixCls}-buttons`
+  }, showCancel && (/*#__PURE__*/(react_production_namespaceFn().createElement)(button_Button, {
+    onClick: onCancel,
+    size: "small",
+    ...cancelButtonProps
+  }, cancelText || contextLocale?.cancelText)), /*#__PURE__*/(react_production_namespaceFn().createElement)(_util_ActionButton, {
+    buttonProps: {
+      size: 'small',
+      ...convertLegacyProps(okType),
+      ...okButtonProps
+    },
+    actionFn: onConfirm,
+    close: close,
+    prefixCls: getPrefixCls('btn'),
+    quitOnNullishReturnValue: true,
+    emitEvent: true
+  }, okText || contextLocale?.okText)));
+};
+const popconfirm_PurePanel_PurePanel = props => {
+  const {
+    prefixCls: customizePrefixCls,
+    placement,
+    className,
+    style,
+    ...restProps
+  } = props;
+  const {
+    getPrefixCls
+  } = (react_production_namespaceFn().useContext)(ConfigContext);
+  const prefixCls = getPrefixCls('popconfirm', customizePrefixCls);
+  popconfirm_style(prefixCls);
+  return /*#__PURE__*/(react_production_namespaceFn().createElement)(popover_PurePanel, {
+    placement: placement,
+    className: clsx(prefixCls, className),
+    style: style,
+    content: /*#__PURE__*/(react_production_namespaceFn().createElement)(popconfirm_PurePanel_Overlay, {
+      prefixCls: prefixCls,
+      ...restProps
+    })
+  });
+};
+/* harmony default export */ const popconfirm_PurePanel = (popconfirm_PurePanel_PurePanel);
+;// ./node_modules/antd/es/popconfirm/index.js
+"use client";
+
+
+
+
+
+
+
+
+
+
+
+
+const InternalPopconfirm = /*#__PURE__*/(react_production_namespaceFn().forwardRef)((props, ref) => {
+  const {
+    prefixCls: customizePrefixCls,
+    placement = 'top',
+    trigger,
+    okType = 'primary',
+    icon = /*#__PURE__*/(react_production_namespaceFn().createElement)(icons_ExclamationCircleFilled, null),
+    children,
+    overlayClassName,
+    onOpenChange,
+    overlayStyle,
+    styles,
+    arrow: popconfirmArrow,
+    classNames,
+    disabled = false,
+    mouseEnterDelay,
+    mouseLeaveDelay,
+    ...restProps
+  } = props;
+  const {
+    getPrefixCls,
+    className: contextClassName,
+    style: contextStyle,
+    classNames: contextClassNames,
+    styles: contextStyles,
+    arrow: contextArrow,
+    trigger: contextTrigger,
+    mouseEnterDelay: contextMouseEnterDelay,
+    mouseLeaveDelay: contextMouseLeaveDelay
+  } = useComponentConfig('popconfirm');
+  const [open, setOpen] = useControlledState(props.defaultOpen ?? false, props.open);
+  const mergedArrow = hook_useMergedArrow(popconfirmArrow, contextArrow);
+  const mergedTrigger = trigger || contextTrigger || 'click';
+  const mergedMouseEnterDelay = mouseEnterDelay ?? contextMouseEnterDelay ?? 0.1;
+  const mergedMouseLeaveDelay = mouseLeaveDelay ?? contextMouseLeaveDelay ?? 0.1;
+  // ========================== Warning ===========================
+  if (false) // removed by dead control flow
+{}
+  const settingOpen = nextOpen => {
+    setOpen(nextOpen);
+    onOpenChange?.(nextOpen);
+  };
+  const close = () => {
+    settingOpen(false);
+  };
+  const onConfirm = e => props.onConfirm?.call(undefined, e);
+  const onCancel = e => {
+    settingOpen(false);
+    props.onCancel?.call(undefined, e);
+  };
+  const onInternalOpenChange = nextOpen => {
+    if (disabled) {
+      return;
+    }
+    settingOpen(nextOpen);
+  };
+  const prefixCls = getPrefixCls('popconfirm', customizePrefixCls);
+  const mergedProps = {
+    ...props,
+    placement,
+    trigger: mergedTrigger,
+    okType,
+    overlayStyle,
+    styles,
+    classNames,
+    mouseEnterDelay: mergedMouseEnterDelay,
+    mouseLeaveDelay: mergedMouseLeaveDelay
+  };
+  const contextStyleRoot = useSemanticRootStyle(contextStyle);
+  const overlayStyleRoot = useSemanticRootStyle(overlayStyle);
+  const [mergedClassNames, mergedStyles] = useMergeSemantic([contextClassNames, classNames], [contextStyles, contextStyleRoot, styles, overlayStyleRoot], {
+    props: mergedProps
+  });
+  const rootClassNames = clsx(prefixCls, contextClassName, overlayClassName, mergedClassNames.root);
+  popconfirm_style(prefixCls);
+  return /*#__PURE__*/(react_production_namespaceFn().createElement)(es_popover, {
+    arrow: mergedArrow,
+    ...omit(restProps, ['title']),
+    trigger: mergedTrigger,
+    placement: placement,
+    onOpenChange: onInternalOpenChange,
+    open: open,
+    ref: ref,
+    mouseEnterDelay: mergedMouseEnterDelay,
+    mouseLeaveDelay: mergedMouseLeaveDelay,
+    classNames: {
+      root: rootClassNames,
+      container: mergedClassNames.container,
+      arrow: mergedClassNames.arrow
+    },
+    styles: {
+      root: mergedStyles.root,
+      container: mergedStyles.container,
+      arrow: mergedStyles.arrow
+    },
+    content: /*#__PURE__*/(react_production_namespaceFn().createElement)(popconfirm_PurePanel_Overlay, {
+      okType: okType,
+      icon: icon,
+      ...props,
+      prefixCls: prefixCls,
+      close: close,
+      onConfirm: onConfirm,
+      onCancel: onCancel,
+      classNames: mergedClassNames,
+      styles: mergedStyles
+    }),
+    "data-popover-inject": true
+  }, children);
+});
+const popconfirm_Popconfirm = InternalPopconfirm;
+// We don't care debug panel
+/* istanbul ignore next */
+popconfirm_Popconfirm._InternalPanelDoNotUseOrYouWillBeFired = popconfirm_PurePanel;
+if (false) // removed by dead control flow
+{}
+/* harmony default export */ const popconfirm = (popconfirm_Popconfirm);
 ;// ./node_modules/antd/es/alert/style/index.js
 
 
@@ -82405,691 +83113,6 @@ select_Select._InternalPanelDoNotUseOrYouWillBeFired = select_PurePanel;
 if (false) // removed by dead control flow
 {}
 /* harmony default export */ const es_select = (select_Select);
-;// ./node_modules/antd/es/_util/getRenderPropValue.js
-
-
-const getRenderPropValue = propValue => {
-  if (!isReactRenderable(propValue)) {
-    return null;
-  }
-  return isFunction(propValue) ? propValue() : propValue;
-};
-;// ./node_modules/antd/es/popover/style/index.js
-
-
-
-
-
-
-const style_FALL_BACK_ORIGIN = '50%';
-const popover_style_genBaseStyle = token => {
-  const {
-    componentCls,
-    popoverColor,
-    titleMinWidth,
-    fontWeightStrong,
-    innerPadding,
-    dropShadowPopover,
-    colorTextHeading,
-    borderRadiusLG,
-    zIndexPopup,
-    titleMarginBottom,
-    colorBgElevated,
-    popoverBg,
-    titleBorderBottom,
-    innerContentPadding,
-    titlePadding,
-    antCls
-  } = token;
-  const [varName, varRef] = genCssVar(antCls, 'tooltip');
-  return [{
-    [componentCls]: {
-      ...resetComponent(token),
-      position: 'absolute',
-      top: 0,
-      // use `left` to fix https://github.com/ant-design/ant-design/issues/39195
-      left: {
-        _skip_check_: true,
-        value: 0
-      },
-      zIndex: zIndexPopup,
-      fontWeight: 'normal',
-      whiteSpace: 'normal',
-      textAlign: 'start',
-      cursor: 'auto',
-      userSelect: 'text',
-      filter: dropShadowPopover,
-      // When use `autoArrow`, origin will follow the arrow position
-      [varName('valid-offset-x')]: varRef('arrow-offset-x', 'var(--arrow-x)'),
-      transformOrigin: [varRef('valid-offset-x', style_FALL_BACK_ORIGIN), `var(--arrow-y, ${style_FALL_BACK_ORIGIN})`].join(' '),
-      [varName('arrow-background-color')]: colorBgElevated,
-      width: 'max-content',
-      maxWidth: '100vw',
-      '&-rtl': {
-        direction: 'rtl'
-      },
-      '&-hidden': {
-        display: 'none'
-      },
-      [`${componentCls}-content`]: {
-        position: 'relative'
-      },
-      [`${componentCls}-container`]: {
-        backgroundColor: popoverBg,
-        backgroundClip: 'padding-box',
-        borderRadius: borderRadiusLG,
-        padding: innerPadding
-      },
-      [`${componentCls}-title`]: {
-        minWidth: titleMinWidth,
-        marginBottom: titleMarginBottom,
-        color: colorTextHeading,
-        fontWeight: fontWeightStrong,
-        borderBottom: titleBorderBottom,
-        padding: titlePadding
-      },
-      [`${componentCls}-content`]: {
-        color: popoverColor,
-        padding: innerContentPadding
-      }
-    }
-  },
-  // Arrow Style
-  placementArrow(token, varRef('arrow-background-color'), {
-    arrowShadow: false
-  }),
-  // Pure Render
-  {
-    [`${componentCls}-pure`]: {
-      position: 'relative',
-      maxWidth: 'none',
-      margin: token.sizePopupArrow,
-      display: 'inline-block'
-    }
-  }];
-};
-const genColorStyle = token => {
-  const {
-    componentCls,
-    antCls
-  } = token;
-  const [varName] = genCssVar(antCls, 'tooltip');
-  return {
-    [componentCls]: PresetColors.map(colorKey => {
-      const lightColor = token[`${colorKey}6`];
-      return {
-        [`&${componentCls}-${colorKey}`]: {
-          [varName('arrow-background-color')]: lightColor,
-          [`${componentCls}-inner`]: {
-            backgroundColor: lightColor
-          },
-          [`${componentCls}-arrow`]: {
-            background: 'transparent'
-          }
-        }
-      };
-    })
-  };
-};
-const popover_style_prepareComponentToken = token => {
-  const {
-    lineWidth,
-    controlHeight,
-    fontHeight,
-    padding,
-    wireframe,
-    zIndexPopupBase,
-    borderRadiusLG,
-    marginXS,
-    lineType,
-    colorSplit,
-    paddingSM
-  } = token;
-  const titlePaddingBlockDist = controlHeight - fontHeight;
-  const popoverTitlePaddingBlockTop = titlePaddingBlockDist / 2;
-  const popoverTitlePaddingBlockBottom = titlePaddingBlockDist / 2 - lineWidth;
-  const popoverPaddingHorizontal = padding;
-  return {
-    titleMinWidth: 177,
-    zIndexPopup: zIndexPopupBase + 30,
-    ...getArrowToken(token),
-    ...getArrowOffsetToken({
-      contentRadius: borderRadiusLG,
-      limitVerticalRadius: true
-    }),
-    // internal
-    innerPadding: wireframe ? 0 : 12,
-    titleMarginBottom: wireframe ? 0 : marginXS,
-    titlePadding: wireframe ? `${popoverTitlePaddingBlockTop}px ${popoverPaddingHorizontal}px ${popoverTitlePaddingBlockBottom}px` : 0,
-    titleBorderBottom: wireframe ? `${lineWidth}px ${lineType} ${colorSplit}` : 'none',
-    innerContentPadding: wireframe ? `${paddingSM}px ${popoverPaddingHorizontal}px` : 0
-  };
-};
-/* harmony default export */ const popover_style = (genStyleHooks('Popover', token => {
-  const {
-    colorBgElevated,
-    colorText
-  } = token;
-  const popoverToken = statistic_merge(token, {
-    popoverBg: colorBgElevated,
-    popoverColor: colorText
-  });
-  return [popover_style_genBaseStyle(popoverToken), genColorStyle(popoverToken), initZoomMotion(popoverToken, 'zoom-big')];
-}, popover_style_prepareComponentToken, {
-  resetStyle: false,
-  deprecatedTokens: [['width', 'titleMinWidth'], ['minWidth', 'titleMinWidth']]
-}));
-;// ./node_modules/antd/es/popover/PurePanel.js
-"use client";
-
-
-
-
-
-
-
-
-
-const PurePanel_Overlay = props => {
-  const {
-    title,
-    content,
-    prefixCls,
-    classNames,
-    styles
-  } = props;
-  if (!isReactRenderable(title) && !isReactRenderable(content)) {
-    return null;
-  }
-  return /*#__PURE__*/(react_production_namespaceFn().createElement)((react_production_namespaceFn().Fragment), null, isReactRenderable(title) && (/*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
-    className: clsx(`${prefixCls}-title`, classNames?.title),
-    style: styles?.title
-  }, title)), isReactRenderable(content) && (/*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
-    className: clsx(`${prefixCls}-content`, classNames?.content),
-    style: styles?.content
-  }, content)));
-};
-const RawPurePanel = props => {
-  const {
-    hashId,
-    prefixCls,
-    className,
-    style,
-    placement = 'top',
-    title,
-    content,
-    children,
-    classNames,
-    styles
-  } = props;
-  const titleNode = getRenderPropValue(title);
-  const contentNode = getRenderPropValue(content);
-  const mergedProps = {
-    ...props,
-    placement
-  };
-  const [mergedClassNames, mergedStyles] = useMergeSemantic([classNames], [styles], {
-    props: mergedProps
-  });
-  const rootClassName = clsx(hashId, prefixCls, `${prefixCls}-pure`, `${prefixCls}-placement-${placement}`, className);
-  return /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
-    className: rootClassName,
-    style: style
-  }, /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
-    className: `${prefixCls}-arrow`
-  }), /*#__PURE__*/(react_production_namespaceFn().createElement)(tooltip_es_Popup, {
-    ...props,
-    className: hashId,
-    prefixCls: prefixCls,
-    classNames: mergedClassNames,
-    styles: mergedStyles
-  }, children || (/*#__PURE__*/(react_production_namespaceFn().createElement)(PurePanel_Overlay, {
-    prefixCls: prefixCls,
-    title: titleNode,
-    content: contentNode,
-    classNames: mergedClassNames,
-    styles: mergedStyles
-  }))));
-};
-const popover_PurePanel_PurePanel = props => {
-  const {
-    prefixCls: customizePrefixCls,
-    className,
-    ...restProps
-  } = props;
-  const {
-    getPrefixCls
-  } = (react_production_namespaceFn().useContext)(ConfigContext);
-  const prefixCls = getPrefixCls('popover', customizePrefixCls);
-  const [hashId, cssVarCls] = popover_style(prefixCls);
-  return /*#__PURE__*/(react_production_namespaceFn().createElement)(RawPurePanel, {
-    ...restProps,
-    prefixCls: prefixCls,
-    hashId: hashId,
-    className: clsx(className, cssVarCls)
-  });
-};
-/* harmony default export */ const popover_PurePanel = (popover_PurePanel_PurePanel);
-;// ./node_modules/antd/es/popover/index.js
-"use client";
-
-
-
-
-
-
-
-
-
-
-
-
-// CSSINJS
-
-const InternalPopover = /*#__PURE__*/(react_production_namespaceFn().forwardRef)((props, ref) => {
-  const {
-    prefixCls: customizePrefixCls,
-    title,
-    content,
-    overlayClassName,
-    placement = 'top',
-    trigger,
-    children,
-    mouseEnterDelay,
-    mouseLeaveDelay,
-    onOpenChange,
-    overlayStyle = {},
-    styles,
-    classNames,
-    motion,
-    arrow: popoverArrow,
-    ...restProps
-  } = props;
-  const {
-    getPrefixCls,
-    className: contextClassName,
-    style: contextStyle,
-    classNames: contextClassNames,
-    styles: contextStyles,
-    arrow: contextArrow,
-    trigger: contextTrigger,
-    mouseEnterDelay: contextMouseEnterDelay,
-    mouseLeaveDelay: contextMouseLeaveDelay
-  } = useComponentConfig('popover');
-  const mergedMouseEnterDelay = mouseEnterDelay ?? contextMouseEnterDelay ?? 0.1;
-  const mergedMouseLeaveDelay = mouseLeaveDelay ?? contextMouseLeaveDelay ?? 0.1;
-  const prefixCls = getPrefixCls('popover', customizePrefixCls);
-  const [hashId, cssVarCls] = popover_style(prefixCls);
-  const rootPrefixCls = getPrefixCls();
-  const mergedArrow = hook_useMergedArrow(popoverArrow, contextArrow);
-  const mergedTrigger = trigger || contextTrigger || 'hover';
-  // ========================== Warning ===========================
-  if (false) // removed by dead control flow
-{}
-  // ============================= Styles =============================
-  const mergedProps = {
-    ...props,
-    placement,
-    trigger: mergedTrigger,
-    mouseEnterDelay: mergedMouseEnterDelay,
-    mouseLeaveDelay: mergedMouseLeaveDelay,
-    overlayStyle,
-    styles,
-    classNames
-  };
-  const contextStyleRoot = useSemanticRootStyle(contextStyle);
-  const overlayStyleRoot = useSemanticRootStyle(overlayStyle);
-  const [mergedClassNames, mergedStyles] = useMergeSemantic([contextClassNames, classNames], [contextStyles, contextStyleRoot, styles, overlayStyleRoot], {
-    props: mergedProps
-  });
-  const rootClassNames = clsx(overlayClassName, hashId, cssVarCls, contextClassName, mergedClassNames.root);
-  const [open, setOpen] = useControlledState(props.defaultOpen ?? false, props.open);
-  const settingOpen = nextOpen => {
-    setOpen(nextOpen);
-    onOpenChange?.(nextOpen);
-  };
-  const titleNode = getRenderPropValue(title);
-  const contentNode = getRenderPropValue(content);
-  return /*#__PURE__*/(react_production_namespaceFn().createElement)(es_tooltip, {
-    unique: false,
-    arrow: mergedArrow,
-    placement: placement,
-    trigger: mergedTrigger,
-    mouseEnterDelay: mergedMouseEnterDelay,
-    mouseLeaveDelay: mergedMouseLeaveDelay,
-    ...restProps,
-    prefixCls: prefixCls,
-    classNames: {
-      root: rootClassNames,
-      container: mergedClassNames.container,
-      arrow: mergedClassNames.arrow
-    },
-    styles: {
-      root: mergedStyles.root,
-      container: mergedStyles.container,
-      arrow: mergedStyles.arrow
-    },
-    ref: ref,
-    open: open,
-    onOpenChange: settingOpen,
-    overlay: isReactRenderable(titleNode) || isReactRenderable(contentNode) ? (/*#__PURE__*/(react_production_namespaceFn().createElement)(PurePanel_Overlay, {
-      prefixCls: prefixCls,
-      title: titleNode,
-      content: contentNode,
-      classNames: mergedClassNames,
-      styles: mergedStyles
-    })) : null,
-    motion: {
-      motionName: motion_getTransitionName(rootPrefixCls, 'zoom-big', typeof motion?.motionName === 'string' ? motion?.motionName : undefined)
-    },
-    "data-popover-inject": true
-  }, children);
-});
-const Popover = InternalPopover;
-Popover._InternalPanelDoNotUseOrYouWillBeFired = popover_PurePanel;
-if (false) // removed by dead control flow
-{}
-/* harmony default export */ const es_popover = (Popover);
-;// ./node_modules/antd/es/popconfirm/style/index.js
-
-// =============================== Base ===============================
-const popconfirm_style_genBaseStyle = token => {
-  const {
-    componentCls,
-    iconCls,
-    antCls,
-    zIndexPopup,
-    colorText,
-    colorWarning,
-    marginXXS,
-    marginXS,
-    fontSize,
-    fontWeightStrong,
-    colorTextHeading
-  } = token;
-  return {
-    [componentCls]: {
-      zIndex: zIndexPopup,
-      [`&${antCls}-popover`]: {
-        fontSize
-      },
-      [`${componentCls}-message`]: {
-        marginBottom: marginXS,
-        display: 'flex',
-        flexWrap: 'nowrap',
-        alignItems: 'start',
-        [`> ${componentCls}-message-icon`]: {
-          color: colorWarning
-        },
-        [`> ${componentCls}-message-icon ${iconCls}`]: {
-          fontSize,
-          lineHeight: 1,
-          marginInlineEnd: marginXS
-        },
-        [`${componentCls}-title`]: {
-          fontWeight: fontWeightStrong,
-          color: colorTextHeading,
-          '&:only-child': {
-            fontWeight: 'normal'
-          }
-        },
-        [`${componentCls}-description`]: {
-          marginTop: marginXXS,
-          color: colorText
-        }
-      },
-      [`${componentCls}-buttons`]: {
-        textAlign: 'end',
-        whiteSpace: 'nowrap',
-        button: {
-          marginInlineStart: marginXS
-        }
-      }
-    }
-  };
-};
-// ============================== Export ==============================
-const popconfirm_style_prepareComponentToken = token => {
-  const {
-    zIndexPopupBase
-  } = token;
-  return {
-    zIndexPopup: zIndexPopupBase + 60
-  };
-};
-/* harmony default export */ const popconfirm_style = (genStyleHooks('Popconfirm', popconfirm_style_genBaseStyle, popconfirm_style_prepareComponentToken, {
-  resetStyle: false
-}));
-;// ./node_modules/antd/es/popconfirm/PurePanel.js
-"use client";
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-const popconfirm_PurePanel_Overlay = props => {
-  const {
-    prefixCls,
-    okButtonProps,
-    cancelButtonProps,
-    title,
-    description,
-    cancelText,
-    okText,
-    okType = 'primary',
-    icon = /*#__PURE__*/(react_production_namespaceFn().createElement)(icons_ExclamationCircleFilled, null),
-    showCancel = true,
-    close,
-    onConfirm,
-    onCancel,
-    onPopupClick,
-    classNames,
-    styles
-  } = props;
-  const {
-    getPrefixCls
-  } = (react_production_namespaceFn().useContext)(ConfigContext);
-  const [contextLocale] = locale_useLocale('Popconfirm', es_locale_en_US.Popconfirm);
-  const titleNode = getRenderPropValue(title);
-  const descriptionNode = getRenderPropValue(description);
-  return /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
-    className: `${prefixCls}-inner-content`,
-    onClick: onPopupClick
-  }, /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
-    className: `${prefixCls}-message`
-  }, icon && (/*#__PURE__*/(react_production_namespaceFn().createElement)("span", {
-    className: clsx(`${prefixCls}-message-icon`, classNames?.icon),
-    style: styles?.icon
-  }, icon)), /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
-    className: `${prefixCls}-message-text`
-  }, isReactRenderable(titleNode) && (/*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
-    className: clsx(`${prefixCls}-title`, classNames?.title),
-    style: styles?.title
-  }, titleNode)), isReactRenderable(descriptionNode) && (/*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
-    className: clsx(`${prefixCls}-description`, classNames?.content),
-    style: styles?.content
-  }, descriptionNode)))), /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
-    className: `${prefixCls}-buttons`
-  }, showCancel && (/*#__PURE__*/(react_production_namespaceFn().createElement)(button_Button, {
-    onClick: onCancel,
-    size: "small",
-    ...cancelButtonProps
-  }, cancelText || contextLocale?.cancelText)), /*#__PURE__*/(react_production_namespaceFn().createElement)(_util_ActionButton, {
-    buttonProps: {
-      size: 'small',
-      ...convertLegacyProps(okType),
-      ...okButtonProps
-    },
-    actionFn: onConfirm,
-    close: close,
-    prefixCls: getPrefixCls('btn'),
-    quitOnNullishReturnValue: true,
-    emitEvent: true
-  }, okText || contextLocale?.okText)));
-};
-const popconfirm_PurePanel_PurePanel = props => {
-  const {
-    prefixCls: customizePrefixCls,
-    placement,
-    className,
-    style,
-    ...restProps
-  } = props;
-  const {
-    getPrefixCls
-  } = (react_production_namespaceFn().useContext)(ConfigContext);
-  const prefixCls = getPrefixCls('popconfirm', customizePrefixCls);
-  popconfirm_style(prefixCls);
-  return /*#__PURE__*/(react_production_namespaceFn().createElement)(popover_PurePanel, {
-    placement: placement,
-    className: clsx(prefixCls, className),
-    style: style,
-    content: /*#__PURE__*/(react_production_namespaceFn().createElement)(popconfirm_PurePanel_Overlay, {
-      prefixCls: prefixCls,
-      ...restProps
-    })
-  });
-};
-/* harmony default export */ const popconfirm_PurePanel = (popconfirm_PurePanel_PurePanel);
-;// ./node_modules/antd/es/popconfirm/index.js
-"use client";
-
-
-
-
-
-
-
-
-
-
-
-
-const InternalPopconfirm = /*#__PURE__*/(react_production_namespaceFn().forwardRef)((props, ref) => {
-  const {
-    prefixCls: customizePrefixCls,
-    placement = 'top',
-    trigger,
-    okType = 'primary',
-    icon = /*#__PURE__*/(react_production_namespaceFn().createElement)(icons_ExclamationCircleFilled, null),
-    children,
-    overlayClassName,
-    onOpenChange,
-    overlayStyle,
-    styles,
-    arrow: popconfirmArrow,
-    classNames,
-    disabled = false,
-    mouseEnterDelay,
-    mouseLeaveDelay,
-    ...restProps
-  } = props;
-  const {
-    getPrefixCls,
-    className: contextClassName,
-    style: contextStyle,
-    classNames: contextClassNames,
-    styles: contextStyles,
-    arrow: contextArrow,
-    trigger: contextTrigger,
-    mouseEnterDelay: contextMouseEnterDelay,
-    mouseLeaveDelay: contextMouseLeaveDelay
-  } = useComponentConfig('popconfirm');
-  const [open, setOpen] = useControlledState(props.defaultOpen ?? false, props.open);
-  const mergedArrow = hook_useMergedArrow(popconfirmArrow, contextArrow);
-  const mergedTrigger = trigger || contextTrigger || 'click';
-  const mergedMouseEnterDelay = mouseEnterDelay ?? contextMouseEnterDelay ?? 0.1;
-  const mergedMouseLeaveDelay = mouseLeaveDelay ?? contextMouseLeaveDelay ?? 0.1;
-  // ========================== Warning ===========================
-  if (false) // removed by dead control flow
-{}
-  const settingOpen = nextOpen => {
-    setOpen(nextOpen);
-    onOpenChange?.(nextOpen);
-  };
-  const close = () => {
-    settingOpen(false);
-  };
-  const onConfirm = e => props.onConfirm?.call(undefined, e);
-  const onCancel = e => {
-    settingOpen(false);
-    props.onCancel?.call(undefined, e);
-  };
-  const onInternalOpenChange = nextOpen => {
-    if (disabled) {
-      return;
-    }
-    settingOpen(nextOpen);
-  };
-  const prefixCls = getPrefixCls('popconfirm', customizePrefixCls);
-  const mergedProps = {
-    ...props,
-    placement,
-    trigger: mergedTrigger,
-    okType,
-    overlayStyle,
-    styles,
-    classNames,
-    mouseEnterDelay: mergedMouseEnterDelay,
-    mouseLeaveDelay: mergedMouseLeaveDelay
-  };
-  const contextStyleRoot = useSemanticRootStyle(contextStyle);
-  const overlayStyleRoot = useSemanticRootStyle(overlayStyle);
-  const [mergedClassNames, mergedStyles] = useMergeSemantic([contextClassNames, classNames], [contextStyles, contextStyleRoot, styles, overlayStyleRoot], {
-    props: mergedProps
-  });
-  const rootClassNames = clsx(prefixCls, contextClassName, overlayClassName, mergedClassNames.root);
-  popconfirm_style(prefixCls);
-  return /*#__PURE__*/(react_production_namespaceFn().createElement)(es_popover, {
-    arrow: mergedArrow,
-    ...omit(restProps, ['title']),
-    trigger: mergedTrigger,
-    placement: placement,
-    onOpenChange: onInternalOpenChange,
-    open: open,
-    ref: ref,
-    mouseEnterDelay: mergedMouseEnterDelay,
-    mouseLeaveDelay: mergedMouseLeaveDelay,
-    classNames: {
-      root: rootClassNames,
-      container: mergedClassNames.container,
-      arrow: mergedClassNames.arrow
-    },
-    styles: {
-      root: mergedStyles.root,
-      container: mergedStyles.container,
-      arrow: mergedStyles.arrow
-    },
-    content: /*#__PURE__*/(react_production_namespaceFn().createElement)(popconfirm_PurePanel_Overlay, {
-      okType: okType,
-      icon: icon,
-      ...props,
-      prefixCls: prefixCls,
-      close: close,
-      onConfirm: onConfirm,
-      onCancel: onCancel,
-      classNames: mergedClassNames,
-      styles: mergedStyles
-    }),
-    "data-popover-inject": true
-  }, children);
-});
-const popconfirm_Popconfirm = InternalPopconfirm;
-// We don't care debug panel
-/* istanbul ignore next */
-popconfirm_Popconfirm._InternalPanelDoNotUseOrYouWillBeFired = popconfirm_PurePanel;
-if (false) // removed by dead control flow
-{}
-/* harmony default export */ const popconfirm = (popconfirm_Popconfirm);
 ;// ./src/lib/agent/types.ts
 /**
  * ScriptCat Agent API（`CAT.agent.*`）的类型声明与纯工具函数。
@@ -88424,10 +88447,25 @@ function TaskPanel({ api, version, onChange }) {
 
 
 
-/** 面板宽度 238px 放不下的内容都进这个弹窗，故给到 720px */
-const MODAL_WIDTH = 720;
+/** 面板宽度 238px 放不下的内容都进这个弹窗；v26.10.10-v13 起左侧多了会话栏，故 720 → 760 */
+const MODAL_WIDTH = 760;
 /** 消息区高度：弹窗固定高度，输入框永远留在视口内，不随消息变长而抖 */
 const MESSAGES_HEIGHT = 360;
+/** 侧栏会话栏宽度：够放「MM/DD HH:mm」与 30 字截断标题，又不至于把消息区压窄 */
+const SIDEBAR_WIDTH = 172;
+/**
+ * 会话卡片上的时间（NextChat 的列表也是这个位置）。
+ * 只到分钟：脚本不用 moment/dayjs（零运行时依赖），手写两行足够。
+ */
+function chatTimeText(timestamp) {
+    if (!timestamp)
+        return '';
+    const date = new Date(timestamp);
+    if (Number.isNaN(date.getTime()))
+        return '';
+    const pad = (value) => String(value).padStart(2, '0');
+    return (pad(date.getMonth() + 1) + '/' + pad(date.getDate()) + ' ' + pad(date.getHours()) + ':' + pad(date.getMinutes()));
+}
 /**
  * 交代脚本自身的上下文，让 Agent 知道「自己在哪、能干什么」。刻意写短：
  * 太长会与用户的真实问题抢注意力，而且它是每轮都要付的 token。
@@ -88467,6 +88505,8 @@ function AgentModal({ open, onClose }) {
     const [chats, setChats] = (0,react_production_namespaceFn().useState)([]);
     /** 当前会话 id；空串 = 空白对话（发第一条消息时才会真正创建） */
     const [activeChatId, setActiveChatId] = (0,react_production_namespaceFn().useState)('');
+    /** 鼠标正悬停的会话卡片：侧栏的删除图标只在悬停（或选中）时出现，用 state 而不是 CSS 类 */
+    const [hoverChatId, setHoverChatId] = (0,react_production_namespaceFn().useState)('');
     const [skillsVersion, setSkillsVersion] = (0,react_production_namespaceFn().useState)(0);
     const [tasksVersion, setTasksVersion] = (0,react_production_namespaceFn().useState)(0);
     const keyRef = (0,react_production_namespaceFn().useRef)(0);
@@ -88761,21 +88801,28 @@ function AgentModal({ open, onClose }) {
         }
         addLog('[Agent] 已切换到对话「' + agentChatLabel(chatsRef.current, id) + '」', 'info');
     }, [api, activeChatId, stopStreaming]);
-    /** 删除当前会话：清空它的消息 + 从本地索引移除（官方没有删除会话的接口，见 sessions.ts） */
-    const deleteChat = (0,react_production_namespaceFn().useCallback)(async () => {
-        const id = activeChatId;
+    /**
+     * 删除某个会话：清空它的消息 + 从本地索引移除（官方没有删除会话的接口，见 sessions.ts）。
+     * v26.10.10-v13 起侧栏每条都能删，所以这里按 id 工作，不再是「只能删当前这条」。
+     */
+    const deleteChat = (0,react_production_namespaceFn().useCallback)(async (id) => {
         if (!id)
             return;
         const label = agentChatLabel(chatsRef.current, id);
-        stopStreaming();
-        setStreaming(false);
         // 只有手里正拿着的实例才能 clear；索引里那条在 ScriptCat 侧已失效时本来也没有消息可清
-        if (conversation && conversation.id === id)
+        if (conversation && conversation.id === id) {
+            stopStreaming();
+            setStreaming(false);
             await clearConversation(conversation);
-        persistChats(removeAgentChat(chatsRef.current, id), '');
-        setConversation(null);
-        setMessages([]);
-        setFatalError('');
+            setConversation(null);
+            setMessages([]);
+            setFatalError('');
+            persistChats(removeAgentChat(chatsRef.current, id), '');
+        }
+        else {
+            // 删的是别的会话：当前视图与 activeId 都不动，只把它从列表里去掉
+            persistChats(removeAgentChat(chatsRef.current, id), activeChatId);
+        }
         addLog('[Agent] 已删除对话「' + label + '」', 'info');
     }, [activeChatId, conversation, persistChats, stopStreaming]);
     const handleClose = (0,react_production_namespaceFn().useCallback)(() => {
@@ -88803,30 +88850,83 @@ function AgentModal({ open, onClose }) {
                                     color: token.colorTextSecondary,
                                 }, children: [toolDisplayName(toolCall.name), toolCall.status === 'running' ? ' …' : ''] }) }, (toolCall.id || toolCall.name) + '-' + index))) })) : null, !isUser && message.thinking ? ((0,react_jsx_runtime_production_namespaceFn().jsxs)("details", { style: { marginBottom: 6 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("summary", { style: { cursor: 'pointer', fontSize: 12, color: token.colorTextTertiary }, children: "\u601D\u8003\u8FC7\u7A0B" }), (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { fontSize: 12, color: token.colorTextSecondary, marginTop: 4 }, children: message.thinking })] })) : null, message.content ? ((0,react_jsx_runtime_production_namespaceFn().jsx)("span", { children: message.content })) : message.pending ? ((0,react_jsx_runtime_production_namespaceFn().jsx)(typography.Text, { type: "secondary", style: { fontSize: 12 }, children: "\u6B63\u5728\u601D\u8003\u2026" })) : null, message.cancelled ? ((0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { fontSize: 12, color: token.colorTextTertiary, marginTop: 4 }, children: "\uFF08\u5DF2\u4E2D\u6B62\uFF09" })) : null, message.error ? ((0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { fontSize: 12, color: token.colorError, marginTop: 6 }, children: message.error })) : null] }) }, message.key));
     };
+    /** 侧栏的一条会话卡片（NextChat 的列表项：标题 + 时间，选中高亮，悬停出现删除） */
+    const renderChatItem = (item) => {
+        const active = item.id === activeChatId;
+        return ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { className: 'znhd-agent-chat-item' + (active ? ' znhd-agent-chat-item-active' : ''), title: agentChatLabel(chats, item.id), onClick: () => void switchChat(item.id), onMouseEnter: () => setHoverChatId(item.id), onMouseLeave: () => setHoverChatId((current) => (current === item.id ? '' : current)), style: {
+                position: 'relative',
+                padding: '6px 24px 6px 8px',
+                marginBottom: 4,
+                borderRadius: 6,
+                cursor: 'pointer',
+                lineHeight: 1.5,
+                background: active ? token.colorPrimaryBg : token.colorFillQuaternary,
+                border: '1px solid ' + (active ? token.colorPrimaryBorder : 'transparent'),
+            }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { fontSize: 12, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }, children: agentChatLabel(chats, item.id) }), (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { fontSize: 11, color: token.colorTextTertiary }, children: chatTimeText(item.updatetime) }), (0,react_jsx_runtime_production_namespaceFn().jsx)("span", { style: {
+                        position: 'absolute',
+                        top: 4,
+                        right: 2,
+                        opacity: active || hoverChatId === item.id ? 1 : 0,
+                    }, onClick: (event) => event.stopPropagation(), children: (0,react_jsx_runtime_production_namespaceFn().jsx)(popconfirm, { title: "\u5220\u9664\u8FD9\u4E2A\u5BF9\u8BDD\uFF1F", description: "\u4F1A\u6E05\u7A7A\u8BE5\u5BF9\u8BDD\u7684\u6D88\u606F\u8BB0\u5F55\uFF0C\u5E76\u4ECE\u4F1A\u8BDD\u5217\u8868\u91CC\u79FB\u9664\u3002", okText: "\u5220\u9664", cancelText: "\u53D6\u6D88", okButtonProps: { danger: true }, onConfirm: () => void deleteChat(item.id), children: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { type: "text", size: "small", "aria-label": "\u5220\u9664\u5BF9\u8BDD", icon: (0,react_jsx_runtime_production_namespaceFn().jsx)(TrashIcon, { size: 12 }), style: { width: 20, height: 20, minWidth: 20, padding: 0, color: token.colorTextTertiary } }) }) })] }, item.id));
+    };
+    /**
+     * 左侧会话栏（v26.10.10-v13）。
+     *
+     * 为什么是 state 控制删除图标的显隐、而不是 CSS `:hover`：本仓库没有给 Agent 弹窗引样式表
+     * （图标全内联、面板样式走 PANEL_CSS），为一次 hover 再注入 <style> 不划算；
+     * onMouseEnter/Leave 两行就够，且选中项永远可见，触屏/键盘用户也不会找不到入口。
+     */
+    const renderSidebar = () => ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { className: "znhd-agent-sidebar", style: {
+            flex: '0 0 ' + SIDEBAR_WIDTH + 'px',
+            width: SIDEBAR_WIDTH,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 6,
+            paddingRight: 10,
+            borderRight: '1px solid ' + token.colorBorderSecondary,
+        }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(es_tooltip, { title: "\u6E05\u7A7A\u5F53\u524D\u89C6\u56FE\uFF0C\u53D1\u51FA\u4E0B\u4E00\u6761\u6D88\u606F\u65F6\u53E6\u8D77\u4E00\u4E2A\u5BF9\u8BDD", children: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { size: "small", icon: (0,react_jsx_runtime_production_namespaceFn().jsx)(PlusIcon, { size: 13 }), onClick: newChat, disabled: streaming && !conversation, style: { justifyContent: 'flex-start' }, children: "\u65B0\u7684\u804A\u5929" }) }), (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { className: "znhd-agent-chat-list", style: { flex: '1 1 auto', minHeight: 0, overflowY: 'auto', overflowX: 'hidden' }, children: chats.length ? (chats.map(renderChatItem)) : ((0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { fontSize: 12, color: token.colorTextTertiary, padding: '4px 2px' }, children: "\u8FD8\u6CA1\u6709\u5386\u53F2\u5BF9\u8BDD\u3002\u53D1\u51FA\u7B2C\u4E00\u6761\u6D88\u606F\u540E\uFF0C\u5B83\u4F1A\u51FA\u73B0\u5728\u8FD9\u91CC\u3002" })) }), (0,react_jsx_runtime_production_namespaceFn().jsx)(typography.Text, { type: "secondary", style: { fontSize: 11, lineHeight: 1.5 }, children: "\u5BF9\u8BDD\u5B58\u5728 ScriptCat \u7684\u672C\u5730\u5B58\u50A8\uFF08OPFS\uFF09\u91CC\uFF0C\u5237\u65B0\u7F51\u9875\u4E5F\u80FD\u4ECE\u8FD9\u91CC\u63A5\u56DE\u3002" })] }));
     const renderChat = () => {
         if (!api) {
             return ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_alert, { type: "warning", showIcon: true, icon: (0,react_jsx_runtime_production_namespaceFn().jsx)(BotIcon, { size: 16 }), message: "Agent \u529F\u80FD\u4E0D\u53EF\u7528", description: availability.reason }));
         }
-        return ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', flexDirection: 'column', gap: 8 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(es_select, { size: "small", style: { minWidth: 200, flex: '1 1 200px' }, value: modelId || undefined, placeholder: models.length ? '选择模型' : '未配置模型', disabled: streaming, options: models.map((model) => ({
-                                value: model.id,
-                                label: model.name + '（' + model.provider + '）',
-                            })), onChange: (value) => setModelId(value) }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_select, { size: "small", style: { minWidth: 160, flex: '1 1 160px' }, value: activeChatId || undefined, placeholder: chats.length ? '选择历史对话' : '还没有历史对话', disabled: streaming, options: chats.map((item) => ({
-                                value: item.id,
-                                label: agentChatLabel(chats, item.id),
-                            })), onChange: (value) => void switchChat(value) }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_tooltip, { title: "\u6E05\u7A7A\u5F53\u524D\u89C6\u56FE\uFF0C\u53D1\u51FA\u4E0B\u4E00\u6761\u6D88\u606F\u65F6\u53E6\u8D77\u4E00\u4E2A\u5BF9\u8BDD", children: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { size: "small", onClick: newChat, disabled: streaming && !conversation, children: "\u65B0\u5EFA\u5BF9\u8BDD" }) }), (0,react_jsx_runtime_production_namespaceFn().jsx)(popconfirm, { title: "\u5220\u9664\u8FD9\u4E2A\u5BF9\u8BDD\uFF1F", description: "\u4F1A\u6E05\u7A7A\u8BE5\u5BF9\u8BDD\u7684\u6D88\u606F\u8BB0\u5F55\uFF0C\u5E76\u4ECE\u4F1A\u8BDD\u5217\u8868\u91CC\u79FB\u9664\u3002", okText: "\u5220\u9664", cancelText: "\u53D6\u6D88", okButtonProps: { danger: true }, onConfirm: () => void deleteChat(), children: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { size: "small", danger: true, disabled: !activeChatId, children: "\u5220\u9664" }) })] }), models.length ? null : ((0,react_jsx_runtime_production_namespaceFn().jsx)(typography.Text, { type: "secondary", style: { fontSize: 12 }, children: "\u8FD8\u6CA1\u6709\u5728 ScriptCat \u91CC\u914D\u7F6E\u6A21\u578B\uFF1A\u8BF7\u6253\u5F00 ScriptCat \u7684 Agent \u8BBE\u7F6E\u6DFB\u52A0\u4E00\u4E2A\u6A21\u578B\uFF08\u652F\u6301 OpenAI \u517C\u5BB9 / Anthropic / \u667A\u8C31\uFF09\uFF0C\u4E4B\u540E\u8FD9\u91CC\u4F1A\u5217\u51FA\u53EF\u9009\u6A21\u578B\u3002" })), fatalError ? (0,react_jsx_runtime_production_namespaceFn().jsx)(es_alert, { type: "error", showIcon: true, message: fatalError }) : null, (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { ref: scrollRef, className: "znhd-agent-messages", style: {
-                        height: MESSAGES_HEIGHT,
-                        overflowY: 'auto',
-                        overflowX: 'hidden',
-                        padding: '8px 4px',
-                        border: '1px solid ' + token.colorBorderSecondary,
-                        borderRadius: 6,
-                        background: token.colorBgContainer,
-                    }, children: messages.length ? (messages.map(renderMessage)) : ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_empty, { image: es_empty.PRESENTED_IMAGE_SIMPLE, description: (0,react_jsx_runtime_production_namespaceFn().jsx)("span", { style: { fontSize: 12 }, children: "\u76F4\u63A5\u63D0\u95EE\u5373\u53EF\u3002\u53EF\u4EE5\u8BD5\u8BD5\u300C\u5E2E\u6211\u603B\u7ED3\u8FD9\u4E2A\u9875\u9762\u80FD\u505A\u4EC0\u4E48\u300D\u300C\u5F81\u7EB3\u4E92\u52A8\u6389\u7EBF\u63D0\u9192\u6CA1\u58F0\u97F3\u600E\u4E48\u529E\u300D" }) })) }), (0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', gap: 8, alignItems: 'flex-end' }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(es_input.TextArea, { ref: inputRef, value: input, onChange: (event) => setInput(event.target.value), onPressEnter: (event) => {
-                                if (event.shiftKey)
-                                    return;
-                                event.preventDefault();
-                                void send();
-                            }, placeholder: "\u8F93\u5165\u95EE\u9898\uFF0CEnter \u53D1\u9001\uFF0CShift+Enter \u6362\u884C", autoSize: { minRows: 1, maxRows: 4 }, disabled: !api, style: { resize: 'none' } }), streaming ? ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { danger: true, icon: (0,react_jsx_runtime_production_namespaceFn().jsx)(CloseIcon, { size: 13 }), onClick: stopStreaming, children: "\u4E2D\u6B62" })) : ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { color: "primary", variant: "solid", onClick: () => void send(), disabled: !input.trim(), children: "\u53D1\u9001" }))] }), (0,react_jsx_runtime_production_namespaceFn().jsx)(typography.Text, { type: "secondary", style: { fontSize: 11 }, children: '对话存在 ScriptCat 的本地存储（OPFS）里，刷新网页也能从上面的下拉接回；「新建对话」另起一个，删除会清空该对话的消息。' })] }));
+        return ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', gap: 12, alignItems: 'stretch' }, children: [renderSidebar(), (0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { flex: '1 1 auto', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 8 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', alignItems: 'baseline', gap: 8 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(typography.Text, { strong: true, style: { fontSize: 14 }, children: activeChatId ? agentChatLabel(chats, activeChatId) : '新的聊天' }), (0,react_jsx_runtime_production_namespaceFn().jsxs)(typography.Text, { type: "secondary", style: { fontSize: 11 }, children: ["\u5171 ", chats.length, " \u6761\u5BF9\u8BDD"] })] }), models.length ? null : ((0,react_jsx_runtime_production_namespaceFn().jsx)(typography.Text, { type: "secondary", style: { fontSize: 12 }, children: "\u8FD8\u6CA1\u6709\u5728 ScriptCat \u91CC\u914D\u7F6E\u6A21\u578B\uFF1A\u8BF7\u6253\u5F00 ScriptCat \u7684 Agent \u8BBE\u7F6E\u6DFB\u52A0\u4E00\u4E2A\u6A21\u578B\uFF08\u652F\u6301 OpenAI \u517C\u5BB9 / Anthropic / \u667A\u8C31\uFF09\uFF0C\u4E4B\u540E\u8FD9\u91CC\u4F1A\u5217\u51FA\u53EF\u9009\u6A21\u578B\u3002" })), fatalError ? (0,react_jsx_runtime_production_namespaceFn().jsx)(es_alert, { type: "error", showIcon: true, message: fatalError }) : null, (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { ref: scrollRef, className: "znhd-agent-messages", style: {
+                                height: MESSAGES_HEIGHT,
+                                overflowY: 'auto',
+                                overflowX: 'hidden',
+                                padding: '8px 4px',
+                                border: '1px solid ' + token.colorBorderSecondary,
+                                borderRadius: 6,
+                                background: token.colorBgContainer,
+                            }, children: messages.length ? (messages.map(renderMessage)) : ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_empty, { image: es_empty.PRESENTED_IMAGE_SIMPLE, description: (0,react_jsx_runtime_production_namespaceFn().jsx)("span", { style: { fontSize: 12 }, children: "\u76F4\u63A5\u63D0\u95EE\u5373\u53EF\u3002\u53EF\u4EE5\u8BD5\u8BD5\u300C\u5E2E\u6211\u603B\u7ED3\u8FD9\u4E2A\u9875\u9762\u80FD\u505A\u4EC0\u4E48\u300D\u300C\u5F81\u7EB3\u4E92\u52A8\u6389\u7EBF\u63D0\u9192\u6CA1\u58F0\u97F3\u600E\u4E48\u529E\u300D" }) })) }), (0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: {
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: 2,
+                                padding: '6px 8px 4px',
+                                border: '1px solid ' + token.colorBorderSecondary,
+                                borderRadius: 8,
+                                background: token.colorBgContainer,
+                            }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(es_input.TextArea, { ref: inputRef, value: input, onChange: (event) => setInput(event.target.value), onPressEnter: (event) => {
+                                        if (event.shiftKey)
+                                            return;
+                                        event.preventDefault();
+                                        void send();
+                                    }, placeholder: "\u8F93\u5165\u95EE\u9898\uFF0CEnter \u53D1\u9001\uFF0CShift+Enter \u6362\u884C", autoSize: { minRows: 1, maxRows: 4 }, disabled: !api, variant: "borderless", 
+                                    // antd v6 的 borderless 变体在 :focus-visible 时会给文本域**自己**画一层
+                                    // outline 聚焦框（node_modules/antd/es/input/style/variants.js 的
+                                    // genBorderlessFocusVisibleStyle：`outline: 1px solid activeBorderColor`），
+                                    // 看上去就像输入框外围多了一圈蓝框。这里显式关掉 outline 与 boxShadow
+                                    // —— 内联样式优先级高于 antd 的类规则（那两条都没用 !important），两种画框
+                                    // 方式一起关，别只堵一半。要恢复聚焦提示的话请改外层容器的边框，别打开这里。
+                                    style: {
+                                        resize: 'none',
+                                        padding: 0,
+                                        fontSize: 13,
+                                        outline: 'none',
+                                        boxShadow: 'none',
+                                    } }), (0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', alignItems: 'center', gap: 8 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(typography.Text, { type: "secondary", style: { fontSize: 11, flex: '1 1 auto', minWidth: 0 }, ellipsis: true, children: "Enter \u53D1\u9001\uFF0CShift + Enter \u6362\u884C" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_select, { size: "small", variant: "borderless", style: { maxWidth: 190 }, value: modelId || undefined, placeholder: models.length ? '选择模型' : '未配置模型', disabled: streaming, options: models.map((model) => ({
+                                                value: model.id,
+                                                label: model.name + '（' + model.provider + '）',
+                                            })), onChange: (value) => setModelId(value) }), streaming ? ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_tooltip, { title: "\u4E2D\u6B62\u672C\u8F6E\u56DE\u7B54", children: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { shape: "circle", size: "small", danger: true, "aria-label": "\u4E2D\u6B62", icon: (0,react_jsx_runtime_production_namespaceFn().jsx)(StopIcon, { size: 12 }), onClick: stopStreaming }) })) : ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_tooltip, { title: "\u53D1\u9001\uFF08Enter\uFF09", children: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { shape: "circle", size: "small", type: "primary", "aria-label": "\u53D1\u9001", icon: (0,react_jsx_runtime_production_namespaceFn().jsx)(SendIcon, { size: 14 }), onClick: () => void send(), disabled: !input.trim() }) }))] })] })] })] }));
     };
     const tabs = [
         { key: 'chat', label: '对话' },

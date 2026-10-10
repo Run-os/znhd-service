@@ -3,7 +3,7 @@ import { Alert, Button, Empty, Input, Modal, Popconfirm, Select, Space, Tooltip,
 import type { TextAreaRef } from 'antd/es/input/TextArea';
 import { addLog } from '@/lib/logger';
 import { getOverlayContainer } from '@/lib/ui/panelHost';
-import { BotIcon, CloseIcon } from '@/lib/ui/icons';
+import { BotIcon, PlusIcon, SendIcon, StopIcon, TrashIcon } from '@/lib/ui/icons';
 import {
     agentErrorMessage,
     clearConversation,
@@ -50,10 +50,26 @@ export interface AgentModalProps {
     onClose: () => void;
 }
 
-/** 面板宽度 238px 放不下的内容都进这个弹窗，故给到 720px */
-const MODAL_WIDTH = 720;
+/** 面板宽度 238px 放不下的内容都进这个弹窗；v26.10.10-v13 起左侧多了会话栏，故 720 → 760 */
+const MODAL_WIDTH = 760;
 /** 消息区高度：弹窗固定高度，输入框永远留在视口内，不随消息变长而抖 */
 const MESSAGES_HEIGHT = 360;
+/** 侧栏会话栏宽度：够放「MM/DD HH:mm」与 30 字截断标题，又不至于把消息区压窄 */
+const SIDEBAR_WIDTH = 172;
+
+/**
+ * 会话卡片上的时间（NextChat 的列表也是这个位置）。
+ * 只到分钟：脚本不用 moment/dayjs（零运行时依赖），手写两行足够。
+ */
+function chatTimeText(timestamp: number): string {
+    if (!timestamp) return '';
+    const date = new Date(timestamp);
+    if (Number.isNaN(date.getTime())) return '';
+    const pad = (value: number) => String(value).padStart(2, '0');
+    return (
+        pad(date.getMonth() + 1) + '/' + pad(date.getDate()) + ' ' + pad(date.getHours()) + ':' + pad(date.getMinutes())
+    );
+}
 
 type TabKey = 'chat' | 'skills' | 'tasks';
 
@@ -99,6 +115,8 @@ export default function AgentModal({ open, onClose }: AgentModalProps) {
     const [chats, setChats] = useState<AgentChatSession[]>([]);
     /** 当前会话 id；空串 = 空白对话（发第一条消息时才会真正创建） */
     const [activeChatId, setActiveChatId] = useState<string>('');
+    /** 鼠标正悬停的会话卡片：侧栏的删除图标只在悬停（或选中）时出现，用 state 而不是 CSS 类 */
+    const [hoverChatId, setHoverChatId] = useState<string>('');
     const [skillsVersion, setSkillsVersion] = useState<number>(0);
     const [tasksVersion, setTasksVersion] = useState<number>(0);
 
@@ -398,21 +416,31 @@ export default function AgentModal({ open, onClose }: AgentModalProps) {
         [api, activeChatId, stopStreaming]
     );
 
-    /** 删除当前会话：清空它的消息 + 从本地索引移除（官方没有删除会话的接口，见 sessions.ts） */
-    const deleteChat = useCallback(async () => {
-        const id = activeChatId;
-        if (!id) return;
-        const label = agentChatLabel(chatsRef.current, id);
-        stopStreaming();
-        setStreaming(false);
-        // 只有手里正拿着的实例才能 clear；索引里那条在 ScriptCat 侧已失效时本来也没有消息可清
-        if (conversation && conversation.id === id) await clearConversation(conversation);
-        persistChats(removeAgentChat(chatsRef.current, id), '');
-        setConversation(null);
-        setMessages([]);
-        setFatalError('');
-        addLog('[Agent] 已删除对话「' + label + '」', 'info');
-    }, [activeChatId, conversation, persistChats, stopStreaming]);
+    /**
+     * 删除某个会话：清空它的消息 + 从本地索引移除（官方没有删除会话的接口，见 sessions.ts）。
+     * v26.10.10-v13 起侧栏每条都能删，所以这里按 id 工作，不再是「只能删当前这条」。
+     */
+    const deleteChat = useCallback(
+        async (id: string) => {
+            if (!id) return;
+            const label = agentChatLabel(chatsRef.current, id);
+            // 只有手里正拿着的实例才能 clear；索引里那条在 ScriptCat 侧已失效时本来也没有消息可清
+            if (conversation && conversation.id === id) {
+                stopStreaming();
+                setStreaming(false);
+                await clearConversation(conversation);
+                setConversation(null);
+                setMessages([]);
+                setFatalError('');
+                persistChats(removeAgentChat(chatsRef.current, id), '');
+            } else {
+                // 删的是别的会话：当前视图与 activeId 都不动，只把它从列表里去掉
+                persistChats(removeAgentChat(chatsRef.current, id), activeChatId);
+            }
+            addLog('[Agent] 已删除对话「' + label + '」', 'info');
+        },
+        [activeChatId, conversation, persistChats, stopStreaming]
+    );
 
     const handleClose = useCallback(() => {
         stopStreaming();
@@ -487,6 +515,105 @@ export default function AgentModal({ open, onClose }: AgentModalProps) {
         );
     };
 
+    /** 侧栏的一条会话卡片（NextChat 的列表项：标题 + 时间，选中高亮，悬停出现删除） */
+    const renderChatItem = (item: AgentChatSession) => {
+        const active = item.id === activeChatId;
+        return (
+            <div
+                key={item.id}
+                className={'znhd-agent-chat-item' + (active ? ' znhd-agent-chat-item-active' : '')}
+                title={agentChatLabel(chats, item.id)}
+                onClick={() => void switchChat(item.id)}
+                onMouseEnter={() => setHoverChatId(item.id)}
+                onMouseLeave={() => setHoverChatId((current) => (current === item.id ? '' : current))}
+                style={{
+                    position: 'relative',
+                    padding: '6px 24px 6px 8px',
+                    marginBottom: 4,
+                    borderRadius: 6,
+                    cursor: 'pointer',
+                    lineHeight: 1.5,
+                    background: active ? token.colorPrimaryBg : token.colorFillQuaternary,
+                    border: '1px solid ' + (active ? token.colorPrimaryBorder : 'transparent'),
+                }}>
+                <div style={{ fontSize: 12, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {agentChatLabel(chats, item.id)}
+                </div>
+                <div style={{ fontSize: 11, color: token.colorTextTertiary }}>{chatTimeText(item.updatetime)}</div>
+                <span
+                    style={{
+                        position: 'absolute',
+                        top: 4,
+                        right: 2,
+                        opacity: active || hoverChatId === item.id ? 1 : 0,
+                    }}
+                    onClick={(event) => event.stopPropagation()}>
+                    <Popconfirm
+                        title="删除这个对话？"
+                        description="会清空该对话的消息记录，并从会话列表里移除。"
+                        okText="删除"
+                        cancelText="取消"
+                        okButtonProps={{ danger: true }}
+                        onConfirm={() => void deleteChat(item.id)}>
+                        <Button
+                            type="text"
+                            size="small"
+                            aria-label="删除对话"
+                            icon={<TrashIcon size={12} />}
+                            style={{ width: 20, height: 20, minWidth: 20, padding: 0, color: token.colorTextTertiary }}
+                        />
+                    </Popconfirm>
+                </span>
+            </div>
+        );
+    };
+
+    /**
+     * 左侧会话栏（v26.10.10-v13）。
+     *
+     * 为什么是 state 控制删除图标的显隐、而不是 CSS `:hover`：本仓库没有给 Agent 弹窗引样式表
+     * （图标全内联、面板样式走 PANEL_CSS），为一次 hover 再注入 <style> 不划算；
+     * onMouseEnter/Leave 两行就够，且选中项永远可见，触屏/键盘用户也不会找不到入口。
+     */
+    const renderSidebar = () => (
+        <div
+            className="znhd-agent-sidebar"
+            style={{
+                flex: '0 0 ' + SIDEBAR_WIDTH + 'px',
+                width: SIDEBAR_WIDTH,
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 6,
+                paddingRight: 10,
+                borderRight: '1px solid ' + token.colorBorderSecondary,
+            }}>
+            <Tooltip title="清空当前视图，发出下一条消息时另起一个对话">
+                <Button
+                    size="small"
+                    icon={<PlusIcon size={13} />}
+                    onClick={newChat}
+                    disabled={streaming && !conversation}
+                    style={{ justifyContent: 'flex-start' }}>
+                    新的聊天
+                </Button>
+            </Tooltip>
+            <div
+                className="znhd-agent-chat-list"
+                style={{ flex: '1 1 auto', minHeight: 0, overflowY: 'auto', overflowX: 'hidden' }}>
+                {chats.length ? (
+                    chats.map(renderChatItem)
+                ) : (
+                    <div style={{ fontSize: 12, color: token.colorTextTertiary, padding: '4px 2px' }}>
+                        还没有历史对话。发出第一条消息后，它会出现在这里。
+                    </div>
+                )}
+            </div>
+            <Typography.Text type="secondary" style={{ fontSize: 11, lineHeight: 1.5 }}>
+                对话存在 ScriptCat 的本地存储（OPFS）里，刷新网页也能从这里接回。
+            </Typography.Text>
+        </div>
+    );
+
     const renderChat = () => {
         if (!api) {
             return (
@@ -500,115 +627,138 @@ export default function AgentModal({ open, onClose }: AgentModalProps) {
             );
         }
         return (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                    <Select
-                        size="small"
-                        style={{ minWidth: 200, flex: '1 1 200px' }}
-                        value={modelId || undefined}
-                        placeholder={models.length ? '选择模型' : '未配置模型'}
-                        disabled={streaming}
-                        options={models.map((model) => ({
-                            value: model.id,
-                            label: model.name + '（' + model.provider + '）',
-                        }))}
-                        onChange={(value) => setModelId(value)}
-                    />
-                    <Select
-                        size="small"
-                        style={{ minWidth: 160, flex: '1 1 160px' }}
-                        value={activeChatId || undefined}
-                        placeholder={chats.length ? '选择历史对话' : '还没有历史对话'}
-                        disabled={streaming}
-                        options={chats.map((item) => ({
-                            value: item.id,
-                            label: agentChatLabel(chats, item.id),
-                        }))}
-                        onChange={(value) => void switchChat(value)}
-                    />
-                    <Tooltip title="清空当前视图，发出下一条消息时另起一个对话">
-                        <Button size="small" onClick={newChat} disabled={streaming && !conversation}>
-                            新建对话
-                        </Button>
-                    </Tooltip>
-                    <Popconfirm
-                        title="删除这个对话？"
-                        description="会清空该对话的消息记录，并从会话列表里移除。"
-                        okText="删除"
-                        cancelText="取消"
-                        okButtonProps={{ danger: true }}
-                        onConfirm={() => void deleteChat()}>
-                        <Button size="small" danger disabled={!activeChatId}>
-                            删除
-                        </Button>
-                    </Popconfirm>
-                </div>
+            <div style={{ display: 'flex', gap: 12, alignItems: 'stretch' }}>
+                {renderSidebar()}
+                <div style={{ flex: '1 1 auto', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+                        <Typography.Text strong style={{ fontSize: 14 }}>
+                            {activeChatId ? agentChatLabel(chats, activeChatId) : '新的聊天'}
+                        </Typography.Text>
+                        <Typography.Text type="secondary" style={{ fontSize: 11 }}>
+                            共 {chats.length} 条对话
+                        </Typography.Text>
+                    </div>
 
-                {models.length ? null : (
-                    <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                        还没有在 ScriptCat 里配置模型：请打开 ScriptCat 的 Agent 设置添加一个模型（支持 OpenAI 兼容 /
-                        Anthropic / 智谱），之后这里会列出可选模型。
-                    </Typography.Text>
-                )}
+                    {models.length ? null : (
+                        <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                            还没有在 ScriptCat 里配置模型：请打开 ScriptCat 的 Agent 设置添加一个模型（支持 OpenAI 兼容
+                            / Anthropic / 智谱），之后这里会列出可选模型。
+                        </Typography.Text>
+                    )}
 
-                {fatalError ? <Alert type="error" showIcon message={fatalError} /> : null}
+                    {fatalError ? <Alert type="error" showIcon message={fatalError} /> : null}
 
-                <div
-                    ref={scrollRef}
-                    className="znhd-agent-messages"
-                    style={{
-                        height: MESSAGES_HEIGHT,
-                        overflowY: 'auto',
-                        overflowX: 'hidden',
-                        padding: '8px 4px',
-                        border: '1px solid ' + token.colorBorderSecondary,
-                        borderRadius: 6,
-                        background: token.colorBgContainer,
-                    }}>
-                    {messages.length ? (
-                        messages.map(renderMessage)
-                    ) : (
-                        <Empty
-                            image={Empty.PRESENTED_IMAGE_SIMPLE}
-                            description={
-                                <span style={{ fontSize: 12 }}>
-                                    直接提问即可。可以试试「帮我总结这个页面能做什么」「征纳互动掉线提醒没声音怎么办」
-                                </span>
-                            }
+                    <div
+                        ref={scrollRef}
+                        className="znhd-agent-messages"
+                        style={{
+                            height: MESSAGES_HEIGHT,
+                            overflowY: 'auto',
+                            overflowX: 'hidden',
+                            padding: '8px 4px',
+                            border: '1px solid ' + token.colorBorderSecondary,
+                            borderRadius: 6,
+                            background: token.colorBgContainer,
+                        }}>
+                        {messages.length ? (
+                            messages.map(renderMessage)
+                        ) : (
+                            <Empty
+                                image={Empty.PRESENTED_IMAGE_SIMPLE}
+                                description={
+                                    <span style={{ fontSize: 12 }}>
+                                        直接提问即可。可以试试「帮我总结这个页面能做什么」「征纳互动掉线提醒没声音怎么办」
+                                    </span>
+                                }
+                            />
+                        )}
+                    </div>
+
+                    {/* 输入框：整块带边框，模型下拉与发送箭头都在框内（参考 Chatbox / NextChat） */}
+                    <div
+                        style={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: 2,
+                            padding: '6px 8px 4px',
+                            border: '1px solid ' + token.colorBorderSecondary,
+                            borderRadius: 8,
+                            background: token.colorBgContainer,
+                        }}>
+                        <Input.TextArea
+                            ref={inputRef}
+                            value={input}
+                            onChange={(event) => setInput(event.target.value)}
+                            onPressEnter={(event) => {
+                                if (event.shiftKey) return;
+                                event.preventDefault();
+                                void send();
+                            }}
+                            placeholder="输入问题，Enter 发送，Shift+Enter 换行"
+                            autoSize={{ minRows: 1, maxRows: 4 }}
+                            disabled={!api}
+                            variant="borderless"
+                            // antd v6 的 borderless 变体在 :focus-visible 时会给文本域**自己**画一层
+                            // outline 聚焦框（node_modules/antd/es/input/style/variants.js 的
+                            // genBorderlessFocusVisibleStyle：`outline: 1px solid activeBorderColor`），
+                            // 看上去就像输入框外围多了一圈蓝框。这里显式关掉 outline 与 boxShadow
+                            // —— 内联样式优先级高于 antd 的类规则（那两条都没用 !important），两种画框
+                            // 方式一起关，别只堵一半。要恢复聚焦提示的话请改外层容器的边框，别打开这里。
+                            style={{
+                                resize: 'none',
+                                padding: 0,
+                                fontSize: 13,
+                                outline: 'none',
+                                boxShadow: 'none',
+                            }}
                         />
-                    )}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <Typography.Text
+                                type="secondary"
+                                style={{ fontSize: 11, flex: '1 1 auto', minWidth: 0 }}
+                                ellipsis>
+                                Enter 发送，Shift + Enter 换行
+                            </Typography.Text>
+                            <Select
+                                size="small"
+                                variant="borderless"
+                                style={{ maxWidth: 190 }}
+                                value={modelId || undefined}
+                                placeholder={models.length ? '选择模型' : '未配置模型'}
+                                disabled={streaming}
+                                options={models.map((model) => ({
+                                    value: model.id,
+                                    label: model.name + '（' + model.provider + '）',
+                                }))}
+                                onChange={(value) => setModelId(value)}
+                            />
+                            {streaming ? (
+                                <Tooltip title="中止本轮回答">
+                                    <Button
+                                        shape="circle"
+                                        size="small"
+                                        danger
+                                        aria-label="中止"
+                                        icon={<StopIcon size={12} />}
+                                        onClick={stopStreaming}
+                                    />
+                                </Tooltip>
+                            ) : (
+                                <Tooltip title="发送（Enter）">
+                                    <Button
+                                        shape="circle"
+                                        size="small"
+                                        type="primary"
+                                        aria-label="发送"
+                                        icon={<SendIcon size={14} />}
+                                        onClick={() => void send()}
+                                        disabled={!input.trim()}
+                                    />
+                                </Tooltip>
+                            )}
+                        </div>
+                    </div>
                 </div>
-
-                <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
-                    <Input.TextArea
-                        ref={inputRef}
-                        value={input}
-                        onChange={(event) => setInput(event.target.value)}
-                        onPressEnter={(event) => {
-                            if (event.shiftKey) return;
-                            event.preventDefault();
-                            void send();
-                        }}
-                        placeholder="输入问题，Enter 发送，Shift+Enter 换行"
-                        autoSize={{ minRows: 1, maxRows: 4 }}
-                        disabled={!api}
-                        style={{ resize: 'none' }}
-                    />
-                    {streaming ? (
-                        <Button danger icon={<CloseIcon size={13} />} onClick={stopStreaming}>
-                            中止
-                        </Button>
-                    ) : (
-                        <Button color="primary" variant="solid" onClick={() => void send()} disabled={!input.trim()}>
-                            发送
-                        </Button>
-                    )}
-                </div>
-                <Typography.Text type="secondary" style={{ fontSize: 11 }}>
-                    {
-                        '对话存在 ScriptCat 的本地存储（OPFS）里，刷新网页也能从上面的下拉接回；「新建对话」另起一个，删除会清空该对话的消息。'
-                    }
-                </Typography.Text>
             </div>
         );
     };

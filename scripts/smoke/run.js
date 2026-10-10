@@ -120,7 +120,10 @@ const CHECKS = [
   // v26.10.10-v11：历史消息的 thinking 是对象，渲染不当会让整棵面板树被卸载
   ['agentReopenOk', '对话后关弹窗再打开：历史思考正常渲染且主面板仍在（v26.10.10-v11）'],
   // v26.10.10-v12：官方 conversation API 只有 create/get，会话列表是脚本自记的本地索引
-  ['agentChatsOk', '多会话：会话索引落盘、新建后切回上一个对话仍看到自己的历史（v26.10.10-v12）'],
+  // v26.10.10-v13：会话搬进弹窗左侧栏（消息级断言必须只看 .znhd-agent-messages，否则侧栏的会话标题会假阳性）
+  ['agentChatsOk', '多会话：会话在左侧栏列出、索引落盘、新建后点侧栏切回上一个对话仍看到自己的历史'],
+  // v26.10.10-v13：borderless 输入框聚焦时 antd 会自己在文本域上画 outline 聚焦框（= 看起来像蓝框）
+  ['agentInputNoRingOk', '输入框聚焦时没有 antd borderless 变体自带的 outline 蓝框（v26.10.10-v13）'],
 ];
 
 /**
@@ -182,6 +185,85 @@ async function main() {
       report: JSON.parse(document.getElementById('smoke-result').textContent),
       title: document.title,
     }));
+
+    // —— 输入框聚焦蓝框（v26.10.10-v13）——
+    // 为什么不在页面内用 JS `ta.focus()` 后读计算样式：这条路**注定假绿**。踩过的坑：
+    //   ① 夹具会把「运行日志」弹窗一直开着盖住 Agent 弹窗，antd 的焦点陷阱随即把我们
+    //      对 Agent 输入框的 focus() 抢回去（连关闭按钮都 focus 不上），
+    //      于是 `document.activeElement !== ta`、`ta.matches(':focus-visible')` 恒为 false，
+    //      「没聚焦」被读成「没有 outline」；
+    //   ② 冒烟视口是 800x600，而 Agent 弹窗比视口高，输入框通常落在折线以下，
+    //      `elementFromPoint` 返回 null、合成点击也打不到它。
+    // 所以这里按用户真实路径做：关掉压在上面的弹窗 → 把输入框滚进视口 → **真实鼠标点击**它
+    // → 读 `:focus-visible` 生效后的计算样式。断言里同时要求 focused && focusVisible，
+    // 任何一个没成立都判红，避免再次出现「什么都没验证到却通过」。
+    // ⚠️ 必须排在下面的拖拽用例之前：那段会点掉所有 `.ant-modal-close`。
+    await page.evaluate(() => {
+      window.__findAgentTextarea = () => {
+        const modal = Array.from(document.querySelectorAll('.ant-modal')).find((el) =>
+          ((el.querySelector('.ant-modal-title') || {}).textContent || '').includes('Agent 助手')
+        );
+        return modal ? modal.querySelector('textarea') : null;
+      };
+    });
+    report.agentInputRing = await (async () => {
+      // 清掉可能残留的全屏预览浮层（拖拽用例里也做了同样的事）：它盖在弹窗上方会吞掉点击
+      await page.evaluate(() => {
+        document
+          .querySelectorAll('.ant-image-preview-root, .ant-image-preview-wrap')
+          .forEach((e) => e.remove());
+        const agent = Array.from(document.querySelectorAll('.ant-modal')).find((el) =>
+          ((el.querySelector('.ant-modal-title') || {}).textContent || '').includes('Agent 助手')
+        );
+        document.querySelectorAll('.ant-modal-close').forEach((btn) => {
+          if (!agent || !agent.contains(btn)) btn.click();
+        });
+      });
+      await sleep(400);
+      const box = await page.evaluate(() => {
+        const ta = window.__findAgentTextarea();
+        if (!ta) return null;
+        ta.scrollIntoView({ block: 'center', inline: 'nearest' });
+        const r = ta.getBoundingClientRect();
+        if (r.width < 1 || r.height < 1) return null;
+        const x = Math.round(r.x + r.width / 2);
+        const y = Math.round(r.y + r.height / 2);
+        const hit = document.elementFromPoint(x, y);
+        return {
+          x,
+          y,
+          // 万一将来又被谁盖住，快照里能直接看出点击打在哪个元素上
+          hit: hit ? String(hit.className || hit.tagName).slice(0, 60) : 'none',
+        };
+      });
+      if (!box) return { found: false };
+      await page.mouse.click(box.x, box.y);
+      await sleep(120);
+      const ring = await page.evaluate(() => {
+        const ta = window.__findAgentTextarea();
+        if (!ta) return { found: false };
+        const cs = window.getComputedStyle(ta);
+        const r = ta.getBoundingClientRect();
+        return {
+          found: true,
+          focused: document.activeElement === ta,
+          focusVisible: ta.matches(':focus-visible'),
+          outlineStyle: cs.outlineStyle,
+          outlineWidth: cs.outlineWidth,
+          boxShadow: cs.boxShadow,
+          rect: Math.round(r.width) + 'x' + Math.round(r.height),
+        };
+      });
+      return { ...ring, hit: box.hit };
+    })();
+    // 四条一起判：没聚焦 / 没命中 :focus-visible 都算红 —— 否则这条断言可能什么都没验证到
+    report.agentInputNoRingOk = !!(
+      report.agentInputRing.found &&
+      report.agentInputRing.focused &&
+      report.agentInputRing.focusVisible &&
+      report.agentInputRing.outlineStyle === 'none' &&
+      (report.agentInputRing.boxShadow === 'none' || report.agentInputRing.boxShadow === '')
+    );
 
     // —— 悬浮球拖拽（v26.10.07-v3）——
     // 拖拽必须由**真实指针事件**驱动（合成 PointerEvent 会让 setPointerCapture 抛 NotFoundError），
@@ -306,9 +388,13 @@ async function main() {
       !checkPass('agentTabsOk') ||
       !checkPass('agentChatOk') ||
       !checkPass('agentReopenOk') ||
-      !checkPass('agentChatsOk')
+      !checkPass('agentChatsOk') ||
+      !checkPass('agentInputNoRingOk')
     ) {
       console.log('      Agent 快照：' + JSON.stringify(report.agentSnap));
+    }
+    if (!checkPass('agentInputNoRingOk')) {
+      console.log('      输入框聚焦快照（真实鼠标点击后）：' + JSON.stringify(report.agentInputRing));
     }
 
     const allErrors = (report.relevantErrors || []).concat(pageErrors);
