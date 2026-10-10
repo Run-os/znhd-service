@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name                征纳互动人数和在线监控v2
 // @namespace           https://scriptcat.org/
-// @version             26.10.10-v14
+// @version             26.10.10-v15
 // @description         实时监控征纳互动等待人数和在线状态，支持语音播报、自定义常用语
 // @author              runos
 // @license             MIT
@@ -116457,7 +116457,7 @@ function AgentModal({ open, onClose }) {
             gap: 6,
             paddingRight: 10,
             borderRight: '1px solid ' + token.colorBorderSecondary,
-        }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(es_tooltip, { title: "\u6E05\u7A7A\u5F53\u524D\u89C6\u56FE\uFF0C\u53D1\u51FA\u4E0B\u4E00\u6761\u6D88\u606F\u65F6\u53E6\u8D77\u4E00\u4E2A\u5BF9\u8BDD", children: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { size: "small", icon: (0,react_jsx_runtime_production_namespaceFn().jsx)(PlusIcon, { size: 13 }), onClick: newChat, disabled: streaming && !conversation, style: { justifyContent: 'flex-start' }, children: "\u65B0\u7684\u804A\u5929" }) }), (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { className: "znhd-agent-chat-list", style: { flex: '1 1 auto', minHeight: 0, overflowY: 'auto', overflowX: 'hidden' }, children: chats.length ? (chats.map(renderChatItem)) : ((0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { fontSize: 12, color: token.colorTextTertiary, padding: '4px 2px' }, children: "\u8FD8\u6CA1\u6709\u5386\u53F2\u5BF9\u8BDD\u3002\u53D1\u51FA\u7B2C\u4E00\u6761\u6D88\u606F\u540E\uFF0C\u5B83\u4F1A\u51FA\u73B0\u5728\u8FD9\u91CC\u3002" })) }), (0,react_jsx_runtime_production_namespaceFn().jsx)(typography.Text, { type: "secondary", style: { fontSize: 11, lineHeight: 1.5 }, children: "\u5BF9\u8BDD\u5B58\u5728 ScriptCat \u7684\u672C\u5730\u5B58\u50A8\uFF08OPFS\uFF09\u91CC\uFF0C\u5237\u65B0\u7F51\u9875\u4E5F\u80FD\u4ECE\u8FD9\u91CC\u63A5\u56DE\u3002" })] }));
+        }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(es_tooltip, { title: "\u6E05\u7A7A\u5F53\u524D\u89C6\u56FE\uFF0C\u53D1\u51FA\u4E0B\u4E00\u6761\u6D88\u606F\u65F6\u53E6\u8D77\u4E00\u4E2A\u5BF9\u8BDD", children: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { size: "small", icon: (0,react_jsx_runtime_production_namespaceFn().jsx)(PlusIcon, { size: 13 }), onClick: newChat, disabled: streaming && !conversation, style: { justifyContent: 'flex-start' }, children: "\u65B0\u7684\u804A\u5929" }) }), (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { className: "znhd-agent-chat-list", style: { flex: '1 1 auto', minHeight: 0, overflowY: 'auto', overflowX: 'hidden' }, children: chats.length ? (chats.map(renderChatItem)) : ((0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { fontSize: 12, color: token.colorTextTertiary, padding: '4px 2px' }, children: "\u8FD8\u6CA1\u6709\u5386\u53F2\u5BF9\u8BDD\u3002\u53D1\u51FA\u7B2C\u4E00\u6761\u6D88\u606F\u540E\uFF0C\u5B83\u4F1A\u51FA\u73B0\u5728\u8FD9\u91CC\u3002" })) })] }));
     const renderChat = () => {
         if (!api) {
             return ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_alert, { type: "warning", showIcon: true, icon: (0,react_jsx_runtime_production_namespaceFn().jsx)(BotIcon, { size: 16 }), message: "Agent \u529F\u80FD\u4E0D\u53EF\u7528", description: availability.reason }));
@@ -116483,7 +116483,13 @@ function AgentModal({ open, onClose }) {
                                             return;
                                         event.preventDefault();
                                         void send();
-                                    }, placeholder: "\u8F93\u5165\u95EE\u9898\uFF0CEnter \u53D1\u9001\uFF0CShift+Enter \u6362\u884C", autoSize: { minRows: 1, maxRows: 4 }, disabled: !api, variant: "borderless", 
+                                    }, placeholder: "\u8F93\u5165\u95EE\u9898\uFF0CEnter \u53D1\u9001\uFF0CShift+Enter \u6362\u884C", 
+                                    // v26.10.10-v15：minRows 从 1 改成 2。rc-textarea 在**挂载时**按 minRows 算高度
+                                    // （1 行 ≈ 20px），而一旦输入过内容，它就按「行数 × 行高 + padding」重算
+                                    // （1 行文本实测 41px）——于是「打一个字再全删掉」会把输入框永久留在 41px，
+                                    // 与刚打开时的 20px 不一致（用户报告的「高度会变」）。minRows: 2 让初始态
+                                    // 就等于打过字的高度，打一个字不再跳。冒烟 agentInputHeightOk 守着这条。
+                                    autoSize: { minRows: 2, maxRows: 4 }, disabled: !api, variant: "borderless", 
                                     // antd v6 的 borderless 变体在 :focus-visible 时会给文本域**自己**画一层
                                     // outline 聚焦框（node_modules/antd/es/input/style/variants.js 的
                                     // genBorderlessFocusVisibleStyle：`outline: 1px solid activeBorderColor`），
@@ -116494,6 +116500,11 @@ function AgentModal({ open, onClose }) {
                                         resize: 'none',
                                         padding: 0,
                                         fontSize: 13,
+                                        // v26.10.10-v15：显式钉住行高。rc-textarea 的 autoSize 靠「把计算样式复制到
+                                        // 隐藏测量 textarea」算高度：挂载那一刻 antd 的样式还没注入完，行高按 20px 算
+                                        // （2 行 = 40px），输入过一次之后再量就是 20.5px（2 行 = 41px），于是「打一个字
+                                        // 再删掉」会永久差 1px。钉死行高后两条路径算出来完全一致。
+                                        lineHeight: '20px',
                                         outline: 'none',
                                         boxShadow: 'none',
                                     } }), (0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', alignItems: 'center', gap: 8 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(typography.Text, { type: "secondary", style: { fontSize: 11, flex: '1 1 auto', minWidth: 0 }, ellipsis: true, children: "Enter \u53D1\u9001\uFF0CShift + Enter \u6362\u884C" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_select, { size: "small", variant: "borderless", style: { maxWidth: 190 }, value: modelId || undefined, placeholder: models.length ? '选择模型' : '未配置模型', disabled: streaming, options: models.map((model) => ({

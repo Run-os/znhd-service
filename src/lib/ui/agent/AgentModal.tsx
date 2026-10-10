@@ -610,9 +610,6 @@ export default function AgentModal({ open, onClose }: AgentModalProps) {
                     </div>
                 )}
             </div>
-            <Typography.Text type="secondary" style={{ fontSize: 11, lineHeight: 1.5 }}>
-                对话存在 ScriptCat 的本地存储（OPFS）里，刷新网页也能从这里接回。
-            </Typography.Text>
         </div>
     );
 
@@ -697,7 +694,12 @@ export default function AgentModal({ open, onClose }: AgentModalProps) {
                                 void send();
                             }}
                             placeholder="输入问题，Enter 发送，Shift+Enter 换行"
-                            autoSize={{ minRows: 1, maxRows: 4 }}
+                            // v26.10.10-v15：minRows 从 1 改成 2。rc-textarea 在**挂载时**按 minRows 算高度
+                            // （1 行 ≈ 20px），而一旦输入过内容，它就按「行数 × 行高 + padding」重算
+                            // （1 行文本实测 41px）——于是「打一个字再全删掉」会把输入框永久留在 41px，
+                            // 与刚打开时的 20px 不一致（用户报告的「高度会变」）。minRows: 2 让初始态
+                            // 就等于打过字的高度，打一个字不再跳。冒烟 agentInputHeightOk 守着这条。
+                            autoSize={{ minRows: 2, maxRows: 4 }}
                             disabled={!api}
                             variant="borderless"
                             // antd v6 的 borderless 变体在 :focus-visible 时会给文本域**自己**画一层
@@ -710,6 +712,11 @@ export default function AgentModal({ open, onClose }: AgentModalProps) {
                                 resize: 'none',
                                 padding: 0,
                                 fontSize: 13,
+                                // v26.10.10-v15：显式钉住行高。rc-textarea 的 autoSize 靠「把计算样式复制到
+                                // 隐藏测量 textarea」算高度：挂载那一刻 antd 的样式还没注入完，行高按 20px 算
+                                // （2 行 = 40px），输入过一次之后再量就是 20.5px（2 行 = 41px），于是「打一个字
+                                // 再删掉」会永久差 1px。钉死行高后两条路径算出来完全一致。
+                                lineHeight: '20px',
                                 outline: 'none',
                                 boxShadow: 'none',
                             }}

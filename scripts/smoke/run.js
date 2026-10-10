@@ -126,6 +126,8 @@ const CHECKS = [
   ['agentInputNoRingOk', '输入框聚焦时没有 antd borderless 变体自带的 outline 蓝框（v26.10.10-v13）'],
   // v26.10.10-v14：回答里的 Markdown 渲染成 DOM（`**加粗**`→<strong>、列表→<li>、行内代码→<code>）
   ['agentMarkdownOk', 'Agent 消息按 Markdown 渲染：加粗/列表/行内代码出成 DOM 且文本里不再有字面量 **（v26.10.10-v14）'],
+  // v26.10.10-v15：输入框高度不能「打一个字再删掉就变高」（重开弹窗后的初始高度 = 删空后的高度）
+  ['agentInputHeightOk', 'Agent 输入框高度稳定：空着/打过字/删空之后一样高（v26.10.10-v15）'],
 ];
 
 /**
@@ -222,6 +224,26 @@ async function main() {
         });
       });
       await sleep(400);
+      // —— 关掉 Agent 弹窗再重新点开（v26.10.10-v15）——
+      // 复现用户报告的路径：「第一次打开 Agent 窗口」时输入框是矮的，打过字再删掉就变高了。
+      // 只有**重新挂载**过的弹窗才是真正的初始态，所以在测高度之前先重开一次。
+      await page.evaluate(() => {
+        const agent = Array.from(document.querySelectorAll('.ant-modal')).find((el) =>
+          ((el.querySelector('.ant-modal-title') || {}).textContent || '').includes('Agent 助手')
+        );
+        const close = agent ? agent.querySelector('.ant-modal-close') : null;
+        if (close) close.click();
+      });
+      await sleep(500);
+      await page.evaluate(() => {
+        const host = document.getElementById('__znhd_panel_host__');
+        if (!host) return;
+        const btn = Array.from(host.querySelectorAll('button')).find(
+          (b) => (b.textContent || '').indexOf('Agent') >= 0
+        );
+        if (btn) btn.click();
+      });
+      await sleep(700);
       const box = await page.evaluate(() => {
         const ta = window.__findAgentTextarea();
         if (!ta) return null;
@@ -254,9 +276,38 @@ async function main() {
           outlineWidth: cs.outlineWidth,
           boxShadow: cs.boxShadow,
           rect: Math.round(r.width) + 'x' + Math.round(r.height),
+          valueEmpty: ta.value === '',
+          heightEmpty: Math.round(r.height),
         };
       });
-      return { ...ring, hit: box.hit };
+      if (!ring.found) return { ...ring, hit: box.hit };
+      // —— 输入框高度稳定性（v26.10.10-v15）——
+      // 用户路径：空着（初始高度）→ 打一个字符 → 全删掉。三次高度必须一致，
+      // 否则就是「打一个字再删掉，输入框莫名变高」。真实键盘事件（page.keyboard）而不是
+      // 直接改 value，才能触发 React 的受控更新与 rc-textarea 的 autoSize 重算。
+      if (!ring.valueEmpty) return { ...ring, hit: box.hit, heightStable: false, heightNote: '重开后输入框不是空的' };
+      await page.keyboard.type('a');
+      await sleep(150);
+      const heightTyped = await page.evaluate(() => {
+        const ta = window.__findAgentTextarea();
+        return ta ? Math.round(ta.getBoundingClientRect().height) : -1;
+      });
+      await page.keyboard.press('Backspace');
+      await sleep(150);
+      const after = await page.evaluate(() => {
+        const ta = window.__findAgentTextarea();
+        return ta
+          ? { heightCleared: Math.round(ta.getBoundingClientRect().height), valueEmpty: ta.value === '' }
+          : { heightCleared: -1, valueEmpty: false };
+      });
+      return {
+        ...ring,
+        hit: box.hit,
+        heightTyped,
+        heightCleared: after.heightCleared,
+        clearedEmpty: after.valueEmpty,
+        heightStable: ring.heightEmpty === after.heightCleared && after.heightCleared > 0,
+      };
     })();
     // 四条一起判：没聚焦 / 没命中 :focus-visible 都算红 —— 否则这条断言可能什么都没验证到
     report.agentInputNoRingOk = !!(
@@ -266,6 +317,8 @@ async function main() {
       report.agentInputRing.outlineStyle === 'none' &&
       (report.agentInputRing.boxShadow === 'none' || report.agentInputRing.boxShadow === '')
     );
+    // 输入框高度：空着 / 打过字 / 删空之后必须一样高（用户报告过「打一个字再删掉就变高」）
+    report.agentInputHeightOk = !!(report.agentInputRing.found && report.agentInputRing.heightStable);
 
     // —— 悬浮球拖拽（v26.10.07-v3）——
     // 拖拽必须由**真实指针事件**驱动（合成 PointerEvent 会让 setPointerCapture 抛 NotFoundError），
@@ -392,12 +445,13 @@ async function main() {
       !checkPass('agentReopenOk') ||
       !checkPass('agentChatsOk') ||
       !checkPass('agentInputNoRingOk') ||
-      !checkPass('agentMarkdownOk')
+      !checkPass('agentMarkdownOk') ||
+      !checkPass('agentInputHeightOk')
     ) {
       console.log('      Agent 快照：' + JSON.stringify(report.agentSnap));
     }
-    if (!checkPass('agentInputNoRingOk')) {
-      console.log('      输入框聚焦快照（真实鼠标点击后）：' + JSON.stringify(report.agentInputRing));
+    if (!checkPass('agentInputNoRingOk') || !checkPass('agentInputHeightOk')) {
+      console.log('      输入框快照（真实鼠标点击后）：' + JSON.stringify(report.agentInputRing));
     }
 
     const allErrors = (report.relevantErrors || []).concat(pageErrors);
