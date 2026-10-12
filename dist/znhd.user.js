@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name                征纳互动人数和在线监控v2
 // @namespace           https://scriptcat.org/
-// @version             26.10.12-v5
+// @version             26.10.13-v1
 // @description         实时监控征纳互动等待人数和在线状态，支持语音播报、自定义常用语
 // @author              runos
 // @license             MIT
@@ -118323,14 +118323,15 @@ function TransferAssistantModal({ open, onClose }) {
             // v26.10.12-v2 起不传 title（标题与第一栏重复）；v26.10.12-v4 起连默认 × 也关掉，
             // 换成标题条右侧的自绘关闭按钮（悬浮变红）。Esc（keyboard 默认 true）与点遮罩
             // 仍走 onCancel，三条关闭路径一条不少。
-            closable: false, className: "znhd-transfer-modal", onCancel: onClose, getContainer: getOverlayContainer, width: "min(1296px, 96vw)", styles: {
+            closable: false, className: "znhd-transfer-modal", onCancel: onClose, getContainer: getOverlayContainer, width: "min(1166px, 96vw)", styles: {
                 // ⚠️ content 的 16/24 默认内边距不能用 styles 归零（antd v6 的 Modal styles
                 // 没有 content 键，tsc 实测 TS2353），改由 uiReset 的 CSS 规则处理
                 // （.znhd-transfer-modal 专属）：三栏贴满窗口 + 关闭按钮贴右上角。
                 body: {
                     padding: 0,
                     // v26.10.12-v5：窗口放大 20%（700→840，1080→1296）
-                    height: 'min(840px, calc(100vh - 96px))',
+                    // v26.10.13-v1：在 v5 基础上整体缩小 10%（1296→1166，840→756）
+                    height: 'min(756px, calc(100vh - 96px))',
                     display: 'flex',
                     flexDirection: 'column',
                     overflow: 'hidden',

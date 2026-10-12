@@ -238,7 +238,7 @@ export default function TransferAssistantModal({ open, onClose }: { open: boolea
                 className="znhd-transfer-modal"
                 onCancel={onClose}
                 getContainer={getOverlayContainer}
-                width="min(1296px, 96vw)"
+                width="min(1166px, 96vw)"
                 styles={{
                     // ⚠️ content 的 16/24 默认内边距不能用 styles 归零（antd v6 的 Modal styles
                     // 没有 content 键，tsc 实测 TS2353），改由 uiReset 的 CSS 规则处理
@@ -246,7 +246,8 @@ export default function TransferAssistantModal({ open, onClose }: { open: boolea
                     body: {
                         padding: 0,
                         // v26.10.12-v5：窗口放大 20%（700→840，1080→1296）
-                        height: 'min(840px, calc(100vh - 96px))',
+                        // v26.10.13-v1：在 v5 基础上整体缩小 10%（1296→1166，840→756）
+                        height: 'min(756px, calc(100vh - 96px))',
                         display: 'flex',
                         flexDirection: 'column',
                         overflow: 'hidden',
