@@ -13,6 +13,7 @@ import {
 } from './lib/relay';
 import { prepareImage } from './lib/image';
 import { useShellViewport } from './lib/viewport';
+import { useLayoutMode } from './lib/layoutMode';
 import EmojiPanel from './EmojiPanel';
 import type { PickedEmoji } from './lib/emojiPack';
 // 预览相关的通用件与脚本端**共用同一份**（v26.10.08-v13 起，见仓库根 shared/preview/）
@@ -37,6 +38,10 @@ import { buildA4ImageNode, PRINT_PAGE_STYLE } from '../../shared/preview/print';
  * ⚠️ 整页骨架是 `position:fixed` 贴视口（见 app.css `.znhd-phone-chat` 的注释：
  * antd `<AntApp>` 的包裹层没有高度，`height:100%` 会断链），top/height 由
  * `useShellViewport` 按 visualViewport 动态校正（键盘弹出时输入区跟着上移）。
+ *
+ * v26.10.13-v4 桌面/手机分流（`useLayoutMode`）：**桌面浏览器**打开本页时聊天窗
+ * 不再全屏，而是屏幕居中的弹窗（420×680，参考微信 PC 端「文件传输助手」独立窗），
+ * 弹窗外是更深一档的纯色背景；**手机/触屏窄屏**仍用全屏骨架。
  */
 
 /** 聊天记录内存上限：超出丢最旧（收件项是 base64 大字符串，无上限会持续吃内存；旧画廊是 27，聊天窗放宽到 100） */
@@ -95,6 +100,8 @@ export default function App() {
 
     // 整页骨架跟随视觉视口（键盘弹出 / 工具栏收放时输入区仍贴最底）
     useShellViewport();
+    // 桌面 → 居中弹窗；手机 → 全屏（见 lib/layoutMode.ts 的判定规则）
+    const layoutMode = useLayoutMode();
 
     const pushMsg = useCallback((m: ChatMsg) => {
         setMsgs((prev) => {
@@ -308,8 +315,9 @@ export default function App() {
         />
     );
 
-    return (
-        <div className="znhd-phone-chat">
+    // 手机版 = 全屏骨架（fixed 贴视口）；桌面版 = 屏幕居中的弹窗（外包居中层 + 弹窗样式）
+    const shell = (
+        <div className={'znhd-phone-chat' + (layoutMode === 'phone' ? '' : ' znhd-chat-window')}>
             {/* 头部：标题 + 连接状态（设备 ID 收进小字，不再占半屏） */}
             <header className="znhd-phone-header">
                 <div className="znhd-phone-header-row">
@@ -443,4 +451,8 @@ export default function App() {
             {/* 「收到的图片」的预览配置直接挂在每张 Image 上（见 renderInImage 的说明） */}
         </div>
     );
+
+    // 桌面版：聊天窗做成屏幕居中的弹窗（420×680，参考微信 PC 端「文件传输助手」独立窗）；
+    // 弹窗外那圈纯色背景由 .znhd-window-layer 提供，弹窗自身靠边框/投影从背景里浮出来
+    return layoutMode === 'phone' ? shell : <div className="znhd-window-layer">{shell}</div>;
 }

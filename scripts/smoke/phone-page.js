@@ -20,6 +20,14 @@
  * 做法：起一个真实 relay-server（它自己就托管 relay-server/public），用无头 Chromium 打开
  * `/u/<deviceId>`，真上传一张图、真发一条文本、真从中继投递一张图，然后断言语义。
  *
+ *
+ * v26.10.13-v4：新增桌面/手机分流（需求：桌面浏览器打开「传输助手」网页时聊天窗
+ * 不做全屏，改屏幕居中的弹窗，参考微信 PC 端「文件传输助手」独立窗 420×680；
+ * 手机版仍全屏）。本文件的 UA 策略随之调整——
+ *   · **主体全程手机 UA**（`PHONE_UA`）：puppeteer 默认 UA 是桌面 Chrome，
+ *     不切 UA 的话主体一上来就走弹窗布局，吸底/全屏断言会全挂；
+ *   · **末尾单独一段桌面段**（`DESKTOP_UA` + 1280×800 reload）：断言弹窗类名、
+ *     420×680 尺寸、屏幕正中心、不占满视口。
  * 跑法：`npm run verify:web`（已串进 `npm run verify`）
  */
 const puppeteer = require('puppeteer');
@@ -48,6 +56,16 @@ const BROWSERS = [
     'C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe',
 ].filter((p) => p && fs.existsSync(p));
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+/**
+ * 布局模式检测用的两个 UA（v26.10.13-v4）：页面按 UA 分流「全屏（手机）/ 居中弹窗（桌面）」，
+ * 冒烟要分别覆盖两端。iPhone UA 走 `lib/layoutMode.ts` 的 UA_MOBILE 分支；
+ * 桌面 UA 明确写成 Chrome/Win（puppeteer 各版本默认 UA 有差异，不依赖默认值）。
+ */
+const PHONE_UA =
+    'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1';
+const DESKTOP_UA =
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36';
 
 function freePort() {
     return new Promise((resolve, reject) => {
@@ -158,6 +176,9 @@ async function main() {
         console.log('手机端聊天窗测试（真起中继 + 真上传/真投递）：');
         const page = await browser.newPage();
         await page.setViewport({ width: 420, height: 800 }); // 手机竖屏视口
+        // v26.10.13-v4：主体测的是「手机版全屏」场景，必须显式切手机 UA
+        // （puppeteer 默认桌面 UA 会让页面走尹屏幕展开的弹窗布局，吸底断言全挂）
+        await page.setUserAgent(PHONE_UA);
 
         // ① 视口桩：伪造 visualViewport，供「键盘弹出」场景确定性复现（初始 height 极大 = 无键盘）
         await page.evaluateOnNewDocument(() => {
@@ -486,6 +507,44 @@ async function main() {
             )
         );
         console.log('     实测打印文档：' + JSON.stringify(printDoc));
+
+        // ⑦ 桌面版：聊天窗是屏幕居中的弹窗（v26.10.13-v4 需求）——切桌面 UA + 大视口 reload。
+        // 页面的判定（lib/layoutMode.ts）挂在挂载时 + resize 重算，reload 后以新 UA 重新计算。
+        await page.setUserAgent(DESKTOP_UA);
+        await page.setViewport({ width: 1280, height: 800 });
+        await page.reload({ waitUntil: 'load', timeout: 60000 });
+        await page.waitForSelector('.znhd-phone-chat', { timeout: 30000 });
+        await sleep(500);
+        const win = await page.evaluate(() => {
+            const shell = document.querySelector('.znhd-phone-chat');
+            const r = shell.getBoundingClientRect();
+            return {
+                isWindow: shell.classList.contains('znhd-chat-window'),
+                hasLayer: !!document.querySelector('.znhd-window-layer'),
+                x: Math.round(r.x),
+                y: Math.round(r.y),
+                w: Math.round(r.width),
+                h: Math.round(r.height),
+                vw: window.innerWidth,
+                vh: window.innerHeight,
+            };
+        });
+        check(
+            '桌面版：聊天窗挂弹窗类 + 居中层（不是全屏骨架）',
+            win.isWindow && win.hasLayer
+        );
+        check(
+            '桌面版：弹窗尺寸 420×680（参考微信 PC 文件传输助手独立窗）',
+            win.w === 420 && win.h === 680
+        );
+        check(
+            '桌面版：弹窗在屏幕正中心（左右/上下间隙差 ≤2px）',
+            Math.abs(win.x - (win.vw - win.w - win.x)) <= 2 && Math.abs(win.y - (win.vh - win.h - win.y)) <= 2
+        );
+        check(
+            '桌面版：弹窗不占满视口（宽高均小于视口）',
+            win.w < win.vw && win.h < win.vh
+        );
     } finally {
         await browser.close();
         child.kill();
