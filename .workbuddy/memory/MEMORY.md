@@ -26,13 +26,16 @@
 ## 传输助手三栏架构（v26.10.12-v1 重构，原「设备互联」）
 - 主面板入口从 5+Agent 两行瘦成**一行 4 个**：设置/常用语/传输助手/图片嗅探（Agent 与「历史记录」入口已删）。
 - 三栏（v26.10.12-v4 起**微信桌面版暗色**）：标题条 `.znhd-transfer-titlebar`（最外围最淡，右自绘关闭按钮 `aria-label="关闭"` 悬浮变红，antd × 已 closable=false 关掉）→ 第一栏 `TransferNavRail`（**58px 窄图标栏**：对话[原「设备」改名，key 仍 devices，在 Agents 上面]/Agents/文件 + 底部设置/企业信息；折叠与外观设置已删）→ 第二栏 `TransferSessionList`（搜索 +「＋」+ 微信式条目：头像/名称+预览/时间+未读红点；文件分组**没有「＋」**；Agents 分组下最上方有「技能」「定时任务」控件）→ 第三栏（`TransferDeviceChat` / `TransferFilesView` / `TransferAgentView`）。
-- **配色一律改 `wechatTheme.ts` 的 `WECHAT` 常量**（frame #383838/rail #2E2E2E/list #252525/chat #1E1E1E/input #262626/气泡 #2F2F2F·#07C160/关闭红 #E81123）；窗口 ConfigProvider 主色 token = 微信绿 #07C160（主面板仍是蓝 #1677FF，嵌套 provider 隔离）。窗口**固定暗色**，外观设置入口与设置窗口主题项已删（settings.theme 字段残留无害）。
+- **配色一律改 `wechatTheme.ts` 的 `WECHAT` 常量**（v26.10.12-v5 起标题条=第一栏同色：rail #2E2E2E / list #252525 / chat #1E1E1E / input #262626 / 气泡 #2F2F2F·#07C160 / 关闭红 #E81123 / navHoverPlate）；窗口 ConfigProvider 主色 token = 微信绿 #07C160（主面板仍是蓝 #1677FF，嵌套 provider 隔离）。窗口**固定暗色**，外观设置入口与设置窗口主题项已删（settings.theme 字段残留无害）。窗口 v5 起放大 20%（1296×840），子弹窗（配对/设置/企业信息）一律 `centered`。
+- **会话持久化（v26.10.12-v5）**：`lib/transfer/persist.ts` 把 sessions 整体覆盖写进 IndexedDB（DB `znhd-transfer`），7 天 TTL（启动+每小时裁剪），`persistReady` 闸门防载入前落盘覆盖旧数据；不可用静默退回内存态。改 store.ts 的消息变更函数记得带 `persistSoon()`。
+- **第一栏图标三态（v26.10.12-v5）**：选中=`aria-current="page"`+变绿无底板，hover（未选中）=深色圆角底板+浮起，选中优先；冒烟判选中**必须用 aria-current**（antd 暗色算法把 #07C160 算成 rgb(9,167,85)，别按 hex 猜 rgb）。
+- **手机端 web/ 已是聊天窗（v26.10.12-v5）**：与脚本端第三栏同款微信暗色；预览配置挂每张收到 Image 自己的 preview prop（`Image.PreviewGroup` context 只对子树生效）；改 web 后必须 `npm run build:web` 重建 relay-server/public，且工作树里 web/node_modules 常是空的要先 `npm --prefix web install`。
 - **第三栏共用聊天面板件（v26.10.12-v3）**：`ChatPanel.tsx`（`ChatHeader`/`ChatScroll`）、`ChatBubble.tsx`、`ChatComposer.tsx`、`chatEmojis.ts` —— 设备会话与 Agent 对话**必须共用这一套**，两处各写一份必然漂移。
   - `ChatScroll` 的 **`minHeight:0` 是硬性**：缺了 flex 子项会被内容撑高，`overflowY:auto` 永不触发；输入框「吸附底部」也是布局算出来的（头部/输入区 `flex:0 0 auto`），不是 `position:fixed`。
   - `ChatBubble` **方向用 `flexDirection: isUser ? 'row-reverse' : 'row'` 表达**（头像位置与气泡贴哪边共用一份代码）；根节点带 `data-side` 作冒烟稳定钩子。
   - 用户气泡 = 主色实心 + 白字 ⇒ `MarkdownBody` 必须传 `inverted`，否则链接色/代码块底色落在主色底上是「蓝压蓝」看不见。
   - `ChatComposer` 铁律（沿用 v26.10.10-v13/v15）：聚焦高亮画在**外层容器**、textarea 自禁 outline（`agentInputNoRingOk` 守）；`autoSize={{minRows:2,maxRows:6}}` 与 `lineHeight:'20px'` **必须成对**（`agentInputHeightOk` 守）。超 `maxRows` 后框内滚动由 rc-textarea 自带（`calculateNodeHeight.js`：`overflowY = height > maxHeight ? undefined : 'hidden'`），零代码实现。
-  - 「＋」按钮语义**随分组变**：对话（设备）→ `aria-label="配对设备"`；Agents → `aria-label="新建对话"`（Agents 第二栏的「+ 新的聊天」已删）；文件分组没有「＋」（v26.10.12-v4）。第三栏由 `AgentPane = 'chat' | 'skills' | 'tasks'` 驱动（`TransferAssistantModal` 持有，切导航/点会话/点「＋」都复位 `chat`）。
+  - 「＋」按钮语义**随分组变**：对话（设备）→ `aria-label="配对设备"`；Agents → `aria-label="新建对话"`（Agents 第二栏的「+ 新的聊天」已删）；文件分组没有「＋」且**该组条目只作展示**（点设备 ID 不跳会话，v26.10.12-v5）。第三栏由 `AgentPane = 'chat' | 'skills' | 'tasks'` 驱动（`TransferAssistantModal` 持有，切导航/点会话/点「＋」都复位 `chat`）。
 - 业务层 `src/lib/transfer/store.ts` 是**模块级单例**（窗口不开也照常收件；`autoOpenListeners` → 主面板 `setTransferOpen(true)` 自动弹窗，`autoOpenOnReceive` 可关）。
 - 设置完全隔离：`scriptCat_TransferSettings`（`lib/transfer/settings.ts` 的 `DEFAULT_RELAY_SERVER`），主面板 `DEFAULTS` 里已无 `relayServer`；旧 `Allvalue.relayServer` 仅一次性迁移种子。
 - 会话归组：正向广播不带手机 ID ⇒ 恰好 1 台在线归该机会话，否则聚合会话 `__phone__`（标签「手机」）。**聚合会话没有单一 phone 对象，在线状态必须用 `sessionSendable()` 判**（用 `!!phone` 会「多台在线却显示离线」，v26.10.12-v1 冒烟抓到的真 bug）。

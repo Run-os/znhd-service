@@ -38,6 +38,8 @@ export default function TransferAboutModal({ open, onClose }: { open: boolean; o
             title="企业信息"
             onCancel={onClose}
             getContainer={getOverlayContainer}
+            // v26.10.12-v5：小窗口垂直居中（默认 top:100px 会顶到传输助手窗口上沿）
+            centered
             width={440}
             styles={{ body: { textAlign: 'left' } }}
             destroyOnHidden
@@ -47,7 +49,7 @@ export default function TransferAboutModal({ open, onClose }: { open: boolean; o
                 </Button>
             }>
             <Row label="中继服务器">{s.settings.relayServer || '（未配置）'}</Row>
-            <Row label="本机设备 ID">
+            <Row label="本机设备">
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                     <DeviceIdTag id={deviceId} />
                     <span style={{ fontSize: 11, opacity: 0.65 }}>{deviceId}</span>
@@ -85,7 +87,7 @@ export default function TransferAboutModal({ open, onClose }: { open: boolean; o
             </Row>
             <Text type="secondary" style={{ fontSize: 12, display: 'block', marginTop: 10 }}>
                 提示：排查「连不上」时先看这里 —— 中继地址是否可达、手机是否出现在在线列表里；
-                会话记录只存本机内存，重启脚本后清空。
+                会话记录保存在本机（IndexedDB），仅保留最近 7 天，超期自动清理。
             </Text>
         </Modal>
     );

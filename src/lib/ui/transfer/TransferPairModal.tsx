@@ -108,6 +108,8 @@ export default function TransferPairModal({
             }
             onCancel={onClose}
             getContainer={getOverlayContainer}
+            // v26.10.12-v5：小窗口垂直居中（默认 top:100px 会顶到传输助手窗口上沿）
+            centered
             width={520}
             styles={{ body: { textAlign: 'left' } }}
             destroyOnHidden

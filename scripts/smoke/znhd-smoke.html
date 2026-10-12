@@ -882,6 +882,23 @@
         ts.filesTextSeen = !!(files && (files.textContent || '').indexOf('冒烟测试文本：收到一条文本消息') >= 0);
       }, 6200);
 
+      // v26.10.12-v5：文件分组下第二栏的条目**只作展示** —— 点设备 ID 不得跳去会话窗口
+      setTimeout(() => {
+        const m = findTransferModal();
+        const item = m ? m.querySelector('.znhd-transfer-session-item') : null;
+        window.__clickedFilesItem = !!item;
+        if (item) item.click();
+      }, 6350);
+      setTimeout(() => {
+        const m = findTransferModal();
+        const ts = window.__transferSnap;
+        ts.filesNoJumpSeen = !!(
+          m &&
+          m.querySelector('.znhd-transfer-files') &&
+          m.querySelector('.znhd-transfer-nav button[aria-label="文件"][aria-current="page"]')
+        );
+      }, 6500);
+
       // ⚠️ 收到图片后点缩略图放大：必须断言「主图真的渲染出来」。
       // 历史：v26.10.8-v1 补的——此前只断言「九宫格画廊（缩略图出现）」，从没点过缩略图，
       // 导致「点开后只有黑罩、主图一直不出现」的 bug 存活了两个多月。
@@ -1363,9 +1380,9 @@
           const el = m ? m.querySelector(sel) : null;
           return el ? getComputedStyle(el).backgroundColor : '';
         };
-        // 固定微信暗色：标题条最淡 #383838 → 第一栏 #2E2E2E → 第二栏 #252525 → 主区最深 #1E1E1E
+        // 固定微信暗色（v5 起标题条与第一栏同色 #2E2E2E）：第二栏 #252525、主区最深 #1E1E1E
         ts.themeDarkOk =
-          rgb('.znhd-transfer-titlebar') === 'rgb(56, 56, 56)' &&
+          rgb('.znhd-transfer-titlebar') === 'rgb(46, 46, 46)' &&
           rgb('.znhd-transfer-nav') === 'rgb(46, 46, 46)' &&
           rgb('.znhd-transfer-sessions') === 'rgb(37, 37, 37)' &&
           rgb('.znhd-transfer-main') === 'rgb(30, 30, 30)';
@@ -1936,8 +1953,20 @@
          只读预采样结果。 */
       setTimeout(() => {
         const m = findTransferModal();
+        const ts = window.__transferSnap;
         const close = m ? m.querySelector('button[aria-label="关闭"]') : null;
         if (close) close.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
+        // v26.10.12-v5：第一栏三态 —— 未选中项派发 mouseover（应出深色底板），选中项也派发
+        // （应保持无底板 = 选中优先于 hover）。36900 拍里采样，同一帧读不到 React 新底色。
+        const navBtns = m ? Array.from(m.querySelectorAll('.znhd-transfer-nav button[aria-label]')) : [];
+        // 选中判据用 aria-current="page"（v5 起自绘按钮带）；不用具体色值 —— antd 暗色算法会把
+        // colorPrimary '#07C160' 处理成 rgb(9, 167, 85)，按 #07C160 猜色必假红（实测踩过）
+        const isSel = (b) => b.getAttribute('aria-current') === 'page';
+        ts.navSelSeen = navBtns.filter(isSel).length;
+        const unsel = navBtns.find((b) => !isSel(b));
+        const sel = navBtns.find(isSel);
+        if (unsel) unsel.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
+        if (sel) sel.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
       }, 36500);
       setTimeout(() => {
         const ts = window.__transferSnap;
@@ -1953,6 +1982,29 @@
         const cr = close.getBoundingClientRect();
         ts.closeTopRight = mr.right - cr.right <= 2 && cr.top - mr.top <= 40;
         close.dispatchEvent(new MouseEvent('mouseout', { bubbles: true }));
+        // 第一栏三态采样（v5）：此时两个 nav 按钮都还挂着 hover（没派发 mouseout）
+        const navBtns = Array.from(m.querySelectorAll('.znhd-transfer-nav button[aria-label]'));
+        const isSel = (b) => b.getAttribute('aria-current') === 'page';
+        const unsel = navBtns.find((b) => !isSel(b));
+        const sel = navBtns.find(isSel);
+        // 选中态颜色必须是「主色绿」而非默认白：不猜具体值，只排除白并要求带 aria-current
+        ts.navSelectedGreen =
+          navBtns.length > 0 &&
+          navBtns.filter(isSel).length === 1 &&
+          !!sel &&
+          getComputedStyle(sel).color !== 'rgba(255, 255, 255, 0.9)';
+        ts.navHoverPlate = !!unsel && getComputedStyle(unsel).backgroundColor === 'rgba(255, 255, 255, 0.1)';
+        ts.navActiveNoPlate = !!sel && getComputedStyle(sel).backgroundColor === 'rgba(0, 0, 0, 0)';
+        ts.navDebug = {
+          count: navBtns.length,
+          selCount: navBtns.filter(isSel).length,
+          unselBg: unsel ? getComputedStyle(unsel).backgroundColor : '',
+          selBg: sel ? getComputedStyle(sel).backgroundColor : '',
+          selColor: sel ? getComputedStyle(sel).color : '',
+          labels: navBtns.map((b) => b.getAttribute('aria-label')),
+          colors: navBtns.map((b) => getComputedStyle(b).color),
+          currents: navBtns.map((b) => b.getAttribute('aria-current')),
+        };
       }, 36900);
 
       setTimeout(() => {
@@ -2114,6 +2166,10 @@
           ),
           // 「文件」视图：图片九宫格 + 文本分区 + 计数正确
           filesViewOk: !!(ts.filesViewSeen && ts.filesCountText && ts.filesImgCount >= 1 && ts.filesTextSeen),
+          // 文件分组下点设备条目不跳会话（v26.10.12-v5：条目只作展示）
+          filesNoJumpOk: !!(window.__clickedFilesItem && ts.filesNoJumpSeen),
+          // 第一栏图标三态（v26.10.12-v5 微信规范）：选中=绿填充无底板、未选中 hover=深色底板、选中优先
+          navStatesOk: !!(ts.navSelSeen && ts.navSelectedGreen && ts.navHoverPlate && ts.navActiveNoPlate),
           // 设备会话聊天区：收到的文本/图片渲染为气泡，头部有在线状态
           sessionChatOk: !!(
             ts.sessionChatSeen &&

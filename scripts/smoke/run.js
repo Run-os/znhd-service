@@ -70,6 +70,8 @@ const CHECKS = [
   ['transferWindowOk', '传输助手三栏窗口：导航/会话/主聊天区 + 会话列表 + 收到的消息'],
   ['transferNoTitleOk', '窗口无标题栏；顶部自绘标题条的关闭按钮贴右上角、悬浮变红（微信同款）'],
   ['filesViewOk', '「文件」视图：图片九宫格 + 文本分区 + 计数（原历史记录弹窗搬迁）'],
+  ['filesNoJumpOk', '文件分组下点击第二栏设备条目不跳转会话窗口（条目只作展示）'],
+  ['navStatesOk', '第一栏图标三态：选中=绿色填充无底板、未选中 hover=深色圆角底板（选中优先）'],
   ['sessionChatOk', '设备会话聊天区：收到的文本与图片渲染为聊天气泡'],
   ['textSentOk', '会话内发送文本：本机气泡 + POST /phone/send'],
   ['phoneSendCompressedOk', '发送图片前压缩（JPEG、最长边≤1600、小于原图）'],
@@ -79,7 +81,7 @@ const CHECKS = [
   ['phoneIdColorOk', '设备 ID 有边框+彩色底，且不同设备底色不同'],
   ['pairTestImageBtnOk', '配对窗口有「发送测试图片」按钮'],
   ['testImageSentOk', '「发送测试图片」把图片投递到 /u/<deviceId>（手机上传同路径）'],
-  ['transferThemeOk', '窗口固定微信暗色：标题条最淡、三栏深浅分层（外围最淡、聊天区最深）'],
+  ['transferThemeOk', '窗口固定微信暗色：标题条与第一栏同色 #2E2E2E、三栏深浅分层（聊天区最深）'],
   ['transferSettingsIsolatedOk', '传输助手设置独立存储 scriptCat_TransferSettings（不污染主设置）'],
   ['filesImgActionsOk', '「文件」视图图片格子：复制/下载/删除是右下角图标按钮（未 hover 隐藏，hover 出现）'],
   // v26.10.12-v3：用户要求「设备菜单和 agent 菜单下的对话主区域使用相同的样式」，

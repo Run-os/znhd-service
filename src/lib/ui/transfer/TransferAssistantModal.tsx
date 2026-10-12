@@ -30,7 +30,7 @@ import type { AgentPane, DeviceSession, TransferMessage } from '@/lib/transfer/t
  * 传输助手主窗口（v26.10.12-v1）：原「设备互联」重构后的三栏窗口。
  *
  * ── 布局（v26.10.12-v4 起**对齐微信桌面版**）────────────────────────────────
- *   标题条（最外围，最淡 #383838）：右侧自绘关闭按钮（悬浮变红，微信同款）
+ *   标题条（与第一栏同色 #2E2E2E，v26.10.12-v5 起）：右侧自绘关闭按钮（悬浮变红，微信同款）
  *   第一栏（窄图标栏 #2E2E2E）：logo → 对话 / Agents / 文件 → 设置 / 企业信息
  *   第二栏（会话列表 #252525）：搜索框 +「＋」→ 会话列表
  *   第三栏（聊天主区 #1E1E1E，最深）：当前会话的聊天区，未选中显示空状态
@@ -238,14 +238,15 @@ export default function TransferAssistantModal({ open, onClose }: { open: boolea
                 className="znhd-transfer-modal"
                 onCancel={onClose}
                 getContainer={getOverlayContainer}
-                width="min(1080px, 96vw)"
+                width="min(1296px, 96vw)"
                 styles={{
                     // ⚠️ content 的 16/24 默认内边距不能用 styles 归零（antd v6 的 Modal styles
                     // 没有 content 键，tsc 实测 TS2353），改由 uiReset 的 CSS 规则处理
                     // （.znhd-transfer-modal 专属）：三栏贴满窗口 + 关闭按钮贴右上角。
                     body: {
                         padding: 0,
-                        height: 'min(700px, calc(100vh - 140px))',
+                        // v26.10.12-v5：窗口放大 20%（700→840，1080→1296）
+                        height: 'min(840px, calc(100vh - 96px))',
                         display: 'flex',
                         flexDirection: 'column',
                         overflow: 'hidden',
@@ -254,7 +255,7 @@ export default function TransferAssistantModal({ open, onClose }: { open: boolea
                 }}
                 destroyOnHidden
                 footer={null}>
-                {/* 标题条：最外围最淡的一层，右侧自绘关闭按钮（悬浮变红） */}
+                {/* 标题条：v26.10.12-v5 起与第一栏同色（#2E2E2E），右侧自绘关闭按钮（悬浮变红） */}
                 <div
                     className="znhd-transfer-titlebar"
                     style={{
@@ -262,7 +263,7 @@ export default function TransferAssistantModal({ open, onClose }: { open: boolea
                         height: TITLE_BAR_HEIGHT,
                         display: 'flex',
                         alignItems: 'center',
-                        background: WECHAT.frame,
+                        background: WECHAT.rail,
                     }}>
                     <span style={{ flex: '1 1 auto' }} />
                     <button

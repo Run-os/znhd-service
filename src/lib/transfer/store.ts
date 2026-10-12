@@ -5,7 +5,8 @@
  * 传输助手窗口是「按需打开」的弹窗（关闭即卸载），而收件 / 在线状态必须在
  * **窗口不开的时候也照常工作**（手机发图到电脑，电脑端要自动弹窗）。
  * 因此数据放模块级，UI 通过 `useSyncExternalStore` 订阅；图片是 Blob + objectURL，
- * 无法持久化，故会话历史只在内存里（与重构前 recvImages/recvTexts 的行为一致）。
+ * v26.10.12-v5 起通过 IndexedDB 持久化（见 `persist.ts`，含 7 天 TTL 自动清理），
+ * 载入时机在 `initTransfer`；存储不可用时静默退回纯内存态。
  *
  * ── 会话归组规则（重要）────────────────────────────────────────────────
  * 中继的正向通道（手机 → 电脑）是**广播**、载荷里不带手机 ID，所以收到的内容
@@ -25,6 +26,7 @@ import {
     startPhoneReceive,
 } from '@/lib/relay';
 import { runtime } from '@/lib/state';
+import { TRANSFER_TTL_MS, loadPersistedSessions, schedulePersist } from '@/lib/transfer/persist';
 import { loadTransferSettings, normalizeTransferSettings, saveTransferSettings } from '@/lib/transfer/settings';
 import type { DeviceSession, PhoneInfo, TransferMessage, TransferSettings } from '@/lib/transfer/types';
 
@@ -61,6 +63,17 @@ let state: TransferState = {
 
 const listeners = new Set<() => void>();
 const autoOpenListeners = new Set<(sessionKey: string) => void>();
+
+/**
+ * 持久化闸门：`initTransfer` 里从 IndexedDB 载入完成之前**不落盘** ——
+ * 否则启动初期的空状态会先把旧数据覆盖掉（写入是整体覆盖）。
+ */
+let persistReady = false;
+
+/** 消息/会话发生变更后调用：闸门开着才防抖落盘 */
+function persistSoon(): void {
+    if (persistReady) schedulePersist(state.sessions);
+}
 
 function emit(): void {
     listeners.forEach((cb) => cb());
@@ -263,6 +276,7 @@ function addMessage(sessionKey: string, msg: TransferMessage): void {
     const nextActive = state.windowOpen ? state.activeSessionKey : sessionKey;
     state = { ...state, sessions, activeSessionKey: nextActive };
     emit();
+    persistSoon();
 
     // 自动打开：仅在**窗口关着**时（企业微信逻辑：窗口开着就只累计未读，不强行切会话）
     if (!state.windowOpen && state.settings.autoOpenOnReceive) {
@@ -280,6 +294,7 @@ function patchMessage(sessionKey: string, msgId: string, patch: Partial<Transfer
     sessions[at] = { ...session, messages };
     state = { ...state, sessions };
     emit();
+    persistSoon();
 }
 
 /** 移除一条消息（revoke 预览 URL，防内存泄漏） */
@@ -293,6 +308,7 @@ export function removeTransferMessage(sessionKey: string, msgId: string): void {
     sessions[at] = { ...session, messages: session.messages.filter((m) => m.id !== msgId) };
     state = { ...state, sessions };
     emit();
+    persistSoon();
 }
 
 /** 清空一个会话的消息（清完后会话若无消息且设备离线，就会从列表消失） */
@@ -306,6 +322,7 @@ export function clearTransferSession(sessionKey: string): void {
         .filter((s) => s.messages.length > 0);
     state = { ...state, sessions };
     emit();
+    persistSoon();
 }
 
 /** 清空全部文件（所有会话的图片一起清） */
@@ -313,6 +330,7 @@ export function clearAllTransferFiles(): void {
     state.sessions.forEach((s) => s.messages.forEach((m) => revokeUrl(m.previewUrl)));
     state = { ...state, sessions: [] };
     emit();
+    persistSoon();
 }
 
 function revokeUrl(url?: string): void {
@@ -538,6 +556,35 @@ function kbText(bytes: number): string {
 
 /* ============================================================ 启动 / 停止 */
 
+/** 每小时跑一次超期裁剪（长开的税务页一挂一整天，TTL 不能只在启动时执行一次） */
+let pruneTimer: number | null = null;
+
+function pruneExpiredNow(): void {
+    const minTs = Date.now() - TRANSFER_TTL_MS;
+    let changed = false;
+    const next: DeviceSession[] = [];
+    state.sessions.forEach((s) => {
+        const kept = s.messages.filter((m) => (m.ts || 0) >= minTs);
+        if (kept.length !== s.messages.length) {
+            // 被裁掉的消息顺手回收内存里的预览 URL（防长开页面泄漏 objectURL）
+            s.messages.forEach((m) => {
+                if ((m.ts || 0) < minTs) revokeUrl(m.previewUrl);
+            });
+            changed = true;
+        }
+        if (kept.length) next.push({ ...s, messages: kept, lastTs: kept[kept.length - 1].ts || s.lastTs });
+    });
+    if (changed) {
+        state = {
+            ...state,
+            sessions: next,
+            activeSessionKey: next.some((s) => s.key === state.activeSessionKey) ? state.activeSessionKey : '',
+        };
+        emit();
+        persistSoon();
+    }
+}
+
 /**
  * 启动传输助手后台能力（幂等：主面板挂载 / 面板自愈重挂时调用）。
  * 中继地址没填好时只加载设置，不起轮询与接收。
@@ -546,11 +593,39 @@ export function initTransfer(): void {
     if (inited) return;
     inited = true;
     restartLoops();
+    // 载入持久化会话（IndexedDB；失败静默退回内存态）。与启动初期已收到的消息合并：
+    // state 里已有的会话优先（活的），只补 state 里没有的。
+    void loadPersistedSessions()
+        .then((loaded) => {
+            if (loaded.length) {
+                const merged = state.sessions.slice();
+                loaded.forEach((s) => {
+                    if (!merged.some((x) => x.key === s.key)) merged.push(s);
+                });
+                merged.sort((a, b) => b.lastTs - a.lastTs);
+                state = { ...state, sessions: merged };
+                emit();
+            }
+        })
+        .catch(() => {
+            /* 存储不可用：纯内存态 */
+        })
+        .finally(() => {
+            persistReady = true;
+        });
+    // 超期裁剪：启动先跑一次（覆盖「跨天挂机」），之后每小时一次
+    pruneExpiredNow();
+    if (pruneTimer) clearInterval(pruneTimer);
+    pruneTimer = setInterval(pruneExpiredNow, 60 * 60 * 1000) as unknown as number;
 }
 
 /** 停止全部后台能力（页面卸载时由 beforeunload 链路调用） */
 export function stopTransfer(): void {
     stopLoops();
+    if (pruneTimer) {
+        clearInterval(pruneTimer);
+        pruneTimer = null;
+    }
     knownPhones = new Set();
     inited = false;
 }

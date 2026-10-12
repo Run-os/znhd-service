@@ -199,27 +199,29 @@ export default function TransferSessionList({
                 ) : isAgents ? null : filtered.length ? (
                     filtered.map((e) => {
                         const active = e.key === activeSessionKey;
+                        // v26.10.12-v5：文件分组下的条目**只作展示**（用户要求点设备 ID 不跳去会话窗口）
+                        const clickable = !isFiles;
                         return (
                             <div
                                 key={e.key}
                                 className="znhd-transfer-session-item"
                                 title={e.label}
-                                onClick={() => onSelectSession(e.key)}
+                                onClick={clickable ? () => onSelectSession(e.key) : undefined}
                                 style={{
                                     display: 'flex',
                                     alignItems: 'center',
                                     gap: 10,
                                     padding: '9px 10px',
                                     borderRadius: 6,
-                                    cursor: 'pointer',
+                                    cursor: clickable ? 'pointer' : 'default',
                                     // 选中 = 比栏底浅一档（微信暗色同款）；悬停 = 中间档
                                     background: active ? WECHAT.selected : 'transparent',
                                 }}
                                 onMouseEnter={(ev) => {
-                                    if (!active) ev.currentTarget.style.background = WECHAT.hover;
+                                    if (clickable && !active) ev.currentTarget.style.background = WECHAT.hover;
                                 }}
                                 onMouseLeave={(ev) => {
-                                    if (!active) ev.currentTarget.style.background = 'transparent';
+                                    if (clickable && !active) ev.currentTarget.style.background = 'transparent';
                                 }}>
                                 {/* 设备头像位：彩色圆 + 首字符（聚合会话用手机图标占位） */}
                                 <span

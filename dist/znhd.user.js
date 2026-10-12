@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name                征纳互动人数和在线监控v2
 // @namespace           https://scriptcat.org/
-// @version             26.10.12-v4
+// @version             26.10.12-v5
 // @description         实时监控征纳互动等待人数和在线状态，支持语音播报、自定义常用语
 // @author              runos
 // @license             MIT
@@ -73935,12 +73935,12 @@ function SniffModal({ open, onClose, minKB, onMinKBChange }) {
  * 主题项一并移除；`scriptCat_TransferSettings.theme` 字段保留但不再被 UI 读取，
  * 老用户存过的值无害）。
  *
- * ── 分层（自外向内越来越深，「最外围的颜色应该是最淡的」）──────────────────
- *   frame  最外围（标题条 + 窗口边框）   #383838  ← 最淡
- *   rail   第一栏（图标导航）           #2E2E2E
- *   list   第二栏（会话列表）           #252525
- *   chat   第三栏（聊天主区）           #1E1E1E  ← 最深
- *   input  第三栏底部（输入面板）        #262626  （比聊天区略浅，靠上边框分开）
+ * ── 分层（v26.10.12-v5 按用户要求：顶栏与第一栏同色）────────────────────────
+ *   rail   第一栏（图标导航）+ 标题条     #2E2E2E  ← 顶栏 = 第一栏同色（v5 起不再用更淡的 #383838）
+ *   frame  窗口边框底色（标题条之外的空隙，基本不可见）
+ *   list   第二栏（会话列表）             #252525
+ *   chat   第三栏（聊天主区）             #1E1E1E  ← 最深
+ *   input  第三栏底部（输入面板）          #262626  （比聊天区略浅，靠上边框分开）
  *
  * 气泡与主色直接采用微信 PC 暗色模式的值：
  *   他人气泡 #2F2F2F；我方气泡 #07C160（微信绿，同时作为窗口主色 token.colorPrimary，
@@ -73962,6 +73962,8 @@ const WECHAT = {
     hover: '#2C2C2C',
     /** 会话列表选中底色 */
     selected: '#383838',
+    /** 第一栏图标 hover 底板（仅未选中项；深色圆角方形 + 轻微浮起，v26.10.12-v5 微信规范） */
+    navHoverPlate: 'rgba(255, 255, 255, 0.1)',
     /** 他人消息气泡（微信灰） */
     bubblePeer: '#2F2F2F',
     /** 我方消息气泡（微信绿） */
@@ -73973,6 +73975,7 @@ const WECHAT = {
 };
 
 ;// ./src/lib/ui/transfer/TransferNavRail.tsx
+
 
 
 
@@ -73991,52 +73994,64 @@ const NAV_ITEMS = [
     { key: 'files', label: '文件', icon: FilesIcon },
 ];
 /**
+ * 微信规范的图标按钮三态（v26.10.12-v5，用户给的交互规格逐条实现）：
+ *
+ *   · 默认：白色描边线条图标、背景透明、无底色；
+ *   · hover（**仅未选中项**）：外层加一块深色圆角方形底板（带轻微浮起阴影），图标本身不变；
+ *   · 选中：图标变成微信绿（填充色变化），**不叠加圆角方形底板**；
+ *   · 选中优先于 hover：已选中的按钮悬浮只有绿色图标，不出底板；
+ *   · 右上角红色圆形未读角标保留（角标不受三态影响）。
+ *
+ * hover 用 React state 而不是 :hover 伪类 —— 冒烟要用「派发 mouseover → 稍后采样」的两拍
+ * 方式量底色（React setState 异步，同帧读不到新值），伪类没法这样测。
+ */
+function NavIconButton({ label, icon, onClick, active, badge, }) {
+    const { token } = es_theme.useToken();
+    const [hovered, setHovered] = (0,react_production_namespaceFn().useState)(false);
+    const isActive = !!active;
+    const plate = !isActive && hovered; // 选中优先于 hover：选中项永远不出底板
+    const count = badge || 0;
+    return ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_tooltip, { title: label, placement: "right", children: (0,react_jsx_runtime_production_namespaceFn().jsxs)("button", { type: "button", "aria-label": label, "aria-current": isActive ? 'page' : undefined, onClick: onClick, onMouseEnter: () => setHovered(true), onMouseLeave: () => setHovered(false), style: {
+                position: 'relative',
+                width: 40,
+                height: 40,
+                margin: '0 auto',
+                padding: 0,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                border: 'none',
+                borderRadius: 10,
+                background: plate ? WECHAT.navHoverPlate : 'transparent',
+                boxShadow: plate ? '0 2px 8px rgba(0, 0, 0, 0.35)' : 'none',
+                cursor: 'pointer',
+                color: isActive ? token.colorPrimary : 'rgba(255, 255, 255, 0.9)',
+            }, children: [icon, count > 0 ? ((0,react_jsx_runtime_production_namespaceFn().jsx)("span", { style: {
+                        position: 'absolute',
+                        top: 2,
+                        right: 2,
+                        minWidth: 15,
+                        height: 15,
+                        padding: '0 4px',
+                        borderRadius: 9,
+                        background: '#FA5151',
+                        color: '#fff',
+                        fontSize: 10,
+                        lineHeight: '15px',
+                        textAlign: 'center',
+                        fontWeight: 600,
+                    }, children: count > 99 ? '99+' : count })) : null] }) }));
+}
+/**
  * 第一栏（最左侧窄导航栏，v26.10.12-v4 微信桌面版样式）。
  *
  * 结构：顶部 logo（头像位）→ 中部图标入口（对话 / Agents / 文件，只放图标不显示文字）
  * → 底部设置 / 企业信息。未读总数在「对话」图标右上角挂红色角标（微信同款位置）。
- * 选中态 = 图标变主色（微信绿）；悬停有 Tooltip（placement right）。
  *
  * 原「外观设置」入口已随窗口固定微信暗色一起移除（见 wechatTheme.ts 头注）。
  */
 function TransferNavRail({ nav, onNav, onOpenSettings, onOpenAbout, unreadTotal, }) {
     const { token } = es_theme.useToken();
-    /** 一个纯图标导航按钮（微信式：48px 见方热区，选中变主色，右上角可挂红色角标） */
-    const iconButton = (label, icon, onClick, opts) => {
-        const active = !!opts?.active;
-        const badge = opts?.badge || 0;
-        return ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_tooltip, { title: label, placement: "right", children: (0,react_jsx_runtime_production_namespaceFn().jsxs)("button", { type: "button", "aria-label": label, onClick: onClick, style: {
-                    position: 'relative',
-                    width: 40,
-                    height: 40,
-                    margin: '0 auto',
-                    padding: 0,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    border: 'none',
-                    borderRadius: 8,
-                    background: 'transparent',
-                    cursor: 'pointer',
-                    color: active ? token.colorPrimary : 'rgba(255,255,255,0.55)',
-                    // 选中态给一个浅色底（微信暗色下是比栏底略浅的一块），比纯变色更可辨
-                    boxShadow: active ? 'inset 0 0 0 100px rgba(255,255,255,0.08)' : 'none',
-                }, children: [icon, badge > 0 ? ((0,react_jsx_runtime_production_namespaceFn().jsx)("span", { style: {
-                            position: 'absolute',
-                            top: 2,
-                            right: 2,
-                            minWidth: 15,
-                            height: 15,
-                            padding: '0 4px',
-                            borderRadius: 9,
-                            background: '#FA5151',
-                            color: '#fff',
-                            fontSize: 10,
-                            lineHeight: '15px',
-                            textAlign: 'center',
-                            fontWeight: 600,
-                        }, children: badge > 99 ? '99+' : badge })) : null] }) }));
-    };
     return ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { className: "znhd-transfer-nav", style: {
             flex: '0 0 auto',
             width: NAV_WIDTH,
@@ -74058,11 +74073,8 @@ function TransferNavRail({ nav, onNav, onOpenSettings, onOpenAbout, unreadTotal,
                     marginBottom: 14,
                 }, children: (0,react_jsx_runtime_production_namespaceFn().jsx)(TransferIcon, { size: 18, color: "#fff" }) }), (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { display: 'flex', flexDirection: 'column', gap: 6 }, children: NAV_ITEMS.map((item) => {
                     const Icon = item.icon;
-                    return ((0,react_jsx_runtime_production_namespaceFn().jsx)("span", { children: iconButton(item.label, (0,react_jsx_runtime_production_namespaceFn().jsx)(Icon, { size: 20, color: "currentColor" }), () => onNav(item.key), {
-                            active: nav === item.key,
-                            badge: item.key === 'devices' ? unreadTotal : 0,
-                        }) }, item.key));
-                }) }), (0,react_jsx_runtime_production_namespaceFn().jsx)("span", { style: { flex: '1 1 auto' } }), (0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', flexDirection: 'column', gap: 6 }, children: [iconButton('设置', (0,react_jsx_runtime_production_namespaceFn().jsx)(SettingsIcon, { size: 19, color: "currentColor" }), onOpenSettings), iconButton('企业信息', (0,react_jsx_runtime_production_namespaceFn().jsx)(InfoIcon, { size: 19, color: "currentColor" }), onOpenAbout)] })] }));
+                    return ((0,react_jsx_runtime_production_namespaceFn().jsx)(NavIconButton, { label: item.label, icon: (0,react_jsx_runtime_production_namespaceFn().jsx)(Icon, { size: 20, color: "currentColor" }), onClick: () => onNav(item.key), active: nav === item.key, badge: item.key === 'devices' ? unreadTotal : 0 }, item.key));
+                }) }), (0,react_jsx_runtime_production_namespaceFn().jsx)("span", { style: { flex: '1 1 auto' } }), (0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', flexDirection: 'column', gap: 6 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(NavIconButton, { label: "\u8BBE\u7F6E", icon: (0,react_jsx_runtime_production_namespaceFn().jsx)(SettingsIcon, { size: 19, color: "currentColor" }), onClick: onOpenSettings }), (0,react_jsx_runtime_production_namespaceFn().jsx)(NavIconButton, { label: "\u4F01\u4E1A\u4FE1\u606F", icon: (0,react_jsx_runtime_production_namespaceFn().jsx)(InfoIcon, { size: 19, color: "currentColor" }), onClick: onOpenAbout })] })] }));
 }
 
 ;// ./node_modules/antd/es/_util/getRenderPropValue.js
@@ -75001,20 +75013,22 @@ function TransferSessionList({ nav, search, onSearch, onPair, deviceEntries, act
                         void agent.switchChat(id);
                     }, onDelete: (id) => void agent.deleteChat(id) })) : isAgents ? null : filtered.length ? (filtered.map((e) => {
                     const active = e.key === activeSessionKey;
-                    return ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { className: "znhd-transfer-session-item", title: e.label, onClick: () => onSelectSession(e.key), style: {
+                    // v26.10.12-v5：文件分组下的条目**只作展示**（用户要求点设备 ID 不跳去会话窗口）
+                    const clickable = !isFiles;
+                    return ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { className: "znhd-transfer-session-item", title: e.label, onClick: clickable ? () => onSelectSession(e.key) : undefined, style: {
                             display: 'flex',
                             alignItems: 'center',
                             gap: 10,
                             padding: '9px 10px',
                             borderRadius: 6,
-                            cursor: 'pointer',
+                            cursor: clickable ? 'pointer' : 'default',
                             // 选中 = 比栏底浅一档（微信暗色同款）；悬停 = 中间档
                             background: active ? WECHAT.selected : 'transparent',
                         }, onMouseEnter: (ev) => {
-                            if (!active)
+                            if (clickable && !active)
                                 ev.currentTarget.style.background = WECHAT.hover;
                         }, onMouseLeave: (ev) => {
-                            if (!active)
+                            if (clickable && !active)
                                 ev.currentTarget.style.background = 'transparent';
                         }, children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)("span", { style: {
                                     width: 36,
@@ -116158,6 +116172,114 @@ function DeviceIdTag({ id, colorIndex }) {
         }, children: shortPhoneId(id) }));
 }
 
+;// ./src/lib/transfer/persist.ts
+/** 消息保留时长：7 天 */
+const TRANSFER_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+const DB_NAME = 'znhd-transfer';
+const DB_VERSION = 1;
+const STORE = 'sessions';
+function openDb() {
+    return new Promise((resolve, reject) => {
+        const req = indexedDB.open(DB_NAME, DB_VERSION);
+        req.onupgradeneeded = () => {
+            const db = req.result;
+            if (!db.objectStoreNames.contains(STORE))
+                db.createObjectStore(STORE, { keyPath: 'key' });
+        };
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error || new Error('IndexedDB open failed'));
+    });
+}
+/** 裁剪超期消息；返回新数组（不修改入参）。空会话直接丢弃。 */
+function pruneSessions(sessions, now = Date.now()) {
+    const minTs = now - TRANSFER_TTL_MS;
+    const out = [];
+    sessions.forEach((s) => {
+        const messages = s.messages.filter((m) => (m.ts || 0) >= minTs);
+        if (messages.length)
+            out.push({ ...s, messages, lastTs: messages[messages.length - 1].ts || s.lastTs });
+    });
+    return out;
+}
+/** 载入持久化的会话：裁剪超期 + 重建图片预览 URL + 中断的「发送中」标记为失败 */
+async function loadPersistedSessions() {
+    let rows = [];
+    try {
+        const db = await openDb();
+        rows = await new Promise((resolve, reject) => {
+            const tx = db.transaction(STORE, 'readonly');
+            const req = tx.objectStore(STORE).getAll();
+            req.onsuccess = () => resolve((req.result || []));
+            req.onerror = () => reject(req.error || new Error('IndexedDB read failed'));
+        });
+        db.close();
+    }
+    catch (e) {
+        return []; // 存储不可用：按无历史处理（内存态照常工作）
+    }
+    const sessions = rows.map((r) => ({
+        key: r.key,
+        unread: 0, // 重启后未读清零（未读是「本次会话期」的概念）
+        lastTs: r.lastTs || 0,
+        messages: (r.messages || []).map((m) => {
+            const msg = { ...m };
+            // 上次退出时还卡在「发送中」的图片：真实状态已不可考，标记为失败让用户可辨
+            if (msg.sendState === 'sending') {
+                msg.sendState = 'failed';
+                msg.sendError = '上次会话中断，发送状态未知';
+            }
+            if (msg.blob) {
+                try {
+                    msg.previewUrl = URL.createObjectURL(msg.blob);
+                }
+                catch (e) {
+                    /* 忽略：预览建不出来就只少一张缩略图 */
+                }
+            }
+            return msg;
+        }),
+    }));
+    return pruneSessions(sessions);
+}
+/** 把会话整体写入 IndexedDB（覆盖写；失败静默 —— 持久化是锦上添花，不能拖垮主链路） */
+async function writeSessions(sessions) {
+    try {
+        const db = await openDb();
+        await new Promise((resolve, reject) => {
+            const tx = db.transaction(STORE, 'readwrite');
+            const store = tx.objectStore(STORE);
+            store.clear();
+            sessions.forEach((s) => {
+                const messages = s.messages.map((m) => {
+                    const { previewUrl: _drop, ...rest } = m;
+                    return rest;
+                });
+                store.put({ key: s.key, messages, unread: s.unread, lastTs: s.lastTs });
+            });
+            tx.oncomplete = () => resolve();
+            tx.onerror = () => reject(tx.error || new Error('IndexedDB write failed'));
+        });
+        db.close();
+    }
+    catch (e) {
+        /* 静默 */
+    }
+}
+let persistTimer = null;
+/**
+ * 防抖落盘（800ms）：连续收发只写最后一次。
+ * ⚠️ 调用方须在「载入完成」之后才允许调（store 里的 persistReady 守着），
+ * 否则启动初期的空状态会把旧数据覆盖掉。
+ */
+function schedulePersist(sessions) {
+    if (persistTimer)
+        window.clearTimeout(persistTimer);
+    persistTimer = window.setTimeout(() => {
+        persistTimer = null;
+        void writeSessions(pruneSessions(sessions));
+    }, 800);
+}
+
 ;// ./src/lib/transfer/settings.ts
 /**
  * 传输助手的自有设置存储（v26.10.12-v1）。
@@ -116245,7 +116367,8 @@ function settings_normalize(input) {
  * 传输助手窗口是「按需打开」的弹窗（关闭即卸载），而收件 / 在线状态必须在
  * **窗口不开的时候也照常工作**（手机发图到电脑，电脑端要自动弹窗）。
  * 因此数据放模块级，UI 通过 `useSyncExternalStore` 订阅；图片是 Blob + objectURL，
- * 无法持久化，故会话历史只在内存里（与重构前 recvImages/recvTexts 的行为一致）。
+ * v26.10.12-v5 起通过 IndexedDB 持久化（见 `persist.ts`，含 7 天 TTL 自动清理），
+ * 载入时机在 `initTransfer`；存储不可用时静默退回纯内存态。
  *
  * ── 会话归组规则（重要）────────────────────────────────────────────────
  * 中继的正向通道（手机 → 电脑）是**广播**、载荷里不带手机 ID，所以收到的内容
@@ -116254,6 +116377,7 @@ function settings_normalize(input) {
  *   · 0 或多台在线 → 归到聚合会话 `__phone__`（列表里显示为「手机」）。
  * 发送方向知道目标（用户在哪个会话里发、发给哪台），所以发件记录总是进对应会话。
  */
+
 
 
 
@@ -116276,6 +116400,16 @@ let store_state = {
 };
 const store_listeners = new Set();
 const autoOpenListeners = new Set();
+/**
+ * 持久化闸门：`initTransfer` 里从 IndexedDB 载入完成之前**不落盘** ——
+ * 否则启动初期的空状态会先把旧数据覆盖掉（写入是整体覆盖）。
+ */
+let persistReady = false;
+/** 消息/会话发生变更后调用：闸门开着才防抖落盘 */
+function persistSoon() {
+    if (persistReady)
+        schedulePersist(store_state.sessions);
+}
 function emit() {
     store_listeners.forEach((cb) => cb());
 }
@@ -116465,6 +116599,7 @@ function addMessage(sessionKey, msg) {
     const nextActive = store_state.windowOpen ? store_state.activeSessionKey : sessionKey;
     store_state = { ...store_state, sessions, activeSessionKey: nextActive };
     emit();
+    persistSoon();
     // 自动打开：仅在**窗口关着**时（企业微信逻辑：窗口开着就只累计未读，不强行切会话）
     if (!store_state.windowOpen && store_state.settings.autoOpenOnReceive) {
         autoOpenListeners.forEach((cb) => cb(sessionKey));
@@ -116481,6 +116616,7 @@ function patchMessage(sessionKey, msgId, patch) {
     sessions[at] = { ...session, messages };
     store_state = { ...store_state, sessions };
     emit();
+    persistSoon();
 }
 /** 移除一条消息（revoke 预览 URL，防内存泄漏） */
 function removeTransferMessage(sessionKey, msgId) {
@@ -116495,6 +116631,7 @@ function removeTransferMessage(sessionKey, msgId) {
     sessions[at] = { ...session, messages: session.messages.filter((m) => m.id !== msgId) };
     store_state = { ...store_state, sessions };
     emit();
+    persistSoon();
 }
 /** 清空一个会话的消息（清完后会话若无消息且设备离线，就会从列表消失） */
 function clearTransferSession(sessionKey) {
@@ -116508,12 +116645,14 @@ function clearTransferSession(sessionKey) {
         .filter((s) => s.messages.length > 0);
     store_state = { ...store_state, sessions };
     emit();
+    persistSoon();
 }
 /** 清空全部文件（所有会话的图片一起清） */
 function clearAllTransferFiles() {
     store_state.sessions.forEach((s) => s.messages.forEach((m) => revokeUrl(m.previewUrl)));
     store_state = { ...store_state, sessions: [] };
     emit();
+    persistSoon();
 }
 function revokeUrl(url) {
     if (!url)
@@ -116717,6 +116856,35 @@ function kbText(bytes) {
     return Math.max(1, Math.round((Number(bytes) || 0) / 1024)) + 'KB';
 }
 /* ============================================================ 启动 / 停止 */
+/** 每小时跑一次超期裁剪（长开的税务页一挂一整天，TTL 不能只在启动时执行一次） */
+let pruneTimer = null;
+function pruneExpiredNow() {
+    const minTs = Date.now() - TRANSFER_TTL_MS;
+    let changed = false;
+    const next = [];
+    store_state.sessions.forEach((s) => {
+        const kept = s.messages.filter((m) => (m.ts || 0) >= minTs);
+        if (kept.length !== s.messages.length) {
+            // 被裁掉的消息顺手回收内存里的预览 URL（防长开页面泄漏 objectURL）
+            s.messages.forEach((m) => {
+                if ((m.ts || 0) < minTs)
+                    revokeUrl(m.previewUrl);
+            });
+            changed = true;
+        }
+        if (kept.length)
+            next.push({ ...s, messages: kept, lastTs: kept[kept.length - 1].ts || s.lastTs });
+    });
+    if (changed) {
+        store_state = {
+            ...store_state,
+            sessions: next,
+            activeSessionKey: next.some((s) => s.key === store_state.activeSessionKey) ? store_state.activeSessionKey : '',
+        };
+        emit();
+        persistSoon();
+    }
+}
 /**
  * 启动传输助手后台能力（幂等：主面板挂载 / 面板自愈重挂时调用）。
  * 中继地址没填好时只加载设置，不起轮询与接收。
@@ -116726,10 +116894,40 @@ function initTransfer() {
         return;
     inited = true;
     restartLoops();
+    // 载入持久化会话（IndexedDB；失败静默退回内存态）。与启动初期已收到的消息合并：
+    // state 里已有的会话优先（活的），只补 state 里没有的。
+    void loadPersistedSessions()
+        .then((loaded) => {
+        if (loaded.length) {
+            const merged = store_state.sessions.slice();
+            loaded.forEach((s) => {
+                if (!merged.some((x) => x.key === s.key))
+                    merged.push(s);
+            });
+            merged.sort((a, b) => b.lastTs - a.lastTs);
+            store_state = { ...store_state, sessions: merged };
+            emit();
+        }
+    })
+        .catch(() => {
+        /* 存储不可用：纯内存态 */
+    })
+        .finally(() => {
+        persistReady = true;
+    });
+    // 超期裁剪：启动先跑一次（覆盖「跨天挂机」），之后每小时一次
+    pruneExpiredNow();
+    if (pruneTimer)
+        clearInterval(pruneTimer);
+    pruneTimer = setInterval(pruneExpiredNow, 60 * 60 * 1000);
 }
 /** 停止全部后台能力（页面卸载时由 beforeunload 链路调用） */
 function stopTransfer() {
     stopLoops();
+    if (pruneTimer) {
+        clearInterval(pruneTimer);
+        pruneTimer = null;
+    }
     knownPhones = new Set();
     inited = false;
 }
@@ -117414,7 +117612,9 @@ function TransferPairModal({ open, onClose, relayServer, phones, }) {
             },
         });
     };
-    return ((0,react_jsx_runtime_production_namespaceFn().jsxs)(modal, { open: open, title: (0,react_jsx_runtime_production_namespaceFn().jsxs)("span", { style: { display: 'inline-flex', alignItems: 'center', gap: 6 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(SmartphoneIcon, { size: 16 }), "\u914D\u5BF9\u8BBE\u5907", (0,react_jsx_runtime_production_namespaceFn().jsx)(es_tag, { style: { marginLeft: 0, fontWeight: 400 }, color: "default", children: "\u624B\u673A\u626B\u7801\u5373\u914D\u5BF9" })] }), onCancel: onClose, getContainer: getOverlayContainer, width: 520, styles: { body: { textAlign: 'left' } }, destroyOnHidden: true, footer: (0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', alignItems: 'center', gap: 8 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { loading: testSending, onClick: doSendTestImage, children: "\u53D1\u9001\u6D4B\u8BD5\u56FE\u7247" }), (0,react_jsx_runtime_production_namespaceFn().jsx)("span", { style: { flex: '1 1 auto' } }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { color: "primary", variant: "solid", onClick: onClose, children: "\u5173\u95ED" })] }), children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: {
+    return ((0,react_jsx_runtime_production_namespaceFn().jsxs)(modal, { open: open, title: (0,react_jsx_runtime_production_namespaceFn().jsxs)("span", { style: { display: 'inline-flex', alignItems: 'center', gap: 6 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(SmartphoneIcon, { size: 16 }), "\u914D\u5BF9\u8BBE\u5907", (0,react_jsx_runtime_production_namespaceFn().jsx)(es_tag, { style: { marginLeft: 0, fontWeight: 400 }, color: "default", children: "\u624B\u673A\u626B\u7801\u5373\u914D\u5BF9" })] }), onCancel: onClose, getContainer: getOverlayContainer, 
+        // v26.10.12-v5：小窗口垂直居中（默认 top:100px 会顶到传输助手窗口上沿）
+        centered: true, width: 520, styles: { body: { textAlign: 'left' } }, destroyOnHidden: true, footer: (0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', alignItems: 'center', gap: 8 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { loading: testSending, onClick: doSendTestImage, children: "\u53D1\u9001\u6D4B\u8BD5\u56FE\u7247" }), (0,react_jsx_runtime_production_namespaceFn().jsx)("span", { style: { flex: '1 1 auto' } }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { color: "primary", variant: "solid", onClick: onClose, children: "\u5173\u95ED" })] }), children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: {
                     border: '1px solid ' + token.colorBorderSecondary,
                     borderRadius: 10,
                     padding: '12px 14px',
@@ -117515,7 +117715,9 @@ function TransferSettingsModal({ open, onClose }) {
         commitRelay(relayDraft);
         onClose();
     };
-    return ((0,react_jsx_runtime_production_namespaceFn().jsxs)(modal, { open: open, title: "\u4F20\u8F93\u52A9\u624B\u8BBE\u7F6E", onCancel: closeWithCommit, getContainer: getOverlayContainer, width: 480, styles: { body: { textAlign: 'left' } }, destroyOnHidden: true, footer: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { color: "primary", variant: "solid", onClick: closeWithCommit, children: "\u5B8C\u6210" }), children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(TransferSettingsModal_Text, { strong: true, style: { display: 'block', marginBottom: 8 }, children: "\u4E2D\u7EE7\u670D\u52A1\u5668\u5730\u5740" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_input, { placeholder: "https://\u4F60\u7684\u670D\u52A1\u5668:\u7AEF\u53E3", value: relayDraft, onChange: (e) => setRelayDraft(e.target.value), onBlur: (e) => {
+    return ((0,react_jsx_runtime_production_namespaceFn().jsxs)(modal, { open: open, title: "\u4F20\u8F93\u52A9\u624B\u8BBE\u7F6E", onCancel: closeWithCommit, getContainer: getOverlayContainer, 
+        // v26.10.12-v5：小窗口垂直居中（默认 top:100px 会顶到传输助手窗口上沿）
+        centered: true, width: 480, styles: { body: { textAlign: 'left' } }, destroyOnHidden: true, footer: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { color: "primary", variant: "solid", onClick: closeWithCommit, children: "\u5B8C\u6210" }), children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(TransferSettingsModal_Text, { strong: true, style: { display: 'block', marginBottom: 8 }, children: "\u4E2D\u7EE7\u670D\u52A1\u5668\u5730\u5740" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_input, { placeholder: "https://\u4F60\u7684\u670D\u52A1\u5668:\u7AEF\u53E3", value: relayDraft, onChange: (e) => setRelayDraft(e.target.value), onBlur: (e) => {
                     const url = (e.target.value || '').trim();
                     if (!url) {
                         // 清空并失焦 → 回填默认地址（与主面板常用语地址同一交互）
@@ -117525,7 +117727,7 @@ function TransferSettingsModal({ open, onClose }) {
                     else {
                         commitRelay(url);
                     }
-                }, onPressEnter: (e) => commitRelay(e.target.value), allowClear: true, style: { marginBottom: 8 } }), (0,react_jsx_runtime_production_namespaceFn().jsx)(TransferSettingsModal_Text, { type: "secondary", style: { fontSize: 12, display: 'block', marginBottom: 16 }, children: "\u624B\u673A\u4E0A\u4F20\u7684\u56FE\u7247 / \u6587\u672C\u7ECF\u6B64\u670D\u52A1\u5668\u8F6C\u53D1\u5230\u672C\u673A\u3002\u4FEE\u6539\u540E\u70B9\u5176\u4ED6\u533A\u57DF\u6216\u6309\u56DE\u8F66\u751F\u6548\uFF1B\u7559\u7A7A\u5931\u7126\u6062\u590D\u9ED8\u8BA4\u5730\u5740\u3002" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(TransferSettingsModal_Text, { strong: true, style: { display: 'block', marginBottom: 8 }, children: "\u7A97\u53E3\u5916\u89C2" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(TransferSettingsModal_Text, { type: "secondary", style: { fontSize: 12, display: 'block', marginBottom: 16 }, children: "v26.10.12-v4 \u8D77\u4F20\u8F93\u52A9\u624B\u7A97\u53E3\u56FA\u5B9A\u4E3A\u5FAE\u4FE1\u684C\u9762\u7248\u6697\u8272\u914D\u8272\uFF08\u5206\u5C42\u6DF1\u6D45 + \u5FAE\u4FE1\u7EFF\u4E3B\u8272\uFF09\uFF0C\u4E0D\u518D\u63D0\u4F9B\u6D45\u8272\u5916\u89C2\u3002" }), (0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(TransferSettingsModal_Text, { strong: true, children: "\u6536\u5230\u5185\u5BB9\u65F6\u81EA\u52A8\u6253\u5F00\u4F20\u8F93\u52A9\u624B" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_switch, { checked: settings.autoOpenOnReceive, onChange: (v) => updateTransferSettings({ autoOpenOnReceive: v }) })] }), (0,react_jsx_runtime_production_namespaceFn().jsx)(TransferSettingsModal_Text, { type: "secondary", style: { fontSize: 12, display: 'block', marginBottom: 16 }, children: "\u5173\u95ED\u65F6\u4EC5\u7D2F\u8BA1\u672A\u8BFB\u89D2\u6807\uFF0C\u4E0D\u6253\u6270\uFF1B\u7A97\u53E3\u5DF2\u5F00\u7740\u5219\u53EA\u7D2F\u52A0\uFF0C\u4E0D\u5F3A\u884C\u5207\u6362\u4F1A\u8BDD\u3002" }), (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { borderTop: '1px solid ' + token.colorBorderSecondary, paddingTop: 12 }, children: (0,react_jsx_runtime_production_namespaceFn().jsx)(popconfirm, { title: "\u6E05\u7A7A\u5168\u90E8\u4F20\u8F93\u8BB0\u5F55", description: "\u6240\u6709\u4F1A\u8BDD\u7684\u56FE\u7247\u4E0E\u6587\u672C\u90FD\u4F1A\u88AB\u79FB\u9664\uFF08\u4EC5\u6E05\u7406\u672C\u673A\u5185\u5B58\uFF0C\u4E0D\u5F71\u54CD\u624B\u673A\u4E0A\u7684\u6587\u4EF6\uFF09", okButtonProps: { danger: true }, onConfirm: () => {
+                }, onPressEnter: (e) => commitRelay(e.target.value), allowClear: true, style: { marginBottom: 8 } }), (0,react_jsx_runtime_production_namespaceFn().jsx)(TransferSettingsModal_Text, { type: "secondary", style: { fontSize: 12, display: 'block', marginBottom: 16 }, children: "\u624B\u673A\u4E0A\u4F20\u7684\u56FE\u7247 / \u6587\u672C\u7ECF\u6B64\u670D\u52A1\u5668\u8F6C\u53D1\u5230\u672C\u673A\u3002\u4FEE\u6539\u540E\u70B9\u5176\u4ED6\u533A\u57DF\u6216\u6309\u56DE\u8F66\u751F\u6548\uFF1B\u7559\u7A7A\u5931\u7126\u6062\u590D\u9ED8\u8BA4\u5730\u5740\u3002" }), (0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(TransferSettingsModal_Text, { strong: true, children: "\u6536\u5230\u5185\u5BB9\u65F6\u81EA\u52A8\u6253\u5F00\u4F20\u8F93\u52A9\u624B" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_switch, { checked: settings.autoOpenOnReceive, onChange: (v) => updateTransferSettings({ autoOpenOnReceive: v }) })] }), (0,react_jsx_runtime_production_namespaceFn().jsx)(TransferSettingsModal_Text, { type: "secondary", style: { fontSize: 12, display: 'block', marginBottom: 16 }, children: "\u5173\u95ED\u65F6\u4EC5\u7D2F\u8BA1\u672A\u8BFB\u89D2\u6807\uFF0C\u4E0D\u6253\u6270\uFF1B\u7A97\u53E3\u5DF2\u5F00\u7740\u5219\u53EA\u7D2F\u52A0\uFF0C\u4E0D\u5F3A\u884C\u5207\u6362\u4F1A\u8BDD\u3002" }), (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { borderTop: '1px solid ' + token.colorBorderSecondary, paddingTop: 12 }, children: (0,react_jsx_runtime_production_namespaceFn().jsx)(popconfirm, { title: "\u6E05\u7A7A\u5168\u90E8\u4F20\u8F93\u8BB0\u5F55", description: "\u6240\u6709\u4F1A\u8BDD\u7684\u56FE\u7247\u4E0E\u6587\u672C\u90FD\u4F1A\u88AB\u79FB\u9664\uFF08\u4EC5\u6E05\u7406\u672C\u673A\u5185\u5B58\uFF0C\u4E0D\u5F71\u54CD\u624B\u673A\u4E0A\u7684\u6587\u4EF6\uFF09", okButtonProps: { danger: true }, onConfirm: () => {
                         clearAllTransferFiles();
                         addLog('[传输助手] 已清空全部传输记录', 'success');
                     }, children: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { danger: true, children: "\u6E05\u7A7A\u5168\u90E8\u4F20\u8F93\u8BB0\u5F55" }) }) })] }));
@@ -117558,7 +117760,9 @@ function TransferAboutModal({ open, onClose }) {
     const s = useTransferStore();
     const deviceId = getDeviceId();
     const colors = resolveDeviceColors(s.phones.map((p) => p.id));
-    return ((0,react_jsx_runtime_production_namespaceFn().jsxs)(modal, { open: open, title: "\u4F01\u4E1A\u4FE1\u606F", onCancel: onClose, getContainer: getOverlayContainer, width: 440, styles: { body: { textAlign: 'left' } }, destroyOnHidden: true, footer: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { color: "primary", variant: "solid", onClick: onClose, children: "\u5173\u95ED" }), children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(TransferAboutModal_Row, { label: "\u4E2D\u7EE7\u670D\u52A1\u5668", children: s.settings.relayServer || '（未配置）' }), (0,react_jsx_runtime_production_namespaceFn().jsx)(TransferAboutModal_Row, { label: "\u672C\u673A\u8BBE\u5907 ID", children: (0,react_jsx_runtime_production_namespaceFn().jsxs)("span", { style: { display: 'inline-flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(DeviceIdTag, { id: deviceId }), (0,react_jsx_runtime_production_namespaceFn().jsx)("span", { style: { fontSize: 11, opacity: 0.65 }, children: deviceId }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { size: "small", type: "text", "aria-label": "\u590D\u5236\u8BBE\u5907 ID", title: "\u590D\u5236\u8BBE\u5907 ID", style: { color: token.colorTextTertiary }, onClick: () => safeCopyText(deviceId), children: (0,react_jsx_runtime_production_namespaceFn().jsx)(CopyIcon, { size: 13 }) })] }) }), (0,react_jsx_runtime_production_namespaceFn().jsx)(TransferAboutModal_Row, { label: "\u5728\u7EBF\u624B\u673A", children: s.phones.length ? ((0,react_jsx_runtime_production_namespaceFn().jsxs)("span", { style: { display: 'inline-flex', gap: 6, flexWrap: 'wrap' }, children: [s.phones.map((p) => ((0,react_jsx_runtime_production_namespaceFn().jsx)(DeviceIdTag, { id: p.id, colorIndex: colors[p.id] }, p.id || 'unknown'))), (0,react_jsx_runtime_production_namespaceFn().jsxs)("span", { style: { fontSize: 11, opacity: 0.65 }, children: ["\u5171 ", s.phones.length, " \u53F0"] })] })) : ((0,react_jsx_runtime_production_namespaceFn().jsx)(TransferAboutModal_Text, { type: "secondary", children: "\u6682\u65E0\uFF08\u624B\u673A\u7AEF\u6253\u5F00\u672C\u673A\u94FE\u63A5\u540E\u51FA\u73B0\uFF09" })) }), (0,react_jsx_runtime_production_namespaceFn().jsx)(TransferAboutModal_Row, { label: "\u811A\u672C\u7248\u672C", children: (GM_info.script && GM_info.script.version) || '未知' }), (0,react_jsx_runtime_production_namespaceFn().jsx)(TransferAboutModal_Row, { label: "\u9879\u76EE\u4E3B\u9875", children: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { type: "link", style: { padding: 0, height: 'auto' }, onClick: () => window.open('https://github.com/Run-os/znhd-service', '_blank'), children: "github.com/Run-os/znhd-service" }) }), (0,react_jsx_runtime_production_namespaceFn().jsx)(TransferAboutModal_Text, { type: "secondary", style: { fontSize: 12, display: 'block', marginTop: 10 }, children: "\u63D0\u793A\uFF1A\u6392\u67E5\u300C\u8FDE\u4E0D\u4E0A\u300D\u65F6\u5148\u770B\u8FD9\u91CC \u2014\u2014 \u4E2D\u7EE7\u5730\u5740\u662F\u5426\u53EF\u8FBE\u3001\u624B\u673A\u662F\u5426\u51FA\u73B0\u5728\u5728\u7EBF\u5217\u8868\u91CC\uFF1B \u4F1A\u8BDD\u8BB0\u5F55\u53EA\u5B58\u672C\u673A\u5185\u5B58\uFF0C\u91CD\u542F\u811A\u672C\u540E\u6E05\u7A7A\u3002" })] }));
+    return ((0,react_jsx_runtime_production_namespaceFn().jsxs)(modal, { open: open, title: "\u4F01\u4E1A\u4FE1\u606F", onCancel: onClose, getContainer: getOverlayContainer, 
+        // v26.10.12-v5：小窗口垂直居中（默认 top:100px 会顶到传输助手窗口上沿）
+        centered: true, width: 440, styles: { body: { textAlign: 'left' } }, destroyOnHidden: true, footer: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { color: "primary", variant: "solid", onClick: onClose, children: "\u5173\u95ED" }), children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(TransferAboutModal_Row, { label: "\u4E2D\u7EE7\u670D\u52A1\u5668", children: s.settings.relayServer || '（未配置）' }), (0,react_jsx_runtime_production_namespaceFn().jsx)(TransferAboutModal_Row, { label: "\u672C\u673A\u8BBE\u5907", children: (0,react_jsx_runtime_production_namespaceFn().jsxs)("span", { style: { display: 'inline-flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(DeviceIdTag, { id: deviceId }), (0,react_jsx_runtime_production_namespaceFn().jsx)("span", { style: { fontSize: 11, opacity: 0.65 }, children: deviceId }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { size: "small", type: "text", "aria-label": "\u590D\u5236\u8BBE\u5907 ID", title: "\u590D\u5236\u8BBE\u5907 ID", style: { color: token.colorTextTertiary }, onClick: () => safeCopyText(deviceId), children: (0,react_jsx_runtime_production_namespaceFn().jsx)(CopyIcon, { size: 13 }) })] }) }), (0,react_jsx_runtime_production_namespaceFn().jsx)(TransferAboutModal_Row, { label: "\u5728\u7EBF\u624B\u673A", children: s.phones.length ? ((0,react_jsx_runtime_production_namespaceFn().jsxs)("span", { style: { display: 'inline-flex', gap: 6, flexWrap: 'wrap' }, children: [s.phones.map((p) => ((0,react_jsx_runtime_production_namespaceFn().jsx)(DeviceIdTag, { id: p.id, colorIndex: colors[p.id] }, p.id || 'unknown'))), (0,react_jsx_runtime_production_namespaceFn().jsxs)("span", { style: { fontSize: 11, opacity: 0.65 }, children: ["\u5171 ", s.phones.length, " \u53F0"] })] })) : ((0,react_jsx_runtime_production_namespaceFn().jsx)(TransferAboutModal_Text, { type: "secondary", children: "\u6682\u65E0\uFF08\u624B\u673A\u7AEF\u6253\u5F00\u672C\u673A\u94FE\u63A5\u540E\u51FA\u73B0\uFF09" })) }), (0,react_jsx_runtime_production_namespaceFn().jsx)(TransferAboutModal_Row, { label: "\u811A\u672C\u7248\u672C", children: (GM_info.script && GM_info.script.version) || '未知' }), (0,react_jsx_runtime_production_namespaceFn().jsx)(TransferAboutModal_Row, { label: "\u9879\u76EE\u4E3B\u9875", children: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { type: "link", style: { padding: 0, height: 'auto' }, onClick: () => window.open('https://github.com/Run-os/znhd-service', '_blank'), children: "github.com/Run-os/znhd-service" }) }), (0,react_jsx_runtime_production_namespaceFn().jsx)(TransferAboutModal_Text, { type: "secondary", style: { fontSize: 12, display: 'block', marginTop: 10 }, children: "\u63D0\u793A\uFF1A\u6392\u67E5\u300C\u8FDE\u4E0D\u4E0A\u300D\u65F6\u5148\u770B\u8FD9\u91CC \u2014\u2014 \u4E2D\u7EE7\u5730\u5740\u662F\u5426\u53EF\u8FBE\u3001\u624B\u673A\u662F\u5426\u51FA\u73B0\u5728\u5728\u7EBF\u5217\u8868\u91CC\uFF1B \u4F1A\u8BDD\u8BB0\u5F55\u4FDD\u5B58\u5728\u672C\u673A\uFF08IndexedDB\uFF09\uFF0C\u4EC5\u4FDD\u7559\u6700\u8FD1 7 \u5929\uFF0C\u8D85\u671F\u81EA\u52A8\u6E05\u7406\u3002" })] }));
 }
 
 ;// ./src/lib/ui/transfer/useAgentChat.ts
@@ -117947,7 +118151,7 @@ function useAgentChat(active) {
  * 传输助手主窗口（v26.10.12-v1）：原「设备互联」重构后的三栏窗口。
  *
  * ── 布局（v26.10.12-v4 起**对齐微信桌面版**）────────────────────────────────
- *   标题条（最外围，最淡 #383838）：右侧自绘关闭按钮（悬浮变红，微信同款）
+ *   标题条（与第一栏同色 #2E2E2E，v26.10.12-v5 起）：右侧自绘关闭按钮（悬浮变红，微信同款）
  *   第一栏（窄图标栏 #2E2E2E）：logo → 对话 / Agents / 文件 → 设置 / 企业信息
  *   第二栏（会话列表 #252525）：搜索框 +「＋」→ 会话列表
  *   第三栏（聊天主区 #1E1E1E，最深）：当前会话的聊天区，未选中显示空状态
@@ -118119,13 +118323,14 @@ function TransferAssistantModal({ open, onClose }) {
             // v26.10.12-v2 起不传 title（标题与第一栏重复）；v26.10.12-v4 起连默认 × 也关掉，
             // 换成标题条右侧的自绘关闭按钮（悬浮变红）。Esc（keyboard 默认 true）与点遮罩
             // 仍走 onCancel，三条关闭路径一条不少。
-            closable: false, className: "znhd-transfer-modal", onCancel: onClose, getContainer: getOverlayContainer, width: "min(1080px, 96vw)", styles: {
+            closable: false, className: "znhd-transfer-modal", onCancel: onClose, getContainer: getOverlayContainer, width: "min(1296px, 96vw)", styles: {
                 // ⚠️ content 的 16/24 默认内边距不能用 styles 归零（antd v6 的 Modal styles
                 // 没有 content 键，tsc 实测 TS2353），改由 uiReset 的 CSS 规则处理
                 // （.znhd-transfer-modal 专属）：三栏贴满窗口 + 关闭按钮贴右上角。
                 body: {
                     padding: 0,
-                    height: 'min(700px, calc(100vh - 140px))',
+                    // v26.10.12-v5：窗口放大 20%（700→840，1080→1296）
+                    height: 'min(840px, calc(100vh - 96px))',
                     display: 'flex',
                     flexDirection: 'column',
                     overflow: 'hidden',
@@ -118136,7 +118341,7 @@ function TransferAssistantModal({ open, onClose }) {
                         height: TITLE_BAR_HEIGHT,
                         display: 'flex',
                         alignItems: 'center',
-                        background: WECHAT.frame,
+                        background: WECHAT.rail,
                     }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("span", { style: { flex: '1 1 auto' } }), (0,react_jsx_runtime_production_namespaceFn().jsx)("button", { type: "button", className: "znhd-transfer-close", "aria-label": "\u5173\u95ED", title: "\u5173\u95ED", onMouseEnter: () => setCloseHover(true), onMouseLeave: () => setCloseHover(false), onClick: onClose, style: {
                                 width: 44,
                                 height: TITLE_BAR_HEIGHT,

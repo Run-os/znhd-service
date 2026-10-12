@@ -1,12 +1,12 @@
 /**
- * 手机上传页（web/ → relay-server/public）的端到端测试（v26.10.08-v2 新增）。
+ * 手机端聊天窗（web/ → relay-server/public）的端到端测试。
  *
- * 为什么需要它：手机页此前**零自动化覆盖**（只有 typecheck/build）。而 v26.10.08-v2 修的正是
- * 「图片发完的提示渲染到了另一张卡片下面」这类**只有跑起来才看得见**的排版错误 ——
- * 静态检查（typecheck）永远发现不了，`来自电脑` 卡片被删掉同样需要断言守着。
+ * v26.10.12-v5：手机页从「上传到电脑」双卡片页重构为**聊天窗**（对齐脚本端第三栏，
+ * 微信暗色气泡 + 底部输入区）。本文件随之重写：不再断言卡片排版，改为断言
+ * 「发出去的进右侧绿气泡、电脑发来的进左侧灰气泡、预览/打印共享链路不回退」。
  *
  * 做法：起一个真实 relay-server（它自己就托管 relay-server/public），用无头 Chromium 打开
- * `/u/<deviceId>`，真上传一张图、真走 `/u/` 接口，然后断言**提示落在哪张卡片里**。
+ * `/u/<deviceId>`，真上传一张图、真发一条文本、真从中继投递一张图，然后断言语义。
  *
  * 跑法：`npm run verify:web`（已串进 `npm run verify`）
  */
@@ -21,15 +21,7 @@ const { spawn } = require('child_process');
 const ROOT = path.resolve(__dirname, '..', '..');
 /**
  * 浏览器可执行文件探测：与 `scripts/smoke/run.js` **用同一份清单**。
- *
- * ⚠️ 这里以前只写了 Windows 路径（`C:\Program Files\...`），于是 CI 上必然红：
- *    `.github/workflows/webpack.yml` 设了 `PUPPETEER_SKIP_DOWNLOAD: 'true'`（省 ~150MB 下载），
- *    改依赖 runner 镜像预装的 Google Chrome —— 而它在 Linux 上是 `/usr/bin/google-chrome`，
- *    不在旧清单里 ⇒ puppeteer 回退去找没下载过的自带 Chromium ⇒
- *    `Could not find Chrome (ver. 154.0.8037.57)`。
- *    实证：`npm run verify` 的**第一段**（run.js，用下面这份全平台清单）在 CI 上是绿的，
- *    只有本文件这段红 —— 即失败原因就是清单不全，与代码无关。
- *    该失败在 v26.10.08-v13（177791e）就已经存在，属历史遗留（2026-10-09 排查确认）。
+ * （CI 上 PUPPETEER_SKIP_DOWNLOAD=true 依赖 runner 预装的 Chrome，清单必须全平台，见 v26.10.08-v13。）
  */
 const BROWSERS = [
     process.env.PUPPETEER_EXECUTABLE_PATH,
@@ -81,7 +73,7 @@ function writeTinyPng(file) {
     }
     const crc = (buf) => {
         let c = 0xffffffff;
-        for (const b of buf) c = crcTable[(c ^ b) & 0xff] ^ (c >>> 8);
+        for (const b of buf) c = crcTable[(c ^ b) & 0xff] >>> 0;
         return (c ^ 0xffffffff) >>> 0;
     };
     const chunk = (type, data) => {
@@ -151,65 +143,75 @@ async function main() {
         ...(BROWSERS[0] ? { executablePath: BROWSERS[0] } : {}),
     });
     try {
-        console.log('手机上传页测试（真起中继 + 真上传一张图）：');
+        console.log('手机端聊天窗测试（真起中继 + 真上传/真投递）：');
         const page = await browser.newPage();
-        await page.setViewport({ width: 1100, height: 900 });
+        await page.setViewport({ width: 420, height: 800 }); // 手机竖屏视口
         await page.goto(`http://127.0.0.1:${port}/u/test-device-0001`, { waitUntil: 'load', timeout: 60000 });
-        await page.waitForSelector('.ant-card', { timeout: 30000 });
+        await page.waitForSelector('.znhd-phone-chat', { timeout: 30000 });
         await sleep(500);
 
-        // ① 两张卡片都在；② 已删除的「来自电脑」卡片不得出现
-        const titles = await page.evaluate(() =>
-            Array.from(document.querySelectorAll('.ant-card-head-title')).map((el) => el.textContent.trim())
+        // ① 骨架三件套：头部 / 消息滚动区 / 底部输入区（flex 吸底契约的载体）
+        const skeleton = await page.evaluate(() => ({
+            chat: !!document.querySelector('.znhd-phone-chat'),
+            header: !!document.querySelector('.znhd-phone-header'),
+            scroll: !!document.querySelector('.znhd-phone-scroll'),
+            composer: !!document.querySelector('.znhd-phone-composer'),
+            textarea: !!document.querySelector('.znhd-phone-composer textarea'),
+            imageBtn: !!document.querySelector('.znhd-phone-composer button[aria-label="图片上传"]'),
+            sendBtn: !!document.querySelector('.znhd-phone-composer button[aria-label="发送"]'),
+            bg: getComputedStyle(document.querySelector('.znhd-phone-chat')).backgroundColor,
+        }));
+        check(
+            '聊天窗骨架齐：头部 + 消息滚动区 + 底部输入区（图片按钮 / 发送按钮 / 输入框）',
+            skeleton.chat &&
+                skeleton.header &&
+                skeleton.scroll &&
+                skeleton.composer &&
+                skeleton.textarea &&
+                skeleton.imageBtn &&
+                skeleton.sendBtn
         );
-        check('手机页正常加载出「发送图片到电脑」与「发送文本到电脑」两张卡片', titles.includes('发送图片到电脑') && titles.includes('发送文本到电脑'));
-        check('「来自电脑」卡片已删除（页面不再出现该卡片）', !titles.some((t) => t.includes('来自电脑')));
+        check('整页微信暗色底（#1E1E1E，对齐脚本端第三栏）', skeleton.bg === 'rgb(30, 30, 30)');
 
-        // 真上传一张图 → 点发送
+        // ② 发图片：选图 → 出「发送中」气泡 → 顺序发送 → 气泡下方出「已发送」
         const input = await page.$('input[type=file]');
         if (!input) {
             check('页面有选图用的 file input', false);
         } else {
             await input.uploadFile(png);
+            await page.waitForSelector('.znhd-chat-msg[data-side="out"] .znhd-chat-img', { timeout: 15000 });
             await page.waitForFunction(
                 () =>
-                    Array.from(document.querySelectorAll('button')).some(
-                        (b) => (b.textContent || '').includes('发送图片到电脑') && !b.disabled
+                    Array.from(document.querySelectorAll('.znhd-chat-msg[data-side="out"] .znhd-chat-meta')).some(
+                        (el) => (el.textContent || '').indexOf('已发送') >= 0
                     ),
-                { timeout: 15000 }
+                { timeout: 20000 }
             );
-            await page.evaluate(() => {
-                const b = Array.from(document.querySelectorAll('button')).find((x) =>
-                    (x.textContent || '').includes('发送图片到电脑')
-                );
-                if (b) b.click();
-            });
-            await page.waitForFunction(() => (document.body.textContent || '').includes('已全部发送到电脑'), {
-                timeout: 20000,
-            });
-            await sleep(300);
-
-            // ③★ 本次修复的核心：完成提示必须落在**发送图片到电脑**卡片里
-            const info = await page.evaluate(() => {
-                const msg = Array.from(document.querySelectorAll('p,span,div')).find(
-                    (el) => (el.textContent || '').includes('已全部发送到电脑') && el.children.length === 0
-                );
-                const card = msg ? msg.closest('.ant-card') : null;
-                const titleEl = card ? card.querySelector('.ant-card-head-title') : null;
-                return {
-                    text: msg ? msg.textContent.trim() : '',
-                    cardTitle: titleEl ? titleEl.textContent.trim() : '',
-                };
+            const bubble = await page.evaluate(() => {
+                const msg = document.querySelector('.znhd-chat-msg[data-side="out"]');
+                const bub = msg ? msg.querySelector('.znhd-chat-bubble') : null;
+                const dir = msg ? getComputedStyle(msg).flexDirection : '';
+                return { dir, bg: bub ? getComputedStyle(bub).backgroundColor : '' };
             });
             check(
-                '图片发完的提示出现在「发送图片到电脑」卡片内（不是文本卡片）',
-                info.cardTitle === '发送图片到电脑' && info.text.includes('已全部发送到电脑')
+                '发出的图片进右侧气泡：row-reverse（头像在右）+ 微信绿 #07C160',
+                bubble.dir === 'row-reverse' && bubble.bg === 'rgb(7, 193, 96)'
             );
-            console.log('     实测：' + JSON.stringify(info));
         }
 
-        // ===== ② 收到的图片：放大预览（v26.10.08-v13 起与脚本端共用 shared/preview/）=====
-        // 真往中继发一张图给这台「手机」，等它经长轮询收到 → 打开画廊 → 点开预览。
+        // ③ 发文本：输入 → Enter（触发 onPressEnter）→ 右侧文本气泡
+        await page.type('.znhd-phone-composer textarea', '冒烟聊天文本：手机到电脑');
+        await page.keyboard.press('Enter');
+        await page.waitForFunction(
+            () =>
+                Array.from(document.querySelectorAll('.znhd-chat-msg[data-side="out"]')).some((el) =>
+                    (el.textContent || '').indexOf('冒烟聊天文本：手机到电脑') >= 0
+                ),
+            { timeout: 15000 }
+        );
+        check('Enter 发送的文本出现在右侧气泡（输入框同时清空）', true);
+
+        // ④ 电脑端 → 手机端：真从中继投递一张图，等长轮询收到 → 左侧灰气泡
         const b64 = fs.readFileSync(png).toString('base64');
         const sent = await fetch(`http://127.0.0.1:${port}/phone/send/test-device-0001`, {
             method: 'POST',
@@ -218,21 +220,21 @@ async function main() {
         });
         check('电脑端 → 手机端：中继投递接口可用（/phone/send 返回 ok）', sent.ok);
 
-        // 画廊入口出现（= 手机页真的收到了这张图）
-        await page.waitForFunction(
-            () => Array.from(document.querySelectorAll('button')).some((b) => (b.textContent || '').includes('查看收到的图片')),
-            { timeout: 25000 }
-        );
-        await page.evaluate(() => {
-            const b = Array.from(document.querySelectorAll('button')).find((x) =>
-                (x.textContent || '').includes('查看收到的图片')
-            );
-            if (b) b.click();
+        await page.waitForSelector('.znhd-chat-msg[data-side="in"] .ant-image img', { timeout: 25000 });
+        const inBubble = await page.evaluate(() => {
+            const msg = document.querySelector('.znhd-chat-msg[data-side="in"]');
+            const bub = msg ? msg.querySelector('.znhd-chat-bubble') : null;
+            const dir = msg ? getComputedStyle(msg).flexDirection : '';
+            return { dir, bg: bub ? getComputedStyle(bub).backgroundColor : '' };
         });
-        // 点缩略图打开放大预览
-        await page.waitForSelector('.znhd-recv-img img, .znhd-recv-cell .ant-image img', { timeout: 15000 });
+        check(
+            '收到的图片进左侧气泡：row（头像在左）+ 微信灰 #2F2F2F',
+            inBubble.dir === 'row' && inBubble.bg === 'rgb(47, 47, 47)'
+        );
+
+        // ⑤ 点收到的图 → antd 预览（shared/preview 集成链路：宿主 / 打印按钮 / 遮罩压制）
         await page.evaluate(() => {
-            const img = document.querySelector('.znhd-recv-cell .ant-image img') || document.querySelector('.znhd-recv-img img');
+            const img = document.querySelector('.znhd-chat-msg[data-side="in"] .ant-image img');
             if (img) img.dispatchEvent(new MouseEvent('click', { bubbles: true }));
         });
         await page.waitForSelector('.ant-image-preview', { timeout: 15000 });
@@ -258,9 +260,8 @@ async function main() {
         check('预览工具栏里有共享方式追加的「打印」按钮', previewInfo.toolbarHasPrint);
         check('预览期间下层遮罩被压掉（与脚本端同一份规则）', previewInfo.masksHidden);
 
-        // 点打印 → react-to-print 建出 id=printWindow 的 iframe，且版式来自共享的 PRINT_PAGE_STYLE
-        // ⚠️ 时序：react-to-print 是「先插 iframe、load 时才写入内容」，所以在**插入那一刻**读是空的，
-        //    必须监听 iframe 自己的 load 事件（脚本端冒烟踩过同一个坑，这里照同一判据写）。
+        // ⑥ 点打印 → react-to-print 建出 id=printWindow 的 iframe，且版式来自共享的 PRINT_PAGE_STYLE
+        // ⚠️ 时序：react-to-print 是「先插 iframe、load 时才写入内容」，必须监听 iframe 自己的 load 事件。
         await page.evaluate(() => {
             window.__printDoc = null;
             const obs = new MutationObserver((muts) => {
@@ -326,14 +327,14 @@ async function main() {
 
     const bad = results.filter((r) => !r.ok);
     if (bad.length) {
-        console.error('❌ 手机上传页测试未通过（phone-page:PARTIAL）：' + bad.map((b) => b.name).join('、'));
+        console.error('❌ 手机端聊天窗测试未通过（phone-page:PARTIAL）：' + bad.map((b) => b.name).join('、'));
         process.exit(1);
     }
-    console.log('✅ 手机上传页测试通过（phone-page:ALL-OK）');
+    console.log('✅ 手机端聊天窗测试通过（phone-page:ALL-OK）');
     process.exit(0);
 }
 
 main().catch((e) => {
-    console.error('❌ 手机上传页测试异常：' + (e && e.message));
+    console.error('❌ 手机端聊天窗测试异常：' + (e && e.message));
     process.exit(1);
 });

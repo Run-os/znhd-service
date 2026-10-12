@@ -49,6 +49,8 @@ export default function TransferSettingsModal({ open, onClose }: { open: boolean
             title="传输助手设置"
             onCancel={closeWithCommit}
             getContainer={getOverlayContainer}
+            // v26.10.12-v5：小窗口垂直居中（默认 top:100px 会顶到传输助手窗口上沿）
+            centered
             width={480}
             styles={{ body: { textAlign: 'left' } }}
             destroyOnHidden
@@ -80,13 +82,6 @@ export default function TransferSettingsModal({ open, onClose }: { open: boolean
             />
             <Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 16 }}>
                 手机上传的图片 / 文本经此服务器转发到本机。修改后点其他区域或按回车生效；留空失焦恢复默认地址。
-            </Text>
-
-            <Text strong style={{ display: 'block', marginBottom: 8 }}>
-                窗口外观
-            </Text>
-            <Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 16 }}>
-                v26.10.12-v4 起传输助手窗口固定为微信桌面版暗色配色（分层深浅 + 微信绿主色），不再提供浅色外观。
             </Text>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>

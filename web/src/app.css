@@ -1,106 +1,205 @@
-/* 手机上传页全局样式：只放 antd 覆盖不到的布局（栅格/缩略图/预览文本），组件外观交给 antd 主题 */
+/* 手机端聊天窗（v26.10.12-v5）：整页对齐脚本端传输助手第三栏（微信暗色）。
+   色板与 src/lib/ui/transfer/wechatTheme.ts 同源：chat #1E1E1E / header·rail #2E2E2E /
+   composer #262626 / 他人气泡 #2F2F2F / 我方气泡 #07C160。 */
 :root {
-    color-scheme: light;
+    color-scheme: dark;
 }
 
 html,
 body {
     margin: 0;
     padding: 0;
-    background: #f5f5f5;
+    background: #1e1e1e;
 }
 
 #root {
-    min-height: 100vh;
+    height: 100vh;
+    height: 100dvh; /* 移动端地址栏收放时以动态视口为准 */
 }
 
-/* 手机单列；md 及以上放宽并变两列（由 antd Row/Col 负责分栏） */
-.znhd-page {
-    max-width: 560px;
-    margin: 0 auto;
-    padding: 16px 16px calc(16px + env(safe-area-inset-bottom, 0px));
+/* ===== 整体骨架：头部 / 消息滚动区 / 底部输入区（flex 吸底，与脚本端第三栏同一契约）===== */
+.znhd-phone-chat {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    background: #1e1e1e;
+    color: rgba(255, 255, 255, 0.9);
+    font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Segoe UI', sans-serif;
+}
+
+.znhd-phone-header {
+    flex: 0 0 auto;
+    background: #2e2e2e;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    padding: 10px 14px 8px;
+}
+
+.znhd-phone-header-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.znhd-phone-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #fff;
+}
+
+.znhd-phone-conn {
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.55);
+}
+
+.znhd-phone-sub {
+    margin-top: 4px;
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.35);
+    word-break: break-all;
+}
+
+/* ===== 消息滚动区 ===== */
+.znhd-phone-scroll {
+    flex: 1 1 auto;
+    min-height: 0; /* 硬性：缺了它滚动区被内容撑高、overflowY 永不触发（脚本端同坑） */
+    overflow-y: auto;
+    scrollbar-gutter: stable;
+    padding: 12px 12px 8px;
     box-sizing: border-box;
 }
 
-@media (min-width: 768px) {
-    .znhd-page {
-        max-width: 1040px;
-        padding: 24px;
-    }
+.znhd-chat-empty {
+    margin-top: 30vh;
+    text-align: center;
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.35);
+    padding: 0 24px;
+    line-height: 1.7;
 }
 
-/* 待发送缩略图：手机 3 列、桌面 6 列 */
-.znhd-preview-grid {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 8px;
+/* 细美化滚动条（微信风格） */
+.znhd-phone-scroll::-webkit-scrollbar {
+    width: 6px;
 }
 
-@media (min-width: 768px) {
-    .znhd-preview-grid {
-        grid-template-columns: repeat(6, minmax(0, 1fr));
-    }
+.znhd-phone-scroll::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.14);
+    border-radius: 3px;
 }
 
-.znhd-thumb {
-    position: relative;
-    width: 100%;
-    aspect-ratio: 1 / 1;
-    overflow: hidden;
-    border-radius: 8px;
-    background: #fff;
-    border: 1px solid #eee;
+.znhd-phone-scroll::-webkit-scrollbar-track {
+    background: transparent;
 }
 
-.znhd-thumb-img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    display: block;
+/* 时间分隔条（间隔 >5 分钟一组共用一条，与脚本端第三栏同一规则） */
+.znhd-chat-time {
+    text-align: center;
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.35);
+    margin: 10px 0 6px;
 }
 
-.znhd-thumb-del {
-    position: absolute;
-    top: 2px;
-    right: 2px;
-    padding: 0 6px;
-    min-width: 22px;
-    height: 22px;
-    line-height: 20px;
-    border-radius: 50%;
-}
-
-/* 收到的图片九宫格 */
-.znhd-recv-grid {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 8px;
-    max-height: 62vh;
-    overflow: auto;
-    align-content: start;
-}
-
-.znhd-recv-cell {
+/* ===== 气泡 ===== */
+.znhd-chat-msg {
     display: flex;
-    flex-direction: column;
+    gap: 8px;
+    margin: 6px 0;
+    align-items: flex-start;
 }
 
-.znhd-recv-img {
-    width: 100%;
-    aspect-ratio: 1 / 1;
-    object-fit: cover;
-    border-radius: 8px;
-    background: #f2f2f2;
+/* 方向用 flex 方向表达（与脚本端 ChatBubble 同一设计：头像位置与贴边共用一份代码） */
+.znhd-chat-msg[data-side='out'] {
+    flex-direction: row-reverse;
 }
 
-/* 收到的文本 */
-.znhd-recv-text {
-    margin: 0;
-    max-height: 60vh;
-    overflow: auto;
-    white-space: pre-wrap;
-    word-break: break-word;
-    font-family: inherit;
+.znhd-chat-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 600;
+    color: #fff;
+}
+
+.znhd-chat-bubble {
+    max-width: 100%;
+    padding: 8px 12px;
+    border-radius: 10px;
     font-size: 15px;
-    line-height: 1.6;
+    line-height: 1.55;
+    word-break: break-word;
+    white-space: pre-wrap;
+}
+
+/* 他人消息：灰底靠左；我方消息：微信绿靠右（圆角切角与微信一致） */
+.znhd-chat-msg[data-side='in'] .znhd-chat-bubble {
+    background: #2f2f2f;
+    color: rgba(255, 255, 255, 0.92);
+    border-top-left-radius: 4px;
+}
+
+.znhd-chat-msg[data-side='out'] .znhd-chat-bubble {
+    background: #07c160;
+    color: #fff;
+    border-top-right-radius: 4px;
+}
+
+/* 图片气泡：去内边距（脚本端 bare 同款），图按自身尺寸完整显示 */
+.znhd-chat-bubble-img {
+    padding: 4px;
+}
+
+.znhd-chat-img {
+    display: block;
+    max-width: min(260px, 62vw);
+    max-height: 360px;
+    width: auto;
+    height: auto;
+    border-radius: 8px;
+}
+
+/* 收到文本的「复制」小按钮 */
+.znhd-chat-copy {
+    display: block;
+    margin-top: 2px;
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: rgba(255, 255, 255, 0.4);
+    font-size: 11px;
+    cursor: pointer;
+}
+
+.znhd-chat-meta {
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.35);
+    margin-top: 2px;
+}
+
+/* ===== 底部输入区 ===== */
+.znhd-phone-composer {
+    flex: 0 0 auto;
+    background: #262626;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 8px 10px calc(8px + env(safe-area-inset-bottom, 0px));
+}
+
+.znhd-composer-tools {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 4px;
+}
+
+.znhd-composer-row {
+    display: flex;
+    gap: 8px;
+    align-items: flex-end;
+}
+
+.znhd-composer-row .ant-input {
+    font-size: 15px;
 }

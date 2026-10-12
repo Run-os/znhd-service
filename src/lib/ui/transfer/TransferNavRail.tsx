@@ -1,4 +1,4 @@
-import type { ReactElement } from 'react';
+import { useState, type ReactElement } from 'react';
 import { Tooltip, theme } from 'antd';
 import { WECHAT } from '@/lib/ui/transfer/wechatTheme';
 import { BotIcon, FilesIcon, InfoIcon, MessageIcon, SettingsIcon, TransferIcon, type IconProps } from '@/lib/ui/icons';
@@ -21,11 +21,91 @@ const NAV_ITEMS: Array<{ key: TransferNav; label: string; icon: (p: IconProps) =
 ];
 
 /**
+ * 微信规范的图标按钮三态（v26.10.12-v5，用户给的交互规格逐条实现）：
+ *
+ *   · 默认：白色描边线条图标、背景透明、无底色；
+ *   · hover（**仅未选中项**）：外层加一块深色圆角方形底板（带轻微浮起阴影），图标本身不变；
+ *   · 选中：图标变成微信绿（填充色变化），**不叠加圆角方形底板**；
+ *   · 选中优先于 hover：已选中的按钮悬浮只有绿色图标，不出底板；
+ *   · 右上角红色圆形未读角标保留（角标不受三态影响）。
+ *
+ * hover 用 React state 而不是 :hover 伪类 —— 冒烟要用「派发 mouseover → 稍后采样」的两拍
+ * 方式量底色（React setState 异步，同帧读不到新值），伪类没法这样测。
+ */
+function NavIconButton({
+    label,
+    icon,
+    onClick,
+    active,
+    badge,
+}: {
+    label: string;
+    icon: ReactElement;
+    onClick: () => void;
+    active?: boolean;
+    badge?: number;
+}) {
+    const { token } = theme.useToken();
+    const [hovered, setHovered] = useState(false);
+    const isActive = !!active;
+    const plate = !isActive && hovered; // 选中优先于 hover：选中项永远不出底板
+    const count = badge || 0;
+    return (
+        <Tooltip title={label} placement="right">
+            <button
+                type="button"
+                aria-label={label}
+                aria-current={isActive ? 'page' : undefined}
+                onClick={onClick}
+                onMouseEnter={() => setHovered(true)}
+                onMouseLeave={() => setHovered(false)}
+                style={{
+                    position: 'relative',
+                    width: 40,
+                    height: 40,
+                    margin: '0 auto',
+                    padding: 0,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    border: 'none',
+                    borderRadius: 10,
+                    background: plate ? WECHAT.navHoverPlate : 'transparent',
+                    boxShadow: plate ? '0 2px 8px rgba(0, 0, 0, 0.35)' : 'none',
+                    cursor: 'pointer',
+                    color: isActive ? token.colorPrimary : 'rgba(255, 255, 255, 0.9)',
+                }}>
+                {icon}
+                {count > 0 ? (
+                    <span
+                        style={{
+                            position: 'absolute',
+                            top: 2,
+                            right: 2,
+                            minWidth: 15,
+                            height: 15,
+                            padding: '0 4px',
+                            borderRadius: 9,
+                            background: '#FA5151',
+                            color: '#fff',
+                            fontSize: 10,
+                            lineHeight: '15px',
+                            textAlign: 'center',
+                            fontWeight: 600,
+                        }}>
+                        {count > 99 ? '99+' : count}
+                    </span>
+                ) : null}
+            </button>
+        </Tooltip>
+    );
+}
+
+/**
  * 第一栏（最左侧窄导航栏，v26.10.12-v4 微信桌面版样式）。
  *
  * 结构：顶部 logo（头像位）→ 中部图标入口（对话 / Agents / 文件，只放图标不显示文字）
  * → 底部设置 / 企业信息。未读总数在「对话」图标右上角挂红色角标（微信同款位置）。
- * 选中态 = 图标变主色（微信绿）；悬停有 Tooltip（placement right）。
  *
  * 原「外观设置」入口已随窗口固定微信暗色一起移除（见 wechatTheme.ts 头注）。
  */
@@ -43,64 +123,6 @@ export default function TransferNavRail({
     unreadTotal: number;
 }) {
     const { token } = theme.useToken();
-
-    /** 一个纯图标导航按钮（微信式：48px 见方热区，选中变主色，右上角可挂红色角标） */
-    const iconButton = (
-        label: string,
-        icon: ReactElement,
-        onClick: () => void,
-        opts?: { active?: boolean; badge?: number }
-    ) => {
-        const active = !!opts?.active;
-        const badge = opts?.badge || 0;
-        return (
-            <Tooltip title={label} placement="right">
-                <button
-                    type="button"
-                    aria-label={label}
-                    onClick={onClick}
-                    style={{
-                        position: 'relative',
-                        width: 40,
-                        height: 40,
-                        margin: '0 auto',
-                        padding: 0,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        border: 'none',
-                        borderRadius: 8,
-                        background: 'transparent',
-                        cursor: 'pointer',
-                        color: active ? token.colorPrimary : 'rgba(255,255,255,0.55)',
-                        // 选中态给一个浅色底（微信暗色下是比栏底略浅的一块），比纯变色更可辨
-                        boxShadow: active ? 'inset 0 0 0 100px rgba(255,255,255,0.08)' : 'none',
-                    }}>
-                    {icon}
-                    {badge > 0 ? (
-                        <span
-                            style={{
-                                position: 'absolute',
-                                top: 2,
-                                right: 2,
-                                minWidth: 15,
-                                height: 15,
-                                padding: '0 4px',
-                                borderRadius: 9,
-                                background: '#FA5151',
-                                color: '#fff',
-                                fontSize: 10,
-                                lineHeight: '15px',
-                                textAlign: 'center',
-                                fontWeight: 600,
-                            }}>
-                            {badge > 99 ? '99+' : badge}
-                        </span>
-                    ) : null}
-                </button>
-            </Tooltip>
-        );
-    };
 
     return (
         <div
@@ -137,12 +159,14 @@ export default function TransferNavRail({
                 {NAV_ITEMS.map((item) => {
                     const Icon = item.icon;
                     return (
-                        <span key={item.key}>
-                            {iconButton(item.label, <Icon size={20} color="currentColor" />, () => onNav(item.key), {
-                                active: nav === item.key,
-                                badge: item.key === 'devices' ? unreadTotal : 0,
-                            })}
-                        </span>
+                        <NavIconButton
+                            key={item.key}
+                            label={item.label}
+                            icon={<Icon size={20} color="currentColor" />}
+                            onClick={() => onNav(item.key)}
+                            active={nav === item.key}
+                            badge={item.key === 'devices' ? unreadTotal : 0}
+                        />
                     );
                 })}
             </div>
@@ -151,8 +175,16 @@ export default function TransferNavRail({
 
             {/* 底部：设置 / 企业信息（原「外观设置」已随固定暗色移除） */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                {iconButton('设置', <SettingsIcon size={19} color="currentColor" />, onOpenSettings)}
-                {iconButton('企业信息', <InfoIcon size={19} color="currentColor" />, onOpenAbout)}
+                <NavIconButton
+                    label="设置"
+                    icon={<SettingsIcon size={19} color="currentColor" />}
+                    onClick={onOpenSettings}
+                />
+                <NavIconButton
+                    label="企业信息"
+                    icon={<InfoIcon size={19} color="currentColor" />}
+                    onClick={onOpenAbout}
+                />
             </div>
         </div>
     );
