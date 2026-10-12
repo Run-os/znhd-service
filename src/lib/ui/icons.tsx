@@ -75,6 +75,23 @@ export function SettingsIcon(p: IconProps) {
     );
 }
 
+/**
+ * 传输助手（Lucide `arrow-left-right`：双向箭头，v26.10.12-v1）。
+ *
+ * 「设备互联」重构为「传输助手」后的主面板入口图标：左右互传的语义比原来的
+ * 「显示器」（monitor）更贴合手机 ↔ 电脑双向收发的新定位。
+ */
+export function TransferIcon(p: IconProps) {
+    return (
+        <SvgIcon {...p}>
+            <path d="M8 3 4 7l4 4" />
+            <path d="M4 7h16" />
+            <path d="m16 21 4-4-4-4" />
+            <path d="M20 17H4" />
+        </SvgIcon>
+    );
+}
+
 /** 常用语（Lucide `message-square`：对话气泡） */
 export function PhrasesIcon(p: IconProps) {
     return (
@@ -286,6 +303,74 @@ export function DownloadIcon(p: IconProps) {
             <path d="M12 15V3" />
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
             <path d="m7 10 5 5 5-5" />
+        </SvgIcon>
+    );
+}
+
+/* ============================================================ 传输助手三栏界面（v26.10.12-v1） */
+
+/** 搜索（Lucide `search`）：会话列表栏顶部的搜索框图标 */
+export function SearchIcon(p: IconProps) {
+    return (
+        <SvgIcon {...p}>
+            <circle cx="11" cy="11" r="8" />
+            <path d="m21 21-4.3-4.3" />
+        </SvgIcon>
+    );
+}
+
+/** 文件（Lucide `folder`）：第一栏「文件」分组入口 */
+export function FilesIcon(p: IconProps) {
+    return (
+        <SvgIcon {...p}>
+            <path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z" />
+        </SvgIcon>
+    );
+}
+
+/** 浅色外观（Lucide `sun`）：底部「外观设置」入口（深色模式下换成 MoonIcon） */
+export function SunIcon(p: IconProps) {
+    return (
+        <SvgIcon {...p}>
+            <circle cx="12" cy="12" r="4" />
+            <path d="M12 2v2" />
+            <path d="M12 20v2" />
+            <path d="m4.93 4.93 1.41 1.41" />
+            <path d="m17.66 17.66 1.41 1.41" />
+            <path d="M2 12h2" />
+            <path d="M20 12h2" />
+            <path d="m6.34 17.66-1.41 1.41" />
+            <path d="m19.07 4.93-1.41 1.41" />
+        </SvgIcon>
+    );
+}
+
+/** 深色外观（Lucide `moon`）：底部「外观设置」在深色模式下的图标 */
+export function MoonIcon(p: IconProps) {
+    return (
+        <SvgIcon {...p}>
+            <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" />
+        </SvgIcon>
+    );
+}
+
+/** 企业信息（Lucide `info`）：第一栏底部入口 */
+export function InfoIcon(p: IconProps) {
+    return (
+        <SvgIcon {...p}>
+            <circle cx="12" cy="12" r="10" />
+            <path d="M12 16v-4" />
+            <path d="M12 8h.01" />
+        </SvgIcon>
+    );
+}
+
+/** 折叠 / 展开第一栏（Lucide `panel-left`：左竖线面板） */
+export function PanelLeftIcon(p: IconProps) {
+    return (
+        <SvgIcon {...p}>
+            <rect width="18" height="18" x="3" y="3" rx="2" />
+            <path d="M9 3v18" />
         </SvgIcon>
     );
 }

@@ -23,8 +23,6 @@ export interface SettingsModalProps {
     onChangeWorkingHours: (wh: WorkingHours) => void;
     commonPhrasesUrl: string;
     onChangeCommonPhrasesUrl: (url: string) => void;
-    relayServer: string;
-    onChangeRelayServer: (url: string) => void;
     useCdn: boolean;
     onChangeUseCdn: (v: boolean) => void;
 }
@@ -32,6 +30,9 @@ export interface SettingsModalProps {
 /**
  * 设置弹窗（v26.10.06-v9：由 CAT_UI.Drawer 侧边抽屉改为 antd Modal 弹窗）。
  * ⚠️ 时间输入与地址草稿的处理是真实页面实测结论（见块内注释），禁止顺手重构。
+ *
+ * v26.10.12-v1：「中继服务器地址」已移到传输助手的独立设置面板（`ui/transfer/TransferSettingsModal`），
+ * 与主面板设置完全分开；本弹窗不再有任何中继相关字段。
  */
 export default function SettingsModal({
     open,
@@ -41,8 +42,6 @@ export default function SettingsModal({
     onChangeWorkingHours,
     commonPhrasesUrl,
     onChangeCommonPhrasesUrl,
-    relayServer,
-    onChangeRelayServer,
     useCdn,
     onChangeUseCdn,
 }: SettingsModalProps) {
@@ -176,23 +175,8 @@ export default function SettingsModal({
                 allowClear
                 style={{ marginBottom: 8 }}
             />
-            <Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 12 }}>
-                修改后请在「常用语」面板点「重新加载常用语」生效；留空并点击其他区域（失焦）后恢复默认地址。
-            </Text>
-
-            <Text strong style={{ display: 'block', marginBottom: 8 }}>
-                中继服务器地址
-            </Text>
-            <Input
-                placeholder="https://你的服务器:端口"
-                value={relayServer || ''}
-                onChange={(e) => onChangeRelayServer((e.target.value || '').trim().replace(/\/+$/, ''))}
-                allowClear
-                style={{ marginBottom: 8 }}
-            />
             <Text type="secondary" style={{ fontSize: 12, display: 'block' }}>
-                用于「设备互联到电脑」：手机上传的图片经此服务器转发到本机剪贴板。需自行部署配套
-                relay-server（见项目说明）。
+                修改后请在「常用语」面板点「重新加载常用语」生效；留空并点击其他区域（失焦）后恢复默认地址。
             </Text>
         </Modal>
     );

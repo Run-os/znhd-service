@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name                征纳互动人数和在线监控v2
 // @namespace           https://scriptcat.org/
-// @version             26.10.10-v17
+// @version             26.10.12-v1
 // @description         实时监控征纳互动等待人数和在线状态，支持语音播报、自定义常用语
 // @author              runos
 // @license             MIT
@@ -56171,6 +56171,8 @@ if (false) // removed by dead control flow
 {}
 /* harmony default export */ const es_switch = (switch_Switch);
 ;// ./src/lib/ui/icons.tsx
+/* unused harmony import specifier */ var _jsxs;
+/* unused harmony import specifier */ var _jsx;
 
 /**
  * 统一的 SVG 外壳（Lucide 规格）。
@@ -56188,13 +56190,22 @@ function SvgIcon({ size = 16, color, style, className, children }) {
 function SettingsIcon(p) {
     return ((0,react_jsx_runtime_production_namespaceFn().jsxs)(SvgIcon, { ...p, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("path", { d: "M9.671 4.136a2.34 2.34 0 0 1 4.659 0 2.34 2.34 0 0 0 3.319 1.915 2.34 2.34 0 0 1 2.33 4.033 2.34 2.34 0 0 0 0 3.831 2.34 2.34 0 0 1-2.33 4.033 2.34 2.34 0 0 0-3.319 1.915 2.34 2.34 0 0 1-4.659 0 2.34 2.34 0 0 0-3.32-1.915 2.34 2.34 0 0 1-2.33-4.033 2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915" }), (0,react_jsx_runtime_production_namespaceFn().jsx)("circle", { cx: "12", cy: "12", r: "3" })] }));
 }
+/**
+ * 传输助手（Lucide `arrow-left-right`：双向箭头，v26.10.12-v1）。
+ *
+ * 「设备互联」重构为「传输助手」后的主面板入口图标：左右互传的语义比原来的
+ * 「显示器」（monitor）更贴合手机 ↔ 电脑双向收发的新定位。
+ */
+function TransferIcon(p) {
+    return ((0,react_jsx_runtime_production_namespaceFn().jsxs)(SvgIcon, { ...p, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("path", { d: "M8 3 4 7l4 4" }), (0,react_jsx_runtime_production_namespaceFn().jsx)("path", { d: "M4 7h16" }), (0,react_jsx_runtime_production_namespaceFn().jsx)("path", { d: "m16 21 4-4-4-4" }), (0,react_jsx_runtime_production_namespaceFn().jsx)("path", { d: "M20 17H4" })] }));
+}
 /** 常用语（Lucide `message-square`：对话气泡） */
 function PhrasesIcon(p) {
     return ((0,react_jsx_runtime_production_namespaceFn().jsx)(SvgIcon, { ...p, children: (0,react_jsx_runtime_production_namespaceFn().jsx)("path", { d: "M22 17a2 2 0 0 1-2 2H6.828a2 2 0 0 0-1.414.586l-2.202 2.202A.71.71 0 0 1 2 21.286V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2z" }) }));
 }
 /** 历史记录（Lucide `image`：相框 + 太阳 + 山） */
 function HistoryIcon(p) {
-    return ((0,react_jsx_runtime_production_namespaceFn().jsxs)(SvgIcon, { ...p, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("rect", { width: "18", height: "18", x: "3", y: "3", rx: "2", ry: "2" }), (0,react_jsx_runtime_production_namespaceFn().jsx)("circle", { cx: "9", cy: "9", r: "2" }), (0,react_jsx_runtime_production_namespaceFn().jsx)("path", { d: "m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" })] }));
+    return (_jsxs(SvgIcon, { ...p, children: [_jsx("rect", { width: "18", height: "18", x: "3", y: "3", rx: "2", ry: "2" }), _jsx("circle", { cx: "9", cy: "9", r: "2" }), _jsx("path", { d: "m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" })] }));
 }
 /**
  * 图片嗅探（Lucide `image-down`：相框 + 太阳 + 山 + 向下箭头）。
@@ -56283,6 +56294,31 @@ function CopyIcon(p) {
 function DownloadIcon(p) {
     return ((0,react_jsx_runtime_production_namespaceFn().jsxs)(SvgIcon, { ...p, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("path", { d: "M12 15V3" }), (0,react_jsx_runtime_production_namespaceFn().jsx)("path", { d: "M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" }), (0,react_jsx_runtime_production_namespaceFn().jsx)("path", { d: "m7 10 5 5 5-5" })] }));
 }
+/* ============================================================ 传输助手三栏界面（v26.10.12-v1） */
+/** 搜索（Lucide `search`）：会话列表栏顶部的搜索框图标 */
+function SearchIcon(p) {
+    return ((0,react_jsx_runtime_production_namespaceFn().jsxs)(SvgIcon, { ...p, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("circle", { cx: "11", cy: "11", r: "8" }), (0,react_jsx_runtime_production_namespaceFn().jsx)("path", { d: "m21 21-4.3-4.3" })] }));
+}
+/** 文件（Lucide `folder`）：第一栏「文件」分组入口 */
+function FilesIcon(p) {
+    return ((0,react_jsx_runtime_production_namespaceFn().jsx)(SvgIcon, { ...p, children: (0,react_jsx_runtime_production_namespaceFn().jsx)("path", { d: "M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z" }) }));
+}
+/** 浅色外观（Lucide `sun`）：底部「外观设置」入口（深色模式下换成 MoonIcon） */
+function SunIcon(p) {
+    return ((0,react_jsx_runtime_production_namespaceFn().jsxs)(SvgIcon, { ...p, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("circle", { cx: "12", cy: "12", r: "4" }), (0,react_jsx_runtime_production_namespaceFn().jsx)("path", { d: "M12 2v2" }), (0,react_jsx_runtime_production_namespaceFn().jsx)("path", { d: "M12 20v2" }), (0,react_jsx_runtime_production_namespaceFn().jsx)("path", { d: "m4.93 4.93 1.41 1.41" }), (0,react_jsx_runtime_production_namespaceFn().jsx)("path", { d: "m17.66 17.66 1.41 1.41" }), (0,react_jsx_runtime_production_namespaceFn().jsx)("path", { d: "M2 12h2" }), (0,react_jsx_runtime_production_namespaceFn().jsx)("path", { d: "M20 12h2" }), (0,react_jsx_runtime_production_namespaceFn().jsx)("path", { d: "m6.34 17.66-1.41 1.41" }), (0,react_jsx_runtime_production_namespaceFn().jsx)("path", { d: "m19.07 4.93-1.41 1.41" })] }));
+}
+/** 深色外观（Lucide `moon`）：底部「外观设置」在深色模式下的图标 */
+function MoonIcon(p) {
+    return ((0,react_jsx_runtime_production_namespaceFn().jsx)(SvgIcon, { ...p, children: (0,react_jsx_runtime_production_namespaceFn().jsx)("path", { d: "M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" }) }));
+}
+/** 企业信息（Lucide `info`）：第一栏底部入口 */
+function InfoIcon(p) {
+    return ((0,react_jsx_runtime_production_namespaceFn().jsxs)(SvgIcon, { ...p, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("circle", { cx: "12", cy: "12", r: "10" }), (0,react_jsx_runtime_production_namespaceFn().jsx)("path", { d: "M12 16v-4" }), (0,react_jsx_runtime_production_namespaceFn().jsx)("path", { d: "M12 8h.01" })] }));
+}
+/** 折叠 / 展开第一栏（Lucide `panel-left`：左竖线面板） */
+function PanelLeftIcon(p) {
+    return ((0,react_jsx_runtime_production_namespaceFn().jsxs)(SvgIcon, { ...p, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("rect", { width: "18", height: "18", x: "3", y: "3", rx: "2" }), (0,react_jsx_runtime_production_namespaceFn().jsx)("path", { d: "M9 3v18" })] }));
+}
 
 ;// ./src/lib/constants.ts
 /**
@@ -56340,8 +56376,10 @@ const DEFAULTS = {
     // 仍要求是「raw 原始直链」——若用户把该字段误填成网页/仓库页面，请求会拉回整页 HTML
     // （如 --fontStack-monospace 的 CSS），jsyaml 解析即报「document separator expected」（v26.9.6-v5 起因）。
     commonPhrasesUrl: 'https://cnb.cool/bbbbaa/work-about/-/git/raw/main/znhd/commonPhrases.yaml',
-    // 手机图片→电脑剪贴板 中继服务器地址（需为公网可访问的 http(s):// 地址，末尾不带 /）
-    relayServer: 'https://znhd.122050.xyz',
+    // ⚠️ v26.10.12-v1：「中继服务器地址」已从这里搬到传输助手自有设置
+    // （`lib/transfer/settings.ts` 的 DEFAULT_RELAY_SERVER + `scriptCat_TransferSettings`），
+    // 与主面板设置完全隔离。存量 `scriptCat_Allvalue.relayServer` 仅作一次性迁移种子读取，
+    // 不再写入新值；Allvalue 类型里的 relayServer 是遗留只读字段（见 storage.ts）。
     // 「运行日志」弹窗的自动刷新开关（v26.10.07-v4）。
     // 开：新日志持续进来，并自动滚到底部看最新内容；关：列表冻结在关闭那一刻的快照，便于往上翻看历史。
     // 持久化（存进 STORAGE_KEY），下次打开弹窗保持上次的选择。
@@ -56781,771 +56819,6 @@ function hhmmToHours(str) {
     if (H < 0 || H > 23 || M < 0 || M > 59)
         return null;
     return H + M / 60;
-}
-
-;// ./shared/image/compress.ts
-/**
- * 图片压缩核心 —— 脚本端与手机上传页**共用一份**（v26.10.08-v13 起）。
- *
- * 为什么抽出来：两端原本各有一份**几乎逐行等价**的 canvas 压缩实现，连参数（最大边 1600 / JPEG 0.75）
- * 也是两份、靠注释「与另一端保持一致」人肉同步 —— 结果已经漂移：脚本端跳过 GIF（canvas 只取首帧，
- * 会把动图压成静态图），手机端没跳过，同一张动图两端行为不同。抽成一份后，参数、解码兜底、
- * 「为什么要跳过」这些理由只有一处，两端差异改用**显式选项**表达（见 `prepare.ts`）。
- *
- * ⚠️ **共享层的硬约束**（改这个文件前务必先读 `AGENT.md` 的「共享层」小节）：
- *   · 禁止 import 任何宿主相关模块（`GM_*` / `@/lib/logger` / `panelHost` / `react-to-print` …）：
- *     手机端 tsconfig 是 `types: ["vite/client"]`，出现 `GM_xmlhttpRequest` 这类全局会直接 typecheck 失败；
- *   · 手机端开着 `isolatedModules` + `noUnusedLocals` + `noUnusedParameters`，`target` 为 **es2020**
- *     ⇒ 共享代码必须按**最严的那一套**写（类型再导出用 `export type`、不留未使用变量、不超出 ES2020）；
- *   · 手机端没装 `@ant-design/icons`、`react-to-print`（未声明）⇒ 只有两端都有的依赖才能 import。
- */
-/** 「发送到手机 / 上传到电脑」的压缩参数：两端共用同一组默认值 */
-const DEFAULT_MAX_DIM = 1600;
-const DEFAULT_QUALITY = 0.75;
-/** HEIC/HEIF 判定：MIME 可能为空串或 application/octet-stream，故扩展名也算 */
-function isHeicLike(lowerMime, lowerName) {
-    return (lowerMime === 'image/heic' ||
-        lowerMime === 'image/heif' ||
-        lowerMime === 'image/heic-sequence' ||
-        lowerMime === 'image/heif-sequence' ||
-        /\.(heic|heif)$/.test(lowerName));
-}
-/** SVG 判定：canvas 无法可靠光栅化，且会丢矢量 ⇒ 一律原样直传 */
-function isSvgLike(lowerMime, lowerName) {
-    return lowerMime === 'image/svg+xml' || /\.svg$/.test(lowerName);
-}
-/** GIF 判定：canvas 只取首帧，会把动图压成静态图 ⇒ 默认也原样直传 */
-function isGifLike(lowerMime, lowerName) {
-    return lowerMime === 'image/gif' || /\.gif$/.test(lowerName);
-}
-/**
- * 解码：`createImageBitmap` 优先，失败回退 `<img>`（部分内核/格式上前者不可用或直接抛）。
- * 失败时 reject，由调用方决定回退策略。
- */
-function decodeToCanvasSource(blob) {
-    const decodeViaImg = () => new Promise((resolve, reject) => {
-        const url = URL.createObjectURL(blob);
-        const img = new Image();
-        img.onload = () => resolve({
-            source: img,
-            width: img.naturalWidth,
-            height: img.naturalHeight,
-            release: () => URL.revokeObjectURL(url),
-        });
-        img.onerror = () => {
-            URL.revokeObjectURL(url);
-            reject(new Error('图片解析失败'));
-        };
-        img.src = url;
-    });
-    if (typeof createImageBitmap !== 'function')
-        return decodeViaImg();
-    return createImageBitmap(blob)
-        .then((bmp) => ({
-        source: bmp,
-        width: bmp.width,
-        height: bmp.height,
-        release: () => {
-            if (bmp.close)
-                bmp.close();
-        },
-    }))
-        .catch(() => decodeViaImg());
-}
-/**
- * canvas 等比缩放到最大边 → 铺白底 → 导出 JPEG。
- *
- * JPEG 无透明通道，**必须先铺白底**，否则透明 PNG 会被压成黑底。
- * 解码/编码失败一律 resolve(null)（不 reject）：两端调用方都按「失败就原样直传」处理，绝不阻断传输。
- */
-async function resizeToJpeg(blob, opt = {}) {
-    const maxDim = opt.maxDim && opt.maxDim > 0 ? opt.maxDim : DEFAULT_MAX_DIM;
-    const quality = typeof opt.quality === 'number' ? opt.quality : DEFAULT_QUALITY;
-    let dec = null;
-    try {
-        dec = await decodeToCanvasSource(blob);
-        const w = Number(dec.width) || 0;
-        const h = Number(dec.height) || 0;
-        if (!w || !h)
-            return null;
-        const scale = Math.min(1, maxDim / Math.max(w, h));
-        const cw = Math.max(1, Math.round(w * scale));
-        const ch = Math.max(1, Math.round(h * scale));
-        const cv = document.createElement('canvas');
-        cv.width = cw;
-        cv.height = ch;
-        const ctx = cv.getContext('2d');
-        if (!ctx)
-            return null;
-        ctx.fillStyle = '#fff';
-        ctx.fillRect(0, 0, cw, ch);
-        ctx.drawImage(dec.source, 0, 0, cw, ch);
-        return await new Promise((resolve) => {
-            cv.toBlob((b) => resolve(b || null), 'image/jpeg', quality);
-        });
-    }
-    catch {
-        return null;
-    }
-    finally {
-        // createImageBitmap 的位图要显式 close，否则大图会短暂占住内存
-        if (dec)
-            dec.release();
-    }
-}
-/**
- * 把「注入进来的 heic2any」包成统一形态的转码器。
- * 两端获取库的方式天生不同（脚本端用 `@require` 的全局，手机页按需注入 `<script>`），故只共享调用方式。
- */
-function makeHeicConverter(heic2any, quality = 0.9) {
-    return (blob) => {
-        if (typeof heic2any !== 'function')
-            return Promise.reject(new Error('heic2any 未加载'));
-        return Promise.resolve(heic2any({
-            blob,
-            toType: 'image/jpeg',
-            quality,
-        })).then((out) => {
-            // 多图 HEIC 会返回数组，取首帧
-            const b = Array.isArray(out) ? out[0] : out;
-            if (b)
-                return b;
-            throw new Error('heic2any 未产出图片');
-        });
-    };
-}
-
-;// ./shared/image/prepare.ts
-/**
- * 「把用户选的图片处理成可直接传输的载荷」—— 脚本端与手机上传页**共用一份**（v26.10.08-v13 起）。
- *
- * 统一后的行为（两端差异全部变成显式选项）：
- *   · SVG 原样直传（canvas 无法可靠光栅化，会丢矢量）；
- *   · **GIF 也原样直传**（canvas 只取首帧，会把动图压成静态图）—— 原先只有脚本端这么做，
- *     手机端会压成静态图；这次统一为「跳过」，顺手修掉两端行为不一致；
- *   · HEIC/HEIF 先转 JPEG 再走同一条压缩链（**转码器由调用方注入**：两端取库方式不同）；
- *     ⚠️ HEIC 的「转码」本身就是目的（既压体积，也修掉安卓端不显示 HEIC 的兼容问题），
- *     故即使 JPEG 没比原始 HEIC 小也照样发 JPEG；其它格式仍遵循「压不小就不压」；
- *   · 任何失败都回退原图直传，绝不阻断传输。
- */
-
-/**
- * 把用户选的图片处理成可直接传输的载荷。
- * 与历史行为逐条对齐（含「压完反而更大就不压」的兜底），失败一律原样直传。
- */
-async function prepareForTransfer(file, opt = {}) {
-    const name = String(file && file.name ? file.name : 'image.jpg');
-    const mime = String((file && file.type) || 'image/jpeg');
-    const original = { blob: file, name, mime, compressed: false };
-    const lowerName = name.toLowerCase();
-    const lowerMime = mime.toLowerCase();
-    if ((opt.skipSvg === undefined ? true : opt.skipSvg) && isSvgLike(lowerMime, lowerName))
-        return original;
-    if ((opt.skipGif === undefined ? true : opt.skipGif) && isGifLike(lowerMime, lowerName))
-        return original;
-    const heic = isHeicLike(lowerMime, lowerName);
-    let source = file;
-    if (heic) {
-        if (!opt.loadHeic)
-            return original; // 库不可用：原图直传，交由接收端处理
-        try {
-            const jpg = await opt.loadHeic(file);
-            if (!jpg)
-                return original;
-            source = jpg;
-        }
-        catch {
-            return original; // 转码失败：原样直传
-        }
-    }
-    const out = await resizeToJpeg(source, {
-        maxDim: opt.maxDim === undefined ? (/* inlined export .DEFAULT_MAX_DIM */1600) : opt.maxDim,
-        quality: opt.quality === undefined ? (/* inlined export .DEFAULT_QUALITY */0.75) : opt.quality,
-    });
-    if (!out)
-        return original; // 解码/编码失败
-    if (!heic && out.size >= (file.size || 0))
-        return original; // 非 HEIC 且压不小 ⇒ 原样发
-    return {
-        blob: out,
-        name: name.replace(/\.[a-z0-9]+$/i, '') + '.jpg',
-        mime: 'image/jpeg',
-        compressed: true,
-    };
-}
-
-;// ./src/lib/relay.ts
-
-// 图片压缩：与手机上传页共用同一份实现（v26.10.08-v13 起），路径见仓库根 shared/
-
-
-/**
- * 设备互联中继客户端（手机 → 电脑）与图片剪贴板工具。
- * 模块化 P4：逐字迁移，仅加 export（内部使用的不导出）。
- * 说明：长轮询而非 WebSocket 是为了绕过税务页 CSP 对 connect-src 的限制。
- */
-// ========== 手机图片 → 电脑剪贴板 ==========
-// 每台电脑/每个脚本安装实例一个稳定 deviceId（持久化，刷新不变），
-// 拼出上传链接 <relayServer>/u/<deviceId>；手机打开该链接上传，电脑端长轮询取走。
-const DEVICE_ID_KEY = 'znhd_device_id';
-// 单请求体上限，须与 relay-server 的 MAX_BODY 保持一致（服务端按「整段 JSON 体积」掐断）。
-// 发图前据此预检体积，避免 base64 膨胀后超过上限，被服务端拒绝时只见笼统的网络/服务器错误。
-const RELAY_MAX_BODY = 12 * 1024 * 1024;
-/**
- * 估算把该文件作为一条 POST body（含 name+mime+base64(data) 与 JSON 结构开销）的体积。
- * 仅用于「发送到手机」发前预检，与服务端 MAX_BODY 对齐（约 12MB）。
- * @param {File|Blob} file - 待发图片文件
- * @param {string} [name] - 文件名
- * @param {string} [mime] - MIME 类型
- * @returns {number} 估算的 body 字节数
- */
-function imagePayloadBytes(file, name, mime) {
-    const b64Len = Math.ceil(((file && file.size) || 0) / 3) * 4; // base64 膨胀 ≈ 4/3
-    // name/mime 按 UTF-8 字节数计（服务端 readBody 按字节累加；String.length 是 UTF-16 码元，
-    // 中文文件名会低估约 3 倍，接近上限时预检可能误放行）
-    const enc = typeof TextEncoder === 'function' ? new TextEncoder() : null;
-    const byteLen = enc
-        ? enc.encode(String(name || '') + String(mime || '')).length
-        : (String(name || '') + String(mime || '')).length;
-    return b64Len + byteLen + 120;
-}
-/** 「发送到手机」压缩参数：与手机上传页共用同一份实现与默认值（见 shared/image/compress.ts） */
-const PHONE_MAX_DIM = (/* inlined export .DEFAULT_MAX_DIM */1600);
-const PHONE_JPEG_QUALITY = (/* inlined export .DEFAULT_QUALITY */0.75);
-/**
- * 「电脑端 → 手机端」发送前的图片压缩。
- *
- * v26.10.08-v13 起**实现搬进共享层** `shared/image/prepare.ts`（与手机上传页同一份）。
- * 规则（SVG/GIF 原样直传、HEIC 先转码、压不小就不压、任何失败都回退原图）全部在那边，
- * 这里只剩脚本端**特有的一步**：把「HEIC 取库方式」注入进去 ——
- * 脚本端用的是 `@require` 进来的全局 `heic2any`，手机页是运行期按需注入 `<script>`。
- *
- * @param {File|Blob} file - 用户选择的原始图片文件
- * @returns {Promise<PhoneImagePayload>} 实际要发送的内容
- */
-function compressImageForPhone(file) {
-    return prepareForTransfer(file, {
-        maxDim: PHONE_MAX_DIM,
-        quality: PHONE_JPEG_QUALITY,
-        loadHeic: (blob) => makeHeicConverter(typeof heic2any === 'function' ? heic2any : null)(blob),
-    });
-}
-/**
- * 取得本机稳定设备 ID：首次运行用 crypto.randomUUID() 生成并持久化（GM_setValue），
- * 之后刷新/重开都读同一值。用于区分不同电脑（A、B 各自不同链接）。
- * @returns {string} 设备 UUID 字符串
- */
-function getDeviceId() {
-    let id = '';
-    try {
-        id = typeof GM_getValue === 'function' ? GM_getValue(DEVICE_ID_KEY, '') || '' : '';
-    }
-    catch (e) {
-        id = '';
-    }
-    if (!id) {
-        try {
-            id =
-                window.crypto && crypto.randomUUID
-                    ? crypto.randomUUID()
-                    : 'd' + Date.now().toString(16) + Math.random().toString(16).slice(2);
-        }
-        catch (e) {
-            id = 'd' + Date.now().toString(16) + Math.random().toString(16).slice(2);
-        }
-        try {
-            if (typeof GM_setValue === 'function')
-                GM_setValue(DEVICE_ID_KEY, id);
-        }
-        catch (e) {
-            /* 忽略 */
-        }
-    }
-    return id;
-}
-/**
- * 将 base64 字符串还原为 Blob（用于把中继返回的图片字节写剪贴板）。
- * @param {string} b64 - base64 文本
- * @param {string} mime - MIME 类型
- * @returns {Blob} 图片 Blob
- */
-function base64ToBlob(b64, mime) {
-    const bin = atob(b64);
-    const len = bin.length;
-    const arr = new Uint8Array(len);
-    for (let i = 0; i < len; i++)
-        arr[i] = bin.charCodeAt(i);
-    return new Blob([arr], { type: mime || 'image/jpeg' });
-}
-/**
- * 将图片 Blob 转成 PNG Blob（best-effort）。
- * 原因：异步 Clipboard API（navigator.clipboard.write + ClipboardItem）在部分
- * Chromium 内核里只可靠支持 image/png；手机传来的图多为 image/jpeg，
- * 直接以 image/jpeg 写入可能失败。统一转 PNG 可规避该限制。
- * 若环境不支持位图解码 / Canvas，则返回原 blob。
- * @param {Blob} blob
- * @returns {Promise<Blob>}
- */
-function blobToPng(blob) {
-    return new Promise((resolve) => {
-        if (typeof createImageBitmap !== 'function' || typeof document === 'undefined') {
-            resolve(blob);
-            return;
-        }
-        try {
-            createImageBitmap(blob)
-                .then((bmp) => {
-                const cv = document.createElement('canvas');
-                cv.width = bmp.width;
-                cv.height = bmp.height;
-                const ctx = cv.getContext('2d');
-                if (!ctx) {
-                    if (bmp.close)
-                        bmp.close();
-                    resolve(blob);
-                    return;
-                }
-                ctx.drawImage(bmp, 0, 0);
-                if (bmp.close)
-                    bmp.close();
-                cv.toBlob((b) => {
-                    resolve(b || blob);
-                }, 'image/png');
-            })
-                .catch(() => resolve(blob));
-        }
-        catch (e) {
-            resolve(blob);
-        }
-    });
-}
-/** 统一取可读的异常文本 */
-function errTextOf(e) {
-    const err = e;
-    return err && err.name ? err.name + ': ' + err.message : String((err && err.message) || e);
-}
-/**
- * 用目标 realm 的原生 Blob 构造器重新包一层。
- * 跨 realm 直接把「隔离世界的 Blob」交给「页面主世界的 ClipboardItem」可能被拒绝；
- * 参考实现 qsniyg/maxurl 同样是用页面原生 `native_blob` 构造后再传入 ClipboardItem。
- */
-function toRealmBlob(blob, BlobCtor) {
-    const type = blob && blob.type ? blob.type : 'image/png';
-    try {
-        return BlobCtor ? new BlobCtor([blob], { type: type }) : blob;
-    }
-    catch (e) {
-        return blob;
-    }
-}
-/**
- * 在指定 realm 里写**一次**剪贴板（只写 image/png）。
- *
- * ⚠️ 为什么只写一次：`clipboard.write()` 通过用户手势校验后就会**消耗**这次手势，失败也不退还。
- * 所以任何「先拿原图试一下、失败再重试」的兜底都会把手势烧掉，让后面的重试必然 NotAllowedError。
- * preferPromiseForm=true 时使用 ClipboardItem 的 Promise 形式：write() 在本次点击手势内**同步发起**，
- * 由浏览器去等异步转换结果 —— 转换耗时（实测约 1s）不再影响手势有效性。
- * @param {ClipboardRealm} realm - 写入目标
- * @param {Promise<any>} pngPromise - 解析为 PNG Blob 的 Promise
- * @param {boolean} preferPromiseForm - 是否优先用 Promise 形式的 ClipboardItem
- * @returns {Promise<boolean>} 写入是否成功
- */
-function writeClipboardOnce(realm, pngPromise, preferPromiseForm) {
-    return new Promise((resolve) => {
-        const doWrite = (item) => {
-            try {
-                realm.nav.clipboard.write([item]).then(() => resolve(true), (e) => {
-                    addLog('[复制] 写入剪贴板被拒（' + realm.name + '）: ' + errTextOf(e), 'warning', true);
-                    resolve(false);
-                });
-            }
-            catch (e) {
-                addLog('[复制] 调用 clipboard.write 异常（' + realm.name + '）: ' + errTextOf(e), 'error', true);
-                resolve(false);
-            }
-        };
-        if (preferPromiseForm) {
-            try {
-                doWrite(new realm.CI({ 'image/png': pngPromise }));
-                return;
-            }
-            catch (e) {
-                addLog('[复制] ClipboardItem 不支持 Promise 形式，改为先转换再写入: ' + errTextOf(e), 'warning', true);
-            }
-        }
-        pngPromise.then((png) => {
-            try {
-                doWrite(new realm.CI({ 'image/png': toRealmBlob(png, realm.BlobCtor) }));
-            }
-            catch (e) {
-                addLog('[复制] 构造 ClipboardItem 失败（' + realm.name + '）: ' + errTextOf(e), 'error', true);
-                resolve(false);
-            }
-        });
-    });
-}
-/**
- * 将图片 Blob 写入系统剪贴板（必须由一次「用户点击」触发）。
- *
- * ⚠️ 2026-10-06 重写。旧实现「先按原图类型写一次 → 失败后再转 PNG 重试」是**注定失败**的写法：
- *   1) Chromium 的异步剪贴板**只支持写 `image/png`**（实测 `ClipboardItem.supports('image/jpeg') === false`），
- *      而手机传来的图多为 jpeg ⇒ 第一次写入必然失败；
- *   2) 按规范，`clipboard.write()` 通过手势校验后即**消耗**该手势（失败也不退还）
- *      ⇒ 转 PNG 后的第二次重试必然 `NotAllowedError: Write permission denied`，用户只看到「复制失败」；
- *   3) 正确顺序：**先转好 PNG，再只写一次**。
- *
- * 参考实现：qsniyg/maxurl（只调用一次 write + 用页面原生 Blob 构造 ClipboardItem + 显式异常分支）。
- * 本脚本不需要它们「跨域图片经 GM_xmlhttpRequest 取二进制」那一段 —— 图片本来就是中继传进来的 Blob。
- * @param {Blob} blob - 图片 Blob
- * @returns {Promise<boolean>} 成功返回 true，失败返回 false（失败原因写入日志）
- */
-function copyImageToClipboard(blob) {
-    return new Promise((resolve) => {
-        if (!blob) {
-            addLog('[复制] 图片数据为空', 'error', true);
-            resolve(false);
-            return;
-        }
-        const pageWin = typeof unsafeWindow !== 'undefined' ? unsafeWindow : null;
-        const realms = [];
-        // 页面主世界优先：ScriptCat 隔离世界里的 ClipboardItem / 写入常不可用
-        if (pageWin &&
-            pageWin.navigator &&
-            pageWin.navigator.clipboard &&
-            // 用 typeof 判断而非直接取真值：写方法在类型上恒有定义，真值判断会被 TS 判为恒真
-            typeof pageWin.navigator.clipboard.write === 'function' &&
-            pageWin.ClipboardItem) {
-            realms.push({
-                name: '页面主世界',
-                nav: pageWin.navigator,
-                CI: pageWin.ClipboardItem,
-                BlobCtor: pageWin.Blob,
-                isPageRealm: true,
-            });
-        }
-        if (navigator.clipboard &&
-            typeof navigator.clipboard.write === 'function' &&
-            typeof ClipboardItem !== 'undefined') {
-            realms.push({ name: '隔离世界', nav: navigator, CI: ClipboardItem, BlobCtor: Blob, isPageRealm: false });
-        }
-        if (!realms.length) {
-            addLog('[复制] 当前环境不支持图片剪贴板（缺 clipboard.write 或 ClipboardItem）', 'error', true);
-            resolve(false);
-            return;
-        }
-        // 先启动 PNG 转换（不阻塞手势）：Chromium 只认 image/png
-        const pngPromise = (blob.type === 'image/png' ? Promise.resolve(blob) : blobToPng(blob)).then((b) => {
-            if (b && b.type !== 'image/png') {
-                // blobToPng 转换失败时会原样返回原图；此处只提示，成败仍交给写入阶段判定
-                addLog('[复制] 图片转 PNG 失败（内核不支持位图解码/Canvas），可能无法写入剪贴板', 'warning', true);
-            }
-            return b;
-        });
-        (async () => {
-            for (const realm of realms) {
-                // 主世界优先用 Promise 形式（write 落在手势内）；隔离世界退化为「先转换、后写入」
-                const ok = await writeClipboardOnce(realm, pngPromise, realm.isPageRealm);
-                if (ok) {
-                    addLog('[复制] 图片已复制到剪贴板（' + realm.name + '）', 'success', true);
-                    resolve(true);
-                    return;
-                }
-            }
-            addLog('[复制] 图片写入剪贴板失败：常见原因是浏览器/油猴未授予剪贴板权限、页面未获得焦点，或该内核不支持图片剪贴板；可长按图片手动保存', 'error', true);
-            resolve(false);
-        })();
-    });
-}
-/**
- * 启动「设备互联」长轮询接收循环（直到 stop() 调用）。
- * 通过 GM_xmlhttpRequest 轮询中继服务器 /recv/<uuid>（绕过税务页面 CSP 对 connect-src 的限制）。
- * 收到图片时回调 onImage；状态变化回调 onStatus；网络异常自动重连。
- * @param {PhoneReceiveOptions} opt - { server, uuid, onStatus, onImage, onText, onConnected }
- * @returns {Function} stop() 停止接收
- */
-function startPhoneReceive(opt) {
-    const server = (opt.server || '').trim().replace(/\/+$/, '');
-    const uuid = opt.uuid;
-    let stopped = false;
-    let lastXhr = null;
-    let connected = false;
-    let loggedConnFail = false;
-    let firstPoll = true;
-    function markConnected() {
-        if (connected)
-            return;
-        connected = true;
-        loggedConnFail = false; // 恢复连接后复位失败标记，后续再次断线仍会记日志（旧实现不复位，之后断连静默）
-        if (opt.onConnected) {
-            try {
-                opt.onConnected();
-            }
-            catch (e) {
-                /* 忽略 */
-            }
-        }
-    }
-    // 说明：不单独探测 /health。旧版中继可能没有该端点，会导致请求挂起并误报
-    // 「连接服务器超时」，而真正的 /recv 接收始终正常（与用户报告的现象一致）。
-    // 改用「首次 /recv 轮询用极短 maxwait」来快速确认已连上：服务器会很快返回空响应，
-    // 从而 markConnected → onConnected 触发「已自动开始接收」日志（约 1 秒内）。
-    function poll() {
-        if (stopped)
-            return;
-        if (opt.onStatus)
-            opt.onStatus('正在等待手机上传…');
-        // 首次轮询用极短 maxwait 仅用于快速确认「已连上服务器」（服务器会很快返回空），
-        // 让「已自动开始接收」日志尽快出现；后续轮询用长 maxwait 实时等待图片。
-        const maxwait = firstPoll ? 1000 : 25000;
-        firstPoll = false;
-        const url = server + '/recv/' + encodeURIComponent(uuid) + '?maxwait=' + maxwait;
-        try {
-            lastXhr = GM_xmlhttpRequest({
-                method: 'GET',
-                url: url,
-                timeout: maxwait + 5000,
-                onload: function (resp) {
-                    if (stopped)
-                        return;
-                    markConnected(); // 首次成功收到服务器响应即视为已连上
-                    try {
-                        let data = null;
-                        try {
-                            data = JSON.parse(resp.responseText);
-                        }
-                        catch (e) {
-                            data = null;
-                        }
-                        if (data && data.empty) {
-                            poll();
-                            return;
-                        }
-                        if (data && data.type === 'image' && data.data) {
-                            const blob = base64ToBlob(data.data, data.mime || 'image/jpeg');
-                            // 预览统一用 objectURL（与「发送到手机」待发列表一致）：
-                            // ① 画廊上限淘汰/单张移除/清空全部时的 URL.revokeObjectURL 真正生效
-                            //   （data:URL 字符串无法 revoke，旧写法实为无效空操作）；
-                            // ② 避免最多 27 张图的 base64 dataURL 长字符串常驻 JS 堆（可达几十 MB）。
-                            const previewUrl = URL.createObjectURL(blob);
-                            if (opt.onStatus)
-                                opt.onStatus('收到图片：' + (data.name || 'image'));
-                            if (opt.onImage)
-                                opt.onImage({ blob: blob, previewUrl: previewUrl, name: data.name, mime: data.mime });
-                            poll(); // 继续接收下一张
-                            return;
-                        }
-                        if (data && data.type === 'text' && typeof data.text === 'string') {
-                            if (opt.onStatus)
-                                opt.onStatus('收到文本');
-                            if (opt.onText)
-                                opt.onText({ text: data.text, ts: data.ts });
-                            poll(); // 继续接收下一条
-                            return;
-                        }
-                        setTimeout(poll, 1000); // 解析失败稍后重试
-                    }
-                    catch (e) {
-                        // 单条数据异常（base64 损坏 atob 抛错、回调抛错等）不得杀死接收循环：
-                        // 记录一次后继续下一次轮询（旧实现无兜底，异常会让 poll 链永久中断、收图静默失效）
-                        addLog('[设备互联] 处理收到数据失败: ' + (e && e.message ? e.message : e), 'error', true);
-                        setTimeout(poll, 1000);
-                    }
-                },
-                onerror: function () {
-                    if (stopped)
-                        return;
-                    if (!loggedConnFail) {
-                        loggedConnFail = true;
-                        addLog('[设备互联] 连接服务器失败，请检查中继地址/网络（' + server + '）', 'error');
-                    }
-                    if (opt.onStatus)
-                        opt.onStatus('连接中断，正在重连…');
-                    setTimeout(poll, 2000);
-                },
-                ontimeout: function () {
-                    if (stopped)
-                        return;
-                    poll(); // 超时继续轮询
-                },
-            });
-        }
-        catch (e) {
-            if (stopped)
-                return;
-            if (opt.onStatus)
-                opt.onStatus('请求异常，正在重连…');
-            setTimeout(poll, 2000);
-        }
-    }
-    poll();
-    return function stop() {
-        stopped = true;
-        try {
-            if (lastXhr && typeof lastXhr.abort === 'function')
-                lastXhr.abort();
-        }
-        catch (e) {
-            /* 忽略 */
-        }
-    };
-}
-/**
- * 「发送测试图片」用的随机图源（v26.10.08-v10）。
- * 直接返回一张图片（会 302 到具体图片），故用 GM_xmlhttpRequest 取二进制。
- */
-const TEST_IMAGE_URL = 'https://t.alcy.cc/fj';
-/** Blob → 不带前缀的 base64（FileReader；与手机上传页同一套做法） */
-function blobToBase64(blob) {
-    return new Promise((resolve, reject) => {
-        const fr = new FileReader();
-        fr.onload = () => resolve(String(fr.result || '').split(',')[1] || '');
-        fr.onerror = () => reject(new Error('读取图片失败'));
-        fr.readAsDataURL(blob);
-    });
-}
-/** 按 MIME 给测试图起个文件名（仅用于日志与下载命名） */
-function testImageName(mime) {
-    const ext = { 'image/jpeg': '.jpg', 'image/png': '.png', 'image/webp': '.webp', 'image/gif': '.gif' }[mime] || '.jpg';
-    return 'test-image-' + Date.now() + ext;
-}
-/**
- * 「发送测试图片」（v26.10.08-v10）：从随机图源取一张图，**当作手机上传**投递到本机中继
- * （`POST /u/<本机 deviceId>`），于是它经**正常的「手机 → 电脑」通道**回到本脚本、进历史记录。
- *
- * 为什么走中继而不是本地直接塞进数组：这样这条路径与真实收图**完全一致**
- * （中继入队 → 长轮询取走 → onImage → 历史），可用它验证整条链路，也能同步到同一台电脑的其它标签页。
- * 代价是必须配置好中继地址（未配置时调用方直接给出提示，不发请求）。
- *
- * ⚠️ 用 GM_xmlhttpRequest 而不是 fetch：税务页 CSP 限制 connect-src，跨域取图也需绕过 CORS。
- */
-function sendTestImage(opt) {
-    const server = (opt.server || '').trim().replace(/\/+$/, '');
-    const url = opt.url || TEST_IMAGE_URL;
-    const fail = (msg) => {
-        if (opt.onFail)
-            opt.onFail(msg);
-    };
-    if (!/^https?:\/\//i.test(server)) {
-        fail('未配置中继服务器，无法投递测试图片');
-        return;
-    }
-    try {
-        GM_xmlhttpRequest({
-            method: 'GET',
-            url: url,
-            responseType: 'blob',
-            timeout: 20000,
-            onload: (resp) => {
-                const blob = resp && resp.response;
-                if (!blob || typeof blob.size !== 'number' || !blob.size) {
-                    fail('取图失败：响应不是有效的二进制图片');
-                    return;
-                }
-                const mime = blob.type || 'image/jpeg';
-                const name = testImageName(mime);
-                // 体积预检：与手机上传同一套判据，避免 base64 膨胀后撞 12MB 上限
-                if (imagePayloadBytes(blob, name, mime) > RELAY_MAX_BODY) {
-                    fail('测试图片过大（超过中继单次上限约 12MB）');
-                    return;
-                }
-                blobToBase64(blob)
-                    .then((b64) => {
-                    if (!b64) {
-                        fail('取图失败：图片内容为空');
-                        return;
-                    }
-                    GM_xmlhttpRequest({
-                        method: 'POST',
-                        url: server + '/u/' + encodeURIComponent(opt.uuid),
-                        headers: { 'Content-Type': 'application/json' },
-                        data: JSON.stringify({ name: name, mime: mime, data: b64 }),
-                        timeout: 20000 + Math.round(b64.length / 200),
-                        onload: (r2) => {
-                            let j = null;
-                            try {
-                                j = JSON.parse(r2.responseText);
-                            }
-                            catch (e) {
-                                j = null;
-                            }
-                            if (j && j.ok) {
-                                if (opt.onOk)
-                                    opt.onOk({ bytes: blob.size, mime: mime });
-                            }
-                            else {
-                                fail((j && j.error) || '投递失败（HTTP ' + r2.status + '）');
-                            }
-                        },
-                        onerror: () => fail('网络错误，无法投递到中继'),
-                        ontimeout: () => fail('投递超时'),
-                    });
-                })
-                    .catch((e) => fail('取图失败：' + ((e && e.message) || '读取错误')));
-            },
-            onerror: () => fail('网络错误，无法获取测试图片'),
-            ontimeout: () => fail('获取测试图片超时'),
-        });
-    }
-    catch (e) {
-        fail('发送测试图片失败：' + ((e && e.message) || '未知错误'));
-    }
-}
-/**
- * 电脑端 → 手机端 发送（图片或文本）。POST 到中继 /phone/send/<deviceId>。
- * 仅负责投递；手机是否在线由调用方先查 /phone/status 决定（离线时调用方直接拦截）。
- * @param {SendToPhoneOptions} opt - { server, uuid, payload, onOk, onFail }
- *   payload: { text } 或 { name, mime, data(base64) }
- */
-function sendToPhone(opt) {
-    const server = (opt.server || '').trim().replace(/\/+$/, '');
-    const uuid = opt.uuid;
-    const url = server + '/phone/send/' + encodeURIComponent(uuid);
-    try {
-        const body = JSON.stringify(opt.payload);
-        GM_xmlhttpRequest({
-            method: 'POST',
-            url: url,
-            headers: { 'Content-Type': 'application/json' },
-            data: body,
-            // 超时随载荷缩放：放行的最大单请求约 16MB（base64 膨胀后），固定 20s 在慢上行时会把合法大图误杀
-            timeout: 20000 + Math.round(body.length / 200), // ≈ 20s + 每 200B 1ms；16MB 体 ≈ 100s
-            onload: function (resp) {
-                let j = null;
-                try {
-                    j = JSON.parse(resp.responseText);
-                }
-                catch (e) {
-                    j = null;
-                }
-                if (j && j.ok) {
-                    if (opt.onOk)
-                        opt.onOk();
-                }
-                else {
-                    // 优先用服务端 JSON 里的中文错误（如 413「内容过大」）；否则按状态码给可读提示，避免笼统报错。
-                    let msg = j && j.error ? String(j.error) : '';
-                    if (!msg && resp.status === 413)
-                        msg = '内容过大，请压缩后再发送';
-                    else if (!msg && resp.status >= 400)
-                        msg = '服务器错误（HTTP ' + resp.status + '）';
-                    if (opt.onFail)
-                        opt.onFail(msg || 'HTTP ' + resp.status);
-                }
-            },
-            onerror: function () {
-                if (opt.onFail)
-                    opt.onFail('网络错误，请检查中继地址');
-            },
-            ontimeout: function () {
-                if (opt.onFail)
-                    opt.onFail('发送超时');
-            },
-        });
-    }
-    catch (e) {
-        if (opt.onFail)
-            opt.onFail(e.message);
-    }
 }
 
 ;// ./src/lib/speech.ts
@@ -63467,8 +62740,11 @@ const { Text: SettingsModal_Text } = typography;
 /**
  * 设置弹窗（v26.10.06-v9：由 CAT_UI.Drawer 侧边抽屉改为 antd Modal 弹窗）。
  * ⚠️ 时间输入与地址草稿的处理是真实页面实测结论（见块内注释），禁止顺手重构。
+ *
+ * v26.10.12-v1：「中继服务器地址」已移到传输助手的独立设置面板（`ui/transfer/TransferSettingsModal`），
+ * 与主面板设置完全分开；本弹窗不再有任何中继相关字段。
  */
-function SettingsModal({ open, onClose, onOpenChangelog, workingHours, onChangeWorkingHours, commonPhrasesUrl, onChangeCommonPhrasesUrl, relayServer, onChangeRelayServer, useCdn, onChangeUseCdn, }) {
+function SettingsModal({ open, onClose, onOpenChangelog, workingHours, onChangeWorkingHours, commonPhrasesUrl, onChangeCommonPhrasesUrl, useCdn, onChangeUseCdn, }) {
     const wh = workingHours || { morningStart: 9, morningEnd: 12, afternoonStart: 13.5, afternoonEnd: 18 };
     // 原生 <input type="time"> 被清空时 hhmmToHours 返回 null（v26.10.06-v16 换掉 antd TimePicker 后
     // 才有这个形态）：此时保持原值不动，避免把 undefined/NaN 写进配置。
@@ -63504,7 +62780,7 @@ function SettingsModal({ open, onClose, onOpenChangelog, workingHours, onChangeW
     };
     return ((0,react_jsx_runtime_production_namespaceFn().jsxs)(modal, { open: open, title: "\u8BBE\u7F6E\u83DC\u5355", onCancel: onClose, getContainer: getOverlayContainer, width: 520, 
         // 显式左对齐：宿主页面常有全局 text-align:center（税务页就是），不设会整屏居中
-        styles: { body: { textAlign: 'left' } }, destroyOnHidden: true, footer: (0,react_jsx_runtime_production_namespaceFn().jsxs)(es_space, { children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { onClick: onClose, children: "\u53D6\u6D88" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { color: "primary", variant: "solid", onClick: onClose, children: "\u786E\u5B9A" })] }), children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)(es_space, { size: 4, wrap: true, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { type: "link", onClick: () => window.open('https://github.com/Run-os/znhd-service', '_blank'), children: "[\u811A\u672C\u4E3B\u9875]" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { type: "link", onClick: () => window.open((GM_info.scriptUpdateURL || GM_info.script.updateURL), '_blank'), children: "[\u66F4\u65B0\u811A\u672C]" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { type: "link", onClick: () => onOpenChangelog(), children: "[\u66F4\u65B0\u65E5\u5FD7]" })] }), (0,react_jsx_runtime_production_namespaceFn().jsx)(divider, { style: { margin: '8px 0' }, children: "\u5176\u4ED6\u8BBE\u7F6E" }), (0,react_jsx_runtime_production_namespaceFn().jsxs)(es_space, { size: 8, style: { marginBottom: 12 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(SettingsModal_Text, { strong: true, children: "\u4F7F\u7528 CDN \u52A0\u901F\uFF08Fastly \u955C\u50CF\uFF09\u52A0\u8F7D\u8D44\u6E90" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_switch, { checked: !!useCdn, onChange: (v) => onChangeUseCdn(v) })] }), (0,react_jsx_runtime_production_namespaceFn().jsx)(SettingsModal_Text, { strong: true, style: { display: 'block', marginBottom: 8 }, children: "\u76D1\u63A7\u65F6\u95F4\u6BB5\uFF08\u70B9\u51FB\u9009\u62E9\u65F6\u95F4\uFF09" }), (0,react_jsx_runtime_production_namespaceFn().jsxs)(es_space, { size: 8, wrap: true, style: { marginBottom: 8 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(SettingsModal_Text, { children: "\u4E0A\u5348" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_input, { type: "time", step: 300, value: hoursToHHmm(wh.morningStart), onChange: (e) => updateWh('morningStart', hhmmToHours(e.target.value)), style: { width: 110 } }), (0,react_jsx_runtime_production_namespaceFn().jsx)(SettingsModal_Text, { children: "\u81F3" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_input, { type: "time", step: 300, value: hoursToHHmm(wh.morningEnd), onChange: (e) => updateWh('morningEnd', hhmmToHours(e.target.value)), style: { width: 110 } })] }), (0,react_jsx_runtime_production_namespaceFn().jsxs)(es_space, { size: 8, wrap: true, style: { marginBottom: 8 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(SettingsModal_Text, { children: "\u4E0B\u5348" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_input, { type: "time", step: 300, value: hoursToHHmm(wh.afternoonStart), onChange: (e) => updateWh('afternoonStart', hhmmToHours(e.target.value)), style: { width: 110 } }), (0,react_jsx_runtime_production_namespaceFn().jsx)(SettingsModal_Text, { children: "\u81F3" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_input, { type: "time", step: 300, value: hoursToHHmm(wh.afternoonEnd), onChange: (e) => updateWh('afternoonEnd', hhmmToHours(e.target.value)), style: { width: 110 } })] }), (0,react_jsx_runtime_production_namespaceFn().jsx)(SettingsModal_Text, { type: "secondary", style: { fontSize: 12, display: 'block', marginBottom: 12 }, children: "\u63D0\u793A\uFF1A\u5C06\u300C\u4E0B\u5348\u5F00\u59CB\u300D\u8BBE\u4E3A\u4E0E\u300C\u4E0A\u5348\u7ED3\u675F\u300D\u76F8\u540C\uFF08\u5982\u90FD\u8BBE\u4E3A 12:00\uFF09\uFF0C\u5373\u53EF\u5348\u4F11\u65F6\u6BB5\u4E5F\u76D1\u63A7\u3002" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(SettingsModal_Text, { strong: true, style: { display: 'block', marginBottom: 8 }, children: "\u5E38\u7528\u8BED\u6570\u636E\u5730\u5740\uFF08\u53EF\u81EA\u5B9A\u4E49\u8FDC\u7A0B YAML\uFF09" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_input, { placeholder: "https://.../commonPhrases.yaml", value: urlDraft, onChange: (e) => onUrlChange(e.target.value), onBlur: onUrlBlur, allowClear: true, style: { marginBottom: 8 } }), (0,react_jsx_runtime_production_namespaceFn().jsx)(SettingsModal_Text, { type: "secondary", style: { fontSize: 12, display: 'block', marginBottom: 12 }, children: "\u4FEE\u6539\u540E\u8BF7\u5728\u300C\u5E38\u7528\u8BED\u300D\u9762\u677F\u70B9\u300C\u91CD\u65B0\u52A0\u8F7D\u5E38\u7528\u8BED\u300D\u751F\u6548\uFF1B\u7559\u7A7A\u5E76\u70B9\u51FB\u5176\u4ED6\u533A\u57DF\uFF08\u5931\u7126\uFF09\u540E\u6062\u590D\u9ED8\u8BA4\u5730\u5740\u3002" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(SettingsModal_Text, { strong: true, style: { display: 'block', marginBottom: 8 }, children: "\u4E2D\u7EE7\u670D\u52A1\u5668\u5730\u5740" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_input, { placeholder: "https://\u4F60\u7684\u670D\u52A1\u5668:\u7AEF\u53E3", value: relayServer || '', onChange: (e) => onChangeRelayServer((e.target.value || '').trim().replace(/\/+$/, '')), allowClear: true, style: { marginBottom: 8 } }), (0,react_jsx_runtime_production_namespaceFn().jsx)(SettingsModal_Text, { type: "secondary", style: { fontSize: 12, display: 'block' }, children: "\u7528\u4E8E\u300C\u8BBE\u5907\u4E92\u8054\u5230\u7535\u8111\u300D\uFF1A\u624B\u673A\u4E0A\u4F20\u7684\u56FE\u7247\u7ECF\u6B64\u670D\u52A1\u5668\u8F6C\u53D1\u5230\u672C\u673A\u526A\u8D34\u677F\u3002\u9700\u81EA\u884C\u90E8\u7F72\u914D\u5957 relay-server\uFF08\u89C1\u9879\u76EE\u8BF4\u660E\uFF09\u3002" })] }));
+        styles: { body: { textAlign: 'left' } }, destroyOnHidden: true, footer: (0,react_jsx_runtime_production_namespaceFn().jsxs)(es_space, { children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { onClick: onClose, children: "\u53D6\u6D88" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { color: "primary", variant: "solid", onClick: onClose, children: "\u786E\u5B9A" })] }), children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)(es_space, { size: 4, wrap: true, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { type: "link", onClick: () => window.open('https://github.com/Run-os/znhd-service', '_blank'), children: "[\u811A\u672C\u4E3B\u9875]" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { type: "link", onClick: () => window.open((GM_info.scriptUpdateURL || GM_info.script.updateURL), '_blank'), children: "[\u66F4\u65B0\u811A\u672C]" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { type: "link", onClick: () => onOpenChangelog(), children: "[\u66F4\u65B0\u65E5\u5FD7]" })] }), (0,react_jsx_runtime_production_namespaceFn().jsx)(divider, { style: { margin: '8px 0' }, children: "\u5176\u4ED6\u8BBE\u7F6E" }), (0,react_jsx_runtime_production_namespaceFn().jsxs)(es_space, { size: 8, style: { marginBottom: 12 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(SettingsModal_Text, { strong: true, children: "\u4F7F\u7528 CDN \u52A0\u901F\uFF08Fastly \u955C\u50CF\uFF09\u52A0\u8F7D\u8D44\u6E90" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_switch, { checked: !!useCdn, onChange: (v) => onChangeUseCdn(v) })] }), (0,react_jsx_runtime_production_namespaceFn().jsx)(SettingsModal_Text, { strong: true, style: { display: 'block', marginBottom: 8 }, children: "\u76D1\u63A7\u65F6\u95F4\u6BB5\uFF08\u70B9\u51FB\u9009\u62E9\u65F6\u95F4\uFF09" }), (0,react_jsx_runtime_production_namespaceFn().jsxs)(es_space, { size: 8, wrap: true, style: { marginBottom: 8 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(SettingsModal_Text, { children: "\u4E0A\u5348" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_input, { type: "time", step: 300, value: hoursToHHmm(wh.morningStart), onChange: (e) => updateWh('morningStart', hhmmToHours(e.target.value)), style: { width: 110 } }), (0,react_jsx_runtime_production_namespaceFn().jsx)(SettingsModal_Text, { children: "\u81F3" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_input, { type: "time", step: 300, value: hoursToHHmm(wh.morningEnd), onChange: (e) => updateWh('morningEnd', hhmmToHours(e.target.value)), style: { width: 110 } })] }), (0,react_jsx_runtime_production_namespaceFn().jsxs)(es_space, { size: 8, wrap: true, style: { marginBottom: 8 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(SettingsModal_Text, { children: "\u4E0B\u5348" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_input, { type: "time", step: 300, value: hoursToHHmm(wh.afternoonStart), onChange: (e) => updateWh('afternoonStart', hhmmToHours(e.target.value)), style: { width: 110 } }), (0,react_jsx_runtime_production_namespaceFn().jsx)(SettingsModal_Text, { children: "\u81F3" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_input, { type: "time", step: 300, value: hoursToHHmm(wh.afternoonEnd), onChange: (e) => updateWh('afternoonEnd', hhmmToHours(e.target.value)), style: { width: 110 } })] }), (0,react_jsx_runtime_production_namespaceFn().jsx)(SettingsModal_Text, { type: "secondary", style: { fontSize: 12, display: 'block', marginBottom: 12 }, children: "\u63D0\u793A\uFF1A\u5C06\u300C\u4E0B\u5348\u5F00\u59CB\u300D\u8BBE\u4E3A\u4E0E\u300C\u4E0A\u5348\u7ED3\u675F\u300D\u76F8\u540C\uFF08\u5982\u90FD\u8BBE\u4E3A 12:00\uFF09\uFF0C\u5373\u53EF\u5348\u4F11\u65F6\u6BB5\u4E5F\u76D1\u63A7\u3002" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(SettingsModal_Text, { strong: true, style: { display: 'block', marginBottom: 8 }, children: "\u5E38\u7528\u8BED\u6570\u636E\u5730\u5740\uFF08\u53EF\u81EA\u5B9A\u4E49\u8FDC\u7A0B YAML\uFF09" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_input, { placeholder: "https://.../commonPhrases.yaml", value: urlDraft, onChange: (e) => onUrlChange(e.target.value), onBlur: onUrlBlur, allowClear: true, style: { marginBottom: 8 } }), (0,react_jsx_runtime_production_namespaceFn().jsx)(SettingsModal_Text, { type: "secondary", style: { fontSize: 12, display: 'block' }, children: "\u4FEE\u6539\u540E\u8BF7\u5728\u300C\u5E38\u7528\u8BED\u300D\u9762\u677F\u70B9\u300C\u91CD\u65B0\u52A0\u8F7D\u5E38\u7528\u8BED\u300D\u751F\u6548\uFF1B\u7559\u7A7A\u5E76\u70B9\u51FB\u5176\u4ED6\u533A\u57DF\uFF08\u5931\u7126\uFF09\u540E\u6062\u590D\u9ED8\u8BA4\u5730\u5740\u3002" })] }));
 }
 
 ;// ./node_modules/@rc-component/drawer/es/context.js
@@ -66066,3136 +65342,6 @@ function PhrasesDrawer({ open, onClose, phrasesData, phrasesLoading, searchKeywo
                             addLog(`添加文本: ${value}`, 'success');
                             notify.success('添加文本: ' + value);
                         }, children: key }) }, key))) }))] }));
-}
-
-;// ./node_modules/antd/es/tag/style/index.js
-
-
-
-
-
-
-// ============================== Styles ==============================
-const tag_style_genBaseStyle = token => {
-  const {
-    paddingXXS,
-    lineWidth,
-    tagPaddingHorizontal,
-    componentCls,
-    calc
-  } = token;
-  const paddingInline = calc(tagPaddingHorizontal).sub(lineWidth).equal();
-  const iconMarginInline = calc(paddingXXS).sub(lineWidth).equal();
-  return {
-    // Result
-    [componentCls]: {
-      ...resetComponent(token),
-      display: 'inline-block',
-      height: 'auto',
-      paddingInline,
-      fontSize: token.tagFontSize,
-      lineHeight: token.tagLineHeight,
-      whiteSpace: 'nowrap',
-      backgroundColor: token.defaultBg,
-      border: `${util_unit(token.lineWidth)} ${token.lineType} ${token.colorBorder}`,
-      borderRadius: token.borderRadiusSM,
-      opacity: 1,
-      transition: `all ${token.motionDurationMid}`,
-      textAlign: 'start',
-      position: 'relative',
-      // RTL
-      [`&${componentCls}-rtl`]: {
-        direction: 'rtl'
-      },
-      '&, a, a:hover': {
-        color: token.defaultColor
-      },
-      [`${componentCls}-close-icon`]: {
-        marginInlineStart: iconMarginInline,
-        fontSize: token.tagIconSize,
-        color: token.colorIcon,
-        cursor: 'pointer',
-        transition: `all ${token.motionDurationMid}`,
-        '&:hover': {
-          color: token.colorTextHeading
-        }
-      },
-      '&-checkable': {
-        backgroundColor: 'transparent',
-        borderColor: 'transparent',
-        cursor: 'pointer',
-        [`&:not(${componentCls}-checkable-checked):hover`]: {
-          color: token.colorPrimary,
-          backgroundColor: token.colorFillSecondary
-        },
-        '&:active, &-checked': {
-          color: token.colorTextLightSolid
-        },
-        '&-checked': {
-          backgroundColor: token.colorPrimary,
-          '&:hover': {
-            backgroundColor: token.colorPrimaryHover
-          }
-        },
-        '&:active': {
-          backgroundColor: token.colorPrimaryActive
-        },
-        '&-disabled': {
-          cursor: 'not-allowed',
-          [`&:not(${componentCls}-checkable-checked)`]: {
-            color: token.colorTextDisabled,
-            '&:hover': {
-              backgroundColor: 'transparent'
-            }
-          },
-          [`&${componentCls}-checkable-checked`]: {
-            color: token.colorTextDisabled,
-            backgroundColor: token.colorBgContainerDisabled
-          },
-          '&:hover, &:active': {
-            backgroundColor: token.colorBgContainerDisabled,
-            color: token.colorTextDisabled
-          },
-          [`&:not(${componentCls}-checkable-checked):hover`]: {
-            color: token.colorTextDisabled
-          }
-        },
-        '&-group': {
-          display: 'flex',
-          flexWrap: 'wrap',
-          gap: token.paddingXS
-        }
-      },
-      '&-hidden': {
-        display: 'none'
-      },
-      // Icons from third-party libraries are a bare `<svg>`, which none of the `.anticon`
-      // rules reach. An `<svg>` has no baseline of its own, so it is aligned by its bottom
-      // margin edge (CSS 2.1 §10.8.1) and rides above the text. Centre it instead: unlike an
-      // `.anticon` (whose `<svg>` is always `1em`, so a fixed `-0.125em` nudge suffices), a
-      // third-party `<svg>` may be sized in `px`, so the correction must not depend on size.
-      // `display: inline-block` keeps it an atomic inline box so `vertical-align` still applies even
-      // under a CSS reset that forces `svg { display: block }` (e.g. Tailwind Preflight), which would
-      // otherwise drop the icon onto its own line. `vertical-align: middle` centres the margin box on
-      // the x-height line; `margin-block-end` then lifts it by half its own value onto the cap-height
-      // centre (capHeight − xHeight ≈ 0.2em across typical fonts), keeping it centred at any icon size.
-      // Only matches a bare `<svg>`: an `.anticon` keeps its `<svg>` one level deeper.
-      '> svg': {
-        display: 'inline-block',
-        verticalAlign: 'middle',
-        marginBlockEnd: '0.2em'
-      },
-      // To ensure that a space will be placed between character and `Icon`.
-      [`> ${token.iconCls} + span, > span + ${token.iconCls}, > svg + span, > span + svg`]: {
-        marginInlineStart: paddingInline
-      }
-    },
-    [`&${token.componentCls}-solid`]: {
-      borderColor: 'transparent',
-      color: token.colorTextLightSolid,
-      backgroundColor: token.colorBgSolid,
-      [`&${componentCls}-default`]: {
-        color: token.solidTextColor
-      }
-    },
-    [`${componentCls}-filled`]: {
-      borderColor: 'transparent',
-      backgroundColor: token.tagBorderlessBg
-    },
-    [`&${componentCls}-disabled`]: {
-      color: token.colorTextDisabled,
-      cursor: 'not-allowed',
-      backgroundColor: token.colorBgContainerDisabled,
-      a: {
-        cursor: 'not-allowed',
-        pointerEvents: 'none',
-        color: token.colorTextDisabled,
-        '&:hover': {
-          color: token.colorTextDisabled
-        }
-      },
-      'a&': {
-        '&:hover, &:active': {
-          color: token.colorTextDisabled
-        }
-      },
-      [`&${componentCls}-outlined`]: {
-        borderColor: token.colorBorderDisabled
-      },
-      [`&${componentCls}-solid, &${componentCls}-filled`]: {
-        color: token.colorTextDisabled,
-        [`${componentCls}-close-icon`]: {
-          color: token.colorTextDisabled
-        }
-      },
-      [`${componentCls}-close-icon`]: {
-        cursor: 'not-allowed',
-        color: token.colorTextDisabled,
-        '&:hover': {
-          color: token.colorTextDisabled
-        }
-      }
-    }
-  };
-};
-// ============================== Export ==============================
-const tag_style_prepareToken = token => {
-  const {
-    lineWidth,
-    fontSizeIcon,
-    calc
-  } = token;
-  const tagFontSize = token.fontSizeSM;
-  const tagToken = statistic_merge(token, {
-    tagFontSize,
-    tagLineHeight: util_unit(calc(token.lineHeightSM).mul(tagFontSize).equal()),
-    tagIconSize: calc(fontSizeIcon).sub(calc(lineWidth).mul(2)).equal(),
-    // Tag icon is much smaller
-    tagPaddingHorizontal: 8,
-    // Fixed padding.
-    tagBorderlessBg: token.defaultBg
-  });
-  return tagToken;
-};
-const tag_style_prepareComponentToken = token => {
-  const solidTextColor = isBright(new AggregationColor(token.colorBgSolid), '#fff') ? '#000' : '#fff';
-  return {
-    defaultBg: new FastColor(token.colorFillTertiary).onBackground(token.colorBgContainer).toHexString(),
-    defaultColor: token.colorText,
-    solidTextColor
-  };
-};
-/* harmony default export */ const tag_style = (genStyleHooks('Tag', token => {
-  const tagToken = tag_style_prepareToken(token);
-  return tag_style_genBaseStyle(tagToken);
-}, tag_style_prepareComponentToken));
-;// ./node_modules/antd/es/tag/CheckableTag.js
-"use client";
-
-
-
-
-
-
-const CheckableTag = /*#__PURE__*/(react_production_namespaceFn().forwardRef)((props, ref) => {
-  const {
-    prefixCls: customizePrefixCls,
-    style,
-    className,
-    checked,
-    children,
-    icon,
-    onChange,
-    onClick,
-    onKeyDown,
-    disabled: customDisabled,
-    ...restProps
-  } = props;
-  const {
-    getPrefixCls,
-    tag
-  } = (react_production_namespaceFn().useContext)(ConfigContext);
-  const disabled = (react_production_namespaceFn().useContext)(config_provider_DisabledContext);
-  const mergedDisabled = customDisabled ?? disabled;
-  const handleClick = e => {
-    if (mergedDisabled) {
-      return;
-    }
-    onChange?.(!checked);
-    onClick?.(e);
-  };
-  const handleKeyDown = e => {
-    onKeyDown?.(e);
-    if (e.defaultPrevented || mergedDisabled) {
-      return;
-    }
-    if (e.key === ' ') {
-      e.preventDefault();
-      if (!e.repeat) {
-        onChange?.(!checked);
-      }
-    }
-  };
-  const prefixCls = getPrefixCls('tag', customizePrefixCls);
-  // Style
-  const [hashId, cssVarCls] = tag_style(prefixCls);
-  const cls = clsx(prefixCls, `${prefixCls}-checkable`, {
-    [`${prefixCls}-checkable-checked`]: checked,
-    [`${prefixCls}-checkable-disabled`]: mergedDisabled
-  }, tag?.className, className, hashId, cssVarCls);
-  return /*#__PURE__*/(react_production_namespaceFn().createElement)("span", {
-    ...restProps,
-    ref: ref,
-    role: "checkbox",
-    "aria-checked": checked,
-    "aria-disabled": mergedDisabled || undefined,
-    tabIndex: mergedDisabled ? -1 : 0,
-    style: {
-      ...tag?.style,
-      ...style
-    },
-    className: cls,
-    onClick: handleClick,
-    onKeyDown: handleKeyDown
-  }, icon, /*#__PURE__*/(react_production_namespaceFn().createElement)("span", null, children));
-});
-/* harmony default export */ const tag_CheckableTag = (CheckableTag);
-;// ./node_modules/antd/es/tag/CheckableTagGroup.js
-"use client";
-
-
-
-
-
-
-
-
-
-
-
-const CheckableTagGroup = /*#__PURE__*/(react_production_namespaceFn().forwardRef)((props, ref) => {
-  const {
-    id,
-    prefixCls: customizePrefixCls,
-    rootClassName,
-    className,
-    style,
-    classNames,
-    styles,
-    disabled,
-    options,
-    value,
-    defaultValue,
-    onChange,
-    multiple,
-    ...restProps
-  } = props;
-  const {
-    getPrefixCls,
-    direction,
-    className: contextClassName,
-    style: contextStyle,
-    classNames: contextClassNames,
-    styles: contextStyles
-  } = useComponentConfig('tag');
-  const prefixCls = getPrefixCls('tag', customizePrefixCls);
-  const groupPrefixCls = `${prefixCls}-checkable-group`;
-  const rootCls = hooks_useCSSVarCls(prefixCls);
-  const [hashId, cssVarCls] = tag_style(prefixCls, rootCls);
-  // ====================== Styles ======================
-  const contextStyleRoot = useSemanticRootStyle(contextStyle);
-  const styleRoot = useSemanticRootStyle(style);
-  const [mergedClassNames, mergedStyles] = useMergeSemantic([contextClassNames, classNames], [contextStyles, contextStyleRoot, styles, styleRoot], {
-    props
-  });
-  // =============================== Option ===============================
-  const parsedOptions = (0,react_production_namespaceFn().useMemo)(() => {
-    if (!Array.isArray(options)) {
-      return [];
-    }
-    return options.map(option => {
-      if (is_isPlainObject(option)) {
-        return option;
-      }
-      return {
-        value: option,
-        label: option
-      };
-    });
-  }, [options]);
-  // =============================== Values ===============================
-  const [mergedValue, setMergedValue] = useControlledState(defaultValue, value);
-  const handleChange = (checked, option) => {
-    let newValue = null;
-    if (multiple) {
-      const valueList = mergedValue || [];
-      newValue = checked ? [].concat(_toConsumableArray(valueList), [option.value]) : valueList.filter(item => item !== option.value);
-    } else {
-      newValue = checked ? option.value : null;
-    }
-    setMergedValue(newValue);
-    onChange?.(newValue); // TS not support generic type in function call
-  };
-  // ================================ Refs ================================
-  const divRef = (react_production_namespaceFn().useRef)(null);
-  (0,react_production_namespaceFn().useImperativeHandle)(ref, () => ({
-    nativeElement: divRef.current
-  }));
-  // ================================ ARIA ================================
-  const ariaProps = pickAttrs(restProps, {
-    aria: true,
-    data: true
-  });
-  // =============================== Render ===============================
-  return /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
-    ...ariaProps,
-    className: clsx(groupPrefixCls, contextClassName, rootClassName, {
-      [`${groupPrefixCls}-disabled`]: disabled,
-      [`${groupPrefixCls}-rtl`]: direction === 'rtl'
-    }, hashId, cssVarCls, className, mergedClassNames.root),
-    style: mergedStyles.root,
-    id: id,
-    ref: divRef
-  }, parsedOptions.map(option => (/*#__PURE__*/(react_production_namespaceFn().createElement)(tag_CheckableTag, {
-    key: option.value,
-    className: clsx(`${groupPrefixCls}-item`, mergedClassNames.item, option.className),
-    style: {
-      ...mergedStyles.item,
-      ...option.style
-    },
-    checked: multiple ? (mergedValue || []).includes(option.value) : mergedValue === option.value,
-    onChange: checked => handleChange(checked, option),
-    disabled: disabled
-  }, option.label))));
-});
-if (false) // removed by dead control flow
-{}
-/* harmony default export */ const tag_CheckableTagGroup = (CheckableTagGroup);
-;// ./node_modules/antd/es/tag/hooks/useColor.js
-
-
-
-/**
- * Convert color related props to a unified object,
- * which is used to flatten the compatibility requirements.
- */
-function useColor(props, contextVariant) {
-  const {
-    color,
-    variant,
-    bordered
-  } = props;
-  return (react_production_namespaceFn().useMemo)(() => {
-    const isInverseColor = color?.endsWith('-inverse');
-    // =================== Variant ===================
-    let nextVariant;
-    if (variant) {
-      // `variant` first
-      nextVariant = variant;
-    } else if (isInverseColor) {
-      // Fallback if using inverse color
-      nextVariant = 'solid';
-    } else if (bordered === false) {
-      // Fallback if using filled
-      nextVariant = 'filled';
-    } else {
-      // Finally not conflict, use context
-      nextVariant = contextVariant || 'filled';
-    }
-    // ==================== Color ====================
-    let nextColor = isInverseColor ? color?.replace('-inverse', '') : color;
-    if (nextColor === undefined && nextVariant === 'solid') {
-      nextColor = 'default';
-    }
-    // =============== Preset & Status ===============
-    const nextIsPreset = isPresetColor(nextColor);
-    const nextIsStatus = isPresetStatusColor(nextColor);
-    // ================== Customize ==================
-    // When `color` is not preset color,
-    // dynamic calculate the color pair.
-    const tagStyle = {};
-    if (!nextIsPreset && !nextIsStatus && nextColor) {
-      if (nextVariant === 'solid') {
-        tagStyle.backgroundColor = color;
-      } else {
-        const hsl = new FastColor(nextColor).toHsl();
-        hsl.l = 0.95;
-        tagStyle.backgroundColor = new FastColor(hsl).toHexString();
-        tagStyle.color = color;
-        if (nextVariant === 'outlined') {
-          tagStyle.borderColor = color;
-        }
-      }
-    }
-    return [nextVariant, nextColor, nextIsPreset, nextIsStatus, tagStyle];
-  }, [color, variant, bordered, contextVariant]);
-}
-;// ./node_modules/antd/es/tag/style/presetCmp.js
-// Style as status component
-
-
-// ============================== Preset ==============================
-const genPresetStyle = token => genPresetColor_genPresetColor(token, (colorKey, {
-  textColor,
-  lightBorderColor,
-  lightColor,
-  darkColor
-}) => ({
-  [`${token.componentCls}${token.componentCls}-${colorKey}:not(${token.componentCls}-disabled)`]: {
-    [`&${token.componentCls}-outlined`]: {
-      backgroundColor: lightColor,
-      borderColor: lightBorderColor,
-      color: textColor
-    },
-    [`&${token.componentCls}-solid`]: {
-      backgroundColor: darkColor,
-      borderColor: darkColor,
-      color: token.colorTextLightSolid
-    },
-    [`&${token.componentCls}-filled`]: {
-      backgroundColor: lightColor,
-      color: textColor
-    }
-  }
-}));
-// ============================== Export ==============================
-/* harmony default export */ const presetCmp = (genSubStyleComponent(['Tag', 'preset'], token => {
-  const tagToken = tag_style_prepareToken(token);
-  return genPresetStyle(tagToken);
-}, tag_style_prepareComponentToken));
-;// ./node_modules/antd/es/_util/capitalize.js
-function capitalize(str) {
-  if (typeof str !== 'string') {
-    return str;
-  }
-  const ret = str.charAt(0).toUpperCase() + str.slice(1);
-  return ret;
-}
-;// ./node_modules/antd/es/tag/style/statusCmp.js
-
-
-
-const genTagStatusStyle = (token, status, cssVariableType) => {
-  const capitalizedCssVariableType = capitalize(cssVariableType);
-  return {
-    [`${token.componentCls}${token.componentCls}-${status}:not(${token.componentCls}-disabled)`]: {
-      [`&${token.componentCls}-outlined`]: {
-        backgroundColor: token[`color${capitalizedCssVariableType}Bg`],
-        borderColor: token[`color${capitalizedCssVariableType}Border`],
-        color: token[`color${cssVariableType}`]
-      },
-      [`&${token.componentCls}-solid`]: {
-        backgroundColor: token[`color${cssVariableType}`],
-        borderColor: token[`color${cssVariableType}`]
-      },
-      [`&${token.componentCls}-filled`]: {
-        backgroundColor: token[`color${capitalizedCssVariableType}Bg`],
-        color: token[`color${cssVariableType}`]
-      }
-    }
-  };
-};
-// ============================== Export ==============================
-/* harmony default export */ const statusCmp = (genSubStyleComponent(['Tag', 'status'], token => {
-  const tagToken = tag_style_prepareToken(token);
-  return [genTagStatusStyle(tagToken, 'success', 'Success'), genTagStatusStyle(tagToken, 'processing', 'Info'), genTagStatusStyle(tagToken, 'error', 'Error'), genTagStatusStyle(tagToken, 'warning', 'Warning')];
-}, tag_style_prepareComponentToken));
-;// ./node_modules/antd/es/tag/index.js
-"use client";
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-const InternalTag = /*#__PURE__*/(react_production_namespaceFn().forwardRef)((props, ref) => {
-  const {
-    prefixCls: customizePrefixCls,
-    className,
-    rootClassName,
-    style,
-    children,
-    icon,
-    color,
-    variant: _variant,
-    onClose,
-    bordered,
-    disabled: customDisabled,
-    href,
-    target,
-    styles,
-    classNames,
-    ...restProps
-  } = props;
-  const {
-    getPrefixCls,
-    direction,
-    className: contextClassName,
-    variant: contextVariant,
-    style: contextStyle,
-    classNames: contextClassNames,
-    styles: contextStyles
-  } = useComponentConfig('tag');
-  // ===================== Warnings =====================
-  if (false) // removed by dead control flow
-{}
-  // ====================== Colors ======================
-  const [mergedVariant, mergedColor, isPreset, isStatus, customTagStyle] = useColor(props, contextVariant);
-  const isInternalColor = isPreset || isStatus;
-  // ===================== Disabled =====================
-  const disabled = (react_production_namespaceFn().useContext)(config_provider_DisabledContext);
-  const mergedDisabled = customDisabled ?? disabled;
-  const {
-    tag: tagContext
-  } = (react_production_namespaceFn().useContext)(ConfigContext);
-  const [visible, setVisible] = (react_production_namespaceFn().useState)(true);
-  const domProps = omit(restProps, ['closeIcon', 'closable']);
-  // =========== Merged Props for Semantic ===========
-  const mergedProps = {
-    ...props,
-    color: mergedColor,
-    variant: mergedVariant,
-    disabled: mergedDisabled
-  };
-  // ====================== Styles ======================
-  const contextStyleRoot = useSemanticRootStyle(contextStyle);
-  const styleRoot = useSemanticRootStyle(style);
-  const [mergedClassNames, mergedStyles] = useMergeSemantic([contextClassNames, classNames], [contextStyles, contextStyleRoot, styles, styleRoot], {
-    props: mergedProps
-  });
-  const tagStyle = (react_production_namespaceFn().useMemo)(() => {
-    let nextTagStyle = mergedStyles.root;
-    if (!mergedDisabled) {
-      nextTagStyle = {
-        ...customTagStyle,
-        ...nextTagStyle
-      };
-    }
-    return nextTagStyle;
-  }, [mergedStyles.root, customTagStyle, mergedDisabled]);
-  const prefixCls = getPrefixCls('tag', customizePrefixCls);
-  const [hashId, cssVarCls] = tag_style(prefixCls);
-  const tagClassName = clsx(prefixCls, contextClassName, mergedClassNames.root, `${prefixCls}-${mergedVariant}`, {
-    [`${prefixCls}-${mergedColor}`]: isInternalColor,
-    [`${prefixCls}-hidden`]: !visible,
-    [`${prefixCls}-rtl`]: direction === 'rtl',
-    [`${prefixCls}-disabled`]: mergedDisabled
-  }, className, rootClassName, hashId, cssVarCls);
-  // ===================== Closable =====================
-  const triggerClose = e => {
-    if (mergedDisabled) {
-      return;
-    }
-    e.stopPropagation();
-    onClose?.(e);
-    if (e.defaultPrevented) {
-      return;
-    }
-    if (href) {
-      e.preventDefault();
-    }
-    setVisible(false);
-  };
-  const handleCloseKeyDown = e => {
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault();
-      if (!e.repeat) {
-        e.currentTarget.click();
-      }
-    }
-  };
-  const [, mergedCloseIcon] = useClosable_useClosable(pickClosable(props), pickClosable(tagContext), {
-    closable: false,
-    closeIconRender: iconNode => {
-      const replacement = /*#__PURE__*/(react_production_namespaceFn().createElement)("span", {
-        role: "button",
-        tabIndex: mergedDisabled ? -1 : 0,
-        "aria-disabled": mergedDisabled || undefined,
-        className: clsx(`${prefixCls}-close-icon`, mergedClassNames.close),
-        onClick: triggerClose,
-        onKeyDown: handleCloseKeyDown,
-        style: mergedStyles.close
-      }, iconNode);
-      return replaceElement(iconNode, replacement, originProps => ({
-        onClick: e => {
-          originProps?.onClick?.(e);
-          triggerClose(e);
-        },
-        onKeyDown: e => {
-          originProps?.onKeyDown?.(e);
-          if (!e.defaultPrevented) {
-            handleCloseKeyDown(e);
-          }
-        },
-        role: 'button',
-        tabIndex: mergedDisabled ? -1 : 0,
-        'aria-disabled': mergedDisabled || undefined,
-        className: clsx(originProps?.className, `${prefixCls}-close-icon`, mergedClassNames.close),
-        style: {
-          ...mergedStyles.close,
-          ...originProps?.style
-        }
-      }));
-    }
-  });
-  // ====================== Render ======================
-  const isNeedWave = isFunction(restProps.onClick) || children && children.type === 'a';
-  const iconNode = cloneElement(icon, {
-    className: clsx(/*#__PURE__*/(react_production_namespaceFn().isValidElement)(icon) ? icon.props?.className : undefined, mergedClassNames.icon),
-    style: mergedStyles.icon
-  });
-  const child = iconNode ? (/*#__PURE__*/(react_production_namespaceFn().createElement)((react_production_namespaceFn().Fragment), null, iconNode, isReactRenderable(children) && (/*#__PURE__*/(react_production_namespaceFn().createElement)("span", {
-    className: mergedClassNames.content,
-    style: mergedStyles.content
-  }, children)))) : children;
-  const TagWrapper = href ? 'a' : 'span';
-  const tagNode = /*#__PURE__*/(react_production_namespaceFn().createElement)(TagWrapper, {
-    ...domProps,
-    ref: ref,
-    className: tagClassName,
-    style: tagStyle,
-    href: mergedDisabled ? undefined : href,
-    target: target,
-    onClick: mergedDisabled ? undefined : domProps.onClick,
-    ...(href && mergedDisabled ? {
-      'aria-disabled': true
-    } : {})
-  }, child, mergedCloseIcon, isPreset && /*#__PURE__*/(react_production_namespaceFn().createElement)(presetCmp, {
-    key: "preset",
-    prefixCls: prefixCls
-  }), isStatus && /*#__PURE__*/(react_production_namespaceFn().createElement)(statusCmp, {
-    key: "status",
-    prefixCls: prefixCls
-  }));
-  return isNeedWave ? /*#__PURE__*/(react_production_namespaceFn().createElement)(wave, {
-    component: "Tag"
-  }, tagNode) : tagNode;
-});
-const Tag = InternalTag;
-if (false) // removed by dead control flow
-{}
-Tag.CheckableTag = tag_CheckableTag;
-Tag.CheckableTagGroup = tag_CheckableTagGroup;
-/* harmony default export */ const es_tag = (Tag);
-;// ./node_modules/@rc-component/checkbox/es/index.js
-function checkbox_es_extends() { checkbox_es_extends = Object.assign ? Object.assign.bind() : function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; }; return checkbox_es_extends.apply(this, arguments); }
-;
-
-
-
-const Checkbox = /*#__PURE__*/(0,react_production_namespaceFn().forwardRef)((props, ref) => {
-  const {
-    prefixCls = 'rc-checkbox',
-    className,
-    style,
-    checked,
-    disabled,
-    defaultChecked = false,
-    type = 'checkbox',
-    title,
-    onChange,
-    ...inputProps
-  } = props;
-  const inputRef = (0,react_production_namespaceFn().useRef)(null);
-  const holderRef = (0,react_production_namespaceFn().useRef)(null);
-  const [rawValue, setRawValue] = useControlledState(defaultChecked, checked);
-  (0,react_production_namespaceFn().useImperativeHandle)(ref, () => ({
-    focus: options => {
-      inputRef.current?.focus(options);
-    },
-    blur: () => {
-      inputRef.current?.blur();
-    },
-    input: inputRef.current,
-    nativeElement: holderRef.current
-  }));
-  const classString = clsx(prefixCls, className, {
-    [`${prefixCls}-checked`]: rawValue,
-    [`${prefixCls}-disabled`]: disabled
-  });
-  const handleChange = e => {
-    if (disabled) {
-      return;
-    }
-    if (!('checked' in props)) {
-      setRawValue(e.target.checked);
-    }
-    onChange?.({
-      target: {
-        ...props,
-        type,
-        checked: e.target.checked
-      },
-      stopPropagation() {
-        e.stopPropagation();
-      },
-      preventDefault() {
-        e.preventDefault();
-      },
-      nativeEvent: e.nativeEvent
-    });
-  };
-  return /*#__PURE__*/(react_production_namespaceFn().createElement)("span", {
-    className: classString,
-    title: title,
-    style: style,
-    ref: holderRef
-  }, /*#__PURE__*/(react_production_namespaceFn().createElement)("input", checkbox_es_extends({}, inputProps, {
-    className: `${prefixCls}-input`,
-    ref: inputRef,
-    onChange: handleChange,
-    disabled: disabled,
-    checked: !!rawValue,
-    type: type
-  })));
-});
-/* harmony default export */ const checkbox_es = (Checkbox);
-;// ./node_modules/antd/es/checkbox/GroupContext.js
-
-const GroupContext = /*#__PURE__*/(react_production_namespaceFn().createContext)(null);
-/* harmony default export */ const checkbox_GroupContext = (GroupContext);
-;// ./node_modules/antd/es/checkbox/style/index.js
-
-
-
-
-// ============================== Styles ==============================
-const genCheckboxStyle = token => {
-  const {
-    checkboxCls,
-    checkboxSize,
-    lineWidth
-  } = token;
-  const wrapperCls = `${checkboxCls}-wrapper`;
-  const hoverMediaQuery = '@media (hover: hover) and (pointer: fine)';
-  return [
-  // ===================== Basic =====================
-  {
-    // Group
-    [`${checkboxCls}-group`]: {
-      ...resetComponent(token),
-      display: 'inline-flex',
-      flexWrap: 'wrap',
-      columnGap: token.marginXS,
-      // Group > Grid
-      [`> ${token.antCls}-row`]: {
-        flex: 1
-      }
-    },
-    // Wrapper
-    [wrapperCls]: {
-      ...resetComponent(token),
-      display: 'inline-flex',
-      alignItems: 'baseline',
-      cursor: 'pointer',
-      // Fix checkbox & radio in flex align #30260
-      '&:after': {
-        display: 'inline-block',
-        width: 0,
-        overflow: 'hidden',
-        content: "'\\a0'"
-      },
-      // Checkbox near checkbox
-      [`& + ${wrapperCls}`]: {
-        marginInlineStart: 0
-      }
-    },
-    // Wrapper > Checkbox
-    [checkboxCls]: {
-      ...resetComponent(token),
-      position: 'relative',
-      whiteSpace: 'nowrap',
-      lineHeight: 1,
-      cursor: 'pointer',
-      // To make alignment right when `controlHeight` is changed
-      // Ref: https://github.com/ant-design/ant-design/issues/41564
-      alignSelf: 'center',
-      // Styles moved from inner
-      boxSizing: 'border-box',
-      display: 'block',
-      width: checkboxSize,
-      height: checkboxSize,
-      direction: 'ltr',
-      backgroundColor: token.colorBgContainer,
-      border: `${util_unit(lineWidth)} ${token.lineType} ${token.colorBorder}`,
-      borderRadius: token.borderRadiusSM,
-      borderCollapse: 'separate',
-      transition: `all ${token.motionDurationSlow}`,
-      flex: 'none',
-      ...genNoMotionStyle(),
-      // Checkmark
-      '&:after': {
-        boxSizing: 'border-box',
-        position: 'absolute',
-        top: `calc(${checkboxSize} / 2 - ${lineWidth})`,
-        insetInlineStart: `calc(${checkboxSize} / 4 - ${lineWidth})`,
-        display: 'table',
-        width: token.calc(checkboxSize).div(14).mul(5).equal(),
-        height: token.calc(checkboxSize).div(14).mul(8).equal(),
-        border: `${util_unit(token.lineWidthBold)} solid ${token.colorWhite}`,
-        borderTop: 0,
-        borderInlineStart: 0,
-        transform: 'rotate(45deg) scale(0) translate(-50%,-50%)',
-        opacity: 0,
-        content: '""',
-        transition: `all ${token.motionDurationFast} ${token.motionEaseInBack}, opacity ${token.motionDurationFast}`,
-        ...genNoMotionRawStyle()
-      },
-      // Wrapper > Checkbox > input
-      [`${checkboxCls}-input`]: {
-        position: 'absolute',
-        // Since baseline align will get additional space offset,
-        // we need to move input to top to make it align with text.
-        // Ref: https://github.com/ant-design/ant-design/issues/38926#issuecomment-1486137799
-        inset: `calc(-1 * (${lineWidth}))`,
-        zIndex: 1,
-        cursor: 'pointer',
-        opacity: 0,
-        margin: 0
-      },
-      // Focus outline on checkbox when input is focus-visible
-      [`&:has(${checkboxCls}-input:focus-visible)`]: genFocusOutline(token),
-      // Wrapper > Checkbox + Text
-      '& + span': {
-        paddingInlineStart: token.paddingXS,
-        paddingInlineEnd: token.paddingXS
-      }
-    }
-  },
-  // ===================== Hover =====================
-  {
-    [hoverMediaQuery]: {
-      // Wrapper & Wrapper > Checkbox
-      [`
-          ${wrapperCls}:not(${wrapperCls}-disabled),
-          ${checkboxCls}:not(${checkboxCls}-disabled)
-        `]: {
-        [`&:hover ${checkboxCls}`]: {
-          borderColor: token.colorPrimary
-        }
-      },
-      [`${wrapperCls}:not(${wrapperCls}-disabled)`]: {
-        [`&:hover ${checkboxCls}-checked:not(${checkboxCls}-disabled)`]: {
-          backgroundColor: token.colorPrimaryHover,
-          borderColor: 'transparent'
-        }
-      }
-    }
-  },
-  // ==================== Checked ====================
-  {
-    // Wrapper > Checkbox
-    [`${checkboxCls}-checked`]: {
-      backgroundColor: token.colorPrimary,
-      borderColor: token.colorPrimary,
-      '&:after': {
-        opacity: 1,
-        transform: 'rotate(45deg) scale(1) translate(-50%,-50%)',
-        transition: `all ${token.motionDurationMid} ${token.motionEaseOutBack} ${token.motionDurationFast}`,
-        ...genNoMotionRawStyle()
-      },
-      [hoverMediaQuery]: {
-        // Hover on checked checkbox directly
-        [`&:not(${checkboxCls}-disabled):hover`]: {
-          backgroundColor: token.colorPrimaryHover,
-          borderColor: 'transparent'
-        }
-      }
-    }
-  },
-  // ================= Indeterminate =================
-  {
-    [checkboxCls]: {
-      '&-indeterminate': {
-        backgroundColor: token.colorBgContainer,
-        borderColor: token.colorBorder,
-        '&:after': {
-          top: '50%',
-          insetInlineStart: '50%',
-          width: token.calc(token.fontSizeLG).div(2).equal(),
-          height: token.calc(token.fontSizeLG).div(2).equal(),
-          backgroundColor: token.colorPrimary,
-          border: 0,
-          transform: 'translate(-50%, -50%) scale(1)',
-          opacity: 1,
-          content: '""'
-        },
-        [hoverMediaQuery]: {
-          // https://github.com/ant-design/ant-design/issues/50074
-          [`&:not(${checkboxCls}-disabled):hover`]: {
-            backgroundColor: token.colorBgContainer,
-            borderColor: token.colorPrimary
-          }
-        }
-      }
-    }
-  },
-  // ==================== Disable ====================
-  {
-    // Wrapper
-    [`${wrapperCls}-disabled`]: {
-      cursor: 'not-allowed'
-    },
-    // Wrapper > Checkbox
-    [`${checkboxCls}-disabled`]: {
-      // Wrapper > Checkbox > input
-      [`&, ${checkboxCls}-input`]: {
-        cursor: 'not-allowed',
-        // Disabled for native input to enable Tooltip event handler
-        // ref: https://github.com/ant-design/ant-design/issues/39822#issuecomment-1365075901
-        pointerEvents: 'none'
-      },
-      // Disabled checkbox styles
-      background: token.colorBgContainerDisabled,
-      borderColor: token.colorBorder,
-      '&:after': {
-        borderColor: token.colorTextDisabled
-      },
-      '& + span': {
-        color: token.colorTextDisabled
-      },
-      [`&${checkboxCls}-indeterminate::after`]: {
-        background: token.colorTextDisabled
-      }
-    }
-  }];
-};
-// ============================== Export ==============================
-function getStyle(prefixCls, token) {
-  const checkboxToken = statistic_merge(token, {
-    checkboxCls: `.${prefixCls}`,
-    checkboxSize: token.controlInteractiveSize
-  });
-  return genCheckboxStyle(checkboxToken);
-}
-/* harmony default export */ const checkbox_style = (genStyleHooks('Checkbox', (token, {
-  prefixCls
-}) => [getStyle(prefixCls, token)]));
-;// ./node_modules/antd/es/checkbox/useBubbleLock.js
-
-
-/**
- * When click on the label,
- * the event will be stopped to prevent the label from being clicked twice.
- * label click -> input click -> label click again
- */
-function useBubbleLock(onOriginInputClick) {
-  const labelClickLockRef = (react_production_namespaceFn().useRef)(null);
-  const clearLock = () => {
-    es_raf.cancel(labelClickLockRef.current);
-    labelClickLockRef.current = null;
-  };
-  const onLabelClick = () => {
-    clearLock();
-    labelClickLockRef.current = es_raf(() => {
-      labelClickLockRef.current = null;
-    });
-  };
-  const onInputClick = e => {
-    if (labelClickLockRef.current) {
-      e.stopPropagation();
-      clearLock();
-    }
-    onOriginInputClick?.(e);
-  };
-  return [onLabelClick, onInputClick];
-}
-;// ./node_modules/antd/es/checkbox/Checkbox.js
-"use client";
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-const InternalCheckbox = (props, ref) => {
-  const {
-    prefixCls: customizePrefixCls,
-    children,
-    indeterminate = false,
-    onMouseEnter,
-    onMouseLeave,
-    skipGroup = false,
-    disabled,
-    // Style
-    rootClassName,
-    className,
-    style,
-    classNames,
-    styles,
-    // Name
-    name,
-    // Value
-    value,
-    // Checked
-    checked,
-    defaultChecked,
-    onChange,
-    ...restProps
-  } = props;
-  const {
-    getPrefixCls,
-    direction,
-    className: contextClassName,
-    style: contextStyle,
-    classNames: contextClassNames,
-    styles: contextStyles
-  } = useComponentConfig('checkbox');
-  const checkboxGroup = (react_production_namespaceFn().useContext)(checkbox_GroupContext);
-  const {
-    isFormItemInput
-  } = (react_production_namespaceFn().useContext)(FormItemInputContext);
-  const contextDisabled = (react_production_namespaceFn().useContext)(config_provider_DisabledContext);
-  const mergedDisabled = disabled ?? checkboxGroup?.disabled ?? contextDisabled;
-  // ============================= Warning ==============================
-  if (false) // removed by dead control flow
-{}
-  // ============================= Checked ==============================
-  const [innerChecked, setInnerChecked] = useControlledState(defaultChecked, checked);
-  let mergedChecked = innerChecked;
-  const onInternalChange = hooks_useEvent(event => {
-    setInnerChecked(event.target.checked);
-    onChange?.(event);
-    if (!skipGroup && checkboxGroup?.toggleOption) {
-      checkboxGroup.toggleOption({
-        label: children,
-        value
-      });
-    }
-  });
-  // ============================== Group ===============================
-  if (checkboxGroup && !skipGroup) {
-    mergedChecked = checkboxGroup.value.includes(value);
-  }
-  const checkboxRef = (react_production_namespaceFn().useRef)(null);
-  const mergedRef = useComposeRef(ref, checkboxRef);
-  (react_production_namespaceFn().useEffect)(() => {
-    if (skipGroup || !checkboxGroup) {
-      return;
-    }
-    checkboxGroup.registerValue(value);
-    return () => {
-      checkboxGroup.cancelValue(value);
-    };
-  }, [value, skipGroup]);
-  // ========================== Indeterminate ===========================
-  (react_production_namespaceFn().useEffect)(() => {
-    if (checkboxRef.current?.input) {
-      checkboxRef.current.input.indeterminate = indeterminate;
-    }
-  }, [indeterminate]);
-  // ============================== Style ===============================
-  const prefixCls = getPrefixCls('checkbox', customizePrefixCls);
-  const rootCls = hooks_useCSSVarCls(prefixCls);
-  const [hashId, cssVarCls] = checkbox_style(prefixCls, rootCls);
-  const checkboxProps = {
-    ...restProps
-  };
-  // =========== Merged Props for Semantic ==========
-  const mergedProps = {
-    ...props,
-    indeterminate,
-    disabled: mergedDisabled,
-    checked: mergedChecked
-  };
-  const contextStyleRoot = useSemanticRootStyle(contextStyle);
-  const styleRoot = useSemanticRootStyle(style);
-  const [mergedClassNames, mergedStyles] = useMergeSemantic([contextClassNames, classNames], [contextStyles, contextStyleRoot, styles, styleRoot], {
-    props: mergedProps
-  });
-  const classString = clsx(`${prefixCls}-wrapper`, {
-    [`${prefixCls}-rtl`]: direction === 'rtl',
-    [`${prefixCls}-wrapper-checked`]: mergedChecked,
-    [`${prefixCls}-wrapper-disabled`]: mergedDisabled,
-    [`${prefixCls}-wrapper-in-form-item`]: isFormItemInput
-  }, contextClassName, className, mergedClassNames.root, rootClassName, cssVarCls, rootCls, hashId);
-  const checkboxClass = clsx(mergedClassNames.icon, {
-    [`${prefixCls}-indeterminate`]: indeterminate
-  }, TARGET_CLS, hashId);
-  // ============================ Event Lock ============================
-  const [onLabelClick, onInputClick] = useBubbleLock(checkboxProps.onClick);
-  // ============================== Render ==============================
-  return /*#__PURE__*/(react_production_namespaceFn().createElement)(wave, {
-    component: "Checkbox",
-    disabled: mergedDisabled
-  }, /*#__PURE__*/(react_production_namespaceFn().createElement)("label", {
-    className: classString,
-    style: mergedStyles.root,
-    onMouseEnter: onMouseEnter,
-    onMouseLeave: onMouseLeave,
-    onClick: onLabelClick
-  }, /*#__PURE__*/(react_production_namespaceFn().createElement)(checkbox_es, {
-    ...checkboxProps,
-    name: !skipGroup && checkboxGroup ? checkboxGroup.name : name,
-    checked: mergedChecked,
-    onClick: onInputClick,
-    onChange: onInternalChange,
-    prefixCls: prefixCls,
-    className: checkboxClass,
-    style: mergedStyles.icon,
-    disabled: mergedDisabled,
-    ref: mergedRef,
-    value: value
-  }), isReactRenderable(children) && (/*#__PURE__*/(react_production_namespaceFn().createElement)("span", {
-    className: clsx(`${prefixCls}-label`, mergedClassNames.label),
-    style: mergedStyles.label
-  }, children))));
-};
-const Checkbox_Checkbox = /*#__PURE__*/(react_production_namespaceFn().forwardRef)(InternalCheckbox);
-if (false) // removed by dead control flow
-{}
-/* harmony default export */ const checkbox_Checkbox = (Checkbox_Checkbox);
-;// ./node_modules/antd/es/checkbox/Group.js
-"use client";
-
-
-
-
-
-
-
-
-
-
-
-const CheckboxGroup = /*#__PURE__*/(react_production_namespaceFn().forwardRef)((props, ref) => {
-  const {
-    defaultValue,
-    children,
-    options = [],
-    prefixCls: customizePrefixCls,
-    className,
-    rootClassName,
-    style,
-    onChange,
-    role = 'group',
-    ...restProps
-  } = props;
-  const {
-    getPrefixCls,
-    direction
-  } = (react_production_namespaceFn().useContext)(ConfigContext);
-  const [value, setValue] = useControlledState(defaultValue || [], restProps.value);
-  const mergedValue = value || [];
-  const [registeredValues, setRegisteredValues] = (react_production_namespaceFn().useState)([]);
-  const memoizedOptions = (react_production_namespaceFn().useMemo)(() => {
-    return options.map(option => {
-      if (isString(option) || isNumber(option)) {
-        return {
-          label: option,
-          value: option
-        };
-      }
-      return option;
-    }).filter(item => isNonNullable(item) && isNonNullable(item.value));
-  }, [options]);
-  const cancelValue = val => {
-    setRegisteredValues(prevValues => prevValues.filter(v => v !== val));
-  };
-  const registerValue = val => {
-    setRegisteredValues(prevValues => [].concat(_toConsumableArray(prevValues), [val]));
-  };
-  const toggleOption = option => {
-    const optionIndex = mergedValue.indexOf(option.value);
-    const newValue = _toConsumableArray(mergedValue);
-    if (optionIndex === -1) {
-      newValue.push(option.value);
-    } else {
-      newValue.splice(optionIndex, 1);
-    }
-    setValue(newValue);
-    onChange?.(newValue.filter(val => registeredValues.includes(val)).sort((a, b) => {
-      const indexA = memoizedOptions.findIndex(opt => opt.value === a);
-      const indexB = memoizedOptions.findIndex(opt => opt.value === b);
-      return indexA - indexB;
-    }));
-  };
-  const prefixCls = getPrefixCls('checkbox', customizePrefixCls);
-  const groupPrefixCls = `${prefixCls}-group`;
-  const rootCls = hooks_useCSSVarCls(prefixCls);
-  const [hashId, cssVarCls] = checkbox_style(prefixCls, rootCls);
-  const domProps = omit(restProps, ['value', 'disabled']);
-  const childrenNode = Array.isArray(memoizedOptions) && memoizedOptions.length > 0 ? memoizedOptions.map(option => (/*#__PURE__*/(react_production_namespaceFn().createElement)(checkbox_Checkbox, {
-    prefixCls: prefixCls,
-    key: option.value.toString(),
-    disabled: 'disabled' in option ? option.disabled : restProps.disabled,
-    value: option.value,
-    checked: mergedValue.includes(option.value),
-    onChange: option.onChange,
-    className: clsx(`${groupPrefixCls}-item`, option.className),
-    style: option.style,
-    title: option.title,
-    id: option.id,
-    required: option.required
-  }, option.label))) : children;
-  const memoizedContext = (react_production_namespaceFn().useMemo)(() => ({
-    toggleOption,
-    value: mergedValue,
-    disabled: restProps.disabled,
-    name: restProps.name,
-    // https://github.com/ant-design/ant-design/issues/16376
-    registerValue,
-    cancelValue
-  }), [toggleOption, mergedValue, restProps.disabled, restProps.name, registerValue, cancelValue]);
-  const classString = clsx(groupPrefixCls, {
-    [`${groupPrefixCls}-rtl`]: direction === 'rtl'
-  }, className, rootClassName, cssVarCls, rootCls, hashId);
-  return /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
-    className: classString,
-    style: style,
-    role: role,
-    ...domProps,
-    ref: ref
-  }, /*#__PURE__*/(react_production_namespaceFn().createElement)(checkbox_GroupContext.Provider, {
-    value: memoizedContext
-  }, childrenNode));
-});
-
-/* harmony default export */ const checkbox_Group = (CheckboxGroup);
-;// ./node_modules/antd/es/checkbox/index.js
-"use client";
-
-
-
-const es_checkbox_Checkbox = checkbox_Checkbox;
-es_checkbox_Checkbox.Group = checkbox_Group;
-es_checkbox_Checkbox.__ANT_CHECKBOX = true;
-if (false) // removed by dead control flow
-{}
-/* harmony default export */ const es_checkbox = (es_checkbox_Checkbox);
-;// ./node_modules/@rc-component/progress/es/common.js
-
-const defaultProps = {
-  percent: 0,
-  prefixCls: 'rc-progress',
-  strokeColor: '#2db7f5',
-  strokeLinecap: 'round',
-  strokeWidth: 1,
-  railColor: '#D9D9D9',
-  railWidth: 1,
-  gapPosition: 'bottom',
-  loading: false
-};
-const useTransitionDuration = () => {
-  const pathsRef = (0,react_production_namespaceFn().useRef)([]);
-  const prevTimeStamp = (0,react_production_namespaceFn().useRef)(null);
-  (0,react_production_namespaceFn().useEffect)(() => {
-    const now = Date.now();
-    let updated = false;
-    pathsRef.current.forEach(path => {
-      if (!path) {
-        return;
-      }
-      updated = true;
-      const pathStyle = path.style;
-      pathStyle.transitionDuration = '.3s, .3s, .3s, .06s';
-      if (prevTimeStamp.current && now - prevTimeStamp.current < 100) {
-        pathStyle.transitionDuration = '0s, 0s';
-      }
-    });
-    if (updated) {
-      prevTimeStamp.current = Date.now();
-    }
-  });
-  return pathsRef.current;
-};
-;// ./node_modules/@rc-component/progress/es/utils/getIndeterminateLine.js
-/* unused harmony import specifier */ var getIndeterminateLine_React;
-
-/* harmony default export */ const getIndeterminateLine = (options => {
-  const {
-    id,
-    percent,
-    strokeLinecap,
-    strokeWidth,
-    loading
-  } = options;
-  if (!loading) {
-    return {
-      indeterminateStyleProps: {},
-      indeterminateStyleAnimation: null
-    };
-  }
-  const animationName = `${id}-indeterminate-animate`;
-  const strokeDashOffset = 100 - (percent + (strokeLinecap === 'round' ? strokeWidth : 0));
-  return {
-    indeterminateStyleProps: {
-      strokeDasharray: `${percent} 100`,
-      animation: `${animationName} .6s linear alternate infinite`,
-      strokeDashoffset: 0
-    },
-    indeterminateStyleAnimation: /*#__PURE__*/getIndeterminateLine_React.createElement("style", null, `@keyframes ${animationName} {
-            0% { stroke-dashoffset: 0; }
-            100% { stroke-dashoffset: -${strokeDashOffset};
-          }`)
-  };
-});
-__webpack_require__.dn(getIndeterminateLine);
-;// ./node_modules/@rc-component/progress/es/Line.js
-/* unused harmony import specifier */ var Line_React;
-/* unused harmony import specifier */ var Line_clsx;
-/* unused harmony import specifier */ var Line_useId;
-/* unused harmony import specifier */ var Line_defaultProps;
-/* unused harmony import specifier */ var Line_useTransitionDuration;
-/* unused harmony import specifier */ var Line_getIndeterminateLine;
-function Line_extends() { Line_extends = Object.assign ? Object.assign.bind() : function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; }; return Line_extends.apply(this, arguments); }
-;
-
-
-
-
-const Line = props => {
-  const {
-    id,
-    className,
-    percent,
-    prefixCls,
-    strokeColor,
-    strokeLinecap,
-    strokeWidth,
-    style,
-    railColor,
-    railWidth,
-    transition,
-    loading,
-    ...restProps
-  } = {
-    ...Line_defaultProps,
-    ...props
-  };
-  const mergedId = Line_useId(id);
-
-  // eslint-disable-next-line no-param-reassign
-  delete restProps.gapPosition;
-  const percentList = Array.isArray(percent) ? percent : [percent];
-  const strokeColorList = Array.isArray(strokeColor) ? strokeColor : [strokeColor];
-  const paths = Line_useTransitionDuration();
-  const center = strokeWidth / 2;
-  const right = 100 - strokeWidth / 2;
-  const pathString = `M ${strokeLinecap === 'round' ? center : 0},${center}
-         L ${strokeLinecap === 'round' ? right : 100},${center}`;
-  const viewBoxString = `0 0 100 ${strokeWidth}`;
-  let stackPtg = 0;
-  const {
-    indeterminateStyleProps,
-    indeterminateStyleAnimation
-  } = Line_getIndeterminateLine({
-    id: mergedId,
-    loading,
-    percent: percentList[0],
-    strokeLinecap,
-    strokeWidth
-  });
-  return /*#__PURE__*/Line_React.createElement("svg", Line_extends({
-    id: id,
-    className: Line_clsx(`${prefixCls}-line`, className),
-    viewBox: viewBoxString,
-    preserveAspectRatio: "none",
-    style: style,
-    role: "presentation"
-  }, restProps), /*#__PURE__*/Line_React.createElement("path", {
-    className: `${prefixCls}-line-rail`,
-    d: pathString,
-    strokeLinecap: strokeLinecap,
-    stroke: railColor,
-    strokeWidth: railWidth || strokeWidth,
-    fillOpacity: "0"
-  }), percentList.map((ptg, index) => {
-    const dashPercent = strokeLinecap === 'round' ? 1 - strokeWidth / 100 : strokeLinecap === 'square' ? 1 - strokeWidth / 2 / 100 : 1;
-    const pathStyle = {
-      strokeDasharray: `${ptg * dashPercent}px, 100px`,
-      strokeDashoffset: `-${stackPtg}px`,
-      transition: transition || 'stroke-dashoffset 0.3s ease 0s, stroke-dasharray .3s ease 0s, stroke 0.3s linear',
-      ...indeterminateStyleProps
-    };
-    const color = strokeColorList[index] || strokeColorList[strokeColorList.length - 1];
-    stackPtg += ptg;
-    return /*#__PURE__*/Line_React.createElement("path", {
-      key: index,
-      className: `${prefixCls}-line-path`,
-      d: pathString,
-      strokeLinecap: strokeLinecap,
-      stroke: color,
-      strokeWidth: strokeWidth,
-      fillOpacity: "0",
-      ref: elem => {
-        // https://reactjs.org/docs/refs-and-the-dom.html#callback-refs
-        // React will call the ref callback with the DOM element when the component mounts,
-        // and call it with `null` when it unmounts.
-        // Refs are guaranteed to be up-to-date before componentDidMount or componentDidUpdate fires.
-
-        paths[index] = elem;
-      },
-      style: pathStyle
-    });
-  }), indeterminateStyleAnimation);
-};
-if (false) // removed by dead control flow
-{}
-/* harmony default export */ const es_Line = ((/* unused pure expression or super */ null && (Line)));
-;// ./node_modules/@rc-component/progress/es/Circle/PtgCircle.js
-
-
-const Block = ({
-  bg,
-  children
-}) => /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
-  style: {
-    width: '100%',
-    height: '100%',
-    background: bg
-  }
-}, children);
-function getPtgColors(color, scale) {
-  return Object.keys(color).map(key => {
-    const parsedKey = parseFloat(key);
-    const ptgKey = `${Math.floor(parsedKey * scale)}%`;
-    return `${color[key]} ${ptgKey}`;
-  });
-}
-const PtgCircle = /*#__PURE__*/(react_production_namespaceFn().forwardRef)((props, ref) => {
-  const {
-    prefixCls,
-    color,
-    gradientId,
-    radius,
-    className,
-    style: circleStyleForStack,
-    ptg,
-    strokeLinecap,
-    strokeWidth,
-    size,
-    gapDegree
-  } = props;
-  const isGradient = color && typeof color === 'object';
-  const stroke = isGradient ? `#FFF` : undefined;
-
-  // ========================== Circle ==========================
-  const halfSize = size / 2;
-  const circleNode = /*#__PURE__*/(react_production_namespaceFn().createElement)("circle", {
-    className: clsx(`${prefixCls}-circle-path`, className),
-    r: radius,
-    cx: halfSize,
-    cy: halfSize,
-    stroke: stroke,
-    strokeLinecap: strokeLinecap,
-    strokeWidth: strokeWidth,
-    opacity: ptg === 0 ? 0 : 1,
-    style: circleStyleForStack,
-    ref: ref
-  });
-
-  // ========================== Render ==========================
-  if (!isGradient) {
-    return circleNode;
-  }
-  const maskId = `${gradientId}-conic`;
-  const fromDeg = gapDegree ? `${180 + gapDegree / 2}deg` : '0deg';
-  const conicColors = getPtgColors(color, (360 - gapDegree) / 360);
-  const linearColors = getPtgColors(color, 1);
-  const conicColorBg = `conic-gradient(from ${fromDeg}, ${conicColors.join(', ')})`;
-  const linearColorBg = `linear-gradient(to ${gapDegree ? 'bottom' : 'top'}, ${linearColors.join(', ')})`;
-  return /*#__PURE__*/(react_production_namespaceFn().createElement)((react_production_namespaceFn().Fragment), null, /*#__PURE__*/(react_production_namespaceFn().createElement)("mask", {
-    id: maskId
-  }, circleNode), /*#__PURE__*/(react_production_namespaceFn().createElement)("foreignObject", {
-    x: 0,
-    y: 0,
-    width: size,
-    height: size,
-    mask: `url(#${maskId})`
-  }, /*#__PURE__*/(react_production_namespaceFn().createElement)(Block, {
-    bg: linearColorBg
-  }, /*#__PURE__*/(react_production_namespaceFn().createElement)(Block, {
-    bg: conicColorBg
-  }))));
-});
-if (false) // removed by dead control flow
-{}
-/* harmony default export */ const Circle_PtgCircle = (PtgCircle);
-;// ./node_modules/@rc-component/progress/es/Circle/util.js
-const VIEW_BOX_SIZE = 100;
-const getCircleStyle = (perimeter, perimeterWithoutGap, offset, percent, rotateDeg, gapDegree, gapPosition, strokeColor, strokeLinecap, strokeWidth, stepSpace = 0) => {
-  const offsetDeg = offset / 100 * 360 * ((360 - gapDegree) / 360);
-  const positionDeg = gapDegree === 0 ? 0 : {
-    bottom: 0,
-    top: 180,
-    left: 90,
-    right: -90
-  }[gapPosition];
-  let strokeDashoffset = (100 - percent) / 100 * perimeterWithoutGap;
-  // Fix percent accuracy when strokeLinecap is round
-  // https://github.com/ant-design/ant-design/issues/35009
-  if (strokeLinecap === 'round' && percent !== 100) {
-    strokeDashoffset += strokeWidth / 2;
-    // when percent is small enough (<= 1%), keep smallest value to avoid it's disappearance
-    if (strokeDashoffset >= perimeterWithoutGap) {
-      strokeDashoffset = perimeterWithoutGap - 0.01;
-    }
-  }
-  const halfSize = VIEW_BOX_SIZE / 2;
-  return {
-    stroke: typeof strokeColor === 'string' ? strokeColor : undefined,
-    strokeDasharray: `${perimeterWithoutGap}px ${perimeter}`,
-    strokeDashoffset: strokeDashoffset + stepSpace,
-    transform: `rotate(${rotateDeg + offsetDeg + positionDeg}deg)`,
-    transformOrigin: `${halfSize}px ${halfSize}px`,
-    transition: 'stroke-dashoffset .3s ease 0s, stroke-dasharray .3s ease 0s, stroke .3s, stroke-width .06s ease .3s, opacity .3s ease 0s',
-    fillOpacity: 0
-  };
-};
-;// ./node_modules/@rc-component/progress/es/utils/getIndeterminateCircle.js
-
-/* harmony default export */ const getIndeterminateCircle = (({
-  id,
-  loading
-}) => {
-  if (!loading) {
-    return {
-      indeterminateStyleProps: {},
-      indeterminateStyleAnimation: null
-    };
-  }
-  const animationName = `${id}-indeterminate-animate`;
-  return {
-    indeterminateStyleProps: {
-      transform: 'rotate(0deg)',
-      animation: `${animationName} 1s linear infinite`
-    },
-    indeterminateStyleAnimation: /*#__PURE__*/(react_production_namespaceFn().createElement)("style", null, `@keyframes ${animationName} {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-          }`)
-  };
-});
-__webpack_require__.dn(getIndeterminateCircle);
-;// ./node_modules/@rc-component/progress/es/Circle/index.js
-function Circle_extends() { Circle_extends = Object.assign ? Object.assign.bind() : function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; }; return Circle_extends.apply(this, arguments); }
-;
-
-
-
-
-
-
-function Circle_toArray(value) {
-  const mergedValue = value ?? [];
-  return Array.isArray(mergedValue) ? mergedValue : [mergedValue];
-}
-const Circle = props => {
-  const {
-    id,
-    prefixCls,
-    classNames = {},
-    styles = {},
-    steps,
-    strokeWidth,
-    railWidth,
-    gapDegree = 0,
-    gapPosition,
-    railColor,
-    strokeLinecap,
-    style,
-    className,
-    strokeColor,
-    percent,
-    loading,
-    ...restProps
-  } = {
-    ...defaultProps,
-    ...props
-  };
-  const halfSize = (/* inlined export .VIEW_BOX_SIZE */100) / 2;
-  const mergedId = hooks_useId(id);
-  const gradientId = `${mergedId}-gradient`;
-  const radius = halfSize - strokeWidth / 2;
-  const perimeter = Math.PI * 2 * radius;
-  const rotateDeg = gapDegree > 0 ? 90 + gapDegree / 2 : -90;
-  const perimeterWithoutGap = perimeter * ((360 - gapDegree) / 360);
-  const {
-    count: stepCount,
-    gap: stepGap
-  } = typeof steps === 'object' ? steps : {
-    count: steps,
-    gap: 2
-  };
-  const percentList = Circle_toArray(percent);
-  const strokeColorList = Circle_toArray(strokeColor);
-  const gradient = strokeColorList.find(color => color && typeof color === 'object');
-  const isConicGradient = gradient && typeof gradient === 'object';
-  const mergedStrokeLinecap = isConicGradient ? 'butt' : strokeLinecap;
-  const {
-    indeterminateStyleProps,
-    indeterminateStyleAnimation
-  } = getIndeterminateCircle({
-    id: mergedId,
-    loading
-  });
-  const circleStyle = getCircleStyle(perimeter, perimeterWithoutGap, 0, 100, rotateDeg, gapDegree, gapPosition, railColor, mergedStrokeLinecap, strokeWidth);
-  const paths = useTransitionDuration();
-  const getStokeList = () => {
-    let stackPtg = 0;
-    return percentList.map((ptg, index) => {
-      const color = strokeColorList[index] || strokeColorList[strokeColorList.length - 1];
-      const circleStyleForStack = getCircleStyle(perimeter, perimeterWithoutGap, stackPtg, ptg, rotateDeg, gapDegree, gapPosition, color, mergedStrokeLinecap, strokeWidth);
-      stackPtg += ptg;
-      return /*#__PURE__*/(react_production_namespaceFn().createElement)(Circle_PtgCircle, {
-        key: index,
-        color: color,
-        ptg: ptg,
-        radius: radius,
-        prefixCls: prefixCls,
-        gradientId: gradientId,
-        className: classNames.track,
-        style: {
-          ...circleStyleForStack,
-          ...indeterminateStyleProps,
-          ...styles.track
-        },
-        strokeLinecap: mergedStrokeLinecap,
-        strokeWidth: strokeWidth,
-        gapDegree: gapDegree,
-        ref: elem => {
-          // https://reactjs.org/docs/refs-and-the-dom.html#callback-refs
-          // React will call the ref callback with the DOM element when the component mounts,
-          // and call it with `null` when it unmounts.
-          // Refs are guaranteed to be up-to-date before componentDidMount or componentDidUpdate fires.
-
-          paths[index] = elem;
-        },
-        size: (/* inlined export .VIEW_BOX_SIZE */100)
-      });
-    }).reverse();
-  };
-  const getStepStokeList = () => {
-    // only show the first percent when pass steps
-    const current = Math.round(stepCount * (percentList[0] / 100));
-    const stepPtg = 100 / stepCount;
-    let stackPtg = 0;
-    return new Array(stepCount).fill(null).map((_, index) => {
-      const color = index <= current - 1 ? strokeColorList[0] : railColor;
-      const stroke = color && typeof color === 'object' ? `url(#${gradientId})` : undefined;
-      const circleStyleForStack = getCircleStyle(perimeter, perimeterWithoutGap, stackPtg, stepPtg, rotateDeg, gapDegree, gapPosition, color, 'butt', strokeWidth, stepGap);
-      stackPtg += (perimeterWithoutGap - circleStyleForStack.strokeDashoffset + stepGap) * 100 / perimeterWithoutGap;
-      return /*#__PURE__*/(react_production_namespaceFn().createElement)("circle", {
-        key: index,
-        className: clsx(`${prefixCls}-circle-path`, classNames.track),
-        r: radius,
-        cx: halfSize,
-        cy: halfSize,
-        stroke: stroke,
-        strokeWidth: strokeWidth,
-        opacity: 1,
-        style: {
-          ...circleStyleForStack,
-          ...styles.track
-        },
-        ref: elem => {
-          paths[index] = elem;
-        }
-      });
-    });
-  };
-  return /*#__PURE__*/(react_production_namespaceFn().createElement)("svg", Circle_extends({
-    className: clsx(`${prefixCls}-circle`, classNames.root, className),
-    viewBox: `0 0 ${(/* inlined export .VIEW_BOX_SIZE */100)} ${(/* inlined export .VIEW_BOX_SIZE */100)}`,
-    style: {
-      ...styles.root,
-      ...style
-    },
-    id: id,
-    role: "presentation"
-  }, restProps), !stepCount && /*#__PURE__*/(react_production_namespaceFn().createElement)("circle", {
-    className: clsx(`${prefixCls}-circle-rail`, classNames.rail),
-    r: radius,
-    cx: halfSize,
-    cy: halfSize,
-    stroke: railColor,
-    strokeLinecap: mergedStrokeLinecap,
-    strokeWidth: railWidth || strokeWidth,
-    style: {
-      ...circleStyle,
-      ...styles.rail
-    }
-  }), stepCount ? getStepStokeList() : getStokeList(), indeterminateStyleAnimation);
-};
-if (false) // removed by dead control flow
-{}
-/* harmony default export */ const es_Circle = (Circle);
-;// ./node_modules/@rc-component/progress/es/index.js
-
-
-
-;// ./node_modules/antd/es/progress/utils.js
-
-
-function validProgress(progress) {
-  if (!progress || progress < 0) {
-    return 0;
-  }
-  if (progress > 100) {
-    return 100;
-  }
-  return progress;
-}
-function getSuccessPercent({
-  success
-}) {
-  let percent;
-  if (success && 'percent' in success) {
-    percent = success.percent;
-  }
-  return percent;
-}
-const getPercentage = ({
-  percent,
-  success
-}) => {
-  const realSuccessPercent = validProgress(getSuccessPercent({
-    success
-  }));
-  return [realSuccessPercent, validProgress(validProgress(percent) - realSuccessPercent)];
-};
-const getStrokeColor = ({
-  success = {},
-  strokeColor
-}) => {
-  const {
-    strokeColor: successColor
-  } = success;
-  return [successColor || presetPrimaryColors.green, strokeColor || null];
-};
-const utils_getSize = (size, type, extra) => {
-  let width = -1;
-  let height = -1;
-  if (type === 'step') {
-    const steps = extra.steps;
-    const strokeWidth = extra.strokeWidth;
-    if (typeof size === 'string' || typeof size === 'undefined') {
-      width = size === 'small' ? 2 : 14;
-      height = strokeWidth ?? 8;
-    } else if (isNumber(size)) {
-      [width, height] = [size, size];
-    } else {
-      [width = 14, height = 8] = Array.isArray(size) ? size : [size.width, size.height];
-    }
-    width *= steps;
-  } else if (type === 'line') {
-    const strokeWidth = extra?.strokeWidth;
-    if (typeof size === 'string' || typeof size === 'undefined') {
-      height = strokeWidth || (size === 'small' ? 6 : 8);
-    } else if (isNumber(size)) {
-      [width, height] = [size, size];
-    } else {
-      [width = -1, height = 8] = Array.isArray(size) ? size : [size.width, size.height];
-    }
-  } else if (type === 'circle' || type === 'dashboard') {
-    if (typeof size === 'string' || typeof size === 'undefined') {
-      [width, height] = size === 'small' ? [60, 60] : [120, 120];
-    } else if (isNumber(size)) {
-      [width, height] = [size, size];
-    } else if (Array.isArray(size)) {
-      width = size[0] ?? size[1] ?? 120;
-      height = size[0] ?? size[1] ?? 120;
-    }
-  }
-  return [width, height];
-};
-;// ./node_modules/antd/es/progress/Circle.js
-"use client";
-
-
-
-
-
-
-
-
-
-const CIRCLE_MIN_STROKE_WIDTH = 3;
-const getMinPercent = width => CIRCLE_MIN_STROKE_WIDTH / width * 100;
-const OMIT_SEMANTIC_NAMES = ['root', 'body', 'indicator'];
-const Circle_Circle = props => {
-  const {
-    prefixCls,
-    classNames,
-    styles,
-    railColor,
-    trailColor,
-    strokeLinecap = 'round',
-    gapPosition,
-    gapPlacement,
-    gapDegree,
-    width: originWidth = 120,
-    type,
-    children,
-    success,
-    size = originWidth,
-    steps
-  } = props;
-  const {
-    direction
-  } = useComponentConfig('progress');
-  const mergedRailColor = railColor ?? trailColor;
-  const [width, height] = utils_getSize(size, 'circle');
-  let {
-    strokeWidth
-  } = props;
-  if (strokeWidth === undefined) {
-    strokeWidth = Math.max(getMinPercent(width), 6);
-  }
-  const circleStyle = {
-    width,
-    height,
-    fontSize: width * 0.15 + 6
-  };
-  const realGapDegree = (react_production_namespaceFn().useMemo)(() => {
-    // Support gapDeg = 0 when type = 'dashboard'
-    if (gapDegree || gapDegree === 0) {
-      return gapDegree;
-    }
-    if (type === 'dashboard') {
-      return 75;
-    }
-    return undefined;
-  }, [gapDegree, type]);
-  const percentArray = getPercentage(props);
-  const gapPos = (react_production_namespaceFn().useMemo)(() => {
-    const mergedPlacement = (gapPlacement ?? gapPosition) || type === 'dashboard' && 'bottom' || undefined;
-    const isRTL = direction === 'rtl';
-    switch (mergedPlacement) {
-      case 'start':
-        return isRTL ? 'right' : 'left';
-      case 'end':
-        return isRTL ? 'left' : 'right';
-      default:
-        return mergedPlacement;
-    }
-  }, [direction, gapPlacement, gapPosition, type]);
-  // using className to style stroke color
-  const isGradient = is_isPlainObject(props.strokeColor);
-  const strokeColor = getStrokeColor({
-    success,
-    strokeColor: props.strokeColor
-  });
-  const wrapperClassName = clsx(`${prefixCls}-body`, {
-    [`${prefixCls}-circle-gradient`]: isGradient
-  }, classNames.body);
-  const circleContent = /*#__PURE__*/(react_production_namespaceFn().createElement)(es_Circle, {
-    steps: steps,
-    percent: steps ? percentArray[1] : percentArray,
-    strokeWidth: strokeWidth,
-    railWidth: strokeWidth,
-    strokeColor: steps ? strokeColor[1] : strokeColor,
-    strokeLinecap: strokeLinecap,
-    railColor: mergedRailColor,
-    prefixCls: prefixCls,
-    gapDegree: realGapDegree,
-    gapPosition: gapPos,
-    classNames: omit(classNames, OMIT_SEMANTIC_NAMES),
-    styles: omit(styles, OMIT_SEMANTIC_NAMES)
-  });
-  const smallCircle = width <= 20;
-  const node = /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
-    className: wrapperClassName,
-    style: {
-      ...circleStyle,
-      ...styles.body
-    }
-  }, circleContent, !smallCircle && children);
-  if (smallCircle) {
-    return /*#__PURE__*/(react_production_namespaceFn().createElement)(es_tooltip, {
-      title: children
-    }, node);
-  }
-  return node;
-};
-/* harmony default export */ const progress_Circle = (Circle_Circle);
-;// ./node_modules/antd/es/progress/style/index.js
-
-
-
-const LineStrokeColorVar = '--progress-line-stroke-color';
-const genAntProgressActive = isRtl => {
-  const direction = isRtl ? '100%' : '-100%';
-  return new Keyframes(`antProgress${isRtl ? 'RTL' : 'LTR'}Active`, {
-    '0%': {
-      transform: `translateX(${direction}) scaleX(0)`,
-      opacity: 0.1
-    },
-    '20%': {
-      transform: `translateX(${direction}) scaleX(0)`,
-      opacity: 0.5
-    },
-    to: {
-      transform: 'translateX(0) scaleX(1)',
-      opacity: 0
-    }
-  });
-};
-// ====================================================================
-// ==                              Base                              ==
-// ====================================================================
-const progress_style_genBaseStyle = token => {
-  const {
-    componentCls: progressCls,
-    iconCls: iconPrefixCls
-  } = token;
-  return {
-    [progressCls]: {
-      ...resetComponent(token),
-      display: 'inline-flex',
-      '&-rtl': {
-        direction: 'rtl'
-      },
-      [`${progressCls}-indicator`]: {
-        color: token.colorText,
-        lineHeight: 1,
-        whiteSpace: 'nowrap',
-        verticalAlign: 'middle',
-        wordBreak: 'normal',
-        [iconPrefixCls]: {
-          fontSize: token.fontSize
-        }
-      },
-      [`&${progressCls}-status-exception`]: {
-        [`${progressCls}-indicator`]: {
-          color: token.colorError
-        }
-      },
-      [`&${progressCls}-status-success`]: {
-        [`${progressCls}-indicator`]: {
-          color: token.colorSuccess
-        }
-      }
-    }
-  };
-};
-// ====================================================================
-// ==                              Line                              ==
-// ====================================================================
-const genLineStyle = token => {
-  const {
-    componentCls
-  } = token;
-  return {
-    [`${componentCls}-line`]: {
-      position: 'relative',
-      width: '100%',
-      fontSize: token.fontSize,
-      [`${componentCls}-body`]: {
-        display: 'inline-flex',
-        alignItems: 'center',
-        width: '100%',
-        gap: token.marginXS
-      },
-      [`${componentCls}-rail`]: {
-        flex: 'auto',
-        background: token.remainingColor,
-        borderRadius: token.lineBorderRadius,
-        position: 'relative',
-        width: '100%',
-        overflow: 'hidden'
-      },
-      [`&${componentCls}-status-active`]: {
-        [`${componentCls}-track:after`]: {
-          content: '""',
-          position: 'absolute',
-          inset: 0,
-          backgroundColor: token.colorBgContainer,
-          borderRadius: 'inherit',
-          opacity: 0,
-          animationName: genAntProgressActive(),
-          animationDuration: token.progressActiveMotionDuration,
-          animationTimingFunction: token.motionEaseOutQuint,
-          animationIterationCount: 'infinite'
-        }
-      },
-      [`${componentCls}-track`]: {
-        position: 'absolute',
-        insetInlineStart: 0,
-        insetBlock: 0,
-        borderRadius: 'inherit',
-        background: token.defaultColor,
-        transition: `all ${token.motionDurationSlow} ${token.motionEaseInOutCirc}`,
-        minWidth: 'max-content',
-        display: 'flex',
-        alignItems: 'center',
-        '&-success': {
-          background: token.colorSuccess
-        }
-      },
-      [`&${componentCls}-status-exception`]: {
-        [`${componentCls}-track`]: {
-          background: token.colorError
-        }
-      },
-      [`&${componentCls}-status-success`]: {
-        [`${componentCls}-track`]: {
-          background: token.colorSuccess
-        }
-      },
-      // >>>>> indicator
-      // >>> Outer
-      [`${componentCls}-indicator-outer`]: {
-        [`&${componentCls}-indicator-start`]: {
-          order: -1
-        }
-      },
-      [`${componentCls}-body-layout-bottom`]: {
-        flexDirection: 'column',
-        alignItems: 'center',
-        gap: token.marginXXS
-      },
-      // >>> Inner
-      [`${componentCls}-indicator${componentCls}-indicator-inner`]: {
-        color: token.colorWhite,
-        paddingInline: token.paddingXXS,
-        width: '100%',
-        display: 'flex',
-        justifyContent: 'center',
-        [`&${componentCls}-indicator-end`]: {
-          justifyContent: 'end'
-        },
-        [`&${componentCls}-indicator-start`]: {
-          justifyContent: 'start'
-        },
-        [`&${componentCls}-indicator-bright`]: {
-          color: 'rgba(0, 0, 0, 0.45)'
-        }
-      }
-    }
-  };
-};
-// ====================================================================
-// ==                             Circle                             ==
-// ====================================================================
-const genCircleStyle = token => {
-  const {
-    componentCls: progressCls,
-    iconCls: iconPrefixCls
-  } = token;
-  return {
-    [`${progressCls}-circle`]: {
-      [`${progressCls}-circle-rail`]: {
-        stroke: token.remainingColor
-      },
-      [`${progressCls}-body:not(${progressCls}-circle-gradient)`]: {
-        [`${progressCls}-circle-path`]: {
-          stroke: token.defaultColor
-        }
-      },
-      [`${progressCls}-body`]: {
-        position: 'relative',
-        lineHeight: 1,
-        backgroundColor: 'transparent'
-      },
-      [`${progressCls}-indicator`]: {
-        position: 'absolute',
-        insetBlockStart: '50%',
-        insetInlineStart: 0,
-        width: '100%',
-        margin: 0,
-        padding: 0,
-        color: token.circleTextColor,
-        fontSize: token.circleTextFontSize,
-        lineHeight: 1,
-        whiteSpace: 'normal',
-        textAlign: 'center',
-        transform: 'translateY(-50%)',
-        [iconPrefixCls]: {
-          fontSize: token.circleIconFontSize
-        }
-      },
-      [`&${progressCls}-status-exception`]: {
-        [`${progressCls}-body:not(${progressCls}-circle-gradient)`]: {
-          [`${progressCls}-circle-path`]: {
-            stroke: token.colorError
-          }
-        }
-      },
-      [`&${progressCls}-status-success`]: {
-        [`${progressCls}-body:not(${progressCls}-circle-gradient)`]: {
-          [`${progressCls}-circle-path`]: {
-            stroke: token.colorSuccess
-          }
-        }
-      }
-    },
-    [`${progressCls}-inline-circle`]: {
-      lineHeight: 1,
-      [`${progressCls}-inner`]: {
-        verticalAlign: 'bottom'
-      }
-    }
-  };
-};
-// ====================================================================
-// ==                              Step                              ==
-// ====================================================================
-const genStepStyle = token => {
-  const {
-    componentCls: progressCls
-  } = token;
-  return {
-    [progressCls]: {
-      [`${progressCls}-steps`]: {
-        display: 'inline-block',
-        '&-body': {
-          display: 'flex',
-          flexDirection: 'row',
-          alignItems: 'center',
-          gap: token.progressStepMarginInlineEnd,
-          [`${progressCls}-indicator`]: {
-            marginInlineStart: token.marginXS
-          }
-        },
-        '&-item': {
-          flexShrink: 0,
-          minWidth: token.progressStepMinWidth,
-          backgroundColor: token.remainingColor,
-          transition: `all ${token.motionDurationSlow}`,
-          '&-active': {
-            backgroundColor: token.defaultColor
-          }
-        }
-      }
-    }
-  };
-};
-// ====================================================================
-// ==                           Small Line                           ==
-// ====================================================================
-const genSmallLine = token => {
-  const {
-    componentCls: progressCls,
-    iconCls: iconPrefixCls
-  } = token;
-  return {
-    [progressCls]: {
-      [`${progressCls}-small&-line, ${progressCls}-small&-line ${progressCls}-indicator ${iconPrefixCls}`]: {
-        fontSize: token.fontSizeSM
-      }
-    }
-  };
-};
-// ====================================================================
-// ==                             Export                             ==
-// ====================================================================
-const progress_style_prepareComponentToken = token => ({
-  circleTextColor: token.colorText,
-  defaultColor: token.colorInfo,
-  remainingColor: token.colorFillSecondary,
-  lineBorderRadius: 100,
-  // magic for capsule shape, should be a very large number
-  circleTextFontSize: '1em',
-  circleIconFontSize: `${token.fontSize / token.fontSizeSM}em`
-});
-/* harmony default export */ const progress_style = (genStyleHooks('Progress', token => {
-  const progressStepMarginInlineEnd = token.calc(token.marginXXS).div(2).equal();
-  const progressToken = statistic_merge(token, {
-    progressStepMarginInlineEnd,
-    progressStepMinWidth: progressStepMarginInlineEnd,
-    progressActiveMotionDuration: '2.4s'
-  });
-  return [progress_style_genBaseStyle(progressToken), genLineStyle(progressToken), genCircleStyle(progressToken), genStepStyle(progressToken), genSmallLine(progressToken)];
-}, progress_style_prepareComponentToken));
-;// ./node_modules/antd/es/progress/Line.js
-"use client";
-
-
-
-
-
-
-
-/**
- * @example
- *   {
- *     "0%": "#afc163",
- *     "75%": "#009900",
- *     "50%": "green", // ====> '#afc163 0%, #66FF00 25%, #00CC00 50%, #009900 75%, #ffffff 100%'
- *     "25%": "#66FF00",
- *     "100%": "#ffffff"
- *   }
- */
-const sortGradient = gradients => {
-  let tempArr = [];
-  Object.keys(gradients).forEach(key => {
-    const formattedKey = Number.parseFloat(key.replace(/%/g, ''));
-    if (!Number.isNaN(formattedKey)) {
-      tempArr.push({
-        key: formattedKey,
-        value: gradients[key]
-      });
-    }
-  });
-  tempArr = tempArr.sort((a, b) => a.key - b.key);
-  return tempArr.map(({
-    key,
-    value
-  }) => `${value} ${key}%`).join(', ');
-};
-/**
- * Then this man came to realize the truth: Besides six pence, there is the moon. Besides bread and
- * butter, there is the bug. And... Besides women, there is the code.
- *
- * @example
- *   {
- *     "0%": "#afc163",
- *     "25%": "#66FF00",
- *     "50%": "#00CC00", // ====>  linear-gradient(to right, #afc163 0%, #66FF00 25%,
- *     "75%": "#009900", //        #00CC00 50%, #009900 75%, #ffffff 100%)
- *     "100%": "#ffffff"
- *   }
- */
-const handleGradient = (strokeColor, directionConfig) => {
-  const {
-    from = presetPrimaryColors.blue,
-    to = presetPrimaryColors.blue,
-    direction = directionConfig === 'rtl' ? 'to left' : 'to right',
-    ...rest
-  } = strokeColor;
-  if (Object.keys(rest).length !== 0) {
-    const sortedGradients = sortGradient(rest);
-    const background = `linear-gradient(${direction}, ${sortedGradients})`;
-    return {
-      background,
-      [LineStrokeColorVar]: background
-    };
-  }
-  const background = `linear-gradient(${direction}, ${from}, ${to})`;
-  return {
-    background,
-    [LineStrokeColorVar]: background
-  };
-};
-const Line_Line = props => {
-  const {
-    prefixCls,
-    classNames,
-    styles,
-    direction: directionConfig,
-    percent,
-    size,
-    strokeWidth,
-    strokeColor,
-    strokeLinecap = 'round',
-    children,
-    railColor,
-    trailColor,
-    percentPosition,
-    success
-  } = props;
-  const {
-    align: infoAlign,
-    type: infoPosition
-  } = percentPosition;
-  const mergedRailColor = railColor ?? trailColor;
-  const borderRadius = strokeLinecap === 'square' || strokeLinecap === 'butt' ? 0 : undefined;
-  if (false) // removed by dead control flow
-{}
-  // ========================= Size =========================
-  const mergedSize = size ?? [-1, strokeWidth || (size === 'small' ? 6 : 8)];
-  const [width, height] = utils_getSize(mergedSize, 'line', {
-    strokeWidth
-  });
-  // ========================= Rail =========================
-  const railStyle = {
-    backgroundColor: mergedRailColor || undefined,
-    borderRadius,
-    height
-  };
-  // ======================== Tracks ========================
-  const trackCls = `${prefixCls}-track`;
-  const backgroundProps = strokeColor && typeof strokeColor !== 'string' ? handleGradient(strokeColor, directionConfig) : {
-    [LineStrokeColorVar]: strokeColor,
-    background: strokeColor
-  };
-  const percentTrackStyle = {
-    width: `${validProgress(percent)}%`,
-    height,
-    borderRadius,
-    ...backgroundProps
-  };
-  const successPercent = getSuccessPercent(props);
-  const successTrackStyle = {
-    width: `${validProgress(successPercent)}%`,
-    height,
-    borderRadius,
-    backgroundColor: success?.strokeColor
-  };
-  // ======================== Render ========================
-  return /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
-    className: clsx(`${prefixCls}-body`, classNames.body, {
-      [`${prefixCls}-body-layout-bottom`]: infoAlign === 'center' && infoPosition === 'outer'
-    }),
-    style: {
-      width: width > 0 ? width : '100%',
-      ...styles.body
-    }
-  }, /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
-    className: clsx(`${prefixCls}-rail`, classNames.rail),
-    style: {
-      ...railStyle,
-      ...styles.rail
-    }
-  }, /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
-    className: clsx(trackCls, classNames.track),
-    style: {
-      ...percentTrackStyle,
-      ...styles.track
-    }
-  }, infoPosition === 'inner' && children), successPercent !== undefined && (/*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
-    className: clsx(trackCls, `${trackCls}-success`, classNames.track),
-    style: {
-      ...successTrackStyle,
-      ...styles.track
-    }
-  }))), infoPosition === 'outer' && children);
-};
-/* harmony default export */ const progress_Line = (Line_Line);
-;// ./node_modules/antd/es/progress/Steps.js
-"use client";
-
-
-
-
-const Steps = props => {
-  const {
-    classNames,
-    styles,
-    size,
-    steps,
-    rounding: customRounding = Math.round,
-    percent = 0,
-    strokeWidth = 8,
-    strokeColor,
-    railColor,
-    trailColor,
-    prefixCls,
-    children
-  } = props;
-  const current = customRounding(steps * (percent / 100));
-  const stepWidth = size === 'small' ? 2 : 14;
-  const mergedSize = size ?? [stepWidth, strokeWidth];
-  const [width, height] = utils_getSize(mergedSize, 'step', {
-    steps,
-    strokeWidth
-  });
-  const unitWidth = width / steps;
-  const styledSteps = Array.from({
-    length: steps
-  });
-  const mergedRailColor = railColor ?? trailColor;
-  for (let i = 0; i < steps; i++) {
-    const color = Array.isArray(strokeColor) ? strokeColor[i] : strokeColor;
-    styledSteps[i] = /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
-      key: i,
-      className: clsx(`${prefixCls}-steps-item`, {
-        [`${prefixCls}-steps-item-active`]: i <= current - 1
-      }, classNames.track),
-      style: {
-        backgroundColor: i <= current - 1 ? color : mergedRailColor,
-        width: unitWidth,
-        height,
-        ...styles.track
-      }
-    });
-  }
-  return /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
-    className: clsx(`${prefixCls}-steps-body`, classNames.body),
-    style: styles.body
-  }, styledSteps, children);
-};
-/* harmony default export */ const progress_Steps = (Steps);
-;// ./node_modules/antd/es/progress/progress.js
-"use client";
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-const ProgressTypes = (/* unused pure expression or super */ null && (['line', 'circle', 'dashboard']));
-const ProgressStatuses = ['normal', 'exception', 'active', 'success'];
-const progress_Progress = /*#__PURE__*/(react_production_namespaceFn().forwardRef)((props, ref) => {
-  const {
-    prefixCls: customizePrefixCls,
-    className,
-    rootClassName,
-    classNames,
-    styles,
-    steps,
-    strokeColor,
-    percent = 0,
-    size = 'medium',
-    showInfo = true,
-    type = 'line',
-    status,
-    format,
-    style,
-    percentPosition = {},
-    ...restProps
-  } = props;
-  // ========================= MISC =========================
-  const {
-    align: infoAlign = 'end',
-    type: infoPosition = 'outer'
-  } = percentPosition;
-  const strokeColorNotArray = Array.isArray(strokeColor) ? strokeColor[0] : strokeColor;
-  const strokeColorNotGradient = typeof strokeColor === 'string' || Array.isArray(strokeColor) ? strokeColor : undefined;
-  const strokeColorIsBright = (react_production_namespaceFn().useMemo)(() => {
-    if (strokeColorNotArray) {
-      const color = typeof strokeColorNotArray === 'string' ? strokeColorNotArray : Object.values(strokeColorNotArray)[0];
-      return new FastColor(color).isLight();
-    }
-    return false;
-  }, [strokeColor]);
-  const percentNumber = (react_production_namespaceFn().useMemo)(() => {
-    const successPercent = getSuccessPercent(props);
-    return Number.parseInt(successPercent !== undefined ? (successPercent ?? 0)?.toString() : (percent ?? 0)?.toString(), 10);
-  }, [percent, props.success]);
-  const progressStatus = (react_production_namespaceFn().useMemo)(() => {
-    if (!ProgressStatuses.includes(status) && percentNumber >= 100) {
-      return 'success';
-    }
-    return status || 'normal';
-  }, [status, percentNumber]);
-  // ======================= Context ========================
-  const {
-    getPrefixCls,
-    direction,
-    className: contextClassName,
-    style: contextStyle,
-    classNames: contextClassNames,
-    styles: contextStyles
-  } = useComponentConfig('progress');
-  const prefixCls = getPrefixCls('progress', customizePrefixCls);
-  const [hashId, cssVarCls] = progress_style(prefixCls);
-  const mergedProps = {
-    ...props,
-    percent,
-    type,
-    size,
-    showInfo,
-    percentPosition
-  };
-  // ======================== Styles ========================
-  const contextStyleRoot = useSemanticRootStyle(contextStyle);
-  const styleRoot = useSemanticRootStyle(style);
-  const [mergedClassNames, mergedStyles] = useMergeSemantic([contextClassNames, classNames], [contextStyles, contextStyleRoot, styles, styleRoot], {
-    props: mergedProps
-  });
-  // ========================= Info =========================
-  const isLineType = type === 'line';
-  const isPureLineType = isLineType && !steps;
-  const progressInfo = (react_production_namespaceFn().useMemo)(() => {
-    if (!showInfo) {
-      return null;
-    }
-    const successPercent = getSuccessPercent(props);
-    let text;
-    const textFormatter = format || (number => `${number}%`);
-    const isBrightInnerColor = isLineType && strokeColorIsBright && infoPosition === 'inner';
-    if (infoPosition === 'inner' || format || progressStatus !== 'exception' && progressStatus !== 'success') {
-      text = textFormatter(validProgress(percent), validProgress(successPercent));
-    } else if (progressStatus === 'exception') {
-      text = isLineType ? /*#__PURE__*/(react_production_namespaceFn().createElement)(icons_CloseCircleFilled, null) : /*#__PURE__*/(react_production_namespaceFn().createElement)(icons_CloseOutlined, null);
-    } else if (progressStatus === 'success') {
-      text = isLineType ? /*#__PURE__*/(react_production_namespaceFn().createElement)(icons_CheckCircleFilled, null) : /*#__PURE__*/(react_production_namespaceFn().createElement)(icons_CheckOutlined, null);
-    }
-    return /*#__PURE__*/(react_production_namespaceFn().createElement)("span", {
-      className: clsx(`${prefixCls}-indicator`, {
-        [`${prefixCls}-indicator-bright`]: isBrightInnerColor,
-        [`${prefixCls}-indicator-${infoAlign}`]: isPureLineType,
-        [`${prefixCls}-indicator-${infoPosition}`]: isPureLineType
-      }, mergedClassNames.indicator),
-      style: mergedStyles.indicator,
-      title: typeof text === 'string' ? text : undefined
-    }, text);
-  }, [showInfo, percent, percentNumber, progressStatus, type, prefixCls, format, isLineType, strokeColorIsBright, infoPosition, infoAlign, isPureLineType, mergedClassNames.indicator, mergedStyles.indicator]);
-  if (false) // removed by dead control flow
-{}
-  // ======================== Render ========================
-  const sharedProps = {
-    ...props,
-    classNames: mergedClassNames,
-    styles: mergedStyles
-  };
-  let progress;
-  // Render progress shape
-  if (type === 'line') {
-    progress = steps ? (/*#__PURE__*/(react_production_namespaceFn().createElement)(progress_Steps, {
-      ...sharedProps,
-      strokeColor: strokeColorNotGradient,
-      prefixCls: prefixCls,
-      steps: is_isPlainObject(steps) ? steps.count : steps
-    }, progressInfo)) : (/*#__PURE__*/(react_production_namespaceFn().createElement)(progress_Line, {
-      ...sharedProps,
-      strokeColor: strokeColorNotArray,
-      prefixCls: prefixCls,
-      direction: direction,
-      percentPosition: {
-        align: infoAlign,
-        type: infoPosition
-      }
-    }, progressInfo));
-  } else if (type === 'circle' || type === 'dashboard') {
-    progress = /*#__PURE__*/(react_production_namespaceFn().createElement)(progress_Circle, {
-      ...sharedProps,
-      strokeColor: strokeColorNotArray,
-      prefixCls: prefixCls,
-      progressStatus: progressStatus
-    }, progressInfo);
-  }
-  const classString = clsx(prefixCls, `${prefixCls}-status-${progressStatus}`, {
-    [`${prefixCls}-${type === 'dashboard' && 'circle' || type}`]: type !== 'line',
-    [`${prefixCls}-inline-circle`]: type === 'circle' && utils_getSize(size, 'circle')[0] <= 20,
-    [`${prefixCls}-line`]: isPureLineType,
-    [`${prefixCls}-line-align-${infoAlign}`]: isPureLineType,
-    [`${prefixCls}-line-position-${infoPosition}`]: isPureLineType,
-    [`${prefixCls}-steps`]: steps,
-    [`${prefixCls}-show-info`]: showInfo,
-    [`${prefixCls}-small`]: size === 'small',
-    [`${prefixCls}-rtl`]: direction === 'rtl'
-  }, contextClassName, className, rootClassName, mergedClassNames.root, hashId, cssVarCls);
-  return /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
-    ref: ref,
-    style: mergedStyles.root,
-    className: classString,
-    role: "progressbar",
-    "aria-valuenow": percentNumber,
-    "aria-valuemin": 0,
-    "aria-valuemax": 100,
-    ...omit(restProps, ['railColor', 'trailColor', 'strokeWidth', 'width', 'gapDegree', 'gapPosition', 'gapPlacement', 'strokeLinecap', 'success'])
-  }, progress);
-});
-if (false) // removed by dead control flow
-{}
-/* harmony default export */ const progress_progress = (progress_Progress);
-;// ./node_modules/antd/es/progress/index.js
-"use client";
-
-
-/* harmony default export */ const es_progress = (progress_progress);
-;// ./src/lib/qrcode.ts
-
-/**
- * 用客户端 qrcodejs 生成二维码 dataURL（原 app.ts 的 genQrDataUrl）。
- * 模块化 P4：逐字迁移，仅加 export。
- */
-/**
- * 用客户端 qrcodejs 库把文本（即上传链接）即时生成为 PNG dataURL，无需服务器参与。
- * qrcodejs 暴露全局 QRCode：new QRCode(div,{text,width,height}) 同步把二维码绘入 div 内的 canvas；
- * 读取其内部 canvas.toDataURL('image/png') 即得图片 dataURL。
- * CAT_UI 的 React 渲染器白名单不放行 <img>/<canvas>，故此处只产出 dataURL 字符串，
- * 由调用方用 backgroundImage div 显示（与收到图片预览同一招）。
- * 库未就绪（QRCode 未定义）时回退为空串（此时仍可手动复制链接文本）。
- * @param {string} text - 待编码文本（上传链接）
- * @returns {Promise<string>} PNG dataURL，失败返回 ''
- */
-function genQrDataUrl(text) {
-    return new Promise((resolve) => {
-        try {
-            if (typeof QRCode === 'undefined' || typeof QRCode !== 'function') {
-                addLog('[二维码] qrcodejs 未加载，请手动复制链接', 'error', true);
-                resolve('');
-                return;
-            }
-            const holder = document.createElement('div');
-            holder.style.position = 'absolute';
-            holder.style.left = '-99999px';
-            holder.style.top = '-99999px';
-            document.body.appendChild(holder);
-            new QRCode(holder, {
-                text: text,
-                width: 240,
-                height: 240,
-                colorDark: '#000000',
-                colorLight: '#ffffff',
-                correctLevel: QRCode.CorrectLevel.M,
-            });
-            // qrcodejs 同步把二维码绘入 canvas；延迟一拍确保绘制完成再读取
-            setTimeout(() => {
-                try {
-                    const canvas = holder.querySelector('canvas');
-                    const url = canvas ? canvas.toDataURL('image/png') : '';
-                    if (holder.parentNode)
-                        holder.parentNode.removeChild(holder);
-                    if (url)
-                        resolve(url);
-                    else {
-                        addLog('[二维码] 画布读取失败，请手动复制链接', 'error', true);
-                        resolve('');
-                    }
-                }
-                catch (e) {
-                    if (holder.parentNode)
-                        holder.parentNode.removeChild(holder);
-                    addLog('[二维码] 读取失败: ' + e.message, 'error', true);
-                    resolve('');
-                }
-            }, 0);
-        }
-        catch (e) {
-            addLog('[二维码] 生成异常: ' + e.message, 'error', true);
-            resolve('');
-        }
-    });
-}
-
-;// ./src/lib/ui/PhoneModal.tsx
-
-
-
-
-
-
-
-
-
-const { Text: PhoneModal_Text } = typography;
-/** 体积显示：统一按 KB 输出（不足 1KB 也显示 1KB，避免出现「0KB」） */
-function kbText(bytes) {
-    const n = Number(bytes) || 0;
-    return Math.max(1, Math.round(n / 1024)) + 'KB';
-}
-/** 手机 ID 的展示用短串（UUID 太长，取前 8 位） */
-function shortPhoneId(id) {
-    if (!id)
-        return '未知设备（旧版中继）';
-    return id.length > 8 ? id.slice(0, 8) + '…' : id;
-}
-/**
- * 设备 ID 的专属配色（v26.10.08-v12，按用户要求：给设备 ID 加边框和彩色底色，不同设备不同色）。
- *
- * ⚠️ 用**固定色板 + 哈希取模**，而不是「由 ID 算 HSL」：后者在哈希相邻时会算出几乎一样的色相，
- *    多台手机并排时反而分不清。色板取 antd 预设色阶的「浅底 / 中边框 / 深字」三档（1 / 3 / 7 号色），
- *    保证浅色主题下文字对比度足够，也与面板整体配色语言一致。
- */
-const DEVICE_COLORS = [
-    { bg: '#e6f4ff', border: '#91caff', color: '#0958d9' }, // 蓝
-    { bg: '#e6fffb', border: '#87e8de', color: '#08979c' }, // 青
-    { bg: '#f6ffed', border: '#b7eb8f', color: '#389e0d' }, // 绿
-    { bg: '#fffbe6', border: '#ffe58f', color: '#d48806' }, // 黄
-    { bg: '#fff7e6', border: '#ffd591', color: '#d46b08' }, // 橙
-    { bg: '#fff1f0', border: '#ffa39e', color: '#cf1322' }, // 红
-    { bg: '#f9f0ff', border: '#d3adf7', color: '#531dab' }, // 紫
-    { bg: '#fff0f6', border: '#ffadd2', color: '#c41d7f' }, // 洋红
-];
-/** 同一 ID 恒定取到同一个颜色（跨会话稳定）；不同 ID 尽量落到不同颜色 */
-function hashDeviceId(id) {
-    // FNV-1a（32 位）：对「只差一个字符」的 ID 也敏感。
-    // ⚠️ 别退回 `h = h * 31 + c`：实测两个只差首字符的 ID 会被 `>>>0` 截断成同一个下标，
-    //    导致「不同设备不同底色」失效（本功能第一版就踩了）。
-    let h = 0x811c9dc5;
-    for (let i = 0; i < id.length; i++) {
-        h ^= id.charCodeAt(i);
-        h = Math.imul(h, 0x01000193) >>> 0;
-    }
-    return h >>> 0;
-}
-/**
- * 为一个**列表**解析「ID → 色板下标」，并把撞色的往后顺延。
- *
- * 为什么不能只用哈希：哈希再好也可能撞（实测「前缀重复字符」的 ID 会整批落到同一色），
- * 而用户要的是「不同设备 ID 不同底色」。故在列表内做贪心分配 ——
- * 设备数 ≤ 色板数（8）时**一定能拿到互不相同的颜色**。
- * 先按哈希排序再分配：谁拿哪个色只取决于 ID 集合，与 phones 的数组顺序无关。
- */
-function resolveDeviceColors(ids) {
-    const out = {};
-    const used = new Set();
-    const ordered = ids
-        .filter(Boolean)
-        .slice()
-        .sort((a, b) => hashDeviceId(a) - hashDeviceId(b) || (a < b ? -1 : 1));
-    for (const id of ordered) {
-        let idx = hashDeviceId(id) % DEVICE_COLORS.length;
-        for (let step = 0; step < DEVICE_COLORS.length && used.has(idx); step++) {
-            idx = (idx + 1) % DEVICE_COLORS.length;
-        }
-        used.add(idx);
-        out[id] = idx;
-    }
-    return out;
-}
-/** 带边框与专属底色的设备 ID 标签 */
-function DeviceIdTag({ id, colorIndex }) {
-    const idx = typeof colorIndex === 'number' ? colorIndex : hashDeviceId(id) % DEVICE_COLORS.length;
-    const c = DEVICE_COLORS[idx];
-    return ((0,react_jsx_runtime_production_namespaceFn().jsx)("span", { "data-device-id": id, "data-color-index": idx, style: {
-            display: 'inline-block',
-            padding: '1px 8px',
-            borderRadius: 6,
-            border: '1px solid ' + c.border,
-            background: c.bg,
-            color: c.color,
-            lineHeight: '20px',
-        }, children: shortPhoneId(id) }));
-}
-/** 卡片式分区（与参考稿一致：圆角描边区块 + 区块标题） */
-function Section({ title, extra, children }) {
-    return ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { border: '1px solid #f0f0f0', borderRadius: 10, padding: '12px 14px', marginBottom: 12 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: {
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    gap: 8,
-                    marginBottom: 10,
-                }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("span", { style: { fontWeight: 600, fontSize: 14 }, children: title }), extra] }), children] }));
-}
-/**
- * 设备互联弹窗（v26.10.06-v17：按参考稿重排版式）。
- *
- * 版式：标题「手机互传（SVG 图标）+ 设备互联标签」→「电脑接收 · 本机专属链接」分区
- * （左二维码 + 右链接框 + 复制按钮；**按要求不放「重新生成」**）→ 居中的在线状态胶囊 →
- * 「发送到手机」分区（文本行 + 待发送图片行 + 虚线选图 + 发送按钮）。
- * 业务逻辑（二维码、在线轮询、逐张压缩发送、进度）与旧实现一致，只换成新排版。
- */
-function PhoneModal({ open, onClose, relayServer, phones }) {
-    const deviceId = getDeviceId();
-    const [qrUrl, setQrUrl] = (0,react_production_namespaceFn().useState)('');
-    const [link, setLink] = (0,react_production_namespaceFn().useState)('');
-    /** 选中的手机 ID（多台时用于定向发送；默认全选） */
-    const [selected, setSelected] = (0,react_production_namespaceFn().useState)([]);
-    const [sending, setSending] = (0,react_production_namespaceFn().useState)(false);
-    const [sendText, setSendText] = (0,react_production_namespaceFn().useState)('');
-    const [pendingImages, setPendingImages] = (0,react_production_namespaceFn().useState)([]);
-    const [progress, setProgress] = (0,react_production_namespaceFn().useState)(null);
-    /** 设备 ID → 色板下标（列表内解决撞色，见 resolveDeviceColors） */
-    const deviceColors = (0,react_production_namespaceFn().useMemo)(() => resolveDeviceColors(phones.map((p) => p.id)), [phones]);
-    const phoneIds = phones.map((p) => p.id).filter(Boolean);
-    const phoneOnline = phones.length > 0;
-    /**
-     * 目标手机变化时同步选择项：保留「仍在线且在选中」的，把新上线的补进选中（= 默认全选）。
-     * 依赖 phones 的**引用变化**即可 —— 主面板只在手机 ID 集合真的变化时才更新该引用。
-     */
-    (0,react_production_namespaceFn().useEffect)(() => {
-        const ids = phones.map((p) => p.id).filter(Boolean);
-        setSelected((prev) => prev.filter((id) => ids.indexOf(id) >= 0).concat(ids.filter((id) => prev.indexOf(id) < 0)));
-    }, [phones]);
-    // 计算链接 + 二维码（非 http(s) 前缀即地址输入中途，不生成）
-    (0,react_production_namespaceFn().useEffect)(() => {
-        const s = (relayServer || '').trim().replace(/\/+$/, '');
-        if (!/^https?:\/\//i.test(s)) {
-            setLink('');
-            setQrUrl('');
-            return;
-        }
-        const lk = s + '/u/' + deviceId;
-        setLink(lk);
-        genQrDataUrl(lk)
-            .then((u) => setQrUrl(u))
-            .catch((e) => {
-            addLog('[二维码] 失败: ' + e.message, 'error', true);
-        });
-    }, [relayServer, open, deviceId]);
-    /**
-     * 本次发送的目标（v26.10.06-v4）：
-     *  - 只有 1 台手机（或老版中继没给手机 ID）→ `'all'`：按用户要求「直接发送」，不做选择；
-     *  - 多台且全选 → `'all'`（服务端广播给所有在线手机）；
-     *  - 多台但只勾了部分 → 手机 ID 数组（服务端按长轮询上的 phoneId 定向投递）。
-     */
-    const sendTargets = () => {
-        if (phoneIds.length <= 1)
-            return 'all';
-        const chosen = phoneIds.filter((id) => selected.indexOf(id) >= 0);
-        return chosen.length === phoneIds.length ? 'all' : chosen;
-    };
-    /** 多台手机时一台都没勾 → 不允许发送（否则会静默发不出去） */
-    const noTarget = phoneIds.length > 1 && phoneIds.every((id) => selected.indexOf(id) < 0);
-    const doSendText = () => {
-        const t = (sendText || '').trim();
-        if (!t) {
-            addLog('[发送到手机] 文本为空', 'error', true);
-            return;
-        }
-        if (noTarget) {
-            addLog('[发送到手机] 未选择任何手机，已取消发送', 'error', true);
-            return;
-        }
-        if (!phoneOnline) {
-            addLog('[发送到手机] 当前无在线设备，无法发送', 'error', true);
-            return;
-        }
-        setSending(true);
-        sendToPhone({
-            server: relayServer,
-            uuid: deviceId,
-            payload: { text: t, targets: sendTargets() },
-            onOk: () => {
-                addLog('[发送到手机] 文本已发送', 'success');
-                setSendText('');
-                setSending(false);
-            },
-            onFail: (e) => {
-                addLog('[发送到手机] 发送失败：' + e, 'error');
-                setSending(false);
-            },
-        });
-    };
-    // 选图：仅加入待发列表，点「发送」才真正上传（与手机端一致，避免误选即发）
-    const pickImages = () => {
-        if (!phoneOnline) {
-            addLog('[发送到手机] 当前无在线设备，无法发送', 'error', true);
-            return;
-        }
-        const inp = document.createElement('input');
-        inp.type = 'file';
-        inp.accept = 'image/*';
-        inp.multiple = true;
-        inp.style.display = 'none';
-        document.body.appendChild(inp);
-        // 取消选择（对话框关闭但未选文件）也要移除隐藏 input：'cancel' 非标准，
-        // 用「对话框关闭后 window 恢复焦点」兜底清理，避免反复取消在 body 累积 input
-        const cleanupFocus = () => {
-            window.removeEventListener('focus', cleanupFocus);
-            try {
-                inp.remove();
-            }
-            catch (e) {
-                /* 已移除 */
-            }
-        };
-        inp.onchange = () => {
-            const files = Array.prototype.slice.call(inp.files || []);
-            window.removeEventListener('focus', cleanupFocus);
-            inp.remove();
-            if (!files.length)
-                return;
-            setPendingImages((prev) => prev.concat(files.map((f) => ({
-                file: f,
-                name: f.name || 'image.jpg',
-                mime: f.type || 'image/jpeg',
-                url: URL.createObjectURL(f),
-            }))));
-        };
-        window.addEventListener('focus', cleanupFocus);
-        inp.click();
-    };
-    const removePendingImage = (i) => {
-        if (sending)
-            return; // 发送中禁止移除：发送按快照进行，移除会导致界面与实际不一致
-        setPendingImages((prev) => {
-            const arr = prev.slice();
-            const removed = arr.splice(i, 1)[0];
-            if (removed) {
-                try {
-                    URL.revokeObjectURL(removed.url);
-                }
-                catch (e) {
-                    /* 忽略 */
-                }
-            }
-            return arr;
-        });
-    };
-    // 逐张顺序发送（一张成功再发下一张，保证到达顺序；失败即停并提示进度）
-    const confirmSendImage = () => {
-        if (!pendingImages.length)
-            return;
-        if (!phoneOnline) {
-            addLog('[发送到手机] 当前无在线设备，无法发送', 'error', true);
-            return;
-        }
-        if (noTarget) {
-            addLog('[发送到手机] 未选择任何手机，已取消发送', 'error', true);
-            return;
-        }
-        setSending(true);
-        // 目标一次性算好：整批图片发给同一组手机（发送过程中用户改勾选不影响本批）
-        const targets = sendTargets();
-        const list = pendingImages.slice();
-        const total = list.length;
-        let sent = 0;
-        const failAt = (reason) => {
-            addLog('[发送到手机] 第 ' + (sent + 1) + ' 张发送失败：' + reason + '（已发 ' + sent + '/' + total + '）', 'error');
-            setSending(false);
-            setProgress({
-                done: sent,
-                total,
-                busy: false,
-                failed: true,
-                // ⚠️ v26.10.09-v7：原文案前缀一个 emoji '❌'（U+274C，Dingbats）——Win7 字形覆盖不可靠，
-                // 且语义上与 failed:true 驱动的「红色 Progress」重复。故直接去掉符号，只留文字。
-                text: '已发送 ' + sent + '/' + total + '，已停止',
-            });
-        };
-        const sendNext = () => {
-            if (sent >= total) {
-                list.forEach((it) => {
-                    try {
-                        URL.revokeObjectURL(it.url);
-                    }
-                    catch (e) {
-                        /* 忽略 */
-                    }
-                });
-                addLog('[发送到手机] ' + total + ' 张图片已全部发送', 'success');
-                setSending(false);
-                setPendingImages([]);
-                setProgress(null);
-                return;
-            }
-            const it = list[sent];
-            // 发送前统一压缩（与「手机 → 电脑」方向一致）：SVG/GIF、解码失败、压不小都回退原图
-            addLog('[发送到手机] 正在处理（' + (sent + 1) + '/' + total + '）：' + (it.name || 'image'), 'info');
-            setProgress({
-                done: sent,
-                total,
-                busy: true,
-                failed: false,
-                text: '处理中… ' + sent + '/' + total + '（第 ' + (sent + 1) + ' 张）',
-            });
-            compressImageForPhone(it.file).then((out) => {
-                if (imagePayloadBytes(out.blob, out.name, out.mime) > RELAY_MAX_BODY) {
-                    addLog('[发送到手机] 第 ' +
-                        (sent + 1) +
-                        ' 张压缩后仍超限（单张约 12MB 上限），已停止（已发 ' +
-                        sent +
-                        '/' +
-                        total +
-                        '）', 'error', true);
-                    setSending(false);
-                    setProgress({
-                        done: sent,
-                        total,
-                        busy: false,
-                        failed: true,
-                        text: '已发送 ' + sent + '/' + total + '，已停止',
-                    });
-                    return;
-                }
-                addLog('[发送到手机] ' +
-                    (out.compressed
-                        ? '已压缩 ' + it.name + '：' + kbText(it.file.size) + ' → ' + kbText(out.blob.size)
-                        : '原图发送 ' + out.name + '（' + kbText(out.blob.size) + '）') +
-                    '，正在发送（' +
-                    (sent + 1) +
-                    '/' +
-                    total +
-                    '）', 'info');
-                const rd = new FileReader();
-                rd.onload = () => {
-                    const b64 = (rd.result || '').split(',')[1] || '';
-                    if (!b64) {
-                        failAt('读取图片失败');
-                        return;
-                    }
-                    sendToPhone({
-                        server: relayServer,
-                        uuid: deviceId,
-                        payload: { name: out.name, mime: out.mime, data: b64, targets: targets },
-                        onOk: () => {
-                            sent++;
-                            setProgress({
-                                done: sent,
-                                total,
-                                busy: sent < total,
-                                failed: false,
-                                text: '已发送 ' + sent + '/' + total,
-                            });
-                            sendNext();
-                        },
-                        onFail: (e) => failAt(e),
-                    });
-                };
-                rd.onerror = () => failAt('读取图片失败');
-                rd.readAsDataURL(out.blob);
-            });
-        };
-        sendNext();
-    };
-    const percent = progress && progress.total ? Math.round((progress.done / progress.total) * 100) : 0;
-    const canSend = phoneOnline && !sending && !noTarget;
-    return ((0,react_jsx_runtime_production_namespaceFn().jsxs)(modal, { open: open, title: (0,react_jsx_runtime_production_namespaceFn().jsxs)("span", { style: { display: 'inline-flex', alignItems: 'center', gap: 6 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(SmartphoneIcon, { size: 16 }), "\u624B\u673A\u4E92\u4F20", (0,react_jsx_runtime_production_namespaceFn().jsx)(es_tag, { style: { marginLeft: 0, fontWeight: 400 }, color: "default", children: "\u8BBE\u5907\u4E92\u8054" })] }), onCancel: onClose, getContainer: getOverlayContainer, width: 560, styles: { body: { textAlign: 'left' } }, destroyOnHidden: true, footer: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { onClick: onClose, children: "\u5173\u95ED" }), children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(Section, { title: "\u7535\u8111\u63A5\u6536 \u00B7 \u672C\u673A\u4E13\u5C5E\u94FE\u63A5", extra: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_tag, { color: "blue", style: { margin: 0, fontWeight: 400 }, children: "\u624B\u673A\u626B\u7801\u5373\u4E0A\u4F20" }), children: link ? ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', gap: 12, alignItems: 'flex-start' }, children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { flex: '0 0 auto', textAlign: 'center' }, children: [qrUrl ? ((0,react_jsx_runtime_production_namespaceFn().jsx)("img", { src: qrUrl, alt: "\u4E0A\u4F20\u94FE\u63A5\u4E8C\u7EF4\u7801", style: {
-                                        width: 124,
-                                        height: 124,
-                                        border: '1px solid #f0f0f0',
-                                        // 二维码不加圆角（v26.10.06-v21 按用户要求）：圆角会切掉
-                                        // 定位用的三个角标，部分扫码器识别率会下降
-                                        display: 'block',
-                                    } })) : ((0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: {
-                                        width: 124,
-                                        height: 124,
-                                        border: '1px solid #f0f0f0',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        color: '#999',
-                                        fontSize: 12,
-                                    }, children: "\u4E8C\u7EF4\u7801\u751F\u6210\u4E2D\u2026" })), (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { fontSize: 12, color: '#8c8c8c', marginTop: 6 }, children: "\u626B\u4E00\u626B\u4E0A\u4F20" })] }), (0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { flex: 1, minWidth: 0 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { fontSize: 12, color: '#8c8c8c', marginBottom: 6 }, children: "\u94FE\u63A5\uFF08\u590D\u5236\u5230\u624B\u673A\u6D4F\u89C8\u5668\u6253\u5F00\uFF09" }), (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: {
-                                        border: '1px solid #d9d9d9',
-                                        borderRadius: 8,
-                                        padding: '7px 10px',
-                                        fontSize: 13,
-                                        wordBreak: 'break-all',
-                                        background: '#fafafa',
-                                        maxHeight: 56,
-                                        overflow: 'auto',
-                                    }, children: link }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { color: "primary", variant: "solid", block: true, style: { marginTop: 10 }, onClick: () => link && safeCopyText(link), children: "\u590D\u5236\u94FE\u63A5" })] })] })) : ((0,react_jsx_runtime_production_namespaceFn().jsx)(PhoneModal_Text, { type: "danger", children: "\u5C1A\u672A\u914D\u7F6E\u4E2D\u7EE7\u670D\u52A1\u5668\uFF0C\u8BF7\u5230\u300C\u8BBE\u7F6E\u300D\u586B\u5199\u3002" })) }), (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { textAlign: 'center', marginBottom: 12 }, children: (0,react_jsx_runtime_production_namespaceFn().jsxs)("span", { style: {
-                        display: 'inline-block',
-                        border: '1px solid ' + (phoneOnline ? '#b7eb8f' : '#ffccc7'),
-                        background: phoneOnline ? '#f6ffed' : '#fff2f0',
-                        color: phoneOnline ? '#389e0d' : '#cf1322',
-                        borderRadius: 16,
-                        padding: '4px 16px',
-                        fontSize: 13,
-                    }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("span", { style: {
-                                display: 'inline-block',
-                                width: 6,
-                                height: 6,
-                                borderRadius: '50%',
-                                background: phoneOnline ? '#52c41a' : '#ff4d4f',
-                                marginRight: 6,
-                                verticalAlign: 'middle',
-                            } }), phoneOnline ? '已连接手机 ' + phones.length + ' 台，可发送' : '当前无在线设备，无法发送'] }) }), phones.length > 0 && ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: {
-                    border: '1px solid #f0f0f0',
-                    borderRadius: 10,
-                    padding: '10px 14px',
-                    marginBottom: 12,
-                }, children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { fontSize: 13, fontWeight: 600, marginBottom: 6 }, children: ["\u5DF2\u8FDE\u63A5\u624B\u673A\uFF08", phones.length, "\uFF09"] }), phones.length > 1 ? ((0,react_jsx_runtime_production_namespaceFn().jsxs)((react_jsx_runtime_production_namespaceFn().Fragment), { children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(es_checkbox.Group, { value: selected, onChange: (v) => setSelected(v), style: { display: 'flex', flexDirection: 'column', gap: 4 }, children: phones.map((p) => ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_checkbox, { value: p.id, children: (0,react_jsx_runtime_production_namespaceFn().jsx)(DeviceIdTag, { id: p.id, colorIndex: deviceColors[p.id] }) }, p.id))) }), (0,react_jsx_runtime_production_namespaceFn().jsx)(PhoneModal_Text, { type: "secondary", style: { fontSize: 11 }, children: "\u9ED8\u8BA4\u5168\u9009\uFF1B\u53D6\u6D88\u52FE\u9009\u540E\u53EA\u53D1\u7ED9\u52FE\u9009\u7684\u624B\u673A\u3002" })] })) : ((0,react_jsx_runtime_production_namespaceFn().jsx)(DeviceIdTag, { id: phones[0].id, colorIndex: deviceColors[phones[0].id] }))] })), (0,react_jsx_runtime_production_namespaceFn().jsxs)(Section, { title: "\u53D1\u9001\u5230\u624B\u673A", children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', gap: 8 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(es_input, { placeholder: "\u8F93\u5165\u8981\u53D1\u9001\u5230\u624B\u673A\u7684\u6587\u672C\u2026", value: sendText, onChange: (e) => setSendText(e.target.value), onPressEnter: doSendText, style: { flex: 1 } }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { color: "primary", variant: "solid", disabled: !canSend, loading: sending, onClick: doSendText, style: { width: 84 }, children: "\u53D1\u9001" })] }), pendingImages.length > 0 && ((0,react_jsx_runtime_production_namespaceFn().jsxs)((react_jsx_runtime_production_namespaceFn().Fragment), { children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', justifyContent: 'space-between', margin: '14px 0 8px' }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("span", { style: { fontSize: 13, color: '#595959' }, children: "\u5F85\u53D1\u9001\u56FE\u7247" }), (0,react_jsx_runtime_production_namespaceFn().jsxs)("span", { style: { fontSize: 13, color: '#8c8c8c' }, children: ["\u5DF2\u9009 ", pendingImages.length, " \u5F20"] })] }), (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0,1fr))', gap: 8 }, children: pendingImages.map((img, i) => ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: {
-                                        position: 'relative',
-                                        paddingBottom: '86%',
-                                        borderRadius: 10,
-                                        overflow: 'hidden',
-                                        background: '#f2f2f2',
-                                    }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("img", { src: img.url, alt: img.name, style: {
-                                                position: 'absolute',
-                                                inset: 0,
-                                                width: '100%',
-                                                height: '100%',
-                                                objectFit: 'cover',
-                                            } }), (0,react_jsx_runtime_production_namespaceFn().jsx)("span", { title: "\u79FB\u9664\u8FD9\u5F20", onClick: () => removePendingImage(i), style: {
-                                                position: 'absolute',
-                                                top: 6,
-                                                right: 6,
-                                                width: 20,
-                                                height: 20,
-                                                borderRadius: '50%',
-                                                background: 'rgba(0,0,0,0.55)',
-                                                color: '#fff',
-                                                fontSize: 13,
-                                                lineHeight: '20px',
-                                                textAlign: 'center',
-                                                cursor: sending ? 'not-allowed' : 'pointer',
-                                                userSelect: 'none',
-                                            }, children: "\u00D7" })] }, img.url))) })] })), (0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', gap: 8, marginTop: 14 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { variant: "dashed", disabled: !canSend, onClick: pickImages, style: { flex: '1 1 0' }, children: "\uFF0B \u9009\u62E9 / \u6DFB\u52A0\u56FE\u7247\uFF08\u53EF\u591A\u9009\uFF09" }), pendingImages.length > 0 && ((0,react_jsx_runtime_production_namespaceFn().jsxs)(es_button, { color: "primary", variant: "solid", disabled: !canSend, loading: sending, onClick: confirmSendImage, style: { flex: '1.2 1 0' }, children: ["\u53D1\u9001 ", pendingImages.length, " \u5F20\u56FE\u7247"] }))] }), progress && ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { marginTop: 12 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(es_progress, { percent: percent, size: "small", strokeColor: progress.failed ? '#e4393c' : '#1677ff', status: progress.failed ? 'exception' : 'normal' }), (0,react_jsx_runtime_production_namespaceFn().jsx)(PhoneModal_Text, { type: progress.failed ? 'danger' : 'secondary', style: { fontSize: 12 }, children: progress.text })] }))] })] }));
 }
 
 ;// ./src/lib/ui/LogModal.tsx
@@ -72116,1032 +68262,602 @@ image_Image.PreviewGroup = image_PreviewGroup;
 if (false) // removed by dead control flow
 {}
 /* harmony default export */ const es_image = (image_Image);
-;// ./node_modules/@ant-design/icons-svg/es/asn/PrinterOutlined.js
-// This icon file is generated automatically.
-var PrinterOutlined = { "icon": { "tag": "svg", "attrs": { "viewBox": "64 64 896 896", "focusable": "false" }, "children": [{ "tag": "path", "attrs": { "d": "M820 436h-40c-4.4 0-8 3.6-8 8v40c0 4.4 3.6 8 8 8h40c4.4 0 8-3.6 8-8v-40c0-4.4-3.6-8-8-8zm32-104H732V120c0-4.4-3.6-8-8-8H300c-4.4 0-8 3.6-8 8v212H172c-44.2 0-80 35.8-80 80v328c0 17.7 14.3 32 32 32h168v132c0 4.4 3.6 8 8 8h424c4.4 0 8-3.6 8-8V772h168c17.7 0 32-14.3 32-32V412c0-44.2-35.8-80-80-80zM360 180h304v152H360V180zm304 664H360V568h304v276zm200-140H732V500H292v204H160V412c0-6.6 5.4-12 12-12h680c6.6 0 12 5.4 12 12v292z" } }] }, "name": "printer", "theme": "outlined" };
-/* harmony default export */ const asn_PrinterOutlined = (PrinterOutlined);
-
-;// ./node_modules/@ant-design/icons/es/icons/PrinterOutlined.js
-function PrinterOutlined_extends() { PrinterOutlined_extends = Object.assign ? Object.assign.bind() : function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; }; return PrinterOutlined_extends.apply(this, arguments); }
-// GENERATED BY ./scripts/generate.ts
-// DO NOT EDIT IT MANUALLY
-
+;// ./node_modules/@rc-component/checkbox/es/index.js
+function checkbox_es_extends() { checkbox_es_extends = Object.assign ? Object.assign.bind() : function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; }; return checkbox_es_extends.apply(this, arguments); }
 ;
 
 
-const PrinterOutlined_PrinterOutlined = (props, ref) => /*#__PURE__*/(react_production_namespaceFn().createElement)(AntdIconLight, PrinterOutlined_extends({}, props, {
-  ref: ref,
-  icon: asn_PrinterOutlined
-}));
 
-/**![printer](data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTAiIGhlaWdodD0iNTAiIGZpbGw9IiNjYWNhY2EiIHZpZXdCb3g9IjY0IDY0IDg5NiA4OTYiIGZvY3VzYWJsZT0iZmFsc2UiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHBhdGggZD0iTTgyMCA0MzZoLTQwYy00LjQgMC04IDMuNi04IDh2NDBjMCA0LjQgMy42IDggOCA4aDQwYzQuNCAwIDgtMy42IDgtOHYtNDBjMC00LjQtMy42LTgtOC04em0zMi0xMDRINzMyVjEyMGMwLTQuNC0zLjYtOC04LThIMzAwYy00LjQgMC04IDMuNi04IDh2MjEySDE3MmMtNDQuMiAwLTgwIDM1LjgtODAgODB2MzI4YzAgMTcuNyAxNC4zIDMyIDMyIDMyaDE2OHYxMzJjMCA0LjQgMy42IDggOCA4aDQyNGM0LjQgMCA4LTMuNiA4LThWNzcyaDE2OGMxNy43IDAgMzItMTQuMyAzMi0zMlY0MTJjMC00NC4yLTM1LjgtODAtODAtODB6TTM2MCAxODBoMzA0djE1MkgzNjBWMTgwem0zMDQgNjY0SDM2MFY1NjhoMzA0djI3NnptMjAwLTE0MEg3MzJWNTAwSDI5MnYyMDRIMTYwVjQxMmMwLTYuNiA1LjQtMTIgMTItMTJoNjgwYzYuNiAwIDEyIDUuNCAxMiAxMnYyOTJ6IiAvPjwvc3ZnPg==) */
-const PrinterOutlined_RefIcon = /*#__PURE__*/(react_production_namespaceFn().forwardRef)(PrinterOutlined_PrinterOutlined);
-if (false) // removed by dead control flow
-{}
-/* harmony default export */ const icons_PrinterOutlined = (PrinterOutlined_RefIcon);
-;// ./node_modules/react-to-print/dist/react-to-print.mjs
-
-const q = "printWindow";
-function V(e) {
-  const t = document.createElement("iframe");
-  return t.width = `${document.documentElement.clientWidth}px`, t.height = `${document.documentElement.clientHeight}px`, t.style.position = "absolute", t.style.top = `-${document.documentElement.clientHeight + 100}px`, t.style.left = `-${document.documentElement.clientWidth + 100}px`, t.id = q, t.srcdoc = "<!DOCTYPE html>", e && (e.allow && (t.allow = e.allow), e.referrerPolicy !== void 0 && (t.referrerPolicy = e.referrerPolicy), e.sandbox !== void 0 && (t.sandbox = e.sandbox)), t;
-}
-function react_to_print_f({ level: e = "error", messages: t, suppressErrors: n = !1 }) {
-  n || (e === "error" ? console.error(t) : e === "warning" ? console.warn(t) : console.debug(t));
-}
-function react_to_print_$(e, t) {
-  if (t || !e) {
-    const n = document.getElementById(q);
-    n && document.body.removeChild(n);
-  }
-}
-function P(e) {
-  return e instanceof Error ? e : new Error("Unknown Error");
-}
-function react_to_print_H(e, t) {
+const Checkbox = /*#__PURE__*/(0,react_production_namespaceFn().forwardRef)((props, ref) => {
   const {
-    documentTitle: n,
-    onAfterPrint: l,
-    onPrintError: p,
-    preserveAfterPrint: m,
-    print: h,
-    suppressErrors: g
-  } = t;
-  setTimeout(() => {
-    if (e.contentWindow) {
-      let a = function() {
-        l?.(), react_to_print_$(m);
-      };
-      if (e.contentWindow.focus(), h)
-        h(e).then(a).catch((c) => {
-          p ? p("print", P(c)) : react_to_print_f({
-            messages: ["An error was thrown by the specified `print` function"],
-            suppressErrors: g
-          });
-        });
-      else {
-        if (e.contentWindow.print) {
-          const c = e.contentDocument?.title ?? "", E = e.ownerDocument.title, y = typeof n == "function" ? n() : n;
-          y && (e.ownerDocument.title = y, e.contentDocument && (e.contentDocument.title = y)), e.contentWindow.print(), y && (e.ownerDocument.title = E, e.contentDocument && (e.contentDocument.title = c));
-        } else
-          react_to_print_f({
-            messages: ["Printing for this browser is not currently possible: the browser does not have a `print` method available for iframes."],
-            suppressErrors: g
-          });
-        react_to_print_z() ? setTimeout(a, 500) : a();
-      }
-    } else
-      react_to_print_f({
-        messages: ["Printing failed because the `contentWindow` of the print iframe did not load. This is possibly an error with `react-to-print`. Please file an issue: https://github.com/MatthewHerbst/react-to-print/issues/"],
-        suppressErrors: g
-      });
-  }, 500);
-}
-function react_to_print_z() {
-  return [
-    /Android/i,
-    /webOS/i,
-    /iPhone/i,
-    /iPad/i,
-    /iPod/i,
-    /BlackBerry/i,
-    /Windows Phone/i
-  ].some((t) => (
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-    (navigator.userAgent ?? // Retained for compatibility with browsers that use `navigator.vendor` to identify the browser.
-    // eslint-disable-next-line @typescript-eslint/no-deprecated
-    navigator.vendor ?? // Retained for compatibility with older versions of Opera that use `window.opera`.
-    ("opera" in window && window.opera)).match(t)
-  ));
-}
-function react_to_print_O(e) {
-  const t = [], n = document.createTreeWalker(e, NodeFilter.SHOW_ELEMENT, null);
-  let l = n.nextNode();
-  for (; l; )
-    t.push(l), l = n.nextNode();
-  return t;
-}
-function react_to_print_j(e, t, n) {
-  const l = react_to_print_O(e), p = react_to_print_O(t);
-  if (l.length !== p.length) {
-    react_to_print_f({
-      messages: ["When cloning shadow root content, source and target elements have different size. `onBeforePrint` likely resolved too early.", e, t],
-      suppressErrors: n
-    });
-    return;
-  }
-  for (let m = 0; m < l.length; m++) {
-    const h = l[m], g = p[m], a = h.shadowRoot;
-    if (a !== null) {
-      const c = g.attachShadow({ mode: a.mode });
-      c.innerHTML = a.innerHTML, react_to_print_j(a, c, n);
-    }
-  }
-}
-const G = `
-    @page {
-        /* Remove browser default header (title) and footer (url) */
-        margin: 0;
-    }
-    @media print {
-        body {
-            /* Tell browsers to print background colors */
-            color-adjust: exact; /* Firefox. This is an older version of "print-color-adjust" */
-            print-color-adjust: exact; /* Firefox/Safari */
-            -webkit-print-color-adjust: exact; /* Chrome/Safari/Edge/Opera */
-        }
-    }
-`;
-function W(e, t, n) {
-  const {
-    contentNode: l,
-    clonedContentNode: p,
-    clonedImgNodes: m,
-    clonedVideoNodes: h,
-    numResourcesToLoad: g,
-    originalCanvasNodes: a
-  } = t, {
-    bodyClass: c,
-    fonts: E,
-    ignoreGlobalStyles: y,
-    pageStyle: C,
-    nonce: T,
-    suppressErrors: A,
-    copyShadowRoots: F
-  } = n, L = [], _ = [];
-  function i(k, x) {
-    if (L.includes(k)) {
-      react_to_print_f({
-        level: "debug",
-        messages: ["Tried to mark a resource that has already been handled", k],
-        suppressErrors: A
-      });
+    prefixCls = 'rc-checkbox',
+    className,
+    style,
+    checked,
+    disabled,
+    defaultChecked = false,
+    type = 'checkbox',
+    title,
+    onChange,
+    ...inputProps
+  } = props;
+  const inputRef = (0,react_production_namespaceFn().useRef)(null);
+  const holderRef = (0,react_production_namespaceFn().useRef)(null);
+  const [rawValue, setRawValue] = useControlledState(defaultChecked, checked);
+  (0,react_production_namespaceFn().useImperativeHandle)(ref, () => ({
+    focus: options => {
+      inputRef.current?.focus(options);
+    },
+    blur: () => {
+      inputRef.current?.blur();
+    },
+    input: inputRef.current,
+    nativeElement: holderRef.current
+  }));
+  const classString = clsx(prefixCls, className, {
+    [`${prefixCls}-checked`]: rawValue,
+    [`${prefixCls}-disabled`]: disabled
+  });
+  const handleChange = e => {
+    if (disabled) {
       return;
     }
-    x ? (react_to_print_f({
-      messages: [
-        '"react-to-print" was unable to load a resource but will continue attempting to print the page',
-        ...x
-      ],
-      suppressErrors: A
-    }), _.push(k)) : L.push(k), L.length + _.length === g && react_to_print_H(e, n);
-  }
-  e.onload = null;
-  const d = e.contentDocument ?? e.contentWindow?.document;
-  if (d) {
-    const k = d.body.appendChild(p);
-    F && react_to_print_j(l, k, !!A), E && (e.contentDocument?.fonts && e.contentWindow?.FontFace ? E.forEach((s) => {
-      const o = new FontFace(
-        s.family,
-        s.source,
-        { weight: s.weight, style: s.style }
-      );
-      e.contentDocument.fonts.add(o), o.loaded.then(() => {
-        i(o);
-      }).catch((b) => {
-        i(o, ["Failed loading the font:", o, "Load error:", P(b)]);
-      });
-    }) : (E.forEach((s) => {
-      i(s);
-    }), react_to_print_f({
-      messages: ['"react-to-print" is not able to load custom fonts because the browser does not support the FontFace API but will continue attempting to print the page'],
-      suppressErrors: A
-    })));
-    const x = C ?? G, D = d.createElement("style");
-    T && (D.setAttribute("nonce", T), d.head.setAttribute("nonce", T)), D.appendChild(d.createTextNode(x)), d.head.appendChild(D), c && d.body.classList.add(...c.split(" "));
-    const U = d.querySelectorAll("canvas");
-    for (let s = 0; s < a.length; ++s) {
-      const o = a[s], b = U[s];
-      if (b === void 0) {
-        react_to_print_f({
-          messages: ["A canvas element could not be copied for printing, has it loaded? `onBeforePrint` likely resolved too early.", o],
-          suppressErrors: A
-        });
-        continue;
-      }
-      const r = b.getContext("2d");
-      r && r.drawImage(o, 0, 0);
+    if (!('checked' in props)) {
+      setRawValue(e.target.checked);
     }
-    for (let s = 0; s < m.length; s++) {
-      const o = m[s], b = o.getAttribute("src");
-      if (!b)
-        i(o, ['Found an <img> tag with an empty "src" attribute. This prevents pre-loading it.', o]);
-      else {
-        const r = new Image();
-        r.onload = () => {
-          i(o);
-        }, r.onerror = (u, w, S, v, N) => {
-          i(o, ["Error loading <img>", o, "Error", N]);
-        }, r.src = b;
-      }
-    }
-    for (let s = 0; s < h.length; s++) {
-      const o = h[s];
-      o.preload = "auto";
-      const b = o.getAttribute("poster");
-      if (b) {
-        const r = new Image();
-        r.onload = () => {
-          i(o);
-        }, r.onerror = (u, w, S, v, N) => {
-          i(o, ["Error loading video poster", b, "for video", o, "Error:", N]);
-        }, r.src = b;
-      } else
-        o.readyState >= 2 ? i(o) : o.src ? (o.onloadeddata = () => {
-          i(o);
-        }, o.onerror = (r, u, w, S, v) => {
-          i(o, ["Error loading video", o, "Error", v]);
-        }, o.onstalled = () => {
-          i(o, ["Loading video stalled, skipping", o]);
-        }) : i(o, ["Error loading video, `src` is empty", o]);
-    }
-    const R = "select", M = l.querySelectorAll(R), B = d.querySelectorAll(R);
-    for (let s = 0; s < M.length; s++)
-      B[s].value = M[s].value;
-    if (!y) {
-      const s = document.querySelectorAll("style, link[rel~='stylesheet'], link[as='style']");
-      for (let o = 0, b = s.length; o < b; ++o) {
-        const r = s[o];
-        if (r.tagName.toLowerCase() === "style") {
-          const u = d.createElement(r.tagName), w = r.sheet;
-          if (w) {
-            let S = "";
-            try {
-              const v = w.cssRules.length;
-              for (let N = 0; N < v; ++N)
-                typeof w.cssRules[N].cssText == "string" && (S += `${w.cssRules[N].cssText}\r
-`);
-            } catch (v) {
-              react_to_print_f({
-                messages: [
-                  "A stylesheet could not be accessed. This is likely due to the stylesheet having cross-origin imports, and many browsers block script access to cross-origin stylesheets. See https://github.com/MatthewHerbst/react-to-print/issues/429 for details. You may be able to load the sheet by both marking the stylesheet with the cross `crossorigin` attribute, and setting the `Access-Control-Allow-Origin` header on the server serving the stylesheet. Alternatively, host the stylesheet on your domain to avoid this issue entirely.",
-                  // eslint-disable-line max-len
-                  r,
-                  `Original error: ${P(v).message}`
-                ],
-                level: "warning"
-              });
-            }
-            u.setAttribute("id", `react-to-print-${o}`), T && u.setAttribute("nonce", T), u.appendChild(d.createTextNode(S)), d.head.appendChild(u);
-          }
-        } else if (r.getAttribute("href"))
-          if (r.hasAttribute("disabled"))
-            react_to_print_f({
-              messages: ["`react-to-print` encountered a <link> tag with a `disabled` attribute and will ignore it. Note that the `disabled` attribute is deprecated, and some browsers ignore it. You should stop using it. https://developer.mozilla.org/en-US/docs/Web/HTML/Element/link#attr-disabled. The <link> is:", r],
-              level: "warning"
-            }), i(r);
-          else {
-            const u = d.createElement(r.tagName);
-            for (let w = 0, S = r.attributes.length; w < S; ++w) {
-              const v = r.attributes[w];
-              v && u.setAttribute(v.nodeName, v.nodeValue ?? "");
-            }
-            u.onload = () => {
-              i(u);
-            }, u.onerror = (w, S, v, N, I) => {
-              i(u, ["Failed to load", u, "Error:", I]);
-            }, T && u.setAttribute("nonce", T), d.head.appendChild(u);
-          }
-        else
-          react_to_print_f({
-            messages: ["`react-to-print` encountered a <link> tag with an empty `href` attribute. In addition to being invalid HTML, this can cause problems in many browsers, and so the <link> was not loaded. The <link> is:", r],
-            level: "warning"
-          }), i(r);
-      }
-    }
-  }
-  g === 0 && react_to_print_H(e, n);
-}
-function J(e, t, n) {
-  e.onload = () => {
-    W(
-      e,
-      t,
-      n
-    );
-  }, document.body.appendChild(e);
-}
-function K({ contentRef: e, optionalContent: t, suppressErrors: n }) {
-  if (t && typeof t == "function")
-    return e && react_to_print_f({
-      level: "warning",
-      messages: ['"react-to-print" received a `contentRef` option and an optional-content param passed to its callback. The `contentRef` option will be ignored.']
-    }), t();
-  if (e)
-    return e.current;
-  react_to_print_f({
-    messages: ['"react-to-print" did not receive a `contentRef` option or a optional-content param pass to its callback.'],
-    suppressErrors: n
-  });
-}
-function Q(e, t) {
-  const {
-    contentRef: n,
-    fonts: l,
-    ignoreGlobalStyles: p,
-    suppressErrors: m
-  } = t, h = K({
-    contentRef: n,
-    optionalContent: e,
-    suppressErrors: m
-  });
-  if (!h)
-    return;
-  const g = h.cloneNode(!0), a = document.querySelectorAll("link[rel~='stylesheet'], link[as='style']"), c = g.querySelectorAll("img"), E = g.querySelectorAll("video"), y = l ? l.length : 0, C = (p ? 0 : a.length) + c.length + E.length + y;
-  return {
-    contentNode: h,
-    clonedContentNode: g,
-    clonedImgNodes: c,
-    clonedVideoNodes: E,
-    numResourcesToLoad: C,
-    originalCanvasNodes: h.querySelectorAll("canvas")
-  };
-}
-function Z({
-  bodyClass: e,
-  contentRef: t,
-  copyShadowRoots: n,
-  documentTitle: l,
-  fonts: p,
-  ignoreGlobalStyles: m,
-  nonce: h,
-  onAfterPrint: g,
-  onBeforePrint: a,
-  onPrintError: c,
-  pageStyle: E,
-  preserveAfterPrint: y,
-  print: C,
-  printIframeProps: T,
-  suppressErrors: A
-}) {
-  return (0,react_production_namespaceFn().useCallback)((L) => {
-    react_to_print_$(y, !0);
-    function _() {
-      const i = {
-        bodyClass: e,
-        contentRef: t,
-        copyShadowRoots: n,
-        documentTitle: l,
-        fonts: p,
-        ignoreGlobalStyles: m,
-        nonce: h,
-        onAfterPrint: g,
-        onPrintError: c,
-        pageStyle: E,
-        preserveAfterPrint: y,
-        print: C,
-        suppressErrors: A
-      }, d = V(T), k = Q(L, i);
-      if (!k) {
-        react_to_print_f({
-          messages: ["There is nothing to print"],
-          suppressErrors: A
-        });
-        return;
-      }
-      J(d, k, i);
-    }
-    a ? a().then(() => {
-      _();
-    }).catch((i) => {
-      c?.("onBeforePrint", P(i));
-    }) : _();
-  }, [
-    e,
-    t,
-    n,
-    l,
-    p,
-    m,
-    h,
-    g,
-    a,
-    c,
-    E,
-    y,
-    T,
-    C,
-    A
-  ]);
-}
-
-
-;// ./src/lib/gallery.ts
-/**
- * 「历史记录」的数据与纯工具（v26.10.06-v13 建，v26.10.08-v3 起同时承载文本记录）。
- *
- * 渲染层已整体改为 React + Ant Design（见 `ui/RecvHistoryModal.tsx`），
- * 本文件**不再有任何 DOM 操作**，也**不再依赖 Viewer.js** —— 图片放大统一交给
- * antd `Image.PreviewGroup`（多图左右切换、缩放、旋转都自带），故 Viewer 的
- * `@require` / `@resource` 已从脚本元信息里移除。
- *
- * 这里只保留：图片/文本条目的类型 + 上限常量 + 文件命名工具。列表状态由主面板（React state）持有。
- */
-/** 画廊最多保留张数，超出丢最旧（并释放其 objectURL） */
-const MAX_GALLERY = 27;
-/** 历史记录最多保留的文本条数，超出丢最旧（文本是小字符串，上限比图片宽松） */
-const MAX_TEXT = 100;
-/**
- * 计算下载用的文件名：优先用原始名；无扩展名时按 MIME 补。
- * @param {string} name - 原始文件名（可空）
- * @param {string} mime - MIME 类型
- * @param {number} idx - 画廊序号（用于兜底命名）
- * @returns {string} 带扩展名的文件名
- */
-function downloadFileName(name, mime, idx = 0) {
-    const extByMime = {
-        'image/jpeg': '.jpg',
-        'image/png': '.png',
-        'image/gif': '.gif',
-        'image/webp': '.webp',
-        'image/svg+xml': '.svg',
-        'image/bmp': '.bmp',
-    };
-    let n = String(name || '').trim();
-    if (!n)
-        n = 'znhd-image-' + (idx + 1);
-    if (!/\.[a-z0-9]{2,5}$/i.test(n))
-        n += extByMime[(mime || '').toLowerCase()] || '.jpg';
-    return n;
-}
-
-;// ./src/lib/ui/ImageOverlayActions.tsx
-
-/**
- * 图片右下角的悬浮功能按钮条（v26.10.10-v16 新增）。
- *
- * ── 它解决什么问题 ─────────────────────────────────────────────────────────
- * 历史记录窗口与图片嗅探窗口原先把「复制 / 下载 / 删除」等按钮**排在图片下方**，
- * 每个格子要占掉一行按钮的高度，图片本身被压得很小。用户要求（v26.10.10-v16）：
- * 按钮挪到**图片内部右下角**、**只显示图标不显示文字**、**鼠标移到图片上才出现**、
- * hover 时才用 tooltip 显示文字。
- *
- * ── 为什么用 state 而不是 CSS `:hover` ──────────────────────────────────────
- * 宿主税务页有自己的样式表，我们不想为了这个悬浮效果往页面里注入全局 CSS 规则
- * （`:hover` 只能靠样式表实现）。这里沿用 `AgentModal.tsx` 侧栏「hover 才出现的删除图标」
- * 的既有做法：`onMouseEnter/onMouseLeave` 改 React state，样式全部内联。
- *
- * ── 为什么隐藏时按钮仍留在 DOM 里 ───────────────────────────────────────────
- * 隐藏只改 `opacity / visibility / pointerEvents`，**不卸载按钮**：
- * ① 冒烟夹具（`scripts/smoke/znhd-smoke.html`）是按 `button[aria-label="复制"]` 找按钮再
- *    程序化 `.click()` 的，元素被卸载就找不到（`visibility: hidden` 不影响 `.click()` 派发）；
- * ② 读屏/键盘用户仍能 Tab 到这些按钮。
- *
- * ── 无障碍 ─────────────────────────────────────────────────────────────────
- * 按钮内没有文字，语义**只由 `aria-label` 承担**（读屏靠它，冒烟测试也按它定位）。
- * tooltip 文案与 `aria-label` 用同一个 `label`，两者不会漂移。
- */
-
-
-function ImageOverlayActions({ children, actions }) {
-    const [hover, setHover] = (0,react_production_namespaceFn().useState)(false);
-    return ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { className: "znhd-img-hover", style: { position: 'relative', width: '100%', minWidth: 0 }, onMouseEnter: () => setHover(true), onMouseLeave: () => setHover(false), children: [children, (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { className: "znhd-img-actions", style: {
-                    position: 'absolute',
-                    right: 6,
-                    bottom: 6,
-                    display: 'flex',
-                    gap: 2,
-                    padding: 2,
-                    borderRadius: 6,
-                    // 半透明黑底：图片本身深浅不定，没有底衬时白色图标会看不清
-                    background: 'rgba(0, 0, 0, 0.55)',
-                    zIndex: 2,
-                    opacity: hover ? 1 : 0,
-                    visibility: hover ? 'visible' : 'hidden',
-                    // 隐藏时不吃鼠标事件，避免挡住图片本身的点击（antd Image 点开预览）
-                    pointerEvents: hover ? 'auto' : 'none',
-                    transition: 'opacity 0.15s',
-                }, children: actions.map((a) => ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_tooltip, { title: a.tooltip ?? a.label, children: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { size: "small", type: "text", "aria-label": a.label, loading: a.loading, onClick: a.onClick, style: {
-                            color: a.danger ? '#ff7875' : '#fff',
-                            padding: 0,
-                            width: 22,
-                            height: 22,
-                        }, children: a.icon }) }, a.label))) })] }));
-}
-
-;// ./shared/preview/actions.tsx
-/**
- * 往 antd 图片预览的工具栏里追加按钮 —— 两端共用（v26.10.08-v13 起）。
- *
- * ⚠️ **必须用 `cloneElement` 把按钮追加进 antd 自己的 `.ant-image-preview-actions` 容器**，
- *    不能把按钮当 `originalNode` 的兄弟节点返回：
- *      · 工具栏的胶囊背景与圆角长在 `actions` 容器上，而它的父级 `footer` 是 `flex-direction: column`
- *        ⇒ 放外面会变成「工具栏下方一个没有背景的裸按钮」；
- *      · 复用 antd 自己的 `ant-image-preview-actions-action` 类，尺寸/悬停与自带图标完全一致。
- *
- * 用法（两端都一样）：
- * ```tsx
- * preview={{ actionsRender: (node) => appendPreviewActions(node, <button …>…) }}
- * ```
- */
-
-/** antd 传给 actionsRender 的原始节点（就是那个 actions 容器） */
-function appendPreviewActions(originalNode, extra) {
-    if (!(0,react_production_namespaceFn().isValidElement)(originalNode))
-        return originalNode;
-    const node = originalNode;
-    return (0,react_production_namespaceFn().cloneElement)(node, {}, [...(react_production_namespaceFn().Children).toArray(node.props.children), extra]);
-}
-
-;// ./shared/preview/host.ts
-/**
- * 放大预览浮层的挂载容器 —— 两端共用（v26.10.08-v13 起）。
- *
- * ⚠️ **必须自己建一个挂在 `documentElement` 下的宿主 div，不能直接用「documentElement 本身」**：
- * antd 的 Image 预览是 `position: fixed` 浮层，**默认 portal 到 `document.body`**；而税务页的 `body`
- * 常被加 `transform`/`filter` 形成独立层叠上下文（本仓库 `panelHost.tsx` 已记录这个坑），
- * 一旦被放进去，浮层就以 **body 的盒子**而不是视口为包含块 ⇒ 工具栏被推到视口外、图片占住它的位置。
- *
- * 实测（1280×800、页面滚到 y=600、`body{transform:translateZ(0)}`）：
- *   · 不传：预览根 `y=-579 h=3000`（= body 盒子），工具栏 `y=2330`（视口外），命中测试拿到的是 `img`；
- *   · 传「返回 documentElement 的函数」：**仍然被挂到 body**（实测，本 antd/rc-portal 版本下不生效，别改回去）；
- *   · 传本函数（自建宿主 div）：预览根 `y=0`，工具栏回到视口内，命中测试通过。
- *
- * ⚠️ 共享层约束：本文件只碰 DOM，不得 import 任何宿主相关模块（见 `shared/image/compress.ts` 头部说明）。
- */
-/** 宿主 div 的 id（v26.10.10-v4 起对外导出：图片嗅探要把它整棵子树排除在扫描之外） */
-const PREVIEW_HOST_ID = '__znhd_preview_host__';
-/** 取得（必要时创建）预览浮层的宿主 div —— 传给 antd 的 `preview.getContainer` */
-function getPreviewHost() {
-    let el = document.getElementById(PREVIEW_HOST_ID);
-    if (!el) {
-        el = document.createElement('div');
-        el.id = PREVIEW_HOST_ID;
-        document.documentElement.appendChild(el);
-    }
-    return el;
-}
-
-;// ./shared/preview/mask.ts
-/**
- * 「预览期间压掉所有下层浮层遮罩」—— 两端共用（v26.10.08-v13 起）。
- *
- * 背景：antd 的 Modal / Drawer 遮罩都是 `rgba(0,0,0,0.45)`。图片预览是**全屏**浮层，它自己那层遮罩
- * 就够做背景了；可底下凡是还开着的弹窗/抽屉，遮罩**依然在画**，两层叠加就是 `1-(0.55×0.55)=0.6975`
- * —— 白底被压到灰度 **77**（单层是 140），肉眼即「没有官方明亮」。
- *
- * ⚠️ 只撤「自己那层」不够（v26.10.08-v9 的错）：实测预览打开时，取样点上还叠着别的浮层遮罩
- *    （例如设置抽屉的 `.ant-drawer-mask`）。故这里按「预览期间一律隐藏下层遮罩」处理：
- *    它们这时本来就被全屏预览完全盖住、对视觉毫无贡献，只是白白多加一层暗。
- *
- * 两端用法一致：预览开/关时调用 `syncPreviewMask(open)`（幂等，CSS 只注入一次）。
- */
-/** 预览期间挂在 `<html>` 上的类名 */
-const PREVIEWING_CLASS = 'znhd-previewing';
-/** 压掉下层遮罩的规则（唯一来源：脚本端不再往 uiReset 里重复写一份） */
-const PREVIEW_MASK_CSS = `html.${PREVIEWING_CLASS} .ant-modal-mask,
-html.${PREVIEWING_CLASS} .ant-drawer-mask {
-  display: none !important;
-}
-`;
-const STYLE_ID = 'znhd-preview-mask-css';
-/** 注入规则（幂等）：两端各自运行在独立页面里，谁先预览谁注入 */
-function ensurePreviewMaskCss() {
-    if (typeof document === 'undefined')
-        return;
-    if (document.getElementById(STYLE_ID))
-        return;
-    const style = document.createElement('style');
-    style.id = STYLE_ID;
-    style.textContent = PREVIEW_MASK_CSS;
-    (document.head || document.documentElement).appendChild(style);
-}
-/** 按预览开关挂/摘 `<html>` 上的类 */
-function setPreviewing(on) {
-    if (typeof document === 'undefined')
-        return;
-    const root = document.documentElement;
-    if (on)
-        root.classList.add(PREVIEWING_CLASS);
-    else
-        root.classList.remove(PREVIEWING_CLASS);
-}
-/** 预览开/关时调用：确保规则已注入，并同步类名（幂等，可重复调用） */
-function syncPreviewMask(open) {
-    ensurePreviewMaskCss();
-    setPreviewing(open);
-}
-
-;// ./shared/preview/print.ts
-/**
- * A4 打印版式 —— 两端共用（v26.10.08-v13 起：脚本端与手机页都用 `react-to-print` 打印原图）。
- *
- * ⚠️ **为什么 `@page` 的 margin 必须是 0**：浏览器的「页眉和页脚」（标题 / URL / 日期 / 页码）
- *    画在**页边距区域**里，而 Chrome 打印对话框里该项**默认是勾上的**。只要页边距非 0，
- *    它们就有地方可画 ⇒ 纸上会多出页眉页脚。把 `@page` 边距归零后它们无处容身（这也是
- *    react-to-print 默认 pageStyle 用 `margin: 0` 的原因，它自己注释写着 "Remove browser default
- *    header (title) and footer (url)"）。CSS 没有直接关掉那个勾选项的能力，只能这样「不给它留位置」。
- *    ⇒ 图片与纸边之间的距离改由**内容框自己的 padding** 提供（`A4_PAD_MM`），效果一样且不会被浏览器占用。
- *
- * ⚠️ 这几个数必须与 `PRINT_PAGE_STYLE` 里的 `@page { size: A4 portrait; margin: 0 }` **配套**：
- *   · 内容框 = 整张 A4（210 × 297mm），减去 3mm 高度余量取 294mm；
- *   · `padding: 10mm` 且**必须 `box-sizing: border-box`** —— 否则 padding 会把框撑到 230×314mm，
- *     直接溢出纸张、多吐空白页（这是最容易写错的一处）；
- *   · 于是真正给图片的区域仍是 190 × 274mm；
- *   · 高度留 3mm 余量：框高**正好等于**纸高时，部分浏览器/打印驱动会因舍入多吐一张空白页。
- */
-const A4_W_MM = 210;
-const A4_H_MM = 297;
-/** 图片与纸边的距离（自己留，不靠 @page margin —— 那个位置要留给「没有页眉页脚」） */
-const A4_PAD_MM = 10;
-/** 内容框宽度 = 整张 A4（含内边距） */
-const PRINT_BOX_W_MM = A4_W_MM;
-/** 内容框高度 = A4 减 3mm 余量（含内边距） */
-const PRINT_BOX_H_MM = A4_H_MM - 3;
-/** 图片真正可用的区域 = 内容框内沿（不含 padding），横图旋转后按此铺满 */
-const IMG_AREA_W_MM = PRINT_BOX_W_MM - 2 * A4_PAD_MM; // 190mm
-const IMG_AREA_H_MM = PRINT_BOX_H_MM - 2 * A4_PAD_MM; // 274mm
-/**
- * 注入打印窗口的页面样式（`react-to-print` 的 `pageStyle`）。
- * - `size: A4 portrait`：浏览器默认按 A4 纵向出纸（用户没在对话框改纸张时生效）；
- * - `margin: 0`：**不是为了贴边打印**，而是让浏览器没地方画页眉页脚（见上）；
- * - `html, body { margin: 0 }`：打印 iframe 的 body 默认 8px 外边距，不归零会把内容框挤出纸张、多吐空白页。
- */
-const PRINT_PAGE_STYLE = '@page { size: A4 portrait; margin: 0; } html, body { margin: 0; padding: 0; }';
-/**
- * 构造「打印用」的游离节点：固定成 A4 可用区的图片框 + `object-fit: contain` 等比居中。
- *
- * ⚠️ 为什么用**游离节点**（不挂进 DOM）：`react-to-print` 的 `cloneNode` 会把**内联样式**一起克隆，
- *    所以「`display:none` / 挪到视口外的隐藏容器」在打印 iframe 里同样不可见 ⇒ 打出来是空白。
- *    游离节点只带我们给的打印样式，没有这个坑；而且不进渲染树，也就不会「闪一下大图」。
- *
- * **打印方向自适应（v26.10.10-v2）**：传入 `natural`（图片真实宽高）后，横图（宽>高）自动旋转 90°，
- * 用满纵向 A4 的高度；竖图保持现状。横图旋转的铺满逻辑：
- *   · 旋转后 width = 可用区高度、height = 可用区宽度（宽高互换），再 `object-fit: contain`；
- *   · 容器转成 flex 居中，`transform: rotate(90deg)` 绕自身中心旋转 ⇒ 视觉上竖版、占满 A4 高度；
- *   · 不裁切内容（contain），极端比例时宽度方向保留等比留白，避免横图被压成小图。
- * 不传 `natural` 时行为不变（向后兼容）。
- *
- * @param src 打印的图片地址（**用原分辨率地址**，不要用预览里缩放/旋转后的画面，清晰度最好）
- * @param alt 无障碍替代文字（同时用于下载/打印对话框的标题）
- * @param natural 图片自然尺寸（可选，用于横图自动旋转铺满）
- */
-function buildA4ImageNode(src, alt, natural) {
-    const node = document.createElement('div');
-    // ⚠️ `box-sizing: border-box` 不能省：width 已按 A4 取 210mm，若按 content-box 再加 10mm padding，
-    //    实际宽度会变成 230mm ⇒ 溢出纸张、多吐空白页。
-    node.style.cssText = `box-sizing:border-box;width:${PRINT_BOX_W_MM}mm;height:${PRINT_BOX_H_MM}mm;padding:${A4_PAD_MM}mm;overflow:hidden;`;
-    const img = document.createElement('img');
-    img.src = src;
-    img.alt = alt;
-    const isLandscape = !!natural && natural.width > natural.height;
-    if (isLandscape) {
-        // 横图：旋转 90° 铺满纵向 A4 —— 宽高互换 + flex 居中 + 绕自身中心旋转
-        node.style.display = 'flex';
-        node.style.alignItems = 'center';
-        node.style.justifyContent = 'center';
-        img.style.width = IMG_AREA_H_MM + 'mm';
-        img.style.height = IMG_AREA_W_MM + 'mm';
-        img.style.transform = 'rotate(90deg)';
-    }
-    else {
-        // 竖图/未知：等比缩放居中（图片区域 = 内容框 padding 的内沿，190 × 274mm）
-        img.style.width = '100%';
-        img.style.height = '100%';
-    }
-    img.style.objectFit = 'contain';
-    img.style.display = 'block';
-    node.appendChild(img);
-    return node;
-}
-
-;// ./src/lib/ui/RecvHistoryModal.tsx
-
-
-
-
-
-
-
-
-
-
-
-
-// 预览相关的通用件全部来自共享层（与手机上传页同一份，v26.10.08-v13 起）
-
-
-
-
-const { Text: RecvHistoryModal_Text } = typography;
-/** 文本记录的时间戳展示（MM-DD HH:mm:ss） */
-function fmtTime(ts) {
-    const d = new Date(ts);
-    const p = (n) => String(n).padStart(2, '0');
-    return `${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
-}
-/**
- * 预览浮层的挂载容器、A4 打印版式、遮罩压制、工具栏追加按钮 ——
- * 这些**通用件已全部搬进 `shared/preview/`**（v26.10.08-v13），与手机上传页共用同一份实现，
- * 因此本文件不再自带一份；原来的实测数据与「为什么这么做」的说明随代码一起搬过去了，见：
- *   · `shared/preview/host.ts`  —— 为什么必须自建宿主 div（body 带 transform 会困住 fixed 浮层）
- *   · `shared/preview/print.ts` —— A4 版式常量、`PRINT_PAGE_STYLE`、`buildA4ImageNode()`
- *   · `shared/preview/mask.ts`  —— 预览期间压掉所有下层遮罩（否则两层 rgba 叠成 0.6975）
- *   · `shared/preview/actions.tsx` —— 把按钮追加进 antd 工具栏胶囊
- */
-/**
- * 「历史记录」弹窗：图片 + 文本两类收件，分两个页签（v26.10.08-v3 由单纯的「收图画廊」升级而来）。
- *
- * 为什么要分页签而不是混排一条时间线：图片页签要复用 antd `Image.PreviewGroup`（多图左右切换、
- * 缩放/旋转、以及工具栏里的打印），它要求 items 是一组同构的图片 URL；文本条目既没有预览语义、
- * 也不需要放大，混进同一列表会把两套交互互相干扰。分页签后图片侧的一切保持不变，文本侧独立。
- *
- * 历史沿革：
- *  - v26.10.06-v13：由原 DOM 弹窗 + Viewer.js 改为 antd Modal + Image.PreviewGroup。
- *    ⚠️ 剪贴板写入仍走 `copyImageToClipboard`：Chromium 对 image/png 支持最可靠，且
- *    「先转好 PNG 再只写一次」是仓库实测结论（写失败也会消耗用户手势），不要改回去。
- *  - v26.10.08-v1/v2：新增「打印」，入口最终落在放大预览的工具栏（antd 预览的 `actionsRender`）。
- *  - v26.10.08-v3：改名与扩展为「历史记录」，新增「文本」页签（单条删除 / 清空 / 复制）。
- */
-function RecvHistoryModal({ open, onClose, relayServer, images, texts, onRemoveImage, onClearImages, onRemoveText, onClearTexts, }) {
-    /** 当前页签 */
-    const [tab, setTab] = (0,react_production_namespaceFn().useState)('image');
-    /** 文本行的复制反馈：记录是**第几行**，避免所有行一起改文案 */
-    const [copyState, setCopyState] = (0,react_production_namespaceFn().useState)(null);
-    /** 「发送测试图片」是否正在取图/投递（防重复点击 + 按钮 loading） */
-    const [testSending, setTestSending] = (0,react_production_namespaceFn().useState)(false);
-    /**
-     * 放大预览是否打开（v26.10.08-v9 起用于撤掉下层遮罩）。
-     *
-     * 预览是**全屏**浮层，下层遮罩全被盖住、对视觉毫无贡献；但 antd 的 Modal / Drawer 遮罩都是
-     * `rgba(0,0,0,0.45)`，叠在预览自带的同款遮罩上就是 `1-(0.55×0.55)=0.6975` ——
-     * 白底被压到灰度 **77**（只有一层时是 **140**），肉眼即「没有官方明亮」。
-     *
-     * ⚠️ **v26.10.08-v9 只撤了本弹窗自己那层，不够**：实测预览打开时，取样点上还叠着
-     * **设置抽屉的 `.ant-drawer-mask`** 以及其它弹窗的 `.ant-modal-mask`。
-     * v11 起改为「预览期间一律压掉所有下层遮罩」（见下面给 documentElement 挂的类）。
-     */
-    const [previewOpen, setPreviewOpen] = (0,react_production_namespaceFn().useState)(false);
-    /**
-     * 预览开关 → 压掉/恢复**所有**下层浮层遮罩。
-     * 规则与类名都在共享层（`shared/preview/mask.ts`），手机页用的是同一份；
-     * `syncPreviewMask` 幂等，且会顺手把 CSS 注入一次（原先脚本端在 uiReset 里另写了一份，已去掉）。
-     */
-    (0,react_production_namespaceFn().useEffect)(() => {
-        syncPreviewMask(previewOpen);
-        return () => syncPreviewMask(false);
-    }, [previewOpen]);
-    // 每次打开都回到「图片」页签：收到新图会自动弹这个弹窗，不应停在用户上次看的「文本」页
-    (0,react_production_namespaceFn().useEffect)(() => {
-        if (open)
-            setTab('image');
-    }, [open]);
-    /** 打印对话框上的文档标题（react-to-print 会在打印期间临时改写 document.title 再还原） */
-    const printTitleRef = (0,react_production_namespaceFn().useRef)('图片');
-    /**
-     * 打印能力来自 react-to-print：它负责「建隐藏 iframe → 把内容克隆进去 → 等图片加载完 →
-     * 调 iframe 的 print() → 清理」，并自带 CSP `nonce` 与失败回调。
-     *
-     * ⚠️ `ignoreGlobalStyles` 必须显式设 true：它的默认行为是把宿主页面**全部** `<style>`/`<link>`
-     *    抄进打印 iframe，税务页那一大坨 CSS 会跟着进去（跨域样式表读 `cssRules` 还会告警）。
-     */
-    const doPrint = Z({
-        ignoreGlobalStyles: true,
-        documentTitle: () => printTitleRef.current,
-        /**
-         * A4 版式来自共享层 `shared/preview/print.ts`（手机页用的是同一个 `PRINT_PAGE_STYLE`）：
-         * `@page` 直接注入打印窗口，比外部 CSS 可靠得多；`margin: 0` 是为了让浏览器**没地方画页眉页脚**，
-         * 图片与纸边的 10mm 由内容框的 padding 提供 —— 完整理由见该文件头部注释。
-         */
-        pageStyle: PRINT_PAGE_STYLE,
+    onChange?.({
+      target: {
+        ...props,
+        type,
+        checked: e.target.checked
+      },
+      stopPropagation() {
+        e.stopPropagation();
+      },
+      preventDefault() {
+        e.preventDefault();
+      },
+      nativeEvent: e.nativeEvent
     });
-    /**
-     * 打印某一张图的**原图**，并自适应 A4 纸。
-     *
-     * 版式与「为什么用游离节点」都搬进了共享层 `shared/preview/print.ts`（`buildA4ImageNode`），
-     * 手机页打印时用的是同一个函数。这里只保留脚本端特有的两点：
-     *   · 打印的是 `previewUrl`（原分辨率 objectURL），不是预览里缩放/旋转后的画面 —— 清晰度最好；
-     *     ⚠️ 打印对话框弹出期间该图的 objectURL 不能被 revoke（移除该图会 revoke），否则打印空白；
-     *   · 文档标题用 `downloadFileName`（与下载同名，便于在打印对话框里认出来）。
-     * ⚠️ 纸张最终仍受用户在打印对话框里的「缩放/适应纸张尺寸」影响：若选了「适应纸张」，
-     *    浏览器会按自己的规则再缩一次，CSS 里的 `@page size` 会被覆盖（这是 CSS「不生效」的常见原因）。
-     */
-    const printImage = (it, idx) => {
-        const fname = downloadFileName(it.name, it.mime, idx);
-        printTitleRef.current = fname;
-        addLog('打印图片: ' + fname, 'success');
-        // v26.10.10-v2：打印前先探测图片自然尺寸，横图自动旋转 90° 铺满纵向 A4。
-        // ⚠️ 不能依赖 img.onload 改样式：react-to-print 克隆的是独立节点，原始节点的 onload
-        //    改动不会带到克隆里。所以这里用临时的 Image() 先量出宽高，再构造好节点交给 doPrint。
-        const probe = document.createElement('img');
-        probe.onload = () => {
-            doPrint(() => buildA4ImageNode(it.previewUrl, fname, {
-                width: probe.naturalWidth,
-                height: probe.naturalHeight,
-            }));
-        };
-        probe.onerror = () => doPrint(() => buildA4ImageNode(it.previewUrl, fname));
-        probe.src = it.previewUrl;
-    };
-    const [imgCopy, setImgCopy] = (0,react_production_namespaceFn().useState)(null);
-    /**
-     * 复制图片并给出反馈。
-     *
-     * ⚠️ v26.10.09-v7：原实现是**命令式改 `btn.textContent`**（`'复制中…'` → `'✓ 已复制'`）。
-     * 因为反馈文案里的 `✓`(U+2713) 属 Dingbats、Win7 字形覆盖不确定，要把它换成内联 SVG
-     * 就必须由 React 渲染，故改为 state 驱动。行为与原来一致：1.5s 后回到「复制」。
-     * ⚠️ v26.10.10-v16：按钮改成图片右下角的图标按钮后**按钮里已经没有文字**，
-     * 反馈改走 hover 提示（`copyHint`），而 `aria-label` **恒为「复制」**——
-     * 冒烟夹具就是按 `button[aria-label="复制"]` 找这个按钮的（不能再按 textContent 找）。
-     */
-    const doCopy = (it, idx) => {
-        setImgCopy({ idx, state: 'busy' });
-        copyImageToClipboard(it.blob).then((ok) => {
-            setImgCopy({ idx, state: ok ? 'ok' : 'fail' });
-            if (ok)
-                addLog('图片已复制到剪贴板: ' + (it.name || ''), 'success');
-            window.setTimeout(() => setImgCopy(null), 1500);
-        });
-    };
-    /** 复制按钮的 hover 提示：随结果切换（按钮内不再有文字，反馈只能靠它） */
-    const copyHint = (idx) => {
-        if (!imgCopy || imgCopy.idx !== idx)
-            return '复制';
-        if (imgCopy.state === 'busy')
-            return '复制中…';
-        return imgCopy.state === 'ok' ? '已复制' : '复制失败';
-    };
-    const doDownload = (it, idx) => {
-        const fname = downloadFileName(it.name, it.mime, idx);
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(it.blob);
-        a.download = fname;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        window.setTimeout(() => URL.revokeObjectURL(a.href), 1000);
-        addLog('图片已下载: ' + fname, 'success');
-    };
-    const doCopyText = (t, idx) => {
-        // safeCopyText 会回传真实结果：无可用途径 / 被拒绝时不再假显示「已复制」
-        safeCopyText(t.text, (ok) => {
-            setCopyState({ idx, ok });
-            if (ok)
-                addLog('文本已复制到剪贴板', 'success');
-            window.setTimeout(() => setCopyState(null), 1500);
-        });
-    };
-    /**
-     * 「发送测试图片」（v26.10.08-v10，按用户要求）：从 `TEST_IMAGE_URL` 取一张随机图，
-     * **当作手机上传**投递到中继 `/u/<本机 deviceId>`，再经正常的「手机 → 电脑」通道回到本脚本、进历史记录。
-     *
-     * 这样空历史也能一键验证「收图 → 画廊 → 预览 → 打印」整条链路，不必掏手机。
-     * ⚠️ 需要先配置中继地址（未配置时 sendTestImage 会直接失败并给出提示，不发请求）。
-     */
-    const doSendTestImage = () => {
-        if (testSending)
-            return;
-        setTestSending(true);
-        addLog('[测试图片] 正在从 ' + TEST_IMAGE_URL + ' 取图并投递到本机…', 'info');
-        sendTestImage({
-            server: relayServer,
-            uuid: getDeviceId(),
-            onOk: (info) => {
-                setTestSending(false);
-                addLog('[测试图片] 已投递（' +
-                    info.mime +
-                    '，约 ' +
-                    Math.max(1, Math.round(info.bytes / 1024)) +
-                    'KB），片刻后会出现在「图片」页签', 'success');
-            },
-            onFail: (msg) => {
-                setTestSending(false);
-                addLog('[测试图片] 失败：' + msg, 'error', true);
-            },
-        });
-    };
-    const tabItems = [
-        {
-            key: 'image',
-            label: `图片（${images.length}）`,
-            children: images.length ? ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_image.PreviewGroup, { items: images.map((i) => i.previewUrl), preview: {
-                    /**
-                     * ⚠️ **必须显式指定挂载容器**（v26.10.08-v7 修「放大后图片盖住下方工具栏」）：
-                     * 原因、实测数据与「为什么不能直接用 getOverlayContainer」都写在 `getPreviewHost` 的注释里。
-                     */
-                    getContainer: getPreviewHost,
-                    /**
-                     * 预览开/关 → 压掉/恢复下层遮罩（避免两层遮罩叠加变暗）。见上方 useEffect。
-                     */
-                    onOpenChange: (o) => setPreviewOpen(o),
-                    /**
-                     * 「打印」放在**放大预览的工具栏**里（v26.10.08-v2，按用户要求从缩略图行挪过来）。
-                     * 追加方式用共享层的 `appendPreviewActions`（手机页用的是同一个函数）；
-                     * 「为什么必须 cloneElement 进 antd 的 actions 容器」写在那个文件里。
-                     */
-                    actionsRender: (originalNode, info) => {
-                        const printBtn = ((0,react_jsx_runtime_production_namespaceFn().jsx)("button", { type: "button", className: "ant-image-preview-actions-action", "aria-label": "print", title: "\u6253\u5370\u539F\u56FE", onClick: () => {
-                                // 优先按 url 反查（items 与 images 同序，但按 url 更稳），退回下标
-                                const found = images.findIndex((i) => i.previewUrl === info.image?.url);
-                                const at = found >= 0 ? found : info.current;
-                                if (images[at])
-                                    printImage(images[at], at);
-                            }, children: (0,react_jsx_runtime_production_namespaceFn().jsx)(icons_PrinterOutlined, {}) }, "znhd-print"));
-                        return appendPreviewActions(originalNode, printBtn);
-                    },
-                }, children: (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: {
-                        display: 'grid',
-                        gridTemplateColumns: 'repeat(3, minmax(0,1fr))',
-                        gap: 8,
-                        maxHeight: '60vh',
-                        overflow: 'auto',
-                        alignContent: 'start',
-                    }, children: images.map((it, idx) => ((0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { display: 'flex', flexDirection: 'column' }, children: (0,react_jsx_runtime_production_namespaceFn().jsx)(ImageOverlayActions, { actions: [
-                                {
-                                    label: '复制',
-                                    tooltip: copyHint(idx),
-                                    icon: imgCopy && imgCopy.idx === idx && imgCopy.state === 'ok' ? ((0,react_jsx_runtime_production_namespaceFn().jsx)(CheckIcon, { size: 13 })) : ((0,react_jsx_runtime_production_namespaceFn().jsx)(CopyIcon, { size: 13 })),
-                                    loading: !!(imgCopy && imgCopy.idx === idx && imgCopy.state === 'busy'),
-                                    onClick: () => doCopy(it, idx),
-                                },
-                                {
-                                    label: '下载',
-                                    icon: (0,react_jsx_runtime_production_namespaceFn().jsx)(DownloadIcon, { size: 13 }),
-                                    onClick: () => doDownload(it, idx),
-                                },
-                                {
-                                    label: '删除',
-                                    danger: true,
-                                    icon: (0,react_jsx_runtime_production_namespaceFn().jsx)(TrashIcon, { size: 13 }),
-                                    onClick: () => onRemoveImage(idx),
-                                },
-                            ], children: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_image, { src: it.previewUrl, alt: it.name || 'image', style: {
-                                    width: '100%',
-                                    aspectRatio: '1 / 1',
-                                    objectFit: 'cover',
-                                    borderRadius: 8,
-                                } }) }) }, it.previewUrl))) }) })) : ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_empty, { description: "\u6682\u65E0\u56FE\u7247" })),
+  };
+  return /*#__PURE__*/(react_production_namespaceFn().createElement)("span", {
+    className: classString,
+    title: title,
+    style: style,
+    ref: holderRef
+  }, /*#__PURE__*/(react_production_namespaceFn().createElement)("input", checkbox_es_extends({}, inputProps, {
+    className: `${prefixCls}-input`,
+    ref: inputRef,
+    onChange: handleChange,
+    disabled: disabled,
+    checked: !!rawValue,
+    type: type
+  })));
+});
+/* harmony default export */ const checkbox_es = (Checkbox);
+;// ./node_modules/antd/es/checkbox/GroupContext.js
+
+const GroupContext = /*#__PURE__*/(react_production_namespaceFn().createContext)(null);
+/* harmony default export */ const checkbox_GroupContext = (GroupContext);
+;// ./node_modules/antd/es/checkbox/style/index.js
+
+
+
+
+// ============================== Styles ==============================
+const genCheckboxStyle = token => {
+  const {
+    checkboxCls,
+    checkboxSize,
+    lineWidth
+  } = token;
+  const wrapperCls = `${checkboxCls}-wrapper`;
+  const hoverMediaQuery = '@media (hover: hover) and (pointer: fine)';
+  return [
+  // ===================== Basic =====================
+  {
+    // Group
+    [`${checkboxCls}-group`]: {
+      ...resetComponent(token),
+      display: 'inline-flex',
+      flexWrap: 'wrap',
+      columnGap: token.marginXS,
+      // Group > Grid
+      [`> ${token.antCls}-row`]: {
+        flex: 1
+      }
+    },
+    // Wrapper
+    [wrapperCls]: {
+      ...resetComponent(token),
+      display: 'inline-flex',
+      alignItems: 'baseline',
+      cursor: 'pointer',
+      // Fix checkbox & radio in flex align #30260
+      '&:after': {
+        display: 'inline-block',
+        width: 0,
+        overflow: 'hidden',
+        content: "'\\a0'"
+      },
+      // Checkbox near checkbox
+      [`& + ${wrapperCls}`]: {
+        marginInlineStart: 0
+      }
+    },
+    // Wrapper > Checkbox
+    [checkboxCls]: {
+      ...resetComponent(token),
+      position: 'relative',
+      whiteSpace: 'nowrap',
+      lineHeight: 1,
+      cursor: 'pointer',
+      // To make alignment right when `controlHeight` is changed
+      // Ref: https://github.com/ant-design/ant-design/issues/41564
+      alignSelf: 'center',
+      // Styles moved from inner
+      boxSizing: 'border-box',
+      display: 'block',
+      width: checkboxSize,
+      height: checkboxSize,
+      direction: 'ltr',
+      backgroundColor: token.colorBgContainer,
+      border: `${util_unit(lineWidth)} ${token.lineType} ${token.colorBorder}`,
+      borderRadius: token.borderRadiusSM,
+      borderCollapse: 'separate',
+      transition: `all ${token.motionDurationSlow}`,
+      flex: 'none',
+      ...genNoMotionStyle(),
+      // Checkmark
+      '&:after': {
+        boxSizing: 'border-box',
+        position: 'absolute',
+        top: `calc(${checkboxSize} / 2 - ${lineWidth})`,
+        insetInlineStart: `calc(${checkboxSize} / 4 - ${lineWidth})`,
+        display: 'table',
+        width: token.calc(checkboxSize).div(14).mul(5).equal(),
+        height: token.calc(checkboxSize).div(14).mul(8).equal(),
+        border: `${util_unit(token.lineWidthBold)} solid ${token.colorWhite}`,
+        borderTop: 0,
+        borderInlineStart: 0,
+        transform: 'rotate(45deg) scale(0) translate(-50%,-50%)',
+        opacity: 0,
+        content: '""',
+        transition: `all ${token.motionDurationFast} ${token.motionEaseInBack}, opacity ${token.motionDurationFast}`,
+        ...genNoMotionRawStyle()
+      },
+      // Wrapper > Checkbox > input
+      [`${checkboxCls}-input`]: {
+        position: 'absolute',
+        // Since baseline align will get additional space offset,
+        // we need to move input to top to make it align with text.
+        // Ref: https://github.com/ant-design/ant-design/issues/38926#issuecomment-1486137799
+        inset: `calc(-1 * (${lineWidth}))`,
+        zIndex: 1,
+        cursor: 'pointer',
+        opacity: 0,
+        margin: 0
+      },
+      // Focus outline on checkbox when input is focus-visible
+      [`&:has(${checkboxCls}-input:focus-visible)`]: genFocusOutline(token),
+      // Wrapper > Checkbox + Text
+      '& + span': {
+        paddingInlineStart: token.paddingXS,
+        paddingInlineEnd: token.paddingXS
+      }
+    }
+  },
+  // ===================== Hover =====================
+  {
+    [hoverMediaQuery]: {
+      // Wrapper & Wrapper > Checkbox
+      [`
+          ${wrapperCls}:not(${wrapperCls}-disabled),
+          ${checkboxCls}:not(${checkboxCls}-disabled)
+        `]: {
+        [`&:hover ${checkboxCls}`]: {
+          borderColor: token.colorPrimary
+        }
+      },
+      [`${wrapperCls}:not(${wrapperCls}-disabled)`]: {
+        [`&:hover ${checkboxCls}-checked:not(${checkboxCls}-disabled)`]: {
+          backgroundColor: token.colorPrimaryHover,
+          borderColor: 'transparent'
+        }
+      }
+    }
+  },
+  // ==================== Checked ====================
+  {
+    // Wrapper > Checkbox
+    [`${checkboxCls}-checked`]: {
+      backgroundColor: token.colorPrimary,
+      borderColor: token.colorPrimary,
+      '&:after': {
+        opacity: 1,
+        transform: 'rotate(45deg) scale(1) translate(-50%,-50%)',
+        transition: `all ${token.motionDurationMid} ${token.motionEaseOutBack} ${token.motionDurationFast}`,
+        ...genNoMotionRawStyle()
+      },
+      [hoverMediaQuery]: {
+        // Hover on checked checkbox directly
+        [`&:not(${checkboxCls}-disabled):hover`]: {
+          backgroundColor: token.colorPrimaryHover,
+          borderColor: 'transparent'
+        }
+      }
+    }
+  },
+  // ================= Indeterminate =================
+  {
+    [checkboxCls]: {
+      '&-indeterminate': {
+        backgroundColor: token.colorBgContainer,
+        borderColor: token.colorBorder,
+        '&:after': {
+          top: '50%',
+          insetInlineStart: '50%',
+          width: token.calc(token.fontSizeLG).div(2).equal(),
+          height: token.calc(token.fontSizeLG).div(2).equal(),
+          backgroundColor: token.colorPrimary,
+          border: 0,
+          transform: 'translate(-50%, -50%) scale(1)',
+          opacity: 1,
+          content: '""'
         },
-        {
-            key: 'text',
-            label: `文本（${texts.length}）`,
-            children: texts.length ? ((0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { maxHeight: '60vh', overflow: 'auto' }, children: texts.map((t, idx) => ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: {
-                        display: 'flex',
-                        gap: 8,
-                        alignItems: 'flex-start',
-                        padding: '8px 0',
-                        borderBottom: '1px solid rgba(0,0,0,0.06)',
-                    }, children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { flex: 1, minWidth: 0 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("pre", { style: {
-                                        margin: 0,
-                                        whiteSpace: 'pre-wrap',
-                                        wordBreak: 'break-word',
-                                        fontFamily: 'inherit',
-                                        fontSize: 14,
-                                        lineHeight: 1.6,
-                                    }, children: t.text }), (0,react_jsx_runtime_production_namespaceFn().jsx)(RecvHistoryModal_Text, { type: "secondary", style: { fontSize: 11 }, children: fmtTime(t.ts) })] }), (0,react_jsx_runtime_production_namespaceFn().jsxs)(es_space, { size: 4, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { size: "small", onClick: () => doCopyText(t, idx), children: copyState && copyState.idx === idx ? (copyState.ok ? ((0,react_jsx_runtime_production_namespaceFn().jsxs)((react_jsx_runtime_production_namespaceFn().Fragment), { children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(CheckIcon, { size: 12 }), " \u5DF2\u590D\u5236"] })) : ('复制失败')) : ('复制') }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { size: "small", danger: true, onClick: () => onRemoveText(idx), children: "\u00D7" })] })] }, t.ts + '-' + idx))) })) : ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_empty, { description: "\u6682\u65E0\u6587\u672C" })),
-        },
-    ];
-    return ((0,react_jsx_runtime_production_namespaceFn().jsxs)(modal, { open: open, title: (0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("span", { children: `历史记录（图片 ${images.length} · 文本 ${texts.length}）` }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { size: "small", loading: testSending, onClick: doSendTestImage, children: "\u53D1\u9001\u6D4B\u8BD5\u56FE\u7247" })] }), onCancel: onClose, getContainer: getOverlayContainer, width: 620, styles: { body: { textAlign: 'left' } }, destroyOnHidden: true, 
-        // 预览打开时撤掉本弹窗的遮罩：预览是全屏浮层，这层遮罩被完全盖住、只会让画面多暗一层（见 previewOpen 注释）
-        mask: !previewOpen, footer: (0,react_jsx_runtime_production_namespaceFn().jsxs)(es_space, { children: [tab === 'image' ? ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { danger: true, disabled: !images.length, onClick: () => {
-                        onClearImages();
-                        onClose();
-                    }, children: "\u6E05\u7A7A\u56FE\u7247" })) : ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { danger: true, disabled: !texts.length, onClick: () => {
-                        onClearTexts();
-                        onClose();
-                    }, children: "\u6E05\u7A7A\u6587\u672C" })), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { color: "primary", variant: "solid", onClick: onClose, children: "\u5173\u95ED" })] }), children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(es_tabs, { activeKey: tab, onChange: (k) => setTab(k), items: tabItems }), (0,react_jsx_runtime_production_namespaceFn().jsx)(RecvHistoryModal_Text, { type: "secondary", style: { fontSize: 12, display: 'block', marginTop: 8 }, children: "\u63D0\u793A\uFF1A\u56FE\u7247\u9875\u7B7E\u5355\u51FB\u7F29\u7565\u56FE\u53EF\u653E\u5927/\u65CB\u8F6C/\u591A\u56FE\u5207\u6362\uFF0C\u653E\u5927\u540E\u5DE5\u5177\u680F\u4E0A\u7684\u300C\u6253\u5370\u300D\u6253\u5370\u539F\u56FE\uFF1B\u56FE\u7247\u4E0E\u6587\u672C\u7684\u300C\u590D\u5236\u300D\u90FD\u4F1A\u5199\u5165\u7CFB\u7EDF\u526A\u8D34\u677F\uFF0C\u56DE\u5F81\u7EB3\u4E92\u52A8 Ctrl+V \u5373\u53EF\uFF08\u6253\u5370\u5BF9\u8BDD\u6846\u5F39\u51FA\u540E\u8BF7\u52FF\u5220\u9664\u8BE5\u56FE\uFF09\u3002" })] }));
+        [hoverMediaQuery]: {
+          // https://github.com/ant-design/ant-design/issues/50074
+          [`&:not(${checkboxCls}-disabled):hover`]: {
+            backgroundColor: token.colorBgContainer,
+            borderColor: token.colorPrimary
+          }
+        }
+      }
+    }
+  },
+  // ==================== Disable ====================
+  {
+    // Wrapper
+    [`${wrapperCls}-disabled`]: {
+      cursor: 'not-allowed'
+    },
+    // Wrapper > Checkbox
+    [`${checkboxCls}-disabled`]: {
+      // Wrapper > Checkbox > input
+      [`&, ${checkboxCls}-input`]: {
+        cursor: 'not-allowed',
+        // Disabled for native input to enable Tooltip event handler
+        // ref: https://github.com/ant-design/ant-design/issues/39822#issuecomment-1365075901
+        pointerEvents: 'none'
+      },
+      // Disabled checkbox styles
+      background: token.colorBgContainerDisabled,
+      borderColor: token.colorBorder,
+      '&:after': {
+        borderColor: token.colorTextDisabled
+      },
+      '& + span': {
+        color: token.colorTextDisabled
+      },
+      [`&${checkboxCls}-indeterminate::after`]: {
+        background: token.colorTextDisabled
+      }
+    }
+  }];
+};
+// ============================== Export ==============================
+function getStyle(prefixCls, token) {
+  const checkboxToken = statistic_merge(token, {
+    checkboxCls: `.${prefixCls}`,
+    checkboxSize: token.controlInteractiveSize
+  });
+  return genCheckboxStyle(checkboxToken);
 }
-
-;// ./src/lib/ui/RecvTextModal.tsx
-
-
-
-
+/* harmony default export */ const checkbox_style = (genStyleHooks('Checkbox', (token, {
+  prefixCls
+}) => [getStyle(prefixCls, token)]));
+;// ./node_modules/antd/es/checkbox/useBubbleLock.js
 
 
 /**
- * 收到文本的弹窗（v26.10.06-v13：由原 DOM 覆盖层改为 antd Modal）。
- * 同屏只保留最新一条：新文本直接替换内容（旧实现会叠加多个全屏遮罩，关掉顶层会露出过期文本）。
+ * When click on the label,
+ * the event will be stopped to prevent the label from being clicked twice.
+ * label click -> input click -> label click again
  */
-function RecvTextModal({ text, onClose }) {
-    // 复制反馈：'' = 未复制（按钮显示「复制到剪贴板」），'ok' / 'fail' = 两种结果。
-    // ⚠️ v26.10.09-v7：原为直接存文案字符串（含 `✓` U+2713，Dingbats 在 Win7 字形覆盖不确定）。
-    // 现在只存状态、由 JSX 渲染内联 SVG 图标，文案不再依赖任何字体字形。
-    const [copied, setCopied] = (0,react_production_namespaceFn().useState)('');
-    const doCopy = () => {
-        // 用 safeCopyText 的真实结果更新按钮文案：无可用途径 / 被拒绝时不再假显示「已复制」
-        safeCopyText(text || '', (ok) => {
-            setCopied(ok ? 'ok' : 'fail');
-        });
-    };
-    return ((0,react_jsx_runtime_production_namespaceFn().jsx)(modal, { open: text !== null, title: "\u6536\u5230\u7535\u8111\u53D1\u6765\u7684\u6587\u672C", onCancel: () => {
-            setCopied('');
-            onClose();
-        }, getContainer: getOverlayContainer, width: 520, styles: { body: { textAlign: 'left' } }, destroyOnHidden: true, footer: (0,react_jsx_runtime_production_namespaceFn().jsxs)(es_space, { children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { color: "primary", variant: "solid", onClick: doCopy, children: copied === 'ok' ? ((0,react_jsx_runtime_production_namespaceFn().jsxs)((react_jsx_runtime_production_namespaceFn().Fragment), { children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(CheckIcon, { size: 13 }), " \u5DF2\u590D\u5236"] })) : copied === 'fail' ? ('复制失败，请长按文本手动复制') : ('复制到剪贴板') }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { onClick: () => {
-                        setCopied('');
-                        onClose();
-                    }, children: "\u5173\u95ED" })] }), children: (0,react_jsx_runtime_production_namespaceFn().jsx)("pre", { style: {
-                margin: 0,
-                maxHeight: '60vh',
-                overflow: 'auto',
-                whiteSpace: 'pre-wrap',
-                wordBreak: 'break-word',
-                fontFamily: 'inherit',
-                fontSize: 15,
-                lineHeight: 1.6,
-            }, children: text || '' }) }));
+function useBubbleLock(onOriginInputClick) {
+  const labelClickLockRef = (react_production_namespaceFn().useRef)(null);
+  const clearLock = () => {
+    es_raf.cancel(labelClickLockRef.current);
+    labelClickLockRef.current = null;
+  };
+  const onLabelClick = () => {
+    clearLock();
+    labelClickLockRef.current = es_raf(() => {
+      labelClickLockRef.current = null;
+    });
+  };
+  const onInputClick = e => {
+    if (labelClickLockRef.current) {
+      e.stopPropagation();
+      clearLock();
+    }
+    onOriginInputClick?.(e);
+  };
+  return [onLabelClick, onInputClick];
 }
+;// ./node_modules/antd/es/checkbox/Checkbox.js
+"use client";
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+const InternalCheckbox = (props, ref) => {
+  const {
+    prefixCls: customizePrefixCls,
+    children,
+    indeterminate = false,
+    onMouseEnter,
+    onMouseLeave,
+    skipGroup = false,
+    disabled,
+    // Style
+    rootClassName,
+    className,
+    style,
+    classNames,
+    styles,
+    // Name
+    name,
+    // Value
+    value,
+    // Checked
+    checked,
+    defaultChecked,
+    onChange,
+    ...restProps
+  } = props;
+  const {
+    getPrefixCls,
+    direction,
+    className: contextClassName,
+    style: contextStyle,
+    classNames: contextClassNames,
+    styles: contextStyles
+  } = useComponentConfig('checkbox');
+  const checkboxGroup = (react_production_namespaceFn().useContext)(checkbox_GroupContext);
+  const {
+    isFormItemInput
+  } = (react_production_namespaceFn().useContext)(FormItemInputContext);
+  const contextDisabled = (react_production_namespaceFn().useContext)(config_provider_DisabledContext);
+  const mergedDisabled = disabled ?? checkboxGroup?.disabled ?? contextDisabled;
+  // ============================= Warning ==============================
+  if (false) // removed by dead control flow
+{}
+  // ============================= Checked ==============================
+  const [innerChecked, setInnerChecked] = useControlledState(defaultChecked, checked);
+  let mergedChecked = innerChecked;
+  const onInternalChange = hooks_useEvent(event => {
+    setInnerChecked(event.target.checked);
+    onChange?.(event);
+    if (!skipGroup && checkboxGroup?.toggleOption) {
+      checkboxGroup.toggleOption({
+        label: children,
+        value
+      });
+    }
+  });
+  // ============================== Group ===============================
+  if (checkboxGroup && !skipGroup) {
+    mergedChecked = checkboxGroup.value.includes(value);
+  }
+  const checkboxRef = (react_production_namespaceFn().useRef)(null);
+  const mergedRef = useComposeRef(ref, checkboxRef);
+  (react_production_namespaceFn().useEffect)(() => {
+    if (skipGroup || !checkboxGroup) {
+      return;
+    }
+    checkboxGroup.registerValue(value);
+    return () => {
+      checkboxGroup.cancelValue(value);
+    };
+  }, [value, skipGroup]);
+  // ========================== Indeterminate ===========================
+  (react_production_namespaceFn().useEffect)(() => {
+    if (checkboxRef.current?.input) {
+      checkboxRef.current.input.indeterminate = indeterminate;
+    }
+  }, [indeterminate]);
+  // ============================== Style ===============================
+  const prefixCls = getPrefixCls('checkbox', customizePrefixCls);
+  const rootCls = hooks_useCSSVarCls(prefixCls);
+  const [hashId, cssVarCls] = checkbox_style(prefixCls, rootCls);
+  const checkboxProps = {
+    ...restProps
+  };
+  // =========== Merged Props for Semantic ==========
+  const mergedProps = {
+    ...props,
+    indeterminate,
+    disabled: mergedDisabled,
+    checked: mergedChecked
+  };
+  const contextStyleRoot = useSemanticRootStyle(contextStyle);
+  const styleRoot = useSemanticRootStyle(style);
+  const [mergedClassNames, mergedStyles] = useMergeSemantic([contextClassNames, classNames], [contextStyles, contextStyleRoot, styles, styleRoot], {
+    props: mergedProps
+  });
+  const classString = clsx(`${prefixCls}-wrapper`, {
+    [`${prefixCls}-rtl`]: direction === 'rtl',
+    [`${prefixCls}-wrapper-checked`]: mergedChecked,
+    [`${prefixCls}-wrapper-disabled`]: mergedDisabled,
+    [`${prefixCls}-wrapper-in-form-item`]: isFormItemInput
+  }, contextClassName, className, mergedClassNames.root, rootClassName, cssVarCls, rootCls, hashId);
+  const checkboxClass = clsx(mergedClassNames.icon, {
+    [`${prefixCls}-indeterminate`]: indeterminate
+  }, TARGET_CLS, hashId);
+  // ============================ Event Lock ============================
+  const [onLabelClick, onInputClick] = useBubbleLock(checkboxProps.onClick);
+  // ============================== Render ==============================
+  return /*#__PURE__*/(react_production_namespaceFn().createElement)(wave, {
+    component: "Checkbox",
+    disabled: mergedDisabled
+  }, /*#__PURE__*/(react_production_namespaceFn().createElement)("label", {
+    className: classString,
+    style: mergedStyles.root,
+    onMouseEnter: onMouseEnter,
+    onMouseLeave: onMouseLeave,
+    onClick: onLabelClick
+  }, /*#__PURE__*/(react_production_namespaceFn().createElement)(checkbox_es, {
+    ...checkboxProps,
+    name: !skipGroup && checkboxGroup ? checkboxGroup.name : name,
+    checked: mergedChecked,
+    onClick: onInputClick,
+    onChange: onInternalChange,
+    prefixCls: prefixCls,
+    className: checkboxClass,
+    style: mergedStyles.icon,
+    disabled: mergedDisabled,
+    ref: mergedRef,
+    value: value
+  }), isReactRenderable(children) && (/*#__PURE__*/(react_production_namespaceFn().createElement)("span", {
+    className: clsx(`${prefixCls}-label`, mergedClassNames.label),
+    style: mergedStyles.label
+  }, children))));
+};
+const Checkbox_Checkbox = /*#__PURE__*/(react_production_namespaceFn().forwardRef)(InternalCheckbox);
+if (false) // removed by dead control flow
+{}
+/* harmony default export */ const checkbox_Checkbox = (Checkbox_Checkbox);
+;// ./node_modules/antd/es/checkbox/Group.js
+"use client";
+
+
+
+
+
+
+
+
+
+
+
+const CheckboxGroup = /*#__PURE__*/(react_production_namespaceFn().forwardRef)((props, ref) => {
+  const {
+    defaultValue,
+    children,
+    options = [],
+    prefixCls: customizePrefixCls,
+    className,
+    rootClassName,
+    style,
+    onChange,
+    role = 'group',
+    ...restProps
+  } = props;
+  const {
+    getPrefixCls,
+    direction
+  } = (react_production_namespaceFn().useContext)(ConfigContext);
+  const [value, setValue] = useControlledState(defaultValue || [], restProps.value);
+  const mergedValue = value || [];
+  const [registeredValues, setRegisteredValues] = (react_production_namespaceFn().useState)([]);
+  const memoizedOptions = (react_production_namespaceFn().useMemo)(() => {
+    return options.map(option => {
+      if (isString(option) || isNumber(option)) {
+        return {
+          label: option,
+          value: option
+        };
+      }
+      return option;
+    }).filter(item => isNonNullable(item) && isNonNullable(item.value));
+  }, [options]);
+  const cancelValue = val => {
+    setRegisteredValues(prevValues => prevValues.filter(v => v !== val));
+  };
+  const registerValue = val => {
+    setRegisteredValues(prevValues => [].concat(_toConsumableArray(prevValues), [val]));
+  };
+  const toggleOption = option => {
+    const optionIndex = mergedValue.indexOf(option.value);
+    const newValue = _toConsumableArray(mergedValue);
+    if (optionIndex === -1) {
+      newValue.push(option.value);
+    } else {
+      newValue.splice(optionIndex, 1);
+    }
+    setValue(newValue);
+    onChange?.(newValue.filter(val => registeredValues.includes(val)).sort((a, b) => {
+      const indexA = memoizedOptions.findIndex(opt => opt.value === a);
+      const indexB = memoizedOptions.findIndex(opt => opt.value === b);
+      return indexA - indexB;
+    }));
+  };
+  const prefixCls = getPrefixCls('checkbox', customizePrefixCls);
+  const groupPrefixCls = `${prefixCls}-group`;
+  const rootCls = hooks_useCSSVarCls(prefixCls);
+  const [hashId, cssVarCls] = checkbox_style(prefixCls, rootCls);
+  const domProps = omit(restProps, ['value', 'disabled']);
+  const childrenNode = Array.isArray(memoizedOptions) && memoizedOptions.length > 0 ? memoizedOptions.map(option => (/*#__PURE__*/(react_production_namespaceFn().createElement)(checkbox_Checkbox, {
+    prefixCls: prefixCls,
+    key: option.value.toString(),
+    disabled: 'disabled' in option ? option.disabled : restProps.disabled,
+    value: option.value,
+    checked: mergedValue.includes(option.value),
+    onChange: option.onChange,
+    className: clsx(`${groupPrefixCls}-item`, option.className),
+    style: option.style,
+    title: option.title,
+    id: option.id,
+    required: option.required
+  }, option.label))) : children;
+  const memoizedContext = (react_production_namespaceFn().useMemo)(() => ({
+    toggleOption,
+    value: mergedValue,
+    disabled: restProps.disabled,
+    name: restProps.name,
+    // https://github.com/ant-design/ant-design/issues/16376
+    registerValue,
+    cancelValue
+  }), [toggleOption, mergedValue, restProps.disabled, restProps.name, registerValue, cancelValue]);
+  const classString = clsx(groupPrefixCls, {
+    [`${groupPrefixCls}-rtl`]: direction === 'rtl'
+  }, className, rootClassName, cssVarCls, rootCls, hashId);
+  return /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
+    className: classString,
+    style: style,
+    role: role,
+    ...domProps,
+    ref: ref
+  }, /*#__PURE__*/(react_production_namespaceFn().createElement)(checkbox_GroupContext.Provider, {
+    value: memoizedContext
+  }, childrenNode));
+});
+
+/* harmony default export */ const checkbox_Group = (CheckboxGroup);
+;// ./node_modules/antd/es/checkbox/index.js
+"use client";
+
+
+
+const es_checkbox_Checkbox = checkbox_Checkbox;
+es_checkbox_Checkbox.Group = checkbox_Group;
+es_checkbox_Checkbox.__ANT_CHECKBOX = true;
+if (false) // removed by dead control flow
+{}
+/* harmony default export */ const es_checkbox = (es_checkbox_Checkbox);
 ;// ./node_modules/@ant-design/icons-svg/es/asn/DownOutlined.js
 // This icon file is generated automatically.
 var DownOutlined = { "icon": { "tag": "svg", "attrs": { "viewBox": "64 64 896 896", "focusable": "false" }, "children": [{ "tag": "path", "attrs": { "d": "M884 256h-75c-5.1 0-9.9 2.5-12.9 6.6L512 654.2 227.9 262.6c-3-4.1-7.8-6.6-12.9-6.6h-75c-6.5 0-10.3 7.4-6.5 12.7l352.6 486.1c12.8 17.6 39 17.6 51.7 0l352.6-486.1c3.9-5.3.1-12.7-6.4-12.7z" } }] }, "name": "down", "theme": "outlined" };
@@ -75027,6 +70743,1743 @@ if (false) // removed by dead control flow
 {}
 TypedInputNumber._InternalPanelDoNotUseOrYouWillBeFired = PureInputNumber;
 /* harmony default export */ const input_number = (TypedInputNumber);
+;// ./node_modules/@rc-component/progress/es/common.js
+
+const defaultProps = {
+  percent: 0,
+  prefixCls: 'rc-progress',
+  strokeColor: '#2db7f5',
+  strokeLinecap: 'round',
+  strokeWidth: 1,
+  railColor: '#D9D9D9',
+  railWidth: 1,
+  gapPosition: 'bottom',
+  loading: false
+};
+const useTransitionDuration = () => {
+  const pathsRef = (0,react_production_namespaceFn().useRef)([]);
+  const prevTimeStamp = (0,react_production_namespaceFn().useRef)(null);
+  (0,react_production_namespaceFn().useEffect)(() => {
+    const now = Date.now();
+    let updated = false;
+    pathsRef.current.forEach(path => {
+      if (!path) {
+        return;
+      }
+      updated = true;
+      const pathStyle = path.style;
+      pathStyle.transitionDuration = '.3s, .3s, .3s, .06s';
+      if (prevTimeStamp.current && now - prevTimeStamp.current < 100) {
+        pathStyle.transitionDuration = '0s, 0s';
+      }
+    });
+    if (updated) {
+      prevTimeStamp.current = Date.now();
+    }
+  });
+  return pathsRef.current;
+};
+;// ./node_modules/@rc-component/progress/es/utils/getIndeterminateLine.js
+/* unused harmony import specifier */ var getIndeterminateLine_React;
+
+/* harmony default export */ const getIndeterminateLine = (options => {
+  const {
+    id,
+    percent,
+    strokeLinecap,
+    strokeWidth,
+    loading
+  } = options;
+  if (!loading) {
+    return {
+      indeterminateStyleProps: {},
+      indeterminateStyleAnimation: null
+    };
+  }
+  const animationName = `${id}-indeterminate-animate`;
+  const strokeDashOffset = 100 - (percent + (strokeLinecap === 'round' ? strokeWidth : 0));
+  return {
+    indeterminateStyleProps: {
+      strokeDasharray: `${percent} 100`,
+      animation: `${animationName} .6s linear alternate infinite`,
+      strokeDashoffset: 0
+    },
+    indeterminateStyleAnimation: /*#__PURE__*/getIndeterminateLine_React.createElement("style", null, `@keyframes ${animationName} {
+            0% { stroke-dashoffset: 0; }
+            100% { stroke-dashoffset: -${strokeDashOffset};
+          }`)
+  };
+});
+__webpack_require__.dn(getIndeterminateLine);
+;// ./node_modules/@rc-component/progress/es/Line.js
+/* unused harmony import specifier */ var Line_React;
+/* unused harmony import specifier */ var Line_clsx;
+/* unused harmony import specifier */ var Line_useId;
+/* unused harmony import specifier */ var Line_defaultProps;
+/* unused harmony import specifier */ var Line_useTransitionDuration;
+/* unused harmony import specifier */ var Line_getIndeterminateLine;
+function Line_extends() { Line_extends = Object.assign ? Object.assign.bind() : function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; }; return Line_extends.apply(this, arguments); }
+;
+
+
+
+
+const Line = props => {
+  const {
+    id,
+    className,
+    percent,
+    prefixCls,
+    strokeColor,
+    strokeLinecap,
+    strokeWidth,
+    style,
+    railColor,
+    railWidth,
+    transition,
+    loading,
+    ...restProps
+  } = {
+    ...Line_defaultProps,
+    ...props
+  };
+  const mergedId = Line_useId(id);
+
+  // eslint-disable-next-line no-param-reassign
+  delete restProps.gapPosition;
+  const percentList = Array.isArray(percent) ? percent : [percent];
+  const strokeColorList = Array.isArray(strokeColor) ? strokeColor : [strokeColor];
+  const paths = Line_useTransitionDuration();
+  const center = strokeWidth / 2;
+  const right = 100 - strokeWidth / 2;
+  const pathString = `M ${strokeLinecap === 'round' ? center : 0},${center}
+         L ${strokeLinecap === 'round' ? right : 100},${center}`;
+  const viewBoxString = `0 0 100 ${strokeWidth}`;
+  let stackPtg = 0;
+  const {
+    indeterminateStyleProps,
+    indeterminateStyleAnimation
+  } = Line_getIndeterminateLine({
+    id: mergedId,
+    loading,
+    percent: percentList[0],
+    strokeLinecap,
+    strokeWidth
+  });
+  return /*#__PURE__*/Line_React.createElement("svg", Line_extends({
+    id: id,
+    className: Line_clsx(`${prefixCls}-line`, className),
+    viewBox: viewBoxString,
+    preserveAspectRatio: "none",
+    style: style,
+    role: "presentation"
+  }, restProps), /*#__PURE__*/Line_React.createElement("path", {
+    className: `${prefixCls}-line-rail`,
+    d: pathString,
+    strokeLinecap: strokeLinecap,
+    stroke: railColor,
+    strokeWidth: railWidth || strokeWidth,
+    fillOpacity: "0"
+  }), percentList.map((ptg, index) => {
+    const dashPercent = strokeLinecap === 'round' ? 1 - strokeWidth / 100 : strokeLinecap === 'square' ? 1 - strokeWidth / 2 / 100 : 1;
+    const pathStyle = {
+      strokeDasharray: `${ptg * dashPercent}px, 100px`,
+      strokeDashoffset: `-${stackPtg}px`,
+      transition: transition || 'stroke-dashoffset 0.3s ease 0s, stroke-dasharray .3s ease 0s, stroke 0.3s linear',
+      ...indeterminateStyleProps
+    };
+    const color = strokeColorList[index] || strokeColorList[strokeColorList.length - 1];
+    stackPtg += ptg;
+    return /*#__PURE__*/Line_React.createElement("path", {
+      key: index,
+      className: `${prefixCls}-line-path`,
+      d: pathString,
+      strokeLinecap: strokeLinecap,
+      stroke: color,
+      strokeWidth: strokeWidth,
+      fillOpacity: "0",
+      ref: elem => {
+        // https://reactjs.org/docs/refs-and-the-dom.html#callback-refs
+        // React will call the ref callback with the DOM element when the component mounts,
+        // and call it with `null` when it unmounts.
+        // Refs are guaranteed to be up-to-date before componentDidMount or componentDidUpdate fires.
+
+        paths[index] = elem;
+      },
+      style: pathStyle
+    });
+  }), indeterminateStyleAnimation);
+};
+if (false) // removed by dead control flow
+{}
+/* harmony default export */ const es_Line = ((/* unused pure expression or super */ null && (Line)));
+;// ./node_modules/@rc-component/progress/es/Circle/PtgCircle.js
+
+
+const Block = ({
+  bg,
+  children
+}) => /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
+  style: {
+    width: '100%',
+    height: '100%',
+    background: bg
+  }
+}, children);
+function getPtgColors(color, scale) {
+  return Object.keys(color).map(key => {
+    const parsedKey = parseFloat(key);
+    const ptgKey = `${Math.floor(parsedKey * scale)}%`;
+    return `${color[key]} ${ptgKey}`;
+  });
+}
+const PtgCircle = /*#__PURE__*/(react_production_namespaceFn().forwardRef)((props, ref) => {
+  const {
+    prefixCls,
+    color,
+    gradientId,
+    radius,
+    className,
+    style: circleStyleForStack,
+    ptg,
+    strokeLinecap,
+    strokeWidth,
+    size,
+    gapDegree
+  } = props;
+  const isGradient = color && typeof color === 'object';
+  const stroke = isGradient ? `#FFF` : undefined;
+
+  // ========================== Circle ==========================
+  const halfSize = size / 2;
+  const circleNode = /*#__PURE__*/(react_production_namespaceFn().createElement)("circle", {
+    className: clsx(`${prefixCls}-circle-path`, className),
+    r: radius,
+    cx: halfSize,
+    cy: halfSize,
+    stroke: stroke,
+    strokeLinecap: strokeLinecap,
+    strokeWidth: strokeWidth,
+    opacity: ptg === 0 ? 0 : 1,
+    style: circleStyleForStack,
+    ref: ref
+  });
+
+  // ========================== Render ==========================
+  if (!isGradient) {
+    return circleNode;
+  }
+  const maskId = `${gradientId}-conic`;
+  const fromDeg = gapDegree ? `${180 + gapDegree / 2}deg` : '0deg';
+  const conicColors = getPtgColors(color, (360 - gapDegree) / 360);
+  const linearColors = getPtgColors(color, 1);
+  const conicColorBg = `conic-gradient(from ${fromDeg}, ${conicColors.join(', ')})`;
+  const linearColorBg = `linear-gradient(to ${gapDegree ? 'bottom' : 'top'}, ${linearColors.join(', ')})`;
+  return /*#__PURE__*/(react_production_namespaceFn().createElement)((react_production_namespaceFn().Fragment), null, /*#__PURE__*/(react_production_namespaceFn().createElement)("mask", {
+    id: maskId
+  }, circleNode), /*#__PURE__*/(react_production_namespaceFn().createElement)("foreignObject", {
+    x: 0,
+    y: 0,
+    width: size,
+    height: size,
+    mask: `url(#${maskId})`
+  }, /*#__PURE__*/(react_production_namespaceFn().createElement)(Block, {
+    bg: linearColorBg
+  }, /*#__PURE__*/(react_production_namespaceFn().createElement)(Block, {
+    bg: conicColorBg
+  }))));
+});
+if (false) // removed by dead control flow
+{}
+/* harmony default export */ const Circle_PtgCircle = (PtgCircle);
+;// ./node_modules/@rc-component/progress/es/Circle/util.js
+const VIEW_BOX_SIZE = 100;
+const getCircleStyle = (perimeter, perimeterWithoutGap, offset, percent, rotateDeg, gapDegree, gapPosition, strokeColor, strokeLinecap, strokeWidth, stepSpace = 0) => {
+  const offsetDeg = offset / 100 * 360 * ((360 - gapDegree) / 360);
+  const positionDeg = gapDegree === 0 ? 0 : {
+    bottom: 0,
+    top: 180,
+    left: 90,
+    right: -90
+  }[gapPosition];
+  let strokeDashoffset = (100 - percent) / 100 * perimeterWithoutGap;
+  // Fix percent accuracy when strokeLinecap is round
+  // https://github.com/ant-design/ant-design/issues/35009
+  if (strokeLinecap === 'round' && percent !== 100) {
+    strokeDashoffset += strokeWidth / 2;
+    // when percent is small enough (<= 1%), keep smallest value to avoid it's disappearance
+    if (strokeDashoffset >= perimeterWithoutGap) {
+      strokeDashoffset = perimeterWithoutGap - 0.01;
+    }
+  }
+  const halfSize = VIEW_BOX_SIZE / 2;
+  return {
+    stroke: typeof strokeColor === 'string' ? strokeColor : undefined,
+    strokeDasharray: `${perimeterWithoutGap}px ${perimeter}`,
+    strokeDashoffset: strokeDashoffset + stepSpace,
+    transform: `rotate(${rotateDeg + offsetDeg + positionDeg}deg)`,
+    transformOrigin: `${halfSize}px ${halfSize}px`,
+    transition: 'stroke-dashoffset .3s ease 0s, stroke-dasharray .3s ease 0s, stroke .3s, stroke-width .06s ease .3s, opacity .3s ease 0s',
+    fillOpacity: 0
+  };
+};
+;// ./node_modules/@rc-component/progress/es/utils/getIndeterminateCircle.js
+
+/* harmony default export */ const getIndeterminateCircle = (({
+  id,
+  loading
+}) => {
+  if (!loading) {
+    return {
+      indeterminateStyleProps: {},
+      indeterminateStyleAnimation: null
+    };
+  }
+  const animationName = `${id}-indeterminate-animate`;
+  return {
+    indeterminateStyleProps: {
+      transform: 'rotate(0deg)',
+      animation: `${animationName} 1s linear infinite`
+    },
+    indeterminateStyleAnimation: /*#__PURE__*/(react_production_namespaceFn().createElement)("style", null, `@keyframes ${animationName} {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+          }`)
+  };
+});
+__webpack_require__.dn(getIndeterminateCircle);
+;// ./node_modules/@rc-component/progress/es/Circle/index.js
+function Circle_extends() { Circle_extends = Object.assign ? Object.assign.bind() : function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; }; return Circle_extends.apply(this, arguments); }
+;
+
+
+
+
+
+
+function Circle_toArray(value) {
+  const mergedValue = value ?? [];
+  return Array.isArray(mergedValue) ? mergedValue : [mergedValue];
+}
+const Circle = props => {
+  const {
+    id,
+    prefixCls,
+    classNames = {},
+    styles = {},
+    steps,
+    strokeWidth,
+    railWidth,
+    gapDegree = 0,
+    gapPosition,
+    railColor,
+    strokeLinecap,
+    style,
+    className,
+    strokeColor,
+    percent,
+    loading,
+    ...restProps
+  } = {
+    ...defaultProps,
+    ...props
+  };
+  const halfSize = (/* inlined export .VIEW_BOX_SIZE */100) / 2;
+  const mergedId = hooks_useId(id);
+  const gradientId = `${mergedId}-gradient`;
+  const radius = halfSize - strokeWidth / 2;
+  const perimeter = Math.PI * 2 * radius;
+  const rotateDeg = gapDegree > 0 ? 90 + gapDegree / 2 : -90;
+  const perimeterWithoutGap = perimeter * ((360 - gapDegree) / 360);
+  const {
+    count: stepCount,
+    gap: stepGap
+  } = typeof steps === 'object' ? steps : {
+    count: steps,
+    gap: 2
+  };
+  const percentList = Circle_toArray(percent);
+  const strokeColorList = Circle_toArray(strokeColor);
+  const gradient = strokeColorList.find(color => color && typeof color === 'object');
+  const isConicGradient = gradient && typeof gradient === 'object';
+  const mergedStrokeLinecap = isConicGradient ? 'butt' : strokeLinecap;
+  const {
+    indeterminateStyleProps,
+    indeterminateStyleAnimation
+  } = getIndeterminateCircle({
+    id: mergedId,
+    loading
+  });
+  const circleStyle = getCircleStyle(perimeter, perimeterWithoutGap, 0, 100, rotateDeg, gapDegree, gapPosition, railColor, mergedStrokeLinecap, strokeWidth);
+  const paths = useTransitionDuration();
+  const getStokeList = () => {
+    let stackPtg = 0;
+    return percentList.map((ptg, index) => {
+      const color = strokeColorList[index] || strokeColorList[strokeColorList.length - 1];
+      const circleStyleForStack = getCircleStyle(perimeter, perimeterWithoutGap, stackPtg, ptg, rotateDeg, gapDegree, gapPosition, color, mergedStrokeLinecap, strokeWidth);
+      stackPtg += ptg;
+      return /*#__PURE__*/(react_production_namespaceFn().createElement)(Circle_PtgCircle, {
+        key: index,
+        color: color,
+        ptg: ptg,
+        radius: radius,
+        prefixCls: prefixCls,
+        gradientId: gradientId,
+        className: classNames.track,
+        style: {
+          ...circleStyleForStack,
+          ...indeterminateStyleProps,
+          ...styles.track
+        },
+        strokeLinecap: mergedStrokeLinecap,
+        strokeWidth: strokeWidth,
+        gapDegree: gapDegree,
+        ref: elem => {
+          // https://reactjs.org/docs/refs-and-the-dom.html#callback-refs
+          // React will call the ref callback with the DOM element when the component mounts,
+          // and call it with `null` when it unmounts.
+          // Refs are guaranteed to be up-to-date before componentDidMount or componentDidUpdate fires.
+
+          paths[index] = elem;
+        },
+        size: (/* inlined export .VIEW_BOX_SIZE */100)
+      });
+    }).reverse();
+  };
+  const getStepStokeList = () => {
+    // only show the first percent when pass steps
+    const current = Math.round(stepCount * (percentList[0] / 100));
+    const stepPtg = 100 / stepCount;
+    let stackPtg = 0;
+    return new Array(stepCount).fill(null).map((_, index) => {
+      const color = index <= current - 1 ? strokeColorList[0] : railColor;
+      const stroke = color && typeof color === 'object' ? `url(#${gradientId})` : undefined;
+      const circleStyleForStack = getCircleStyle(perimeter, perimeterWithoutGap, stackPtg, stepPtg, rotateDeg, gapDegree, gapPosition, color, 'butt', strokeWidth, stepGap);
+      stackPtg += (perimeterWithoutGap - circleStyleForStack.strokeDashoffset + stepGap) * 100 / perimeterWithoutGap;
+      return /*#__PURE__*/(react_production_namespaceFn().createElement)("circle", {
+        key: index,
+        className: clsx(`${prefixCls}-circle-path`, classNames.track),
+        r: radius,
+        cx: halfSize,
+        cy: halfSize,
+        stroke: stroke,
+        strokeWidth: strokeWidth,
+        opacity: 1,
+        style: {
+          ...circleStyleForStack,
+          ...styles.track
+        },
+        ref: elem => {
+          paths[index] = elem;
+        }
+      });
+    });
+  };
+  return /*#__PURE__*/(react_production_namespaceFn().createElement)("svg", Circle_extends({
+    className: clsx(`${prefixCls}-circle`, classNames.root, className),
+    viewBox: `0 0 ${(/* inlined export .VIEW_BOX_SIZE */100)} ${(/* inlined export .VIEW_BOX_SIZE */100)}`,
+    style: {
+      ...styles.root,
+      ...style
+    },
+    id: id,
+    role: "presentation"
+  }, restProps), !stepCount && /*#__PURE__*/(react_production_namespaceFn().createElement)("circle", {
+    className: clsx(`${prefixCls}-circle-rail`, classNames.rail),
+    r: radius,
+    cx: halfSize,
+    cy: halfSize,
+    stroke: railColor,
+    strokeLinecap: mergedStrokeLinecap,
+    strokeWidth: railWidth || strokeWidth,
+    style: {
+      ...circleStyle,
+      ...styles.rail
+    }
+  }), stepCount ? getStepStokeList() : getStokeList(), indeterminateStyleAnimation);
+};
+if (false) // removed by dead control flow
+{}
+/* harmony default export */ const es_Circle = (Circle);
+;// ./node_modules/@rc-component/progress/es/index.js
+
+
+
+;// ./node_modules/antd/es/progress/utils.js
+
+
+function validProgress(progress) {
+  if (!progress || progress < 0) {
+    return 0;
+  }
+  if (progress > 100) {
+    return 100;
+  }
+  return progress;
+}
+function getSuccessPercent({
+  success
+}) {
+  let percent;
+  if (success && 'percent' in success) {
+    percent = success.percent;
+  }
+  return percent;
+}
+const getPercentage = ({
+  percent,
+  success
+}) => {
+  const realSuccessPercent = validProgress(getSuccessPercent({
+    success
+  }));
+  return [realSuccessPercent, validProgress(validProgress(percent) - realSuccessPercent)];
+};
+const getStrokeColor = ({
+  success = {},
+  strokeColor
+}) => {
+  const {
+    strokeColor: successColor
+  } = success;
+  return [successColor || presetPrimaryColors.green, strokeColor || null];
+};
+const utils_getSize = (size, type, extra) => {
+  let width = -1;
+  let height = -1;
+  if (type === 'step') {
+    const steps = extra.steps;
+    const strokeWidth = extra.strokeWidth;
+    if (typeof size === 'string' || typeof size === 'undefined') {
+      width = size === 'small' ? 2 : 14;
+      height = strokeWidth ?? 8;
+    } else if (isNumber(size)) {
+      [width, height] = [size, size];
+    } else {
+      [width = 14, height = 8] = Array.isArray(size) ? size : [size.width, size.height];
+    }
+    width *= steps;
+  } else if (type === 'line') {
+    const strokeWidth = extra?.strokeWidth;
+    if (typeof size === 'string' || typeof size === 'undefined') {
+      height = strokeWidth || (size === 'small' ? 6 : 8);
+    } else if (isNumber(size)) {
+      [width, height] = [size, size];
+    } else {
+      [width = -1, height = 8] = Array.isArray(size) ? size : [size.width, size.height];
+    }
+  } else if (type === 'circle' || type === 'dashboard') {
+    if (typeof size === 'string' || typeof size === 'undefined') {
+      [width, height] = size === 'small' ? [60, 60] : [120, 120];
+    } else if (isNumber(size)) {
+      [width, height] = [size, size];
+    } else if (Array.isArray(size)) {
+      width = size[0] ?? size[1] ?? 120;
+      height = size[0] ?? size[1] ?? 120;
+    }
+  }
+  return [width, height];
+};
+;// ./node_modules/antd/es/progress/Circle.js
+"use client";
+
+
+
+
+
+
+
+
+
+const CIRCLE_MIN_STROKE_WIDTH = 3;
+const getMinPercent = width => CIRCLE_MIN_STROKE_WIDTH / width * 100;
+const OMIT_SEMANTIC_NAMES = ['root', 'body', 'indicator'];
+const Circle_Circle = props => {
+  const {
+    prefixCls,
+    classNames,
+    styles,
+    railColor,
+    trailColor,
+    strokeLinecap = 'round',
+    gapPosition,
+    gapPlacement,
+    gapDegree,
+    width: originWidth = 120,
+    type,
+    children,
+    success,
+    size = originWidth,
+    steps
+  } = props;
+  const {
+    direction
+  } = useComponentConfig('progress');
+  const mergedRailColor = railColor ?? trailColor;
+  const [width, height] = utils_getSize(size, 'circle');
+  let {
+    strokeWidth
+  } = props;
+  if (strokeWidth === undefined) {
+    strokeWidth = Math.max(getMinPercent(width), 6);
+  }
+  const circleStyle = {
+    width,
+    height,
+    fontSize: width * 0.15 + 6
+  };
+  const realGapDegree = (react_production_namespaceFn().useMemo)(() => {
+    // Support gapDeg = 0 when type = 'dashboard'
+    if (gapDegree || gapDegree === 0) {
+      return gapDegree;
+    }
+    if (type === 'dashboard') {
+      return 75;
+    }
+    return undefined;
+  }, [gapDegree, type]);
+  const percentArray = getPercentage(props);
+  const gapPos = (react_production_namespaceFn().useMemo)(() => {
+    const mergedPlacement = (gapPlacement ?? gapPosition) || type === 'dashboard' && 'bottom' || undefined;
+    const isRTL = direction === 'rtl';
+    switch (mergedPlacement) {
+      case 'start':
+        return isRTL ? 'right' : 'left';
+      case 'end':
+        return isRTL ? 'left' : 'right';
+      default:
+        return mergedPlacement;
+    }
+  }, [direction, gapPlacement, gapPosition, type]);
+  // using className to style stroke color
+  const isGradient = is_isPlainObject(props.strokeColor);
+  const strokeColor = getStrokeColor({
+    success,
+    strokeColor: props.strokeColor
+  });
+  const wrapperClassName = clsx(`${prefixCls}-body`, {
+    [`${prefixCls}-circle-gradient`]: isGradient
+  }, classNames.body);
+  const circleContent = /*#__PURE__*/(react_production_namespaceFn().createElement)(es_Circle, {
+    steps: steps,
+    percent: steps ? percentArray[1] : percentArray,
+    strokeWidth: strokeWidth,
+    railWidth: strokeWidth,
+    strokeColor: steps ? strokeColor[1] : strokeColor,
+    strokeLinecap: strokeLinecap,
+    railColor: mergedRailColor,
+    prefixCls: prefixCls,
+    gapDegree: realGapDegree,
+    gapPosition: gapPos,
+    classNames: omit(classNames, OMIT_SEMANTIC_NAMES),
+    styles: omit(styles, OMIT_SEMANTIC_NAMES)
+  });
+  const smallCircle = width <= 20;
+  const node = /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
+    className: wrapperClassName,
+    style: {
+      ...circleStyle,
+      ...styles.body
+    }
+  }, circleContent, !smallCircle && children);
+  if (smallCircle) {
+    return /*#__PURE__*/(react_production_namespaceFn().createElement)(es_tooltip, {
+      title: children
+    }, node);
+  }
+  return node;
+};
+/* harmony default export */ const progress_Circle = (Circle_Circle);
+;// ./node_modules/antd/es/progress/style/index.js
+
+
+
+const LineStrokeColorVar = '--progress-line-stroke-color';
+const genAntProgressActive = isRtl => {
+  const direction = isRtl ? '100%' : '-100%';
+  return new Keyframes(`antProgress${isRtl ? 'RTL' : 'LTR'}Active`, {
+    '0%': {
+      transform: `translateX(${direction}) scaleX(0)`,
+      opacity: 0.1
+    },
+    '20%': {
+      transform: `translateX(${direction}) scaleX(0)`,
+      opacity: 0.5
+    },
+    to: {
+      transform: 'translateX(0) scaleX(1)',
+      opacity: 0
+    }
+  });
+};
+// ====================================================================
+// ==                              Base                              ==
+// ====================================================================
+const progress_style_genBaseStyle = token => {
+  const {
+    componentCls: progressCls,
+    iconCls: iconPrefixCls
+  } = token;
+  return {
+    [progressCls]: {
+      ...resetComponent(token),
+      display: 'inline-flex',
+      '&-rtl': {
+        direction: 'rtl'
+      },
+      [`${progressCls}-indicator`]: {
+        color: token.colorText,
+        lineHeight: 1,
+        whiteSpace: 'nowrap',
+        verticalAlign: 'middle',
+        wordBreak: 'normal',
+        [iconPrefixCls]: {
+          fontSize: token.fontSize
+        }
+      },
+      [`&${progressCls}-status-exception`]: {
+        [`${progressCls}-indicator`]: {
+          color: token.colorError
+        }
+      },
+      [`&${progressCls}-status-success`]: {
+        [`${progressCls}-indicator`]: {
+          color: token.colorSuccess
+        }
+      }
+    }
+  };
+};
+// ====================================================================
+// ==                              Line                              ==
+// ====================================================================
+const genLineStyle = token => {
+  const {
+    componentCls
+  } = token;
+  return {
+    [`${componentCls}-line`]: {
+      position: 'relative',
+      width: '100%',
+      fontSize: token.fontSize,
+      [`${componentCls}-body`]: {
+        display: 'inline-flex',
+        alignItems: 'center',
+        width: '100%',
+        gap: token.marginXS
+      },
+      [`${componentCls}-rail`]: {
+        flex: 'auto',
+        background: token.remainingColor,
+        borderRadius: token.lineBorderRadius,
+        position: 'relative',
+        width: '100%',
+        overflow: 'hidden'
+      },
+      [`&${componentCls}-status-active`]: {
+        [`${componentCls}-track:after`]: {
+          content: '""',
+          position: 'absolute',
+          inset: 0,
+          backgroundColor: token.colorBgContainer,
+          borderRadius: 'inherit',
+          opacity: 0,
+          animationName: genAntProgressActive(),
+          animationDuration: token.progressActiveMotionDuration,
+          animationTimingFunction: token.motionEaseOutQuint,
+          animationIterationCount: 'infinite'
+        }
+      },
+      [`${componentCls}-track`]: {
+        position: 'absolute',
+        insetInlineStart: 0,
+        insetBlock: 0,
+        borderRadius: 'inherit',
+        background: token.defaultColor,
+        transition: `all ${token.motionDurationSlow} ${token.motionEaseInOutCirc}`,
+        minWidth: 'max-content',
+        display: 'flex',
+        alignItems: 'center',
+        '&-success': {
+          background: token.colorSuccess
+        }
+      },
+      [`&${componentCls}-status-exception`]: {
+        [`${componentCls}-track`]: {
+          background: token.colorError
+        }
+      },
+      [`&${componentCls}-status-success`]: {
+        [`${componentCls}-track`]: {
+          background: token.colorSuccess
+        }
+      },
+      // >>>>> indicator
+      // >>> Outer
+      [`${componentCls}-indicator-outer`]: {
+        [`&${componentCls}-indicator-start`]: {
+          order: -1
+        }
+      },
+      [`${componentCls}-body-layout-bottom`]: {
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: token.marginXXS
+      },
+      // >>> Inner
+      [`${componentCls}-indicator${componentCls}-indicator-inner`]: {
+        color: token.colorWhite,
+        paddingInline: token.paddingXXS,
+        width: '100%',
+        display: 'flex',
+        justifyContent: 'center',
+        [`&${componentCls}-indicator-end`]: {
+          justifyContent: 'end'
+        },
+        [`&${componentCls}-indicator-start`]: {
+          justifyContent: 'start'
+        },
+        [`&${componentCls}-indicator-bright`]: {
+          color: 'rgba(0, 0, 0, 0.45)'
+        }
+      }
+    }
+  };
+};
+// ====================================================================
+// ==                             Circle                             ==
+// ====================================================================
+const genCircleStyle = token => {
+  const {
+    componentCls: progressCls,
+    iconCls: iconPrefixCls
+  } = token;
+  return {
+    [`${progressCls}-circle`]: {
+      [`${progressCls}-circle-rail`]: {
+        stroke: token.remainingColor
+      },
+      [`${progressCls}-body:not(${progressCls}-circle-gradient)`]: {
+        [`${progressCls}-circle-path`]: {
+          stroke: token.defaultColor
+        }
+      },
+      [`${progressCls}-body`]: {
+        position: 'relative',
+        lineHeight: 1,
+        backgroundColor: 'transparent'
+      },
+      [`${progressCls}-indicator`]: {
+        position: 'absolute',
+        insetBlockStart: '50%',
+        insetInlineStart: 0,
+        width: '100%',
+        margin: 0,
+        padding: 0,
+        color: token.circleTextColor,
+        fontSize: token.circleTextFontSize,
+        lineHeight: 1,
+        whiteSpace: 'normal',
+        textAlign: 'center',
+        transform: 'translateY(-50%)',
+        [iconPrefixCls]: {
+          fontSize: token.circleIconFontSize
+        }
+      },
+      [`&${progressCls}-status-exception`]: {
+        [`${progressCls}-body:not(${progressCls}-circle-gradient)`]: {
+          [`${progressCls}-circle-path`]: {
+            stroke: token.colorError
+          }
+        }
+      },
+      [`&${progressCls}-status-success`]: {
+        [`${progressCls}-body:not(${progressCls}-circle-gradient)`]: {
+          [`${progressCls}-circle-path`]: {
+            stroke: token.colorSuccess
+          }
+        }
+      }
+    },
+    [`${progressCls}-inline-circle`]: {
+      lineHeight: 1,
+      [`${progressCls}-inner`]: {
+        verticalAlign: 'bottom'
+      }
+    }
+  };
+};
+// ====================================================================
+// ==                              Step                              ==
+// ====================================================================
+const genStepStyle = token => {
+  const {
+    componentCls: progressCls
+  } = token;
+  return {
+    [progressCls]: {
+      [`${progressCls}-steps`]: {
+        display: 'inline-block',
+        '&-body': {
+          display: 'flex',
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: token.progressStepMarginInlineEnd,
+          [`${progressCls}-indicator`]: {
+            marginInlineStart: token.marginXS
+          }
+        },
+        '&-item': {
+          flexShrink: 0,
+          minWidth: token.progressStepMinWidth,
+          backgroundColor: token.remainingColor,
+          transition: `all ${token.motionDurationSlow}`,
+          '&-active': {
+            backgroundColor: token.defaultColor
+          }
+        }
+      }
+    }
+  };
+};
+// ====================================================================
+// ==                           Small Line                           ==
+// ====================================================================
+const genSmallLine = token => {
+  const {
+    componentCls: progressCls,
+    iconCls: iconPrefixCls
+  } = token;
+  return {
+    [progressCls]: {
+      [`${progressCls}-small&-line, ${progressCls}-small&-line ${progressCls}-indicator ${iconPrefixCls}`]: {
+        fontSize: token.fontSizeSM
+      }
+    }
+  };
+};
+// ====================================================================
+// ==                             Export                             ==
+// ====================================================================
+const progress_style_prepareComponentToken = token => ({
+  circleTextColor: token.colorText,
+  defaultColor: token.colorInfo,
+  remainingColor: token.colorFillSecondary,
+  lineBorderRadius: 100,
+  // magic for capsule shape, should be a very large number
+  circleTextFontSize: '1em',
+  circleIconFontSize: `${token.fontSize / token.fontSizeSM}em`
+});
+/* harmony default export */ const progress_style = (genStyleHooks('Progress', token => {
+  const progressStepMarginInlineEnd = token.calc(token.marginXXS).div(2).equal();
+  const progressToken = statistic_merge(token, {
+    progressStepMarginInlineEnd,
+    progressStepMinWidth: progressStepMarginInlineEnd,
+    progressActiveMotionDuration: '2.4s'
+  });
+  return [progress_style_genBaseStyle(progressToken), genLineStyle(progressToken), genCircleStyle(progressToken), genStepStyle(progressToken), genSmallLine(progressToken)];
+}, progress_style_prepareComponentToken));
+;// ./node_modules/antd/es/progress/Line.js
+"use client";
+
+
+
+
+
+
+
+/**
+ * @example
+ *   {
+ *     "0%": "#afc163",
+ *     "75%": "#009900",
+ *     "50%": "green", // ====> '#afc163 0%, #66FF00 25%, #00CC00 50%, #009900 75%, #ffffff 100%'
+ *     "25%": "#66FF00",
+ *     "100%": "#ffffff"
+ *   }
+ */
+const sortGradient = gradients => {
+  let tempArr = [];
+  Object.keys(gradients).forEach(key => {
+    const formattedKey = Number.parseFloat(key.replace(/%/g, ''));
+    if (!Number.isNaN(formattedKey)) {
+      tempArr.push({
+        key: formattedKey,
+        value: gradients[key]
+      });
+    }
+  });
+  tempArr = tempArr.sort((a, b) => a.key - b.key);
+  return tempArr.map(({
+    key,
+    value
+  }) => `${value} ${key}%`).join(', ');
+};
+/**
+ * Then this man came to realize the truth: Besides six pence, there is the moon. Besides bread and
+ * butter, there is the bug. And... Besides women, there is the code.
+ *
+ * @example
+ *   {
+ *     "0%": "#afc163",
+ *     "25%": "#66FF00",
+ *     "50%": "#00CC00", // ====>  linear-gradient(to right, #afc163 0%, #66FF00 25%,
+ *     "75%": "#009900", //        #00CC00 50%, #009900 75%, #ffffff 100%)
+ *     "100%": "#ffffff"
+ *   }
+ */
+const handleGradient = (strokeColor, directionConfig) => {
+  const {
+    from = presetPrimaryColors.blue,
+    to = presetPrimaryColors.blue,
+    direction = directionConfig === 'rtl' ? 'to left' : 'to right',
+    ...rest
+  } = strokeColor;
+  if (Object.keys(rest).length !== 0) {
+    const sortedGradients = sortGradient(rest);
+    const background = `linear-gradient(${direction}, ${sortedGradients})`;
+    return {
+      background,
+      [LineStrokeColorVar]: background
+    };
+  }
+  const background = `linear-gradient(${direction}, ${from}, ${to})`;
+  return {
+    background,
+    [LineStrokeColorVar]: background
+  };
+};
+const Line_Line = props => {
+  const {
+    prefixCls,
+    classNames,
+    styles,
+    direction: directionConfig,
+    percent,
+    size,
+    strokeWidth,
+    strokeColor,
+    strokeLinecap = 'round',
+    children,
+    railColor,
+    trailColor,
+    percentPosition,
+    success
+  } = props;
+  const {
+    align: infoAlign,
+    type: infoPosition
+  } = percentPosition;
+  const mergedRailColor = railColor ?? trailColor;
+  const borderRadius = strokeLinecap === 'square' || strokeLinecap === 'butt' ? 0 : undefined;
+  if (false) // removed by dead control flow
+{}
+  // ========================= Size =========================
+  const mergedSize = size ?? [-1, strokeWidth || (size === 'small' ? 6 : 8)];
+  const [width, height] = utils_getSize(mergedSize, 'line', {
+    strokeWidth
+  });
+  // ========================= Rail =========================
+  const railStyle = {
+    backgroundColor: mergedRailColor || undefined,
+    borderRadius,
+    height
+  };
+  // ======================== Tracks ========================
+  const trackCls = `${prefixCls}-track`;
+  const backgroundProps = strokeColor && typeof strokeColor !== 'string' ? handleGradient(strokeColor, directionConfig) : {
+    [LineStrokeColorVar]: strokeColor,
+    background: strokeColor
+  };
+  const percentTrackStyle = {
+    width: `${validProgress(percent)}%`,
+    height,
+    borderRadius,
+    ...backgroundProps
+  };
+  const successPercent = getSuccessPercent(props);
+  const successTrackStyle = {
+    width: `${validProgress(successPercent)}%`,
+    height,
+    borderRadius,
+    backgroundColor: success?.strokeColor
+  };
+  // ======================== Render ========================
+  return /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
+    className: clsx(`${prefixCls}-body`, classNames.body, {
+      [`${prefixCls}-body-layout-bottom`]: infoAlign === 'center' && infoPosition === 'outer'
+    }),
+    style: {
+      width: width > 0 ? width : '100%',
+      ...styles.body
+    }
+  }, /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
+    className: clsx(`${prefixCls}-rail`, classNames.rail),
+    style: {
+      ...railStyle,
+      ...styles.rail
+    }
+  }, /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
+    className: clsx(trackCls, classNames.track),
+    style: {
+      ...percentTrackStyle,
+      ...styles.track
+    }
+  }, infoPosition === 'inner' && children), successPercent !== undefined && (/*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
+    className: clsx(trackCls, `${trackCls}-success`, classNames.track),
+    style: {
+      ...successTrackStyle,
+      ...styles.track
+    }
+  }))), infoPosition === 'outer' && children);
+};
+/* harmony default export */ const progress_Line = (Line_Line);
+;// ./node_modules/antd/es/progress/Steps.js
+"use client";
+
+
+
+
+const Steps = props => {
+  const {
+    classNames,
+    styles,
+    size,
+    steps,
+    rounding: customRounding = Math.round,
+    percent = 0,
+    strokeWidth = 8,
+    strokeColor,
+    railColor,
+    trailColor,
+    prefixCls,
+    children
+  } = props;
+  const current = customRounding(steps * (percent / 100));
+  const stepWidth = size === 'small' ? 2 : 14;
+  const mergedSize = size ?? [stepWidth, strokeWidth];
+  const [width, height] = utils_getSize(mergedSize, 'step', {
+    steps,
+    strokeWidth
+  });
+  const unitWidth = width / steps;
+  const styledSteps = Array.from({
+    length: steps
+  });
+  const mergedRailColor = railColor ?? trailColor;
+  for (let i = 0; i < steps; i++) {
+    const color = Array.isArray(strokeColor) ? strokeColor[i] : strokeColor;
+    styledSteps[i] = /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
+      key: i,
+      className: clsx(`${prefixCls}-steps-item`, {
+        [`${prefixCls}-steps-item-active`]: i <= current - 1
+      }, classNames.track),
+      style: {
+        backgroundColor: i <= current - 1 ? color : mergedRailColor,
+        width: unitWidth,
+        height,
+        ...styles.track
+      }
+    });
+  }
+  return /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
+    className: clsx(`${prefixCls}-steps-body`, classNames.body),
+    style: styles.body
+  }, styledSteps, children);
+};
+/* harmony default export */ const progress_Steps = (Steps);
+;// ./node_modules/antd/es/progress/progress.js
+"use client";
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+const ProgressTypes = (/* unused pure expression or super */ null && (['line', 'circle', 'dashboard']));
+const ProgressStatuses = ['normal', 'exception', 'active', 'success'];
+const progress_Progress = /*#__PURE__*/(react_production_namespaceFn().forwardRef)((props, ref) => {
+  const {
+    prefixCls: customizePrefixCls,
+    className,
+    rootClassName,
+    classNames,
+    styles,
+    steps,
+    strokeColor,
+    percent = 0,
+    size = 'medium',
+    showInfo = true,
+    type = 'line',
+    status,
+    format,
+    style,
+    percentPosition = {},
+    ...restProps
+  } = props;
+  // ========================= MISC =========================
+  const {
+    align: infoAlign = 'end',
+    type: infoPosition = 'outer'
+  } = percentPosition;
+  const strokeColorNotArray = Array.isArray(strokeColor) ? strokeColor[0] : strokeColor;
+  const strokeColorNotGradient = typeof strokeColor === 'string' || Array.isArray(strokeColor) ? strokeColor : undefined;
+  const strokeColorIsBright = (react_production_namespaceFn().useMemo)(() => {
+    if (strokeColorNotArray) {
+      const color = typeof strokeColorNotArray === 'string' ? strokeColorNotArray : Object.values(strokeColorNotArray)[0];
+      return new FastColor(color).isLight();
+    }
+    return false;
+  }, [strokeColor]);
+  const percentNumber = (react_production_namespaceFn().useMemo)(() => {
+    const successPercent = getSuccessPercent(props);
+    return Number.parseInt(successPercent !== undefined ? (successPercent ?? 0)?.toString() : (percent ?? 0)?.toString(), 10);
+  }, [percent, props.success]);
+  const progressStatus = (react_production_namespaceFn().useMemo)(() => {
+    if (!ProgressStatuses.includes(status) && percentNumber >= 100) {
+      return 'success';
+    }
+    return status || 'normal';
+  }, [status, percentNumber]);
+  // ======================= Context ========================
+  const {
+    getPrefixCls,
+    direction,
+    className: contextClassName,
+    style: contextStyle,
+    classNames: contextClassNames,
+    styles: contextStyles
+  } = useComponentConfig('progress');
+  const prefixCls = getPrefixCls('progress', customizePrefixCls);
+  const [hashId, cssVarCls] = progress_style(prefixCls);
+  const mergedProps = {
+    ...props,
+    percent,
+    type,
+    size,
+    showInfo,
+    percentPosition
+  };
+  // ======================== Styles ========================
+  const contextStyleRoot = useSemanticRootStyle(contextStyle);
+  const styleRoot = useSemanticRootStyle(style);
+  const [mergedClassNames, mergedStyles] = useMergeSemantic([contextClassNames, classNames], [contextStyles, contextStyleRoot, styles, styleRoot], {
+    props: mergedProps
+  });
+  // ========================= Info =========================
+  const isLineType = type === 'line';
+  const isPureLineType = isLineType && !steps;
+  const progressInfo = (react_production_namespaceFn().useMemo)(() => {
+    if (!showInfo) {
+      return null;
+    }
+    const successPercent = getSuccessPercent(props);
+    let text;
+    const textFormatter = format || (number => `${number}%`);
+    const isBrightInnerColor = isLineType && strokeColorIsBright && infoPosition === 'inner';
+    if (infoPosition === 'inner' || format || progressStatus !== 'exception' && progressStatus !== 'success') {
+      text = textFormatter(validProgress(percent), validProgress(successPercent));
+    } else if (progressStatus === 'exception') {
+      text = isLineType ? /*#__PURE__*/(react_production_namespaceFn().createElement)(icons_CloseCircleFilled, null) : /*#__PURE__*/(react_production_namespaceFn().createElement)(icons_CloseOutlined, null);
+    } else if (progressStatus === 'success') {
+      text = isLineType ? /*#__PURE__*/(react_production_namespaceFn().createElement)(icons_CheckCircleFilled, null) : /*#__PURE__*/(react_production_namespaceFn().createElement)(icons_CheckOutlined, null);
+    }
+    return /*#__PURE__*/(react_production_namespaceFn().createElement)("span", {
+      className: clsx(`${prefixCls}-indicator`, {
+        [`${prefixCls}-indicator-bright`]: isBrightInnerColor,
+        [`${prefixCls}-indicator-${infoAlign}`]: isPureLineType,
+        [`${prefixCls}-indicator-${infoPosition}`]: isPureLineType
+      }, mergedClassNames.indicator),
+      style: mergedStyles.indicator,
+      title: typeof text === 'string' ? text : undefined
+    }, text);
+  }, [showInfo, percent, percentNumber, progressStatus, type, prefixCls, format, isLineType, strokeColorIsBright, infoPosition, infoAlign, isPureLineType, mergedClassNames.indicator, mergedStyles.indicator]);
+  if (false) // removed by dead control flow
+{}
+  // ======================== Render ========================
+  const sharedProps = {
+    ...props,
+    classNames: mergedClassNames,
+    styles: mergedStyles
+  };
+  let progress;
+  // Render progress shape
+  if (type === 'line') {
+    progress = steps ? (/*#__PURE__*/(react_production_namespaceFn().createElement)(progress_Steps, {
+      ...sharedProps,
+      strokeColor: strokeColorNotGradient,
+      prefixCls: prefixCls,
+      steps: is_isPlainObject(steps) ? steps.count : steps
+    }, progressInfo)) : (/*#__PURE__*/(react_production_namespaceFn().createElement)(progress_Line, {
+      ...sharedProps,
+      strokeColor: strokeColorNotArray,
+      prefixCls: prefixCls,
+      direction: direction,
+      percentPosition: {
+        align: infoAlign,
+        type: infoPosition
+      }
+    }, progressInfo));
+  } else if (type === 'circle' || type === 'dashboard') {
+    progress = /*#__PURE__*/(react_production_namespaceFn().createElement)(progress_Circle, {
+      ...sharedProps,
+      strokeColor: strokeColorNotArray,
+      prefixCls: prefixCls,
+      progressStatus: progressStatus
+    }, progressInfo);
+  }
+  const classString = clsx(prefixCls, `${prefixCls}-status-${progressStatus}`, {
+    [`${prefixCls}-${type === 'dashboard' && 'circle' || type}`]: type !== 'line',
+    [`${prefixCls}-inline-circle`]: type === 'circle' && utils_getSize(size, 'circle')[0] <= 20,
+    [`${prefixCls}-line`]: isPureLineType,
+    [`${prefixCls}-line-align-${infoAlign}`]: isPureLineType,
+    [`${prefixCls}-line-position-${infoPosition}`]: isPureLineType,
+    [`${prefixCls}-steps`]: steps,
+    [`${prefixCls}-show-info`]: showInfo,
+    [`${prefixCls}-small`]: size === 'small',
+    [`${prefixCls}-rtl`]: direction === 'rtl'
+  }, contextClassName, className, rootClassName, mergedClassNames.root, hashId, cssVarCls);
+  return /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
+    ref: ref,
+    style: mergedStyles.root,
+    className: classString,
+    role: "progressbar",
+    "aria-valuenow": percentNumber,
+    "aria-valuemin": 0,
+    "aria-valuemax": 100,
+    ...omit(restProps, ['railColor', 'trailColor', 'strokeWidth', 'width', 'gapDegree', 'gapPosition', 'gapPlacement', 'strokeLinecap', 'success'])
+  }, progress);
+});
+if (false) // removed by dead control flow
+{}
+/* harmony default export */ const progress_progress = (progress_Progress);
+;// ./node_modules/antd/es/progress/index.js
+"use client";
+
+
+/* harmony default export */ const es_progress = (progress_progress);
+;// ./node_modules/@ant-design/icons-svg/es/asn/PrinterOutlined.js
+// This icon file is generated automatically.
+var PrinterOutlined = { "icon": { "tag": "svg", "attrs": { "viewBox": "64 64 896 896", "focusable": "false" }, "children": [{ "tag": "path", "attrs": { "d": "M820 436h-40c-4.4 0-8 3.6-8 8v40c0 4.4 3.6 8 8 8h40c4.4 0 8-3.6 8-8v-40c0-4.4-3.6-8-8-8zm32-104H732V120c0-4.4-3.6-8-8-8H300c-4.4 0-8 3.6-8 8v212H172c-44.2 0-80 35.8-80 80v328c0 17.7 14.3 32 32 32h168v132c0 4.4 3.6 8 8 8h424c4.4 0 8-3.6 8-8V772h168c17.7 0 32-14.3 32-32V412c0-44.2-35.8-80-80-80zM360 180h304v152H360V180zm304 664H360V568h304v276zm200-140H732V500H292v204H160V412c0-6.6 5.4-12 12-12h680c6.6 0 12 5.4 12 12v292z" } }] }, "name": "printer", "theme": "outlined" };
+/* harmony default export */ const asn_PrinterOutlined = (PrinterOutlined);
+
+;// ./node_modules/@ant-design/icons/es/icons/PrinterOutlined.js
+function PrinterOutlined_extends() { PrinterOutlined_extends = Object.assign ? Object.assign.bind() : function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; }; return PrinterOutlined_extends.apply(this, arguments); }
+// GENERATED BY ./scripts/generate.ts
+// DO NOT EDIT IT MANUALLY
+
+;
+
+
+const PrinterOutlined_PrinterOutlined = (props, ref) => /*#__PURE__*/(react_production_namespaceFn().createElement)(AntdIconLight, PrinterOutlined_extends({}, props, {
+  ref: ref,
+  icon: asn_PrinterOutlined
+}));
+
+/**![printer](data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTAiIGhlaWdodD0iNTAiIGZpbGw9IiNjYWNhY2EiIHZpZXdCb3g9IjY0IDY0IDg5NiA4OTYiIGZvY3VzYWJsZT0iZmFsc2UiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHBhdGggZD0iTTgyMCA0MzZoLTQwYy00LjQgMC04IDMuNi04IDh2NDBjMCA0LjQgMy42IDggOCA4aDQwYzQuNCAwIDgtMy42IDgtOHYtNDBjMC00LjQtMy42LTgtOC04em0zMi0xMDRINzMyVjEyMGMwLTQuNC0zLjYtOC04LThIMzAwYy00LjQgMC04IDMuNi04IDh2MjEySDE3MmMtNDQuMiAwLTgwIDM1LjgtODAgODB2MzI4YzAgMTcuNyAxNC4zIDMyIDMyIDMyaDE2OHYxMzJjMCA0LjQgMy42IDggOCA4aDQyNGM0LjQgMCA4LTMuNiA4LThWNzcyaDE2OGMxNy43IDAgMzItMTQuMyAzMi0zMlY0MTJjMC00NC4yLTM1LjgtODAtODAtODB6TTM2MCAxODBoMzA0djE1MkgzNjBWMTgwem0zMDQgNjY0SDM2MFY1NjhoMzA0djI3NnptMjAwLTE0MEg3MzJWNTAwSDI5MnYyMDRIMTYwVjQxMmMwLTYuNiA1LjQtMTIgMTItMTJoNjgwYzYuNiAwIDEyIDUuNCAxMiAxMnYyOTJ6IiAvPjwvc3ZnPg==) */
+const PrinterOutlined_RefIcon = /*#__PURE__*/(react_production_namespaceFn().forwardRef)(PrinterOutlined_PrinterOutlined);
+if (false) // removed by dead control flow
+{}
+/* harmony default export */ const icons_PrinterOutlined = (PrinterOutlined_RefIcon);
+;// ./node_modules/react-to-print/dist/react-to-print.mjs
+
+const q = "printWindow";
+function V(e) {
+  const t = document.createElement("iframe");
+  return t.width = `${document.documentElement.clientWidth}px`, t.height = `${document.documentElement.clientHeight}px`, t.style.position = "absolute", t.style.top = `-${document.documentElement.clientHeight + 100}px`, t.style.left = `-${document.documentElement.clientWidth + 100}px`, t.id = q, t.srcdoc = "<!DOCTYPE html>", e && (e.allow && (t.allow = e.allow), e.referrerPolicy !== void 0 && (t.referrerPolicy = e.referrerPolicy), e.sandbox !== void 0 && (t.sandbox = e.sandbox)), t;
+}
+function react_to_print_f({ level: e = "error", messages: t, suppressErrors: n = !1 }) {
+  n || (e === "error" ? console.error(t) : e === "warning" ? console.warn(t) : console.debug(t));
+}
+function react_to_print_$(e, t) {
+  if (t || !e) {
+    const n = document.getElementById(q);
+    n && document.body.removeChild(n);
+  }
+}
+function P(e) {
+  return e instanceof Error ? e : new Error("Unknown Error");
+}
+function react_to_print_H(e, t) {
+  const {
+    documentTitle: n,
+    onAfterPrint: l,
+    onPrintError: p,
+    preserveAfterPrint: m,
+    print: h,
+    suppressErrors: g
+  } = t;
+  setTimeout(() => {
+    if (e.contentWindow) {
+      let a = function() {
+        l?.(), react_to_print_$(m);
+      };
+      if (e.contentWindow.focus(), h)
+        h(e).then(a).catch((c) => {
+          p ? p("print", P(c)) : react_to_print_f({
+            messages: ["An error was thrown by the specified `print` function"],
+            suppressErrors: g
+          });
+        });
+      else {
+        if (e.contentWindow.print) {
+          const c = e.contentDocument?.title ?? "", E = e.ownerDocument.title, y = typeof n == "function" ? n() : n;
+          y && (e.ownerDocument.title = y, e.contentDocument && (e.contentDocument.title = y)), e.contentWindow.print(), y && (e.ownerDocument.title = E, e.contentDocument && (e.contentDocument.title = c));
+        } else
+          react_to_print_f({
+            messages: ["Printing for this browser is not currently possible: the browser does not have a `print` method available for iframes."],
+            suppressErrors: g
+          });
+        react_to_print_z() ? setTimeout(a, 500) : a();
+      }
+    } else
+      react_to_print_f({
+        messages: ["Printing failed because the `contentWindow` of the print iframe did not load. This is possibly an error with `react-to-print`. Please file an issue: https://github.com/MatthewHerbst/react-to-print/issues/"],
+        suppressErrors: g
+      });
+  }, 500);
+}
+function react_to_print_z() {
+  return [
+    /Android/i,
+    /webOS/i,
+    /iPhone/i,
+    /iPad/i,
+    /iPod/i,
+    /BlackBerry/i,
+    /Windows Phone/i
+  ].some((t) => (
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+    (navigator.userAgent ?? // Retained for compatibility with browsers that use `navigator.vendor` to identify the browser.
+    // eslint-disable-next-line @typescript-eslint/no-deprecated
+    navigator.vendor ?? // Retained for compatibility with older versions of Opera that use `window.opera`.
+    ("opera" in window && window.opera)).match(t)
+  ));
+}
+function react_to_print_O(e) {
+  const t = [], n = document.createTreeWalker(e, NodeFilter.SHOW_ELEMENT, null);
+  let l = n.nextNode();
+  for (; l; )
+    t.push(l), l = n.nextNode();
+  return t;
+}
+function react_to_print_j(e, t, n) {
+  const l = react_to_print_O(e), p = react_to_print_O(t);
+  if (l.length !== p.length) {
+    react_to_print_f({
+      messages: ["When cloning shadow root content, source and target elements have different size. `onBeforePrint` likely resolved too early.", e, t],
+      suppressErrors: n
+    });
+    return;
+  }
+  for (let m = 0; m < l.length; m++) {
+    const h = l[m], g = p[m], a = h.shadowRoot;
+    if (a !== null) {
+      const c = g.attachShadow({ mode: a.mode });
+      c.innerHTML = a.innerHTML, react_to_print_j(a, c, n);
+    }
+  }
+}
+const G = `
+    @page {
+        /* Remove browser default header (title) and footer (url) */
+        margin: 0;
+    }
+    @media print {
+        body {
+            /* Tell browsers to print background colors */
+            color-adjust: exact; /* Firefox. This is an older version of "print-color-adjust" */
+            print-color-adjust: exact; /* Firefox/Safari */
+            -webkit-print-color-adjust: exact; /* Chrome/Safari/Edge/Opera */
+        }
+    }
+`;
+function W(e, t, n) {
+  const {
+    contentNode: l,
+    clonedContentNode: p,
+    clonedImgNodes: m,
+    clonedVideoNodes: h,
+    numResourcesToLoad: g,
+    originalCanvasNodes: a
+  } = t, {
+    bodyClass: c,
+    fonts: E,
+    ignoreGlobalStyles: y,
+    pageStyle: C,
+    nonce: T,
+    suppressErrors: A,
+    copyShadowRoots: F
+  } = n, L = [], _ = [];
+  function i(k, x) {
+    if (L.includes(k)) {
+      react_to_print_f({
+        level: "debug",
+        messages: ["Tried to mark a resource that has already been handled", k],
+        suppressErrors: A
+      });
+      return;
+    }
+    x ? (react_to_print_f({
+      messages: [
+        '"react-to-print" was unable to load a resource but will continue attempting to print the page',
+        ...x
+      ],
+      suppressErrors: A
+    }), _.push(k)) : L.push(k), L.length + _.length === g && react_to_print_H(e, n);
+  }
+  e.onload = null;
+  const d = e.contentDocument ?? e.contentWindow?.document;
+  if (d) {
+    const k = d.body.appendChild(p);
+    F && react_to_print_j(l, k, !!A), E && (e.contentDocument?.fonts && e.contentWindow?.FontFace ? E.forEach((s) => {
+      const o = new FontFace(
+        s.family,
+        s.source,
+        { weight: s.weight, style: s.style }
+      );
+      e.contentDocument.fonts.add(o), o.loaded.then(() => {
+        i(o);
+      }).catch((b) => {
+        i(o, ["Failed loading the font:", o, "Load error:", P(b)]);
+      });
+    }) : (E.forEach((s) => {
+      i(s);
+    }), react_to_print_f({
+      messages: ['"react-to-print" is not able to load custom fonts because the browser does not support the FontFace API but will continue attempting to print the page'],
+      suppressErrors: A
+    })));
+    const x = C ?? G, D = d.createElement("style");
+    T && (D.setAttribute("nonce", T), d.head.setAttribute("nonce", T)), D.appendChild(d.createTextNode(x)), d.head.appendChild(D), c && d.body.classList.add(...c.split(" "));
+    const U = d.querySelectorAll("canvas");
+    for (let s = 0; s < a.length; ++s) {
+      const o = a[s], b = U[s];
+      if (b === void 0) {
+        react_to_print_f({
+          messages: ["A canvas element could not be copied for printing, has it loaded? `onBeforePrint` likely resolved too early.", o],
+          suppressErrors: A
+        });
+        continue;
+      }
+      const r = b.getContext("2d");
+      r && r.drawImage(o, 0, 0);
+    }
+    for (let s = 0; s < m.length; s++) {
+      const o = m[s], b = o.getAttribute("src");
+      if (!b)
+        i(o, ['Found an <img> tag with an empty "src" attribute. This prevents pre-loading it.', o]);
+      else {
+        const r = new Image();
+        r.onload = () => {
+          i(o);
+        }, r.onerror = (u, w, S, v, N) => {
+          i(o, ["Error loading <img>", o, "Error", N]);
+        }, r.src = b;
+      }
+    }
+    for (let s = 0; s < h.length; s++) {
+      const o = h[s];
+      o.preload = "auto";
+      const b = o.getAttribute("poster");
+      if (b) {
+        const r = new Image();
+        r.onload = () => {
+          i(o);
+        }, r.onerror = (u, w, S, v, N) => {
+          i(o, ["Error loading video poster", b, "for video", o, "Error:", N]);
+        }, r.src = b;
+      } else
+        o.readyState >= 2 ? i(o) : o.src ? (o.onloadeddata = () => {
+          i(o);
+        }, o.onerror = (r, u, w, S, v) => {
+          i(o, ["Error loading video", o, "Error", v]);
+        }, o.onstalled = () => {
+          i(o, ["Loading video stalled, skipping", o]);
+        }) : i(o, ["Error loading video, `src` is empty", o]);
+    }
+    const R = "select", M = l.querySelectorAll(R), B = d.querySelectorAll(R);
+    for (let s = 0; s < M.length; s++)
+      B[s].value = M[s].value;
+    if (!y) {
+      const s = document.querySelectorAll("style, link[rel~='stylesheet'], link[as='style']");
+      for (let o = 0, b = s.length; o < b; ++o) {
+        const r = s[o];
+        if (r.tagName.toLowerCase() === "style") {
+          const u = d.createElement(r.tagName), w = r.sheet;
+          if (w) {
+            let S = "";
+            try {
+              const v = w.cssRules.length;
+              for (let N = 0; N < v; ++N)
+                typeof w.cssRules[N].cssText == "string" && (S += `${w.cssRules[N].cssText}\r
+`);
+            } catch (v) {
+              react_to_print_f({
+                messages: [
+                  "A stylesheet could not be accessed. This is likely due to the stylesheet having cross-origin imports, and many browsers block script access to cross-origin stylesheets. See https://github.com/MatthewHerbst/react-to-print/issues/429 for details. You may be able to load the sheet by both marking the stylesheet with the cross `crossorigin` attribute, and setting the `Access-Control-Allow-Origin` header on the server serving the stylesheet. Alternatively, host the stylesheet on your domain to avoid this issue entirely.",
+                  // eslint-disable-line max-len
+                  r,
+                  `Original error: ${P(v).message}`
+                ],
+                level: "warning"
+              });
+            }
+            u.setAttribute("id", `react-to-print-${o}`), T && u.setAttribute("nonce", T), u.appendChild(d.createTextNode(S)), d.head.appendChild(u);
+          }
+        } else if (r.getAttribute("href"))
+          if (r.hasAttribute("disabled"))
+            react_to_print_f({
+              messages: ["`react-to-print` encountered a <link> tag with a `disabled` attribute and will ignore it. Note that the `disabled` attribute is deprecated, and some browsers ignore it. You should stop using it. https://developer.mozilla.org/en-US/docs/Web/HTML/Element/link#attr-disabled. The <link> is:", r],
+              level: "warning"
+            }), i(r);
+          else {
+            const u = d.createElement(r.tagName);
+            for (let w = 0, S = r.attributes.length; w < S; ++w) {
+              const v = r.attributes[w];
+              v && u.setAttribute(v.nodeName, v.nodeValue ?? "");
+            }
+            u.onload = () => {
+              i(u);
+            }, u.onerror = (w, S, v, N, I) => {
+              i(u, ["Failed to load", u, "Error:", I]);
+            }, T && u.setAttribute("nonce", T), d.head.appendChild(u);
+          }
+        else
+          react_to_print_f({
+            messages: ["`react-to-print` encountered a <link> tag with an empty `href` attribute. In addition to being invalid HTML, this can cause problems in many browsers, and so the <link> was not loaded. The <link> is:", r],
+            level: "warning"
+          }), i(r);
+      }
+    }
+  }
+  g === 0 && react_to_print_H(e, n);
+}
+function J(e, t, n) {
+  e.onload = () => {
+    W(
+      e,
+      t,
+      n
+    );
+  }, document.body.appendChild(e);
+}
+function K({ contentRef: e, optionalContent: t, suppressErrors: n }) {
+  if (t && typeof t == "function")
+    return e && react_to_print_f({
+      level: "warning",
+      messages: ['"react-to-print" received a `contentRef` option and an optional-content param passed to its callback. The `contentRef` option will be ignored.']
+    }), t();
+  if (e)
+    return e.current;
+  react_to_print_f({
+    messages: ['"react-to-print" did not receive a `contentRef` option or a optional-content param pass to its callback.'],
+    suppressErrors: n
+  });
+}
+function Q(e, t) {
+  const {
+    contentRef: n,
+    fonts: l,
+    ignoreGlobalStyles: p,
+    suppressErrors: m
+  } = t, h = K({
+    contentRef: n,
+    optionalContent: e,
+    suppressErrors: m
+  });
+  if (!h)
+    return;
+  const g = h.cloneNode(!0), a = document.querySelectorAll("link[rel~='stylesheet'], link[as='style']"), c = g.querySelectorAll("img"), E = g.querySelectorAll("video"), y = l ? l.length : 0, C = (p ? 0 : a.length) + c.length + E.length + y;
+  return {
+    contentNode: h,
+    clonedContentNode: g,
+    clonedImgNodes: c,
+    clonedVideoNodes: E,
+    numResourcesToLoad: C,
+    originalCanvasNodes: h.querySelectorAll("canvas")
+  };
+}
+function Z({
+  bodyClass: e,
+  contentRef: t,
+  copyShadowRoots: n,
+  documentTitle: l,
+  fonts: p,
+  ignoreGlobalStyles: m,
+  nonce: h,
+  onAfterPrint: g,
+  onBeforePrint: a,
+  onPrintError: c,
+  pageStyle: E,
+  preserveAfterPrint: y,
+  print: C,
+  printIframeProps: T,
+  suppressErrors: A
+}) {
+  return (0,react_production_namespaceFn().useCallback)((L) => {
+    react_to_print_$(y, !0);
+    function _() {
+      const i = {
+        bodyClass: e,
+        contentRef: t,
+        copyShadowRoots: n,
+        documentTitle: l,
+        fonts: p,
+        ignoreGlobalStyles: m,
+        nonce: h,
+        onAfterPrint: g,
+        onPrintError: c,
+        pageStyle: E,
+        preserveAfterPrint: y,
+        print: C,
+        suppressErrors: A
+      }, d = V(T), k = Q(L, i);
+      if (!k) {
+        react_to_print_f({
+          messages: ["There is nothing to print"],
+          suppressErrors: A
+        });
+        return;
+      }
+      J(d, k, i);
+    }
+    a ? a().then(() => {
+      _();
+    }).catch((i) => {
+      c?.("onBeforePrint", P(i));
+    }) : _();
+  }, [
+    e,
+    t,
+    n,
+    l,
+    p,
+    m,
+    h,
+    g,
+    a,
+    c,
+    E,
+    y,
+    T,
+    C,
+    A
+  ]);
+}
+
+
 ;// ./src/lib/ui/panelIds.ts
 /**
  * 本脚本 UI 的共享常量。
@@ -75057,6 +72510,97 @@ const OVERLAY_HOST_ID = '__znhd_overlay_host__';
  * （旧代码就是硬编码 340，见 panelHost 的 initialPoint）。
  */
 const PANEL_WIDTH = 238;
+
+;// ./src/lib/ui/ImageOverlayActions.tsx
+
+/**
+ * 图片右下角的悬浮功能按钮条（v26.10.10-v16 新增）。
+ *
+ * ── 它解决什么问题 ─────────────────────────────────────────────────────────
+ * 历史记录窗口与图片嗅探窗口原先把「复制 / 下载 / 删除」等按钮**排在图片下方**，
+ * 每个格子要占掉一行按钮的高度，图片本身被压得很小。用户要求（v26.10.10-v16）：
+ * 按钮挪到**图片内部右下角**、**只显示图标不显示文字**、**鼠标移到图片上才出现**、
+ * hover 时才用 tooltip 显示文字。
+ *
+ * ── 为什么用 state 而不是 CSS `:hover` ──────────────────────────────────────
+ * 宿主税务页有自己的样式表，我们不想为了这个悬浮效果往页面里注入全局 CSS 规则
+ * （`:hover` 只能靠样式表实现）。这里沿用 `transfer/AgentConversationList.tsx` 侧栏
+ * 「hover 才出现的删除图标」的既有做法：`onMouseEnter/onMouseLeave` 改 React state，样式全部内联。
+ *
+ * ── 为什么隐藏时按钮仍留在 DOM 里 ───────────────────────────────────────────
+ * 隐藏只改 `opacity / visibility / pointerEvents`，**不卸载按钮**：
+ * ① 冒烟夹具（`scripts/smoke/znhd-smoke.html`）是按 `button[aria-label="复制"]` 找按钮再
+ *    程序化 `.click()` 的，元素被卸载就找不到（`visibility: hidden` 不影响 `.click()` 派发）；
+ * ② 读屏/键盘用户仍能 Tab 到这些按钮。
+ *
+ * ── 无障碍 ─────────────────────────────────────────────────────────────────
+ * 按钮内没有文字，语义**只由 `aria-label` 承担**（读屏靠它，冒烟测试也按它定位）。
+ * tooltip 文案与 `aria-label` 用同一个 `label`，两者不会漂移。
+ */
+
+
+function ImageOverlayActions({ children, actions }) {
+    const [hover, setHover] = (0,react_production_namespaceFn().useState)(false);
+    return ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { className: "znhd-img-hover", style: { position: 'relative', width: '100%', minWidth: 0 }, onMouseEnter: () => setHover(true), onMouseLeave: () => setHover(false), children: [children, (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { className: "znhd-img-actions", style: {
+                    position: 'absolute',
+                    right: 6,
+                    bottom: 6,
+                    display: 'flex',
+                    gap: 2,
+                    padding: 2,
+                    borderRadius: 6,
+                    // 半透明黑底：图片本身深浅不定，没有底衬时白色图标会看不清
+                    background: 'rgba(0, 0, 0, 0.55)',
+                    zIndex: 2,
+                    opacity: hover ? 1 : 0,
+                    visibility: hover ? 'visible' : 'hidden',
+                    // 隐藏时不吃鼠标事件，避免挡住图片本身的点击（antd Image 点开预览）
+                    pointerEvents: hover ? 'auto' : 'none',
+                    transition: 'opacity 0.15s',
+                }, children: actions.map((a) => ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_tooltip, { title: a.tooltip ?? a.label, children: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { size: "small", type: "text", "aria-label": a.label, loading: a.loading, onClick: a.onClick, style: {
+                            color: a.danger ? '#ff7875' : '#fff',
+                            padding: 0,
+                            width: 22,
+                            height: 22,
+                        }, children: a.icon }) }, a.label))) })] }));
+}
+
+;// ./src/lib/gallery.ts
+/**
+ * 收件相关的纯工具（v26.10.06-v13 建，v26.10.12-v1 起只剩文件命名）。
+ *
+ * 沿革：「历史记录」弹窗（图片 + 文本画廊）在「设备互联 → 传输助手」重构中被
+ * 传输助手第三栏的「文件」分组（`ui/transfer/TransferFilesView.tsx`）取代，
+ * 数据类型也换成了 `lib/transfer/types.ts` 的 `TransferMessage`（按会话组织），
+ * 故本文件里的 GalleryImage / GalleryText / MAX_GALLERY / MAX_TEXT 已全部删除。
+ *
+ * 保留的只有 `downloadFileName`：下载 / 打印的命名规则（优先原始名、无扩展名按
+ * MIME 补、兜底 znhd-image-N）被传输助手与图片嗅探共用，不再有「画廊序号」语义，
+ * 参数 idx 仅作兜底编号。
+ */
+/**
+ * 计算下载用的文件名：优先用原始名；无扩展名时按 MIME 补。
+ * @param {string} name - 原始文件名（可空）
+ * @param {string} mime - MIME 类型
+ * @param {number} idx - 兜底命名用的序号
+ * @returns {string} 带扩展名的文件名
+ */
+function downloadFileName(name, mime, idx = 0) {
+    const extByMime = {
+        'image/jpeg': '.jpg',
+        'image/png': '.png',
+        'image/gif': '.gif',
+        'image/webp': '.webp',
+        'image/svg+xml': '.svg',
+        'image/bmp': '.bmp',
+    };
+    let n = String(name || '').trim();
+    if (!n)
+        n = 'znhd-image-' + (idx + 1);
+    if (!/\.[a-z0-9]{2,5}$/i.test(n))
+        n += extByMime[(mime || '').toLowerCase()] || '.jpg';
+    return n;
+}
 
 ;// ./src/lib/sniffer.ts
 /**
@@ -75806,6 +73350,192 @@ async function downloadImage(url, filename) {
     return anchorDownload(url, filename);
 }
 
+;// ./shared/preview/actions.tsx
+/**
+ * 往 antd 图片预览的工具栏里追加按钮 —— 两端共用（v26.10.08-v13 起）。
+ *
+ * ⚠️ **必须用 `cloneElement` 把按钮追加进 antd 自己的 `.ant-image-preview-actions` 容器**，
+ *    不能把按钮当 `originalNode` 的兄弟节点返回：
+ *      · 工具栏的胶囊背景与圆角长在 `actions` 容器上，而它的父级 `footer` 是 `flex-direction: column`
+ *        ⇒ 放外面会变成「工具栏下方一个没有背景的裸按钮」；
+ *      · 复用 antd 自己的 `ant-image-preview-actions-action` 类，尺寸/悬停与自带图标完全一致。
+ *
+ * 用法（两端都一样）：
+ * ```tsx
+ * preview={{ actionsRender: (node) => appendPreviewActions(node, <button …>…) }}
+ * ```
+ */
+
+/** antd 传给 actionsRender 的原始节点（就是那个 actions 容器） */
+function appendPreviewActions(originalNode, extra) {
+    if (!(0,react_production_namespaceFn().isValidElement)(originalNode))
+        return originalNode;
+    const node = originalNode;
+    return (0,react_production_namespaceFn().cloneElement)(node, {}, [...(react_production_namespaceFn().Children).toArray(node.props.children), extra]);
+}
+
+;// ./shared/preview/host.ts
+/**
+ * 放大预览浮层的挂载容器 —— 两端共用（v26.10.08-v13 起）。
+ *
+ * ⚠️ **必须自己建一个挂在 `documentElement` 下的宿主 div，不能直接用「documentElement 本身」**：
+ * antd 的 Image 预览是 `position: fixed` 浮层，**默认 portal 到 `document.body`**；而税务页的 `body`
+ * 常被加 `transform`/`filter` 形成独立层叠上下文（本仓库 `panelHost.tsx` 已记录这个坑），
+ * 一旦被放进去，浮层就以 **body 的盒子**而不是视口为包含块 ⇒ 工具栏被推到视口外、图片占住它的位置。
+ *
+ * 实测（1280×800、页面滚到 y=600、`body{transform:translateZ(0)}`）：
+ *   · 不传：预览根 `y=-579 h=3000`（= body 盒子），工具栏 `y=2330`（视口外），命中测试拿到的是 `img`；
+ *   · 传「返回 documentElement 的函数」：**仍然被挂到 body**（实测，本 antd/rc-portal 版本下不生效，别改回去）；
+ *   · 传本函数（自建宿主 div）：预览根 `y=0`，工具栏回到视口内，命中测试通过。
+ *
+ * ⚠️ 共享层约束：本文件只碰 DOM，不得 import 任何宿主相关模块（见 `shared/image/compress.ts` 头部说明）。
+ */
+/** 宿主 div 的 id（v26.10.10-v4 起对外导出：图片嗅探要把它整棵子树排除在扫描之外） */
+const PREVIEW_HOST_ID = '__znhd_preview_host__';
+/** 取得（必要时创建）预览浮层的宿主 div —— 传给 antd 的 `preview.getContainer` */
+function getPreviewHost() {
+    let el = document.getElementById(PREVIEW_HOST_ID);
+    if (!el) {
+        el = document.createElement('div');
+        el.id = PREVIEW_HOST_ID;
+        document.documentElement.appendChild(el);
+    }
+    return el;
+}
+
+;// ./shared/preview/mask.ts
+/**
+ * 「预览期间压掉所有下层浮层遮罩」—— 两端共用（v26.10.08-v13 起）。
+ *
+ * 背景：antd 的 Modal / Drawer 遮罩都是 `rgba(0,0,0,0.45)`。图片预览是**全屏**浮层，它自己那层遮罩
+ * 就够做背景了；可底下凡是还开着的弹窗/抽屉，遮罩**依然在画**，两层叠加就是 `1-(0.55×0.55)=0.6975`
+ * —— 白底被压到灰度 **77**（单层是 140），肉眼即「没有官方明亮」。
+ *
+ * ⚠️ 只撤「自己那层」不够（v26.10.08-v9 的错）：实测预览打开时，取样点上还叠着别的浮层遮罩
+ *    （例如设置抽屉的 `.ant-drawer-mask`）。故这里按「预览期间一律隐藏下层遮罩」处理：
+ *    它们这时本来就被全屏预览完全盖住、对视觉毫无贡献，只是白白多加一层暗。
+ *
+ * 两端用法一致：预览开/关时调用 `syncPreviewMask(open)`（幂等，CSS 只注入一次）。
+ */
+/** 预览期间挂在 `<html>` 上的类名 */
+const PREVIEWING_CLASS = 'znhd-previewing';
+/** 压掉下层遮罩的规则（唯一来源：脚本端不再往 uiReset 里重复写一份） */
+const PREVIEW_MASK_CSS = `html.${PREVIEWING_CLASS} .ant-modal-mask,
+html.${PREVIEWING_CLASS} .ant-drawer-mask {
+  display: none !important;
+}
+`;
+const STYLE_ID = 'znhd-preview-mask-css';
+/** 注入规则（幂等）：两端各自运行在独立页面里，谁先预览谁注入 */
+function ensurePreviewMaskCss() {
+    if (typeof document === 'undefined')
+        return;
+    if (document.getElementById(STYLE_ID))
+        return;
+    const style = document.createElement('style');
+    style.id = STYLE_ID;
+    style.textContent = PREVIEW_MASK_CSS;
+    (document.head || document.documentElement).appendChild(style);
+}
+/** 按预览开关挂/摘 `<html>` 上的类 */
+function setPreviewing(on) {
+    if (typeof document === 'undefined')
+        return;
+    const root = document.documentElement;
+    if (on)
+        root.classList.add(PREVIEWING_CLASS);
+    else
+        root.classList.remove(PREVIEWING_CLASS);
+}
+/** 预览开/关时调用：确保规则已注入，并同步类名（幂等，可重复调用） */
+function syncPreviewMask(open) {
+    ensurePreviewMaskCss();
+    setPreviewing(open);
+}
+
+;// ./shared/preview/print.ts
+/**
+ * A4 打印版式 —— 两端共用（v26.10.08-v13 起：脚本端与手机页都用 `react-to-print` 打印原图）。
+ *
+ * ⚠️ **为什么 `@page` 的 margin 必须是 0**：浏览器的「页眉和页脚」（标题 / URL / 日期 / 页码）
+ *    画在**页边距区域**里，而 Chrome 打印对话框里该项**默认是勾上的**。只要页边距非 0，
+ *    它们就有地方可画 ⇒ 纸上会多出页眉页脚。把 `@page` 边距归零后它们无处容身（这也是
+ *    react-to-print 默认 pageStyle 用 `margin: 0` 的原因，它自己注释写着 "Remove browser default
+ *    header (title) and footer (url)"）。CSS 没有直接关掉那个勾选项的能力，只能这样「不给它留位置」。
+ *    ⇒ 图片与纸边之间的距离改由**内容框自己的 padding** 提供（`A4_PAD_MM`），效果一样且不会被浏览器占用。
+ *
+ * ⚠️ 这几个数必须与 `PRINT_PAGE_STYLE` 里的 `@page { size: A4 portrait; margin: 0 }` **配套**：
+ *   · 内容框 = 整张 A4（210 × 297mm），减去 3mm 高度余量取 294mm；
+ *   · `padding: 10mm` 且**必须 `box-sizing: border-box`** —— 否则 padding 会把框撑到 230×314mm，
+ *     直接溢出纸张、多吐空白页（这是最容易写错的一处）；
+ *   · 于是真正给图片的区域仍是 190 × 274mm；
+ *   · 高度留 3mm 余量：框高**正好等于**纸高时，部分浏览器/打印驱动会因舍入多吐一张空白页。
+ */
+const A4_W_MM = 210;
+const A4_H_MM = 297;
+/** 图片与纸边的距离（自己留，不靠 @page margin —— 那个位置要留给「没有页眉页脚」） */
+const A4_PAD_MM = 10;
+/** 内容框宽度 = 整张 A4（含内边距） */
+const PRINT_BOX_W_MM = A4_W_MM;
+/** 内容框高度 = A4 减 3mm 余量（含内边距） */
+const PRINT_BOX_H_MM = A4_H_MM - 3;
+/** 图片真正可用的区域 = 内容框内沿（不含 padding），横图旋转后按此铺满 */
+const IMG_AREA_W_MM = PRINT_BOX_W_MM - 2 * A4_PAD_MM; // 190mm
+const IMG_AREA_H_MM = PRINT_BOX_H_MM - 2 * A4_PAD_MM; // 274mm
+/**
+ * 注入打印窗口的页面样式（`react-to-print` 的 `pageStyle`）。
+ * - `size: A4 portrait`：浏览器默认按 A4 纵向出纸（用户没在对话框改纸张时生效）；
+ * - `margin: 0`：**不是为了贴边打印**，而是让浏览器没地方画页眉页脚（见上）；
+ * - `html, body { margin: 0 }`：打印 iframe 的 body 默认 8px 外边距，不归零会把内容框挤出纸张、多吐空白页。
+ */
+const PRINT_PAGE_STYLE = '@page { size: A4 portrait; margin: 0; } html, body { margin: 0; padding: 0; }';
+/**
+ * 构造「打印用」的游离节点：固定成 A4 可用区的图片框 + `object-fit: contain` 等比居中。
+ *
+ * ⚠️ 为什么用**游离节点**（不挂进 DOM）：`react-to-print` 的 `cloneNode` 会把**内联样式**一起克隆，
+ *    所以「`display:none` / 挪到视口外的隐藏容器」在打印 iframe 里同样不可见 ⇒ 打出来是空白。
+ *    游离节点只带我们给的打印样式，没有这个坑；而且不进渲染树，也就不会「闪一下大图」。
+ *
+ * **打印方向自适应（v26.10.10-v2）**：传入 `natural`（图片真实宽高）后，横图（宽>高）自动旋转 90°，
+ * 用满纵向 A4 的高度；竖图保持现状。横图旋转的铺满逻辑：
+ *   · 旋转后 width = 可用区高度、height = 可用区宽度（宽高互换），再 `object-fit: contain`；
+ *   · 容器转成 flex 居中，`transform: rotate(90deg)` 绕自身中心旋转 ⇒ 视觉上竖版、占满 A4 高度；
+ *   · 不裁切内容（contain），极端比例时宽度方向保留等比留白，避免横图被压成小图。
+ * 不传 `natural` 时行为不变（向后兼容）。
+ *
+ * @param src 打印的图片地址（**用原分辨率地址**，不要用预览里缩放/旋转后的画面，清晰度最好）
+ * @param alt 无障碍替代文字（同时用于下载/打印对话框的标题）
+ * @param natural 图片自然尺寸（可选，用于横图自动旋转铺满）
+ */
+function buildA4ImageNode(src, alt, natural) {
+    const node = document.createElement('div');
+    // ⚠️ `box-sizing: border-box` 不能省：width 已按 A4 取 210mm，若按 content-box 再加 10mm padding，
+    //    实际宽度会变成 230mm ⇒ 溢出纸张、多吐空白页。
+    node.style.cssText = `box-sizing:border-box;width:${PRINT_BOX_W_MM}mm;height:${PRINT_BOX_H_MM}mm;padding:${A4_PAD_MM}mm;overflow:hidden;`;
+    const img = document.createElement('img');
+    img.src = src;
+    img.alt = alt;
+    const isLandscape = !!natural && natural.width > natural.height;
+    if (isLandscape) {
+        // 横图：旋转 90° 铺满纵向 A4 —— 宽高互换 + flex 居中 + 绕自身中心旋转
+        node.style.display = 'flex';
+        node.style.alignItems = 'center';
+        node.style.justifyContent = 'center';
+        img.style.width = IMG_AREA_H_MM + 'mm';
+        img.style.height = IMG_AREA_W_MM + 'mm';
+        img.style.transform = 'rotate(90deg)';
+    }
+    else {
+        // 竖图/未知：等比缩放居中（图片区域 = 内容框 padding 的内沿，190 × 274mm）
+        img.style.width = '100%';
+        img.style.height = '100%';
+    }
+    img.style.objectFit = 'contain';
+    img.style.display = 'block';
+    node.appendChild(img);
+    return node;
+}
+
 ;// ./src/lib/ui/SniffModal.tsx
 
 
@@ -76532,6 +74262,878 @@ Popover._InternalPanelDoNotUseOrYouWillBeFired = popover_PurePanel;
 if (false) // removed by dead control flow
 {}
 /* harmony default export */ const es_popover = (Popover);
+;// ./node_modules/@rc-component/segmented/es/MotionThumb.js
+
+
+
+
+const calcThumbStyle = (targetElement, vertical) => {
+  if (!targetElement) return null;
+  const style = {
+    left: targetElement.offsetLeft,
+    right: targetElement.parentElement.clientWidth - targetElement.clientWidth - targetElement.offsetLeft,
+    width: targetElement.clientWidth,
+    top: targetElement.offsetTop,
+    bottom: targetElement.parentElement.clientHeight - targetElement.clientHeight - targetElement.offsetTop,
+    height: targetElement.clientHeight
+  };
+  if (vertical) {
+    // Adjusts positioning and size for vertical layout by setting horizontal properties to 0 and using vertical properties from the style object.
+    return {
+      left: 0,
+      right: 0,
+      width: 0,
+      top: style.top,
+      bottom: style.bottom,
+      height: style.height
+    };
+  }
+  return {
+    left: style.left,
+    right: style.right,
+    width: style.width,
+    top: 0,
+    bottom: 0,
+    height: 0
+  };
+};
+const toPX = value => value !== undefined ? `${value}px` : undefined;
+function MotionThumb(props) {
+  const {
+    prefixCls,
+    containerRef,
+    value,
+    getValueIndex,
+    motionName,
+    onMotionStart,
+    onMotionEnd,
+    direction,
+    vertical = false
+  } = props;
+  const thumbRef = (react_production_namespaceFn().useRef)(null);
+  const [prevValue, setPrevValue] = (react_production_namespaceFn().useState)(value);
+
+  // =========================== Effect ===========================
+  const findValueElement = val => {
+    const index = getValueIndex(val);
+    const ele = containerRef.current?.querySelectorAll(`.${prefixCls}-item`)[index];
+    return ele?.offsetParent && ele;
+  };
+  const [prevStyle, setPrevStyle] = (react_production_namespaceFn().useState)(null);
+  const [nextStyle, setNextStyle] = (react_production_namespaceFn().useState)(null);
+  hooks_useLayoutEffect(() => {
+    if (prevValue !== value) {
+      const prev = findValueElement(prevValue);
+      const next = findValueElement(value);
+      const calcPrevStyle = calcThumbStyle(prev, vertical);
+      const calcNextStyle = calcThumbStyle(next, vertical);
+      setPrevValue(value);
+      setPrevStyle(calcPrevStyle);
+      setNextStyle(calcNextStyle);
+      if (prev && next) {
+        onMotionStart();
+      } else {
+        onMotionEnd();
+      }
+    }
+  }, [value]);
+  const thumbStart = (react_production_namespaceFn().useMemo)(() => {
+    if (vertical) {
+      return toPX(prevStyle?.top ?? 0);
+    }
+    if (direction === 'rtl') {
+      return toPX(-prevStyle?.right);
+    }
+    return toPX(prevStyle?.left);
+  }, [vertical, direction, prevStyle]);
+  const thumbActive = (react_production_namespaceFn().useMemo)(() => {
+    if (vertical) {
+      return toPX(nextStyle?.top ?? 0);
+    }
+    if (direction === 'rtl') {
+      return toPX(-nextStyle?.right);
+    }
+    return toPX(nextStyle?.left);
+  }, [vertical, direction, nextStyle]);
+
+  // =========================== Motion ===========================
+  const onAppearStart = () => {
+    if (vertical) {
+      return {
+        transform: 'translateY(var(--thumb-start-top))',
+        height: 'var(--thumb-start-height)'
+      };
+    }
+    return {
+      transform: 'translateX(var(--thumb-start-left))',
+      width: 'var(--thumb-start-width)'
+    };
+  };
+  const onAppearActive = () => {
+    if (vertical) {
+      return {
+        transform: 'translateY(var(--thumb-active-top))',
+        height: 'var(--thumb-active-height)'
+      };
+    }
+    return {
+      transform: 'translateX(var(--thumb-active-left))',
+      width: 'var(--thumb-active-width)'
+    };
+  };
+  const onVisibleChanged = () => {
+    setPrevStyle(null);
+    setNextStyle(null);
+    onMotionEnd();
+  };
+
+  // =========================== Render ===========================
+  // No need motion when nothing exist in queue
+  if (!prevStyle || !nextStyle) {
+    return null;
+  }
+  return /*#__PURE__*/(react_production_namespaceFn().createElement)(es, {
+    visible: true,
+    motionName: motionName,
+    motionAppear: true,
+    onAppearStart: onAppearStart,
+    onAppearActive: onAppearActive,
+    onVisibleChanged: onVisibleChanged
+  }, ({
+    className: motionClassName,
+    style: motionStyle
+  }, ref) => {
+    const mergedStyle = {
+      ...motionStyle,
+      '--thumb-start-left': thumbStart,
+      '--thumb-start-width': toPX(prevStyle?.width),
+      '--thumb-active-left': thumbActive,
+      '--thumb-active-width': toPX(nextStyle?.width),
+      '--thumb-start-top': thumbStart,
+      '--thumb-start-height': toPX(prevStyle?.height),
+      '--thumb-active-top': thumbActive,
+      '--thumb-active-height': toPX(nextStyle?.height)
+    };
+
+    // It's little ugly which should be refactor when @umi/test update to latest jsdom
+    const motionProps = {
+      ref: composeRef(thumbRef, ref),
+      style: mergedStyle,
+      className: clsx(`${prefixCls}-thumb`, motionClassName)
+    };
+    if (false) // removed by dead control flow
+{}
+    return /*#__PURE__*/(react_production_namespaceFn().createElement)("div", motionProps);
+  });
+}
+;// ./node_modules/@rc-component/segmented/es/index.js
+function segmented_es_extends() { segmented_es_extends = Object.assign ? Object.assign.bind() : function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; }; return segmented_es_extends.apply(this, arguments); }
+;
+
+
+
+function getValidTitle(option) {
+  if (typeof option.title !== 'undefined') {
+    return option.title;
+  }
+
+  // read `label` when title is `undefined`
+  if (typeof option.label !== 'object') {
+    return option.label?.toString();
+  }
+}
+function normalizeOptions(options) {
+  return options.map(option => {
+    if (typeof option === 'object' && option !== null) {
+      const validTitle = getValidTitle(option);
+      return {
+        ...option,
+        value: option.value,
+        title: validTitle
+      };
+    }
+    return {
+      label: option?.toString(),
+      title: option?.toString(),
+      value: option
+    };
+  });
+}
+const InternalSegmentedOption = ({
+  prefixCls,
+  className,
+  style,
+  styles,
+  classNames: segmentedClassNames,
+  data,
+  disabled,
+  checked,
+  label,
+  title,
+  value,
+  name,
+  onChange,
+  onFocus,
+  onBlur,
+  onKeyDown,
+  onKeyUp,
+  onMouseDown,
+  itemRender = node => node
+}) => {
+  const handleChange = event => {
+    if (disabled) {
+      return;
+    }
+    onChange(event, value);
+  };
+  const itemContent = /*#__PURE__*/(react_production_namespaceFn().createElement)("label", {
+    className: clsx(className, {
+      [`${prefixCls}-item-disabled`]: disabled
+    }),
+    style: style,
+    onMouseDown: onMouseDown
+  }, /*#__PURE__*/(react_production_namespaceFn().createElement)("input", {
+    name: name,
+    className: `${prefixCls}-item-input`,
+    type: "radio",
+    disabled: disabled,
+    checked: checked,
+    onChange: handleChange,
+    onFocus: onFocus,
+    onBlur: onBlur,
+    onKeyDown: onKeyDown,
+    onKeyUp: onKeyUp
+  }), /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
+    className: clsx(`${prefixCls}-item-label`, segmentedClassNames?.label),
+    title: title,
+    style: styles?.label
+  }, label));
+  return itemRender(itemContent, {
+    item: data
+  });
+};
+const Segmented = /*#__PURE__*/(react_production_namespaceFn().forwardRef)((props, ref) => {
+  const {
+    prefixCls = 'rc-segmented',
+    direction,
+    vertical,
+    options = [],
+    disabled,
+    defaultValue,
+    value,
+    name,
+    onChange,
+    className = '',
+    style,
+    styles,
+    classNames: segmentedClassNames,
+    motionName = 'thumb-motion',
+    itemRender,
+    ...restProps
+  } = props;
+  const containerRef = (react_production_namespaceFn().useRef)(null);
+  const mergedRef = (react_production_namespaceFn().useMemo)(() => composeRef(containerRef, ref), [containerRef, ref]);
+  const segmentedOptions = (react_production_namespaceFn().useMemo)(() => {
+    return normalizeOptions(options);
+  }, [options]);
+
+  // Note: We should not auto switch value when value not exist in options
+  // which may break single source of truth.
+  const [rawValue, setRawValue] = useControlledState(defaultValue ?? segmentedOptions[0]?.value, value);
+
+  // ======================= Change ========================
+  const [thumbShow, setThumbShow] = (react_production_namespaceFn().useState)(false);
+  const handleChange = (event, val) => {
+    setRawValue(val);
+    onChange?.(val);
+  };
+  const divProps = omit(restProps, ['children']);
+
+  // ======================= Focus ========================
+  const [isKeyboard, setIsKeyboard] = (react_production_namespaceFn().useState)(false);
+  const [isFocused, setIsFocused] = (react_production_namespaceFn().useState)(false);
+  const handleFocus = () => {
+    setIsFocused(true);
+  };
+  const handleBlur = () => {
+    setIsFocused(false);
+  };
+  const handleMouseDown = () => {
+    setIsKeyboard(false);
+  };
+
+  // capture keyboard tab interaction for correct focus style
+  const handleKeyUp = event => {
+    if (event.key === 'Tab') {
+      setIsKeyboard(true);
+    }
+  };
+
+  // ======================= Keyboard ========================
+  const onOffset = offset => {
+    // keep the current option and not disabled options
+    const validOptions = segmentedOptions.filter(option => option.value === rawValue || !option.disabled);
+    const currentIndex = validOptions.findIndex(option => option.value === rawValue);
+    const total = validOptions.length;
+    const nextIndex = (currentIndex + offset + total) % total;
+    const nextOption = validOptions[nextIndex];
+    if (nextOption && nextOption.value !== rawValue) {
+      setRawValue(nextOption.value);
+      onChange?.(nextOption.value);
+    }
+  };
+  const handleKeyDown = event => {
+    switch (event.key) {
+      case 'ArrowLeft':
+      case 'ArrowUp':
+        onOffset(-1);
+        break;
+      case 'ArrowRight':
+      case 'ArrowDown':
+        onOffset(1);
+        break;
+    }
+  };
+  const renderOption = segmentedOption => {
+    const {
+      value: optionValue,
+      disabled: optionDisabled
+    } = segmentedOption;
+    return /*#__PURE__*/(react_production_namespaceFn().createElement)(InternalSegmentedOption, segmented_es_extends({}, segmentedOption, {
+      name: name,
+      data: segmentedOption,
+      itemRender: itemRender,
+      key: optionValue,
+      prefixCls: prefixCls,
+      className: clsx(segmentedOption.className, `${prefixCls}-item`, segmentedClassNames?.item, {
+        [`${prefixCls}-item-selected`]: optionValue === rawValue && !thumbShow,
+        [`${prefixCls}-item-selected-text`]: optionValue === rawValue,
+        [`${prefixCls}-item-focused`]: isFocused && isKeyboard && optionValue === rawValue
+      }),
+      style: styles?.item,
+      classNames: segmentedClassNames,
+      styles: styles,
+      checked: optionValue === rawValue,
+      onChange: handleChange,
+      onFocus: handleFocus,
+      onBlur: handleBlur,
+      onKeyDown: handleKeyDown,
+      onKeyUp: handleKeyUp,
+      onMouseDown: handleMouseDown,
+      disabled: !!disabled || !!optionDisabled
+    }));
+  };
+  return /*#__PURE__*/(react_production_namespaceFn().createElement)("div", segmented_es_extends({
+    role: "radiogroup",
+    "aria-label": "segmented control",
+    tabIndex: disabled ? undefined : 0,
+    "aria-orientation": vertical ? 'vertical' : 'horizontal',
+    style: style
+  }, divProps, {
+    className: clsx(prefixCls, {
+      [`${prefixCls}-rtl`]: direction === 'rtl',
+      [`${prefixCls}-disabled`]: disabled,
+      [`${prefixCls}-vertical`]: vertical
+    }, className),
+    ref: mergedRef
+  }), /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
+    className: `${prefixCls}-group`
+  }, /*#__PURE__*/(react_production_namespaceFn().createElement)(MotionThumb, {
+    vertical: vertical,
+    prefixCls: prefixCls,
+    value: rawValue,
+    containerRef: containerRef,
+    motionName: `${prefixCls}-${motionName}`,
+    direction: direction,
+    getValueIndex: val => segmentedOptions.findIndex(n => n.value === val),
+    onMotionStart: () => {
+      setThumbShow(true);
+    },
+    onMotionEnd: () => {
+      setThumbShow(false);
+    }
+  }), segmentedOptions.map(renderOption)));
+});
+if (false) // removed by dead control flow
+{}
+const TypedSegmented = Segmented;
+/* harmony default export */ const segmented_es = (TypedSegmented);
+;// ./node_modules/antd/es/segmented/style/index.js
+
+
+
+// ============================== Mixins ==============================
+function getItemDisabledStyle(cls, token) {
+  return {
+    [`${cls}, ${cls}:hover, ${cls}:focus`]: {
+      color: token.colorTextDisabled,
+      cursor: 'not-allowed'
+    }
+  };
+}
+const getItemSelectedStyle = token => {
+  return {
+    background: token.itemSelectedBg,
+    boxShadow: token.boxShadowTertiary
+  };
+};
+const segmentedTextEllipsisCss = {
+  overflow: 'hidden',
+  // handle text ellipsis
+  ...textEllipsis
+};
+// ============================== Styles ==============================
+const genSegmentedStyle = token => {
+  const {
+    componentCls,
+    motionDurationSlow,
+    motionEaseInOut,
+    motionDurationMid
+  } = token;
+  const labelHeight = token.calc(token.controlHeight).sub(token.calc(token.trackPadding).mul(2)).equal();
+  const labelHeightLG = token.calc(token.controlHeightLG).sub(token.calc(token.trackPadding).mul(2)).equal();
+  const labelHeightSM = token.calc(token.controlHeightSM).sub(token.calc(token.trackPadding).mul(2)).equal();
+  return {
+    [componentCls]: {
+      ...resetComponent(token),
+      display: 'inline-block',
+      padding: token.trackPadding,
+      color: token.itemColor,
+      background: token.trackBg,
+      borderRadius: token.borderRadius,
+      transition: `all ${motionDurationMid}`,
+      ...genFocusStyle(token),
+      [`${componentCls}-group`]: {
+        position: 'relative',
+        display: 'flex',
+        alignItems: 'stretch',
+        justifyItems: 'flex-start',
+        flexDirection: 'row',
+        width: '100%'
+      },
+      // RTL styles
+      [`&${componentCls}-rtl`]: {
+        direction: 'rtl'
+      },
+      [`&${componentCls}-vertical`]: {
+        [`${componentCls}-group`]: {
+          flexDirection: 'column'
+        },
+        [`${componentCls}-thumb`]: {
+          width: '100%',
+          height: 0,
+          padding: `0 ${util_unit(token.paddingXXS)}`
+        }
+      },
+      // block styles
+      [`&${componentCls}-block`]: {
+        display: 'flex'
+      },
+      [`&${componentCls}-block ${componentCls}-item`]: {
+        flex: 1,
+        minWidth: 0
+      },
+      // item styles
+      [`${componentCls}-item`]: {
+        position: 'relative',
+        textAlign: 'center',
+        cursor: 'pointer',
+        transition: `color ${motionDurationMid}`,
+        borderRadius: token.borderRadiusSM,
+        // Fix Safari render bug
+        // https://github.com/ant-design/ant-design/issues/45250
+        transform: 'translateZ(0)',
+        '&-selected': {
+          ...getItemSelectedStyle(token),
+          color: token.itemSelectedColor
+        },
+        '&-selected-text': {
+          color: token.itemSelectedColor,
+          transition: `color ${motionDurationMid}`
+        },
+        '&-focused': genFocusOutline(token),
+        '&::after': {
+          content: '""',
+          position: 'absolute',
+          zIndex: -1,
+          width: '100%',
+          height: '100%',
+          top: 0,
+          insetInlineStart: 0,
+          borderRadius: 'inherit',
+          opacity: 0,
+          // This is mandatory to make it not clickable or hoverable
+          // Ref: https://github.com/ant-design/ant-design/issues/40888
+          pointerEvents: 'none',
+          transition: ['opacity', 'background-color'].map(prop => `${prop} ${motionDurationMid}`).join(', ')
+        },
+        [`&:not(${componentCls}-item-selected):not(${componentCls}-item-selected-text):not(${componentCls}-item-disabled)`]: {
+          '&:hover, &:active': {
+            color: token.itemHoverColor
+          },
+          '&:hover::after': {
+            opacity: 1,
+            backgroundColor: token.itemHoverBg
+          },
+          '&:active::after': {
+            opacity: 1,
+            backgroundColor: token.itemActiveBg
+          }
+        },
+        '&-label': {
+          minHeight: labelHeight,
+          lineHeight: util_unit(labelHeight),
+          padding: `0 ${util_unit(token.segmentedPaddingHorizontal)}`,
+          ...segmentedTextEllipsisCss
+        },
+        // syntactic sugar to add `icon` for Segmented Item
+        '&-icon + *': {
+          marginInlineStart: token.calc(token.marginSM).div(2).equal()
+        },
+        // Icons from third-party libraries render as a bare `<svg>` inside the icon wrapper,
+        // which the `.anticon` reset never reaches. An `<svg>` has no baseline of its own, so it
+        // is aligned by its bottom margin edge (CSS 2.1 §10.8.1) and rides above the label.
+        // `display: inline-block` keeps it an atomic inline box so `vertical-align` still applies
+        // even under a CSS reset that forces `svg { display: block }` (e.g. Tailwind Preflight),
+        // which would otherwise drop the icon onto its own line. `vertical-align: middle` centres its
+        // margin box on the x-height line; `margin-block-end` then lifts it by half its own value onto
+        // the cap-height centre (capHeight − xHeight ≈ 0.2em across typical fonts), keeping it centred
+        // at any icon size.
+        // Only matches a bare `<svg>`: an `.anticon` keeps its `<svg>` one level deeper.
+        '&-icon > svg': {
+          display: 'inline-block',
+          verticalAlign: 'middle',
+          marginBlockEnd: '0.2em'
+        },
+        '&-input': {
+          position: 'absolute',
+          insetBlockStart: 0,
+          insetInlineStart: 0,
+          width: 0,
+          height: 0,
+          opacity: 0,
+          pointerEvents: 'none'
+        }
+      },
+      // thumb styles
+      [`${componentCls}-thumb`]: {
+        ...getItemSelectedStyle(token),
+        position: 'absolute',
+        insetBlockStart: 0,
+        insetInlineStart: 0,
+        width: 0,
+        height: '100%',
+        padding: `${util_unit(token.paddingXXS)} 0`,
+        borderRadius: token.borderRadiusSM,
+        [`& ~ ${componentCls}-item:not(${componentCls}-item-selected):not(${componentCls}-item-disabled)::after`]: {
+          backgroundColor: 'transparent'
+        }
+      },
+      // size styles
+      [`&${componentCls}-lg`]: {
+        borderRadius: token.borderRadiusLG,
+        [`${componentCls}-item-label`]: {
+          minHeight: labelHeightLG,
+          lineHeight: util_unit(labelHeightLG),
+          padding: `0 ${util_unit(token.segmentedPaddingHorizontal)}`,
+          fontSize: token.fontSizeLG
+        },
+        [`${componentCls}-item, ${componentCls}-thumb`]: {
+          borderRadius: token.borderRadius
+        }
+      },
+      [`&${componentCls}-sm`]: {
+        borderRadius: token.borderRadiusSM,
+        [`${componentCls}-item-label`]: {
+          minHeight: labelHeightSM,
+          lineHeight: util_unit(labelHeightSM),
+          padding: `0 ${util_unit(token.segmentedPaddingHorizontalSM)}`
+        },
+        [`${componentCls}-item, ${componentCls}-thumb`]: {
+          borderRadius: token.borderRadiusXS
+        }
+      },
+      // disabled styles
+      ...getItemDisabledStyle(`&-disabled ${componentCls}-item`, token),
+      ...getItemDisabledStyle(`${componentCls}-item-disabled`, token),
+      // transition effect when `appear-active`
+      [`${componentCls}-thumb-motion-appear-active`]: {
+        willChange: 'transform, width',
+        transition: [`transform`, `width`].map(prop => `${prop} ${motionDurationSlow} ${motionEaseInOut}`).join(', ')
+      },
+      [`&${componentCls}-shape-round`]: {
+        borderRadius: 9999,
+        [`${componentCls}-item, ${componentCls}-thumb`]: {
+          borderRadius: 9999
+        }
+      }
+    }
+  };
+};
+// ============================== Export ==============================
+const segmented_style_prepareComponentToken = token => {
+  const {
+    colorTextLabel,
+    colorText,
+    colorFillSecondary,
+    colorBgElevated,
+    colorFill,
+    lineWidthBold,
+    colorBgLayout
+  } = token;
+  return {
+    trackPadding: lineWidthBold,
+    trackBg: colorBgLayout,
+    itemColor: colorTextLabel,
+    itemHoverColor: colorText,
+    itemHoverBg: colorFillSecondary,
+    itemSelectedBg: colorBgElevated,
+    itemActiveBg: colorFill,
+    itemSelectedColor: colorText
+  };
+};
+/* harmony default export */ const segmented_style = (genStyleHooks('Segmented', token => {
+  const {
+    lineWidth,
+    calc
+  } = token;
+  const segmentedToken = statistic_merge(token, {
+    segmentedPaddingHorizontal: calc(token.controlPaddingHorizontal).sub(lineWidth).equal(),
+    segmentedPaddingHorizontalSM: calc(token.controlPaddingHorizontalSM).sub(lineWidth).equal()
+  });
+  return genSegmentedStyle(segmentedToken);
+}, segmented_style_prepareComponentToken));
+;// ./node_modules/antd/es/segmented/index.js
+"use client";
+
+
+
+
+
+
+
+
+
+
+
+
+function isSegmentedLabeledOptionWithIcon(option) {
+  return is_isPlainObject(option) && !!option?.icon;
+}
+const InternalSegmented = /*#__PURE__*/(react_production_namespaceFn().forwardRef)((props, ref) => {
+  const defaultName = hooks_useId();
+  const {
+    prefixCls: customizePrefixCls,
+    className,
+    rootClassName,
+    block,
+    options = [],
+    size: customSize,
+    style,
+    vertical,
+    orientation,
+    shape = 'default',
+    name = defaultName,
+    styles,
+    classNames,
+    ...restProps
+  } = props;
+  const {
+    getPrefixCls,
+    direction,
+    className: contextClassName,
+    style: contextStyle,
+    classNames: contextClassNames,
+    styles: contextStyles
+  } = useComponentConfig('segmented');
+  const mergedProps = {
+    ...props,
+    options,
+    size: customSize,
+    shape
+  };
+  const contextStyleRoot = useSemanticRootStyle(contextStyle);
+  const styleRoot = useSemanticRootStyle(style);
+  const [mergedClassNames, mergedStyles] = useMergeSemantic([contextClassNames, classNames], [contextStyles, contextStyleRoot, styles, styleRoot], {
+    props: mergedProps
+  });
+  const prefixCls = getPrefixCls('segmented', customizePrefixCls);
+  // Style
+  const [hashId, cssVarCls] = segmented_style(prefixCls);
+  // ===================== Size =====================
+  const mergedSize = hooks_useSize(customSize);
+  // syntactic sugar to support `icon` for Segmented Item
+  const extendedOptions = (react_production_namespaceFn().useMemo)(() => options.map(option => {
+    if (isSegmentedLabeledOptionWithIcon(option)) {
+      const {
+        icon,
+        label,
+        ...restOption
+      } = option;
+      return {
+        ...restOption,
+        label: (/*#__PURE__*/(react_production_namespaceFn().createElement)((react_production_namespaceFn().Fragment), null, /*#__PURE__*/(react_production_namespaceFn().createElement)("span", {
+          className: clsx(`${prefixCls}-item-icon`, mergedClassNames.icon),
+          style: mergedStyles.icon
+        }, icon), isReactRenderable(label) && /*#__PURE__*/(react_production_namespaceFn().createElement)("span", null, label)))
+      };
+    }
+    return option;
+  }), [options, prefixCls, mergedClassNames.icon, mergedStyles.icon]);
+  const [, mergedVertical] = useOrientation(orientation, vertical);
+  const cls = clsx(className, rootClassName, contextClassName, mergedClassNames.root, {
+    [`${prefixCls}-block`]: block,
+    [`${prefixCls}-sm`]: mergedSize === 'small',
+    [`${prefixCls}-lg`]: mergedSize === 'large',
+    [`${prefixCls}-vertical`]: mergedVertical,
+    [`${prefixCls}-shape-${shape}`]: shape === 'round'
+  }, hashId, cssVarCls);
+  const itemRender = (node, {
+    item
+  }) => {
+    if (!item.tooltip) {
+      return node;
+    }
+    const tooltipProps = is_isPlainObject(item.tooltip) ? item.tooltip : {
+      title: item.tooltip
+    };
+    return /*#__PURE__*/(react_production_namespaceFn().createElement)(es_tooltip, {
+      ...tooltipProps
+    }, node);
+  };
+  return /*#__PURE__*/(react_production_namespaceFn().createElement)(segmented_es, {
+    ...restProps,
+    name: name,
+    className: cls,
+    style: mergedStyles.root,
+    classNames: mergedClassNames,
+    styles: mergedStyles,
+    itemRender: itemRender,
+    options: extendedOptions,
+    ref: ref,
+    prefixCls: prefixCls,
+    direction: direction,
+    vertical: mergedVertical
+  });
+});
+const segmented_Segmented = InternalSegmented;
+if (false) // removed by dead control flow
+{}
+/* harmony default export */ const segmented = (segmented_Segmented);
+;// ./src/lib/ui/transfer/TransferNavRail.tsx
+
+
+
+
+
+/** 第一栏宽度：展开 / 折叠（企业微信式窄导航） */
+const NAV_WIDTH = 196;
+const NAV_WIDTH_COLLAPSED = 52;
+/** 中部入口（Agents 固定最顶部，其余为传输助手相关的会话 / 设备分组） */
+const NAV_ITEMS = [
+    { key: 'agents', label: 'Agents', icon: BotIcon },
+    { key: 'devices', label: '设备', icon: DeviceIcon },
+    { key: 'files', label: '文件', icon: FilesIcon },
+];
+/**
+ * 第一栏（最左侧窄导航栏，v26.10.12-v1）。
+ *
+ * 结构（对齐企业微信桌面端）：顶部 logo + 折叠开关 → 中部入口列表
+ * （**Agents 固定在最顶部**，支持整栏折叠 / 展开）→ 底部外观设置 / 设置 / 企业信息。
+ *
+ * 折叠后只剩图标（展开时显示完整入口）；未读总数在「设备」入口上挂小红点。
+ */
+function TransferNavRail({ nav, onNav, collapsed, onToggleCollapsed, themeMode, onThemeMode, onOpenSettings, onOpenAbout, unreadTotal, }) {
+    const { token } = es_theme.useToken();
+    const [appearanceOpen, setAppearanceOpen] = (0,react_production_namespaceFn().useState)(false);
+    const renderNavItem = (item) => {
+        const active = nav === item.key;
+        const Icon = item.icon;
+        const btn = ((0,react_jsx_runtime_production_namespaceFn().jsxs)(es_button, { type: "text", block: true, "aria-label": item.label, onClick: () => onNav(item.key), style: {
+                display: 'flex',
+                alignItems: 'center',
+                gap: 10,
+                height: 38,
+                padding: collapsed ? '0 8px' : '0 10px',
+                justifyContent: collapsed ? 'center' : 'flex-start',
+                borderRadius: 8,
+                background: active ? token.colorPrimaryBg : 'transparent',
+                color: active ? token.colorPrimary : token.colorText,
+                fontWeight: active ? 600 : 400,
+                fontSize: 13,
+            }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(Icon, { size: 17, color: "currentColor" }), collapsed ? null : ((0,react_jsx_runtime_production_namespaceFn().jsx)("span", { style: { minWidth: 0, overflow: 'hidden', whiteSpace: 'nowrap' }, children: item.label })), !collapsed && item.key === 'devices' && unreadTotal > 0 ? ((0,react_jsx_runtime_production_namespaceFn().jsx)("span", { style: {
+                        marginLeft: 'auto',
+                        background: token.colorError,
+                        color: '#fff',
+                        borderRadius: 9,
+                        fontSize: 11,
+                        lineHeight: '16px',
+                        padding: '0 5px',
+                        minWidth: 16,
+                        textAlign: 'center',
+                    }, children: unreadTotal > 99 ? '99+' : unreadTotal })) : null, collapsed && item.key === 'devices' && unreadTotal > 0 ? ((0,react_jsx_runtime_production_namespaceFn().jsx)("span", { style: {
+                        position: 'absolute',
+                        top: 4,
+                        right: 6,
+                        width: 7,
+                        height: 7,
+                        borderRadius: '50%',
+                        background: token.colorError,
+                    } })) : null] }));
+        return ((0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { position: 'relative', marginBottom: 2 }, children: collapsed ? ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_tooltip, { title: item.label, placement: "right", children: btn })) : (btn) }, item.key));
+    };
+    const bottomItem = (label, icon, onClick, extra) => {
+        const btn = ((0,react_jsx_runtime_production_namespaceFn().jsxs)(es_button, { type: "text", block: true, "aria-label": label, onClick: onClick, style: {
+                display: 'flex',
+                alignItems: 'center',
+                gap: 10,
+                height: 36,
+                padding: collapsed ? '0 8px' : '0 10px',
+                justifyContent: collapsed ? 'center' : 'flex-start',
+                borderRadius: 8,
+                color: token.colorTextSecondary,
+                fontSize: 13,
+            }, children: [icon, collapsed ? null : (0,react_jsx_runtime_production_namespaceFn().jsx)("span", { children: label }), extra] }));
+        return ((0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { marginBottom: 2 }, children: collapsed ? ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_tooltip, { title: label, placement: "right", children: btn })) : (btn) }, label));
+    };
+    const appearance = ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_popover, { trigger: "click", open: appearanceOpen, onOpenChange: setAppearanceOpen, placement: "right", content: (0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { width: 180 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { fontSize: 12, color: token.colorTextSecondary, marginBottom: 8 }, children: "\u7A97\u53E3\u5916\u89C2" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(segmented, { block: true, value: themeMode, onChange: (v) => onThemeMode(v), options: [
+                        { label: '浅色', value: 'light' },
+                        { label: '深色', value: 'dark' },
+                    ] }), (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { fontSize: 11, color: token.colorTextTertiary, marginTop: 8 }, children: "\u53EA\u5F71\u54CD\u4F20\u8F93\u52A9\u624B\u7A97\u53E3\uFF0C\u4E0E\u4E3B\u9762\u677F\u8BBE\u7F6E\u65E0\u5173\u3002" })] }), children: bottomItem('外观设置', themeMode === 'dark' ? ((0,react_jsx_runtime_production_namespaceFn().jsx)(MoonIcon, { size: 17, color: "currentColor" })) : ((0,react_jsx_runtime_production_namespaceFn().jsx)(SunIcon, { size: 17, color: "currentColor" })), () => setAppearanceOpen((v) => !v)) }));
+    return ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { className: "znhd-transfer-nav", style: {
+            flex: '0 0 auto',
+            width: collapsed ? NAV_WIDTH_COLLAPSED : NAV_WIDTH,
+            display: 'flex',
+            flexDirection: 'column',
+            padding: '10px 8px',
+            borderRight: '1px solid ' + token.colorBorderSecondary,
+            background: token.colorBgLayout,
+            transition: 'width 0.15s',
+        }, children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, padding: '0 2px' }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("span", { style: {
+                            width: 30,
+                            height: 30,
+                            borderRadius: 8,
+                            background: token.colorPrimary,
+                            color: '#fff',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            flex: '0 0 auto',
+                        }, children: (0,react_jsx_runtime_production_namespaceFn().jsx)(TransferIcon, { size: 17, color: "#fff" }) }), collapsed ? null : ((0,react_jsx_runtime_production_namespaceFn().jsx)("span", { style: {
+                            fontSize: 15,
+                            fontWeight: 700,
+                            minWidth: 0,
+                            overflow: 'hidden',
+                            whiteSpace: 'nowrap',
+                        }, children: "\u4F20\u8F93\u52A9\u624B" })), (0,react_jsx_runtime_production_namespaceFn().jsx)("span", { style: { flex: '1 1 auto' } }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_tooltip, { title: collapsed ? '展开导航栏' : '折叠导航栏', placement: "right", children: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { type: "text", size: "small", "aria-label": collapsed ? '展开导航栏' : '折叠导航栏', onClick: onToggleCollapsed, style: {
+                                padding: 4,
+                                minWidth: 24,
+                                color: token.colorTextTertiary,
+                                transform: collapsed ? 'rotate(180deg)' : 'none',
+                                transition: 'transform 0.15s',
+                            }, children: (0,react_jsx_runtime_production_namespaceFn().jsx)(PanelLeftIcon, { size: 16, color: "currentColor" }) }) })] }), (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { display: 'flex', flexDirection: 'column' }, children: NAV_ITEMS.map(renderNavItem) }), (0,react_jsx_runtime_production_namespaceFn().jsx)("span", { style: { flex: '1 1 auto' } }), (0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { borderTop: '1px solid ' + token.colorBorderSecondary, paddingTop: 8 }, children: [appearance, bottomItem('设置', (0,react_jsx_runtime_production_namespaceFn().jsx)(SettingsIcon, { size: 17, color: "currentColor" }), onOpenSettings), bottomItem('企业信息', (0,react_jsx_runtime_production_namespaceFn().jsx)(InfoIcon, { size: 17, color: "currentColor" }), onOpenAbout)] })] }));
+}
+
 ;// ./node_modules/antd/es/popconfirm/style/index.js
 
 // =============================== Base ===============================
@@ -76832,6 +75434,267 @@ popconfirm_Popconfirm._InternalPanelDoNotUseOrYouWillBeFired = popconfirm_PurePa
 if (false) // removed by dead control flow
 {}
 /* harmony default export */ const popconfirm = (popconfirm_Popconfirm);
+;// ./src/lib/agent/sessions.ts
+/**
+ * Agent 会话索引（v26.10.10-v12）。
+ *
+ * ── 为什么脚本要自己记一份会话列表 ───────────────────────────────────────────
+ * 官方 `CAT.agent.conversation` 只对脚本开放两个方法：`create()` 和 `get(id)`
+ * （ScriptCat 侧 `src/types/scriptcat.d.ts:1104-1115`，内容侧实现
+ * `src/app/service/content/gm_api/cat_agent.ts:924-960`）。内部的
+ * `listConversations()` / `deleteConversation()`（`src/app/repo/agent_chat.ts:173`、`:237`）
+ * 没有对应的 `@GMContext.API` 出口，而脚本侧的 `sendMessage` 是 `protected`，绕不过去。
+ * 所以「有哪些对话、叫什么名字、上次打开的是哪个」只能由脚本自己记账 —— 就是本模块。
+ *
+ * ── 这里存的**只是索引** ───────────────────────────────────────────────────
+ * 对话消息本体一直在 ScriptCat 的 OPFS 里（本脚本用的是非 ephemeral 对话）。
+ * 索引丢了最多是「列表看不到」，消息不会丢；切回某个对话时仍走 `conversation.get(id)` 取历史。
+ * 反过来，索引里的 id 在 ScriptCat 侧被清掉时 `get()` 会返回 null，调用方按「已失效」处理。
+ *
+ * ── 为什么对话 id 是 ScriptCat 生成的 ──────────────────────────────────────
+ * `create()` 支持传自定义 id，但没必要：id 拿到就存下来即可，少一处自造 id 的撞号风险。
+ */
+
+
+const EMPTY_STORE = { activeId: null, items: [] };
+function isSession(value) {
+    if (!value || typeof value !== 'object')
+        return false;
+    const item = value;
+    return typeof item.id === 'string' && !!item.id && typeof item.title === 'string';
+}
+/**
+ * 读索引。任何异常（localStorage 不可用、JSON 被别的东西写坏）都退化成空列表 ——
+ * 弹窗打开时读它，绝不能因为一份索引解析失败就整块面板报错。
+ */
+function loadAgentChatStore() {
+    try {
+        const raw = localStorage.getItem(AGENT_CHATS_KEY);
+        if (!raw)
+            return EMPTY_STORE;
+        const parsed = JSON.parse(raw);
+        if (!parsed || typeof parsed !== 'object')
+            return EMPTY_STORE;
+        const record = parsed;
+        const items = (Array.isArray(record.items) ? record.items : [])
+            .filter(isSession)
+            .slice(0, CONFIG.MAX_AGENT_CHATS)
+            .map((item) => ({
+            id: item.id,
+            title: item.title,
+            createtime: typeof item.createtime === 'number' ? item.createtime : 0,
+            updatetime: typeof item.updatetime === 'number' ? item.updatetime : 0,
+        }));
+        const activeId = typeof record.activeId === 'string' && record.activeId ? record.activeId : null;
+        // activeId 指向的条目不在索引里（索引被手改过 / 写入中断）：当作没有活动对话，避免界面显示一个点不开的选项
+        return { activeId: items.some((item) => item.id === activeId) ? activeId : null, items };
+    }
+    catch (error) {
+        addLog('[Agent] 读取会话列表失败: ' + (error instanceof Error ? error.message : String(error)), 'warning');
+        return EMPTY_STORE;
+    }
+}
+/** 写索引。失败只记日志：会话列表写不进去不该打断正在进行的对话。 */
+function saveAgentChatStore(store) {
+    try {
+        localStorage.setItem(AGENT_CHATS_KEY, JSON.stringify(store));
+    }
+    catch (error) {
+        addLog('[Agent] 保存会话列表失败: ' + (error instanceof Error ? error.message : String(error)), 'warning');
+    }
+}
+/**
+ * 由首条用户消息生成会话标题，规则与官方一致（截断长度见 CONFIG.AGENT_CHAT_TITLE_LENGTH）。
+ * 换行/连续空白压成单个空格，否则列表里会出现莫名其妙的空白。
+ */
+function agentChatTitle(text) {
+    const flat = text.replace(/\s+/g, ' ').trim();
+    const limit = CONFIG.AGENT_CHAT_TITLE_LENGTH;
+    if (flat.length <= limit)
+        return flat || '新对话';
+    return flat.slice(0, limit) + '…';
+}
+/**
+ * 写入/更新一条会话，并把它提到列表最前（最近使用）。
+ * 已存在时以传入的 session 为准整条替换，调用方负责决定是否保留原标题。
+ */
+function upsertAgentChat(items, session) {
+    const rest = items.filter((item) => item.id !== session.id);
+    return [session, ...rest].slice(0, CONFIG.MAX_AGENT_CHATS);
+}
+/** 从索引里移除一条（删对话时用）。官方没有删除会话的接口，这里只动本地索引。 */
+function removeAgentChat(items, id) {
+    return items.filter((item) => item.id !== id);
+}
+/** 取一条会话的标题，取不到时回退成 id 前 8 位（界面上总得显示点东西） */
+function agentChatLabel(items, id) {
+    const found = items.find((item) => item.id === id);
+    if (found && found.title)
+        return found.title;
+    return id ? id.slice(0, 8) : '新对话';
+}
+
+;// ./src/lib/ui/transfer/AgentConversationList.tsx
+
+
+
+
+
+
+/**
+ * 会话卡片上的时间（NextChat 的列表也是这个位置）。
+ * 只到分钟：脚本不用 moment/dayjs（零运行时依赖），手写两行足够。
+ */
+function chatTimeText(timestamp) {
+    if (!timestamp)
+        return '';
+    const date = new Date(timestamp);
+    if (Number.isNaN(date.getTime()))
+        return '';
+    const pad = (value) => String(value).padStart(2, '0');
+    return (pad(date.getMonth() + 1) + '/' + pad(date.getDate()) + ' ' + pad(date.getHours()) + ':' + pad(date.getMinutes()));
+}
+/**
+ * Agent 会话列表（v26.10.12-v1：从 AgentModal 左侧会话栏搬来，作为传输助手第二栏的
+ * Agents 内容）。「新的聊天」在顶部，下面一条条会话卡片（选中高亮、悬停出删除）。
+ *
+ * ⚠️ 类名 `znhd-agent-chat-item` 是冒烟断言的定位符（AGENT.md「历史踩坑索引」有记），勿改。
+ */
+function AgentConversationList({ chats, activeChatId, streaming, onNewChat, onSwitch, onDelete, }) {
+    const { token } = es_theme.useToken();
+    /** 鼠标正悬停的会话卡片：删除图标只在悬停（或选中）时出现，用 state 而不是 CSS 类 */
+    const [hoverChatId, setHoverChatId] = (0,react_production_namespaceFn().useState)('');
+    const renderChatItem = (item) => {
+        const active = item.id === activeChatId;
+        return ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { className: 'znhd-agent-chat-item' + (active ? ' znhd-agent-chat-item-active' : ''), title: agentChatLabel(chats, item.id), onClick: () => onSwitch(item.id), onMouseEnter: () => setHoverChatId(item.id), onMouseLeave: () => setHoverChatId((current) => (current === item.id ? '' : current)), style: {
+                position: 'relative',
+                padding: '6px 24px 6px 8px',
+                marginBottom: 4,
+                borderRadius: 6,
+                cursor: 'pointer',
+                lineHeight: 1.5,
+                background: active ? token.colorPrimaryBg : token.colorFillQuaternary,
+                border: '1px solid ' + (active ? token.colorPrimaryBorder : 'transparent'),
+            }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { fontSize: 12, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }, children: agentChatLabel(chats, item.id) }), (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { fontSize: 11, color: token.colorTextTertiary }, children: chatTimeText(item.updatetime) }), (0,react_jsx_runtime_production_namespaceFn().jsx)("span", { style: {
+                        position: 'absolute',
+                        top: 4,
+                        right: 2,
+                        opacity: active || hoverChatId === item.id ? 1 : 0,
+                    }, onClick: (event) => event.stopPropagation(), children: (0,react_jsx_runtime_production_namespaceFn().jsx)(popconfirm, { title: "\u5220\u9664\u8FD9\u4E2A\u5BF9\u8BDD\uFF1F", description: "\u4F1A\u6E05\u7A7A\u8BE5\u5BF9\u8BDD\u7684\u6D88\u606F\u8BB0\u5F55\uFF0C\u5E76\u4ECE\u4F1A\u8BDD\u5217\u8868\u91CC\u79FB\u9664\u3002", okText: "\u5220\u9664", cancelText: "\u53D6\u6D88", okButtonProps: { danger: true }, onConfirm: () => void onDelete(item.id), children: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { type: "text", size: "small", "aria-label": "\u5220\u9664\u5BF9\u8BDD", icon: (0,react_jsx_runtime_production_namespaceFn().jsx)(TrashIcon, { size: 12 }), style: { width: 20, height: 20, minWidth: 20, padding: 0, color: token.colorTextTertiary } }) }) })] }, item.id));
+    };
+    return ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', flexDirection: 'column', gap: 6, minHeight: 0, flex: '1 1 auto' }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(es_tooltip, { title: "\u6E05\u7A7A\u5F53\u524D\u89C6\u56FE\uFF0C\u53D1\u51FA\u4E0B\u4E00\u6761\u6D88\u606F\u65F6\u53E6\u8D77\u4E00\u4E2A\u5BF9\u8BDD", children: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { size: "small", icon: (0,react_jsx_runtime_production_namespaceFn().jsx)(PlusIcon, { size: 13 }), onClick: onNewChat, disabled: streaming && !activeChatId, style: { justifyContent: 'flex-start' }, children: "\u65B0\u7684\u804A\u5929" }) }), (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { className: "znhd-agent-chat-list", style: { flex: '1 1 auto', minHeight: 0, overflowY: 'auto', overflowX: 'hidden' }, children: chats.length ? (chats.map(renderChatItem)) : ((0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { fontSize: 12, color: token.colorTextTertiary, padding: '4px 2px' }, children: "\u8FD8\u6CA1\u6709\u5386\u53F2\u5BF9\u8BDD\u3002\u53D1\u51FA\u7B2C\u4E00\u6761\u6D88\u606F\u540E\uFF0C\u5B83\u4F1A\u51FA\u73B0\u5728\u8FD9\u91CC\u3002" })) })] }));
+}
+
+;// ./src/lib/ui/transfer/TransferSessionList.tsx
+
+
+
+
+
+/** 会话列表里对最后一条消息的预览文案 */
+function previewText(msg) {
+    if (!msg)
+        return '';
+    if (msg.type === 'image')
+        return '[图片] ' + (msg.name || '');
+    return (msg.text || '').replace(/\s+/g, ' ').slice(0, 40);
+}
+/** 列表里的时间（今天 HH:mm，否则 MM-DD） */
+function listTime(ts) {
+    if (!ts)
+        return '';
+    const d = new Date(ts);
+    const now = new Date();
+    const pad = (n) => String(n).padStart(2, '0');
+    const sameDay = d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
+    return sameDay ? pad(d.getHours()) + ':' + pad(d.getMinutes()) : pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+}
+/**
+ * 第二栏（中间会话列表栏，v26.10.12-v1）。
+ *
+ * 结构（对齐企业微信桌面端）：顶部**搜索框 + 紧邻右侧的「+」按钮**（配对 / 绑定入口
+ * 统一收在这里，点击弹出配对窗口）；下方按第一栏当前分组显示会话 / 设备列表。
+ */
+function TransferSessionList({ nav, search, onSearch, onPair, deviceEntries, activeSessionKey, onSelectSession, agent, }) {
+    const { token } = es_theme.useToken();
+    const keyword = search.trim().toLowerCase();
+    const filtered = keyword
+        ? deviceEntries.filter((e) => e.label.toLowerCase().includes(keyword) || previewText(e.lastMsg).toLowerCase().includes(keyword))
+        : deviceEntries;
+    return ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { className: "znhd-transfer-sessions", style: {
+            flex: '0 0 auto',
+            width: 264,
+            display: 'flex',
+            flexDirection: 'column',
+            borderRight: '1px solid ' + token.colorBorderSecondary,
+            background: token.colorBgContainer,
+            minWidth: 0,
+        }, children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', gap: 8, padding: 10 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(es_input, { allowClear: true, prefix: (0,react_jsx_runtime_production_namespaceFn().jsx)(SearchIcon, { size: 14, color: token.colorTextQuaternary }), placeholder: nav === 'agents' ? '搜索对话' : '搜索会话 / 设备', value: search, onChange: (e) => onSearch(e.target.value) }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_tooltip, { title: "\u914D\u5BF9\u8BBE\u5907\uFF08\u624B\u673A\u626B\u7801 / \u6253\u5F00\u94FE\u63A5\u5373\u5B8C\u6210\u914D\u5BF9\uFF09", children: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { color: "primary", variant: "solid", "aria-label": "\u914D\u5BF9\u8BBE\u5907", onClick: onPair, style: { width: 38, padding: 0 }, children: "+" }) })] }), (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { flex: '1 1 auto', minHeight: 0, overflowY: 'auto', padding: '0 8px 10px' }, children: nav === 'agents' && agent ? ((0,react_jsx_runtime_production_namespaceFn().jsx)(AgentConversationList, { chats: agent.chats, activeChatId: agent.activeChatId, streaming: agent.streaming, onNewChat: agent.newChat, onSwitch: (id) => void agent.switchChat(id), onDelete: (id) => void agent.deleteChat(id) })) : nav === 'agents' ? null : filtered.length ? (filtered.map((e) => {
+                    const active = e.key === activeSessionKey;
+                    return ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { className: "znhd-transfer-session-item", title: e.label, onClick: () => onSelectSession(e.key), style: {
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 8,
+                            padding: '8px 10px',
+                            marginBottom: 2,
+                            borderRadius: 8,
+                            cursor: 'pointer',
+                            background: active ? token.colorPrimaryBg : 'transparent',
+                            border: '1px solid ' + (active ? token.colorPrimaryBorder : 'transparent'),
+                        }, children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)("span", { style: {
+                                    width: 34,
+                                    height: 34,
+                                    borderRadius: 8,
+                                    flex: '0 0 auto',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    background: e.isAggregate ? token.colorFillSecondary : token.colorPrimaryBg,
+                                    color: e.isAggregate ? token.colorTextSecondary : token.colorPrimary,
+                                    fontSize: 13,
+                                    fontWeight: 600,
+                                    position: 'relative',
+                                }, children: [e.isAggregate ? ((0,react_jsx_runtime_production_namespaceFn().jsx)(SmartphoneIcon, { size: 18, color: "currentColor" })) : (e.label.slice(0, 1).toUpperCase()), e.online ? ((0,react_jsx_runtime_production_namespaceFn().jsx)("span", { style: {
+                                            position: 'absolute',
+                                            right: -1,
+                                            bottom: -1,
+                                            width: 9,
+                                            height: 9,
+                                            borderRadius: '50%',
+                                            background: '#52c41a',
+                                            border: '1.5px solid ' + token.colorBgContainer,
+                                        } })) : null] }), (0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { flex: '1 1 auto', minWidth: 0 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: {
+                                            fontSize: 13,
+                                            fontWeight: active ? 600 : 400,
+                                            overflow: 'hidden',
+                                            textOverflow: 'ellipsis',
+                                            whiteSpace: 'nowrap',
+                                        }, children: e.label }), (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: {
+                                            fontSize: 11,
+                                            color: token.colorTextTertiary,
+                                            overflow: 'hidden',
+                                            textOverflow: 'ellipsis',
+                                            whiteSpace: 'nowrap',
+                                        }, children: e.lastMsg ? previewText(e.lastMsg) : e.online ? '在线' : '离线' })] }), (0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { flex: '0 0 auto', textAlign: 'right' }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { fontSize: 11, color: token.colorTextTertiary }, children: listTime(e.lastTs || 0) }), e.unread > 0 ? ((0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: {
+                                            marginTop: 2,
+                                            marginLeft: 'auto',
+                                            background: token.colorError,
+                                            color: '#fff',
+                                            borderRadius: 9,
+                                            fontSize: 11,
+                                            lineHeight: '16px',
+                                            padding: '0 5px',
+                                            minWidth: 16,
+                                            textAlign: 'center',
+                                        }, children: e.unread > 99 ? '99+' : e.unread })) : null] })] }, e.key));
+                })) : ((0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: {
+                        fontSize: 12,
+                        color: token.colorTextTertiary,
+                        padding: '12px 4px',
+                        textAlign: 'center',
+                    }, children: keyword ? '没有匹配的会话 / 设备' : '暂无会话——点右上角 + 配对手机' })) })] }));
+}
+
 ;// ./node_modules/antd/es/alert/style/index.js
 
 
@@ -83809,517 +82672,6 @@ select_Select._InternalPanelDoNotUseOrYouWillBeFired = select_PurePanel;
 if (false) // removed by dead control flow
 {}
 /* harmony default export */ const es_select = (select_Select);
-;// ./src/lib/agent/types.ts
-/**
- * ScriptCat Agent API（`CAT.agent.*`）的类型声明与纯工具函数。
- *
- * ── 为什么这里自己声明（v26.10.10-v10）──────────────────────────────────────
- * 官方 d.ts 随 ScriptCat 仓库发布（`src/app/service/agent/core/types.ts` 与
- * `src/types/scriptcat.d.ts`），**不进本仓库的 node_modules**：本脚本是油猴脚本，
- * `npm run typecheck` 用的是本仓库 tsconfig，拿不到 `declare const CAT`。
- * 故此处按官方类型等价声明一份，唯一约束是「只声明 UI 真正用到的字段」。
- *
- * ⚠️ **本文件按官方源码（而非官方文档）对齐**，三处文档与实现不一致已在下方逐条标注
- * `[与文档不符]`。改这里之前建议先回看官方 `src/app/service/agent/core/types.ts`。
- *
- * ── 可用性前提 ─────────────────────────────────────────────────────────────
- * 整套 `CAT.agent.*` 是 **ScriptCat v1.4+** 才有的能力，且需逐项 `@grant`
- * （见 `config/common.meta.json`）。Tampermonkey 等其它管理器里 `CAT` 全局根本不存在，
- * 故所有调用都必须先过 `src/lib/agent/api.ts` 的探测，**绝不能直接摸 `CAT.agent`**。
- *
- * ── 本文件不做任何运行时副作用 ─────────────────────────────────────────────
- * 只有类型 + 纯函数（内容压平 / 工具名去命名空间），可被 UI 复用。
- */
-/** 把正文压成一行可显示文本（图片/文件/音频退化成占位标记） */
-function contentToText(content) {
-    if (typeof content === 'string')
-        return content;
-    if (!Array.isArray(content))
-        return '';
-    return content
-        .map((block) => {
-        if (!block || typeof block !== 'object')
-            return '';
-        switch (block.type) {
-            case 'text':
-                return typeof block.text === 'string' ? block.text : '';
-            case 'image':
-                return '[图片]';
-            case 'file':
-                return '[文件 ' + (typeof block.filename === 'string' ? block.filename : '') + ']';
-            case 'audio':
-                return '[音频]';
-            default:
-                return '';
-        }
-    })
-        .join('');
-}
-/**
- * 把思考过程归一成字符串。
- *
- * ⚠️ 只有 `chat()` / 流式分片累加出来的是**字符串**；`getMessages()` 返回的历史消息里
- * `thinking` 是**对象**（官方 `ThinkingBlock = { content: string }`，见 scriptcat
- * `core/types.ts:94-96` 与 `tool_loop_orchestrator.ts:696` 的
- * `thinking: result.thinking ? { content: result.thinking } : undefined`）。
- * 直接把对象交给 React 渲染会抛
- * `Objects are not valid as a React child (found: object with keys {content})`，
- * 而面板没有错误边界 ⇒ 整棵面板树被卸载（v26.10.10-v11 之前线上真实踩到：
- * 对话过后关弹窗再打开，主面板整个消失且不自愈）。
- */
-function thinkingToText(thinking) {
-    if (typeof thinking === 'string')
-        return thinking;
-    if (thinking && typeof thinking === 'object' && typeof thinking.content === 'string')
-        return thinking.content;
-    return '';
-}
-/**
- * 工具名既可能是裸名（`read_file`），也可能带服务端命名空间（`mcp__xxx__read_file`）。
- * 面板上只显示最后一段，避免超长名把按钮撑破。
- */
-function toolDisplayName(name) {
-    const raw = typeof name === 'string' ? name : '';
-    const parts = raw.split('__').filter((segment) => segment.length > 0);
-    return parts.length > 1 ? parts[parts.length - 1] : raw || '工具';
-}
-/** 四个子能力，用于逐项探测可用性（顺序即面板提示里的列出顺序） */
-const CAT_AGENT_PARTS = ['conversation', 'model', 'skills', 'task'];
-
-;// ./src/lib/agent/api.ts
-/**
- * ScriptCat Agent 服务层：能力探测 + 四个子 API 的薄封装（v26.10.10-v10）。
- *
- * ── 为什么要有这一层，而不是让 UI 直接摸 `CAT.agent` ─────────────────────────
- * ① `CAT` 全局**只在 ScriptCat 里存在**。本脚本同时支持 Tampermonkey（`@match` 含税务页与
- *    example.com），在 TM 里访问 `CAT.agent` 是 ReferenceError —— 直接写就是「打开面板即崩」。
- * ② 就算在 ScriptCat 里，四个子能力也是**逐项 `@grant`** 的：老版本 ScriptCat（< 1.4）、
- *    或用户在管理页里拒绝某项授权，都会让单个子 API 缺失。故这里按能力逐个探测，
- *    缺哪块只在对应页签里提示，不牵连其它功能。
- * ③ 官方 API 的返回形状有 3 处文档与实现不一致（见 types.ts 的 `[与文档不符]`），
- *    纠偏逻辑集中放在这里，UI 只面对规整后的数据。
- *
- * ── 探测时机与代价 ─────────────────────────────────────────────────────────
- * `detectCatAgent()` 是**纯内存判空**（`typeof` + 逐层取属性），不发起任何异步调用，
- * 因此可以放心在组件 render 期调用；真正的 `model.list()` / `conversation.create()`
- * 等异步动作只在用户打开弹窗时才发生。
- *
- * ── ephemeral 之外的对话会落到 OPFS ───────────────────────────────────────
- * 本脚本用的是**非 ephemeral** 对话（持久化、带内置工具），关掉弹窗再打开仍能接着聊；
- * 「新建对话」走 `conversation.create()` 换新实例，不是 `clear()`。
- * v26.10.10-v12 起多了「会话列表」：官方只开放 `create`/`get`，没有 list/delete，
- * 列表由脚本自己记账（见 `lib/agent/sessions.ts`），`clear()` 只在「删除」时用来清消息。
- */
-
-
-const MISSING_CAT_REASON = '当前脚本管理器没有 Agent 能力：需要 ScriptCat v1.4 及以上（Tampermonkey 等其它管理器不支持）。';
-/** 探测 `CAT.agent.*`。纯内存判空，可安全重复调用（不缓存，避免脚本管理器热重载后状态过期） */
-function detectCatAgent() {
-    const unavailable = (reason) => ({
-        api: null,
-        parts: { conversation: false, model: false, skills: false, task: false },
-        reason,
-    });
-    if (typeof CAT === 'undefined' || !CAT)
-        return unavailable(MISSING_CAT_REASON);
-    let agent;
-    try {
-        agent = CAT.agent;
-    }
-    catch {
-        // 极端情况下 getter 抛错（不该发生），当作不可用而不是让整个面板崩掉
-        return unavailable(MISSING_CAT_REASON);
-    }
-    if (!agent || typeof agent !== 'object') {
-        return unavailable('当前 ScriptCat 版本未提供 Agent 功能，请升级到 v1.4 及以上。');
-    }
-    const record = agent;
-    const parts = {};
-    const missing = [];
-    for (const part of CAT_AGENT_PARTS) {
-        const ok = !!record[part] && typeof record[part] === 'object';
-        parts[part] = ok;
-        if (!ok)
-            missing.push(part);
-    }
-    if (missing.length) {
-        return {
-            api: null,
-            parts,
-            reason: 'Agent 的「' +
-                missing.join(' / ') +
-                '」权限不可用：请在 ScriptCat 里重新安装脚本并允许对应授权（脚本需要 CAT.agent.conversation / model / skills / task 四项）。',
-        };
-    }
-    return { api: agent, parts, reason: '' };
-}
-/* ============================================================ 错误文案 */
-const ERROR_CODE_TEXT = {
-    rate_limit: '触发模型限流，请稍后重试。',
-    auth: '模型鉴权失败：请在 ScriptCat 设置里检查该模型的 API Key。',
-    tool_timeout: '工具执行超时。',
-    context_too_large: '对话上下文超出模型窗口，请新建对话或清空历史。',
-    api_error: '模型接口报错。',
-};
-/** 把任意抛出物压成一句话（供日志与界面共用） */
-function agentErrorMessage(error) {
-    if (error instanceof Error)
-        return error.message || error.name || '未知错误';
-    if (typeof error === 'string')
-        return error;
-    if (error && typeof error === 'object') {
-        const maybe = error;
-        if (typeof maybe.message === 'string' && maybe.message)
-            return maybe.message;
-        if (typeof maybe.error === 'string' && maybe.error)
-            return maybe.error;
-        try {
-            return JSON.stringify(error);
-        }
-        catch {
-            return '未知错误';
-        }
-    }
-    return String(error);
-}
-/** 按 errorCode 补充中文提示，界面统一走这个 */
-function describeAgentError(error, errorCode) {
-    const raw = agentErrorMessage(error);
-    const hint = errorCode ? ERROR_CODE_TEXT[errorCode] : '';
-    if (!hint)
-        return raw;
-    return raw && raw !== hint ? hint + '（' + raw + '）' : hint;
-}
-/* ============================================================ 模型 */
-function isModelSummary(value) {
-    if (!value || typeof value !== 'object')
-        return false;
-    const model = value;
-    return typeof model.id === 'string';
-}
-/** 列出可用模型；任何一步失败都返回空数组（界面显示「未配置模型」而不是报错弹窗） */
-async function listModels(api) {
-    try {
-        const list = await api.model.list();
-        return Array.isArray(list) ? list.filter(isModelSummary) : [];
-    }
-    catch (error) {
-        addLog('[Agent] 读取模型列表失败: ' + agentErrorMessage(error), 'warning');
-        return [];
-    }
-}
-/**
- * 取默认模型 id。⚠️ `model.getDefault()` 的返回形状在官方 d.ts / 文档 / 实现之间不一致：
- * 可能是字符串、ModelSummary、或 {modelId}/{id}/{name} 包装对象，故逐一判型后兜底。
- */
-async function pickDefaultModelId(api) {
-    let value;
-    try {
-        value = await api.model.getDefault();
-    }
-    catch (error) {
-        addLog('[Agent] 读取默认模型失败: ' + agentErrorMessage(error), 'warning');
-        return '';
-    }
-    if (typeof value === 'string')
-        return value;
-    if (isModelSummary(value))
-        return value.id;
-    if (value && typeof value === 'object') {
-        const wrapper = value;
-        if (typeof wrapper.modelId === 'string')
-            return wrapper.modelId;
-        if (typeof wrapper.id === 'string')
-            return wrapper.id;
-        if (typeof wrapper.summary === 'string')
-            return wrapper.summary;
-        if (isModelSummary(wrapper.summary))
-            return wrapper.summary.id;
-    }
-    return '';
-}
-/* ============================================================ 对话 */
-/** 新建对话。system 用于交代脚本自身上下文；不传 model 时由 ScriptCat 用默认模型 */
-async function createConversation(api, options) {
-    return api.conversation.create(options);
-}
-/** 读取历史消息并统一成界面结构（跳过 system 消息：那是脚本自己注入的提示词） */
-async function readConversationMessages(conversation) {
-    const messages = await conversation.getMessages();
-    if (!Array.isArray(messages))
-        return [];
-    return messages.filter((message) => message && message.role !== 'system');
-}
-/**
- * 按 id 接回已有对话（打开弹窗时恢复上次的会话、或切换会话）。
- * 官方签名是「不存在返回 null」，这里把抛错也一并折成 null —— 界面按「已失效」提示，
- * 不能因为一个取不到的 id 就把对话页签打挂。
- */
-async function getConversation(api, id) {
-    if (!id)
-        return null;
-    try {
-        const conversation = await api.conversation.get(id);
-        return conversation || null;
-    }
-    catch (error) {
-        addLog('[Agent] 打开对话失败: ' + agentErrorMessage(error), 'warning');
-        return null;
-    }
-}
-/**
- * 删对话时清空该对话的消息。
- * ⚠️ 官方没有开放删除会话的接口（`deleteConversation` 只存在于内部 repo 层），
- * `clear()` 的语义是「清空消息历史」（映射到 `{action:"clearMessages"}`），**不删会话记录**。
- * 所以本脚本的「删除」= 这里清消息 + 从本地索引移除，ScriptCat 里会留一条空记录。
- * 返回是否清空成功（没成功也照样从索引移除：对用户来说「看不见了」才算删掉）。
- */
-async function clearConversation(conversation) {
-    try {
-        await conversation.clear();
-        return true;
-    }
-    catch (error) {
-        addLog('[Agent] 清空对话消息失败: ' + agentErrorMessage(error), 'warning');
-        return false;
-    }
-}
-/** 消费一次流式对话；`timeoutMs` 是**静默看门狗**（默认 2 分钟无任何分片即中止） */
-async function streamConversation(conversation, content, handlers = {}, timeoutMs = 120_000) {
-    const outcome = { content: '', thinking: '' };
-    const stream = await conversation.chatStream(content);
-    const iterator = stream[Symbol.asyncIterator]();
-    let timedOut = false;
-    try {
-        for (;;) {
-            let timer;
-            const guard = new Promise((resolve) => {
-                timer = setTimeout(() => resolve('timeout'), timeoutMs);
-            });
-            const next = await Promise.race([iterator.next(), guard]);
-            if (timer)
-                clearTimeout(timer);
-            if (next === 'timeout') {
-                timedOut = true;
-                break;
-            }
-            if (next.done)
-                break;
-            const chunk = next.value;
-            if (!chunk || typeof chunk !== 'object')
-                continue;
-            switch (chunk.type) {
-                case 'content_delta':
-                    if (chunk.content) {
-                        outcome.content += chunk.content;
-                        handlers.onContent?.(chunk.content);
-                    }
-                    break;
-                case 'thinking_delta':
-                    if (chunk.content) {
-                        outcome.thinking += chunk.content;
-                        handlers.onThinking?.(chunk.content);
-                    }
-                    break;
-                case 'tool_call':
-                case 'tool_call_complete':
-                    if (chunk.toolCall)
-                        handlers.onToolCall?.(chunk.toolCall);
-                    break;
-                case 'system_warning':
-                    if (chunk.warning)
-                        handlers.onWarning?.(chunk.warning);
-                    break;
-                case 'done':
-                    outcome.usage = chunk.usage;
-                    outcome.durationMs = chunk.durationMs;
-                    if (chunk.warning)
-                        handlers.onWarning?.(chunk.warning);
-                    break;
-                case 'error':
-                    outcome.error = describeAgentError(chunk.error || '模型返回错误', chunk.errorCode);
-                    outcome.errorCode = chunk.errorCode;
-                    outcome.usage = chunk.usage;
-                    break;
-                default:
-                    // content_block / new_message 等：本轮 UI 不做区分展示
-                    break;
-            }
-        }
-    }
-    finally {
-        // 正常 `done` 之后迭代器自己已断开连接；提前 break / 超时 / 抛错时必须显式 return()，
-        // 否则 SW 侧的 port 会一直挂着（官方 processStream 的注释专门写了这一点）
-        await iterator.return?.();
-    }
-    if (timedOut && !outcome.content && !outcome.error) {
-        outcome.error = '等待模型响应超过 ' + Math.round(timeoutMs / 1000) + ' 秒，已中止本次请求。';
-        outcome.errorCode = 'timeout';
-    }
-    return outcome;
-}
-/* ============================================================ 技能 */
-async function listSkills(api) {
-    const list = await api.skills.list();
-    return Array.isArray(list) ? list : [];
-}
-async function removeSkill(api, name) {
-    return api.skills.remove(name);
-}
-/* ============================================================ 定时任务 */
-async function listTasks(api) {
-    const list = await api.task.list();
-    return Array.isArray(list) ? list : [];
-}
-/** 任务动作的薄封装：把「哪个动作失败」写进日志，便于用户回看运行日志定位 */
-async function runTaskAction(api, action, run) {
-    try {
-        await run(api.task);
-        addLog('[Agent] 定时任务' + action + '成功', 'success');
-    }
-    catch (error) {
-        const message = agentErrorMessage(error);
-        addLog('[Agent] 定时任务' + action + '失败: ' + message, 'error');
-        throw error;
-    }
-}
-function buildTaskInput(draft) {
-    return {
-        name: draft.name.trim(),
-        crontab: draft.crontab.trim(),
-        prompt: draft.prompt.trim(),
-        mode: 'internal',
-        enabled: true,
-        notify: false,
-    };
-}
-/**
- * 五字段 crontab 的**轻量**校验（分 时 日 月 周）。
- * 只挡明显写错（字段数不对、出现非法字符），不做完整 cron 语义校验 ——
- * 真正的合法性由 ScriptCat 的 TaskScheduler 判定，这里的作用是让用户尽早得到反馈。
- */
-function validateCrontab(expression) {
-    const text = expression.trim();
-    if (!text)
-        return '请填写 crontab（五段：分 时 日 月 周）';
-    const fields = text.split(/\s+/);
-    if (fields.length !== 5)
-        return 'crontab 需要 5 段（分 时 日 月 周），当前 ' + fields.length + ' 段';
-    for (const field of fields) {
-        if (!/^[\d*,\-/]+$/.test(field))
-            return 'crontab 里有不支持的字符：' + field;
-    }
-    return '';
-}
-/** 判断某个已安装技能是否被 agent 对话自动加载（仅用于界面提示措辞） */
-function skillToolSummary(skill) {
-    const tools = Array.isArray(skill.toolNames) ? skill.toolNames : [];
-    if (!tools.length)
-        return '无工具';
-    const shown = tools.slice(0, 3).map(toolDisplayName).join('、');
-    return tools.length > 3 ? shown + ' 等 ' + tools.length + ' 个' : shown;
-}
-
-;// ./src/lib/agent/sessions.ts
-/**
- * Agent 会话索引（v26.10.10-v12）。
- *
- * ── 为什么脚本要自己记一份会话列表 ───────────────────────────────────────────
- * 官方 `CAT.agent.conversation` 只对脚本开放两个方法：`create()` 和 `get(id)`
- * （ScriptCat 侧 `src/types/scriptcat.d.ts:1104-1115`，内容侧实现
- * `src/app/service/content/gm_api/cat_agent.ts:924-960`）。内部的
- * `listConversations()` / `deleteConversation()`（`src/app/repo/agent_chat.ts:173`、`:237`）
- * 没有对应的 `@GMContext.API` 出口，而脚本侧的 `sendMessage` 是 `protected`，绕不过去。
- * 所以「有哪些对话、叫什么名字、上次打开的是哪个」只能由脚本自己记账 —— 就是本模块。
- *
- * ── 这里存的**只是索引** ───────────────────────────────────────────────────
- * 对话消息本体一直在 ScriptCat 的 OPFS 里（本脚本用的是非 ephemeral 对话）。
- * 索引丢了最多是「列表看不到」，消息不会丢；切回某个对话时仍走 `conversation.get(id)` 取历史。
- * 反过来，索引里的 id 在 ScriptCat 侧被清掉时 `get()` 会返回 null，调用方按「已失效」处理。
- *
- * ── 为什么对话 id 是 ScriptCat 生成的 ──────────────────────────────────────
- * `create()` 支持传自定义 id，但没必要：id 拿到就存下来即可，少一处自造 id 的撞号风险。
- */
-
-
-const EMPTY_STORE = { activeId: null, items: [] };
-function isSession(value) {
-    if (!value || typeof value !== 'object')
-        return false;
-    const item = value;
-    return typeof item.id === 'string' && !!item.id && typeof item.title === 'string';
-}
-/**
- * 读索引。任何异常（localStorage 不可用、JSON 被别的东西写坏）都退化成空列表 ——
- * 弹窗打开时读它，绝不能因为一份索引解析失败就整块面板报错。
- */
-function loadAgentChatStore() {
-    try {
-        const raw = localStorage.getItem(AGENT_CHATS_KEY);
-        if (!raw)
-            return EMPTY_STORE;
-        const parsed = JSON.parse(raw);
-        if (!parsed || typeof parsed !== 'object')
-            return EMPTY_STORE;
-        const record = parsed;
-        const items = (Array.isArray(record.items) ? record.items : [])
-            .filter(isSession)
-            .slice(0, CONFIG.MAX_AGENT_CHATS)
-            .map((item) => ({
-            id: item.id,
-            title: item.title,
-            createtime: typeof item.createtime === 'number' ? item.createtime : 0,
-            updatetime: typeof item.updatetime === 'number' ? item.updatetime : 0,
-        }));
-        const activeId = typeof record.activeId === 'string' && record.activeId ? record.activeId : null;
-        // activeId 指向的条目不在索引里（索引被手改过 / 写入中断）：当作没有活动对话，避免界面显示一个点不开的选项
-        return { activeId: items.some((item) => item.id === activeId) ? activeId : null, items };
-    }
-    catch (error) {
-        addLog('[Agent] 读取会话列表失败: ' + (error instanceof Error ? error.message : String(error)), 'warning');
-        return EMPTY_STORE;
-    }
-}
-/** 写索引。失败只记日志：会话列表写不进去不该打断正在进行的对话。 */
-function saveAgentChatStore(store) {
-    try {
-        localStorage.setItem(AGENT_CHATS_KEY, JSON.stringify(store));
-    }
-    catch (error) {
-        addLog('[Agent] 保存会话列表失败: ' + (error instanceof Error ? error.message : String(error)), 'warning');
-    }
-}
-/**
- * 由首条用户消息生成会话标题，规则与官方一致（截断长度见 CONFIG.AGENT_CHAT_TITLE_LENGTH）。
- * 换行/连续空白压成单个空格，否则列表里会出现莫名其妙的空白。
- */
-function agentChatTitle(text) {
-    const flat = text.replace(/\s+/g, ' ').trim();
-    const limit = CONFIG.AGENT_CHAT_TITLE_LENGTH;
-    if (flat.length <= limit)
-        return flat || '新对话';
-    return flat.slice(0, limit) + '…';
-}
-/**
- * 写入/更新一条会话，并把它提到列表最前（最近使用）。
- * 已存在时以传入的 session 为准整条替换，调用方负责决定是否保留原标题。
- */
-function upsertAgentChat(items, session) {
-    const rest = items.filter((item) => item.id !== session.id);
-    return [session, ...rest].slice(0, CONFIG.MAX_AGENT_CHATS);
-}
-/** 从索引里移除一条（删对话时用）。官方没有删除会话的接口，这里只动本地索引。 */
-function removeAgentChat(items, id) {
-    return items.filter((item) => item.id !== id);
-}
-/** 取一条会话的标题，取不到时回退成 id 前 8 位（界面上总得显示点东西） */
-function agentChatLabel(items, id) {
-    const found = items.find((item) => item.id === id);
-    if (found && found.title)
-        return found.title;
-    return id ? id.slice(0, 8) : '新对话';
-}
-
 ;// ./node_modules/devlop/lib/default.js
 function deprecate(fn) {
   return fn
@@ -113978,6 +112330,1119 @@ if (false) // removed by dead control flow
 const list_List = ListWithForwardRef;
 list_List.Item = list_Item;
 /* harmony default export */ const es_list = (list_List);
+;// ./node_modules/antd/es/tag/style/index.js
+
+
+
+
+
+
+// ============================== Styles ==============================
+const tag_style_genBaseStyle = token => {
+  const {
+    paddingXXS,
+    lineWidth,
+    tagPaddingHorizontal,
+    componentCls,
+    calc
+  } = token;
+  const paddingInline = calc(tagPaddingHorizontal).sub(lineWidth).equal();
+  const iconMarginInline = calc(paddingXXS).sub(lineWidth).equal();
+  return {
+    // Result
+    [componentCls]: {
+      ...resetComponent(token),
+      display: 'inline-block',
+      height: 'auto',
+      paddingInline,
+      fontSize: token.tagFontSize,
+      lineHeight: token.tagLineHeight,
+      whiteSpace: 'nowrap',
+      backgroundColor: token.defaultBg,
+      border: `${util_unit(token.lineWidth)} ${token.lineType} ${token.colorBorder}`,
+      borderRadius: token.borderRadiusSM,
+      opacity: 1,
+      transition: `all ${token.motionDurationMid}`,
+      textAlign: 'start',
+      position: 'relative',
+      // RTL
+      [`&${componentCls}-rtl`]: {
+        direction: 'rtl'
+      },
+      '&, a, a:hover': {
+        color: token.defaultColor
+      },
+      [`${componentCls}-close-icon`]: {
+        marginInlineStart: iconMarginInline,
+        fontSize: token.tagIconSize,
+        color: token.colorIcon,
+        cursor: 'pointer',
+        transition: `all ${token.motionDurationMid}`,
+        '&:hover': {
+          color: token.colorTextHeading
+        }
+      },
+      '&-checkable': {
+        backgroundColor: 'transparent',
+        borderColor: 'transparent',
+        cursor: 'pointer',
+        [`&:not(${componentCls}-checkable-checked):hover`]: {
+          color: token.colorPrimary,
+          backgroundColor: token.colorFillSecondary
+        },
+        '&:active, &-checked': {
+          color: token.colorTextLightSolid
+        },
+        '&-checked': {
+          backgroundColor: token.colorPrimary,
+          '&:hover': {
+            backgroundColor: token.colorPrimaryHover
+          }
+        },
+        '&:active': {
+          backgroundColor: token.colorPrimaryActive
+        },
+        '&-disabled': {
+          cursor: 'not-allowed',
+          [`&:not(${componentCls}-checkable-checked)`]: {
+            color: token.colorTextDisabled,
+            '&:hover': {
+              backgroundColor: 'transparent'
+            }
+          },
+          [`&${componentCls}-checkable-checked`]: {
+            color: token.colorTextDisabled,
+            backgroundColor: token.colorBgContainerDisabled
+          },
+          '&:hover, &:active': {
+            backgroundColor: token.colorBgContainerDisabled,
+            color: token.colorTextDisabled
+          },
+          [`&:not(${componentCls}-checkable-checked):hover`]: {
+            color: token.colorTextDisabled
+          }
+        },
+        '&-group': {
+          display: 'flex',
+          flexWrap: 'wrap',
+          gap: token.paddingXS
+        }
+      },
+      '&-hidden': {
+        display: 'none'
+      },
+      // Icons from third-party libraries are a bare `<svg>`, which none of the `.anticon`
+      // rules reach. An `<svg>` has no baseline of its own, so it is aligned by its bottom
+      // margin edge (CSS 2.1 §10.8.1) and rides above the text. Centre it instead: unlike an
+      // `.anticon` (whose `<svg>` is always `1em`, so a fixed `-0.125em` nudge suffices), a
+      // third-party `<svg>` may be sized in `px`, so the correction must not depend on size.
+      // `display: inline-block` keeps it an atomic inline box so `vertical-align` still applies even
+      // under a CSS reset that forces `svg { display: block }` (e.g. Tailwind Preflight), which would
+      // otherwise drop the icon onto its own line. `vertical-align: middle` centres the margin box on
+      // the x-height line; `margin-block-end` then lifts it by half its own value onto the cap-height
+      // centre (capHeight − xHeight ≈ 0.2em across typical fonts), keeping it centred at any icon size.
+      // Only matches a bare `<svg>`: an `.anticon` keeps its `<svg>` one level deeper.
+      '> svg': {
+        display: 'inline-block',
+        verticalAlign: 'middle',
+        marginBlockEnd: '0.2em'
+      },
+      // To ensure that a space will be placed between character and `Icon`.
+      [`> ${token.iconCls} + span, > span + ${token.iconCls}, > svg + span, > span + svg`]: {
+        marginInlineStart: paddingInline
+      }
+    },
+    [`&${token.componentCls}-solid`]: {
+      borderColor: 'transparent',
+      color: token.colorTextLightSolid,
+      backgroundColor: token.colorBgSolid,
+      [`&${componentCls}-default`]: {
+        color: token.solidTextColor
+      }
+    },
+    [`${componentCls}-filled`]: {
+      borderColor: 'transparent',
+      backgroundColor: token.tagBorderlessBg
+    },
+    [`&${componentCls}-disabled`]: {
+      color: token.colorTextDisabled,
+      cursor: 'not-allowed',
+      backgroundColor: token.colorBgContainerDisabled,
+      a: {
+        cursor: 'not-allowed',
+        pointerEvents: 'none',
+        color: token.colorTextDisabled,
+        '&:hover': {
+          color: token.colorTextDisabled
+        }
+      },
+      'a&': {
+        '&:hover, &:active': {
+          color: token.colorTextDisabled
+        }
+      },
+      [`&${componentCls}-outlined`]: {
+        borderColor: token.colorBorderDisabled
+      },
+      [`&${componentCls}-solid, &${componentCls}-filled`]: {
+        color: token.colorTextDisabled,
+        [`${componentCls}-close-icon`]: {
+          color: token.colorTextDisabled
+        }
+      },
+      [`${componentCls}-close-icon`]: {
+        cursor: 'not-allowed',
+        color: token.colorTextDisabled,
+        '&:hover': {
+          color: token.colorTextDisabled
+        }
+      }
+    }
+  };
+};
+// ============================== Export ==============================
+const tag_style_prepareToken = token => {
+  const {
+    lineWidth,
+    fontSizeIcon,
+    calc
+  } = token;
+  const tagFontSize = token.fontSizeSM;
+  const tagToken = statistic_merge(token, {
+    tagFontSize,
+    tagLineHeight: util_unit(calc(token.lineHeightSM).mul(tagFontSize).equal()),
+    tagIconSize: calc(fontSizeIcon).sub(calc(lineWidth).mul(2)).equal(),
+    // Tag icon is much smaller
+    tagPaddingHorizontal: 8,
+    // Fixed padding.
+    tagBorderlessBg: token.defaultBg
+  });
+  return tagToken;
+};
+const tag_style_prepareComponentToken = token => {
+  const solidTextColor = isBright(new AggregationColor(token.colorBgSolid), '#fff') ? '#000' : '#fff';
+  return {
+    defaultBg: new FastColor(token.colorFillTertiary).onBackground(token.colorBgContainer).toHexString(),
+    defaultColor: token.colorText,
+    solidTextColor
+  };
+};
+/* harmony default export */ const tag_style = (genStyleHooks('Tag', token => {
+  const tagToken = tag_style_prepareToken(token);
+  return tag_style_genBaseStyle(tagToken);
+}, tag_style_prepareComponentToken));
+;// ./node_modules/antd/es/tag/CheckableTag.js
+"use client";
+
+
+
+
+
+
+const CheckableTag = /*#__PURE__*/(react_production_namespaceFn().forwardRef)((props, ref) => {
+  const {
+    prefixCls: customizePrefixCls,
+    style,
+    className,
+    checked,
+    children,
+    icon,
+    onChange,
+    onClick,
+    onKeyDown,
+    disabled: customDisabled,
+    ...restProps
+  } = props;
+  const {
+    getPrefixCls,
+    tag
+  } = (react_production_namespaceFn().useContext)(ConfigContext);
+  const disabled = (react_production_namespaceFn().useContext)(config_provider_DisabledContext);
+  const mergedDisabled = customDisabled ?? disabled;
+  const handleClick = e => {
+    if (mergedDisabled) {
+      return;
+    }
+    onChange?.(!checked);
+    onClick?.(e);
+  };
+  const handleKeyDown = e => {
+    onKeyDown?.(e);
+    if (e.defaultPrevented || mergedDisabled) {
+      return;
+    }
+    if (e.key === ' ') {
+      e.preventDefault();
+      if (!e.repeat) {
+        onChange?.(!checked);
+      }
+    }
+  };
+  const prefixCls = getPrefixCls('tag', customizePrefixCls);
+  // Style
+  const [hashId, cssVarCls] = tag_style(prefixCls);
+  const cls = clsx(prefixCls, `${prefixCls}-checkable`, {
+    [`${prefixCls}-checkable-checked`]: checked,
+    [`${prefixCls}-checkable-disabled`]: mergedDisabled
+  }, tag?.className, className, hashId, cssVarCls);
+  return /*#__PURE__*/(react_production_namespaceFn().createElement)("span", {
+    ...restProps,
+    ref: ref,
+    role: "checkbox",
+    "aria-checked": checked,
+    "aria-disabled": mergedDisabled || undefined,
+    tabIndex: mergedDisabled ? -1 : 0,
+    style: {
+      ...tag?.style,
+      ...style
+    },
+    className: cls,
+    onClick: handleClick,
+    onKeyDown: handleKeyDown
+  }, icon, /*#__PURE__*/(react_production_namespaceFn().createElement)("span", null, children));
+});
+/* harmony default export */ const tag_CheckableTag = (CheckableTag);
+;// ./node_modules/antd/es/tag/CheckableTagGroup.js
+"use client";
+
+
+
+
+
+
+
+
+
+
+
+const CheckableTagGroup = /*#__PURE__*/(react_production_namespaceFn().forwardRef)((props, ref) => {
+  const {
+    id,
+    prefixCls: customizePrefixCls,
+    rootClassName,
+    className,
+    style,
+    classNames,
+    styles,
+    disabled,
+    options,
+    value,
+    defaultValue,
+    onChange,
+    multiple,
+    ...restProps
+  } = props;
+  const {
+    getPrefixCls,
+    direction,
+    className: contextClassName,
+    style: contextStyle,
+    classNames: contextClassNames,
+    styles: contextStyles
+  } = useComponentConfig('tag');
+  const prefixCls = getPrefixCls('tag', customizePrefixCls);
+  const groupPrefixCls = `${prefixCls}-checkable-group`;
+  const rootCls = hooks_useCSSVarCls(prefixCls);
+  const [hashId, cssVarCls] = tag_style(prefixCls, rootCls);
+  // ====================== Styles ======================
+  const contextStyleRoot = useSemanticRootStyle(contextStyle);
+  const styleRoot = useSemanticRootStyle(style);
+  const [mergedClassNames, mergedStyles] = useMergeSemantic([contextClassNames, classNames], [contextStyles, contextStyleRoot, styles, styleRoot], {
+    props
+  });
+  // =============================== Option ===============================
+  const parsedOptions = (0,react_production_namespaceFn().useMemo)(() => {
+    if (!Array.isArray(options)) {
+      return [];
+    }
+    return options.map(option => {
+      if (is_isPlainObject(option)) {
+        return option;
+      }
+      return {
+        value: option,
+        label: option
+      };
+    });
+  }, [options]);
+  // =============================== Values ===============================
+  const [mergedValue, setMergedValue] = useControlledState(defaultValue, value);
+  const handleChange = (checked, option) => {
+    let newValue = null;
+    if (multiple) {
+      const valueList = mergedValue || [];
+      newValue = checked ? [].concat(_toConsumableArray(valueList), [option.value]) : valueList.filter(item => item !== option.value);
+    } else {
+      newValue = checked ? option.value : null;
+    }
+    setMergedValue(newValue);
+    onChange?.(newValue); // TS not support generic type in function call
+  };
+  // ================================ Refs ================================
+  const divRef = (react_production_namespaceFn().useRef)(null);
+  (0,react_production_namespaceFn().useImperativeHandle)(ref, () => ({
+    nativeElement: divRef.current
+  }));
+  // ================================ ARIA ================================
+  const ariaProps = pickAttrs(restProps, {
+    aria: true,
+    data: true
+  });
+  // =============================== Render ===============================
+  return /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
+    ...ariaProps,
+    className: clsx(groupPrefixCls, contextClassName, rootClassName, {
+      [`${groupPrefixCls}-disabled`]: disabled,
+      [`${groupPrefixCls}-rtl`]: direction === 'rtl'
+    }, hashId, cssVarCls, className, mergedClassNames.root),
+    style: mergedStyles.root,
+    id: id,
+    ref: divRef
+  }, parsedOptions.map(option => (/*#__PURE__*/(react_production_namespaceFn().createElement)(tag_CheckableTag, {
+    key: option.value,
+    className: clsx(`${groupPrefixCls}-item`, mergedClassNames.item, option.className),
+    style: {
+      ...mergedStyles.item,
+      ...option.style
+    },
+    checked: multiple ? (mergedValue || []).includes(option.value) : mergedValue === option.value,
+    onChange: checked => handleChange(checked, option),
+    disabled: disabled
+  }, option.label))));
+});
+if (false) // removed by dead control flow
+{}
+/* harmony default export */ const tag_CheckableTagGroup = (CheckableTagGroup);
+;// ./node_modules/antd/es/tag/hooks/useColor.js
+
+
+
+/**
+ * Convert color related props to a unified object,
+ * which is used to flatten the compatibility requirements.
+ */
+function useColor(props, contextVariant) {
+  const {
+    color,
+    variant,
+    bordered
+  } = props;
+  return (react_production_namespaceFn().useMemo)(() => {
+    const isInverseColor = color?.endsWith('-inverse');
+    // =================== Variant ===================
+    let nextVariant;
+    if (variant) {
+      // `variant` first
+      nextVariant = variant;
+    } else if (isInverseColor) {
+      // Fallback if using inverse color
+      nextVariant = 'solid';
+    } else if (bordered === false) {
+      // Fallback if using filled
+      nextVariant = 'filled';
+    } else {
+      // Finally not conflict, use context
+      nextVariant = contextVariant || 'filled';
+    }
+    // ==================== Color ====================
+    let nextColor = isInverseColor ? color?.replace('-inverse', '') : color;
+    if (nextColor === undefined && nextVariant === 'solid') {
+      nextColor = 'default';
+    }
+    // =============== Preset & Status ===============
+    const nextIsPreset = isPresetColor(nextColor);
+    const nextIsStatus = isPresetStatusColor(nextColor);
+    // ================== Customize ==================
+    // When `color` is not preset color,
+    // dynamic calculate the color pair.
+    const tagStyle = {};
+    if (!nextIsPreset && !nextIsStatus && nextColor) {
+      if (nextVariant === 'solid') {
+        tagStyle.backgroundColor = color;
+      } else {
+        const hsl = new FastColor(nextColor).toHsl();
+        hsl.l = 0.95;
+        tagStyle.backgroundColor = new FastColor(hsl).toHexString();
+        tagStyle.color = color;
+        if (nextVariant === 'outlined') {
+          tagStyle.borderColor = color;
+        }
+      }
+    }
+    return [nextVariant, nextColor, nextIsPreset, nextIsStatus, tagStyle];
+  }, [color, variant, bordered, contextVariant]);
+}
+;// ./node_modules/antd/es/tag/style/presetCmp.js
+// Style as status component
+
+
+// ============================== Preset ==============================
+const genPresetStyle = token => genPresetColor_genPresetColor(token, (colorKey, {
+  textColor,
+  lightBorderColor,
+  lightColor,
+  darkColor
+}) => ({
+  [`${token.componentCls}${token.componentCls}-${colorKey}:not(${token.componentCls}-disabled)`]: {
+    [`&${token.componentCls}-outlined`]: {
+      backgroundColor: lightColor,
+      borderColor: lightBorderColor,
+      color: textColor
+    },
+    [`&${token.componentCls}-solid`]: {
+      backgroundColor: darkColor,
+      borderColor: darkColor,
+      color: token.colorTextLightSolid
+    },
+    [`&${token.componentCls}-filled`]: {
+      backgroundColor: lightColor,
+      color: textColor
+    }
+  }
+}));
+// ============================== Export ==============================
+/* harmony default export */ const presetCmp = (genSubStyleComponent(['Tag', 'preset'], token => {
+  const tagToken = tag_style_prepareToken(token);
+  return genPresetStyle(tagToken);
+}, tag_style_prepareComponentToken));
+;// ./node_modules/antd/es/_util/capitalize.js
+function capitalize(str) {
+  if (typeof str !== 'string') {
+    return str;
+  }
+  const ret = str.charAt(0).toUpperCase() + str.slice(1);
+  return ret;
+}
+;// ./node_modules/antd/es/tag/style/statusCmp.js
+
+
+
+const genTagStatusStyle = (token, status, cssVariableType) => {
+  const capitalizedCssVariableType = capitalize(cssVariableType);
+  return {
+    [`${token.componentCls}${token.componentCls}-${status}:not(${token.componentCls}-disabled)`]: {
+      [`&${token.componentCls}-outlined`]: {
+        backgroundColor: token[`color${capitalizedCssVariableType}Bg`],
+        borderColor: token[`color${capitalizedCssVariableType}Border`],
+        color: token[`color${cssVariableType}`]
+      },
+      [`&${token.componentCls}-solid`]: {
+        backgroundColor: token[`color${cssVariableType}`],
+        borderColor: token[`color${cssVariableType}`]
+      },
+      [`&${token.componentCls}-filled`]: {
+        backgroundColor: token[`color${capitalizedCssVariableType}Bg`],
+        color: token[`color${cssVariableType}`]
+      }
+    }
+  };
+};
+// ============================== Export ==============================
+/* harmony default export */ const statusCmp = (genSubStyleComponent(['Tag', 'status'], token => {
+  const tagToken = tag_style_prepareToken(token);
+  return [genTagStatusStyle(tagToken, 'success', 'Success'), genTagStatusStyle(tagToken, 'processing', 'Info'), genTagStatusStyle(tagToken, 'error', 'Error'), genTagStatusStyle(tagToken, 'warning', 'Warning')];
+}, tag_style_prepareComponentToken));
+;// ./node_modules/antd/es/tag/index.js
+"use client";
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+const InternalTag = /*#__PURE__*/(react_production_namespaceFn().forwardRef)((props, ref) => {
+  const {
+    prefixCls: customizePrefixCls,
+    className,
+    rootClassName,
+    style,
+    children,
+    icon,
+    color,
+    variant: _variant,
+    onClose,
+    bordered,
+    disabled: customDisabled,
+    href,
+    target,
+    styles,
+    classNames,
+    ...restProps
+  } = props;
+  const {
+    getPrefixCls,
+    direction,
+    className: contextClassName,
+    variant: contextVariant,
+    style: contextStyle,
+    classNames: contextClassNames,
+    styles: contextStyles
+  } = useComponentConfig('tag');
+  // ===================== Warnings =====================
+  if (false) // removed by dead control flow
+{}
+  // ====================== Colors ======================
+  const [mergedVariant, mergedColor, isPreset, isStatus, customTagStyle] = useColor(props, contextVariant);
+  const isInternalColor = isPreset || isStatus;
+  // ===================== Disabled =====================
+  const disabled = (react_production_namespaceFn().useContext)(config_provider_DisabledContext);
+  const mergedDisabled = customDisabled ?? disabled;
+  const {
+    tag: tagContext
+  } = (react_production_namespaceFn().useContext)(ConfigContext);
+  const [visible, setVisible] = (react_production_namespaceFn().useState)(true);
+  const domProps = omit(restProps, ['closeIcon', 'closable']);
+  // =========== Merged Props for Semantic ===========
+  const mergedProps = {
+    ...props,
+    color: mergedColor,
+    variant: mergedVariant,
+    disabled: mergedDisabled
+  };
+  // ====================== Styles ======================
+  const contextStyleRoot = useSemanticRootStyle(contextStyle);
+  const styleRoot = useSemanticRootStyle(style);
+  const [mergedClassNames, mergedStyles] = useMergeSemantic([contextClassNames, classNames], [contextStyles, contextStyleRoot, styles, styleRoot], {
+    props: mergedProps
+  });
+  const tagStyle = (react_production_namespaceFn().useMemo)(() => {
+    let nextTagStyle = mergedStyles.root;
+    if (!mergedDisabled) {
+      nextTagStyle = {
+        ...customTagStyle,
+        ...nextTagStyle
+      };
+    }
+    return nextTagStyle;
+  }, [mergedStyles.root, customTagStyle, mergedDisabled]);
+  const prefixCls = getPrefixCls('tag', customizePrefixCls);
+  const [hashId, cssVarCls] = tag_style(prefixCls);
+  const tagClassName = clsx(prefixCls, contextClassName, mergedClassNames.root, `${prefixCls}-${mergedVariant}`, {
+    [`${prefixCls}-${mergedColor}`]: isInternalColor,
+    [`${prefixCls}-hidden`]: !visible,
+    [`${prefixCls}-rtl`]: direction === 'rtl',
+    [`${prefixCls}-disabled`]: mergedDisabled
+  }, className, rootClassName, hashId, cssVarCls);
+  // ===================== Closable =====================
+  const triggerClose = e => {
+    if (mergedDisabled) {
+      return;
+    }
+    e.stopPropagation();
+    onClose?.(e);
+    if (e.defaultPrevented) {
+      return;
+    }
+    if (href) {
+      e.preventDefault();
+    }
+    setVisible(false);
+  };
+  const handleCloseKeyDown = e => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      if (!e.repeat) {
+        e.currentTarget.click();
+      }
+    }
+  };
+  const [, mergedCloseIcon] = useClosable_useClosable(pickClosable(props), pickClosable(tagContext), {
+    closable: false,
+    closeIconRender: iconNode => {
+      const replacement = /*#__PURE__*/(react_production_namespaceFn().createElement)("span", {
+        role: "button",
+        tabIndex: mergedDisabled ? -1 : 0,
+        "aria-disabled": mergedDisabled || undefined,
+        className: clsx(`${prefixCls}-close-icon`, mergedClassNames.close),
+        onClick: triggerClose,
+        onKeyDown: handleCloseKeyDown,
+        style: mergedStyles.close
+      }, iconNode);
+      return replaceElement(iconNode, replacement, originProps => ({
+        onClick: e => {
+          originProps?.onClick?.(e);
+          triggerClose(e);
+        },
+        onKeyDown: e => {
+          originProps?.onKeyDown?.(e);
+          if (!e.defaultPrevented) {
+            handleCloseKeyDown(e);
+          }
+        },
+        role: 'button',
+        tabIndex: mergedDisabled ? -1 : 0,
+        'aria-disabled': mergedDisabled || undefined,
+        className: clsx(originProps?.className, `${prefixCls}-close-icon`, mergedClassNames.close),
+        style: {
+          ...mergedStyles.close,
+          ...originProps?.style
+        }
+      }));
+    }
+  });
+  // ====================== Render ======================
+  const isNeedWave = isFunction(restProps.onClick) || children && children.type === 'a';
+  const iconNode = cloneElement(icon, {
+    className: clsx(/*#__PURE__*/(react_production_namespaceFn().isValidElement)(icon) ? icon.props?.className : undefined, mergedClassNames.icon),
+    style: mergedStyles.icon
+  });
+  const child = iconNode ? (/*#__PURE__*/(react_production_namespaceFn().createElement)((react_production_namespaceFn().Fragment), null, iconNode, isReactRenderable(children) && (/*#__PURE__*/(react_production_namespaceFn().createElement)("span", {
+    className: mergedClassNames.content,
+    style: mergedStyles.content
+  }, children)))) : children;
+  const TagWrapper = href ? 'a' : 'span';
+  const tagNode = /*#__PURE__*/(react_production_namespaceFn().createElement)(TagWrapper, {
+    ...domProps,
+    ref: ref,
+    className: tagClassName,
+    style: tagStyle,
+    href: mergedDisabled ? undefined : href,
+    target: target,
+    onClick: mergedDisabled ? undefined : domProps.onClick,
+    ...(href && mergedDisabled ? {
+      'aria-disabled': true
+    } : {})
+  }, child, mergedCloseIcon, isPreset && /*#__PURE__*/(react_production_namespaceFn().createElement)(presetCmp, {
+    key: "preset",
+    prefixCls: prefixCls
+  }), isStatus && /*#__PURE__*/(react_production_namespaceFn().createElement)(statusCmp, {
+    key: "status",
+    prefixCls: prefixCls
+  }));
+  return isNeedWave ? /*#__PURE__*/(react_production_namespaceFn().createElement)(wave, {
+    component: "Tag"
+  }, tagNode) : tagNode;
+});
+const Tag = InternalTag;
+if (false) // removed by dead control flow
+{}
+Tag.CheckableTag = tag_CheckableTag;
+Tag.CheckableTagGroup = tag_CheckableTagGroup;
+/* harmony default export */ const es_tag = (Tag);
+;// ./src/lib/agent/types.ts
+/**
+ * ScriptCat Agent API（`CAT.agent.*`）的类型声明与纯工具函数。
+ *
+ * ── 为什么这里自己声明（v26.10.10-v10）──────────────────────────────────────
+ * 官方 d.ts 随 ScriptCat 仓库发布（`src/app/service/agent/core/types.ts` 与
+ * `src/types/scriptcat.d.ts`），**不进本仓库的 node_modules**：本脚本是油猴脚本，
+ * `npm run typecheck` 用的是本仓库 tsconfig，拿不到 `declare const CAT`。
+ * 故此处按官方类型等价声明一份，唯一约束是「只声明 UI 真正用到的字段」。
+ *
+ * ⚠️ **本文件按官方源码（而非官方文档）对齐**，三处文档与实现不一致已在下方逐条标注
+ * `[与文档不符]`。改这里之前建议先回看官方 `src/app/service/agent/core/types.ts`。
+ *
+ * ── 可用性前提 ─────────────────────────────────────────────────────────────
+ * 整套 `CAT.agent.*` 是 **ScriptCat v1.4+** 才有的能力，且需逐项 `@grant`
+ * （见 `config/common.meta.json`）。Tampermonkey 等其它管理器里 `CAT` 全局根本不存在，
+ * 故所有调用都必须先过 `src/lib/agent/api.ts` 的探测，**绝不能直接摸 `CAT.agent`**。
+ *
+ * ── 本文件不做任何运行时副作用 ─────────────────────────────────────────────
+ * 只有类型 + 纯函数（内容压平 / 工具名去命名空间），可被 UI 复用。
+ */
+/** 把正文压成一行可显示文本（图片/文件/音频退化成占位标记） */
+function contentToText(content) {
+    if (typeof content === 'string')
+        return content;
+    if (!Array.isArray(content))
+        return '';
+    return content
+        .map((block) => {
+        if (!block || typeof block !== 'object')
+            return '';
+        switch (block.type) {
+            case 'text':
+                return typeof block.text === 'string' ? block.text : '';
+            case 'image':
+                return '[图片]';
+            case 'file':
+                return '[文件 ' + (typeof block.filename === 'string' ? block.filename : '') + ']';
+            case 'audio':
+                return '[音频]';
+            default:
+                return '';
+        }
+    })
+        .join('');
+}
+/**
+ * 把思考过程归一成字符串。
+ *
+ * ⚠️ 只有 `chat()` / 流式分片累加出来的是**字符串**；`getMessages()` 返回的历史消息里
+ * `thinking` 是**对象**（官方 `ThinkingBlock = { content: string }`，见 scriptcat
+ * `core/types.ts:94-96` 与 `tool_loop_orchestrator.ts:696` 的
+ * `thinking: result.thinking ? { content: result.thinking } : undefined`）。
+ * 直接把对象交给 React 渲染会抛
+ * `Objects are not valid as a React child (found: object with keys {content})`，
+ * 而面板没有错误边界 ⇒ 整棵面板树被卸载（v26.10.10-v11 之前线上真实踩到：
+ * 对话过后关弹窗再打开，主面板整个消失且不自愈）。
+ */
+function thinkingToText(thinking) {
+    if (typeof thinking === 'string')
+        return thinking;
+    if (thinking && typeof thinking === 'object' && typeof thinking.content === 'string')
+        return thinking.content;
+    return '';
+}
+/**
+ * 工具名既可能是裸名（`read_file`），也可能带服务端命名空间（`mcp__xxx__read_file`）。
+ * 面板上只显示最后一段，避免超长名把按钮撑破。
+ */
+function toolDisplayName(name) {
+    const raw = typeof name === 'string' ? name : '';
+    const parts = raw.split('__').filter((segment) => segment.length > 0);
+    return parts.length > 1 ? parts[parts.length - 1] : raw || '工具';
+}
+/** 四个子能力，用于逐项探测可用性（顺序即面板提示里的列出顺序） */
+const CAT_AGENT_PARTS = ['conversation', 'model', 'skills', 'task'];
+
+;// ./src/lib/agent/api.ts
+/**
+ * ScriptCat Agent 服务层：能力探测 + 四个子 API 的薄封装（v26.10.10-v10）。
+ *
+ * ── 为什么要有这一层，而不是让 UI 直接摸 `CAT.agent` ─────────────────────────
+ * ① `CAT` 全局**只在 ScriptCat 里存在**。本脚本同时支持 Tampermonkey（`@match` 含税务页与
+ *    example.com），在 TM 里访问 `CAT.agent` 是 ReferenceError —— 直接写就是「打开面板即崩」。
+ * ② 就算在 ScriptCat 里，四个子能力也是**逐项 `@grant`** 的：老版本 ScriptCat（< 1.4）、
+ *    或用户在管理页里拒绝某项授权，都会让单个子 API 缺失。故这里按能力逐个探测，
+ *    缺哪块只在对应页签里提示，不牵连其它功能。
+ * ③ 官方 API 的返回形状有 3 处文档与实现不一致（见 types.ts 的 `[与文档不符]`），
+ *    纠偏逻辑集中放在这里，UI 只面对规整后的数据。
+ *
+ * ── 探测时机与代价 ─────────────────────────────────────────────────────────
+ * `detectCatAgent()` 是**纯内存判空**（`typeof` + 逐层取属性），不发起任何异步调用，
+ * 因此可以放心在组件 render 期调用；真正的 `model.list()` / `conversation.create()`
+ * 等异步动作只在用户打开弹窗时才发生。
+ *
+ * ── ephemeral 之外的对话会落到 OPFS ───────────────────────────────────────
+ * 本脚本用的是**非 ephemeral** 对话（持久化、带内置工具），关掉弹窗再打开仍能接着聊；
+ * 「新建对话」走 `conversation.create()` 换新实例，不是 `clear()`。
+ * v26.10.10-v12 起多了「会话列表」：官方只开放 `create`/`get`，没有 list/delete，
+ * 列表由脚本自己记账（见 `lib/agent/sessions.ts`），`clear()` 只在「删除」时用来清消息。
+ */
+
+
+const MISSING_CAT_REASON = '当前脚本管理器没有 Agent 能力：需要 ScriptCat v1.4 及以上（Tampermonkey 等其它管理器不支持）。';
+/** 探测 `CAT.agent.*`。纯内存判空，可安全重复调用（不缓存，避免脚本管理器热重载后状态过期） */
+function detectCatAgent() {
+    const unavailable = (reason) => ({
+        api: null,
+        parts: { conversation: false, model: false, skills: false, task: false },
+        reason,
+    });
+    if (typeof CAT === 'undefined' || !CAT)
+        return unavailable(MISSING_CAT_REASON);
+    let agent;
+    try {
+        agent = CAT.agent;
+    }
+    catch {
+        // 极端情况下 getter 抛错（不该发生），当作不可用而不是让整个面板崩掉
+        return unavailable(MISSING_CAT_REASON);
+    }
+    if (!agent || typeof agent !== 'object') {
+        return unavailable('当前 ScriptCat 版本未提供 Agent 功能，请升级到 v1.4 及以上。');
+    }
+    const record = agent;
+    const parts = {};
+    const missing = [];
+    for (const part of CAT_AGENT_PARTS) {
+        const ok = !!record[part] && typeof record[part] === 'object';
+        parts[part] = ok;
+        if (!ok)
+            missing.push(part);
+    }
+    if (missing.length) {
+        return {
+            api: null,
+            parts,
+            reason: 'Agent 的「' +
+                missing.join(' / ') +
+                '」权限不可用：请在 ScriptCat 里重新安装脚本并允许对应授权（脚本需要 CAT.agent.conversation / model / skills / task 四项）。',
+        };
+    }
+    return { api: agent, parts, reason: '' };
+}
+/* ============================================================ 错误文案 */
+const ERROR_CODE_TEXT = {
+    rate_limit: '触发模型限流，请稍后重试。',
+    auth: '模型鉴权失败：请在 ScriptCat 设置里检查该模型的 API Key。',
+    tool_timeout: '工具执行超时。',
+    context_too_large: '对话上下文超出模型窗口，请新建对话或清空历史。',
+    api_error: '模型接口报错。',
+};
+/** 把任意抛出物压成一句话（供日志与界面共用） */
+function agentErrorMessage(error) {
+    if (error instanceof Error)
+        return error.message || error.name || '未知错误';
+    if (typeof error === 'string')
+        return error;
+    if (error && typeof error === 'object') {
+        const maybe = error;
+        if (typeof maybe.message === 'string' && maybe.message)
+            return maybe.message;
+        if (typeof maybe.error === 'string' && maybe.error)
+            return maybe.error;
+        try {
+            return JSON.stringify(error);
+        }
+        catch {
+            return '未知错误';
+        }
+    }
+    return String(error);
+}
+/** 按 errorCode 补充中文提示，界面统一走这个 */
+function describeAgentError(error, errorCode) {
+    const raw = agentErrorMessage(error);
+    const hint = errorCode ? ERROR_CODE_TEXT[errorCode] : '';
+    if (!hint)
+        return raw;
+    return raw && raw !== hint ? hint + '（' + raw + '）' : hint;
+}
+/* ============================================================ 模型 */
+function isModelSummary(value) {
+    if (!value || typeof value !== 'object')
+        return false;
+    const model = value;
+    return typeof model.id === 'string';
+}
+/** 列出可用模型；任何一步失败都返回空数组（界面显示「未配置模型」而不是报错弹窗） */
+async function listModels(api) {
+    try {
+        const list = await api.model.list();
+        return Array.isArray(list) ? list.filter(isModelSummary) : [];
+    }
+    catch (error) {
+        addLog('[Agent] 读取模型列表失败: ' + agentErrorMessage(error), 'warning');
+        return [];
+    }
+}
+/**
+ * 取默认模型 id。⚠️ `model.getDefault()` 的返回形状在官方 d.ts / 文档 / 实现之间不一致：
+ * 可能是字符串、ModelSummary、或 {modelId}/{id}/{name} 包装对象，故逐一判型后兜底。
+ */
+async function pickDefaultModelId(api) {
+    let value;
+    try {
+        value = await api.model.getDefault();
+    }
+    catch (error) {
+        addLog('[Agent] 读取默认模型失败: ' + agentErrorMessage(error), 'warning');
+        return '';
+    }
+    if (typeof value === 'string')
+        return value;
+    if (isModelSummary(value))
+        return value.id;
+    if (value && typeof value === 'object') {
+        const wrapper = value;
+        if (typeof wrapper.modelId === 'string')
+            return wrapper.modelId;
+        if (typeof wrapper.id === 'string')
+            return wrapper.id;
+        if (typeof wrapper.summary === 'string')
+            return wrapper.summary;
+        if (isModelSummary(wrapper.summary))
+            return wrapper.summary.id;
+    }
+    return '';
+}
+/* ============================================================ 对话 */
+/** 新建对话。system 用于交代脚本自身上下文；不传 model 时由 ScriptCat 用默认模型 */
+async function createConversation(api, options) {
+    return api.conversation.create(options);
+}
+/** 读取历史消息并统一成界面结构（跳过 system 消息：那是脚本自己注入的提示词） */
+async function readConversationMessages(conversation) {
+    const messages = await conversation.getMessages();
+    if (!Array.isArray(messages))
+        return [];
+    return messages.filter((message) => message && message.role !== 'system');
+}
+/**
+ * 按 id 接回已有对话（打开弹窗时恢复上次的会话、或切换会话）。
+ * 官方签名是「不存在返回 null」，这里把抛错也一并折成 null —— 界面按「已失效」提示，
+ * 不能因为一个取不到的 id 就把对话页签打挂。
+ */
+async function getConversation(api, id) {
+    if (!id)
+        return null;
+    try {
+        const conversation = await api.conversation.get(id);
+        return conversation || null;
+    }
+    catch (error) {
+        addLog('[Agent] 打开对话失败: ' + agentErrorMessage(error), 'warning');
+        return null;
+    }
+}
+/**
+ * 删对话时清空该对话的消息。
+ * ⚠️ 官方没有开放删除会话的接口（`deleteConversation` 只存在于内部 repo 层），
+ * `clear()` 的语义是「清空消息历史」（映射到 `{action:"clearMessages"}`），**不删会话记录**。
+ * 所以本脚本的「删除」= 这里清消息 + 从本地索引移除，ScriptCat 里会留一条空记录。
+ * 返回是否清空成功（没成功也照样从索引移除：对用户来说「看不见了」才算删掉）。
+ */
+async function clearConversation(conversation) {
+    try {
+        await conversation.clear();
+        return true;
+    }
+    catch (error) {
+        addLog('[Agent] 清空对话消息失败: ' + agentErrorMessage(error), 'warning');
+        return false;
+    }
+}
+/** 消费一次流式对话；`timeoutMs` 是**静默看门狗**（默认 2 分钟无任何分片即中止） */
+async function streamConversation(conversation, content, handlers = {}, timeoutMs = 120_000) {
+    const outcome = { content: '', thinking: '' };
+    const stream = await conversation.chatStream(content);
+    const iterator = stream[Symbol.asyncIterator]();
+    let timedOut = false;
+    try {
+        for (;;) {
+            let timer;
+            const guard = new Promise((resolve) => {
+                timer = setTimeout(() => resolve('timeout'), timeoutMs);
+            });
+            const next = await Promise.race([iterator.next(), guard]);
+            if (timer)
+                clearTimeout(timer);
+            if (next === 'timeout') {
+                timedOut = true;
+                break;
+            }
+            if (next.done)
+                break;
+            const chunk = next.value;
+            if (!chunk || typeof chunk !== 'object')
+                continue;
+            switch (chunk.type) {
+                case 'content_delta':
+                    if (chunk.content) {
+                        outcome.content += chunk.content;
+                        handlers.onContent?.(chunk.content);
+                    }
+                    break;
+                case 'thinking_delta':
+                    if (chunk.content) {
+                        outcome.thinking += chunk.content;
+                        handlers.onThinking?.(chunk.content);
+                    }
+                    break;
+                case 'tool_call':
+                case 'tool_call_complete':
+                    if (chunk.toolCall)
+                        handlers.onToolCall?.(chunk.toolCall);
+                    break;
+                case 'system_warning':
+                    if (chunk.warning)
+                        handlers.onWarning?.(chunk.warning);
+                    break;
+                case 'done':
+                    outcome.usage = chunk.usage;
+                    outcome.durationMs = chunk.durationMs;
+                    if (chunk.warning)
+                        handlers.onWarning?.(chunk.warning);
+                    break;
+                case 'error':
+                    outcome.error = describeAgentError(chunk.error || '模型返回错误', chunk.errorCode);
+                    outcome.errorCode = chunk.errorCode;
+                    outcome.usage = chunk.usage;
+                    break;
+                default:
+                    // content_block / new_message 等：本轮 UI 不做区分展示
+                    break;
+            }
+        }
+    }
+    finally {
+        // 正常 `done` 之后迭代器自己已断开连接；提前 break / 超时 / 抛错时必须显式 return()，
+        // 否则 SW 侧的 port 会一直挂着（官方 processStream 的注释专门写了这一点）
+        await iterator.return?.();
+    }
+    if (timedOut && !outcome.content && !outcome.error) {
+        outcome.error = '等待模型响应超过 ' + Math.round(timeoutMs / 1000) + ' 秒，已中止本次请求。';
+        outcome.errorCode = 'timeout';
+    }
+    return outcome;
+}
+/* ============================================================ 技能 */
+async function listSkills(api) {
+    const list = await api.skills.list();
+    return Array.isArray(list) ? list : [];
+}
+async function removeSkill(api, name) {
+    return api.skills.remove(name);
+}
+/* ============================================================ 定时任务 */
+async function listTasks(api) {
+    const list = await api.task.list();
+    return Array.isArray(list) ? list : [];
+}
+/** 任务动作的薄封装：把「哪个动作失败」写进日志，便于用户回看运行日志定位 */
+async function runTaskAction(api, action, run) {
+    try {
+        await run(api.task);
+        addLog('[Agent] 定时任务' + action + '成功', 'success');
+    }
+    catch (error) {
+        const message = agentErrorMessage(error);
+        addLog('[Agent] 定时任务' + action + '失败: ' + message, 'error');
+        throw error;
+    }
+}
+function buildTaskInput(draft) {
+    return {
+        name: draft.name.trim(),
+        crontab: draft.crontab.trim(),
+        prompt: draft.prompt.trim(),
+        mode: 'internal',
+        enabled: true,
+        notify: false,
+    };
+}
+/**
+ * 五字段 crontab 的**轻量**校验（分 时 日 月 周）。
+ * 只挡明显写错（字段数不对、出现非法字符），不做完整 cron 语义校验 ——
+ * 真正的合法性由 ScriptCat 的 TaskScheduler 判定，这里的作用是让用户尽早得到反馈。
+ */
+function validateCrontab(expression) {
+    const text = expression.trim();
+    if (!text)
+        return '请填写 crontab（五段：分 时 日 月 周）';
+    const fields = text.split(/\s+/);
+    if (fields.length !== 5)
+        return 'crontab 需要 5 段（分 时 日 月 周），当前 ' + fields.length + ' 段';
+    for (const field of fields) {
+        if (!/^[\d*,\-/]+$/.test(field))
+            return 'crontab 里有不支持的字符：' + field;
+    }
+    return '';
+}
+/** 判断某个已安装技能是否被 agent 对话自动加载（仅用于界面提示措辞） */
+function skillToolSummary(skill) {
+    const tools = Array.isArray(skill.toolNames) ? skill.toolNames : [];
+    if (!tools.length)
+        return '无工具';
+    const shown = tools.slice(0, 3).map(toolDisplayName).join('、');
+    return tools.length > 3 ? shown + ' 等 ' + tools.length + ' 个' : shown;
+}
+
 ;// ./src/lib/ui/agent/SkillsPanel.tsx
 
 
@@ -116139,7 +115604,7 @@ function TaskPanel({ api, version, onChange }) {
                                     (task.lastRunError ? '　错误：' + task.lastRunError : '') })] }) })) })) : ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_empty, { image: es_empty.PRESENTED_IMAGE_SIMPLE, description: (0,react_jsx_runtime_production_namespaceFn().jsx)("span", { style: { fontSize: 12 }, children: "\u8FD8\u6CA1\u6709\u5B9A\u65F6\u4EFB\u52A1\uFF0C\u7528\u4E0A\u9762\u7684\u8868\u5355\u5EFA\u4E00\u4E2A\u3002" }) })), (0,react_jsx_runtime_production_namespaceFn().jsx)(typography.Text, { type: "secondary", style: { fontSize: 11 }, children: (0,react_jsx_runtime_production_namespaceFn().jsx)("span", { style: { color: token.colorTextTertiary }, children: '任务由 ScriptCat 在后台按计划触发，关闭本弹窗或关掉网页也会照常执行。' }) })] }));
 }
 
-;// ./src/lib/ui/agent/AgentModal.tsx
+;// ./src/lib/ui/transfer/TransferAgentView.tsx
 
 
 
@@ -116149,28 +115614,2344 @@ function TaskPanel({ api, version, onChange }) {
 
 
 
-
-
-
-/** 面板宽度 238px 放不下的内容都进这个弹窗；v26.10.10-v13 起左侧多了会话栏，故 720 → 760 */
-const MODAL_WIDTH = 760;
-/** 消息区高度：弹窗固定高度，输入框永远留在视口内，不随消息变长而抖 */
-const MESSAGES_HEIGHT = 360;
-/** 侧栏会话栏宽度：够放「MM/DD HH:mm」与 30 字截断标题，又不至于把消息区压窄 */
-const SIDEBAR_WIDTH = 172;
+/** 消息区高度：窗口固定高度，输入框永远留在视口内，不随消息变长而抖 */
+const MESSAGES_HEIGHT = 300;
 /**
- * 会话卡片上的时间（NextChat 的列表也是这个位置）。
- * 只到分钟：脚本不用 moment/dayjs（零运行时依赖），手写两行足够。
+ * Agent 视图（v26.10.12-v1：原「Agent 助手」弹窗的对话区，搬进传输助手右侧主聊天区）。
+ *
+ * 三个页签（对话 / 技能 / 定时任务）与原弹窗一致；对话页签的输入框样式
+ * （无聚焦蓝框、高度稳定）是 v26.10.10-v13~v15 的实测结论，勿动。
  */
-function chatTimeText(timestamp) {
-    if (!timestamp)
-        return '';
-    const date = new Date(timestamp);
-    if (Number.isNaN(date.getTime()))
-        return '';
-    const pad = (value) => String(value).padStart(2, '0');
-    return (pad(date.getMonth() + 1) + '/' + pad(date.getDate()) + ' ' + pad(date.getHours()) + ':' + pad(date.getMinutes()));
+function TransferAgentView({ agent }) {
+    const { token } = es_theme.useToken();
+    const [tab, setTab] = (0,react_production_namespaceFn().useState)('chat');
+    /** 技能 / 任务面板的数据版本：卸载技能、增删任务后 +1 触发重拉（与原弹窗同一机制） */
+    const [skillsVersion, setSkillsVersion] = (0,react_production_namespaceFn().useState)(0);
+    const [tasksVersion, setTasksVersion] = (0,react_production_namespaceFn().useState)(0);
+    const scrollRef = (0,react_production_namespaceFn().useRef)(null);
+    // antd 的 Input.TextArea ref 不是原生 textarea，而是带 nativeElement 的 TextAreaRef（rc-textarea 约定）
+    const inputRef = (0,react_production_namespaceFn().useRef)(null);
+    /* ---------------------------------------------------------- 输入框自适应高度 */
+    (0,react_production_namespaceFn().useEffect)(() => {
+        const el = inputRef.current?.nativeElement;
+        if (!el)
+            return;
+        el.style.height = 'auto';
+        el.style.height = Math.min(el.scrollHeight, 96) + 'px';
+    }, [agent.input, tab]);
+    /* ---------------------------------------------------------- 消息区自动滚到底 */
+    (0,react_production_namespaceFn().useEffect)(() => {
+        const el = scrollRef.current;
+        if (!el)
+            return;
+        el.scrollTop = el.scrollHeight;
+    }, [agent.messages]);
+    const renderMessage = (message) => {
+        const isUser = message.role === 'user';
+        return ((0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { display: 'flex', justifyContent: isUser ? 'flex-end' : 'flex-start', marginBottom: 10 }, children: (0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: {
+                    maxWidth: '86%',
+                    padding: '8px 10px',
+                    borderRadius: 8,
+                    fontSize: 13,
+                    lineHeight: 1.6,
+                    wordBreak: 'break-word',
+                    background: isUser ? token.colorPrimaryBg : token.colorFillQuaternary,
+                    border: '1px solid ' + (isUser ? token.colorPrimaryBorder : token.colorBorderSecondary),
+                }, children: [!isUser && message.toolCalls?.length ? ((0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { marginBottom: 6, display: 'flex', flexWrap: 'wrap', gap: 4 }, children: message.toolCalls.map((toolCall, index) => ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_tooltip, { title: toolCall.arguments ? toolCall.arguments.slice(0, 300) : toolCall.name, children: (0,react_jsx_runtime_production_namespaceFn().jsxs)("span", { style: {
+                                    fontSize: 11,
+                                    padding: '1px 6px',
+                                    borderRadius: 9,
+                                    background: token.colorFillTertiary,
+                                    color: token.colorTextSecondary,
+                                }, children: [toolDisplayName(toolCall.name), toolCall.status === 'running' ? ' …' : ''] }) }, (toolCall.id || toolCall.name) + '-' + index))) })) : null, !isUser && message.thinking ? ((0,react_jsx_runtime_production_namespaceFn().jsxs)("details", { style: { marginBottom: 6 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("summary", { style: { cursor: 'pointer', fontSize: 12, color: token.colorTextTertiary }, children: "\u601D\u8003\u8FC7\u7A0B" }), (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { fontSize: 12, color: token.colorTextSecondary, marginTop: 4 }, children: message.thinking })] })) : null, message.content ? ((0,react_jsx_runtime_production_namespaceFn().jsx)(MarkdownBody, { content: message.content })) : message.pending ? ((0,react_jsx_runtime_production_namespaceFn().jsx)(typography.Text, { type: "secondary", style: { fontSize: 12 }, children: "\u6B63\u5728\u601D\u8003\u2026" })) : null, message.cancelled ? ((0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { fontSize: 12, color: token.colorTextTertiary, marginTop: 4 }, children: "\uFF08\u5DF2\u4E2D\u6B62\uFF09" })) : null, message.error ? ((0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { fontSize: 12, color: token.colorError, marginTop: 6 }, children: message.error })) : null] }) }, message.key));
+    };
+    const renderChat = () => {
+        if (!agent.api) {
+            return ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_alert, { type: "warning", showIcon: true, icon: (0,react_jsx_runtime_production_namespaceFn().jsx)(BotIcon, { size: 16 }), message: "Agent \u529F\u80FD\u4E0D\u53EF\u7528", description: agent.availability.reason }));
+        }
+        return ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', flexDirection: 'column', gap: 8, minHeight: 0, flex: '1 1 auto' }, children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', alignItems: 'baseline', gap: 8 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(typography.Text, { strong: true, style: { fontSize: 14 }, children: agent.activeChatId ? agentChatLabel(agent.chats, agent.activeChatId) : '新的聊天' }), (0,react_jsx_runtime_production_namespaceFn().jsxs)(typography.Text, { type: "secondary", style: { fontSize: 11 }, children: ["\u5171 ", agent.chats.length, " \u6761\u5BF9\u8BDD"] })] }), agent.models.length ? null : ((0,react_jsx_runtime_production_namespaceFn().jsx)(typography.Text, { type: "secondary", style: { fontSize: 12 }, children: "\u8FD8\u6CA1\u6709\u5728 ScriptCat \u91CC\u914D\u7F6E\u6A21\u578B\uFF1A\u8BF7\u6253\u5F00 ScriptCat \u7684 Agent \u8BBE\u7F6E\u6DFB\u52A0\u4E00\u4E2A\u6A21\u578B\uFF08\u652F\u6301 OpenAI \u517C\u5BB9 / Anthropic / \u667A\u8C31\uFF09\uFF0C\u4E4B\u540E\u8FD9\u91CC\u4F1A\u5217\u51FA\u53EF\u9009\u6A21\u578B\u3002" })), agent.fatalError ? (0,react_jsx_runtime_production_namespaceFn().jsx)(es_alert, { type: "error", showIcon: true, message: agent.fatalError }) : null, (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { ref: scrollRef, className: "znhd-agent-messages", style: {
+                        height: MESSAGES_HEIGHT,
+                        overflowY: 'auto',
+                        overflowX: 'hidden',
+                        padding: '8px 4px',
+                        border: '1px solid ' + token.colorBorderSecondary,
+                        borderRadius: 6,
+                        background: token.colorBgContainer,
+                    }, children: agent.messages.length ? (agent.messages.map(renderMessage)) : ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_empty, { image: es_empty.PRESENTED_IMAGE_SIMPLE, description: (0,react_jsx_runtime_production_namespaceFn().jsx)("span", { style: { fontSize: 12 }, children: "\u76F4\u63A5\u63D0\u95EE\u5373\u53EF\u3002\u53EF\u4EE5\u8BD5\u8BD5\u300C\u5E2E\u6211\u603B\u7ED3\u8FD9\u4E2A\u9875\u9762\u80FD\u505A\u4EC0\u4E48\u300D\u300C\u5F81\u7EB3\u4E92\u52A8\u6389\u7EBF\u63D0\u9192\u6CA1\u58F0\u97F3\u600E\u4E48\u529E\u300D" }) })) }), (0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: {
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 2,
+                        padding: '6px 8px 4px',
+                        border: '1px solid ' + token.colorBorderSecondary,
+                        borderRadius: 8,
+                        background: token.colorBgContainer,
+                    }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(es_input.TextArea, { ref: inputRef, value: agent.input, onChange: (event) => agent.setInput(event.target.value), onPressEnter: (event) => {
+                                if (event.shiftKey)
+                                    return;
+                                event.preventDefault();
+                                void agent.send();
+                            }, placeholder: "\u8F93\u5165\u95EE\u9898\uFF0CEnter \u53D1\u9001\uFF0CShift+Enter \u6362\u884C", 
+                            // minRows 从 1 改成 2：rc-textarea 在挂载时按 minRows 算高度（1 行 ≈ 20px），
+                            // 而一旦输入过内容，它就按「行数 × 行高 + padding」重算（1 行文本实测 41px）——
+                            // 于是「打一个字再全删掉」会把输入框永久留在 41px，与刚打开时的 20px 不一致
+                            // （用户报告的「高度会变」）。minRows: 2 让初始态就等于打过字的高度。
+                            autoSize: { minRows: 2, maxRows: 4 }, disabled: !agent.api, variant: "borderless", 
+                            // antd v6 的 borderless 变体在 :focus-visible 时会给文本域**自己**画一层
+                            // outline 聚焦框（node_modules/antd/es/input/style/variants.js 的
+                            // genBorderlessFocusVisibleStyle），看上去就像输入框外围多了一圈蓝框。
+                            // 这里显式关掉 outline 与 boxShadow（内联样式优先级高于 antd 的类规则）。
+                            // 要恢复聚焦提示的话请改外层容器的边框，别打开这里。
+                            style: {
+                                resize: 'none',
+                                padding: 0,
+                                fontSize: 13,
+                                // 显式钉住行高：rc-textarea 的 autoSize 靠「把计算样式复制到隐藏测量
+                                // textarea」算高度，挂载那一刻 antd 的样式还没注入完，行高按 20px 算
+                                // （2 行 = 40px），输入过一次之后再量就是 20.5px（2 行 = 41px），
+                                // 于是「打一个字再删掉」会永久差 1px。钉死行高后两条路径算出来完全一致。
+                                lineHeight: '20px',
+                                outline: 'none',
+                                boxShadow: 'none',
+                            } }), (0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', alignItems: 'center', gap: 8 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(typography.Text, { type: "secondary", style: { fontSize: 11, flex: '1 1 auto', minWidth: 0 }, ellipsis: true, children: "Enter \u53D1\u9001\uFF0CShift + Enter \u6362\u884C" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_select, { size: "small", variant: "borderless", style: { maxWidth: 190 }, value: agent.modelId || undefined, placeholder: agent.models.length ? '选择模型' : '未配置模型', disabled: agent.streaming, options: agent.models.map((model) => ({
+                                        value: model.id,
+                                        label: model.name + '（' + model.provider + '）',
+                                    })), onChange: (value) => agent.setModelId(value) }), agent.streaming ? ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_tooltip, { title: "\u4E2D\u6B62\u672C\u8F6E\u56DE\u7B54", children: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { shape: "circle", size: "small", danger: true, "aria-label": "\u4E2D\u6B62", icon: (0,react_jsx_runtime_production_namespaceFn().jsx)(StopIcon, { size: 12 }), onClick: agent.stopStreaming }) })) : ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_tooltip, { title: "\u53D1\u9001\uFF08Enter\uFF09", children: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { shape: "circle", size: "small", type: "primary", "aria-label": "\u53D1\u9001", icon: (0,react_jsx_runtime_production_namespaceFn().jsx)(SendIcon, { size: 14 }), onClick: () => void agent.send(), disabled: !agent.input.trim() }) }))] })] })] }));
+    };
+    const tabs = [
+        { key: 'chat', label: '对话' },
+        { key: 'skills', label: '技能' },
+        { key: 'tasks', label: '定时任务' },
+    ];
+    return ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', flexDirection: 'column', minHeight: 0, flex: '1 1 auto' }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { display: 'flex', gap: 4, borderBottom: '1px solid ' + token.colorBorderSecondary }, children: tabs.map((item) => ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { type: "text", size: "small", onClick: () => setTab(item.key), style: {
+                        padding: '4px 10px',
+                        fontSize: 13,
+                        borderBottom: '2px solid ' + (tab === item.key ? token.colorPrimary : 'transparent'),
+                        borderRadius: 0,
+                    }, children: item.label }, item.key))) }), (0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { paddingTop: 10, flex: '1 1 auto', minHeight: 0, display: 'flex', flexDirection: 'column' }, children: [tab === 'chat' ? renderChat() : null, tab === 'skills' ? (agent.api ? ((0,react_jsx_runtime_production_namespaceFn().jsx)(SkillsPanel, { api: agent.api, version: skillsVersion, onChange: () => setSkillsVersion((value) => value + 1) })) : ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_alert, { type: "warning", showIcon: true, message: "\u6280\u80FD\u4E0D\u53EF\u7528", description: agent.availability.reason }))) : null, tab === 'tasks' ? (agent.api ? ((0,react_jsx_runtime_production_namespaceFn().jsx)(TaskPanel, { api: agent.api, version: tasksVersion, onChange: () => setTasksVersion((value) => value + 1) })) : ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_alert, { type: "warning", showIcon: true, message: "\u5B9A\u65F6\u4EFB\u52A1\u4E0D\u53EF\u7528", description: agent.availability.reason }))) : null] })] }));
 }
+
+;// ./shared/image/compress.ts
+/**
+ * 图片压缩核心 —— 脚本端与手机上传页**共用一份**（v26.10.08-v13 起）。
+ *
+ * 为什么抽出来：两端原本各有一份**几乎逐行等价**的 canvas 压缩实现，连参数（最大边 1600 / JPEG 0.75）
+ * 也是两份、靠注释「与另一端保持一致」人肉同步 —— 结果已经漂移：脚本端跳过 GIF（canvas 只取首帧，
+ * 会把动图压成静态图），手机端没跳过，同一张动图两端行为不同。抽成一份后，参数、解码兜底、
+ * 「为什么要跳过」这些理由只有一处，两端差异改用**显式选项**表达（见 `prepare.ts`）。
+ *
+ * ⚠️ **共享层的硬约束**（改这个文件前务必先读 `AGENT.md` 的「共享层」小节）：
+ *   · 禁止 import 任何宿主相关模块（`GM_*` / `@/lib/logger` / `panelHost` / `react-to-print` …）：
+ *     手机端 tsconfig 是 `types: ["vite/client"]`，出现 `GM_xmlhttpRequest` 这类全局会直接 typecheck 失败；
+ *   · 手机端开着 `isolatedModules` + `noUnusedLocals` + `noUnusedParameters`，`target` 为 **es2020**
+ *     ⇒ 共享代码必须按**最严的那一套**写（类型再导出用 `export type`、不留未使用变量、不超出 ES2020）；
+ *   · 手机端没装 `@ant-design/icons`、`react-to-print`（未声明）⇒ 只有两端都有的依赖才能 import。
+ */
+/** 「发送到手机 / 上传到电脑」的压缩参数：两端共用同一组默认值 */
+const DEFAULT_MAX_DIM = 1600;
+const DEFAULT_QUALITY = 0.75;
+/** HEIC/HEIF 判定：MIME 可能为空串或 application/octet-stream，故扩展名也算 */
+function isHeicLike(lowerMime, lowerName) {
+    return (lowerMime === 'image/heic' ||
+        lowerMime === 'image/heif' ||
+        lowerMime === 'image/heic-sequence' ||
+        lowerMime === 'image/heif-sequence' ||
+        /\.(heic|heif)$/.test(lowerName));
+}
+/** SVG 判定：canvas 无法可靠光栅化，且会丢矢量 ⇒ 一律原样直传 */
+function isSvgLike(lowerMime, lowerName) {
+    return lowerMime === 'image/svg+xml' || /\.svg$/.test(lowerName);
+}
+/** GIF 判定：canvas 只取首帧，会把动图压成静态图 ⇒ 默认也原样直传 */
+function isGifLike(lowerMime, lowerName) {
+    return lowerMime === 'image/gif' || /\.gif$/.test(lowerName);
+}
+/**
+ * 解码：`createImageBitmap` 优先，失败回退 `<img>`（部分内核/格式上前者不可用或直接抛）。
+ * 失败时 reject，由调用方决定回退策略。
+ */
+function decodeToCanvasSource(blob) {
+    const decodeViaImg = () => new Promise((resolve, reject) => {
+        const url = URL.createObjectURL(blob);
+        const img = new Image();
+        img.onload = () => resolve({
+            source: img,
+            width: img.naturalWidth,
+            height: img.naturalHeight,
+            release: () => URL.revokeObjectURL(url),
+        });
+        img.onerror = () => {
+            URL.revokeObjectURL(url);
+            reject(new Error('图片解析失败'));
+        };
+        img.src = url;
+    });
+    if (typeof createImageBitmap !== 'function')
+        return decodeViaImg();
+    return createImageBitmap(blob)
+        .then((bmp) => ({
+        source: bmp,
+        width: bmp.width,
+        height: bmp.height,
+        release: () => {
+            if (bmp.close)
+                bmp.close();
+        },
+    }))
+        .catch(() => decodeViaImg());
+}
+/**
+ * canvas 等比缩放到最大边 → 铺白底 → 导出 JPEG。
+ *
+ * JPEG 无透明通道，**必须先铺白底**，否则透明 PNG 会被压成黑底。
+ * 解码/编码失败一律 resolve(null)（不 reject）：两端调用方都按「失败就原样直传」处理，绝不阻断传输。
+ */
+async function resizeToJpeg(blob, opt = {}) {
+    const maxDim = opt.maxDim && opt.maxDim > 0 ? opt.maxDim : DEFAULT_MAX_DIM;
+    const quality = typeof opt.quality === 'number' ? opt.quality : DEFAULT_QUALITY;
+    let dec = null;
+    try {
+        dec = await decodeToCanvasSource(blob);
+        const w = Number(dec.width) || 0;
+        const h = Number(dec.height) || 0;
+        if (!w || !h)
+            return null;
+        const scale = Math.min(1, maxDim / Math.max(w, h));
+        const cw = Math.max(1, Math.round(w * scale));
+        const ch = Math.max(1, Math.round(h * scale));
+        const cv = document.createElement('canvas');
+        cv.width = cw;
+        cv.height = ch;
+        const ctx = cv.getContext('2d');
+        if (!ctx)
+            return null;
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(0, 0, cw, ch);
+        ctx.drawImage(dec.source, 0, 0, cw, ch);
+        return await new Promise((resolve) => {
+            cv.toBlob((b) => resolve(b || null), 'image/jpeg', quality);
+        });
+    }
+    catch {
+        return null;
+    }
+    finally {
+        // createImageBitmap 的位图要显式 close，否则大图会短暂占住内存
+        if (dec)
+            dec.release();
+    }
+}
+/**
+ * 把「注入进来的 heic2any」包成统一形态的转码器。
+ * 两端获取库的方式天生不同（脚本端用 `@require` 的全局，手机页按需注入 `<script>`），故只共享调用方式。
+ */
+function makeHeicConverter(heic2any, quality = 0.9) {
+    return (blob) => {
+        if (typeof heic2any !== 'function')
+            return Promise.reject(new Error('heic2any 未加载'));
+        return Promise.resolve(heic2any({
+            blob,
+            toType: 'image/jpeg',
+            quality,
+        })).then((out) => {
+            // 多图 HEIC 会返回数组，取首帧
+            const b = Array.isArray(out) ? out[0] : out;
+            if (b)
+                return b;
+            throw new Error('heic2any 未产出图片');
+        });
+    };
+}
+
+;// ./shared/image/prepare.ts
+/**
+ * 「把用户选的图片处理成可直接传输的载荷」—— 脚本端与手机上传页**共用一份**（v26.10.08-v13 起）。
+ *
+ * 统一后的行为（两端差异全部变成显式选项）：
+ *   · SVG 原样直传（canvas 无法可靠光栅化，会丢矢量）；
+ *   · **GIF 也原样直传**（canvas 只取首帧，会把动图压成静态图）—— 原先只有脚本端这么做，
+ *     手机端会压成静态图；这次统一为「跳过」，顺手修掉两端行为不一致；
+ *   · HEIC/HEIF 先转 JPEG 再走同一条压缩链（**转码器由调用方注入**：两端取库方式不同）；
+ *     ⚠️ HEIC 的「转码」本身就是目的（既压体积，也修掉安卓端不显示 HEIC 的兼容问题），
+ *     故即使 JPEG 没比原始 HEIC 小也照样发 JPEG；其它格式仍遵循「压不小就不压」；
+ *   · 任何失败都回退原图直传，绝不阻断传输。
+ */
+
+/**
+ * 把用户选的图片处理成可直接传输的载荷。
+ * 与历史行为逐条对齐（含「压完反而更大就不压」的兜底），失败一律原样直传。
+ */
+async function prepareForTransfer(file, opt = {}) {
+    const name = String(file && file.name ? file.name : 'image.jpg');
+    const mime = String((file && file.type) || 'image/jpeg');
+    const original = { blob: file, name, mime, compressed: false };
+    const lowerName = name.toLowerCase();
+    const lowerMime = mime.toLowerCase();
+    if ((opt.skipSvg === undefined ? true : opt.skipSvg) && isSvgLike(lowerMime, lowerName))
+        return original;
+    if ((opt.skipGif === undefined ? true : opt.skipGif) && isGifLike(lowerMime, lowerName))
+        return original;
+    const heic = isHeicLike(lowerMime, lowerName);
+    let source = file;
+    if (heic) {
+        if (!opt.loadHeic)
+            return original; // 库不可用：原图直传，交由接收端处理
+        try {
+            const jpg = await opt.loadHeic(file);
+            if (!jpg)
+                return original;
+            source = jpg;
+        }
+        catch {
+            return original; // 转码失败：原样直传
+        }
+    }
+    const out = await resizeToJpeg(source, {
+        maxDim: opt.maxDim === undefined ? (/* inlined export .DEFAULT_MAX_DIM */1600) : opt.maxDim,
+        quality: opt.quality === undefined ? (/* inlined export .DEFAULT_QUALITY */0.75) : opt.quality,
+    });
+    if (!out)
+        return original; // 解码/编码失败
+    if (!heic && out.size >= (file.size || 0))
+        return original; // 非 HEIC 且压不小 ⇒ 原样发
+    return {
+        blob: out,
+        name: name.replace(/\.[a-z0-9]+$/i, '') + '.jpg',
+        mime: 'image/jpeg',
+        compressed: true,
+    };
+}
+
+;// ./src/lib/relay.ts
+
+// 图片压缩：与手机上传页共用同一份实现（v26.10.08-v13 起），路径见仓库根 shared/
+
+
+/**
+ * 设备互联中继客户端（手机 → 电脑）与图片剪贴板工具。
+ * 模块化 P4：逐字迁移，仅加 export（内部使用的不导出）。
+ * 说明：长轮询而非 WebSocket 是为了绕过税务页 CSP 对 connect-src 的限制。
+ */
+// ========== 手机图片 → 电脑剪贴板 ==========
+// 每台电脑/每个脚本安装实例一个稳定 deviceId（持久化，刷新不变），
+// 拼出上传链接 <relayServer>/u/<deviceId>；手机打开该链接上传，电脑端长轮询取走。
+const DEVICE_ID_KEY = 'znhd_device_id';
+// 单请求体上限，须与 relay-server 的 MAX_BODY 保持一致（服务端按「整段 JSON 体积」掐断）。
+// 发图前据此预检体积，避免 base64 膨胀后超过上限，被服务端拒绝时只见笼统的网络/服务器错误。
+const RELAY_MAX_BODY = 12 * 1024 * 1024;
+/**
+ * 估算把该文件作为一条 POST body（含 name+mime+base64(data) 与 JSON 结构开销）的体积。
+ * 仅用于「发送到手机」发前预检，与服务端 MAX_BODY 对齐（约 12MB）。
+ * @param {File|Blob} file - 待发图片文件
+ * @param {string} [name] - 文件名
+ * @param {string} [mime] - MIME 类型
+ * @returns {number} 估算的 body 字节数
+ */
+function imagePayloadBytes(file, name, mime) {
+    const b64Len = Math.ceil(((file && file.size) || 0) / 3) * 4; // base64 膨胀 ≈ 4/3
+    // name/mime 按 UTF-8 字节数计（服务端 readBody 按字节累加；String.length 是 UTF-16 码元，
+    // 中文文件名会低估约 3 倍，接近上限时预检可能误放行）
+    const enc = typeof TextEncoder === 'function' ? new TextEncoder() : null;
+    const byteLen = enc
+        ? enc.encode(String(name || '') + String(mime || '')).length
+        : (String(name || '') + String(mime || '')).length;
+    return b64Len + byteLen + 120;
+}
+/** 「发送到手机」压缩参数：与手机上传页共用同一份实现与默认值（见 shared/image/compress.ts） */
+const PHONE_MAX_DIM = (/* inlined export .DEFAULT_MAX_DIM */1600);
+const PHONE_JPEG_QUALITY = (/* inlined export .DEFAULT_QUALITY */0.75);
+/**
+ * 「电脑端 → 手机端」发送前的图片压缩。
+ *
+ * v26.10.08-v13 起**实现搬进共享层** `shared/image/prepare.ts`（与手机上传页同一份）。
+ * 规则（SVG/GIF 原样直传、HEIC 先转码、压不小就不压、任何失败都回退原图）全部在那边，
+ * 这里只剩脚本端**特有的一步**：把「HEIC 取库方式」注入进去 ——
+ * 脚本端用的是 `@require` 进来的全局 `heic2any`，手机页是运行期按需注入 `<script>`。
+ *
+ * @param {File|Blob} file - 用户选择的原始图片文件
+ * @returns {Promise<PhoneImagePayload>} 实际要发送的内容
+ */
+function compressImageForPhone(file) {
+    return prepareForTransfer(file, {
+        maxDim: PHONE_MAX_DIM,
+        quality: PHONE_JPEG_QUALITY,
+        loadHeic: (blob) => makeHeicConverter(typeof heic2any === 'function' ? heic2any : null)(blob),
+    });
+}
+/**
+ * 取得本机稳定设备 ID：首次运行用 crypto.randomUUID() 生成并持久化（GM_setValue），
+ * 之后刷新/重开都读同一值。用于区分不同电脑（A、B 各自不同链接）。
+ * @returns {string} 设备 UUID 字符串
+ */
+function getDeviceId() {
+    let id = '';
+    try {
+        id = typeof GM_getValue === 'function' ? GM_getValue(DEVICE_ID_KEY, '') || '' : '';
+    }
+    catch (e) {
+        id = '';
+    }
+    if (!id) {
+        try {
+            id =
+                window.crypto && crypto.randomUUID
+                    ? crypto.randomUUID()
+                    : 'd' + Date.now().toString(16) + Math.random().toString(16).slice(2);
+        }
+        catch (e) {
+            id = 'd' + Date.now().toString(16) + Math.random().toString(16).slice(2);
+        }
+        try {
+            if (typeof GM_setValue === 'function')
+                GM_setValue(DEVICE_ID_KEY, id);
+        }
+        catch (e) {
+            /* 忽略 */
+        }
+    }
+    return id;
+}
+/**
+ * 将 base64 字符串还原为 Blob（用于把中继返回的图片字节写剪贴板）。
+ * @param {string} b64 - base64 文本
+ * @param {string} mime - MIME 类型
+ * @returns {Blob} 图片 Blob
+ */
+function base64ToBlob(b64, mime) {
+    const bin = atob(b64);
+    const len = bin.length;
+    const arr = new Uint8Array(len);
+    for (let i = 0; i < len; i++)
+        arr[i] = bin.charCodeAt(i);
+    return new Blob([arr], { type: mime || 'image/jpeg' });
+}
+/**
+ * 将图片 Blob 转成 PNG Blob（best-effort）。
+ * 原因：异步 Clipboard API（navigator.clipboard.write + ClipboardItem）在部分
+ * Chromium 内核里只可靠支持 image/png；手机传来的图多为 image/jpeg，
+ * 直接以 image/jpeg 写入可能失败。统一转 PNG 可规避该限制。
+ * 若环境不支持位图解码 / Canvas，则返回原 blob。
+ * @param {Blob} blob
+ * @returns {Promise<Blob>}
+ */
+function blobToPng(blob) {
+    return new Promise((resolve) => {
+        if (typeof createImageBitmap !== 'function' || typeof document === 'undefined') {
+            resolve(blob);
+            return;
+        }
+        try {
+            createImageBitmap(blob)
+                .then((bmp) => {
+                const cv = document.createElement('canvas');
+                cv.width = bmp.width;
+                cv.height = bmp.height;
+                const ctx = cv.getContext('2d');
+                if (!ctx) {
+                    if (bmp.close)
+                        bmp.close();
+                    resolve(blob);
+                    return;
+                }
+                ctx.drawImage(bmp, 0, 0);
+                if (bmp.close)
+                    bmp.close();
+                cv.toBlob((b) => {
+                    resolve(b || blob);
+                }, 'image/png');
+            })
+                .catch(() => resolve(blob));
+        }
+        catch (e) {
+            resolve(blob);
+        }
+    });
+}
+/** 统一取可读的异常文本 */
+function errTextOf(e) {
+    const err = e;
+    return err && err.name ? err.name + ': ' + err.message : String((err && err.message) || e);
+}
+/**
+ * 用目标 realm 的原生 Blob 构造器重新包一层。
+ * 跨 realm 直接把「隔离世界的 Blob」交给「页面主世界的 ClipboardItem」可能被拒绝；
+ * 参考实现 qsniyg/maxurl 同样是用页面原生 `native_blob` 构造后再传入 ClipboardItem。
+ */
+function toRealmBlob(blob, BlobCtor) {
+    const type = blob && blob.type ? blob.type : 'image/png';
+    try {
+        return BlobCtor ? new BlobCtor([blob], { type: type }) : blob;
+    }
+    catch (e) {
+        return blob;
+    }
+}
+/**
+ * 在指定 realm 里写**一次**剪贴板（只写 image/png）。
+ *
+ * ⚠️ 为什么只写一次：`clipboard.write()` 通过用户手势校验后就会**消耗**这次手势，失败也不退还。
+ * 所以任何「先拿原图试一下、失败再重试」的兜底都会把手势烧掉，让后面的重试必然 NotAllowedError。
+ * preferPromiseForm=true 时使用 ClipboardItem 的 Promise 形式：write() 在本次点击手势内**同步发起**，
+ * 由浏览器去等异步转换结果 —— 转换耗时（实测约 1s）不再影响手势有效性。
+ * @param {ClipboardRealm} realm - 写入目标
+ * @param {Promise<any>} pngPromise - 解析为 PNG Blob 的 Promise
+ * @param {boolean} preferPromiseForm - 是否优先用 Promise 形式的 ClipboardItem
+ * @returns {Promise<boolean>} 写入是否成功
+ */
+function writeClipboardOnce(realm, pngPromise, preferPromiseForm) {
+    return new Promise((resolve) => {
+        const doWrite = (item) => {
+            try {
+                realm.nav.clipboard.write([item]).then(() => resolve(true), (e) => {
+                    addLog('[复制] 写入剪贴板被拒（' + realm.name + '）: ' + errTextOf(e), 'warning', true);
+                    resolve(false);
+                });
+            }
+            catch (e) {
+                addLog('[复制] 调用 clipboard.write 异常（' + realm.name + '）: ' + errTextOf(e), 'error', true);
+                resolve(false);
+            }
+        };
+        if (preferPromiseForm) {
+            try {
+                doWrite(new realm.CI({ 'image/png': pngPromise }));
+                return;
+            }
+            catch (e) {
+                addLog('[复制] ClipboardItem 不支持 Promise 形式，改为先转换再写入: ' + errTextOf(e), 'warning', true);
+            }
+        }
+        pngPromise.then((png) => {
+            try {
+                doWrite(new realm.CI({ 'image/png': toRealmBlob(png, realm.BlobCtor) }));
+            }
+            catch (e) {
+                addLog('[复制] 构造 ClipboardItem 失败（' + realm.name + '）: ' + errTextOf(e), 'error', true);
+                resolve(false);
+            }
+        });
+    });
+}
+/**
+ * 将图片 Blob 写入系统剪贴板（必须由一次「用户点击」触发）。
+ *
+ * ⚠️ 2026-10-06 重写。旧实现「先按原图类型写一次 → 失败后再转 PNG 重试」是**注定失败**的写法：
+ *   1) Chromium 的异步剪贴板**只支持写 `image/png`**（实测 `ClipboardItem.supports('image/jpeg') === false`），
+ *      而手机传来的图多为 jpeg ⇒ 第一次写入必然失败；
+ *   2) 按规范，`clipboard.write()` 通过手势校验后即**消耗**该手势（失败也不退还）
+ *      ⇒ 转 PNG 后的第二次重试必然 `NotAllowedError: Write permission denied`，用户只看到「复制失败」；
+ *   3) 正确顺序：**先转好 PNG，再只写一次**。
+ *
+ * 参考实现：qsniyg/maxurl（只调用一次 write + 用页面原生 Blob 构造 ClipboardItem + 显式异常分支）。
+ * 本脚本不需要它们「跨域图片经 GM_xmlhttpRequest 取二进制」那一段 —— 图片本来就是中继传进来的 Blob。
+ * @param {Blob} blob - 图片 Blob
+ * @returns {Promise<boolean>} 成功返回 true，失败返回 false（失败原因写入日志）
+ */
+function copyImageToClipboard(blob) {
+    return new Promise((resolve) => {
+        if (!blob) {
+            addLog('[复制] 图片数据为空', 'error', true);
+            resolve(false);
+            return;
+        }
+        const pageWin = typeof unsafeWindow !== 'undefined' ? unsafeWindow : null;
+        const realms = [];
+        // 页面主世界优先：ScriptCat 隔离世界里的 ClipboardItem / 写入常不可用
+        if (pageWin &&
+            pageWin.navigator &&
+            pageWin.navigator.clipboard &&
+            // 用 typeof 判断而非直接取真值：写方法在类型上恒有定义，真值判断会被 TS 判为恒真
+            typeof pageWin.navigator.clipboard.write === 'function' &&
+            pageWin.ClipboardItem) {
+            realms.push({
+                name: '页面主世界',
+                nav: pageWin.navigator,
+                CI: pageWin.ClipboardItem,
+                BlobCtor: pageWin.Blob,
+                isPageRealm: true,
+            });
+        }
+        if (navigator.clipboard &&
+            typeof navigator.clipboard.write === 'function' &&
+            typeof ClipboardItem !== 'undefined') {
+            realms.push({ name: '隔离世界', nav: navigator, CI: ClipboardItem, BlobCtor: Blob, isPageRealm: false });
+        }
+        if (!realms.length) {
+            addLog('[复制] 当前环境不支持图片剪贴板（缺 clipboard.write 或 ClipboardItem）', 'error', true);
+            resolve(false);
+            return;
+        }
+        // 先启动 PNG 转换（不阻塞手势）：Chromium 只认 image/png
+        const pngPromise = (blob.type === 'image/png' ? Promise.resolve(blob) : blobToPng(blob)).then((b) => {
+            if (b && b.type !== 'image/png') {
+                // blobToPng 转换失败时会原样返回原图；此处只提示，成败仍交给写入阶段判定
+                addLog('[复制] 图片转 PNG 失败（内核不支持位图解码/Canvas），可能无法写入剪贴板', 'warning', true);
+            }
+            return b;
+        });
+        (async () => {
+            for (const realm of realms) {
+                // 主世界优先用 Promise 形式（write 落在手势内）；隔离世界退化为「先转换、后写入」
+                const ok = await writeClipboardOnce(realm, pngPromise, realm.isPageRealm);
+                if (ok) {
+                    addLog('[复制] 图片已复制到剪贴板（' + realm.name + '）', 'success', true);
+                    resolve(true);
+                    return;
+                }
+            }
+            addLog('[复制] 图片写入剪贴板失败：常见原因是浏览器/油猴未授予剪贴板权限、页面未获得焦点，或该内核不支持图片剪贴板；可长按图片手动保存', 'error', true);
+            resolve(false);
+        })();
+    });
+}
+/**
+ * 启动「设备互联」长轮询接收循环（直到 stop() 调用）。
+ * 通过 GM_xmlhttpRequest 轮询中继服务器 /recv/<uuid>（绕过税务页面 CSP 对 connect-src 的限制）。
+ * 收到图片时回调 onImage；状态变化回调 onStatus；网络异常自动重连。
+ * @param {PhoneReceiveOptions} opt - { server, uuid, onStatus, onImage, onText, onConnected }
+ * @returns {Function} stop() 停止接收
+ */
+function startPhoneReceive(opt) {
+    const server = (opt.server || '').trim().replace(/\/+$/, '');
+    const uuid = opt.uuid;
+    let stopped = false;
+    let lastXhr = null;
+    let connected = false;
+    let loggedConnFail = false;
+    let firstPoll = true;
+    function markConnected() {
+        if (connected)
+            return;
+        connected = true;
+        loggedConnFail = false; // 恢复连接后复位失败标记，后续再次断线仍会记日志（旧实现不复位，之后断连静默）
+        if (opt.onConnected) {
+            try {
+                opt.onConnected();
+            }
+            catch (e) {
+                /* 忽略 */
+            }
+        }
+    }
+    // 说明：不单独探测 /health。旧版中继可能没有该端点，会导致请求挂起并误报
+    // 「连接服务器超时」，而真正的 /recv 接收始终正常（与用户报告的现象一致）。
+    // 改用「首次 /recv 轮询用极短 maxwait」来快速确认已连上：服务器会很快返回空响应，
+    // 从而 markConnected → onConnected 触发「已自动开始接收」日志（约 1 秒内）。
+    function poll() {
+        if (stopped)
+            return;
+        if (opt.onStatus)
+            opt.onStatus('正在等待手机上传…');
+        // 首次轮询用极短 maxwait 仅用于快速确认「已连上服务器」（服务器会很快返回空），
+        // 让「已自动开始接收」日志尽快出现；后续轮询用长 maxwait 实时等待图片。
+        const maxwait = firstPoll ? 1000 : 25000;
+        firstPoll = false;
+        const url = server + '/recv/' + encodeURIComponent(uuid) + '?maxwait=' + maxwait;
+        try {
+            lastXhr = GM_xmlhttpRequest({
+                method: 'GET',
+                url: url,
+                timeout: maxwait + 5000,
+                onload: function (resp) {
+                    if (stopped)
+                        return;
+                    markConnected(); // 首次成功收到服务器响应即视为已连上
+                    try {
+                        let data = null;
+                        try {
+                            data = JSON.parse(resp.responseText);
+                        }
+                        catch (e) {
+                            data = null;
+                        }
+                        if (data && data.empty) {
+                            poll();
+                            return;
+                        }
+                        if (data && data.type === 'image' && data.data) {
+                            const blob = base64ToBlob(data.data, data.mime || 'image/jpeg');
+                            // 预览统一用 objectURL（与「发送到手机」待发列表一致）：
+                            // ① 画廊上限淘汰/单张移除/清空全部时的 URL.revokeObjectURL 真正生效
+                            //   （data:URL 字符串无法 revoke，旧写法实为无效空操作）；
+                            // ② 避免最多 27 张图的 base64 dataURL 长字符串常驻 JS 堆（可达几十 MB）。
+                            const previewUrl = URL.createObjectURL(blob);
+                            if (opt.onStatus)
+                                opt.onStatus('收到图片：' + (data.name || 'image'));
+                            if (opt.onImage)
+                                opt.onImage({ blob: blob, previewUrl: previewUrl, name: data.name, mime: data.mime });
+                            poll(); // 继续接收下一张
+                            return;
+                        }
+                        if (data && data.type === 'text' && typeof data.text === 'string') {
+                            if (opt.onStatus)
+                                opt.onStatus('收到文本');
+                            if (opt.onText)
+                                opt.onText({ text: data.text, ts: data.ts });
+                            poll(); // 继续接收下一条
+                            return;
+                        }
+                        setTimeout(poll, 1000); // 解析失败稍后重试
+                    }
+                    catch (e) {
+                        // 单条数据异常（base64 损坏 atob 抛错、回调抛错等）不得杀死接收循环：
+                        // 记录一次后继续下一次轮询（旧实现无兜底，异常会让 poll 链永久中断、收图静默失效）
+                        addLog('[设备互联] 处理收到数据失败: ' + (e && e.message ? e.message : e), 'error', true);
+                        setTimeout(poll, 1000);
+                    }
+                },
+                onerror: function () {
+                    if (stopped)
+                        return;
+                    if (!loggedConnFail) {
+                        loggedConnFail = true;
+                        addLog('[设备互联] 连接服务器失败，请检查中继地址/网络（' + server + '）', 'error');
+                    }
+                    if (opt.onStatus)
+                        opt.onStatus('连接中断，正在重连…');
+                    setTimeout(poll, 2000);
+                },
+                ontimeout: function () {
+                    if (stopped)
+                        return;
+                    poll(); // 超时继续轮询
+                },
+            });
+        }
+        catch (e) {
+            if (stopped)
+                return;
+            if (opt.onStatus)
+                opt.onStatus('请求异常，正在重连…');
+            setTimeout(poll, 2000);
+        }
+    }
+    poll();
+    return function stop() {
+        stopped = true;
+        try {
+            if (lastXhr && typeof lastXhr.abort === 'function')
+                lastXhr.abort();
+        }
+        catch (e) {
+            /* 忽略 */
+        }
+    };
+}
+/**
+ * 「发送测试图片」用的随机图源（v26.10.08-v10）。
+ * 直接返回一张图片（会 302 到具体图片），故用 GM_xmlhttpRequest 取二进制。
+ */
+const TEST_IMAGE_URL = 'https://t.alcy.cc/fj';
+/** Blob → 不带前缀的 base64（FileReader；与手机上传页同一套做法） */
+function blobToBase64(blob) {
+    return new Promise((resolve, reject) => {
+        const fr = new FileReader();
+        fr.onload = () => resolve(String(fr.result || '').split(',')[1] || '');
+        fr.onerror = () => reject(new Error('读取图片失败'));
+        fr.readAsDataURL(blob);
+    });
+}
+/** 按 MIME 给测试图起个文件名（仅用于日志与下载命名） */
+function testImageName(mime) {
+    const ext = { 'image/jpeg': '.jpg', 'image/png': '.png', 'image/webp': '.webp', 'image/gif': '.gif' }[mime] || '.jpg';
+    return 'test-image-' + Date.now() + ext;
+}
+/**
+ * 「发送测试图片」（v26.10.08-v10）：从随机图源取一张图，**当作手机上传**投递到本机中继
+ * （`POST /u/<本机 deviceId>`），于是它经**正常的「手机 → 电脑」通道**回到本脚本、进历史记录。
+ *
+ * 为什么走中继而不是本地直接塞进数组：这样这条路径与真实收图**完全一致**
+ * （中继入队 → 长轮询取走 → onImage → 历史），可用它验证整条链路，也能同步到同一台电脑的其它标签页。
+ * 代价是必须配置好中继地址（未配置时调用方直接给出提示，不发请求）。
+ *
+ * ⚠️ 用 GM_xmlhttpRequest 而不是 fetch：税务页 CSP 限制 connect-src，跨域取图也需绕过 CORS。
+ */
+function sendTestImage(opt) {
+    const server = (opt.server || '').trim().replace(/\/+$/, '');
+    const url = opt.url || TEST_IMAGE_URL;
+    const fail = (msg) => {
+        if (opt.onFail)
+            opt.onFail(msg);
+    };
+    if (!/^https?:\/\//i.test(server)) {
+        fail('未配置中继服务器，无法投递测试图片');
+        return;
+    }
+    try {
+        GM_xmlhttpRequest({
+            method: 'GET',
+            url: url,
+            responseType: 'blob',
+            timeout: 20000,
+            onload: (resp) => {
+                const blob = resp && resp.response;
+                if (!blob || typeof blob.size !== 'number' || !blob.size) {
+                    fail('取图失败：响应不是有效的二进制图片');
+                    return;
+                }
+                const mime = blob.type || 'image/jpeg';
+                const name = testImageName(mime);
+                // 体积预检：与手机上传同一套判据，避免 base64 膨胀后撞 12MB 上限
+                if (imagePayloadBytes(blob, name, mime) > RELAY_MAX_BODY) {
+                    fail('测试图片过大（超过中继单次上限约 12MB）');
+                    return;
+                }
+                blobToBase64(blob)
+                    .then((b64) => {
+                    if (!b64) {
+                        fail('取图失败：图片内容为空');
+                        return;
+                    }
+                    GM_xmlhttpRequest({
+                        method: 'POST',
+                        url: server + '/u/' + encodeURIComponent(opt.uuid),
+                        headers: { 'Content-Type': 'application/json' },
+                        data: JSON.stringify({ name: name, mime: mime, data: b64 }),
+                        timeout: 20000 + Math.round(b64.length / 200),
+                        onload: (r2) => {
+                            let j = null;
+                            try {
+                                j = JSON.parse(r2.responseText);
+                            }
+                            catch (e) {
+                                j = null;
+                            }
+                            if (j && j.ok) {
+                                if (opt.onOk)
+                                    opt.onOk({ bytes: blob.size, mime: mime });
+                            }
+                            else {
+                                fail((j && j.error) || '投递失败（HTTP ' + r2.status + '）');
+                            }
+                        },
+                        onerror: () => fail('网络错误，无法投递到中继'),
+                        ontimeout: () => fail('投递超时'),
+                    });
+                })
+                    .catch((e) => fail('取图失败：' + ((e && e.message) || '读取错误')));
+            },
+            onerror: () => fail('网络错误，无法获取测试图片'),
+            ontimeout: () => fail('获取测试图片超时'),
+        });
+    }
+    catch (e) {
+        fail('发送测试图片失败：' + ((e && e.message) || '未知错误'));
+    }
+}
+/**
+ * 电脑端 → 手机端 发送（图片或文本）。POST 到中继 /phone/send/<deviceId>。
+ * 仅负责投递；手机是否在线由调用方先查 /phone/status 决定（离线时调用方直接拦截）。
+ * @param {SendToPhoneOptions} opt - { server, uuid, payload, onOk, onFail }
+ *   payload: { text } 或 { name, mime, data(base64) }
+ */
+function sendToPhone(opt) {
+    const server = (opt.server || '').trim().replace(/\/+$/, '');
+    const uuid = opt.uuid;
+    const url = server + '/phone/send/' + encodeURIComponent(uuid);
+    try {
+        const body = JSON.stringify(opt.payload);
+        GM_xmlhttpRequest({
+            method: 'POST',
+            url: url,
+            headers: { 'Content-Type': 'application/json' },
+            data: body,
+            // 超时随载荷缩放：放行的最大单请求约 16MB（base64 膨胀后），固定 20s 在慢上行时会把合法大图误杀
+            timeout: 20000 + Math.round(body.length / 200), // ≈ 20s + 每 200B 1ms；16MB 体 ≈ 100s
+            onload: function (resp) {
+                let j = null;
+                try {
+                    j = JSON.parse(resp.responseText);
+                }
+                catch (e) {
+                    j = null;
+                }
+                if (j && j.ok) {
+                    if (opt.onOk)
+                        opt.onOk();
+                }
+                else {
+                    // 优先用服务端 JSON 里的中文错误（如 413「内容过大」）；否则按状态码给可读提示，避免笼统报错。
+                    let msg = j && j.error ? String(j.error) : '';
+                    if (!msg && resp.status === 413)
+                        msg = '内容过大，请压缩后再发送';
+                    else if (!msg && resp.status >= 400)
+                        msg = '服务器错误（HTTP ' + resp.status + '）';
+                    if (opt.onFail)
+                        opt.onFail(msg || 'HTTP ' + resp.status);
+                }
+            },
+            onerror: function () {
+                if (opt.onFail)
+                    opt.onFail('网络错误，请检查中继地址');
+            },
+            ontimeout: function () {
+                if (opt.onFail)
+                    opt.onFail('发送超时');
+            },
+        });
+    }
+    catch (e) {
+        if (opt.onFail)
+            opt.onFail(e.message);
+    }
+}
+
+;// ./src/lib/ui/transfer/deviceColors.ts
+/**
+ * 设备 ID 的专属配色（v26.10.08-v12 随 PhoneModal 建立；v26.10.12-v1 随「设备互联」
+ * 重构为「传输助手」搬到本文件，逻辑逐字不变）。
+ *
+ * 按用户要求：给设备 ID 加边框和彩色底色，不同设备不同色。
+ *
+ * ⚠️ 用**固定色板 + 哈希取模**，而不是「由 ID 算 HSL」：后者在哈希相邻时会算出几乎一样的色相，
+ *    多台手机并排时反而分不清。色板取 antd 预设色阶的「浅底 / 中边框 / 深字」三档（1 / 3 / 7 号色），
+ *    保证浅色主题下文字对比度足够，也与面板整体配色语言一致。
+ */
+/** 同一 ID 恒定取到同一个颜色（跨会话稳定）；不同 ID 尽量落到不同颜色 */
+const DEVICE_COLORS = [
+    { bg: '#e6f4ff', border: '#91caff', color: '#0958d9' }, // 蓝
+    { bg: '#e6fffb', border: '#87e8de', color: '#08979c' }, // 青
+    { bg: '#f6ffed', border: '#b7eb8f', color: '#389e0d' }, // 绿
+    { bg: '#fffbe6', border: '#ffe58f', color: '#d48806' }, // 黄
+    { bg: '#fff7e6', border: '#ffd591', color: '#d46b08' }, // 橙
+    { bg: '#fff1f0', border: '#ffa39e', color: '#cf1322' }, // 红
+    { bg: '#f9f0ff', border: '#d3adf7', color: '#531dab' }, // 紫
+    { bg: '#fff0f6', border: '#ffadd2', color: '#c41d7f' }, // 洋红
+];
+function hashDeviceId(id) {
+    // FNV-1a（32 位）：对「只差一个字符」的 ID 也敏感。
+    // ⚠️ 别退回 `h = h * 31 + c`：实测两个只差首字符的 ID 会被 `>>>0` 截断成同一个下标，
+    //    导致「不同设备不同底色」失效（本功能第一版就踩了）。
+    let h = 0x811c9dc5;
+    for (let i = 0; i < id.length; i++) {
+        h ^= id.charCodeAt(i);
+        h = Math.imul(h, 0x01000193) >>> 0;
+    }
+    return h >>> 0;
+}
+/**
+ * 为一个**列表**解析「ID → 色板下标」，并把撞色的往后顺延。
+ *
+ * 为什么不能只用哈希：哈希再好也可能撞（实测「前缀重复字符」的 ID 会整批落到同一色），
+ * 而用户要的是「不同设备 ID 不同底色」。故在列表内做贪心分配 ——
+ * 设备数 ≤ 色板数（8）时**一定能拿到互不相同的颜色**。
+ * 先按哈希排序再分配：谁拿哪个色只取决于 ID 集合，与数组顺序无关。
+ */
+function resolveDeviceColors(ids) {
+    const out = {};
+    const used = new Set();
+    const ordered = ids
+        .filter(Boolean)
+        .slice()
+        .sort((a, b) => hashDeviceId(a) - hashDeviceId(b) || (a < b ? -1 : 1));
+    for (const id of ordered) {
+        let idx = hashDeviceId(id) % DEVICE_COLORS.length;
+        for (let step = 0; step < DEVICE_COLORS.length && used.has(idx); step++) {
+            idx = (idx + 1) % DEVICE_COLORS.length;
+        }
+        used.add(idx);
+        out[id] = idx;
+    }
+    return out;
+}
+/** 手机 ID 的展示用短串（UUID 太长，取前 8 位） */
+function shortPhoneId(id) {
+    if (!id)
+        return '未知设备（旧版中继）';
+    return id.length > 8 ? id.slice(0, 8) + '…' : id;
+}
+
+;// ./src/lib/ui/transfer/DeviceIdTag.tsx
+
+
+/**
+ * 带边框与专属底色的设备 ID 标签（v26.10.08-v12；v26.10.12-v1 随传输助手重构搬迁）。
+ * 颜色下标由调用方传入（列表内已做撞色顺延，见 resolveDeviceColors）；不传则按哈希取。
+ */
+function DeviceIdTag({ id, colorIndex }) {
+    const idx = typeof colorIndex === 'number' ? colorIndex : hashDeviceId(id) % DEVICE_COLORS.length;
+    const c = DEVICE_COLORS[idx];
+    return ((0,react_jsx_runtime_production_namespaceFn().jsx)("span", { "data-device-id": id, "data-color-index": idx, style: {
+            display: 'inline-block',
+            padding: '1px 8px',
+            borderRadius: 6,
+            border: '1px solid ' + c.border,
+            background: c.bg,
+            color: c.color,
+            lineHeight: '20px',
+        }, children: shortPhoneId(id) }));
+}
+
+;// ./src/lib/transfer/settings.ts
+/**
+ * 传输助手的自有设置存储（v26.10.12-v1）。
+ *
+ * 与 App 主面板设置**完全隔离**（用户要求：数据、入口、UI 均不共用）：
+ *   · 主面板 `SettingsModal` 里不再有「中继服务器地址」——它搬到了这里；
+ *   · 本模块的设置只进 `scriptCat_TransferSettings`，不写 `scriptCat_Allvalue`。
+ *
+ * 存量迁移（一次性）：老用户的中继地址存在 `scriptCat_Allvalue.relayServer` 里
+ * （可能还是自己改过的地址）。第一次读取本模块设置时若本地没有任何记录，
+ * 就把旧地址搬过来当默认值，避免升级后要重填。
+ */
+/**
+ * 中继服务器默认地址（v26.10.12-v1 起由本模块自有，不再走主面板 DEFAULTS）。
+ * 即原 `DEFAULTS.relayServer` 的线上地址，随「设置隔离」一起搬过来。
+ */
+const DEFAULT_RELAY_SERVER = 'https://znhd.122050.xyz';
+/** 传输助手设置的 localStorage 键（与主设置的 `scriptCat_Allvalue` 分开） */
+const TRANSFER_STORAGE_KEY = 'scriptCat_TransferSettings';
+/** 默认设置：中继地址为线上默认地址 */
+const DEFAULT_TRANSFER_SETTINGS = {
+    relayServer: DEFAULT_RELAY_SERVER,
+    theme: 'light',
+    autoOpenOnReceive: true,
+};
+/**
+ * 读取传输助手设置（与默认值合并；形状损坏一律退化成默认值）。
+ *
+ * @param legacyRelayServer 旧主设置里的中继地址（`runtime.init.relayServer`）：
+ *        仅当本地**从来没有**存过传输助手设置时用作默认值，之后用户在本模块改的值优先。
+ */
+function loadTransferSettings(legacyRelayServer) {
+    let stored = null;
+    try {
+        const raw = localStorage.getItem(TRANSFER_STORAGE_KEY);
+        if (raw) {
+            const parsed = JSON.parse(raw);
+            if (parsed && typeof parsed === 'object' && !Array.isArray(parsed))
+                stored = parsed;
+        }
+    }
+    catch (e) {
+        stored = null;
+    }
+    const base = stored
+        ? { ...DEFAULT_TRANSFER_SETTINGS, ...stored }
+        : {
+            ...DEFAULT_TRANSFER_SETTINGS,
+            // 一次性迁移：老用户在别处填过的中继地址继续生效
+            relayServer: typeof legacyRelayServer === 'string' && legacyRelayServer.trim()
+                ? legacyRelayServer.trim().replace(/\/+$/, '')
+                : DEFAULT_TRANSFER_SETTINGS.relayServer,
+        };
+    return settings_normalize(base);
+}
+/** 保存传输助手设置（同步写入；本模块设置项少，不需要防抖） */
+function saveTransferSettings(settings) {
+    try {
+        localStorage.setItem(TRANSFER_STORAGE_KEY, JSON.stringify(settings));
+    }
+    catch (e) {
+        /* 隐私模式等写不进去时静默：设置仍能在当次会话内生效 */
+    }
+}
+/** 归一化：地址去尾部斜杠、主题只认 light/dark、开关强制布尔 */
+function normalizeTransferSettings(input) {
+    const theme = input.theme === 'dark' ? 'dark' : 'light';
+    return {
+        relayServer: String(input.relayServer || '')
+            .trim()
+            .replace(/\/+$/, ''),
+        theme,
+        autoOpenOnReceive: input.autoOpenOnReceive === undefined ? true : !!input.autoOpenOnReceive,
+    };
+}
+function settings_normalize(input) {
+    return normalizeTransferSettings(input);
+}
+
+;// ./src/lib/transfer/store.ts
+/**
+ * 传输助手的运行时存储（v26.10.12-v1，替代原 MainPanel 里的接收循环 / 手机轮询）。
+ *
+ * ── 为什么是模块级 store 而不是组件 state ──────────────────────────────
+ * 传输助手窗口是「按需打开」的弹窗（关闭即卸载），而收件 / 在线状态必须在
+ * **窗口不开的时候也照常工作**（手机发图到电脑，电脑端要自动弹窗）。
+ * 因此数据放模块级，UI 通过 `useSyncExternalStore` 订阅；图片是 Blob + objectURL，
+ * 无法持久化，故会话历史只在内存里（与重构前 recvImages/recvTexts 的行为一致）。
+ *
+ * ── 会话归组规则（重要）────────────────────────────────────────────────
+ * 中继的正向通道（手机 → 电脑）是**广播**、载荷里不带手机 ID，所以收到的内容
+ * **无法归组到具体某一台手机**：
+ *   · 只有 1 台手机在线 → 归到那台手机的会话（最常见场景，收发同会话）；
+ *   · 0 或多台在线 → 归到聚合会话 `__phone__`（列表里显示为「手机」）。
+ * 发送方向知道目标（用户在哪个会话里发、发给哪台），所以发件记录总是进对应会话。
+ */
+
+
+
+
+
+/** 聚合会话键：多台手机在线时收到的内容（以及老版中继的未知设备）都归到这里 */
+const PHONE_SESSION_KEY = '__phone__';
+/** 聚合会话的显示名（老版中继的未知设备也算它） */
+const PHONE_SESSION_LABEL = '手机';
+/** 手机 ID → 会话键：空 ID（老版中继只回 online）并入聚合会话 */
+function sessionKeyOf(phoneId) {
+    return phoneId || PHONE_SESSION_KEY;
+}
+let store_state = {
+    settings: loadTransferSettings(state_runtime.init.relayServer),
+    phones: [],
+    sessions: [],
+    activeSessionKey: '',
+    windowOpen: false,
+};
+const store_listeners = new Set();
+const autoOpenListeners = new Set();
+function emit() {
+    store_listeners.forEach((cb) => cb());
+}
+function store_subscribe(cb) {
+    store_listeners.add(cb);
+    return () => {
+        store_listeners.delete(cb);
+    };
+}
+function store_getSnapshot() {
+    return store_state;
+}
+/** React 订阅入口：组件里 `const s = useTransferStore()` 拿到整份 state */
+function useTransferStore() {
+    return (0,react_production_namespaceFn().useSyncExternalStore)(store_subscribe, store_getSnapshot, store_getSnapshot);
+}
+/* ============================================================ 设置 */
+/** 改设置（持久化；中继地址变化时重启轮询与接收循环） */
+function updateTransferSettings(patch) {
+    const prev = store_state.settings;
+    const next = normalizeTransferSettings({ ...prev, ...patch });
+    if (next.relayServer === prev.relayServer &&
+        next.theme === prev.theme &&
+        next.autoOpenOnReceive === prev.autoOpenOnReceive) {
+        return;
+    }
+    saveTransferSettings(next);
+    store_state = { ...store_state, settings: next };
+    emit();
+    if (next.relayServer !== prev.relayServer)
+        restartLoops();
+}
+/* ============================================================ 生命周期 */
+let phonePollTimer = null;
+let receiveStop = null;
+let knownPhones = new Set();
+let inited = false;
+function validServer() {
+    const s = (store_state.settings.relayServer || '').trim().replace(/\/+$/, '');
+    return /^https?:\/\//i.test(s) ? s : '';
+}
+/** 启停接收循环 + 手机在线轮询（幂等：先停后启） */
+function restartLoops() {
+    stopLoops();
+    const server = validServer();
+    if (!server) {
+        store_state = { ...store_state, phones: [] };
+        knownPhones = new Set();
+        emit();
+        return;
+    }
+    startPhonePoll(server);
+    startReceive(server);
+}
+function stopLoops() {
+    if (phonePollTimer) {
+        clearInterval(phonePollTimer);
+        phonePollTimer = null;
+    }
+    if (receiveStop) {
+        receiveStop();
+        receiveStop = null;
+    }
+}
+/**
+ * 手机在线状态轮询（5s）。连接 / 断开写运行日志（与重构前一致，且不依赖窗口是否打开）。
+ * 老版中继只回 `{online:true}` 没有 phones 时按「1 台未知手机」处理。
+ */
+function startPhonePoll(server) {
+    const uuid = getDeviceId();
+    const check = () => {
+        try {
+            GM_xmlhttpRequest({
+                method: 'GET',
+                url: server + '/phone/status/' + encodeURIComponent(uuid),
+                timeout: 8000,
+                onload: (r) => {
+                    let j = null;
+                    try {
+                        j = JSON.parse(r.responseText);
+                    }
+                    catch (e) {
+                        j = null;
+                    }
+                    const list = j && Array.isArray(j.phones)
+                        ? j.phones.map((p) => ({ id: String(p.id || ''), lastSeen: Number(p.lastSeen) || 0 }))
+                        : j && j.online
+                            ? [{ id: '', lastSeen: 0 }]
+                            : [];
+                    store_state = { ...store_state, phones: list };
+                    const nowIds = new Set(list.map((p) => p.id).filter(Boolean));
+                    knownPhones.forEach((id) => {
+                        if (!nowIds.has(id))
+                            addLog('[传输助手] 手机已断开：' + id, 'warning');
+                    });
+                    nowIds.forEach((id) => {
+                        if (!knownPhones.has(id))
+                            addLog('[传输助手] 手机已连接：' + id, 'success');
+                    });
+                    knownPhones = nowIds;
+                    emit();
+                },
+                onerror: () => {
+                    if (store_state.phones.length) {
+                        store_state = { ...store_state, phones: [] };
+                        emit();
+                    }
+                },
+            });
+        }
+        catch (e) {
+            /* 忽略单轮异常，5s 后自然重试 */
+        }
+    };
+    check();
+    phonePollTimer = setInterval(check, 5000);
+}
+/** 接收循环（长轮询 /recv）：收到图片 / 文本进对应会话，并按设置自动弹窗 */
+function startReceive(server) {
+    receiveStop = startPhoneReceive({
+        server,
+        uuid: getDeviceId(),
+        onConnected: () => addLog('[传输助手] 已自动开始接收（' + server + '）', 'info'),
+        onImage: (img) => {
+            addLog('[传输助手] 收到图片：' + (img.name || 'image') + '（' + (img.mime || 'image') + '）', 'success');
+            const key = sessionKeyForIncoming();
+            addMessage(key, {
+                id: nextId(),
+                type: 'image',
+                direction: 'in',
+                sessionKey: key,
+                name: img.name,
+                mime: img.mime,
+                blob: img.blob,
+                previewUrl: img.previewUrl,
+                ts: Date.now(),
+            });
+        },
+        onText: (txt) => {
+            const t = (txt.text || '').replace(/\s+$/, '');
+            addLog('[传输助手] 收到文本：' + (t.length > 40 ? t.slice(0, 40) + '…' : t), 'success');
+            const key = sessionKeyForIncoming();
+            addMessage(key, {
+                id: nextId(),
+                type: 'text',
+                direction: 'in',
+                sessionKey: key,
+                text: t,
+                ts: txt.ts || Date.now(),
+            });
+        },
+    });
+}
+/**
+ * 收到内容时归到哪个会话：只有 1 台在线手机 → 那台；否则聚合会话。
+ * （正向广播不带手机 ID，无法细分，见文件头「会话归组规则」。）
+ */
+function sessionKeyForIncoming() {
+    const online = store_state.phones.filter((p) => p.id);
+    if (online.length === 1)
+        return sessionKeyOf(online[0].id);
+    return PHONE_SESSION_KEY;
+}
+function nextId() {
+    return Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8);
+}
+/* ============================================================ 消息变更 */
+/** 新增一条消息（收或发）；未读累计 + 自动弹窗都在这里 */
+function addMessage(sessionKey, msg) {
+    const sessions = store_state.sessions.slice();
+    const at = sessions.findIndex((s) => s.key === sessionKey);
+    const prev = at >= 0 ? sessions[at] : { key: sessionKey, messages: [], unread: 0, lastTs: 0 };
+    // 只有「窗口开着且正停在这个会话」才算已读；其余情况（窗关着 / 停在别的会话）累计未读
+    const isViewing = store_state.windowOpen && store_state.activeSessionKey === sessionKey;
+    const next = {
+        ...prev,
+        messages: prev.messages.concat(msg),
+        lastTs: msg.ts || Date.now(),
+        unread: isViewing ? prev.unread : prev.unread + 1,
+    };
+    if (at >= 0)
+        sessions[at] = next;
+    else
+        sessions.push(next);
+    sessions.sort((a, b) => b.lastTs - a.lastTs);
+    // 窗关着：把选中切到新消息所在会话（窗口打开后即停在它上面）；窗开着：选中不动
+    const nextActive = store_state.windowOpen ? store_state.activeSessionKey : sessionKey;
+    store_state = { ...store_state, sessions, activeSessionKey: nextActive };
+    emit();
+    // 自动打开：仅在**窗口关着**时（企业微信逻辑：窗口开着就只累计未读，不强行切会话）
+    if (!store_state.windowOpen && store_state.settings.autoOpenOnReceive) {
+        autoOpenListeners.forEach((cb) => cb(sessionKey));
+    }
+}
+/** 更新一条消息（发送中 → 成功 / 失败） */
+function patchMessage(sessionKey, msgId, patch) {
+    const sessions = store_state.sessions.slice();
+    const at = sessions.findIndex((s) => s.key === sessionKey);
+    if (at < 0)
+        return;
+    const session = sessions[at];
+    const messages = session.messages.map((m) => (m.id === msgId ? { ...m, ...patch } : m));
+    sessions[at] = { ...session, messages };
+    store_state = { ...store_state, sessions };
+    emit();
+}
+/** 移除一条消息（revoke 预览 URL，防内存泄漏） */
+function removeTransferMessage(sessionKey, msgId) {
+    const sessions = store_state.sessions.slice();
+    const at = sessions.findIndex((s) => s.key === sessionKey);
+    if (at < 0)
+        return;
+    const session = sessions[at];
+    const removed = session.messages.find((m) => m.id === msgId);
+    if (removed)
+        revokeUrl(removed.previewUrl);
+    sessions[at] = { ...session, messages: session.messages.filter((m) => m.id !== msgId) };
+    store_state = { ...store_state, sessions };
+    emit();
+}
+/** 清空一个会话的消息（清完后会话若无消息且设备离线，就会从列表消失） */
+function clearTransferSession(sessionKey) {
+    const sessions = store_state.sessions
+        .map((s) => {
+        if (s.key !== sessionKey)
+            return s;
+        s.messages.forEach((m) => revokeUrl(m.previewUrl));
+        return { ...s, messages: [], unread: 0, lastTs: 0 };
+    })
+        .filter((s) => s.messages.length > 0);
+    store_state = { ...store_state, sessions };
+    emit();
+}
+/** 清空全部文件（所有会话的图片一起清） */
+function clearAllTransferFiles() {
+    store_state.sessions.forEach((s) => s.messages.forEach((m) => revokeUrl(m.previewUrl)));
+    store_state = { ...store_state, sessions: [] };
+    emit();
+}
+function revokeUrl(url) {
+    if (!url)
+        return;
+    try {
+        URL.revokeObjectURL(url);
+    }
+    catch (e) {
+        /* 忽略 */
+    }
+}
+/* ============================================================ 选中 / 窗口状态 */
+/** 选中会话（切会话时由 UI 调用） */
+function setActiveSession(sessionKey) {
+    if (store_state.activeSessionKey === sessionKey)
+        return;
+    store_state = { ...store_state, activeSessionKey: sessionKey };
+    emit();
+}
+/** 窗口开 / 关（UI 调用；关窗不清空选中，重开时停回原会话） */
+function setTransferWindowOpen(open) {
+    if (store_state.windowOpen === open)
+        return;
+    store_state = { ...store_state, windowOpen: open };
+    emit();
+}
+/** 已读：窗口开着且正停在该会话上时清零未读 */
+function markSessionRead(sessionKey) {
+    const at = store_state.sessions.findIndex((s) => s.key === sessionKey);
+    if (at < 0 || store_state.sessions[at].unread === 0)
+        return;
+    const sessions = store_state.sessions.slice();
+    sessions[at] = { ...sessions[at], unread: 0 };
+    store_state = { ...store_state, sessions };
+    emit();
+}
+/**
+ * 注册「收到新内容且需要自动打开窗口」的回调（主面板用来把传输助手带到眼前）。
+ * @returns 取消注册的函数
+ */
+function onTransferAutoOpen(cb) {
+    autoOpenListeners.add(cb);
+    return () => {
+        autoOpenListeners.delete(cb);
+    };
+}
+/* ============================================================ 发送（电脑 → 手机） */
+/** 某会话的对方是否可发送（聚合会话 = 有任一手机在线；具体会话 = 那台在线） */
+function sessionSendable(sessionKey) {
+    if (sessionKey === PHONE_SESSION_KEY)
+        return store_state.phones.length > 0;
+    return store_state.phones.some((p) => sessionKeyOf(p.id) === sessionKey);
+}
+/** 发送目标：具体手机 → 定向；聚合 / 未知设备 → 广播 */
+function sendTargets(sessionKey) {
+    if (sessionKey === PHONE_SESSION_KEY)
+        return 'all';
+    return [sessionKey];
+}
+/** 发送文本到某会话；返回是否真正发出了请求 */
+function sendTextToSession(sessionKey, text) {
+    const t = (text || '').trim();
+    const server = validServer();
+    if (!t) {
+        addLog('[传输助手] 文本为空', 'error', true);
+        return false;
+    }
+    if (!server) {
+        addLog('[传输助手] 尚未配置中继服务器，无法发送', 'error', true);
+        return false;
+    }
+    if (!sessionSendable(sessionKey)) {
+        addLog('[传输助手] 当前无在线设备，无法发送', 'error', true);
+        return false;
+    }
+    const msg = {
+        id: nextId(),
+        type: 'text',
+        direction: 'out',
+        sessionKey,
+        text: t,
+        ts: Date.now(),
+    };
+    addMessage(sessionKey, msg);
+    sendToPhone({
+        server,
+        uuid: getDeviceId(),
+        payload: { text: t, targets: sendTargets(sessionKey) },
+        onOk: () => addLog('[传输助手] 文本已发送', 'success'),
+        onFail: (e) => {
+            patchMessage(sessionKey, msg.id, { sendState: 'failed', sendError: e });
+            addLog('[传输助手] 发送失败：' + e, 'error');
+        },
+    });
+    return true;
+}
+/**
+ * 发送图片到某会话：逐张顺序发送（一张成功再发下一张，保证到达顺序）。
+ * 图片先经 `compressImageForPhone` 压缩（与「手机 → 电脑」同套规格：最长边 1600、JPEG 0.75；
+ * SVG/GIF、解码失败、压不小都回退原图），超 12MB 上限即停止。
+ *
+ * @returns 是否开始了发送（调用方用于清空待发列表 / 显示进度）
+ */
+function sendImagesToSession(sessionKey, files, onProgress) {
+    const server = validServer();
+    if (!files.length)
+        return false;
+    if (!server) {
+        addLog('[传输助手] 尚未配置中继服务器，无法发送', 'error', true);
+        return false;
+    }
+    if (!sessionSendable(sessionKey)) {
+        addLog('[传输助手] 当前无在线设备，无法发送', 'error', true);
+        return false;
+    }
+    const targets = sendTargets(sessionKey);
+    const list = files.slice();
+    const total = list.length;
+    let sent = 0;
+    const failAt = (reason, msgId) => {
+        if (msgId)
+            patchMessage(sessionKey, msgId, { sendState: 'failed', sendError: reason });
+        addLog('[传输助手] 第 ' + (sent + 1) + ' 张发送失败：' + reason + '（已发 ' + sent + '/' + total + '）', 'error');
+        onProgress?.(sent, total, true, '已发送 ' + sent + '/' + total + '，已停止');
+    };
+    const sendNext = () => {
+        if (sent >= total) {
+            addLog('[传输助手] ' + total + ' 张图片已全部发送', 'success');
+            onProgress?.(total, total, false, '已发送 ' + total + '/' + total);
+            return;
+        }
+        const it = list[sent];
+        addLog('[传输助手] 正在处理（' + (sent + 1) + '/' + total + '）：' + (it.name || 'image'), 'info');
+        onProgress?.(sent, total, false, '处理中… ' + sent + '/' + total + '（第 ' + (sent + 1) + ' 张）');
+        const msgId = nextId();
+        compressImageForPhone(it.file)
+            .then((out) => {
+            if (imagePayloadBytes(out.blob, out.name, out.mime) > RELAY_MAX_BODY) {
+                addLog('[传输助手] 第 ' +
+                    (sent + 1) +
+                    ' 张压缩后仍超限（单张约 12MB 上限），已停止（已发 ' +
+                    sent +
+                    '/' +
+                    total +
+                    '）', 'error', true);
+                failAt('压缩后仍超过单张上限（约 12MB）');
+                return;
+            }
+            addLog('[传输助手] ' +
+                (out.compressed
+                    ? '已压缩 ' + it.name + '：' + kbText(it.file.size) + ' → ' + kbText(out.blob.size)
+                    : '原图发送 ' + out.name + '（' + kbText(out.blob.size) + '）') +
+                '，正在发送（' +
+                (sent + 1) +
+                '/' +
+                total +
+                '）', 'info');
+            // 先落一条「发送中」的气泡（缩略图用待发对象），成功/失败再改状态
+            addMessage(sessionKey, {
+                id: msgId,
+                type: 'image',
+                direction: 'out',
+                sessionKey,
+                name: out.name,
+                mime: out.mime,
+                blob: out.blob,
+                previewUrl: it.url,
+                ts: Date.now(),
+                sendState: 'sending',
+            });
+            const rd = new FileReader();
+            rd.onload = () => {
+                const b64 = (rd.result || '').split(',')[1] || '';
+                if (!b64) {
+                    failAt('读取图片失败', msgId);
+                    return;
+                }
+                sendToPhone({
+                    server,
+                    uuid: getDeviceId(),
+                    payload: { name: out.name, mime: out.mime, data: b64, targets },
+                    onOk: () => {
+                        sent++;
+                        patchMessage(sessionKey, msgId, { sendState: undefined, sendError: undefined });
+                        onProgress?.(sent, total, false, '已发送 ' + sent + '/' + total);
+                        sendNext();
+                    },
+                    onFail: (e) => failAt(e, msgId),
+                });
+            };
+            rd.onerror = () => failAt('读取图片失败', msgId);
+            rd.readAsDataURL(out.blob);
+        })
+            .catch((e) => failAt((e && e.message) || '图片处理失败'));
+    };
+    sendNext();
+    return true;
+}
+/** 体积显示：统一按 KB（不足 1KB 也显示 1KB） */
+function kbText(bytes) {
+    return Math.max(1, Math.round((Number(bytes) || 0) / 1024)) + 'KB';
+}
+/* ============================================================ 启动 / 停止 */
+/**
+ * 启动传输助手后台能力（幂等：主面板挂载 / 面板自愈重挂时调用）。
+ * 中继地址没填好时只加载设置，不起轮询与接收。
+ */
+function initTransfer() {
+    if (inited)
+        return;
+    inited = true;
+    restartLoops();
+}
+/** 停止全部后台能力（页面卸载时由 beforeunload 链路调用） */
+function stopTransfer() {
+    stopLoops();
+    knownPhones = new Set();
+    inited = false;
+}
+
+;// ./src/lib/ui/transfer/TransferDeviceChat.tsx
+
+
+
+
+
+
+
+
+
+
+
+
+// 预览相关的通用件全部来自共享层（与手机上传页同一份，v26.10.08-v13 起）
+
+
+
+
+const { Text: TransferDeviceChat_Text } = typography;
+/** 时间展示（HH:mm） */
+function fmtTime(ts) {
+    const d = new Date(ts);
+    const p = (n) => String(n).padStart(2, '0');
+    return p(d.getHours()) + ':' + p(d.getMinutes());
+}
+/**
+ * 设备会话聊天区（v26.10.12-v1，传输助手第三栏的主体）。
+ *
+ * 由「设备互联」弹窗的「发送到手机」分区 + 原「历史记录」画廊合并而来：
+ *   · 消息按会话聚合成聊天气泡（收到的在左灰底、本机发出的在右浅蓝底）；
+ *   · 图片消息单击放大（antd Image.PreviewGroup + 共享层预览宿主 / A4 打印 / 遮罩压制）；
+ *   · 右下角悬浮图标按钮（复制 / 下载 / 删除）与历史记录同一套实现；
+ *   · 底部输入区发文本 / 选图发送，逐张压缩后按序投递（逻辑与原发送分区一致）。
+ */
+function TransferDeviceChat({ session, phone, colorIndex, onClear, }) {
+    const { token } = es_theme.useToken();
+    const [sendText, setSendText] = (0,react_production_namespaceFn().useState)('');
+    const [pendingImages, setPendingImages] = (0,react_production_namespaceFn().useState)([]);
+    const [sending, setSending] = (0,react_production_namespaceFn().useState)(false);
+    const [progress, setProgress] = (0,react_production_namespaceFn().useState)(null);
+    /** 图片复制的反馈：记录是哪一条消息，避免所有图一起改文案 */
+    const [imgCopy, setImgCopy] = (0,react_production_namespaceFn().useState)(null);
+    /**
+     * 放大预览是否打开（用于撤掉下层遮罩，理由同 RecvHistoryModal：
+     * 两层 rgba(0,0,0,0.45) 叠成 0.6975，白底被压到灰度 77）。
+     */
+    const [previewOpen, setPreviewOpen] = (0,react_production_namespaceFn().useState)(false);
+    const scrollRef = (0,react_production_namespaceFn().useRef)(null);
+    const sendable = sessionSendable(session.key);
+    const isAggregate = session.key === PHONE_SESSION_KEY;
+    (0,react_production_namespaceFn().useEffect)(() => {
+        syncPreviewMask(previewOpen);
+        return () => syncPreviewMask(false);
+    }, [previewOpen]);
+    // 新消息自动滚到底
+    (0,react_production_namespaceFn().useEffect)(() => {
+        const el = scrollRef.current;
+        if (!el)
+            return;
+        el.scrollTop = el.scrollHeight;
+    }, [session.messages]);
+    /** 打印对话框上的文档标题（react-to-print 会在打印期间临时改写 document.title 再还原） */
+    const printTitleRef = (0,react_production_namespaceFn().useRef)('图片');
+    const doPrint = Z({
+        ignoreGlobalStyles: true,
+        documentTitle: () => printTitleRef.current,
+        pageStyle: PRINT_PAGE_STYLE,
+    });
+    /** 打印某一条图片消息的原图，并自适应 A4 纸（横图自动旋转，逻辑同 RecvHistoryModal） */
+    const printImage = (msg, idx) => {
+        const fname = downloadFileName(msg.name, msg.mime, idx);
+        printTitleRef.current = fname;
+        addLog('打印图片: ' + fname, 'success');
+        const probe = document.createElement('img');
+        probe.onload = () => {
+            doPrint(() => buildA4ImageNode(msg.previewUrl, fname, {
+                width: probe.naturalWidth,
+                height: probe.naturalHeight,
+            }));
+        };
+        probe.onerror = () => doPrint(() => buildA4ImageNode(msg.previewUrl, fname));
+        probe.src = msg.previewUrl;
+    };
+    const doCopy = (msg) => {
+        setImgCopy({ id: msg.id, state: 'busy' });
+        copyImageToClipboard(msg.blob).then((ok) => {
+            setImgCopy({ id: msg.id, state: ok ? 'ok' : 'fail' });
+            if (ok)
+                addLog('图片已复制到剪贴板: ' + (msg.name || ''), 'success');
+            window.setTimeout(() => setImgCopy(null), 1500);
+        });
+    };
+    const copyHint = (msg) => {
+        if (!imgCopy || imgCopy.id !== msg.id)
+            return '复制';
+        if (imgCopy.state === 'busy')
+            return '复制中…';
+        return imgCopy.state === 'ok' ? '已复制' : '复制失败';
+    };
+    const doDownload = (msg, idx) => {
+        const fname = downloadFileName(msg.name, msg.mime, idx);
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(msg.blob);
+        a.download = fname;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+        addLog('图片已下载: ' + fname, 'success');
+    };
+    const doSendText = () => {
+        const t = sendText.trim();
+        if (!t || !sendable)
+            return;
+        if (sendTextToSession(session.key, t))
+            setSendText('');
+    };
+    // 选图：仅加入待发列表，点「发送」才真正上传（与手机端一致，避免误选即发）
+    const pickImages = () => {
+        if (!sendable) {
+            addLog('[传输助手] 当前无在线设备，无法发送', 'error', true);
+            return;
+        }
+        const inp = document.createElement('input');
+        inp.type = 'file';
+        inp.accept = 'image/*';
+        inp.multiple = true;
+        inp.style.display = 'none';
+        document.body.appendChild(inp);
+        // 取消选择（对话框关闭但未选文件）也要移除隐藏 input：'cancel' 非标准，
+        // 用「对话框关闭后 window 恢复焦点」兜底清理，避免反复取消在 body 累积 input
+        const cleanupFocus = () => {
+            window.removeEventListener('focus', cleanupFocus);
+            try {
+                inp.remove();
+            }
+            catch (e) {
+                /* 已移除 */
+            }
+        };
+        inp.onchange = () => {
+            const files = Array.prototype.slice.call(inp.files || []);
+            window.removeEventListener('focus', cleanupFocus);
+            inp.remove();
+            if (!files.length)
+                return;
+            setPendingImages((prev) => prev.concat(files.map((f) => ({
+                file: f,
+                name: f.name || 'image.jpg',
+                mime: f.type || 'image/jpeg',
+                url: URL.createObjectURL(f),
+            }))));
+        };
+        window.addEventListener('focus', cleanupFocus);
+        inp.click();
+    };
+    const removePendingImage = (i) => {
+        if (sending)
+            return; // 发送中禁止移除：发送按快照进行，移除会导致界面与实际不一致
+        setPendingImages((prev) => {
+            const arr = prev.slice();
+            const removed = arr.splice(i, 1)[0];
+            if (removed) {
+                try {
+                    URL.revokeObjectURL(removed.url);
+                }
+                catch (e) {
+                    /* 忽略 */
+                }
+            }
+            return arr;
+        });
+    };
+    const confirmSendImage = () => {
+        if (!pendingImages.length || !sendable)
+            return;
+        setSending(true);
+        const list = pendingImages.slice();
+        const ok = sendImagesToSession(session.key, list, (done, total, failed, text) => {
+            setProgress({ done, total, failed, text });
+            if (done >= total || failed) {
+                setSending(false);
+                if (!failed) {
+                    setPendingImages([]);
+                    setProgress(null);
+                }
+            }
+        });
+        if (!ok)
+            setSending(false);
+    };
+    // 图片消息（会话内按出现顺序）——预览左右切换由 antd 接管
+    const imageMessages = (0,react_production_namespaceFn().useMemo)(() => session.messages.filter((m) => m.type === 'image'), [session.messages]);
+    const percent = progress && progress.total ? Math.round((progress.done / progress.total) * 100) : 0;
+    const renderMessage = (msg) => {
+        const isUser = msg.direction === 'out';
+        if (msg.type === 'image') {
+            const idx = imageMessages.findIndex((m) => m.id === msg.id);
+            return ((0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { display: 'flex', justifyContent: isUser ? 'flex-end' : 'flex-start', marginBottom: 10 }, children: (0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { maxWidth: '62%' }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(ImageOverlayActions, { actions: [
+                                {
+                                    label: '复制',
+                                    tooltip: copyHint(msg),
+                                    icon: imgCopy && imgCopy.id === msg.id && imgCopy.state === 'ok' ? ((0,react_jsx_runtime_production_namespaceFn().jsx)(CheckIcon, { size: 13 })) : ((0,react_jsx_runtime_production_namespaceFn().jsx)(CopyIcon, { size: 13 })),
+                                    loading: !!(imgCopy && imgCopy.id === msg.id && imgCopy.state === 'busy'),
+                                    onClick: () => doCopy(msg),
+                                },
+                                {
+                                    label: '下载',
+                                    icon: (0,react_jsx_runtime_production_namespaceFn().jsx)(DownloadIcon, { size: 13 }),
+                                    onClick: () => doDownload(msg, idx),
+                                },
+                                {
+                                    label: '删除',
+                                    danger: true,
+                                    icon: (0,react_jsx_runtime_production_namespaceFn().jsx)(TrashIcon, { size: 13 }),
+                                    onClick: () => removeTransferMessage(session.key, msg.id),
+                                },
+                            ], children: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_image, { src: msg.previewUrl, alt: msg.name || 'image', style: {
+                                    width: '100%',
+                                    maxWidth: 220,
+                                    aspectRatio: '4 / 3',
+                                    objectFit: 'cover',
+                                    borderRadius: 8,
+                                    // 发送中的图半透明 + 灰底，失败加红框
+                                    opacity: msg.sendState === 'sending' ? 0.55 : 1,
+                                    border: msg.sendState === 'failed'
+                                        ? '1px solid ' + token.colorError
+                                        : '1px solid ' + token.colorBorderSecondary,
+                                    display: 'block',
+                                } }) }), (0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: {
+                                fontSize: 11,
+                                color: token.colorTextTertiary,
+                                marginTop: 2,
+                                textAlign: isUser ? 'right' : 'left',
+                            }, children: [fmtTime(msg.ts), msg.sendState === 'sending' ? ' · 发送中…' : '', msg.sendState === 'failed' ? ' · 发送失败' : '', msg.name ? ' · ' + msg.name : ''] })] }) }, msg.id));
+        }
+        return ((0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { display: 'flex', justifyContent: isUser ? 'flex-end' : 'flex-start', marginBottom: 10 }, children: (0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { maxWidth: '70%' }, children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: {
+                            padding: '8px 10px',
+                            borderRadius: 8,
+                            fontSize: 13,
+                            lineHeight: 1.6,
+                            wordBreak: 'break-word',
+                            whiteSpace: 'pre-wrap',
+                            background: isUser ? token.colorPrimaryBg : token.colorFillQuaternary,
+                            border: '1px solid ' + (isUser ? token.colorPrimaryBorder : token.colorBorderSecondary),
+                            color: msg.sendState === 'failed' ? token.colorError : undefined,
+                        }, children: [msg.text, msg.sendState === 'failed' && msg.sendError ? ((0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { fontSize: 11, marginTop: 4 }, children: msg.sendError })) : null] }), (0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: {
+                            fontSize: 11,
+                            color: token.colorTextTertiary,
+                            marginTop: 2,
+                            textAlign: isUser ? 'right' : 'left',
+                        }, children: [fmtTime(msg.ts), msg.sendState === 'sending' ? ' · 发送中…' : '', msg.sendState === 'failed' ? ' · 发送失败' : ''] })] }) }, msg.id));
+    };
+    const onlineDot = isAggregate ? (sendable ? '#52c41a' : '#bfbfbf') : phone ? '#52c41a' : '#bfbfbf';
+    // 聚合会话（多台在线）没有单一 phone 对象，不能用 `!!phone` 判在线 ——
+    // 否则两头手机都在线，头部却显示「离线」（v26.10.12-v1 冒烟抓到的真 bug）。
+    const onlineText = isAggregate ? (sendable ? '在线 · 多台在线' : '离线') : phone ? '在线' : '离线';
+    return ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', flexDirection: 'column', minHeight: 0, flex: '1 1 auto' }, children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: {
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    padding: '8px 12px',
+                    borderBottom: '1px solid ' + token.colorBorderSecondary,
+                }, children: [isAggregate ? ((0,react_jsx_runtime_production_namespaceFn().jsx)(TransferDeviceChat_Text, { strong: true, style: { fontSize: 14 }, children: (/* inlined export .PHONE_SESSION_LABEL */"手机") })) : ((0,react_jsx_runtime_production_namespaceFn().jsx)(DeviceIdTag, { id: session.key, colorIndex: colorIndex })), (0,react_jsx_runtime_production_namespaceFn().jsxs)("span", { style: {
+                            fontSize: 12,
+                            color: token.colorTextSecondary,
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 4,
+                        }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("span", { style: {
+                                    display: 'inline-block',
+                                    width: 6,
+                                    height: 6,
+                                    borderRadius: '50%',
+                                    background: onlineDot,
+                                } }), onlineText, isAggregate && sendable ? ' · 多台在线时收到的内容归在这里' : ''] }), (0,react_jsx_runtime_production_namespaceFn().jsx)("span", { style: { flex: '1 1 auto' } }), (0,react_jsx_runtime_production_namespaceFn().jsx)(popconfirm, { title: "\u6E05\u7A7A\u8FD9\u4E2A\u4F1A\u8BDD\u7684\u5168\u90E8\u6D88\u606F\uFF1F", okText: "\u6E05\u7A7A", cancelText: "\u53D6\u6D88", onConfirm: onClear, children: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { type: "text", size: "small", icon: (0,react_jsx_runtime_production_namespaceFn().jsx)(TrashIcon, { size: 13 }), children: "\u6E05\u7A7A\u6D88\u606F" }) })] }), (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { ref: scrollRef, className: "znhd-transfer-messages", style: {
+                    flex: '1 1 auto',
+                    minHeight: 0,
+                    overflowY: 'auto',
+                    overflowX: 'hidden',
+                    padding: '10px 12px',
+                }, children: session.messages.length ? ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_image.PreviewGroup, { items: imageMessages.map((m) => m.previewUrl), preview: {
+                        // 必须显式指定挂载容器（v26.10.08-v7：body 带 transform 会困住 fixed 浮层）
+                        getContainer: getPreviewHost,
+                        onOpenChange: (o) => setPreviewOpen(o),
+                        actionsRender: (originalNode, info) => {
+                            const printBtn = ((0,react_jsx_runtime_production_namespaceFn().jsx)("button", { type: "button", className: "ant-image-preview-actions-action", "aria-label": "print", title: "\u6253\u5370\u539F\u56FE", onClick: () => {
+                                    // 优先按 url 反查，退回下标
+                                    const found = imageMessages.findIndex((m) => m.previewUrl === info.image?.url);
+                                    const at = found >= 0 ? found : info.current;
+                                    if (imageMessages[at])
+                                        printImage(imageMessages[at], at);
+                                }, children: (0,react_jsx_runtime_production_namespaceFn().jsx)(icons_PrinterOutlined, {}) }, "znhd-print"));
+                            return appendPreviewActions(originalNode, printBtn);
+                        },
+                    }, children: session.messages.map(renderMessage) })) : ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_empty, { image: es_empty.PRESENTED_IMAGE_SIMPLE, description: (0,react_jsx_runtime_production_namespaceFn().jsx)("span", { style: { fontSize: 12 }, children: "\u6682\u65E0\u6D88\u606F\uFF0C\u7528\u4E0B\u9762\u7684\u8F93\u5165\u6846\u7ED9\u8FD9\u53F0\u624B\u673A\u53D1\u70B9\u4E1C\u897F\u5427" }) })) }), pendingImages.length > 0 && ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { padding: '8px 12px 0' }, children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', justifyContent: 'space-between', marginBottom: 6 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("span", { style: { fontSize: 12, color: token.colorTextSecondary }, children: "\u5F85\u53D1\u9001\u56FE\u7247" }), (0,react_jsx_runtime_production_namespaceFn().jsxs)("span", { style: { fontSize: 12, color: token.colorTextTertiary }, children: ["\u5DF2\u9009 ", pendingImages.length, " \u5F20"] })] }), (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { display: 'grid', gridTemplateColumns: 'repeat(6, minmax(0,1fr))', gap: 6 }, children: pendingImages.map((img, i) => ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: {
+                                position: 'relative',
+                                paddingBottom: '75%',
+                                borderRadius: 8,
+                                overflow: 'hidden',
+                                background: token.colorFillQuaternary,
+                            }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("img", { src: img.url, alt: img.name, style: {
+                                        position: 'absolute',
+                                        inset: 0,
+                                        width: '100%',
+                                        height: '100%',
+                                        objectFit: 'cover',
+                                    } }), (0,react_jsx_runtime_production_namespaceFn().jsx)("span", { title: "\u79FB\u9664\u8FD9\u5F20", onClick: () => removePendingImage(i), style: {
+                                        position: 'absolute',
+                                        top: 4,
+                                        right: 4,
+                                        width: 20,
+                                        height: 20,
+                                        borderRadius: '50%',
+                                        background: 'rgba(0,0,0,0.55)',
+                                        color: '#fff',
+                                        fontSize: 13,
+                                        lineHeight: '20px',
+                                        textAlign: 'center',
+                                        cursor: sending ? 'not-allowed' : 'pointer',
+                                        userSelect: 'none',
+                                    }, children: "\u00D7" })] }, img.url))) })] })), (0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { padding: 10, borderTop: '1px solid ' + token.colorBorderSecondary }, children: [!sendable && ((0,react_jsx_runtime_production_namespaceFn().jsx)(TransferDeviceChat_Text, { type: "warning", style: { fontSize: 12, display: 'block', marginBottom: 6 }, children: "\u5F53\u524D\u6CA1\u6709\u5728\u7EBF\u624B\u673A\uFF0C\u8FDE\u4E0A\u624B\u673A\u540E\u624D\u80FD\u53D1\u9001\u3002" })), (0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', gap: 8 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { variant: "dashed", disabled: !sendable || sending, onClick: pickImages, children: "\u9009\u62E9\u56FE\u7247" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_input, { placeholder: "\u8F93\u5165\u8981\u53D1\u9001\u5230\u624B\u673A\u7684\u6587\u672C\u2026", value: sendText, onChange: (e) => setSendText(e.target.value), onPressEnter: doSendText, disabled: !sendable, style: { flex: 1 } }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { color: "primary", variant: "solid", disabled: !sendable || !sendText.trim(), onClick: doSendText, style: { width: 76 }, children: "\u53D1\u9001" })] }), pendingImages.length > 0 && ((0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { marginTop: 8 }, children: (0,react_jsx_runtime_production_namespaceFn().jsxs)(es_button, { color: "primary", variant: "solid", block: true, disabled: !sendable, loading: sending, onClick: confirmSendImage, children: ["\u53D1\u9001 ", pendingImages.length, " \u5F20\u56FE\u7247"] }) })), progress && ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { marginTop: 8 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(es_progress, { percent: percent, size: "small", strokeColor: progress.failed ? '#e4393c' : '#1677ff', status: progress.failed ? 'exception' : 'normal' }), (0,react_jsx_runtime_production_namespaceFn().jsx)(TransferDeviceChat_Text, { type: progress.failed ? 'danger' : 'secondary', style: { fontSize: 12 }, children: progress.text })] }))] })] }));
+}
+
+;// ./src/lib/ui/transfer/TransferFilesView.tsx
+
+
+
+
+
+
+
+
+
+
+
+
+
+// 预览相关的通用件全部来自共享层（与手机上传页同一份，v26.10.08-v13 起）
+
+
+
+
+const { Text: TransferFilesView_Text } = typography;
+/** 时间戳展示（MM-DD HH:mm:ss） */
+function TransferFilesView_fmtTime(ts) {
+    const d = new Date(ts);
+    const p = (n) => String(n).padStart(2, '0');
+    return `${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+}
+/** 来源设备名（聚合会话显示「手机」） */
+function sourceLabel(msg) {
+    if (msg.sessionKey === PHONE_SESSION_KEY)
+        return '手机';
+    return shortPhoneId(msg.sessionKey);
+}
+/**
+ * 文件视图（v26.10.12-v1，传输助手第三栏的「文件」分组）。
+ *
+ * 原「历史记录」弹窗的整体搬迁：全部传输过的文件（跨会话汇总）按图片 / 文本
+ * 两类平铺，图片用九宫格 + 右下角悬浮图标按钮（复制 / 下载 / 删除）+ 单击放大
+ * （缩放 / 旋转 / 多图切换 / 工具栏打印原图，A4 自适应）。
+ */
+function TransferFilesView({ messages }) {
+    const { token } = es_theme.useToken();
+    /** 文本行的复制反馈：记录是**哪一行**，避免所有行一起改文案 */
+    const [copyState, setCopyState] = (0,react_production_namespaceFn().useState)(null);
+    /** 图片复制的反馈 */
+    const [imgCopy, setImgCopy] = (0,react_production_namespaceFn().useState)(null);
+    const [previewOpen, setPreviewOpen] = (0,react_production_namespaceFn().useState)(false);
+    const printTitleRef = (0,react_production_namespaceFn().useRef)('图片');
+    (0,react_production_namespaceFn().useEffect)(() => {
+        syncPreviewMask(previewOpen);
+        return () => syncPreviewMask(false);
+    }, [previewOpen]);
+    const doPrint = Z({
+        ignoreGlobalStyles: true,
+        documentTitle: () => printTitleRef.current,
+        pageStyle: PRINT_PAGE_STYLE,
+    });
+    // 最新在前（与「历史记录」一致：刚收到的先看）
+    const ordered = (0,react_production_namespaceFn().useMemo)(() => messages.slice().sort((a, b) => b.ts - a.ts), [messages]);
+    const images = ordered.filter((m) => m.type === 'image');
+    const texts = ordered.filter((m) => m.type === 'text');
+    const printImage = (msg, idx) => {
+        const fname = downloadFileName(msg.name, msg.mime, idx);
+        printTitleRef.current = fname;
+        addLog('打印图片: ' + fname, 'success');
+        const probe = document.createElement('img');
+        probe.onload = () => {
+            doPrint(() => buildA4ImageNode(msg.previewUrl, fname, {
+                width: probe.naturalWidth,
+                height: probe.naturalHeight,
+            }));
+        };
+        probe.onerror = () => doPrint(() => buildA4ImageNode(msg.previewUrl, fname));
+        probe.src = msg.previewUrl;
+    };
+    const doCopy = (msg) => {
+        setImgCopy({ id: msg.id, state: 'busy' });
+        copyImageToClipboard(msg.blob).then((ok) => {
+            setImgCopy({ id: msg.id, state: ok ? 'ok' : 'fail' });
+            if (ok)
+                addLog('图片已复制到剪贴板: ' + (msg.name || ''), 'success');
+            window.setTimeout(() => setImgCopy(null), 1500);
+        });
+    };
+    const copyHint = (msg) => {
+        if (!imgCopy || imgCopy.id !== msg.id)
+            return '复制';
+        if (imgCopy.state === 'busy')
+            return '复制中…';
+        return imgCopy.state === 'ok' ? '已复制' : '复制失败';
+    };
+    const doDownload = (msg, idx) => {
+        const fname = downloadFileName(msg.name, msg.mime, idx);
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(msg.blob);
+        a.download = fname;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+        addLog('图片已下载: ' + fname, 'success');
+    };
+    const doCopyText = (msg) => {
+        safeCopyText(msg.text || '', (ok) => {
+            setCopyState({ id: msg.id, ok });
+            if (ok)
+                addLog('文本已复制到剪贴板', 'success');
+            window.setTimeout(() => setCopyState(null), 1500);
+        });
+    };
+    if (!ordered.length) {
+        return ((0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { flex: '1 1 auto', display: 'flex', alignItems: 'center', justifyContent: 'center' }, children: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_empty, { image: es_empty.PRESENTED_IMAGE_SIMPLE, description: (0,react_jsx_runtime_production_namespaceFn().jsx)("span", { style: { fontSize: 12 }, children: "\u6682\u65E0\u6587\u4EF6\u2014\u2014\u624B\u673A\u53D1\u6765\u7684\u56FE\u7247 / \u6587\u672C\u4F1A\u6C47\u603B\u5728\u8FD9\u91CC" }) }) }));
+    }
+    return ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { className: "znhd-transfer-files", style: { flex: '1 1 auto', minHeight: 0, overflowY: 'auto', padding: '10px 12px' }, children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 8 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)(TransferFilesView_Text, { strong: true, style: { fontSize: 14 }, children: ["\u5168\u90E8\u6587\u4EF6\uFF08\u56FE\u7247 ", images.length, " \u00B7 \u6587\u672C ", texts.length, "\uFF09"] }), (0,react_jsx_runtime_production_namespaceFn().jsx)("span", { style: { flex: '1 1 auto' } }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { danger: true, size: "small", onClick: clearAllTransferFiles, children: "\u6E05\u7A7A\u5168\u90E8" })] }), images.length ? ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_image.PreviewGroup, { items: images.map((m) => m.previewUrl), preview: {
+                    getContainer: getPreviewHost,
+                    onOpenChange: (o) => setPreviewOpen(o),
+                    actionsRender: (originalNode, info) => {
+                        const printBtn = ((0,react_jsx_runtime_production_namespaceFn().jsx)("button", { type: "button", className: "ant-image-preview-actions-action", "aria-label": "print", title: "\u6253\u5370\u539F\u56FE", onClick: () => {
+                                const found = images.findIndex((m) => m.previewUrl === info.image?.url);
+                                const at = found >= 0 ? found : info.current;
+                                if (images[at])
+                                    printImage(images[at], at);
+                            }, children: (0,react_jsx_runtime_production_namespaceFn().jsx)(icons_PrinterOutlined, {}) }, "znhd-print"));
+                        return appendPreviewActions(originalNode, printBtn);
+                    },
+                }, children: (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: {
+                        // auto-fill + 96px 下限：格子必须宽过右下角悬浮按钮条（3 个图标按钮实测 74px），
+                        // 否则窄栏（窗口未最大化时主聊天区只有约 300px）会把按钮条挤出图片，
+                        // 「按钮在图片右下角」这条几何契约就假红（v26.10.12-v1 冒烟实测：4 等分格子只有 53px）。
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(auto-fill, minmax(96px, 1fr))',
+                        gap: 8,
+                        alignContent: 'start',
+                    }, children: images.map((msg, idx) => ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', flexDirection: 'column' }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(ImageOverlayActions, { actions: [
+                                    {
+                                        label: '复制',
+                                        tooltip: copyHint(msg),
+                                        icon: imgCopy && imgCopy.id === msg.id && imgCopy.state === 'ok' ? ((0,react_jsx_runtime_production_namespaceFn().jsx)(CheckIcon, { size: 13 })) : ((0,react_jsx_runtime_production_namespaceFn().jsx)(CopyIcon, { size: 13 })),
+                                        loading: !!(imgCopy && imgCopy.id === msg.id && imgCopy.state === 'busy'),
+                                        onClick: () => doCopy(msg),
+                                    },
+                                    {
+                                        label: '下载',
+                                        icon: (0,react_jsx_runtime_production_namespaceFn().jsx)(DownloadIcon, { size: 13 }),
+                                        onClick: () => doDownload(msg, idx),
+                                    },
+                                    {
+                                        label: '删除',
+                                        danger: true,
+                                        icon: (0,react_jsx_runtime_production_namespaceFn().jsx)(TrashIcon, { size: 13 }),
+                                        onClick: () => removeTransferMessage(msg.sessionKey, msg.id),
+                                    },
+                                ], children: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_image, { src: msg.previewUrl, alt: msg.name || 'image', style: {
+                                        width: '100%',
+                                        aspectRatio: '1 / 1',
+                                        objectFit: 'cover',
+                                        borderRadius: 8,
+                                    } }) }), (0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { fontSize: 11, color: token.colorTextTertiary, marginTop: 2 }, children: [sourceLabel(msg), " \u00B7 ", TransferFilesView_fmtTime(msg.ts), " \u00B7 ", msg.direction === 'in' ? '收到' : '发出'] })] }, msg.id))) }) })) : null, texts.length ? ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { marginTop: images.length ? 16 : 0 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)(TransferFilesView_Text, { strong: true, style: { fontSize: 13, display: 'block', marginBottom: 6 }, children: ["\u6587\u672C\uFF08", texts.length, "\uFF09"] }), texts.map((msg) => ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: {
+                            display: 'flex',
+                            gap: 8,
+                            alignItems: 'flex-start',
+                            padding: '8px 0',
+                            borderBottom: '1px solid ' + token.colorBorderSecondary,
+                        }, children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { flex: 1, minWidth: 0 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("pre", { style: {
+                                            margin: 0,
+                                            whiteSpace: 'pre-wrap',
+                                            wordBreak: 'break-word',
+                                            fontFamily: 'inherit',
+                                            fontSize: 14,
+                                            lineHeight: 1.6,
+                                        }, children: msg.text }), (0,react_jsx_runtime_production_namespaceFn().jsxs)(TransferFilesView_Text, { type: "secondary", style: { fontSize: 11 }, children: [sourceLabel(msg), " \u00B7 ", TransferFilesView_fmtTime(msg.ts), " \u00B7 ", msg.direction === 'in' ? '收到' : '发出'] })] }), (0,react_jsx_runtime_production_namespaceFn().jsxs)(es_space, { size: 4, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { size: "small", onClick: () => doCopyText(msg), children: copyState && copyState.id === msg.id ? (copyState.ok ? ((0,react_jsx_runtime_production_namespaceFn().jsxs)((react_jsx_runtime_production_namespaceFn().Fragment), { children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(CheckIcon, { size: 12 }), " \u5DF2\u590D\u5236"] })) : ('复制失败')) : ('复制') }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { size: "small", danger: true, "aria-label": "\u5220\u9664\u6587\u672C", onClick: () => removeTransferMessage(msg.sessionKey, msg.id), children: "\u00D7" })] })] }, msg.id)))] })) : null] }));
+}
+
+;// ./src/lib/qrcode.ts
+
+/**
+ * 用客户端 qrcodejs 生成二维码 dataURL（原 app.ts 的 genQrDataUrl）。
+ * 模块化 P4：逐字迁移，仅加 export。
+ */
+/**
+ * 用客户端 qrcodejs 库把文本（即上传链接）即时生成为 PNG dataURL，无需服务器参与。
+ * qrcodejs 暴露全局 QRCode：new QRCode(div,{text,width,height}) 同步把二维码绘入 div 内的 canvas；
+ * 读取其内部 canvas.toDataURL('image/png') 即得图片 dataURL。
+ * CAT_UI 的 React 渲染器白名单不放行 <img>/<canvas>，故此处只产出 dataURL 字符串，
+ * 由调用方用 backgroundImage div 显示（与收到图片预览同一招）。
+ * 库未就绪（QRCode 未定义）时回退为空串（此时仍可手动复制链接文本）。
+ * @param {string} text - 待编码文本（上传链接）
+ * @returns {Promise<string>} PNG dataURL，失败返回 ''
+ */
+function genQrDataUrl(text) {
+    return new Promise((resolve) => {
+        try {
+            if (typeof QRCode === 'undefined' || typeof QRCode !== 'function') {
+                addLog('[二维码] qrcodejs 未加载，请手动复制链接', 'error', true);
+                resolve('');
+                return;
+            }
+            const holder = document.createElement('div');
+            holder.style.position = 'absolute';
+            holder.style.left = '-99999px';
+            holder.style.top = '-99999px';
+            document.body.appendChild(holder);
+            new QRCode(holder, {
+                text: text,
+                width: 240,
+                height: 240,
+                colorDark: '#000000',
+                colorLight: '#ffffff',
+                correctLevel: QRCode.CorrectLevel.M,
+            });
+            // qrcodejs 同步把二维码绘入 canvas；延迟一拍确保绘制完成再读取
+            setTimeout(() => {
+                try {
+                    const canvas = holder.querySelector('canvas');
+                    const url = canvas ? canvas.toDataURL('image/png') : '';
+                    if (holder.parentNode)
+                        holder.parentNode.removeChild(holder);
+                    if (url)
+                        resolve(url);
+                    else {
+                        addLog('[二维码] 画布读取失败，请手动复制链接', 'error', true);
+                        resolve('');
+                    }
+                }
+                catch (e) {
+                    if (holder.parentNode)
+                        holder.parentNode.removeChild(holder);
+                    addLog('[二维码] 读取失败: ' + e.message, 'error', true);
+                    resolve('');
+                }
+            }, 0);
+        }
+        catch (e) {
+            addLog('[二维码] 生成异常: ' + e.message, 'error', true);
+            resolve('');
+        }
+    });
+}
+
+;// ./src/lib/ui/transfer/TransferPairModal.tsx
+
+
+
+
+
+
+
+
+
+
+
+
+const { Text: TransferPairModal_Text } = typography;
+/**
+ * 配对窗口（v26.10.12-v1，由原「设备互联」弹窗的配对部分搬迁而来）。
+ *
+ * 入口统一收在第二栏搜索框右侧的「+」按钮（不再散落在主面板）。本窗口只负责
+ * **配对与连通性验证**：二维码 / 链接、在线状态、已连接手机列表、发送测试图片。
+ * 真正的收发（文本 / 图片）在右侧聊天区按会话进行，不在这里。
+ */
+function TransferPairModal({ open, onClose, relayServer, phones, }) {
+    const { token } = es_theme.useToken();
+    const deviceId = getDeviceId();
+    const [qrUrl, setQrUrl] = (0,react_production_namespaceFn().useState)('');
+    const [link, setLink] = (0,react_production_namespaceFn().useState)('');
+    /** 「发送测试图片」是否正在取图/投递（防重复点击 + 按钮 loading） */
+    const [testSending, setTestSending] = (0,react_production_namespaceFn().useState)(false);
+    /** 设备 ID → 色板下标（列表内解决撞色，见 resolveDeviceColors） */
+    const deviceColors = (0,react_production_namespaceFn().useMemo)(() => resolveDeviceColors(phones.map((p) => p.id)), [phones]);
+    const phoneOnline = phones.length > 0;
+    // 计算链接 + 二维码（非 http(s) 前缀即地址输入中途，不生成）
+    (0,react_production_namespaceFn().useEffect)(() => {
+        const s = (relayServer || '').trim().replace(/\/+$/, '');
+        if (!/^https?:\/\//i.test(s)) {
+            setLink('');
+            setQrUrl('');
+            return;
+        }
+        const lk = s + '/u/' + deviceId;
+        setLink(lk);
+        genQrDataUrl(lk)
+            .then((u) => setQrUrl(u))
+            .catch((e) => {
+            addLog('[配对] 二维码失败: ' + (e && e.message), 'error', true);
+        });
+    }, [relayServer, open, deviceId]);
+    /**
+     * 「发送测试图片」（v26.10.08-v10 起提供，从原「历史记录」弹窗标题栏迁到此处）：
+     * 从 `TEST_IMAGE_URL` 取一张随机图，**当作手机上传**投递到中继 `/u/<本机 deviceId>`，
+     * 再经正常的「手机 → 电脑」通道回到本脚本、进对应会话。
+     *
+     * 这样配对完成后不必掏手机就能一键验证「中继 → 收件 → 会话」整条链路。
+     * ⚠️ 需要先配置中继地址（未配置时 sendTestImage 会直接失败并给出提示，不发请求）。
+     */
+    const doSendTestImage = () => {
+        if (testSending)
+            return;
+        setTestSending(true);
+        addLog('[测试图片] 正在从 ' + TEST_IMAGE_URL + ' 取图并投递到本机…', 'info');
+        sendTestImage({
+            server: relayServer,
+            uuid: deviceId,
+            onOk: (info) => {
+                setTestSending(false);
+                addLog('[测试图片] 已投递（' +
+                    info.mime +
+                    '，约 ' +
+                    Math.max(1, Math.round(info.bytes / 1024)) +
+                    'KB），片刻后会出现在会话里', 'success');
+            },
+            onFail: (msg) => {
+                setTestSending(false);
+                addLog('[测试图片] 失败：' + msg, 'error', true);
+            },
+        });
+    };
+    return ((0,react_jsx_runtime_production_namespaceFn().jsxs)(modal, { open: open, title: (0,react_jsx_runtime_production_namespaceFn().jsxs)("span", { style: { display: 'inline-flex', alignItems: 'center', gap: 6 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(SmartphoneIcon, { size: 16 }), "\u914D\u5BF9\u8BBE\u5907", (0,react_jsx_runtime_production_namespaceFn().jsx)(es_tag, { style: { marginLeft: 0, fontWeight: 400 }, color: "default", children: "\u624B\u673A\u626B\u7801\u5373\u914D\u5BF9" })] }), onCancel: onClose, getContainer: getOverlayContainer, width: 520, styles: { body: { textAlign: 'left' } }, destroyOnHidden: true, footer: (0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', alignItems: 'center', gap: 8 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { loading: testSending, onClick: doSendTestImage, children: "\u53D1\u9001\u6D4B\u8BD5\u56FE\u7247" }), (0,react_jsx_runtime_production_namespaceFn().jsx)("span", { style: { flex: '1 1 auto' } }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { color: "primary", variant: "solid", onClick: onClose, children: "\u5173\u95ED" })] }), children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: {
+                    border: '1px solid ' + token.colorBorderSecondary,
+                    borderRadius: 10,
+                    padding: '12px 14px',
+                    marginBottom: 12,
+                }, children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: {
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            gap: 8,
+                            marginBottom: 10,
+                        }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("span", { style: { fontWeight: 600, fontSize: 14 }, children: "\u7535\u8111\u63A5\u6536 \u00B7 \u672C\u673A\u4E13\u5C5E\u94FE\u63A5" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_tag, { color: "blue", style: { margin: 0, fontWeight: 400 }, children: "\u624B\u673A\u626B\u7801\u5373\u4E0A\u4F20" })] }), link ? ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', gap: 12, alignItems: 'flex-start' }, children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { flex: '0 0 auto', textAlign: 'center' }, children: [qrUrl ? ((0,react_jsx_runtime_production_namespaceFn().jsx)("img", { src: qrUrl, alt: "\u4E0A\u4F20\u94FE\u63A5\u4E8C\u7EF4\u7801", style: {
+                                            width: 124,
+                                            height: 124,
+                                            border: '1px solid ' + token.colorBorderSecondary,
+                                            // 二维码不加圆角（v26.10.06-v21 按用户要求）：圆角会切掉
+                                            // 定位用的三个角标，部分扫码器识别率会下降
+                                            display: 'block',
+                                        } })) : ((0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: {
+                                            width: 124,
+                                            height: 124,
+                                            border: '1px solid ' + token.colorBorderSecondary,
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            color: token.colorTextQuaternary,
+                                            fontSize: 12,
+                                        }, children: "\u4E8C\u7EF4\u7801\u751F\u6210\u4E2D\u2026" })), (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { fontSize: 12, color: token.colorTextTertiary, marginTop: 6 }, children: "\u626B\u4E00\u626B\u4E0A\u4F20" })] }), (0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { flex: 1, minWidth: 0 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { fontSize: 12, color: token.colorTextTertiary, marginBottom: 6 }, children: "\u94FE\u63A5\uFF08\u590D\u5236\u5230\u624B\u673A\u6D4F\u89C8\u5668\u6253\u5F00\uFF09" }), (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: {
+                                            border: '1px solid ' + token.colorBorder,
+                                            borderRadius: 8,
+                                            padding: '7px 10px',
+                                            fontSize: 13,
+                                            wordBreak: 'break-all',
+                                            background: token.colorFillQuaternary,
+                                            maxHeight: 56,
+                                            overflow: 'auto',
+                                        }, children: link }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { color: "primary", variant: "solid", block: true, style: { marginTop: 10 }, onClick: () => link && safeCopyText(link), children: "\u590D\u5236\u94FE\u63A5" })] })] })) : ((0,react_jsx_runtime_production_namespaceFn().jsx)(TransferPairModal_Text, { type: "danger", children: "\u5C1A\u672A\u914D\u7F6E\u4E2D\u7EE7\u670D\u52A1\u5668\uFF0C\u8BF7\u5230\u7B2C\u4E00\u680F\u300C\u8BBE\u7F6E\u300D\u586B\u5199\u3002" }))] }), (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { textAlign: 'center', marginBottom: 12 }, children: (0,react_jsx_runtime_production_namespaceFn().jsxs)("span", { style: {
+                        display: 'inline-block',
+                        border: '1px solid ' + (phoneOnline ? token.colorSuccessBorder : token.colorErrorBorder),
+                        background: phoneOnline ? token.colorSuccessBg : token.colorErrorBg,
+                        color: phoneOnline ? token.colorSuccess : token.colorError,
+                        borderRadius: 16,
+                        padding: '4px 16px',
+                        fontSize: 13,
+                    }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("span", { style: {
+                                display: 'inline-block',
+                                width: 6,
+                                height: 6,
+                                borderRadius: '50%',
+                                background: phoneOnline ? token.colorSuccess : token.colorError,
+                                marginRight: 6,
+                                verticalAlign: 'middle',
+                            } }), phoneOnline ? '已连接手机 ' + phones.length + ' 台，可收发' : '当前无在线设备，暂不可收发'] }) }), phones.length > 0 && ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: {
+                    border: '1px solid ' + token.colorBorderSecondary,
+                    borderRadius: 10,
+                    padding: '10px 14px',
+                }, children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { fontSize: 13, fontWeight: 600, marginBottom: 6 }, children: ["\u5DF2\u8FDE\u63A5\u624B\u673A\uFF08", phones.length, "\uFF09"] }), (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { display: 'flex', flexWrap: 'wrap', gap: 6 }, children: phones.map((p) => ((0,react_jsx_runtime_production_namespaceFn().jsx)(DeviceIdTag, { id: p.id, colorIndex: deviceColors[p.id] }, p.id || 'unknown'))) }), (0,react_jsx_runtime_production_namespaceFn().jsx)(TransferPairModal_Text, { type: "secondary", style: { fontSize: 11 }, children: "\u5728\u5DE6\u4FA7\u300C\u8BBE\u5907\u300D\u5206\u7EC4\u70B9\u5BF9\u5E94\u624B\u673A\u5373\u53EF\u8FDB\u5165\u4F1A\u8BDD\uFF1B\u53D1\u7ED9\u8C01\u7531\u6240\u5728\u4F1A\u8BDD\u51B3\u5B9A\u3002" })] }))] }));
+}
+
+;// ./src/lib/ui/transfer/TransferSettingsModal.tsx
+
+
+
+
+
+
+
+
+const { Text: TransferSettingsModal_Text } = typography;
+/**
+ * 传输助手的**独立设置面板**（v26.10.12-v1）。
+ *
+ * 与 App 主面板的「设置菜单」完全分开（用户要求：数据、入口、UI 均不共用）：
+ *   · 数据落在 `scriptCat_TransferSettings`，不写主设置的 `scriptCat_Allvalue`；
+ *   · 入口在第一栏底部「设置」，主面板设置菜单里不再有中继地址。
+ *
+ * 中继地址用**草稿 + 失焦/回车提交**：`updateTransferSettings` 在地址变化时会重启
+ * 轮询与长轮询（stop → start），如果逐字提交，输入 "https://…" 的每个合法前缀都会
+ * 触发一次重连（原主面板设置是逐字提交的，那里只有一处地址框，影响面小）。
+ */
+function TransferSettingsModal({ open, onClose }) {
+    const { token } = es_theme.useToken();
+    const s = useTransferStore();
+    const settings = s.settings;
+    const [relayDraft, setRelayDraft] = (0,react_production_namespaceFn().useState)(settings.relayServer);
+    // 打开时把当前值灌进草稿；提交后 settings.relayServer 变化会同步回来（与草稿相同，无感）
+    (0,react_production_namespaceFn().useEffect)(() => {
+        if (open)
+            setRelayDraft(settings.relayServer);
+    }, [open, settings.relayServer]);
+    /** 提交草稿（去首尾空白 + 尾斜杠后与现值比较，相同则 store 自己会跳过） */
+    const commitRelay = (val) => {
+        const url = (val || '').trim().replace(/\/+$/, '');
+        if (url && url !== settings.relayServer)
+            updateTransferSettings({ relayServer: url });
+    };
+    /** 关闭前把未提交的草稿补交（点 X / 遮罩关闭时输入框不一定失焦） */
+    const closeWithCommit = () => {
+        commitRelay(relayDraft);
+        onClose();
+    };
+    return ((0,react_jsx_runtime_production_namespaceFn().jsxs)(modal, { open: open, title: "\u4F20\u8F93\u52A9\u624B\u8BBE\u7F6E", onCancel: closeWithCommit, getContainer: getOverlayContainer, width: 480, styles: { body: { textAlign: 'left' } }, destroyOnHidden: true, footer: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { color: "primary", variant: "solid", onClick: closeWithCommit, children: "\u5B8C\u6210" }), children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(TransferSettingsModal_Text, { strong: true, style: { display: 'block', marginBottom: 8 }, children: "\u4E2D\u7EE7\u670D\u52A1\u5668\u5730\u5740" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_input, { placeholder: "https://\u4F60\u7684\u670D\u52A1\u5668:\u7AEF\u53E3", value: relayDraft, onChange: (e) => setRelayDraft(e.target.value), onBlur: (e) => {
+                    const url = (e.target.value || '').trim();
+                    if (!url) {
+                        // 清空并失焦 → 回填默认地址（与主面板常用语地址同一交互）
+                        setRelayDraft(DEFAULT_RELAY_SERVER);
+                        commitRelay(DEFAULT_RELAY_SERVER);
+                    }
+                    else {
+                        commitRelay(url);
+                    }
+                }, onPressEnter: (e) => commitRelay(e.target.value), allowClear: true, style: { marginBottom: 8 } }), (0,react_jsx_runtime_production_namespaceFn().jsx)(TransferSettingsModal_Text, { type: "secondary", style: { fontSize: 12, display: 'block', marginBottom: 16 }, children: "\u624B\u673A\u4E0A\u4F20\u7684\u56FE\u7247 / \u6587\u672C\u7ECF\u6B64\u670D\u52A1\u5668\u8F6C\u53D1\u5230\u672C\u673A\u3002\u4FEE\u6539\u540E\u70B9\u5176\u4ED6\u533A\u57DF\u6216\u6309\u56DE\u8F66\u751F\u6548\uFF1B\u7559\u7A7A\u5931\u7126\u6062\u590D\u9ED8\u8BA4\u5730\u5740\u3002" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(TransferSettingsModal_Text, { strong: true, style: { display: 'block', marginBottom: 8 }, children: "\u7A97\u53E3\u5916\u89C2" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(segmented, { block: true, value: settings.theme, onChange: (v) => updateTransferSettings({ theme: v }), options: [
+                    { label: '浅色', value: 'light' },
+                    { label: '深色', value: 'dark' },
+                ], style: { marginBottom: 8 } }), (0,react_jsx_runtime_production_namespaceFn().jsx)(TransferSettingsModal_Text, { type: "secondary", style: { fontSize: 12, display: 'block', marginBottom: 16 }, children: "\u53EA\u5F71\u54CD\u4F20\u8F93\u52A9\u624B\u7A97\u53E3\uFF0C\u4E0E\u4E3B\u9762\u677F\u53CA\u5F81\u7EB3\u4E92\u52A8\u9875\u9762\u7684\u5916\u89C2\u65E0\u5173\u3002" }), (0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(TransferSettingsModal_Text, { strong: true, children: "\u6536\u5230\u5185\u5BB9\u65F6\u81EA\u52A8\u6253\u5F00\u4F20\u8F93\u52A9\u624B" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_switch, { checked: settings.autoOpenOnReceive, onChange: (v) => updateTransferSettings({ autoOpenOnReceive: v }) })] }), (0,react_jsx_runtime_production_namespaceFn().jsx)(TransferSettingsModal_Text, { type: "secondary", style: { fontSize: 12, display: 'block', marginBottom: 16 }, children: "\u5173\u95ED\u65F6\u4EC5\u7D2F\u8BA1\u672A\u8BFB\u89D2\u6807\uFF0C\u4E0D\u6253\u6270\uFF1B\u7A97\u53E3\u5DF2\u5F00\u7740\u5219\u53EA\u7D2F\u52A0\uFF0C\u4E0D\u5F3A\u884C\u5207\u6362\u4F1A\u8BDD\u3002" }), (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { borderTop: '1px solid ' + token.colorBorderSecondary, paddingTop: 12 }, children: (0,react_jsx_runtime_production_namespaceFn().jsx)(popconfirm, { title: "\u6E05\u7A7A\u5168\u90E8\u4F20\u8F93\u8BB0\u5F55", description: "\u6240\u6709\u4F1A\u8BDD\u7684\u56FE\u7247\u4E0E\u6587\u672C\u90FD\u4F1A\u88AB\u79FB\u9664\uFF08\u4EC5\u6E05\u7406\u672C\u673A\u5185\u5B58\uFF0C\u4E0D\u5F71\u54CD\u624B\u673A\u4E0A\u7684\u6587\u4EF6\uFF09", okButtonProps: { danger: true }, onConfirm: () => {
+                        clearAllTransferFiles();
+                        addLog('[传输助手] 已清空全部传输记录', 'success');
+                    }, children: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { danger: true, children: "\u6E05\u7A7A\u5168\u90E8\u4F20\u8F93\u8BB0\u5F55" }) }) })] }));
+}
+
+;// ./src/lib/ui/transfer/TransferAboutModal.tsx
+
+
+
+
+
+
+
+
+
+
+const { Text: TransferAboutModal_Text } = typography;
+/** 一行「标签 — 值」 */
+function TransferAboutModal_Row({ label, children }) {
+    return ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', gap: 12, padding: '7px 0', borderBottom: '1px solid rgba(128,128,128,0.12)' }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("span", { style: { flex: '0 0 92px', fontSize: 13, color: 'inherit', opacity: 0.65 }, children: label }), (0,react_jsx_runtime_production_namespaceFn().jsx)("span", { style: { flex: '1 1 auto', minWidth: 0, fontSize: 13, wordBreak: 'break-all' }, children: children })] }));
+}
+/**
+ * 企业信息（v26.10.12-v1）：传输助手第一栏底部入口。
+ *
+ * 对齐企业微信桌面端的「企业信息」：展示本助手的运行环境（中继地址、本机设备 ID、
+ * 在线手机、脚本版本），便于排查「连不上」时先确认这几项。
+ */
+function TransferAboutModal({ open, onClose }) {
+    const { token } = es_theme.useToken();
+    const s = useTransferStore();
+    const deviceId = getDeviceId();
+    const colors = resolveDeviceColors(s.phones.map((p) => p.id));
+    return ((0,react_jsx_runtime_production_namespaceFn().jsxs)(modal, { open: open, title: "\u4F01\u4E1A\u4FE1\u606F", onCancel: onClose, getContainer: getOverlayContainer, width: 440, styles: { body: { textAlign: 'left' } }, destroyOnHidden: true, footer: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { color: "primary", variant: "solid", onClick: onClose, children: "\u5173\u95ED" }), children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(TransferAboutModal_Row, { label: "\u4E2D\u7EE7\u670D\u52A1\u5668", children: s.settings.relayServer || '（未配置）' }), (0,react_jsx_runtime_production_namespaceFn().jsx)(TransferAboutModal_Row, { label: "\u672C\u673A\u8BBE\u5907 ID", children: (0,react_jsx_runtime_production_namespaceFn().jsxs)("span", { style: { display: 'inline-flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(DeviceIdTag, { id: deviceId }), (0,react_jsx_runtime_production_namespaceFn().jsx)("span", { style: { fontSize: 11, opacity: 0.65 }, children: deviceId }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { size: "small", type: "text", "aria-label": "\u590D\u5236\u8BBE\u5907 ID", title: "\u590D\u5236\u8BBE\u5907 ID", style: { color: token.colorTextTertiary }, onClick: () => safeCopyText(deviceId), children: (0,react_jsx_runtime_production_namespaceFn().jsx)(CopyIcon, { size: 13 }) })] }) }), (0,react_jsx_runtime_production_namespaceFn().jsx)(TransferAboutModal_Row, { label: "\u5728\u7EBF\u624B\u673A", children: s.phones.length ? ((0,react_jsx_runtime_production_namespaceFn().jsxs)("span", { style: { display: 'inline-flex', gap: 6, flexWrap: 'wrap' }, children: [s.phones.map((p) => ((0,react_jsx_runtime_production_namespaceFn().jsx)(DeviceIdTag, { id: p.id, colorIndex: colors[p.id] }, p.id || 'unknown'))), (0,react_jsx_runtime_production_namespaceFn().jsxs)("span", { style: { fontSize: 11, opacity: 0.65 }, children: ["\u5171 ", s.phones.length, " \u53F0"] })] })) : ((0,react_jsx_runtime_production_namespaceFn().jsx)(TransferAboutModal_Text, { type: "secondary", children: "\u6682\u65E0\uFF08\u624B\u673A\u7AEF\u6253\u5F00\u672C\u673A\u94FE\u63A5\u540E\u51FA\u73B0\uFF09" })) }), (0,react_jsx_runtime_production_namespaceFn().jsx)(TransferAboutModal_Row, { label: "\u811A\u672C\u7248\u672C", children: (GM_info.script && GM_info.script.version) || '未知' }), (0,react_jsx_runtime_production_namespaceFn().jsx)(TransferAboutModal_Row, { label: "\u9879\u76EE\u4E3B\u9875", children: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { type: "link", style: { padding: 0, height: 'auto' }, onClick: () => window.open('https://github.com/Run-os/znhd-service', '_blank'), children: "github.com/Run-os/znhd-service" }) }), (0,react_jsx_runtime_production_namespaceFn().jsx)(TransferAboutModal_Text, { type: "secondary", style: { fontSize: 12, display: 'block', marginTop: 10 }, children: "\u63D0\u793A\uFF1A\u6392\u67E5\u300C\u8FDE\u4E0D\u4E0A\u300D\u65F6\u5148\u770B\u8FD9\u91CC \u2014\u2014 \u4E2D\u7EE7\u5730\u5740\u662F\u5426\u53EF\u8FBE\u3001\u624B\u673A\u662F\u5426\u51FA\u73B0\u5728\u5728\u7EBF\u5217\u8868\u91CC\uFF1B \u4F1A\u8BDD\u8BB0\u5F55\u53EA\u5B58\u672C\u673A\u5185\u5B58\uFF0C\u91CD\u542F\u811A\u672C\u540E\u6E05\u7A7A\u3002" })] }));
+}
+
+;// ./src/lib/ui/transfer/useAgentChat.ts
+
+
+
+
+
 /**
  * 交代脚本自身的上下文，让 Agent 知道「自己在哪、能干什么」。刻意写短：
  * 太长会与用户的真实问题抢注意力，而且它是每轮都要付的 token。
@@ -116178,27 +117959,26 @@ function chatTimeText(timestamp) {
 const SYSTEM_PROMPT = [
     '你是「征纳互动人数和在线监控」油猴脚本内置的助手。',
     '这个脚本运行在税务人员的工作电脑上：监控征纳互动的等待人数与掉线弹窗、语音播报提醒、',
-    '还有常用语、历史记录、设备互联（手机传图到电脑）、图片嗅探几个面板入口。',
+    '还有常用语、传输助手（手机 ↔ 电脑互传文件）、图片嗅探几个面板入口。',
     '回答请用简体中文，尽量简短直接；涉及操作步骤时说清楚点哪个按钮。',
 ].join('\n');
 /**
- * Agent 弹窗（v26.10.10-v10）。
+ * Agent 对话状态机（v26.10.12-v1 从原 AgentModal 抽取）。
  *
- * ── 为什么是「弹窗 + 页签」而不是面板里再开一层 ──────────────────────────────
- * 主面板宽度固定 238px（`PANEL_WIDTH`），塞不下对话流。弹窗沿用本仓库既有做法
- * （`getOverlayContainer`，见 PhoneModal / SniffModal）挂到宿主页 body 之外的 overlay 容器，
- * 避免宿主页 `body { transform }` 把浮层限制在盒子内。
+ * 重构背景：「Agent 助手」不再是独立弹窗，而是传输助手第一栏的 Agents 入口 ——
+ * 点击后在右侧主聊天区直接打开对话。本 hook 把原弹窗里的全部会话逻辑原样搬过来，
+ * 由传输助手窗口（第一栏 Agents 选中时）持有；`active` 即「Agent 视图当前可见」。
  *
- * ── 可用性 ─────────────────────────────────────────────────────────────────
- * `CAT.agent.*` 只在 ScriptCat v1.4+ 存在。探测在 render 期做（纯内存判空，无异步），
- * 不可用时**照常打开弹窗**并显示原因，而不是把按钮藏起来 —— 用户至少要知道「为什么点不动」。
+ * ⚠️ 以下实测结论全部沿用（原 AgentModal 已于 v26.10.12-v1 删除，结论随本 hook 保留），改前必读 AGENT.md 对应条目：
+ *   · 流式分片回调早于 `await` 返回值可用 ⇒ 增量累加必须用调用前建好的独立对象（TDZ）；
+ *   · 历史消息的 `thinking` 是对象，必须过 `thinkingToText()` 再进 JSX；
+ *   · 官方没有 list/delete 会话接口，列表是本地索引（`scriptCat_AgentChats`）；
+ *   · `clear()` 只清消息、不删会话记录，UI 不承诺「彻底删除」。
  */
-function AgentModal({ open, onClose }) {
-    const { token } = es_theme.useToken();
+function useAgentChat(active) {
     // 探测是纯内存判空，每次 render 重算也无所谓（不缓存，避免 ScriptCat 热重载后状态过期）
     const availability = detectCatAgent();
     const api = availability.api;
-    const [tab, setTab] = (0,react_production_namespaceFn().useState)('chat');
     const [models, setModels] = (0,react_production_namespaceFn().useState)([]);
     const [modelId, setModelId] = (0,react_production_namespaceFn().useState)('');
     const [messages, setMessages] = (0,react_production_namespaceFn().useState)([]);
@@ -116206,21 +117986,13 @@ function AgentModal({ open, onClose }) {
     const [streaming, setStreaming] = (0,react_production_namespaceFn().useState)(false);
     const [fatalError, setFatalError] = (0,react_production_namespaceFn().useState)('');
     const [conversation, setConversation] = (0,react_production_namespaceFn().useState)(null);
-    /** 会话索引（v26.10.10-v12）：官方 conversation API 没有 list/delete，列表由脚本自己记账 */
     const [chats, setChats] = (0,react_production_namespaceFn().useState)([]);
     /** 当前会话 id；空串 = 空白对话（发第一条消息时才会真正创建） */
     const [activeChatId, setActiveChatId] = (0,react_production_namespaceFn().useState)('');
-    /** 鼠标正悬停的会话卡片：侧栏的删除图标只在悬停（或选中）时出现，用 state 而不是 CSS 类 */
-    const [hoverChatId, setHoverChatId] = (0,react_production_namespaceFn().useState)('');
-    const [skillsVersion, setSkillsVersion] = (0,react_production_namespaceFn().useState)(0);
-    const [tasksVersion, setTasksVersion] = (0,react_production_namespaceFn().useState)(0);
     const keyRef = (0,react_production_namespaceFn().useRef)(0);
     /** 会话索引的最新值：回调里要读它，不能依赖 state 快照（否则连发两条会用同一份旧列表去 upsert） */
     const chatsRef = (0,react_production_namespaceFn().useRef)([]);
-    const scrollRef = (0,react_production_namespaceFn().useRef)(null);
     const streamTokenRef = (0,react_production_namespaceFn().useRef)(0);
-    // antd 的 Input.TextArea ref 不是原生 textarea，而是带 nativeElement 的 TextAreaRef（rc-textarea 约定）
-    const inputRef = (0,react_production_namespaceFn().useRef)(null);
     const nextKey = (0,react_production_namespaceFn().useCallback)(() => {
         keyRef.current += 1;
         return keyRef.current;
@@ -116237,7 +118009,7 @@ function AgentModal({ open, onClose }) {
     }, []);
     /* ---------------------------------------------------------- 模型列表 */
     (0,react_production_namespaceFn().useEffect)(() => {
-        if (!open || !api)
+        if (!active || !api)
             return;
         let alive = true;
         void (async () => {
@@ -116250,15 +118022,15 @@ function AgentModal({ open, onClose }) {
         return () => {
             alive = false;
         };
-    }, [open, api]);
+    }, [active, api]);
     /* ---------------------------------------------------------- 接回上次的会话 */
     /**
-     * 打开弹窗时先把本地会话索引读出来，再按上次的 activeId 把那个对话接回去。
-     * 这一步就是「刷新网页 / 关掉弹窗后对话还在」的关键：对话本体一直在 ScriptCat 的 OPFS 里，
+     * Agent 视图变为可见时先把本地会话索引读出来，再按上次的 activeId 把那个对话接回来。
+     * 这一步就是「刷新网页 / 关掉窗口后对话还在」的关键：对话本体一直在 ScriptCat 的 OPFS 里，
      * 缺的只是脚本这边记住「上次聊的是哪一个」。
      */
     (0,react_production_namespaceFn().useEffect)(() => {
-        if (!open)
+        if (!active)
             return;
         const store = loadAgentChatStore();
         chatsRef.current = store.items;
@@ -116290,22 +118062,39 @@ function AgentModal({ open, onClose }) {
         return () => {
             alive = false;
         };
-    }, [open, api]);
-    /* ---------------------------------------------------------- 输入框自适应高度 */
+    }, [active, api]);
+    /** 打开 Agent 视图时把该对话已有的历史拉回来，切走再切回仍能接着看 */
     (0,react_production_namespaceFn().useEffect)(() => {
-        const el = inputRef.current?.nativeElement;
-        if (!el)
+        if (!active || !conversation)
             return;
-        el.style.height = 'auto';
-        el.style.height = Math.min(el.scrollHeight, 96) + 'px';
-    }, [input, tab, open]);
-    /* ---------------------------------------------------------- 消息区自动滚到底 */
-    (0,react_production_namespaceFn().useEffect)(() => {
-        const el = scrollRef.current;
-        if (!el)
-            return;
-        el.scrollTop = el.scrollHeight;
-    }, [messages]);
+        let alive = true;
+        void (async () => {
+            try {
+                const history = await readConversationMessages(conversation);
+                if (!alive || !history.length)
+                    return;
+                setMessages(history
+                    .filter((message) => message.role === 'user' || message.role === 'assistant')
+                    .map((message) => ({
+                    key: nextKey(),
+                    role: message.role,
+                    content: contentToText(message.content),
+                    // 历史消息的 thinking 是官方 ThinkingBlock（对象 { content }），
+                    // 必须归一成字符串再交给 React，否则整棵树会被卸载（v26.10.10-v11）。
+                    thinking: thinkingToText(message.thinking),
+                    toolCalls: message.toolCalls,
+                })));
+            }
+            catch (error) {
+                if (alive)
+                    addLog('[Agent] 读取对话历史失败: ' + agentErrorMessage(error), 'warning');
+            }
+        })();
+        return () => {
+            alive = false;
+        };
+        // conversation 变化（新建对话）时也要重新拉
+    }, [active, conversation, nextKey]);
     const patchLast = (0,react_production_namespaceFn().useCallback)((patch) => {
         setMessages((prev) => {
             if (!prev.length)
@@ -116342,38 +118131,6 @@ function AgentModal({ open, onClose }) {
         // 递增令牌即可让正在跑的消费循环在下一个分片处 break（并走 finally → iterator.return()）
         streamTokenRef.current += 1;
     }, []);
-    /** 打开弹窗时把该对话已有的历史拉回来，关掉再开仍能接着看 */
-    (0,react_production_namespaceFn().useEffect)(() => {
-        if (!open || !conversation)
-            return;
-        let alive = true;
-        void (async () => {
-            try {
-                const history = await readConversationMessages(conversation);
-                if (!alive || !history.length)
-                    return;
-                setMessages(history
-                    .filter((message) => message.role === 'user' || message.role === 'assistant')
-                    .map((message) => ({
-                    key: nextKey(),
-                    role: message.role,
-                    content: contentToText(message.content),
-                    // 历史消息的 thinking 是官方 ThinkingBlock（对象 { content }），
-                    // 必须归一成字符串再交给 React，否则整棵树会被卸载（v26.10.10-v11）。
-                    thinking: thinkingToText(message.thinking),
-                    toolCalls: message.toolCalls,
-                })));
-            }
-            catch (error) {
-                if (alive)
-                    addLog('[Agent] 读取对话历史失败: ' + agentErrorMessage(error), 'warning');
-            }
-        })();
-        return () => {
-            alive = false;
-        };
-        // conversation 变化（新建对话）时也要重新拉
-    }, [open, conversation, nextKey]);
     const send = (0,react_production_namespaceFn().useCallback)(async () => {
         const text = input.trim();
         if (!api || !text || streaming)
@@ -116508,7 +118265,7 @@ function AgentModal({ open, onClose }) {
     }, [api, activeChatId, stopStreaming]);
     /**
      * 删除某个会话：清空它的消息 + 从本地索引移除（官方没有删除会话的接口，见 sessions.ts）。
-     * v26.10.10-v13 起侧栏每条都能删，所以这里按 id 工作，不再是「只能删当前这条」。
+     * 传输助手的会话列表里每条都能删，所以这里按 id 工作，不再是「只能删当前这条」。
      */
     const deleteChat = (0,react_production_namespaceFn().useCallback)(async (id) => {
         if (!id)
@@ -116530,137 +118287,209 @@ function AgentModal({ open, onClose }) {
         }
         addLog('[Agent] 已删除对话「' + label + '」', 'info');
     }, [activeChatId, conversation, persistChats, stopStreaming]);
-    const handleClose = (0,react_production_namespaceFn().useCallback)(() => {
-        stopStreaming();
-        setStreaming(false);
-        onClose();
-    }, [stopStreaming, onClose]);
-    const renderMessage = (message) => {
-        const isUser = message.role === 'user';
-        return ((0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { display: 'flex', justifyContent: isUser ? 'flex-end' : 'flex-start', marginBottom: 10 }, children: (0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: {
-                    maxWidth: '86%',
-                    padding: '8px 10px',
-                    borderRadius: 8,
-                    fontSize: 13,
-                    lineHeight: 1.6,
-                    wordBreak: 'break-word',
-                    background: isUser ? token.colorPrimaryBg : token.colorFillQuaternary,
-                    border: '1px solid ' + (isUser ? token.colorPrimaryBorder : token.colorBorderSecondary),
-                }, children: [!isUser && message.toolCalls?.length ? ((0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { marginBottom: 6, display: 'flex', flexWrap: 'wrap', gap: 4 }, children: message.toolCalls.map((toolCall, index) => ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_tooltip, { title: toolCall.arguments ? toolCall.arguments.slice(0, 300) : toolCall.name, children: (0,react_jsx_runtime_production_namespaceFn().jsxs)("span", { style: {
-                                    fontSize: 11,
-                                    padding: '1px 6px',
-                                    borderRadius: 9,
-                                    background: token.colorFillTertiary,
-                                    color: token.colorTextSecondary,
-                                }, children: [toolDisplayName(toolCall.name), toolCall.status === 'running' ? ' …' : ''] }) }, (toolCall.id || toolCall.name) + '-' + index))) })) : null, !isUser && message.thinking ? ((0,react_jsx_runtime_production_namespaceFn().jsxs)("details", { style: { marginBottom: 6 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("summary", { style: { cursor: 'pointer', fontSize: 12, color: token.colorTextTertiary }, children: "\u601D\u8003\u8FC7\u7A0B" }), (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { fontSize: 12, color: token.colorTextSecondary, marginTop: 4 }, children: message.thinking })] })) : null, message.content ? ((0,react_jsx_runtime_production_namespaceFn().jsx)(MarkdownBody, { content: message.content })) : message.pending ? ((0,react_jsx_runtime_production_namespaceFn().jsx)(typography.Text, { type: "secondary", style: { fontSize: 12 }, children: "\u6B63\u5728\u601D\u8003\u2026" })) : null, message.cancelled ? ((0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { fontSize: 12, color: token.colorTextTertiary, marginTop: 4 }, children: "\uFF08\u5DF2\u4E2D\u6B62\uFF09" })) : null, message.error ? ((0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { fontSize: 12, color: token.colorError, marginTop: 6 }, children: message.error })) : null] }) }, message.key));
+    return {
+        availability,
+        api,
+        models,
+        modelId,
+        setModelId,
+        messages,
+        input,
+        setInput,
+        streaming,
+        fatalError,
+        chats,
+        activeChatId,
+        send,
+        stopStreaming,
+        newChat,
+        switchChat,
+        deleteChat,
+        nextKey,
     };
-    /** 侧栏的一条会话卡片（NextChat 的列表项：标题 + 时间，选中高亮，悬停出现删除） */
-    const renderChatItem = (item) => {
-        const active = item.id === activeChatId;
-        return ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { className: 'znhd-agent-chat-item' + (active ? ' znhd-agent-chat-item-active' : ''), title: agentChatLabel(chats, item.id), onClick: () => void switchChat(item.id), onMouseEnter: () => setHoverChatId(item.id), onMouseLeave: () => setHoverChatId((current) => (current === item.id ? '' : current)), style: {
-                position: 'relative',
-                padding: '6px 24px 6px 8px',
-                marginBottom: 4,
-                borderRadius: 6,
-                cursor: 'pointer',
-                lineHeight: 1.5,
-                background: active ? token.colorPrimaryBg : token.colorFillQuaternary,
-                border: '1px solid ' + (active ? token.colorPrimaryBorder : 'transparent'),
-            }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { fontSize: 12, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }, children: agentChatLabel(chats, item.id) }), (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { fontSize: 11, color: token.colorTextTertiary }, children: chatTimeText(item.updatetime) }), (0,react_jsx_runtime_production_namespaceFn().jsx)("span", { style: {
-                        position: 'absolute',
-                        top: 4,
-                        right: 2,
-                        opacity: active || hoverChatId === item.id ? 1 : 0,
-                    }, onClick: (event) => event.stopPropagation(), children: (0,react_jsx_runtime_production_namespaceFn().jsx)(popconfirm, { title: "\u5220\u9664\u8FD9\u4E2A\u5BF9\u8BDD\uFF1F", description: "\u4F1A\u6E05\u7A7A\u8BE5\u5BF9\u8BDD\u7684\u6D88\u606F\u8BB0\u5F55\uFF0C\u5E76\u4ECE\u4F1A\u8BDD\u5217\u8868\u91CC\u79FB\u9664\u3002", okText: "\u5220\u9664", cancelText: "\u53D6\u6D88", okButtonProps: { danger: true }, onConfirm: () => void deleteChat(item.id), children: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { type: "text", size: "small", "aria-label": "\u5220\u9664\u5BF9\u8BDD", icon: (0,react_jsx_runtime_production_namespaceFn().jsx)(TrashIcon, { size: 12 }), style: { width: 20, height: 20, minWidth: 20, padding: 0, color: token.colorTextTertiary } }) }) })] }, item.id));
-    };
+}
+
+;// ./src/lib/ui/transfer/TransferAssistantModal.tsx
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/**
+ * 传输助手主窗口（v26.10.12-v1）：原「设备互联」重构后的三栏窗口。
+ *
+ * ── 布局（对齐企业微信桌面端）────────────────────────────────────────────
+ *   第一栏（最窄）：logo + 折叠开关 → Agents（固定最顶部）/ 设备 / 文件 → 底部外观 / 设置 / 企业信息
+ *   第二栏（中等）：搜索框 + 紧邻的「+」配对按钮 → 会话 / 设备列表（Agents 分组时为对话列表）
+ *   第三栏（最宽）：当前会话的聊天区（设备收发 / Agent 对话 / 全部文件），未选中显示空状态
+ *
+ * ── 关键设计 ─────────────────────────────────────────────────────────────
+ *   · **外观隔离**：整窗套一层嵌套 ConfigProvider（深色算法只作用于本窗），
+ *     与主面板、征纳互动页面的主题互不影响；
+ *   · **数据隔离**：设置走 `scriptCat_TransferSettings`，收发明明在模块级 store
+ *     （窗口不开时照常收件、按设置自动弹窗），见 `lib/transfer/store.ts` 头注；
+ *   · **Agents 直达**：点第一栏 Agents 就在右侧主聊天区打开对话（useAgentChat），
+ *     不再有「打开 Agent 助手」按钮 + 独立窗口的旧交互。
+ */
+function TransferAssistantModal({ open, onClose }) {
+    const s = useTransferStore();
+    // ── 窗口自身的 UI 状态（与 store 的持久状态分开）──────────────────────
+    const [nav, setNav] = (0,react_production_namespaceFn().useState)('devices');
+    const [collapsed, setCollapsed] = (0,react_production_namespaceFn().useState)(false);
+    const [search, setSearch] = (0,react_production_namespaceFn().useState)('');
+    const [pairOpen, setPairOpen] = (0,react_production_namespaceFn().useState)(false);
+    const [settingsOpen, setSettingsOpen] = (0,react_production_namespaceFn().useState)(false);
+    const [aboutOpen, setAboutOpen] = (0,react_production_namespaceFn().useState)(false);
     /**
-     * 左侧会话栏（v26.10.10-v13）。
-     *
-     * 为什么是 state 控制删除图标的显隐、而不是 CSS `:hover`：本仓库没有给 Agent 弹窗引样式表
-     * （图标全内联、面板样式走 PANEL_CSS），为一次 hover 再注入 <style> 不划算；
-     * onMouseEnter/Leave 两行就够，且选中项永远可见，触屏/键盘用户也不会找不到入口。
+     * Agent 对话控制器：第一栏选中 Agents 且窗口开着才算 active（不活跃时 hook 内部
+     * 暂停流式与轮询，但会话索引照常留在 localStorage，重进不丢）。
+     * ⚠️ hook 必须无条件调用（不能塞进 `nav === 'agents'` 分支里）。
      */
-    const renderSidebar = () => ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { className: "znhd-agent-sidebar", style: {
-            flex: '0 0 ' + SIDEBAR_WIDTH + 'px',
-            width: SIDEBAR_WIDTH,
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 6,
-            paddingRight: 10,
-            borderRight: '1px solid ' + token.colorBorderSecondary,
-        }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(es_tooltip, { title: "\u6E05\u7A7A\u5F53\u524D\u89C6\u56FE\uFF0C\u53D1\u51FA\u4E0B\u4E00\u6761\u6D88\u606F\u65F6\u53E6\u8D77\u4E00\u4E2A\u5BF9\u8BDD", children: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { size: "small", icon: (0,react_jsx_runtime_production_namespaceFn().jsx)(PlusIcon, { size: 13 }), onClick: newChat, disabled: streaming && !conversation, style: { justifyContent: 'flex-start' }, children: "\u65B0\u7684\u804A\u5929" }) }), (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { className: "znhd-agent-chat-list", style: { flex: '1 1 auto', minHeight: 0, overflowY: 'auto', overflowX: 'hidden' }, children: chats.length ? (chats.map(renderChatItem)) : ((0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { fontSize: 12, color: token.colorTextTertiary, padding: '4px 2px' }, children: "\u8FD8\u6CA1\u6709\u5386\u53F2\u5BF9\u8BDD\u3002\u53D1\u51FA\u7B2C\u4E00\u6761\u6D88\u606F\u540E\uFF0C\u5B83\u4F1A\u51FA\u73B0\u5728\u8FD9\u91CC\u3002" })) })] }));
-    const renderChat = () => {
-        if (!api) {
-            return ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_alert, { type: "warning", showIcon: true, icon: (0,react_jsx_runtime_production_namespaceFn().jsx)(BotIcon, { size: 16 }), message: "Agent \u529F\u80FD\u4E0D\u53EF\u7528", description: availability.reason }));
-        }
-        return ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', gap: 12, alignItems: 'stretch' }, children: [renderSidebar(), (0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { flex: '1 1 auto', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 8 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', alignItems: 'baseline', gap: 8 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(typography.Text, { strong: true, style: { fontSize: 14 }, children: activeChatId ? agentChatLabel(chats, activeChatId) : '新的聊天' }), (0,react_jsx_runtime_production_namespaceFn().jsxs)(typography.Text, { type: "secondary", style: { fontSize: 11 }, children: ["\u5171 ", chats.length, " \u6761\u5BF9\u8BDD"] })] }), models.length ? null : ((0,react_jsx_runtime_production_namespaceFn().jsx)(typography.Text, { type: "secondary", style: { fontSize: 12 }, children: "\u8FD8\u6CA1\u6709\u5728 ScriptCat \u91CC\u914D\u7F6E\u6A21\u578B\uFF1A\u8BF7\u6253\u5F00 ScriptCat \u7684 Agent \u8BBE\u7F6E\u6DFB\u52A0\u4E00\u4E2A\u6A21\u578B\uFF08\u652F\u6301 OpenAI \u517C\u5BB9 / Anthropic / \u667A\u8C31\uFF09\uFF0C\u4E4B\u540E\u8FD9\u91CC\u4F1A\u5217\u51FA\u53EF\u9009\u6A21\u578B\u3002" })), fatalError ? (0,react_jsx_runtime_production_namespaceFn().jsx)(es_alert, { type: "error", showIcon: true, message: fatalError }) : null, (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { ref: scrollRef, className: "znhd-agent-messages", style: {
-                                height: MESSAGES_HEIGHT,
-                                overflowY: 'auto',
-                                overflowX: 'hidden',
-                                padding: '8px 4px',
-                                border: '1px solid ' + token.colorBorderSecondary,
-                                borderRadius: 6,
-                                background: token.colorBgContainer,
-                            }, children: messages.length ? (messages.map(renderMessage)) : ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_empty, { image: es_empty.PRESENTED_IMAGE_SIMPLE, description: (0,react_jsx_runtime_production_namespaceFn().jsx)("span", { style: { fontSize: 12 }, children: "\u76F4\u63A5\u63D0\u95EE\u5373\u53EF\u3002\u53EF\u4EE5\u8BD5\u8BD5\u300C\u5E2E\u6211\u603B\u7ED3\u8FD9\u4E2A\u9875\u9762\u80FD\u505A\u4EC0\u4E48\u300D\u300C\u5F81\u7EB3\u4E92\u52A8\u6389\u7EBF\u63D0\u9192\u6CA1\u58F0\u97F3\u600E\u4E48\u529E\u300D" }) })) }), (0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: {
-                                display: 'flex',
-                                flexDirection: 'column',
-                                gap: 2,
-                                padding: '6px 8px 4px',
-                                border: '1px solid ' + token.colorBorderSecondary,
-                                borderRadius: 8,
-                                background: token.colorBgContainer,
-                            }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(es_input.TextArea, { ref: inputRef, value: input, onChange: (event) => setInput(event.target.value), onPressEnter: (event) => {
-                                        if (event.shiftKey)
-                                            return;
-                                        event.preventDefault();
-                                        void send();
-                                    }, placeholder: "\u8F93\u5165\u95EE\u9898\uFF0CEnter \u53D1\u9001\uFF0CShift+Enter \u6362\u884C", 
-                                    // v26.10.10-v15：minRows 从 1 改成 2。rc-textarea 在**挂载时**按 minRows 算高度
-                                    // （1 行 ≈ 20px），而一旦输入过内容，它就按「行数 × 行高 + padding」重算
-                                    // （1 行文本实测 41px）——于是「打一个字再全删掉」会把输入框永久留在 41px，
-                                    // 与刚打开时的 20px 不一致（用户报告的「高度会变」）。minRows: 2 让初始态
-                                    // 就等于打过字的高度，打一个字不再跳。冒烟 agentInputHeightOk 守着这条。
-                                    autoSize: { minRows: 2, maxRows: 4 }, disabled: !api, variant: "borderless", 
-                                    // antd v6 的 borderless 变体在 :focus-visible 时会给文本域**自己**画一层
-                                    // outline 聚焦框（node_modules/antd/es/input/style/variants.js 的
-                                    // genBorderlessFocusVisibleStyle：`outline: 1px solid activeBorderColor`），
-                                    // 看上去就像输入框外围多了一圈蓝框。这里显式关掉 outline 与 boxShadow
-                                    // —— 内联样式优先级高于 antd 的类规则（那两条都没用 !important），两种画框
-                                    // 方式一起关，别只堵一半。要恢复聚焦提示的话请改外层容器的边框，别打开这里。
-                                    style: {
-                                        resize: 'none',
-                                        padding: 0,
-                                        fontSize: 13,
-                                        // v26.10.10-v15：显式钉住行高。rc-textarea 的 autoSize 靠「把计算样式复制到
-                                        // 隐藏测量 textarea」算高度：挂载那一刻 antd 的样式还没注入完，行高按 20px 算
-                                        // （2 行 = 40px），输入过一次之后再量就是 20.5px（2 行 = 41px），于是「打一个字
-                                        // 再删掉」会永久差 1px。钉死行高后两条路径算出来完全一致。
-                                        lineHeight: '20px',
-                                        outline: 'none',
-                                        boxShadow: 'none',
-                                    } }), (0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', alignItems: 'center', gap: 8 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(typography.Text, { type: "secondary", style: { fontSize: 11, flex: '1 1 auto', minWidth: 0 }, ellipsis: true, children: "Enter \u53D1\u9001\uFF0CShift + Enter \u6362\u884C" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_select, { size: "small", variant: "borderless", style: { maxWidth: 190 }, value: modelId || undefined, placeholder: models.length ? '选择模型' : '未配置模型', disabled: streaming, options: models.map((model) => ({
-                                                value: model.id,
-                                                label: model.name + '（' + model.provider + '）',
-                                            })), onChange: (value) => setModelId(value) }), streaming ? ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_tooltip, { title: "\u4E2D\u6B62\u672C\u8F6E\u56DE\u7B54", children: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { shape: "circle", size: "small", danger: true, "aria-label": "\u4E2D\u6B62", icon: (0,react_jsx_runtime_production_namespaceFn().jsx)(StopIcon, { size: 12 }), onClick: stopStreaming }) })) : ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_tooltip, { title: "\u53D1\u9001\uFF08Enter\uFF09", children: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { shape: "circle", size: "small", type: "primary", "aria-label": "\u53D1\u9001", icon: (0,react_jsx_runtime_production_namespaceFn().jsx)(SendIcon, { size: 14 }), onClick: () => void send(), disabled: !input.trim() }) }))] })] })] })] }));
+    const agent = useAgentChat(nav === 'agents' && open);
+    // 窗口开合 → 通知 store（决定未读累计与自动弹窗行为）
+    (0,react_production_namespaceFn().useEffect)(() => {
+        setTransferWindowOpen(open);
+        return () => setTransferWindowOpen(false);
+    }, [open]);
+    // 自动弹窗打开时，若 store 已把选中切到新消息所在会话，右侧跟着切到「设备」视图
+    // （只认「关 → 开」这一个跳变：窗口开着时用户手动切视图不被抢）
+    const prevOpen = (0,react_production_namespaceFn().useRef)(false);
+    (0,react_production_namespaceFn().useEffect)(() => {
+        if (open && !prevOpen.current && s.activeSessionKey)
+            setNav('devices');
+        prevOpen.current = open;
+    }, [open, s.activeSessionKey]);
+    // 选中/切换会话即已读
+    (0,react_production_namespaceFn().useEffect)(() => {
+        if (open && s.activeSessionKey)
+            markSessionRead(s.activeSessionKey);
+    }, [open, s.activeSessionKey]);
+    /** 设备 ID → 色板下标（会话列表、聊天头部、配对窗共用同一套配色） */
+    const deviceColors = (0,react_production_namespaceFn().useMemo)(() => resolveDeviceColors(s.phones.map((p) => p.id)), [s.phones]);
+    /** 第二栏的设备条目：在线手机（无消息也出现，便于直接发起会话） ∪ 有消息的会话 */
+    const deviceEntries = (0,react_production_namespaceFn().useMemo)(() => {
+        const map = new Map();
+        s.phones.forEach((p) => {
+            const key = sessionKeyOf(p.id);
+            map.set(key, {
+                key,
+                label: key === PHONE_SESSION_KEY ? (/* inlined export .PHONE_SESSION_LABEL */"手机") : shortPhoneId(p.id),
+                isAggregate: key === PHONE_SESSION_KEY,
+                online: true,
+                unread: 0,
+                lastTs: 0,
+                hasMessages: false,
+            });
+        });
+        s.sessions.forEach((sess) => {
+            const prev = map.get(sess.key);
+            const lastMsg = sess.messages.length ? sess.messages[sess.messages.length - 1] : undefined;
+            map.set(sess.key, {
+                key: sess.key,
+                label: prev && !prev.isAggregate
+                    ? prev.label
+                    : sess.key === PHONE_SESSION_KEY
+                        ? (/* inlined export .PHONE_SESSION_LABEL */"手机")
+                        : shortPhoneId(sess.key),
+                isAggregate: sess.key === PHONE_SESSION_KEY,
+                online: prev ? prev.online : false,
+                unread: (prev ? prev.unread : 0) + sess.unread,
+                lastTs: sess.lastTs,
+                lastMsg,
+                hasMessages: sess.messages.length > 0,
+            });
+        });
+        // 有消息的（按最后消息时间）排在前，纯在线设备随后
+        return Array.from(map.values()).sort((a, b) => b.lastTs - a.lastTs);
+    }, [s.phones, s.sessions]);
+    /** 未读总数（第一栏「设备」入口的小红点） */
+    const unreadTotal = s.sessions.reduce((n, x) => n + x.unread, 0);
+    /** 全部文件视图的数据源：所有会话的消息（组件内部按时间倒序） */
+    const allMessages = (0,react_production_namespaceFn().useMemo)(() => s.sessions.reduce((acc, x) => acc.concat(x.messages), []), [s.sessions]);
+    /**
+     * 当前会话；选中了一台**在线但无历史**的手机时合成一条空会话，
+     * 让用户能直接发起发送（发送侧只要求对方在线，不要求有历史）。
+     */
+    const activeSession = (0,react_production_namespaceFn().useMemo)(() => {
+        const found = s.sessions.find((x) => x.key === s.activeSessionKey);
+        if (found)
+            return found;
+        if (!s.activeSessionKey)
+            return undefined;
+        const known = s.activeSessionKey === PHONE_SESSION_KEY
+            ? s.phones.length > 0
+            : s.phones.some((p) => sessionKeyOf(p.id) === s.activeSessionKey);
+        return known ? { key: s.activeSessionKey, messages: [], unread: 0, lastTs: 0 } : undefined;
+    }, [s.sessions, s.activeSessionKey, s.phones]);
+    const activePhone = activeSession ? s.phones.find((p) => sessionKeyOf(p.id) === activeSession.key) : undefined;
+    const onSelectSession = (key) => {
+        setNav('devices');
+        setActiveSession(key);
     };
-    const tabs = [
-        { key: 'chat', label: '对话' },
-        { key: 'skills', label: '技能' },
-        { key: 'tasks', label: '定时任务' },
-    ];
-    return ((0,react_jsx_runtime_production_namespaceFn().jsxs)(modal, { open: open, title: (0,react_jsx_runtime_production_namespaceFn().jsxs)(es_space, { size: 6, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(BotIcon, { size: 16, color: token.colorPrimary }), (0,react_jsx_runtime_production_namespaceFn().jsx)("span", { children: "Agent \u52A9\u624B" })] }), width: MODAL_WIDTH, getContainer: getOverlayContainer, onCancel: handleClose, destroyOnHidden: true, footer: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_space, { children: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { onClick: handleClose, children: "\u5173\u95ED" }) }), children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { display: 'flex', gap: 4, borderBottom: '1px solid ' + token.colorBorderSecondary }, children: tabs.map((item) => ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { type: "text", size: "small", onClick: () => setTab(item.key), style: {
-                        padding: '4px 10px',
-                        fontSize: 13,
-                        borderBottom: '2px solid ' + (tab === item.key ? token.colorPrimary : 'transparent'),
-                        borderRadius: 0,
-                    }, children: item.label }, item.key))) }), (0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { paddingTop: 10 }, children: [tab === 'chat' ? renderChat() : null, tab === 'skills' ? (api ? ((0,react_jsx_runtime_production_namespaceFn().jsx)(SkillsPanel, { api: api, version: skillsVersion, onChange: () => setSkillsVersion((value) => value + 1) })) : ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_alert, { type: "warning", showIcon: true, message: "\u6280\u80FD\u4E0D\u53EF\u7528", description: availability.reason }))) : null, tab === 'tasks' ? (api ? ((0,react_jsx_runtime_production_namespaceFn().jsx)(TaskPanel, { api: api, version: tasksVersion, onChange: () => setTasksVersion((value) => value + 1) })) : ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_alert, { type: "warning", showIcon: true, message: "\u5B9A\u65F6\u4EFB\u52A1\u4E0D\u53EF\u7528", description: availability.reason }))) : null] })] }));
+    /** 第三栏路由 */
+    let main = null;
+    if (nav === 'agents') {
+        main = (0,react_jsx_runtime_production_namespaceFn().jsx)(TransferAgentView, { agent: agent });
+    }
+    else if (nav === 'files') {
+        main = (0,react_jsx_runtime_production_namespaceFn().jsx)(TransferFilesView, { messages: allMessages });
+    }
+    else if (activeSession) {
+        main = ((0,react_jsx_runtime_production_namespaceFn().jsx)(TransferDeviceChat, { session: activeSession, phone: activePhone, colorIndex: activePhone ? deviceColors[activePhone.id] : undefined, onClear: () => {
+                clearTransferSession(activeSession.key);
+                addLog('[传输助手] 已清空会话消息', 'success');
+            } }));
+    }
+    else {
+        main = ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { className: "znhd-transfer-empty", style: {
+                flex: '1 1 auto',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 10,
+            }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(DeviceIcon, { size: 44, color: "rgba(128,128,128,0.45)" }), (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { fontSize: 14, fontWeight: 600, opacity: 0.75 }, children: "\u6682\u65E0\u6D88\u606F" }), (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { fontSize: 12, opacity: 0.55 }, children: "\u70B9\u7B2C\u4E8C\u680F\u53F3\u4E0A\u89D2 + \u914D\u5BF9\u624B\u673A\uFF0C\u6216\u5728\u300C\u8BBE\u5907\u300D\u91CC\u9009\u62E9\u4E00\u4E2A\u4F1A\u8BDD\u5F00\u59CB\u6536\u53D1" })] }));
+    }
+    const dark = s.settings.theme === 'dark';
+    return ((0,react_jsx_runtime_production_namespaceFn().jsx)(config_provider
+    // 深色算法只作用于传输助手窗口（嵌套 provider：locale / zIndexPopupBase 等
+    // 仍从外层主面板的 provider 继承）；浮层统一进 overlay 宿主，避开宿主页层叠上下文
+    , { 
+        // 深色算法只作用于传输助手窗口（嵌套 provider：locale / zIndexPopupBase 等
+        // 仍从外层主面板的 provider 继承）；浮层统一进 overlay 宿主，避开宿主页层叠上下文
+        theme: {
+            algorithm: dark ? es_theme.darkAlgorithm : es_theme.defaultAlgorithm,
+            token: { borderRadius: 8, borderRadiusLG: 10, borderRadiusSM: 6 },
+        }, getPopupContainer: getOverlayContainer, children: (0,react_jsx_runtime_production_namespaceFn().jsxs)(modal, { open: open, title: (0,react_jsx_runtime_production_namespaceFn().jsxs)("span", { style: { display: 'inline-flex', alignItems: 'center', gap: 8 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(TransferIcon, { size: 17 }), "\u4F20\u8F93\u52A9\u624B"] }), onCancel: onClose, getContainer: getOverlayContainer, width: "min(1080px, 96vw)", styles: {
+                body: {
+                    padding: 0,
+                    height: 'min(640px, calc(100vh - 190px))',
+                    display: 'flex',
+                    flexDirection: 'row',
+                    overflow: 'hidden',
+                },
+            }, destroyOnHidden: true, footer: null, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(TransferNavRail, { nav: nav, onNav: setNav, collapsed: collapsed, onToggleCollapsed: () => setCollapsed((v) => !v), themeMode: s.settings.theme, onThemeMode: (t) => updateTransferSettings({ theme: t }), onOpenSettings: () => setSettingsOpen(true), onOpenAbout: () => setAboutOpen(true), unreadTotal: unreadTotal }), (0,react_jsx_runtime_production_namespaceFn().jsx)(TransferSessionList, { nav: nav, search: search, onSearch: setSearch, onPair: () => setPairOpen(true), deviceEntries: deviceEntries, activeSessionKey: s.activeSessionKey, onSelectSession: onSelectSession, agent: nav === 'agents' ? agent : undefined }), (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { className: "znhd-transfer-main", style: {
+                        flex: '1 1 auto',
+                        minWidth: 0,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        background: s.settings.theme === 'dark' ? '#141414' : '#fff',
+                    }, children: main }), (0,react_jsx_runtime_production_namespaceFn().jsx)(TransferPairModal, { open: pairOpen, onClose: () => setPairOpen(false), relayServer: s.settings.relayServer, phones: s.phones }), (0,react_jsx_runtime_production_namespaceFn().jsx)(TransferSettingsModal, { open: settingsOpen, onClose: () => setSettingsOpen(false) }), (0,react_jsx_runtime_production_namespaceFn().jsx)(TransferAboutModal, { open: aboutOpen, onClose: () => setAboutOpen(false) })] }) }));
 }
 
 ;// ./src/lib/ui/MainPanel.tsx
-
-
-
-
 
 
 
@@ -116709,9 +118538,9 @@ function BrandIcon({ size = 26 }) {
     return ((0,react_jsx_runtime_production_namespaceFn().jsx)("img", { src: BRAND_ICON, alt: "", draggable: false, style: { ...box, display: 'block' }, onError: () => setFailed(true) }));
 }
 /**
- * 底部入口按钮的自适应样式（v26.10.07-v3；v26.10.10-v4 起由 4 个增至 5 个）。
+ * 底部入口按钮的自适应样式（v26.10.07-v3；v26.10.12-v1 起由 5 个减为 4 个）。
  *
- * 需求：5 个入口合并到一行，并随宽度自适应——
+ * 需求：4 个入口合并到一行，并随宽度自适应——
  *   · 宽度足够 → 图标 + 文字同排；
  *   · 宽度不足 → **只留图标**（当前面板就落在这一档，文案靠 hover Tooltip 给出）；
  *   · 两种状态下悬停都有 Tooltip（见下方 JSX）。
@@ -116719,12 +118548,12 @@ function BrandIcon({ size = 26 }) {
  * 阈值为什么取 65px（实测：Chrome 154）：
  *   容器查询的尺寸按**内容盒**算 —— 按钮宽度减去内边距 4×2 与边框 1×2 才是被查询的尺寸。
  *   横排所需宽度 = 图标 15px + 间距 2px + 4 字 × 11px = **61px**
- *   （最长标签「历史记录」「图片嗅探」同为 4 字，故 v26.10.10-v4 新增入口后阈值不变），
+ *   （最长标签「传输助手」4 字，与旧版「历史记录」「图片嗅探」同长，故阈值不变），
  *   留 4px 余量故阈值取 65px；正好卡在边界会折成两行。
  *   ⚠️ v26.10.09-v7：图标由 emoji（约 18px 宽）换成内联 SVG（`size={15}` ⇒ 15px 宽）后，
  *      阈值由 **68px 复算为 65px**（窄 3px）。换图标尺寸/标签字数后必须回来重算。
  *   ⚠️ 该阈值与面板宽度无关，只取决于按钮自身宽度：
- *      · 当前面板 238px 时五列各 38px（内容盒 28px）→ 在阈值下，只显示图标；
+ *      · 当前面板 238px 时四列各约 49px（内容盒约 39px）→ 在阈值下，只显示图标；
  *      · 面板加宽到约 75px/按钮以上，文字会自动出现，**无需改代码**。
  *
  * ⚠️ 若日后改 PANEL_ACTIONS 的标签字数或图标字号，**必须回来重算这个阈值**，
@@ -116751,7 +118580,7 @@ const PANEL_CSS = `
 }
 `;
 /**
- * 底部入口（v26.10.10-v4 起 5 个）：key + 图标组件 + 文案（文案同时用于 hover Tooltip；点击行为见组件内 actionHandlers）
+ * 底部入口（v26.10.12-v1 起 4 个）：key + 图标组件 + 文案（文案同时用于 hover Tooltip；点击行为见组件内 actionHandlers）
  *
  * ⚠️ v26.10.09-v7：图标由 emoji 字符（'⚙️' '💬' '🖼️' '💻'）改为**内联 SVG 组件**。
  * **原因**：Win7 没有 Segoe UI Emoji 字体（Win8.1 才引入），`💬 U+1F4AC` / `🖼 U+1F5BC` /
@@ -116762,27 +118591,17 @@ const PANEL_CSS = `
  *
  * `icon` 存组件类型而非实例，便于统一控制尺寸与颜色。
  *
- * ⚠️ v26.10.10-v10：**Agent 入口不放进这个数组**。用户要求「每行只需 5 个按钮、Agent 另起一行」，
- * 故数组严格保持 5 项 = 第一行的 5 个入口；Agent 由下面的 AGENT_ACTION 单独渲染在第二行，
- * 这样第一行的列宽（`repeat(5, minmax(0,1fr))`）与按钮位置和加 Agent 之前完全一致。
+ * v26.10.12-v1「设备互联 → 传输助手」重构后的入口变化：
+ *   · 删「历史记录」：收件历史已并入传输助手第三栏的「文件」分组；
+ *   · 「设备互联」改名「传输助手」：点它打开三栏传输助手窗口（收发、配对、Agent 全在里面）；
+ *   · 删「Agent 助手」按钮与旧独立窗口：Agent 改为传输助手第一栏 Agents 入口，直达右侧聊天区。
  */
 const PANEL_ACTIONS = [
     { key: 'settings', icon: SettingsIcon, label: '设置' },
     { key: 'phrases', icon: PhrasesIcon, label: '常用语' },
-    { key: 'history', icon: HistoryIcon, label: '历史记录' },
-    { key: 'phone', icon: DeviceIcon, label: '设备互联' },
+    { key: 'transfer', icon: TransferIcon, label: '传输助手' },
     { key: 'sniff', icon: SniffIcon, label: '图片嗅探' },
 ];
-/**
- * Agent 入口（v26.10.10-v10，ScriptCat v1.4+ 专属）。
- *
- * 为什么不并进 PANEL_ACTIONS：面板宽 PANEL_WIDTH=238px，5 列每列约 38px（只够放图标）；
- * 6 列会挤到 ~31px，而「Agent」是**英文**、比中文标签更宽，复用 65px 容器查询阈值必然显示不全。
- * 用户拍板的版式是「第一行原 5 个 + 第二行只有 Agent 一个」，所以这里单独一行、宽度走 5 列同宽。
- *
- * ⚠️ 文案必须保持 "Agent"：scripts/smoke/znhd-smoke.html 的 panelAgentBtnOk 按 textContent === 'Agent' 定位。
- */
-const AGENT_ACTION = { key: 'agent', icon: BotIcon, label: 'Agent' };
 /**
  * 主面板入口按钮（图标 + 文案）。第一行 5 个与第二行的 Agent 共用同一结构，
  * 只允许传「图标 / 文案 / 主题色 / 点击」，不接收任意属性透传 —— 样式完全由 .znhd-panel-btn 决定。
@@ -116825,30 +118644,18 @@ function MainPanel({ host }) {
     const [Allvalue, setAllvalue] = (0,react_production_namespaceFn().useState)(() => state_runtime.init);
     const [settingsOpen, setSettingsOpen] = (0,react_production_namespaceFn().useState)(false);
     const [phrasesOpen, setPhrasesOpen] = (0,react_production_namespaceFn().useState)(false);
-    const [phoneOpen, setPhoneOpen] = (0,react_production_namespaceFn().useState)(false);
+    /** 传输助手三栏窗口（v26.10.12-v1：原「设备互联」+「历史记录」+「Agent 助手」三者的收敛） */
+    const [transferOpen, setTransferOpen] = (0,react_production_namespaceFn().useState)(false);
     const [logOpen, setLogOpen] = (0,react_production_namespaceFn().useState)(false);
     const [changelogOpen, setChangelogOpen] = (0,react_production_namespaceFn().useState)(false);
     /** 图片嗅探（v26.10.10-v4）：扫描当前页面上的图片，筛选/预览/下载/打印 */
     const [sniffOpen, setSniffOpen] = (0,react_production_namespaceFn().useState)(false);
-    /** Agent 助手（v26.10.10-v10）：对话 / 技能盘点 / 定时任务，需 ScriptCat v1.4+ 的 CAT.agent */
-    const [agentOpen, setAgentOpen] = (0,react_production_namespaceFn().useState)(false);
-    // 收到图片/文本（v26.10.06-v13：由原来的命令式 DOM 弹窗改为 React state 驱动 antd 弹窗）
-    const [recvImages, setRecvImages] = (0,react_production_namespaceFn().useState)([]);
-    /** 历史记录里的文本（可回看，上限 MAX_TEXT）；与下面「收到即自动弹出的最新一条」是两条独立路径 */
-    const [recvTexts, setRecvTexts] = (0,react_production_namespaceFn().useState)([]);
-    const [historyOpen, setHistoryOpen] = (0,react_production_namespaceFn().useState)(false);
-    const [recvText, setRecvText] = (0,react_production_namespaceFn().useState)(null);
-    /** 已连接的手机（中继 /phone/status 返回；供【设备互联】显示数量与选择发送目标） */
-    const [phones, setPhones] = (0,react_production_namespaceFn().useState)([]);
-    /** 上一次已知的手机 ID 集合，用于「连接/断开」日志去重（不要每 5s 重复刷屏） */
-    const knownPhonesRef = (0,react_production_namespaceFn().useRef)(new Set());
     const [logEntries, setLogEntries] = (0,react_production_namespaceFn().useState)([]);
     const [phrasesData, setPhrasesData] = (0,react_production_namespaceFn().useState)({});
     const [phrasesLoading, setPhrasesLoading] = (0,react_production_namespaceFn().useState)(false);
     const [searchKeyword, setSearchKeyword] = (0,react_production_namespaceFn().useState)('');
     const [collapsed, setCollapsed] = (0,react_production_namespaceFn().useState)(false);
     const [mon, setMon] = (0,react_production_namespaceFn().useState)(() => getMonitorState());
-    const receiveStopRef = (0,react_production_namespaceFn().useRef)(null);
     const updateAllvalue = (newValue) => {
         setAllvalue(newValue);
         saveAllvalue(newValue);
@@ -116964,144 +118771,22 @@ function MainPanel({ host }) {
             loadPhrasesData();
     }, [phrasesOpen]);
     /**
-     * 轮询「已连接的手机」（中继 /phone/status），并记录连接/断开日志（v26.10.06-v4）。
+     * 传输助手后台能力（v26.10.12-v1）：手机在线轮询 + 长轮询接收，全部收进
+     * `lib/transfer/store.ts`（模块级 store，窗口不开也照常收件）。
      *
-     * 为什么放在主面板而不是【设备互联】弹窗里：日志要**不依赖弹窗是否打开**都能记录。
-     * 手机身份由手机页自己生成（localStorage UUID），故这里拿到的是手机 ID 列表。
-     * ⚠️ 老版中继只回 `{online:true}`（没有 phones），此时退化成「1 台未知手机」，
-     *    界面与发送仍可用（走 'all' 广播），不会因为这个接口而整体不可用。
+     * 主面板只做两件事：
+     *   ① 挂载时 `initTransfer()`（幂等；中继地址来自传输助手自有设置）；
+     *   ② 注册「收到新内容且需要自动打开窗口」的回调 —— 把传输助手带到眼前。
+     * 卸载时 `stopTransfer()` 停掉全部定时器 / 长轮询（页面卸载链路由 beforeunload 兜底）。
      */
     (0,react_production_namespaceFn().useEffect)(() => {
-        const s = (Allvalue.relayServer || '').trim().replace(/\/+$/, '');
-        if (!/^https?:\/\//i.test(s)) {
-            setPhones([]);
-            knownPhonesRef.current = new Set();
-            return;
-        }
-        const uuid = getDeviceId();
-        let alive = true;
-        const check = () => {
-            if (!alive)
-                return;
-            try {
-                GM_xmlhttpRequest({
-                    method: 'GET',
-                    url: s + '/phone/status/' + encodeURIComponent(uuid),
-                    timeout: 8000,
-                    onload: (r) => {
-                        if (!alive)
-                            return;
-                        let j = null;
-                        try {
-                            j = JSON.parse(r.responseText);
-                        }
-                        catch (e) {
-                            j = null;
-                        }
-                        // 兼容老中继：只有 online 没有 phones 时按「1 台未知手机」处理
-                        const list = j && Array.isArray(j.phones)
-                            ? j.phones.map((p) => ({
-                                id: String(p.id || ''),
-                                lastSeen: Number(p.lastSeen) || 0,
-                            }))
-                            : j && j.online
-                                ? [{ id: '', lastSeen: 0 }]
-                                : [];
-                        setPhones((prev) => {
-                            // 只在「手机 ID 集合」真的变化时才更新 state：否则每 5s 轮询都会触发整面板重渲染。
-                            // ⚠️ 必须把**数量**也纳入比较：老中继回的是 `{online:true}` 没有 phones，
-                            //    兜底项 id 为空串，`[]` 与 `[{id:''}]` 的 id 拼接结果都是 '' ——
-                            //    只比 id 会把「0 台 → 1 台未知设备」误判为没变化，导致永远显示无在线设备。
-                            const a = prev.length + '|' + prev.map((p) => p.id).join(',');
-                            const b = list.length + '|' + list.map((p) => p.id).join(',');
-                            return a === b ? prev : list;
-                        });
-                        const nowIds = new Set(list.map((p) => String(p.id || '')).filter((id) => id));
-                        knownPhonesRef.current.forEach((id) => {
-                            if (!nowIds.has(id))
-                                addLog('[设备互联] 手机已断开：' + id, 'warning');
-                        });
-                        nowIds.forEach((id) => {
-                            if (!knownPhonesRef.current.has(id))
-                                addLog('[设备互联] 手机已连接：' + id, 'success');
-                        });
-                        knownPhonesRef.current = nowIds;
-                    },
-                    onerror: () => {
-                        if (alive)
-                            setPhones([]);
-                    },
-                });
-            }
-            catch (e) {
-                if (alive)
-                    setPhones([]);
-            }
-        };
-        check();
-        const t = setInterval(check, 5000);
+        initTransfer();
+        const offAutoOpen = onTransferAutoOpen(() => setTransferOpen(true));
         return () => {
-            alive = false;
-            clearInterval(t);
+            offAutoOpen();
+            stopTransfer();
         };
-    }, [Allvalue.relayServer]);
-    // 设备互联：地址填好后默认自动开始接收（门控 + 800ms 防抖，避免逐字输入时反复启停）
-    (0,react_production_namespaceFn().useEffect)(() => {
-        const s = (Allvalue.relayServer || '').trim().replace(/\/+$/, '');
-        if (!s || !/^https?:\/\//i.test(s))
-            return;
-        const timer = setTimeout(() => {
-            if (receiveStopRef.current)
-                return;
-            const stop = startPhoneReceive({
-                server: s,
-                uuid: getDeviceId(),
-                onConnected: () => addLog('[设备互联] 已自动开始接收（' + s + '）', 'info'),
-                // 入参类型由 startPhoneReceive 的 PhoneReceiveOptions 上下文推断，无需显式标注
-                onImage: (img) => {
-                    addLog('[设备互联] 收到图片：' + (img.name || 'image') + '（' + (img.mime || 'image') + '）', 'success');
-                    // 入列 + 上限保护（超出的丢最旧并 revoke 其 objectURL，防内存累积），随后自动打开画廊
-                    setRecvImages((prev) => {
-                        const next = prev.concat({
-                            blob: img.blob,
-                            previewUrl: img.previewUrl,
-                            name: img.name,
-                            mime: img.mime,
-                        });
-                        while (next.length > (/* inlined export .MAX_GALLERY */27)) {
-                            const dropped = next.shift();
-                            if (dropped) {
-                                try {
-                                    URL.revokeObjectURL(dropped.previewUrl);
-                                }
-                                catch (e) {
-                                    /* 忽略 */
-                                }
-                            }
-                        }
-                        return next;
-                    });
-                    setHistoryOpen(true);
-                },
-                onText: (txt) => {
-                    const t = (txt.text || '').replace(/\s+$/, '');
-                    addLog('[设备互联] 收到文本：' + (t.length > 40 ? t.slice(0, 40) + '…' : t), 'success');
-                    // ① 进「历史记录」的文本页签：最新一条排最前，超出 MAX_TEXT 丢最旧
-                    setRecvTexts((prev) => [{ text: t, ts: txt.ts || Date.now() }, ...prev].slice(0, (/* inlined export .MAX_TEXT */100)));
-                    // ② 保持原有行为：仍自动弹出「最新一条」文本窗（同屏只留最新一条，antd Modal 单实例）
-                    setRecvText(txt.text || '');
-                },
-            });
-            receiveStopRef.current = stop;
-        }, 800);
-        return () => {
-            clearTimeout(timer);
-            if (receiveStopRef.current) {
-                receiveStopRef.current();
-                receiveStopRef.current = null;
-            }
-        };
-    }, [Allvalue.relayServer]);
+    }, []);
     const toggleVoice = (next) => {
         patchAllvalue({ voiceEnabled: next });
         addLog('语音播报已' + (next ? '开启' : '静音'), 'info');
@@ -117134,18 +118819,12 @@ function MainPanel({ host }) {
                 touchAction: 'none',
             }, children: (0,react_jsx_runtime_production_namespaceFn().jsx)(BrandIcon, { size: 20 }) }));
     }
-    // 入口的点击行为（key 与 PANEL_ACTIONS / AGENT_ACTION 对齐）
+    // 入口的点击行为（key 与 PANEL_ACTIONS 对齐）
     const actionHandlers = {
         settings: () => setSettingsOpen(true),
         phrases: () => setPhrasesOpen(true),
-        history: () => {
-            // v26.10.08-v10：**历史为空也要能打开**（按用户要求）—— 空态原本就由弹窗内的 Empty 呈现，
-            // 而且标题旁边新增了「发送测试图片」，空历史正是它最有用的场景。故不再提前拦截。
-            setHistoryOpen(true);
-        },
-        phone: () => setPhoneOpen(true),
+        transfer: () => setTransferOpen(true),
         sniff: () => setSniffOpen(true),
-        agent: () => setAgentOpen(true),
     };
     return ((0,react_jsx_runtime_production_namespaceFn().jsxs)(card, { size: "small", style: { width: (/* inlined export .PANEL_WIDTH */238), boxShadow: '0 6px 24px rgba(0,0,0,0.18)' }, styles: { body: { padding: 12 }, header: { padding: '8px 10px', minHeight: 46 } }, title: (0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { ...dragHandlers, style: {
                 cursor: 'move',
@@ -117194,7 +118873,7 @@ function MainPanel({ host }) {
                     alignItems: 'center',
                     justifyContent: 'space-between',
                     marginBottom: 10,
-                }, children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)(es_space, { size: 6, children: [voiceEnabled ? ((0,react_jsx_runtime_production_namespaceFn().jsx)(VolumeOnIcon, { size: 15, color: token.colorPrimary })) : ((0,react_jsx_runtime_production_namespaceFn().jsx)(VolumeOffIcon, { size: 15, color: token.colorTextQuaternary })), (0,react_jsx_runtime_production_namespaceFn().jsx)("span", { style: { fontSize: 13 }, children: "\u8BED\u97F3\u64AD\u62A5" })] }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_switch, { checked: !!voiceEnabled, onChange: toggleVoice })] }), (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { display: 'grid', gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', gap: 6 }, children: PANEL_ACTIONS.map((a) => ((0,react_jsx_runtime_production_namespaceFn().jsx)(PanelEntryButton, { icon: a.icon, label: a.label, color: token.colorPrimary, onClick: actionHandlers[a.key] }, a.key))) }), (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { display: 'grid', gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', gap: 6, marginTop: 6 }, children: (0,react_jsx_runtime_production_namespaceFn().jsx)(PanelEntryButton, { icon: AGENT_ACTION.icon, label: AGENT_ACTION.label, color: token.colorPrimary, onClick: actionHandlers[AGENT_ACTION.key] }) }), (0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: {
+                }, children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)(es_space, { size: 6, children: [voiceEnabled ? ((0,react_jsx_runtime_production_namespaceFn().jsx)(VolumeOnIcon, { size: 15, color: token.colorPrimary })) : ((0,react_jsx_runtime_production_namespaceFn().jsx)(VolumeOffIcon, { size: 15, color: token.colorTextQuaternary })), (0,react_jsx_runtime_production_namespaceFn().jsx)("span", { style: { fontSize: 13 }, children: "\u8BED\u97F3\u64AD\u62A5" })] }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_switch, { checked: !!voiceEnabled, onChange: toggleVoice })] }), (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 6 }, children: PANEL_ACTIONS.map((a) => ((0,react_jsx_runtime_production_namespaceFn().jsx)(PanelEntryButton, { icon: a.icon, label: a.label, color: token.colorPrimary, onClick: actionHandlers[a.key] }, a.key))) }), (0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: {
                     marginTop: 10,
                     display: 'flex',
                     alignItems: 'center',
@@ -117215,42 +118894,14 @@ function MainPanel({ host }) {
                 }, commonPhrasesUrl: Allvalue.commonPhrasesUrl, onChangeCommonPhrasesUrl: (url) => {
                     patchAllvalue({ commonPhrasesUrl: url });
                     addLogDebounced('commonPhrasesUrl', '常用语数据源已更新: ' + url, 'info');
-                }, relayServer: Allvalue.relayServer || '', onChangeRelayServer: (url) => {
-                    patchAllvalue({ relayServer: url });
-                    addLogDebounced('relayServer', '中继服务器已更新: ' + (url || '（空）'), 'info');
                 }, useCdn: Allvalue.useCdn, onChangeUseCdn: (v) => {
                     patchAllvalue({ useCdn: !!v });
                     addLog('CDN 加速已' + (v ? '开启' : '关闭'), 'info');
-                } }), (0,react_jsx_runtime_production_namespaceFn().jsx)(PhrasesDrawer, { open: phrasesOpen, onClose: () => setPhrasesOpen(false), phrasesData: phrasesData, phrasesLoading: phrasesLoading, searchKeyword: searchKeyword, setSearchKeyword: setSearchKeyword, loadPhrasesData: loadPhrasesData, commonPhrasesUrl: Allvalue.commonPhrasesUrl }), (0,react_jsx_runtime_production_namespaceFn().jsx)(PhoneModal, { open: phoneOpen, onClose: () => setPhoneOpen(false), relayServer: Allvalue.relayServer || '', phones: phones, onChangeRelayServer: (url) => {
-                    patchAllvalue({ relayServer: url });
-                    addLogDebounced('relayServer', '中继服务器已更新: ' + (url || '（空）'), 'info');
-                } }), (0,react_jsx_runtime_production_namespaceFn().jsx)(LogModal, { open: logOpen, onClose: () => setLogOpen(false), logEntries: logEntries, onClear: clearLogs, autoRefresh: !!Allvalue.logAutoRefresh, onAutoRefreshChange: (v) => {
+                } }), (0,react_jsx_runtime_production_namespaceFn().jsx)(PhrasesDrawer, { open: phrasesOpen, onClose: () => setPhrasesOpen(false), phrasesData: phrasesData, phrasesLoading: phrasesLoading, searchKeyword: searchKeyword, setSearchKeyword: setSearchKeyword, loadPhrasesData: loadPhrasesData, commonPhrasesUrl: Allvalue.commonPhrasesUrl }), (0,react_jsx_runtime_production_namespaceFn().jsx)(LogModal, { open: logOpen, onClose: () => setLogOpen(false), logEntries: logEntries, onClear: clearLogs, autoRefresh: !!Allvalue.logAutoRefresh, onAutoRefreshChange: (v) => {
                     // 只改设置、不写日志：这是「看日志的方式」，不是被监控的业务动作，
                     // 记一条日志反而会在冻结列表时制造困惑。
                     patchAllvalue({ logAutoRefresh: !!v });
-                } }), (0,react_jsx_runtime_production_namespaceFn().jsx)(ChangelogModal, { open: changelogOpen, onClose: () => setChangelogOpen(false) }), (0,react_jsx_runtime_production_namespaceFn().jsx)(SniffModal, { open: sniffOpen, onClose: () => setSniffOpen(false), minKB: Allvalue.sniffMinKB, onMinKBChange: (kb) => patchAllvalue({ sniffMinKB: kb }) }), (0,react_jsx_runtime_production_namespaceFn().jsx)(RecvHistoryModal, { open: historyOpen, onClose: () => setHistoryOpen(false), relayServer: Allvalue.relayServer || '', images: recvImages, texts: recvTexts, onRemoveImage: (idx) => setRecvImages((prev) => {
-                    const next = prev.slice();
-                    const removed = next.splice(idx, 1)[0];
-                    if (removed) {
-                        try {
-                            URL.revokeObjectURL(removed.previewUrl);
-                        }
-                        catch (e) {
-                            /* 忽略 */
-                        }
-                    }
-                    return next;
-                }), onClearImages: () => setRecvImages((prev) => {
-                    prev.forEach((it) => {
-                        try {
-                            URL.revokeObjectURL(it.previewUrl);
-                        }
-                        catch (e) {
-                            /* 忽略 */
-                        }
-                    });
-                    return [];
-                }), onRemoveText: (idx) => setRecvTexts((prev) => prev.filter((_, i) => i !== idx)), onClearTexts: () => setRecvTexts([]) }), (0,react_jsx_runtime_production_namespaceFn().jsx)(RecvTextModal, { text: recvText, onClose: () => setRecvText(null) }), (0,react_jsx_runtime_production_namespaceFn().jsx)(AgentModal, { open: agentOpen, onClose: () => setAgentOpen(false) })] }));
+                } }), (0,react_jsx_runtime_production_namespaceFn().jsx)(ChangelogModal, { open: changelogOpen, onClose: () => setChangelogOpen(false) }), (0,react_jsx_runtime_production_namespaceFn().jsx)(SniffModal, { open: sniffOpen, onClose: () => setSniffOpen(false), minKB: Allvalue.sniffMinKB, onMinKBChange: (kb) => patchAllvalue({ sniffMinKB: kb }) }), (0,react_jsx_runtime_production_namespaceFn().jsx)(TransferAssistantModal, { open: transferOpen, onClose: () => setTransferOpen(false) })] }));
 }
 
 ;// ./src/lib/ui/PanelApp.tsx
@@ -117332,7 +118983,7 @@ const RESET_CSS = `
    margin: -2.75em auto 0，按 16px 字号约 -44px；antd 自身从不给 svg 设 margin）。
    这类规则特异性只有 (0,0,1)，用带容器前缀的选择器即可稳压。
    ⚠️ v26.10.08-v8：**.ant-image-preview 必须在内** —— 预览挂在自己建的宿主 div 下
-   （见 RecvHistoryModal 的 getPreviewHost），既不在面板宿主里、也不在 .ant-modal-root 里；
+   （见 shared/preview/host.ts 的 getPreviewHost），既不在面板宿主里、也不在 .ant-modal-root 里；
    漏了它就会让工具栏图标被顶到胶囊上方（实测偏移 25px），表现成「图标看不见、只剩一条灰色胶囊」。
    对照：弹窗关闭图标的同类偏移为 0（因为它被本规则覆盖）。 */
 #${PANEL_HOST_ID} svg, .ant-modal-root svg, .ant-drawer svg, .ant-picker-dropdown svg, .ant-message svg, .ant-notification svg, .ant-tooltip svg, .ant-dropdown svg, .ant-image-preview svg {

@@ -6,8 +6,13 @@ import { DEFAULTS, LEGACY_COMMON_PHRASES_URL, PANEL_POINT_KEY, PHRASES_CACHE_KEY
  * 全部用户配置的形状（= DEFAULTS 的结构）。
  * 用 type 而非 interface：type 别名带隐式索引签名，可直接传给 saveAllvalue(Record<string, unknown>)。
  * 有了它，loadAllvalue 的返回值不再是推断出的 any，UI 侧也不必再写 useState<any>。
+ *
+ * ⚠️ v26.10.12-v1：`relayServer` 是**遗留只读字段**——「中继服务器地址」已搬进传输助手自有设置
+ * （`scriptCat_TransferSettings`，见 lib/transfer/settings.ts），主面板不再写它；
+ * 保留只为让 `loadTransferSettings(runtime.init.relayServer)` 能做一次性存量迁移
+ * （老用户当年填在 `scriptCat_Allvalue` 里的地址继续生效，不必重填）。
  */
-export type Allvalue = typeof DEFAULTS;
+export type Allvalue = typeof DEFAULTS & { relayServer?: string };
 
 /**
  * 本地存储读写：面板位置 / 常用语缓存 / 全部用户配置（原 app.ts「存储管理」段）。

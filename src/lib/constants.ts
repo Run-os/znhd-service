@@ -55,8 +55,10 @@ export const DEFAULTS = {
     // 仍要求是「raw 原始直链」——若用户把该字段误填成网页/仓库页面，请求会拉回整页 HTML
     // （如 --fontStack-monospace 的 CSS），jsyaml 解析即报「document separator expected」（v26.9.6-v5 起因）。
     commonPhrasesUrl: 'https://cnb.cool/bbbbaa/work-about/-/git/raw/main/znhd/commonPhrases.yaml',
-    // 手机图片→电脑剪贴板 中继服务器地址（需为公网可访问的 http(s):// 地址，末尾不带 /）
-    relayServer: 'https://znhd.122050.xyz',
+    // ⚠️ v26.10.12-v1：「中继服务器地址」已从这里搬到传输助手自有设置
+    // （`lib/transfer/settings.ts` 的 DEFAULT_RELAY_SERVER + `scriptCat_TransferSettings`），
+    // 与主面板设置完全隔离。存量 `scriptCat_Allvalue.relayServer` 仅作一次性迁移种子读取，
+    // 不再写入新值；Allvalue 类型里的 relayServer 是遗留只读字段（见 storage.ts）。
     // 「运行日志」弹窗的自动刷新开关（v26.10.07-v4）。
     // 开：新日志持续进来，并自动滚到底部看最新内容；关：列表冻结在关闭那一刻的快照，便于往上翻看历史。
     // 持久化（存进 STORAGE_KEY），下次打开弹窗保持上次的选择。

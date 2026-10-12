@@ -37,7 +37,7 @@ const RESET_CSS = `
    margin: -2.75em auto 0，按 16px 字号约 -44px；antd 自身从不给 svg 设 margin）。
    这类规则特异性只有 (0,0,1)，用带容器前缀的选择器即可稳压。
    ⚠️ v26.10.08-v8：**.ant-image-preview 必须在内** —— 预览挂在自己建的宿主 div 下
-   （见 RecvHistoryModal 的 getPreviewHost），既不在面板宿主里、也不在 .ant-modal-root 里；
+   （见 shared/preview/host.ts 的 getPreviewHost），既不在面板宿主里、也不在 .ant-modal-root 里；
    漏了它就会让工具栏图标被顶到胶囊上方（实测偏移 25px），表现成「图标看不见、只剩一条灰色胶囊」。
    对照：弹窗关闭图标的同类偏移为 0（因为它被本规则覆盖）。 */
 #${PANEL_HOST_ID} svg, .ant-modal-root svg, .ant-drawer svg, .ant-picker-dropdown svg, .ant-message svg, .ant-notification svg, .ant-tooltip svg, .ant-dropdown svg, .ant-image-preview svg {
