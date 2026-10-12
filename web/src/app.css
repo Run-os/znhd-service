@@ -41,6 +41,45 @@ body {
     font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Segoe UI', sans-serif;
 }
 
+/* ===== 桌面版：聊天窗弹窗化（v26.10.13-v4）====================================
+   需求：桌面浏览器打开「传输助手」网页时不要全屏，参考微信 PC 端「文件传输助手」
+   独立聊天窗的位置与大小 —— 屏幕正中的居中弹窗（约 420×680）。
+   判定在 lib/layoutMode.ts（UA / 粗指针 + 屏幕短边）；手机版不加这两个类，
+   保持上面的 fixed 全屏骨架。
+   ⚠️ `.znhd-phone-chat.znhd-chat-window`（双类，特异性 0-2-0）覆盖 fixed 全屏
+   那段（单类 0-1-0）：position 改 relative、top/left 等改 auto，于是
+   `--znhd-shell-h/--znhd-shell-top`（visualViewport 同步写的）在弹窗模式下被
+   完全绕开——桌面触屏键盘弹起的场景极少，不为它把弹窗定位搞复杂。 */
+.znhd-window-layer {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    box-sizing: border-box;
+    background: #141414; /* 比聊天区（#1e1e1e）更深一档，让弹窗的边框/投影有对比 */
+}
+
+.znhd-phone-chat.znhd-chat-window {
+    position: relative;
+    left: auto;
+    right: auto;
+    top: auto;
+    height: min(680px, 100%); /* 100% = 居中层减去 24px 四边 padding 后的净高 */
+    width: min(420px, 100%); /* 桌面窄窗时等比缩到 100%，弹窗形态不变 */
+    box-sizing: border-box; /* 420/680 是含 1px 边框的外尺寸（不加会是 422/682） */
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 18px 60px rgba(0, 0, 0, 0.6);
+    overflow: hidden;
+}
+
+/* 空状态的 30vh 是按全屏视口写的：弹窗 680px 高时会顶爆滚动区，桌面弹窗下改小 */
+.znhd-chat-window .znhd-chat-empty {
+    margin-top: 120px;
+}
+
 .znhd-phone-header {
     flex: 0 0 auto;
     background: #2e2e2e;
