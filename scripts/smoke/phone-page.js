@@ -5,6 +5,18 @@
  * 微信暗色气泡 + 底部输入区）。本文件随之重写：不再断言卡片排版，改为断言
  * 「发出去的进右侧绿气泡、电脑发来的进左侧灰气泡、预览/打印共享链路不回退」。
  *
+ * v26.10.13-v3：新增三组断言（对应本次需求）——
+ *   ① **输入区吸底**（`composerPinnedOk`）：antd `<AntApp>` 会渲染一个没有高度的
+ *      `div.ant-app` 包裹层，`height:100%` 对 auto 父级解析为 auto，整页会退化成
+ *      内容高度、输入区悬在视口中间（用户截图实录）。判据 = 整页骨架 `position:fixed`
+ *      且高=视口、输入区底边=视口底。
+ *   ② **表情按钮与面板**（`emojiBtnOrderOk` / `emojiPanelOk` / `emojiSendOk`）：
+ *      工具栏顺序为「表情 → 图片上传」；CDN（cdn.klyang.com）用请求拦截桩掉
+ *      （冒烟不能依赖外网），点一张表情 → 右侧图片气泡 +1，且真 POST 过
+ *      `mime=image/png` 的载荷（跳过 canvas 压缩、webp/png 原样发的语义）。
+ *   ③ **键盘弹出时输入区跟随视觉视口**（`composerKeyboardOk`）：伪造 visualViewport
+ *      模拟「键盘顶起」，输入区底边应随之上移，收起后还原。
+ *
  * 做法：起一个真实 relay-server（它自己就托管 relay-server/public），用无头 Chromium 打开
  * `/u/<deviceId>`，真上传一张图、真发一条文本、真从中继投递一张图，然后断言语义。
  *
@@ -146,6 +158,67 @@ async function main() {
         console.log('手机端聊天窗测试（真起中继 + 真上传/真投递）：');
         const page = await browser.newPage();
         await page.setViewport({ width: 420, height: 800 }); // 手机竖屏视口
+
+        // ① 视口桩：伪造 visualViewport，供「键盘弹出」场景确定性复现（初始 height 极大 = 无键盘）
+        await page.evaluateOnNewDocument(() => {
+            const listeners = {};
+            const fake = {
+                height: 1e9,
+                offsetTop: 0,
+                scale: 1,
+                addEventListener: (t, fn) => {
+                    (listeners[t] = listeners[t] || []).push(fn);
+                },
+                removeEventListener: () => {
+                    /* 桩：无需移除 */
+                },
+            };
+            Object.defineProperty(window, 'visualViewport', { value: fake, configurable: true });
+            window.__vvFire = (t) => (listeners[t] || []).forEach((fn) => fn());
+            window.__vvSet = (h, top) => {
+                fake.height = h;
+                fake.offsetTop = top || 0;
+            };
+        });
+
+        // ② CDN 桩 + POST 捕获：表情包清单/图片走 cdn.klyang.com（CORS 实测可用），
+        //    冒烟不依赖外网；同时捕获手机 → 中继的 POST 载荷供表情发送断言。
+        const phonePosts = [];
+        await page.setRequestInterception(true);
+        page.on('request', (req) => {
+            const url = req.url();
+            if (url.indexOf('https://cdn.klyang.com/json/') === 0) {
+                req.respond({
+                    status: 200,
+                    contentType: 'application/json',
+                    // ⚠️ 必须带 CORS 头：页面是跨域 fetch，没有 ACAO 浏览器直接拒（等价于 CDN 真行为）
+                    headers: { 'Access-Control-Allow-Origin': '*' },
+                    body: JSON.stringify({
+                        name: '桩表情合集',
+                        type: 'image',
+                        items: [
+                            { key: '01', val: 'https://cdn.klyang.com/emo/stub/stub-01.png' },
+                            { key: '02', val: 'https://cdn.klyang.com/emo/stub/stub-02.png' },
+                        ],
+                    }),
+                });
+                return;
+            }
+            if (url.indexOf('https://cdn.klyang.com/emo/') === 0) {
+                req.respond({
+                    status: 200,
+                    contentType: 'image/png',
+                    headers: { 'Access-Control-Allow-Origin': '*' },
+                    body: fs.readFileSync(png),
+                });
+                return;
+            }
+            if (req.method() === 'POST' && new URL(url).pathname.indexOf('/u/') === 0) {
+                phonePosts.push(req.postData() || '');
+            }
+            req.continue();
+        });
+
         await page.goto(`http://127.0.0.1:${port}/u/test-device-0001`, { waitUntil: 'load', timeout: 60000 });
         await page.waitForSelector('.znhd-phone-chat', { timeout: 30000 });
         await sleep(500);
@@ -172,6 +245,104 @@ async function main() {
                 skeleton.sendBtn
         );
         check('整页微信暗色底（#1E1E1E，对齐脚本端第三栏）', skeleton.bg === 'rgb(30, 30, 30)');
+
+        // ①-B 输入区吸底（v26.10.13-v3 回归判据）：antd <AntApp> 的 div.ant-app 包裹层
+        //     没有高度，height:100% 会断链 ⇒ 整页内容高度、输入区悬在视口中间。
+        const pin = await page.evaluate(() => {
+            const chatEl = document.querySelector('.znhd-phone-chat');
+            const composerEl = document.querySelector('.znhd-phone-composer');
+            const chat = chatEl ? chatEl.getBoundingClientRect() : null;
+            const composer = composerEl ? composerEl.getBoundingClientRect() : null;
+            return {
+                vh: window.innerHeight,
+                chatH: chat ? Math.round(chat.height) : -1,
+                chatPos: chatEl ? getComputedStyle(chatEl).position : '',
+                composerBottom: composer ? Math.round(composer.bottom) : -1,
+            };
+        });
+        check(
+            '输入区吸底：整页骨架 fixed 且高=视口，输入区底边=视口底（修复 App 包裹层断高度链）',
+            pin.chatPos === 'fixed' &&
+                Math.abs(pin.chatH - pin.vh) <= 1 &&
+                Math.abs(pin.composerBottom - pin.vh) <= 1
+        );
+
+        // ①-C 工具栏顺序：表情按钮在图片按钮前面（v26.10.13-v3 需求）
+        const order = await page.evaluate(() => {
+            const tools = document.querySelector('.znhd-composer-tools');
+            if (!tools) return null;
+            const btns = Array.from(tools.querySelectorAll('button[aria-label]'));
+            const idx = (label) => btns.findIndex((b) => b.getAttribute('aria-label') === label);
+            return { emoji: idx('表情'), image: idx('图片上传') };
+        });
+        check(
+            '工具栏顺序：表情按钮在图片按钮前面',
+            !!order && order.emoji >= 0 && order.image >= 0 && order.emoji < order.image
+        );
+
+        // ①-D 表情面板与「点一张直接发到电脑」（CDN 已桩；载荷断言见 phonePosts）
+        await page.click('button[aria-label="表情"]');
+        await page.waitForSelector('.znhd-emoji-panel', { timeout: 10000 });
+        const panelInfo = await page.evaluate(() => ({
+            chips: document.querySelectorAll('.znhd-emoji-chip').length,
+            items: document.querySelectorAll('.znhd-emoji-item').length,
+        }));
+        check(
+            '表情面板展开：合集 chips（≥1）+ 图片格子（≥2，清单走 CDN 桩）',
+            panelInfo.chips >= 1 && panelInfo.items >= 2
+        );
+        await page.waitForSelector('.znhd-emoji-item img', { timeout: 15000 });
+        await page.click('.znhd-emoji-item');
+        await page.waitForFunction(
+            () => document.querySelectorAll('.znhd-chat-msg[data-side="out"] .znhd-chat-img').length >= 1,
+            { timeout: 15000 }
+        );
+        await sleep(800); // 等 base64 + POST 真发出去（捕获发生在请求时刻）
+        await page.click('button[aria-label="表情"]'); // 再点一次应收起
+        const panelGone = await page.evaluate(() => !document.querySelector('.znhd-emoji-panel'));
+        check('表情面板可再点按钮收起（toggle）', panelGone);
+        const emojiPost = (() => {
+            for (let i = phonePosts.length - 1; i >= 0; i--) {
+                try {
+                    const p = JSON.parse(phonePosts[i]);
+                    if (p && typeof p.data === 'string') return p;
+                } catch (e) {
+                    /* 非 JSON（心跳等）：跳过 */
+                }
+            }
+            return null;
+        })();
+        check(
+            '点表情直接发送：POST 载荷 mime=image/png、name 形如 <合集>-<键>.png、data 非空',
+            !!emojiPost &&
+                emojiPost.mime === 'image/png' &&
+                /^[a-z0-9_-]+-\d+\.png$/.test(String(emojiPost.name || '')) &&
+                String(emojiPost.data || '').length >= 20
+        );
+
+        // ①-E 键盘弹出：shell 跟随视觉视口（输入区不被键盘挡住），收起后还原 100dvh
+        const kb = await page.evaluate(async () => {
+            const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+            const bottom = () =>
+                Math.round(document.querySelector('.znhd-phone-composer').getBoundingClientRect().bottom);
+            const before = bottom();
+            window.__vvSet(window.innerHeight - 320, 0);
+            window.__vvFire('resize');
+            await wait(120);
+            const during = bottom();
+            const duringH = getComputedStyle(document.querySelector('.znhd-phone-chat')).height;
+            window.__vvSet(1e9, 0);
+            window.__vvFire('resize');
+            await wait(120);
+            return { before, during, duringH, after: bottom(), vh: window.innerHeight };
+        });
+        check(
+            '键盘弹出时输入区随视觉视口上移 320px（高也同步），收起后回到底',
+            Math.abs(kb.before - kb.vh) <= 1 &&
+                Math.abs(kb.during - (kb.vh - 320)) <= 1 &&
+                kb.duringH === kb.vh - 320 + 'px' &&
+                Math.abs(kb.after - kb.vh) <= 1
+        );
 
         // ② 发图片：选图 → 出「发送中」气泡 → 顺序发送 → 气泡下方出「已发送」
         const input = await page.$('input[type=file]');
