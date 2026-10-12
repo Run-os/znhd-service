@@ -35,11 +35,25 @@ function sourceLabel(msg: TransferMessage): string {
 /**
  * 文件视图（v26.10.12-v1，传输助手第三栏的「文件」分组）。
  *
- * 原「历史记录」弹窗的整体搬迁：全部传输过的文件（跨会话汇总）按图片 / 文本
- * 两类平铺，图片用九宫格 + 右下角悬浮图标按钮（复制 / 下载 / 删除）+ 单击放大
- * （缩放 / 旋转 / 多图切换 / 工具栏打印原图，A4 自适应）。
+ * 原「历史记录」弹窗的整体搬迁：传输过的文件按图片 / 文本两类平铺，图片用九宫格 +
+ * 右下角悬浮图标按钮（复制 / 下载 / 删除）+ 单击放大（缩放 / 旋转 / 多图切换 /
+ * 工具栏打印原图，A4 自适应）。
+ *
+ * v26.10.13-v5 起**跟随第二栏选中**：`scopeLabel` 为「全部文件」时显示跨会话汇总；
+ * 选中具体会话时只显示该会话的文件（父组件已按 sessionKey 过滤好再传进来），
+ * 清空按钮也相应变成「清空本会话」。
  */
-export default function TransferFilesView({ messages }: { messages: TransferMessage[] }) {
+export default function TransferFilesView({
+    messages,
+    scopeLabel,
+    onClearScope,
+}: {
+    messages: TransferMessage[];
+    /** 标题前缀：「全部文件」或「<会话名>的文件」 */
+    scopeLabel: string;
+    /** 仅显示单个会话时提供：清空按钮变为「清空本会话」（清这整个会话，含聊天消息） */
+    onClearScope?: () => void;
+}) {
     const { token } = theme.useToken();
     /** 文本行的复制反馈：记录是**哪一行**，避免所有行一起改文案 */
     const [copyState, setCopyState] = useState<{ id: string; ok: boolean } | null>(null);
@@ -121,7 +135,11 @@ export default function TransferFilesView({ messages }: { messages: TransferMess
             <div style={{ flex: '1 1 auto', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <Empty
                     image={Empty.PRESENTED_IMAGE_SIMPLE}
-                    description={<span style={{ fontSize: 12 }}>暂无文件——手机发来的图片 / 文本会汇总在这里</span>}
+                    description={
+                        <span style={{ fontSize: 12 }}>
+                            {onClearScope ? '该会话暂无图片 / 文本' : '暂无文件——手机发来的图片 / 文本会汇总在这里'}
+                        </span>
+                    }
                 />
             </div>
         );
@@ -133,12 +151,24 @@ export default function TransferFilesView({ messages }: { messages: TransferMess
             style={{ flex: '1 1 auto', minHeight: 0, overflowY: 'auto', padding: '10px 12px' }}>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 8 }}>
                 <Text strong style={{ fontSize: 14 }}>
-                    全部文件（图片 {images.length} · 文本 {texts.length}）
+                    {scopeLabel}（图片 {images.length} · 文本 {texts.length}）
                 </Text>
                 <span style={{ flex: '1 1 auto' }} />
-                <Button danger size="small" onClick={clearAllTransferFiles}>
-                    清空全部
-                </Button>
+                {onClearScope ? (
+                    <Button
+                        danger
+                        size="small"
+                        onClick={() => {
+                            onClearScope();
+                            addLog('[传输助手] 已清空该会话的文件与消息', 'success');
+                        }}>
+                        清空本会话
+                    </Button>
+                ) : (
+                    <Button danger size="small" onClick={clearAllTransferFiles}>
+                        清空全部
+                    </Button>
+                )}
             </div>
 
             {images.length ? (

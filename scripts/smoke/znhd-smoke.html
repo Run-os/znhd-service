@@ -926,22 +926,49 @@
         ts.filesTextSeen = !!(files && (files.textContent || '').indexOf('冒烟测试文本：收到一条文本消息') >= 0);
       }, 6200);
 
-      // v26.10.12-v5：文件分组下第二栏的条目**只作展示** —— 点设备 ID 不得跳去会话窗口
+      // v26.10.12-v5：文件分组下点设备条目不得跳去会话窗口；
+      // v26.10.13-v5：点会话 = 筛选第三栏文件视图（只显示该会话的文件）
       setTimeout(() => {
         const m = findTransferModal();
-        const item = m ? m.querySelector('.znhd-transfer-session-item') : null;
+        // 排除常驻的「全部文件」入口，点的是真正的设备条目
+        const item = m
+          ? Array.from(m.querySelectorAll('.znhd-transfer-session-item')).find((el) => !el.hasAttribute('data-all-files'))
+          : null;
         window.__clickedFilesItem = !!item;
+        window.__filesFilterLabel = item ? (item.textContent || '').trim().slice(0, 12) : '';
         if (item) item.click();
       }, 6350);
       setTimeout(() => {
         const m = findTransferModal();
+        const files = m ? m.querySelector('.znhd-transfer-files') : null;
         const ts = window.__transferSnap;
         ts.filesNoJumpSeen = !!(
           m &&
-          m.querySelector('.znhd-transfer-files') &&
+          files &&
           m.querySelector('.znhd-transfer-nav button[aria-label="文件"][aria-current="page"]')
         );
+        // 筛选生效：标题变成「<会话名>的文件（图片 1 · 文本 1）」，图片仍在该会话里
+        ts.filesFilterSeen = !!(
+          files &&
+          (files.textContent || '').indexOf('的文件（图片 1 · 文本 1）') >= 0 &&
+          files.querySelectorAll('.ant-image img').length === 1
+        );
       }, 6500);
+      // 点「全部文件」回到跨会话汇总
+      setTimeout(() => {
+        const m = findTransferModal();
+        const all = m ? m.querySelector('.znhd-transfer-session-item[data-all-files="1"]') : null;
+        window.__clickedFilesAll = !!all;
+        if (all) all.click();
+      }, 6550);
+      setTimeout(() => {
+        const m = findTransferModal();
+        const files = m ? m.querySelector('.znhd-transfer-files') : null;
+        window.__transferSnap.filesAllRestored = !!(
+          files &&
+          (files.textContent || '').indexOf('全部文件（图片 1 · 文本 1）') >= 0
+        );
+      }, 6580);
 
       // ⚠️ 收到图片后点缩略图放大：必须断言「主图真的渲染出来」。
       // 历史：v26.10.8-v1 补的——此前只断言「九宫格画廊（缩略图出现）」，从没点过缩略图，
@@ -2311,8 +2338,10 @@
           ),
           // 「文件」视图：图片九宫格 + 文本分区 + 计数正确
           filesViewOk: !!(ts.filesViewSeen && ts.filesCountText && ts.filesImgCount >= 1 && ts.filesTextSeen),
-          // 文件分组下点设备条目不跳会话（v26.10.12-v5：条目只作展示）
+          // 文件分组下点设备条目不跳会话（v26.10.13-v5 起：点击 = 筛选文件视图）
           filesNoJumpOk: !!(window.__clickedFilesItem && ts.filesNoJumpSeen),
+          // 文件视图跟随第二栏选择（v26.10.13-v5）：点会话只显示该会话的文件，点「全部文件」还原
+          filesFilterOk: !!(ts.filesFilterSeen && window.__clickedFilesAll && ts.filesAllRestored),
           // 第一栏图标三态（v26.10.12-v5 微信规范）：选中=绿填充无底板、未选中 hover=深色底板、选中优先
           navStatesOk: !!(ts.navSelSeen && ts.navSelectedGreen && ts.navHoverPlate && ts.navActiveNoPlate),
           // 设备会话聊天区：收到的文本/图片渲染为气泡，头部有在线状态

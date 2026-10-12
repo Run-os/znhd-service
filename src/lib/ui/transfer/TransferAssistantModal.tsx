@@ -61,6 +61,12 @@ export default function TransferAssistantModal({ open, onClose }: { open: boolea
      */
     const [agentPane, setAgentPane] = useState<AgentPane>('chat');
     const [search, setSearch] = useState('');
+    /**
+     * 文件视图的会话筛选（v26.10.13-v5）：'' = 全部文件（跨会话汇总）；
+     * 在文件分组点第二栏某个会话 = 只看那个会话的文件。与 `activeSessionKey` 分开——
+     * 文件分组下点会话不该影响「对话」分组的选中态，也不该触发已读标记。
+     */
+    const [filesFilterKey, setFilesFilterKey] = useState('');
     const [pairOpen, setPairOpen] = useState(false);
     const [settingsOpen, setSettingsOpen] = useState(false);
     const [aboutOpen, setAboutOpen] = useState(false);
@@ -143,6 +149,17 @@ export default function TransferAssistantModal({ open, onClose }: { open: boolea
         [s.sessions]
     );
 
+    /** 文件视图实际显示的消息：筛选了具体会话就只取该会话的 */
+    const filesMessages = useMemo<TransferMessage[]>(
+        () => (filesFilterKey ? allMessages.filter((m) => m.sessionKey === filesFilterKey) : allMessages),
+        [allMessages, filesFilterKey]
+    );
+
+    /** 文件视图标题：全部文件 / <会话名>的文件 */
+    const filesScopeLabel = filesFilterKey
+        ? (deviceEntries.find((e) => e.key === filesFilterKey)?.label || shortPhoneId(filesFilterKey)) + '的文件'
+        : '全部文件';
+
     /**
      * 当前会话；选中了一台**在线但无历史**的手机时合成一条空会话，
      * 让用户能直接发起发送（发送侧只要求对方在线，不要求有历史）。
@@ -173,6 +190,9 @@ export default function TransferAssistantModal({ open, onClose }: { open: boolea
     const onNav = (next: TransferNav) => {
         setNav(next);
         if (next === 'agents') setAgentPane('chat');
+        // 离开文件分组就还原成「全部文件」：筛选是文件视图的临时状态，
+        // 保留到下次进来会出现「明明点的是文件却只看到某个会话」的困惑
+        if (next !== 'files') setFilesFilterKey('');
     };
 
     /** 第三栏路由 */
@@ -180,7 +200,20 @@ export default function TransferAssistantModal({ open, onClose }: { open: boolea
     if (nav === 'agents') {
         main = <TransferAgentView agent={agent} pane={agentPane} />;
     } else if (nav === 'files') {
-        main = <TransferFilesView messages={allMessages} />;
+        main = (
+            <TransferFilesView
+                messages={filesMessages}
+                scopeLabel={filesScopeLabel}
+                onClearScope={
+                    filesFilterKey
+                        ? () => {
+                              clearTransferSession(filesFilterKey);
+                              addLog('[传输助手] 已清空该会话的文件与消息', 'success');
+                          }
+                        : undefined
+                }
+            />
+        );
     } else if (activeSession) {
         main = (
             <TransferDeviceChat
@@ -313,6 +346,8 @@ export default function TransferAssistantModal({ open, onClose }: { open: boolea
                         deviceEntries={deviceEntries}
                         activeSessionKey={s.activeSessionKey}
                         onSelectSession={onSelectSession}
+                        filesActiveKey={filesFilterKey}
+                        onSelectFilesSession={setFilesFilterKey}
                         agent={nav === 'agents' ? agent : undefined}
                         agentPane={agentPane}
                         onAgentPane={setAgentPane}

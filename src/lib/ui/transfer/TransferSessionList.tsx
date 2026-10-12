@@ -51,6 +51,10 @@ function listTime(ts: number): string {
  *
  * 会话条目为微信结构：左头像 / 中名称 + 预览摘要 / 右时间 + 未读红点角标；
  * 选中条目用比栏底浅一档的底色高亮（#383838，微信暗色同款），不再用主色底。
+ *
+ * 文件分组（v26.10.13-v5）：条目**可点 = 筛选第三栏的文件视图**（点哪个会话就只显示
+ * 哪个会话的文件，不跳去聊天窗口 —— v26.10.12-v5「只作展示」的行为由此取代）；
+ * 列表最顶上常驻一条「全部文件」，点了回到跨会话汇总。
  */
 export default function TransferSessionList({
     nav,
@@ -60,6 +64,8 @@ export default function TransferSessionList({
     deviceEntries,
     activeSessionKey,
     onSelectSession,
+    filesActiveKey,
+    onSelectFilesSession,
     agent,
     agentPane,
     onAgentPane,
@@ -71,6 +77,10 @@ export default function TransferSessionList({
     deviceEntries: DeviceEntry[];
     activeSessionKey: string;
     onSelectSession: (key: string) => void;
+    /** 文件分组：当前文件视图正筛选哪个会话（'' = 全部文件） */
+    filesActiveKey?: string;
+    /** 文件分组：点击会话条目 = 筛选文件视图（不传则条目退回纯展示） */
+    onSelectFilesSession?: (key: string) => void;
     /** Agents 分组时的会话控制器（对话列表 + 新建 / 切换 / 删除） */
     agent?: AgentChatController;
     /** Agents 分组下第三栏正在显示哪一块（chat / skills / tasks） */
@@ -80,6 +90,8 @@ export default function TransferSessionList({
     const { token } = theme.useToken();
     const isAgents = nav === 'agents';
     const isFiles = nav === 'files';
+    /** 文件分组 + 父组件提供了筛选回调 ⇒ 条目可点（= 筛选第三栏文件视图） */
+    const filesMode = isFiles && !!onSelectFilesSession;
 
     const keyword = search.trim().toLowerCase();
     const filtered = keyword
@@ -197,33 +209,31 @@ export default function TransferSessionList({
                         onDelete={(id) => void agent.deleteChat(id)}
                     />
                 ) : isAgents ? null : filtered.length ? (
-                    filtered.map((e) => {
-                        const active = e.key === activeSessionKey;
-                        // v26.10.12-v5：文件分组下的条目**只作展示**（用户要求点设备 ID 不跳去会话窗口）
-                        const clickable = !isFiles;
-                        return (
+                    <>
+                        {/* 文件分组：常驻「全部文件」入口（回到跨会话汇总；data 钩子供冒烟定位） */}
+                        {filesMode ? (
                             <div
-                                key={e.key}
+                                key="__all_files__"
                                 className="znhd-transfer-session-item"
-                                title={e.label}
-                                onClick={clickable ? () => onSelectSession(e.key) : undefined}
+                                data-all-files="1"
+                                title="全部文件"
+                                aria-label="全部文件"
+                                onClick={() => onSelectFilesSession('')}
                                 style={{
                                     display: 'flex',
                                     alignItems: 'center',
                                     gap: 10,
                                     padding: '9px 10px',
                                     borderRadius: 6,
-                                    cursor: clickable ? 'pointer' : 'default',
-                                    // 选中 = 比栏底浅一档（微信暗色同款）；悬停 = 中间档
-                                    background: active ? WECHAT.selected : 'transparent',
+                                    cursor: 'pointer',
+                                    background: filesActiveKey === '' ? WECHAT.selected : 'transparent',
                                 }}
                                 onMouseEnter={(ev) => {
-                                    if (clickable && !active) ev.currentTarget.style.background = WECHAT.hover;
+                                    if (filesActiveKey !== '') ev.currentTarget.style.background = WECHAT.hover;
                                 }}
                                 onMouseLeave={(ev) => {
-                                    if (clickable && !active) ev.currentTarget.style.background = 'transparent';
+                                    if (filesActiveKey !== '') ev.currentTarget.style.background = 'transparent';
                                 }}>
-                                {/* 设备头像位：彩色圆 + 首字符（聚合会话用手机图标占位） */}
                                 <span
                                     style={{
                                         width: 36,
@@ -233,32 +243,10 @@ export default function TransferSessionList({
                                         display: 'inline-flex',
                                         alignItems: 'center',
                                         justifyContent: 'center',
-                                        background: e.isAggregate ? WECHAT.bubblePeer : token.colorPrimaryBg,
-                                        color: e.isAggregate ? 'rgba(255,255,255,0.8)' : token.colorPrimary,
-                                        fontSize: 14,
-                                        fontWeight: 600,
-                                        position: 'relative',
+                                        background: WECHAT.bubblePeer,
+                                        color: 'rgba(255,255,255,0.8)',
                                     }}>
-                                    {/* 聚合会话用手机图标（⚠️ 不用 emoji：Win7 无 Segoe UI Emoji ⇒ 豆腐块，v26.10.12-v1） */}
-                                    {e.isAggregate ? (
-                                        <SmartphoneIcon size={18} color="currentColor" />
-                                    ) : (
-                                        e.label.slice(0, 1).toUpperCase()
-                                    )}
-                                    {e.online ? (
-                                        <span
-                                            style={{
-                                                position: 'absolute',
-                                                right: -2,
-                                                bottom: -2,
-                                                width: 9,
-                                                height: 9,
-                                                borderRadius: '50%',
-                                                background: '#52c41a',
-                                                border: '1.5px solid ' + WECHAT.list,
-                                            }}
-                                        />
-                                    ) : null}
+                                    <GridIcon size={18} color="currentColor" />
                                 </span>
                                 <div style={{ flex: '1 1 auto', minWidth: 0 }}>
                                     <div
@@ -269,7 +257,7 @@ export default function TransferSessionList({
                                             textOverflow: 'ellipsis',
                                             whiteSpace: 'nowrap',
                                         }}>
-                                        {e.label}
+                                        全部文件
                                     </div>
                                     <div
                                         style={{
@@ -280,34 +268,127 @@ export default function TransferSessionList({
                                             whiteSpace: 'nowrap',
                                             marginTop: 1,
                                         }}>
-                                        {e.lastMsg ? previewText(e.lastMsg) : e.online ? '在线' : '离线'}
+                                        所有会话的图片与文本
                                     </div>
-                                </div>
-                                <div style={{ flex: '0 0 auto', textAlign: 'right' }}>
-                                    <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)' }}>
-                                        {listTime(e.lastTs || 0)}
-                                    </div>
-                                    {e.unread > 0 ? (
-                                        <div
-                                            style={{
-                                                marginTop: 3,
-                                                marginLeft: 'auto',
-                                                background: '#FA5151',
-                                                color: '#fff',
-                                                borderRadius: 9,
-                                                fontSize: 11,
-                                                lineHeight: '16px',
-                                                padding: '0 5px',
-                                                minWidth: 16,
-                                                textAlign: 'center',
-                                            }}>
-                                            {e.unread > 99 ? '99+' : e.unread}
-                                        </div>
-                                    ) : null}
                                 </div>
                             </div>
-                        );
-                    })
+                        ) : null}
+                        {filtered.map((e) => {
+                            // 文件分组：选中/点击都走「筛选文件视图」；其余分组照旧（选中会话 → 聊天）
+                            const active = filesMode ? e.key === filesActiveKey : e.key === activeSessionKey;
+                            const clickable = filesMode || !isFiles;
+                            const pick = () => {
+                                if (filesMode) onSelectFilesSession(e.key);
+                                else onSelectSession(e.key);
+                            };
+                            return (
+                                <div
+                                    key={e.key}
+                                    className="znhd-transfer-session-item"
+                                    title={e.label}
+                                    onClick={clickable ? pick : undefined}
+                                    style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: 10,
+                                        padding: '9px 10px',
+                                        borderRadius: 6,
+                                        cursor: clickable ? 'pointer' : 'default',
+                                        // 选中 = 比栏底浅一档（微信暗色同款）；悬停 = 中间档
+                                        background: active ? WECHAT.selected : 'transparent',
+                                    }}
+                                    onMouseEnter={(ev) => {
+                                        if (clickable && !active) ev.currentTarget.style.background = WECHAT.hover;
+                                    }}
+                                    onMouseLeave={(ev) => {
+                                        if (clickable && !active) ev.currentTarget.style.background = 'transparent';
+                                    }}>
+                                    {/* 设备头像位：彩色圆 + 首字符（聚合会话用手机图标占位） */}
+                                    <span
+                                        style={{
+                                            width: 36,
+                                            height: 36,
+                                            borderRadius: 6,
+                                            flex: '0 0 auto',
+                                            display: 'inline-flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            background: e.isAggregate ? WECHAT.bubblePeer : token.colorPrimaryBg,
+                                            color: e.isAggregate ? 'rgba(255,255,255,0.8)' : token.colorPrimary,
+                                            fontSize: 14,
+                                            fontWeight: 600,
+                                            position: 'relative',
+                                        }}>
+                                        {/* 聚合会话用手机图标（⚠️ 不用 emoji：Win7 无 Segoe UI Emoji ⇒ 豆腐块，v26.10.12-v1） */}
+                                        {e.isAggregate ? (
+                                            <SmartphoneIcon size={18} color="currentColor" />
+                                        ) : (
+                                            e.label.slice(0, 1).toUpperCase()
+                                        )}
+                                        {e.online ? (
+                                            <span
+                                                style={{
+                                                    position: 'absolute',
+                                                    right: -2,
+                                                    bottom: -2,
+                                                    width: 9,
+                                                    height: 9,
+                                                    borderRadius: '50%',
+                                                    background: '#52c41a',
+                                                    border: '1.5px solid ' + WECHAT.list,
+                                                }}
+                                            />
+                                        ) : null}
+                                    </span>
+                                    <div style={{ flex: '1 1 auto', minWidth: 0 }}>
+                                        <div
+                                            style={{
+                                                fontSize: 13,
+                                                color: 'rgba(255,255,255,0.9)',
+                                                overflow: 'hidden',
+                                                textOverflow: 'ellipsis',
+                                                whiteSpace: 'nowrap',
+                                            }}>
+                                            {e.label}
+                                        </div>
+                                        <div
+                                            style={{
+                                                fontSize: 12,
+                                                color: 'rgba(255,255,255,0.4)',
+                                                overflow: 'hidden',
+                                                textOverflow: 'ellipsis',
+                                                whiteSpace: 'nowrap',
+                                                marginTop: 1,
+                                            }}>
+                                            {e.lastMsg ? previewText(e.lastMsg) : e.online ? '在线' : '离线'}
+                                        </div>
+                                    </div>
+                                    <div style={{ flex: '0 0 auto', textAlign: 'right' }}>
+                                        <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)' }}>
+                                            {listTime(e.lastTs || 0)}
+                                        </div>
+                                        {e.unread > 0 ? (
+                                            <div
+                                                style={{
+                                                    marginTop: 3,
+                                                    marginLeft: 'auto',
+                                                    background: '#FA5151',
+                                                    color: '#fff',
+                                                    borderRadius: 9,
+                                                    fontSize: 11,
+                                                    lineHeight: '16px',
+                                                    padding: '0 5px',
+                                                    minWidth: 16,
+                                                    textAlign: 'center',
+                                                }}>
+                                                {e.unread > 99 ? '99+' : e.unread}
+                                            </div>
+                                        ) : null}
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </>
                 ) : (
                     <div
                         style={{

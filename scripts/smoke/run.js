@@ -70,7 +70,8 @@ const CHECKS = [
   ['transferWindowOk', '传输助手三栏窗口：导航/会话/主聊天区 + 会话列表 + 收到的消息'],
   ['transferNoTitleOk', '窗口无标题栏；顶部自绘标题条的关闭按钮贴右上角、悬浮变红（微信同款）'],
   ['filesViewOk', '「文件」视图：图片九宫格 + 文本分区 + 计数（原历史记录弹窗搬迁）'],
-  ['filesNoJumpOk', '文件分组下点击第二栏设备条目不跳转会话窗口（条目只作展示）'],
+  ['filesNoJumpOk', '文件分组下点击第二栏设备条目不跳转会话窗口（点击=筛选文件视图）'],
+  ['filesFilterOk', '文件视图跟随第二栏选择：点会话只显示该会话的文件，点「全部文件」还原汇总'],
   ['navStatesOk', '第一栏图标三态：选中=绿色填充无底板、未选中 hover=深色圆角底板（选中优先）'],
   ['sessionChatOk', '设备会话聊天区：收到的文本与图片渲染为聊天气泡'],
   ['textSentOk', '会话内发送文本：本机气泡 + POST /phone/send'],
@@ -505,6 +506,8 @@ async function main() {
       !checkPass('transferWindowOk') ||
       !checkPass('transferNoTitleOk') ||
       !checkPass('filesViewOk') ||
+      !checkPass('filesNoJumpOk') ||
+      !checkPass('filesFilterOk') ||
       !checkPass('sessionChatOk') ||
       !checkPass('textSentOk') ||
       !checkPass('sessionClearOk') ||

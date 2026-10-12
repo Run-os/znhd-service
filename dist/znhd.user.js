@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name                征纳互动人数和在线监控v2
 // @namespace           https://scriptcat.org/
-// @version             26.10.13-v4
+// @version             26.10.13-v5
 // @description         实时监控征纳互动等待人数和在线状态，支持语音播报、自定义常用语
 // @author              runos
 // @license             MIT
@@ -74966,11 +74966,17 @@ function listTime(ts) {
  *
  * 会话条目为微信结构：左头像 / 中名称 + 预览摘要 / 右时间 + 未读红点角标；
  * 选中条目用比栏底浅一档的底色高亮（#383838，微信暗色同款），不再用主色底。
+ *
+ * 文件分组（v26.10.13-v5）：条目**可点 = 筛选第三栏的文件视图**（点哪个会话就只显示
+ * 哪个会话的文件，不跳去聊天窗口 —— v26.10.12-v5「只作展示」的行为由此取代）；
+ * 列表最顶上常驻一条「全部文件」，点了回到跨会话汇总。
  */
-function TransferSessionList({ nav, search, onSearch, onPair, deviceEntries, activeSessionKey, onSelectSession, agent, agentPane, onAgentPane, }) {
+function TransferSessionList({ nav, search, onSearch, onPair, deviceEntries, activeSessionKey, onSelectSession, filesActiveKey, onSelectFilesSession, agent, agentPane, onAgentPane, }) {
     const { token } = es_theme.useToken();
     const isAgents = nav === 'agents';
     const isFiles = nav === 'files';
+    /** 文件分组 + 父组件提供了筛选回调 ⇒ 条目可点（= 筛选第三栏文件视图） */
+    const filesMode = isFiles && !!onSelectFilesSession;
     const keyword = search.trim().toLowerCase();
     const filtered = keyword
         ? deviceEntries.filter((e) => e.label.toLowerCase().includes(keyword) || previewText(e.lastMsg).toLowerCase().includes(keyword))
@@ -75019,73 +75025,116 @@ function TransferSessionList({ nav, search, onSearch, onPair, deviceEntries, act
                         if (onAgentPane)
                             onAgentPane('chat');
                         void agent.switchChat(id);
-                    }, onDelete: (id) => void agent.deleteChat(id) })) : isAgents ? null : filtered.length ? (filtered.map((e) => {
-                    const active = e.key === activeSessionKey;
-                    // v26.10.12-v5：文件分组下的条目**只作展示**（用户要求点设备 ID 不跳去会话窗口）
-                    const clickable = !isFiles;
-                    return ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { className: "znhd-transfer-session-item", title: e.label, onClick: clickable ? () => onSelectSession(e.key) : undefined, style: {
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 10,
-                            padding: '9px 10px',
-                            borderRadius: 6,
-                            cursor: clickable ? 'pointer' : 'default',
-                            // 选中 = 比栏底浅一档（微信暗色同款）；悬停 = 中间档
-                            background: active ? WECHAT.selected : 'transparent',
-                        }, onMouseEnter: (ev) => {
-                            if (clickable && !active)
-                                ev.currentTarget.style.background = WECHAT.hover;
-                        }, onMouseLeave: (ev) => {
-                            if (clickable && !active)
-                                ev.currentTarget.style.background = 'transparent';
-                        }, children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)("span", { style: {
-                                    width: 36,
-                                    height: 36,
-                                    borderRadius: 6,
-                                    flex: '0 0 auto',
-                                    display: 'inline-flex',
+                    }, onDelete: (id) => void agent.deleteChat(id) })) : isAgents ? null : filtered.length ? ((0,react_jsx_runtime_production_namespaceFn().jsxs)((react_jsx_runtime_production_namespaceFn().Fragment), { children: [filesMode ? ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { className: "znhd-transfer-session-item", "data-all-files": "1", title: "\u5168\u90E8\u6587\u4EF6", "aria-label": "\u5168\u90E8\u6587\u4EF6", onClick: () => onSelectFilesSession(''), style: {
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 10,
+                                padding: '9px 10px',
+                                borderRadius: 6,
+                                cursor: 'pointer',
+                                background: filesActiveKey === '' ? WECHAT.selected : 'transparent',
+                            }, onMouseEnter: (ev) => {
+                                if (filesActiveKey !== '')
+                                    ev.currentTarget.style.background = WECHAT.hover;
+                            }, onMouseLeave: (ev) => {
+                                if (filesActiveKey !== '')
+                                    ev.currentTarget.style.background = 'transparent';
+                            }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("span", { style: {
+                                        width: 36,
+                                        height: 36,
+                                        borderRadius: 6,
+                                        flex: '0 0 auto',
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        background: WECHAT.bubblePeer,
+                                        color: 'rgba(255,255,255,0.8)',
+                                    }, children: (0,react_jsx_runtime_production_namespaceFn().jsx)(GridIcon, { size: 18, color: "currentColor" }) }), (0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { flex: '1 1 auto', minWidth: 0 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: {
+                                                fontSize: 13,
+                                                color: 'rgba(255,255,255,0.9)',
+                                                overflow: 'hidden',
+                                                textOverflow: 'ellipsis',
+                                                whiteSpace: 'nowrap',
+                                            }, children: "\u5168\u90E8\u6587\u4EF6" }), (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: {
+                                                fontSize: 12,
+                                                color: 'rgba(255,255,255,0.4)',
+                                                overflow: 'hidden',
+                                                textOverflow: 'ellipsis',
+                                                whiteSpace: 'nowrap',
+                                                marginTop: 1,
+                                            }, children: "\u6240\u6709\u4F1A\u8BDD\u7684\u56FE\u7247\u4E0E\u6587\u672C" })] })] }, "__all_files__")) : null, filtered.map((e) => {
+                            // 文件分组：选中/点击都走「筛选文件视图」；其余分组照旧（选中会话 → 聊天）
+                            const active = filesMode ? e.key === filesActiveKey : e.key === activeSessionKey;
+                            const clickable = filesMode || !isFiles;
+                            const pick = () => {
+                                if (filesMode)
+                                    onSelectFilesSession(e.key);
+                                else
+                                    onSelectSession(e.key);
+                            };
+                            return ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { className: "znhd-transfer-session-item", title: e.label, onClick: clickable ? pick : undefined, style: {
+                                    display: 'flex',
                                     alignItems: 'center',
-                                    justifyContent: 'center',
-                                    background: e.isAggregate ? WECHAT.bubblePeer : token.colorPrimaryBg,
-                                    color: e.isAggregate ? 'rgba(255,255,255,0.8)' : token.colorPrimary,
-                                    fontSize: 14,
-                                    fontWeight: 600,
-                                    position: 'relative',
-                                }, children: [e.isAggregate ? ((0,react_jsx_runtime_production_namespaceFn().jsx)(SmartphoneIcon, { size: 18, color: "currentColor" })) : (e.label.slice(0, 1).toUpperCase()), e.online ? ((0,react_jsx_runtime_production_namespaceFn().jsx)("span", { style: {
-                                            position: 'absolute',
-                                            right: -2,
-                                            bottom: -2,
-                                            width: 9,
-                                            height: 9,
-                                            borderRadius: '50%',
-                                            background: '#52c41a',
-                                            border: '1.5px solid ' + WECHAT.list,
-                                        } })) : null] }), (0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { flex: '1 1 auto', minWidth: 0 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: {
-                                            fontSize: 13,
-                                            color: 'rgba(255,255,255,0.9)',
-                                            overflow: 'hidden',
-                                            textOverflow: 'ellipsis',
-                                            whiteSpace: 'nowrap',
-                                        }, children: e.label }), (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: {
-                                            fontSize: 12,
-                                            color: 'rgba(255,255,255,0.4)',
-                                            overflow: 'hidden',
-                                            textOverflow: 'ellipsis',
-                                            whiteSpace: 'nowrap',
-                                            marginTop: 1,
-                                        }, children: e.lastMsg ? previewText(e.lastMsg) : e.online ? '在线' : '离线' })] }), (0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { flex: '0 0 auto', textAlign: 'right' }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { fontSize: 11, color: 'rgba(255,255,255,0.35)' }, children: listTime(e.lastTs || 0) }), e.unread > 0 ? ((0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: {
-                                            marginTop: 3,
-                                            marginLeft: 'auto',
-                                            background: '#FA5151',
-                                            color: '#fff',
-                                            borderRadius: 9,
-                                            fontSize: 11,
-                                            lineHeight: '16px',
-                                            padding: '0 5px',
-                                            minWidth: 16,
-                                            textAlign: 'center',
-                                        }, children: e.unread > 99 ? '99+' : e.unread })) : null] })] }, e.key));
-                })) : ((0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: {
+                                    gap: 10,
+                                    padding: '9px 10px',
+                                    borderRadius: 6,
+                                    cursor: clickable ? 'pointer' : 'default',
+                                    // 选中 = 比栏底浅一档（微信暗色同款）；悬停 = 中间档
+                                    background: active ? WECHAT.selected : 'transparent',
+                                }, onMouseEnter: (ev) => {
+                                    if (clickable && !active)
+                                        ev.currentTarget.style.background = WECHAT.hover;
+                                }, onMouseLeave: (ev) => {
+                                    if (clickable && !active)
+                                        ev.currentTarget.style.background = 'transparent';
+                                }, children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)("span", { style: {
+                                            width: 36,
+                                            height: 36,
+                                            borderRadius: 6,
+                                            flex: '0 0 auto',
+                                            display: 'inline-flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            background: e.isAggregate ? WECHAT.bubblePeer : token.colorPrimaryBg,
+                                            color: e.isAggregate ? 'rgba(255,255,255,0.8)' : token.colorPrimary,
+                                            fontSize: 14,
+                                            fontWeight: 600,
+                                            position: 'relative',
+                                        }, children: [e.isAggregate ? ((0,react_jsx_runtime_production_namespaceFn().jsx)(SmartphoneIcon, { size: 18, color: "currentColor" })) : (e.label.slice(0, 1).toUpperCase()), e.online ? ((0,react_jsx_runtime_production_namespaceFn().jsx)("span", { style: {
+                                                    position: 'absolute',
+                                                    right: -2,
+                                                    bottom: -2,
+                                                    width: 9,
+                                                    height: 9,
+                                                    borderRadius: '50%',
+                                                    background: '#52c41a',
+                                                    border: '1.5px solid ' + WECHAT.list,
+                                                } })) : null] }), (0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { flex: '1 1 auto', minWidth: 0 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: {
+                                                    fontSize: 13,
+                                                    color: 'rgba(255,255,255,0.9)',
+                                                    overflow: 'hidden',
+                                                    textOverflow: 'ellipsis',
+                                                    whiteSpace: 'nowrap',
+                                                }, children: e.label }), (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: {
+                                                    fontSize: 12,
+                                                    color: 'rgba(255,255,255,0.4)',
+                                                    overflow: 'hidden',
+                                                    textOverflow: 'ellipsis',
+                                                    whiteSpace: 'nowrap',
+                                                    marginTop: 1,
+                                                }, children: e.lastMsg ? previewText(e.lastMsg) : e.online ? '在线' : '离线' })] }), (0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { flex: '0 0 auto', textAlign: 'right' }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { fontSize: 11, color: 'rgba(255,255,255,0.35)' }, children: listTime(e.lastTs || 0) }), e.unread > 0 ? ((0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: {
+                                                    marginTop: 3,
+                                                    marginLeft: 'auto',
+                                                    background: '#FA5151',
+                                                    color: '#fff',
+                                                    borderRadius: 9,
+                                                    fontSize: 11,
+                                                    lineHeight: '16px',
+                                                    padding: '0 5px',
+                                                    minWidth: 16,
+                                                    textAlign: 'center',
+                                                }, children: e.unread > 99 ? '99+' : e.unread })) : null] })] }, e.key));
+                        })] })) : ((0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: {
                         fontSize: 12,
                         color: 'rgba(255,255,255,0.35)',
                         padding: '12px 4px',
@@ -117827,11 +117876,15 @@ function sourceLabel(msg) {
 /**
  * 文件视图（v26.10.12-v1，传输助手第三栏的「文件」分组）。
  *
- * 原「历史记录」弹窗的整体搬迁：全部传输过的文件（跨会话汇总）按图片 / 文本
- * 两类平铺，图片用九宫格 + 右下角悬浮图标按钮（复制 / 下载 / 删除）+ 单击放大
- * （缩放 / 旋转 / 多图切换 / 工具栏打印原图，A4 自适应）。
+ * 原「历史记录」弹窗的整体搬迁：传输过的文件按图片 / 文本两类平铺，图片用九宫格 +
+ * 右下角悬浮图标按钮（复制 / 下载 / 删除）+ 单击放大（缩放 / 旋转 / 多图切换 /
+ * 工具栏打印原图，A4 自适应）。
+ *
+ * v26.10.13-v5 起**跟随第二栏选中**：`scopeLabel` 为「全部文件」时显示跨会话汇总；
+ * 选中具体会话时只显示该会话的文件（父组件已按 sessionKey 过滤好再传进来），
+ * 清空按钮也相应变成「清空本会话」。
  */
-function TransferFilesView({ messages }) {
+function TransferFilesView({ messages, scopeLabel, onClearScope, }) {
     const { token } = es_theme.useToken();
     /** 文本行的复制反馈：记录是**哪一行**，避免所有行一起改文案 */
     const [copyState, setCopyState] = (0,react_production_namespaceFn().useState)(null);
@@ -117902,9 +117955,12 @@ function TransferFilesView({ messages }) {
         });
     };
     if (!ordered.length) {
-        return ((0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { flex: '1 1 auto', display: 'flex', alignItems: 'center', justifyContent: 'center' }, children: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_empty, { image: es_empty.PRESENTED_IMAGE_SIMPLE, description: (0,react_jsx_runtime_production_namespaceFn().jsx)("span", { style: { fontSize: 12 }, children: "\u6682\u65E0\u6587\u4EF6\u2014\u2014\u624B\u673A\u53D1\u6765\u7684\u56FE\u7247 / \u6587\u672C\u4F1A\u6C47\u603B\u5728\u8FD9\u91CC" }) }) }));
+        return ((0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { flex: '1 1 auto', display: 'flex', alignItems: 'center', justifyContent: 'center' }, children: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_empty, { image: es_empty.PRESENTED_IMAGE_SIMPLE, description: (0,react_jsx_runtime_production_namespaceFn().jsx)("span", { style: { fontSize: 12 }, children: onClearScope ? '该会话暂无图片 / 文本' : '暂无文件——手机发来的图片 / 文本会汇总在这里' }) }) }));
     }
-    return ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { className: "znhd-transfer-files", style: { flex: '1 1 auto', minHeight: 0, overflowY: 'auto', padding: '10px 12px' }, children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 8 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)(TransferFilesView_Text, { strong: true, style: { fontSize: 14 }, children: ["\u5168\u90E8\u6587\u4EF6\uFF08\u56FE\u7247 ", images.length, " \u00B7 \u6587\u672C ", texts.length, "\uFF09"] }), (0,react_jsx_runtime_production_namespaceFn().jsx)("span", { style: { flex: '1 1 auto' } }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { danger: true, size: "small", onClick: clearAllTransferFiles, children: "\u6E05\u7A7A\u5168\u90E8" })] }), images.length ? ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_image.PreviewGroup, { items: images.map((m) => m.previewUrl), preview: {
+    return ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { className: "znhd-transfer-files", style: { flex: '1 1 auto', minHeight: 0, overflowY: 'auto', padding: '10px 12px' }, children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 8 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)(TransferFilesView_Text, { strong: true, style: { fontSize: 14 }, children: [scopeLabel, "\uFF08\u56FE\u7247 ", images.length, " \u00B7 \u6587\u672C ", texts.length, "\uFF09"] }), (0,react_jsx_runtime_production_namespaceFn().jsx)("span", { style: { flex: '1 1 auto' } }), onClearScope ? ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { danger: true, size: "small", onClick: () => {
+                            onClearScope();
+                            addLog('[传输助手] 已清空该会话的文件与消息', 'success');
+                        }, children: "\u6E05\u7A7A\u672C\u4F1A\u8BDD" })) : ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { danger: true, size: "small", onClick: clearAllTransferFiles, children: "\u6E05\u7A7A\u5168\u90E8" }))] }), images.length ? ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_image.PreviewGroup, { items: images.map((m) => m.previewUrl), preview: {
                     getContainer: getPreviewHost,
                     onOpenChange: (o) => setPreviewOpen(o),
                     actionsRender: (originalNode, info) => {
@@ -118674,6 +118730,12 @@ function TransferAssistantModal({ open, onClose }) {
      */
     const [agentPane, setAgentPane] = (0,react_production_namespaceFn().useState)('chat');
     const [search, setSearch] = (0,react_production_namespaceFn().useState)('');
+    /**
+     * 文件视图的会话筛选（v26.10.13-v5）：'' = 全部文件（跨会话汇总）；
+     * 在文件分组点第二栏某个会话 = 只看那个会话的文件。与 `activeSessionKey` 分开——
+     * 文件分组下点会话不该影响「对话」分组的选中态，也不该触发已读标记。
+     */
+    const [filesFilterKey, setFilesFilterKey] = (0,react_production_namespaceFn().useState)('');
     const [pairOpen, setPairOpen] = (0,react_production_namespaceFn().useState)(false);
     const [settingsOpen, setSettingsOpen] = (0,react_production_namespaceFn().useState)(false);
     const [aboutOpen, setAboutOpen] = (0,react_production_namespaceFn().useState)(false);
@@ -118745,6 +118807,12 @@ function TransferAssistantModal({ open, onClose }) {
     const unreadTotal = s.sessions.reduce((n, x) => n + x.unread, 0);
     /** 全部文件视图的数据源：所有会话的消息（组件内部按时间倒序） */
     const allMessages = (0,react_production_namespaceFn().useMemo)(() => s.sessions.reduce((acc, x) => acc.concat(x.messages), []), [s.sessions]);
+    /** 文件视图实际显示的消息：筛选了具体会话就只取该会话的 */
+    const filesMessages = (0,react_production_namespaceFn().useMemo)(() => (filesFilterKey ? allMessages.filter((m) => m.sessionKey === filesFilterKey) : allMessages), [allMessages, filesFilterKey]);
+    /** 文件视图标题：全部文件 / <会话名>的文件 */
+    const filesScopeLabel = filesFilterKey
+        ? (deviceEntries.find((e) => e.key === filesFilterKey)?.label || shortPhoneId(filesFilterKey)) + '的文件'
+        : '全部文件';
     /**
      * 当前会话；选中了一台**在线但无历史**的手机时合成一条空会话，
      * 让用户能直接发起发送（发送侧只要求对方在线，不要求有历史）。
@@ -118774,6 +118842,10 @@ function TransferAssistantModal({ open, onClose }) {
         setNav(next);
         if (next === 'agents')
             setAgentPane('chat');
+        // 离开文件分组就还原成「全部文件」：筛选是文件视图的临时状态，
+        // 保留到下次进来会出现「明明点的是文件却只看到某个会话」的困惑
+        if (next !== 'files')
+            setFilesFilterKey('');
     };
     /** 第三栏路由 */
     let main = null;
@@ -118781,7 +118853,12 @@ function TransferAssistantModal({ open, onClose }) {
         main = (0,react_jsx_runtime_production_namespaceFn().jsx)(TransferAgentView, { agent: agent, pane: agentPane });
     }
     else if (nav === 'files') {
-        main = (0,react_jsx_runtime_production_namespaceFn().jsx)(TransferFilesView, { messages: allMessages });
+        main = ((0,react_jsx_runtime_production_namespaceFn().jsx)(TransferFilesView, { messages: filesMessages, scopeLabel: filesScopeLabel, onClearScope: filesFilterKey
+                ? () => {
+                    clearTransferSession(filesFilterKey);
+                    addLog('[传输助手] 已清空该会话的文件与消息', 'success');
+                }
+                : undefined }));
     }
     else if (activeSession) {
         main = ((0,react_jsx_runtime_production_namespaceFn().jsx)(TransferDeviceChat, { session: activeSession, phone: activePhone, colorIndex: activePhone ? deviceColors[activePhone.id] : undefined, onClear: () => {
@@ -118851,7 +118928,7 @@ function TransferAssistantModal({ open, onClose }) {
                                 color: closeHover ? '#fff' : 'rgba(255,255,255,0.65)',
                                 // ⚠️ 不加 transition：冒烟会在派发 mouseover 的同一帧量底色，
                                 // 有过渡就会量到半路的透明 → 假红（微信的关闭变红本身也是瞬时的）
-                            }, children: (0,react_jsx_runtime_production_namespaceFn().jsx)(CloseIcon, { size: 15, color: "currentColor" }) })] }), (0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { flex: '1 1 auto', minHeight: 0, display: 'flex', flexDirection: 'row' }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(TransferNavRail, { nav: nav, onNav: onNav, onOpenSettings: () => setSettingsOpen(true), onOpenAbout: () => setAboutOpen(true), unreadTotal: unreadTotal }), (0,react_jsx_runtime_production_namespaceFn().jsx)(TransferSessionList, { nav: nav, search: search, onSearch: setSearch, onPair: () => setPairOpen(true), deviceEntries: deviceEntries, activeSessionKey: s.activeSessionKey, onSelectSession: onSelectSession, agent: nav === 'agents' ? agent : undefined, agentPane: agentPane, onAgentPane: setAgentPane }), (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { className: "znhd-transfer-main", style: {
+                            }, children: (0,react_jsx_runtime_production_namespaceFn().jsx)(CloseIcon, { size: 15, color: "currentColor" }) })] }), (0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { flex: '1 1 auto', minHeight: 0, display: 'flex', flexDirection: 'row' }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(TransferNavRail, { nav: nav, onNav: onNav, onOpenSettings: () => setSettingsOpen(true), onOpenAbout: () => setAboutOpen(true), unreadTotal: unreadTotal }), (0,react_jsx_runtime_production_namespaceFn().jsx)(TransferSessionList, { nav: nav, search: search, onSearch: setSearch, onPair: () => setPairOpen(true), deviceEntries: deviceEntries, activeSessionKey: s.activeSessionKey, onSelectSession: onSelectSession, filesActiveKey: filesFilterKey, onSelectFilesSession: setFilesFilterKey, agent: nav === 'agents' ? agent : undefined, agentPane: agentPane, onAgentPane: setAgentPane }), (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { className: "znhd-transfer-main", style: {
                                 flex: '1 1 auto',
                                 minWidth: 0,
                                 display: 'flex',
