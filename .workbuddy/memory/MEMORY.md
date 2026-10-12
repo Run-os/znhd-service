@@ -36,6 +36,7 @@
 - 诊断：启动日志末 `http://0.0.0.0:5689`；nginx 报 `Connection refused (111) upstream 5689` = relay 未在该端口监听。
 
 ## 已落地功能
+- 手机页（web/，`/u/<deviceId>`）v26.10.13-v1 起为**聊天流布局**：ChatMsg 五类消息（sys/img-in/text-in/img-out/text-out），收左发右气泡 + 居中系统气泡；待发条方案 A（选图先进条、点发送才入流）；发送后不 revoke objectURL（气泡缩略图仍引用）。版本注入链：relay pkg → vite `__APP_VERSION__`。
 - 工作时间可配置 DEFAULTS.workingHours；启动日志走 addLog 进面板日志窗。
 - resolveGithubUrl(githubUrl)：useCdn 时 jsdelivr gh，否则 raw.githubusercontent；支持 blob/raw 多段分支。DEFAULTS.useCdn 默认 true。
 - 手机上传页 compressFile：SVG 跳过压缩原样直传；HEIC 用 heic2any（CDN bootcdn 0.0.4）转 JPEG 再 canvas 压缩（铺白底防黑底），库缺失/失败原样直传兜底；失败原因在状态区显示。

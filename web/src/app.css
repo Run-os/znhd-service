@@ -1,4 +1,4 @@
-/* 手机上传页全局样式：只放 antd 覆盖不到的布局（栅格/缩略图/预览文本），组件外观交给 antd 主题 */
+/* 手机聊天页全局样式：布局与气泡（antd 覆盖不到的部分），组件外观交给 antd 主题 */
 :root {
     color-scheme: light;
 }
@@ -11,96 +11,340 @@ body {
 }
 
 #root {
-    min-height: 100vh;
+    height: 100%;
 }
 
-/* 手机单列；md 及以上放宽并变两列（由 antd Row/Col 负责分栏） */
+/* 整页 = 状态栏 + 消息流 + （待发条）+ 输入栏 的纵向 flex；100dvh 跟随手机地址栏伸缩 */
 .znhd-page {
-    max-width: 560px;
+    height: 100vh;
+    height: 100dvh;
+    max-width: 720px;
     margin: 0 auto;
-    padding: 16px 16px calc(16px + env(safe-area-inset-bottom, 0px));
+    padding: 0 12px calc(8px + env(safe-area-inset-bottom, 0px));
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+}
+
+/* ===== 顶部状态栏 ===== */
+.znhd-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 10px 2px 8px;
+    border-bottom: 1px solid #ececec;
+    background: #f5f5f5;
+}
+
+.znhd-top-status {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+}
+
+.znhd-top-text {
+    font-size: 14px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.znhd-top-right {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex: 0 0 auto;
+}
+
+.znhd-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #d9d9d9;
+    flex: 0 0 auto;
+}
+
+.znhd-dot-on {
+    background: #52c41a;
+    box-shadow: 0 0 0 3px rgba(82, 196, 26, 0.15);
+}
+
+.znhd-dot-err {
+    background: #ff4d4f;
+    box-shadow: 0 0 0 3px rgba(255, 77, 79, 0.15);
+}
+
+/* ===== 消息流 ===== */
+.znhd-stream {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 12px 2px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.znhd-empty {
+    margin: auto;
+    text-align: center;
+    color: #999;
+    font-size: 13px;
+    line-height: 1.7;
+    padding: 0 24px;
+}
+
+/* 一行消息：收件靠左、发件靠右 */
+.znhd-row {
+    display: flex;
+    align-items: flex-end;
+    gap: 6px;
+}
+
+.znhd-row-in {
+    justify-content: flex-start;
+}
+
+.znhd-row-out {
+    justify-content: flex-end;
+}
+
+/* 系统气泡（居中） */
+.znhd-sys {
+    align-self: center;
+    max-width: 82%;
+    text-align: center;
+    font-size: 12px;
+    color: #8c8c8c;
+    background: #ececec;
+    border-radius: 12px;
+    padding: 3px 12px;
+    word-break: break-word;
+}
+
+.znhd-sys-err {
+    color: #cf1322;
+    background: #fff1f0;
+}
+
+/* 气泡本体 */
+.znhd-bubble {
+    max-width: 78%;
+    border-radius: 14px;
+    padding: 8px 12px;
+    font-size: 15px;
+    line-height: 1.6;
+    word-break: break-word;
     box-sizing: border-box;
 }
 
-@media (min-width: 768px) {
-    .znhd-page {
-        max-width: 1040px;
-        padding: 24px;
-    }
+.znhd-bubble-in {
+    background: #fff;
+    border: 1px solid #ececec;
+    border-top-left-radius: 4px;
 }
 
-/* 待发送缩略图：手机 3 列、桌面 6 列 */
-.znhd-preview-grid {
+.znhd-bubble-out {
+    background: #d9f5e3;
+    border-top-right-radius: 4px;
+}
+
+.znhd-bubble-failed {
+    border: 1px solid #ffccc7;
+}
+
+/* 图片气泡放宽（图片本身要尽量大） */
+.znhd-bubble-img {
+    max-width: 82%;
+    padding: 6px;
+}
+
+.znhd-msg-text {
+    white-space: pre-wrap;
+}
+
+.znhd-note {
+    margin-top: 4px;
+    font-size: 11px;
+    color: #8c8c8c;
+    text-align: right;
+}
+
+.znhd-note-err {
+    color: #cf1322;
+}
+
+/* 气泡内图片：单张大图、多张三列小格 */
+.znhd-img-grid {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 8px;
+    grid-template-columns: repeat(3, 78px);
+    gap: 4px;
 }
 
-@media (min-width: 768px) {
-    .znhd-preview-grid {
-        grid-template-columns: repeat(6, minmax(0, 1fr));
-    }
-}
-
-.znhd-thumb {
-    position: relative;
+.znhd-img {
     width: 100%;
     aspect-ratio: 1 / 1;
-    overflow: hidden;
+    object-fit: cover;
     border-radius: 8px;
-    background: #fff;
-    border: 1px solid #eee;
+    background: #f2f2f2;
+    display: block;
 }
 
-.znhd-thumb-img {
+/* 单张时给 antd Image 包一层后的 img 同样生效 */
+.znhd-bubble-img .znhd-img {
+    max-width: 100%;
+}
+
+/* 发出侧的裸 img（不走 antd Image） */
+.znhd-img-plain {
+    cursor: default;
+}
+
+/* 单张收到图放大些：:only-child 由网格/单张类名区分，这里对非网格内的图限宽 */
+.znhd-bubble-img > div:not(.znhd-img-grid) .znhd-img {
+    width: 180px;
+    max-width: 100%;
+}
+
+.znhd-img-count {
+    margin-top: 4px;
+    font-size: 11px;
+    color: #8c8c8c;
+    text-align: center;
+}
+
+/* 气泡旁的小图标按钮（复制/下载） */
+.znhd-mini-col {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 0 0 auto;
+}
+
+.znhd-mini-btn {
+    border: none;
+    background: transparent;
+    color: #8c8c8c;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 15px;
+    cursor: pointer;
+    padding: 0;
+    flex: 0 0 auto;
+}
+
+.znhd-mini-btn:active {
+    background: rgba(0, 0, 0, 0.06);
+}
+
+.znhd-mini-btn:disabled {
+    color: #d9d9d9;
+    cursor: not-allowed;
+}
+
+/* ===== 待发条 ===== */
+.znhd-pending {
+    border-top: 1px solid #ececec;
+    background: #fafafa;
+    border-radius: 12px 12px 0 0;
+    padding: 8px;
+}
+
+.znhd-pending-strip {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 4px;
+}
+
+.znhd-pending-thumb {
+    position: relative;
+    flex: 0 0 auto;
+    width: 64px;
+    height: 64px;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid #eee;
+    background: #fff;
+}
+
+.znhd-pending-thumb img {
     width: 100%;
     height: 100%;
     object-fit: cover;
     display: block;
 }
 
-.znhd-thumb-del {
+.znhd-pending-del {
     position: absolute;
-    top: 2px;
-    right: 2px;
-    padding: 0 6px;
-    min-width: 22px;
-    height: 22px;
-    line-height: 20px;
+    top: 1px;
+    right: 1px;
+    width: 18px;
+    height: 18px;
+    line-height: 16px;
     border-radius: 50%;
+    border: none;
+    background: rgba(0, 0, 0, 0.55);
+    color: #fff;
+    font-size: 13px;
+    padding: 0;
+    cursor: pointer;
 }
 
-/* 收到的图片九宫格 */
-.znhd-recv-grid {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 8px;
-    max-height: 62vh;
-    overflow: auto;
-    align-content: start;
-}
-
-.znhd-recv-cell {
+.znhd-pending-bar {
     display: flex;
-    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding-top: 4px;
 }
 
-.znhd-recv-img {
-    width: 100%;
-    aspect-ratio: 1 / 1;
-    object-fit: cover;
-    border-radius: 8px;
-    background: #f2f2f2;
+.znhd-pending-info {
+    font-size: 12px;
+    color: #8c8c8c;
 }
 
-/* 收到的文本 */
-.znhd-recv-text {
-    margin: 0;
-    max-height: 60vh;
-    overflow: auto;
-    white-space: pre-wrap;
-    word-break: break-word;
-    font-family: inherit;
-    font-size: 15px;
-    line-height: 1.6;
+/* ===== 底部输入栏 ===== */
+.znhd-inputbar {
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
+    padding-top: 8px;
+    background: #f5f5f5;
+}
+
+.znhd-pick-btn {
+    border: 1px solid #d9d9d9;
+    background: #fff;
+    width: 38px;
+    height: 38px;
+    font-size: 18px;
+    color: #595959;
+    border-radius: 10px;
+}
+
+.znhd-input {
+    flex: 1;
+    min-width: 0;
+}
+
+/* 发送按钮：固定正方形，箭头居中 */
+.znhd-send-btn {
+    width: 38px;
+    height: 38px;
+    padding: 0;
+    border-radius: 10px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
 }
