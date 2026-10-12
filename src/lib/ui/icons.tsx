@@ -374,3 +374,89 @@ export function PanelLeftIcon(p: IconProps) {
         </SvgIcon>
     );
 }
+
+/* ============================================================ 聊天面板（v26.10.12-v3） */
+
+/**
+ * 用户头像（Lucide `user`：头 + 肩）。
+ *
+ * 聊天气泡右侧「我」的头像。设备会话与 Agent 对话共用同一套气泡布局，
+ * 所以这个图标两个面板都会用到。
+ */
+export function UserIcon(p: IconProps) {
+    return (
+        <SvgIcon {...p}>
+            <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
+            <circle cx="12" cy="7" r="4" />
+        </SvgIcon>
+    );
+}
+
+/**
+ * 表情（Lucide `smile`）：输入框左下角的附加功能按钮之一。
+ *
+ * ⚠️ 这里说的是**按钮图标**（矢量，Win7 安全）。点开后的表情面板里是**字符**，
+ * 清单刻意只取 BMP 符号、且避开 Dingbats（U+2700–U+27BF）——理由见 `chatEmojis.ts`。
+ */
+export function SmileIcon(p: IconProps) {
+    return (
+        <SvgIcon {...p}>
+            <circle cx="12" cy="12" r="10" />
+            <path d="M8 14s1.5 2 4 2 4-2 4-2" />
+            <line x1="9" x2="9.01" y1="9" y2="9" />
+            <line x1="15" x2="15.01" y1="9" y2="9" />
+        </SvgIcon>
+    );
+}
+
+/**
+ * 图片上传（Lucide `image`）：输入框左下角「上传图片」按钮。
+ *
+ * 与 `HistoryIcon` 同源（都是 Lucide `image`）—— 语义不同（一个是面板入口、一个是发送动作），
+ * 刻意不合并：合并后改其中一个形状会连带影响另一个入口的外观。
+ */
+export function ImageIcon(p: IconProps) {
+    return (
+        <SvgIcon {...p}>
+            <rect width="18" height="18" x="3" y="3" rx="2" ry="2" />
+            <circle cx="9" cy="9" r="2" />
+            <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" />
+        </SvgIcon>
+    );
+}
+
+/** 附件（Lucide `paperclip`）：输入框左下角的回形针（当前两端都不支持，按钮置灰） */
+export function PaperclipIcon(p: IconProps) {
+    return (
+        <SvgIcon {...p}>
+            <path d="m16 6-8.414 8.586a2 2 0 0 0 2.829 2.829l8.414-8.586a4 4 0 1 0-5.657-5.657l-8.379 8.551a6 6 0 1 0 8.485 8.485l8.379-8.551" />
+        </SvgIcon>
+    );
+}
+
+/**
+ * 技能（Lucide `layout-grid`：2×2 圆角方块）：第二栏 Agents 分组顶部的「技能」控件。
+ *
+ * 取「一格格工具」的语义。没用 Lucide 的 `puzzle` ——那个 path 更长、且随 Lucide 版本改过，
+ * 这里的四宫格是自己写得出来的确定几何，不会因为库升级而变样。
+ */
+export function GridIcon(p: IconProps) {
+    return (
+        <SvgIcon {...p}>
+            <rect width="7" height="7" x="3" y="3" rx="1" />
+            <rect width="7" height="7" x="14" y="3" rx="1" />
+            <rect width="7" height="7" x="14" y="14" rx="1" />
+            <rect width="7" height="7" x="3" y="14" rx="1" />
+        </SvgIcon>
+    );
+}
+
+/** 定时任务（Lucide `clock`：表盘 + 指针）：第二栏 Agents 分组顶部的「定时任务」控件 */
+export function ClockIcon(p: IconProps) {
+    return (
+        <SvgIcon {...p}>
+            <circle cx="12" cy="12" r="10" />
+            <path d="M12 6v6l4 2" />
+        </SvgIcon>
+    );
+}

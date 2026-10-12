@@ -24,8 +24,14 @@
 - 旧自绘弹窗内 button 会被 arco focus-lock 抢焦点（`tabIndex=-1` + mousedown `preventDefault` 修）；旧 Viewer.js 容器困在 body transform 层叠上下文（MutationObserver 移入 overlay 修）——这两条机制在新 antd 栈里已不复现，但「浮层挂 `document.documentElement` 避开 body transform」的结论仍有效。
 
 ## 传输助手三栏架构（v26.10.12-v1 重构，原「设备互联」）
-- 主面板入口从 5+Agent 两行瘦成**一行 4 个**：设置/常用语/传输助手/图片嗅删（Agent 与「历史记录」入口已删）。
-- 三栏（企业微信式）：第一栏 `TransferNavRail`（Agents 固定顶部 + 设备/文件 + 底部外观/设置/企业信息，可折叠）→ 第二栏 `TransferSessionList`（搜索 + `aria-label="配对设备"` 的「+」+ 会话列表）→ 第三栏（`TransferDeviceChat` 设备会话 / `TransferFilesView` 全部文件 / `TransferAgentView` Agents）。
+- 主面板入口从 5+Agent 两行瘦成**一行 4 个**：设置/常用语/传输助手/图片嗅探（Agent 与「历史记录」入口已删）。
+- 三栏（企业微信式）：第一栏 `TransferNavRail`（Agents 固定顶部 + 设备/文件 + 底部外观/设置/企业信息，可折叠）→ 第二栏 `TransferSessionList`（搜索 + 「＋」+ 会话列表；**Agents 分组下最上方还有「技能」「定时任务」两个控件**）→ 第三栏（`TransferDeviceChat` 设备会话 / `TransferFilesView` 全部文件 / `TransferAgentView` Agents）。
+- **第三栏共用聊天面板件（v26.10.12-v3）**：`ChatPanel.tsx`（`ChatHeader`/`ChatScroll`）、`ChatBubble.tsx`、`ChatComposer.tsx`、`chatEmojis.ts` —— 设备会话与 Agent 对话**必须共用这一套**，两处各写一份必然漂移。
+  - `ChatScroll` 的 **`minHeight:0` 是硬性**：缺了 flex 子项会被内容撑高，`overflowY:auto` 永不触发；输入框「吸附底部」也是布局算出来的（头部/输入区 `flex:0 0 auto`），不是 `position:fixed`。
+  - `ChatBubble` **方向用 `flexDirection: isUser ? 'row-reverse' : 'row'` 表达**（头像位置与气泡贴哪边共用一份代码）；根节点带 `data-side` 作冒烟稳定钩子。
+  - 用户气泡 = 主色实心 + 白字 ⇒ `MarkdownBody` 必须传 `inverted`，否则链接色/代码块底色落在主色底上是「蓝压蓝」看不见。
+  - `ChatComposer` 铁律（沿用 v26.10.10-v13/v15）：聚焦高亮画在**外层容器**、textarea 自禁 outline（`agentInputNoRingOk` 守）；`autoSize={{minRows:2,maxRows:6}}` 与 `lineHeight:'20px'` **必须成对**（`agentInputHeightOk` 守）。超 `maxRows` 后框内滚动由 rc-textarea 自带（`calculateNodeHeight.js`：`overflowY = height > maxHeight ? undefined : 'hidden'`），零代码实现。
+  - 「＋」按钮语义**随分组变**：设备 → `aria-label="配对设备"`；Agents → `aria-label="新建对话"`（Agents 第二栏的「+ 新的聊天」已删）。第三栏由 `AgentPane = 'chat' | 'skills' | 'tasks'` 驱动（`TransferAssistantModal` 持有，切导航/点会话/点「＋」都复位 `chat`）。
 - 业务层 `src/lib/transfer/store.ts` 是**模块级单例**（窗口不开也照常收件；`autoOpenListeners` → 主面板 `setTransferOpen(true)` 自动弹窗，`autoOpenOnReceive` 可关）。
 - 设置完全隔离：`scriptCat_TransferSettings`（`lib/transfer/settings.ts` 的 `DEFAULT_RELAY_SERVER`），主面板 `DEFAULTS` 里已无 `relayServer`；旧 `Allvalue.relayServer` 仅一次性迁移种子。
 - 会话归组：正向广播不带手机 ID ⇒ 恰好 1 台在线归该机会话，否则聚合会话 `__phone__`（标签「手机」）。**聚合会话没有单一 phone 对象，在线状态必须用 `sessionSendable()` 判**（用 `!!phone` 会「多台在线却显示离线」，v26.10.12-v1 冒烟抓到的真 bug）。
@@ -57,10 +63,11 @@
 - **Win7 没有 Segoe UI Emoji 字体**（Win8.1 才有）→ emoji 字符（`⚙️💬🖼️💻🔊🔇🎯❌📱`）在 Win7 全渲染成豆腐块。
   这类字符在 **U+1F300+ 补充平面**，Win7 无字形；而 `✓✕→≈≥×` 在 **BMP U+2190–U+2BFF**（Segoe UI/Arial 自带）**可以留**。
   判断依据是**码位所在平面**，不是「看起来像不像图标」。
-- 统一用 `@ant-design/icons`（已在 devDependencies，产物里本就有 `anticon`/`viewBox` ⇒ 零新增体积），
+- 图标统一走 **`src/lib/ui/icons.tsx`**（自写内联 SVG，图形取自 Lucide 24×24 / stroke 2 / ISC，头部注释有许可说明）；
+  `@ant-design/icons` 现在**只剩 3 处 `PrinterOutlined`**（`SniffModal` / `TransferDeviceChat` / `TransferFilesView`）。
   外层套 `MainPanel.tsx` 的 `IconBox`（inline-flex + 居中）防宿主税务页的 svg 规则顶偏图标。
 - ⚠️ **`@ant-design/icons` 的组件 props 不接受 `style`**（`AntdIconProps` 只认 className 等少数几项），
-  直接 `<IconOutlined style={...}/>` 报 **TS2322**。样式必须挂 IconBox 外层 span。
+  直接 `<PrinterOutlined style={...}/>` 报 **TS2322**。样式必须挂外层 span（自写的 `icons.tsx` 组件则接受 `size`）。
 - 面板按钮的容器查询阈值（`PANEL_CSS`，65px）与**图标字号/标签字数**耦合：antd 图标是 `1em` 正方形，
   字号 15px ⇒ 占宽 15px。**改这两者任一个都要回来重算阈值**，否则文字会在将满时折行。
 - 实测夹具 `tmp/check-icons.js`：起 `scripts/smoke/server.js` + 真实 Chromium 加载**构建产物**量 DOM。

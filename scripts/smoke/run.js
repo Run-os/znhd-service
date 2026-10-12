@@ -82,6 +82,11 @@ const CHECKS = [
   ['transferThemeOk', '外观切到深色：窗口主区变深色（嵌套 ConfigProvider 只作用于本窗）'],
   ['transferSettingsIsolatedOk', '传输助手设置独立存储 scriptCat_TransferSettings（不污染主设置）'],
   ['filesImgActionsOk', '「文件」视图图片格子：复制/下载/删除是右下角图标按钮（未 hover 隐藏，hover 出现）'],
+  // v26.10.12-v3：用户要求「设备菜单和 agent 菜单下的对话主区域使用相同的样式」，
+  // 于是气泡、滚动区、底部输入框都抽成了共用件 —— 这三条守的就是「共用件真的长出来了」
+  ['chatBubbleOk', '聊天气泡左右分栏（他人靠左浅底 / 我的靠右深底）+ 头像在气泡外侧'],
+  ['chatComposerOk', '底部输入区：多行自增高（超上限后框内滚动）+ 左下角表情/图片上传/附件 + 右下角圆形发送按钮 + 有边框'],
+  ['chatPanelSharedOk', 'Agent 对话与设备会话共用同一套聊天面板（同一个输入框外壳 + 带 data-side 的气泡 + 头像）'],
   // ===== 主面板既有断言 =====
   ['phrasesLoaded', '常用语 YAML 解析'],
   ['phrasesClicked', '常用语侧边栏可打开'],
@@ -121,7 +126,7 @@ const CHECKS = [
   ['selfHeal', '面板被宿主页删除后自动挂回（且不重复挂载）'],
   // v26.10.12-v1：Agent 助手不再是独立弹窗，改为传输助手第一栏 Agents → 右侧聊天区
   ['agentEntryOk', '第一栏 Agents 入口打开右侧聊天区（可用态）'],
-  ['agentTabsOk', 'Agent 视图三个页签可切换且技能/任务面板渲染（桩数据）'],
+  ['agentPanesOk', '第二栏「技能 / 定时任务」控件切换第三栏内容，两个面板都渲染（桩数据）'],
   ['agentChatOk', 'Agent 对话能发出并落地流式回答（桩分片）'],
   // v26.10.10-v11：历史消息的 thinking 是对象，渲染不当会让整棵面板树被卸载
   ['agentReopenOk', '对话后关窗再打开：历史思考正常渲染且主面板仍在（v26.10.10-v11）'],
@@ -479,7 +484,9 @@ async function main() {
       !checkPass('textSentOk') ||
       !checkPass('sessionClearOk') ||
       !checkPass('transferThemeOk') ||
-      !checkPass('transferSettingsIsolatedOk')
+      !checkPass('transferSettingsIsolatedOk') ||
+      !checkPass('chatBubbleOk') ||
+      !checkPass('chatComposerOk')
     ) {
       console.log('      传输助手快照：' + JSON.stringify(report.transferSnap));
     }
@@ -500,13 +507,14 @@ async function main() {
     // 以及 v26.10.10-v11 的「重开弹窗后面板是否还在」、v26.10.10-v12 的「会话索引/切换」
     if (
       !checkPass('agentEntryOk') ||
-      !checkPass('agentTabsOk') ||
+      !checkPass('agentPanesOk') ||
       !checkPass('agentChatOk') ||
       !checkPass('agentReopenOk') ||
       !checkPass('agentChatsOk') ||
       !checkPass('agentInputNoRingOk') ||
       !checkPass('agentMarkdownOk') ||
-      !checkPass('agentInputHeightOk')
+      !checkPass('agentInputHeightOk') ||
+      !checkPass('chatPanelSharedOk')
     ) {
       console.log('      Agent 快照：' + JSON.stringify(report.agentSnap));
     }

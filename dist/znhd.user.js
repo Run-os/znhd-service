@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name                征纳互动人数和在线监控v2
 // @namespace           https://scriptcat.org/
-// @version             26.10.12-v2
+// @version             26.10.12-v3
 // @description         实时监控征纳互动等待人数和在线状态，支持语音播报、自定义常用语
 // @author              runos
 // @license             MIT
@@ -56319,6 +56319,51 @@ function InfoIcon(p) {
 function PanelLeftIcon(p) {
     return ((0,react_jsx_runtime_production_namespaceFn().jsxs)(SvgIcon, { ...p, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("rect", { width: "18", height: "18", x: "3", y: "3", rx: "2" }), (0,react_jsx_runtime_production_namespaceFn().jsx)("path", { d: "M9 3v18" })] }));
 }
+/* ============================================================ 聊天面板（v26.10.12-v3） */
+/**
+ * 用户头像（Lucide `user`：头 + 肩）。
+ *
+ * 聊天气泡右侧「我」的头像。设备会话与 Agent 对话共用同一套气泡布局，
+ * 所以这个图标两个面板都会用到。
+ */
+function UserIcon(p) {
+    return ((0,react_jsx_runtime_production_namespaceFn().jsxs)(SvgIcon, { ...p, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("path", { d: "M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" }), (0,react_jsx_runtime_production_namespaceFn().jsx)("circle", { cx: "12", cy: "7", r: "4" })] }));
+}
+/**
+ * 表情（Lucide `smile`）：输入框左下角的附加功能按钮之一。
+ *
+ * ⚠️ 这里说的是**按钮图标**（矢量，Win7 安全）。点开后的表情面板里是**字符**，
+ * 清单刻意只取 BMP 符号、且避开 Dingbats（U+2700–U+27BF）——理由见 `chatEmojis.ts`。
+ */
+function SmileIcon(p) {
+    return ((0,react_jsx_runtime_production_namespaceFn().jsxs)(SvgIcon, { ...p, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("circle", { cx: "12", cy: "12", r: "10" }), (0,react_jsx_runtime_production_namespaceFn().jsx)("path", { d: "M8 14s1.5 2 4 2 4-2 4-2" }), (0,react_jsx_runtime_production_namespaceFn().jsx)("line", { x1: "9", x2: "9.01", y1: "9", y2: "9" }), (0,react_jsx_runtime_production_namespaceFn().jsx)("line", { x1: "15", x2: "15.01", y1: "9", y2: "9" })] }));
+}
+/**
+ * 图片上传（Lucide `image`）：输入框左下角「上传图片」按钮。
+ *
+ * 与 `HistoryIcon` 同源（都是 Lucide `image`）—— 语义不同（一个是面板入口、一个是发送动作），
+ * 刻意不合并：合并后改其中一个形状会连带影响另一个入口的外观。
+ */
+function ImageIcon(p) {
+    return ((0,react_jsx_runtime_production_namespaceFn().jsxs)(SvgIcon, { ...p, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("rect", { width: "18", height: "18", x: "3", y: "3", rx: "2", ry: "2" }), (0,react_jsx_runtime_production_namespaceFn().jsx)("circle", { cx: "9", cy: "9", r: "2" }), (0,react_jsx_runtime_production_namespaceFn().jsx)("path", { d: "m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" })] }));
+}
+/** 附件（Lucide `paperclip`）：输入框左下角的回形针（当前两端都不支持，按钮置灰） */
+function PaperclipIcon(p) {
+    return ((0,react_jsx_runtime_production_namespaceFn().jsx)(SvgIcon, { ...p, children: (0,react_jsx_runtime_production_namespaceFn().jsx)("path", { d: "m16 6-8.414 8.586a2 2 0 0 0 2.829 2.829l8.414-8.586a4 4 0 1 0-5.657-5.657l-8.379 8.551a6 6 0 1 0 8.485 8.485l8.379-8.551" }) }));
+}
+/**
+ * 技能（Lucide `layout-grid`：2×2 圆角方块）：第二栏 Agents 分组顶部的「技能」控件。
+ *
+ * 取「一格格工具」的语义。没用 Lucide 的 `puzzle` ——那个 path 更长、且随 Lucide 版本改过，
+ * 这里的四宫格是自己写得出来的确定几何，不会因为库升级而变样。
+ */
+function GridIcon(p) {
+    return ((0,react_jsx_runtime_production_namespaceFn().jsxs)(SvgIcon, { ...p, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("rect", { width: "7", height: "7", x: "3", y: "3", rx: "1" }), (0,react_jsx_runtime_production_namespaceFn().jsx)("rect", { width: "7", height: "7", x: "14", y: "3", rx: "1" }), (0,react_jsx_runtime_production_namespaceFn().jsx)("rect", { width: "7", height: "7", x: "14", y: "14", rx: "1" }), (0,react_jsx_runtime_production_namespaceFn().jsx)("rect", { width: "7", height: "7", x: "3", y: "14", rx: "1" })] }));
+}
+/** 定时任务（Lucide `clock`：表盘 + 指针）：第二栏 Agents 分组顶部的「定时任务」控件 */
+function ClockIcon(p) {
+    return ((0,react_jsx_runtime_production_namespaceFn().jsxs)(SvgIcon, { ...p, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("circle", { cx: "12", cy: "12", r: "10" }), (0,react_jsx_runtime_production_namespaceFn().jsx)("path", { d: "M12 6v6l4 2" })] }));
+}
 
 ;// ./src/lib/constants.ts
 /**
@@ -75556,11 +75601,16 @@ function chatTimeText(timestamp) {
 }
 /**
  * Agent 会话列表（v26.10.12-v1：从 AgentModal 左侧会话栏搬来，作为传输助手第二栏的
- * Agents 内容）。「新的聊天」在顶部，下面一条条会话卡片（选中高亮、悬停出删除）。
+ * Agents 内容）。
  *
- * ⚠️ 类名 `znhd-agent-chat-item` 是冒烟断言的定位符（AGENT.md「历史踩坑索引」有记），勿改。
+ * v26.10.12-v3 去掉列表顶部那个「新的聊天」按钮：用户要求把新建的入口并进**搜索框右侧的 ＋**
+ * （`TransferSessionList` 里，Agents 分组下它是「新建对话」，设备分组下才是「配对设备」）——
+ * 于是这里只剩「标题 + 一条条会话卡片（选中高亮、悬停出删除）」。
+ *
+ * ⚠️ 类名 `znhd-agent-chat-item` / `znhd-agent-chat-list` 是冒烟断言的定位符
+ * （AGENT.md「历史踩坑索引」有记），勿改。
  */
-function AgentConversationList({ chats, activeChatId, streaming, onNewChat, onSwitch, onDelete, }) {
+function AgentConversationList({ chats, activeChatId, onSwitch, onDelete, }) {
     const { token } = es_theme.useToken();
     /** 鼠标正悬停的会话卡片：删除图标只在悬停（或选中）时出现，用 state 而不是 CSS 类 */
     const [hoverChatId, setHoverChatId] = (0,react_production_namespaceFn().useState)('');
@@ -75582,7 +75632,7 @@ function AgentConversationList({ chats, activeChatId, streaming, onNewChat, onSw
                         opacity: active || hoverChatId === item.id ? 1 : 0,
                     }, onClick: (event) => event.stopPropagation(), children: (0,react_jsx_runtime_production_namespaceFn().jsx)(popconfirm, { title: "\u5220\u9664\u8FD9\u4E2A\u5BF9\u8BDD\uFF1F", description: "\u4F1A\u6E05\u7A7A\u8BE5\u5BF9\u8BDD\u7684\u6D88\u606F\u8BB0\u5F55\uFF0C\u5E76\u4ECE\u4F1A\u8BDD\u5217\u8868\u91CC\u79FB\u9664\u3002", okText: "\u5220\u9664", cancelText: "\u53D6\u6D88", okButtonProps: { danger: true }, onConfirm: () => void onDelete(item.id), children: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { type: "text", size: "small", "aria-label": "\u5220\u9664\u5BF9\u8BDD", icon: (0,react_jsx_runtime_production_namespaceFn().jsx)(TrashIcon, { size: 12 }), style: { width: 20, height: 20, minWidth: 20, padding: 0, color: token.colorTextTertiary } }) }) })] }, item.id));
     };
-    return ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', flexDirection: 'column', gap: 6, minHeight: 0, flex: '1 1 auto' }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(es_tooltip, { title: "\u6E05\u7A7A\u5F53\u524D\u89C6\u56FE\uFF0C\u53D1\u51FA\u4E0B\u4E00\u6761\u6D88\u606F\u65F6\u53E6\u8D77\u4E00\u4E2A\u5BF9\u8BDD", children: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { size: "small", icon: (0,react_jsx_runtime_production_namespaceFn().jsx)(PlusIcon, { size: 13 }), onClick: onNewChat, disabled: streaming && !activeChatId, style: { justifyContent: 'flex-start' }, children: "\u65B0\u7684\u804A\u5929" }) }), (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { className: "znhd-agent-chat-list", style: { flex: '1 1 auto', minHeight: 0, overflowY: 'auto', overflowX: 'hidden' }, children: chats.length ? (chats.map(renderChatItem)) : ((0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { fontSize: 12, color: token.colorTextTertiary, padding: '4px 2px' }, children: "\u8FD8\u6CA1\u6709\u5386\u53F2\u5BF9\u8BDD\u3002\u53D1\u51FA\u7B2C\u4E00\u6761\u6D88\u606F\u540E\uFF0C\u5B83\u4F1A\u51FA\u73B0\u5728\u8FD9\u91CC\u3002" })) })] }));
+    return ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', flexDirection: 'column', gap: 4, minHeight: 0, flex: '1 1 auto' }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { fontSize: 11, color: token.colorTextTertiary, padding: '0 2px' }, children: "\u5BF9\u8BDD" }), (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { className: "znhd-agent-chat-list", style: { flex: '1 1 auto', minHeight: 0, overflowY: 'auto', overflowX: 'hidden' }, children: chats.length ? (chats.map(renderChatItem)) : ((0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { fontSize: 12, color: token.colorTextTertiary, padding: '4px 2px' }, children: "\u8FD8\u6CA1\u6709\u5386\u53F2\u5BF9\u8BDD\u3002\u53D1\u51FA\u7B2C\u4E00\u6761\u6D88\u606F\u540E\uFF0C\u5B83\u4F1A\u51FA\u73B0\u5728\u8FD9\u91CC\u3002" })) })] }));
 }
 
 ;// ./src/lib/ui/transfer/TransferSessionList.tsx
@@ -75612,15 +75662,39 @@ function listTime(ts) {
 /**
  * 第二栏（中间会话列表栏，v26.10.12-v1）。
  *
- * 结构（对齐企业微信桌面端）：顶部**搜索框 + 紧邻右侧的「+」按钮**（配对 / 绑定入口
- * 统一收在这里，点击弹出配对窗口）；下方按第一栏当前分组显示会话 / 设备列表。
+ * 结构（对齐企业微信桌面端）：顶部**搜索框 + 紧邻右侧的「＋」按钮**，下方按第一栏当前分组
+ * 显示会话 / 设备列表。**「＋」的含义随分组变**（v26.10.12-v3，用户要求）：
+ *   · 设备分组 → 「配对设备」（弹配对窗口）；
+ *   · Agents 分组 → 「新建对话」（清空当前视图，发出下一条消息时另起一个对话）——
+ *     直接把新建塞进搜索框旁边，不再让「＋」在 Agents 下复用设备的那套配对。
+ *
+ * Agents 分组下「＋」下面还有两个控件：**技能 / 定时任务**（v26.10.12-v3 从第三栏页签提上来），
+ * 点哪个第三栏就显示哪个；再往下才是「对话」列表。
  */
-function TransferSessionList({ nav, search, onSearch, onPair, deviceEntries, activeSessionKey, onSelectSession, agent, }) {
+function TransferSessionList({ nav, search, onSearch, onPair, deviceEntries, activeSessionKey, onSelectSession, agent, agentPane, onAgentPane, }) {
     const { token } = es_theme.useToken();
+    const isAgents = nav === 'agents';
     const keyword = search.trim().toLowerCase();
     const filtered = keyword
         ? deviceEntries.filter((e) => e.label.toLowerCase().includes(keyword) || previewText(e.lastMsg).toLowerCase().includes(keyword))
         : deviceEntries;
+    /** Agents 分组下的「技能 / 定时任务」控件：选中态与第一栏导航同一套视觉 */
+    const agentControl = (key, label, icon) => {
+        const active = agentPane === key;
+        return ((0,react_jsx_runtime_production_namespaceFn().jsx)("div", { children: (0,react_jsx_runtime_production_namespaceFn().jsxs)(es_button, { type: "text", block: true, "aria-label": label, onClick: () => onAgentPane && onAgentPane(key), style: {
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    height: 32,
+                    justifyContent: 'flex-start',
+                    padding: '0 8px',
+                    borderRadius: 8,
+                    fontSize: 13,
+                    background: active ? token.colorPrimaryBg : 'transparent',
+                    color: active ? token.colorPrimary : token.colorText,
+                    fontWeight: active ? 600 : 400,
+                }, children: [icon, (0,react_jsx_runtime_production_namespaceFn().jsx)("span", { style: { minWidth: 0, overflow: 'hidden', whiteSpace: 'nowrap' }, children: label })] }) }, key));
+    };
     return ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { className: "znhd-transfer-sessions", style: {
             flex: '0 0 auto',
             width: 264,
@@ -75629,7 +75703,17 @@ function TransferSessionList({ nav, search, onSearch, onPair, deviceEntries, act
             borderRight: '1px solid ' + token.colorBorderSecondary,
             background: token.colorBgContainer,
             minWidth: 0,
-        }, children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', gap: 8, padding: 10 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(es_input, { allowClear: true, prefix: (0,react_jsx_runtime_production_namespaceFn().jsx)(SearchIcon, { size: 14, color: token.colorTextQuaternary }), placeholder: nav === 'agents' ? '搜索对话' : '搜索会话 / 设备', value: search, onChange: (e) => onSearch(e.target.value) }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_tooltip, { title: "\u914D\u5BF9\u8BBE\u5907\uFF08\u624B\u673A\u626B\u7801 / \u6253\u5F00\u94FE\u63A5\u5373\u5B8C\u6210\u914D\u5BF9\uFF09", children: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { color: "primary", variant: "solid", "aria-label": "\u914D\u5BF9\u8BBE\u5907", onClick: onPair, style: { width: 38, padding: 0 }, children: "+" }) })] }), (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { flex: '1 1 auto', minHeight: 0, overflowY: 'auto', padding: '0 8px 10px' }, children: nav === 'agents' && agent ? ((0,react_jsx_runtime_production_namespaceFn().jsx)(AgentConversationList, { chats: agent.chats, activeChatId: agent.activeChatId, streaming: agent.streaming, onNewChat: agent.newChat, onSwitch: (id) => void agent.switchChat(id), onDelete: (id) => void agent.deleteChat(id) })) : nav === 'agents' ? null : filtered.length ? (filtered.map((e) => {
+        }, children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', gap: 8, padding: 10 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(es_input, { allowClear: true, prefix: (0,react_jsx_runtime_production_namespaceFn().jsx)(SearchIcon, { size: 14, color: token.colorTextQuaternary }), placeholder: isAgents ? '搜索对话' : '搜索会话 / 设备', value: search, onChange: (e) => onSearch(e.target.value) }), isAgents ? ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_tooltip, { title: "\u65B0\u5EFA\u5BF9\u8BDD\uFF08\u6E05\u7A7A\u5F53\u524D\u89C6\u56FE\uFF0C\u53D1\u51FA\u4E0B\u4E00\u6761\u6D88\u606F\u65F6\u53E6\u8D77\u4E00\u4E2A\u5BF9\u8BDD\uFF09", children: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { color: "primary", variant: "solid", "aria-label": "\u65B0\u5EFA\u5BF9\u8BDD", onClick: () => {
+                                if (onAgentPane)
+                                    onAgentPane('chat');
+                                if (agent)
+                                    agent.newChat();
+                            }, style: { width: 38, padding: 0 }, children: (0,react_jsx_runtime_production_namespaceFn().jsx)(PlusIcon, { size: 14 }) }) })) : ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_tooltip, { title: "\u914D\u5BF9\u8BBE\u5907\uFF08\u624B\u673A\u626B\u7801 / \u6253\u5F00\u94FE\u63A5\u5373\u5B8C\u6210\u914D\u5BF9\uFF09", children: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { color: "primary", variant: "solid", "aria-label": "\u914D\u5BF9\u8BBE\u5907", onClick: onPair, style: { width: 38, padding: 0 }, children: (0,react_jsx_runtime_production_namespaceFn().jsx)(PlusIcon, { size: 14 }) }) }))] }), isAgents ? ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', flexDirection: 'column', gap: 2, padding: '0 8px 6px' }, children: [agentControl('skills', '技能', (0,react_jsx_runtime_production_namespaceFn().jsx)(GridIcon, { size: 15, color: "currentColor" })), agentControl('tasks', '定时任务', (0,react_jsx_runtime_production_namespaceFn().jsx)(ClockIcon, { size: 15, color: "currentColor" }))] })) : null, (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { flex: '1 1 auto', minHeight: 0, overflowY: 'auto', padding: '0 8px 10px' }, children: isAgents && agent ? ((0,react_jsx_runtime_production_namespaceFn().jsx)(AgentConversationList, { chats: agent.chats, activeChatId: agent.activeChatId, onSwitch: (id) => {
+                        // 从技能 / 定时任务页切回对话（点会话卡片就是「我要看这个对话」）
+                        if (onAgentPane)
+                            onAgentPane('chat');
+                        void agent.switchChat(id);
+                    }, onDelete: (id) => void agent.deleteChat(id) })) : isAgents ? null : filtered.length ? (filtered.map((e) => {
                     const active = e.key === activeSessionKey;
                     return ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { className: "znhd-transfer-session-item", title: e.label, onClick: () => onSelectSession(e.key), style: {
                             display: 'flex',
@@ -109601,9 +109685,12 @@ function remarkBreaks() {
 
 
 
-function MarkdownBody({ content }) {
+function MarkdownBody({ content, inverted }) {
     const { token } = es_theme.useToken();
-    const codeBg = token.colorFillTertiary;
+    const codeBg = inverted ? 'rgba(255, 255, 255, 0.22)' : token.colorFillTertiary;
+    const linkColor = inverted ? '#fff' : token.colorPrimary;
+    const line = inverted ? 'rgba(255, 255, 255, 0.35)' : token.colorBorderSecondary;
+    const quoteLine = inverted ? 'rgba(255, 255, 255, 0.45)' : token.colorBorder;
     return ((0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: {
             display: 'flex',
             flexDirection: 'column',
@@ -109623,7 +109710,11 @@ function MarkdownBody({ content }) {
                 ul: ({ children }) => (0,react_jsx_runtime_production_namespaceFn().jsx)("ul", { style: { margin: 0, paddingLeft: 20 }, children: children }),
                 ol: ({ children }) => (0,react_jsx_runtime_production_namespaceFn().jsx)("ol", { style: { margin: 0, paddingLeft: 20 }, children: children }),
                 li: ({ children }) => (0,react_jsx_runtime_production_namespaceFn().jsx)("li", { style: { margin: '2px 0' }, children: children }),
-                a: ({ children, href }) => ((0,react_jsx_runtime_production_namespaceFn().jsx)("a", { href: href, target: "_blank", rel: "noreferrer", style: { color: token.colorPrimary, wordBreak: 'break-all' }, children: children })),
+                a: ({ children, href }) => ((0,react_jsx_runtime_production_namespaceFn().jsx)("a", { href: href, target: "_blank", rel: "noreferrer", style: {
+                        color: linkColor,
+                        wordBreak: 'break-all',
+                        textDecoration: inverted ? 'underline' : 'none',
+                    }, children: children })),
                 // 块级代码：`language-xxx` 一定有；无语言围栏（``` 后面没写名字）靠换行兜
                 code: ({ children, className }) => {
                     const isBlock = /language-/.test(className || '') || String(children).includes('\n');
@@ -109651,27 +109742,27 @@ function MarkdownBody({ content }) {
                 blockquote: ({ children }) => ((0,react_jsx_runtime_production_namespaceFn().jsx)("blockquote", { style: {
                         margin: 0,
                         paddingLeft: 10,
-                        borderLeft: '3px solid ' + token.colorBorder,
+                        borderLeft: '3px solid ' + quoteLine,
                         color: token.colorTextSecondary,
                     }, children: children })),
                 // 窄弹窗里表格必须能横向滚，否则会把气泡撑破
                 table: ({ children }) => ((0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { overflowX: 'auto', minWidth: 0 }, children: (0,react_jsx_runtime_production_namespaceFn().jsx)("table", { style: { borderCollapse: 'collapse', fontSize: 12 }, children: children }) })),
                 th: ({ children }) => ((0,react_jsx_runtime_production_namespaceFn().jsx)("th", { style: {
                         padding: '3px 8px',
-                        border: '1px solid ' + token.colorBorderSecondary,
+                        border: '1px solid ' + line,
                         background: codeBg,
                         textAlign: 'left',
                         whiteSpace: 'nowrap',
                     }, children: children })),
                 td: ({ children }) => ((0,react_jsx_runtime_production_namespaceFn().jsx)("td", { style: {
                         padding: '3px 8px',
-                        border: '1px solid ' + token.colorBorderSecondary,
+                        border: '1px solid ' + line,
                         textAlign: 'left',
                     }, children: children })),
                 hr: () => ((0,react_jsx_runtime_production_namespaceFn().jsx)("hr", { style: {
                         margin: '2px 0',
                         border: 0,
-                        borderTop: '1px solid ' + token.colorBorderSecondary,
+                        borderTop: '1px solid ' + line,
                     } })),
                 img: ({ src, alt }) => ((0,react_jsx_runtime_production_namespaceFn().jsx)("img", { src: src, alt: alt, style: { maxWidth: '100%', borderRadius: 6, display: 'block' } })),
                 // GFM 任务列表的复选框：antd 的全局 input 规则会把它顶歪，这里钉回来
@@ -115604,6 +115695,248 @@ function TaskPanel({ api, version, onChange }) {
                                     (task.lastRunError ? '　错误：' + task.lastRunError : '') })] }) })) })) : ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_empty, { image: es_empty.PRESENTED_IMAGE_SIMPLE, description: (0,react_jsx_runtime_production_namespaceFn().jsx)("span", { style: { fontSize: 12 }, children: "\u8FD8\u6CA1\u6709\u5B9A\u65F6\u4EFB\u52A1\uFF0C\u7528\u4E0A\u9762\u7684\u8868\u5355\u5EFA\u4E00\u4E2A\u3002" }) })), (0,react_jsx_runtime_production_namespaceFn().jsx)(typography.Text, { type: "secondary", style: { fontSize: 11 }, children: (0,react_jsx_runtime_production_namespaceFn().jsx)("span", { style: { color: token.colorTextTertiary }, children: '任务由 ScriptCat 在后台按计划触发，关闭本弹窗或关掉网页也会照常执行。' }) })] }));
 }
 
+;// ./src/lib/ui/transfer/ChatBubble.tsx
+
+
+function ChatBubble({ side, avatar, children, meta, bare, danger, maxWidth = '72%', avatarStyle, }) {
+    const { token } = es_theme.useToken();
+    const isUser = side === 'right';
+    return ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { className: "znhd-chat-msg", "data-side": side, style: {
+            display: 'flex',
+            flexDirection: isUser ? 'row-reverse' : 'row',
+            alignItems: 'flex-start',
+            gap: 8,
+            marginBottom: 12,
+            minWidth: 0,
+        }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("span", { className: "znhd-chat-avatar", style: {
+                    flex: '0 0 auto',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: 28,
+                    height: 28,
+                    borderRadius: 8,
+                    background: isUser ? token.colorPrimaryBg : token.colorFillSecondary,
+                    color: isUser ? token.colorPrimary : token.colorTextSecondary,
+                    fontSize: 12,
+                    fontWeight: 600,
+                    overflow: 'hidden',
+                    ...avatarStyle,
+                }, children: avatar }), (0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: {
+                    minWidth: 0,
+                    maxWidth,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: isUser ? 'flex-end' : 'flex-start',
+                }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("div", { className: "znhd-chat-bubble", style: {
+                            maxWidth: '100%',
+                            padding: bare ? 0 : '8px 11px',
+                            borderRadius: bare ? 8 : 10,
+                            fontSize: 13,
+                            lineHeight: 1.6,
+                            wordBreak: 'break-word',
+                            background: bare ? 'transparent' : isUser ? token.colorPrimary : token.colorFillQuaternary,
+                            border: bare
+                                ? 'none'
+                                : '1px solid ' +
+                                    (danger ? token.colorError : isUser ? token.colorPrimary : token.colorBorderSecondary),
+                            // 用户气泡是主色实心：文字必须显式刷白，否则深色主题下会继承成暗色文字
+                            color: bare ? undefined : isUser ? '#fff' : undefined,
+                            overflow: 'hidden',
+                        }, children: children }), meta ? ((0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: {
+                            fontSize: 11,
+                            color: token.colorTextTertiary,
+                            marginTop: 2,
+                            maxWidth: '100%',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                        }, children: meta })) : null] })] }));
+}
+
+;// ./src/lib/ui/transfer/chatEmojis.ts
+/**
+ * 输入框「表情」面板的字符清单（v26.10.12-v3）。
+ *
+ * ── 为什么只有这些「老古董」符号，而不是 😀😀❤️🎉 那一套 ────────────────────────
+ * 本脚本的主战场是**税务办的 Win7 机器**。Win7 的微软雅黑 / Segoe UI **没有**
+ * Segoe UI Emoji（Win8.1 才随系统引入），因此：
+ *   · 补充平面 emoji（U+1F300 以上，如 😀❤️🎉📱）在 Win7 上**没有字形** —— 渲染成豆腐块；
+ *   · Dingbats 区（U+2700–U+27BF，如 ✓✕✈✂✉）在 Win7 的 Segoe UI Symbol 里覆盖**不确定**，
+ *     本项目已在 `icons.tsx`/`uiReset` 里明确把这一区段列为「不用」。
+ * 而下面这些码位都落在 **BMP 的 Miscellaneous Symbols（U+2600–U+26FF）/ Misc Technical /
+ * 字母型符号** 里，Arial / Segoe UI Symbol / 微软雅黑 都有稳定字形 —— 与本仓库
+ * 「UI 一律用矢量、不靠字体」的结论同源的判断依据：**先看码位所在区段，再看它像不像图标**。
+ *
+ * 所以这里给的是「符号面板」而不是「emoji 面板」：能保证在目标机器上**真的显示出来**，
+ * 比有几个彩色小人重要。要补新字符时**先确认它不在 U+1F000+ 与 U+2700–27BF**。
+ *
+ * ── 面板形态 ────────────────────────────────────────────────────────────────
+ * `ChatComposer` 用 Popover 渲染成 8 列网格，点一下把字符插到光标处（不替换整段文本）。
+ */
+const EMOJI_GROUPS = [
+    { title: '表情 · 手势', items: ['☺', '☻', '☹', '☝', '☞', '☜', '☛', '☚'] },
+    { title: '天气 · 生活', items: ['☀', '☁', '☂', '☃', '☄', '☔', '☕', '⚡'] },
+    { title: '星星 · 音乐', items: ['★', '☆', '♡', '♥', '♨', '♪', '♫', '♬'] },
+    { title: '符号 · 标记', items: ['☎', '☏', '⌚', '⌛', '⚑', '☑', '☐', '☒'] },
+    { title: '扑克 · 音符', items: ['♠', '♣', '♢', '♦', '♤', '♧', '♩', '♭'] },
+    { title: '星座', items: ['♈', '♉', '♊', '♋', '♌', '♍', '♎', '♏'] },
+];
+
+;// ./src/lib/ui/transfer/ChatComposer.tsx
+
+/**
+ * 聊天输入区（v26.10.12-v3）：设备会话与 Agent 对话**共用同一个输入框**。
+ *
+ * ── 用户给的规格 ─────────────────────────────────────────────────────────────
+ *   ① 固定吸附在聊天区底部，不随消息滚动；
+ *   ② 多行输入框随内容自动增高，到最大高度后**框内**出现滚动条；
+ *   ③ 左下角：表情 / 图片上传 / 附件；右下角：发送按钮；
+ *   ④ Enter 发送、Shift+Enter 换行；外层有边框，hover / focus 时高亮。
+ * ② 与 ④ 的「高亮画在哪」有两处实测结论不能动，写在这里当路标：
+ *
+ * ⚠️ **聚焦高亮画在外层容器，不画在 textarea 上**（v26.10.10-v13 的结论，本次沿用）：
+ * antd v6 的 `variant="borderless"` 会在 `:focus-visible` 时给文本域**自己**画一层
+ * `outline`（`node_modules/antd/es/input/style/variants.js` 的 `genBorderlessFocusVisibleStyle`），
+ * 看起来就是「输入框里又套了一个蓝框」。所以这里内联关掉 outline / boxShadow
+ * （冒烟断言 `agentInputNoRingOk` 守着），聚焦反馈改由外层容器的 border + boxShadow 承担。
+ *
+ * ⚠️ **必须同时钉住 `minRows: 2` 与 `lineHeight: '20px'`**（v26.10.10-v15）：
+ * rc-textarea 挂载时按 `minRows` 算高度（1 行 ≈ 20px），输入过内容之后改按
+ * 「行数 × 行高 + padding」重算（1 行文本实测 41px）；而挂载那一刻 antd 的 CSS 还没注入完、
+ * 行高按 20px 算、输入后才是 20.5px ⇒「打一个字再全删掉」会让输入框永久停在更高的位置。
+ * 冒烟 `agentInputHeightOk` 按严格整数相等守着，别只改其中一个。
+ */
+
+
+
+
+function ChatComposer({ value, onChange, onSend, disabled, streaming, onStop, placeholder, canSend, actions, rightExtras, notice, }) {
+    const { token } = es_theme.useToken();
+    const [focused, setFocused] = (0,react_production_namespaceFn().useState)(false);
+    const [hovered, setHovered] = (0,react_production_namespaceFn().useState)(false);
+    const [emojiOpen, setEmojiOpen] = (0,react_production_namespaceFn().useState)(false);
+    const inputRef = (0,react_production_namespaceFn().useRef)(null);
+    const highlighted = focused || hovered;
+    const sendDisabled = !!disabled || streaming || !(canSend === undefined ? value.trim() : canSend);
+    /** 把字符插到光标处（不是追加到末尾：用户可能改到中间才想起来加个表情） */
+    const insertEmoji = (ch) => {
+        // antd 的 TextAreaRef.nativeElement 声明为 HTMLElement，取光标位置要自己收窄成 textarea
+        const el = inputRef.current?.nativeElement;
+        const start = el && el.selectionStart !== null ? el.selectionStart : value.length;
+        const end = el && el.selectionEnd !== null ? el.selectionEnd : value.length;
+        onChange(value.slice(0, start) + ch + value.slice(end));
+        const caret = start + ch.length;
+        // 等 React 把这轮 value 提交完再摆光标；点表情按钮后焦点会跑到按钮上，顺手抢回来
+        window.requestAnimationFrame(() => {
+            const node = inputRef.current?.nativeElement;
+            if (!node)
+                return;
+            node.focus();
+            node.setSelectionRange(caret, caret);
+        });
+    };
+    const emojiPanel = ((0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { width: 236 }, children: EMOJI_GROUPS.map((group) => ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { marginBottom: 6 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { fontSize: 11, color: token.colorTextTertiary, marginBottom: 2 }, children: group.title }), (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { display: 'grid', gridTemplateColumns: 'repeat(8, minmax(0, 1fr))', gap: 2 }, children: group.items.map((ch) => ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { type: "text", size: "small", "aria-label": '表情 ' + ch, onClick: () => insertEmoji(ch), style: { height: 24, minWidth: 0, padding: 0, fontSize: 15, lineHeight: '24px' }, children: ch }, ch))) })] }, group.title))) }));
+    const iconButton = (label, tooltip, icon, onClick, isDisabled) => ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_tooltip, { title: tooltip, children: (0,react_jsx_runtime_production_namespaceFn().jsx)("span", { style: { display: 'inline-flex' }, children: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { type: "text", size: "small", "aria-label": label, icon: icon, disabled: isDisabled, onClick: onClick, style: { width: 26, height: 26, minWidth: 26, padding: 0, color: token.colorTextSecondary } }) }) }, label));
+    return ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: {
+            flex: '0 0 auto',
+            padding: 10,
+            borderTop: '1px solid ' + token.colorBorderSecondary,
+        }, children: [notice, (0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { className: "znhd-chat-composer", onMouseEnter: () => setHovered(true), onMouseLeave: () => setHovered(false), style: {
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 2,
+                    padding: '6px 8px 4px',
+                    border: '1px solid ' + (highlighted ? token.colorPrimaryBorder : token.colorBorderSecondary),
+                    borderRadius: 10,
+                    background: token.colorBgContainer,
+                    // 聚焦时再补一圈淡主色光晕（聚焦反馈只在这里，textarea 自己是干净的）
+                    boxShadow: focused ? '0 0 0 2px ' + token.colorPrimaryBg : 'none',
+                    transition: 'border-color 0.15s, box-shadow 0.15s',
+                }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(es_input.TextArea, { ref: inputRef, value: value, onChange: (event) => onChange(event.target.value), onPressEnter: (event) => {
+                            if (event.shiftKey)
+                                return;
+                            event.preventDefault();
+                            onSend();
+                        }, onFocus: () => setFocused(true), onBlur: () => setFocused(false), placeholder: placeholder, 
+                        // 行数上限 6 行：超过后 rc-textarea 交给原生滚动条（框内滚动），
+                        // 输入区高度因此有上限，不会把消息区挤没
+                        autoSize: { minRows: 2, maxRows: 6 }, disabled: disabled, variant: "borderless", style: {
+                            resize: 'none',
+                            padding: 0,
+                            fontSize: 13,
+                            lineHeight: '20px',
+                            outline: 'none',
+                            boxShadow: 'none',
+                        } }), (0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', alignItems: 'center', gap: 2, minWidth: 0 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(es_popover, { trigger: "click", placement: "topLeft", open: emojiOpen, onOpenChange: setEmojiOpen, content: emojiPanel, children: iconButton('表情', '插入符号 / 表情', (0,react_jsx_runtime_production_namespaceFn().jsx)(SmileIcon, { size: 15 }), () => setEmojiOpen((v) => !v), disabled) }), (actions || []).map((action) => iconButton(action.label, action.tooltip || action.label, action.icon, action.onClick, action.disabled || disabled)), (0,react_jsx_runtime_production_namespaceFn().jsx)("span", { style: { flex: '1 1 auto', minWidth: 0 } }), rightExtras, streaming ? ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_tooltip, { title: "\u4E2D\u6B62\u672C\u8F6E\u56DE\u7B54", children: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { shape: "circle", size: "small", danger: true, "aria-label": "\u4E2D\u6B62", icon: (0,react_jsx_runtime_production_namespaceFn().jsx)(StopIcon, { size: 12 }), onClick: () => onStop && onStop() }) })) : ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_tooltip, { title: "\u53D1\u9001\uFF08Enter\uFF09", children: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { shape: "circle", size: "small", type: "primary", "aria-label": "\u53D1\u9001", icon: (0,react_jsx_runtime_production_namespaceFn().jsx)(SendIcon, { size: 14 }), onClick: onSend, disabled: sendDisabled }) }))] })] })] }));
+}
+
+;// ./src/lib/ui/transfer/ChatPanel.tsx
+
+/**
+ * 聊天面板的共用骨架件（v26.10.12-v3）。
+ *
+ * ── 为什么抽出来 ─────────────────────────────────────────────────────────────
+ * 「设备会话」（`TransferDeviceChat`）与「Agent 对话」（`TransferAgentView`）的第三栏
+ * 原来是两套自己写的结构：一个用 `header + 消息区 + 输入区` 的三段 div，另一个用
+ * 「页签 + 固定 300px 消息盒 + 输入框」。用户要求两边**长得一模一样**（同一套气泡、
+ * 同一种底部输入框），若各写一份，下次改样式必然只改一边 —— 所以这里把
+ * 「头部 / 滚动消息区 / 气泡行」三件抽成共用件，两个面板只能通过它们拼装。
+ *
+ * ── 尺寸契约 ─────────────────────────────────────────────────────────────────
+ * 第三栏整体是 `display:flex; flex-direction:column`，其中
+ *   · 头部      `flex: 0 0 auto`（不参与伸缩）；
+ *   · 消息区    `flex: 1 1 auto; minHeight: 0`（**必须 minHeight:0**，否则 flex 子项按内容
+ *               撑高，滚动条永远不出现，输入框会被顶出窗口）；
+ *   · 输入区    `flex: 0 0 auto`（见 ChatComposer）。
+ * 于是「输入框固定吸附在底部、不随消息滚动」是布局算出来的，不是靠 position:fixed 硬钉。
+ */
+
+
+/**
+ * 第三栏头部（设备名 / 对话名 / 面板名 + 右侧操作）。
+ *
+ * ⚠️ 右侧必留 48px：v26.10.12-v2 去掉了 Modal 标题栏后，关闭按钮 ×（rc-dialog 的
+ * `closerNode`）是**绝对定位浮在窗口右上角**的，不占布局高度。任何长在第三栏右上角的
+ * 控件（「清空消息」「清空全部」）都会被它压住 —— 把让位写在这里，避免每个面板各记一次。
+ */
+function ChatHeader({ left, right }) {
+    const { token } = es_theme.useToken();
+    return ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { className: "znhd-chat-header", style: {
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            padding: '8px 48px 8px 12px',
+            borderBottom: '1px solid ' + token.colorBorderSecondary,
+            flex: '0 0 auto',
+            minWidth: 0,
+        }, children: [left, (0,react_jsx_runtime_production_namespaceFn().jsx)("span", { style: { flex: '1 1 auto' } }), right] }));
+}
+/**
+ * 消息滚动容器：新消息到达时自动滚到底。
+ *
+ * ⚠️ `scrollbarGutter: 'stable'` 不是装饰：消息区出现/消失滚动条时，没有它会**整列左右抖动**
+ * （Windows 上原生滚动条占 10px）。占用固定槽位后宽度不再跳。
+ * 滚动条外观本身由 `uiReset` 统一美化（`.ant-modal-root *` 的 ::-webkit-scrollbar 规则）。
+ */
+function ChatScroll({ className, scrollDep, children, }) {
+    const ref = (0,react_production_namespaceFn().useRef)(null);
+    (0,react_production_namespaceFn().useEffect)(() => {
+        const el = ref.current;
+        if (!el)
+            return;
+        el.scrollTop = el.scrollHeight;
+    }, [scrollDep]);
+    return ((0,react_jsx_runtime_production_namespaceFn().jsx)("div", { ref: ref, className: className, style: {
+            flex: '1 1 auto',
+            minHeight: 0,
+            overflowY: 'auto',
+            overflowX: 'hidden',
+            padding: '10px 12px',
+            scrollbarGutter: 'stable',
+        }, children: children }));
+}
+
 ;// ./src/lib/ui/transfer/TransferAgentView.tsx
 
 
@@ -115614,120 +115947,71 @@ function TaskPanel({ api, version, onChange }) {
 
 
 
-/** 消息区高度：窗口固定高度，输入框永远留在视口内，不随消息变长而抖 */
-const MESSAGES_HEIGHT = 300;
+
+
+
 /**
  * Agent 视图（v26.10.12-v1：原「Agent 助手」弹窗的对话区，搬进传输助手右侧主聊天区）。
  *
- * 三个页签（对话 / 技能 / 定时任务）与原弹窗一致；对话页签的输入框样式
- * （无聚焦蓝框、高度稳定）是 v26.10.10-v13~v15 的实测结论，勿动。
+ * v26.10.12-v3 两处改动（用户要求「设备菜单和 agent 菜单下的对话主区域使用相同的样式」）：
+ *   · 第三栏**不再有页签**：显示什么由第二栏的两个控件（技能 / 定时任务）决定 ——
+ *     状态提在 `TransferAssistantModal`（`pane` 属性），本组件只按值渲染；
+ *   · 对话 pane 的排版与设备会话**完全共用** ChatHeader / ChatScroll / ChatBubble / ChatComposer
+ *     （气泡左右分栏 + 头像、底部吸附输入框、Enter 发送 / Shift+Enter 换行 …）。
+ * 输入框那两条实测结论（禁聚焦蓝框、高度稳定）跟着 ChatComposer 走，理由写在那边。
  */
-function TransferAgentView({ agent }) {
+function TransferAgentView({ agent, pane }) {
     const { token } = es_theme.useToken();
-    const [tab, setTab] = (0,react_production_namespaceFn().useState)('chat');
-    /** 技能 / 任务面板的数据版本：卸载技能、增删任务后 +1 触发重拉（与原弹窗同一机制） */
+    /** 技能 / 任务面板的数据版本：卸载技能、增删任务后 +1 触发重拉（与旧实现同一机制） */
     const [skillsVersion, setSkillsVersion] = (0,react_production_namespaceFn().useState)(0);
     const [tasksVersion, setTasksVersion] = (0,react_production_namespaceFn().useState)(0);
-    const scrollRef = (0,react_production_namespaceFn().useRef)(null);
-    // antd 的 Input.TextArea ref 不是原生 textarea，而是带 nativeElement 的 TextAreaRef（rc-textarea 约定）
-    const inputRef = (0,react_production_namespaceFn().useRef)(null);
-    /* ---------------------------------------------------------- 输入框自适应高度 */
-    (0,react_production_namespaceFn().useEffect)(() => {
-        const el = inputRef.current?.nativeElement;
-        if (!el)
-            return;
-        el.style.height = 'auto';
-        el.style.height = Math.min(el.scrollHeight, 96) + 'px';
-    }, [agent.input, tab]);
-    /* ---------------------------------------------------------- 消息区自动滚到底 */
-    (0,react_production_namespaceFn().useEffect)(() => {
-        const el = scrollRef.current;
-        if (!el)
-            return;
-        el.scrollTop = el.scrollHeight;
-    }, [agent.messages]);
     const renderMessage = (message) => {
         const isUser = message.role === 'user';
-        return ((0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { display: 'flex', justifyContent: isUser ? 'flex-end' : 'flex-start', marginBottom: 10 }, children: (0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: {
-                    maxWidth: '86%',
-                    padding: '8px 10px',
-                    borderRadius: 8,
-                    fontSize: 13,
-                    lineHeight: 1.6,
-                    wordBreak: 'break-word',
-                    background: isUser ? token.colorPrimaryBg : token.colorFillQuaternary,
-                    border: '1px solid ' + (isUser ? token.colorPrimaryBorder : token.colorBorderSecondary),
-                }, children: [!isUser && message.toolCalls?.length ? ((0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { marginBottom: 6, display: 'flex', flexWrap: 'wrap', gap: 4 }, children: message.toolCalls.map((toolCall, index) => ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_tooltip, { title: toolCall.arguments ? toolCall.arguments.slice(0, 300) : toolCall.name, children: (0,react_jsx_runtime_production_namespaceFn().jsxs)("span", { style: {
-                                    fontSize: 11,
-                                    padding: '1px 6px',
-                                    borderRadius: 9,
-                                    background: token.colorFillTertiary,
-                                    color: token.colorTextSecondary,
-                                }, children: [toolDisplayName(toolCall.name), toolCall.status === 'running' ? ' …' : ''] }) }, (toolCall.id || toolCall.name) + '-' + index))) })) : null, !isUser && message.thinking ? ((0,react_jsx_runtime_production_namespaceFn().jsxs)("details", { style: { marginBottom: 6 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("summary", { style: { cursor: 'pointer', fontSize: 12, color: token.colorTextTertiary }, children: "\u601D\u8003\u8FC7\u7A0B" }), (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { fontSize: 12, color: token.colorTextSecondary, marginTop: 4 }, children: message.thinking })] })) : null, message.content ? ((0,react_jsx_runtime_production_namespaceFn().jsx)(MarkdownBody, { content: message.content })) : message.pending ? ((0,react_jsx_runtime_production_namespaceFn().jsx)(typography.Text, { type: "secondary", style: { fontSize: 12 }, children: "\u6B63\u5728\u601D\u8003\u2026" })) : null, message.cancelled ? ((0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { fontSize: 12, color: token.colorTextTertiary, marginTop: 4 }, children: "\uFF08\u5DF2\u4E2D\u6B62\uFF09" })) : null, message.error ? ((0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { fontSize: 12, color: token.colorError, marginTop: 6 }, children: message.error })) : null] }) }, message.key));
+        return ((0,react_jsx_runtime_production_namespaceFn().jsxs)(ChatBubble, { side: isUser ? 'right' : 'left', maxWidth: "86%", avatar: isUser ? (0,react_jsx_runtime_production_namespaceFn().jsx)(UserIcon, { size: 15 }) : (0,react_jsx_runtime_production_namespaceFn().jsx)(BotIcon, { size: 15 }), children: [!isUser && message.toolCalls?.length ? ((0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { marginBottom: 6, display: 'flex', flexWrap: 'wrap', gap: 4 }, children: message.toolCalls.map((toolCall, index) => ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_tooltip, { title: toolCall.arguments ? toolCall.arguments.slice(0, 300) : toolCall.name, children: (0,react_jsx_runtime_production_namespaceFn().jsxs)("span", { style: {
+                                fontSize: 11,
+                                padding: '1px 6px',
+                                borderRadius: 9,
+                                background: token.colorFillTertiary,
+                                color: token.colorTextSecondary,
+                            }, children: [toolDisplayName(toolCall.name), toolCall.status === 'running' ? ' …' : ''] }) }, (toolCall.id || toolCall.name) + '-' + index))) })) : null, !isUser && message.thinking ? ((0,react_jsx_runtime_production_namespaceFn().jsxs)("details", { style: { marginBottom: 6 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("summary", { style: { cursor: 'pointer', fontSize: 12, color: token.colorTextTertiary }, children: "\u601D\u8003\u8FC7\u7A0B" }), (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { fontSize: 12, color: token.colorTextSecondary, marginTop: 4 }, children: message.thinking })] })) : null, message.content ? ((0,react_jsx_runtime_production_namespaceFn().jsx)(MarkdownBody, { content: message.content, inverted: isUser })) : message.pending ? ((0,react_jsx_runtime_production_namespaceFn().jsx)(typography.Text, { type: "secondary", style: { fontSize: 12 }, children: "\u6B63\u5728\u601D\u8003\u2026" })) : null, message.cancelled ? ((0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { fontSize: 12, color: token.colorTextTertiary, marginTop: 4 }, children: "\uFF08\u5DF2\u4E2D\u6B62\uFF09" })) : null, message.error ? ((0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { fontSize: 12, color: token.colorError, marginTop: 6 }, children: message.error })) : null] }, message.key));
     };
     const renderChat = () => {
         if (!agent.api) {
-            return ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_alert, { type: "warning", showIcon: true, icon: (0,react_jsx_runtime_production_namespaceFn().jsx)(BotIcon, { size: 16 }), message: "Agent \u529F\u80FD\u4E0D\u53EF\u7528", description: agent.availability.reason }));
+            return ((0,react_jsx_runtime_production_namespaceFn().jsxs)((react_jsx_runtime_production_namespaceFn().Fragment), { children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(ChatHeader, { left: (0,react_jsx_runtime_production_namespaceFn().jsx)(typography.Text, { strong: true, children: "Agents" }) }), (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { padding: 12 }, children: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_alert, { type: "warning", showIcon: true, icon: (0,react_jsx_runtime_production_namespaceFn().jsx)(BotIcon, { size: 16 }), message: "Agent \u529F\u80FD\u4E0D\u53EF\u7528", description: agent.availability.reason }) })] }));
         }
-        return ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', flexDirection: 'column', gap: 8, minHeight: 0, flex: '1 1 auto' }, children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', alignItems: 'baseline', gap: 8 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(typography.Text, { strong: true, style: { fontSize: 14 }, children: agent.activeChatId ? agentChatLabel(agent.chats, agent.activeChatId) : '新的聊天' }), (0,react_jsx_runtime_production_namespaceFn().jsxs)(typography.Text, { type: "secondary", style: { fontSize: 11 }, children: ["\u5171 ", agent.chats.length, " \u6761\u5BF9\u8BDD"] })] }), agent.models.length ? null : ((0,react_jsx_runtime_production_namespaceFn().jsx)(typography.Text, { type: "secondary", style: { fontSize: 12 }, children: "\u8FD8\u6CA1\u6709\u5728 ScriptCat \u91CC\u914D\u7F6E\u6A21\u578B\uFF1A\u8BF7\u6253\u5F00 ScriptCat \u7684 Agent \u8BBE\u7F6E\u6DFB\u52A0\u4E00\u4E2A\u6A21\u578B\uFF08\u652F\u6301 OpenAI \u517C\u5BB9 / Anthropic / \u667A\u8C31\uFF09\uFF0C\u4E4B\u540E\u8FD9\u91CC\u4F1A\u5217\u51FA\u53EF\u9009\u6A21\u578B\u3002" })), agent.fatalError ? (0,react_jsx_runtime_production_namespaceFn().jsx)(es_alert, { type: "error", showIcon: true, message: agent.fatalError }) : null, (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { ref: scrollRef, className: "znhd-agent-messages", style: {
-                        height: MESSAGES_HEIGHT,
-                        overflowY: 'auto',
-                        overflowX: 'hidden',
-                        padding: '8px 4px',
-                        border: '1px solid ' + token.colorBorderSecondary,
-                        borderRadius: 6,
-                        background: token.colorBgContainer,
-                    }, children: agent.messages.length ? (agent.messages.map(renderMessage)) : ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_empty, { image: es_empty.PRESENTED_IMAGE_SIMPLE, description: (0,react_jsx_runtime_production_namespaceFn().jsx)("span", { style: { fontSize: 12 }, children: "\u76F4\u63A5\u63D0\u95EE\u5373\u53EF\u3002\u53EF\u4EE5\u8BD5\u8BD5\u300C\u5E2E\u6211\u603B\u7ED3\u8FD9\u4E2A\u9875\u9762\u80FD\u505A\u4EC0\u4E48\u300D\u300C\u5F81\u7EB3\u4E92\u52A8\u6389\u7EBF\u63D0\u9192\u6CA1\u58F0\u97F3\u600E\u4E48\u529E\u300D" }) })) }), (0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: {
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: 2,
-                        padding: '6px 8px 4px',
-                        border: '1px solid ' + token.colorBorderSecondary,
-                        borderRadius: 8,
-                        background: token.colorBgContainer,
-                    }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(es_input.TextArea, { ref: inputRef, value: agent.input, onChange: (event) => agent.setInput(event.target.value), onPressEnter: (event) => {
-                                if (event.shiftKey)
-                                    return;
-                                event.preventDefault();
-                                void agent.send();
-                            }, placeholder: "\u8F93\u5165\u95EE\u9898\uFF0CEnter \u53D1\u9001\uFF0CShift+Enter \u6362\u884C", 
-                            // minRows 从 1 改成 2：rc-textarea 在挂载时按 minRows 算高度（1 行 ≈ 20px），
-                            // 而一旦输入过内容，它就按「行数 × 行高 + padding」重算（1 行文本实测 41px）——
-                            // 于是「打一个字再全删掉」会把输入框永久留在 41px，与刚打开时的 20px 不一致
-                            // （用户报告的「高度会变」）。minRows: 2 让初始态就等于打过字的高度。
-                            autoSize: { minRows: 2, maxRows: 4 }, disabled: !agent.api, variant: "borderless", 
-                            // antd v6 的 borderless 变体在 :focus-visible 时会给文本域**自己**画一层
-                            // outline 聚焦框（node_modules/antd/es/input/style/variants.js 的
-                            // genBorderlessFocusVisibleStyle），看上去就像输入框外围多了一圈蓝框。
-                            // 这里显式关掉 outline 与 boxShadow（内联样式优先级高于 antd 的类规则）。
-                            // 要恢复聚焦提示的话请改外层容器的边框，别打开这里。
-                            style: {
-                                resize: 'none',
-                                padding: 0,
-                                fontSize: 13,
-                                // 显式钉住行高：rc-textarea 的 autoSize 靠「把计算样式复制到隐藏测量
-                                // textarea」算高度，挂载那一刻 antd 的样式还没注入完，行高按 20px 算
-                                // （2 行 = 40px），输入过一次之后再量就是 20.5px（2 行 = 41px），
-                                // 于是「打一个字再删掉」会永久差 1px。钉死行高后两条路径算出来完全一致。
-                                lineHeight: '20px',
-                                outline: 'none',
-                                boxShadow: 'none',
-                            } }), (0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', alignItems: 'center', gap: 8 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(typography.Text, { type: "secondary", style: { fontSize: 11, flex: '1 1 auto', minWidth: 0 }, ellipsis: true, children: "Enter \u53D1\u9001\uFF0CShift + Enter \u6362\u884C" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_select, { size: "small", variant: "borderless", style: { maxWidth: 190 }, value: agent.modelId || undefined, placeholder: agent.models.length ? '选择模型' : '未配置模型', disabled: agent.streaming, options: agent.models.map((model) => ({
-                                        value: model.id,
-                                        label: model.name + '（' + model.provider + '）',
-                                    })), onChange: (value) => agent.setModelId(value) }), agent.streaming ? ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_tooltip, { title: "\u4E2D\u6B62\u672C\u8F6E\u56DE\u7B54", children: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { shape: "circle", size: "small", danger: true, "aria-label": "\u4E2D\u6B62", icon: (0,react_jsx_runtime_production_namespaceFn().jsx)(StopIcon, { size: 12 }), onClick: agent.stopStreaming }) })) : ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_tooltip, { title: "\u53D1\u9001\uFF08Enter\uFF09", children: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { shape: "circle", size: "small", type: "primary", "aria-label": "\u53D1\u9001", icon: (0,react_jsx_runtime_production_namespaceFn().jsx)(SendIcon, { size: 14 }), onClick: () => void agent.send(), disabled: !agent.input.trim() }) }))] })] })] }));
+        return ((0,react_jsx_runtime_production_namespaceFn().jsxs)((react_jsx_runtime_production_namespaceFn().Fragment), { children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(ChatHeader, { left: (0,react_jsx_runtime_production_namespaceFn().jsx)(typography.Text, { strong: true, style: { fontSize: 14 }, ellipsis: true, children: agent.activeChatId ? agentChatLabel(agent.chats, agent.activeChatId) : '新的聊天' }), right: (0,react_jsx_runtime_production_namespaceFn().jsxs)(typography.Text, { type: "secondary", style: { fontSize: 11, flex: '0 0 auto' }, children: ["\u5171 ", agent.chats.length, " \u6761\u5BF9\u8BDD"] }) }), agent.fatalError ? ((0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { padding: '8px 12px 0' }, children: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_alert, { type: "error", showIcon: true, message: agent.fatalError }) })) : null, (0,react_jsx_runtime_production_namespaceFn().jsx)(ChatScroll, { className: "znhd-agent-messages", scrollDep: agent.messages, children: agent.messages.length ? (agent.messages.map(renderMessage)) : ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_empty, { image: es_empty.PRESENTED_IMAGE_SIMPLE, description: (0,react_jsx_runtime_production_namespaceFn().jsx)("span", { style: { fontSize: 12 }, children: "\u76F4\u63A5\u63D0\u95EE\u5373\u53EF\u3002\u53EF\u4EE5\u8BD5\u8BD5\u300C\u5E2E\u6211\u603B\u7ED3\u8FD9\u4E2A\u9875\u9762\u80FD\u505A\u4EC0\u4E48\u300D\u300C\u5F81\u7EB3\u4E92\u52A8\u6389\u7EBF\u63D0\u9192\u6CA1\u58F0\u97F3\u600E\u4E48\u529E\u300D" }) })) }), (0,react_jsx_runtime_production_namespaceFn().jsx)(ChatComposer, { value: agent.input, onChange: agent.setInput, onSend: () => void agent.send(), disabled: !agent.api, streaming: agent.streaming, onStop: agent.stopStreaming, canSend: !!agent.input.trim(), placeholder: agent.models.length
+                        ? '输入问题，Enter 发送，Shift + Enter 换行'
+                        : '还没在 ScriptCat 里配置模型：请先到 ScriptCat 的 Agent 设置里添加一个模型', rightExtras: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_select, { size: "small", variant: "borderless", style: { maxWidth: 190 }, value: agent.modelId || undefined, placeholder: agent.models.length ? '选择模型' : '未配置模型', disabled: agent.streaming, options: agent.models.map((model) => ({
+                            value: model.id,
+                            label: model.name + '（' + model.provider + '）',
+                        })), onChange: (value) => agent.setModelId(value) }), actions: [
+                        {
+                            key: 'image',
+                            label: '图片上传',
+                            tooltip: '暂不支持：ScriptCat Agent 目前只接受文本',
+                            icon: (0,react_jsx_runtime_production_namespaceFn().jsx)(ImageIcon, { size: 15 }),
+                            disabled: true,
+                        },
+                        {
+                            key: 'file',
+                            label: '附件',
+                            tooltip: '暂不支持：ScriptCat Agent 目前只接受文本',
+                            icon: (0,react_jsx_runtime_production_namespaceFn().jsx)(PaperclipIcon, { size: 15 }),
+                            disabled: true,
+                        },
+                    ] })] }));
     };
-    const tabs = [
-        { key: 'chat', label: '对话' },
-        { key: 'skills', label: '技能' },
-        { key: 'tasks', label: '定时任务' },
-    ];
-    return ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', flexDirection: 'column', minHeight: 0, flex: '1 1 auto' }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { display: 'flex', gap: 4, borderBottom: '1px solid ' + token.colorBorderSecondary }, children: tabs.map((item) => ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { type: "text", size: "small", onClick: () => setTab(item.key), style: {
-                        padding: '4px 10px',
-                        fontSize: 13,
-                        borderBottom: '2px solid ' + (tab === item.key ? token.colorPrimary : 'transparent'),
-                        borderRadius: 0,
-                    }, children: item.label }, item.key))) }), (0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { paddingTop: 10, flex: '1 1 auto', minHeight: 0, display: 'flex', flexDirection: 'column' }, children: [tab === 'chat' ? renderChat() : null, tab === 'skills' ? (agent.api ? ((0,react_jsx_runtime_production_namespaceFn().jsx)(SkillsPanel, { api: agent.api, version: skillsVersion, onChange: () => setSkillsVersion((value) => value + 1) })) : ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_alert, { type: "warning", showIcon: true, message: "\u6280\u80FD\u4E0D\u53EF\u7528", description: agent.availability.reason }))) : null, tab === 'tasks' ? (agent.api ? ((0,react_jsx_runtime_production_namespaceFn().jsx)(TaskPanel, { api: agent.api, version: tasksVersion, onChange: () => setTasksVersion((value) => value + 1) })) : ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_alert, { type: "warning", showIcon: true, message: "\u5B9A\u65F6\u4EFB\u52A1\u4E0D\u53EF\u7528", description: agent.availability.reason }))) : null] })] }));
+    /** 技能 / 定时任务：第二栏点了控件才渲染到这里（第三栏顶部给个标题，避免「这是哪儿」） */
+    const renderPanel = (kind) => {
+        const title = kind === 'skills' ? '技能' : '定时任务';
+        if (!agent.api) {
+            return ((0,react_jsx_runtime_production_namespaceFn().jsxs)((react_jsx_runtime_production_namespaceFn().Fragment), { children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(ChatHeader, { left: (0,react_jsx_runtime_production_namespaceFn().jsx)(typography.Text, { strong: true, children: title }) }), (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { padding: 12 }, children: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_alert, { type: "warning", showIcon: true, message: title + '不可用', description: agent.availability.reason }) })] }));
+        }
+        return ((0,react_jsx_runtime_production_namespaceFn().jsxs)((react_jsx_runtime_production_namespaceFn().Fragment), { children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(ChatHeader, { left: (0,react_jsx_runtime_production_namespaceFn().jsxs)(typography.Text, { strong: true, style: { display: 'inline-flex', alignItems: 'center', gap: 6 }, children: [kind === 'skills' ? (0,react_jsx_runtime_production_namespaceFn().jsx)(GridIcon, { size: 15 }) : (0,react_jsx_runtime_production_namespaceFn().jsx)(ClockIcon, { size: 15 }), title] }), right: (0,react_jsx_runtime_production_namespaceFn().jsx)(typography.Text, { type: "secondary", style: { fontSize: 11, flex: '0 0 auto' }, children: kind === 'skills'
+                            ? '对话时已启用的技能会自动加载，不必逐个勾选'
+                            : '由 ScriptCat 调度器在后台执行，关掉网页也照跑' }) }), (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { flex: '1 1 auto', minHeight: 0, overflowY: 'auto', padding: 12 }, children: kind === 'skills' ? ((0,react_jsx_runtime_production_namespaceFn().jsx)(SkillsPanel, { api: agent.api, version: skillsVersion, onChange: () => setSkillsVersion((v) => v + 1) })) : ((0,react_jsx_runtime_production_namespaceFn().jsx)(TaskPanel, { api: agent.api, version: tasksVersion, onChange: () => setTasksVersion((v) => v + 1) })) })] }));
+    };
+    return ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', flexDirection: 'column', minHeight: 0, flex: '1 1 auto' }, children: [pane === 'chat' ? renderChat() : null, pane === 'skills' ? renderPanel('skills') : null, pane === 'tasks' ? renderPanel('tasks') : null] }));
 }
 
 ;// ./shared/image/compress.ts
@@ -117170,6 +117454,11 @@ function stopTransfer() {
 
 
 
+
+
+
+
+
 // 预览相关的通用件全部来自共享层（与手机上传页同一份，v26.10.08-v13 起）
 
 
@@ -117186,10 +117475,14 @@ function fmtTime(ts) {
  * 设备会话聊天区（v26.10.12-v1，传输助手第三栏的主体）。
  *
  * 由「设备互联」弹窗的「发送到手机」分区 + 原「历史记录」画廊合并而来：
- *   · 消息按会话聚合成聊天气泡（收到的在左灰底、本机发出的在右浅蓝底）；
+ *   · 消息按会话聚合成聊天气泡（收到的在左浅底、本机发出的在右主色实心）；
  *   · 图片消息单击放大（antd Image.PreviewGroup + 共享层预览宿主 / A4 打印 / 遮罩压制）；
  *   · 右下角悬浮图标按钮（复制 / 下载 / 删除）与历史记录同一套实现；
- *   · 底部输入区发文本 / 选图发送，逐张压缩后按序投递（逻辑与原发送分区一致）。
+ *   · 底部输入区发文本 / 选图发送，逐张压缩后按序投递。
+ *
+ * v26.10.12-v3：气泡、滚动区、输入框全部换成 `ChatBubble` / `ChatScroll` / `ChatComposer`
+ * （与 Agent 对话共用同一套）。用户要求「设备菜单和 agent 菜单下的对话主区域使用相同的样式」，
+ * 所以这里**只负责数据与动作**，排版一律走共用件 —— 想改外观请改共用件，别在这里另写一套。
  */
 function TransferDeviceChat({ session, phone, colorIndex, onClear, }) {
     const { token } = es_theme.useToken();
@@ -117204,20 +117497,12 @@ function TransferDeviceChat({ session, phone, colorIndex, onClear, }) {
      * 两层 rgba(0,0,0,0.45) 叠成 0.6975，白底被压到灰度 77）。
      */
     const [previewOpen, setPreviewOpen] = (0,react_production_namespaceFn().useState)(false);
-    const scrollRef = (0,react_production_namespaceFn().useRef)(null);
     const sendable = sessionSendable(session.key);
     const isAggregate = session.key === PHONE_SESSION_KEY;
     (0,react_production_namespaceFn().useEffect)(() => {
         syncPreviewMask(previewOpen);
         return () => syncPreviewMask(false);
     }, [previewOpen]);
-    // 新消息自动滚到底
-    (0,react_production_namespaceFn().useEffect)(() => {
-        const el = scrollRef.current;
-        if (!el)
-            return;
-        el.scrollTop = el.scrollHeight;
-    }, [session.messages]);
     /** 打印对话框上的文档标题（react-to-print 会在打印期间临时改写 document.title 再还原） */
     const printTitleRef = (0,react_production_namespaceFn().useRef)('图片');
     const doPrint = Z({
@@ -117351,94 +117636,73 @@ function TransferDeviceChat({ session, phone, colorIndex, onClear, }) {
     // 图片消息（会话内按出现顺序）——预览左右切换由 antd 接管
     const imageMessages = (0,react_production_namespaceFn().useMemo)(() => session.messages.filter((m) => m.type === 'image'), [session.messages]);
     const percent = progress && progress.total ? Math.round((progress.done / progress.total) * 100) : 0;
+    /** 对方头像 = 设备专属色板（与第二栏列表、配对窗同一个色，一眼对应是哪台） */
+    const palette = DEVICE_COLORS[typeof colorIndex === 'number' ? colorIndex : hashDeviceId(session.key) % DEVICE_COLORS.length];
+    const peerAvatarStyle = {
+        background: palette.bg,
+        border: '1px solid ' + palette.border,
+        color: palette.color,
+    };
+    const peerAvatar = isAggregate ? ((0,react_jsx_runtime_production_namespaceFn().jsx)(SmartphoneIcon, { size: 15, color: "currentColor" })) : (shortPhoneId(session.key).slice(0, 1).toUpperCase());
+    /** 时间 + 发送状态（v26.10.12-v3 起**不再拼文件名**：图片气泡只显示图，名字在下载/打印时才需要） */
+    const metaOf = (msg) => ((0,react_jsx_runtime_production_namespaceFn().jsxs)((react_jsx_runtime_production_namespaceFn().Fragment), { children: [fmtTime(msg.ts), msg.sendState === 'sending' ? ' · 发送中…' : '', msg.sendState === 'failed' ? ' · 发送失败' : ''] }));
     const renderMessage = (msg) => {
         const isUser = msg.direction === 'out';
+        const side = isUser ? 'right' : 'left';
         if (msg.type === 'image') {
             const idx = imageMessages.findIndex((m) => m.id === msg.id);
-            return ((0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { display: 'flex', justifyContent: isUser ? 'flex-end' : 'flex-start', marginBottom: 10 }, children: (0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { maxWidth: '62%' }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(ImageOverlayActions, { actions: [
-                                {
-                                    label: '复制',
-                                    tooltip: copyHint(msg),
-                                    icon: imgCopy && imgCopy.id === msg.id && imgCopy.state === 'ok' ? ((0,react_jsx_runtime_production_namespaceFn().jsx)(CheckIcon, { size: 13 })) : ((0,react_jsx_runtime_production_namespaceFn().jsx)(CopyIcon, { size: 13 })),
-                                    loading: !!(imgCopy && imgCopy.id === msg.id && imgCopy.state === 'busy'),
-                                    onClick: () => doCopy(msg),
-                                },
-                                {
-                                    label: '下载',
-                                    icon: (0,react_jsx_runtime_production_namespaceFn().jsx)(DownloadIcon, { size: 13 }),
-                                    onClick: () => doDownload(msg, idx),
-                                },
-                                {
-                                    label: '删除',
-                                    danger: true,
-                                    icon: (0,react_jsx_runtime_production_namespaceFn().jsx)(TrashIcon, { size: 13 }),
-                                    onClick: () => removeTransferMessage(session.key, msg.id),
-                                },
-                            ], children: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_image, { src: msg.previewUrl, alt: msg.name || 'image', style: {
-                                    width: '100%',
-                                    maxWidth: 220,
-                                    aspectRatio: '4 / 3',
-                                    objectFit: 'cover',
-                                    borderRadius: 8,
-                                    // 发送中的图半透明 + 灰底，失败加红框
-                                    opacity: msg.sendState === 'sending' ? 0.55 : 1,
-                                    border: msg.sendState === 'failed'
-                                        ? '1px solid ' + token.colorError
-                                        : '1px solid ' + token.colorBorderSecondary,
-                                    display: 'block',
-                                } }) }), (0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: {
-                                fontSize: 11,
-                                color: token.colorTextTertiary,
-                                marginTop: 2,
-                                textAlign: isUser ? 'right' : 'left',
-                            }, children: [fmtTime(msg.ts), msg.sendState === 'sending' ? ' · 发送中…' : '', msg.sendState === 'failed' ? ' · 发送失败' : '', msg.name ? ' · ' + msg.name : ''] })] }) }, msg.id));
-        }
-        return ((0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { display: 'flex', justifyContent: isUser ? 'flex-end' : 'flex-start', marginBottom: 10 }, children: (0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { maxWidth: '70%' }, children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: {
-                            padding: '8px 10px',
+            return ((0,react_jsx_runtime_production_namespaceFn().jsx)(ChatBubble, { side: side, bare: true, maxWidth: "62%", danger: msg.sendState === 'failed', meta: metaOf(msg), avatar: isUser ? (0,react_jsx_runtime_production_namespaceFn().jsx)(UserIcon, { size: 15 }) : peerAvatar, avatarStyle: isUser ? undefined : peerAvatarStyle, children: (0,react_jsx_runtime_production_namespaceFn().jsx)(ImageOverlayActions, { actions: [
+                        {
+                            label: '复制',
+                            tooltip: copyHint(msg),
+                            icon: imgCopy && imgCopy.id === msg.id && imgCopy.state === 'ok' ? ((0,react_jsx_runtime_production_namespaceFn().jsx)(CheckIcon, { size: 13 })) : ((0,react_jsx_runtime_production_namespaceFn().jsx)(CopyIcon, { size: 13 })),
+                            loading: !!(imgCopy && imgCopy.id === msg.id && imgCopy.state === 'busy'),
+                            onClick: () => doCopy(msg),
+                        },
+                        {
+                            label: '下载',
+                            icon: (0,react_jsx_runtime_production_namespaceFn().jsx)(DownloadIcon, { size: 13 }),
+                            onClick: () => doDownload(msg, idx),
+                        },
+                        {
+                            label: '删除',
+                            danger: true,
+                            icon: (0,react_jsx_runtime_production_namespaceFn().jsx)(TrashIcon, { size: 13 }),
+                            onClick: () => removeTransferMessage(session.key, msg.id),
+                        },
+                    ], children: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_image, { src: msg.previewUrl, alt: msg.name || 'image', style: {
+                            width: '100%',
+                            maxWidth: 220,
+                            aspectRatio: '4 / 3',
+                            objectFit: 'cover',
                             borderRadius: 8,
-                            fontSize: 13,
-                            lineHeight: 1.6,
-                            wordBreak: 'break-word',
-                            whiteSpace: 'pre-wrap',
-                            background: isUser ? token.colorPrimaryBg : token.colorFillQuaternary,
-                            border: '1px solid ' + (isUser ? token.colorPrimaryBorder : token.colorBorderSecondary),
-                            color: msg.sendState === 'failed' ? token.colorError : undefined,
-                        }, children: [msg.text, msg.sendState === 'failed' && msg.sendError ? ((0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { fontSize: 11, marginTop: 4 }, children: msg.sendError })) : null] }), (0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: {
-                            fontSize: 11,
-                            color: token.colorTextTertiary,
-                            marginTop: 2,
-                            textAlign: isUser ? 'right' : 'left',
-                        }, children: [fmtTime(msg.ts), msg.sendState === 'sending' ? ' · 发送中…' : '', msg.sendState === 'failed' ? ' · 发送失败' : ''] })] }) }, msg.id));
+                            // 发送中的图半透明 + 灰底，失败加红框
+                            opacity: msg.sendState === 'sending' ? 0.55 : 1,
+                            border: msg.sendState === 'failed'
+                                ? '1px solid ' + token.colorError
+                                : '1px solid ' + token.colorBorderSecondary,
+                            display: 'block',
+                        } }) }) }, msg.id));
+        }
+        return ((0,react_jsx_runtime_production_namespaceFn().jsxs)(ChatBubble, { side: side, maxWidth: "74%", danger: msg.sendState === 'failed', meta: metaOf(msg), avatar: isUser ? (0,react_jsx_runtime_production_namespaceFn().jsx)(UserIcon, { size: 15 }) : peerAvatar, avatarStyle: isUser ? undefined : peerAvatarStyle, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(MarkdownBody, { content: msg.text || '', inverted: isUser }), msg.sendState === 'failed' && msg.sendError ? ((0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { fontSize: 11, marginTop: 4 }, children: msg.sendError })) : null] }, msg.id));
     };
     const onlineDot = isAggregate ? (sendable ? '#52c41a' : '#bfbfbf') : phone ? '#52c41a' : '#bfbfbf';
     // 聚合会话（多台在线）没有单一 phone 对象，不能用 `!!phone` 判在线 ——
     // 否则两头手机都在线，头部却显示「离线」（v26.10.12-v1 冒烟抓到的真 bug）。
     const onlineText = isAggregate ? (sendable ? '在线 · 多台在线' : '离线') : phone ? '在线' : '离线';
-    return ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', flexDirection: 'column', minHeight: 0, flex: '1 1 auto' }, children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: {
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 8,
-                    padding: '8px 48px 8px 12px',
-                    borderBottom: '1px solid ' + token.colorBorderSecondary,
-                }, children: [isAggregate ? ((0,react_jsx_runtime_production_namespaceFn().jsx)(TransferDeviceChat_Text, { strong: true, style: { fontSize: 14 }, children: (/* inlined export .PHONE_SESSION_LABEL */"手机") })) : ((0,react_jsx_runtime_production_namespaceFn().jsx)(DeviceIdTag, { id: session.key, colorIndex: colorIndex })), (0,react_jsx_runtime_production_namespaceFn().jsxs)("span", { style: {
-                            fontSize: 12,
-                            color: token.colorTextSecondary,
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: 4,
-                        }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("span", { style: {
-                                    display: 'inline-block',
-                                    width: 6,
-                                    height: 6,
-                                    borderRadius: '50%',
-                                    background: onlineDot,
-                                } }), onlineText, isAggregate && sendable ? ' · 多台在线时收到的内容归在这里' : ''] }), (0,react_jsx_runtime_production_namespaceFn().jsx)("span", { style: { flex: '1 1 auto' } }), (0,react_jsx_runtime_production_namespaceFn().jsx)(popconfirm, { title: "\u6E05\u7A7A\u8FD9\u4E2A\u4F1A\u8BDD\u7684\u5168\u90E8\u6D88\u606F\uFF1F", okText: "\u6E05\u7A7A", cancelText: "\u53D6\u6D88", onConfirm: onClear, children: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { type: "text", size: "small", icon: (0,react_jsx_runtime_production_namespaceFn().jsx)(TrashIcon, { size: 13 }), children: "\u6E05\u7A7A\u6D88\u606F" }) })] }), (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { ref: scrollRef, className: "znhd-transfer-messages", style: {
-                    flex: '1 1 auto',
-                    minHeight: 0,
-                    overflowY: 'auto',
-                    overflowX: 'hidden',
-                    padding: '10px 12px',
-                }, children: session.messages.length ? ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_image.PreviewGroup, { items: imageMessages.map((m) => m.previewUrl), preview: {
+    return ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', flexDirection: 'column', minHeight: 0, flex: '1 1 auto' }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(ChatHeader, { left: (0,react_jsx_runtime_production_namespaceFn().jsxs)((react_jsx_runtime_production_namespaceFn().Fragment), { children: [isAggregate ? ((0,react_jsx_runtime_production_namespaceFn().jsx)(TransferDeviceChat_Text, { strong: true, style: { fontSize: 14 }, children: (/* inlined export .PHONE_SESSION_LABEL */"手机") })) : ((0,react_jsx_runtime_production_namespaceFn().jsx)(DeviceIdTag, { id: session.key, colorIndex: colorIndex })), (0,react_jsx_runtime_production_namespaceFn().jsxs)("span", { style: {
+                                fontSize: 12,
+                                color: token.colorTextSecondary,
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: 4,
+                            }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("span", { style: {
+                                        display: 'inline-block',
+                                        width: 6,
+                                        height: 6,
+                                        borderRadius: '50%',
+                                        background: onlineDot,
+                                    } }), onlineText, isAggregate && sendable ? ' · 多台在线时收到的内容归在这里' : ''] })] }), right: (0,react_jsx_runtime_production_namespaceFn().jsx)(popconfirm, { title: "\u6E05\u7A7A\u8FD9\u4E2A\u4F1A\u8BDD\u7684\u5168\u90E8\u6D88\u606F\uFF1F", okText: "\u6E05\u7A7A", cancelText: "\u53D6\u6D88", onConfirm: onClear, children: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { type: "text", size: "small", icon: (0,react_jsx_runtime_production_namespaceFn().jsx)(TrashIcon, { size: 13 }), children: "\u6E05\u7A7A\u6D88\u606F" }) }) }), (0,react_jsx_runtime_production_namespaceFn().jsx)(ChatScroll, { className: "znhd-transfer-messages", scrollDep: session.messages, children: session.messages.length ? ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_image.PreviewGroup, { items: imageMessages.map((m) => m.previewUrl), preview: {
                         // 必须显式指定挂载容器（v26.10.08-v7：body 带 transform 会困住 fixed 浮层）
                         getContainer: getPreviewHost,
                         onOpenChange: (o) => setPreviewOpen(o),
@@ -117452,7 +117716,7 @@ function TransferDeviceChat({ session, phone, colorIndex, onClear, }) {
                                 }, children: (0,react_jsx_runtime_production_namespaceFn().jsx)(icons_PrinterOutlined, {}) }, "znhd-print"));
                             return appendPreviewActions(originalNode, printBtn);
                         },
-                    }, children: session.messages.map(renderMessage) })) : ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_empty, { image: es_empty.PRESENTED_IMAGE_SIMPLE, description: (0,react_jsx_runtime_production_namespaceFn().jsx)("span", { style: { fontSize: 12 }, children: "\u6682\u65E0\u6D88\u606F\uFF0C\u7528\u4E0B\u9762\u7684\u8F93\u5165\u6846\u7ED9\u8FD9\u53F0\u624B\u673A\u53D1\u70B9\u4E1C\u897F\u5427" }) })) }), pendingImages.length > 0 && ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { padding: '8px 12px 0' }, children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', justifyContent: 'space-between', marginBottom: 6 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("span", { style: { fontSize: 12, color: token.colorTextSecondary }, children: "\u5F85\u53D1\u9001\u56FE\u7247" }), (0,react_jsx_runtime_production_namespaceFn().jsxs)("span", { style: { fontSize: 12, color: token.colorTextTertiary }, children: ["\u5DF2\u9009 ", pendingImages.length, " \u5F20"] })] }), (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { display: 'grid', gridTemplateColumns: 'repeat(6, minmax(0,1fr))', gap: 6 }, children: pendingImages.map((img, i) => ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: {
+                    }, children: session.messages.map(renderMessage) })) : ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_empty, { image: es_empty.PRESENTED_IMAGE_SIMPLE, description: (0,react_jsx_runtime_production_namespaceFn().jsx)("span", { style: { fontSize: 12 }, children: "\u6682\u65E0\u6D88\u606F\uFF0C\u7528\u4E0B\u9762\u7684\u8F93\u5165\u6846\u7ED9\u8FD9\u53F0\u624B\u673A\u53D1\u70B9\u4E1C\u897F\u5427" }) })) }), pendingImages.length > 0 && ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { flex: '0 0 auto', padding: '8px 12px 0' }, children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', justifyContent: 'space-between', marginBottom: 6 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("span", { style: { fontSize: 12, color: token.colorTextSecondary }, children: "\u5F85\u53D1\u9001\u56FE\u7247" }), (0,react_jsx_runtime_production_namespaceFn().jsxs)("span", { style: { fontSize: 12, color: token.colorTextTertiary }, children: ["\u5DF2\u9009 ", pendingImages.length, " \u5F20"] })] }), (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { display: 'grid', gridTemplateColumns: 'repeat(6, minmax(0,1fr))', gap: 6 }, children: pendingImages.map((img, i) => ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: {
                                 position: 'relative',
                                 paddingBottom: '75%',
                                 borderRadius: 8,
@@ -117478,7 +117742,23 @@ function TransferDeviceChat({ session, phone, colorIndex, onClear, }) {
                                         textAlign: 'center',
                                         cursor: sending ? 'not-allowed' : 'pointer',
                                         userSelect: 'none',
-                                    }, children: "\u00D7" })] }, img.url))) })] })), (0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { padding: 10, borderTop: '1px solid ' + token.colorBorderSecondary }, children: [!sendable && ((0,react_jsx_runtime_production_namespaceFn().jsx)(TransferDeviceChat_Text, { type: "warning", style: { fontSize: 12, display: 'block', marginBottom: 6 }, children: "\u5F53\u524D\u6CA1\u6709\u5728\u7EBF\u624B\u673A\uFF0C\u8FDE\u4E0A\u624B\u673A\u540E\u624D\u80FD\u53D1\u9001\u3002" })), (0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', gap: 8 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { variant: "dashed", disabled: !sendable || sending, onClick: pickImages, children: "\u9009\u62E9\u56FE\u7247" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_input, { placeholder: "\u8F93\u5165\u8981\u53D1\u9001\u5230\u624B\u673A\u7684\u6587\u672C\u2026", value: sendText, onChange: (e) => setSendText(e.target.value), onPressEnter: doSendText, disabled: !sendable, style: { flex: 1 } }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { color: "primary", variant: "solid", disabled: !sendable || !sendText.trim(), onClick: doSendText, style: { width: 76 }, children: "\u53D1\u9001" })] }), pendingImages.length > 0 && ((0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { marginTop: 8 }, children: (0,react_jsx_runtime_production_namespaceFn().jsxs)(es_button, { color: "primary", variant: "solid", block: true, disabled: !sendable, loading: sending, onClick: confirmSendImage, children: ["\u53D1\u9001 ", pendingImages.length, " \u5F20\u56FE\u7247"] }) })), progress && ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { marginTop: 8 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(es_progress, { percent: percent, size: "small", strokeColor: progress.failed ? '#e4393c' : '#1677ff', status: progress.failed ? 'exception' : 'normal' }), (0,react_jsx_runtime_production_namespaceFn().jsx)(TransferDeviceChat_Text, { type: progress.failed ? 'danger' : 'secondary', style: { fontSize: 12 }, children: progress.text })] }))] })] }));
+                                    }, children: "\u00D7" })] }, img.url))) }), (0,react_jsx_runtime_production_namespaceFn().jsxs)(es_button, { color: "primary", variant: "solid", block: true, disabled: !sendable, loading: sending, onClick: confirmSendImage, style: { marginTop: 8 }, children: ["\u53D1\u9001 ", pendingImages.length, " \u5F20\u56FE\u7247"] })] })), progress && ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { flex: '0 0 auto', padding: '8px 12px 0' }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(es_progress, { percent: percent, size: "small", strokeColor: progress.failed ? '#e4393c' : '#1677ff', status: progress.failed ? 'exception' : 'normal' }), (0,react_jsx_runtime_production_namespaceFn().jsx)(TransferDeviceChat_Text, { type: progress.failed ? 'danger' : 'secondary', style: { fontSize: 12 }, children: progress.text })] })), (0,react_jsx_runtime_production_namespaceFn().jsx)(ChatComposer, { value: sendText, onChange: setSendText, onSend: doSendText, disabled: !sendable, canSend: !!sendText.trim(), placeholder: "\u8F93\u5165\u8981\u53D1\u9001\u5230\u624B\u673A\u7684\u6587\u672C\u2026\uFF08Enter \u53D1\u9001\uFF0CShift+Enter \u6362\u884C\uFF09", notice: sendable ? undefined : ((0,react_jsx_runtime_production_namespaceFn().jsx)(TransferDeviceChat_Text, { type: "warning", style: { fontSize: 12, display: 'block', marginBottom: 6 }, children: "\u5F53\u524D\u6CA1\u6709\u5728\u7EBF\u624B\u673A\uFF0C\u8FDE\u4E0A\u624B\u673A\u540E\u624D\u80FD\u53D1\u9001\u3002" })), actions: [
+                    {
+                        key: 'image',
+                        label: '图片上传',
+                        tooltip: '选择图片发送到手机（发送前自动压缩）',
+                        icon: (0,react_jsx_runtime_production_namespaceFn().jsx)(ImageIcon, { size: 15 }),
+                        onClick: pickImages,
+                        disabled: !sendable || sending,
+                    },
+                    {
+                        key: 'file',
+                        label: '附件',
+                        tooltip: '暂不支持发送附件：中继服务只转发图片与文本',
+                        icon: (0,react_jsx_runtime_production_namespaceFn().jsx)(PaperclipIcon, { size: 15 }),
+                        disabled: true,
+                    },
+                ] })] }));
 }
 
 ;// ./src/lib/ui/transfer/TransferFilesView.tsx
@@ -118347,6 +118627,12 @@ function TransferAssistantModal({ open, onClose }) {
     const s = useTransferStore();
     // ── 窗口自身的 UI 状态（与 store 的持久状态分开）──────────────────────
     const [nav, setNav] = (0,react_production_namespaceFn().useState)('devices');
+    /**
+     * Agents 分组下第三栏显示什么（v26.10.12-v3）：对话 / 技能 / 定时任务。
+     * 「技能」「定时任务」由第二栏顶部的两个控件切换（原来是第三栏的页签）。
+     * 三处会把它复位到 chat：切第一栏导航、点会话卡片、点搜索框旁的「＋」新建对话。
+     */
+    const [agentPane, setAgentPane] = (0,react_production_namespaceFn().useState)('chat');
     const [collapsed, setCollapsed] = (0,react_production_namespaceFn().useState)(false);
     const [search, setSearch] = (0,react_production_namespaceFn().useState)('');
     const [pairOpen, setPairOpen] = (0,react_production_namespaceFn().useState)(false);
@@ -118438,10 +118724,20 @@ function TransferAssistantModal({ open, onClose }) {
         setNav('devices');
         setActiveSession(key);
     };
+    /**
+     * 第一栏导航：切到 Agents 时把第三栏复位成「对话」。
+     * 没有这一步会出现「上次停在技能页 → 关窗重开 → 点 Agents 看到技能页」这种摸不着头脑的状态
+     * （重开虽然会重置 state，但**同一次会话内**来回切第一栏不会）。
+     */
+    const onNav = (next) => {
+        setNav(next);
+        if (next === 'agents')
+            setAgentPane('chat');
+    };
     /** 第三栏路由 */
     let main = null;
     if (nav === 'agents') {
-        main = (0,react_jsx_runtime_production_namespaceFn().jsx)(TransferAgentView, { agent: agent });
+        main = (0,react_jsx_runtime_production_namespaceFn().jsx)(TransferAgentView, { agent: agent, pane: agentPane });
     }
     else if (nav === 'files') {
         main = (0,react_jsx_runtime_production_namespaceFn().jsx)(TransferFilesView, { messages: allMessages });
@@ -118489,7 +118785,7 @@ function TransferAssistantModal({ open, onClose }) {
                     flexDirection: 'row',
                     overflow: 'hidden',
                 },
-            }, destroyOnHidden: true, footer: null, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(TransferNavRail, { nav: nav, onNav: setNav, collapsed: collapsed, onToggleCollapsed: () => setCollapsed((v) => !v), themeMode: s.settings.theme, onThemeMode: (t) => updateTransferSettings({ theme: t }), onOpenSettings: () => setSettingsOpen(true), onOpenAbout: () => setAboutOpen(true), unreadTotal: unreadTotal }), (0,react_jsx_runtime_production_namespaceFn().jsx)(TransferSessionList, { nav: nav, search: search, onSearch: setSearch, onPair: () => setPairOpen(true), deviceEntries: deviceEntries, activeSessionKey: s.activeSessionKey, onSelectSession: onSelectSession, agent: nav === 'agents' ? agent : undefined }), (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { className: "znhd-transfer-main", style: {
+            }, destroyOnHidden: true, footer: null, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(TransferNavRail, { nav: nav, onNav: onNav, collapsed: collapsed, onToggleCollapsed: () => setCollapsed((v) => !v), themeMode: s.settings.theme, onThemeMode: (t) => updateTransferSettings({ theme: t }), onOpenSettings: () => setSettingsOpen(true), onOpenAbout: () => setAboutOpen(true), unreadTotal: unreadTotal }), (0,react_jsx_runtime_production_namespaceFn().jsx)(TransferSessionList, { nav: nav, search: search, onSearch: setSearch, onPair: () => setPairOpen(true), deviceEntries: deviceEntries, activeSessionKey: s.activeSessionKey, onSelectSession: onSelectSession, agent: nav === 'agents' ? agent : undefined, agentPane: agentPane, onAgentPane: setAgentPane }), (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { className: "znhd-transfer-main", style: {
                         flex: '1 1 auto',
                         minWidth: 0,
                         display: 'flex',

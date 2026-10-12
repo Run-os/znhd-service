@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { Button, Popconfirm, Tooltip } from 'antd';
+import { Button, Popconfirm } from 'antd';
 import { theme } from 'antd';
-import { PlusIcon, TrashIcon } from '@/lib/ui/icons';
+import { TrashIcon } from '@/lib/ui/icons';
 import { agentChatLabel } from '@/lib/agent/sessions';
 import type { AgentChatSession } from '@/lib/agent/sessions';
 
@@ -21,22 +21,23 @@ function chatTimeText(timestamp: number): string {
 
 /**
  * Agent 会话列表（v26.10.12-v1：从 AgentModal 左侧会话栏搬来，作为传输助手第二栏的
- * Agents 内容）。「新的聊天」在顶部，下面一条条会话卡片（选中高亮、悬停出删除）。
+ * Agents 内容）。
  *
- * ⚠️ 类名 `znhd-agent-chat-item` 是冒烟断言的定位符（AGENT.md「历史踩坑索引」有记），勿改。
+ * v26.10.12-v3 去掉列表顶部那个「新的聊天」按钮：用户要求把新建的入口并进**搜索框右侧的 ＋**
+ * （`TransferSessionList` 里，Agents 分组下它是「新建对话」，设备分组下才是「配对设备」）——
+ * 于是这里只剩「标题 + 一条条会话卡片（选中高亮、悬停出删除）」。
+ *
+ * ⚠️ 类名 `znhd-agent-chat-item` / `znhd-agent-chat-list` 是冒烟断言的定位符
+ * （AGENT.md「历史踩坑索引」有记），勿改。
  */
 export default function AgentConversationList({
     chats,
     activeChatId,
-    streaming,
-    onNewChat,
     onSwitch,
     onDelete,
 }: {
     chats: AgentChatSession[];
     activeChatId: string;
-    streaming: boolean;
-    onNewChat: () => void;
     onSwitch: (id: string) => void;
     onDelete: (id: string) => void;
 }) {
@@ -97,17 +98,8 @@ export default function AgentConversationList({
     };
 
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, minHeight: 0, flex: '1 1 auto' }}>
-            <Tooltip title="清空当前视图，发出下一条消息时另起一个对话">
-                <Button
-                    size="small"
-                    icon={<PlusIcon size={13} />}
-                    onClick={onNewChat}
-                    disabled={streaming && !activeChatId}
-                    style={{ justifyContent: 'flex-start' }}>
-                    新的聊天
-                </Button>
-            </Tooltip>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minHeight: 0, flex: '1 1 auto' }}>
+            <div style={{ fontSize: 11, color: token.colorTextTertiary, padding: '0 2px' }}>对话</div>
             <div
                 className="znhd-agent-chat-list"
                 style={{ flex: '1 1 auto', minHeight: 0, overflowY: 'auto', overflowX: 'hidden' }}>

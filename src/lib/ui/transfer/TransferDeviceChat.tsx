@@ -1,13 +1,27 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Button, Empty, Image, Input, Popconfirm, Progress, Typography, theme } from 'antd';
+import { Button, Empty, Image, Popconfirm, Progress, Typography, theme } from 'antd';
 import { PrinterOutlined } from '@ant-design/icons';
 import { useReactToPrint } from 'react-to-print';
 import { addLog } from '@/lib/logger';
 import { copyImageToClipboard } from '@/lib/relay';
 import { downloadFileName } from '@/lib/gallery';
-import { CheckIcon, CopyIcon, DownloadIcon, TrashIcon } from '@/lib/ui/icons';
+import {
+    CheckIcon,
+    CopyIcon,
+    DownloadIcon,
+    ImageIcon,
+    PaperclipIcon,
+    SmartphoneIcon,
+    TrashIcon,
+    UserIcon,
+} from '@/lib/ui/icons';
 import ImageOverlayActions from '@/lib/ui/ImageOverlayActions';
 import DeviceIdTag from '@/lib/ui/transfer/DeviceIdTag';
+import ChatBubble from '@/lib/ui/transfer/ChatBubble';
+import ChatComposer from '@/lib/ui/transfer/ChatComposer';
+import { ChatHeader, ChatScroll } from '@/lib/ui/transfer/ChatPanel';
+import { DEVICE_COLORS, hashDeviceId, shortPhoneId } from '@/lib/ui/transfer/deviceColors';
+import MarkdownBody from '@/lib/ui/agent/MarkdownBody';
 import {
     PHONE_SESSION_KEY,
     PHONE_SESSION_LABEL,
@@ -43,10 +57,14 @@ interface PendingImage {
  * 设备会话聊天区（v26.10.12-v1，传输助手第三栏的主体）。
  *
  * 由「设备互联」弹窗的「发送到手机」分区 + 原「历史记录」画廊合并而来：
- *   · 消息按会话聚合成聊天气泡（收到的在左灰底、本机发出的在右浅蓝底）；
+ *   · 消息按会话聚合成聊天气泡（收到的在左浅底、本机发出的在右主色实心）；
  *   · 图片消息单击放大（antd Image.PreviewGroup + 共享层预览宿主 / A4 打印 / 遮罩压制）；
  *   · 右下角悬浮图标按钮（复制 / 下载 / 删除）与历史记录同一套实现；
- *   · 底部输入区发文本 / 选图发送，逐张压缩后按序投递（逻辑与原发送分区一致）。
+ *   · 底部输入区发文本 / 选图发送，逐张压缩后按序投递。
+ *
+ * v26.10.12-v3：气泡、滚动区、输入框全部换成 `ChatBubble` / `ChatScroll` / `ChatComposer`
+ * （与 Agent 对话共用同一套）。用户要求「设备菜单和 agent 菜单下的对话主区域使用相同的样式」，
+ * 所以这里**只负责数据与动作**，排版一律走共用件 —— 想改外观请改共用件，别在这里另写一套。
  */
 export default function TransferDeviceChat({
     session,
@@ -73,7 +91,6 @@ export default function TransferDeviceChat({
      * 两层 rgba(0,0,0,0.45) 叠成 0.6975，白底被压到灰度 77）。
      */
     const [previewOpen, setPreviewOpen] = useState(false);
-    const scrollRef = useRef<HTMLDivElement | null>(null);
 
     const sendable = sessionSendable(session.key);
     const isAggregate = session.key === PHONE_SESSION_KEY;
@@ -82,13 +99,6 @@ export default function TransferDeviceChat({
         syncPreviewMask(previewOpen);
         return () => syncPreviewMask(false);
     }, [previewOpen]);
-
-    // 新消息自动滚到底
-    useEffect(() => {
-        const el = scrollRef.current;
-        if (!el) return;
-        el.scrollTop = el.scrollHeight;
-    }, [session.messages]);
 
     /** 打印对话框上的文档标题（react-to-print 会在打印期间临时改写 document.title 再还原） */
     const printTitleRef = useRef('图片');
@@ -229,111 +239,108 @@ export default function TransferDeviceChat({
     const imageMessages = useMemo(() => session.messages.filter((m) => m.type === 'image'), [session.messages]);
     const percent = progress && progress.total ? Math.round((progress.done / progress.total) * 100) : 0;
 
+    /** 对方头像 = 设备专属色板（与第二栏列表、配对窗同一个色，一眼对应是哪台） */
+    const palette =
+        DEVICE_COLORS[typeof colorIndex === 'number' ? colorIndex : hashDeviceId(session.key) % DEVICE_COLORS.length];
+    const peerAvatarStyle = {
+        background: palette.bg,
+        border: '1px solid ' + palette.border,
+        color: palette.color,
+    };
+    const peerAvatar = isAggregate ? (
+        <SmartphoneIcon size={15} color="currentColor" />
+    ) : (
+        shortPhoneId(session.key).slice(0, 1).toUpperCase()
+    );
+
+    /** 时间 + 发送状态（v26.10.12-v3 起**不再拼文件名**：图片气泡只显示图，名字在下载/打印时才需要） */
+    const metaOf = (msg: TransferMessage) => (
+        <>
+            {fmtTime(msg.ts)}
+            {msg.sendState === 'sending' ? ' · 发送中…' : ''}
+            {msg.sendState === 'failed' ? ' · 发送失败' : ''}
+        </>
+    );
+
     const renderMessage = (msg: TransferMessage) => {
         const isUser = msg.direction === 'out';
+        const side = isUser ? 'right' : 'left';
         if (msg.type === 'image') {
             const idx = imageMessages.findIndex((m) => m.id === msg.id);
             return (
-                <div
+                <ChatBubble
                     key={msg.id}
-                    style={{ display: 'flex', justifyContent: isUser ? 'flex-end' : 'flex-start', marginBottom: 10 }}>
-                    <div style={{ maxWidth: '62%' }}>
-                        <ImageOverlayActions
-                            actions={[
-                                {
-                                    label: '复制',
-                                    tooltip: copyHint(msg),
-                                    icon:
-                                        imgCopy && imgCopy.id === msg.id && imgCopy.state === 'ok' ? (
-                                            <CheckIcon size={13} />
-                                        ) : (
-                                            <CopyIcon size={13} />
-                                        ),
-                                    loading: !!(imgCopy && imgCopy.id === msg.id && imgCopy.state === 'busy'),
-                                    onClick: () => doCopy(msg),
-                                },
-                                {
-                                    label: '下载',
-                                    icon: <DownloadIcon size={13} />,
-                                    onClick: () => doDownload(msg, idx),
-                                },
-                                {
-                                    label: '删除',
-                                    danger: true,
-                                    icon: <TrashIcon size={13} />,
-                                    onClick: () => removeTransferMessage(session.key, msg.id),
-                                },
-                            ]}>
-                            <Image
-                                src={msg.previewUrl}
-                                alt={msg.name || 'image'}
-                                style={{
-                                    width: '100%',
-                                    maxWidth: 220,
-                                    aspectRatio: '4 / 3',
-                                    objectFit: 'cover',
-                                    borderRadius: 8,
-                                    // 发送中的图半透明 + 灰底，失败加红框
-                                    opacity: msg.sendState === 'sending' ? 0.55 : 1,
-                                    border:
-                                        msg.sendState === 'failed'
-                                            ? '1px solid ' + token.colorError
-                                            : '1px solid ' + token.colorBorderSecondary,
-                                    display: 'block',
-                                }}
-                            />
-                        </ImageOverlayActions>
-                        <div
+                    side={side}
+                    bare
+                    maxWidth="62%"
+                    danger={msg.sendState === 'failed'}
+                    meta={metaOf(msg)}
+                    avatar={isUser ? <UserIcon size={15} /> : peerAvatar}
+                    avatarStyle={isUser ? undefined : peerAvatarStyle}>
+                    <ImageOverlayActions
+                        actions={[
+                            {
+                                label: '复制',
+                                tooltip: copyHint(msg),
+                                icon:
+                                    imgCopy && imgCopy.id === msg.id && imgCopy.state === 'ok' ? (
+                                        <CheckIcon size={13} />
+                                    ) : (
+                                        <CopyIcon size={13} />
+                                    ),
+                                loading: !!(imgCopy && imgCopy.id === msg.id && imgCopy.state === 'busy'),
+                                onClick: () => doCopy(msg),
+                            },
+                            {
+                                label: '下载',
+                                icon: <DownloadIcon size={13} />,
+                                onClick: () => doDownload(msg, idx),
+                            },
+                            {
+                                label: '删除',
+                                danger: true,
+                                icon: <TrashIcon size={13} />,
+                                onClick: () => removeTransferMessage(session.key, msg.id),
+                            },
+                        ]}>
+                        <Image
+                            src={msg.previewUrl}
+                            alt={msg.name || 'image'}
                             style={{
-                                fontSize: 11,
-                                color: token.colorTextTertiary,
-                                marginTop: 2,
-                                textAlign: isUser ? 'right' : 'left',
-                            }}>
-                            {fmtTime(msg.ts)}
-                            {msg.sendState === 'sending' ? ' · 发送中…' : ''}
-                            {msg.sendState === 'failed' ? ' · 发送失败' : ''}
-                            {msg.name ? ' · ' + msg.name : ''}
-                        </div>
-                    </div>
-                </div>
+                                width: '100%',
+                                maxWidth: 220,
+                                aspectRatio: '4 / 3',
+                                objectFit: 'cover',
+                                borderRadius: 8,
+                                // 发送中的图半透明 + 灰底，失败加红框
+                                opacity: msg.sendState === 'sending' ? 0.55 : 1,
+                                border:
+                                    msg.sendState === 'failed'
+                                        ? '1px solid ' + token.colorError
+                                        : '1px solid ' + token.colorBorderSecondary,
+                                display: 'block',
+                            }}
+                        />
+                    </ImageOverlayActions>
+                </ChatBubble>
             );
         }
         return (
-            <div
+            <ChatBubble
                 key={msg.id}
-                style={{ display: 'flex', justifyContent: isUser ? 'flex-end' : 'flex-start', marginBottom: 10 }}>
-                <div style={{ maxWidth: '70%' }}>
-                    <div
-                        style={{
-                            padding: '8px 10px',
-                            borderRadius: 8,
-                            fontSize: 13,
-                            lineHeight: 1.6,
-                            wordBreak: 'break-word',
-                            whiteSpace: 'pre-wrap',
-                            background: isUser ? token.colorPrimaryBg : token.colorFillQuaternary,
-                            border: '1px solid ' + (isUser ? token.colorPrimaryBorder : token.colorBorderSecondary),
-                            color: msg.sendState === 'failed' ? token.colorError : undefined,
-                        }}>
-                        {msg.text}
-                        {msg.sendState === 'failed' && msg.sendError ? (
-                            <div style={{ fontSize: 11, marginTop: 4 }}>{msg.sendError}</div>
-                        ) : null}
-                    </div>
-                    <div
-                        style={{
-                            fontSize: 11,
-                            color: token.colorTextTertiary,
-                            marginTop: 2,
-                            textAlign: isUser ? 'right' : 'left',
-                        }}>
-                        {fmtTime(msg.ts)}
-                        {msg.sendState === 'sending' ? ' · 发送中…' : ''}
-                        {msg.sendState === 'failed' ? ' · 发送失败' : ''}
-                    </div>
-                </div>
-            </div>
+                side={side}
+                maxWidth="74%"
+                danger={msg.sendState === 'failed'}
+                meta={metaOf(msg)}
+                avatar={isUser ? <UserIcon size={15} /> : peerAvatar}
+                avatarStyle={isUser ? undefined : peerAvatarStyle}>
+                {/* 两侧都按 Markdown 渲染：与 Agent 对话保持同一种文字排版；
+                    用户气泡是主色实心，故走反色档（否则链接/代码块会「蓝压蓝」看不见） */}
+                <MarkdownBody content={msg.text || ''} inverted={isUser} />
+                {msg.sendState === 'failed' && msg.sendError ? (
+                    <div style={{ fontSize: 11, marginTop: 4 }}>{msg.sendError}</div>
+                ) : null}
+            </ChatBubble>
         );
     };
 
@@ -344,64 +351,50 @@ export default function TransferDeviceChat({
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', minHeight: 0, flex: '1 1 auto' }}>
-            {/* 会话头部：设备 + 在线状态 + 清空
-                ⚠️ 右侧留 48px 空档：v26.10.12-v2 去掉了 Modal 标题栏，关闭按钮 × 是绝对定位
-                浮在窗口右上角的（rc-dialog 的 closerNode 独立于 header 渲染），不占布局高度。
-                这里原本只有 12px 内边距，「清空消息」会被 × 压住 —— 宽度必须 ≥ 关闭按钮占位。 */}
-            <div
-                style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 8,
-                    padding: '8px 48px 8px 12px',
-                    borderBottom: '1px solid ' + token.colorBorderSecondary,
-                }}>
-                {isAggregate ? (
-                    <Text strong style={{ fontSize: 14 }}>
-                        {PHONE_SESSION_LABEL}
-                    </Text>
-                ) : (
-                    <DeviceIdTag id={session.key} colorIndex={colorIndex} />
-                )}
-                <span
-                    style={{
-                        fontSize: 12,
-                        color: token.colorTextSecondary,
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: 4,
-                    }}>
-                    <span
-                        style={{
-                            display: 'inline-block',
-                            width: 6,
-                            height: 6,
-                            borderRadius: '50%',
-                            background: onlineDot,
-                        }}
-                    />
-                    {onlineText}
-                    {isAggregate && sendable ? ' · 多台在线时收到的内容归在这里' : ''}
-                </span>
-                <span style={{ flex: '1 1 auto' }} />
-                <Popconfirm title="清空这个会话的全部消息？" okText="清空" cancelText="取消" onConfirm={onClear}>
-                    <Button type="text" size="small" icon={<TrashIcon size={13} />}>
-                        清空消息
-                    </Button>
-                </Popconfirm>
-            </div>
+            {/* 会话头部：设备 + 在线状态 + 清空（右侧 48px 让位由 ChatHeader 统一处理） */}
+            <ChatHeader
+                left={
+                    <>
+                        {isAggregate ? (
+                            <Text strong style={{ fontSize: 14 }}>
+                                {PHONE_SESSION_LABEL}
+                            </Text>
+                        ) : (
+                            <DeviceIdTag id={session.key} colorIndex={colorIndex} />
+                        )}
+                        <span
+                            style={{
+                                fontSize: 12,
+                                color: token.colorTextSecondary,
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: 4,
+                            }}>
+                            <span
+                                style={{
+                                    display: 'inline-block',
+                                    width: 6,
+                                    height: 6,
+                                    borderRadius: '50%',
+                                    background: onlineDot,
+                                }}
+                            />
+                            {onlineText}
+                            {isAggregate && sendable ? ' · 多台在线时收到的内容归在这里' : ''}
+                        </span>
+                    </>
+                }
+                right={
+                    <Popconfirm title="清空这个会话的全部消息？" okText="清空" cancelText="取消" onConfirm={onClear}>
+                        <Button type="text" size="small" icon={<TrashIcon size={13} />}>
+                            清空消息
+                        </Button>
+                    </Popconfirm>
+                }
+            />
 
             {/* 消息区 */}
-            <div
-                ref={scrollRef}
-                className="znhd-transfer-messages"
-                style={{
-                    flex: '1 1 auto',
-                    minHeight: 0,
-                    overflowY: 'auto',
-                    overflowX: 'hidden',
-                    padding: '10px 12px',
-                }}>
+            <ChatScroll className="znhd-transfer-messages" scrollDep={session.messages}>
                 {session.messages.length ? (
                     <Image.PreviewGroup
                         items={imageMessages.map((m) => m.previewUrl as string)}
@@ -439,11 +432,11 @@ export default function TransferDeviceChat({
                         description={<span style={{ fontSize: 12 }}>暂无消息，用下面的输入框给这台手机发点东西吧</span>}
                     />
                 )}
-            </div>
+            </ChatScroll>
 
-            {/* 待发送图片 */}
+            {/* 待发送图片 + 进度：贴在输入框**上方**（输入框本身在两端保持完全一致，不塞业务块） */}
             {pendingImages.length > 0 && (
-                <div style={{ padding: '8px 12px 0' }}>
+                <div style={{ flex: '0 0 auto', padding: '8px 12px 0' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
                         <span style={{ fontSize: 12, color: token.colorTextSecondary }}>待发送图片</span>
                         <span style={{ fontSize: 12, color: token.colorTextTertiary }}>
@@ -495,64 +488,65 @@ export default function TransferDeviceChat({
                             </div>
                         ))}
                     </div>
-                </div>
-            )}
-
-            {/* 输入区 */}
-            <div style={{ padding: 10, borderTop: '1px solid ' + token.colorBorderSecondary }}>
-                {!sendable && (
-                    <Text type="warning" style={{ fontSize: 12, display: 'block', marginBottom: 6 }}>
-                        当前没有在线手机，连上手机后才能发送。
-                    </Text>
-                )}
-                <div style={{ display: 'flex', gap: 8 }}>
-                    <Button variant="dashed" disabled={!sendable || sending} onClick={pickImages}>
-                        选择图片
-                    </Button>
-                    <Input
-                        placeholder="输入要发送到手机的文本…"
-                        value={sendText}
-                        onChange={(e) => setSendText(e.target.value)}
-                        onPressEnter={doSendText}
-                        disabled={!sendable}
-                        style={{ flex: 1 }}
-                    />
                     <Button
                         color="primary"
                         variant="solid"
-                        disabled={!sendable || !sendText.trim()}
-                        onClick={doSendText}
-                        style={{ width: 76 }}>
-                        发送
+                        block
+                        disabled={!sendable}
+                        loading={sending}
+                        onClick={confirmSendImage}
+                        style={{ marginTop: 8 }}>
+                        发送 {pendingImages.length} 张图片
                     </Button>
                 </div>
-                {pendingImages.length > 0 && (
-                    <div style={{ marginTop: 8 }}>
-                        <Button
-                            color="primary"
-                            variant="solid"
-                            block
-                            disabled={!sendable}
-                            loading={sending}
-                            onClick={confirmSendImage}>
-                            发送 {pendingImages.length} 张图片
-                        </Button>
-                    </div>
-                )}
-                {progress && (
-                    <div style={{ marginTop: 8 }}>
-                        <Progress
-                            percent={percent}
-                            size="small"
-                            strokeColor={progress.failed ? '#e4393c' : '#1677ff'}
-                            status={progress.failed ? 'exception' : 'normal'}
-                        />
-                        <Text type={progress.failed ? 'danger' : 'secondary'} style={{ fontSize: 12 }}>
-                            {progress.text}
+            )}
+            {progress && (
+                <div style={{ flex: '0 0 auto', padding: '8px 12px 0' }}>
+                    <Progress
+                        percent={percent}
+                        size="small"
+                        strokeColor={progress.failed ? '#e4393c' : '#1677ff'}
+                        status={progress.failed ? 'exception' : 'normal'}
+                    />
+                    <Text type={progress.failed ? 'danger' : 'secondary'} style={{ fontSize: 12 }}>
+                        {progress.text}
+                    </Text>
+                </div>
+            )}
+
+            {/* 输入区（与 Agent 对话同一个 ChatComposer） */}
+            <ChatComposer
+                value={sendText}
+                onChange={setSendText}
+                onSend={doSendText}
+                disabled={!sendable}
+                canSend={!!sendText.trim()}
+                placeholder="输入要发送到手机的文本…（Enter 发送，Shift+Enter 换行）"
+                notice={
+                    sendable ? undefined : (
+                        <Text type="warning" style={{ fontSize: 12, display: 'block', marginBottom: 6 }}>
+                            当前没有在线手机，连上手机后才能发送。
                         </Text>
-                    </div>
-                )}
-            </div>
+                    )
+                }
+                actions={[
+                    {
+                        key: 'image',
+                        label: '图片上传',
+                        tooltip: '选择图片发送到手机（发送前自动压缩）',
+                        icon: <ImageIcon size={15} />,
+                        onClick: pickImages,
+                        disabled: !sendable || sending,
+                    },
+                    {
+                        key: 'file',
+                        label: '附件',
+                        tooltip: '暂不支持发送附件：中继服务只转发图片与文本',
+                        icon: <PaperclipIcon size={15} />,
+                        disabled: true,
+                    },
+                ]}
+            />
         </div>
     );
 }

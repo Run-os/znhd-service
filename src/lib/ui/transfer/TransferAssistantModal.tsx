@@ -24,7 +24,7 @@ import {
     updateTransferSettings,
     useTransferStore,
 } from '@/lib/transfer/store';
-import type { DeviceSession, TransferMessage, TransferTheme } from '@/lib/transfer/types';
+import type { AgentPane, DeviceSession, TransferMessage, TransferTheme } from '@/lib/transfer/types';
 
 /**
  * 传输助手主窗口（v26.10.12-v1）：原「设备互联」重构后的三栏窗口。
@@ -47,6 +47,12 @@ export default function TransferAssistantModal({ open, onClose }: { open: boolea
 
     // ── 窗口自身的 UI 状态（与 store 的持久状态分开）──────────────────────
     const [nav, setNav] = useState<TransferNav>('devices');
+    /**
+     * Agents 分组下第三栏显示什么（v26.10.12-v3）：对话 / 技能 / 定时任务。
+     * 「技能」「定时任务」由第二栏顶部的两个控件切换（原来是第三栏的页签）。
+     * 三处会把它复位到 chat：切第一栏导航、点会话卡片、点搜索框旁的「＋」新建对话。
+     */
+    const [agentPane, setAgentPane] = useState<AgentPane>('chat');
     const [collapsed, setCollapsed] = useState(false);
     const [search, setSearch] = useState('');
     const [pairOpen, setPairOpen] = useState(false);
@@ -151,10 +157,20 @@ export default function TransferAssistantModal({ open, onClose }: { open: boolea
         setActiveSession(key);
     };
 
+    /**
+     * 第一栏导航：切到 Agents 时把第三栏复位成「对话」。
+     * 没有这一步会出现「上次停在技能页 → 关窗重开 → 点 Agents 看到技能页」这种摸不着头脑的状态
+     * （重开虽然会重置 state，但**同一次会话内**来回切第一栏不会）。
+     */
+    const onNav = (next: TransferNav) => {
+        setNav(next);
+        if (next === 'agents') setAgentPane('chat');
+    };
+
     /** 第三栏路由 */
     let main: ReactNode = null;
     if (nav === 'agents') {
-        main = <TransferAgentView agent={agent} />;
+        main = <TransferAgentView agent={agent} pane={agentPane} />;
     } else if (nav === 'files') {
         main = <TransferFilesView messages={allMessages} />;
     } else if (activeSession) {
@@ -229,7 +245,7 @@ export default function TransferAssistantModal({ open, onClose }: { open: boolea
                 {/* 第一栏：窄导航 */}
                 <TransferNavRail
                     nav={nav}
-                    onNav={setNav}
+                    onNav={onNav}
                     collapsed={collapsed}
                     onToggleCollapsed={() => setCollapsed((v) => !v)}
                     themeMode={s.settings.theme}
@@ -249,6 +265,8 @@ export default function TransferAssistantModal({ open, onClose }: { open: boolea
                     activeSessionKey={s.activeSessionKey}
                     onSelectSession={onSelectSession}
                     agent={nav === 'agents' ? agent : undefined}
+                    agentPane={agentPane}
+                    onAgentPane={setAgentPane}
                 />
 
                 {/* 第三栏：聊天主区 */}

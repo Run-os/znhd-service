@@ -1029,24 +1029,71 @@
 
       const SEND_TEXT = '冒烟测试：本机发出的文本';
       // 用原型上的 setter 赋值再派发 input：React 的受控输入依赖原生 setter 触发的 value 跟踪
-      // （直接 `input.value = x` 会被 React 缓存的 value 覆盖掉；input 事件必须冒泡到 root）
-      const typeInto = (input, text) => {
-        const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set;
-        setter.call(input, text);
-        input.dispatchEvent(new Event('input', { bubbles: true }));
+      // （直接 `el.value = x` 会被 React 缓存的 value 覆盖掉；input 事件必须冒泡到 root）
+      // ⚠️ v26.10.12-v3：设备输入框从**单行 input 换成了多行 textarea**（与 Agent 对话共用
+      //    ChatComposer，用户要求两边样式一致），setter 必须按 tagName 取对应原型 ——
+      //    用错原型时 React 收不到变更，表现为「赋值了但发送按钮还是灰的」。
+      const typeInto = (el, text) => {
+        const proto = el.tagName === 'TEXTAREA' ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
+        const setter = Object.getOwnPropertyDescriptor(proto, 'value').set;
+        setter.call(el, text);
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+      };
+      /** 设备会话的输入框（多行 textarea；按 placeholder 找，与 Agent 的输入框区分） */
+      const findDeviceInput = () => {
+        const m = findTransferModal();
+        if (!m) return null;
+        return (
+          Array.from(m.querySelectorAll('textarea, input')).find(
+            (el) => (el.placeholder || '').indexOf('输入要发送到手机的文本') >= 0
+          ) || null
+        );
+      };
+      /** 输入框所在的共用外壳（气泡/输入框/发送按钮都长在它里面） */
+      const composerBoxOf = (el) => (el ? el.closest('.znhd-chat-composer') : null);
+      /**
+       * 共用输入区的事实快照（v26.10.12-v3）。
+       *
+       * 用户给的规格：多行自增高、超上限后框内滚动；左下角 表情/图片上传/附件；
+       * 右下角发送按钮；外层有边框。设备会话与 Agent 对话共用同一个 `ChatComposer`，
+       * 所以判据只认组件自己的钩子（外壳类名 `.znhd-chat-composer` + 按钮 aria-label）。
+       */
+      const composerFacts = () => {
+        const ta = findDeviceInput();
+        const shell = composerBoxOf(ta);
+        if (!ta || !shell) return { shell: false };
+        const cs = getComputedStyle(shell);
+        const tb = ta.getBoundingClientRect();
+        const bb = shell.getBoundingClientRect();
+        const send = shell.querySelector('button[aria-label="发送"]');
+        const sb = send ? send.getBoundingClientRect() : null;
+        const labels = Array.from(shell.querySelectorAll('button[aria-label]')).map((b) =>
+          b.getAttribute('aria-label')
+        );
+        return {
+          shell: true,
+          isTextarea: ta.tagName === 'TEXTAREA',
+          labels: labels,
+          // 发送按钮里没有文字、只有矢量图标
+          sendIconOnly: !!(send && !(send.textContent || '').trim() && send.querySelector('svg')),
+          // 发送按钮在**右下角**：贴着外壳右边，且在文本框下沿之下
+          sendBottomRight: !!(sb && bb.right - sb.right <= 24 && sb.top >= tb.bottom - 8),
+          // 外层是带圆角的实体边框（hover/focus 只是换边框颜色，所以这条能证明「有边框」）
+          bordered: parseFloat(cs.borderTopWidth) > 0 && parseFloat(cs.borderRadius) > 0,
+          height: Math.round(tb.height),
+        };
       };
       setTimeout(() => {
-        const m = findTransferModal();
-        const input = m
-          ? Array.from(m.querySelectorAll('input')).find((i) => (i.placeholder || '').indexOf('输入要发送到手机的文本') >= 0)
-          : null;
+        const input = findDeviceInput();
         window.__sendInputFound = !!input;
         if (input) typeInto(input, SEND_TEXT);
       }, 9600);
       setTimeout(() => {
+        // v26.10.12-v3：发送按钮改成圆形图标按钮（与 Agent 同一个 ChatComposer），
+        // 里面没有文字了 —— 只能按 aria-label 找（语义全挂在它上面）。
         const m = findTransferModal();
         const btn = m
-          ? Array.from(m.querySelectorAll('button')).find((b) => (b.textContent || '').trim() === '发送')
+          ? Array.from(m.querySelectorAll('button')).find((b) => (b.getAttribute('aria-label') || '') === '发送')
           : null;
         window.__clickedSessionSend = !!btn;
         if (btn) btn.click();
@@ -1055,13 +1102,53 @@
         const ts = window.__transferSnap;
         ts.textSentSeen = transferMessagesText().indexOf(SEND_TEXT) >= 0;
         ts.phoneSentText = (window.__phoneSent || []).some((p) => p.text === SEND_TEXT);
+        // —— 气泡：左右分栏（他人靠左浅底 / 我的靠右深底）+ 每个气泡外侧都有头像 ——
+        const m = findTransferModal();
+        const box = m ? m.querySelector('.znhd-transfer-messages') : null;
+        const left = box ? box.querySelector('.znhd-chat-msg[data-side="left"]') : null;
+        const right = box ? box.querySelector('.znhd-chat-msg[data-side="right"]') : null;
+        const bgOf = (el) => {
+          const bubble = el ? el.querySelector('.znhd-chat-bubble') : null;
+          return bubble ? getComputedStyle(bubble).backgroundColor : '';
+        };
+        ts.bubbles = {
+          leftSeen: !!left,
+          rightSeen: !!right,
+          leftDirection: left ? getComputedStyle(left).flexDirection : '',
+          rightDirection: right ? getComputedStyle(right).flexDirection : '',
+          leftBg: bgOf(left),
+          rightBg: bgOf(right),
+          bubbleCount: box ? box.querySelectorAll('.znhd-chat-msg').length : 0,
+          avatars: box ? box.querySelectorAll('.znhd-chat-msg .znhd-chat-avatar').length : 0,
+        };
+        // —— 输入区（空着时的基线高度）——
+        ts.composerEmpty = composerFacts();
       }, 10200);
+      // 多行自增高：塞 10 行（远超 maxRows=6）→ 高度必须封顶、且**框内**出现滚动条
+      setTimeout(() => {
+        const ta = findDeviceInput();
+        if (ta) typeInto(ta, Array.from({ length: 10 }, (_, i) => '第 ' + i + ' 行').join('\n'));
+      }, 10250);
+      setTimeout(() => {
+        const ts = window.__transferSnap;
+        const ta = findDeviceInput();
+        ts.composerGrown = composerFacts();
+        ts.composerScroll = ta
+          ? {
+              scrollHeight: ta.scrollHeight,
+              clientHeight: ta.clientHeight,
+              overflowY: getComputedStyle(ta).overflowY,
+            }
+          : null;
+        // 清空：别影响后面「选图发送」的用例（那个按钮的可点状态与文本无关，但保持现场干净）
+        if (ta) typeInto(ta, '');
+      }, 10330);
 
       setTimeout(() => {
         const m = findTransferModal();
-        const btn = m
-          ? Array.from(m.querySelectorAll('button')).find((b) => (b.textContent || '').trim() === '选择图片')
-          : null;
+        // v26.10.12-v3：原来的「选择图片」文字按钮改成输入框左下角的**图标按钮**
+        // （表情 / 图片上传 / 附件 三个之一），按 aria-label 找。
+        const btn = m ? m.querySelector('.znhd-chat-composer button[aria-label="图片上传"]') : null;
         window.__clickedPick = !!btn;
         if (btn) btn.click();
       }, 10400);
@@ -1310,7 +1397,9 @@
           entrySeen: false,
           panelFellBack: false,
           modalSeen: false,
-          tabsOk: false,
+          // v26.10.12-v3：技能 / 定时任务从「第三栏页签」提到「第二栏控件」，所以断言名从
+          // tabsOk 改成 panesOk 的语义是「点第二栏控件 → 第三栏换内容」
+          panesOk: false,
           skillsPanelSeen: false,
           skillsListed: false,
           tasksPanelSeen: false,
@@ -1391,10 +1480,11 @@
             }
             return;
           }
-          snap.tabsOk = clickBtnWithText(m, '技能');
+          // v26.10.12-v3：控件在**第二栏**（会话列表栏）顶部，点它第三栏才换成技能面板
+          snap.panesOk = clickBtnWithText(m, '技能');
           setTimeout(() => {
-            if (!snap.tabsOk) {
-              snap.stageReached = 'tab-skills-miss';
+            if (!snap.panesOk) {
+              snap.stageReached = 'pane-skills-miss';
               finish();
               return;
             }
@@ -1403,7 +1493,9 @@
             clickBtnWithText(m, '定时任务');
             setTimeout(() => {
               snap.tasksPanelSeen = (m.textContent || '').indexOf('crontab') >= 0;
-              clickBtnWithText(m, '对话');
+              // 回到对话：原来点第三栏的「对话」页签，现在把第一栏 Agents 再点一次
+              // （导航处理里会把第三栏复位成 chat，见 TransferAssistantModal 的 onNav）
+              clickTransferNav('Agents');
               setTimeout(() => stageSend(0), 300);
             }, 300);
           }, 300);
@@ -1470,6 +1562,17 @@
           snap.mdListItemCount = m ? m.querySelectorAll('.znhd-agent-messages ul li').length : 0;
           snap.mdInlineCodeCount = m ? m.querySelectorAll('.znhd-agent-messages p code').length : 0;
           snap.mdRawStars = t.indexOf('**') >= 0;
+          // v26.10.12-v3：Agent 对话必须与设备会话长成同一套 —— 判据就是它们都用了共用的
+          // ChatComposer 外壳（.znhd-chat-composer）与 ChatBubble（.znhd-chat-msg[data-side]）。
+          snap.sharedComposerSeen = !!(m && m.querySelector('.znhd-chat-composer textarea'));
+          snap.sharedComposerLabels = m
+            ? Array.from(m.querySelectorAll('.znhd-chat-composer button[aria-label]')).map((b) =>
+                  b.getAttribute('aria-label')
+              )
+            : [];
+          snap.avatarSeen = !!(
+            m && m.querySelector('.znhd-agent-messages .znhd-chat-msg[data-side="right"] .znhd-chat-avatar')
+          );
           snap.calls = (window.__catAgentCalls || []).slice();
           snap.replyTries = tries;
           if (snap.replySeen && snap.userMsgSeen) {
@@ -1554,7 +1657,7 @@
            官方 CAT.agent.conversation 只开放 create/get（没有 list/delete），所以「会话列表」
            是脚本自己记在 localStorage 的 scriptCat_AgentChats 里的。这条用例覆盖：
            ① 发完一轮后索引里就有这个对话（id + 用首条消息当标题）
-           ② 点「新的聊天」再发一条 → 第二个对话进索引，视图里看不到上一个对话的内容
+           ② 点「＋」（新建对话）再发一条 → 第二个对话进索引，视图里看不到上一个对话的内容
            ③ 在第二栏点回第一个对话 → 又看到它自己的历史（含对象形状 thinking 的回填），面板仍在 */
         const readChatStore = () => {
           try {
@@ -1572,8 +1675,9 @@
             return;
           }
           snap.chatsStored = readChatStore();
-          // v26.10.10-v13：「新建对话」在第二栏顶部，文案为「新的聊天」
-          snap.newChatClicked = clickBtnWithText(m, '新的聊天');
+          // v26.10.12-v3：「新建对话」不再是列表顶部的文字按钮，改成搜索框旁的「＋」
+          // （aria-label=新建对话；设备分组下同一个位置才是「配对设备」）
+          snap.newChatClicked = clickBtnWithText(m, '新建对话');
           if (!snap.newChatClicked && tries > 0) {
             setTimeout(() => stageNewChat(tries - 1), 100);
             return;
@@ -1641,14 +1745,14 @@
           const m = findAgentModal();
           const t = messagesText(m);
           snap.switchedToFirst = !!m;
-          // 第二栏此时应仍列出两个会话，且顶部有「新的聊天」按钮（v26.10.10-v13 的布局判据）
+          // 第二栏此时应仍列出两个会话，且搜索框旁有「＋ 新建对话」（v26.10.12-v3 的布局判据）
           const items = m ? Array.from(m.querySelectorAll('.znhd-agent-chat-item')) : [];
           snap.sidebarItemCount = items.length;
           snap.sidebarTitles = items.map((el) => (el.textContent || '').replace(/\s+/g, ' ').trim()).slice(0, 6);
           snap.sidebarNewChatSeen = !!(
             m &&
             m.querySelector('.znhd-agent-chat-list') &&
-            Array.from(m.querySelectorAll('button')).some((b) => (b.textContent || '').indexOf('新的聊天') >= 0)
+            m.querySelector('button[aria-label="新建对话"]')
           );
           snap.switchHistorySeen = t.indexOf('你好') >= 0;
           // 少了这条，用例可能只是「没换视图」也判过
@@ -1982,6 +2086,51 @@
             const s = window.__filesImgActions;
             return !!(s && s.btns === 3 && s.iconOnly && s.hidden && s.inside && s.bottomRight && s.hovered);
           })(),
+          // ===== 共用聊天面板（v26.10.12-v3：设备会话与 Agent 对话同一套气泡 / 输入框）=====
+          // 气泡：他人靠左浅底、我的靠右深底、头像在气泡外侧
+          chatBubbleOk: (() => {
+            const b = ts.bubbles || {};
+            return !!(
+              b.leftSeen &&
+              b.rightSeen &&
+              b.leftDirection === 'row' &&
+              b.rightDirection === 'row-reverse' &&
+              b.leftBg &&
+              b.rightBg &&
+              b.leftBg !== b.rightBg &&
+              b.bubbleCount >= 2 &&
+              b.avatars === b.bubbleCount
+            );
+          })(),
+          // 输入区：多行自增高（超上限后框内滚动）+ 左下角三个附加功能按钮 + 右下角圆形发送按钮 + 有边框
+          chatComposerOk: (() => {
+            const a = ts.composerEmpty || {};
+            const g = ts.composerGrown || {};
+            const sc = ts.composerScroll || {};
+            const need = ['表情', '图片上传', '附件'];
+            const has = (list) => need.every((l) => (list || []).indexOf(l) >= 0);
+            return !!(
+              a.shell &&
+              a.isTextarea &&
+              a.bordered &&
+              has(a.labels) &&
+              has(g.labels) &&
+              a.sendIconOnly &&
+              a.sendBottomRight &&
+              g.height > a.height &&
+              sc.scrollHeight > sc.clientHeight + 2
+            );
+          })(),
+          // Agent 侧必须是同一套组件（共用 ChatComposer 外壳 + 带 data-side 的气泡 + 头像）
+          chatPanelSharedOk: (() => {
+            const s = window.__agentSnap || {};
+            const need = ['表情', '图片上传', '附件'];
+            return !!(
+              s.sharedComposerSeen &&
+              need.every((l) => (s.sharedComposerLabels || []).indexOf(l) >= 0) &&
+              s.avatarSeen
+            );
+          })(),
 
           // 方案 B：antd 浮层（Modal/Drawer…）必须盖在面板之上
           // （面板宿主 999999 < zIndexPopupBase 1000000）
@@ -2192,14 +2341,15 @@
             window.__sniffSnap.excludedCount >= 4
           ),
           // ===== Agent 对话（v26.10.12-v1：入口改为传输助手第一栏 Agents）=====
-          // 链路：面板「传输助手」→ 第一栏 Agents → 右侧聊天区 → 三个页签 → 发消息 → 流式回答。
+          // 链路：面板「传输助手」→ 第一栏 Agents → 第二栏（技能 / 定时任务 / 对话列表）→ 第三栏内容。
           // ⚠️ 这些断言在 CAT.agent 桩下跑「可用态」；不可用态（无 CAT）由 buildAgentSnap 的
           //    panelFellBack/entrySeen 两条覆盖不了 —— 那条路径的判据是弹窗里的 Alert 文案，
           //    本 harness 不再单独造一份「无 CAT」环境（会与桩冲突）。
           agentEntryOk: !!(window.__agentSnap && window.__agentSnap.entrySeen && window.__agentSnap.modalSeen),
-          agentTabsOk: !!(
+          // v26.10.12-v3：技能 / 定时任务由第二栏控件切换（原来是第三栏页签）
+          agentPanesOk: !!(
             window.__agentSnap &&
-            window.__agentSnap.tabsOk &&
+            window.__agentSnap.panesOk &&
             window.__agentSnap.skillsPanelSeen &&
             window.__agentSnap.skillsListed &&
             window.__agentSnap.tasksPanelSeen
@@ -2309,6 +2459,8 @@
           report.previewIconCenteredOk &&
           report.previewSingleMaskOk &&
           report.filesImgActionsOk &&
+          report.chatBubbleOk &&
+          report.chatComposerOk &&
           report.phoneSendCompressedOk &&
           report.sniffEntryOk &&
           report.sniffScanOk &&
