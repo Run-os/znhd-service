@@ -184,9 +184,30 @@ async function main() {
   const url = `http://127.0.0.1:${server.address().port}/smoke.html`;
   let browser = null;
 
+  // ===== 产物头部结构门禁（v26.10.13-v2 加）=====
+  // 两件事必须在产物里成立：
+  //   ① `// ==UserScript==` 是**文件第一行** —— 脚本管理器的元数据块要从文件开头就能解析；
+  //   ② 元数据块之后带 `// @ts-nocheck` —— 让编辑器的 TS 服务跳过这个 3.7MB 单文件产物，
+  //      否则 VS Code 会对它跑 JS 诊断并误报 TS2451「无法重新声明块范围变量 Link」
+  //      （产物里只有一处真实声明 antd Typography.Link，另两处报错点落在 JSDoc 注释里的
+  //      单词 Link 上）。注入点在 config/webpack.config.base.js 的 getBanner。
+  const bundleText = fs.readFileSync(BUNDLE, 'utf8');
+  const metaEnd = bundleText.indexOf('// ==/UserScript==');
+  const headerOk = bundleText.startsWith('// ==UserScript==');
+  const tsNoCheckOk = metaEnd >= 0 && bundleText.slice(metaEnd, metaEnd + 4096).includes('// @ts-nocheck');
+  if (!headerOk || !tsNoCheckOk) {
+    console.error(
+      '❌ dist/znhd.user.js 头部结构不对 —— ' +
+        (headerOk ? '' : '第一行不是 `// ==UserScript==`（脚本管理器解析不了元数据块）；') +
+        (tsNoCheckOk ? '' : '元数据块后缺 `// @ts-nocheck`（编辑器会对产物误报 TS2451，见 getBanner 注释）；') +
+        '\n   请检查 config/webpack.config.base.js 的 getBanner 并重新 `npm run build`。'
+    );
+    process.exit(1);
+  }
+
   // 从构建产物的 ==UserScript== 头读真实 @version，注入页面作 GM_info.script.version。
   // 这样「面板渲染的版本号」是对产物的真实校验，而不是 harness 里的死值。
-  const scriptVersion = (fs.readFileSync(BUNDLE, 'utf8').match(/@version\s+(\S+)/) || [])[1] || '';
+  const scriptVersion = (bundleText.match(/@version\s+(\S+)/) || [])[1] || '';
 
   try {
     browser = await launchBrowser();

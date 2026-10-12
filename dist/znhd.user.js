@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name                征纳互动人数和在线监控v2
 // @namespace           https://scriptcat.org/
-// @version             26.10.13-v1
+// @version             26.10.13-v2
 // @description         实时监控征纳互动等待人数和在线状态，支持语音播报、自定义常用语
 // @author              runos
 // @license             MIT
@@ -32,6 +32,13 @@
 // 元信息说明（勿随意改动，均为有意为之）：
 //  - @match https://example.com/* ：本脚本面板/弹窗的调试宿主，本地验证用，发布版保留以便排查问题。
 //  - @connect * ：中继服务器地址由用户在设置面板自定义（域名不固定），必须通配，无法收窄为固定域名。
+// 下面这行给编辑器用：让 TypeScript 服务跳过本产物，不要删。
+// @ts-nocheck
+//   为什么需要（v26.10.13-v2）：本文件是 3.7MB 的打包单文件，VS Code 的 TS 服务会对它
+//   跑一遍 JS 诊断，并误报 TS2451「无法重新声明块范围变量 Link」—— 产物里只有一处真实的
+//   Link 声明（antd Typography.Link），另两处报错点实际落在 JSDoc 注释里的单词 Link 上，
+//   属于超大文件上的解析定位错位（node --check 对这个文件无任何语法报错）。
+//   产物的正确性由 npm run check（node --check）与 npm run verify 把关，不靠编辑器诊断。
 /******/ (() => { // webpackBootstrap
 /******/ 	var __webpack_modules__ = ({
 

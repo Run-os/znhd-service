@@ -17,6 +17,12 @@
 - ⚠️ **relay-server 里已无内联手机页 HTML**（v26.10.06-v3 起整页迁到 `web/` React 应用，`upload-page.js` 只读构建产物）——旧「手机页模板字符串吞反斜杠」陷阱不再适用。
 - **现行同类陷阱在 `src/lib/ui/uiReset.ts`**：整段 CSS 是模板字符串，**注释里出现反引号会直接截断模板**（tsc 报 TS1005，报错行还指向注释后面那行，v26.10.08-v8/v13 踩过两次）。规则：该文件写注释一律不用反引号，用标识符名或中文引号。
 
+## 构建产物头部约定（硬性）
+- `dist/znhd.user.js` 头部注释由 `config/webpack.config.base.js` 的 `getBanner` 生成，两条不能破：① `// ==UserScript==` 必须是**文件第一行**（脚本管理器要从文件开头解析元数据块）；② 元数据块之后带 `// @ts-nocheck`。
+  - 为什么要 ②（v26.10.13-v2）：产物是 3.7MB 单文件，VS Code 的 TS 服务会对它跑 JS 诊断并误报 `TS2451 无法重新声明块范围变量「Link」`——产物里唯一真实的 `const Link` 是 antd `Typography.Link`，另两处报错点落在 **JSDoc 注释**的单词 `Link` 上（超大文件解析定位错位；`node --check` 零报错）。不要去关全局 JS 校验、也不要改业务代码。
+  - `scripts/smoke/run.js` 有结构门禁守着这两条；改 banner 后必须 `npm run build` + `npm run verify`。
+  - ⚠️ `getBanner` 是模板字符串，其注释里**绝不能出现反引号**。
+
 ## CAT_UI 库关键事实（⚠️ 已整体废弃，v26.10.06-v9 起）
 - 面板早已不是 `CAT_UI.createPanel`：改为自建宿主 + **React 19 + Ant Design v6**（v26.10.5-v1 模块化 → v26.10.06-v9 换 UI 栈），`@require` 里已无脚本猫 UI 库。下面这些旧结论只对 v26.10.06-v9 之前的产物有效，排查老问题时才翻：
 - `window.CAT_UI` 名义导出 arco 几十组件，但运行时大量是 undefined（已实测 undefined：`TimePicker`/`Image`/`Switch`）。
