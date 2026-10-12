@@ -17,9 +17,23 @@ body {
     height: 100dvh; /* 移动端地址栏收放时以动态视口为准 */
 }
 
-/* ===== 整体骨架：头部 / 消息滚动区 / 底部输入区（flex 吸底，与脚本端第三栏同一契约）===== */
+/* ===== 整体骨架：头部 / 消息滚动区 / 底部输入区（flex 吸底，与脚本端第三栏同一契约）=====
+   ⚠️ v26.10.13-v3：shell 必须 **fixed 贴视口**，不能再 `height:100%`——
+   实测根因：`main.tsx` 里 antd `<AntApp>` 会渲染一个 `div.ant-app` 包裹层
+   （cssinjs 类名如 `css-oc1rc0`），它自身**没有高度**；`height:100%` 对
+   auto 高度的父级按 CSS 规范解析为 auto ⇒ 整页退化成**内容高度**，
+   输入区悬在视口中间、下面一大条黑洞（800px 视口下 shell 只有 497px，
+   即用户截图里「输入框不在页面最下方」）。
+   `position:fixed` + left/right/top/height 不依赖任何祖先的高度链，
+   天然钉在视口上；`--znhd-shell-top` / `--znhd-shell-h` 由 App.tsx 的
+   visualViewport 同步写入（虚拟键盘弹出、地址栏收放时改按**视觉视口**，
+   输入区始终贴最底；未写入时回退 100dvh，老 WebView 无 visualViewport 也正常）。 */
 .znhd-phone-chat {
-    height: 100%;
+    position: fixed;
+    left: 0;
+    right: 0;
+    top: var(--znhd-shell-top, 0px);
+    height: var(--znhd-shell-h, 100dvh);
     display: flex;
     flex-direction: column;
     background: #1e1e1e;
@@ -186,6 +200,125 @@ body {
     background: #262626;
     border-top: 1px solid rgba(255, 255, 255, 0.08);
     padding: 8px 10px calc(8px + env(safe-area-inset-bottom, 0px));
+}
+
+/* ===== 在线表情面板（v26.10.13-v3）：内嵌在输入区里、工具栏上方，微信式「点按钮展开、再点收起」=====
+   数据层 web/src/lib/emojiPack.ts（8 个合集清单直连 cdn.klyang.com，CORS 实测可用）；
+   点一张表情 = 直接把这张图发到电脑（与脚本端 TransferDeviceChat.sendEmojiNow 同语义，
+   跳过 canvas 压缩——表情本来就是 2–6KB 的 webp，原样发更小也更保真）。 */
+.znhd-emoji-panel {
+    margin-bottom: 6px;
+}
+
+.znhd-emoji-chips {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-bottom: 6px;
+}
+
+.znhd-emoji-chips-scroll {
+    flex: 1 1 auto;
+    display: flex;
+    gap: 4px;
+    overflow-x: auto;
+    padding-bottom: 2px;
+    scrollbar-width: none;
+}
+
+.znhd-emoji-chips-scroll::-webkit-scrollbar {
+    display: none;
+}
+
+.znhd-emoji-chip {
+    flex: 0 0 auto;
+    height: 22px;
+    padding: 0 8px;
+    border: none;
+    border-radius: 11px;
+    font-size: 12px;
+    cursor: pointer;
+    background: rgba(255, 255, 255, 0.06);
+    color: rgba(255, 255, 255, 0.75);
+}
+
+.znhd-emoji-chip[aria-pressed='true'] {
+    background: rgba(7, 193, 96, 0.18);
+    color: #07c160;
+}
+
+.znhd-emoji-refresh {
+    flex: 0 0 auto;
+    height: 22px;
+    padding: 0 4px;
+    border: none;
+    background: transparent;
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.45);
+    cursor: pointer;
+}
+
+.znhd-emoji-refresh:disabled {
+    cursor: default;
+    opacity: 0.5;
+}
+
+/* 8 列流体网格：格子用 aspect-ratio 1 自适应屏宽（390px 手机上每格约 42px） */
+.znhd-emoji-grid {
+    display: grid;
+    grid-template-columns: repeat(8, minmax(0, 1fr));
+    gap: 2px;
+    max-height: 200px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+}
+
+.znhd-emoji-item {
+    aspect-ratio: 1;
+    width: 100%;
+    padding: 0;
+    border: none;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.05);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+.znhd-emoji-item img {
+    max-width: 86%;
+    max-height: 86%;
+    display: block;
+}
+
+.znhd-emoji-item[aria-busy='true'] {
+    opacity: 0.45;
+}
+
+.znhd-emoji-tip {
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.35);
+    margin-top: 6px;
+}
+
+.znhd-emoji-state {
+    padding: 22px 0;
+    text-align: center;
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.45);
+}
+
+.znhd-emoji-retry {
+    margin-top: 8px;
+    height: 24px;
+    padding: 0 12px;
+    border: none;
+    border-radius: 4px;
+    font-size: 12px;
+    cursor: pointer;
+    background: rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.85);
 }
 
 .znhd-composer-tools {

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { App as AntApp, Badge, Button, Image, Input, Tag } from 'antd';
-import { PictureOutlined, PrinterOutlined, SendOutlined } from '@ant-design/icons';
+import { PictureOutlined, PrinterOutlined, SendOutlined, SmileOutlined } from '@ant-design/icons';
 import { useReactToPrint } from 'react-to-print';
 import {
     blobToBase64,
@@ -12,6 +12,9 @@ import {
     type RecvItem,
 } from './lib/relay';
 import { prepareImage } from './lib/image';
+import { useShellViewport } from './lib/viewport';
+import EmojiPanel from './EmojiPanel';
+import type { PickedEmoji } from './lib/emojiPack';
 // 预览相关的通用件与脚本端**共用同一份**（v26.10.08-v13 起，见仓库根 shared/preview/）
 import { appendPreviewActions } from '../../shared/preview/actions';
 import { getPreviewHost } from '../../shared/preview/host';
@@ -19,15 +22,21 @@ import { syncPreviewMask } from '../../shared/preview/mask';
 import { buildA4ImageNode, PRINT_PAGE_STYLE } from '../../shared/preview/print';
 
 /**
- * 手机端聊天窗（v26.10.12-v5 重构）：整页改为**与脚本端第三栏同一套聊天样式**（微信暗色）。
+ * 手机端聊天窗（v26.10.12-v5 重构；v26.10.13-v3 加表情按钮 + 输入区吸底修复）：整页改为
+ * **与脚本端第三栏同一套聊天样式**（微信暗色）。
  *
  * 与旧「上传到电脑」双卡片页的关系：功能全部保留 —— 选图/拍照（自动压缩）发到电脑、
- * 发文本到电脑、接收电脑发来的图片（可预览/打印/复制/下载）与文本 —— 只是呈现方式
- * 从「两张卡片 + 画廊弹窗」变成「消息气泡 + 底部输入区」：
+ * 发文本到电脑、**点在线表情直接发到电脑**（v26.10.13-v3）、接收电脑发来的图片
+ * （可预览/打印/复制/下载）与文本 —— 只是呈现方式从「两张卡片 + 画廊弹窗」变成
+ * 「消息气泡 + 底部输入区」：
  *   · 手机发出去的 = 右侧绿色气泡（微信「我方」配色 #07C160）；
  *   · 电脑发来的   = 左侧灰色气泡（微信「对方」配色 #2F2F2F）；
  *   · 发送状态（发送中 / 已发送 / 发送失败）显示在气泡下方的小字；
  *   · 间隔超 5 分钟的消息之间插一条居中时间分隔条（与脚本端第三栏同一规则）。
+ *
+ * ⚠️ 整页骨架是 `position:fixed` 贴视口（见 app.css `.znhd-phone-chat` 的注释：
+ * antd `<AntApp>` 的包裹层没有高度，`height:100%` 会断链），top/height 由
+ * `useShellViewport` 按 visualViewport 动态校正（键盘弹出时输入区跟着上移）。
  */
 
 /** 聊天记录内存上限：超出丢最旧（收件项是 base64 大字符串，无上限会持续吃内存；旧画廊是 27，聊天窗放宽到 100） */
@@ -79,8 +88,13 @@ export default function App() {
     const [text, setText] = useState('');
     const [sendingText, setSendingText] = useState(false);
     const [preparing, setPreparing] = useState(false);
+    /** 表情面板展开态（v26.10.13-v3：内嵌在输入区里、工具栏上方） */
+    const [emojiOpen, setEmojiOpen] = useState(false);
     const fileRef = useRef<HTMLInputElement>(null);
     const scrollRef = useRef<HTMLDivElement>(null);
+
+    // 整页骨架跟随视觉视口（键盘弹出 / 工具栏收放时输入区仍贴最底）
+    useShellViewport();
 
     const pushMsg = useCallback((m: ChatMsg) => {
         setMsgs((prev) => {
@@ -124,11 +138,11 @@ export default function App() {
         return startPhoneRelay({ deviceId, phoneId, onConn: setConn, onItem });
     }, [deviceId, phoneId, onItem]);
 
-    // 消息变化 → 滚动到底（聊天窗的基本行为）
+    // 消息变化 → 滚动到底（聊天窗的基本行为）；表情面板开合也重算（面板会挤占滚动区高度）
     useEffect(() => {
         const el = scrollRef.current;
         if (el) el.scrollTop = el.scrollHeight;
-    }, [msgs]);
+    }, [msgs, emojiOpen]);
 
     // ===== 选图（多选）→ 逐张压缩 → 变成「发送中」气泡 → 顺序发送 =====
     const onPick = async (files: FileList | null) => {
@@ -189,6 +203,37 @@ export default function App() {
         } else {
             patchMsg(id, { state: 'failed', err: (res && res.error) || '未知错误' });
             setText(t); // 发送失败把内容还回输入框，方便改完重发
+        }
+    };
+
+    // ===== 发送在线表情（v26.10.13-v3）：点一张直接发，与脚本端「点表情即发出」同语义 =====
+    // 面板交回的就是下好的 blob，这里 base64 后走与文本/图片同一条 postItem 链路。
+    // ⚠️ 不走 prepareImage 的 canvas 压缩：表情本来就是 2–6KB 的 webp，原样发更小也更保真
+    //   （PC 端会话气泡与「图片上传」收到的图一样直接渲染，webp 现代浏览器都认）。
+    const sendEmoji = async (emoji: PickedEmoji) => {
+        const mime = emoji.blob.type || 'image/webp';
+        const id = uid();
+        pushMsg({
+            id,
+            type: 'image',
+            side: 'out',
+            url: URL.createObjectURL(emoji.blob),
+            name: emoji.name,
+            mime,
+            state: 'sending',
+            ts: Date.now(),
+        });
+        try {
+            const b64 = await blobToBase64(emoji.blob);
+            const res = await postItem({ name: emoji.name, mime, data: b64 });
+            if (res && res.ok) {
+                patchMsg(id, { state: 'ok' });
+            } else {
+                patchMsg(id, { state: 'failed', err: (res && res.error) || '未知错误' });
+                message.error('表情 ' + emoji.name + ' 发送失败');
+            }
+        } catch (e: any) {
+            patchMsg(id, { state: 'failed', err: (e && e.message) || '读取图片失败' });
         }
     };
 
@@ -284,7 +329,7 @@ export default function App() {
             <div className="znhd-phone-scroll" ref={scrollRef}>
                 {msgs.length === 0 ? (
                     <div className="znhd-chat-empty">
-                        选择图片 / 拍照，或输入文本发送到电脑；电脑发来的内容也会出现在这里。
+                        选择图片 / 拍照 / 发表情，或输入文本发送到电脑；电脑发来的内容也会出现在这里。
                     </div>
                 ) : null}
                 {msgs.map((m, i) => {
@@ -338,9 +383,17 @@ export default function App() {
                 })}
             </div>
 
-            {/* 底部输入区：图标行（图片）+ 输入框 + 发送（与脚本端第三栏同一结构） */}
+            {/* 底部输入区：图标行（表情 / 图片）+ 输入框 + 发送（与脚本端第三栏同一结构） */}
             <div className="znhd-phone-composer">
+                {/* 在线表情面板：展开时内嵌在工具栏上方（微信式），再点表情按钮收起 */}
+                {emojiOpen ? <EmojiPanel onPick={(e) => void sendEmoji(e)} /> : null}
                 <div className="znhd-composer-tools">
+                    <Button
+                        type="text"
+                        aria-label="表情"
+                        onClick={() => setEmojiOpen((v) => !v)}
+                        icon={<SmileOutlined />}
+                    />
                     <Button
                         type="text"
                         aria-label="图片上传"
@@ -370,6 +423,8 @@ export default function App() {
                                 void sendText();
                             }
                         }}
+                        // 聚焦 = 用户要打字：收起表情面板，否则键盘 + 面板双双顶起
+                        onFocus={() => setEmojiOpen(false)}
                         placeholder="输入要发送到电脑的文本…（Enter 发送，Shift+Enter 换行）"
                         autoSize={{ minRows: 1, maxRows: 4 }}
                         style={{ background: '#1E1E1E', color: 'rgba(255,255,255,0.9)' }}
