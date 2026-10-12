@@ -37,7 +37,7 @@ const RESET_CSS = `
    margin: -2.75em auto 0，按 16px 字号约 -44px；antd 自身从不给 svg 设 margin）。
    这类规则特异性只有 (0,0,1)，用带容器前缀的选择器即可稳压。
    ⚠️ v26.10.08-v8：**.ant-image-preview 必须在内** —— 预览挂在自己建的宿主 div 下
-   （见 RecvHistoryModal 的 getPreviewHost），既不在面板宿主里、也不在 .ant-modal-root 里；
+   （见 shared/preview/host.ts 的 getPreviewHost），既不在面板宿主里、也不在 .ant-modal-root 里；
    漏了它就会让工具栏图标被顶到胶囊上方（实测偏移 25px），表现成「图标看不见、只剩一条灰色胶囊」。
    对照：弹窗关闭图标的同类偏移为 0（因为它被本规则覆盖）。 */
 #${PANEL_HOST_ID} svg, .ant-modal-root svg, .ant-drawer svg, .ant-picker-dropdown svg, .ant-message svg, .ant-notification svg, .ant-tooltip svg, .ant-dropdown svg, .ant-image-preview svg {
@@ -110,6 +110,17 @@ const RESET_CSS = `
 .ant-modal-root *::-webkit-scrollbar-corner,
 .ant-drawer *::-webkit-scrollbar-corner {
   background: transparent;
+}
+
+/* ===== 传输助手窗口：微信式贴边三栏（v26.10.12-v4）=====
+   antd v6 Modal 的容器默认带 16/24 内边距（contentPadding token，注意 v6 里类名是
+   .ant-modal-container，不是 v5 的 .ant-modal-content），且 Modal 的 styles 配置项
+   没有 content 键 —— 只能用 CSS 归零，否则三栏四周会留一圈底色不同的空隙、自绘关闭
+   按钮也贴不到窗口右上角。
+   ⚠️ 本段是模板字符串的一部分：注释里不能出现反引号。 */
+.znhd-transfer-modal.ant-modal .ant-modal-container {
+  padding: 0;
+  overflow: hidden;
 }
 `;
 

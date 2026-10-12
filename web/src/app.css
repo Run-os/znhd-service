@@ -1,350 +1,205 @@
-/* 手机聊天页全局样式：布局与气泡（antd 覆盖不到的部分），组件外观交给 antd 主题 */
+/* 手机端聊天窗（v26.10.12-v5）：整页对齐脚本端传输助手第三栏（微信暗色）。
+   色板与 src/lib/ui/transfer/wechatTheme.ts 同源：chat #1E1E1E / header·rail #2E2E2E /
+   composer #262626 / 他人气泡 #2F2F2F / 我方气泡 #07C160。 */
 :root {
-    color-scheme: light;
+    color-scheme: dark;
 }
 
 html,
 body {
     margin: 0;
     padding: 0;
-    background: #f5f5f5;
+    background: #1e1e1e;
 }
 
 #root {
-    height: 100%;
-}
-
-/* 整页 = 状态栏 + 消息流 + （待发条）+ 输入栏 的纵向 flex；100dvh 跟随手机地址栏伸缩 */
-.znhd-page {
     height: 100vh;
-    height: 100dvh;
-    max-width: 720px;
-    margin: 0 auto;
-    padding: 0 12px calc(8px + env(safe-area-inset-bottom, 0px));
-    box-sizing: border-box;
+    height: 100dvh; /* 移动端地址栏收放时以动态视口为准 */
+}
+
+/* ===== 整体骨架：头部 / 消息滚动区 / 底部输入区（flex 吸底，与脚本端第三栏同一契约）===== */
+.znhd-phone-chat {
+    height: 100%;
     display: flex;
     flex-direction: column;
+    background: #1e1e1e;
+    color: rgba(255, 255, 255, 0.9);
+    font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Segoe UI', sans-serif;
 }
 
-/* ===== 顶部状态栏 ===== */
-.znhd-topbar {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-    padding: 10px 2px 8px;
-    border-bottom: 1px solid #ececec;
-    background: #f5f5f5;
+.znhd-phone-header {
+    flex: 0 0 auto;
+    background: #2e2e2e;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    padding: 10px 14px 8px;
 }
 
-.znhd-top-status {
+.znhd-phone-header-row {
     display: flex;
     align-items: center;
     gap: 6px;
-    min-width: 0;
 }
 
-.znhd-top-text {
-    font-size: 14px;
+.znhd-phone-title {
+    font-size: 16px;
     font-weight: 600;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    color: #fff;
 }
 
-.znhd-top-right {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    flex: 0 0 auto;
-}
-
-.znhd-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: #d9d9d9;
-    flex: 0 0 auto;
-}
-
-.znhd-dot-on {
-    background: #52c41a;
-    box-shadow: 0 0 0 3px rgba(82, 196, 26, 0.15);
-}
-
-.znhd-dot-err {
-    background: #ff4d4f;
-    box-shadow: 0 0 0 3px rgba(255, 77, 79, 0.15);
-}
-
-/* ===== 消息流 ===== */
-.znhd-stream {
-    flex: 1;
-    min-height: 0;
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
-    padding: 12px 2px;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-}
-
-.znhd-empty {
-    margin: auto;
-    text-align: center;
-    color: #999;
-    font-size: 13px;
-    line-height: 1.7;
-    padding: 0 24px;
-}
-
-/* 一行消息：收件靠左、发件靠右 */
-.znhd-row {
-    display: flex;
-    align-items: flex-end;
-    gap: 6px;
-}
-
-.znhd-row-in {
-    justify-content: flex-start;
-}
-
-.znhd-row-out {
-    justify-content: flex-end;
-}
-
-/* 系统气泡（居中） */
-.znhd-sys {
-    align-self: center;
-    max-width: 82%;
-    text-align: center;
+.znhd-phone-conn {
     font-size: 12px;
-    color: #8c8c8c;
-    background: #ececec;
-    border-radius: 12px;
-    padding: 3px 12px;
-    word-break: break-word;
+    color: rgba(255, 255, 255, 0.55);
 }
 
-.znhd-sys-err {
-    color: #cf1322;
-    background: #fff1f0;
+.znhd-phone-sub {
+    margin-top: 4px;
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.35);
+    word-break: break-all;
 }
 
-/* 气泡本体 */
-.znhd-bubble {
-    max-width: 78%;
-    border-radius: 14px;
-    padding: 8px 12px;
-    font-size: 15px;
-    line-height: 1.6;
-    word-break: break-word;
+/* ===== 消息滚动区 ===== */
+.znhd-phone-scroll {
+    flex: 1 1 auto;
+    min-height: 0; /* 硬性：缺了它滚动区被内容撑高、overflowY 永不触发（脚本端同坑） */
+    overflow-y: auto;
+    scrollbar-gutter: stable;
+    padding: 12px 12px 8px;
     box-sizing: border-box;
 }
 
-.znhd-bubble-in {
-    background: #fff;
-    border: 1px solid #ececec;
-    border-top-left-radius: 4px;
+.znhd-chat-empty {
+    margin-top: 30vh;
+    text-align: center;
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.35);
+    padding: 0 24px;
+    line-height: 1.7;
 }
 
-.znhd-bubble-out {
-    background: #d9f5e3;
-    border-top-right-radius: 4px;
+/* 细美化滚动条（微信风格） */
+.znhd-phone-scroll::-webkit-scrollbar {
+    width: 6px;
 }
 
-.znhd-bubble-failed {
-    border: 1px solid #ffccc7;
+.znhd-phone-scroll::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.14);
+    border-radius: 3px;
 }
 
-/* 图片气泡放宽（图片本身要尽量大） */
-.znhd-bubble-img {
-    max-width: 82%;
-    padding: 6px;
+.znhd-phone-scroll::-webkit-scrollbar-track {
+    background: transparent;
 }
 
-.znhd-msg-text {
+/* 时间分隔条（间隔 >5 分钟一组共用一条，与脚本端第三栏同一规则） */
+.znhd-chat-time {
+    text-align: center;
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.35);
+    margin: 10px 0 6px;
+}
+
+/* ===== 气泡 ===== */
+.znhd-chat-msg {
+    display: flex;
+    gap: 8px;
+    margin: 6px 0;
+    align-items: flex-start;
+}
+
+/* 方向用 flex 方向表达（与脚本端 ChatBubble 同一设计：头像位置与贴边共用一份代码） */
+.znhd-chat-msg[data-side='out'] {
+    flex-direction: row-reverse;
+}
+
+.znhd-chat-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 600;
+    color: #fff;
+}
+
+.znhd-chat-bubble {
+    max-width: 100%;
+    padding: 8px 12px;
+    border-radius: 10px;
+    font-size: 15px;
+    line-height: 1.55;
+    word-break: break-word;
     white-space: pre-wrap;
 }
 
-.znhd-note {
-    margin-top: 4px;
-    font-size: 11px;
-    color: #8c8c8c;
-    text-align: right;
+/* 他人消息：灰底靠左；我方消息：微信绿靠右（圆角切角与微信一致） */
+.znhd-chat-msg[data-side='in'] .znhd-chat-bubble {
+    background: #2f2f2f;
+    color: rgba(255, 255, 255, 0.92);
+    border-top-left-radius: 4px;
 }
 
-.znhd-note-err {
-    color: #cf1322;
+.znhd-chat-msg[data-side='out'] .znhd-chat-bubble {
+    background: #07c160;
+    color: #fff;
+    border-top-right-radius: 4px;
 }
 
-/* 气泡内图片：单张大图、多张三列小格 */
-.znhd-img-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 78px);
-    gap: 4px;
+/* 图片气泡：去内边距（脚本端 bare 同款），图按自身尺寸完整显示 */
+.znhd-chat-bubble-img {
+    padding: 4px;
 }
 
-.znhd-img {
-    width: 100%;
-    aspect-ratio: 1 / 1;
-    object-fit: cover;
-    border-radius: 8px;
-    background: #f2f2f2;
+.znhd-chat-img {
     display: block;
+    max-width: min(260px, 62vw);
+    max-height: 360px;
+    width: auto;
+    height: auto;
+    border-radius: 8px;
 }
 
-/* 单张时给 antd Image 包一层后的 img 同样生效 */
-.znhd-bubble-img .znhd-img {
-    max-width: 100%;
-}
-
-/* 发出侧的裸 img（不走 antd Image） */
-.znhd-img-plain {
-    cursor: default;
-}
-
-/* 单张收到图放大些：:only-child 由网格/单张类名区分，这里对非网格内的图限宽 */
-.znhd-bubble-img > div:not(.znhd-img-grid) .znhd-img {
-    width: 180px;
-    max-width: 100%;
-}
-
-.znhd-img-count {
-    margin-top: 4px;
-    font-size: 11px;
-    color: #8c8c8c;
-    text-align: center;
-}
-
-/* 气泡旁的小图标按钮（复制/下载） */
-.znhd-mini-col {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    flex: 0 0 auto;
-}
-
-.znhd-mini-btn {
+/* 收到文本的「复制」小按钮 */
+.znhd-chat-copy {
+    display: block;
+    margin-top: 2px;
+    padding: 0;
     border: none;
     background: transparent;
-    color: #8c8c8c;
-    width: 28px;
-    height: 28px;
-    border-radius: 50%;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 15px;
-    cursor: pointer;
-    padding: 0;
-    flex: 0 0 auto;
-}
-
-.znhd-mini-btn:active {
-    background: rgba(0, 0, 0, 0.06);
-}
-
-.znhd-mini-btn:disabled {
-    color: #d9d9d9;
-    cursor: not-allowed;
-}
-
-/* ===== 待发条 ===== */
-.znhd-pending {
-    border-top: 1px solid #ececec;
-    background: #fafafa;
-    border-radius: 12px 12px 0 0;
-    padding: 8px;
-}
-
-.znhd-pending-strip {
-    display: flex;
-    gap: 8px;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    padding-bottom: 4px;
-}
-
-.znhd-pending-thumb {
-    position: relative;
-    flex: 0 0 auto;
-    width: 64px;
-    height: 64px;
-    border-radius: 8px;
-    overflow: hidden;
-    border: 1px solid #eee;
-    background: #fff;
-}
-
-.znhd-pending-thumb img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    display: block;
-}
-
-.znhd-pending-del {
-    position: absolute;
-    top: 1px;
-    right: 1px;
-    width: 18px;
-    height: 18px;
-    line-height: 16px;
-    border-radius: 50%;
-    border: none;
-    background: rgba(0, 0, 0, 0.55);
-    color: #fff;
-    font-size: 13px;
-    padding: 0;
+    color: rgba(255, 255, 255, 0.4);
+    font-size: 11px;
     cursor: pointer;
 }
 
-.znhd-pending-bar {
+.znhd-chat-meta {
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.35);
+    margin-top: 2px;
+}
+
+/* ===== 底部输入区 ===== */
+.znhd-phone-composer {
+    flex: 0 0 auto;
+    background: #262626;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 8px 10px calc(8px + env(safe-area-inset-bottom, 0px));
+}
+
+.znhd-composer-tools {
     display: flex;
-    align-items: center;
-    justify-content: space-between;
+    gap: 6px;
+    margin-bottom: 4px;
+}
+
+.znhd-composer-row {
+    display: flex;
     gap: 8px;
-    padding-top: 4px;
-}
-
-.znhd-pending-info {
-    font-size: 12px;
-    color: #8c8c8c;
-}
-
-/* ===== 底部输入栏 ===== */
-.znhd-inputbar {
-    display: flex;
     align-items: flex-end;
-    gap: 8px;
-    padding-top: 8px;
-    background: #f5f5f5;
 }
 
-.znhd-pick-btn {
-    border: 1px solid #d9d9d9;
-    background: #fff;
-    width: 38px;
-    height: 38px;
-    font-size: 18px;
-    color: #595959;
-    border-radius: 10px;
-}
-
-.znhd-input {
-    flex: 1;
-    min-width: 0;
-}
-
-/* 发送按钮：固定正方形，箭头居中 */
-.znhd-send-btn {
-    width: 38px;
-    height: 38px;
-    padding: 0;
-    border-radius: 10px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    flex: 0 0 auto;
+.znhd-composer-row .ant-input {
+    font-size: 15px;
 }

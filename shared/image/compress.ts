@@ -48,6 +48,20 @@ export function isGifLike(lowerMime: string, lowerName: string): boolean {
 }
 
 /**
+ * WebP 判定：默认同样**原样直传**（v26.10.13-v3 加）。两条理由与 SVG/GIF 同源：
+ *   · canvas 只能导出 JPEG ⇒ **透明通道丢失**（JPEG 无 alpha，实现里要铺白底），而聊天用的
+ *     表情图（桌面端在线表情包，cdn.klyang.com 的静态 webp）几乎都是透明背景，压完就会
+ *     变成深色气泡里的一块白方块；
+ *   · 动画 webp 与 GIF 一样只取首帧，会把动图压死。
+ * 何况 webp 本身压缩率就高（表情图单张仅 2–6KB），再压基本只剩「体积变大」的份 ——
+ * 即便不特判，`prepare.ts` 里「压不小就原样发」的兜底也会落到同一结果；
+ * 显式写出来是为了**语义明确**，别让后来人以为这是被兜底意外兜住的。
+ */
+export function isWebpLike(lowerMime: string, lowerName: string): boolean {
+    return lowerMime === 'image/webp' || /\.webp$/.test(lowerName);
+}
+
+/**
  * 解码：`createImageBitmap` 优先，失败回退 `<img>`（部分内核/格式上前者不可用或直接抛）。
  * 失败时 reject，由调用方决定回退策略。
  */

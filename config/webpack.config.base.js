@@ -29,7 +29,14 @@ const getBanner = (meta) => `// ==UserScript==\n${Object.entries(Object.assign({
 // ==/UserScript==
 /* eslint-disable */ /* spell-checker: disable */
 // @[ 本文件是构建产物，源码与构建方式见 GitHub 仓库 Run-os/znhd-service，请勿直接编辑 ]
-${bannerNotes.map((line) => `// ${line}`).join('\n')}`;
+${bannerNotes.map((line) => `// ${line}`).join('\n')}
+// 下面这行给编辑器用：让 TypeScript 服务跳过本产物，不要删。
+// @ts-nocheck
+//   为什么需要（v26.10.13-v2）：本文件是 3.7MB 的打包单文件，VS Code 的 TS 服务会对它
+//   跑一遍 JS 诊断，并误报 TS2451「无法重新声明块范围变量 Link」—— 产物里只有一处真实的
+//   Link 声明（antd Typography.Link），另两处报错点实际落在 JSDoc 注释里的单词 Link 上，
+//   属于超大文件上的解析定位错位（node --check 对这个文件无任何语法报错）。
+//   产物的正确性由 npm run check（node --check）与 npm run verify 把关，不靠编辑器诊断。`;
 
 const relativePath = (p) => path.join(process.cwd(), p);
 const src = relativePath('src');

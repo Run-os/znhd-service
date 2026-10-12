@@ -1,14 +1,12 @@
 import { useEffect, useRef, useState, type ReactElement } from 'react';
 import { Button, Card, Space, Switch, Tooltip, theme } from 'antd';
 import {
-    BotIcon,
     CloseIcon,
     CrosshairIcon,
-    DeviceIcon,
-    HistoryIcon,
     PhrasesIcon,
     SettingsIcon,
     SniffIcon,
+    TransferIcon,
     VolumeOffIcon,
     VolumeOnIcon,
     type IconProps,
@@ -18,8 +16,6 @@ import { addLog, addLogDebounced, setLogEntriesSink, clearLogs, type LogEntry } 
 import { loadPhrasesCache, savePhrasesCache, saveAllvalue, type Allvalue } from '@/lib/storage';
 import { runtime } from '@/lib/state';
 import { resolveGithubUrl, hoursToHHmm } from '@/lib/utils';
-import { getDeviceId, startPhoneReceive } from '@/lib/relay';
-import { MAX_GALLERY, MAX_TEXT, type GalleryImage, type GalleryText } from '@/lib/gallery';
 import { clearSpeechQueue } from '@/lib/speech';
 import { getMonitorState, resetWaitCountBaseline, setMonitorStateSink, type MonitorState } from '@/lib/monitor';
 import { notify } from '@/lib/ui/notify';
@@ -27,13 +23,11 @@ import { clampHostIntoView, usePanelDrag } from '@/lib/ui/panelHost';
 import { PANEL_WIDTH } from '@/lib/ui/panelIds';
 import SettingsModal from '@/lib/ui/SettingsModal';
 import PhrasesDrawer from '@/lib/ui/PhrasesDrawer';
-import PhoneModal from '@/lib/ui/PhoneModal';
 import LogModal from '@/lib/ui/LogModal';
 import ChangelogModal from '@/lib/ui/ChangelogModal';
-import RecvHistoryModal from '@/lib/ui/RecvHistoryModal';
-import RecvTextModal from '@/lib/ui/RecvTextModal';
 import SniffModal from '@/lib/ui/SniffModal';
-import AgentModal from '@/lib/ui/agent/AgentModal';
+import TransferAssistantModal from '@/lib/ui/transfer/TransferAssistantModal';
+import { initTransfer, onTransferAutoOpen, stopTransfer } from '@/lib/transfer/store';
 
 // 常用语请求序号（loadPhrasesData 用）：仅最新一次请求可落地结果，防慢的旧响应后到覆盖新数据
 let phrasesRequestSeq = 0;
@@ -78,9 +72,9 @@ function BrandIcon({ size = 26 }: { size?: number }) {
 }
 
 /**
- * 底部入口按钮的自适应样式（v26.10.07-v3；v26.10.10-v4 起由 4 个增至 5 个）。
+ * 底部入口按钮的自适应样式（v26.10.07-v3；v26.10.12-v1 起由 5 个减为 4 个）。
  *
- * 需求：5 个入口合并到一行，并随宽度自适应——
+ * 需求：4 个入口合并到一行，并随宽度自适应——
  *   · 宽度足够 → 图标 + 文字同排；
  *   · 宽度不足 → **只留图标**（当前面板就落在这一档，文案靠 hover Tooltip 给出）；
  *   · 两种状态下悬停都有 Tooltip（见下方 JSX）。
@@ -88,12 +82,12 @@ function BrandIcon({ size = 26 }: { size?: number }) {
  * 阈值为什么取 65px（实测：Chrome 154）：
  *   容器查询的尺寸按**内容盒**算 —— 按钮宽度减去内边距 4×2 与边框 1×2 才是被查询的尺寸。
  *   横排所需宽度 = 图标 15px + 间距 2px + 4 字 × 11px = **61px**
- *   （最长标签「历史记录」「图片嗅探」同为 4 字，故 v26.10.10-v4 新增入口后阈值不变），
+ *   （最长标签「传输助手」4 字，与旧版「历史记录」「图片嗅探」同长，故阈值不变），
  *   留 4px 余量故阈值取 65px；正好卡在边界会折成两行。
  *   ⚠️ v26.10.09-v7：图标由 emoji（约 18px 宽）换成内联 SVG（`size={15}` ⇒ 15px 宽）后，
  *      阈值由 **68px 复算为 65px**（窄 3px）。换图标尺寸/标签字数后必须回来重算。
  *   ⚠️ 该阈值与面板宽度无关，只取决于按钮自身宽度：
- *      · 当前面板 238px 时五列各 38px（内容盒 28px）→ 在阈值下，只显示图标；
+ *      · 当前面板 238px 时四列各约 49px（内容盒约 39px）→ 在阈值下，只显示图标；
  *      · 面板加宽到约 75px/按钮以上，文字会自动出现，**无需改代码**。
  *
  * ⚠️ 若日后改 PANEL_ACTIONS 的标签字数或图标字号，**必须回来重算这个阈值**，
@@ -121,7 +115,7 @@ const PANEL_CSS = `
 `;
 
 /**
- * 底部入口（v26.10.10-v4 起 5 个）：key + 图标组件 + 文案（文案同时用于 hover Tooltip；点击行为见组件内 actionHandlers）
+ * 底部入口（v26.10.12-v1 起 4 个）：key + 图标组件 + 文案（文案同时用于 hover Tooltip；点击行为见组件内 actionHandlers）
  *
  * ⚠️ v26.10.09-v7：图标由 emoji 字符（'⚙️' '💬' '🖼️' '💻'）改为**内联 SVG 组件**。
  * **原因**：Win7 没有 Segoe UI Emoji 字体（Win8.1 才引入），`💬 U+1F4AC` / `🖼 U+1F5BC` /
@@ -132,28 +126,17 @@ const PANEL_CSS = `
  *
  * `icon` 存组件类型而非实例，便于统一控制尺寸与颜色。
  *
- * ⚠️ v26.10.10-v10：**Agent 入口不放进这个数组**。用户要求「每行只需 5 个按钮、Agent 另起一行」，
- * 故数组严格保持 5 项 = 第一行的 5 个入口；Agent 由下面的 AGENT_ACTION 单独渲染在第二行，
- * 这样第一行的列宽（`repeat(5, minmax(0,1fr))`）与按钮位置和加 Agent 之前完全一致。
+ * v26.10.12-v1「设备互联 → 传输助手」重构后的入口变化：
+ *   · 删「历史记录」：收件历史已并入传输助手第三栏的「文件」分组；
+ *   · 「设备互联」改名「传输助手」：点它打开三栏传输助手窗口（收发、配对、Agent 全在里面）；
+ *   · 删「Agent 助手」按钮与旧独立窗口：Agent 改为传输助手第一栏 Agents 入口，直达右侧聊天区。
  */
 const PANEL_ACTIONS = [
     { key: 'settings', icon: SettingsIcon, label: '设置' },
     { key: 'phrases', icon: PhrasesIcon, label: '常用语' },
-    { key: 'history', icon: HistoryIcon, label: '历史记录' },
-    { key: 'phone', icon: DeviceIcon, label: '设备互联' },
+    { key: 'transfer', icon: TransferIcon, label: '传输助手' },
     { key: 'sniff', icon: SniffIcon, label: '图片嗅探' },
 ] as const;
-
-/**
- * Agent 入口（v26.10.10-v10，ScriptCat v1.4+ 专属）。
- *
- * 为什么不并进 PANEL_ACTIONS：面板宽 PANEL_WIDTH=238px，5 列每列约 38px（只够放图标）；
- * 6 列会挤到 ~31px，而「Agent」是**英文**、比中文标签更宽，复用 65px 容器查询阈值必然显示不全。
- * 用户拍板的版式是「第一行原 5 个 + 第二行只有 Agent 一个」，所以这里单独一行、宽度走 5 列同宽。
- *
- * ⚠️ 文案必须保持 "Agent"：scripts/smoke/znhd-smoke.html 的 panelAgentBtnOk 按 textContent === 'Agent' 定位。
- */
-const AGENT_ACTION = { key: 'agent', icon: BotIcon, label: 'Agent' } as const;
 
 /**
  * 主面板入口按钮（图标 + 文案）。第一行 5 个与第二行的 Agent 共用同一结构，
@@ -229,30 +212,18 @@ export default function MainPanel({ host }: MainPanelProps) {
     const [Allvalue, setAllvalue] = useState<Allvalue>(() => runtime.init);
     const [settingsOpen, setSettingsOpen] = useState(false);
     const [phrasesOpen, setPhrasesOpen] = useState(false);
-    const [phoneOpen, setPhoneOpen] = useState(false);
+    /** 传输助手三栏窗口（v26.10.12-v1：原「设备互联」+「历史记录」+「Agent 助手」三者的收敛） */
+    const [transferOpen, setTransferOpen] = useState(false);
     const [logOpen, setLogOpen] = useState(false);
     const [changelogOpen, setChangelogOpen] = useState(false);
     /** 图片嗅探（v26.10.10-v4）：扫描当前页面上的图片，筛选/预览/下载/打印 */
     const [sniffOpen, setSniffOpen] = useState(false);
-    /** Agent 助手（v26.10.10-v10）：对话 / 技能盘点 / 定时任务，需 ScriptCat v1.4+ 的 CAT.agent */
-    const [agentOpen, setAgentOpen] = useState(false);
-    // 收到图片/文本（v26.10.06-v13：由原来的命令式 DOM 弹窗改为 React state 驱动 antd 弹窗）
-    const [recvImages, setRecvImages] = useState<GalleryImage[]>([]);
-    /** 历史记录里的文本（可回看，上限 MAX_TEXT）；与下面「收到即自动弹出的最新一条」是两条独立路径 */
-    const [recvTexts, setRecvTexts] = useState<GalleryText[]>([]);
-    const [historyOpen, setHistoryOpen] = useState(false);
-    const [recvText, setRecvText] = useState<string | null>(null);
-    /** 已连接的手机（中继 /phone/status 返回；供【设备互联】显示数量与选择发送目标） */
-    const [phones, setPhones] = useState<{ id: string; lastSeen: number }[]>([]);
-    /** 上一次已知的手机 ID 集合，用于「连接/断开」日志去重（不要每 5s 重复刷屏） */
-    const knownPhonesRef = useRef<Set<string>>(new Set());
     const [logEntries, setLogEntries] = useState<LogEntry[]>([]);
     const [phrasesData, setPhrasesData] = useState<Record<string, string>>({});
     const [phrasesLoading, setPhrasesLoading] = useState(false);
     const [searchKeyword, setSearchKeyword] = useState('');
     const [collapsed, setCollapsed] = useState(false);
     const [mon, setMon] = useState<MonitorState>(() => getMonitorState());
-    const receiveStopRef = useRef<null | (() => void)>(null);
 
     const updateAllvalue = (newValue: Allvalue) => {
         setAllvalue(newValue);
@@ -376,138 +347,22 @@ export default function MainPanel({ host }: MainPanelProps) {
     }, [phrasesOpen]);
 
     /**
-     * 轮询「已连接的手机」（中继 /phone/status），并记录连接/断开日志（v26.10.06-v4）。
+     * 传输助手后台能力（v26.10.12-v1）：手机在线轮询 + 长轮询接收，全部收进
+     * `lib/transfer/store.ts`（模块级 store，窗口不开也照常收件）。
      *
-     * 为什么放在主面板而不是【设备互联】弹窗里：日志要**不依赖弹窗是否打开**都能记录。
-     * 手机身份由手机页自己生成（localStorage UUID），故这里拿到的是手机 ID 列表。
-     * ⚠️ 老版中继只回 `{online:true}`（没有 phones），此时退化成「1 台未知手机」，
-     *    界面与发送仍可用（走 'all' 广播），不会因为这个接口而整体不可用。
+     * 主面板只做两件事：
+     *   ① 挂载时 `initTransfer()`（幂等；中继地址来自传输助手自有设置）；
+     *   ② 注册「收到新内容且需要自动打开窗口」的回调 —— 把传输助手带到眼前。
+     * 卸载时 `stopTransfer()` 停掉全部定时器 / 长轮询（页面卸载链路由 beforeunload 兜底）。
      */
     useEffect(() => {
-        const s = (Allvalue.relayServer || '').trim().replace(/\/+$/, '');
-        if (!/^https?:\/\//i.test(s)) {
-            setPhones([]);
-            knownPhonesRef.current = new Set();
-            return;
-        }
-        const uuid = getDeviceId();
-        let alive = true;
-        const check = () => {
-            if (!alive) return;
-            try {
-                GM_xmlhttpRequest({
-                    method: 'GET',
-                    url: s + '/phone/status/' + encodeURIComponent(uuid),
-                    timeout: 8000,
-                    onload: (r) => {
-                        if (!alive) return;
-                        let j: { online?: boolean; phones?: { id?: string; lastSeen?: number }[] } | null = null;
-                        try {
-                            j = JSON.parse(r.responseText);
-                        } catch (e) {
-                            j = null;
-                        }
-                        // 兼容老中继：只有 online 没有 phones 时按「1 台未知手机」处理
-                        const list: { id: string; lastSeen: number }[] =
-                            j && Array.isArray(j.phones)
-                                ? j.phones.map((p) => ({
-                                      id: String(p.id || ''),
-                                      lastSeen: Number(p.lastSeen) || 0,
-                                  }))
-                                : j && j.online
-                                ? [{ id: '', lastSeen: 0 }]
-                                : [];
-                        setPhones((prev) => {
-                            // 只在「手机 ID 集合」真的变化时才更新 state：否则每 5s 轮询都会触发整面板重渲染。
-                            // ⚠️ 必须把**数量**也纳入比较：老中继回的是 `{online:true}` 没有 phones，
-                            //    兜底项 id 为空串，`[]` 与 `[{id:''}]` 的 id 拼接结果都是 '' ——
-                            //    只比 id 会把「0 台 → 1 台未知设备」误判为没变化，导致永远显示无在线设备。
-                            const a = prev.length + '|' + prev.map((p) => p.id).join(',');
-                            const b = list.length + '|' + list.map((p) => p.id).join(',');
-                            return a === b ? prev : list;
-                        });
-                        const nowIds = new Set<string>(list.map((p) => String(p.id || '')).filter((id) => id));
-                        knownPhonesRef.current.forEach((id) => {
-                            if (!nowIds.has(id)) addLog('[设备互联] 手机已断开：' + id, 'warning');
-                        });
-                        nowIds.forEach((id) => {
-                            if (!knownPhonesRef.current.has(id)) addLog('[设备互联] 手机已连接：' + id, 'success');
-                        });
-                        knownPhonesRef.current = nowIds;
-                    },
-                    onerror: () => {
-                        if (alive) setPhones([]);
-                    },
-                });
-            } catch (e) {
-                if (alive) setPhones([]);
-            }
-        };
-        check();
-        const t = setInterval(check, 5000);
+        initTransfer();
+        const offAutoOpen = onTransferAutoOpen(() => setTransferOpen(true));
         return () => {
-            alive = false;
-            clearInterval(t);
+            offAutoOpen();
+            stopTransfer();
         };
-    }, [Allvalue.relayServer]);
-
-    // 设备互联：地址填好后默认自动开始接收（门控 + 800ms 防抖，避免逐字输入时反复启停）
-    useEffect(() => {
-        const s = (Allvalue.relayServer || '').trim().replace(/\/+$/, '');
-        if (!s || !/^https?:\/\//i.test(s)) return;
-        const timer = setTimeout(() => {
-            if (receiveStopRef.current) return;
-            const stop = startPhoneReceive({
-                server: s,
-                uuid: getDeviceId(),
-                onConnected: () => addLog('[设备互联] 已自动开始接收（' + s + '）', 'info'),
-                // 入参类型由 startPhoneReceive 的 PhoneReceiveOptions 上下文推断，无需显式标注
-                onImage: (img) => {
-                    addLog(
-                        '[设备互联] 收到图片：' + (img.name || 'image') + '（' + (img.mime || 'image') + '）',
-                        'success'
-                    );
-                    // 入列 + 上限保护（超出的丢最旧并 revoke 其 objectURL，防内存累积），随后自动打开画廊
-                    setRecvImages((prev) => {
-                        const next = prev.concat({
-                            blob: img.blob,
-                            previewUrl: img.previewUrl,
-                            name: img.name,
-                            mime: img.mime,
-                        });
-                        while (next.length > MAX_GALLERY) {
-                            const dropped = next.shift();
-                            if (dropped) {
-                                try {
-                                    URL.revokeObjectURL(dropped.previewUrl);
-                                } catch (e) {
-                                    /* 忽略 */
-                                }
-                            }
-                        }
-                        return next;
-                    });
-                    setHistoryOpen(true);
-                },
-                onText: (txt) => {
-                    const t = (txt.text || '').replace(/\s+$/, '');
-                    addLog('[设备互联] 收到文本：' + (t.length > 40 ? t.slice(0, 40) + '…' : t), 'success');
-                    // ① 进「历史记录」的文本页签：最新一条排最前，超出 MAX_TEXT 丢最旧
-                    setRecvTexts((prev) => [{ text: t, ts: txt.ts || Date.now() }, ...prev].slice(0, MAX_TEXT));
-                    // ② 保持原有行为：仍自动弹出「最新一条」文本窗（同屏只留最新一条，antd Modal 单实例）
-                    setRecvText(txt.text || '');
-                },
-            });
-            receiveStopRef.current = stop;
-        }, 800);
-        return () => {
-            clearTimeout(timer);
-            if (receiveStopRef.current) {
-                receiveStopRef.current();
-                receiveStopRef.current = null;
-            }
-        };
-    }, [Allvalue.relayServer]);
+    }, []);
 
     const toggleVoice = (next: boolean) => {
         patchAllvalue({ voiceEnabled: next });
@@ -552,18 +407,12 @@ export default function MainPanel({ host }: MainPanelProps) {
         );
     }
 
-    // 入口的点击行为（key 与 PANEL_ACTIONS / AGENT_ACTION 对齐）
+    // 入口的点击行为（key 与 PANEL_ACTIONS 对齐）
     const actionHandlers: Record<string, () => void> = {
         settings: () => setSettingsOpen(true),
         phrases: () => setPhrasesOpen(true),
-        history: () => {
-            // v26.10.08-v10：**历史为空也要能打开**（按用户要求）—— 空态原本就由弹窗内的 Empty 呈现，
-            // 而且标题旁边新增了「发送测试图片」，空历史正是它最有用的场景。故不再提前拦截。
-            setHistoryOpen(true);
-        },
-        phone: () => setPhoneOpen(true),
+        transfer: () => setTransferOpen(true),
         sniff: () => setSniffOpen(true),
-        agent: () => setAgentOpen(true),
     };
 
     return (
@@ -691,8 +540,8 @@ export default function MainPanel({ host }: MainPanelProps) {
                 <Switch checked={!!voiceEnabled} onChange={toggleVoice} />
             </div>
 
-            {/* 第一行：原 5 个入口（v26.10.10-v10 起布局不变）。宽度自适应（不够时只留图标），悬停给出完整文案 */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', gap: 6 }}>
+            {/* 第一行：4 个入口（v26.10.12-v1 起）。宽度自适应（不够时只留图标），悬停给出完整文案 */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 6 }}>
                 {PANEL_ACTIONS.map((a) => (
                     <PanelEntryButton
                         key={a.key}
@@ -702,17 +551,6 @@ export default function MainPanel({ host }: MainPanelProps) {
                         onClick={actionHandlers[a.key]}
                     />
                 ))}
-            </div>
-
-            {/* 第二行：只有 Agent 一个（v26.10.10-v10，按用户要求）。
-                宽度取 1/5 与上一行列宽一致，Agent 按钮因此落在第一列正下方，视觉上与上行对齐。 */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', gap: 6, marginTop: 6 }}>
-                <PanelEntryButton
-                    icon={AGENT_ACTION.icon}
-                    label={AGENT_ACTION.label}
-                    color={token.colorPrimary}
-                    onClick={actionHandlers[AGENT_ACTION.key]}
-                />
             </div>
 
             {/* 底部：上次播报 + 查看日志 */}
@@ -758,11 +596,6 @@ export default function MainPanel({ host }: MainPanelProps) {
                     patchAllvalue({ commonPhrasesUrl: url });
                     addLogDebounced('commonPhrasesUrl', '常用语数据源已更新: ' + url, 'info');
                 }}
-                relayServer={Allvalue.relayServer || ''}
-                onChangeRelayServer={(url: string) => {
-                    patchAllvalue({ relayServer: url });
-                    addLogDebounced('relayServer', '中继服务器已更新: ' + (url || '（空）'), 'info');
-                }}
                 useCdn={Allvalue.useCdn}
                 onChangeUseCdn={(v: boolean) => {
                     patchAllvalue({ useCdn: !!v });
@@ -779,17 +612,6 @@ export default function MainPanel({ host }: MainPanelProps) {
                 setSearchKeyword={setSearchKeyword}
                 loadPhrasesData={loadPhrasesData}
                 commonPhrasesUrl={Allvalue.commonPhrasesUrl}
-            />
-
-            <PhoneModal
-                open={phoneOpen}
-                onClose={() => setPhoneOpen(false)}
-                relayServer={Allvalue.relayServer || ''}
-                phones={phones}
-                onChangeRelayServer={(url: string) => {
-                    patchAllvalue({ relayServer: url });
-                    addLogDebounced('relayServer', '中继服务器已更新: ' + (url || '（空）'), 'info');
-                }}
             />
 
             <LogModal
@@ -815,46 +637,8 @@ export default function MainPanel({ host }: MainPanelProps) {
                 onMinKBChange={(kb) => patchAllvalue({ sniffMinKB: kb })}
             />
 
-            <RecvHistoryModal
-                open={historyOpen}
-                onClose={() => setHistoryOpen(false)}
-                relayServer={Allvalue.relayServer || ''}
-                images={recvImages}
-                texts={recvTexts}
-                onRemoveImage={(idx) =>
-                    setRecvImages((prev) => {
-                        const next = prev.slice();
-                        const removed = next.splice(idx, 1)[0];
-                        if (removed) {
-                            try {
-                                URL.revokeObjectURL(removed.previewUrl);
-                            } catch (e) {
-                                /* 忽略 */
-                            }
-                        }
-                        return next;
-                    })
-                }
-                onClearImages={() =>
-                    setRecvImages((prev) => {
-                        prev.forEach((it) => {
-                            try {
-                                URL.revokeObjectURL(it.previewUrl);
-                            } catch (e) {
-                                /* 忽略 */
-                            }
-                        });
-                        return [];
-                    })
-                }
-                onRemoveText={(idx) => setRecvTexts((prev) => prev.filter((_, i) => i !== idx))}
-                onClearTexts={() => setRecvTexts([])}
-            />
-
-            <RecvTextModal text={recvText} onClose={() => setRecvText(null)} />
-
-            {/* Agent 助手（v26.10.10-v10）：ScriptCat v1.4+ 专有；不可用时弹窗内自会显示原因，故入口不置灰 */}
-            <AgentModal open={agentOpen} onClose={() => setAgentOpen(false)} />
+            {/* 传输助手（v26.10.12-v1）：三栏窗口，内含设备收发 / 配对 / 文件 / Agents 对话 */}
+            <TransferAssistantModal open={transferOpen} onClose={() => setTransferOpen(false)} />
         </Card>
     );
 }

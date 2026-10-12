@@ -20,11 +20,22 @@ import { theme } from 'antd';
 
 interface MarkdownBodyProps {
     content: string;
+    /**
+     * 反色渲染（v26.10.12-v3）：用在**主色实心的用户气泡**里。
+     *
+     * 聊天气泡改版后「我发的消息」是深色底白字，而 Markdown 里的代码块底色
+     * （`colorFillTertiary`）与链接色（`colorPrimary`）都是为白底设计的 —— 落在主色底上
+     * 就是「蓝字压蓝底」，链接直接看不见。反色档只换这几个颜色，不改任何结构。
+     */
+    inverted?: boolean;
 }
 
-export default function MarkdownBody({ content }: MarkdownBodyProps) {
+export default function MarkdownBody({ content, inverted }: MarkdownBodyProps) {
     const { token } = theme.useToken();
-    const codeBg = token.colorFillTertiary;
+    const codeBg = inverted ? 'rgba(255, 255, 255, 0.22)' : token.colorFillTertiary;
+    const linkColor = inverted ? '#fff' : token.colorPrimary;
+    const line = inverted ? 'rgba(255, 255, 255, 0.35)' : token.colorBorderSecondary;
+    const quoteLine = inverted ? 'rgba(255, 255, 255, 0.45)' : token.colorBorder;
 
     return (
         <div
@@ -55,7 +66,11 @@ export default function MarkdownBody({ content }: MarkdownBodyProps) {
                             href={href}
                             target="_blank"
                             rel="noreferrer"
-                            style={{ color: token.colorPrimary, wordBreak: 'break-all' }}>
+                            style={{
+                                color: linkColor,
+                                wordBreak: 'break-all',
+                                textDecoration: inverted ? 'underline' : 'none',
+                            }}>
                             {children}
                         </a>
                     ),
@@ -98,7 +113,7 @@ export default function MarkdownBody({ content }: MarkdownBodyProps) {
                             style={{
                                 margin: 0,
                                 paddingLeft: 10,
-                                borderLeft: '3px solid ' + token.colorBorder,
+                                borderLeft: '3px solid ' + quoteLine,
                                 color: token.colorTextSecondary,
                             }}>
                             {children}
@@ -114,7 +129,7 @@ export default function MarkdownBody({ content }: MarkdownBodyProps) {
                         <th
                             style={{
                                 padding: '3px 8px',
-                                border: '1px solid ' + token.colorBorderSecondary,
+                                border: '1px solid ' + line,
                                 background: codeBg,
                                 textAlign: 'left',
                                 whiteSpace: 'nowrap',
@@ -126,7 +141,7 @@ export default function MarkdownBody({ content }: MarkdownBodyProps) {
                         <td
                             style={{
                                 padding: '3px 8px',
-                                border: '1px solid ' + token.colorBorderSecondary,
+                                border: '1px solid ' + line,
                                 textAlign: 'left',
                             }}>
                             {children}
@@ -137,7 +152,7 @@ export default function MarkdownBody({ content }: MarkdownBodyProps) {
                             style={{
                                 margin: '2px 0',
                                 border: 0,
-                                borderTop: '1px solid ' + token.colorBorderSecondary,
+                                borderTop: '1px solid ' + line,
                             }}
                         />
                     ),

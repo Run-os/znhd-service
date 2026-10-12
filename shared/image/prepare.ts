@@ -5,6 +5,8 @@
  *   · SVG 原样直传（canvas 无法可靠光栅化，会丢矢量）；
  *   · **GIF 也原样直传**（canvas 只取首帧，会把动图压成静态图）—— 原先只有脚本端这么做，
  *     手机端会压成静态图；这次统一为「跳过」，顺手修掉两端行为不一致；
+ *   · **WebP 也原样直传**（v26.10.13-v3 加，理由同 GIF，另加「JPEG 无透明通道」一条 ——
+ *     桌面端在线表情包是透明背景的 webp，压完会在深色气泡里变成白方块）；
  *   · HEIC/HEIF 先转 JPEG 再走同一条压缩链（**转码器由调用方注入**：两端取库方式不同）；
  *     ⚠️ HEIC 的「转码」本身就是目的（既压体积，也修掉安卓端不显示 HEIC 的兼容问题），
  *     故即使 JPEG 没比原始 HEIC 小也照样发 JPEG；其它格式仍遵循「压不小就不压」；
@@ -17,6 +19,7 @@ import {
     isGifLike,
     isHeicLike,
     isSvgLike,
+    isWebpLike,
     resizeToJpeg,
 } from './compress';
 
@@ -40,6 +43,8 @@ export interface PrepareTransferOptions {
     skipSvg?: boolean;
     /** GIF 是否原样直传（默认 true，见文件头说明） */
     skipGif?: boolean;
+    /** WebP 是否原样直传（默认 true，见文件头说明） */
+    skipWebp?: boolean;
     /**
      * HEIC/HEIF 转码器（**必须注入**）：拿到 Blob、返回 JPEG Blob；不可用或失败时抛错即可，
      * 调用方会兜成「原图直传」。脚本端传 `makeHeicConverter(全局 heic2any)`，
@@ -64,6 +69,7 @@ export async function prepareForTransfer(
 
     if ((opt.skipSvg === undefined ? true : opt.skipSvg) && isSvgLike(lowerMime, lowerName)) return original;
     if ((opt.skipGif === undefined ? true : opt.skipGif) && isGifLike(lowerMime, lowerName)) return original;
+    if ((opt.skipWebp === undefined ? true : opt.skipWebp) && isWebpLike(lowerMime, lowerName)) return original;
 
     const heic = isHeicLike(lowerMime, lowerName);
     let source: Blob = file;

@@ -75,6 +75,23 @@ export function SettingsIcon(p: IconProps) {
     );
 }
 
+/**
+ * 传输助手（Lucide `arrow-left-right`：双向箭头，v26.10.12-v1）。
+ *
+ * 「设备互联」重构为「传输助手」后的主面板入口图标：左右互传的语义比原来的
+ * 「显示器」（monitor）更贴合手机 ↔ 电脑双向收发的新定位。
+ */
+export function TransferIcon(p: IconProps) {
+    return (
+        <SvgIcon {...p}>
+            <path d="M8 3 4 7l4 4" />
+            <path d="M4 7h16" />
+            <path d="m16 21 4-4-4-4" />
+            <path d="M20 17H4" />
+        </SvgIcon>
+    );
+}
+
 /** 常用语（Lucide `message-square`：对话气泡） */
 export function PhrasesIcon(p: IconProps) {
     return (
@@ -286,6 +303,170 @@ export function DownloadIcon(p: IconProps) {
             <path d="M12 15V3" />
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
             <path d="m7 10 5 5 5-5" />
+        </SvgIcon>
+    );
+}
+
+/* ============================================================ 传输助手三栏界面（v26.10.12-v1） */
+
+/** 搜索（Lucide `search`）：会话列表栏顶部的搜索框图标 */
+export function SearchIcon(p: IconProps) {
+    return (
+        <SvgIcon {...p}>
+            <circle cx="11" cy="11" r="8" />
+            <path d="m21 21-4.3-4.3" />
+        </SvgIcon>
+    );
+}
+
+/** 文件（Lucide `folder`）：第一栏「文件」分组入口 */
+export function FilesIcon(p: IconProps) {
+    return (
+        <SvgIcon {...p}>
+            <path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z" />
+        </SvgIcon>
+    );
+}
+
+/** 浅色外观（Lucide `sun`）：底部「外观设置」入口（深色模式下换成 MoonIcon） */
+export function SunIcon(p: IconProps) {
+    return (
+        <SvgIcon {...p}>
+            <circle cx="12" cy="12" r="4" />
+            <path d="M12 2v2" />
+            <path d="M12 20v2" />
+            <path d="m4.93 4.93 1.41 1.41" />
+            <path d="m17.66 17.66 1.41 1.41" />
+            <path d="M2 12h2" />
+            <path d="M20 12h2" />
+            <path d="m6.34 17.66-1.41 1.41" />
+            <path d="m19.07 4.93-1.41 1.41" />
+        </SvgIcon>
+    );
+}
+
+/** 深色外观（Lucide `moon`）：底部「外观设置」在深色模式下的图标 */
+export function MoonIcon(p: IconProps) {
+    return (
+        <SvgIcon {...p}>
+            <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" />
+        </SvgIcon>
+    );
+}
+
+/** 企业信息（Lucide `info`）：第一栏底部入口 */
+export function InfoIcon(p: IconProps) {
+    return (
+        <SvgIcon {...p}>
+            <circle cx="12" cy="12" r="10" />
+            <path d="M12 16v-4" />
+            <path d="M12 8h.01" />
+        </SvgIcon>
+    );
+}
+
+/** 折叠 / 展开第一栏（Lucide `panel-left`：左竖线面板） */
+export function PanelLeftIcon(p: IconProps) {
+    return (
+        <SvgIcon {...p}>
+            <rect width="18" height="18" x="3" y="3" rx="2" />
+            <path d="M9 3v18" />
+        </SvgIcon>
+    );
+}
+
+/* ============================================================ 聊天面板（v26.10.12-v3） */
+
+/**
+ * 用户头像（Lucide `user`：头 + 肩）。
+ *
+ * 聊天气泡右侧「我」的头像。设备会话与 Agent 对话共用同一套气泡布局，
+ * 所以这个图标两个面板都会用到。
+ */
+export function UserIcon(p: IconProps) {
+    return (
+        <SvgIcon {...p}>
+            <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
+            <circle cx="12" cy="7" r="4" />
+        </SvgIcon>
+    );
+}
+
+/**
+ * 表情（Lucide `smile`）：输入框左下角的附加功能按钮之一。
+ *
+ * ⚠️ 这里说的是**按钮图标**（矢量，Win7 安全）。点开后的表情面板 v26.10.13-v3 起换成
+ * **在线图片表情包**（`EmojiPackPanel` + `lib/transfer/emojiPack.ts`）——图片不依赖字体，
+ * 所以彻底跳出了「Win7 没有彩色 emoji 字体」的限制（旧版那张 BMP 字符表现在已删）。
+ */
+export function SmileIcon(p: IconProps) {
+    return (
+        <SvgIcon {...p}>
+            <circle cx="12" cy="12" r="10" />
+            <path d="M8 14s1.5 2 4 2 4-2 4-2" />
+            <line x1="9" x2="9.01" y1="9" y2="9" />
+            <line x1="15" x2="15.01" y1="9" y2="9" />
+        </SvgIcon>
+    );
+}
+
+/**
+ * 图片上传（Lucide `image`）：输入框左下角「上传图片」按钮。
+ *
+ * 与 `HistoryIcon` 同源（都是 Lucide `image`）—— 语义不同（一个是面板入口、一个是发送动作），
+ * 刻意不合并：合并后改其中一个形状会连带影响另一个入口的外观。
+ */
+export function ImageIcon(p: IconProps) {
+    return (
+        <SvgIcon {...p}>
+            <rect width="18" height="18" x="3" y="3" rx="2" ry="2" />
+            <circle cx="9" cy="9" r="2" />
+            <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" />
+        </SvgIcon>
+    );
+}
+
+/** 附件（Lucide `paperclip`）：输入框左下角的回形针（当前两端都不支持，按钮置灰） */
+export function PaperclipIcon(p: IconProps) {
+    return (
+        <SvgIcon {...p}>
+            <path d="m16 6-8.414 8.586a2 2 0 0 0 2.829 2.829l8.414-8.586a4 4 0 1 0-5.657-5.657l-8.379 8.551a6 6 0 1 0 8.485 8.485l8.379-8.551" />
+        </SvgIcon>
+    );
+}
+
+/**
+ * 技能（Lucide `layout-grid`：2×2 圆角方块）：第二栏 Agents 分组顶部的「技能」控件。
+ *
+ * 取「一格格工具」的语义。没用 Lucide 的 `puzzle` ——那个 path 更长、且随 Lucide 版本改过，
+ * 这里的四宫格是自己写得出来的确定几何，不会因为库升级而变样。
+ */
+export function GridIcon(p: IconProps) {
+    return (
+        <SvgIcon {...p}>
+            <rect width="7" height="7" x="3" y="3" rx="1" />
+            <rect width="7" height="7" x="14" y="3" rx="1" />
+            <rect width="7" height="7" x="14" y="14" rx="1" />
+            <rect width="7" height="7" x="3" y="14" rx="1" />
+        </SvgIcon>
+    );
+}
+
+/** 定时任务（Lucide `clock`：表盘 + 指针）：第二栏 Agents 分组顶部的「定时任务」控件 */
+export function ClockIcon(p: IconProps) {
+    return (
+        <SvgIcon {...p}>
+            <circle cx="12" cy="12" r="10" />
+            <path d="M12 6v6l4 2" />
+        </SvgIcon>
+    );
+}
+
+/** 对话（Lucide `message-circle`：圆角气泡）：第一栏的「对话」导航图标（原「设备」，v26.10.12-v4） */
+export function MessageIcon(p: IconProps) {
+    return (
+        <SvgIcon {...p}>
+            <path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z" />
         </SvgIcon>
     );
 }

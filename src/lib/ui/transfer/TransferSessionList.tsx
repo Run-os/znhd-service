@@ -1,0 +1,325 @@
+import type { ReactNode } from 'react';
+import { Button, Input, Tooltip } from 'antd';
+import { theme } from 'antd';
+import { ClockIcon, GridIcon, PlusIcon, SearchIcon, SmartphoneIcon } from '@/lib/ui/icons';
+import { WECHAT } from '@/lib/ui/transfer/wechatTheme';
+import AgentConversationList from '@/lib/ui/transfer/AgentConversationList';
+import type { AgentChatController } from '@/lib/ui/transfer/useAgentChat';
+import type { AgentPane, TransferMessage } from '@/lib/transfer/types';
+import type { TransferNav } from '@/lib/ui/transfer/TransferNavRail';
+
+/** 第二栏的一条设备会话（由父组件从 store 汇总） */
+export interface DeviceEntry {
+    key: string;
+    /** 展示名（短 ID 或「手机」） */
+    label: string;
+    isAggregate: boolean;
+    online: boolean;
+    unread: number;
+    lastTs: number;
+    lastMsg?: TransferMessage;
+    hasMessages: boolean;
+}
+
+/** 会话列表里对最后一条消息的预览文案 */
+function previewText(msg?: TransferMessage): string {
+    if (!msg) return '';
+    if (msg.type === 'image') return '[图片]';
+    return (msg.text || '').replace(/\s+/g, ' ').slice(0, 40);
+}
+
+/** 列表里的时间（今天 HH:mm，昨天加「昨天」，否则 MM-DD） */
+function listTime(ts: number): string {
+    if (!ts) return '';
+    const d = new Date(ts);
+    const now = new Date();
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const dayOf = (x: Date) => x.getFullYear() + '-' + x.getMonth() + '-' + x.getDate();
+    const hm = pad(d.getHours()) + ':' + pad(d.getMinutes());
+    if (dayOf(d) === dayOf(now)) return hm;
+    const yesterday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
+    if (dayOf(d) === dayOf(yesterday)) return '昨天 ' + hm;
+    return pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+}
+
+/**
+ * 第二栏（中间会话列表栏，v26.10.12-v1；v26.10.12-v4 微信化）。
+ *
+ * 结构：顶部**搜索框 +「＋」按钮**（仅对话 / Agents 分组有；文件分组没有 —— 用户要求
+ * 文件下不放任何新建入口），下方按第一栏当前分组显示会话 / 对话列表。
+ * 「＋」的含义随分组变：对话分组 →「配对设备」；Agents 分组 →「新建对话」。
+ *
+ * 会话条目为微信结构：左头像 / 中名称 + 预览摘要 / 右时间 + 未读红点角标；
+ * 选中条目用比栏底浅一档的底色高亮（#383838，微信暗色同款），不再用主色底。
+ */
+export default function TransferSessionList({
+    nav,
+    search,
+    onSearch,
+    onPair,
+    deviceEntries,
+    activeSessionKey,
+    onSelectSession,
+    agent,
+    agentPane,
+    onAgentPane,
+}: {
+    nav: TransferNav;
+    search: string;
+    onSearch: (value: string) => void;
+    onPair: () => void;
+    deviceEntries: DeviceEntry[];
+    activeSessionKey: string;
+    onSelectSession: (key: string) => void;
+    /** Agents 分组时的会话控制器（对话列表 + 新建 / 切换 / 删除） */
+    agent?: AgentChatController;
+    /** Agents 分组下第三栏正在显示哪一块（chat / skills / tasks） */
+    agentPane?: AgentPane;
+    onAgentPane?: (pane: AgentPane) => void;
+}) {
+    const { token } = theme.useToken();
+    const isAgents = nav === 'agents';
+    const isFiles = nav === 'files';
+
+    const keyword = search.trim().toLowerCase();
+    const filtered = keyword
+        ? deviceEntries.filter(
+              (e) => e.label.toLowerCase().includes(keyword) || previewText(e.lastMsg).toLowerCase().includes(keyword)
+          )
+        : deviceEntries;
+
+    /** Agents 分组下的「技能 / 定时任务」控件 */
+    const agentControl = (key: AgentPane, label: string, icon: ReactNode) => {
+        const active = agentPane === key;
+        return (
+            <div key={key}>
+                <Button
+                    type="text"
+                    block
+                    aria-label={label}
+                    onClick={() => onAgentPane && onAgentPane(key)}
+                    style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 8,
+                        height: 30,
+                        justifyContent: 'flex-start',
+                        padding: '0 8px',
+                        borderRadius: 6,
+                        fontSize: 13,
+                        color: active ? token.colorPrimary : 'rgba(255,255,255,0.75)',
+                        fontWeight: active ? 600 : 400,
+                    }}>
+                    {icon}
+                    <span style={{ minWidth: 0, overflow: 'hidden', whiteSpace: 'nowrap' }}>{label}</span>
+                </Button>
+            </div>
+        );
+    };
+
+    return (
+        <div
+            className="znhd-transfer-sessions"
+            style={{
+                flex: '0 0 auto',
+                width: 250,
+                display: 'flex',
+                flexDirection: 'column',
+                background: WECHAT.list,
+                minWidth: 0,
+            }}>
+            {/* 搜索框 +「＋」（对话=配对 / Agents=新建对话；文件分组没有「＋」） */}
+            <div style={{ display: 'flex', gap: 6, padding: '10px 10px 8px' }}>
+                <Input
+                    allowClear
+                    prefix={<SearchIcon size={14} color="rgba(255,255,255,0.35)" />}
+                    placeholder={isAgents ? '搜索对话' : '搜索'}
+                    value={search}
+                    onChange={(e) => onSearch(e.target.value)}
+                    style={{
+                        background: WECHAT.chat,
+                        borderRadius: 6,
+                    }}
+                />
+                {isFiles ? null : isAgents ? (
+                    <Tooltip title="新建对话（清空当前视图，发出下一条消息时另起一个对话）">
+                        <Button
+                            type="text"
+                            aria-label="新建对话"
+                            onClick={() => {
+                                if (onAgentPane) onAgentPane('chat');
+                                if (agent) agent.newChat();
+                            }}
+                            style={{
+                                width: 28,
+                                padding: 0,
+                                color: 'rgba(255,255,255,0.65)',
+                            }}>
+                            <PlusIcon size={16} />
+                        </Button>
+                    </Tooltip>
+                ) : (
+                    <Tooltip title="配对设备（手机扫码 / 打开链接即完成配对）">
+                        <Button
+                            type="text"
+                            aria-label="配对设备"
+                            onClick={onPair}
+                            style={{
+                                width: 28,
+                                padding: 0,
+                                color: 'rgba(255,255,255,0.65)',
+                            }}>
+                            <PlusIcon size={16} />
+                        </Button>
+                    </Tooltip>
+                )}
+            </div>
+
+            {/* Agents 分组：技能 / 定时任务（点在第三栏显示） */}
+            {isAgents ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 2, padding: '0 8px 6px' }}>
+                    {agentControl('skills', '技能', <GridIcon size={15} color="currentColor" />)}
+                    {agentControl('tasks', '定时任务', <ClockIcon size={15} color="currentColor" />)}
+                </div>
+            ) : null}
+
+            {/* 列表 */}
+            <div style={{ flex: '1 1 auto', minHeight: 0, overflowY: 'auto', padding: '0 6px 10px' }}>
+                {isAgents && agent ? (
+                    <AgentConversationList
+                        chats={agent.chats}
+                        activeChatId={agent.activeChatId}
+                        onSwitch={(id) => {
+                            // 从技能 / 定时任务页切回对话（点会话卡片就是「我要看这个对话」）
+                            if (onAgentPane) onAgentPane('chat');
+                            void agent.switchChat(id);
+                        }}
+                        onDelete={(id) => void agent.deleteChat(id)}
+                    />
+                ) : isAgents ? null : filtered.length ? (
+                    filtered.map((e) => {
+                        const active = e.key === activeSessionKey;
+                        // v26.10.12-v5：文件分组下的条目**只作展示**（用户要求点设备 ID 不跳去会话窗口）
+                        const clickable = !isFiles;
+                        return (
+                            <div
+                                key={e.key}
+                                className="znhd-transfer-session-item"
+                                title={e.label}
+                                onClick={clickable ? () => onSelectSession(e.key) : undefined}
+                                style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 10,
+                                    padding: '9px 10px',
+                                    borderRadius: 6,
+                                    cursor: clickable ? 'pointer' : 'default',
+                                    // 选中 = 比栏底浅一档（微信暗色同款）；悬停 = 中间档
+                                    background: active ? WECHAT.selected : 'transparent',
+                                }}
+                                onMouseEnter={(ev) => {
+                                    if (clickable && !active) ev.currentTarget.style.background = WECHAT.hover;
+                                }}
+                                onMouseLeave={(ev) => {
+                                    if (clickable && !active) ev.currentTarget.style.background = 'transparent';
+                                }}>
+                                {/* 设备头像位：彩色圆 + 首字符（聚合会话用手机图标占位） */}
+                                <span
+                                    style={{
+                                        width: 36,
+                                        height: 36,
+                                        borderRadius: 6,
+                                        flex: '0 0 auto',
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        background: e.isAggregate ? WECHAT.bubblePeer : token.colorPrimaryBg,
+                                        color: e.isAggregate ? 'rgba(255,255,255,0.8)' : token.colorPrimary,
+                                        fontSize: 14,
+                                        fontWeight: 600,
+                                        position: 'relative',
+                                    }}>
+                                    {/* 聚合会话用手机图标（⚠️ 不用 emoji：Win7 无 Segoe UI Emoji ⇒ 豆腐块，v26.10.12-v1） */}
+                                    {e.isAggregate ? (
+                                        <SmartphoneIcon size={18} color="currentColor" />
+                                    ) : (
+                                        e.label.slice(0, 1).toUpperCase()
+                                    )}
+                                    {e.online ? (
+                                        <span
+                                            style={{
+                                                position: 'absolute',
+                                                right: -2,
+                                                bottom: -2,
+                                                width: 9,
+                                                height: 9,
+                                                borderRadius: '50%',
+                                                background: '#52c41a',
+                                                border: '1.5px solid ' + WECHAT.list,
+                                            }}
+                                        />
+                                    ) : null}
+                                </span>
+                                <div style={{ flex: '1 1 auto', minWidth: 0 }}>
+                                    <div
+                                        style={{
+                                            fontSize: 13,
+                                            color: 'rgba(255,255,255,0.9)',
+                                            overflow: 'hidden',
+                                            textOverflow: 'ellipsis',
+                                            whiteSpace: 'nowrap',
+                                        }}>
+                                        {e.label}
+                                    </div>
+                                    <div
+                                        style={{
+                                            fontSize: 12,
+                                            color: 'rgba(255,255,255,0.4)',
+                                            overflow: 'hidden',
+                                            textOverflow: 'ellipsis',
+                                            whiteSpace: 'nowrap',
+                                            marginTop: 1,
+                                        }}>
+                                        {e.lastMsg ? previewText(e.lastMsg) : e.online ? '在线' : '离线'}
+                                    </div>
+                                </div>
+                                <div style={{ flex: '0 0 auto', textAlign: 'right' }}>
+                                    <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)' }}>
+                                        {listTime(e.lastTs || 0)}
+                                    </div>
+                                    {e.unread > 0 ? (
+                                        <div
+                                            style={{
+                                                marginTop: 3,
+                                                marginLeft: 'auto',
+                                                background: '#FA5151',
+                                                color: '#fff',
+                                                borderRadius: 9,
+                                                fontSize: 11,
+                                                lineHeight: '16px',
+                                                padding: '0 5px',
+                                                minWidth: 16,
+                                                textAlign: 'center',
+                                            }}>
+                                            {e.unread > 99 ? '99+' : e.unread}
+                                        </div>
+                                    ) : null}
+                                </div>
+                            </div>
+                        );
+                    })
+                ) : (
+                    <div
+                        style={{
+                            fontSize: 12,
+                            color: 'rgba(255,255,255,0.35)',
+                            padding: '12px 4px',
+                            textAlign: 'center',
+                        }}>
+                        {keyword ? '没有匹配的会话 / 设备' : isFiles ? '暂无文件' : '暂无会话——点右上角 + 配对手机'}
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+}
