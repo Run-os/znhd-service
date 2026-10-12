@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { ConfigProvider, Modal, theme } from 'antd';
 import { addLog } from '@/lib/logger';
 import { getOverlayContainer } from '@/lib/ui/panelHost';
-import { DeviceIcon, TransferIcon } from '@/lib/ui/icons';
+import { DeviceIcon } from '@/lib/ui/icons';
 import TransferNavRail, { type TransferNav } from '@/lib/ui/transfer/TransferNavRail';
 import TransferSessionList, { type DeviceEntry } from '@/lib/ui/transfer/TransferSessionList';
 import TransferAgentView from '@/lib/ui/transfer/TransferAgentView';
@@ -203,19 +203,22 @@ export default function TransferAssistantModal({ open, onClose }: { open: boolea
             getPopupContainer={getOverlayContainer}>
             <Modal
                 open={open}
-                title={
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-                        <TransferIcon size={17} />
-                        传输助手
-                    </span>
-                }
+                // v26.10.12-v2：**不传 title** —— 标题栏（图标 + 「传输助手」）与第一栏顶部的
+                // logo + 名称完全重复，用户要求整条去掉。rc-dialog 的 header 只在 `title` 为真值时
+                // 才渲染，而关闭按钮 `closerNode` 是独立渲染的（见 @rc-component/dialog 的
+                // Content/Panel），所以去掉标题**不会**把右上角的 × 一起弄丢。
+                // className 是冒烟/夹具识别本窗口的**唯一稳定钩子**（className 落在 `.ant-modal`
+                // 元素上，见 Panel 的 `clsx(prefixCls, className)`）：v26.10.12-v1 之前靠标题文字
+                // 精确匹配区分本窗口与「传输助手设置」子窗口，现在没有标题了，必须换成 class 定位。
+                className="znhd-transfer-modal"
                 onCancel={onClose}
                 getContainer={getOverlayContainer}
                 width="min(1080px, 96vw)"
                 styles={{
                     body: {
                         padding: 0,
-                        height: 'min(640px, calc(100vh - 190px))',
+                        // 去掉标题栏省下约 57px，这里相应放宽视口上限（原来按「标题栏 + 内边距」留的 190）
+                        height: 'min(660px, calc(100vh - 140px))',
                         display: 'flex',
                         flexDirection: 'row',
                         overflow: 'hidden',

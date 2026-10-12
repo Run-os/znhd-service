@@ -344,13 +344,16 @@ export default function TransferDeviceChat({
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', minHeight: 0, flex: '1 1 auto' }}>
-            {/* 会话头部：设备 + 在线状态 + 清空 */}
+            {/* 会话头部：设备 + 在线状态 + 清空
+                ⚠️ 右侧留 48px 空档：v26.10.12-v2 去掉了 Modal 标题栏，关闭按钮 × 是绝对定位
+                浮在窗口右上角的（rc-dialog 的 closerNode 独立于 header 渲染），不占布局高度。
+                这里原本只有 12px 内边距，「清空消息」会被 × 压住 —— 宽度必须 ≥ 关闭按钮占位。 */}
             <div
                 style={{
                     display: 'flex',
                     alignItems: 'center',
                     gap: 8,
-                    padding: '8px 12px',
+                    padding: '8px 48px 8px 12px',
                     borderBottom: '1px solid ' + token.colorBorderSecondary,
                 }}>
                 {isAggregate ? (

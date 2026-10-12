@@ -31,7 +31,7 @@
 - 会话归组：正向广播不带手机 ID ⇒ 恰好 1 台在线归该机会话，否则聚合会话 `__phone__`（标签「手机」）。**聚合会话没有单一 phone 对象，在线状态必须用 `sessionSendable()` 判**（用 `!!phone` 会「多台在线却显示离线」，v26.10.12-v1 冒烟抓到的真 bug）。
 - 发送目标由会话决定：具体会话=定向那台，聚合会话=`targets:'all'` 广播（旧版「≥2 台多选勾选」交互已移除）。
 - `destroyOnHidden`：关窗即卸载重挂 ⇒ nav 复位 `devices`、Agent hook 随窗口重生（会话索引靠 localStorage `scriptCat_AgentChats` 回填）。冒烟重开 Agent 必须：关窗 → 点面板「传输助手」→ 再点第一栏 `aria-label="Agents"`。
-- 窗口标题**精确等于**「传输助手」（子窗口「传输助手设置」也含四字，`includes` 误命中；冒烟/夹具一律 `===`）。
+- **窗口无标题栏**（v26.10.12-v2 起去掉了 `title`，因为与第一栏顶部的图标+名称重复）：识别窗口一律用 className 钩子 `.ant-modal.znhd-transfer-modal`（`className` 落在 `.ant-modal` 元素上，见 rc-dialog Panel 的 `clsx(prefixCls, className)`）。⚠️ antd 的 **关闭按钮 `closerNode` 独立于 header 渲染**（`Content/Panel` 里 `headerNode = title ? ... : null`，两者分开）——去掉 title 不会丢 ×；但 × 是绝对定位浮在窗口右上角、不占布局高度，第三栏右上角的控件（会话头「清空消息」、文件头「清空全部」）必须给它留出右侧空档。
 - 删除的组件：PhoneModal / RecvHistoryModal / RecvTextModal / agent/AgentModal；`lib/gallery.ts` 只剩 `downloadFileName`。
 - 冒烟 `scripts/smoke/znhd-smoke.html` 时间线整体重写（报告时刻 37000ms）；「自动弹窗未点击」证据必须在点击前时刻记快照（报告时刻读全局量会被污染→假红）。
 

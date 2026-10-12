@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name                征纳互动人数和在线监控v2
 // @namespace           https://scriptcat.org/
-// @version             26.10.12-v1
+// @version             26.10.12-v2
 // @description         实时监控征纳互动等待人数和在线状态，支持语音播报、自定义常用语
 // @author              runos
 // @license             MIT
@@ -117418,7 +117418,7 @@ function TransferDeviceChat({ session, phone, colorIndex, onClear, }) {
                     display: 'flex',
                     alignItems: 'center',
                     gap: 8,
-                    padding: '8px 12px',
+                    padding: '8px 48px 8px 12px',
                     borderBottom: '1px solid ' + token.colorBorderSecondary,
                 }, children: [isAggregate ? ((0,react_jsx_runtime_production_namespaceFn().jsx)(TransferDeviceChat_Text, { strong: true, style: { fontSize: 14 }, children: (/* inlined export .PHONE_SESSION_LABEL */"手机") })) : ((0,react_jsx_runtime_production_namespaceFn().jsx)(DeviceIdTag, { id: session.key, colorIndex: colorIndex })), (0,react_jsx_runtime_production_namespaceFn().jsxs)("span", { style: {
                             fontSize: 12,
@@ -117593,7 +117593,7 @@ function TransferFilesView({ messages }) {
     if (!ordered.length) {
         return ((0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { flex: '1 1 auto', display: 'flex', alignItems: 'center', justifyContent: 'center' }, children: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_empty, { image: es_empty.PRESENTED_IMAGE_SIMPLE, description: (0,react_jsx_runtime_production_namespaceFn().jsx)("span", { style: { fontSize: 12 }, children: "\u6682\u65E0\u6587\u4EF6\u2014\u2014\u624B\u673A\u53D1\u6765\u7684\u56FE\u7247 / \u6587\u672C\u4F1A\u6C47\u603B\u5728\u8FD9\u91CC" }) }) }));
     }
-    return ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { className: "znhd-transfer-files", style: { flex: '1 1 auto', minHeight: 0, overflowY: 'auto', padding: '10px 12px' }, children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 8 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)(TransferFilesView_Text, { strong: true, style: { fontSize: 14 }, children: ["\u5168\u90E8\u6587\u4EF6\uFF08\u56FE\u7247 ", images.length, " \u00B7 \u6587\u672C ", texts.length, "\uFF09"] }), (0,react_jsx_runtime_production_namespaceFn().jsx)("span", { style: { flex: '1 1 auto' } }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { danger: true, size: "small", onClick: clearAllTransferFiles, children: "\u6E05\u7A7A\u5168\u90E8" })] }), images.length ? ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_image.PreviewGroup, { items: images.map((m) => m.previewUrl), preview: {
+    return ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { className: "znhd-transfer-files", style: { flex: '1 1 auto', minHeight: 0, overflowY: 'auto', padding: '10px 12px' }, children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 8, paddingRight: 36 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)(TransferFilesView_Text, { strong: true, style: { fontSize: 14 }, children: ["\u5168\u90E8\u6587\u4EF6\uFF08\u56FE\u7247 ", images.length, " \u00B7 \u6587\u672C ", texts.length, "\uFF09"] }), (0,react_jsx_runtime_production_namespaceFn().jsx)("span", { style: { flex: '1 1 auto' } }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { danger: true, size: "small", onClick: clearAllTransferFiles, children: "\u6E05\u7A7A\u5168\u90E8" })] }), images.length ? ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_image.PreviewGroup, { items: images.map((m) => m.previewUrl), preview: {
                     getContainer: getPreviewHost,
                     onOpenChange: (o) => setPreviewOpen(o),
                     actionsRender: (originalNode, info) => {
@@ -118472,10 +118472,19 @@ function TransferAssistantModal({ open, onClose }) {
         theme: {
             algorithm: dark ? es_theme.darkAlgorithm : es_theme.defaultAlgorithm,
             token: { borderRadius: 8, borderRadiusLG: 10, borderRadiusSM: 6 },
-        }, getPopupContainer: getOverlayContainer, children: (0,react_jsx_runtime_production_namespaceFn().jsxs)(modal, { open: open, title: (0,react_jsx_runtime_production_namespaceFn().jsxs)("span", { style: { display: 'inline-flex', alignItems: 'center', gap: 8 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(TransferIcon, { size: 17 }), "\u4F20\u8F93\u52A9\u624B"] }), onCancel: onClose, getContainer: getOverlayContainer, width: "min(1080px, 96vw)", styles: {
+        }, getPopupContainer: getOverlayContainer, children: (0,react_jsx_runtime_production_namespaceFn().jsxs)(modal, { open: open, 
+            // v26.10.12-v2：**不传 title** —— 标题栏（图标 + 「传输助手」）与第一栏顶部的
+            // logo + 名称完全重复，用户要求整条去掉。rc-dialog 的 header 只在 `title` 为真值时
+            // 才渲染，而关闭按钮 `closerNode` 是独立渲染的（见 @rc-component/dialog 的
+            // Content/Panel），所以去掉标题**不会**把右上角的 × 一起弄丢。
+            // className 是冒烟/夹具识别本窗口的**唯一稳定钩子**（className 落在 `.ant-modal`
+            // 元素上，见 Panel 的 `clsx(prefixCls, className)`）：v26.10.12-v1 之前靠标题文字
+            // 精确匹配区分本窗口与「传输助手设置」子窗口，现在没有标题了，必须换成 class 定位。
+            className: "znhd-transfer-modal", onCancel: onClose, getContainer: getOverlayContainer, width: "min(1080px, 96vw)", styles: {
                 body: {
                     padding: 0,
-                    height: 'min(640px, calc(100vh - 190px))',
+                    // 去掉标题栏省下约 57px，这里相应放宽视口上限（原来按「标题栏 + 内边距」留的 190）
+                    height: 'min(660px, calc(100vh - 140px))',
                     display: 'flex',
                     flexDirection: 'row',
                     overflow: 'hidden',

@@ -636,12 +636,10 @@
            第一栏 .znhd-transfer-nav      —— Agents / 设备 / 文件 + 底部外观/设置/企业信息
            第二栏 .znhd-transfer-sessions —— 搜索框 + 「+」配对按钮 + 会话/设备列表
            第三栏 .znhd-transfer-main     —— 聊天主区（设备会话 / Agent 对话 / 全部文件）
-         标题用**精确相等**匹配：子窗口「传输助手设置」也含「传输助手」四个字，
-         用 includes 会把设置弹窗误判成主窗口（v26.10.12-v1 加这条时特意核过）。 */
-      const findTransferModal = () =>
-        Array.from(document.querySelectorAll('.ant-modal')).find(
-          (el) => ((el.querySelector('.ant-modal-title') || {}).textContent || '').trim() === '传输助手'
-        );
+         v26.10.12-v2：主窗口**去掉了标题栏**（与第一栏顶部的图标 + 名称重复），改用
+         Modal 的 className 钩子 `.znhd-transfer-modal` 定位 —— 不再靠标题文字匹配，
+         顺带解决了「传输助手设置」子窗口也含「传输助手」四字的误命中问题。 */
+      const findTransferModal = () => document.querySelector('.ant-modal.znhd-transfer-modal');
       const findPairModal = () =>
         Array.from(document.querySelectorAll('.ant-modal')).find((el) =>
           ((el.querySelector('.ant-modal-title') || {}).textContent || '').includes('配对设备')
@@ -1933,6 +1931,15 @@
           })(),
 
           // ===== 传输助手（v26.10.12-v1 重构）=====
+          // v26.10.12-v2：窗口**没有标题栏**（`.ant-modal-header` 不渲染），但关闭按钮 × 必须在
+          // （rc-dialog 的 closerNode 独立于 header，用户要的是去掉标题、不是去掉关闭）
+          transferNoTitleOk: (() => {
+            const m = findTransferModal();
+            if (!m) return false;
+            const header = m.querySelector('.ant-modal-header');
+            const close = m.querySelector('.ant-modal-close');
+            return !header && !!close && close.getBoundingClientRect().width > 0;
+          })(),
           // 收到文本时窗口**自动打开**（后台收件 + autoOpenOnReceive 的对外契约）
           transferAutoOpenOk: !!(ts.autoOpenSeen && ts.autoOpenTextSeen && ts.autoOpenNoClick),
           // 三栏结构 + 会话列表 + 收到的文本/图片落在会话里
@@ -2279,6 +2286,7 @@
           report.panelIconsAreSvg &&
           report.transferAutoOpenOk &&
           report.transferWindowOk &&
+          report.transferNoTitleOk &&
           report.filesViewOk &&
           report.sessionChatOk &&
           report.textSentOk &&

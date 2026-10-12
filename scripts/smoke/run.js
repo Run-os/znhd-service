@@ -68,6 +68,7 @@ const CHECKS = [
   // ===== 传输助手（v26.10.12-v1：「设备互联 / 历史记录 / Agent 助手」三入口收敛为一个三栏窗口）=====
   ['transferAutoOpenOk', '收到手机内容时自动打开传输助手窗口（窗口不开也收件）'],
   ['transferWindowOk', '传输助手三栏窗口：导航/会话/主聊天区 + 会话列表 + 收到的消息'],
+  ['transferNoTitleOk', '窗口无标题栏（与第一栏图标+名称重复，已去掉），但右上角关闭按钮仍在'],
   ['filesViewOk', '「文件」视图：图片九宫格 + 文本分区 + 计数（原历史记录弹窗搬迁）'],
   ['sessionChatOk', '设备会话聊天区：收到的文本与图片渲染为聊天气泡'],
   ['textSentOk', '会话内发送文本：本机气泡 + POST /phone/send'],
@@ -211,13 +212,11 @@ async function main() {
     // 任何一个没成立都判红，避免再次出现「什么都没验证到却通过」。
     // ⚠️ 必须排在下面的拖拽用例之前：那段会点掉所有 `.ant-modal-close`。
     // v26.10.12-v1：Agent 对话搬进传输助手窗口（第一栏 Agents → 右侧聊天区），
-    // 输入框定位从「标题含 Agent 助手的独立弹窗」改为「标题为传输助手、且正停在 Agents 视图的窗口」。
-    // 标题用**精确相等**：子窗口「传输助手设置」也含这四个字，includes 会误命中。
+    // 输入框定位从「标题含 Agent 助手的独立弹窗」改为「传输助手窗口且正停在 Agents 视图」。
+    // v26.10.12-v2：主窗口去掉了标题栏（与第一栏顶部图标 + 名称重复），改用 Modal 的
+    // className 钩子定位 —— 不再需要「标题精确相等」那套绕法。
     await page.evaluate(() => {
-      window.__findTransferModal = () =>
-        Array.from(document.querySelectorAll('.ant-modal')).find(
-          (el) => ((el.querySelector('.ant-modal-title') || {}).textContent || '').trim() === '传输助手'
-        );
+      window.__findTransferModal = () => document.querySelector('.ant-modal.znhd-transfer-modal');
       window.__findAgentTextarea = () => {
         const modal = window.__findTransferModal();
         // 必须正停在 Agents 视图（有 .znhd-agent-messages），否则可能拿到别处的输入框
@@ -474,6 +473,7 @@ async function main() {
     if (
       !checkPass('transferAutoOpenOk') ||
       !checkPass('transferWindowOk') ||
+      !checkPass('transferNoTitleOk') ||
       !checkPass('filesViewOk') ||
       !checkPass('sessionChatOk') ||
       !checkPass('textSentOk') ||
