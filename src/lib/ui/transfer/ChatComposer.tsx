@@ -21,7 +21,7 @@
  *
  * v26.10.13-v3：表情面板由「BMP 字符符号」换成**在线图片表情包**（`EmojiPackPanel`，
  * 数据层见 `@/lib/transfer/emojiPack`）。点一张表情不再往输入框插字符，而是把图片交回
- * 调用方（`onPickEmojiImage`）——设备会话据此加入「待发图片」，与微信「表情先进输入区」同义；
+ * 调用方（`onPickEmojiImage`）——设备会话据此**直接发出去**（v26.10.13-v4 起）；
  * **不传这个回调的宿主（Agent 对话）表情按钮自动禁用**（那条通道只收文本）。
  */
 
@@ -64,7 +64,7 @@ export interface ChatComposerProps {
     /** 输入面板上方的提示行（无在线手机 / 待发图片计数等） */
     notice?: ReactNode;
     /**
-     * 点选一张**在线表情**（v26.10.13-v3）。设备会话把它变成待发图片；
+     * 点选一张**在线表情**（v26.10.13-v3）。设备会话收到后**直接发送到手机**（v26.10.13-v4）；
      * **不传则表情按钮禁用**（Agent 对话只收文本，与旁边的「图片上传 / 附件」同为灰态）。
      */
     onPickEmojiImage?: (emoji: PickedEmoji) => void;
@@ -143,7 +143,7 @@ export default function ChatComposer({
                     {iconButton(
                         '表情',
                         emojiEnabled
-                            ? '表情包（点一张先放进待发图片）'
+                            ? '表情包（点一张直接发送到手机，悬停可放大）'
                             : emojiDisabledReason || '当前对话不支持发送表情',
                         <SmileIcon size={16} />,
                         () => setEmojiOpen((v) => !v),

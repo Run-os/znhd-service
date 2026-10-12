@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name                征纳互动人数和在线监控v2
 // @namespace           https://scriptcat.org/
-// @version             26.10.13-v3
+// @version             26.10.13-v4
 // @description         实时监控征纳互动等待人数和在线状态，支持语音播报、自定义常用语
 // @author              runos
 // @license             MIT
@@ -115272,14 +115272,40 @@ function loadEmojiBlob(url) {
  * 2. **合集用 chips 而不是下拉**：Popover 里再套一层 antd Select/下拉，点开时会被
  *    Popover 的「点外部关闭」逻辑抢走点击（要额外配 getPopupContainer），chips 没这个问题。
  * 3. **点击时直接交 blob**（不再二次下载）：面板显示本来就下过这张图，`onPick` 把 blob 一起
- *    交回调用方，设备会话据此构造 File 入待发列表 —— 少一次网络往返，也没有「点了没反应」的空窗。
+ *    交回调用方（设备会话**立刻发出去**，见 TransferDeviceChat 的 pickEmojiImage）——
+ *    少一次网络往返，也没有「点了没反应」的空窗。
+ *
+ * ── 悬停放大预览（v26.10.13-v4）──────────────────────────────────────────────
+ * 格子只有 30px，看不清表情细节：**鼠标停在格子上 0.5 秒**后弹出一个 120px 的放大浮层
+ * （跟随光标、`pointerEvents:none` 不吃事件）；预览**已经在屏幕上时**移到别的格子**立即换图**，
+ * 不再重新等 0.5 秒 —— 用户原话「在显示 hover 的情况下移动鼠标到其他表情包，实时显示」。
+ *
+ * ⚠️ 三个实现要点（都踩过或有原因）：
+ *   a) 悬停判定用**网格上的 `mousemove` 委托**（`closest('.znhd-emoji-item')`），**不用每格的
+ *      `onMouseEnter/onMouseLeave`**：React 的 enter/leave 是同一批 mouseover 里成对合成的，
+ *      先派发 leave 再派发 enter ⇒ 移到相邻格子时会**先 close 再重新计时 0.5s**（「实时切换」失效）。
+ *      委托只有一个来源，顺序问题不存在。
+ *   b) 浮层 portal 到 `getPreviewHost()`（共享层的预览宿主，挂在 documentElement 下）：
+ *      税务页 body 常带 transform，挂 body 的 fixed 浮层会以 body 盒子为包含块 → 坐标全错。
+ *   c) 「是否已在显示」用 **ref**（`hoverShown`）而不是读 state：mousemove 每秒几十次，
+ *      用 state 判会读到闭包里的旧值，切换逻辑会退化成重新计时。
  */
+
+
 
 
 
 const EmojiPackPanel_PANEL_WIDTH = 300;
 /** 每批并发下载的张数：太多会瞬间打满连接，太少首屏出图慢 */
 const BATCH = 8;
+/** 悬停多久后弹出放大预览（用户要求 0.5s：扫过格子时不该闪出大图） */
+const HOVER_DELAY = 500;
+/** 放大预览的方形边长（含内边距） */
+const HOVER_BOX = 120;
+/** 预览相对光标的偏移 */
+const HOVER_OFFSET = 16;
+/** 浮层的 z-index：要盖住 Popover（antd zIndexPopupBase = 1000000） */
+const HOVER_Z = 1000001;
 function EmojiPackPanel({ onPick }) {
     const { token } = es_theme.useToken();
     const [packs, setPacks] = (0,react_production_namespaceFn().useState)(null);
@@ -115290,6 +115316,31 @@ function EmojiPackPanel({ onPick }) {
     const [ready, setReady] = (0,react_production_namespaceFn().useState)({});
     /** 正在临时补下载的那张（用户点得比下载快） */
     const [pendingKey, setPendingKey] = (0,react_production_namespaceFn().useState)('');
+    /** 放大预览（null = 不显示）：url 为被悬停的那张，x/y 是光标视口坐标 */
+    const [hover, setHover] = (0,react_production_namespaceFn().useState)(null);
+    /** 0.5s 计时器 */
+    const hoverTimer = (0,react_production_namespaceFn().useRef)(null);
+    /** 正在等待计时的那张（同一张继续等，不重置计时） */
+    const hoverPending = (0,react_production_namespaceFn().useRef)('');
+    /** 预览是否已在屏幕上 —— 为 true 时移到别的格子**立即换图**（不再等 0.5s） */
+    const hoverShown = (0,react_production_namespaceFn().useRef)(false);
+    /** 最后一次鼠标位置（计时结束时用它定位，而不是计时开始时的旧位置） */
+    const hoverPos = (0,react_production_namespaceFn().useRef)({ x: 0, y: 0 });
+    const clearHoverTimer = () => {
+        if (hoverTimer.current !== null) {
+            window.clearTimeout(hoverTimer.current);
+            hoverTimer.current = null;
+        }
+    };
+    /** 收起预览（鼠标移出网格 / 移到空白处）：下一次悬停要重新等 0.5s */
+    const closeHover = () => {
+        clearHoverTimer();
+        hoverPending.current = '';
+        hoverShown.current = false;
+        setHover(null);
+    };
+    // 面板被关掉（Popover 卸载）时清掉挂起的计时器，别让它在卸载后 setState
+    (0,react_production_namespaceFn().useEffect)(() => () => clearHoverTimer(), []);
     const load = (0,react_production_namespaceFn().useCallback)((force) => {
         setBusy(true);
         setErr('');
@@ -115360,6 +115411,55 @@ function EmojiPackPanel({ onPick }) {
         })
             .finally(() => setPendingKey((k) => (k === it.url ? '' : k)));
     };
+    /**
+     * 网格上的鼠标移动（委托）：更新预览位置 / 切换预览目标。
+     * 见文件头 a) —— 这里刻意不用每格的 onMouseEnter/onMouseLeave。
+     */
+    const onGridMove = (e) => {
+        const target = e.target;
+        const cell = target ? target.closest('.znhd-emoji-item') : null;
+        const url = cell ? cell.getAttribute('data-emoji-url') || '' : '';
+        hoverPos.current = { x: e.clientX, y: e.clientY };
+        if (!url) {
+            // 网格的空白处：已显示的收起，正在计时的作废
+            if (hoverShown.current)
+                closeHover();
+            else
+                clearHoverTimer();
+            return;
+        }
+        if (hoverShown.current) {
+            // 预览已在屏幕上 → 实时换图（用户要求的「实时通过 hover 显示其他表情包」）
+            setHover({ url, x: e.clientX, y: e.clientY });
+            return;
+        }
+        if (hoverPending.current === url)
+            return; // 同一格继续等，别重置计时
+        clearHoverTimer();
+        hoverPending.current = url;
+        hoverTimer.current = window.setTimeout(() => {
+            hoverTimer.current = null;
+            hoverShown.current = true;
+            setHover({ url, x: hoverPos.current.x, y: hoverPos.current.y });
+        }, HOVER_DELAY);
+    };
+    // 悬停的那张还没下好（面板分批下载中）：补一次，到位后浮层自己换成图
+    (0,react_production_namespaceFn().useEffect)(() => {
+        if (!hover || ready[hover.url])
+            return;
+        let alive = true;
+        loadEmojiBlob(hover.url)
+            .then((entry) => {
+            if (alive)
+                setReady((prev) => ({ ...prev, [hover.url]: entry.objectUrl }));
+        })
+            .catch(() => {
+            /* 下载失败：浮层留在加载态，移开即消失 */
+        });
+        return () => {
+            alive = false;
+        };
+    }, [hover, ready]);
     const chip = (pack) => {
         const on = pack.id === activeId;
         return ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { size: "small", type: "text", "aria-pressed": on, onClick: () => setActiveId(pack.id), style: {
@@ -115379,7 +115479,7 @@ function EmojiPackPanel({ onPick }) {
         if (!packs) {
             return ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { padding: '22px 0', textAlign: 'center' }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(spin, { size: "small" }), (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { fontSize: 12, color: 'rgba(255,255,255,0.45)', marginTop: 8 }, children: "\u6B63\u5728\u52A0\u8F7D\u8868\u60C5\u5305\u2026" })] }));
         }
-        return ((0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: {
+        return ((0,react_jsx_runtime_production_namespaceFn().jsx)("div", { onMouseMove: onGridMove, onMouseLeave: closeHover, style: {
                 maxHeight: 196,
                 overflowY: 'auto',
                 display: 'grid',
@@ -115387,7 +115487,7 @@ function EmojiPackPanel({ onPick }) {
                 gap: 2,
             }, children: (activePack ? activePack.items : []).map((it) => {
                 const url = ready[it.url];
-                return ((0,react_jsx_runtime_production_namespaceFn().jsx)("button", { type: "button", className: "znhd-emoji-item", "aria-label": '表情 ' + it.name, title: it.key, "aria-busy": pendingKey === it.url, onClick: () => pick(it), style: {
+                return ((0,react_jsx_runtime_production_namespaceFn().jsx)("button", { type: "button", className: "znhd-emoji-item", "aria-label": '表情 ' + it.name, title: it.key, "aria-busy": pendingKey === it.url, "data-emoji-url": it.url, onClick: () => pick(it), style: {
                         width: 30,
                         height: 30,
                         padding: 0,
@@ -115408,7 +115508,26 @@ function EmojiPackPanel({ onPick }) {
                             padding: '0 4px',
                             fontSize: 12,
                             color: token.colorTextTertiary,
-                        }, children: "\u5237\u65B0" })] }), body(), (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { fontSize: 11, color: 'rgba(255,255,255,0.35)', marginTop: 6 }, children: "\u70B9\u8868\u60C5\u5148\u653E\u8FDB\u300C\u5F85\u53D1\u56FE\u7247\u300D\uFF0C\u518D\u70B9\u53D1\u9001\u53D1\u51FA\u53BB" })] }));
+                        }, children: "\u5237\u65B0" })] }), body(), (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { fontSize: 11, color: 'rgba(255,255,255,0.35)', marginTop: 6 }, children: "\u70B9\u8868\u60C5\u76F4\u63A5\u53D1\u9001\u5230\u624B\u673A \u00B7 \u60AC\u505C 0.5 \u79D2\u653E\u5927\u67E5\u770B" }), hover
+                ? (0,react_dom_production_namespaceFn().createPortal)((0,react_jsx_runtime_production_namespaceFn().jsx)("div", { className: "znhd-emoji-hover", "data-emoji-url": hover.url, "aria-hidden": "true", style: {
+                        position: 'fixed',
+                        // 跟随光标 + 视口夹紧（贴边时不越界）
+                        left: Math.max(8, Math.min(hover.x + HOVER_OFFSET, window.innerWidth - HOVER_BOX - 8)),
+                        top: Math.max(8, Math.min(hover.y + HOVER_OFFSET, window.innerHeight - HOVER_BOX - 8)),
+                        width: HOVER_BOX,
+                        height: HOVER_BOX,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        background: 'rgba(0,0,0,0.78)',
+                        border: '1px solid rgba(255,255,255,0.16)',
+                        borderRadius: 10,
+                        boxShadow: '0 8px 24px rgba(0,0,0,0.55)',
+                        // 不吃鼠标事件：浮层压在别的格子上也不会打断「移到下一张」
+                        pointerEvents: 'none',
+                        zIndex: HOVER_Z,
+                    }, children: ready[hover.url] ? ((0,react_jsx_runtime_production_namespaceFn().jsx)("img", { src: ready[hover.url], alt: "", style: { maxWidth: HOVER_BOX - 16, maxHeight: HOVER_BOX - 16, display: 'block' } })) : ((0,react_jsx_runtime_production_namespaceFn().jsx)(spin, { size: "small" })) }), getPreviewHost())
+                : null] }));
 }
 
 ;// ./src/lib/ui/transfer/ChatComposer.tsx
@@ -115436,7 +115555,7 @@ function EmojiPackPanel({ onPick }) {
  *
  * v26.10.13-v3：表情面板由「BMP 字符符号」换成**在线图片表情包**（`EmojiPackPanel`，
  * 数据层见 `@/lib/transfer/emojiPack`）。点一张表情不再往输入框插字符，而是把图片交回
- * 调用方（`onPickEmojiImage`）——设备会话据此加入「待发图片」，与微信「表情先进输入区」同义；
+ * 调用方（`onPickEmojiImage`）——设备会话据此**直接发出去**（v26.10.13-v4 起）；
  * **不传这个回调的宿主（Agent 对话）表情按钮自动禁用**（那条通道只收文本）。
  */
 
@@ -115463,7 +115582,7 @@ function ChatComposer({ value, onChange, onSend, disabled, streaming, onStop, pl
                         // 面板内容只在首次打开时挂载（Popover 不渲染关闭态的内容）：表情包清单与图片
                         // 都是打开面板才去拉，不开面板不产生任何网络请求
                         content: emojiEnabled ? (0,react_jsx_runtime_production_namespaceFn().jsx)(EmojiPackPanel, { onPick: onPickEmojiImage }) : null, children: iconButton('表情', emojiEnabled
-                            ? '表情包（点一张先放进待发图片）'
+                            ? '表情包（点一张直接发送到手机，悬停可放大）'
                             : emojiDisabledReason || '当前对话不支持发送表情', (0,react_jsx_runtime_production_namespaceFn().jsx)(SmileIcon, { size: 16 }), () => setEmojiOpen((v) => !v), disabled || !emojiEnabled) }), (actions || []).map((action) => iconButton(action.label, action.tooltip || action.label, action.icon, action.onClick, action.disabled || disabled))] }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_input.TextArea, { value: value, onChange: (event) => onChange(event.target.value), onPressEnter: (event) => {
                     if (event.shiftKey)
                         return;
@@ -117444,31 +117563,55 @@ function TransferDeviceChat({ session, phone, colorIndex, onClear, }) {
         inp.click();
     };
     /**
-     * 点选一张在线表情（v26.10.13-v3）：表情面板已经把图下好了（blob 在手上），
-     * 这里只把它变成「待发图片」的一项 —— 与「图片上传」走**同一条发送链路**
-     * （待发列表 → 逐张压缩 → /phone/send），所以表情也享受同一套进度与失败提示。
-     * 语义与微信一致：点表情先落到输入区上方，点发送才真正发出去。
+     * 投递一批图片（「发送 N 张」与「点表情直接发送」共用）：
+     * 逐张压缩 → POST /phone/send，进度写进 `progress`；全部成功时清进度并执行 `afterOk`。
+     * 失败停在原地（进度条转红 + 文案说明已发几张），由用户决定是否重发。
      */
-    const pickEmojiImage = (emoji) => {
+    const runSend = (list, afterOk) => {
+        setSending(true);
+        const ok = sendImagesToSession(session.key, list, (done, total, failed, text) => {
+            setProgress({ done, total, failed, text });
+            if (done >= total || failed) {
+                setSending(false);
+                if (!failed) {
+                    afterOk();
+                    setProgress(null);
+                }
+            }
+        });
+        if (!ok)
+            setSending(false);
+    };
+    /**
+     * 点选一张在线表情（v26.10.13-v3 入待发列表；**v26.10.13-v4 改为直接发送**，按用户要求）：
+     * 表情面板已经把图下好了（blob 在手上），这里直接把它包成一张图投出去 ——
+     * 与「图片上传 → 发送 N 张」走**同一条发送链路**（逐张压缩 → /phone/send → 气泡 + 进度），
+     * 只是跳过「待发列表」这一步：点一下就是一次发送，与微信「点表情即发出」一致。
+     */
+    const sendEmojiNow = (emoji) => {
         if (!sendable) {
             addLog('[传输助手] 当前无在线设备，无法发送', 'error', true);
             return;
         }
-        if (sending)
-            return; // 发送中不改变待发列表（发送按快照进行）
+        if (sending) {
+            addLog('[传输助手] 正在发送上一批，稍后再点表情', 'info');
+            return;
+        }
         const mime = emoji.blob.type || 'image/webp';
         const file = new File([emoji.blob], emoji.name, { type: mime });
-        setPendingImages((prev) => prev.concat([
+        addLog('[传输助手] 发送表情：' + emoji.pack + ' · ' + emoji.key, 'info');
+        runSend([
             {
                 file,
                 name: emoji.name,
                 mime,
-                // 与「图片上传」一样用 objectURL 做缩略图；这张图发送后仍被会话气泡引用，
-                // 故这里**不 revoke**（撤销由 removeTransferMessage 那条路径负责）
+                // 与「图片上传」一样用 objectURL；这张 blob 还会被表情面板的缩略图/浮层引用，
+                // 故这里**不 revoke**（本进程内长期复用同一份 blob，撤销会让面板一起裂掉）
                 url: URL.createObjectURL(emoji.blob),
             },
-        ]));
-        addLog('[传输助手] 已选表情：' + emoji.pack + ' · ' + emoji.key + '（点「发送」发给手机）', 'info');
+        ], () => {
+            /* 直接发送：没有待发列表要清 */
+        });
     };
     const removePendingImage = (i) => {
         if (sending)
@@ -117490,20 +117633,9 @@ function TransferDeviceChat({ session, phone, colorIndex, onClear, }) {
     const confirmSendImage = () => {
         if (!pendingImages.length || !sendable)
             return;
-        setSending(true);
-        const list = pendingImages.slice();
-        const ok = sendImagesToSession(session.key, list, (done, total, failed, text) => {
-            setProgress({ done, total, failed, text });
-            if (done >= total || failed) {
-                setSending(false);
-                if (!failed) {
-                    setPendingImages([]);
-                    setProgress(null);
-                }
-            }
-        });
-        if (!ok)
-            setSending(false);
+        // 发送按**快照**进行：列表在发送期间被清空/改动都不影响这一批
+        const snapshot = pendingImages.slice();
+        runSend(snapshot, () => setPendingImages([]));
     };
     // 图片消息（会话内按出现顺序）——预览左右切换由 antd 接管
     const imageMessages = (0,react_production_namespaceFn().useMemo)(() => session.messages.filter((m) => m.type === 'image'), [session.messages]);
@@ -117641,7 +117773,7 @@ function TransferDeviceChat({ session, phone, colorIndex, onClear, }) {
                                         textAlign: 'center',
                                         cursor: sending ? 'not-allowed' : 'pointer',
                                         userSelect: 'none',
-                                    }, children: "\u00D7" })] }, img.url))) }), (0,react_jsx_runtime_production_namespaceFn().jsxs)(es_button, { color: "primary", variant: "solid", block: true, disabled: !sendable, loading: sending, onClick: confirmSendImage, style: { marginTop: 8 }, children: ["\u53D1\u9001 ", pendingImages.length, " \u5F20\u56FE\u7247"] })] })), progress && ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { flex: '0 0 auto', padding: '8px 12px 0' }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(es_progress, { percent: percent, size: "small", strokeColor: progress.failed ? '#e4393c' : '#1677ff', status: progress.failed ? 'exception' : 'normal' }), (0,react_jsx_runtime_production_namespaceFn().jsx)(TransferDeviceChat_Text, { type: progress.failed ? 'danger' : 'secondary', style: { fontSize: 12 }, children: progress.text })] })), (0,react_jsx_runtime_production_namespaceFn().jsx)(ChatComposer, { value: sendText, onChange: setSendText, onSend: doSendText, disabled: !sendable, canSend: !!sendText.trim(), placeholder: "\u8F93\u5165\u8981\u53D1\u9001\u5230\u624B\u673A\u7684\u6587\u672C\u2026\uFF08Enter \u53D1\u9001\uFF0CShift+Enter \u6362\u884C\uFF09", onPickEmojiImage: pickEmojiImage, notice: sendable ? undefined : ((0,react_jsx_runtime_production_namespaceFn().jsx)(TransferDeviceChat_Text, { type: "warning", style: { fontSize: 12, display: 'block', marginBottom: 6 }, children: "\u5F53\u524D\u6CA1\u6709\u5728\u7EBF\u624B\u673A\uFF0C\u8FDE\u4E0A\u624B\u673A\u540E\u624D\u80FD\u53D1\u9001\u3002" })), actions: [
+                                    }, children: "\u00D7" })] }, img.url))) }), (0,react_jsx_runtime_production_namespaceFn().jsxs)(es_button, { color: "primary", variant: "solid", block: true, disabled: !sendable, loading: sending, onClick: confirmSendImage, style: { marginTop: 8 }, children: ["\u53D1\u9001 ", pendingImages.length, " \u5F20\u56FE\u7247"] })] })), progress && ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { flex: '0 0 auto', padding: '8px 12px 0' }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(es_progress, { percent: percent, size: "small", strokeColor: progress.failed ? '#e4393c' : '#1677ff', status: progress.failed ? 'exception' : 'normal' }), (0,react_jsx_runtime_production_namespaceFn().jsx)(TransferDeviceChat_Text, { type: progress.failed ? 'danger' : 'secondary', style: { fontSize: 12 }, children: progress.text })] })), (0,react_jsx_runtime_production_namespaceFn().jsx)(ChatComposer, { value: sendText, onChange: setSendText, onSend: doSendText, disabled: !sendable, canSend: !!sendText.trim(), placeholder: "\u8F93\u5165\u8981\u53D1\u9001\u5230\u624B\u673A\u7684\u6587\u672C\u2026\uFF08Enter \u53D1\u9001\uFF0CShift+Enter \u6362\u884C\uFF09", onPickEmojiImage: sendEmojiNow, notice: sendable ? undefined : ((0,react_jsx_runtime_production_namespaceFn().jsx)(TransferDeviceChat_Text, { type: "warning", style: { fontSize: 12, display: 'block', marginBottom: 6 }, children: "\u5F53\u524D\u6CA1\u6709\u5728\u7EBF\u624B\u673A\uFF0C\u8FDE\u4E0A\u624B\u673A\u540E\u624D\u80FD\u53D1\u9001\u3002" })), actions: [
                     {
                         key: 'image',
                         label: '图片上传',

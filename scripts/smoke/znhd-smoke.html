@@ -1361,23 +1361,73 @@
           firstLabel: items[0] ? items[0].getAttribute('aria-label') || '' : '',
         };
         window.__emojiFirstItem = items[0] || null;
+        window.__emojiItems = items;
       }, 13300);
+      /* ===== 表情包：悬停放大预览 + 点击直接发送（v26.10.13-v4）=====================
+         ① 悬停要等 0.5 秒才出放大浮层（派发瞬间与 100ms 时都不该出现）；
+         ② 浮层已在屏幕上时移到另一张 → **立即**换图（不再等 0.5 秒）—— 用户原话「实时显示」；
+         ③ 点一张 = **直接发送**：不进「待发图片」，而是多出一条图片气泡。
+         ⚠️ 悬停判定走网格上的 mousemove 委托，故这里派发的是 mousemove（不是 mouseover）。 */
       setTimeout(() => {
-        // 点第一张；若此刻图还没下完，面板会等它下完再交出来（所以点击一定有效果）
+        const ts = window.__transferSnap;
+        const first = window.__emojiFirstItem;
+        const second = (window.__emojiItems || [])[1] || null;
+        window.__emojiSecondItem = second;
+        // 两张必须是不同的图，否则「切换」断言没有意义
+        ts.emojiFirstUrl = first ? first.getAttribute('data-emoji-url') || '' : '';
+        ts.emojiSecondUrl = second ? second.getAttribute('data-emoji-url') || '' : '';
+        if (first) first.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, clientX: 300, clientY: 300 }));
+        // 派发瞬间：浮层必须还没出现（有 0.5s 延迟）
+        ts.emojiHoverImmediate = !!document.querySelector('.znhd-emoji-hover');
+      }, 13400);
+      setTimeout(() => {
+        // 100ms 时仍不该出现
+        window.__transferSnap.emojiHoverAt100 = !!document.querySelector('.znhd-emoji-hover');
+      }, 13500);
+      setTimeout(() => {
+        // 650ms：浮层出现，内容是**被悬停的那一张**
+        const el = document.querySelector('.znhd-emoji-hover');
+        window.__transferSnap.emojiHoverAfter = {
+          seen: !!el,
+          url: el ? el.getAttribute('data-emoji-url') || '' : '',
+          img: el ? el.querySelectorAll('img').length : 0,
+        };
+      }, 14050);
+      setTimeout(() => {
+        // 移到第二张：应当**立即**换图（不等 0.5s）
+        const s = window.__emojiSecondItem;
+        if (s) s.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, clientX: 340, clientY: 300 }));
+      }, 14080);
+      setTimeout(() => {
+        const el = document.querySelector('.znhd-emoji-hover');
+        window.__transferSnap.emojiHoverSwitch = {
+          seen: !!el,
+          url: el ? el.getAttribute('data-emoji-url') || '' : '',
+        };
+      }, 14150);
+      setTimeout(() => {
+        // 点第一张 → 应当**直接发送**（不再进「待发图片」）
+        const ts = window.__transferSnap;
+        const m = findTransferModal();
+        ts.emojiMsgsBefore = m ? m.querySelectorAll('.znhd-transfer-messages .ant-image-img').length : -1;
+        ts.emojiPendingBeforeClick = !!(m && (m.textContent || '').indexOf('待发送图片') >= 0);
         window.__clickedEmojiItem = !!window.__emojiFirstItem;
         if (window.__emojiFirstItem) window.__emojiFirstItem.click();
-      }, 13400);
+      }, 14200);
       setTimeout(() => {
         const ts = window.__transferSnap;
         const m = findTransferModal();
-        const text = m ? m.textContent || '' : '';
-        const after = text.match(/已选 (\d+) 张/);
+        const sent = (window.__phoneSent || []).slice(-1)[0] || {};
         ts.emojiPicked = {
           selected: !!window.__clickedEmojiItem,
-          pendingSeen: text.indexOf('待发送图片') >= 0,
-          countText: after ? after[1] : '',
+          // 点击后**不该**出现待发列表（直接发送的判据）
+          pendingSeen: !!(m && (m.textContent || '').indexOf('待发送图片') >= 0),
+          // 会话里应当多出一张图片气泡
+          msgsAfter: m ? m.querySelectorAll('.znhd-transfer-messages .ant-image-img').length : -1,
+          sentMime: sent.mime || '',
+          sentBytes: typeof sent.data === 'string' ? sent.data.length : 0,
         };
-      }, 13480);
+      }, 14700);
 
       /* ===== ⑥ 「+」配对窗口：二维码 / 链接 / 在线状态 / 手机列表 / 发送测试图片 ==========
          旧「设备互联」弹窗的配对部分，入口统一收进第二栏搜索框右侧的「+」。 */
@@ -1386,7 +1436,7 @@
         const btn = m ? m.querySelector('button[aria-label="配对设备"]') : null;
         window.__clickedPair = !!btn;
         if (btn) btn.click();
-      }, 13500);
+      }, 14800);
       setTimeout(() => {
         const p = findPairModal();
         const ps = window.__pairSnap;
@@ -1419,7 +1469,7 @@
           p &&
           Array.from(p.querySelectorAll('button')).some((b) => (b.textContent || '').includes('发送测试图片'))
         );
-      }, 14100);
+      }, 15400);
 
       // 「发送测试图片」（v26.10.08-v10）：点 footer 按钮 → 代码去图源取图（桩返回真 Blob）→ 转 base64
       // → POST /u/<deviceId>（桩记录载荷）。断言只看「有没有真把图片投出去」。
@@ -1430,7 +1480,7 @@
           : null;
         window.__clickedTestImage = !!btn;
         if (btn) btn.click();
-      }, 14500);
+      }, 15800);
       setTimeout(() => {
         const s = window.__testImageSent;
         window.__pairSnap.testImageSent = !!(
@@ -1439,7 +1489,7 @@
           s.data.length > 100 &&
           /^image\//.test(s.mime || '')
         );
-      }, 15100);
+      }, 16400);
 
       /* ===== ⑦ 设置隔离 + 固定微信暗色（v26.10.12-v4）=================================
          外观切换已随「窗口固定微信暗色」移除；这里改为：
@@ -1451,14 +1501,14 @@
         const btn = p ? Array.from(p.querySelectorAll('button')).find((b) => (b.textContent || '').trim() === '关闭') : null;
         window.__closedPair = !!btn;
         if (btn) btn.click();
-      }, 15500);
+      }, 16800);
       setTimeout(() => {
         // 第一栏底部「设置」是纯图标按钮（aria-label）
         const m = findTransferModal();
         const btn = m ? m.querySelector('button[aria-label="设置"]') : null;
         window.__openedSettings = !!btn;
         if (btn) btn.click();
-      }, 15900);
+      }, 17200);
       setTimeout(() => {
         // 传输助手设置子窗口：按内容找（标题只有「传输助手设置」也是 .ant-modal）
         const sm = Array.from(document.querySelectorAll('.ant-modal')).find((el) =>
@@ -1467,7 +1517,7 @@
         const sw = sm ? sm.querySelector('button[role="switch"]') : null;
         window.__toggledAutoOpen = !!sw;
         if (sw) sw.click();
-      }, 16200);
+      }, 17500);
       setTimeout(() => {
         const m = findTransferModal();
         const ts = window.__transferSnap;
@@ -1494,7 +1544,7 @@
           stored.relayServer === 'https://znhd.122050.xyz'
         );
         ts.mainAllvalueUntouched = !/relayServer/.test(localStorage.getItem('scriptCat_Allvalue') || '');
-      }, 16600);
+      }, 17900);
       setTimeout(() => {
         // 关掉设置子窗口（普通 antd 弹窗，自带 .ant-modal-close），别挡住后面的 Agents 用例
         const sm = Array.from(document.querySelectorAll('.ant-modal')).find((el) =>
@@ -1503,7 +1553,7 @@
         const close = sm ? sm.querySelector('.ant-modal-close') : null;
         window.__closedSettings = !!close;
         if (close) close.click();
-      }, 16850);
+      }, 18150);
 
       /* ===== ⑧ Agent 对话（v26.10.12-v1：入口 = 传输助手第一栏 Agents）==================
          覆盖链路：面板「传输助手」→ 第一栏 Agents → 右侧聊天区 → 三个页签 → 发消息 → 流式回答。
@@ -1940,7 +1990,7 @@
           }
           stageSkills(30);
         }, 450);
-      }, 17000);
+      }, 18500);
 
       /* ===== ⑨ 图片嗅探（v26.10.10-v4）=====
          点面板入口 → 弹窗自动扫描页面（夹具见 #sniff-fixtures）。
@@ -2033,13 +2083,13 @@
         };
         poll(30, 0);
       };
-      setTimeout(kickSniff, 28500);
+      setTimeout(kickSniff, 30000);
 
       // 打开「运行日志」弹窗，验证「日志从上到下生成、最新在最上方」。
       // 放在报告采集前 2s（报告在其后），留时间给 React 渲染。
       setTimeout(() => {
         window.__openedLog = clickByText('查看日志');
-      }, 35000);
+      }, 36500);
 
       /* ===== 关闭按钮的预采样（v26.10.12-v4）=====================================
          悬浮变红：派发 mouseover 触发 React onMouseEnter 后，setState 重渲染是**异步**
@@ -2062,7 +2112,7 @@
         const sel = navBtns.find(isSel);
         if (unsel) unsel.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
         if (sel) sel.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
-      }, 36500);
+      }, 38000);
       setTimeout(() => {
         const ts = window.__transferSnap;
         const m = findTransferModal();
@@ -2100,7 +2150,7 @@
           colors: navBtns.map((b) => getComputedStyle(b).color),
           currents: navBtns.map((b) => b.getAttribute('aria-current')),
         };
-      }, 36900);
+      }, 38400);
 
       setTimeout(() => {
         const text = collectText();
@@ -2333,12 +2383,12 @@
               sc.scrollHeight > sc.clientHeight + 2
             );
           })(),
-          // 在线表情包（v26.10.13-v3）：面板拿到清单（合集 chips + 选中态）→ 图片真的下好
-          // → 点一张之后待发图片**恰好 +1**（和「图片上传」同一条待发链路）
+          // 在线表情包（v26.10.13-v3；v4 起点击**直接发送**）：面板拿到清单（合集 chips + 选中态）
+          // → 图片真的下好 → 点一张**不进待发列表**，而是会话里多出一条图片气泡（真发出去了）
           emojiPackOk: (() => {
             const p = ts.emojiPanel || {};
             const k = ts.emojiPicked || {};
-            const before = Number(ts.emojiPendingBefore || 0);
+            const before = Number(ts.emojiMsgsBefore);
             return !!(
               p.seen &&
               (p.packs || []).length >= 2 &&
@@ -2347,8 +2397,29 @@
               p.imgCount >= 1 &&
               /^表情 /.test(p.firstLabel || '') &&
               k.selected &&
-              k.pendingSeen &&
-              Number(k.countText) === before + 1
+              // 「直接发送」的判据：点击前后都没有待发列表，且多出一张图片气泡 + 真 POST 过图片
+              !k.pendingSeen &&
+              !ts.emojiPendingBeforeClick &&
+              Number(k.msgsAfter) === before + 1 &&
+              /^image\//.test(k.sentMime || '')
+            );
+          })(),
+          // 表情悬停放大预览（v26.10.13-v4）：停 0.5 秒才出现，且此刻移到另一张**立即换图**
+          // （「实时」= 不再等第二个 0.5 秒；若实现退化成重新计时，sw.url 会还是第一张 → 假红）
+          emojiHoverOk: (() => {
+            const h = ts.emojiHoverAfter || {};
+            const sw = ts.emojiHoverSwitch || {};
+            return !!(
+              ts.emojiFirstUrl &&
+              ts.emojiSecondUrl &&
+              ts.emojiFirstUrl !== ts.emojiSecondUrl &&
+              ts.emojiHoverImmediate === false &&
+              ts.emojiHoverAt100 === false &&
+              h.seen &&
+              h.url === ts.emojiFirstUrl &&
+              h.img >= 1 &&
+              sw.seen &&
+              sw.url === ts.emojiSecondUrl
             );
           })(),
           // Agent 侧必须是同一套组件（共用 ChatComposer 外壳 + 带 data-side 的气泡 + 头像）
@@ -2701,7 +2772,7 @@
           report.sniffSelectScopeOk
             ? 'ALL-OK'
             : 'PARTIAL');
-      }, 37000);
+      }, 38500);
     </script>
   </body>
 </html>

@@ -222,32 +222,58 @@ export default function TransferDeviceChat({
     };
 
     /**
-     * 点选一张在线表情（v26.10.13-v3）：表情面板已经把图下好了（blob 在手上），
-     * 这里只把它变成「待发图片」的一项 —— 与「图片上传」走**同一条发送链路**
-     * （待发列表 → 逐张压缩 → /phone/send），所以表情也享受同一套进度与失败提示。
-     * 语义与微信一致：点表情先落到输入区上方，点发送才真正发出去。
+     * 投递一批图片（「发送 N 张」与「点表情直接发送」共用）：
+     * 逐张压缩 → POST /phone/send，进度写进 `progress`；全部成功时清进度并执行 `afterOk`。
+     * 失败停在原地（进度条转红 + 文案说明已发几张），由用户决定是否重发。
      */
-    const pickEmojiImage = (emoji: PickedEmoji) => {
+    const runSend = (list: PendingImage[], afterOk: () => void) => {
+        setSending(true);
+        const ok = sendImagesToSession(session.key, list, (done, total, failed, text) => {
+            setProgress({ done, total, failed, text });
+            if (done >= total || failed) {
+                setSending(false);
+                if (!failed) {
+                    afterOk();
+                    setProgress(null);
+                }
+            }
+        });
+        if (!ok) setSending(false);
+    };
+
+    /**
+     * 点选一张在线表情（v26.10.13-v3 入待发列表；**v26.10.13-v4 改为直接发送**，按用户要求）：
+     * 表情面板已经把图下好了（blob 在手上），这里直接把它包成一张图投出去 ——
+     * 与「图片上传 → 发送 N 张」走**同一条发送链路**（逐张压缩 → /phone/send → 气泡 + 进度），
+     * 只是跳过「待发列表」这一步：点一下就是一次发送，与微信「点表情即发出」一致。
+     */
+    const sendEmojiNow = (emoji: PickedEmoji) => {
         if (!sendable) {
             addLog('[传输助手] 当前无在线设备，无法发送', 'error', true);
             return;
         }
-        if (sending) return; // 发送中不改变待发列表（发送按快照进行）
+        if (sending) {
+            addLog('[传输助手] 正在发送上一批，稍后再点表情', 'info');
+            return;
+        }
         const mime = emoji.blob.type || 'image/webp';
         const file = new File([emoji.blob], emoji.name, { type: mime });
-        setPendingImages((prev) =>
-            prev.concat([
+        addLog('[传输助手] 发送表情：' + emoji.pack + ' · ' + emoji.key, 'info');
+        runSend(
+            [
                 {
                     file,
                     name: emoji.name,
                     mime,
-                    // 与「图片上传」一样用 objectURL 做缩略图；这张图发送后仍被会话气泡引用，
-                    // 故这里**不 revoke**（撤销由 removeTransferMessage 那条路径负责）
+                    // 与「图片上传」一样用 objectURL；这张 blob 还会被表情面板的缩略图/浮层引用，
+                    // 故这里**不 revoke**（本进程内长期复用同一份 blob，撤销会让面板一起裂掉）
                     url: URL.createObjectURL(emoji.blob),
                 },
-            ])
+            ],
+            () => {
+                /* 直接发送：没有待发列表要清 */
+            }
         );
-        addLog('[传输助手] 已选表情：' + emoji.pack + ' · ' + emoji.key + '（点「发送」发给手机）', 'info');
     };
 
     const removePendingImage = (i: number) => {
@@ -268,19 +294,9 @@ export default function TransferDeviceChat({
 
     const confirmSendImage = () => {
         if (!pendingImages.length || !sendable) return;
-        setSending(true);
-        const list = pendingImages.slice();
-        const ok = sendImagesToSession(session.key, list, (done, total, failed, text) => {
-            setProgress({ done, total, failed, text });
-            if (done >= total || failed) {
-                setSending(false);
-                if (!failed) {
-                    setPendingImages([]);
-                    setProgress(null);
-                }
-            }
-        });
-        if (!ok) setSending(false);
+        // 发送按**快照**进行：列表在发送期间被清空/改动都不影响这一批
+        const snapshot = pendingImages.slice();
+        runSend(snapshot, () => setPendingImages([]));
     };
 
     // 图片消息（会话内按出现顺序）——预览左右切换由 antd 接管
@@ -609,7 +625,7 @@ export default function TransferDeviceChat({
                 disabled={!sendable}
                 canSend={!!sendText.trim()}
                 placeholder="输入要发送到手机的文本…（Enter 发送，Shift+Enter 换行）"
-                onPickEmojiImage={pickEmojiImage}
+                onPickEmojiImage={sendEmojiNow}
                 notice={
                     sendable ? undefined : (
                         <Text type="warning" style={{ fontSize: 12, display: 'block', marginBottom: 6 }}>

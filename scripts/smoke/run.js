@@ -88,7 +88,8 @@ const CHECKS = [
   // 于是气泡、滚动区、底部输入框都抽成了共用件 —— 这三条守的就是「共用件真的长出来了」
   ['chatBubbleOk', '聊天气泡左右分栏（他人靠左微信灰 / 我的靠右微信绿）+ 头像在气泡外侧 + 时间分隔条'],
   ['chatComposerOk', '输入区（微信式）：工具栏表情/图片上传/附件 + 多行自增高（超上限后框内滚动）+ 右下角发送按钮 + 实心底面板'],
-  ['emojiPackOk', '在线表情包：面板加载合集与图片，点一张进「待发图片」（与图片上传同一条发送链路）'],
+  ['emojiPackOk', '在线表情包：面板加载合集与图片，点一张**直接发送**（不进待发列表，会话里多一条图片气泡）'],
+  ['emojiHoverOk', '表情悬停放大预览：停 0.5 秒才弹出，浮层显示中移到另一张立即换图'],
   ['chatPanelSharedOk', 'Agent 对话与设备会话共用同一套聊天面板（同一个输入框外壳 + 带 data-side 的气泡 + 头像）'],
   // ===== 主面板既有断言 =====
   ['phrasesLoaded', '常用语 YAML 解析'],
@@ -511,7 +512,8 @@ async function main() {
       !checkPass('transferSettingsIsolatedOk') ||
       !checkPass('chatBubbleOk') ||
       !checkPass('chatComposerOk') ||
-      !checkPass('emojiPackOk')
+      !checkPass('emojiPackOk') ||
+      !checkPass('emojiHoverOk')
     ) {
       console.log('      传输助手快照：' + JSON.stringify(report.transferSnap));
     }

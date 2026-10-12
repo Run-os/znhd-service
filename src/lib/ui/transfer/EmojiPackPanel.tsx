@@ -10,10 +10,27 @@
  * 2. **合集用 chips 而不是下拉**：Popover 里再套一层 antd Select/下拉，点开时会被
  *    Popover 的「点外部关闭」逻辑抢走点击（要额外配 getPopupContainer），chips 没这个问题。
  * 3. **点击时直接交 blob**（不再二次下载）：面板显示本来就下过这张图，`onPick` 把 blob 一起
- *    交回调用方，设备会话据此构造 File 入待发列表 —— 少一次网络往返，也没有「点了没反应」的空窗。
+ *    交回调用方（设备会话**立刻发出去**，见 TransferDeviceChat 的 pickEmojiImage）——
+ *    少一次网络往返，也没有「点了没反应」的空窗。
+ *
+ * ── 悬停放大预览（v26.10.13-v4）──────────────────────────────────────────────
+ * 格子只有 30px，看不清表情细节：**鼠标停在格子上 0.5 秒**后弹出一个 120px 的放大浮层
+ * （跟随光标、`pointerEvents:none` 不吃事件）；预览**已经在屏幕上时**移到别的格子**立即换图**，
+ * 不再重新等 0.5 秒 —— 用户原话「在显示 hover 的情况下移动鼠标到其他表情包，实时显示」。
+ *
+ * ⚠️ 三个实现要点（都踩过或有原因）：
+ *   a) 悬停判定用**网格上的 `mousemove` 委托**（`closest('.znhd-emoji-item')`），**不用每格的
+ *      `onMouseEnter/onMouseLeave`**：React 的 enter/leave 是同一批 mouseover 里成对合成的，
+ *      先派发 leave 再派发 enter ⇒ 移到相邻格子时会**先 close 再重新计时 0.5s**（「实时切换」失效）。
+ *      委托只有一个来源，顺序问题不存在。
+ *   b) 浮层 portal 到 `getPreviewHost()`（共享层的预览宿主，挂在 documentElement 下）：
+ *      税务页 body 常带 transform，挂 body 的 fixed 浮层会以 body 盒子为包含块 → 坐标全错。
+ *   c) 「是否已在显示」用 **ref**（`hoverShown`）而不是读 state：mousemove 每秒几十次，
+ *      用 state 判会读到闭包里的旧值，切换逻辑会退化成重新计时。
  */
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent } from 'react';
+import { createPortal } from 'react-dom';
 import { Button, Spin, theme } from 'antd';
 import {
     cachedEmojiBlob,
@@ -22,6 +39,7 @@ import {
     type EmojiItem,
     type EmojiPack,
 } from '@/lib/transfer/emojiPack';
+import { getPreviewHost } from '../../../../shared/preview/host';
 
 /** 用户点选的一张表情（blob 已就绪，调用方直接拿去构造 File） */
 export interface PickedEmoji {
@@ -39,6 +57,14 @@ export interface PickedEmoji {
 const PANEL_WIDTH = 300;
 /** 每批并发下载的张数：太多会瞬间打满连接，太少首屏出图慢 */
 const BATCH = 8;
+/** 悬停多久后弹出放大预览（用户要求 0.5s：扫过格子时不该闪出大图） */
+const HOVER_DELAY = 500;
+/** 放大预览的方形边长（含内边距） */
+const HOVER_BOX = 120;
+/** 预览相对光标的偏移 */
+const HOVER_OFFSET = 16;
+/** 浮层的 z-index：要盖住 Popover（antd zIndexPopupBase = 1000000） */
+const HOVER_Z = 1000001;
 
 export default function EmojiPackPanel({ onPick }: { onPick: (emoji: PickedEmoji) => void }) {
     const { token } = theme.useToken();
@@ -50,6 +76,34 @@ export default function EmojiPackPanel({ onPick }: { onPick: (emoji: PickedEmoji
     const [ready, setReady] = useState<Record<string, string>>({});
     /** 正在临时补下载的那张（用户点得比下载快） */
     const [pendingKey, setPendingKey] = useState('');
+    /** 放大预览（null = 不显示）：url 为被悬停的那张，x/y 是光标视口坐标 */
+    const [hover, setHover] = useState<{ url: string; x: number; y: number } | null>(null);
+    /** 0.5s 计时器 */
+    const hoverTimer = useRef<number | null>(null);
+    /** 正在等待计时的那张（同一张继续等，不重置计时） */
+    const hoverPending = useRef('');
+    /** 预览是否已在屏幕上 —— 为 true 时移到别的格子**立即换图**（不再等 0.5s） */
+    const hoverShown = useRef(false);
+    /** 最后一次鼠标位置（计时结束时用它定位，而不是计时开始时的旧位置） */
+    const hoverPos = useRef({ x: 0, y: 0 });
+
+    const clearHoverTimer = () => {
+        if (hoverTimer.current !== null) {
+            window.clearTimeout(hoverTimer.current);
+            hoverTimer.current = null;
+        }
+    };
+
+    /** 收起预览（鼠标移出网格 / 移到空白处）：下一次悬停要重新等 0.5s */
+    const closeHover = () => {
+        clearHoverTimer();
+        hoverPending.current = '';
+        hoverShown.current = false;
+        setHover(null);
+    };
+
+    // 面板被关掉（Popover 卸载）时清掉挂起的计时器，别让它在卸载后 setState
+    useEffect(() => () => clearHoverTimer(), []);
 
     const load = useCallback((force: boolean) => {
         setBusy(true);
@@ -121,6 +175,52 @@ export default function EmojiPackPanel({ onPick }: { onPick: (emoji: PickedEmoji
             .finally(() => setPendingKey((k) => (k === it.url ? '' : k)));
     };
 
+    /**
+     * 网格上的鼠标移动（委托）：更新预览位置 / 切换预览目标。
+     * 见文件头 a) —— 这里刻意不用每格的 onMouseEnter/onMouseLeave。
+     */
+    const onGridMove = (e: ReactMouseEvent<HTMLDivElement>) => {
+        const target = e.target as HTMLElement | null;
+        const cell = target ? (target.closest('.znhd-emoji-item') as HTMLElement | null) : null;
+        const url = cell ? cell.getAttribute('data-emoji-url') || '' : '';
+        hoverPos.current = { x: e.clientX, y: e.clientY };
+        if (!url) {
+            // 网格的空白处：已显示的收起，正在计时的作废
+            if (hoverShown.current) closeHover();
+            else clearHoverTimer();
+            return;
+        }
+        if (hoverShown.current) {
+            // 预览已在屏幕上 → 实时换图（用户要求的「实时通过 hover 显示其他表情包」）
+            setHover({ url, x: e.clientX, y: e.clientY });
+            return;
+        }
+        if (hoverPending.current === url) return; // 同一格继续等，别重置计时
+        clearHoverTimer();
+        hoverPending.current = url;
+        hoverTimer.current = window.setTimeout(() => {
+            hoverTimer.current = null;
+            hoverShown.current = true;
+            setHover({ url, x: hoverPos.current.x, y: hoverPos.current.y });
+        }, HOVER_DELAY);
+    };
+
+    // 悬停的那张还没下好（面板分批下载中）：补一次，到位后浮层自己换成图
+    useEffect(() => {
+        if (!hover || ready[hover.url]) return;
+        let alive = true;
+        loadEmojiBlob(hover.url)
+            .then((entry) => {
+                if (alive) setReady((prev) => ({ ...prev, [hover.url]: entry.objectUrl }));
+            })
+            .catch(() => {
+                /* 下载失败：浮层留在加载态，移开即消失 */
+            });
+        return () => {
+            alive = false;
+        };
+    }, [hover, ready]);
+
     const chip = (pack: EmojiPack) => {
         const on = pack.id === activeId;
         return (
@@ -165,6 +265,8 @@ export default function EmojiPackPanel({ onPick }: { onPick: (emoji: PickedEmoji
         }
         return (
             <div
+                onMouseMove={onGridMove}
+                onMouseLeave={closeHover}
                 style={{
                     maxHeight: 196,
                     overflowY: 'auto',
@@ -182,6 +284,8 @@ export default function EmojiPackPanel({ onPick }: { onPick: (emoji: PickedEmoji
                             aria-label={'表情 ' + it.name}
                             title={it.key}
                             aria-busy={pendingKey === it.url}
+                            // 悬停预览委托靠它反查是哪一张（见 onGridMove）
+                            data-emoji-url={it.url}
                             onClick={() => pick(it)}
                             style={{
                                 width: 30,
@@ -230,8 +334,46 @@ export default function EmojiPackPanel({ onPick }: { onPick: (emoji: PickedEmoji
             </div>
             {body()}
             <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', marginTop: 6 }}>
-                点表情先放进「待发图片」，再点发送发出去
+                点表情直接发送到手机 · 悬停 0.5 秒放大查看
             </div>
+            {/* 悬停放大预览：portal 到共享预览宿主（挂 documentElement，避开 body transform） */}
+            {hover
+                ? createPortal(
+                      <div
+                          className="znhd-emoji-hover"
+                          data-emoji-url={hover.url}
+                          aria-hidden="true"
+                          style={{
+                              position: 'fixed',
+                              // 跟随光标 + 视口夹紧（贴边时不越界）
+                              left: Math.max(8, Math.min(hover.x + HOVER_OFFSET, window.innerWidth - HOVER_BOX - 8)),
+                              top: Math.max(8, Math.min(hover.y + HOVER_OFFSET, window.innerHeight - HOVER_BOX - 8)),
+                              width: HOVER_BOX,
+                              height: HOVER_BOX,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              background: 'rgba(0,0,0,0.78)',
+                              border: '1px solid rgba(255,255,255,0.16)',
+                              borderRadius: 10,
+                              boxShadow: '0 8px 24px rgba(0,0,0,0.55)',
+                              // 不吃鼠标事件：浮层压在别的格子上也不会打断「移到下一张」
+                              pointerEvents: 'none',
+                              zIndex: HOVER_Z,
+                          }}>
+                          {ready[hover.url] ? (
+                              <img
+                                  src={ready[hover.url]}
+                                  alt=""
+                                  style={{ maxWidth: HOVER_BOX - 16, maxHeight: HOVER_BOX - 16, display: 'block' }}
+                              />
+                          ) : (
+                              <Spin size="small" />
+                          )}
+                      </div>,
+                      getPreviewHost()
+                  )
+                : null}
         </div>
     );
 }
