@@ -19,6 +19,7 @@ import ImageOverlayActions from '@/lib/ui/ImageOverlayActions';
 import DeviceIdTag from '@/lib/ui/transfer/DeviceIdTag';
 import ChatBubble from '@/lib/ui/transfer/ChatBubble';
 import ChatComposer from '@/lib/ui/transfer/ChatComposer';
+import type { PickedEmoji } from '@/lib/ui/transfer/EmojiPackPanel';
 import { ChatHeader, ChatScroll } from '@/lib/ui/transfer/ChatPanel';
 import { DEVICE_COLORS, hashDeviceId, shortPhoneId } from '@/lib/ui/transfer/deviceColors';
 import MarkdownBody from '@/lib/ui/agent/MarkdownBody';
@@ -218,6 +219,35 @@ export default function TransferDeviceChat({
         };
         window.addEventListener('focus', cleanupFocus);
         inp.click();
+    };
+
+    /**
+     * 点选一张在线表情（v26.10.13-v3）：表情面板已经把图下好了（blob 在手上），
+     * 这里只把它变成「待发图片」的一项 —— 与「图片上传」走**同一条发送链路**
+     * （待发列表 → 逐张压缩 → /phone/send），所以表情也享受同一套进度与失败提示。
+     * 语义与微信一致：点表情先落到输入区上方，点发送才真正发出去。
+     */
+    const pickEmojiImage = (emoji: PickedEmoji) => {
+        if (!sendable) {
+            addLog('[传输助手] 当前无在线设备，无法发送', 'error', true);
+            return;
+        }
+        if (sending) return; // 发送中不改变待发列表（发送按快照进行）
+        const mime = emoji.blob.type || 'image/webp';
+        const file = new File([emoji.blob], emoji.name, { type: mime });
+        setPendingImages((prev) =>
+            prev.concat([
+                {
+                    file,
+                    name: emoji.name,
+                    mime,
+                    // 与「图片上传」一样用 objectURL 做缩略图；这张图发送后仍被会话气泡引用，
+                    // 故这里**不 revoke**（撤销由 removeTransferMessage 那条路径负责）
+                    url: URL.createObjectURL(emoji.blob),
+                },
+            ])
+        );
+        addLog('[传输助手] 已选表情：' + emoji.pack + ' · ' + emoji.key + '（点「发送」发给手机）', 'info');
     };
 
     const removePendingImage = (i: number) => {
@@ -579,6 +609,7 @@ export default function TransferDeviceChat({
                 disabled={!sendable}
                 canSend={!!sendText.trim()}
                 placeholder="输入要发送到手机的文本…（Enter 发送，Shift+Enter 换行）"
+                onPickEmojiImage={pickEmojiImage}
                 notice={
                     sendable ? undefined : (
                         <Text type="warning" style={{ fontSize: 12, display: 'block', marginBottom: 6 }}>

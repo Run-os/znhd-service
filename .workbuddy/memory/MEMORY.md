@@ -48,6 +48,7 @@
 - 发送目标由会话决定：具体会话=定向那台，聚合会话=`targets:'all'` 广播（旧版「≥2 台多选勾选」交互已移除）。
 - `destroyOnHidden`：关窗即卸载重挂 ⇒ nav 复位 `devices`、Agent hook 随窗口重生（会话索引靠 localStorage `scriptCat_AgentChats` 回填）。冒烟重开 Agent 必须：关窗 → 点面板「传输助手」→ 再点第一栏 `aria-label="Agents"`。
 - **窗口无标题栏**（v26.10.12-v2 起去掉了 `title`；v26.10.12-v4 起连 antd 的 × 也 `closable=false` 关掉，换成自绘标题条 `.znhd-transfer-titlebar` 里的关闭按钮）：识别窗口一律用 className 钩子 `.ant-modal.znhd-transfer-modal`。⚠️ v4 的关闭按钮在标题条里，**第三栏不再需要 48px 让位**（v2/v3 的约束已解除）；⚠️ antd v6 的 Modal 容器是 `.ant-modal-container`（非 v5 的 `.ant-modal-content`），且 `styles` 无 content 键——归零默认 16/24 内边距要在 `uiReset.ts` 写 CSS 规则。
+- **表情面板=在线图片表情包（v26.10.13-v3）**：`lib/transfer/emojiPack.ts`（8 个 `cdn.klyang.com` 合集清单，12h localStorage 缓存键 `scriptCat_EmojiPacks`；图片 blob+objectURL 双缓存与在途去重；**必须走 GM_xmlhttpRequest**——宿主 CSP 会拦外域 `<img src>`）+ `ui/transfer/EmojiPackPanel.tsx`（合集 chips/刷新/8 列网格/分批下载）。点一张 = 经 `onPickEmojiImage` 把 blob 交回宿主 → 设备会话加入「待发图片」（与图片上传同一条链路）；**不传该回调的宿主（Agent）表情按钮禁用**。旧 `chatEmojis.ts` 已删。webp 走 `skipWebp` 原样直传（canvas 压 JPEG 会丢透明通道）。
 - 删除的组件：PhoneModal / RecvHistoryModal / RecvTextModal / agent/AgentModal；`lib/gallery.ts` 只剩 `downloadFileName`。
 - 冒烟 `scripts/smoke/znhd-smoke.html` 时间线整体重写（报告时刻 37000ms）；「自动弹窗未点击」证据必须在点击前时刻记快照（报告时刻读全局量会被污染→假红）。
 

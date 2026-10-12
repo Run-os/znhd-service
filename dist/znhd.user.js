@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name                征纳互动人数和在线监控v2
 // @namespace           https://scriptcat.org/
-// @version             26.10.13-v2
+// @version             26.10.13-v3
 // @description         实时监控征纳互动等待人数和在线状态，支持语音播报、自定义常用语
 // @author              runos
 // @license             MIT
@@ -56339,8 +56339,9 @@ function UserIcon(p) {
 /**
  * 表情（Lucide `smile`）：输入框左下角的附加功能按钮之一。
  *
- * ⚠️ 这里说的是**按钮图标**（矢量，Win7 安全）。点开后的表情面板里是**字符**，
- * 清单刻意只取 BMP 符号、且避开 Dingbats（U+2700–U+27BF）——理由见 `chatEmojis.ts`。
+ * ⚠️ 这里说的是**按钮图标**（矢量，Win7 安全）。点开后的表情面板 v26.10.13-v3 起换成
+ * **在线图片表情包**（`EmojiPackPanel` + `lib/transfer/emojiPack.ts`）——图片不依赖字体，
+ * 所以彻底跳出了「Win7 没有彩色 emoji 字体」的限制（旧版那张 BMP 字符表现在已删）。
  */
 function SmileIcon(p) {
     return ((0,react_jsx_runtime_production_namespaceFn().jsxs)(SvgIcon, { ...p, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("circle", { cx: "12", cy: "12", r: "10" }), (0,react_jsx_runtime_production_namespaceFn().jsx)("path", { d: "M8 14s1.5 2 4 2 4-2 4-2" }), (0,react_jsx_runtime_production_namespaceFn().jsx)("line", { x1: "9", x2: "9.01", y1: "9", y2: "9" }), (0,react_jsx_runtime_production_namespaceFn().jsx)("line", { x1: "15", x2: "15.01", y1: "9", y2: "9" })] }));
@@ -115065,34 +115066,350 @@ function ChatBubble({ side, avatar, children, meta, bare, danger, maxWidth = '72
                         }, children: meta })) : null] })] }));
 }
 
-;// ./src/lib/ui/transfer/chatEmojis.ts
+;// ./src/lib/transfer/emojiPack.ts
 /**
- * 输入框「表情」面板的字符清单（v26.10.12-v3）。
+ * 传输助手的**在线表情包**数据层（v26.10.13-v3）。
  *
- * ── 为什么只有这些「老古董」符号，而不是 😀😀❤️🎉 那一套 ────────────────────────
- * 本脚本的主战场是**税务办的 Win7 机器**。Win7 的微软雅黑 / Segoe UI **没有**
- * Segoe UI Emoji（Win8.1 才随系统引入），因此：
- *   · 补充平面 emoji（U+1F300 以上，如 😀❤️🎉📱）在 Win7 上**没有字形** —— 渲染成豆腐块；
- *   · Dingbats 区（U+2700–U+27BF，如 ✓✕✈✂✉）在 Win7 的 Segoe UI Symbol 里覆盖**不确定**，
- *     本项目已在 `icons.tsx`/`uiReset` 里明确把这一区段列为「不用」。
- * 而下面这些码位都落在 **BMP 的 Miscellaneous Symbols（U+2600–U+26FF）/ Misc Technical /
- * 字母型符号** 里，Arial / Segoe UI Symbol / 微软雅黑 都有稳定字形 —— 与本仓库
- * 「UI 一律用矢量、不靠字体」的结论同源的判断依据：**先看码位所在区段，再看它像不像图标**。
+ * ── 为什么从「字符符号面板」换成在线表情包 ──────────────────────────────────
+ * 旧面板（`chatEmojis.ts`，本版已删）只能在 BMP 区里挑 `☺ ☝ ★` 这类**老符号**：脚本的主战场是
+ * 税务办的 Win7 机器，系统没有 Segoe UI Emoji 字体，U+1F300+ 的彩色 emoji 一律渲染成豆腐块。
+ * 换成**图片表情**后这个约束自动消失 —— 图片不靠字体，Win7 上一样是彩色的。
  *
- * 所以这里给的是「符号面板」而不是「emoji 面板」：能保证在目标机器上**真的显示出来**，
- * 比有几个彩色小人重要。要补新字符时**先确认它不在 U+1F000+ 与 U+2700–27BF**。
+ * ── 数据来源 ────────────────────────────────────────────────────────────────
+ * 8 个合集的地址写死在 `EMOJI_PACK_SOURCES`（用户给定，均在 cdn.klyang.com）：
+ *   · 清单 JSON：`https://cdn.klyang.com/json/<id>.json`
+ *     → `{ name: '阿鲁日常', type: 'image', items: [{ key: '01', val: '<图片地址>' }] }`
+ *   · 图片本体：`https://cdn.klyang.com/emo/.../<key>.webp`（静态 webp，实测单张 2–6 KB）
  *
- * ── 面板形态 ────────────────────────────────────────────────────────────────
- * `ChatComposer` 用 Popover 渲染成 8 列网格，点一下把字符插到光标处（不替换整段文本）。
+ * ── 三个必须绕开的坑 ────────────────────────────────────────────────────────
+ * 1. **必须走 `GM_xmlhttpRequest`，不能用 `<img src>` 直接引 CDN**：宿主税务页有 CSP，
+ *    img-src 白名单里没有这个域，直接引用会整片裂图；GM 请求不受页面 CSP 约束
+ *    （与中继长轮询绕过 connect-src 同一个理由）。
+ * 2. **清单必须缓存**：面板每开一次就拉 8 个请求没必要 —— 缓存在 localStorage
+ *    （键 `scriptCat_EmojiPacks`）12 小时；表情包是静态资源，TTL 给得长一些，
+ *    面板上有「刷新」可强制重拉。
+ * 3. **图片 blob 也要缓存**：点选表情后要把图片交给「待发图片 → 逐张发送」链路，
+ *    本来就需要 blob，面板显示也用同一份（`URL.createObjectURL`）。objectURL **不主动 revoke**：
+ *    全套最多几百张、单张几 KB，撤销反而会让面板缩略图与会话里的待发缩略图一起裂掉。
+ *
+ * 失败处理：单个合集失败就跳过（其余照常显示）；8 个全失败才 reject，面板给出「重试」。
  */
-const EMOJI_GROUPS = [
-    { title: '表情 · 手势', items: ['☺', '☻', '☹', '☝', '☞', '☜', '☛', '☚'] },
-    { title: '天气 · 生活', items: ['☀', '☁', '☂', '☃', '☄', '☔', '☕', '⚡'] },
-    { title: '星星 · 音乐', items: ['★', '☆', '♡', '♥', '♨', '♪', '♫', '♬'] },
-    { title: '符号 · 标记', items: ['☎', '☏', '⌚', '⌛', '⚑', '☑', '☐', '☒'] },
-    { title: '扑克 · 音符', items: ['♠', '♣', '♢', '♦', '♤', '♧', '♩', '♭'] },
-    { title: '星座', items: ['♈', '♉', '♊', '♋', '♌', '♍', '♎', '♏'] },
+/** 用户给定的 8 个合集（顺序即面板里的顺序） */
+const EMOJI_PACK_SOURCES = [
+    { id: 'aluhedwm', url: 'https://cdn.klyang.com/json/aluhedwm.json' },
+    { id: 'alurc', url: 'https://cdn.klyang.com/json/alurc.json' },
+    { id: 'alurc2', url: 'https://cdn.klyang.com/json/alurc2.json' },
+    { id: 'aluyn', url: 'https://cdn.klyang.com/json/aluyn.json' },
+    { id: 'jralu', url: 'https://cdn.klyang.com/json/jralu.json' },
+    { id: 'rcxly', url: 'https://cdn.klyang.com/json/rcxly.json' },
+    { id: 'tvxds', url: 'https://cdn.klyang.com/json/tvxds.json' },
+    { id: 'xhl', url: 'https://cdn.klyang.com/json/xhl.json' },
 ];
+const CACHE_KEY = 'scriptCat_EmojiPacks';
+/** 清单缓存时长：表情包基本不变，12 小时足够，避免每次开面板都打 8 个请求 */
+const CACHE_TTL = 12 * 60 * 60 * 1000;
+/* ============================ GM 请求（脚本端才有） ============================ */
+function gmGetText(url) {
+    return new Promise((resolve, reject) => {
+        GM_xmlhttpRequest({
+            method: 'GET',
+            url,
+            timeout: 15000,
+            onload: (resp) => {
+                if (resp.status >= 200 && resp.status < 300 && typeof resp.responseText === 'string') {
+                    resolve(resp.responseText);
+                    return;
+                }
+                reject(new Error('HTTP ' + resp.status));
+            },
+            onerror: () => reject(new Error('网络请求失败')),
+            ontimeout: () => reject(new Error('请求超时')),
+        });
+    });
+}
+function gmGetBlob(url) {
+    return new Promise((resolve, reject) => {
+        GM_xmlhttpRequest({
+            method: 'GET',
+            url,
+            responseType: 'blob',
+            timeout: 20000,
+            onload: (resp) => {
+                const blob = resp && resp.response;
+                if (!blob || typeof blob.size !== 'number' || !blob.size) {
+                    reject(new Error('响应不是有效的图片数据'));
+                    return;
+                }
+                resolve(blob);
+            },
+            onerror: () => reject(new Error('网络请求失败')),
+            ontimeout: () => reject(new Error('请求超时')),
+        });
+    });
+}
+/* ============================== 清单：拉取 + 缓存 ============================== */
+/** 文件名净化：去掉路径分隔符与控制字符（合集 key 里可能有中文，中文本身不处理） */
+function sanitizeName(s) {
+    return s.replace(/[\\/:*?"<>|\s]+/g, '_').slice(0, 60) || 'emoji';
+}
+function emojiFileName(packId, key, url) {
+    const ext = (url.match(/\.([a-z0-9]{2,5})(?:[?#]|$)/i) || [])[1] || 'webp';
+    return sanitizeName(packId + '-' + key) + '.' + ext.toLowerCase();
+}
+function readCache() {
+    try {
+        const raw = localStorage.getItem(CACHE_KEY);
+        if (!raw)
+            return null;
+        const parsed = JSON.parse(raw);
+        if (!parsed || !Array.isArray(parsed.packs) || !parsed.packs.length)
+            return null;
+        if (typeof parsed.ts !== 'number' || Date.now() - parsed.ts > CACHE_TTL)
+            return null;
+        return parsed.packs;
+    }
+    catch (e) {
+        return null;
+    }
+}
+function writeCache(packs) {
+    try {
+        localStorage.setItem(CACHE_KEY, JSON.stringify({ ts: Date.now(), packs }));
+    }
+    catch (e) {
+        /* 存储满 / 隐私模式：缓存失败不影响功能 */
+    }
+}
+/** 清掉清单缓存（面板上的「刷新」用：强制重新拉 8 个合集） */
+function clearEmojiPackCache() {
+    try {
+        localStorage.removeItem(CACHE_KEY);
+    }
+    catch (e) {
+        /* 忽略 */
+    }
+}
+function parsePack(srcId, text) {
+    const raw = JSON.parse(text);
+    // 先落到变量上再 Array.isArray：对「表达式」做类型守卫不会收窄，list 会退化成 unknown
+    const rawItems = raw ? raw.items : undefined;
+    const list = Array.isArray(rawItems) ? rawItems : [];
+    const items = [];
+    list.forEach((it) => {
+        const row = (it || {});
+        const url = String(row.val || '').trim();
+        // 只收 http(s) 的图片地址，脏数据直接跳过（别让一条坏记录毁掉整个合集）
+        if (!/^https?:\/\//i.test(url))
+            return;
+        const key = String(row.key || '').trim() || 'emoji';
+        items.push({ key, url, name: emojiFileName(srcId, key, url) });
+    });
+    if (!items.length)
+        throw new Error('合集为空');
+    return { id: srcId, name: String((raw && raw.name) || srcId), items };
+}
+/**
+ * 拉取全部表情包：命中缓存直接返回，否则并发拉 8 个清单（单个失败跳过）。
+ *
+ * @param force 忽略缓存强制重拉（面板「刷新」按钮）
+ */
+async function loadEmojiPacks(force = false) {
+    if (!force) {
+        const hit = readCache();
+        if (hit)
+            return hit;
+    }
+    const results = await Promise.all(EMOJI_PACK_SOURCES.map((src) => gmGetText(src.url)
+        .then((text) => parsePack(src.id, text))
+        .catch(() => null)));
+    const packs = results.filter((p) => !!p && p.items.length > 0);
+    if (!packs.length)
+        throw new Error('表情包全部加载失败（8 个合集都没取到）');
+    writeCache(packs);
+    return packs;
+}
+const blobCache = new Map();
+const inflight = new Map();
+/** 已经下好的表情图（面板渲染时先查它，避免重复请求） */
+function cachedEmojiBlob(url) {
+    return blobCache.get(url);
+}
+/**
+ * 取表情图（带缓存与去重：同一张图面板显示与「点选加入待发」共用一次下载）。
+ * 下载失败会 reject，由调用方决定「这张留白 / 提示失败」。
+ */
+function loadEmojiBlob(url) {
+    const hit = blobCache.get(url);
+    if (hit)
+        return Promise.resolve(hit);
+    const running = inflight.get(url);
+    if (running)
+        return running;
+    const task = gmGetBlob(url)
+        .then((blob) => {
+        const entry = { blob, objectUrl: URL.createObjectURL(blob) };
+        blobCache.set(url, entry);
+        return entry;
+    })
+        .finally(() => {
+        inflight.delete(url);
+    });
+    inflight.set(url, task);
+    return task;
+}
+
+;// ./src/lib/ui/transfer/EmojiPackPanel.tsx
+
+/**
+ * 在线表情包面板（v26.10.13-v3）—— `ChatComposer` 表情按钮的 Popover 内容。
+ *
+ * 结构：顶部一行合集 chips（可横向滚动）+ 右上角「刷新」→ 中间图片网格 → 底部一行提示。
+ * 数据层在 `@/lib/transfer/emojiPack`（清单缓存 / GM 拉取 / blob 复用，理由写在那边）。
+ *
+ * ── 三个实现要点 ────────────────────────────────────────────────────────────
+ * 1. **分批下载**：合集最多 134 张，一次并发 8 张 → 首屏很快就有图，剩下的在后台补。
+ *    已下好的（blob 缓存命中）同步填进去，切走再切回来是秒开。
+ * 2. **合集用 chips 而不是下拉**：Popover 里再套一层 antd Select/下拉，点开时会被
+ *    Popover 的「点外部关闭」逻辑抢走点击（要额外配 getPopupContainer），chips 没这个问题。
+ * 3. **点击时直接交 blob**（不再二次下载）：面板显示本来就下过这张图，`onPick` 把 blob 一起
+ *    交回调用方，设备会话据此构造 File 入待发列表 —— 少一次网络往返，也没有「点了没反应」的空窗。
+ */
+
+
+
+const EmojiPackPanel_PANEL_WIDTH = 300;
+/** 每批并发下载的张数：太多会瞬间打满连接，太少首屏出图慢 */
+const BATCH = 8;
+function EmojiPackPanel({ onPick }) {
+    const { token } = es_theme.useToken();
+    const [packs, setPacks] = (0,react_production_namespaceFn().useState)(null);
+    const [err, setErr] = (0,react_production_namespaceFn().useState)('');
+    const [activeId, setActiveId] = (0,react_production_namespaceFn().useState)('');
+    const [busy, setBusy] = (0,react_production_namespaceFn().useState)(false);
+    /** url -> objectURL（已下好的图） */
+    const [ready, setReady] = (0,react_production_namespaceFn().useState)({});
+    /** 正在临时补下载的那张（用户点得比下载快） */
+    const [pendingKey, setPendingKey] = (0,react_production_namespaceFn().useState)('');
+    const load = (0,react_production_namespaceFn().useCallback)((force) => {
+        setBusy(true);
+        setErr('');
+        loadEmojiPacks(force)
+            .then((list) => {
+            setPacks(list);
+            // 默认选第一组；刷新后尽量留在原来的组
+            setActiveId((prev) => (prev && list.some((p) => p.id === prev) ? prev : list[0].id));
+        })
+            .catch((e) => setErr((e && e.message) || '表情包加载失败'))
+            .finally(() => setBusy(false));
+    }, []);
+    (0,react_production_namespaceFn().useEffect)(() => {
+        load(false);
+    }, [load]);
+    const activePack = (0,react_production_namespaceFn().useMemo)(() => (packs || []).find((p) => p.id === activeId) || null, [packs, activeId]);
+    // 当前合集的图片：缓存命中的同步填，其余分批下载（切组合集会取消上一轮）
+    (0,react_production_namespaceFn().useEffect)(() => {
+        if (!activePack)
+            return;
+        let cancelled = false;
+        const cached = {};
+        const queue = [];
+        activePack.items.forEach((it) => {
+            const hit = cachedEmojiBlob(it.url);
+            if (hit)
+                cached[it.url] = hit.objectUrl;
+            else
+                queue.push(it);
+        });
+        if (Object.keys(cached).length)
+            setReady((prev) => ({ ...prev, ...cached }));
+        const run = async () => {
+            while (queue.length && !cancelled) {
+                const batch = queue.splice(0, BATCH);
+                const results = await Promise.allSettled(batch.map((it) => loadEmojiBlob(it.url)));
+                if (cancelled)
+                    return;
+                const add = {};
+                results.forEach((r, i) => {
+                    if (r.status === 'fulfilled')
+                        add[batch[i].url] = r.value.objectUrl;
+                });
+                if (Object.keys(add).length)
+                    setReady((prev) => ({ ...prev, ...add }));
+            }
+        };
+        void run();
+        return () => {
+            cancelled = true;
+        };
+    }, [activePack]);
+    const pick = (it) => {
+        if (!activePack)
+            return;
+        const hit = cachedEmojiBlob(it.url);
+        if (hit) {
+            onPick({ pack: activePack.name, key: it.key, url: it.url, name: it.name, blob: hit.blob });
+            return;
+        }
+        // 还没下好（用户手比下载快）：等这张下完再交出去 —— 别让点击石沉大海。
+        // ⚠️ 不把未就绪的格子做成 disabled：disabled 的按钮点了完全没反馈，用户只会以为坏了。
+        setPendingKey(it.url);
+        loadEmojiBlob(it.url)
+            .then((entry) => onPick({ pack: activePack.name, key: it.key, url: it.url, name: it.name, blob: entry.blob }))
+            .catch(() => {
+            /* 下载失败：格子保持占位，用户可重试或点刷新 */
+        })
+            .finally(() => setPendingKey((k) => (k === it.url ? '' : k)));
+    };
+    const chip = (pack) => {
+        const on = pack.id === activeId;
+        return ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { size: "small", type: "text", "aria-pressed": on, onClick: () => setActiveId(pack.id), style: {
+                flex: '0 0 auto',
+                height: 22,
+                padding: '0 8px',
+                fontSize: 12,
+                borderRadius: 11,
+                background: on ? 'rgba(7,193,96,0.18)' : 'rgba(255,255,255,0.06)',
+                color: on ? '#07C160' : 'rgba(255,255,255,0.75)',
+            }, children: pack.name }, pack.id));
+    };
+    const body = () => {
+        if (err) {
+            return ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { padding: '18px 0', textAlign: 'center' }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { fontSize: 12, color: 'rgba(255,255,255,0.55)', marginBottom: 8 }, children: err }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { size: "small", onClick: () => load(true), children: "\u91CD\u8BD5" })] }));
+        }
+        if (!packs) {
+            return ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { padding: '22px 0', textAlign: 'center' }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(spin, { size: "small" }), (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { fontSize: 12, color: 'rgba(255,255,255,0.45)', marginTop: 8 }, children: "\u6B63\u5728\u52A0\u8F7D\u8868\u60C5\u5305\u2026" })] }));
+        }
+        return ((0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: {
+                maxHeight: 196,
+                overflowY: 'auto',
+                display: 'grid',
+                gridTemplateColumns: 'repeat(8, minmax(0, 1fr))',
+                gap: 2,
+            }, children: (activePack ? activePack.items : []).map((it) => {
+                const url = ready[it.url];
+                return ((0,react_jsx_runtime_production_namespaceFn().jsx)("button", { type: "button", className: "znhd-emoji-item", "aria-label": '表情 ' + it.name, title: it.key, "aria-busy": pendingKey === it.url, onClick: () => pick(it), style: {
+                        width: 30,
+                        height: 30,
+                        padding: 0,
+                        border: 'none',
+                        borderRadius: 4,
+                        background: url ? 'transparent' : 'rgba(255,255,255,0.05)',
+                        opacity: pendingKey === it.url ? 0.45 : 1,
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: 'pointer',
+                    }, children: url ? ((0,react_jsx_runtime_production_namespaceFn().jsx)("img", { src: url, alt: it.key, style: { maxWidth: 26, maxHeight: 26, display: 'block' } })) : null }, it.url));
+            }) }));
+    };
+    return ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { width: EmojiPackPanel_PANEL_WIDTH }, className: "znhd-emoji-panel", children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { flex: '1 1 auto', display: 'flex', gap: 4, overflowX: 'auto', paddingBottom: 2 }, children: (packs || []).map(chip) }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { size: "small", type: "text", "aria-label": "\u5237\u65B0\u8868\u60C5\u5305", disabled: busy, onClick: () => load(true), style: {
+                            flex: '0 0 auto',
+                            height: 22,
+                            padding: '0 4px',
+                            fontSize: 12,
+                            color: token.colorTextTertiary,
+                        }, children: "\u5237\u65B0" })] }), body(), (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { fontSize: 11, color: 'rgba(255,255,255,0.35)', marginTop: 6 }, children: "\u70B9\u8868\u60C5\u5148\u653E\u8FDB\u300C\u5F85\u53D1\u56FE\u7247\u300D\uFF0C\u518D\u70B9\u53D1\u9001\u53D1\u51FA\u53BB" })] }));
+}
 
 ;// ./src/lib/ui/transfer/ChatComposer.tsx
 
@@ -115116,35 +115433,22 @@ const EMOJI_GROUPS = [
  * · **必须同时钉住 `minRows` 与 `lineHeight: '20px'`**（v26.10.10-v15）：rc-textarea
  *   挂载时按 minRows 算高、输入后按「行数 × 行高 + padding」重算，行高不一致会出现
  *   「打一个字再删空，输入框永久变高」。冒烟 `agentInputHeightOk` 严格相等守着。
+ *
+ * v26.10.13-v3：表情面板由「BMP 字符符号」换成**在线图片表情包**（`EmojiPackPanel`，
+ * 数据层见 `@/lib/transfer/emojiPack`）。点一张表情不再往输入框插字符，而是把图片交回
+ * 调用方（`onPickEmojiImage`）——设备会话据此加入「待发图片」，与微信「表情先进输入区」同义；
+ * **不传这个回调的宿主（Agent 对话）表情按钮自动禁用**（那条通道只收文本）。
  */
 
 
 
 
 
-function ChatComposer({ value, onChange, onSend, disabled, streaming, onStop, placeholder, canSend, actions, rightExtras, notice, }) {
-    const { token } = es_theme.useToken();
+function ChatComposer({ value, onChange, onSend, disabled, streaming, onStop, placeholder, canSend, actions, rightExtras, notice, onPickEmojiImage, emojiDisabledReason, }) {
     const [emojiOpen, setEmojiOpen] = (0,react_production_namespaceFn().useState)(false);
-    const inputRef = (0,react_production_namespaceFn().useRef)(null);
     const sendDisabled = !!disabled || streaming || !(canSend === undefined ? value.trim() : canSend);
-    /** 把字符插到光标处（不是追加到末尾：用户可能改到中间才想起来加个表情） */
-    const insertEmoji = (ch) => {
-        // antd 的 TextAreaRef.nativeElement 声明为 HTMLElement，取光标位置要自己收窄成 textarea
-        const el = inputRef.current?.nativeElement;
-        const start = el && el.selectionStart !== null ? el.selectionStart : value.length;
-        const end = el && el.selectionEnd !== null ? el.selectionEnd : value.length;
-        onChange(value.slice(0, start) + ch + value.slice(end));
-        const caret = start + ch.length;
-        // 等 React 把这轮 value 提交完再摆光标；点表情按钮后焦点会跑到按钮上，顺手抢回来
-        window.requestAnimationFrame(() => {
-            const node = inputRef.current?.nativeElement;
-            if (!node)
-                return;
-            node.focus();
-            node.setSelectionRange(caret, caret);
-        });
-    };
-    const emojiPanel = ((0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { width: 236 }, children: EMOJI_GROUPS.map((group) => ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { marginBottom: 6 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { fontSize: 11, color: token.colorTextTertiary, marginBottom: 2 }, children: group.title }), (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { display: 'grid', gridTemplateColumns: 'repeat(8, minmax(0, 1fr))', gap: 2 }, children: group.items.map((ch) => ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { type: "text", size: "small", "aria-label": '表情 ' + ch, onClick: () => insertEmoji(ch), style: { height: 24, minWidth: 0, padding: 0, fontSize: 15, lineHeight: '24px' }, children: ch }, ch))) })] }, group.title))) }));
+    /** 表情面板只在有回调时可用（v26.10.13-v3：换成在线图片表情包，见 EmojiPackPanel） */
+    const emojiEnabled = !!onPickEmojiImage;
     const iconButton = (label, tooltip, icon, onClick, isDisabled) => ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_tooltip, { title: tooltip, children: (0,react_jsx_runtime_production_namespaceFn().jsx)("span", { style: { display: 'inline-flex' }, children: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { type: "text", size: "small", "aria-label": label, icon: icon, disabled: isDisabled, onClick: onClick, style: { width: 28, height: 28, minWidth: 28, padding: 0, color: 'rgba(255,255,255,0.6)' } }) }) }, label));
     return ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { 
         // 类名是冒烟夹具识别「共用输入面板」的钩子（composerFacts / composerBoxOf），勿改
@@ -115155,7 +115459,12 @@ function ChatComposer({ value, onChange, onSend, disabled, streaming, onStop, pl
             padding: '6px 12px 8px',
             background: WECHAT.input,
             borderTop: '1px solid rgba(0,0,0,0.4)',
-        }, children: [notice, (0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', alignItems: 'center', gap: 2, marginBottom: 2 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(es_popover, { trigger: "click", placement: "topLeft", open: emojiOpen, onOpenChange: setEmojiOpen, content: emojiPanel, children: iconButton('表情', '插入符号 / 表情', (0,react_jsx_runtime_production_namespaceFn().jsx)(SmileIcon, { size: 16 }), () => setEmojiOpen((v) => !v), disabled) }), (actions || []).map((action) => iconButton(action.label, action.tooltip || action.label, action.icon, action.onClick, action.disabled || disabled))] }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_input.TextArea, { ref: inputRef, value: value, onChange: (event) => onChange(event.target.value), onPressEnter: (event) => {
+        }, children: [notice, (0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', alignItems: 'center', gap: 2, marginBottom: 2 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(es_popover, { trigger: "click", placement: "topLeft", open: emojiOpen, onOpenChange: setEmojiOpen, 
+                        // 面板内容只在首次打开时挂载（Popover 不渲染关闭态的内容）：表情包清单与图片
+                        // 都是打开面板才去拉，不开面板不产生任何网络请求
+                        content: emojiEnabled ? (0,react_jsx_runtime_production_namespaceFn().jsx)(EmojiPackPanel, { onPick: onPickEmojiImage }) : null, children: iconButton('表情', emojiEnabled
+                            ? '表情包（点一张先放进待发图片）'
+                            : emojiDisabledReason || '当前对话不支持发送表情', (0,react_jsx_runtime_production_namespaceFn().jsx)(SmileIcon, { size: 16 }), () => setEmojiOpen((v) => !v), disabled || !emojiEnabled) }), (actions || []).map((action) => iconButton(action.label, action.tooltip || action.label, action.icon, action.onClick, action.disabled || disabled))] }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_input.TextArea, { value: value, onChange: (event) => onChange(event.target.value), onPressEnter: (event) => {
                     if (event.shiftKey)
                         return;
                     event.preventDefault();
@@ -115293,7 +115602,10 @@ function TransferAgentView({ agent, pane }) {
                                     justifyContent: 'center',
                                     background: '#4A4A4A',
                                     color: '#fff',
-                                }, children: (0,react_jsx_runtime_production_namespaceFn().jsx)(BotIcon, { size: 16, color: "currentColor" }) }), (0,react_jsx_runtime_production_namespaceFn().jsx)(typography.Text, { strong: true, style: { fontSize: 15 }, ellipsis: true, children: agent.activeChatId ? agentChatLabel(agent.chats, agent.activeChatId) : '新的聊天' }), (0,react_jsx_runtime_production_namespaceFn().jsxs)(typography.Text, { type: "secondary", style: { fontSize: 11, flex: '0 0 auto' }, children: ["\u5171 ", agent.chats.length, " \u6761\u5BF9\u8BDD"] })] }) }), agent.fatalError ? ((0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { padding: '8px 12px 0' }, children: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_alert, { type: "error", showIcon: true, message: agent.fatalError }) })) : null, (0,react_jsx_runtime_production_namespaceFn().jsx)(ChatScroll, { className: "znhd-agent-messages", scrollDep: agent.messages, children: agent.messages.length ? (agent.messages.map(renderMessage)) : ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_empty, { image: es_empty.PRESENTED_IMAGE_SIMPLE, description: (0,react_jsx_runtime_production_namespaceFn().jsx)("span", { style: { fontSize: 12 }, children: "\u76F4\u63A5\u63D0\u95EE\u5373\u53EF\u3002\u53EF\u4EE5\u8BD5\u8BD5\u300C\u5E2E\u6211\u603B\u7ED3\u8FD9\u4E2A\u9875\u9762\u80FD\u505A\u4EC0\u4E48\u300D\u300C\u5F81\u7EB3\u4E92\u52A8\u6389\u7EBF\u63D0\u9192\u6CA1\u58F0\u97F3\u600E\u4E48\u529E\u300D" }) })) }), (0,react_jsx_runtime_production_namespaceFn().jsx)(ChatComposer, { value: agent.input, onChange: agent.setInput, onSend: () => void agent.send(), disabled: !agent.api, streaming: agent.streaming, onStop: agent.stopStreaming, canSend: !!agent.input.trim(), placeholder: agent.models.length
+                                }, children: (0,react_jsx_runtime_production_namespaceFn().jsx)(BotIcon, { size: 16, color: "currentColor" }) }), (0,react_jsx_runtime_production_namespaceFn().jsx)(typography.Text, { strong: true, style: { fontSize: 15 }, ellipsis: true, children: agent.activeChatId ? agentChatLabel(agent.chats, agent.activeChatId) : '新的聊天' }), (0,react_jsx_runtime_production_namespaceFn().jsxs)(typography.Text, { type: "secondary", style: { fontSize: 11, flex: '0 0 auto' }, children: ["\u5171 ", agent.chats.length, " \u6761\u5BF9\u8BDD"] })] }) }), agent.fatalError ? ((0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { padding: '8px 12px 0' }, children: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_alert, { type: "error", showIcon: true, message: agent.fatalError }) })) : null, (0,react_jsx_runtime_production_namespaceFn().jsx)(ChatScroll, { className: "znhd-agent-messages", scrollDep: agent.messages, children: agent.messages.length ? (agent.messages.map(renderMessage)) : ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_empty, { image: es_empty.PRESENTED_IMAGE_SIMPLE, description: (0,react_jsx_runtime_production_namespaceFn().jsx)("span", { style: { fontSize: 12 }, children: "\u76F4\u63A5\u63D0\u95EE\u5373\u53EF\u3002\u53EF\u4EE5\u8BD5\u8BD5\u300C\u5E2E\u6211\u603B\u7ED3\u8FD9\u4E2A\u9875\u9762\u80FD\u505A\u4EC0\u4E48\u300D\u300C\u5F81\u7EB3\u4E92\u52A8\u6389\u7EBF\u63D0\u9192\u6CA1\u58F0\u97F3\u600E\u4E48\u529E\u300D" }) })) }), (0,react_jsx_runtime_production_namespaceFn().jsx)(ChatComposer, { value: agent.input, onChange: agent.setInput, onSend: () => void agent.send(), disabled: !agent.api, streaming: agent.streaming, onStop: agent.stopStreaming, canSend: !!agent.input.trim(), 
+                    // 表情包是「图片」：Agent 通道只吃文本，故不传 onPickEmojiImage（按钮禁用），
+                    // 说明与紧邻的「图片上传 / 附件」两个灰按钮保持一致
+                    emojiDisabledReason: "\u6682\u4E0D\u652F\u6301\uFF1AScriptCat Agent \u76EE\u524D\u53EA\u63A5\u53D7\u6587\u672C", placeholder: agent.models.length
                         ? '输入问题，Enter 发送，Shift + Enter 换行'
                         : '还没在 ScriptCat 里配置模型：请先到 ScriptCat 的 Agent 设置里添加一个模型', rightExtras: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_select, { size: "small", variant: "borderless", style: { maxWidth: 190 }, value: agent.modelId || undefined, placeholder: agent.models.length ? '选择模型' : '未配置模型', disabled: agent.streaming, options: agent.models.map((model) => ({
                             value: model.id,
@@ -115362,6 +115674,19 @@ function isSvgLike(lowerMime, lowerName) {
 /** GIF 判定：canvas 只取首帧，会把动图压成静态图 ⇒ 默认也原样直传 */
 function isGifLike(lowerMime, lowerName) {
     return lowerMime === 'image/gif' || /\.gif$/.test(lowerName);
+}
+/**
+ * WebP 判定：默认同样**原样直传**（v26.10.13-v3 加）。两条理由与 SVG/GIF 同源：
+ *   · canvas 只能导出 JPEG ⇒ **透明通道丢失**（JPEG 无 alpha，实现里要铺白底），而聊天用的
+ *     表情图（桌面端在线表情包，cdn.klyang.com 的静态 webp）几乎都是透明背景，压完就会
+ *     变成深色气泡里的一块白方块；
+ *   · 动画 webp 与 GIF 一样只取首帧，会把动图压死。
+ * 何况 webp 本身压缩率就高（表情图单张仅 2–6KB），再压基本只剩「体积变大」的份 ——
+ * 即便不特判，`prepare.ts` 里「压不小就原样发」的兜底也会落到同一结果；
+ * 显式写出来是为了**语义明确**，别让后来人以为这是被兜底意外兜住的。
+ */
+function isWebpLike(lowerMime, lowerName) {
+    return lowerMime === 'image/webp' || /\.webp$/.test(lowerName);
 }
 /**
  * 解码：`createImageBitmap` 优先，失败回退 `<img>`（部分内核/格式上前者不可用或直接抛）。
@@ -115468,6 +115793,8 @@ function makeHeicConverter(heic2any, quality = 0.9) {
  *   · SVG 原样直传（canvas 无法可靠光栅化，会丢矢量）；
  *   · **GIF 也原样直传**（canvas 只取首帧，会把动图压成静态图）—— 原先只有脚本端这么做，
  *     手机端会压成静态图；这次统一为「跳过」，顺手修掉两端行为不一致；
+ *   · **WebP 也原样直传**（v26.10.13-v3 加，理由同 GIF，另加「JPEG 无透明通道」一条 ——
+ *     桌面端在线表情包是透明背景的 webp，压完会在深色气泡里变成白方块）；
  *   · HEIC/HEIF 先转 JPEG 再走同一条压缩链（**转码器由调用方注入**：两端取库方式不同）；
  *     ⚠️ HEIC 的「转码」本身就是目的（既压体积，也修掉安卓端不显示 HEIC 的兼容问题），
  *     故即使 JPEG 没比原始 HEIC 小也照样发 JPEG；其它格式仍遵循「压不小就不压」；
@@ -115487,6 +115814,8 @@ async function prepareForTransfer(file, opt = {}) {
     if ((opt.skipSvg === undefined ? true : opt.skipSvg) && isSvgLike(lowerMime, lowerName))
         return original;
     if ((opt.skipGif === undefined ? true : opt.skipGif) && isGifLike(lowerMime, lowerName))
+        return original;
+    if ((opt.skipWebp === undefined ? true : opt.skipWebp) && isWebpLike(lowerMime, lowerName))
         return original;
     const heic = isHeicLike(lowerMime, lowerName);
     let source = file;
@@ -117114,6 +117443,33 @@ function TransferDeviceChat({ session, phone, colorIndex, onClear, }) {
         window.addEventListener('focus', cleanupFocus);
         inp.click();
     };
+    /**
+     * 点选一张在线表情（v26.10.13-v3）：表情面板已经把图下好了（blob 在手上），
+     * 这里只把它变成「待发图片」的一项 —— 与「图片上传」走**同一条发送链路**
+     * （待发列表 → 逐张压缩 → /phone/send），所以表情也享受同一套进度与失败提示。
+     * 语义与微信一致：点表情先落到输入区上方，点发送才真正发出去。
+     */
+    const pickEmojiImage = (emoji) => {
+        if (!sendable) {
+            addLog('[传输助手] 当前无在线设备，无法发送', 'error', true);
+            return;
+        }
+        if (sending)
+            return; // 发送中不改变待发列表（发送按快照进行）
+        const mime = emoji.blob.type || 'image/webp';
+        const file = new File([emoji.blob], emoji.name, { type: mime });
+        setPendingImages((prev) => prev.concat([
+            {
+                file,
+                name: emoji.name,
+                mime,
+                // 与「图片上传」一样用 objectURL 做缩略图；这张图发送后仍被会话气泡引用，
+                // 故这里**不 revoke**（撤销由 removeTransferMessage 那条路径负责）
+                url: URL.createObjectURL(emoji.blob),
+            },
+        ]));
+        addLog('[传输助手] 已选表情：' + emoji.pack + ' · ' + emoji.key + '（点「发送」发给手机）', 'info');
+    };
     const removePendingImage = (i) => {
         if (sending)
             return; // 发送中禁止移除：发送按快照进行，移除会导致界面与实际不一致
@@ -117285,7 +117641,7 @@ function TransferDeviceChat({ session, phone, colorIndex, onClear, }) {
                                         textAlign: 'center',
                                         cursor: sending ? 'not-allowed' : 'pointer',
                                         userSelect: 'none',
-                                    }, children: "\u00D7" })] }, img.url))) }), (0,react_jsx_runtime_production_namespaceFn().jsxs)(es_button, { color: "primary", variant: "solid", block: true, disabled: !sendable, loading: sending, onClick: confirmSendImage, style: { marginTop: 8 }, children: ["\u53D1\u9001 ", pendingImages.length, " \u5F20\u56FE\u7247"] })] })), progress && ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { flex: '0 0 auto', padding: '8px 12px 0' }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(es_progress, { percent: percent, size: "small", strokeColor: progress.failed ? '#e4393c' : '#1677ff', status: progress.failed ? 'exception' : 'normal' }), (0,react_jsx_runtime_production_namespaceFn().jsx)(TransferDeviceChat_Text, { type: progress.failed ? 'danger' : 'secondary', style: { fontSize: 12 }, children: progress.text })] })), (0,react_jsx_runtime_production_namespaceFn().jsx)(ChatComposer, { value: sendText, onChange: setSendText, onSend: doSendText, disabled: !sendable, canSend: !!sendText.trim(), placeholder: "\u8F93\u5165\u8981\u53D1\u9001\u5230\u624B\u673A\u7684\u6587\u672C\u2026\uFF08Enter \u53D1\u9001\uFF0CShift+Enter \u6362\u884C\uFF09", notice: sendable ? undefined : ((0,react_jsx_runtime_production_namespaceFn().jsx)(TransferDeviceChat_Text, { type: "warning", style: { fontSize: 12, display: 'block', marginBottom: 6 }, children: "\u5F53\u524D\u6CA1\u6709\u5728\u7EBF\u624B\u673A\uFF0C\u8FDE\u4E0A\u624B\u673A\u540E\u624D\u80FD\u53D1\u9001\u3002" })), actions: [
+                                    }, children: "\u00D7" })] }, img.url))) }), (0,react_jsx_runtime_production_namespaceFn().jsxs)(es_button, { color: "primary", variant: "solid", block: true, disabled: !sendable, loading: sending, onClick: confirmSendImage, style: { marginTop: 8 }, children: ["\u53D1\u9001 ", pendingImages.length, " \u5F20\u56FE\u7247"] })] })), progress && ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { flex: '0 0 auto', padding: '8px 12px 0' }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(es_progress, { percent: percent, size: "small", strokeColor: progress.failed ? '#e4393c' : '#1677ff', status: progress.failed ? 'exception' : 'normal' }), (0,react_jsx_runtime_production_namespaceFn().jsx)(TransferDeviceChat_Text, { type: progress.failed ? 'danger' : 'secondary', style: { fontSize: 12 }, children: progress.text })] })), (0,react_jsx_runtime_production_namespaceFn().jsx)(ChatComposer, { value: sendText, onChange: setSendText, onSend: doSendText, disabled: !sendable, canSend: !!sendText.trim(), placeholder: "\u8F93\u5165\u8981\u53D1\u9001\u5230\u624B\u673A\u7684\u6587\u672C\u2026\uFF08Enter \u53D1\u9001\uFF0CShift+Enter \u6362\u884C\uFF09", onPickEmojiImage: pickEmojiImage, notice: sendable ? undefined : ((0,react_jsx_runtime_production_namespaceFn().jsx)(TransferDeviceChat_Text, { type: "warning", style: { fontSize: 12, display: 'block', marginBottom: 6 }, children: "\u5F53\u524D\u6CA1\u6709\u5728\u7EBF\u624B\u673A\uFF0C\u8FDE\u4E0A\u624B\u673A\u540E\u624D\u80FD\u53D1\u9001\u3002" })), actions: [
                     {
                         key: 'image',
                         label: '图片上传',

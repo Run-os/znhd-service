@@ -395,8 +395,9 @@ export function UserIcon(p: IconProps) {
 /**
  * 表情（Lucide `smile`）：输入框左下角的附加功能按钮之一。
  *
- * ⚠️ 这里说的是**按钮图标**（矢量，Win7 安全）。点开后的表情面板里是**字符**，
- * 清单刻意只取 BMP 符号、且避开 Dingbats（U+2700–U+27BF）——理由见 `chatEmojis.ts`。
+ * ⚠️ 这里说的是**按钮图标**（矢量，Win7 安全）。点开后的表情面板 v26.10.13-v3 起换成
+ * **在线图片表情包**（`EmojiPackPanel` + `lib/transfer/emojiPack.ts`）——图片不依赖字体，
+ * 所以彻底跳出了「Win7 没有彩色 emoji 字体」的限制（旧版那张 BMP 字符表现在已删）。
  */
 export function SmileIcon(p: IconProps) {
     return (

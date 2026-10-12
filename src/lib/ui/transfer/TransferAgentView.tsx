@@ -162,6 +162,9 @@ export default function TransferAgentView({ agent, pane }: { agent: AgentChatCon
                     streaming={agent.streaming}
                     onStop={agent.stopStreaming}
                     canSend={!!agent.input.trim()}
+                    // 表情包是「图片」：Agent 通道只吃文本，故不传 onPickEmojiImage（按钮禁用），
+                    // 说明与紧邻的「图片上传 / 附件」两个灰按钮保持一致
+                    emojiDisabledReason="暂不支持：ScriptCat Agent 目前只接受文本"
                     placeholder={
                         agent.models.length
                             ? '输入问题，Enter 发送，Shift + Enter 换行'

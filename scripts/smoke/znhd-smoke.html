@@ -81,6 +81,8 @@
         }
       })();
       const PHRASES_YAML = ['冒烟常用语A: |', '  A 的内容', '冒烟常用语B: |', '  B 的内容', ''].join('\n');
+      /** 在线表情包合集名（v26.10.13-v3）：对应 cdn.klyang.com/json/<id>.json 的 name 字段 */
+      const EMOJI_PACK_NAMES = { aluhedwm: '阿鲁和动物们', alurc: '阿鲁日常' };
       // 更新日志：给 12 条，验证「默认只显示最新 10 条」+ 条数提示（多出的 2 条不渲染）
       const CHANGELOG_MD = (() => {
         const parts = ['# 更新日志', '', '本文件是唯一来源。', '', '---', ''];
@@ -235,6 +237,48 @@
               }
             }, 40);
           }, 'image/png');
+          return { abort: () => {} };
+        }
+        // ===== 在线表情包（v26.10.13-v3）：清单 JSON + 图片本体都由桩作答 =================
+        // 为什么要桩：表情面板的数据源是公网 CDN，CI / 断网机器拿不到。冒烟只验「拿到数据之后
+        // 的 UI 与接入对不对」，真实 CDN 链路由真机验证覆盖。
+        if (url.indexOf('cdn.klyang.com/json/') >= 0) {
+          const id = (url.split('/').pop() || '').replace('.json', '');
+          reply(details, {
+            name: EMOJI_PACK_NAMES[id] || id,
+            type: 'image',
+            items: [
+              { key: '01', val: 'https://cdn.klyang.com/emo/smoke/' + id + '/01.webp' },
+              { key: '02', val: 'https://cdn.klyang.com/emo/smoke/' + id + '/02.webp' },
+            ],
+          });
+          return { abort: () => {} };
+        }
+        // 表情图本体：必须返回**真 webp Blob** —— 我们的代码用 `responseType:'blob'` 取图，
+        // 并把 `blob.type` 当 mime 一路传给发送链路（压缩层据此判「webp 原样直传」、
+        // 手机端据此定文件名后缀），用 PNG 糊弄会让这些断言全都测不到真东西。
+        if (url.indexOf('cdn.klyang.com/emo/') >= 0) {
+          const cv = document.createElement('canvas');
+          cv.width = 32;
+          cv.height = 32;
+          const ctx = cv.getContext('2d');
+          ctx.clearRect(0, 0, 32, 32); // 透明背景：与真实表情图一致
+          ctx.fillStyle = '#07C160';
+          ctx.fillRect(4, 4, 24, 24);
+          cv.toBlob((b) => {
+            setTimeout(() => {
+              if (typeof details.onload === 'function') {
+                details.onload({
+                  status: 200,
+                  statusText: 'OK',
+                  response: b,
+                  responseText: '',
+                  responseHeaders: 'content-type: image/webp',
+                  finalUrl: url,
+                });
+              }
+            }, 30);
+          }, 'image/webp');
           return { abort: () => {} };
         }
         // 「发送测试图片」投递：POST /u/<deviceId>（手机上传同一条路径）→ 记录载荷供断言
@@ -1284,6 +1328,57 @@
         ts.sessionClearOk = transferMessagesText().indexOf('暂无消息，用下面的输入框') >= 0;
       }, 13100);
 
+      /* ===== 在线表情包（v26.10.13-v3）===================================================
+         用户要求把表情面板换成 8 个在线表情合集（cdn.klyang.com）。桩按 URL 分支作答
+         （清单 JSON + 真 webp Blob），验三件事：面板拿到清单并渲染、图片真的下好、
+         点一张之后**进待发图片列表**（表情与「图片上传」走同一条发送链路）。 */
+      setTimeout(() => {
+        const m = findTransferModal();
+        const ts = window.__transferSnap;
+        // 点之前先记下待发张数（前面用例可能留下残留，只比「点击前后 +1」才稳）
+        const before = (m ? m.textContent || '' : '').match(/已选 (\d+) 张/);
+        ts.emojiPendingBefore = before ? before[1] : '0';
+        const btn = m ? m.querySelector('.znhd-chat-composer button[aria-label="表情"]') : null;
+        ts.emojiBtnSeen = !!btn;
+        if (btn) btn.click();
+      }, 13150);
+      setTimeout(() => {
+        // ⚠️ Popover 的内容**不在传输助手 Modal 的子树里** —— TransferAssistantModal 给
+        // ConfigProvider 配了 getPopupContainer(getOverlayContainer)，浮层统一挂到
+        // `#__znhd_overlay_host__`。所以面板/条目必须从 document 查，用 m.querySelector 永远查不到。
+        const panel = document.querySelector('.znhd-emoji-panel');
+        const items = panel ? Array.from(panel.querySelectorAll('.znhd-emoji-item')) : [];
+        const chips = panel ? Array.from(panel.querySelectorAll('button[aria-pressed]')) : [];
+        const on = chips.find((b) => b.getAttribute('aria-pressed') === 'true');
+        window.__transferSnap.emojiPanel = {
+          seen: !!panel,
+          // 合集 chips（选中的那个 aria-pressed=true）
+          packs: chips.map((b) => b.textContent || ''),
+          selected: on ? on.textContent || '' : '',
+          itemCount: items.length,
+          // 图片是否真的下好（blob → objectURL 进了 <img src>）
+          imgCount: panel ? panel.querySelectorAll('.znhd-emoji-item img').length : 0,
+          firstLabel: items[0] ? items[0].getAttribute('aria-label') || '' : '',
+        };
+        window.__emojiFirstItem = items[0] || null;
+      }, 13300);
+      setTimeout(() => {
+        // 点第一张；若此刻图还没下完，面板会等它下完再交出来（所以点击一定有效果）
+        window.__clickedEmojiItem = !!window.__emojiFirstItem;
+        if (window.__emojiFirstItem) window.__emojiFirstItem.click();
+      }, 13400);
+      setTimeout(() => {
+        const ts = window.__transferSnap;
+        const m = findTransferModal();
+        const text = m ? m.textContent || '' : '';
+        const after = text.match(/已选 (\d+) 张/);
+        ts.emojiPicked = {
+          selected: !!window.__clickedEmojiItem,
+          pendingSeen: text.indexOf('待发送图片') >= 0,
+          countText: after ? after[1] : '',
+        };
+      }, 13480);
+
       /* ===== ⑥ 「+」配对窗口：二维码 / 链接 / 在线状态 / 手机列表 / 发送测试图片 ==========
          旧「设备互联」弹窗的配对部分，入口统一收进第二栏搜索框右侧的「+」。 */
       setTimeout(() => {
@@ -2238,6 +2333,24 @@
               sc.scrollHeight > sc.clientHeight + 2
             );
           })(),
+          // 在线表情包（v26.10.13-v3）：面板拿到清单（合集 chips + 选中态）→ 图片真的下好
+          // → 点一张之后待发图片**恰好 +1**（和「图片上传」同一条待发链路）
+          emojiPackOk: (() => {
+            const p = ts.emojiPanel || {};
+            const k = ts.emojiPicked || {};
+            const before = Number(ts.emojiPendingBefore || 0);
+            return !!(
+              p.seen &&
+              (p.packs || []).length >= 2 &&
+              p.selected &&
+              p.itemCount >= 2 &&
+              p.imgCount >= 1 &&
+              /^表情 /.test(p.firstLabel || '') &&
+              k.selected &&
+              k.pendingSeen &&
+              Number(k.countText) === before + 1
+            );
+          })(),
           // Agent 侧必须是同一套组件（共用 ChatComposer 外壳 + 带 data-side 的气泡 + 头像）
           chatPanelSharedOk: (() => {
             const s = window.__agentSnap || {};
@@ -2578,6 +2691,7 @@
           report.filesImgActionsOk &&
           report.chatBubbleOk &&
           report.chatComposerOk &&
+          report.emojiPackOk &&
           report.phoneSendCompressedOk &&
           report.sniffEntryOk &&
           report.sniffScanOk &&

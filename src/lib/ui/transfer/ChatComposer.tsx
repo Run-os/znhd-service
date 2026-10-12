@@ -18,13 +18,17 @@
  * · **必须同时钉住 `minRows` 与 `lineHeight: '20px'`**（v26.10.10-v15）：rc-textarea
  *   挂载时按 minRows 算高、输入后按「行数 × 行高 + padding」重算，行高不一致会出现
  *   「打一个字再删空，输入框永久变高」。冒烟 `agentInputHeightOk` 严格相等守着。
+ *
+ * v26.10.13-v3：表情面板由「BMP 字符符号」换成**在线图片表情包**（`EmojiPackPanel`，
+ * 数据层见 `@/lib/transfer/emojiPack`）。点一张表情不再往输入框插字符，而是把图片交回
+ * 调用方（`onPickEmojiImage`）——设备会话据此加入「待发图片」，与微信「表情先进输入区」同义；
+ * **不传这个回调的宿主（Agent 对话）表情按钮自动禁用**（那条通道只收文本）。
  */
 
-import { useRef, useState, type ReactNode } from 'react';
-import { Button, Input, Popover, Tooltip, theme } from 'antd';
-import type { TextAreaRef } from 'antd/es/input/TextArea';
+import { useState, type ReactNode } from 'react';
+import { Button, Input, Popover, Tooltip } from 'antd';
 import { SendIcon, SmileIcon, StopIcon } from '@/lib/ui/icons';
-import { EMOJI_GROUPS } from '@/lib/ui/transfer/chatEmojis';
+import EmojiPackPanel, { type PickedEmoji } from '@/lib/ui/transfer/EmojiPackPanel';
 import { WECHAT } from '@/lib/ui/transfer/wechatTheme';
 
 /** 工具栏行的附加功能按钮（表情独立在组件内，这个数组是它之后的按钮） */
@@ -59,6 +63,13 @@ export interface ChatComposerProps {
     rightExtras?: ReactNode;
     /** 输入面板上方的提示行（无在线手机 / 待发图片计数等） */
     notice?: ReactNode;
+    /**
+     * 点选一张**在线表情**（v26.10.13-v3）。设备会话把它变成待发图片；
+     * **不传则表情按钮禁用**（Agent 对话只收文本，与旁边的「图片上传 / 附件」同为灰态）。
+     */
+    onPickEmojiImage?: (emoji: PickedEmoji) => void;
+    /** 表情按钮禁用时的 hover 说明（不传 onPickEmojiImage 时用） */
+    emojiDisabledReason?: string;
 }
 
 export default function ChatComposer({
@@ -73,52 +84,15 @@ export default function ChatComposer({
     actions,
     rightExtras,
     notice,
+    onPickEmojiImage,
+    emojiDisabledReason,
 }: ChatComposerProps) {
-    const { token } = theme.useToken();
     const [emojiOpen, setEmojiOpen] = useState(false);
-    const inputRef = useRef<TextAreaRef | null>(null);
 
     const sendDisabled = !!disabled || streaming || !(canSend === undefined ? value.trim() : canSend);
 
-    /** 把字符插到光标处（不是追加到末尾：用户可能改到中间才想起来加个表情） */
-    const insertEmoji = (ch: string) => {
-        // antd 的 TextAreaRef.nativeElement 声明为 HTMLElement，取光标位置要自己收窄成 textarea
-        const el = inputRef.current?.nativeElement as HTMLTextAreaElement | undefined;
-        const start = el && el.selectionStart !== null ? el.selectionStart : value.length;
-        const end = el && el.selectionEnd !== null ? el.selectionEnd : value.length;
-        onChange(value.slice(0, start) + ch + value.slice(end));
-        const caret = start + ch.length;
-        // 等 React 把这轮 value 提交完再摆光标；点表情按钮后焦点会跑到按钮上，顺手抢回来
-        window.requestAnimationFrame(() => {
-            const node = inputRef.current?.nativeElement as HTMLTextAreaElement | undefined;
-            if (!node) return;
-            node.focus();
-            node.setSelectionRange(caret, caret);
-        });
-    };
-
-    const emojiPanel = (
-        <div style={{ width: 236 }}>
-            {EMOJI_GROUPS.map((group) => (
-                <div key={group.title} style={{ marginBottom: 6 }}>
-                    <div style={{ fontSize: 11, color: token.colorTextTertiary, marginBottom: 2 }}>{group.title}</div>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(8, minmax(0, 1fr))', gap: 2 }}>
-                        {group.items.map((ch) => (
-                            <Button
-                                key={ch}
-                                type="text"
-                                size="small"
-                                aria-label={'表情 ' + ch}
-                                onClick={() => insertEmoji(ch)}
-                                style={{ height: 24, minWidth: 0, padding: 0, fontSize: 15, lineHeight: '24px' }}>
-                                {ch}
-                            </Button>
-                        ))}
-                    </div>
-                </div>
-            ))}
-        </div>
-    );
+    /** 表情面板只在有回调时可用（v26.10.13-v3：换成在线图片表情包，见 EmojiPackPanel） */
+    const emojiEnabled = !!onPickEmojiImage;
 
     const iconButton = (
         label: string,
@@ -163,13 +137,17 @@ export default function ChatComposer({
                     placement="topLeft"
                     open={emojiOpen}
                     onOpenChange={setEmojiOpen}
-                    content={emojiPanel}>
+                    // 面板内容只在首次打开时挂载（Popover 不渲染关闭态的内容）：表情包清单与图片
+                    // 都是打开面板才去拉，不开面板不产生任何网络请求
+                    content={emojiEnabled ? <EmojiPackPanel onPick={onPickEmojiImage} /> : null}>
                     {iconButton(
                         '表情',
-                        '插入符号 / 表情',
+                        emojiEnabled
+                            ? '表情包（点一张先放进待发图片）'
+                            : emojiDisabledReason || '当前对话不支持发送表情',
                         <SmileIcon size={16} />,
                         () => setEmojiOpen((v) => !v),
-                        disabled
+                        disabled || !emojiEnabled
                     )}
                 </Popover>
                 {(actions || []).map((action) =>
@@ -183,7 +161,6 @@ export default function ChatComposer({
                 )}
             </div>
             <Input.TextArea
-                ref={inputRef}
                 value={value}
                 onChange={(event) => onChange(event.target.value)}
                 onPressEnter={(event) => {
