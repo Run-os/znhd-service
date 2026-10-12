@@ -111,6 +111,17 @@ const RESET_CSS = `
 .ant-drawer *::-webkit-scrollbar-corner {
   background: transparent;
 }
+
+/* ===== 传输助手窗口：微信式贴边三栏（v26.10.12-v4）=====
+   antd v6 Modal 的容器默认带 16/24 内边距（contentPadding token，注意 v6 里类名是
+   .ant-modal-container，不是 v5 的 .ant-modal-content），且 Modal 的 styles 配置项
+   没有 content 键 —— 只能用 CSS 归零，否则三栏四周会留一圈底色不同的空隙、自绘关闭
+   按钮也贴不到窗口右上角。
+   ⚠️ 本段是模板字符串的一部分：注释里不能出现反引号。 */
+.znhd-transfer-modal.ant-modal .ant-modal-container {
+  padding: 0;
+  overflow: hidden;
+}
 `;
 
 let injected = false;

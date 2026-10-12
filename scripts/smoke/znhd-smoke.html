@@ -633,18 +633,21 @@
 
       /* ===== 传输助手窗口定位（v26.10.12-v1 重构后的新结构）=========================
          「设备互联 / 历史记录 / Agent 助手」三个旧入口已全部收敛进这一个三栏窗口：
-           第一栏 .znhd-transfer-nav      —— Agents / 设备 / 文件 + 底部外观/设置/企业信息
-           第二栏 .znhd-transfer-sessions —— 搜索框 + 「+」配对按钮 + 会话/设备列表
+           标题条 .znhd-transfer-titlebar —— 右侧自绘关闭按钮（悬浮变红，v26.10.12-v4）
+           第一栏 .znhd-transfer-nav      —— 对话 / Agents / 文件 + 底部设置/企业信息
+           第二栏 .znhd-transfer-sessions —— 搜索框 +「＋」+ 会话/设备列表
            第三栏 .znhd-transfer-main     —— 聊天主区（设备会话 / Agent 对话 / 全部文件）
          v26.10.12-v2：主窗口**去掉了标题栏**（与第一栏顶部的图标 + 名称重复），改用
          Modal 的 className 钩子 `.znhd-transfer-modal` 定位 —— 不再靠标题文字匹配，
-         顺带解决了「传输助手设置」子窗口也含「传输助手」四字的误命中问题。 */
+         顺带解决了「传输助手设置」子窗口也含「传输助手」四字的误命中问题。
+         v26.10.12-v4：对齐微信桌面版 —— 第一栏改窄图标栏（「设备」改名「对话」、置于
+         Agents 之上），窗口固定微信暗色配色，关闭按钮回到顶部标题条（自绘、悬浮变红）。 */
       const findTransferModal = () => document.querySelector('.ant-modal.znhd-transfer-modal');
       const findPairModal = () =>
         Array.from(document.querySelectorAll('.ant-modal')).find((el) =>
           ((el.querySelector('.ant-modal-title') || {}).textContent || '').includes('配对设备')
         );
-      /** 第一栏导航项（aria-label 精确匹配：Agents / 设备 / 文件） */
+      /** 第一栏导航项（aria-label 精确匹配：对话 / Agents / 文件） */
       const clickTransferNav = (label) => {
         const m = findTransferModal();
         if (!m) return false;
@@ -826,7 +829,7 @@
       // 关掉它：后面要用「点面板入口重新打开」这条路径验证入口本身
       setTimeout(() => {
         const m = findTransferModal();
-        const btn = m ? m.querySelector('.ant-modal-close') : null;
+        const btn = m ? m.querySelector('button[aria-label="关闭"]') : null;
         window.__transferSnap.closeClicked = !!btn;
         if (btn) btn.click();
       }, 2200);
@@ -993,6 +996,9 @@
             const p = m[1].split(',').map((s) => parseFloat(s.trim()));
             if (p.length < 3 || !(p[0] < 128 && p[1] < 128 && p[2] < 128)) return;
             const al = p.length === 4 ? p[3] : 1;
+            // v26.10.12-v4：窗口固定微信暗色后，聊天区/侧栏本身就是不透明深色 —— 那是内容底色，
+            // 不是遮罩；本判据只针对「半透明遮罩叠了几层」，不透明层（al>=1）不计入
+            if (al >= 1) return;
             a = 1 - (1 - a) * (1 - al);
           });
           return Number(a.toFixed(4));
@@ -1015,7 +1021,7 @@
         document
           .querySelectorAll('.ant-image-preview-root, .ant-image-preview-wrap')
           .forEach((e) => e.remove());
-        window.__clickedDevicesNav = clickTransferNav('设备');
+        window.__clickedDevicesNav = clickTransferNav('对话');
       }, 9000);
       setTimeout(() => {
         const m = findTransferModal();
@@ -1052,11 +1058,11 @@
       /** 输入框所在的共用外壳（气泡/输入框/发送按钮都长在它里面） */
       const composerBoxOf = (el) => (el ? el.closest('.znhd-chat-composer') : null);
       /**
-       * 共用输入区的事实快照（v26.10.12-v3）。
+       * 共用输入区的事实快照（v26.10.12-v3；v26.10.12-v4 改微信结构后同步）。
        *
-       * 用户给的规格：多行自增高、超上限后框内滚动；左下角 表情/图片上传/附件；
-       * 右下角发送按钮；外层有边框。设备会话与 Agent 对话共用同一个 `ChatComposer`，
-       * 所以判据只认组件自己的钩子（外壳类名 `.znhd-chat-composer` + 按钮 aria-label）。
+       * 微信式输入面板：工具栏图标行（上）→ 多行输入框（自动增高、超上限框内滚动）→
+       * 右下角「发送」文字按钮。设备会话与 Agent 对话共用同一个 `ChatComposer`，
+       * 所以判据只认组件自己的钩子（面板类名 `.znhd-chat-composer` + 按钮 aria-label）。
        */
       const composerFacts = () => {
         const ta = findDeviceInput();
@@ -1074,12 +1080,12 @@
           shell: true,
           isTextarea: ta.tagName === 'TEXTAREA',
           labels: labels,
-          // 发送按钮里没有文字、只有矢量图标
-          sendIconOnly: !!(send && !(send.textContent || '').trim() && send.querySelector('svg')),
-          // 发送按钮在**右下角**：贴着外壳右边，且在文本框下沿之下
+          // v26.10.12-v4：发送按钮改微信式文字按钮（「发送」）
+          sendTextLabel: !!(send && (send.textContent || '').trim() === '发送'),
+          // 发送按钮在**右下角**：贴着面板右边，且在文本框下沿之下
           sendBottomRight: !!(sb && bb.right - sb.right <= 24 && sb.top >= tb.bottom - 8),
-          // 外层是带圆角的实体边框（hover/focus 只是换边框颜色，所以这条能证明「有边框」）
-          bordered: parseFloat(cs.borderTopWidth) > 0 && parseFloat(cs.borderRadius) > 0,
+          // 整块面板实心底 + 顶部有分隔线（微信输入区是一块面板，不再是带圆角的内层盒子）
+          panelBordered: parseFloat(cs.borderTopWidth) > 0,
           height: Math.round(tb.height),
         };
       };
@@ -1120,6 +1126,8 @@
           rightBg: bgOf(right),
           bubbleCount: box ? box.querySelectorAll('.znhd-chat-msg').length : 0,
           avatars: box ? box.querySelectorAll('.znhd-chat-msg .znhd-chat-avatar').length : 0,
+          // v26.10.12-v4：时间分隔条（居中灰字，多条消息共用一条）
+          timeSep: !!(box && box.querySelector('.znhd-chat-time')),
         };
         // —— 输入区（空着时的基线高度）——
         ts.composerEmpty = composerFacts();
@@ -1237,9 +1245,8 @@
       /* ===== ⑤ 「清空消息」：会话回到空状态（旧「历史为空也能打开」的等价物）============ */
       setTimeout(() => {
         const m = findTransferModal();
-        const btn = m
-          ? Array.from(m.querySelectorAll('button')).find((b) => (b.textContent || '').trim() === '清空消息')
-          : null;
+        // v26.10.12-v4：清空按钮改微信式纯图标（垃圾桶），语义全在 aria-label 上
+        const btn = m ? m.querySelector('button[aria-label="清空消息"]') : null;
         window.__clickedClearSession = !!btn;
         if (btn) btn.click();
       }, 12400);
@@ -1322,7 +1329,11 @@
         );
       }, 15100);
 
-      /* ===== ⑦ 外观切换：深色只作用于传输助手窗口（嵌套 ConfigProvider）================= */
+      /* ===== ⑦ 设置隔离 + 固定微信暗色（v26.10.12-v4）=================================
+         外观切换已随「窗口固定微信暗色」移除；这里改为：
+         · 打开第一栏底部「设置」→ 拨「收到内容时自动打开」开关 → 落盘必须只进
+           scriptCat_TransferSettings（relayServer 是默认值、开关状态翻转），不碰主设置；
+         · 三栏 + 标题条 + 主区固定微信分层色（外围最淡、聊天区最深）。 */
       setTimeout(() => {
         const p = findPairModal();
         const btn = p ? Array.from(p.querySelectorAll('button')).find((b) => (b.textContent || '').trim() === '关闭') : null;
@@ -1330,25 +1341,35 @@
         if (btn) btn.click();
       }, 15500);
       setTimeout(() => {
-        window.__clickedAppearance = clickByText('外观设置');
+        // 第一栏底部「设置」是纯图标按钮（aria-label）
+        const m = findTransferModal();
+        const btn = m ? m.querySelector('button[aria-label="设置"]') : null;
+        window.__openedSettings = !!btn;
+        if (btn) btn.click();
       }, 15900);
       setTimeout(() => {
-        // 外观是 Popover + Segmented：选项是 label 而不是 button，clickByText 点不到，直接点label
-        const pop = Array.from(document.querySelectorAll('.ant-popover')).find((el) =>
-          (el.textContent || '').indexOf('窗口外观') >= 0
+        // 传输助手设置子窗口：按内容找（标题只有「传输助手设置」也是 .ant-modal）
+        const sm = Array.from(document.querySelectorAll('.ant-modal')).find((el) =>
+          (el.textContent || '').indexOf('收到内容时自动打开传输助手') >= 0
         );
-        const item = pop
-          ? Array.from(pop.querySelectorAll('.ant-segmented-item-label')).find((el) => (el.textContent || '').trim() === '深色')
-          : null;
-        window.__clickedDark = !!item;
-        if (item) item.click();
+        const sw = sm ? sm.querySelector('button[role="switch"]') : null;
+        window.__toggledAutoOpen = !!sw;
+        if (sw) sw.click();
       }, 16200);
       setTimeout(() => {
         const m = findTransferModal();
-        const main = m ? m.querySelector('.znhd-transfer-main') : null;
         const ts = window.__transferSnap;
-        ts.themeDarkOk = !!main && getComputedStyle(main).backgroundColor === 'rgb(20, 20, 20)';
-        // 设置隔离：必须落在传输助手自己的键里，且不写主设置的 scriptCat_Allvalue
+        const rgb = (sel) => {
+          const el = m ? m.querySelector(sel) : null;
+          return el ? getComputedStyle(el).backgroundColor : '';
+        };
+        // 固定微信暗色：标题条最淡 #383838 → 第一栏 #2E2E2E → 第二栏 #252525 → 主区最深 #1E1E1E
+        ts.themeDarkOk =
+          rgb('.znhd-transfer-titlebar') === 'rgb(56, 56, 56)' &&
+          rgb('.znhd-transfer-nav') === 'rgb(46, 46, 46)' &&
+          rgb('.znhd-transfer-sessions') === 'rgb(37, 37, 37)' &&
+          rgb('.znhd-transfer-main') === 'rgb(30, 30, 30)';
+        // 设置隔离：开关翻转会写传输助手自己的键（relayServer 保持默认值），不写主设置
         let stored = null;
         try {
           stored = JSON.parse(localStorage.getItem('scriptCat_TransferSettings') || 'null');
@@ -1357,11 +1378,20 @@
         }
         ts.settingsStoredOk = !!(
           stored &&
-          stored.theme === 'dark' &&
+          stored.autoOpenOnReceive === false &&
           stored.relayServer === 'https://znhd.122050.xyz'
         );
         ts.mainAllvalueUntouched = !/relayServer/.test(localStorage.getItem('scriptCat_Allvalue') || '');
       }, 16600);
+      setTimeout(() => {
+        // 关掉设置子窗口（普通 antd 弹窗，自带 .ant-modal-close），别挡住后面的 Agents 用例
+        const sm = Array.from(document.querySelectorAll('.ant-modal')).find((el) =>
+          (el.textContent || '').indexOf('收到内容时自动打开传输助手') >= 0
+        );
+        const close = sm ? sm.querySelector('.ant-modal-close') : null;
+        window.__closedSettings = !!close;
+        if (close) close.click();
+      }, 16850);
 
       /* ===== ⑧ Agent 对话（v26.10.12-v1：入口 = 传输助手第一栏 Agents）==================
          覆盖链路：面板「传输助手」→ 第一栏 Agents → 右侧聊天区 → 三个页签 → 发消息 → 流式回答。
@@ -1599,7 +1629,7 @@
         const closeAndReopen = () => {
           const m = findTransferModal();
           if (m) {
-            const close = m.querySelector('.ant-modal-close');
+            const close = m.querySelector('button[aria-label="关闭"]');
             if (close) close.click();
           }
           setTimeout(() => waitModalGone(25), 150);
@@ -1899,6 +1929,32 @@
         window.__openedLog = clickByText('查看日志');
       }, 35000);
 
+      /* ===== 关闭按钮的预采样（v26.10.12-v4）=====================================
+         悬浮变红：派发 mouseover 触发 React onMouseEnter 后，setState 重渲染是**异步**
+         的 —— 同一帧里 getComputedStyle 读到的还是旧底色（本次踩过）。所以在报告前
+         分两拍：36500 派发 mouseover，36900 采样底色与几何，报告里的 transferNoTitleOk
+         只读预采样结果。 */
+      setTimeout(() => {
+        const m = findTransferModal();
+        const close = m ? m.querySelector('button[aria-label="关闭"]') : null;
+        if (close) close.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
+      }, 36500);
+      setTimeout(() => {
+        const ts = window.__transferSnap;
+        const m = findTransferModal();
+        const close = m ? m.querySelector('button[aria-label="关闭"]') : null;
+        if (!close || !m) {
+          ts.closeHoverRed = false;
+          ts.closeTopRight = false;
+          return;
+        }
+        ts.closeHoverRed = getComputedStyle(close).backgroundColor === 'rgb(232, 17, 35)';
+        const mr = m.getBoundingClientRect();
+        const cr = close.getBoundingClientRect();
+        ts.closeTopRight = mr.right - cr.right <= 2 && cr.top - mr.top <= 40;
+        close.dispatchEvent(new MouseEvent('mouseout', { bubbles: true }));
+      }, 36900);
+
       setTimeout(() => {
         const text = collectText();
         const relevant = window.__errors.filter((e) => !/chrome-extension:/.test(e));
@@ -2037,12 +2093,14 @@
           // ===== 传输助手（v26.10.12-v1 重构）=====
           // v26.10.12-v2：窗口**没有标题栏**（`.ant-modal-header` 不渲染），但关闭按钮 × 必须在
           // （rc-dialog 的 closerNode 独立于 header，用户要的是去掉标题、不是去掉关闭）
+          // v26.10.12-v4：对齐微信 —— 顶部有自绘标题条，右侧关闭按钮（aria-label=关闭）
+          // 贴窗口右上角；悬浮变红在 36500/36800 两个时刻预采样（React setState 重渲染是
+          // 异步的，同一帧里量不到新底色，必须隔一拍再读 —— v26.10.12-v4 踩过）。
           transferNoTitleOk: (() => {
             const m = findTransferModal();
             if (!m) return false;
             const header = m.querySelector('.ant-modal-header');
-            const close = m.querySelector('.ant-modal-close');
-            return !header && !!close && close.getBoundingClientRect().width > 0;
+            return !header && !!ts.closeHoverRed && !!ts.closeTopRight;
           })(),
           // 收到文本时窗口**自动打开**（后台收件 + autoOpenOnReceive 的对外契约）
           transferAutoOpenOk: !!(ts.autoOpenSeen && ts.autoOpenTextSeen && ts.autoOpenNoClick),
@@ -2077,7 +2135,7 @@
           // 配对窗口 footer 的「发送测试图片」
           pairTestImageBtnOk: !!ps.testBtnOk,
           testImageSentOk: !!ps.testImageSent,
-          // 深色外观只作用于传输助手窗口（嵌套 ConfigProvider + 主题隔离）
+          // 窗口固定微信暗色（v26.10.12-v4）：标题条/三栏分层色，嵌套 ConfigProvider 仍隔离主题
           transferThemeOk: !!ts.themeDarkOk,
           // 设置隔离：落 scriptCat_TransferSettings，不污染主设置 scriptCat_Allvalue
           transferSettingsIsolatedOk: !!(ts.settingsStoredOk && ts.mainAllvalueUntouched),
@@ -2087,7 +2145,8 @@
             return !!(s && s.btns === 3 && s.iconOnly && s.hidden && s.inside && s.bottomRight && s.hovered);
           })(),
           // ===== 共用聊天面板（v26.10.12-v3：设备会话与 Agent 对话同一套气泡 / 输入框）=====
-          // 气泡：他人靠左浅底、我的靠右深底、头像在气泡外侧
+          // 气泡：他人靠左灰底（微信 #2F2F2F）、我的靠右绿底（微信 #07C160）、头像在气泡外侧、
+          // 消息组上方有居中的时间分隔条（v26.10.12-v4）
           chatBubbleOk: (() => {
             const b = ts.bubbles || {};
             return !!(
@@ -2099,10 +2158,12 @@
               b.rightBg &&
               b.leftBg !== b.rightBg &&
               b.bubbleCount >= 2 &&
-              b.avatars === b.bubbleCount
+              b.avatars === b.bubbleCount &&
+              b.timeSep
             );
           })(),
-          // 输入区：多行自增高（超上限后框内滚动）+ 左下角三个附加功能按钮 + 右下角圆形发送按钮 + 有边框
+          // 输入区（微信式）：多行自增高（超上限后框内滚动）+ 工具栏表情/图片上传/附件
+          // + 右下角「发送」文字按钮 + 整块面板实心底带顶部分隔线
           chatComposerOk: (() => {
             const a = ts.composerEmpty || {};
             const g = ts.composerGrown || {};
@@ -2112,10 +2173,10 @@
             return !!(
               a.shell &&
               a.isTextarea &&
-              a.bordered &&
+              a.panelBordered &&
               has(a.labels) &&
               has(g.labels) &&
-              a.sendIconOnly &&
+              a.sendTextLabel &&
               a.sendBottomRight &&
               g.height > a.height &&
               sc.scrollHeight > sc.clientHeight + 2

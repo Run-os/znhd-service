@@ -108,14 +108,28 @@ export default function TransferAgentView({ agent, pane }: { agent: AgentChatCon
             <>
                 <ChatHeader
                     left={
-                        <Typography.Text strong style={{ fontSize: 14 }} ellipsis>
-                            {agent.activeChatId ? agentChatLabel(agent.chats, agent.activeChatId) : '新的聊天'}
-                        </Typography.Text>
-                    }
-                    right={
-                        <Typography.Text type="secondary" style={{ fontSize: 11, flex: '0 0 auto' }}>
-                            共 {agent.chats.length} 条对话
-                        </Typography.Text>
+                        <>
+                            <span
+                                style={{
+                                    width: 30,
+                                    height: 30,
+                                    borderRadius: 6,
+                                    flex: '0 0 auto',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    background: '#4A4A4A',
+                                    color: '#fff',
+                                }}>
+                                <BotIcon size={16} color="currentColor" />
+                            </span>
+                            <Typography.Text strong style={{ fontSize: 15 }} ellipsis>
+                                {agent.activeChatId ? agentChatLabel(agent.chats, agent.activeChatId) : '新的聊天'}
+                            </Typography.Text>
+                            <Typography.Text type="secondary" style={{ fontSize: 11, flex: '0 0 auto' }}>
+                                共 {agent.chats.length} 条对话
+                            </Typography.Text>
+                        </>
                     }
                 />
 

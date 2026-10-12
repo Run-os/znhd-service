@@ -18,17 +18,14 @@
  */
 
 import { useEffect, useRef, type ReactNode } from 'react';
-import { theme } from 'antd';
 
 /**
- * 第三栏头部（设备名 / 对话名 / 面板名 + 右侧操作）。
+ * 第三栏头部（微信式会话标题栏：左头像 + 名称，右操作图标）。
  *
- * ⚠️ 右侧必留 48px：v26.10.12-v2 去掉了 Modal 标题栏后，关闭按钮 ×（rc-dialog 的
- * `closerNode`）是**绝对定位浮在窗口右上角**的，不占布局高度。任何长在第三栏右上角的
- * 控件（「清空消息」「清空全部」）都会被它压住 —— 把让位写在这里，避免每个面板各记一次。
+ * v26.10.12-v4 起关闭按钮移到窗口顶部自绘标题条（znhd-transfer-titlebar）里，
+ * 不再浮在第三栏右上角 —— 这里不再需要 48px 让位（v26.10.12-v2/v3 的历史约束随之解除）。
  */
 export function ChatHeader({ left, right }: { left: ReactNode; right?: ReactNode }) {
-    const { token } = theme.useToken();
     return (
         <div
             className="znhd-chat-header"
@@ -36,8 +33,8 @@ export function ChatHeader({ left, right }: { left: ReactNode; right?: ReactNode
                 display: 'flex',
                 alignItems: 'center',
                 gap: 8,
-                padding: '8px 48px 8px 12px',
-                borderBottom: '1px solid ' + token.colorBorderSecondary,
+                padding: '10px 12px',
+                borderBottom: '1px solid rgba(0,0,0,0.4)',
                 flex: '0 0 auto',
                 minWidth: 0,
             }}>

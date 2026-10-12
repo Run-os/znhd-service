@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Button, Empty, Image, Popconfirm, Progress, Typography, theme } from 'antd';
 import { PrinterOutlined } from '@ant-design/icons';
 import { useReactToPrint } from 'react-to-print';
@@ -45,6 +45,24 @@ function fmtTime(ts: number): string {
     const p = (n: number) => String(n).padStart(2, '0');
     return p(d.getHours()) + ':' + p(d.getMinutes());
 }
+
+/**
+ * 时间分隔条的文案（微信规则）：今天只显示 HH:mm，昨天加「昨天」前缀，再往前 MM-DD HH:mm。
+ */
+function sepTimeText(ts: number): string {
+    const d = new Date(ts);
+    const p = (n: number) => String(n).padStart(2, '0');
+    const dayOf = (x: Date) => x.getFullYear() + '-' + x.getMonth() + '-' + x.getDate();
+    const now = new Date();
+    const hm = fmtTime(ts);
+    if (dayOf(d) === dayOf(now)) return hm;
+    const yesterday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
+    if (dayOf(d) === dayOf(yesterday)) return '昨天 ' + hm;
+    return p(d.getMonth() + 1) + '-' + p(d.getDate()) + ' ' + hm;
+}
+
+/** 两条消息间隔超过 5 分钟就插一条时间分隔条（微信同款；不逐条显示时间） */
+const TIME_GAP = 5 * 60 * 1000;
 
 interface PendingImage {
     file: File;
@@ -253,14 +271,9 @@ export default function TransferDeviceChat({
         shortPhoneId(session.key).slice(0, 1).toUpperCase()
     );
 
-    /** 时间 + 发送状态（v26.10.12-v3 起**不再拼文件名**：图片气泡只显示图，名字在下载/打印时才需要） */
-    const metaOf = (msg: TransferMessage) => (
-        <>
-            {fmtTime(msg.ts)}
-            {msg.sendState === 'sending' ? ' · 发送中…' : ''}
-            {msg.sendState === 'failed' ? ' · 发送失败' : ''}
-        </>
-    );
+    /** 时间分隔条之后才轮到发送状态：meta 只在「发送中 / 失败」时出现（时间在分隔条上，微信规则） */
+    const metaOf = (msg: TransferMessage): ReactNode =>
+        msg.sendState === 'sending' ? '发送中…' : msg.sendState === 'failed' ? '发送失败' : undefined;
 
     const renderMessage = (msg: TransferMessage) => {
         const isUser = msg.direction === 'out';
@@ -307,17 +320,16 @@ export default function TransferDeviceChat({
                             src={msg.previewUrl}
                             alt={msg.name || 'image'}
                             style={{
-                                width: '100%',
-                                maxWidth: 220,
-                                aspectRatio: '4 / 3',
-                                objectFit: 'cover',
+                                // 微信规则：按图片自身尺寸显示（宽高 auto + 只给上限），
+                                // 比例永远保持、完整可见 —— 不用 aspectRatio/objectFit 裁切
+                                maxWidth: 240,
+                                maxHeight: 360,
+                                width: 'auto',
+                                height: 'auto',
                                 borderRadius: 8,
-                                // 发送中的图半透明 + 灰底，失败加红框
+                                // 发送中的图半透明，失败加红框
                                 opacity: msg.sendState === 'sending' ? 0.55 : 1,
-                                border:
-                                    msg.sendState === 'failed'
-                                        ? '1px solid ' + token.colorError
-                                        : '1px solid ' + token.colorBorderSecondary,
+                                border: msg.sendState === 'failed' ? '1px solid ' + token.colorError : 'none',
                                 display: 'block',
                             }}
                         />
@@ -351,12 +363,27 @@ export default function TransferDeviceChat({
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', minHeight: 0, flex: '1 1 auto' }}>
-            {/* 会话头部：设备 + 在线状态 + 清空（右侧 48px 让位由 ChatHeader 统一处理） */}
+            {/* 会话头部（微信式）：左 = 对方头像 + 会话名称 + 在线状态；右 = 垃圾桶（清空） */}
             <ChatHeader
                 left={
                     <>
+                        <span
+                            style={{
+                                width: 30,
+                                height: 30,
+                                borderRadius: 6,
+                                flex: '0 0 auto',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                fontSize: 13,
+                                fontWeight: 600,
+                                ...peerAvatarStyle,
+                            }}>
+                            {peerAvatar}
+                        </span>
                         {isAggregate ? (
-                            <Text strong style={{ fontSize: 14 }}>
+                            <Text strong style={{ fontSize: 15 }}>
                                 {PHONE_SESSION_LABEL}
                             </Text>
                         ) : (
@@ -386,14 +413,20 @@ export default function TransferDeviceChat({
                 }
                 right={
                     <Popconfirm title="清空这个会话的全部消息？" okText="清空" cancelText="取消" onConfirm={onClear}>
-                        <Button type="text" size="small" icon={<TrashIcon size={13} />}>
-                            清空消息
-                        </Button>
+                        {/* 微信同款：头部右侧是纯图标功能按钮（垃圾桶），不带文字 */}
+                        <Button
+                            type="text"
+                            size="small"
+                            aria-label="清空消息"
+                            title="清空消息"
+                            icon={<TrashIcon size={15} />}
+                            style={{ color: token.colorTextSecondary }}
+                        />
                     </Popconfirm>
                 }
             />
 
-            {/* 消息区 */}
+            {/* 消息区（时间分隔条：间隔超过 5 分钟的一组消息共用一条，微信同款） */}
             <ChatScroll className="znhd-transfer-messages" scrollDep={session.messages}>
                 {session.messages.length ? (
                     <Image.PreviewGroup
@@ -424,7 +457,31 @@ export default function TransferDeviceChat({
                                 return appendPreviewActions(originalNode, printBtn);
                             },
                         }}>
-                        {session.messages.map(renderMessage)}
+                        {/* 消息 + 时间分隔条：相邻两条间隔 > 5 分钟就插一条居中的时间（多条共用，微信规则） */}
+                        {(() => {
+                            const nodes: ReactNode[] = [];
+                            let prevTs = 0;
+                            session.messages.forEach((msg) => {
+                                if (!prevTs || msg.ts - prevTs > TIME_GAP) {
+                                    nodes.push(
+                                        <div
+                                            key={'sep-' + msg.id}
+                                            className="znhd-chat-time"
+                                            style={{
+                                                textAlign: 'center',
+                                                fontSize: 11,
+                                                color: 'rgba(255,255,255,0.35)',
+                                                margin: '6px 0 12px',
+                                            }}>
+                                            {sepTimeText(msg.ts)}
+                                        </div>
+                                    );
+                                }
+                                prevTs = msg.ts;
+                                nodes.push(renderMessage(msg));
+                            });
+                            return nodes;
+                        })()}
                     </Image.PreviewGroup>
                 ) : (
                     <Empty

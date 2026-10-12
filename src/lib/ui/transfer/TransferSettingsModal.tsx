@@ -1,11 +1,10 @@
 import { useEffect, useState } from 'react';
-import { Button, Input, Modal, Popconfirm, Segmented, Switch, Typography } from 'antd';
+import { Button, Input, Modal, Popconfirm, Switch, Typography } from 'antd';
 import { theme } from 'antd';
 import { addLog } from '@/lib/logger';
 import { DEFAULT_RELAY_SERVER } from '@/lib/transfer/settings';
 import { clearAllTransferFiles, updateTransferSettings, useTransferStore } from '@/lib/transfer/store';
 import { getOverlayContainer } from '@/lib/ui/panelHost';
-import type { TransferTheme } from '@/lib/transfer/types';
 
 const { Text } = Typography;
 
@@ -86,18 +85,8 @@ export default function TransferSettingsModal({ open, onClose }: { open: boolean
             <Text strong style={{ display: 'block', marginBottom: 8 }}>
                 窗口外观
             </Text>
-            <Segmented
-                block
-                value={settings.theme}
-                onChange={(v) => updateTransferSettings({ theme: v as TransferTheme })}
-                options={[
-                    { label: '浅色', value: 'light' },
-                    { label: '深色', value: 'dark' },
-                ]}
-                style={{ marginBottom: 8 }}
-            />
             <Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 16 }}>
-                只影响传输助手窗口，与主面板及征纳互动页面的外观无关。
+                v26.10.12-v4 起传输助手窗口固定为微信桌面版暗色配色（分层深浅 + 微信绿主色），不再提供浅色外观。
             </Text>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>

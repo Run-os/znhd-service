@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { Button, Input, Tooltip } from 'antd';
 import { theme } from 'antd';
 import { ClockIcon, GridIcon, PlusIcon, SearchIcon, SmartphoneIcon } from '@/lib/ui/icons';
+import { WECHAT } from '@/lib/ui/transfer/wechatTheme';
 import AgentConversationList from '@/lib/ui/transfer/AgentConversationList';
 import type { AgentChatController } from '@/lib/ui/transfer/useAgentChat';
 import type { AgentPane, TransferMessage } from '@/lib/transfer/types';
@@ -23,32 +24,33 @@ export interface DeviceEntry {
 /** 会话列表里对最后一条消息的预览文案 */
 function previewText(msg?: TransferMessage): string {
     if (!msg) return '';
-    if (msg.type === 'image') return '[图片] ' + (msg.name || '');
+    if (msg.type === 'image') return '[图片]';
     return (msg.text || '').replace(/\s+/g, ' ').slice(0, 40);
 }
 
-/** 列表里的时间（今天 HH:mm，否则 MM-DD） */
+/** 列表里的时间（今天 HH:mm，昨天加「昨天」，否则 MM-DD） */
 function listTime(ts: number): string {
     if (!ts) return '';
     const d = new Date(ts);
     const now = new Date();
     const pad = (n: number) => String(n).padStart(2, '0');
-    const sameDay =
-        d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
-    return sameDay ? pad(d.getHours()) + ':' + pad(d.getMinutes()) : pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+    const dayOf = (x: Date) => x.getFullYear() + '-' + x.getMonth() + '-' + x.getDate();
+    const hm = pad(d.getHours()) + ':' + pad(d.getMinutes());
+    if (dayOf(d) === dayOf(now)) return hm;
+    const yesterday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
+    if (dayOf(d) === dayOf(yesterday)) return '昨天 ' + hm;
+    return pad(d.getMonth() + 1) + '-' + pad(d.getDate());
 }
 
 /**
- * 第二栏（中间会话列表栏，v26.10.12-v1）。
+ * 第二栏（中间会话列表栏，v26.10.12-v1；v26.10.12-v4 微信化）。
  *
- * 结构（对齐企业微信桌面端）：顶部**搜索框 + 紧邻右侧的「＋」按钮**，下方按第一栏当前分组
- * 显示会话 / 设备列表。**「＋」的含义随分组变**（v26.10.12-v3，用户要求）：
- *   · 设备分组 → 「配对设备」（弹配对窗口）；
- *   · Agents 分组 → 「新建对话」（清空当前视图，发出下一条消息时另起一个对话）——
- *     直接把新建塞进搜索框旁边，不再让「＋」在 Agents 下复用设备的那套配对。
+ * 结构：顶部**搜索框 +「＋」按钮**（仅对话 / Agents 分组有；文件分组没有 —— 用户要求
+ * 文件下不放任何新建入口），下方按第一栏当前分组显示会话 / 对话列表。
+ * 「＋」的含义随分组变：对话分组 →「配对设备」；Agents 分组 →「新建对话」。
  *
- * Agents 分组下「＋」下面还有两个控件：**技能 / 定时任务**（v26.10.12-v3 从第三栏页签提上来），
- * 点哪个第三栏就显示哪个；再往下才是「对话」列表。
+ * 会话条目为微信结构：左头像 / 中名称 + 预览摘要 / 右时间 + 未读红点角标；
+ * 选中条目用比栏底浅一档的底色高亮（#383838，微信暗色同款），不再用主色底。
  */
 export default function TransferSessionList({
     nav,
@@ -77,6 +79,7 @@ export default function TransferSessionList({
 }) {
     const { token } = theme.useToken();
     const isAgents = nav === 'agents';
+    const isFiles = nav === 'files';
 
     const keyword = search.trim().toLowerCase();
     const filtered = keyword
@@ -85,7 +88,7 @@ export default function TransferSessionList({
           )
         : deviceEntries;
 
-    /** Agents 分组下的「技能 / 定时任务」控件：选中态与第一栏导航同一套视觉 */
+    /** Agents 分组下的「技能 / 定时任务」控件 */
     const agentControl = (key: AgentPane, label: string, icon: ReactNode) => {
         const active = agentPane === key;
         return (
@@ -99,13 +102,12 @@ export default function TransferSessionList({
                         display: 'flex',
                         alignItems: 'center',
                         gap: 8,
-                        height: 32,
+                        height: 30,
                         justifyContent: 'flex-start',
                         padding: '0 8px',
-                        borderRadius: 8,
+                        borderRadius: 6,
                         fontSize: 13,
-                        background: active ? token.colorPrimaryBg : 'transparent',
-                        color: active ? token.colorPrimary : token.colorText,
+                        color: active ? token.colorPrimary : 'rgba(255,255,255,0.75)',
                         fontWeight: active ? 600 : 400,
                     }}>
                     {icon}
@@ -120,45 +122,54 @@ export default function TransferSessionList({
             className="znhd-transfer-sessions"
             style={{
                 flex: '0 0 auto',
-                width: 264,
+                width: 250,
                 display: 'flex',
                 flexDirection: 'column',
-                borderRight: '1px solid ' + token.colorBorderSecondary,
-                background: token.colorBgContainer,
+                background: WECHAT.list,
                 minWidth: 0,
             }}>
-            {/* 搜索框 + 「＋」（设备=配对 / Agents=新建对话） */}
-            <div style={{ display: 'flex', gap: 8, padding: 10 }}>
+            {/* 搜索框 +「＋」（对话=配对 / Agents=新建对话；文件分组没有「＋」） */}
+            <div style={{ display: 'flex', gap: 6, padding: '10px 10px 8px' }}>
                 <Input
                     allowClear
-                    prefix={<SearchIcon size={14} color={token.colorTextQuaternary} />}
-                    placeholder={isAgents ? '搜索对话' : '搜索会话 / 设备'}
+                    prefix={<SearchIcon size={14} color="rgba(255,255,255,0.35)" />}
+                    placeholder={isAgents ? '搜索对话' : '搜索'}
                     value={search}
                     onChange={(e) => onSearch(e.target.value)}
+                    style={{
+                        background: WECHAT.chat,
+                        borderRadius: 6,
+                    }}
                 />
-                {isAgents ? (
+                {isFiles ? null : isAgents ? (
                     <Tooltip title="新建对话（清空当前视图，发出下一条消息时另起一个对话）">
                         <Button
-                            color="primary"
-                            variant="solid"
+                            type="text"
                             aria-label="新建对话"
                             onClick={() => {
                                 if (onAgentPane) onAgentPane('chat');
                                 if (agent) agent.newChat();
                             }}
-                            style={{ width: 38, padding: 0 }}>
-                            <PlusIcon size={14} />
+                            style={{
+                                width: 28,
+                                padding: 0,
+                                color: 'rgba(255,255,255,0.65)',
+                            }}>
+                            <PlusIcon size={16} />
                         </Button>
                     </Tooltip>
                 ) : (
                     <Tooltip title="配对设备（手机扫码 / 打开链接即完成配对）">
                         <Button
-                            color="primary"
-                            variant="solid"
+                            type="text"
                             aria-label="配对设备"
                             onClick={onPair}
-                            style={{ width: 38, padding: 0 }}>
-                            <PlusIcon size={14} />
+                            style={{
+                                width: 28,
+                                padding: 0,
+                                color: 'rgba(255,255,255,0.65)',
+                            }}>
+                            <PlusIcon size={16} />
                         </Button>
                     </Tooltip>
                 )}
@@ -173,7 +184,7 @@ export default function TransferSessionList({
             ) : null}
 
             {/* 列表 */}
-            <div style={{ flex: '1 1 auto', minHeight: 0, overflowY: 'auto', padding: '0 8px 10px' }}>
+            <div style={{ flex: '1 1 auto', minHeight: 0, overflowY: 'auto', padding: '0 6px 10px' }}>
                 {isAgents && agent ? (
                     <AgentConversationList
                         chats={agent.chats}
@@ -197,27 +208,32 @@ export default function TransferSessionList({
                                 style={{
                                     display: 'flex',
                                     alignItems: 'center',
-                                    gap: 8,
-                                    padding: '8px 10px',
-                                    marginBottom: 2,
-                                    borderRadius: 8,
+                                    gap: 10,
+                                    padding: '9px 10px',
+                                    borderRadius: 6,
                                     cursor: 'pointer',
-                                    background: active ? token.colorPrimaryBg : 'transparent',
-                                    border: '1px solid ' + (active ? token.colorPrimaryBorder : 'transparent'),
+                                    // 选中 = 比栏底浅一档（微信暗色同款）；悬停 = 中间档
+                                    background: active ? WECHAT.selected : 'transparent',
+                                }}
+                                onMouseEnter={(ev) => {
+                                    if (!active) ev.currentTarget.style.background = WECHAT.hover;
+                                }}
+                                onMouseLeave={(ev) => {
+                                    if (!active) ev.currentTarget.style.background = 'transparent';
                                 }}>
                                 {/* 设备头像位：彩色圆 + 首字符（聚合会话用手机图标占位） */}
                                 <span
                                     style={{
-                                        width: 34,
-                                        height: 34,
-                                        borderRadius: 8,
+                                        width: 36,
+                                        height: 36,
+                                        borderRadius: 6,
                                         flex: '0 0 auto',
                                         display: 'inline-flex',
                                         alignItems: 'center',
                                         justifyContent: 'center',
-                                        background: e.isAggregate ? token.colorFillSecondary : token.colorPrimaryBg,
-                                        color: e.isAggregate ? token.colorTextSecondary : token.colorPrimary,
-                                        fontSize: 13,
+                                        background: e.isAggregate ? WECHAT.bubblePeer : token.colorPrimaryBg,
+                                        color: e.isAggregate ? 'rgba(255,255,255,0.8)' : token.colorPrimary,
+                                        fontSize: 14,
                                         fontWeight: 600,
                                         position: 'relative',
                                     }}>
@@ -231,13 +247,13 @@ export default function TransferSessionList({
                                         <span
                                             style={{
                                                 position: 'absolute',
-                                                right: -1,
-                                                bottom: -1,
+                                                right: -2,
+                                                bottom: -2,
                                                 width: 9,
                                                 height: 9,
                                                 borderRadius: '50%',
                                                 background: '#52c41a',
-                                                border: '1.5px solid ' + token.colorBgContainer,
+                                                border: '1.5px solid ' + WECHAT.list,
                                             }}
                                         />
                                     ) : null}
@@ -246,7 +262,7 @@ export default function TransferSessionList({
                                     <div
                                         style={{
                                             fontSize: 13,
-                                            fontWeight: active ? 600 : 400,
+                                            color: 'rgba(255,255,255,0.9)',
                                             overflow: 'hidden',
                                             textOverflow: 'ellipsis',
                                             whiteSpace: 'nowrap',
@@ -255,25 +271,26 @@ export default function TransferSessionList({
                                     </div>
                                     <div
                                         style={{
-                                            fontSize: 11,
-                                            color: token.colorTextTertiary,
+                                            fontSize: 12,
+                                            color: 'rgba(255,255,255,0.4)',
                                             overflow: 'hidden',
                                             textOverflow: 'ellipsis',
                                             whiteSpace: 'nowrap',
+                                            marginTop: 1,
                                         }}>
                                         {e.lastMsg ? previewText(e.lastMsg) : e.online ? '在线' : '离线'}
                                     </div>
                                 </div>
                                 <div style={{ flex: '0 0 auto', textAlign: 'right' }}>
-                                    <div style={{ fontSize: 11, color: token.colorTextTertiary }}>
+                                    <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)' }}>
                                         {listTime(e.lastTs || 0)}
                                     </div>
                                     {e.unread > 0 ? (
                                         <div
                                             style={{
-                                                marginTop: 2,
+                                                marginTop: 3,
                                                 marginLeft: 'auto',
-                                                background: token.colorError,
+                                                background: '#FA5151',
                                                 color: '#fff',
                                                 borderRadius: 9,
                                                 fontSize: 11,
@@ -293,11 +310,11 @@ export default function TransferSessionList({
                     <div
                         style={{
                             fontSize: 12,
-                            color: token.colorTextTertiary,
+                            color: 'rgba(255,255,255,0.35)',
                             padding: '12px 4px',
                             textAlign: 'center',
                         }}>
-                        {keyword ? '没有匹配的会话 / 设备' : '暂无会话——点右上角 + 配对手机'}
+                        {keyword ? '没有匹配的会话 / 设备' : isFiles ? '暂无文件' : '暂无会话——点右上角 + 配对手机'}
                     </div>
                 )}
             </div>

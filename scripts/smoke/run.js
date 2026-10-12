@@ -68,7 +68,7 @@ const CHECKS = [
   // ===== 传输助手（v26.10.12-v1：「设备互联 / 历史记录 / Agent 助手」三入口收敛为一个三栏窗口）=====
   ['transferAutoOpenOk', '收到手机内容时自动打开传输助手窗口（窗口不开也收件）'],
   ['transferWindowOk', '传输助手三栏窗口：导航/会话/主聊天区 + 会话列表 + 收到的消息'],
-  ['transferNoTitleOk', '窗口无标题栏（与第一栏图标+名称重复，已去掉），但右上角关闭按钮仍在'],
+  ['transferNoTitleOk', '窗口无标题栏；顶部自绘标题条的关闭按钮贴右上角、悬浮变红（微信同款）'],
   ['filesViewOk', '「文件」视图：图片九宫格 + 文本分区 + 计数（原历史记录弹窗搬迁）'],
   ['sessionChatOk', '设备会话聊天区：收到的文本与图片渲染为聊天气泡'],
   ['textSentOk', '会话内发送文本：本机气泡 + POST /phone/send'],
@@ -79,13 +79,13 @@ const CHECKS = [
   ['phoneIdColorOk', '设备 ID 有边框+彩色底，且不同设备底色不同'],
   ['pairTestImageBtnOk', '配对窗口有「发送测试图片」按钮'],
   ['testImageSentOk', '「发送测试图片」把图片投递到 /u/<deviceId>（手机上传同路径）'],
-  ['transferThemeOk', '外观切到深色：窗口主区变深色（嵌套 ConfigProvider 只作用于本窗）'],
+  ['transferThemeOk', '窗口固定微信暗色：标题条最淡、三栏深浅分层（外围最淡、聊天区最深）'],
   ['transferSettingsIsolatedOk', '传输助手设置独立存储 scriptCat_TransferSettings（不污染主设置）'],
   ['filesImgActionsOk', '「文件」视图图片格子：复制/下载/删除是右下角图标按钮（未 hover 隐藏，hover 出现）'],
   // v26.10.12-v3：用户要求「设备菜单和 agent 菜单下的对话主区域使用相同的样式」，
   // 于是气泡、滚动区、底部输入框都抽成了共用件 —— 这三条守的就是「共用件真的长出来了」
-  ['chatBubbleOk', '聊天气泡左右分栏（他人靠左浅底 / 我的靠右深底）+ 头像在气泡外侧'],
-  ['chatComposerOk', '底部输入区：多行自增高（超上限后框内滚动）+ 左下角表情/图片上传/附件 + 右下角圆形发送按钮 + 有边框'],
+  ['chatBubbleOk', '聊天气泡左右分栏（他人靠左微信灰 / 我的靠右微信绿）+ 头像在气泡外侧 + 时间分隔条'],
+  ['chatComposerOk', '输入区（微信式）：工具栏表情/图片上传/附件 + 多行自增高（超上限后框内滚动）+ 右下角发送按钮 + 实心底面板'],
   ['chatPanelSharedOk', 'Agent 对话与设备会话共用同一套聊天面板（同一个输入框外壳 + 带 data-side 的气泡 + 头像）'],
   // ===== 主面板既有断言 =====
   ['phrasesLoaded', '常用语 YAML 解析'],

@@ -1,276 +1,158 @@
-import { useState, type ReactElement } from 'react';
-import { Button, Popover, Segmented, Tooltip } from 'antd';
-import { theme } from 'antd';
-import {
-    BotIcon,
-    DeviceIcon,
-    FilesIcon,
-    InfoIcon,
-    MoonIcon,
-    PanelLeftIcon,
-    SettingsIcon,
-    SunIcon,
-    TransferIcon,
-    type IconProps,
-} from '@/lib/ui/icons';
-import type { TransferTheme } from '@/lib/transfer/types';
+import type { ReactElement } from 'react';
+import { Tooltip, theme } from 'antd';
+import { WECHAT } from '@/lib/ui/transfer/wechatTheme';
+import { BotIcon, FilesIcon, InfoIcon, MessageIcon, SettingsIcon, TransferIcon, type IconProps } from '@/lib/ui/icons';
 
 export type TransferNav = 'agents' | 'devices' | 'files';
 
-/** 第一栏宽度：展开 / 折叠（企业微信式窄导航） */
-export const NAV_WIDTH = 196;
-export const NAV_WIDTH_COLLAPSED = 52;
+/** 第一栏宽度：微信式窄侧边栏（只放图标，不可折叠 —— 折叠开关随宽栏一起移除） */
+export const NAV_WIDTH = 58;
 
-/** 中部入口（Agents 固定最顶部，其余为传输助手相关的会话 / 设备分组） */
+/**
+ * 第一栏导航项（v26.10.12-v4 改微信式窄栏）。
+ *
+ * 顺序与命名（用户要求）：**「设备」改名「对话」并置于 Agents 之上**，文件随后。
+ * 注意 key 保持 `devices` 不变 —— store / 自动弹窗 / 冒烟夹具都按 key 路由，改 key 是纯风险。
+ */
 const NAV_ITEMS: Array<{ key: TransferNav; label: string; icon: (p: IconProps) => ReactElement }> = [
+    { key: 'devices', label: '对话', icon: MessageIcon },
     { key: 'agents', label: 'Agents', icon: BotIcon },
-    { key: 'devices', label: '设备', icon: DeviceIcon },
     { key: 'files', label: '文件', icon: FilesIcon },
 ];
 
 /**
- * 第一栏（最左侧窄导航栏，v26.10.12-v1）。
+ * 第一栏（最左侧窄导航栏，v26.10.12-v4 微信桌面版样式）。
  *
- * 结构（对齐企业微信桌面端）：顶部 logo + 折叠开关 → 中部入口列表
- * （**Agents 固定在最顶部**，支持整栏折叠 / 展开）→ 底部外观设置 / 设置 / 企业信息。
+ * 结构：顶部 logo（头像位）→ 中部图标入口（对话 / Agents / 文件，只放图标不显示文字）
+ * → 底部设置 / 企业信息。未读总数在「对话」图标右上角挂红色角标（微信同款位置）。
+ * 选中态 = 图标变主色（微信绿）；悬停有 Tooltip（placement right）。
  *
- * 折叠后只剩图标（展开时显示完整入口）；未读总数在「设备」入口上挂小红点。
+ * 原「外观设置」入口已随窗口固定微信暗色一起移除（见 wechatTheme.ts 头注）。
  */
 export default function TransferNavRail({
     nav,
     onNav,
-    collapsed,
-    onToggleCollapsed,
-    themeMode,
-    onThemeMode,
     onOpenSettings,
     onOpenAbout,
     unreadTotal,
 }: {
     nav: TransferNav;
     onNav: (nav: TransferNav) => void;
-    collapsed: boolean;
-    onToggleCollapsed: () => void;
-    themeMode: TransferTheme;
-    onThemeMode: (theme: TransferTheme) => void;
     onOpenSettings: () => void;
     onOpenAbout: () => void;
     unreadTotal: number;
 }) {
     const { token } = theme.useToken();
-    const [appearanceOpen, setAppearanceOpen] = useState(false);
 
-    const renderNavItem = (item: (typeof NAV_ITEMS)[number]) => {
-        const active = nav === item.key;
-        const Icon = item.icon;
-        const btn = (
-            <Button
-                type="text"
-                block
-                aria-label={item.label}
-                onClick={() => onNav(item.key)}
-                style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 10,
-                    height: 38,
-                    padding: collapsed ? '0 8px' : '0 10px',
-                    justifyContent: collapsed ? 'center' : 'flex-start',
-                    borderRadius: 8,
-                    background: active ? token.colorPrimaryBg : 'transparent',
-                    color: active ? token.colorPrimary : token.colorText,
-                    fontWeight: active ? 600 : 400,
-                    fontSize: 13,
-                }}>
-                <Icon size={17} color="currentColor" />
-                {collapsed ? null : (
-                    <span style={{ minWidth: 0, overflow: 'hidden', whiteSpace: 'nowrap' }}>{item.label}</span>
-                )}
-                {!collapsed && item.key === 'devices' && unreadTotal > 0 ? (
-                    <span
-                        style={{
-                            marginLeft: 'auto',
-                            background: token.colorError,
-                            color: '#fff',
-                            borderRadius: 9,
-                            fontSize: 11,
-                            lineHeight: '16px',
-                            padding: '0 5px',
-                            minWidth: 16,
-                            textAlign: 'center',
-                        }}>
-                        {unreadTotal > 99 ? '99+' : unreadTotal}
-                    </span>
-                ) : null}
-                {collapsed && item.key === 'devices' && unreadTotal > 0 ? (
-                    <span
-                        style={{
-                            position: 'absolute',
-                            top: 4,
-                            right: 6,
-                            width: 7,
-                            height: 7,
-                            borderRadius: '50%',
-                            background: token.colorError,
-                        }}
-                    />
-                ) : null}
-            </Button>
-        );
+    /** 一个纯图标导航按钮（微信式：48px 见方热区，选中变主色，右上角可挂红色角标） */
+    const iconButton = (
+        label: string,
+        icon: ReactElement,
+        onClick: () => void,
+        opts?: { active?: boolean; badge?: number }
+    ) => {
+        const active = !!opts?.active;
+        const badge = opts?.badge || 0;
         return (
-            <div key={item.key} style={{ position: 'relative', marginBottom: 2 }}>
-                {collapsed ? (
-                    <Tooltip title={item.label} placement="right">
-                        {btn}
-                    </Tooltip>
-                ) : (
-                    btn
-                )}
-            </div>
+            <Tooltip title={label} placement="right">
+                <button
+                    type="button"
+                    aria-label={label}
+                    onClick={onClick}
+                    style={{
+                        position: 'relative',
+                        width: 40,
+                        height: 40,
+                        margin: '0 auto',
+                        padding: 0,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        border: 'none',
+                        borderRadius: 8,
+                        background: 'transparent',
+                        cursor: 'pointer',
+                        color: active ? token.colorPrimary : 'rgba(255,255,255,0.55)',
+                        // 选中态给一个浅色底（微信暗色下是比栏底略浅的一块），比纯变色更可辨
+                        boxShadow: active ? 'inset 0 0 0 100px rgba(255,255,255,0.08)' : 'none',
+                    }}>
+                    {icon}
+                    {badge > 0 ? (
+                        <span
+                            style={{
+                                position: 'absolute',
+                                top: 2,
+                                right: 2,
+                                minWidth: 15,
+                                height: 15,
+                                padding: '0 4px',
+                                borderRadius: 9,
+                                background: '#FA5151',
+                                color: '#fff',
+                                fontSize: 10,
+                                lineHeight: '15px',
+                                textAlign: 'center',
+                                fontWeight: 600,
+                            }}>
+                            {badge > 99 ? '99+' : badge}
+                        </span>
+                    ) : null}
+                </button>
+            </Tooltip>
         );
     };
-
-    const bottomItem = (label: string, icon: ReactElement, onClick: () => void, extra?: ReactElement) => {
-        const btn = (
-            <Button
-                type="text"
-                block
-                aria-label={label}
-                onClick={onClick}
-                style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 10,
-                    height: 36,
-                    padding: collapsed ? '0 8px' : '0 10px',
-                    justifyContent: collapsed ? 'center' : 'flex-start',
-                    borderRadius: 8,
-                    color: token.colorTextSecondary,
-                    fontSize: 13,
-                }}>
-                {icon}
-                {collapsed ? null : <span>{label}</span>}
-                {extra}
-            </Button>
-        );
-        return (
-            <div key={label} style={{ marginBottom: 2 }}>
-                {collapsed ? (
-                    <Tooltip title={label} placement="right">
-                        {btn}
-                    </Tooltip>
-                ) : (
-                    btn
-                )}
-            </div>
-        );
-    };
-
-    const appearance = (
-        <Popover
-            trigger="click"
-            open={appearanceOpen}
-            onOpenChange={setAppearanceOpen}
-            placement="right"
-            content={
-                <div style={{ width: 180 }}>
-                    <div style={{ fontSize: 12, color: token.colorTextSecondary, marginBottom: 8 }}>窗口外观</div>
-                    <Segmented
-                        block
-                        value={themeMode}
-                        onChange={(v) => onThemeMode(v as TransferTheme)}
-                        options={[
-                            { label: '浅色', value: 'light' },
-                            { label: '深色', value: 'dark' },
-                        ]}
-                    />
-                    <div style={{ fontSize: 11, color: token.colorTextTertiary, marginTop: 8 }}>
-                        只影响传输助手窗口，与主面板设置无关。
-                    </div>
-                </div>
-            }>
-            {bottomItem(
-                '外观设置',
-                themeMode === 'dark' ? (
-                    <MoonIcon size={17} color="currentColor" />
-                ) : (
-                    <SunIcon size={17} color="currentColor" />
-                ),
-                () => setAppearanceOpen((v) => !v)
-            )}
-        </Popover>
-    );
 
     return (
         <div
             className="znhd-transfer-nav"
             style={{
                 flex: '0 0 auto',
-                width: collapsed ? NAV_WIDTH_COLLAPSED : NAV_WIDTH,
+                width: NAV_WIDTH,
                 display: 'flex',
                 flexDirection: 'column',
-                padding: '10px 8px',
-                borderRight: '1px solid ' + token.colorBorderSecondary,
-                background: token.colorBgLayout,
-                transition: 'width 0.15s',
+                alignItems: 'center',
+                padding: '10px 0 8px',
+                background: WECHAT.rail,
             }}>
-            {/* 顶部：logo + 折叠开关 */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, padding: '0 2px' }}>
-                <span
-                    style={{
-                        width: 30,
-                        height: 30,
-                        borderRadius: 8,
-                        background: token.colorPrimary,
-                        color: '#fff',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        flex: '0 0 auto',
-                    }}>
-                    <TransferIcon size={17} color="#fff" />
-                </span>
-                {collapsed ? null : (
-                    <span
-                        style={{
-                            fontSize: 15,
-                            fontWeight: 700,
-                            minWidth: 0,
-                            overflow: 'hidden',
-                            whiteSpace: 'nowrap',
-                        }}>
-                        传输助手
-                    </span>
-                )}
-                <span style={{ flex: '1 1 auto' }} />
-                <Tooltip title={collapsed ? '展开导航栏' : '折叠导航栏'} placement="right">
-                    <Button
-                        type="text"
-                        size="small"
-                        aria-label={collapsed ? '展开导航栏' : '折叠导航栏'}
-                        onClick={onToggleCollapsed}
-                        style={{
-                            padding: 4,
-                            minWidth: 24,
-                            color: token.colorTextTertiary,
-                            transform: collapsed ? 'rotate(180deg)' : 'none',
-                            transition: 'transform 0.15s',
-                        }}>
-                        <PanelLeftIcon size={16} color="currentColor" />
-                    </Button>
-                </Tooltip>
-            </div>
+            {/* 顶部：logo（微信这里是用户头像位） */}
+            <span
+                title="传输助手"
+                style={{
+                    width: 32,
+                    height: 32,
+                    borderRadius: 8,
+                    background: token.colorPrimary,
+                    color: '#fff',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flex: '0 0 auto',
+                    marginBottom: 14,
+                }}>
+                <TransferIcon size={18} color="#fff" />
+            </span>
 
-            {/* 中部入口（Agents 固定最顶部） */}
-            <div style={{ display: 'flex', flexDirection: 'column' }}>{NAV_ITEMS.map(renderNavItem)}</div>
+            {/* 中部入口（对话在最上，其次 Agents、文件） */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {NAV_ITEMS.map((item) => {
+                    const Icon = item.icon;
+                    return (
+                        <span key={item.key}>
+                            {iconButton(item.label, <Icon size={20} color="currentColor" />, () => onNav(item.key), {
+                                active: nav === item.key,
+                                badge: item.key === 'devices' ? unreadTotal : 0,
+                            })}
+                        </span>
+                    );
+                })}
+            </div>
 
             <span style={{ flex: '1 1 auto' }} />
 
-            {/* 底部：外观设置 / 设置 / 企业信息 */}
-            <div style={{ borderTop: '1px solid ' + token.colorBorderSecondary, paddingTop: 8 }}>
-                {appearance}
-                {bottomItem('设置', <SettingsIcon size={17} color="currentColor" />, onOpenSettings)}
-                {bottomItem('企业信息', <InfoIcon size={17} color="currentColor" />, onOpenAbout)}
+            {/* 底部：设置 / 企业信息（原「外观设置」已随固定暗色移除） */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {iconButton('设置', <SettingsIcon size={19} color="currentColor" />, onOpenSettings)}
+                {iconButton('企业信息', <InfoIcon size={19} color="currentColor" />, onOpenAbout)}
             </div>
         </div>
     );

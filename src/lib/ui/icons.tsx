@@ -460,3 +460,12 @@ export function ClockIcon(p: IconProps) {
         </SvgIcon>
     );
 }
+
+/** 对话（Lucide `message-circle`：圆角气泡）：第一栏的「对话」导航图标（原「设备」，v26.10.12-v4） */
+export function MessageIcon(p: IconProps) {
+    return (
+        <SvgIcon {...p}>
+            <path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z" />
+        </SvgIcon>
+    );
+}

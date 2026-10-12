@@ -131,9 +131,7 @@ export default function TransferFilesView({ messages }: { messages: TransferMess
         <div
             className="znhd-transfer-files"
             style={{ flex: '1 1 auto', minHeight: 0, overflowY: 'auto', padding: '10px 12px' }}>
-            {/* 右侧留 48px 空档：v26.10.12-v2 去掉 Modal 标题栏后，关闭按钮 × 绝对定位浮在窗口右上角，
-                「清空全部」贴右边会被它压住 */}
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 8, paddingRight: 36 }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 8 }}>
                 <Text strong style={{ fontSize: 14 }}>
                     全部文件（图片 {images.length} · 文本 {texts.length}）
                 </Text>

@@ -1,24 +1,23 @@
 /**
- * 聊天输入区（v26.10.12-v3）：设备会话与 Agent 对话**共用同一个输入框**。
+ * 聊天输入区（v26.10.12-v3；v26.10.12-v4 改**微信桌面版结构**）：设备会话与 Agent 对话
+ * **共用同一个输入面板**。
  *
- * ── 用户给的规格 ─────────────────────────────────────────────────────────────
- *   ① 固定吸附在聊天区底部，不随消息滚动；
- *   ② 多行输入框随内容自动增高，到最大高度后**框内**出现滚动条；
- *   ③ 左下角：表情 / 图片上传 / 附件；右下角：发送按钮；
- *   ④ Enter 发送、Shift+Enter 换行；外层有边框，hover / focus 时高亮。
- * ② 与 ④ 的「高亮画在哪」有两处实测结论不能动，写在这里当路标：
+ * ── 微信原版结构（对齐截图）─────────────────────────────────────────────────
+ *   ┌────────────────────────────────────────┐
+ *   │ 😀 🖼 📎                ← 工具栏图标行（上） │
+ *   │ 多行文本输入框（自动增高，超限框内滚动）      │
+ *   │                        [发送] ← 右下角 │
+ *   └────────────────────────────────────────┘
+ * 整个面板是一块 #262626 的实心底（比聊天区略浅，靠上边框分开），**不再有 v3 那个
+ * 带边框圆角的内层盒子** —— 微信的输入区就是一整块面板。
  *
- * ⚠️ **聚焦高亮画在外层容器，不画在 textarea 上**（v26.10.10-v13 的结论，本次沿用）：
- * antd v6 的 `variant="borderless"` 会在 `:focus-visible` 时给文本域**自己**画一层
- * `outline`（`node_modules/antd/es/input/style/variants.js` 的 `genBorderlessFocusVisibleStyle`），
- * 看起来就是「输入框里又套了一个蓝框」。所以这里内联关掉 outline / boxShadow
- * （冒烟断言 `agentInputNoRingOk` 守着），聚焦反馈改由外层容器的 border + boxShadow 承担。
- *
- * ⚠️ **必须同时钉住 `minRows: 2` 与 `lineHeight: '20px'`**（v26.10.10-v15）：
- * rc-textarea 挂载时按 `minRows` 算高度（1 行 ≈ 20px），输入过内容之后改按
- * 「行数 × 行高 + padding」重算（1 行文本实测 41px）；而挂载那一刻 antd 的 CSS 还没注入完、
- * 行高按 20px 算、输入后才是 20.5px ⇒「打一个字再全删掉」会让输入框永久停在更高的位置。
- * 冒烟 `agentInputHeightOk` 按严格整数相等守着，别只改其中一个。
+ * ⚠️ 两条实测结论仍然成立，别动：
+ * · **textarea 自己禁 outline / boxShadow**（v26.10.10-v13）：antd `variant="borderless"`
+ *   会在 `:focus-visible` 时给文本域自己画 outline（「框里套框」）。聚焦反馈交给光标，
+ *   不再画外圈（微信输入区也没有聚焦光圈）。
+ * · **必须同时钉住 `minRows` 与 `lineHeight: '20px'`**（v26.10.10-v15）：rc-textarea
+ *   挂载时按 minRows 算高、输入后按「行数 × 行高 + padding」重算，行高不一致会出现
+ *   「打一个字再删空，输入框永久变高」。冒烟 `agentInputHeightOk` 严格相等守着。
  */
 
 import { useRef, useState, type ReactNode } from 'react';
@@ -26,8 +25,9 @@ import { Button, Input, Popover, Tooltip, theme } from 'antd';
 import type { TextAreaRef } from 'antd/es/input/TextArea';
 import { SendIcon, SmileIcon, StopIcon } from '@/lib/ui/icons';
 import { EMOJI_GROUPS } from '@/lib/ui/transfer/chatEmojis';
+import { WECHAT } from '@/lib/ui/transfer/wechatTheme';
 
-/** 左下角的附加功能按钮（表情独立在组件内，这个数组是它之后的按钮） */
+/** 工具栏行的附加功能按钮（表情独立在组件内，这个数组是它之后的按钮） */
 export interface ComposerAction {
     key: string;
     /** 无障碍名（按钮只有图标）：读屏与冒烟测试都靠它 */
@@ -57,7 +57,7 @@ export interface ChatComposerProps {
     actions?: ComposerAction[];
     /** 发送按钮左侧的附加控件（Agent 的模型下拉） */
     rightExtras?: ReactNode;
-    /** 输入框上方的提示行（无在线手机 / 待发图片计数等） */
+    /** 输入面板上方的提示行（无在线手机 / 待发图片计数等） */
     notice?: ReactNode;
 }
 
@@ -75,12 +75,9 @@ export default function ChatComposer({
     notice,
 }: ChatComposerProps) {
     const { token } = theme.useToken();
-    const [focused, setFocused] = useState(false);
-    const [hovered, setHovered] = useState(false);
     const [emojiOpen, setEmojiOpen] = useState(false);
     const inputRef = useRef<TextAreaRef | null>(null);
 
-    const highlighted = focused || hovered;
     const sendDisabled = !!disabled || streaming || !(canSend === undefined ? value.trim() : canSend);
 
     /** 把字符插到光标处（不是追加到末尾：用户可能改到中间才想起来加个表情） */
@@ -140,7 +137,7 @@ export default function ChatComposer({
                     icon={icon}
                     disabled={isDisabled}
                     onClick={onClick}
-                    style={{ width: 26, height: 26, minWidth: 26, padding: 0, color: token.colorTextSecondary }}
+                    style={{ width: 28, height: 28, minWidth: 28, padding: 0, color: 'rgba(255,255,255,0.6)' }}
                 />
             </span>
         </Tooltip>
@@ -148,105 +145,97 @@ export default function ChatComposer({
 
     return (
         <div
+            // 类名是冒烟夹具识别「共用输入面板」的钩子（composerFacts / composerBoxOf），勿改
+            className="znhd-chat-composer"
             style={{
                 flex: '0 0 auto',
-                padding: 10,
-                borderTop: '1px solid ' + token.colorBorderSecondary,
+                display: 'flex',
+                flexDirection: 'column',
+                padding: '6px 12px 8px',
+                background: WECHAT.input,
+                borderTop: '1px solid rgba(0,0,0,0.4)',
             }}>
             {notice}
-            <div
-                className="znhd-chat-composer"
-                onMouseEnter={() => setHovered(true)}
-                onMouseLeave={() => setHovered(false)}
+            {/* 工具栏图标行（微信把这一行放在输入框上面） */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 2, marginBottom: 2 }}>
+                <Popover
+                    trigger="click"
+                    placement="topLeft"
+                    open={emojiOpen}
+                    onOpenChange={setEmojiOpen}
+                    content={emojiPanel}>
+                    {iconButton(
+                        '表情',
+                        '插入符号 / 表情',
+                        <SmileIcon size={16} />,
+                        () => setEmojiOpen((v) => !v),
+                        disabled
+                    )}
+                </Popover>
+                {(actions || []).map((action) =>
+                    iconButton(
+                        action.label,
+                        action.tooltip || action.label,
+                        action.icon,
+                        action.onClick,
+                        action.disabled || disabled
+                    )
+                )}
+            </div>
+            <Input.TextArea
+                ref={inputRef}
+                value={value}
+                onChange={(event) => onChange(event.target.value)}
+                onPressEnter={(event) => {
+                    if (event.shiftKey) return;
+                    event.preventDefault();
+                    onSend();
+                }}
+                placeholder={placeholder}
+                // 行数上限 6 行：超过后 rc-textarea 交给原生滚动条（框内滚动），
+                // 输入区高度因此有上限，不会把消息区挤没
+                autoSize={{ minRows: 2, maxRows: 6 }}
+                disabled={disabled}
+                variant="borderless"
                 style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: 2,
-                    padding: '6px 8px 4px',
-                    border: '1px solid ' + (highlighted ? token.colorPrimaryBorder : token.colorBorderSecondary),
-                    borderRadius: 10,
-                    background: token.colorBgContainer,
-                    // 聚焦时再补一圈淡主色光晕（聚焦反馈只在这里，textarea 自己是干净的）
-                    boxShadow: focused ? '0 0 0 2px ' + token.colorPrimaryBg : 'none',
-                    transition: 'border-color 0.15s, box-shadow 0.15s',
-                }}>
-                <Input.TextArea
-                    ref={inputRef}
-                    value={value}
-                    onChange={(event) => onChange(event.target.value)}
-                    onPressEnter={(event) => {
-                        if (event.shiftKey) return;
-                        event.preventDefault();
-                        onSend();
-                    }}
-                    onFocus={() => setFocused(true)}
-                    onBlur={() => setFocused(false)}
-                    placeholder={placeholder}
-                    // 行数上限 6 行：超过后 rc-textarea 交给原生滚动条（框内滚动），
-                    // 输入区高度因此有上限，不会把消息区挤没
-                    autoSize={{ minRows: 2, maxRows: 6 }}
-                    disabled={disabled}
-                    variant="borderless"
-                    style={{
-                        resize: 'none',
-                        padding: 0,
-                        fontSize: 13,
-                        lineHeight: '20px',
-                        outline: 'none',
-                        boxShadow: 'none',
-                    }}
-                />
-                <div style={{ display: 'flex', alignItems: 'center', gap: 2, minWidth: 0 }}>
-                    <Popover
-                        trigger="click"
-                        placement="topLeft"
-                        open={emojiOpen}
-                        onOpenChange={setEmojiOpen}
-                        content={emojiPanel}>
-                        {iconButton(
-                            '表情',
-                            '插入符号 / 表情',
-                            <SmileIcon size={15} />,
-                            () => setEmojiOpen((v) => !v),
-                            disabled
-                        )}
-                    </Popover>
-                    {(actions || []).map((action) =>
-                        iconButton(
-                            action.label,
-                            action.tooltip || action.label,
-                            action.icon,
-                            action.onClick,
-                            action.disabled || disabled
-                        )
-                    )}
-                    <span style={{ flex: '1 1 auto', minWidth: 0 }} />
-                    {rightExtras}
-                    {streaming ? (
-                        <Tooltip title="中止本轮回答">
-                            <Button
-                                shape="circle"
-                                size="small"
-                                danger
-                                aria-label="中止"
-                                icon={<StopIcon size={12} />}
-                                onClick={() => onStop && onStop()}
-                            />
-                        </Tooltip>
-                    ) : (
-                        <Tooltip title="发送（Enter）">
-                            <Button
-                                shape="circle"
-                                size="small"
-                                type="primary"
-                                aria-label="发送"
-                                icon={<SendIcon size={14} />}
-                                onClick={onSend}
-                                disabled={sendDisabled}
-                            />
-                        </Tooltip>
-                    )}
-                </div>
+                    resize: 'none',
+                    padding: 0,
+                    fontSize: 14,
+                    lineHeight: '20px',
+                    color: 'rgba(255,255,255,0.9)',
+                    outline: 'none',
+                    boxShadow: 'none',
+                }}
+            />
+            {/* 底部一行：右侧发送按钮（微信同位置；Enter 发送 / Shift+Enter 换行走 onPressEnter） */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 8, marginTop: 4 }}>
+                {rightExtras}
+                {streaming ? (
+                    <Tooltip title="中止本轮回答">
+                        <Button
+                            shape="circle"
+                            size="small"
+                            danger
+                            aria-label="中止"
+                            icon={<StopIcon size={12} />}
+                            onClick={() => onStop && onStop()}
+                        />
+                    </Tooltip>
+                ) : (
+                    <Button
+                        size="small"
+                        aria-label="发送"
+                        disabled={sendDisabled}
+                        onClick={onSend}
+                        icon={<SendIcon size={13} />}
+                        style={{
+                            minWidth: 64,
+                            color: sendDisabled ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.9)',
+                            background: sendDisabled ? 'transparent' : 'rgba(255,255,255,0.08)',
+                        }}>
+                        发送
+                    </Button>
+                )}
             </div>
         </div>
     );

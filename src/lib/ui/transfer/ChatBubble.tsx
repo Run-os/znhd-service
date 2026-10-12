@@ -1,11 +1,17 @@
 /**
- * 聊天气泡（v26.10.12-v3）：设备会话与 Agent 对话**共用同一条消息的排版**。
+ * 聊天气泡（v26.10.12-v3；v26.10.12-v4 换微信 PC 暗色配色）：设备会话与 Agent 对话
+ * **共用同一条消息的排版**。
  *
- * ── 布局（用户给的规格）──────────────────────────────────────────────────────
- *   他人 / AI：气泡靠左、**浅色底**、圆角，头像在气泡左侧；
- *   我       ：气泡靠右、**深色底**（这里用主色实心）、圆角，头像在气泡右侧。
+ * ── 布局（微信 PC 原版）─────────────────────────────────────────────────────
+ *   对方消息：气泡居左、**#2F2F2F 灰底**、圆角，头像在气泡左侧；
+ *   我方消息：气泡居右、**#07C160 微信绿底**、圆角，头像在气泡右侧。
  * 实现上只有一个 flex 容器：`flexDirection` 在 `row` / `row-reverse` 之间切，
  * 于是「头像位置」与「气泡贴哪边」用同一份代码得到，不会出现两边各写一套而错位。
+ *
+ * ── 配色来源 ────────────────────────────────────────────────────────────────
+ * 我方气泡用 token.colorPrimary —— 窗口的 ConfigProvider 已把主色 token 换成微信绿
+ * #07C160（见 TransferAssistantModal / wechatTheme），于是气泡、发送按钮、选中态是同一
+ * 个绿，不会各写一份漂移。对方气泡按用户给的规范钉死 #2F2F2F（微信灰），不带边框。
  *
  * ── 为什么头像用 span 包一层 ─────────────────────────────────────────────────
  * 宿主税务页给 `svg` 加过 margin/vertical-align（见 `uiReset` 与 `icons.tsx` 的说明），
@@ -14,6 +20,7 @@
 
 import type { CSSProperties, ReactNode } from 'react';
 import { theme } from 'antd';
+import { WECHAT } from '@/lib/ui/transfer/wechatTheme';
 
 export default function ChatBubble({
     side,
@@ -29,9 +36,9 @@ export default function ChatBubble({
     side: 'left' | 'right';
     avatar: ReactNode;
     children: ReactNode;
-    /** 气泡下方的时间 / 发送状态行 */
+    /** 气泡下方的补充行（发送中 / 发送失败；时间在时间分隔条上，不再逐条显示） */
     meta?: ReactNode;
-    /** 图片气泡：去掉内边距与边框（图片自带圆角与描边） */
+    /** 图片气泡：去掉内边距与底色（图片自带圆角） */
     bare?: boolean;
     /** 发送失败等错误态：加一圈红边 */
     danger?: boolean;
@@ -46,14 +53,14 @@ export default function ChatBubble({
         <div
             className="znhd-chat-msg"
             // data-side 是给冒烟夹具用的稳定钩子：断言「收到的靠左（row）/ 发出的靠右（row-reverse）」
-            // 时不能靠猜气泡颜色（深色主题下主色底和灰底都不好认），直接读这个属性
+            // 时不能靠猜气泡颜色，直接读这个属性
             data-side={side}
             style={{
                 display: 'flex',
                 flexDirection: isUser ? 'row-reverse' : 'row',
                 alignItems: 'flex-start',
                 gap: 8,
-                marginBottom: 12,
+                marginBottom: 14,
                 minWidth: 0,
             }}>
             <span
@@ -63,12 +70,12 @@ export default function ChatBubble({
                     display: 'inline-flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    width: 28,
-                    height: 28,
-                    borderRadius: 8,
-                    background: isUser ? token.colorPrimaryBg : token.colorFillSecondary,
-                    color: isUser ? token.colorPrimary : token.colorTextSecondary,
-                    fontSize: 12,
+                    width: 32,
+                    height: 32,
+                    borderRadius: 6,
+                    background: isUser ? '#4A4A4A' : token.colorFillSecondary,
+                    color: isUser ? '#fff' : token.colorTextSecondary,
+                    fontSize: 13,
                     fontWeight: 600,
                     overflow: 'hidden',
                     ...avatarStyle,
@@ -87,18 +94,15 @@ export default function ChatBubble({
                     className="znhd-chat-bubble"
                     style={{
                         maxWidth: '100%',
-                        padding: bare ? 0 : '8px 11px',
-                        borderRadius: bare ? 8 : 10,
-                        fontSize: 13,
+                        padding: bare ? 0 : '8px 12px',
+                        borderRadius: 8,
+                        fontSize: 14,
                         lineHeight: 1.6,
                         wordBreak: 'break-word',
-                        background: bare ? 'transparent' : isUser ? token.colorPrimary : token.colorFillQuaternary,
-                        border: bare
-                            ? 'none'
-                            : '1px solid ' +
-                              (danger ? token.colorError : isUser ? token.colorPrimary : token.colorBorderSecondary),
-                        // 用户气泡是主色实心：文字必须显式刷白，否则深色主题下会继承成暗色文字
-                        color: bare ? undefined : isUser ? '#fff' : undefined,
+                        background: bare ? 'transparent' : isUser ? token.colorPrimary : WECHAT.bubblePeer,
+                        border: bare ? 'none' : danger ? '1px solid ' + token.colorError : '1px solid transparent',
+                        // 微信绿是中饱和绿：文字必须显式刷白，否则暗色主题下会继承成暗色文字
+                        color: bare ? undefined : isUser ? '#fff' : 'rgba(255,255,255,0.9)',
                         overflow: 'hidden',
                     }}>
                     {children}
