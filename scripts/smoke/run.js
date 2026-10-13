@@ -74,6 +74,7 @@ const CHECKS = [
   ['filesFilterOk', '文件视图跟随第二栏选择：点会话只显示该会话的文件，点「全部文件」还原汇总'],
   ['navStatesOk', '第一栏图标三态：选中=绿色填充无底板、未选中 hover=深色圆角底板（选中优先）'],
   ['sessionChatOk', '设备会话聊天区：收到的文本与图片渲染为聊天气泡'],
+  ['sessionRouteBySenderOk', '按发送者归组：两台在线时各自手机的内容进各自会话（不再全进聚合「手机」）'],
   ['textSentOk', '会话内发送文本：本机气泡 + POST /phone/send'],
   ['phoneSendCompressedOk', '发送图片前压缩（JPEG、最长边≤1600、小于原图）'],
   ['sessionClearOk', '「清空消息」后会话回到空状态'],
@@ -509,6 +510,7 @@ async function main() {
       !checkPass('filesNoJumpOk') ||
       !checkPass('filesFilterOk') ||
       !checkPass('sessionChatOk') ||
+      !checkPass('sessionRouteBySenderOk') ||
       !checkPass('textSentOk') ||
       !checkPass('sessionClearOk') ||
       !checkPass('transferThemeOk') ||

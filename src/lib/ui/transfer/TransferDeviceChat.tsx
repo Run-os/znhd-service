@@ -453,7 +453,8 @@ export default function TransferDeviceChat({
                                 }}
                             />
                             {onlineText}
-                            {isAggregate && sendable ? ' · 多台在线时收到的内容归在这里' : ''}
+                            {/* v26.10.13-v6 起内容按发送者归组，聚合会话只剩「无法识别发送者」的兜底 */}
+                            {isAggregate && sendable ? ' · 无法识别发送设备时归在这里' : ''}
                         </span>
                     </>
                 }

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name                征纳互动人数和在线监控v2
 // @namespace           https://scriptcat.org/
-// @version             26.10.13-v5
+// @version             26.10.13-v6
 // @description         实时监控征纳互动等待人数和在线状态，支持语音播报、自定义常用语
 // @author              runos
 // @license             MIT
@@ -116372,7 +116372,13 @@ function startPhoneReceive(opt) {
                             if (opt.onStatus)
                                 opt.onStatus('收到图片：' + (data.name || 'image'));
                             if (opt.onImage)
-                                opt.onImage({ blob: blob, previewUrl: previewUrl, name: data.name, mime: data.mime });
+                                opt.onImage({
+                                    blob: blob,
+                                    previewUrl: previewUrl,
+                                    name: data.name,
+                                    mime: data.mime,
+                                    from: data.from,
+                                });
                             poll(); // 继续接收下一张
                             return;
                         }
@@ -116380,7 +116386,7 @@ function startPhoneReceive(opt) {
                             if (opt.onStatus)
                                 opt.onStatus('收到文本');
                             if (opt.onText)
-                                opt.onText({ text: data.text, ts: data.ts });
+                                opt.onText({ text: data.text, ts: data.ts, from: data.from });
                             poll(); // 继续接收下一条
                             return;
                         }
@@ -116875,10 +116881,11 @@ function settings_normalize(input) {
  * 载入时机在 `initTransfer`；存储不可用时静默退回纯内存态。
  *
  * ── 会话归组规则（重要）────────────────────────────────────────────────
- * 中继的正向通道（手机 → 电脑）是**广播**、载荷里不带手机 ID，所以收到的内容
- * **无法归组到具体某一台手机**：
- *   · 只有 1 台手机在线 → 归到那台手机的会话（最常见场景，收发同会话）；
- *   · 0 或多台在线 → 归到聚合会话 `__phone__`（列表里显示为「手机」）。
+ * v26.10.13-v6 起，中继的正向通道（手机 → 电脑）**随条目回传发送者手机 ID**
+ * （手机页上传时带 `phoneId`，服务端写进 `from`），因此收到的内容**按发送者归组**：
+ *   · 载荷带 `from` → 归那台手机的会话（多台在线也各归各的，这是常态路径）；
+ *   · 不带 `from`（老中继 / 老手机页 / 发送测试图）→ 旧规则兜底：
+ *     只有 1 台在线归那台手机的会话，0 或多台在线归聚合会话 `__phone__`。
  * 发送方向知道目标（用户在哪个会话里发、发给哪台），所以发件记录总是进对应会话。
  */
 
@@ -116887,7 +116894,7 @@ function settings_normalize(input) {
 
 
 
-/** 聚合会话键：多台手机在线时收到的内容（以及老版中继的未知设备）都归到这里 */
+/** 聚合会话键：无法识别发送者时收到的内容（老中继多台在线 / 老手机页）都归到这里 */
 const PHONE_SESSION_KEY = '__phone__';
 /** 聚合会话的显示名（老版中继的未知设备也算它） */
 const PHONE_SESSION_LABEL = '手机';
@@ -117039,7 +117046,7 @@ function startReceive(server) {
         onConnected: () => addLog('[传输助手] 已自动开始接收（' + server + '）', 'info'),
         onImage: (img) => {
             addLog('[传输助手] 收到图片：' + (img.name || 'image') + '（' + (img.mime || 'image') + '）', 'success');
-            const key = sessionKeyForIncoming();
+            const key = sessionKeyForIncoming(img.from);
             addMessage(key, {
                 id: nextId(),
                 type: 'image',
@@ -117055,7 +117062,7 @@ function startReceive(server) {
         onText: (txt) => {
             const t = (txt.text || '').replace(/\s+$/, '');
             addLog('[传输助手] 收到文本：' + (t.length > 40 ? t.slice(0, 40) + '…' : t), 'success');
-            const key = sessionKeyForIncoming();
+            const key = sessionKeyForIncoming(txt.from);
             addMessage(key, {
                 id: nextId(),
                 type: 'text',
@@ -117068,10 +117075,14 @@ function startReceive(server) {
     });
 }
 /**
- * 收到内容时归到哪个会话：只有 1 台在线手机 → 那台；否则聚合会话。
- * （正向广播不带手机 ID，无法细分，见文件头「会话归组规则」。）
+ * 收到内容时归到哪个会话（v26.10.13-v6 起按发送者归组）：
+ *  · 载荷带发送者手机 ID（新中继 + 新手机页）→ 归那台手机的会话，多台在线也各归各的；
+ *  · 不带（老中继 / 发送测试图）→ 旧规则：只有 1 台在线归那台，否则聚合会话。
  */
-function sessionKeyForIncoming() {
+function sessionKeyForIncoming(from) {
+    const sender = (from || '').trim();
+    if (sender)
+        return sessionKeyOf(sender);
     const online = store_state.phones.filter((p) => p.id);
     if (online.length === 1)
         return sessionKeyOf(online[0].id);
@@ -117766,7 +117777,7 @@ function TransferDeviceChat({ session, phone, colorIndex, onClear, }) {
                                         height: 6,
                                         borderRadius: '50%',
                                         background: onlineDot,
-                                    } }), onlineText, isAggregate && sendable ? ' · 多台在线时收到的内容归在这里' : ''] })] }), right: (0,react_jsx_runtime_production_namespaceFn().jsx)(popconfirm, { title: "\u6E05\u7A7A\u8FD9\u4E2A\u4F1A\u8BDD\u7684\u5168\u90E8\u6D88\u606F\uFF1F", okText: "\u6E05\u7A7A", cancelText: "\u53D6\u6D88", onConfirm: onClear, children: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { type: "text", size: "small", "aria-label": "\u6E05\u7A7A\u6D88\u606F", title: "\u6E05\u7A7A\u6D88\u606F", icon: (0,react_jsx_runtime_production_namespaceFn().jsx)(TrashIcon, { size: 15 }), style: { color: token.colorTextSecondary } }) }) }), (0,react_jsx_runtime_production_namespaceFn().jsx)(ChatScroll, { className: "znhd-transfer-messages", scrollDep: session.messages, children: session.messages.length ? ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_image.PreviewGroup, { items: imageMessages.map((m) => m.previewUrl), preview: {
+                                    } }), onlineText, isAggregate && sendable ? ' · 无法识别发送设备时归在这里' : ''] })] }), right: (0,react_jsx_runtime_production_namespaceFn().jsx)(popconfirm, { title: "\u6E05\u7A7A\u8FD9\u4E2A\u4F1A\u8BDD\u7684\u5168\u90E8\u6D88\u606F\uFF1F", okText: "\u6E05\u7A7A", cancelText: "\u53D6\u6D88", onConfirm: onClear, children: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { type: "text", size: "small", "aria-label": "\u6E05\u7A7A\u6D88\u606F", title: "\u6E05\u7A7A\u6D88\u606F", icon: (0,react_jsx_runtime_production_namespaceFn().jsx)(TrashIcon, { size: 15 }), style: { color: token.colorTextSecondary } }) }) }), (0,react_jsx_runtime_production_namespaceFn().jsx)(ChatScroll, { className: "znhd-transfer-messages", scrollDep: session.messages, children: session.messages.length ? ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_image.PreviewGroup, { items: imageMessages.map((m) => m.previewUrl), preview: {
                         // 必须显式指定挂载容器（v26.10.08-v7：body 带 transform 会困住 fixed 浮层）
                         getContainer: getPreviewHost,
                         onOpenChange: (o) => setPreviewOpen(o),

@@ -334,8 +334,9 @@ interface PhoneReceiveOptions {
     server?: string | null;
     uuid: string;
     onStatus?: (text: string) => void;
-    onImage?: (img: { blob: Blob; previewUrl: string; name?: string; mime?: string }) => void;
-    onText?: (item: { text: string; ts?: number }) => void;
+    /** from（v26.10.13-v6）：发送者手机 ID（中继随条目回传；老中继/未知发送者时为空） */
+    onImage?: (img: { blob: Blob; previewUrl: string; name?: string; mime?: string; from?: string }) => void;
+    onText?: (item: { text: string; ts?: number; from?: string }) => void;
     onConnected?: () => void;
 }
 
@@ -406,13 +407,19 @@ export function startPhoneReceive(opt: PhoneReceiveOptions) {
                             const previewUrl = URL.createObjectURL(blob);
                             if (opt.onStatus) opt.onStatus('收到图片：' + (data.name || 'image'));
                             if (opt.onImage)
-                                opt.onImage({ blob: blob, previewUrl: previewUrl, name: data.name, mime: data.mime });
+                                opt.onImage({
+                                    blob: blob,
+                                    previewUrl: previewUrl,
+                                    name: data.name,
+                                    mime: data.mime,
+                                    from: data.from,
+                                });
                             poll(); // 继续接收下一张
                             return;
                         }
                         if (data && data.type === 'text' && typeof data.text === 'string') {
                             if (opt.onStatus) opt.onStatus('收到文本');
-                            if (opt.onText) opt.onText({ text: data.text, ts: data.ts });
+                            if (opt.onText) opt.onText({ text: data.text, ts: data.ts, from: data.from });
                             poll(); // 继续接收下一条
                             return;
                         }

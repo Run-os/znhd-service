@@ -6,8 +6,11 @@
 //   正向（手机 → 电脑）：
 //   1) 电脑端脚本生成稳定 deviceId，拼出上传链接  http(s)://<本服务>/u/<deviceId>
 //   2) 手机浏览器打开该链接 → 选图（前端 canvas 压缩）/输入文本 → POST JSON 到同一路径
+//      （v26.10.13-v3 起载荷带 `phoneId`：这台手机自己的持久 ID，服务端随投递回传，
+//        电脑端据此把内容归到**对应那台手机**的会话，多台在线也不再全挤进聚合会话）
 //   3) 服务器把图片或文本按 deviceId 暂存（TTL 内）
-//   4) 电脑端脚本用 GM_xmlhttpRequest 长轮询 /recv/<deviceId> 取走条目（type 区分 image/text）→ 弹窗预览/复制
+//   4) 电脑端脚本用 GM_xmlhttpRequest 长轮询 /recv/<deviceId> 取走条目（type 区分 image/text，
+//      `from` = 发送者手机 ID；老手机页不带 phoneId 时 from 为空，电脑端按旧规则归组）
 //
 //   反向（电脑 → 手机）：
 //   1) 手机打开 /u/<deviceId> 后，周期性 POST /phone/heartbeat/<deviceId> 报活（声明在线）
@@ -318,11 +321,13 @@ function createChannel(labels, opts) {
 }
 
 // 正向通道：手机 → 电脑（POST /u 入队，GET /recv 长轮询取走）
+// v26.10.13-v3：入队时带上发送者手机 ID（item.from，见 parseItemBody 的 withPhoneId），
+// 投递时随条目回传，电脑端按它把内容归到对应手机的会话（多台在线不再全进聚合会话）。
 const forwardChannel = createChannel({
   recv: '电脑端接收端',
   dropQ: '暂存队列',
-  sendImg: (uuid, item, len) => `[发送] 设备 ${uuid} 手机端发送图片：${cleanLogName(item.name)}（${item.mime}，约 ${b64SizeKB(item.data)}KB），队列 ${len} 条`,
-  sendTxt: (uuid, item) => `[发送] 设备 ${uuid} 手机端发送文本：${previewText(item.text)}`
+  sendImg: (uuid, item, len) => `[发送] 设备 ${uuid} 手机端发送图片：${cleanLogName(item.name)}（${item.mime}，约 ${b64SizeKB(item.data)}KB）${fromText(item)}，队列 ${len} 条`,
+  sendTxt: (uuid, item) => `[发送] 设备 ${uuid} 手机端发送文本：${previewText(item.text)}${fromText(item)}`
 });
 
 // 反向通道：电脑 → 手机（POST /phone/send 入队，GET /phone/recv 长轮询取走）
@@ -347,9 +352,22 @@ function targetsText(item) {
   return `（发给 ${item.targets.length} 台手机）`;
 }
 
+/** 正向发送日志里附上发送者手机 ID（v26.10.13-v3；反向是电脑发的，用 targetsText） */
+function fromText(item) {
+  return item && item.from ? `（来自手机 ${shortId(item.from)}）` : '';
+}
+
+/** 归一化手机 ID（与心跳 recipientFromUrl 同一套校验）：非法/缺失一律回落空串（按「未知发送者」处理） */
+function normalizePhoneId(id) {
+  const s = String(id || '');
+  return /^[a-zA-Z0-9_-]{8,64}$/.test(s) ? s : '';
+}
+
 // 解析 POST 正文为待投递条目（图片 {data,mime,name} 或文本 {text}）；非法时已回 4xx 并返回 null。
 // /u 与 /phone/send 两个 POST 路由共用。
-async function parseItemBody(req, res) {
+//   opts.withPhoneId —— 仅正向（/u 上传）为 true：把载荷里的 phoneId 归一化后写进 item.from，
+//   随长轮询投递回电脑端（v26.10.13-v3）；反向（/phone/send）发送者是电脑，没有这个概念。
+async function parseItemBody(req, res, opts) {
   let buf;
   try {
     buf = await readBody(req);
@@ -368,9 +386,11 @@ async function parseItemBody(req, res) {
   //   'all'（缺省） = 发给全部在线手机；数组 = 只发给这些手机 ID。
   // 非法值一律归一化为 'all'（宁可发多，不要因为参数写错而静默丢消息）。
   const targets = normalizeTargets(payload.targets);
+  // 发送者手机 ID（仅正向 /u）：老手机页不带 → 空串（电脑端按「只有 1 台在线归那台、否则聚合」的旧规则归组）
+  const from = opts && opts.withPhoneId ? normalizePhoneId(payload.phoneId) : '';
   if (typeof payload.text === 'string' && payload.text.length > 0) {
     // 文本
-    return { type: 'text', text: payload.text.slice(0, MAX_BODY), ts: Date.now(), targets, deliveredTo: new Set() };
+    return { type: 'text', text: payload.text.slice(0, MAX_BODY), ts: Date.now(), targets, deliveredTo: new Set(), from };
   }
   if (typeof payload.data === 'string') {
     // 图片（base64）
@@ -381,7 +401,8 @@ async function parseItemBody(req, res) {
       data: payload.data.slice(0, MAX_BODY),
       ts: Date.now(),
       targets,
-      deliveredTo: new Set()
+      deliveredTo: new Set(),
+      from
     };
   }
   sendJson(res, 400, { error: 'missing data or text' });
@@ -515,7 +536,8 @@ const server = http.createServer(async (req, res) => {
         return;
       }
       if (method === 'POST') {
-        const item = await parseItemBody(req, res);
+        // withPhoneId：把手机页自报的 phoneId 写进 item.from，随 /recv 投递回电脑端（v26.10.13-v3）
+        const item = await parseItemBody(req, res, { withPhoneId: true });
         if (!item) return; // 解析失败已回 4xx
         forwardChannel.enqueue(uuid, item);
         sendJson(res, 200, { ok: true });
@@ -528,7 +550,7 @@ const server = http.createServer(async (req, res) => {
     // /recv/<deviceId> ：电脑端长轮询取图
     // 支持「广播」：同一 deviceId 在多个标签页/浏览器同时长轮询时，每张图会**同时发给所有在等待的接收端**，
     // 彻底消除「两个接收端抢唯一图槽、第一张被别的标签抢走」的竞态（刷新网页后第一次不弹窗的根因）。
-    // 语义详见 createChannel 注释。
+    // 语义详见 createChannel 注释。v26.10.13-v3：条目带 `from`（发送者手机 ID），电脑端按它归组到对应会话。
     const r = /^\/recv\/([a-z0-9-]{8,64})$/i.exec(path);
     if (r && method === 'GET') {
       forwardChannel.handlePoll(req, res, r[1], u);

@@ -403,6 +403,31 @@ async function main() {
         );
         check('Enter 发送的文本出现在右侧气泡（输入框同时清空）', true);
 
+        // ③b 上传带 phoneId（v26.10.13-v3 起；覆盖范围 v26.10.13-v5 补齐）：App 自己发的**每一条**
+        //     （表情直发 / 上传图 / 文本）经真中继投递时都带 from = 本机手机 ID —— 电脑端据此把内容
+        //     归到**这台手机**的会话，两台及以上手机在线也不再全挤进聚合会话。
+        //     ⚠️ 必须把队列里**全部 3 条**取出来再判（队列顺序 = ① 的表情直发 → ② 上传图 → ③ 文本）：
+        //       只取前 2 条时，表情那条 from 为空也照样「通过」（前两条都是图），v26.10.13-v5 实测漏判过一次。
+        const phoneId = await page.evaluate(() => {
+            const sub = document.querySelector('.znhd-phone-sub');
+            const m = /本机（手机）ID：(\S+)/.exec(sub ? sub.textContent || '' : '');
+            return m ? m[1] : '';
+        });
+        const recvItems = [];
+        for (let i = 0; i < 3; i++) {
+            recvItems.push(
+                await fetch(`http://127.0.0.1:${port}/recv/test-device-0001?maxwait=2000`).then((r) => r.json())
+            );
+        }
+        check(
+            '手机上传带 phoneId：中继 /recv 投递的每条（表情图 / 上传图 / 文本）from = 本机手机 ID',
+            !!phoneId &&
+                recvItems.length === 3 &&
+                recvItems.every((it) => it && it.from === phoneId && (it.type === 'image' || it.type === 'text')) &&
+                recvItems.some((it) => it.type === 'image') &&
+                recvItems.some((it) => it.type === 'text')
+        );
+
         // ④ 电脑端 → 手机端：真从中继投递一张图，等长轮询收到 → 左侧灰气泡
         const b64 = fs.readFileSync(png).toString('base64');
         const sent = await fetch(`http://127.0.0.1:${port}/phone/send/test-device-0001`, {

@@ -177,7 +177,8 @@ export default function App() {
             for (const it of queued) {
                 try {
                     const b64 = await blobToBase64(it.blob);
-                    const res = await postItem({ name: it.name, mime: it.mime, data: b64 });
+                    // 带 phoneId：服务端随投递回传 from，电脑端把内容归到本台手机的会话（v26.10.13-v3）
+                    const res = await postItem({ name: it.name, mime: it.mime, data: b64 }, phoneId);
                     if (res && res.ok) {
                         patchMsg(it.id, { state: 'ok' });
                     } else {
@@ -203,7 +204,8 @@ export default function App() {
         setSendingText(true);
         pushMsg({ id, type: 'text', side: 'out', text: t, state: 'sending', ts: Date.now() });
         setText('');
-        const res = await postItem({ text: t });
+        // 带 phoneId：让电脑端把这条文本归到本台手机的会话（v26.10.13-v3）
+        const res = await postItem({ text: t }, phoneId);
         setSendingText(false);
         if (res && res.ok) {
             patchMsg(id, { state: 'ok' });
@@ -217,6 +219,8 @@ export default function App() {
     // 面板交回的就是下好的 blob，这里 base64 后走与文本/图片同一条 postItem 链路。
     // ⚠️ 不走 prepareImage 的 canvas 压缩：表情本来就是 2–6KB 的 webp，原样发更小也更保真
     //   （PC 端会话气泡与「图片上传」收到的图一样直接渲染，webp 现代浏览器都认）。
+    // ⚠️ 必须带 phoneId（与上传图/文本一致）：表情也是「正向通道」的一条，漏了它服务端写不出
+    //   `from`，电脑端只能按旧规则兜底归组（多台手机在线时会串到聚合会话）。v26.10.13-v5 修。
     const sendEmoji = async (emoji: PickedEmoji) => {
         const mime = emoji.blob.type || 'image/webp';
         const id = uid();
@@ -232,7 +236,7 @@ export default function App() {
         });
         try {
             const b64 = await blobToBase64(emoji.blob);
-            const res = await postItem({ name: emoji.name, mime, data: b64 });
+            const res = await postItem({ name: emoji.name, mime, data: b64 }, phoneId);
             if (res && res.ok) {
                 patchMsg(id, { state: 'ok' });
             } else {

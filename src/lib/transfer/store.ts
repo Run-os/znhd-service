@@ -9,10 +9,11 @@
  * 载入时机在 `initTransfer`；存储不可用时静默退回纯内存态。
  *
  * ── 会话归组规则（重要）────────────────────────────────────────────────
- * 中继的正向通道（手机 → 电脑）是**广播**、载荷里不带手机 ID，所以收到的内容
- * **无法归组到具体某一台手机**：
- *   · 只有 1 台手机在线 → 归到那台手机的会话（最常见场景，收发同会话）；
- *   · 0 或多台在线 → 归到聚合会话 `__phone__`（列表里显示为「手机」）。
+ * v26.10.13-v6 起，中继的正向通道（手机 → 电脑）**随条目回传发送者手机 ID**
+ * （手机页上传时带 `phoneId`，服务端写进 `from`），因此收到的内容**按发送者归组**：
+ *   · 载荷带 `from` → 归那台手机的会话（多台在线也各归各的，这是常态路径）；
+ *   · 不带 `from`（老中继 / 老手机页 / 发送测试图）→ 旧规则兜底：
+ *     只有 1 台在线归那台手机的会话，0 或多台在线归聚合会话 `__phone__`。
  * 发送方向知道目标（用户在哪个会话里发、发给哪台），所以发件记录总是进对应会话。
  */
 import { useSyncExternalStore } from 'react';
@@ -30,7 +31,7 @@ import { TRANSFER_TTL_MS, loadPersistedSessions, schedulePersist } from '@/lib/t
 import { loadTransferSettings, normalizeTransferSettings, saveTransferSettings } from '@/lib/transfer/settings';
 import type { DeviceSession, PhoneInfo, TransferMessage, TransferSettings } from '@/lib/transfer/types';
 
-/** 聚合会话键：多台手机在线时收到的内容（以及老版中继的未知设备）都归到这里 */
+/** 聚合会话键：无法识别发送者时收到的内容（老中继多台在线 / 老手机页）都归到这里 */
 export const PHONE_SESSION_KEY = '__phone__';
 
 /** 聚合会话的显示名（老版中继的未知设备也算它） */
@@ -210,7 +211,7 @@ function startReceive(server: string): void {
         onConnected: () => addLog('[传输助手] 已自动开始接收（' + server + '）', 'info'),
         onImage: (img) => {
             addLog('[传输助手] 收到图片：' + (img.name || 'image') + '（' + (img.mime || 'image') + '）', 'success');
-            const key = sessionKeyForIncoming();
+            const key = sessionKeyForIncoming(img.from);
             addMessage(key, {
                 id: nextId(),
                 type: 'image',
@@ -226,7 +227,7 @@ function startReceive(server: string): void {
         onText: (txt) => {
             const t = (txt.text || '').replace(/\s+$/, '');
             addLog('[传输助手] 收到文本：' + (t.length > 40 ? t.slice(0, 40) + '…' : t), 'success');
-            const key = sessionKeyForIncoming();
+            const key = sessionKeyForIncoming(txt.from);
             addMessage(key, {
                 id: nextId(),
                 type: 'text',
@@ -240,10 +241,13 @@ function startReceive(server: string): void {
 }
 
 /**
- * 收到内容时归到哪个会话：只有 1 台在线手机 → 那台；否则聚合会话。
- * （正向广播不带手机 ID，无法细分，见文件头「会话归组规则」。）
+ * 收到内容时归到哪个会话（v26.10.13-v6 起按发送者归组）：
+ *  · 载荷带发送者手机 ID（新中继 + 新手机页）→ 归那台手机的会话，多台在线也各归各的；
+ *  · 不带（老中继 / 发送测试图）→ 旧规则：只有 1 台在线归那台，否则聚合会话。
  */
-function sessionKeyForIncoming(): string {
+function sessionKeyForIncoming(from?: string): string {
+    const sender = (from || '').trim();
+    if (sender) return sessionKeyOf(sender);
     const online = state.phones.filter((p) => p.id);
     if (online.length === 1) return sessionKeyOf(online[0].id);
     return PHONE_SESSION_KEY;

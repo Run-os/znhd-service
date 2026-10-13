@@ -67,12 +67,17 @@ export function blobToBase64(blob: Blob): Promise<string> {
     });
 }
 
-/** POST 一条内容到本设备的中继路径（图片 {name,mime,data} / 文本 {text}） */
-export function postItem(payload: Record<string, unknown>): Promise<{ ok?: boolean; error?: string }> {
+/**
+ * POST 一条内容到本设备的中继路径（图片 {name,mime,data} / 文本 {text}）。
+ * phoneId（v26.10.13-v3）：带上本机手机 ID，服务端会把它写进条目的 `from` 随投递回传，
+ * 电脑端据此把内容归到**这台手机**的会话 —— 多台手机同时在线也不再全挤进聚合会话。
+ */
+export function postItem(payload: Record<string, unknown>, phoneId?: string): Promise<{ ok?: boolean; error?: string }> {
+    const body = phoneId ? { ...payload, phoneId } : payload;
     return fetch(window.location.pathname, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(body),
     })
         .then((r) => r.json())
         .catch((e: any) => ({ ok: false, error: (e && e.message) || '网络错误' }));

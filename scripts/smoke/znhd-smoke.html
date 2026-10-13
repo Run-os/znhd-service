@@ -202,6 +202,12 @@
         const url = String((details && details.url) || '');
         window.__gmXhrLog.push(((details && details.method) || 'GET') + ' ' + url);
 
+        // ===== 两台在线手机的 ID（v26.10.13-v6：/recv 桩按发送者归组要用）=====
+        // 与下面 /phone/status 桩、sessionRouteBySenderOk 断言共用同一组值；
+        // 两个 ID 前 8 位不同，才能验证「按短 ID 区分展示」不会把两台显示成同一个。
+        const _SMOKE_PHONE_A = '11111111-1111-4111-8111-111111111111';
+        const _SMOKE_PHONE_B = '22222222-2222-4222-8222-222222222222';
+
         // 常用语 YAML：走成功路径
         if (url.includes('commonPhrases.yaml')) {
           reply(details, PHRASES_YAML);
@@ -297,8 +303,8 @@
           reply(details, {
             online: true,
             phones: [
-              { id: '11111111-1111-4111-8111-111111111111', lastSeen: Date.now() },
-              { id: '22222222-2222-4222-8222-222222222222', lastSeen: Date.now() },
+              { id: _SMOKE_PHONE_A, lastSeen: Date.now() },
+              { id: _SMOKE_PHONE_B, lastSeen: Date.now() },
             ],
           });
           return { abort: () => {} };
@@ -315,12 +321,16 @@
           reply(details, { ok: true });
           return { abort: () => {} };
         }
-        // 中继收件长轮询：先空响应确认连接，再给一条文本、一张图片，之后空转
+        // 中继收件长轮询：先空响应确认连接，再给一条文本、一张图片，之后空转。
+        // v26.10.13-v6：文本/图片都带 `from` = 手机 A —— 两台在线时内容按发送者归组，
+        // 进各自手机的会话，不再全挤进聚合会话「手机」（用户报的 bug 的回归断言）。
+        // 第 4 次起且 __routePhase 已置位：补发一条**来自手机 B** 的文本（只发一次），
+        // 供 sessionRouteBySenderOk 断言「B 的内容进 B 的会话、且不在当前会话里」。
         if (/\/recv\//.test(url)) {
           const n = (window.__recvCount = (window.__recvCount || 0) + 1);
           if (n === 1) reply(details, { empty: true });
           else if (n === 2)
-            reply(details, { type: 'text', text: '冒烟测试文本：收到一条文本消息', ts: Date.now() });
+            reply(details, { type: 'text', text: '冒烟测试文本：收到一条文本消息', ts: Date.now(), from: _SMOKE_PHONE_A });
           else if (n === 3)
             reply(details, {
               type: 'image',
@@ -328,8 +338,17 @@
               mime: 'image/jpeg',
               data: SMOKE_IMG_B64,
               ts: Date.now(),
+              from: _SMOKE_PHONE_A,
             });
-          else reply(details, { empty: true });
+          else if (n >= 4 && window.__routePhase && !window.__routeTextSent) {
+            window.__routeTextSent = true;
+            reply(details, {
+              type: 'text',
+              text: '归组测试：来自第二台手机的文本',
+              ts: Date.now(),
+              from: _SMOKE_PHONE_B,
+            });
+          } else reply(details, { empty: true });
           return { abort: () => {} };
         }
         // ===== 图片嗅探夹具（v26.10.10-v4）：按 URL 分支作答，覆盖测量阶梯 =====
@@ -905,8 +924,15 @@
           m.querySelector('.znhd-transfer-sessions') &&
           m.querySelector('.znhd-transfer-main')
         );
-        // 第二栏：两台手机在线 ⇒ 聚合会话「手机」必须出现在列表里（无消息也在）
-        ts.transferSessionItem = items.some((el) => (el.textContent || '').indexOf('手机') >= 0);
+        // 第二栏（v26.10.13-v6 按发送者归组）：两台手机各自成为会话条目（按短 ID 区分），
+        // 收到的内容进手机 A 的会话；聚合会话「手机」不再出现（没有内容会归到它）。
+        // ⚠️ 判据用条目标题行（title=标签，聚合会话恰为「手机」）而不是整条文本——
+        // 预览文案里可能出现「手机」二字（如归组测试文本），按 textContent 查会误伤。
+        const titleOf = (el) => el.getAttribute('title') || '';
+        ts.transferSessionItem =
+          items.some((el) => titleOf(el).indexOf('11111111') >= 0) &&
+          items.some((el) => titleOf(el).indexOf('22222222') >= 0) &&
+          !items.some((el) => titleOf(el) === '手机');
         ts.transferRecvTextSeen = transferMessagesText().indexOf('冒烟测试文本：收到一条文本消息') >= 0;
         ts.transferRecvImgSeen = !!(m && m.querySelector('.znhd-transfer-messages .ant-image img'));
       }, 5200);
@@ -1101,6 +1127,28 @@
           singleMask: !!histRoot && maskHidden('.ant-modal-mask') && maskHidden('.ant-drawer-mask') && maskComposite <= 0.46,
         };
       }, 8600);
+
+      /* ===== ②b 按发送者归组（v26.10.13-v6）===========================================
+         用户报的 bug：两台及以上手机在线时，内容全进聚合会话「手机」。修复后按发送者归组——
+         这里让 /recv 桩补发一条**来自手机 B** 的文本（窗口开着 ⇒ 不抢当前会话），然后断言：
+         第二栏出现 B 的条目且预览是这条文本、聚合会话「手机」不出现、当前会话（A）里没有它。 */
+      setTimeout(() => {
+        window.__routePhase = true; // /recv 桩据此补发「来自 B」的文本（只发一次）
+      }, 10500);
+      setTimeout(() => {
+        const m = findTransferModal();
+        const ts = window.__transferSnap;
+        const items = m ? Array.from(m.querySelectorAll('.znhd-transfer-session-item')) : [];
+        // 判据用条目标题行（title=标签）：聚合会话恰为「手机」；预览文案里带「手机」二字不算
+        const titleOf = (el) => el.getAttribute('title') || '';
+        const bItem = items.find((el) => titleOf(el).indexOf('22222222') >= 0);
+        ts.routeBySender = {
+          bItemSeen: !!bItem,
+          bPreviewOk: !!(bItem && (bItem.textContent || '').indexOf('归组测试：来自第二台手机的文本') >= 0),
+          noAggregate: !items.some((el) => titleOf(el) === '手机'),
+          notInActive: transferMessagesText().indexOf('归组测试：来自第二台手机的文本') < 0,
+        };
+      }, 11400);
 
       /* ===== ④ 设备会话：聊天区渲染 + 发文本 + 选图发送（先压缩再发）=================
          旧「发送到手机」分区 + 旧「历史记录」画廊合并为第三栏的聊天气泡；
@@ -2351,6 +2399,15 @@
             ts.sessionRecvImgSeen &&
             ts.sessionHeaderSeen
           ),
+          // 按发送者归组（v26.10.13-v6）：两台在线时，来自 B 的内容进 B 自己的会话
+          //（第二栏条目 + 预览），不进当前会话；聚合会话「手机」不出现
+          sessionRouteBySenderOk: !!(
+            ts.routeBySender &&
+            ts.routeBySender.bItemSeen &&
+            ts.routeBySender.bPreviewOk &&
+            ts.routeBySender.noAggregate &&
+            ts.routeBySender.notInActive
+          ),
           // 会话内发文本：本机气泡 + 真的 POST 到 /phone/send
           textSentOk: !!(ts.textSentSeen && ts.phoneSentText),
           // 「清空消息」后会话回到空状态
@@ -2769,6 +2826,7 @@
           report.transferNoTitleOk &&
           report.filesViewOk &&
           report.sessionChatOk &&
+          report.sessionRouteBySenderOk &&
           report.textSentOk &&
           report.sessionClearOk &&
           report.pairModalOk &&

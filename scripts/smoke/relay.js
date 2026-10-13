@@ -6,7 +6,8 @@
  * 根本碰不到真实服务端。定向投递（v26.10.06-v4 多手机）必须用真实 HTTP 长轮询来验。
  *
  * 覆盖：心跳必须带 phoneId（缺则 400）、/phone/status 返回手机列表、定向条目只投给目标手机、
- *      广播条目所有人都收、recv 缺 phoneId 回 400。
+ *      广播条目所有人都收、recv 缺 phoneId 回 400、正向 /u 上传带 phoneId → /recv 条目带 from
+ *      （v26.10.13-v3：电脑端据此把内容归到对应手机的会话）。
  *
  * 前置：无（自己拉起 server.js）。运行：npm run verify:relay
  */
@@ -114,6 +115,49 @@ function poll(phoneId, maxwait = 2000) {
     };
 }
 
+/** 发起一次正向（/recv）长轮询，返回可查询是否已结束/可中止的句柄 */
+function recvPoll(maxwait = 2000) {
+    let settled = false;
+    let resolveFn;
+    const promise = new Promise((res) => (resolveFn = res));
+    const r = http.request(
+        { host: HOST, port: PORT, path: `/recv/${DEVICE}?maxwait=${maxwait}`, method: 'GET' },
+        (res) => {
+            let b = '';
+            res.setEncoding('utf8');
+            res.on('data', (c) => (b += c));
+            res.on('end', () => {
+                if (settled) return;
+                settled = true;
+                let j = null;
+                try {
+                    j = JSON.parse(b);
+                } catch (e) {
+                    j = null;
+                }
+                resolveFn(j);
+            });
+        }
+    );
+    r.on('error', () => {
+        if (settled) return;
+        settled = true;
+        resolveFn(null);
+    });
+    r.end();
+    return {
+        promise,
+        isSettled: () => settled,
+        abort: () => {
+            try {
+                r.destroy();
+            } catch (e) {
+                /* 忽略 */
+            }
+        },
+    };
+}
+
 const results = [];
 function check(name, ok) {
     results.push({ name, ok });
@@ -178,6 +222,23 @@ async function main() {
     const pbLater = poll(PHONE_B);
     const gotBLater = await Promise.race([pbLater.promise, sleep(1500).then(() => undefined)]);
     check('离线期间发的定向条目：B 上线后取到', !!(gotBLater && gotBLater.text === 'for-B-later'));
+
+    // 8) 正向通道：/u 上传带 phoneId → /recv 投递的条目带 from（v26.10.13-v3）。
+    //    电脑端按 from 把内容归到对应手机的会话 —— 两台及以上在线也不再全进聚合会话。
+    await req('POST', `/u/${DEVICE}`, { text: 'from-A', phoneId: PHONE_A });
+    const gotFromA = await Promise.race([recvPoll().promise, sleep(1500).then(() => undefined)]);
+    check(
+        '正向条目带 from：/u 带 phoneId → /recv 收到 from=该手机 ID',
+        !!(gotFromA && gotFromA.from === PHONE_A && gotFromA.text === 'from-A')
+    );
+
+    await req('POST', `/u/${DEVICE}`, { text: 'from-bad', phoneId: 'x' });
+    const gotBad = await Promise.race([recvPoll().promise, sleep(1500).then(() => undefined)]);
+    check('非法 phoneId 归一化为空 from（按未知发送者处理）', !!(gotBad && !gotBad.from && gotBad.text === 'from-bad'));
+
+    await req('POST', `/u/${DEVICE}`, { text: 'from-none' });
+    const gotNone = await Promise.race([recvPoll().promise, sleep(1500).then(() => undefined)]);
+    check('不带 phoneId（老手机页）→ from 为空（旧归组规则兜底）', !!(gotNone && !gotNone.from && gotNone.text === 'from-none'));
 
     pa.abort();
     pb.abort();
