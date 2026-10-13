@@ -547,8 +547,11 @@
          Agents 之上），窗口固定微信暗色配色，关闭按钮回到顶部标题条（自绘、悬浮变红）。
          v26.10.13-v9：中间那格 Agents 入口已随 Agent 能力整体删除，第一栏只剩「对话 / 文件」。
          v26.10.13-v10：圆角 + 层级（用户 excalidraw 白板稿）—— 外框大圆角、第二三栏包进
-         内嵌圆角卡片（右/下缘露 frame 色）、输入区改四边留白的圆角浮起卡片；新增
-         `transferLayeredOk` 断言（几何 + 计算样式判据，见 17900ms 那拍的 layered 快照）。 */
+         内嵌圆角卡片（右/下缘露出窗口底色）、输入区改四边留白的圆角浮起卡片；新增
+         `transferLayeredOk` 断言（几何 + 计算样式判据，见 17900ms 那拍的 layered 快照）。
+         v26.10.14-v1：窗口底色 frame（#383838）→ 与第一栏同色的 rail（#2E2E2E），
+         卡片右/下缘露出层不再与第一栏有色差断层；`transferLayeredOk` 加
+         `frameMatchesRail`（窗口底色 === 第一栏底色）判据。 */
       const findTransferModal = () => document.querySelector('.ant-modal.znhd-transfer-modal');
       const findPairModal = () =>
         Array.from(document.querySelectorAll('.ant-modal')).find((el) =>
@@ -1608,16 +1611,19 @@
           rgb('.znhd-transfer-main') === 'rgb(30, 30, 30)';
         // ── 圆角 + 层级（v26.10.13-v10，对齐用户 excalidraw 白板稿）──
         //   · 窗口外框大圆角（≥12px，来自 borderRadiusLG token）
-        //   · 第二三栏整体是内嵌圆角卡片：右/下缘与窗口边缘留出 frame 色空隙（层级），
+        //   · 第二三栏整体是内嵌圆角卡片：右/下缘与窗口边缘留出空隙（层级），
+        //     空隙露出**与第一栏同色的窗口底色**（v26.10.14-v1 起，用户要求避免断层），
         //     左缘紧贴第一栏、上缘接标题条
         //   · 第一栏贴满窗口高度（不随卡片内缩）
         //   · 输入区是浮在聊天区上的圆角卡片：四边留白 + 全边框
         //   · 搜索框圆角（内部控件圆角化的代表）
-        // ⚠️ 全部用**几何 + 计算样式**判据，不猜色值（antd 暗色算法会改主色）。
+        // ⚠️ 全部用**几何 + 计算样式**判据，不猜色值（antd 暗色算法会改主色）；
+        //    唯一的颜色判据是「窗口底色 === 第一栏底色」（同色比较，不写死 hex）。
         const layered = (() => {
           const out = {};
           const radiusOf = (el) => (el ? parseFloat(getComputedStyle(el).borderTopLeftRadius) || 0 : 0);
           const container = m ? m.querySelector('.ant-modal-container') : null;
+          const modalBody = m ? m.querySelector('.ant-modal-body') : null;
           const content = m ? m.querySelector('.znhd-transfer-content') : null;
           const navEl = m ? m.querySelector('.znhd-transfer-nav') : null;
           const composer = m ? m.querySelector('.znhd-chat-composer') : null;
@@ -1640,6 +1646,15 @@
           out.composerInsetBottom = cm && mm ? Math.round(mm.bottom - cm.bottom) : -1;
           out.composerBordered = composer ? parseFloat(getComputedStyle(composer).borderTopWidth) > 0 : false;
           out.searchRadius = radiusOf(searchInput);
+          // v26.10.14-v1：第二三栏卡片右/下缘露出的窗口底色必须与第一栏同色
+          // （用户原话「最下面的底色与第一栏保持一致，避免颜色断层」）
+          // ⚠️ 量 **.ant-modal-body** 不是 .ant-modal-container：v6 的 DOM 是
+          // .ant-modal > .ant-modal-container > .ant-modal-body，我们的底色在 body 上
+          // （container 只放圆角），首版量 container 量到默认 colorBgElevated 假红过一次
+          out.frameMatchesRail = (() => {
+            const bgOf = (el) => (el ? getComputedStyle(el).backgroundColor : '');
+            return !!modalBody && !!navEl && bgOf(modalBody) === bgOf(navEl) && bgOf(modalBody) !== '';
+          })();
           return out;
         })();
         ts.layered = layered;
@@ -1653,6 +1668,7 @@
           layered.composerInsetLeft >= 4 &&
           layered.composerInsetBottom >= 4 &&
           layered.composerBordered &&
+          layered.frameMatchesRail &&
           layered.searchRadius >= 4
         );
         // 设置隔离：开关翻转会写传输助手自己的键（relayServer 保持默认值），不写主设置
@@ -2092,8 +2108,8 @@
           // 窗口固定微信暗色（v26.10.12-v4）：标题条/三栏分层色，嵌套 ConfigProvider 仍隔离主题
           transferThemeOk: !!ts.themeDarkOk,
           // 圆角 + 层级（v26.10.13-v10，对齐用户 excalidraw 白板稿）：外框大圆角、
-          // 第二三栏内嵌圆角卡片（右/下缘露 frame 色）、第一栏贴满窗口高度、
-          // 输入区四边留白的圆角浮起卡片、搜索框等内部控件圆角
+          // 第二三栏内嵌圆角卡片（右/下缘露窗口底色，v26.10.14-v1 起与第一栏同色）、
+          // 第一栏贴满窗口高度、输入区四边留白的圆角浮起卡片、搜索框等内部控件圆角
           transferLayeredOk: !!ts.layeredOk,
           // 设置隔离：落 scriptCat_TransferSettings，不污染主设置 scriptCat_Allvalue
           transferSettingsIsolatedOk: !!(ts.settingsStoredOk && ts.mainAllvalueUntouched),

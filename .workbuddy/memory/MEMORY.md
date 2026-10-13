@@ -14,9 +14,9 @@
 - 清理：备份标签 → **在 `origin/main` 上** rebase → 解冲突（changelog 取并集；`relay-server/public/*` 取 origin 侧并 `git rm` 过期 hash）→ `build:web` + `build` → verify。追加修复用 `--fixup` + `rebase -i --autosquash`。
 - `workbuddy/*` 分支不能 `git branch -d`（被 WorkBuddy worktree 占用）⇒ 只删远端。
 
-## 传输助手（微信桌面版暗色；现行 v26.10.13-v10）
+## 传输助手（微信桌面版暗色；现行 v26.10.14-v1）
 - 入口 = 主面板一行 4 个（设置/常用语/传输助手/图片嗅探）；三栏 = `TransferNavRail`（对话 key 仍 `devices` / 文件 + 底部设置·企业信息）→ `TransferSessionList` → 第三栏（`TransferDeviceChat` / `TransferFilesView`）。⚠️ **Agent 能力（第一栏 Agents 入口 + 技能/定时任务控件 + Agent 对话第三栏 + `lib/agent/`）已于 v26.10.13-v9 整体删除**，公共件 `MarkdownBody` 已从 `ui/agent/` 移到 `ui/`。
-- **圆角 + 层级（v26.10.13-v10，用户 excalidraw 白板稿）**：圆角唯一入口 `wechatTheme.ts` 的 `RADIUS`（window 14 / panel 10 / card 12 / control 8）；外框大圆角 = ConfigProvider `borderRadiusLG`（子弹窗同族）；第二三栏包在 `.znhd-transfer-content` 内嵌圆角卡片里（右缩进 10 / 下缩进 8 露 `WECHAT.frame`），第一栏贴满窗口高度；输入区（`ChatComposer`）是四边留白 12px 的圆角浮起卡片（**全边框不能删**——冒烟 `panelBordered` 判 `borderTopWidth>0`）。冒烟 `transferLayeredOk` 守全部几何量。
+- **圆角 + 层级（v26.10.13-v10 用户 excalidraw 白板稿；v26.10.14-v1 露出层与第一栏同色）**：圆角唯一入口 `wechatTheme.ts` 的 `RADIUS`（window 14 / panel 10 / card 12 / control 8）；外框大圆角 = ConfigProvider `borderRadiusLG`（子弹窗同族）；第二三栏包在 `.znhd-transfer-content` 内嵌圆角卡片里（右缩进 10 / 下缩进 8），第一栏贴满窗口高度；⚠️ **v26.10.14-v1 起卡片露出层 = Modal body 底色 = `WECHAT.rail`（#2E2E2E，与第一栏/标题条同色）**——用户明确要求最下面不与第一栏有色差断层（v10 曾露 `WECHAT.frame` #383838，已改）；输入区（`ChatComposer`）是四边留白 12px 的圆角浮起卡片（**全边框不能删**——冒烟 `panelBordered` 判 `borderTopWidth>0`）。冒烟 `transferLayeredOk` 守全部几何量 + `frameMatchesRail`（容器底色 === 第一栏底色，同色比较不写死 hex）。
 - 配色唯一入口 `wechatTheme.ts` 的 `WECHAT`（rail #2E2E2E / list #252525 / chat #1E1E1E / 关闭红 #E81123）；窗口主色微信绿 #07C160 且固定暗色；尺寸改 `TransferAssistantModal` 的 `width` + body `height` 两处；子弹窗一律 `centered`；窗口识别用 `.ant-modal.znhd-transfer-modal`。⚠️ antd v6 Modal 容器类名是 **`.ant-modal-container`** 且 `styles` 无 content 键。
 - 第一栏选中态判据 = **`aria-current="page"`**（暗色算法会把 #07C160 算成 rgb(9,167,85)，按 hex 猜必假红）。聊天共用件：`ChatScroll` 的 **`minHeight:0` 硬性**；气泡方向用 `flexDirection` + 根节点 `data-side`；用户气泡实心 ⇒ `MarkdownBody` 传 `inverted`；`autoSize{2..6}` 与 `lineHeight:'20px'` 成对。
 - `lib/transfer/store.ts` 模块级单例（窗口不开也收件），消息变更要带 `persistSoon()`（IndexedDB，7 天 TTL）。归组按发送者 `phoneId → item.from → sessionKeyForIncoming`；聚合会话在线态用 `sessionSendable()`；手机页**三条**发送路径都要带 `phoneId`。设置隔离在 `scriptCat_TransferSettings`。

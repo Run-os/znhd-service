@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name                征纳互动人数和在线监控v2
 // @namespace           https://scriptcat.org/
-// @version             26.10.13-v10
+// @version             26.10.14-v1
 // @description         实时监控征纳互动等待人数和在线状态，支持语音播报、自定义常用语
 // @author              runos
 // @license             MIT
@@ -75228,11 +75228,13 @@ function SniffModal({ open, onClose, minKB, onMinKBChange }) {
  * 老用户存过的值无害）。
  *
  * ── 分层（v26.10.12-v5 按用户要求：顶栏与第一栏同色）────────────────────────
- *   rail   第一栏（图标导航）+ 标题条     #2E2E2E  ← 顶栏 = 第一栏同色（v5 起不再用更淡的 #383838）
- *   frame  窗口边框底色（标题条之外的空隙，基本不可见）
+ *   rail   第一栏（图标导航）+ 标题条 + **窗口底色**  #2E2E2E  ← 顶栏 = 第一栏 = 窗口底色同色
+ *          （v26.10.14-v1 起窗口底色由 frame 改为 rail：第二三栏卡片右/下缘露出的
+ *            这一层必须与第一栏一致，用户明确要求避免颜色断层）
+ *   frame  备用深色（v26.10.14-v1 起不再作为窗口底色；与 selected 同值 #383838）
  *   list   第二栏（会话列表）             #252525
  *   chat   第三栏（聊天主区）             #1E1E1E  ← 最深
- *   input  第三栏底部（输入面板）          #262626  （比聊天区略浅，靠上边框分开）
+ *   input  第三栏底部（输入面板）          #262626  （比聊天区略浅，四边留白浮起）
  *
  * 气泡与主色直接采用微信 PC 暗色模式的值：
  *   他人气泡 #2F2F2F；我方气泡 #07C160（微信绿，同时作为窗口主色 token.colorPrimary，
@@ -75244,7 +75246,9 @@ function SniffModal({ open, onClose, minKB, onMinKBChange }) {
  *   window  窗口外框大圆角（= ConfigProvider 的 borderRadiusLG，见 TransferAssistantModal；
  *           同步作用于配对 / 设置 / 企业信息等子弹窗，整族一致）；
  *   panel   内容面板圆角 —— 第二栏 + 第三栏整体是一张**内嵌圆角卡片**，右/下缘与窗口
- *           边缘留出 frame 色空隙，形成「窗口 → 卡片 → 三栏」的层级（白板稿的双层边框）；
+ *           边缘留出空隙，形成「窗口 → 卡片 → 三栏」的层级（白板稿的双层边框）；
+ *           ⚠️ v26.10.14-v1 起空隙露出的是与第一栏同色的 rail（#2E2E2E），不是 frame
+ *           —— 用户要求最下面不与第一栏出现色差断层；
  *   card    内部大卡片（第三栏底部输入区：四边留白浮在聊天区上的圆角卡片）；
  *   control 内部控件（搜索框 /「＋」/ 会话条目 / 各类头像位）。
  *
@@ -106550,8 +106554,10 @@ function TransferAboutModal({ open, onClose }) {
  *   标题条（与第一栏同色 #2E2E2E，v26.10.12-v5 起）：右侧自绘关闭按钮（悬浮变红，微信同款）
  *   第一栏（窄图标栏 #2E2E2E）：logo → 对话 / 文件 → 设置 / 企业信息（**贴满窗口高度**）
  *   内容面板（v26.10.13-v10）：第二栏 + 第三栏整体是一张**内嵌圆角卡片**——
- *     右缘 / 下缘与窗口边缘留出 frame 色（#383838）空隙，窗口外框大圆角，
- *     于是视觉上是「窗口 → 圆角卡片 → 三栏」三层，而不是三栏直接贴窗口边；
+ *     右缘 / 下缘与窗口边缘留出空隙（**v26.10.14-v1 起露出与第一栏同色的
+ *     #2E2E2E 窗口底色，不再用 #383838 —— 用户要求避免与第一栏的色差断层**），
+ *     窗口外框大圆角，于是视觉上是「窗口 → 圆角卡片 → 三栏」三层，
+ *     而不是三栏直接贴窗口边；
  *   第二栏（会话列表 #252525）：搜索框 +「＋」→ 会话列表
  *   第三栏（聊天主区 #1E1E1E，最深）：当前会话的聊天区，未选中显示空状态
  *
@@ -106569,7 +106575,9 @@ function TransferAboutModal({ open, onClose }) {
  */
 /** 标题条高度（含自绘关闭按钮；v26.10.13-v10 38 → 40，配合外层大圆角更稳） */
 const TITLE_BAR_HEIGHT = 40;
-/** 内容面板的外缩进（v26.10.13-v10）：右 / 下缘露出 frame 色形成层级；左缘紧贴第一栏 */
+/** 内容面板的外缩进（v26.10.13-v10）：右 / 下缘露出窗口底色形成层级；左缘紧贴第一栏。
+ *  ⚠️ v26.10.14-v1：窗口底色由 frame 色（#383838）改为与第一栏同色的 rail（#2E2E2E）——
+ *  用户要求「第二三栏最下面的底色与第一栏一致，避免断层」，右侧露出带一并同色。 */
 const PANEL_INSET = { right: 10, bottom: 8 };
 function TransferAssistantModal({ open, onClose }) {
     const s = useTransferStore();
@@ -106733,6 +106741,11 @@ function TransferAssistantModal({ open, onClose }) {
                 // ⚠️ content 的 16/24 默认内边距不能用 styles 归零（antd v6 的 Modal styles
                 // 没有 content 键，tsc 实测 TS2353），改由 uiReset 的 CSS 规则处理
                 // （.znhd-transfer-modal 专属）：三栏贴满窗口 + 关闭按钮贴右上角。
+                // v26.10.14-v1：container 与 body 双设 rail 底色 —— container 自己是
+                // 包着 body 的那层（v6 的 DOM：.ant-modal > .ant-modal-container >
+                // .ant-modal-body），默认带 colorBgElevated；body 虽撑满盖住它，
+                // 一并设同色防未来哪层露底出现异色断层。
+                container: { background: WECHAT.rail },
                 body: {
                     padding: 0,
                     // v26.10.12-v5：窗口放大 20%（700→840，1080→1296）
@@ -106741,7 +106754,10 @@ function TransferAssistantModal({ open, onClose }) {
                     display: 'flex',
                     flexDirection: 'column',
                     overflow: 'hidden',
-                    background: WECHAT.frame,
+                    // v26.10.14-v1：窗口底色由 frame（#383838）改为与第一栏同色的
+                    // rail（#2E2E2E）—— 第二三栏卡片右/下缘露出的就是这一层，
+                    // 与第一栏连成一体，不再有颜色断层（v26.10.13-v10 曾用 frame 色）
+                    background: WECHAT.rail,
                 },
             }, destroyOnHidden: true, footer: null, children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { className: "znhd-transfer-titlebar", style: {
                         flex: '0 0 auto',

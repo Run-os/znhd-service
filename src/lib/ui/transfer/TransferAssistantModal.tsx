@@ -32,8 +32,10 @@ import type { DeviceSession, TransferMessage } from '@/lib/transfer/types';
  *   标题条（与第一栏同色 #2E2E2E，v26.10.12-v5 起）：右侧自绘关闭按钮（悬浮变红，微信同款）
  *   第一栏（窄图标栏 #2E2E2E）：logo → 对话 / 文件 → 设置 / 企业信息（**贴满窗口高度**）
  *   内容面板（v26.10.13-v10）：第二栏 + 第三栏整体是一张**内嵌圆角卡片**——
- *     右缘 / 下缘与窗口边缘留出 frame 色（#383838）空隙，窗口外框大圆角，
- *     于是视觉上是「窗口 → 圆角卡片 → 三栏」三层，而不是三栏直接贴窗口边；
+ *     右缘 / 下缘与窗口边缘留出空隙（**v26.10.14-v1 起露出与第一栏同色的
+ *     #2E2E2E 窗口底色，不再用 #383838 —— 用户要求避免与第一栏的色差断层**），
+ *     窗口外框大圆角，于是视觉上是「窗口 → 圆角卡片 → 三栏」三层，
+ *     而不是三栏直接贴窗口边；
  *   第二栏（会话列表 #252525）：搜索框 +「＋」→ 会话列表
  *   第三栏（聊天主区 #1E1E1E，最深）：当前会话的聊天区，未选中显示空状态
  *
@@ -53,7 +55,9 @@ import type { DeviceSession, TransferMessage } from '@/lib/transfer/types';
 /** 标题条高度（含自绘关闭按钮；v26.10.13-v10 38 → 40，配合外层大圆角更稳） */
 const TITLE_BAR_HEIGHT = 40;
 
-/** 内容面板的外缩进（v26.10.13-v10）：右 / 下缘露出 frame 色形成层级；左缘紧贴第一栏 */
+/** 内容面板的外缩进（v26.10.13-v10）：右 / 下缘露出窗口底色形成层级；左缘紧贴第一栏。
+ *  ⚠️ v26.10.14-v1：窗口底色由 frame 色（#383838）改为与第一栏同色的 rail（#2E2E2E）——
+ *  用户要求「第二三栏最下面的底色与第一栏一致，避免断层」，右侧露出带一并同色。 */
 const PANEL_INSET = { right: 10, bottom: 8 } as const;
 
 export default function TransferAssistantModal({ open, onClose }: { open: boolean; onClose: () => void }) {
@@ -266,6 +270,11 @@ export default function TransferAssistantModal({ open, onClose }: { open: boolea
                     // ⚠️ content 的 16/24 默认内边距不能用 styles 归零（antd v6 的 Modal styles
                     // 没有 content 键，tsc 实测 TS2353），改由 uiReset 的 CSS 规则处理
                     // （.znhd-transfer-modal 专属）：三栏贴满窗口 + 关闭按钮贴右上角。
+                    // v26.10.14-v1：container 与 body 双设 rail 底色 —— container 自己是
+                    // 包着 body 的那层（v6 的 DOM：.ant-modal > .ant-modal-container >
+                    // .ant-modal-body），默认带 colorBgElevated；body 虽撑满盖住它，
+                    // 一并设同色防未来哪层露底出现异色断层。
+                    container: { background: WECHAT.rail },
                     body: {
                         padding: 0,
                         // v26.10.12-v5：窗口放大 20%（700→840，1080→1296）
@@ -274,7 +283,10 @@ export default function TransferAssistantModal({ open, onClose }: { open: boolea
                         display: 'flex',
                         flexDirection: 'column',
                         overflow: 'hidden',
-                        background: WECHAT.frame,
+                        // v26.10.14-v1：窗口底色由 frame（#383838）改为与第一栏同色的
+                        // rail（#2E2E2E）—— 第二三栏卡片右/下缘露出的就是这一层，
+                        // 与第一栏连成一体，不再有颜色断层（v26.10.13-v10 曾用 frame 色）
+                        background: WECHAT.rail,
                     },
                 }}
                 destroyOnHidden
@@ -328,8 +340,9 @@ export default function TransferAssistantModal({ open, onClose }: { open: boolea
                     />
 
                     {/* 内容面板（v26.10.13-v10）：第二栏 + 第三栏整体的内嵌圆角卡片。
-                        右 / 下缘留出 PANEL_INSET 的空隙露出 frame 底色（#383838），
-                        与外框大圆角一起构成「窗口 → 卡片 → 三栏」的层级；
+                        右 / 下缘留出 PANEL_INSET 的空隙露出窗口底色（v26.10.14-v1 起与
+                        第一栏同色 #2E2E2E，避免色差断层），与外框大圆角一起构成
+                        「窗口 → 卡片 → 三栏」的层级；
                         overflow:hidden 让卡片圆角裁掉内部两栏的直角边。 */}
                     <div
                         className="znhd-transfer-content"
