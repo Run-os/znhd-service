@@ -92,6 +92,7 @@ const CHECKS = [
   ['chatComposerOk', '输入区（微信式）：工具栏表情/图片上传/附件 + 多行自增高（超上限后框内滚动）+ 右下角发送按钮 + 实心底面板'],
   ['emojiPackOk', '在线表情包：面板加载合集与图片，点一张**直接发送**（不进待发列表，会话里多一条图片气泡）'],
   ['emojiHoverOk', '表情悬停放大预览：停 0.5 秒才弹出，浮层显示中移到另一张立即换图'],
+  ['emojiAutoCloseOk', '表情面板自动收起：点一张表情后立即收起 / 点面板之外立即收起 / 点触发按钮收起'],
   ['chatPanelSharedOk', 'Agent 对话与设备会话共用同一套聊天面板（同一个输入框外壳 + 带 data-side 的气泡 + 头像）'],
   // ===== 主面板既有断言 =====
   ['phrasesLoaded', '常用语 YAML 解析'],
@@ -377,6 +378,122 @@ async function main() {
     // 输入框高度：空着 / 打过字 / 删空之后必须一样高（用户报告过「打一个字再删掉就变高」）
     report.agentInputHeightOk = !!(report.agentInputRing.found && report.agentInputRing.heightStable);
 
+    // —— 表情面板自动收起（v26.10.13-v7，用户要求）：**真实鼠标**复验 ——
+    // 页面内那条断言走合成事件（覆盖的是我们自己的 document mousedown 判定 + React onClick）；
+    // 这里按用户真实路径用真实鼠标再跑一遍：① 点一张表情应立即收起；② 点面板之外应立即收起。
+    // 结论并入 report.emojiAutoCloseOk（页面内 && 真实鼠标），避免「合成事件绿、真机红」。
+    // ⚠️ 必须排在下面的悬浮球拖拽用例之前：那段会把所有 `.ant-modal-close` 点掉。
+    report.emojiRealMouse = await (async () => {
+      const panelVisible = () =>
+        page.evaluate(() => {
+          const panel = document.querySelector('.znhd-emoji-panel');
+          if (!panel) return false; // 面板不在 DOM 里 ⇒ 已收起
+          const pop = panel.closest('.ant-popover');
+          if (pop) {
+            const cls = pop.className || '';
+            if (cls.indexOf('ant-popover-hidden') >= 0) return false;
+            // 退场动画期间仍是 display:block，也要算「已收起」（同 smoke 页 emojiPanelVisible 的判据）
+            if (cls.indexOf('-leave') >= 0) return false;
+            const cs = getComputedStyle(pop);
+            if (cs.display === 'none' || cs.visibility === 'hidden' || Number(cs.opacity) === 0) return false;
+          }
+          return panel.getBoundingClientRect().width > 0;
+        });
+      /** 触发按钮的视口坐标（要求可见且可点；拿不到返回 null） */
+      const triggerPoint = () =>
+        page.evaluate(() => {
+          const m = document.querySelector('.ant-modal.znhd-transfer-modal');
+          const btn = m ? m.querySelector('.znhd-chat-composer button[aria-label="表情"]') : null;
+          if (!btn || btn.disabled) return null;
+          btn.scrollIntoView({ block: 'center', inline: 'nearest' });
+          const r = btn.getBoundingClientRect();
+          if (r.width < 1 || r.height < 1) return null;
+          const x = Math.round(r.x + r.width / 2);
+          const y = Math.round(r.y + r.height / 2);
+          const hit = document.elementFromPoint(x, y);
+          if (!hit || !btn.contains(hit)) return null; // 被别的浮层盖住就别点（宁可红，不要假绿）
+          return { x, y };
+        });
+      // 确保传输助手窗口在，且停在设备会话（第一栏「对话」）——表情按钮只在那条通道可用
+      await page.evaluate(() => {
+        const m = document.querySelector('.ant-modal.znhd-transfer-modal');
+        if (!m) {
+          const host = document.getElementById('__znhd_panel_host__');
+          const btn = host
+            ? Array.from(host.querySelectorAll('button')).find(
+                (b) => (b.textContent || '').indexOf('传输助手') >= 0
+              )
+            : null;
+          if (btn) btn.click();
+        }
+      });
+      await sleep(700);
+      await page.evaluate(() => {
+        const m = document.querySelector('.ant-modal.znhd-transfer-modal');
+        const nav = m
+          ? Array.from(m.querySelectorAll('button')).find((b) => (b.getAttribute('aria-label') || '') === '对话')
+          : null;
+        if (nav) nav.click();
+      });
+      await sleep(600);
+      let trigger = await triggerPoint();
+      if (!trigger) {
+        // 会话没选中（或无在线设备 ⇒ 表情按钮灰态）：点第一条会话再看一眼
+        await page.evaluate(() => {
+          const m = document.querySelector('.ant-modal.znhd-transfer-modal');
+          const it = m ? m.querySelector('.znhd-transfer-session-item') : null;
+          if (it) it.click();
+        });
+        await sleep(600);
+        trigger = await triggerPoint();
+      }
+      if (!trigger) return { ok: false, reason: 'no enabled emoji trigger' };
+
+      // ① 真实鼠标点触发按钮 → 面板应打开
+      await page.mouse.click(trigger.x, trigger.y);
+      await sleep(600);
+      const opened = await panelVisible();
+      // ② 真实鼠标点第一张表情 → 应立即收起
+      const item = await page.evaluate(() => {
+        const it = document.querySelector('.znhd-emoji-item');
+        if (!it) return null;
+        const r = it.getBoundingClientRect();
+        return { x: Math.round(r.x + r.width / 2), y: Math.round(r.y + r.height / 2) };
+      });
+      if (!item) return { ok: false, reason: 'no emoji item rendered', opened };
+      await page.mouse.click(item.x, item.y);
+      await sleep(600);
+      const afterPick = await panelVisible();
+      // ③ 再打开 → 真实鼠标点「面板之外」（输入框：面板在触发按钮上方，盖不到它）
+      await page.mouse.click(trigger.x, trigger.y);
+      await sleep(600);
+      const reopened = await panelVisible();
+      const outside = await page.evaluate(() => {
+        const m = document.querySelector('.ant-modal.znhd-transfer-modal');
+        const ta = m ? m.querySelector('.znhd-chat-composer textarea') : null;
+        if (!ta) return null;
+        const r = ta.getBoundingClientRect();
+        const x = Math.round(r.x + r.width / 2);
+        const y = Math.round(r.y + r.height / 2);
+        const hit = document.elementFromPoint(x, y);
+        if (!hit || !ta.contains(hit)) return null; // 落点没打在输入框上 ⇒ 换不了「外部点击」
+        return { x, y };
+      });
+      if (!outside) return { ok: false, reason: 'outside point blocked', opened, afterPick, reopened };
+      await page.mouse.click(outside.x, outside.y);
+      await sleep(400);
+      const afterOutside = await panelVisible();
+      return {
+        ok: !!opened && afterPick === false && !!reopened && afterOutside === false,
+        opened,
+        afterPick,
+        reopened,
+        afterOutside,
+      };
+    })();
+    console.log('  表情面板真实鼠标：' + JSON.stringify(report.emojiRealMouse));
+    report.emojiAutoCloseOk = !!report.emojiAutoCloseOk && !!report.emojiRealMouse.ok;
+
     // 常用语数据源（v26.10.10-v17）：夹具预置了**旧默认**地址，故实际请求必须落在 cnb.cool 新默认上。
     // 只认「迁移后的默认值」——若哪天有人把 DEFAULTS 改回旧地址、或迁移被删掉，这条会变红。
     report.phrasesSourceOk = /cnb\.cool\/[^ ]*commonPhrases\.yaml/.test(report.phrasesSourceUrl || '');
@@ -518,7 +635,8 @@ async function main() {
       !checkPass('chatBubbleOk') ||
       !checkPass('chatComposerOk') ||
       !checkPass('emojiPackOk') ||
-      !checkPass('emojiHoverOk')
+      !checkPass('emojiHoverOk') ||
+      !checkPass('emojiAutoCloseOk')
     ) {
       console.log('      传输助手快照：' + JSON.stringify(report.transferSnap));
     }

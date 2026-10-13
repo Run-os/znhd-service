@@ -724,6 +724,36 @@
         const box = m ? m.querySelector('.znhd-transfer-messages') : null;
         return box ? box.textContent || '' : '';
       };
+      /**
+       * 表情面板当前是否**可见/仍在屏幕上**（v26.10.13-v7，供「点表情/点外部后是否立即收起」断言用）。
+       * ⚠️ 三个坑：
+       * 1) 页面上可能同时存在多个 `.ant-popover`（其它浮层关掉后只是缓存隐藏），必须认准
+       *    「装着 .znhd-emoji-panel 的」那一个；
+       * 2) Popover 关闭后内容会卸载（`.znhd-emoji-panel` 直接不在 DOM 里）⇒ 查不到就是已收起，
+       *    不能只判 `ant-popover-hidden` 类；
+       * 3) **关闭动画期间**（`ant-zoom-big-leave` / `-leave-active`）浮层还是 `display:block`、量出来
+       *    有 322px 宽，但它在往外收（实测：点完表情 +100ms 正是这个状态）。判「已收起」必须把
+       *    退场过渡也算进去，否则会假红 —— `ant-popover-hidden` 要动画结束才加上。
+       */
+      const emojiPanelVisible = () => {
+        const panel = document.querySelector('.znhd-emoji-panel');
+        if (!panel) return false; // 面板根本不在 DOM 里 ⇒ 已收起
+        const pop = panel.closest('.ant-popover');
+        if (pop) {
+          const cls = pop.className || '';
+          if (cls.indexOf('ant-popover-hidden') >= 0) return false;
+          if (cls.indexOf('-leave') >= 0) return false; // 正在退场 = 已开始收起
+          const cs = getComputedStyle(pop);
+          if (cs.display === 'none' || cs.visibility === 'hidden' || Number(cs.opacity) === 0) return false;
+        }
+        return panel.getBoundingClientRect().width > 0;
+      };
+
+      /** 表情触发按钮（传输助手第三栏输入区里那颗「表情」；面板开着/关着都返回它） */
+      const emojiTriggerButton = () => {
+        const m = findTransferModal();
+        return m ? m.querySelector('.znhd-chat-composer button[aria-label="表情"]') : null;
+      };
 
       // 造一张 3000x2000 的大图（最长边远超压缩上限 1600），用于验证「发送到手机」会先压缩
       const makeBigFile = () =>
@@ -1480,19 +1510,56 @@
           url: el ? el.getAttribute('data-emoji-url') || '' : '',
         };
       }, 14150);
+      /* ===== 表情面板自动收起（v26.10.13-v7，用户要求）=============================
+         ① 点一张表情 → **立即**收起面板（同时照旧直接发送，见 emojiPicked）；
+         ② 面板开着时点「面板之外的任何区域」→ **立即**收起；
+         ③ 回归：面板开着时点触发按钮 → 收起（而不是被 toggle 又打开）。
+         每条前置都先记「守卫」事实（点之前面板是开的），否则「点后已收起」会恒真假绿。 */
       setTimeout(() => {
-        // 点第一张 → 应当**直接发送**（不再进「待发图片」）
+        // 点第一张 → 应当**直接发送**（不再进「待发图片」），并**立即收起**面板
         const ts = window.__transferSnap;
         const m = findTransferModal();
         ts.emojiMsgsBefore = m ? m.querySelectorAll('.znhd-transfer-messages .ant-image-img').length : -1;
         ts.emojiPendingBeforeClick = !!(m && (m.textContent || '').indexOf('待发送图片') >= 0);
         window.__clickedEmojiItem = !!window.__emojiFirstItem;
+        ts.emojiPanelBeforePick = emojiPanelVisible(); // 守卫：点之前必须是开着的
         if (window.__emojiFirstItem) window.__emojiFirstItem.click();
       }, 14200);
       setTimeout(() => {
         const ts = window.__transferSnap;
+        // ① 点表情后 100ms：面板必须已经收起
+        ts.emojiCloseAfterPick = emojiPanelVisible();
+        // 再打开一次，为下一条「点外部」用例做准备
+        const btn = emojiTriggerButton();
+        if (btn) btn.click();
+      }, 14300);
+      setTimeout(() => {
+        const ts = window.__transferSnap;
+        // 守卫：重新打开确实生效（否则「点外部后收起」也可能是假绿）
+        ts.emojiReopenSeen = emojiPanelVisible();
+        // ② 点面板之外（消息区）→ 派发 mousedown（本组件的关闭判定挂在 document 捕获阶段）
+        const m = findTransferModal();
+        const outside = (m && m.querySelector('.znhd-transfer-messages')) || document.body;
+        outside.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }));
+      }, 14400);
+      setTimeout(() => {
+        const ts = window.__transferSnap;
+        ts.emojiCloseAfterOutside = emojiPanelVisible();
+        // 再开一次，验「开着时点触发按钮」这条回归
+        const btn = emojiTriggerButton();
+        if (btn) btn.click();
+      }, 14500);
+      setTimeout(() => {
+        const ts = window.__transferSnap;
+        ts.emojiReopenForTriggerSeen = emojiPanelVisible(); // 守卫
+        const btn = emojiTriggerButton();
+        if (btn) btn.click(); // ③ 开着时点触发按钮 → 应收起
+      }, 14600);
+      setTimeout(() => {
+        const ts = window.__transferSnap;
         const m = findTransferModal();
         const sent = (window.__phoneSent || []).slice(-1)[0] || {};
+        ts.emojiCloseOnTrigger = emojiPanelVisible();
         ts.emojiPicked = {
           selected: !!window.__clickedEmojiItem,
           // 点击后**不该**出现待发列表（直接发送的判据）
@@ -2508,6 +2575,16 @@
               sw.url === ts.emojiSecondUrl
             );
           })(),
+          // 表情面板自动收起（v26.10.13-v7，用户要求）：点一张表情立即收起；点面板之外也立即收起；
+          // 回归：面板开着时点触发按钮应收起（而不是被自身 toggle 又打开）。三条都带「前置守卫」。
+          emojiAutoCloseOk: !!(
+            ts.emojiPanelBeforePick === true &&
+            ts.emojiCloseAfterPick === false &&
+            ts.emojiReopenSeen === true &&
+            ts.emojiCloseAfterOutside === false &&
+            ts.emojiReopenForTriggerSeen === true &&
+            ts.emojiCloseOnTrigger === false
+          ),
           // Agent 侧必须是同一套组件（共用 ChatComposer 外壳 + 带 data-side 的气泡 + 头像）
           chatPanelSharedOk: (() => {
             const s = window.__agentSnap || {};
@@ -2850,6 +2927,10 @@
           report.chatBubbleOk &&
           report.chatComposerOk &&
           report.emojiPackOk &&
+          // 表情面板的两条自动收起（v26.10.13-v7）。顺手把同一族的 emojiHoverOk 也纳入总门禁
+          // （此前只在明细里报，未参与 ALL-OK 判定）
+          report.emojiHoverOk &&
+          report.emojiAutoCloseOk &&
           report.phoneSendCompressedOk &&
           report.sniffEntryOk &&
           report.sniffScanOk &&

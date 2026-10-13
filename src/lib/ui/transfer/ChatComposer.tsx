@@ -23,9 +23,16 @@
  * 数据层见 `@/lib/transfer/emojiPack`）。点一张表情不再往输入框插字符，而是把图片交回
  * 调用方（`onPickEmojiImage`）——设备会话据此**直接发出去**（v26.10.13-v4 起）；
  * **不传这个回调的宿主（Agent 对话）表情按钮自动禁用**（那条通道只收文本）。
+ *
+ * ── 表情面板的两种自动收起（v26.10.13-v7，用户要求）────────────────────────────
+ * ① **点一张表情后立即收起**：点击落在 Popover 内容里，rc-trigger 视作「内部点击」不会关，
+ *    必须在 pick 回调里显式 `setEmojiOpen(false)`（见 `pickEmoji`）。
+ * ② **点面板之外的任何区域立即收起**：由本组件自己挂 document 级 mousedown 判定（见 `useEffect`），
+ *    不依赖 rc-trigger 的 `useWinClick` —— 后者只用「触发元素 / 浮层元素」两个 DOM 判内外，
+ *    在受控 `open` 下行为不够直观，自己管一遍更确定。判据见注释。
  */
 
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { Button, Input, Popover, Tooltip } from 'antd';
 import { SendIcon, SmileIcon, StopIcon } from '@/lib/ui/icons';
 import EmojiPackPanel, { type PickedEmoji } from '@/lib/ui/transfer/EmojiPackPanel';
@@ -89,10 +96,43 @@ export default function ChatComposer({
 }: ChatComposerProps) {
     const [emojiOpen, setEmojiOpen] = useState(false);
 
-    const sendDisabled = !!disabled || streaming || !(canSend === undefined ? value.trim() : canSend);
-
     /** 表情面板只在有回调时可用（v26.10.13-v3：换成在线图片表情包，见 EmojiPackPanel） */
     const emojiEnabled = !!onPickEmojiImage;
+
+    /**
+     * 点选一张表情：**立即收起面板**，再把图交回调用方。
+     * ⚠️ 不能只靠 Popover 的「点外部关闭」——点击发生在 Popover 内容里，rc-trigger 把它
+     * 当作内部点击，不会触发 onOpenChange；用户要求「点表情发送后立刻隐藏表情窗口」。
+     */
+    const pickEmoji = (emoji: PickedEmoji) => {
+        setEmojiOpen(false);
+        if (onPickEmojiImage) onPickEmojiImage(emoji);
+    };
+
+    /**
+     * 点「表情窗口之外」立即收起（v26.10.13-v7，用户要求）。
+     * 由本组件自己接管，不依赖 rc-trigger 的 useWinClick，行为更确定：
+     *   · 点面板内部（合集 chips / 网格 / 刷新 / 滚动条）→ 不动；
+     *   · 点触发按钮 → 交给按钮自身的 toggle（否则会「先被这里关掉、又被 toggle 打开」）；
+     *   · 其余任何地方（消息区、输入框、其它按钮、窗口外）→ 收起。
+     * ⚠️ 面板内容由 Popover portal 到浮层宿主（`#__znhd_overlay_host__`），**不在本组件子树里**，
+     * 所以只能挂 document 级 mousedown，用类名反查（与冒烟夹具 `emojiPanelVisible` 同一套判据）。
+     */
+    useEffect(() => {
+        if (!emojiOpen) return;
+        const onDown = (event: MouseEvent) => {
+            const target = event.target as Element | null;
+            if (target && typeof target.closest === 'function') {
+                if (target.closest('.znhd-emoji-panel')) return; // 点在面板里
+                if (target.closest('button[aria-label="表情"]')) return; // 点触发按钮：交给它 toggle
+            }
+            setEmojiOpen(false);
+        };
+        document.addEventListener('mousedown', onDown, true);
+        return () => document.removeEventListener('mousedown', onDown, true);
+    }, [emojiOpen]);
+
+    const sendDisabled = !!disabled || streaming || !(canSend === undefined ? value.trim() : canSend);
 
     const iconButton = (
         label: string,
@@ -139,7 +179,8 @@ export default function ChatComposer({
                     onOpenChange={setEmojiOpen}
                     // 面板内容只在首次打开时挂载（Popover 不渲染关闭态的内容）：表情包清单与图片
                     // 都是打开面板才去拉，不开面板不产生任何网络请求
-                    content={emojiEnabled ? <EmojiPackPanel onPick={onPickEmojiImage} /> : null}>
+                    // onPick = pickEmoji：点一张即收起面板 + 交回调用方（见上面 pickEmoji 注释）
+                    content={emojiEnabled ? <EmojiPackPanel onPick={pickEmoji} /> : null}>
                     {iconButton(
                         '表情',
                         emojiEnabled
