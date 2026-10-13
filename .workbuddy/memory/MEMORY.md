@@ -13,6 +13,7 @@
 - 清理流程：备份 `backup/*` 标签 → **在 `origin/main` 上** `git rebase origin/main`（base 必须用 `origin/main`；用更早的提交会把已发布的提交一起重写）→ 解冲突（changelog 取并集、产物 `relay-server/public/*` 取 origin 侧并 `git rm` 过期 hash 文件）→ **`npm run build:web` + `npm run build`** → verify。
 - **relay-server 与脚本各自独立编版本，并行分支同日必然可能撞车**（曾两边都编到 relay `v3`）；合并后按「当天第 N 次」重排。`npm run verify:relay` 启动日志会打印 relay 版本，可核对 `relay-server/package.json`。
 - 给已提交的本地提交追加修复：`git commit --fixup=<目标>` + `GIT_SEQUENCE_EDITOR=true git rebase -i --autosquash origin/main`。
+- **`workbuddy/*` 分支不能 `git branch -d`**：报 `used by worktree at C:/Users/liuyz/WorkBuddy/Worktrees/...` —— 那是 WorkBuddy 自己管理的 worktree，**不要去 `git worktree remove` 那个目录**；只删远端分支即可，本地那条留着。
 
 ## 传输助手（v26.10.12-v1 由「设备互联」重构；现行 v26.10.13-v5）
 - 入口：主面板一行 4 个（设置/常用语/传输助手/图片嗅探；Agent 与「历史记录」入口已删，Agent 从传输助手第一栏进）。三栏（**微信桌面版暗色**）：标题条 `.znhd-transfer-titlebar`（与第一栏同色；自绘关闭按钮 `aria-label="关闭"` 悬浮变红，antd × 已 `closable=false`）→ 第一栏 `TransferNavRail`（58px 窄图标栏：对话[key 仍 `devices`，在 Agents 上]/Agents/文件 + 底部设置/企业信息）→ 第二栏 `TransferSessionList`（搜索 +「＋」+ 微信式条目；文件分组**无「＋」，v26.10.13-v5 起点条目 = 筛选第三栏文件视图（不跳会话），顶部常驻 `data-all-files` 「全部文件」入口还原汇总，筛选状态 `filesFilterKey` 与 `activeSessionKey` 分开、切走文件分组自动还原**；Agents 分组顶部有「技能/定时任务」）→ 第三栏（`TransferDeviceChat`/`TransferFilesView`/`TransferAgentView`，由 `AgentPane = chat|skills|tasks` 驱动，`TransferAssistantModal` 持有）。
