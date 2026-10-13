@@ -306,6 +306,7 @@
 | **点 Popover 内容里的东西不会自动关浮层** | 点选发生在浮层**内容里**，rc-trigger 的 `useWinClick` 把「落在 popup 或 trigger 内」的点视作内部点击、不触发 `onOpenChange` ⇒ 表情面板点完一张仍赖在屏幕上（用户报的 bug）。**点选类交互必须在自己的回调里显式 `setOpen(false)`**（`ChatComposer.pickEmoji`）；想「点外部立即收起」也别指望 rc-trigger，自己挂 `document` 捕获阶段 `mousedown` 更确定 —— 但**必须排除触发按钮**，否则「先被自己关掉、再被按钮自身的 toggle 打开」 | **v26.10.13-v7** |
 | **判「浮层已收起」不能只看 hidden 类** | antd Popover 关闭时先跑退场动画（`ant-zoom-big-leave[-active]`），这段期间**仍是 `display:block` 且量得到尺寸**（实测 322px），`ant-popover-hidden` 要动画结束才加 ⇒ 点完 +100ms 采样会读成「还开着」而假红。判据要同时覆盖：面板不在 DOM / `ant-popover-hidden` / 类名含 `-leave` / computed display:none / 无尺寸。另：页面上常有**多个** `.ant-popover`（其它浮层关掉后只是缓存隐藏），必须认准「装着目标内容的那一个」 | **v26.10.13-v7** |
 | **「按名称计数」的夹具在分组后会静默算少** | 嗅探面板顶部的「大小未知（N）」在**平铺时代全页只有一个**，夹具用 `/大小未知（（\d+)）/.exec(文本)` 取第一个就够；v26.10.13-v8 按会话分组后**每个分组各一个**折叠档，同一个正则只会拿到第一组的数 ⇒ 「全选张数 === 卡片数 + 未知数」这条等式**必假红**，而界面其实完全正常。规则：界面元素从「全页唯一」变成「每组一份」时，**必须回查所有靠正则取它的断言**，改成 `matchAll` 求和（本次已改）；反向验证也顺手做了（把 attribution 短路成 null ⇒ 两条新断言同时变红、其余全绿） | **v26.10.13-v8** |
+| **CI 上「表情面板自动收起」会偶发假红** | v26.10.13-v8 推送后，**只改记忆文件**的那次提交竟把 `NodeJS with Webpack` 判红，挂的断言是 `表情面板自动收起：点一张表情后立即收起 / 点面板之外立即收起 / 点触发按钮收起`（快照特征：`emojiPanelBeforePick:true` 而 `emojiCloseAfterPick/AfterOutside/OnTrigger` 全 `false`，即三条收起路径统统没在轮询窗口内观察到收起）。同一份代码前一次推送是绿、本地 `npm run verify` 也全绿 ⇒ **纯时序抖动**，与改动无关。规则：见到这条（或任何只在 CI 出现、本地复现不了的断言）**先 `gh run rerun <id> --failed` 重跑**再下结论，别去改代码；重跑已确认转 success | **v26.10.13-v8** |
 
 ## 技术债务
 
