@@ -20,7 +20,7 @@
 
 import type { CSSProperties, ReactNode } from 'react';
 import { theme } from 'antd';
-import { WECHAT } from '@/lib/ui/transfer/wechatTheme';
+import { RADIUS, WECHAT } from '@/lib/ui/transfer/wechatTheme';
 
 export default function ChatBubble({
     side,
@@ -72,7 +72,7 @@ export default function ChatBubble({
                     justifyContent: 'center',
                     width: 32,
                     height: 32,
-                    borderRadius: 6,
+                    borderRadius: RADIUS.control,
                     background: isUser ? '#4A4A4A' : token.colorFillSecondary,
                     color: isUser ? '#fff' : token.colorTextSecondary,
                     fontSize: 13,

@@ -117,6 +117,9 @@ const RESET_CSS = `
    .ant-modal-container，不是 v5 的 .ant-modal-content），且 Modal 的 styles 配置项
    没有 content 键 —— 只能用 CSS 归零，否则三栏四周会留一圈底色不同的空隙、自绘关闭
    按钮也贴不到窗口右上角。
+   v26.10.13-v10：窗口外框的**大圆角不在这里设** —— 它来自传输助手嵌套 ConfigProvider
+   的 borderRadiusLG（见 wechatTheme.ts 的 RADIUS.window，配对/设置等子弹窗同族一致）；
+   本规则只管 padding:0 + overflow:hidden（圆角靠 overflow 裁内部直角边）。
    ⚠️ 本段是模板字符串的一部分：注释里不能出现反引号。 */
 .znhd-transfer-modal.ant-modal .ant-modal-container {
   padding: 0;

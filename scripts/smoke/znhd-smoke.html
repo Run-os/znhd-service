@@ -536,7 +536,8 @@
       /* ===== 传输助手窗口定位（v26.10.12-v1 重构后的新结构）=========================
          「设备互联 / 历史记录 / Agent 助手」三个旧入口已全部收敛进这一个三栏窗口：
            标题条 .znhd-transfer-titlebar —— 右侧自绘关闭按钮（悬浮变红，v26.10.12-v4）
-           第一栏 .znhd-transfer-nav      —— 对话 / 文件 + 底部设置/企业信息
+           第一栏 .znhd-transfer-nav      —— 对话 / 文件 + 底部设置/企业信息（贴满窗口高度）
+           内容卡 .znhd-transfer-content  —— 第二三栏整体的内嵌圆角卡片（v26.10.13-v10）
            第二栏 .znhd-transfer-sessions —— 搜索框 +「＋」+ 会话/设备列表
            第三栏 .znhd-transfer-main     —— 聊天主区（设备会话 / 全部文件）
          v26.10.12-v2：主窗口**去掉了标题栏**（与第一栏顶部的图标 + 名称重复），改用
@@ -544,7 +545,10 @@
          顺带解决了「传输助手设置」子窗口也含「传输助手」四字的误命中问题。
          v26.10.12-v4：对齐微信桌面版 —— 第一栏改窄图标栏（「设备」改名「对话」、置于
          Agents 之上），窗口固定微信暗色配色，关闭按钮回到顶部标题条（自绘、悬浮变红）。
-         v26.10.13-v9：中间那格 Agents 入口已随 Agent 能力整体删除，第一栏只剩「对话 / 文件」。 */
+         v26.10.13-v9：中间那格 Agents 入口已随 Agent 能力整体删除，第一栏只剩「对话 / 文件」。
+         v26.10.13-v10：圆角 + 层级（用户 excalidraw 白板稿）—— 外框大圆角、第二三栏包进
+         内嵌圆角卡片（右/下缘露 frame 色）、输入区改四边留白的圆角浮起卡片；新增
+         `transferLayeredOk` 断言（几何 + 计算样式判据，见 17900ms 那拍的 layered 快照）。 */
       const findTransferModal = () => document.querySelector('.ant-modal.znhd-transfer-modal');
       const findPairModal = () =>
         Array.from(document.querySelectorAll('.ant-modal')).find((el) =>
@@ -1178,7 +1182,8 @@
           sendTextLabel: !!(send && (send.textContent || '').trim() === '发送'),
           // 发送按钮在**右下角**：贴着面板右边，且在文本框下沿之下
           sendBottomRight: !!(sb && bb.right - sb.right <= 24 && sb.top >= tb.bottom - 8),
-          // 整块面板实心底 + 顶部有分隔线（微信输入区是一块面板，不再是带圆角的内层盒子）
+          // 整块面板实心底 + 一圈边框（v26.10.13-v10 起是四边留白的圆角浮起卡片，
+          // 通栏时代的「顶部分隔线」由这圈全边框继承：判据仍是 borderTopWidth > 0）
           panelBordered: parseFloat(cs.borderTopWidth) > 0,
           height: Math.round(tb.height),
         };
@@ -1601,6 +1606,55 @@
           rgb('.znhd-transfer-nav') === 'rgb(46, 46, 46)' &&
           rgb('.znhd-transfer-sessions') === 'rgb(37, 37, 37)' &&
           rgb('.znhd-transfer-main') === 'rgb(30, 30, 30)';
+        // ── 圆角 + 层级（v26.10.13-v10，对齐用户 excalidraw 白板稿）──
+        //   · 窗口外框大圆角（≥12px，来自 borderRadiusLG token）
+        //   · 第二三栏整体是内嵌圆角卡片：右/下缘与窗口边缘留出 frame 色空隙（层级），
+        //     左缘紧贴第一栏、上缘接标题条
+        //   · 第一栏贴满窗口高度（不随卡片内缩）
+        //   · 输入区是浮在聊天区上的圆角卡片：四边留白 + 全边框
+        //   · 搜索框圆角（内部控件圆角化的代表）
+        // ⚠️ 全部用**几何 + 计算样式**判据，不猜色值（antd 暗色算法会改主色）。
+        const layered = (() => {
+          const out = {};
+          const radiusOf = (el) => (el ? parseFloat(getComputedStyle(el).borderTopLeftRadius) || 0 : 0);
+          const container = m ? m.querySelector('.ant-modal-container') : null;
+          const content = m ? m.querySelector('.znhd-transfer-content') : null;
+          const navEl = m ? m.querySelector('.znhd-transfer-nav') : null;
+          const composer = m ? m.querySelector('.znhd-chat-composer') : null;
+          const mainEl = m ? m.querySelector('.znhd-transfer-main') : null;
+          // ⚠️ 搜索框的圆角量**外层** `.ant-input-affix-wrapper`（Input 带 prefix 时
+          // style 落在外壳上，内层 input 自己是 0）—— 首版量内层量出 0，假红过一次
+          const searchInput = m ? m.querySelector('.znhd-transfer-sessions .ant-input-affix-wrapper') : null;
+          const mr = m ? m.getBoundingClientRect() : null;
+          const cr = content ? content.getBoundingClientRect() : null;
+          const nr = navEl ? navEl.getBoundingClientRect() : null;
+          const cm = composer ? composer.getBoundingClientRect() : null;
+          const mm = mainEl ? mainEl.getBoundingClientRect() : null;
+          out.windowRadius = radiusOf(container);
+          out.panelRadius = radiusOf(content);
+          out.panelInsetRight = cr && mr ? Math.round(mr.right - cr.right) : -1;
+          out.panelInsetBottom = cr && mr ? Math.round(mr.bottom - cr.bottom) : -1;
+          out.navFullHeight = !!(nr && mr && Math.round(mr.bottom - nr.bottom) <= 2);
+          out.composerRadius = radiusOf(composer);
+          out.composerInsetLeft = cm && mm ? Math.round(cm.left - mm.left) : -1;
+          out.composerInsetBottom = cm && mm ? Math.round(mm.bottom - cm.bottom) : -1;
+          out.composerBordered = composer ? parseFloat(getComputedStyle(composer).borderTopWidth) > 0 : false;
+          out.searchRadius = radiusOf(searchInput);
+          return out;
+        })();
+        ts.layered = layered;
+        ts.layeredOk = !!(
+          layered.windowRadius >= 12 &&
+          layered.panelRadius >= 6 &&
+          layered.panelInsetRight >= 4 &&
+          layered.panelInsetBottom >= 4 &&
+          layered.navFullHeight &&
+          layered.composerRadius >= 6 &&
+          layered.composerInsetLeft >= 4 &&
+          layered.composerInsetBottom >= 4 &&
+          layered.composerBordered &&
+          layered.searchRadius >= 4
+        );
         // 设置隔离：开关翻转会写传输助手自己的键（relayServer 保持默认值），不写主设置
         let stored = null;
         try {
@@ -2037,6 +2091,10 @@
           testImageSentOk: !!ps.testImageSent,
           // 窗口固定微信暗色（v26.10.12-v4）：标题条/三栏分层色，嵌套 ConfigProvider 仍隔离主题
           transferThemeOk: !!ts.themeDarkOk,
+          // 圆角 + 层级（v26.10.13-v10，对齐用户 excalidraw 白板稿）：外框大圆角、
+          // 第二三栏内嵌圆角卡片（右/下缘露 frame 色）、第一栏贴满窗口高度、
+          // 输入区四边留白的圆角浮起卡片、搜索框等内部控件圆角
+          transferLayeredOk: !!ts.layeredOk,
           // 设置隔离：落 scriptCat_TransferSettings，不污染主设置 scriptCat_Allvalue
           transferSettingsIsolatedOk: !!(ts.settingsStoredOk && ts.mainAllvalueUntouched),
           // 「文件」视图图片格子：复制/下载/删除是右下角的图标按钮（未 hover 隐藏，hover 出现）
@@ -2063,7 +2121,7 @@
             );
           })(),
           // 输入区（微信式）：多行自增高（超上限后框内滚动）+ 工具栏表情/图片上传/附件
-          // + 右下角「发送」文字按钮 + 整块面板实心底带顶部分隔线
+          // + 右下角「发送」文字按钮 + 实心底圆角浮起卡片（v26.10.13-v10 起四边留白）
           chatComposerOk: (() => {
             const a = ts.composerEmpty || {};
             const g = ts.composerGrown || {};
@@ -2421,6 +2479,7 @@
           report.pairTestImageBtnOk &&
           report.testImageSentOk &&
           report.transferThemeOk &&
+          report.transferLayeredOk &&
           report.transferSettingsIsolatedOk &&
           report.phrasesLoaded &&
           report.changelogPopup &&

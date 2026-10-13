@@ -1,5 +1,6 @@
 /**
- * 聊天输入区（v26.10.12-v3；v26.10.12-v4 改**微信桌面版结构**）：传输助手第三栏的消息输入面板。
+ * 聊天输入区（v26.10.12-v3；v26.10.12-v4 改**微信桌面版结构**；v26.10.13-v10 改**圆角浮起卡片**）：
+ * 传输助手第三栏的消息输入面板。
  *
  * ── 微信原版结构（对齐截图）─────────────────────────────────────────────────
  *   ┌────────────────────────────────────────┐
@@ -7,16 +8,21 @@
  *   │ 多行文本输入框（自动增高，超限框内滚动）      │
  *   │                        [发送] ← 右下角 │
  *   └────────────────────────────────────────┘
- * 整个面板是一块 #262626 的实心底（比聊天区略浅，靠上边框分开），**不再有 v3 那个
- * 带边框圆角的内层盒子** —— 微信的输入区就是一整块面板。
+ * 整个面板是一块 #262626 的实心底（比聊天区略浅，靠边框与聊天区分开），
+ * **v26.10.13-v10 起四边留白**（左右下各 12px）浮在聊天区上，外框 12px 圆角 +
+ * 一圈 1px 浅色细边 —— 对齐用户 excalidraw 白板稿底部那枚圆角输入卡片；
+ * 此前 v3/v4 是「通栏面板 + 顶部分隔线」的贴边形态，已按白板稿取代。
  *
- * ⚠️ 两条实测结论仍然成立，别动：
+ * ⚠️ 三条实测结论仍然成立，别动：
  * · **textarea 自己禁 outline / boxShadow**（v26.10.10-v13）：antd `variant="borderless"`
  *   会在 `:focus-visible` 时给文本域自己画 outline（「框里套框」）。聚焦反馈交给光标，
  *   不再画外圈（微信输入区也没有聚焦光圈）。
  * · **必须同时钉住 `minRows` 与 `lineHeight: '20px'`**（v26.10.10-v15）：rc-textarea
  *   挂载时按 minRows 算高、输入后按「行数 × 行高 + padding」重算，行高不一致会出现
  *   「打一个字再删空，输入框永久变高」。
+ * · **四周边框不能去掉**（v26.10.13-v10）：冒烟 `chatComposerOk` 的 `panelBordered`
+ *   判据是 `borderTopWidth > 0` —— 通栏时代的「顶部分隔线」由这圈全边框继承，
+ *   改成只有圆角没有边框会直接假红。
  *
  * v26.10.13-v3：表情面板由「BMP 字符符号」换成**在线图片表情包**（`EmojiPackPanel`，
  * 数据层见 `@/lib/transfer/emojiPack`）。点一张表情不再往输入框插字符，而是把图片交回
@@ -37,7 +43,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { Button, Input, Popover, Tooltip } from 'antd';
 import { SendIcon, SmileIcon } from '@/lib/ui/icons';
 import EmojiPackPanel, { type PickedEmoji } from '@/lib/ui/transfer/EmojiPackPanel';
-import { WECHAT } from '@/lib/ui/transfer/wechatTheme';
+import { RADIUS, WECHAT } from '@/lib/ui/transfer/wechatTheme';
 
 /** 工具栏行的附加功能按钮（表情独立在组件内，这个数组是它之后的按钮） */
 export interface ComposerAction {
@@ -152,9 +158,15 @@ export default function ChatComposer({
                 flex: '0 0 auto',
                 display: 'flex',
                 flexDirection: 'column',
-                padding: '6px 12px 8px',
+                // v26.10.13-v10：四边留白的圆角浮起卡片（对齐白板稿底部输入卡片）——
+                // 左右下各 12px 空隙露出聊天区底色 #1E1E1E，与消息区左右 12px 内边距对齐
+                margin: '0 12px 12px',
+                padding: '8px 12px 10px',
                 background: WECHAT.input,
-                borderTop: '1px solid rgba(0,0,0,0.4)',
+                borderRadius: RADIUS.card,
+                // 全边框（不只是顶线）：浮起卡片靠这圈细边与聊天区分界；
+                // ⚠️ borderTopWidth 是冒烟 panelBordered 的判据，不能删
+                border: '1px solid rgba(255, 255, 255, 0.07)',
             }}>
             {notice}
             {/* 工具栏图标行（微信把这一行放在输入框上面） */}

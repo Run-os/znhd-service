@@ -1,7 +1,7 @@
 import { Button, Input, Tooltip } from 'antd';
 import { theme } from 'antd';
 import { GridIcon, PlusIcon, SearchIcon, SmartphoneIcon } from '@/lib/ui/icons';
-import { WECHAT } from '@/lib/ui/transfer/wechatTheme';
+import { RADIUS, WECHAT } from '@/lib/ui/transfer/wechatTheme';
 import type { TransferMessage } from '@/lib/transfer/types';
 import type { TransferNav } from '@/lib/ui/transfer/TransferNavRail';
 
@@ -40,7 +40,7 @@ function listTime(ts: number): string {
 }
 
 /**
- * 第二栏（中间会话列表栏，v26.10.12-v1；v26.10.12-v4 微信化）。
+ * 第二栏（中间会话列表栏，v26.10.12-v1；v26.10.12-v4 微信化；v26.10.13-v10 圆角化）。
  *
  * 结构：顶部**搜索框 +「＋」按钮**（仅对话分组有；文件分组没有 —— 用户要求
  * 文件下不放任何新建入口），下方按第一栏当前分组显示会话列表。
@@ -48,6 +48,9 @@ function listTime(ts: number): string {
  *
  * 会话条目为微信结构：左头像 / 中名称 + 预览摘要 / 右时间 + 未读红点角标；
  * 选中条目用比栏底浅一档的底色高亮（#383838，微信暗色同款），不再用主色底。
+ *
+ * v26.10.13-v10（对齐用户 excalidraw 白板稿）：搜索框 /「＋」/ 会话条目 / 头像
+ * 统一 8px 圆角（`RADIUS.control`），「＋」改成与搜索框同款的圆角方块（同底同高）。
  *
  * 文件分组（v26.10.13-v5）：条目**可点 = 筛选第三栏的文件视图**（点哪个会话就只显示
  * 哪个会话的文件，不跳去聊天窗口 —— v26.10.12-v5「只作展示」的行为由此取代）；
@@ -111,7 +114,7 @@ export default function TransferSessionList({
                     onChange={(e) => onSearch(e.target.value)}
                     style={{
                         background: WECHAT.chat,
-                        borderRadius: 6,
+                        borderRadius: RADIUS.control,
                     }}
                 />
                 {isFiles ? null : (
@@ -121,8 +124,12 @@ export default function TransferSessionList({
                             aria-label="配对设备"
                             onClick={onPair}
                             style={{
-                                width: 28,
+                                // v26.10.13-v10：与搜索框同款圆角方块（同底同高同圆角）
+                                width: 32,
+                                height: 32,
                                 padding: 0,
+                                background: WECHAT.chat,
+                                borderRadius: RADIUS.control,
                                 color: 'rgba(255,255,255,0.65)',
                             }}>
                             <PlusIcon size={16} />
@@ -149,7 +156,7 @@ export default function TransferSessionList({
                                     alignItems: 'center',
                                     gap: 10,
                                     padding: '9px 10px',
-                                    borderRadius: 6,
+                                    borderRadius: RADIUS.control,
                                     cursor: 'pointer',
                                     background: filesActiveKey === '' ? WECHAT.selected : 'transparent',
                                 }}
@@ -163,7 +170,7 @@ export default function TransferSessionList({
                                     style={{
                                         width: 36,
                                         height: 36,
-                                        borderRadius: 6,
+                                        borderRadius: RADIUS.control,
                                         flex: '0 0 auto',
                                         display: 'inline-flex',
                                         alignItems: 'center',
@@ -217,7 +224,7 @@ export default function TransferSessionList({
                                         alignItems: 'center',
                                         gap: 10,
                                         padding: '9px 10px',
-                                        borderRadius: 6,
+                                        borderRadius: RADIUS.control,
                                         cursor: clickable ? 'pointer' : 'default',
                                         // 选中 = 比栏底浅一档（微信暗色同款）；悬停 = 中间档
                                         background: active ? WECHAT.selected : 'transparent',
@@ -233,7 +240,7 @@ export default function TransferSessionList({
                                         style={{
                                             width: 36,
                                             height: 36,
-                                            borderRadius: 6,
+                                            borderRadius: RADIUS.control,
                                             flex: '0 0 auto',
                                             display: 'inline-flex',
                                             alignItems: 'center',

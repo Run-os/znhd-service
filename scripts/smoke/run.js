@@ -84,6 +84,7 @@ const CHECKS = [
   ['pairTestImageBtnOk', '配对窗口有「发送测试图片」按钮'],
   ['testImageSentOk', '「发送测试图片」把图片投递到 /u/<deviceId>（手机上传同路径）'],
   ['transferThemeOk', '窗口固定微信暗色：标题条与第一栏同色 #2E2E2E、三栏深浅分层（聊天区最深）'],
+  ['transferLayeredOk', '圆角+层级（v26.10.13-v10）：外框大圆角、第二三栏内嵌圆角卡片、第一栏贴满高度、输入区圆角浮起卡片'],
   ['transferSettingsIsolatedOk', '传输助手设置独立存储 scriptCat_TransferSettings（不污染主设置）'],
   ['filesImgActionsOk', '「文件」视图图片格子：复制/下载/删除是右下角图标按钮（未 hover 隐藏，hover 出现）'],
   // v26.10.12-v3：气泡、滚动区、底部输入框抽成共用件（当时是为设备会话与 Agent 对话同款；
@@ -477,6 +478,7 @@ async function main() {
     //   transferSnap：自动弹窗/三栏/文件视图/会话/清空/主题 各阶段的事实；
     //   pairSnap：配对窗口的二维码/链接/手机列表/设备色/测试图片。
     // 否则只能看到「❌」，还得改代码才知道是窗口没开、视图没切还是消息没落会话（重构后结构全变了，必须能一眼定位）。
+    // v26.10.13-v10：层级/圆角事实（layered）随 transferSnap 一起打（窗口圆角、卡片内缩量等）。
     if (
       !checkPass('transferAutoOpenOk') ||
       !checkPass('transferWindowOk') ||
@@ -489,6 +491,7 @@ async function main() {
       !checkPass('textSentOk') ||
       !checkPass('sessionClearOk') ||
       !checkPass('transferThemeOk') ||
+      !checkPass('transferLayeredOk') ||
       !checkPass('transferSettingsIsolatedOk') ||
       !checkPass('chatBubbleOk') ||
       !checkPass('chatComposerOk') ||

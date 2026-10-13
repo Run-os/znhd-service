@@ -22,6 +22,7 @@ import ChatComposer from '@/lib/ui/transfer/ChatComposer';
 import type { PickedEmoji } from '@/lib/ui/transfer/EmojiPackPanel';
 import { ChatHeader, ChatScroll } from '@/lib/ui/transfer/ChatPanel';
 import { DEVICE_COLORS, hashDeviceId, shortPhoneId } from '@/lib/ui/transfer/deviceColors';
+import { RADIUS } from '@/lib/ui/transfer/wechatTheme';
 import MarkdownBody from '@/lib/ui/MarkdownBody';
 import {
     PHONE_SESSION_KEY,
@@ -418,7 +419,7 @@ export default function TransferDeviceChat({
                             style={{
                                 width: 30,
                                 height: 30,
-                                borderRadius: 6,
+                                borderRadius: RADIUS.control,
                                 flex: '0 0 auto',
                                 display: 'inline-flex',
                                 alignItems: 'center',

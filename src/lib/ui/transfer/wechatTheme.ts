@@ -18,6 +18,25 @@
  *   于是发送按钮 / 选中态 / Switch 等所有 antd 主色控件跟着一起变绿 —— 与微信观感一致）。
  */
 
+/**
+ * 圆角体系（v26.10.13-v10，对齐用户 excalidraw 白板稿「文件传输助手」）：
+ *
+ *   window  窗口外框大圆角（= ConfigProvider 的 borderRadiusLG，见 TransferAssistantModal；
+ *           同步作用于配对 / 设置 / 企业信息等子弹窗，整族一致）；
+ *   panel   内容面板圆角 —— 第二栏 + 第三栏整体是一张**内嵌圆角卡片**，右/下缘与窗口
+ *           边缘留出 frame 色空隙，形成「窗口 → 卡片 → 三栏」的层级（白板稿的双层边框）；
+ *   card    内部大卡片（第三栏底部输入区：四边留白浮在聊天区上的圆角卡片）；
+ *   control 内部控件（搜索框 /「＋」/ 会话条目 / 各类头像位）。
+ *
+ * ⚠️ 改任一层都要回冒烟：`transferLayeredOk` 对 window/panel/card/control 都有下限断言。
+ */
+export const RADIUS = {
+    window: 14,
+    panel: 10,
+    card: 12,
+    control: 8,
+} as const;
+
 /** 微信暗色分层色板（全部 hex 常量，别用 antd token 拼这些底色 —— token 是「主题」，这里是「品牌」） */
 export const WECHAT = {
     /** 最外围：标题条与窗口边框（最淡） */

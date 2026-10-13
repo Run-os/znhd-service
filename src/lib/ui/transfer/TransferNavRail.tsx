@@ -1,6 +1,6 @@
 import { useState, type ReactElement } from 'react';
 import { Tooltip, theme } from 'antd';
-import { WECHAT } from '@/lib/ui/transfer/wechatTheme';
+import { RADIUS, WECHAT } from '@/lib/ui/transfer/wechatTheme';
 import { FilesIcon, InfoIcon, MessageIcon, SettingsIcon, TransferIcon, type IconProps } from '@/lib/ui/icons';
 
 export type TransferNav = 'devices' | 'files';
@@ -104,10 +104,14 @@ function NavIconButton({
 }
 
 /**
- * 第一栏（最左侧窄导航栏，v26.10.12-v4 微信桌面版样式）。
+ * 第一栏（最左侧窄导航栏，v26.10.12-v4 微信桌面版样式；v26.10.13-v10 圆角 + 层级）。
  *
  * 结构：顶部 logo（头像位）→ 中部图标入口（对话 / 文件，只放图标不显示文字）
  * → 底部设置 / 企业信息。未读总数在「对话」图标右上角挂红色角标（微信同款位置）。
+ *
+ * v26.10.13-v10：本栏**贴满窗口高度**（不随第二三栏的内嵌圆角卡片一起内缩），
+ * 外框左上 / 左下两个大圆角由窗口容器的 overflow:hidden 裁出来；logo 加大到
+ * 36px 方坯 + 10px 圆角（对齐用户 excalidraw 白板稿的头像位）。
  *
  * 原「外观设置」入口已随窗口固定微信暗色一起移除（见 wechatTheme.ts 头注）；
  * 原中间的 Agents 入口已随 Agent 能力删除（v26.10.13-v9）。
@@ -139,13 +143,13 @@ export default function TransferNavRail({
                 padding: '10px 0 8px',
                 background: WECHAT.rail,
             }}>
-            {/* 顶部：logo（微信这里是用户头像位） */}
+            {/* 顶部：logo（微信这里是用户头像位；v26.10.13-v10 加大到 36px 方坯 + 10 圆角） */}
             <span
                 title="传输助手"
                 style={{
-                    width: 32,
-                    height: 32,
-                    borderRadius: 8,
+                    width: 36,
+                    height: 36,
+                    borderRadius: RADIUS.control + 2,
                     background: token.colorPrimary,
                     color: '#fff',
                     display: 'inline-flex',
@@ -154,7 +158,7 @@ export default function TransferNavRail({
                     flex: '0 0 auto',
                     marginBottom: 14,
                 }}>
-                <TransferIcon size={18} color="#fff" />
+                <TransferIcon size={20} color="#fff" />
             </span>
 
             {/* 中部入口（对话在最上，其次文件） */}

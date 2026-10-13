@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name                征纳互动人数和在线监控v2
 // @namespace           https://scriptcat.org/
-// @version             26.10.13-v9
+// @version             26.10.13-v10
 // @description         实时监控征纳互动等待人数和在线状态，支持语音播报、自定义常用语
 // @author              runos
 // @license             MIT
@@ -75238,6 +75238,24 @@ function SniffModal({ open, onClose, minKB, onMinKBChange }) {
  *   他人气泡 #2F2F2F；我方气泡 #07C160（微信绿，同时作为窗口主色 token.colorPrimary，
  *   于是发送按钮 / 选中态 / Switch 等所有 antd 主色控件跟着一起变绿 —— 与微信观感一致）。
  */
+/**
+ * 圆角体系（v26.10.13-v10，对齐用户 excalidraw 白板稿「文件传输助手」）：
+ *
+ *   window  窗口外框大圆角（= ConfigProvider 的 borderRadiusLG，见 TransferAssistantModal；
+ *           同步作用于配对 / 设置 / 企业信息等子弹窗，整族一致）；
+ *   panel   内容面板圆角 —— 第二栏 + 第三栏整体是一张**内嵌圆角卡片**，右/下缘与窗口
+ *           边缘留出 frame 色空隙，形成「窗口 → 卡片 → 三栏」的层级（白板稿的双层边框）；
+ *   card    内部大卡片（第三栏底部输入区：四边留白浮在聊天区上的圆角卡片）；
+ *   control 内部控件（搜索框 /「＋」/ 会话条目 / 各类头像位）。
+ *
+ * ⚠️ 改任一层都要回冒烟：`transferLayeredOk` 对 window/panel/card/control 都有下限断言。
+ */
+const RADIUS = {
+    window: 14,
+    panel: 10,
+    card: 12,
+    control: 8,
+};
 /** 微信暗色分层色板（全部 hex 常量，别用 antd token 拼这些底色 —— token 是「主题」，这里是「品牌」） */
 const WECHAT = {
     /** 最外围：标题条与窗口边框（最淡） */
@@ -75337,10 +75355,14 @@ function NavIconButton({ label, icon, onClick, active, badge, }) {
                     }, children: count > 99 ? '99+' : count })) : null] }) }));
 }
 /**
- * 第一栏（最左侧窄导航栏，v26.10.12-v4 微信桌面版样式）。
+ * 第一栏（最左侧窄导航栏，v26.10.12-v4 微信桌面版样式；v26.10.13-v10 圆角 + 层级）。
  *
  * 结构：顶部 logo（头像位）→ 中部图标入口（对话 / 文件，只放图标不显示文字）
  * → 底部设置 / 企业信息。未读总数在「对话」图标右上角挂红色角标（微信同款位置）。
+ *
+ * v26.10.13-v10：本栏**贴满窗口高度**（不随第二三栏的内嵌圆角卡片一起内缩），
+ * 外框左上 / 左下两个大圆角由窗口容器的 overflow:hidden 裁出来；logo 加大到
+ * 36px 方坯 + 10px 圆角（对齐用户 excalidraw 白板稿的头像位）。
  *
  * 原「外观设置」入口已随窗口固定微信暗色一起移除（见 wechatTheme.ts 头注）；
  * 原中间的 Agents 入口已随 Agent 能力删除（v26.10.13-v9）。
@@ -75356,9 +75378,9 @@ function TransferNavRail({ nav, onNav, onOpenSettings, onOpenAbout, unreadTotal,
             padding: '10px 0 8px',
             background: WECHAT.rail,
         }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("span", { title: "\u4F20\u8F93\u52A9\u624B", style: {
-                    width: 32,
-                    height: 32,
-                    borderRadius: 8,
+                    width: 36,
+                    height: 36,
+                    borderRadius: RADIUS.control + 2,
                     background: token.colorPrimary,
                     color: '#fff',
                     display: 'inline-flex',
@@ -75366,7 +75388,7 @@ function TransferNavRail({ nav, onNav, onOpenSettings, onOpenAbout, unreadTotal,
                     justifyContent: 'center',
                     flex: '0 0 auto',
                     marginBottom: 14,
-                }, children: (0,react_jsx_runtime_production_namespaceFn().jsx)(TransferIcon, { size: 18, color: "#fff" }) }), (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { display: 'flex', flexDirection: 'column', gap: 6 }, children: NAV_ITEMS.map((item) => {
+                }, children: (0,react_jsx_runtime_production_namespaceFn().jsx)(TransferIcon, { size: 20, color: "#fff" }) }), (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { display: 'flex', flexDirection: 'column', gap: 6 }, children: NAV_ITEMS.map((item) => {
                     const Icon = item.icon;
                     return ((0,react_jsx_runtime_production_namespaceFn().jsx)(NavIconButton, { label: item.label, icon: (0,react_jsx_runtime_production_namespaceFn().jsx)(Icon, { size: 20, color: "currentColor" }), onClick: () => onNav(item.key), active: nav === item.key, badge: item.key === 'devices' ? unreadTotal : 0 }, item.key));
                 }) }), (0,react_jsx_runtime_production_namespaceFn().jsx)("span", { style: { flex: '1 1 auto' } }), (0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', flexDirection: 'column', gap: 6 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(NavIconButton, { label: "\u8BBE\u7F6E", icon: (0,react_jsx_runtime_production_namespaceFn().jsx)(SettingsIcon, { size: 19, color: "currentColor" }), onClick: onOpenSettings }), (0,react_jsx_runtime_production_namespaceFn().jsx)(NavIconButton, { label: "\u4F01\u4E1A\u4FE1\u606F", icon: (0,react_jsx_runtime_production_namespaceFn().jsx)(InfoIcon, { size: 19, color: "currentColor" }), onClick: onOpenAbout })] })] }));
@@ -75403,7 +75425,7 @@ function listTime(ts) {
     return pad(d.getMonth() + 1) + '-' + pad(d.getDate());
 }
 /**
- * 第二栏（中间会话列表栏，v26.10.12-v1；v26.10.12-v4 微信化）。
+ * 第二栏（中间会话列表栏，v26.10.12-v1；v26.10.12-v4 微信化；v26.10.13-v10 圆角化）。
  *
  * 结构：顶部**搜索框 +「＋」按钮**（仅对话分组有；文件分组没有 —— 用户要求
  * 文件下不放任何新建入口），下方按第一栏当前分组显示会话列表。
@@ -75411,6 +75433,9 @@ function listTime(ts) {
  *
  * 会话条目为微信结构：左头像 / 中名称 + 预览摘要 / 右时间 + 未读红点角标；
  * 选中条目用比栏底浅一档的底色高亮（#383838，微信暗色同款），不再用主色底。
+ *
+ * v26.10.13-v10（对齐用户 excalidraw 白板稿）：搜索框 /「＋」/ 会话条目 / 头像
+ * 统一 8px 圆角（`RADIUS.control`），「＋」改成与搜索框同款的圆角方块（同底同高）。
  *
  * 文件分组（v26.10.13-v5）：条目**可点 = 筛选第三栏的文件视图**（点哪个会话就只显示
  * 哪个会话的文件，不跳去聊天窗口 —— v26.10.12-v5「只作展示」的行为由此取代）；
@@ -75436,17 +75461,21 @@ function TransferSessionList({ nav, search, onSearch, onPair, deviceEntries, act
             minWidth: 0,
         }, children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', gap: 6, padding: '10px 10px 8px' }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(es_input, { allowClear: true, prefix: (0,react_jsx_runtime_production_namespaceFn().jsx)(SearchIcon, { size: 14, color: "rgba(255,255,255,0.35)" }), placeholder: "\u641C\u7D22", value: search, onChange: (e) => onSearch(e.target.value), style: {
                             background: WECHAT.chat,
-                            borderRadius: 6,
+                            borderRadius: RADIUS.control,
                         } }), isFiles ? null : ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_tooltip, { title: "\u914D\u5BF9\u8BBE\u5907\uFF08\u624B\u673A\u626B\u7801 / \u6253\u5F00\u94FE\u63A5\u5373\u5B8C\u6210\u914D\u5BF9\uFF09", children: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { type: "text", "aria-label": "\u914D\u5BF9\u8BBE\u5907", onClick: onPair, style: {
-                                width: 28,
+                                // v26.10.13-v10：与搜索框同款圆角方块（同底同高同圆角）
+                                width: 32,
+                                height: 32,
                                 padding: 0,
+                                background: WECHAT.chat,
+                                borderRadius: RADIUS.control,
                                 color: 'rgba(255,255,255,0.65)',
                             }, children: (0,react_jsx_runtime_production_namespaceFn().jsx)(PlusIcon, { size: 16 }) }) }))] }), (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { flex: '1 1 auto', minHeight: 0, overflowY: 'auto', padding: '0 6px 10px' }, children: filtered.length ? ((0,react_jsx_runtime_production_namespaceFn().jsxs)((react_jsx_runtime_production_namespaceFn().Fragment), { children: [filesMode ? ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { className: "znhd-transfer-session-item", "data-all-files": "1", title: "\u5168\u90E8\u6587\u4EF6", "aria-label": "\u5168\u90E8\u6587\u4EF6", onClick: () => onSelectFilesSession(''), style: {
                                 display: 'flex',
                                 alignItems: 'center',
                                 gap: 10,
                                 padding: '9px 10px',
-                                borderRadius: 6,
+                                borderRadius: RADIUS.control,
                                 cursor: 'pointer',
                                 background: filesActiveKey === '' ? WECHAT.selected : 'transparent',
                             }, onMouseEnter: (ev) => {
@@ -75458,7 +75487,7 @@ function TransferSessionList({ nav, search, onSearch, onPair, deviceEntries, act
                             }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("span", { style: {
                                         width: 36,
                                         height: 36,
-                                        borderRadius: 6,
+                                        borderRadius: RADIUS.control,
                                         flex: '0 0 auto',
                                         display: 'inline-flex',
                                         alignItems: 'center',
@@ -75493,7 +75522,7 @@ function TransferSessionList({ nav, search, onSearch, onPair, deviceEntries, act
                                     alignItems: 'center',
                                     gap: 10,
                                     padding: '9px 10px',
-                                    borderRadius: 6,
+                                    borderRadius: RADIUS.control,
                                     cursor: clickable ? 'pointer' : 'default',
                                     // 选中 = 比栏底浅一档（微信暗色同款）；悬停 = 中间档
                                     background: active ? WECHAT.selected : 'transparent',
@@ -75506,7 +75535,7 @@ function TransferSessionList({ nav, search, onSearch, onPair, deviceEntries, act
                                 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)("span", { style: {
                                             width: 36,
                                             height: 36,
-                                            borderRadius: 6,
+                                            borderRadius: RADIUS.control,
                                             flex: '0 0 auto',
                                             display: 'inline-flex',
                                             alignItems: 'center',
@@ -77138,7 +77167,7 @@ function ChatBubble({ side, avatar, children, meta, bare, danger, maxWidth = '72
                     justifyContent: 'center',
                     width: 32,
                     height: 32,
-                    borderRadius: 6,
+                    borderRadius: RADIUS.control,
                     background: isUser ? '#4A4A4A' : token.colorFillSecondary,
                     color: isUser ? '#fff' : token.colorTextSecondary,
                     fontSize: 13,
@@ -77641,7 +77670,8 @@ function EmojiPackPanel({ onPick }) {
 ;// ./src/lib/ui/transfer/ChatComposer.tsx
 
 /**
- * 聊天输入区（v26.10.12-v3；v26.10.12-v4 改**微信桌面版结构**）：传输助手第三栏的消息输入面板。
+ * 聊天输入区（v26.10.12-v3；v26.10.12-v4 改**微信桌面版结构**；v26.10.13-v10 改**圆角浮起卡片**）：
+ * 传输助手第三栏的消息输入面板。
  *
  * ── 微信原版结构（对齐截图）─────────────────────────────────────────────────
  *   ┌────────────────────────────────────────┐
@@ -77649,16 +77679,21 @@ function EmojiPackPanel({ onPick }) {
  *   │ 多行文本输入框（自动增高，超限框内滚动）      │
  *   │                        [发送] ← 右下角 │
  *   └────────────────────────────────────────┘
- * 整个面板是一块 #262626 的实心底（比聊天区略浅，靠上边框分开），**不再有 v3 那个
- * 带边框圆角的内层盒子** —— 微信的输入区就是一整块面板。
+ * 整个面板是一块 #262626 的实心底（比聊天区略浅，靠边框与聊天区分开），
+ * **v26.10.13-v10 起四边留白**（左右下各 12px）浮在聊天区上，外框 12px 圆角 +
+ * 一圈 1px 浅色细边 —— 对齐用户 excalidraw 白板稿底部那枚圆角输入卡片；
+ * 此前 v3/v4 是「通栏面板 + 顶部分隔线」的贴边形态，已按白板稿取代。
  *
- * ⚠️ 两条实测结论仍然成立，别动：
+ * ⚠️ 三条实测结论仍然成立，别动：
  * · **textarea 自己禁 outline / boxShadow**（v26.10.10-v13）：antd `variant="borderless"`
  *   会在 `:focus-visible` 时给文本域自己画 outline（「框里套框」）。聚焦反馈交给光标，
  *   不再画外圈（微信输入区也没有聚焦光圈）。
  * · **必须同时钉住 `minRows` 与 `lineHeight: '20px'`**（v26.10.10-v15）：rc-textarea
  *   挂载时按 minRows 算高、输入后按「行数 × 行高 + padding」重算，行高不一致会出现
  *   「打一个字再删空，输入框永久变高」。
+ * · **四周边框不能去掉**（v26.10.13-v10）：冒烟 `chatComposerOk` 的 `panelBordered`
+ *   判据是 `borderTopWidth > 0` —— 通栏时代的「顶部分隔线」由这圈全边框继承，
+ *   改成只有圆角没有边框会直接假红。
  *
  * v26.10.13-v3：表情面板由「BMP 字符符号」换成**在线图片表情包**（`EmojiPackPanel`，
  * 数据层见 `@/lib/transfer/emojiPack`）。点一张表情不再往输入框插字符，而是把图片交回
@@ -77726,9 +77761,15 @@ function ChatComposer({ value, onChange, onSend, disabled, placeholder, canSend,
             flex: '0 0 auto',
             display: 'flex',
             flexDirection: 'column',
-            padding: '6px 12px 8px',
+            // v26.10.13-v10：四边留白的圆角浮起卡片（对齐白板稿底部输入卡片）——
+            // 左右下各 12px 空隙露出聊天区底色 #1E1E1E，与消息区左右 12px 内边距对齐
+            margin: '0 12px 12px',
+            padding: '8px 12px 10px',
             background: WECHAT.input,
-            borderTop: '1px solid rgba(0,0,0,0.4)',
+            borderRadius: RADIUS.card,
+            // 全边框（不只是顶线）：浮起卡片靠这圈细边与聊天区分界；
+            // ⚠️ borderTopWidth 是冒烟 panelBordered 的判据，不能删
+            border: '1px solid rgba(255, 255, 255, 0.07)',
         }, children: [notice, (0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', alignItems: 'center', gap: 2, marginBottom: 2 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(es_popover, { trigger: "click", placement: "topLeft", open: emojiOpen, onOpenChange: setEmojiOpen, 
                         // 面板内容只在首次打开时挂载（Popover 不渲染关闭态的内容）：表情包清单与图片
                         // 都是打开面板才去拉，不开面板不产生任何网络请求
@@ -105620,6 +105661,7 @@ function stopTransfer() {
 
 
 
+
 // 预览相关的通用件全部来自共享层（与手机上传页同一份，v26.10.08-v13 起）
 
 
@@ -105913,7 +105955,7 @@ function TransferDeviceChat({ session, phone, colorIndex, onClear, }) {
     return ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', flexDirection: 'column', minHeight: 0, flex: '1 1 auto' }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(ChatHeader, { left: (0,react_jsx_runtime_production_namespaceFn().jsxs)((react_jsx_runtime_production_namespaceFn().Fragment), { children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("span", { style: {
                                 width: 30,
                                 height: 30,
-                                borderRadius: 6,
+                                borderRadius: RADIUS.control,
                                 flex: '0 0 auto',
                                 display: 'inline-flex',
                                 alignItems: 'center',
@@ -106503,9 +106545,13 @@ function TransferAboutModal({ open, onClose }) {
 /**
  * 传输助手主窗口（v26.10.12-v1）：原「设备互联」重构后的三栏窗口。
  *
- * ── 布局（v26.10.12-v4 起**对齐微信桌面版**）────────────────────────────────
+ * ── 布局（v26.10.12-v4 起**对齐微信桌面版**；v26.10.13-v10 起按用户 excalidraw
+ *    白板稿做「圆角 + 层级」）──────────────────────────────────────────────
  *   标题条（与第一栏同色 #2E2E2E，v26.10.12-v5 起）：右侧自绘关闭按钮（悬浮变红，微信同款）
- *   第一栏（窄图标栏 #2E2E2E）：logo → 对话 / 文件 → 设置 / 企业信息
+ *   第一栏（窄图标栏 #2E2E2E）：logo → 对话 / 文件 → 设置 / 企业信息（**贴满窗口高度**）
+ *   内容面板（v26.10.13-v10）：第二栏 + 第三栏整体是一张**内嵌圆角卡片**——
+ *     右缘 / 下缘与窗口边缘留出 frame 色（#383838）空隙，窗口外框大圆角，
+ *     于是视觉上是「窗口 → 圆角卡片 → 三栏」三层，而不是三栏直接贴窗口边；
  *   第二栏（会话列表 #252525）：搜索框 +「＋」→ 会话列表
  *   第三栏（聊天主区 #1E1E1E，最深）：当前会话的聊天区，未选中显示空状态
  *
@@ -106521,8 +106567,10 @@ function TransferAboutModal({ open, onClose }) {
  * ⚠️ v26.10.13-v9：原第一栏的 **Agents 入口与 Agent 对话第三栏已整体删除**
  * （含 `useAgentChat` / `TransferAgentView` / 技能·定时任务面板）。
  */
-/** 标题条高度（含自绘关闭按钮；微信桌面版约 32px） */
-const TITLE_BAR_HEIGHT = 36;
+/** 标题条高度（含自绘关闭按钮；v26.10.13-v10 38 → 40，配合外层大圆角更稳） */
+const TITLE_BAR_HEIGHT = 40;
+/** 内容面板的外缩进（v26.10.13-v10）：右 / 下缘露出 frame 色形成层级；左缘紧贴第一栏 */
+const PANEL_INSET = { right: 10, bottom: 8 };
 function TransferAssistantModal({ open, onClose }) {
     const s = useTransferStore();
     // ── 窗口自身的 UI 状态（与 store 的持久状态分开）──────────────────────
@@ -106672,7 +106720,9 @@ function TransferAssistantModal({ open, onClose }) {
                 colorPrimary: WECHAT.primary,
                 colorLink: WECHAT.primary,
                 borderRadius: 8,
-                borderRadiusLG: 10,
+                // v26.10.13-v10：窗口外框大圆角（antd Modal 容器用的是 borderRadiusLG），
+                // 配对 / 设置 / 企业信息等子弹窗同族一致；内容面板圆角另见 RADIUS.panel
+                borderRadiusLG: RADIUS.window,
                 borderRadiusSM: 6,
             },
         }, getPopupContainer: getOverlayContainer, children: (0,react_jsx_runtime_production_namespaceFn().jsxs)(modal, { open: open, 
@@ -106712,13 +106762,24 @@ function TransferAssistantModal({ open, onClose }) {
                                 color: closeHover ? '#fff' : 'rgba(255,255,255,0.65)',
                                 // ⚠️ 不加 transition：冒烟会在派发 mouseover 的同一帧量底色，
                                 // 有过渡就会量到半路的透明 → 假红（微信的关闭变红本身也是瞬时的）
-                            }, children: (0,react_jsx_runtime_production_namespaceFn().jsx)(CloseIcon, { size: 15, color: "currentColor" }) })] }), (0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { flex: '1 1 auto', minHeight: 0, display: 'flex', flexDirection: 'row' }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(TransferNavRail, { nav: nav, onNav: onNav, onOpenSettings: () => setSettingsOpen(true), onOpenAbout: () => setAboutOpen(true), unreadTotal: unreadTotal }), (0,react_jsx_runtime_production_namespaceFn().jsx)(TransferSessionList, { nav: nav, search: search, onSearch: setSearch, onPair: () => setPairOpen(true), deviceEntries: deviceEntries, activeSessionKey: s.activeSessionKey, onSelectSession: onSelectSession, filesActiveKey: filesFilterKey, onSelectFilesSession: setFilesFilterKey }), (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { className: "znhd-transfer-main", style: {
+                            }, children: (0,react_jsx_runtime_production_namespaceFn().jsx)(CloseIcon, { size: 15, color: "currentColor" }) })] }), (0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { flex: '1 1 auto', minHeight: 0, display: 'flex', flexDirection: 'row' }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(TransferNavRail, { nav: nav, onNav: onNav, onOpenSettings: () => setSettingsOpen(true), onOpenAbout: () => setAboutOpen(true), unreadTotal: unreadTotal }), (0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { className: "znhd-transfer-content", style: {
                                 flex: '1 1 auto',
                                 minWidth: 0,
+                                minHeight: 0,
+                                margin: `0 ${PANEL_INSET.right}px ${PANEL_INSET.bottom}px 0`,
+                                borderRadius: RADIUS.panel,
+                                border: '1px solid rgba(255, 255, 255, 0.06)',
+                                overflow: 'hidden',
                                 display: 'flex',
-                                flexDirection: 'column',
-                                background: WECHAT.chat,
-                            }, children: main })] }), (0,react_jsx_runtime_production_namespaceFn().jsx)(TransferPairModal, { open: pairOpen, onClose: () => setPairOpen(false), relayServer: s.settings.relayServer, phones: s.phones }), (0,react_jsx_runtime_production_namespaceFn().jsx)(TransferSettingsModal, { open: settingsOpen, onClose: () => setSettingsOpen(false) }), (0,react_jsx_runtime_production_namespaceFn().jsx)(TransferAboutModal, { open: aboutOpen, onClose: () => setAboutOpen(false) })] }) }));
+                                flexDirection: 'row',
+                                background: WECHAT.list,
+                            }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(TransferSessionList, { nav: nav, search: search, onSearch: setSearch, onPair: () => setPairOpen(true), deviceEntries: deviceEntries, activeSessionKey: s.activeSessionKey, onSelectSession: onSelectSession, filesActiveKey: filesFilterKey, onSelectFilesSession: setFilesFilterKey }), (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { className: "znhd-transfer-main", style: {
+                                        flex: '1 1 auto',
+                                        minWidth: 0,
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        background: WECHAT.chat,
+                                    }, children: main })] })] }), (0,react_jsx_runtime_production_namespaceFn().jsx)(TransferPairModal, { open: pairOpen, onClose: () => setPairOpen(false), relayServer: s.settings.relayServer, phones: s.phones }), (0,react_jsx_runtime_production_namespaceFn().jsx)(TransferSettingsModal, { open: settingsOpen, onClose: () => setSettingsOpen(false) }), (0,react_jsx_runtime_production_namespaceFn().jsx)(TransferAboutModal, { open: aboutOpen, onClose: () => setAboutOpen(false) })] }) }));
 }
 
 ;// ./src/lib/ui/MainPanel.tsx
@@ -107298,6 +107359,9 @@ const RESET_CSS = `
    .ant-modal-container，不是 v5 的 .ant-modal-content），且 Modal 的 styles 配置项
    没有 content 键 —— 只能用 CSS 归零，否则三栏四周会留一圈底色不同的空隙、自绘关闭
    按钮也贴不到窗口右上角。
+   v26.10.13-v10：窗口外框的**大圆角不在这里设** —— 它来自传输助手嵌套 ConfigProvider
+   的 borderRadiusLG（见 wechatTheme.ts 的 RADIUS.window，配对/设置等子弹窗同族一致）；
+   本规则只管 padding:0 + overflow:hidden（圆角靠 overflow 裁内部直角边）。
    ⚠️ 本段是模板字符串的一部分：注释里不能出现反引号。 */
 .znhd-transfer-modal.ant-modal .ant-modal-container {
   padding: 0;

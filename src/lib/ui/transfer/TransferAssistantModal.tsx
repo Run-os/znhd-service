@@ -11,7 +11,7 @@ import TransferPairModal from '@/lib/ui/transfer/TransferPairModal';
 import TransferSettingsModal from '@/lib/ui/transfer/TransferSettingsModal';
 import TransferAboutModal from '@/lib/ui/transfer/TransferAboutModal';
 import { resolveDeviceColors, shortPhoneId } from '@/lib/ui/transfer/deviceColors';
-import { WECHAT } from '@/lib/ui/transfer/wechatTheme';
+import { RADIUS, WECHAT } from '@/lib/ui/transfer/wechatTheme';
 import {
     PHONE_SESSION_KEY,
     PHONE_SESSION_LABEL,
@@ -27,9 +27,13 @@ import type { DeviceSession, TransferMessage } from '@/lib/transfer/types';
 /**
  * 传输助手主窗口（v26.10.12-v1）：原「设备互联」重构后的三栏窗口。
  *
- * ── 布局（v26.10.12-v4 起**对齐微信桌面版**）────────────────────────────────
+ * ── 布局（v26.10.12-v4 起**对齐微信桌面版**；v26.10.13-v10 起按用户 excalidraw
+ *    白板稿做「圆角 + 层级」）──────────────────────────────────────────────
  *   标题条（与第一栏同色 #2E2E2E，v26.10.12-v5 起）：右侧自绘关闭按钮（悬浮变红，微信同款）
- *   第一栏（窄图标栏 #2E2E2E）：logo → 对话 / 文件 → 设置 / 企业信息
+ *   第一栏（窄图标栏 #2E2E2E）：logo → 对话 / 文件 → 设置 / 企业信息（**贴满窗口高度**）
+ *   内容面板（v26.10.13-v10）：第二栏 + 第三栏整体是一张**内嵌圆角卡片**——
+ *     右缘 / 下缘与窗口边缘留出 frame 色（#383838）空隙，窗口外框大圆角，
+ *     于是视觉上是「窗口 → 圆角卡片 → 三栏」三层，而不是三栏直接贴窗口边；
  *   第二栏（会话列表 #252525）：搜索框 +「＋」→ 会话列表
  *   第三栏（聊天主区 #1E1E1E，最深）：当前会话的聊天区，未选中显示空状态
  *
@@ -46,8 +50,11 @@ import type { DeviceSession, TransferMessage } from '@/lib/transfer/types';
  * （含 `useAgentChat` / `TransferAgentView` / 技能·定时任务面板）。
  */
 
-/** 标题条高度（含自绘关闭按钮；微信桌面版约 32px） */
-const TITLE_BAR_HEIGHT = 36;
+/** 标题条高度（含自绘关闭按钮；v26.10.13-v10 38 → 40，配合外层大圆角更稳） */
+const TITLE_BAR_HEIGHT = 40;
+
+/** 内容面板的外缩进（v26.10.13-v10）：右 / 下缘露出 frame 色形成层级；左缘紧贴第一栏 */
+const PANEL_INSET = { right: 10, bottom: 8 } as const;
 
 export default function TransferAssistantModal({ open, onClose }: { open: boolean; onClose: () => void }) {
     const s = useTransferStore();
@@ -238,7 +245,9 @@ export default function TransferAssistantModal({ open, onClose }: { open: boolea
                     colorPrimary: WECHAT.primary,
                     colorLink: WECHAT.primary,
                     borderRadius: 8,
-                    borderRadiusLG: 10,
+                    // v26.10.13-v10：窗口外框大圆角（antd Modal 容器用的是 borderRadiusLG），
+                    // 配对 / 设置 / 企业信息等子弹窗同族一致；内容面板圆角另见 RADIUS.panel
+                    borderRadiusLG: RADIUS.window,
                     borderRadiusSM: 6,
                 },
             }}
@@ -309,7 +318,7 @@ export default function TransferAssistantModal({ open, onClose }: { open: boolea
 
                 {/* 三栏内容 */}
                 <div style={{ flex: '1 1 auto', minHeight: 0, display: 'flex', flexDirection: 'row' }}>
-                    {/* 第一栏：微信式窄图标导航 */}
+                    {/* 第一栏：微信式窄图标导航（贴满窗口高度，不随内容卡片内缩） */}
                     <TransferNavRail
                         nav={nav}
                         onNav={onNav}
@@ -318,30 +327,49 @@ export default function TransferAssistantModal({ open, onClose }: { open: boolea
                         unreadTotal={unreadTotal}
                     />
 
-                    {/* 第二栏：搜索 +「＋」+ 会话列表 */}
-                    <TransferSessionList
-                        nav={nav}
-                        search={search}
-                        onSearch={setSearch}
-                        onPair={() => setPairOpen(true)}
-                        deviceEntries={deviceEntries}
-                        activeSessionKey={s.activeSessionKey}
-                        onSelectSession={onSelectSession}
-                        filesActiveKey={filesFilterKey}
-                        onSelectFilesSession={setFilesFilterKey}
-                    />
-
-                    {/* 第三栏：聊天主区（三栏里最深的一层） */}
+                    {/* 内容面板（v26.10.13-v10）：第二栏 + 第三栏整体的内嵌圆角卡片。
+                        右 / 下缘留出 PANEL_INSET 的空隙露出 frame 底色（#383838），
+                        与外框大圆角一起构成「窗口 → 卡片 → 三栏」的层级；
+                        overflow:hidden 让卡片圆角裁掉内部两栏的直角边。 */}
                     <div
-                        className="znhd-transfer-main"
+                        className="znhd-transfer-content"
                         style={{
                             flex: '1 1 auto',
                             minWidth: 0,
+                            minHeight: 0,
+                            margin: `0 ${PANEL_INSET.right}px ${PANEL_INSET.bottom}px 0`,
+                            borderRadius: RADIUS.panel,
+                            border: '1px solid rgba(255, 255, 255, 0.06)',
+                            overflow: 'hidden',
                             display: 'flex',
-                            flexDirection: 'column',
-                            background: WECHAT.chat,
+                            flexDirection: 'row',
+                            background: WECHAT.list,
                         }}>
-                        {main}
+                        {/* 第二栏：搜索 +「＋」+ 会话列表 */}
+                        <TransferSessionList
+                            nav={nav}
+                            search={search}
+                            onSearch={setSearch}
+                            onPair={() => setPairOpen(true)}
+                            deviceEntries={deviceEntries}
+                            activeSessionKey={s.activeSessionKey}
+                            onSelectSession={onSelectSession}
+                            filesActiveKey={filesFilterKey}
+                            onSelectFilesSession={setFilesFilterKey}
+                        />
+
+                        {/* 第三栏：聊天主区（三栏里最深的一层） */}
+                        <div
+                            className="znhd-transfer-main"
+                            style={{
+                                flex: '1 1 auto',
+                                minWidth: 0,
+                                display: 'flex',
+                                flexDirection: 'column',
+                                background: WECHAT.chat,
+                            }}>
+                            {main}
+                        </div>
                     </div>
                 </div>
 
