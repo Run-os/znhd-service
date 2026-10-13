@@ -385,6 +385,15 @@
           reply(details, '', { status: 404, statusText: 'Not Found' });
           return { abort: () => {} };
         }
+        // ⑩⑪ 会话分组夹具（v26.10.13-v8）：两张图属于两个会话，HEAD 给不同体积（50 / 60 KB）
+        if (url.indexOf('/im-cos/11/sniff-conv-a.png') >= 0) {
+          reply(details, '', { responseHeaders: 'content-type: image/png\ncontent-length: 51200' });
+          return { abort: () => {} };
+        }
+        if (url.indexOf('/im-cos/11/sniff-conv-b.png') >= 0) {
+          reply(details, '', { responseHeaders: 'content-type: image/png\ncontent-length: 61440' });
+          return { abort: () => {} };
+        }
         // 其它一律失败，观察脚本是否优雅降级
         setTimeout(() => {
           if (details && typeof details.onerror === 'function') {
@@ -438,6 +447,21 @@
       <img id="sniff-excluded-name" src="https://sniff-smoke.test/media/user-man.png" alt="" />
       <!-- ⑨ 后缀命中排除规则（.svg，v26.10.10-v7）：同样在收集阶段就丢掉，连 HEAD 都不会发 -->
       <img id="sniff-svg-http" src="https://sniff-smoke.test/media/icon.svg" alt="" />
+      <!-- ⑩⑪ 会话分组夹具（v26.10.13-v8）：URL 末段与下面的 Vuex 桩里的 fileName 同名
+           ⇒ 分别归属到「刘永增」（当前会话）与「湖南博大园林建筑有限公司」（历史会话）。
+           域名仍是 *.test（从不出网），体积由 GM 桩按 URL 作答（50 / 60 KB）。 -->
+      <img id="sniff-conv-a" src="https://sniff-smoke.test/im-cos/11/sniff-conv-a.png" alt="" />
+      <img id="sniff-conv-b" src="https://sniff-smoke.test/im-cos/11/sniff-conv-b.png" alt="" />
+    </div>
+
+    <!-- ===== 会话宿主的 DOM 侧（v26.10.13-v8）=====
+         脚本读当前会话时，Vuex 为主、DOM 兜底（`.group-item.selected .company-name`）。
+         ⚠️ 必须放在 body 末尾：脚本的人数监控按 `.count:nth-child(2)` 取节点，
+            在上面插元素会打乱 body 的子节点序号。hidden 不影响 querySelector / textContent。 -->
+    <div id="app" hidden>
+      <div class="group-item selected">
+        <div class="description-left"><span class="company-name">刘永增</span></div>
+      </div>
     </div>
 
     <pre id="smoke-result" style="margin-top: 40px">running…</pre>
@@ -836,6 +860,94 @@
           n++;
         });
         return n;
+      };
+
+      /* ===== 会话分组夹具（v26.10.13-v8）=====
+         模拟征纳互动工作台的 Vue2 + Vuex：**当前会话**的图走 `state.chat.messageList`，
+         **历史会话**的图走 `state.allChat.historyMsg`（嵌套结构、脚本端用宽容遍历认）。
+         脚本是经 unsafeWindow.document 读 `#app.__vue__` 的；本 harness 把 window.unsafeWindow
+         指向了同一个 window，所以这里直接往 `#app` 上挂 __vue__ 就等于挂在页面主世界。 */
+      window.__sniffConvMsg = (fileName, sender, time) => ({
+        type: 'TIMImageElem',
+        sendUserName: sender,
+        time: time,
+        payload: {
+          fileName: fileName,
+          uuid: 'uuid-' + fileName,
+          imageInfoArray: [
+            { type: 1, imageUrl: 'https://sniff-smoke.test/im-cos/11/' + fileName + '?sign=orig' },
+            { type: 3, imageUrl: 'https://sniff-smoke.test/im-cos/11/' + fileName + '?sign=thumb' },
+          ],
+        },
+      });
+
+      /**
+       * mode = 'two'      ：当前会话「刘永增」+ 历史会话「湖南博大园林建筑有限公司」，各一张图；
+       *        'switched' ：当前会话换成「湖南博大」，且两条消息**都不给** ——
+       *                     此时还能把两张图各自归回原会话，只能靠脚本的持久层（会话归属索引）。
+       */
+      window.__installSniffChat = (mode) => {
+        const app = document.getElementById('app');
+        if (!app) return false;
+        const two = mode === 'two';
+        app.__vue__ = {
+          $store: {
+            state: {
+              chat: {
+                selectItem: {
+                  conversationInfo: two
+                    ? { conversationID: 'GROUP_CUR_A', groupProfile: { name: '刘永增' } }
+                    : { conversationID: 'GROUP_HIST_B', groupProfile: { name: '湖南博大园林建筑有限公司' } },
+                },
+                messageList: two ? [window.__sniffConvMsg('sniff-conv-a.png', '刘永增', 1700000001000)] : [],
+              },
+              allChat: {
+                historyMsg: two
+                  ? {
+                      GROUP_HIST_B: {
+                        conversationInfo: {
+                          conversationID: 'GROUP_HIST_B',
+                          groupProfile: { name: '湖南博大园林建筑有限公司' },
+                        },
+                        messageList: [
+                          window.__sniffConvMsg('sniff-conv-b.png', '湖南博大园林建筑有限公司', 1700000000000),
+                        ],
+                      },
+                    }
+                  : {},
+              },
+            },
+          },
+        };
+        return true;
+      };
+
+      /**
+       * 读面板上的分组事实。分组容器带 `data-sniff-group` / `-name` / `-current` 钩子（组件里写的）：
+       *  · names        —— 各组的会话名（未归属分组的 name 是空串）
+       *  · headers      —— 组头文案（`会话名（N 张）`）
+       *  · currentIndex —— 「当前会话」标签落在第几组（-1 = 没有）
+       *  · cards        —— 每组渲染出的卡片数
+       *  · titles       —— 每组卡片上的 title 合集（文件名 + 来源提示都在这）
+       */
+      window.__sniffGroupFacts = () => {
+        const m = window.__findSniffModal();
+        if (!m) return null;
+        const sections = Array.from(m.querySelectorAll('[data-sniff-group]'));
+        return {
+          count: sections.length,
+          names: sections.map((s) => s.getAttribute('data-sniff-group-name') || ''),
+          headers: sections.map((s) =>
+            ((s.querySelector('[data-sniff-group-header]') || {}).textContent || '').trim()
+          ),
+          currentIndex: sections.findIndex((s) => s.getAttribute('data-sniff-group-current') === '1'),
+          cards: sections.map((s) => s.querySelectorAll('.ant-image').length),
+          titles: sections.map((s) =>
+            Array.from(s.querySelectorAll('[title]'))
+              .map((el) => el.getAttribute('title') || '')
+              .join(' | ')
+          ),
+        };
       };
 
       /**
@@ -2134,14 +2246,30 @@
         }, 450);
       }, 18500);
 
-      /* ===== ⑨ 图片嗅探（v26.10.10-v4）=====
-         点面板入口 → 弹窗自动扫描页面（夹具见 #sniff-fixtures）。
-         扫描是异步的（每张 HEAD/Range 各 40ms 桩延迟），故用轮询等「卡片出来且已量到大小」再快照；
-         快照必须在报告采集**之前**完成，故最多再等 6s。
-         ⚠️ v26.10.12-v1：这条与 Agent 流程**串行**（Agent 收尾后才kick），
+      /* ===== ⑨ 图片嗅探（v26.10.10-v4；会话分组 v26.10.13-v8）=====
+         点面板入口 → 弹窗自动扫描页面（夹具见 #sniff-fixtures 与 body 末尾的 #app）。
+         扫描是异步的（每张 HEAD/Range 各 40ms 桩延迟），故用轮询等「卡片出来且已量到大小」再快照。
+         阶段（都在报告采集之前跑完）：
+           0) 等扫描/测量完成 → 点「全选」，取「下载所选（N）」的范围；
+           1) 固化这一轮的事实（含分组事实），然后**切走会话并重扫**；
+           2) 等重扫完成，读切换后的分组事实 —— 此时 Vuex 里两条消息都没了，
+              还能各自归回原会话只能靠脚本的持久层（会话归属索引）；
+           3) 量卡片右下角的悬浮按钮（下载/打印）几何。
+         ⚠️ v26.10.12-v1：这条与 Agent 流程**串行**（Agent 收尾后才 kick），
             避免两个弹窗的轮询互相抢时序（旧夹具里两者是并发的，重构后窗口结构变了，收敛成串行更稳）。 */
       const kickSniff = () => {
+        // 会话分组夹具必须在**扫描之前**就位：脚本是在「打开弹窗 → 扫描」时读页面 Vuex 的
+        window.__sniffChatInstalled = window.__installSniffChat('two');
+        window.__sniffSnap = {};
         window.__clickedSniff = clickByText('图片嗅探');
+        /** 点标题条上的「重新扫描」（扫描中时按钮文案是「扫描中…」，故两个文案都认） */
+        const clickRescan = (m) => {
+          const btn = Array.from(m.querySelectorAll('.ant-modal-title button')).find((b) =>
+            /重新扫描|扫描中/.test(b.textContent || '')
+          );
+          if (btn) btn.click();
+          return !!btn;
+        };
         const poll = (tries, stage) => {
           const m = Array.from(document.querySelectorAll('.ant-modal')).find((el) =>
             ((el.querySelector('.ant-modal-title') || {}).textContent || '').includes('图片嗅探')
@@ -2156,7 +2284,12 @@
             : '';
           const hay = t + ' || ' + titles;
           const cards = m ? m.querySelectorAll('.ant-image').length : 0;
-          const unknown = /大小未知（(\d+)）/.exec(t);
+          // v26.10.13-v8：分组后「大小未知」是**每个分组各一个**折叠档，必须把所有匹配求和 ——
+          // 仍取第一个的话总数会算少，下面 selectAllCount 的等式断言必假红（本次踩到）。
+          const unknownCount = Array.from(t.matchAll(/大小未知（(\d+)）/g)).reduce(
+            (sum, x) => sum + Number(x[1]),
+            0
+          );
           const excludedNotice = /已按文件名排除\s*(\d+)\s*张/.exec(t);
           // 全选后的按钮文案「下载所选（N）」= 全选范围（v26.10.10-v6 起必须等于「卡片 + 大小未知」）
           const dlBtn = m
@@ -2166,19 +2299,21 @@
             : null;
           const dlText = dlBtn ? dlBtn.textContent || '' : '';
           const dlCount = /下载所选（(\d+)）/.exec(dlText);
-          const btns = document.querySelectorAll('#__znhd_panel_host__ .znhd-panel-btn');
           const snap = {
             entrySeen: !!window.__clickedSniff,
-            panelBtns: btns.length,
+            panelBtns: document.querySelectorAll('#__znhd_panel_host__ .znhd-panel-btn').length,
             panelHasSniffLabel: collectText().indexOf('图片嗅探') >= 0,
             modalSeen: !!m,
+            chatInstalled: !!window.__sniffChatInstalled,
             cards: cards,
             sourcesCss: hay.indexOf('CSS 背景') >= 0,
             sourcesSvg: hay.indexOf('内联 SVG') >= 0,
-            titlesSample: titles.slice(0, 300),
+            titlesSample: titles.slice(0, 400),
             headSize: t.indexOf('30 KB') >= 0,
             rangeSize: t.indexOf('40 KB') >= 0,
-            unknownCount: unknown ? Number(unknown[1]) : -1,
+            convASize: t.indexOf('50 KB') >= 0,
+            convBSize: t.indexOf('60 KB') >= 0,
+            unknownCount: unknownCount,
             // v26.10.10-v6：界面不再出现「另有 N 张小于阈值」这类计数
             belowNoticeShown: t.indexOf('小于阈值') >= 0,
             // 10 KB 的 ⑦ 被阈值过滤 ⇒ 它不该出现在任何卡片标题里
@@ -2193,35 +2328,66 @@
             svgUrlInTitles: titles.indexOf('icon.svg') >= 0,
             svgInTitles: /\.svg/i.test(titles),
           };
-          // v26.10.10-v7 起 SVG 全被后缀规则排除，达标卡片只剩「CSS 背景 ×2」
-          const done = snap.modalSeen && cards >= 2 && snap.headSize && snap.rangeSize;
-          // 第一阶段：等扫描/测量完成；第二阶段：点「全选」后重取快照，看「下载所选（N）」的范围
-          if (done && stage === 0 && m) {
+          // 达标卡片 = CSS 背景 ×2（30/40 KB）+ 会话图 ×2（50/60 KB）；SVG 与 < 阈值的都已被排除
+          const done =
+            snap.modalSeen && cards >= 4 && snap.headSize && snap.rangeSize && snap.convASize && snap.convBSize;
+
+          if (stage === 0) {
+            if (!done || !m) {
+              if (tries <= 0) {
+                window.__sniffSnap = snap;
+                return;
+              }
+              setTimeout(() => poll(tries - 1, 0), 200);
+              return;
+            }
             const box = Array.from(m.querySelectorAll('.ant-checkbox-wrapper')).find(
               (el) => (el.textContent || '').indexOf('全选') >= 0
             );
             const input = box ? box.querySelector('input') : null;
             if (input) input.click();
             window.__sniffSelectAllClicked = !!input;
-            setTimeout(() => poll(Math.max(tries - 1, 1), 1), 250);
+            setTimeout(() => poll(30, 1), 250);
             return;
           }
-          if ((done && stage === 1) || tries <= 0) {
-            // v26.10.10-v16：卡片右下角的悬浮按钮（下载/打印）——静态事实 + 派发 hover。
-            // 先让卡片图真的渲染出方盒子（原因见 __renderSniffCardImages 注释），等图片 load 完再测。
-            snap.renderedCards = window.__renderSniffCardImages(m);
-            window.__sniffSnap = snap;
+
+          if (stage === 1) {
+            // 把这一轮的事实**固化**：重扫会重置选择集，之后再读 footer 就不是这批数了
+            const S = window.__sniffSnap;
+            Object.assign(S, snap);
+            S.groups = window.__sniffGroupFacts();
+            S.renderedCards = window.__renderSniffCardImages(m);
+            // 切走会话（Vuex 里两条消息都不再提供）后重扫
+            window.__sniffSwitched = window.__installSniffChat('switched');
+            S.rescanClicked = clickRescan(m);
+            setTimeout(() => poll(30, 2), 300);
+            return;
+          }
+
+          const g = window.__sniffGroupFacts();
+          const groupCards = g ? g.cards.reduce((a, b) => a + b, 0) : 0;
+          // 重扫完成的判据：卡片数回到 4，且首组变成切换后的会话（组顺序跟着「当前会话」走）
+          if (stage === 2 && tries > 0 && !(g && groupCards >= 4 && g.names[0] === '湖南博大园林建筑有限公司')) {
+            setTimeout(() => poll(tries - 1, 2), 200);
+            return;
+          }
+          const S = window.__sniffSnap;
+          S.groupsAfterSwitch = g;
+          S.groupCardsAfterSwitch = groupCards;
+          S.switchedSeen = !!window.__sniffSwitched;
+          // v26.10.10-v16：卡片右下角的悬浮按钮（下载/打印）——静态事实 + 派发 hover。
+          // 先让卡片图真的渲染出方盒子（原因见 __renderSniffCardImages 注释），等图片 load 完再测。
+          const m2 = window.__findSniffModal() || m;
+          setTimeout(() => {
+            S.cardsAfterSwitch = window.__renderSniffCardImages(m2);
             setTimeout(() => {
-              const m2 = window.__findSniffModal() || m;
-              snap.imgActions = imgActionsFacts(m2, ['下载', '打印']);
+              S.imgActions = imgActionsFacts(m2, ['下载', '打印']);
               // hover 后的可见性要等 React 重渲染完（异步），补读后写回同一个对象
               setTimeout(() => {
-                snap.imgActionsHovered = imgActionsVisible(m2, ['下载', '打印']);
+                S.imgActionsHovered = imgActionsVisible(m2, ['下载', '打印']);
               }, 150);
             }, 300);
-            return;
-          }
-          setTimeout(() => poll(tries - 1, stage), 200);
+          }, 300);
         };
         poll(30, 0);
       };
@@ -2804,6 +2970,47 @@
             !window.__sniffSnap.svgInTitles &&
             window.__sniffSnap.excludedCount >= 4
           ),
+          // 会话分组（v26.10.13-v8）：两张会话图各归各的组，当前会话置顶，未归属单独成组。
+          // 判据（三条一起看，缺一条都说明归属/排序/渲染有一处没接上）：
+          //   ① 恰好 3 组：刘永增 / 湖南博大园林建筑有限公司 / 未归属（name 为空串）；
+          //   ② 「当前会话」标签落在第 0 组（= Vuex 的 selectItem 那一组）；
+          //   ③ 每组的卡片数与卡片标题对得上（a 图在第 0 组、b 图在第 1 组，各 1 张）。
+          sniffGroupOk: (() => {
+            const s = window.__sniffSnap;
+            const g = s && s.groups;
+            if (!g) return false;
+            return !!(
+              s.chatInstalled &&
+              g.count === 3 &&
+              g.names[0] === '刘永增' &&
+              g.names[1] === '湖南博大园林建筑有限公司' &&
+              g.names[2] === '' &&
+              g.currentIndex === 0 &&
+              g.cards[0] === 1 &&
+              g.cards[1] === 1 &&
+              g.titles[0].indexOf('sniff-conv-a.png') >= 0 &&
+              g.titles[1].indexOf('sniff-conv-b.png') >= 0 &&
+              g.headers[0].indexOf('1 张') >= 0
+            );
+          })(),
+          // 会话归属的持久化（v26.10.13-v8）：切走会话（Vuex 里两条消息都不再提供）后重扫，
+          // 两张图仍各自归回原会话 —— 少了持久层的话它们只会落进「未归属」，names 前两项都是空串。
+          sniffGroupPersistOk: (() => {
+            const s = window.__sniffSnap;
+            const g = s && s.groupsAfterSwitch;
+            if (!g) return false;
+            return !!(
+              s.rescanClicked &&
+              s.switchedSeen &&
+              g.count === 3 &&
+              g.names[0] === '湖南博大园林建筑有限公司' &&
+              g.names[1] === '刘永增' &&
+              g.names[2] === '' &&
+              g.currentIndex === 0 &&
+              g.cards[0] === 1 &&
+              g.cards[1] === 1
+            );
+          })(),
           // ===== Agent 对话（v26.10.12-v1：入口改为传输助手第一栏 Agents）=====
           // 链路：面板「传输助手」→ 第一栏 Agents → 第二栏（技能 / 定时任务 / 对话列表）→ 第三栏内容。
           // ⚠️ 这些断言在 CAT.agent 桩下跑「可用态」；不可用态（无 CAT）由 buildAgentSnap 的
@@ -2937,7 +3144,10 @@
           report.sniffUnknownKeptOk &&
           report.sniffExcludeOk &&
           report.sniffSvgExcludedOk &&
-          report.sniffSelectScopeOk
+          report.sniffSelectScopeOk &&
+          // 会话分组（v26.10.13-v8）：分组渲染 + 切会话后仍靠持久层归组
+          report.sniffGroupOk &&
+          report.sniffGroupPersistOk
             ? 'ALL-OK'
             : 'PARTIAL');
       }, 38500);

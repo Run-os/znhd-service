@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name                征纳互动人数和在线监控v2
 // @namespace           https://scriptcat.org/
-// @version             26.10.13-v7
+// @version             26.10.13-v8
 // @description         实时监控征纳互动等待人数和在线状态，支持语音播报、自定义常用语
 // @author              runos
 // @license             MIT
@@ -56402,6 +56402,12 @@ const CONFIG = {
     // Agent 会话标题的截断长度，与 ScriptCat 官方的自动标题规则保持一致
     // （chat_service.ts 里 `titleText.slice(0, 30)`），这样本地记的标题和 ScriptCat 侧看到的是同一个。
     AGENT_CHAT_TITLE_LENGTH: 30,
+    // 「图片嗅探」会话归属索引的条数上限（v26.10.13-v8，见 SNIFF_CONV_INDEX_KEY）：
+    // 每条只是一小段「文件名 → 会话」，但页面上的图会一直累积，给个上限防止无限增长（超出按最旧丢）。
+    MAX_SNIFF_CONV_STEMS: 2000,
+    // 会话归属索引的有效期（30 天）。文件名里带 uuid，跨天的同名文件几乎不可能，
+    // 过期只为了不让陈年映射无限期留着（且 URL 签名早就失效、那些图也不会再被嗅到）。
+    SNIFF_CONV_TTL: 30 * 24 * 60 * 60 * 1000,
 };
 // ==========存储管理==========
 // 存储键名
@@ -56414,6 +56420,10 @@ const PHRASES_CACHE_TTL = 2 * 60 * 60 * 1000; // 缓存有效期：2 小时（�
 // Agent 会话索引（v26.10.10-v12）：官方 conversation API 没有 list/delete，脚本只能自己记
 // 「有哪些对话、叫什么名字、上次打开的是哪个」。只存索引，对话消息仍在 ScriptCat 的 OPFS 里。
 const AGENT_CHATS_KEY = 'scriptCat_AgentChats';
+// 「图片嗅探」的会话归属索引（v26.10.13-v8）：文件名主干 → 会话（纳税人）。
+// **只存映射、不存 URL** —— im-cos 直链带签名会过期，存下来下次打开就是一片裂图。
+// 它的价值：切走会话后 Vuex 里已经没有那条消息，但图还留在资源表 / DOM 里时，仍能归回原会话。
+const SNIFF_CONV_INDEX_KEY = 'scriptCat_SniffConvIndex';
 const DEFAULTS = {
     voiceEnabled: true,
     // 监控时间段（单位：小时，可含小数，如 13.5 表示 13:30）
@@ -72127,6 +72137,708 @@ if (false) // removed by dead control flow
 
 
 /* harmony default export */ const es_progress = (progress_progress);
+;// ./node_modules/antd/es/tag/style/index.js
+
+
+
+
+
+
+// ============================== Styles ==============================
+const tag_style_genBaseStyle = token => {
+  const {
+    paddingXXS,
+    lineWidth,
+    tagPaddingHorizontal,
+    componentCls,
+    calc
+  } = token;
+  const paddingInline = calc(tagPaddingHorizontal).sub(lineWidth).equal();
+  const iconMarginInline = calc(paddingXXS).sub(lineWidth).equal();
+  return {
+    // Result
+    [componentCls]: {
+      ...resetComponent(token),
+      display: 'inline-block',
+      height: 'auto',
+      paddingInline,
+      fontSize: token.tagFontSize,
+      lineHeight: token.tagLineHeight,
+      whiteSpace: 'nowrap',
+      backgroundColor: token.defaultBg,
+      border: `${util_unit(token.lineWidth)} ${token.lineType} ${token.colorBorder}`,
+      borderRadius: token.borderRadiusSM,
+      opacity: 1,
+      transition: `all ${token.motionDurationMid}`,
+      textAlign: 'start',
+      position: 'relative',
+      // RTL
+      [`&${componentCls}-rtl`]: {
+        direction: 'rtl'
+      },
+      '&, a, a:hover': {
+        color: token.defaultColor
+      },
+      [`${componentCls}-close-icon`]: {
+        marginInlineStart: iconMarginInline,
+        fontSize: token.tagIconSize,
+        color: token.colorIcon,
+        cursor: 'pointer',
+        transition: `all ${token.motionDurationMid}`,
+        '&:hover': {
+          color: token.colorTextHeading
+        }
+      },
+      '&-checkable': {
+        backgroundColor: 'transparent',
+        borderColor: 'transparent',
+        cursor: 'pointer',
+        [`&:not(${componentCls}-checkable-checked):hover`]: {
+          color: token.colorPrimary,
+          backgroundColor: token.colorFillSecondary
+        },
+        '&:active, &-checked': {
+          color: token.colorTextLightSolid
+        },
+        '&-checked': {
+          backgroundColor: token.colorPrimary,
+          '&:hover': {
+            backgroundColor: token.colorPrimaryHover
+          }
+        },
+        '&:active': {
+          backgroundColor: token.colorPrimaryActive
+        },
+        '&-disabled': {
+          cursor: 'not-allowed',
+          [`&:not(${componentCls}-checkable-checked)`]: {
+            color: token.colorTextDisabled,
+            '&:hover': {
+              backgroundColor: 'transparent'
+            }
+          },
+          [`&${componentCls}-checkable-checked`]: {
+            color: token.colorTextDisabled,
+            backgroundColor: token.colorBgContainerDisabled
+          },
+          '&:hover, &:active': {
+            backgroundColor: token.colorBgContainerDisabled,
+            color: token.colorTextDisabled
+          },
+          [`&:not(${componentCls}-checkable-checked):hover`]: {
+            color: token.colorTextDisabled
+          }
+        },
+        '&-group': {
+          display: 'flex',
+          flexWrap: 'wrap',
+          gap: token.paddingXS
+        }
+      },
+      '&-hidden': {
+        display: 'none'
+      },
+      // Icons from third-party libraries are a bare `<svg>`, which none of the `.anticon`
+      // rules reach. An `<svg>` has no baseline of its own, so it is aligned by its bottom
+      // margin edge (CSS 2.1 §10.8.1) and rides above the text. Centre it instead: unlike an
+      // `.anticon` (whose `<svg>` is always `1em`, so a fixed `-0.125em` nudge suffices), a
+      // third-party `<svg>` may be sized in `px`, so the correction must not depend on size.
+      // `display: inline-block` keeps it an atomic inline box so `vertical-align` still applies even
+      // under a CSS reset that forces `svg { display: block }` (e.g. Tailwind Preflight), which would
+      // otherwise drop the icon onto its own line. `vertical-align: middle` centres the margin box on
+      // the x-height line; `margin-block-end` then lifts it by half its own value onto the cap-height
+      // centre (capHeight − xHeight ≈ 0.2em across typical fonts), keeping it centred at any icon size.
+      // Only matches a bare `<svg>`: an `.anticon` keeps its `<svg>` one level deeper.
+      '> svg': {
+        display: 'inline-block',
+        verticalAlign: 'middle',
+        marginBlockEnd: '0.2em'
+      },
+      // To ensure that a space will be placed between character and `Icon`.
+      [`> ${token.iconCls} + span, > span + ${token.iconCls}, > svg + span, > span + svg`]: {
+        marginInlineStart: paddingInline
+      }
+    },
+    [`&${token.componentCls}-solid`]: {
+      borderColor: 'transparent',
+      color: token.colorTextLightSolid,
+      backgroundColor: token.colorBgSolid,
+      [`&${componentCls}-default`]: {
+        color: token.solidTextColor
+      }
+    },
+    [`${componentCls}-filled`]: {
+      borderColor: 'transparent',
+      backgroundColor: token.tagBorderlessBg
+    },
+    [`&${componentCls}-disabled`]: {
+      color: token.colorTextDisabled,
+      cursor: 'not-allowed',
+      backgroundColor: token.colorBgContainerDisabled,
+      a: {
+        cursor: 'not-allowed',
+        pointerEvents: 'none',
+        color: token.colorTextDisabled,
+        '&:hover': {
+          color: token.colorTextDisabled
+        }
+      },
+      'a&': {
+        '&:hover, &:active': {
+          color: token.colorTextDisabled
+        }
+      },
+      [`&${componentCls}-outlined`]: {
+        borderColor: token.colorBorderDisabled
+      },
+      [`&${componentCls}-solid, &${componentCls}-filled`]: {
+        color: token.colorTextDisabled,
+        [`${componentCls}-close-icon`]: {
+          color: token.colorTextDisabled
+        }
+      },
+      [`${componentCls}-close-icon`]: {
+        cursor: 'not-allowed',
+        color: token.colorTextDisabled,
+        '&:hover': {
+          color: token.colorTextDisabled
+        }
+      }
+    }
+  };
+};
+// ============================== Export ==============================
+const tag_style_prepareToken = token => {
+  const {
+    lineWidth,
+    fontSizeIcon,
+    calc
+  } = token;
+  const tagFontSize = token.fontSizeSM;
+  const tagToken = statistic_merge(token, {
+    tagFontSize,
+    tagLineHeight: util_unit(calc(token.lineHeightSM).mul(tagFontSize).equal()),
+    tagIconSize: calc(fontSizeIcon).sub(calc(lineWidth).mul(2)).equal(),
+    // Tag icon is much smaller
+    tagPaddingHorizontal: 8,
+    // Fixed padding.
+    tagBorderlessBg: token.defaultBg
+  });
+  return tagToken;
+};
+const tag_style_prepareComponentToken = token => {
+  const solidTextColor = isBright(new AggregationColor(token.colorBgSolid), '#fff') ? '#000' : '#fff';
+  return {
+    defaultBg: new FastColor(token.colorFillTertiary).onBackground(token.colorBgContainer).toHexString(),
+    defaultColor: token.colorText,
+    solidTextColor
+  };
+};
+/* harmony default export */ const tag_style = (genStyleHooks('Tag', token => {
+  const tagToken = tag_style_prepareToken(token);
+  return tag_style_genBaseStyle(tagToken);
+}, tag_style_prepareComponentToken));
+;// ./node_modules/antd/es/tag/CheckableTag.js
+"use client";
+
+
+
+
+
+
+const CheckableTag = /*#__PURE__*/(react_production_namespaceFn().forwardRef)((props, ref) => {
+  const {
+    prefixCls: customizePrefixCls,
+    style,
+    className,
+    checked,
+    children,
+    icon,
+    onChange,
+    onClick,
+    onKeyDown,
+    disabled: customDisabled,
+    ...restProps
+  } = props;
+  const {
+    getPrefixCls,
+    tag
+  } = (react_production_namespaceFn().useContext)(ConfigContext);
+  const disabled = (react_production_namespaceFn().useContext)(config_provider_DisabledContext);
+  const mergedDisabled = customDisabled ?? disabled;
+  const handleClick = e => {
+    if (mergedDisabled) {
+      return;
+    }
+    onChange?.(!checked);
+    onClick?.(e);
+  };
+  const handleKeyDown = e => {
+    onKeyDown?.(e);
+    if (e.defaultPrevented || mergedDisabled) {
+      return;
+    }
+    if (e.key === ' ') {
+      e.preventDefault();
+      if (!e.repeat) {
+        onChange?.(!checked);
+      }
+    }
+  };
+  const prefixCls = getPrefixCls('tag', customizePrefixCls);
+  // Style
+  const [hashId, cssVarCls] = tag_style(prefixCls);
+  const cls = clsx(prefixCls, `${prefixCls}-checkable`, {
+    [`${prefixCls}-checkable-checked`]: checked,
+    [`${prefixCls}-checkable-disabled`]: mergedDisabled
+  }, tag?.className, className, hashId, cssVarCls);
+  return /*#__PURE__*/(react_production_namespaceFn().createElement)("span", {
+    ...restProps,
+    ref: ref,
+    role: "checkbox",
+    "aria-checked": checked,
+    "aria-disabled": mergedDisabled || undefined,
+    tabIndex: mergedDisabled ? -1 : 0,
+    style: {
+      ...tag?.style,
+      ...style
+    },
+    className: cls,
+    onClick: handleClick,
+    onKeyDown: handleKeyDown
+  }, icon, /*#__PURE__*/(react_production_namespaceFn().createElement)("span", null, children));
+});
+/* harmony default export */ const tag_CheckableTag = (CheckableTag);
+;// ./node_modules/antd/es/tag/CheckableTagGroup.js
+"use client";
+
+
+
+
+
+
+
+
+
+
+
+const CheckableTagGroup = /*#__PURE__*/(react_production_namespaceFn().forwardRef)((props, ref) => {
+  const {
+    id,
+    prefixCls: customizePrefixCls,
+    rootClassName,
+    className,
+    style,
+    classNames,
+    styles,
+    disabled,
+    options,
+    value,
+    defaultValue,
+    onChange,
+    multiple,
+    ...restProps
+  } = props;
+  const {
+    getPrefixCls,
+    direction,
+    className: contextClassName,
+    style: contextStyle,
+    classNames: contextClassNames,
+    styles: contextStyles
+  } = useComponentConfig('tag');
+  const prefixCls = getPrefixCls('tag', customizePrefixCls);
+  const groupPrefixCls = `${prefixCls}-checkable-group`;
+  const rootCls = hooks_useCSSVarCls(prefixCls);
+  const [hashId, cssVarCls] = tag_style(prefixCls, rootCls);
+  // ====================== Styles ======================
+  const contextStyleRoot = useSemanticRootStyle(contextStyle);
+  const styleRoot = useSemanticRootStyle(style);
+  const [mergedClassNames, mergedStyles] = useMergeSemantic([contextClassNames, classNames], [contextStyles, contextStyleRoot, styles, styleRoot], {
+    props
+  });
+  // =============================== Option ===============================
+  const parsedOptions = (0,react_production_namespaceFn().useMemo)(() => {
+    if (!Array.isArray(options)) {
+      return [];
+    }
+    return options.map(option => {
+      if (is_isPlainObject(option)) {
+        return option;
+      }
+      return {
+        value: option,
+        label: option
+      };
+    });
+  }, [options]);
+  // =============================== Values ===============================
+  const [mergedValue, setMergedValue] = useControlledState(defaultValue, value);
+  const handleChange = (checked, option) => {
+    let newValue = null;
+    if (multiple) {
+      const valueList = mergedValue || [];
+      newValue = checked ? [].concat(_toConsumableArray(valueList), [option.value]) : valueList.filter(item => item !== option.value);
+    } else {
+      newValue = checked ? option.value : null;
+    }
+    setMergedValue(newValue);
+    onChange?.(newValue); // TS not support generic type in function call
+  };
+  // ================================ Refs ================================
+  const divRef = (react_production_namespaceFn().useRef)(null);
+  (0,react_production_namespaceFn().useImperativeHandle)(ref, () => ({
+    nativeElement: divRef.current
+  }));
+  // ================================ ARIA ================================
+  const ariaProps = pickAttrs(restProps, {
+    aria: true,
+    data: true
+  });
+  // =============================== Render ===============================
+  return /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
+    ...ariaProps,
+    className: clsx(groupPrefixCls, contextClassName, rootClassName, {
+      [`${groupPrefixCls}-disabled`]: disabled,
+      [`${groupPrefixCls}-rtl`]: direction === 'rtl'
+    }, hashId, cssVarCls, className, mergedClassNames.root),
+    style: mergedStyles.root,
+    id: id,
+    ref: divRef
+  }, parsedOptions.map(option => (/*#__PURE__*/(react_production_namespaceFn().createElement)(tag_CheckableTag, {
+    key: option.value,
+    className: clsx(`${groupPrefixCls}-item`, mergedClassNames.item, option.className),
+    style: {
+      ...mergedStyles.item,
+      ...option.style
+    },
+    checked: multiple ? (mergedValue || []).includes(option.value) : mergedValue === option.value,
+    onChange: checked => handleChange(checked, option),
+    disabled: disabled
+  }, option.label))));
+});
+if (false) // removed by dead control flow
+{}
+/* harmony default export */ const tag_CheckableTagGroup = (CheckableTagGroup);
+;// ./node_modules/antd/es/tag/hooks/useColor.js
+
+
+
+/**
+ * Convert color related props to a unified object,
+ * which is used to flatten the compatibility requirements.
+ */
+function useColor(props, contextVariant) {
+  const {
+    color,
+    variant,
+    bordered
+  } = props;
+  return (react_production_namespaceFn().useMemo)(() => {
+    const isInverseColor = color?.endsWith('-inverse');
+    // =================== Variant ===================
+    let nextVariant;
+    if (variant) {
+      // `variant` first
+      nextVariant = variant;
+    } else if (isInverseColor) {
+      // Fallback if using inverse color
+      nextVariant = 'solid';
+    } else if (bordered === false) {
+      // Fallback if using filled
+      nextVariant = 'filled';
+    } else {
+      // Finally not conflict, use context
+      nextVariant = contextVariant || 'filled';
+    }
+    // ==================== Color ====================
+    let nextColor = isInverseColor ? color?.replace('-inverse', '') : color;
+    if (nextColor === undefined && nextVariant === 'solid') {
+      nextColor = 'default';
+    }
+    // =============== Preset & Status ===============
+    const nextIsPreset = isPresetColor(nextColor);
+    const nextIsStatus = isPresetStatusColor(nextColor);
+    // ================== Customize ==================
+    // When `color` is not preset color,
+    // dynamic calculate the color pair.
+    const tagStyle = {};
+    if (!nextIsPreset && !nextIsStatus && nextColor) {
+      if (nextVariant === 'solid') {
+        tagStyle.backgroundColor = color;
+      } else {
+        const hsl = new FastColor(nextColor).toHsl();
+        hsl.l = 0.95;
+        tagStyle.backgroundColor = new FastColor(hsl).toHexString();
+        tagStyle.color = color;
+        if (nextVariant === 'outlined') {
+          tagStyle.borderColor = color;
+        }
+      }
+    }
+    return [nextVariant, nextColor, nextIsPreset, nextIsStatus, tagStyle];
+  }, [color, variant, bordered, contextVariant]);
+}
+;// ./node_modules/antd/es/tag/style/presetCmp.js
+// Style as status component
+
+
+// ============================== Preset ==============================
+const genPresetStyle = token => genPresetColor_genPresetColor(token, (colorKey, {
+  textColor,
+  lightBorderColor,
+  lightColor,
+  darkColor
+}) => ({
+  [`${token.componentCls}${token.componentCls}-${colorKey}:not(${token.componentCls}-disabled)`]: {
+    [`&${token.componentCls}-outlined`]: {
+      backgroundColor: lightColor,
+      borderColor: lightBorderColor,
+      color: textColor
+    },
+    [`&${token.componentCls}-solid`]: {
+      backgroundColor: darkColor,
+      borderColor: darkColor,
+      color: token.colorTextLightSolid
+    },
+    [`&${token.componentCls}-filled`]: {
+      backgroundColor: lightColor,
+      color: textColor
+    }
+  }
+}));
+// ============================== Export ==============================
+/* harmony default export */ const presetCmp = (genSubStyleComponent(['Tag', 'preset'], token => {
+  const tagToken = tag_style_prepareToken(token);
+  return genPresetStyle(tagToken);
+}, tag_style_prepareComponentToken));
+;// ./node_modules/antd/es/_util/capitalize.js
+function capitalize(str) {
+  if (typeof str !== 'string') {
+    return str;
+  }
+  const ret = str.charAt(0).toUpperCase() + str.slice(1);
+  return ret;
+}
+;// ./node_modules/antd/es/tag/style/statusCmp.js
+
+
+
+const genTagStatusStyle = (token, status, cssVariableType) => {
+  const capitalizedCssVariableType = capitalize(cssVariableType);
+  return {
+    [`${token.componentCls}${token.componentCls}-${status}:not(${token.componentCls}-disabled)`]: {
+      [`&${token.componentCls}-outlined`]: {
+        backgroundColor: token[`color${capitalizedCssVariableType}Bg`],
+        borderColor: token[`color${capitalizedCssVariableType}Border`],
+        color: token[`color${cssVariableType}`]
+      },
+      [`&${token.componentCls}-solid`]: {
+        backgroundColor: token[`color${cssVariableType}`],
+        borderColor: token[`color${cssVariableType}`]
+      },
+      [`&${token.componentCls}-filled`]: {
+        backgroundColor: token[`color${capitalizedCssVariableType}Bg`],
+        color: token[`color${cssVariableType}`]
+      }
+    }
+  };
+};
+// ============================== Export ==============================
+/* harmony default export */ const statusCmp = (genSubStyleComponent(['Tag', 'status'], token => {
+  const tagToken = tag_style_prepareToken(token);
+  return [genTagStatusStyle(tagToken, 'success', 'Success'), genTagStatusStyle(tagToken, 'processing', 'Info'), genTagStatusStyle(tagToken, 'error', 'Error'), genTagStatusStyle(tagToken, 'warning', 'Warning')];
+}, tag_style_prepareComponentToken));
+;// ./node_modules/antd/es/tag/index.js
+"use client";
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+const InternalTag = /*#__PURE__*/(react_production_namespaceFn().forwardRef)((props, ref) => {
+  const {
+    prefixCls: customizePrefixCls,
+    className,
+    rootClassName,
+    style,
+    children,
+    icon,
+    color,
+    variant: _variant,
+    onClose,
+    bordered,
+    disabled: customDisabled,
+    href,
+    target,
+    styles,
+    classNames,
+    ...restProps
+  } = props;
+  const {
+    getPrefixCls,
+    direction,
+    className: contextClassName,
+    variant: contextVariant,
+    style: contextStyle,
+    classNames: contextClassNames,
+    styles: contextStyles
+  } = useComponentConfig('tag');
+  // ===================== Warnings =====================
+  if (false) // removed by dead control flow
+{}
+  // ====================== Colors ======================
+  const [mergedVariant, mergedColor, isPreset, isStatus, customTagStyle] = useColor(props, contextVariant);
+  const isInternalColor = isPreset || isStatus;
+  // ===================== Disabled =====================
+  const disabled = (react_production_namespaceFn().useContext)(config_provider_DisabledContext);
+  const mergedDisabled = customDisabled ?? disabled;
+  const {
+    tag: tagContext
+  } = (react_production_namespaceFn().useContext)(ConfigContext);
+  const [visible, setVisible] = (react_production_namespaceFn().useState)(true);
+  const domProps = omit(restProps, ['closeIcon', 'closable']);
+  // =========== Merged Props for Semantic ===========
+  const mergedProps = {
+    ...props,
+    color: mergedColor,
+    variant: mergedVariant,
+    disabled: mergedDisabled
+  };
+  // ====================== Styles ======================
+  const contextStyleRoot = useSemanticRootStyle(contextStyle);
+  const styleRoot = useSemanticRootStyle(style);
+  const [mergedClassNames, mergedStyles] = useMergeSemantic([contextClassNames, classNames], [contextStyles, contextStyleRoot, styles, styleRoot], {
+    props: mergedProps
+  });
+  const tagStyle = (react_production_namespaceFn().useMemo)(() => {
+    let nextTagStyle = mergedStyles.root;
+    if (!mergedDisabled) {
+      nextTagStyle = {
+        ...customTagStyle,
+        ...nextTagStyle
+      };
+    }
+    return nextTagStyle;
+  }, [mergedStyles.root, customTagStyle, mergedDisabled]);
+  const prefixCls = getPrefixCls('tag', customizePrefixCls);
+  const [hashId, cssVarCls] = tag_style(prefixCls);
+  const tagClassName = clsx(prefixCls, contextClassName, mergedClassNames.root, `${prefixCls}-${mergedVariant}`, {
+    [`${prefixCls}-${mergedColor}`]: isInternalColor,
+    [`${prefixCls}-hidden`]: !visible,
+    [`${prefixCls}-rtl`]: direction === 'rtl',
+    [`${prefixCls}-disabled`]: mergedDisabled
+  }, className, rootClassName, hashId, cssVarCls);
+  // ===================== Closable =====================
+  const triggerClose = e => {
+    if (mergedDisabled) {
+      return;
+    }
+    e.stopPropagation();
+    onClose?.(e);
+    if (e.defaultPrevented) {
+      return;
+    }
+    if (href) {
+      e.preventDefault();
+    }
+    setVisible(false);
+  };
+  const handleCloseKeyDown = e => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      if (!e.repeat) {
+        e.currentTarget.click();
+      }
+    }
+  };
+  const [, mergedCloseIcon] = useClosable_useClosable(pickClosable(props), pickClosable(tagContext), {
+    closable: false,
+    closeIconRender: iconNode => {
+      const replacement = /*#__PURE__*/(react_production_namespaceFn().createElement)("span", {
+        role: "button",
+        tabIndex: mergedDisabled ? -1 : 0,
+        "aria-disabled": mergedDisabled || undefined,
+        className: clsx(`${prefixCls}-close-icon`, mergedClassNames.close),
+        onClick: triggerClose,
+        onKeyDown: handleCloseKeyDown,
+        style: mergedStyles.close
+      }, iconNode);
+      return replaceElement(iconNode, replacement, originProps => ({
+        onClick: e => {
+          originProps?.onClick?.(e);
+          triggerClose(e);
+        },
+        onKeyDown: e => {
+          originProps?.onKeyDown?.(e);
+          if (!e.defaultPrevented) {
+            handleCloseKeyDown(e);
+          }
+        },
+        role: 'button',
+        tabIndex: mergedDisabled ? -1 : 0,
+        'aria-disabled': mergedDisabled || undefined,
+        className: clsx(originProps?.className, `${prefixCls}-close-icon`, mergedClassNames.close),
+        style: {
+          ...mergedStyles.close,
+          ...originProps?.style
+        }
+      }));
+    }
+  });
+  // ====================== Render ======================
+  const isNeedWave = isFunction(restProps.onClick) || children && children.type === 'a';
+  const iconNode = cloneElement(icon, {
+    className: clsx(/*#__PURE__*/(react_production_namespaceFn().isValidElement)(icon) ? icon.props?.className : undefined, mergedClassNames.icon),
+    style: mergedStyles.icon
+  });
+  const child = iconNode ? (/*#__PURE__*/(react_production_namespaceFn().createElement)((react_production_namespaceFn().Fragment), null, iconNode, isReactRenderable(children) && (/*#__PURE__*/(react_production_namespaceFn().createElement)("span", {
+    className: mergedClassNames.content,
+    style: mergedStyles.content
+  }, children)))) : children;
+  const TagWrapper = href ? 'a' : 'span';
+  const tagNode = /*#__PURE__*/(react_production_namespaceFn().createElement)(TagWrapper, {
+    ...domProps,
+    ref: ref,
+    className: tagClassName,
+    style: tagStyle,
+    href: mergedDisabled ? undefined : href,
+    target: target,
+    onClick: mergedDisabled ? undefined : domProps.onClick,
+    ...(href && mergedDisabled ? {
+      'aria-disabled': true
+    } : {})
+  }, child, mergedCloseIcon, isPreset && /*#__PURE__*/(react_production_namespaceFn().createElement)(presetCmp, {
+    key: "preset",
+    prefixCls: prefixCls
+  }), isStatus && /*#__PURE__*/(react_production_namespaceFn().createElement)(statusCmp, {
+    key: "status",
+    prefixCls: prefixCls
+  }));
+  return isNeedWave ? /*#__PURE__*/(react_production_namespaceFn().createElement)(wave, {
+    component: "Tag"
+  }, tagNode) : tagNode;
+});
+const Tag = InternalTag;
+if (false) // removed by dead control flow
+{}
+Tag.CheckableTag = tag_CheckableTag;
+Tag.CheckableTagGroup = tag_CheckableTagGroup;
+/* harmony default export */ const es_tag = (Tag);
 ;// ./node_modules/@ant-design/icons-svg/es/asn/PrinterOutlined.js
 // This icon file is generated automatically.
 var PrinterOutlined = { "icon": { "tag": "svg", "attrs": { "viewBox": "64 64 896 896", "focusable": "false" }, "children": [{ "tag": "path", "attrs": { "d": "M820 436h-40c-4.4 0-8 3.6-8 8v40c0 4.4 3.6 8 8 8h40c4.4 0 8-3.6 8-8v-40c0-4.4-3.6-8-8-8zm32-104H732V120c0-4.4-3.6-8-8-8H300c-4.4 0-8 3.6-8 8v212H172c-44.2 0-80 35.8-80 80v328c0 17.7 14.3 32 32 32h168v132c0 4.4 3.6 8 8 8h424c4.4 0 8-3.6 8-8V772h168c17.7 0 32-14.3 32-32V412c0-44.2-35.8-80-80-80zM360 180h304v152H360V180zm304 664H360V568h304v276zm200-140H732V500H292v204H160V412c0-6.6 5.4-12 12-12h680c6.6 0 12 5.4 12 12v292z" } }] }, "name": "printer", "theme": "outlined" };
@@ -72806,6 +73518,38 @@ function sniffFileName(url, mime, idx = 0) {
     }
     return downloadFileName(base || 'znhd-sniff-' + (idx + 1), mime, idx);
 }
+/**
+ * URL 的文件名主干（v26.10.13-v8）：pathname 末段 → 解码 → 去空白 → 小写。
+ *
+ * 用途只有一个：**「按会话分组」的匹配键**。页面（征纳互动工作台）的 Vuex 消息里
+ * `payload.fileName` / `payload.imageInfoArray[].imageUrl` 与嗅探到的 URL 指向同一张图，
+ * 靠这串名字把它们对上号。因此它必须与 `sniffFileName` 分开：
+ *   · `sniffFileName` 是**给人看/存盘用**的下载名 —— 要消毒非法字符、要按 MIME 补后缀、要兜底编号；
+ *   · 本函数是**给机器比**的键 —— 不做兜底、不补后缀，只做「取末段 + 归一化」，
+ *     否则两个名字会不一致（如 `a.svg.png` 消毒后不变、但补后缀就会漂移）。
+ * 取不到末段（`data:` / `blob:` / 相对路径异常）返回 ''，调用方按「未归属」处理，绝不丢图。
+ */
+function urlFileStem(url) {
+    const s = String(url || '');
+    if (!s || /^(?:data|blob):/i.test(s))
+        return '';
+    let seg = '';
+    try {
+        const u = new URL(s, location.href);
+        seg = u.pathname.split('/').filter(Boolean).pop() || '';
+    }
+    catch (e) {
+        // 不是合法 URL（如 Vuex 消息里裸的 uuid）：按最后一段路径字符处理
+        seg = s.split('?')[0].split('/').pop() || '';
+    }
+    try {
+        seg = decodeURIComponent(seg);
+    }
+    catch (e) {
+        /* 百分号编码坏了就用原串 */
+    }
+    return seg.trim().toLowerCase();
+}
 /** URL 归一化：非 http(s)/data/blob 一律丢弃；data: 只接受 data:image/* */
 function normalizeUrl(raw) {
     const s = String(raw || '').trim();
@@ -73019,6 +73763,7 @@ function collectCandidates(opts = {}) {
         map.set(key, {
             key: key,
             url: url,
+            stem: urlFileStem(url),
             kind: /^data:/i.test(url) ? 'data' : /^blob:/i.test(url) ? 'blob' : 'http',
             sources: [source],
             svgText: extra?.svgText,
@@ -73407,6 +74152,441 @@ async function downloadImage(url, filename) {
     return anchorDownload(url, filename);
 }
 
+;// ./src/lib/sniffConv.ts
+/**
+ * 图片嗅探「会话归属」模块（v26.10.13-v8 新增，配合 `lib/sniffer.ts` + `ui/SniffModal.tsx`）。
+ *
+ * 解决什么问题：征纳互动工作台里的图片是**按会话窗口（纳税人）**产生的，而嗅探是整页扫描，
+ * 结果平铺在一起分不清哪张是谁的（用户 2026-10-13 提出）。这里把「文件名主干 → 会话」的映射建起来，
+ * 面板据此分组展示。改之前先读下面这份页面事实与三条设计约束。
+ *
+ * ── 页面事实（用户 2026-10-13 提供的实测文档，页内实测） ──────────────────────────
+ *   · 工作台是 Vue2 + Vuex 单页应用，根实例 `#app.__vue__`，状态 `$store.state`；
+ *   · 当前会话：`state.chat.selectItem.conversationInfo`（`conversationID` + `groupProfile.name`），
+ *     取不到时用 DOM 兜底 `.group-item.selected .company-name`；
+ *   · 图片消息：`state.chat.messageList` 里 `type === 'TIMImageElem'` 的项，
+ *     `payload.fileName` 与 `payload.imageInfoArray[].imageUrl` 的末段就是页面上的文件名，
+ *     `payload.uuid` 全局唯一；
+ *   · ⚠️ `messageList` **只有当前会话**，别的会话的图只能靠 `state.allChat.historyMsg`
+ *     （嵌套结构官方无文档，本模块用宽容遍历兜）或**上一次扫描留下的持久记录**（见下）。
+ *
+ * ── 三条设计约束 ────────────────────────────────────────────────────────────
+ *  1) **归属按「文件名主干」而不是 DOM 位置**：实测图片节点多数不在 `.panel-container` 里、
+ *     可能挂在游离容器中，按 DOM 祖先找会话必错。文件名是同一条 CDN 路径上的稳定标识
+ *     （im-cos 直链带签名会过期，但 `pathname` 末段不变），且与 Vuex 消息里的 `fileName` 同形。
+ *  2) **读页面 Vuex 必须走 `unsafeWindow.document`**：ScriptCat 隔离世界里直接读
+ *     `document.querySelector('#app').__vue__` 可能拿不到（脚本已声明 `@grant unsafeWindow`，
+ *     本模块不新增任何 @grant）。DOM 的 `textContent` 不受此限，故会话名有 DOM 兜底。
+ *  3) **绝不因为页面结构变化而丢图或抛错**：认得出就归组，认不出就落到「未归属」，
+ *     `historyMsg` 那一路全靠宽容遍历（见 walkAny 的注释）——结构变了只是少归几个组，不会报错。
+ *
+ * ── 持久化（`scriptCat_SniffConvIndex`，见 constants.ts） ────────────────────
+ * 「文件名 → 会话」按 origin 分桶存在 localStorage：30 天过期、上限 2000 条、超出按最旧丢。
+ * **只存映射不存 URL**（签名会过期）。它的价值是「切走会话后 Vuex 里已经没有那条消息，
+ * 但图还留在 DOM / 资源表里时仍能归回原会话」，也是「重新扫描不丢分组」的原因。
+ * 本次从页面读到的映射**优先于**持久记录（页面才是最新真相）。
+ *
+ * ── 现场待确认（唯一一处） ────────────────────────────────────────────────
+ * `allChat.historyMsg` 的实际嵌套结构没有实测样本（当时环境里没有历史会话）。本模块按
+ * 「容器自带 `conversationID` / `conversationInfo` / `groupProfile.name`」以及
+ * 「`{ [conversationID]: 节点 }` 字典用 key 当会话 ID」两种形状去认；
+ * 若线上历史会话归组不对，先打印一次 `state.allChat.historyMsg` 的实际结构再改 convOfNode。
+ */
+
+
+
+/** 未归属分组的 ID（空串；渲染时会转成 React key 的兜底串） */
+const UNNAMED_CONV_ID = '';
+/** 遍历深度上限：Vue 状态里可能有循环引用（`_vm` 回指等），没有上限会栈溢出 */
+const MAX_WALK_DEPTH = 7;
+/** 单条消息最多登记几个匹配键（fileName / uuid / 各档 imageUrl） */
+const MAX_STEMS_PER_MSG = 8;
+/**
+ * 看起来像 TIM 会话 ID 的对象键：`{ [conversationID]: 会话节点 }` 这种字典要靠 key 当会话 ID。
+ * 只认 TIM 的两种前缀（单聊 `C2C…`、群 `GROUP…` / `@TIM#…`），不猜别的键名，避免把
+ * `messageList` 这种普通字段名当成会话 ID（那会给所有消息挂上一个假会话）。
+ */
+const CONV_ID_KEY_RE = /^(?:C2C|GROUP|@TIM#)/i;
+/** 安全取字符串（trim；非字符串一律空串） */
+function str(v) {
+    return typeof v === 'string' ? v.trim() : '';
+}
+/** 安全取有限数字 */
+function num(v) {
+    return typeof v === 'number' && Number.isFinite(v) ? v : null;
+}
+/** ID 的短尾（给「取不到会话名」时的兜底显示用，如 `会话 aPKJKKK1`） */
+function shortId(id) {
+    return id.length > 8 ? id.slice(-8) : id;
+}
+/** 页面主世界的 document（拿不到就用隔离世界的，两者指向同一棵 DOM） */
+function hostDoc() {
+    try {
+        if (typeof unsafeWindow !== 'undefined' && unsafeWindow.document)
+            return unsafeWindow.document;
+    }
+    catch (e) {
+        /* 沙箱代理拦截时退回下面的 document */
+    }
+    try {
+        return document;
+    }
+    catch (e) {
+        return null;
+    }
+}
+function readVueInstance() {
+    const docs = [hostDoc(), document];
+    for (const d of docs) {
+        if (!d)
+            continue;
+        try {
+            const el = d.querySelector('#app');
+            const vm = el && el.__vue__;
+            if (vm && vm.$store && vm.$store.state)
+                return vm;
+        }
+        catch (e) {
+            /* 换下一个 document 再试 */
+        }
+    }
+    return null;
+}
+/** 页面 Vuex 的 state（拿不到返回 null） */
+function readChatState() {
+    const vm = readVueInstance();
+    const st = vm && vm.$store && vm.$store.state;
+    return st && typeof st === 'object' ? st : null;
+}
+/** DOM 上的当前会话名（`.group-item.selected .company-name`）——不受沙箱限制的兜底来源 */
+function domCurrentName() {
+    const docs = [hostDoc(), document];
+    for (const d of docs) {
+        if (!d)
+            continue;
+        try {
+            const el = d.querySelector('.group-item.selected .company-name');
+            const t = el && el.textContent ? el.textContent.trim() : '';
+            if (t)
+                return t;
+        }
+        catch (e) {
+            /* 忽略，继续下一个来源 */
+        }
+    }
+    return '';
+}
+/**
+ * 当前会话（Vuex 为主、DOM 兜底）。两边都取不到返回 null —— 那说明这页面上没有「会话」这个概念
+ * （或页面还没就绪），调用方按「不分组」处理。
+ */
+function getCurrentConv() {
+    let id = '';
+    let name = '';
+    const st = readChatState();
+    const chat = st && st.chat;
+    const sel = chat && chat.selectItem;
+    const ci = sel && sel.conversationInfo;
+    if (ci) {
+        id = str(ci.conversationID) || str(ci.conversationId) || str(ci.sessionID);
+        const gp = ci.groupProfile;
+        name = (gp ? str(gp.name) : '') || str(ci.name);
+    }
+    if (!name)
+        name = domCurrentName();
+    if (!id && !name)
+        return null;
+    return { id: id || 'name:' + name, name: name || '会话 ' + shortId(id), sender: null, time: null };
+}
+/** 一个候选键（可能是 URL、uuId 或纯文件名）的归一化：走 urlFileStem，失败再退成小写原串 */
+function stemKey(v) {
+    const s = str(v);
+    if (!s)
+        return '';
+    return urlFileStem(s) || s.toLowerCase();
+}
+/** 一条图片消息能提供的所有匹配键（fileName / uuid / 各档 imageUrl 的末段） */
+function stemsOfPayload(p) {
+    const out = [];
+    const push = (v) => {
+        const k = stemKey(v);
+        if (k && out.indexOf(k) < 0)
+            out.push(k);
+    };
+    push(p.fileName);
+    push(p.uuid);
+    const arr = p.imageInfoArray;
+    if (Array.isArray(arr)) {
+        for (const x of arr) {
+            if (x && typeof x === 'object')
+                push(x.imageUrl);
+        }
+    }
+    return out.slice(0, MAX_STEMS_PER_MSG);
+}
+/** 从容器节点自身读会话身份（`conversationInfo` / `groupProfile` / 直接的 conversationID…），读不到就沿用上层 */
+function convOfNode(obj, ctx) {
+    let id = str(obj.conversationID) || str(obj.conversationId) || str(obj.sessionID) || ctx.id;
+    let name = str(obj.conversationName) || str(obj.groupName) || ctx.name;
+    const ci = (obj.conversationInfo || obj.conversation || obj.sessionInfo);
+    if (ci && typeof ci === 'object') {
+        id = str(ci.conversationID) || str(ci.conversationId) || str(ci.sessionID) || id;
+        if (!name) {
+            const gp = ci.groupProfile;
+            name = (gp ? str(gp.name) : '') || str(ci.name) || name;
+        }
+    }
+    // ⚠️ 刻意**不认**通用的 `obj.name`：容器五花八门，随便一个 `name` 字段都可能不是会话名，
+    // 认错了会给出一个看起来像真的、其实张冠李戴的组名（比「会话未命名」更糟）。
+    const sender = str(obj.sendUserName) || ctx.sender;
+    if (id === ctx.id && name === ctx.name && sender === ctx.sender)
+        return ctx;
+    return { id, name, sender };
+}
+/**
+ * 宽容遍历任意嵌套结构，把每条图片消息连同「它所在容器的会话身份」交给 visit。
+ *
+ * 为什么不用固定路径：`allChat.historyMsg` 的嵌套结构没有文档也没有实测样本，写死路径一旦不符就全丢。
+ * 这里的取舍是「**认得出来就用、认不出来退到上一层**」——结构变了最多少归几个组，绝不抛异常。
+ * 三层保护：深度上限（防循环引用）、只认 `type === 'TIMImageElem'` 的叶子、容器身份只认白名单字段。
+ */
+function walkAny(node, ctx, depth, visit) {
+    if (node === null || node === undefined || depth > MAX_WALK_DEPTH)
+        return;
+    if (Array.isArray(node)) {
+        for (const x of node)
+            walkAny(x, ctx, depth + 1, visit);
+        return;
+    }
+    if (typeof node !== 'object')
+        return;
+    const obj = node;
+    // 命中一条图片消息：就地消费，不再往 payload 里钻（payload 里的字段不是消息）
+    if (obj.type === 'TIMImageElem' && obj.payload) {
+        visit(obj, ctx);
+        return;
+    }
+    const next = convOfNode(obj, ctx);
+    for (const k of Object.keys(obj)) {
+        // `{ [conversationID]: 节点 }` 形状的字典：把 key 当这一支的会话 ID
+        const childCtx = CONV_ID_KEY_RE.test(k) && !next.id ? { ...next, id: k } : next;
+        walkAny(obj[k], childCtx, depth + 1, visit);
+    }
+}
+/** 把一条消息折算成会话（ID 优先取消息自身的，其次容器的，最后才是当前会话） */
+function toConv(msg, ctx, current) {
+    const id = str(msg.conversationID) || str(msg.conversationId) || str(msg.sessionID) || ctx.id;
+    let name = str(msg.conversationName) || str(msg.groupName) || ctx.name;
+    if (!name && current && id && id === current.id)
+        name = current.name;
+    // 三者都拿不到就归 null：那不是「未知会话」，而是**根本不知道属于谁**，
+    // 调用方会让这些图落到「未归属」分组（与页面上压根没有会话概念的图同一个去处）。
+    if (!id && !name)
+        return null;
+    const key = id || 'name:' + name;
+    return {
+        id: key,
+        name: name || '会话 ' + shortId(key),
+        sender: str(msg.sendUserName) || ctx.sender,
+        time: num(msg.time),
+    };
+}
+function readBucket() {
+    try {
+        const raw = localStorage.getItem(SNIFF_CONV_INDEX_KEY);
+        if (!raw)
+            return null;
+        const parsed = JSON.parse(raw);
+        if (!parsed || parsed.origin !== location.origin)
+            return null;
+        if (!parsed.items || typeof parsed.items !== 'object')
+            return null;
+        return parsed;
+    }
+    catch (e) {
+        return null;
+    }
+}
+/** 载入未过期的持久映射（过期/坏值直接跳过，不报错） */
+function loadStoredConv() {
+    const out = [];
+    const bucket = readBucket();
+    if (!bucket)
+        return out;
+    const now = Date.now();
+    for (const k of Object.keys(bucket.items)) {
+        const r = bucket.items[k];
+        if (!r || typeof r.id !== 'string' || !r.id)
+            continue;
+        if (!Number.isFinite(r.at) || now - r.at > CONFIG.SNIFF_CONV_TTL)
+            continue;
+        out.push([
+            k,
+            {
+                id: r.id,
+                name: typeof r.name === 'string' && r.name ? r.name : '会话 ' + shortId(r.id),
+                sender: typeof r.sender === 'string' ? r.sender : null,
+                time: num(r.time),
+            },
+        ]);
+    }
+    return out;
+}
+/** 保存映射（合并 → 清过期 → 超限按最旧丢）。任何失败都只记日志，不影响扫描 */
+function saveStoredConv(fresh) {
+    try {
+        const now = Date.now();
+        const bucket = readBucket() || { origin: location.origin, items: {} };
+        bucket.origin = location.origin;
+        for (const [stem, conv] of fresh) {
+            bucket.items[stem] = { id: conv.id, name: conv.name, sender: conv.sender, time: conv.time, at: now };
+        }
+        for (const k of Object.keys(bucket.items)) {
+            const r = bucket.items[k];
+            if (!r || !Number.isFinite(r.at) || now - r.at > CONFIG.SNIFF_CONV_TTL)
+                delete bucket.items[k];
+        }
+        const keys = Object.keys(bucket.items);
+        const max = CONFIG.MAX_SNIFF_CONV_STEMS;
+        if (keys.length > max) {
+            keys.sort((a, b) => (bucket.items[a].at || 0) - (bucket.items[b].at || 0));
+            for (const k of keys.slice(0, keys.length - max))
+                delete bucket.items[k];
+        }
+        localStorage.setItem(SNIFF_CONV_INDEX_KEY, JSON.stringify(bucket));
+    }
+    catch (e) {
+        addLog('[图片嗅探] 会话归属记录保存失败: ' + e.message, 'error', true);
+    }
+}
+/**
+ * 建一次扫描要用的归属上下文：**页面 Vuex（当前会话消息 → 历史会话）优先，持久记录补空缺**。
+ * 每次扫描重建（页面数据是最新真相），创建阶段不发网络请求、不做 DOM 扫描，纯读。
+ */
+function buildConvContext() {
+    const current = getCurrentConv();
+    const byStem = new Map();
+    const fresh = [];
+    const out = (msg, ctx) => {
+        const conv = toConv(msg, ctx, current);
+        if (!conv)
+            return;
+        const payload = msg.payload;
+        for (const k of stemsOfPayload(payload)) {
+            // 先到先得：当前会话先遍历，故同名文件以当前会话为准；历史会话再来只补空缺
+            if (byStem.has(k))
+                continue;
+            byStem.set(k, conv);
+            fresh.push([k, conv]);
+        }
+    };
+    const st = readChatState();
+    const chat = st && st.chat;
+    if (chat) {
+        // ① 当前会话：结构已实测，最可靠的一路
+        const seed = { id: current ? current.id : '', name: current ? current.name : '', sender: null };
+        walkAny(chat.messageList, seed, 0, out);
+    }
+    const allChat = st && st.allChat;
+    if (allChat) {
+        // ② 历史会话：嵌套结构未实测（见文件头「现场待确认」），靠宽容遍历
+        walkAny(allChat.historyMsg, { id: '', name: '', sender: null }, 0, out);
+    }
+    const fromPage = byStem.size;
+    // ③ 持久记录只补空缺：页面读到的一定更新（会话可能改名、也可能这次不在页面上）
+    for (const [k, v] of loadStoredConv()) {
+        if (!byStem.has(k))
+            byStem.set(k, v);
+    }
+    if (byStem.size) {
+        addLog('[图片嗅探] 会话归属：本次从页面读到 ' +
+            fromPage +
+            ' 个文件名（含历史记录共 ' +
+            byStem.size +
+            ' 个；' +
+            (current ? '当前会话「' + current.name + '」' : '当前会话未识别') +
+            '）', 'info');
+    }
+    return { current, byStem, fresh };
+}
+/** 把本次从页面读到的映射写进持久层（没有新映射时不写，避免无谓的 localStorage 写入） */
+function persistConvContext(ctx) {
+    if (!ctx.fresh.length)
+        return;
+    saveStoredConv(ctx.fresh);
+}
+/** 取一张图归属的会话（未归属返回 null） */
+function convOfItem(it, ctx) {
+    if (!ctx || !it.stem)
+        return null;
+    return ctx.byStem.get(it.stem) || null;
+}
+/**
+ * 把嗅探结果按会话分组。
+ *
+ * 排序规则（用户没指定，按「最可能想看的排最前」定）：
+ *   ① 当前会话置顶；② 其余会话按最新消息时间倒序；③ 未归属永远排最后。
+ * 组内：达标图按体积从大到小（沿用原有的展示习惯），大小未知的单独一档。
+ *
+ * 返回值里的 `grouped` 决定面板要不要画组头：**一个具名分组都没有时不画**
+ * （普通网页上根本没有「会话」概念，硬套一个「未归属会话」标题只是噪音；
+ * 而此时 sections 恰好只有一个未归属分组，渲染出来就是原来的平铺形态）。
+ */
+function groupByConversation(items, ctx, minBytes) {
+    const buckets = new Map();
+    const bucketOf = (conv) => {
+        const id = conv ? conv.id : UNNAMED_CONV_ID;
+        let b = buckets.get(id);
+        if (!b) {
+            b = {
+                name: conv ? conv.name : '',
+                current: !!(conv && ctx && ctx.current && ctx.current.id === conv.id),
+                time: conv ? conv.time : null,
+                known: [],
+                unknown: [],
+            };
+            buckets.set(id, b);
+        }
+        // 同一个会话的不同消息可能一条带名字一条没有：取到过名字就留着
+        if (conv && conv.name && !b.name)
+            b.name = conv.name;
+        if (conv && conv.time !== null && (b.time === null || conv.time > b.time))
+            b.time = conv.time;
+        return b;
+    };
+    for (const it of items) {
+        const b = bucketOf(convOfItem(it, ctx));
+        if (it.size === null)
+            b.unknown.push(it);
+        else if (it.size >= minBytes)
+            b.known.push(it);
+        // 其余（已知但小于阈值）只被过滤，不进入任何分组 —— 与面板的「只列出 ≥ N KB」一致
+    }
+    const bySizeDesc = (a, b) => (b.size === null ? 0 : b.size) - (a.size === null ? 0 : a.size);
+    const list = [];
+    for (const [id, bucket] of buckets) {
+        bucket.known.sort(bySizeDesc);
+        list.push({ id, time: bucket.time, current: bucket.current, bucket });
+    }
+    list.sort((a, b) => {
+        if (a.current !== b.current)
+            return a.current ? -1 : 1;
+        const au = a.id === UNNAMED_CONV_ID ? 1 : 0;
+        const bu = b.id === UNNAMED_CONV_ID ? 1 : 0;
+        if (au !== bu)
+            return au - bu;
+        return (b.time || 0) - (a.time || 0);
+    });
+    const sections = list.map((x) => ({
+        id: x.id,
+        name: x.bucket.name,
+        current: x.current,
+        known: x.bucket.known,
+        unknown: x.bucket.unknown,
+    }));
+    return { sections, grouped: sections.some((s) => !!s.name) };
+}
+
 ;// ./shared/preview/actions.tsx
 /**
  * 往 antd 图片预览的工具栏里追加按钮 —— 两端共用（v26.10.08-v13 起）。
@@ -73607,6 +74787,8 @@ function buildA4ImageNode(src, alt, natural) {
 
 
 
+// 会话归属（v26.10.13-v8）：把图片按会话窗口（纳税人）分组，见 lib/sniffConv.ts 的文件头
+
 
 // 预览相关通用件全部来自共享层（与「历史记录」、手机上传页同一份实现）
 
@@ -73653,6 +74835,11 @@ function sleep(ms) {
         window.setTimeout(resolve, ms);
     });
 }
+/** 取某张图在「展示顺序」（shown）里的下标：拿不到就 0（只影响兜底文件名的编号，不影响功能） */
+function idxOf(it, index) {
+    const at = index.get(it.key);
+    return at === undefined ? 0 : at;
+}
 function SniffModal({ open, onClose, minKB, onMinKBChange }) {
     /** 本轮扫描到哪一步：测量中 / 测完（测量中显示进度条） */
     const [phase, setPhase] = (0,react_production_namespaceFn().useState)('done');
@@ -73664,8 +74851,16 @@ function SniffModal({ open, onClose, minKB, onMinKBChange }) {
     const [truncated, setTruncated] = (0,react_production_namespaceFn().useState)(false);
     /** 被名称规则（EXCLUDED_NAME_PATTERNS + EXCLUDED_NAME_SUFFIXES）排除的张数 —— 让用户知道「不是没扫到，是按规则排掉了」 */
     const [excluded, setExcluded] = (0,react_production_namespaceFn().useState)(0);
-    /** 「大小未知」分组是否展开（默认折叠） */
-    const [unknownOpen, setUnknownOpen] = (0,react_production_namespaceFn().useState)(false);
+    /**
+     * 哪些分组的「大小未知」档是展开的（默认全折叠）。键是分组 id（未归属为 '')。
+     * v26.10.13-v8 起从「一个全局布尔」变成「按分组记」—— 分组后每个会话各有各的未知档。
+     */
+    const [openUnknown, setOpenUnknown] = (0,react_production_namespaceFn().useState)(() => new Set());
+    /**
+     * 本轮扫描的会话归属上下文（页面上取不到会话信息时为 null ⇒ 面板退化成原来的平铺列表）。
+     * 跟着扫描走而不是每次渲染现读页面：页面状态随时会变，同一次扫描的结果必须口径一致。
+     */
+    const [convCtx, setConvCtx] = (0,react_production_namespaceFn().useState)(null);
     /** 勾选（存 key，不用下标：结果集是异步增长的，下标会错位） */
     const [selected, setSelected] = (0,react_production_namespaceFn().useState)(() => new Set());
     /** 放大预览是否打开（用于撤掉下层遮罩，同「历史记录」） */
@@ -73713,10 +74908,15 @@ function SniffModal({ open, onClose, minKB, onMinKBChange }) {
         setTruncated(false);
         setExcluded(0);
         setSelected(new Set());
-        setUnknownOpen(false);
+        setOpenUnknown(new Set());
         setBusyKey(null);
         setBatch(null);
         setPhase('measuring');
+        // 先建「文件名 → 会话」的归属上下文（纯读页面 Vuex + localStorage，零网络），
+        // 再把映射写回持久层：下次即使切走了会话、Vuex 里没有那条消息，图仍能归回原会话。
+        const ctx = buildConvContext();
+        persistConvContext(ctx);
+        setConvCtx(ctx);
         addLog('[图片嗅探] 开始扫描当前页面的图片…', 'info');
         const res = collectCandidates({ excludeSelector: SNIFF_EXCLUDE_SELECTOR });
         if (runIdRef.current !== runId)
@@ -73775,14 +74975,18 @@ function SniffModal({ open, onClose, minKB, onMinKBChange }) {
     }, [minKB]);
     /** 丢掉「测出来根本不是图片」的条目（Content-Type 明确是 text/video/json 等） */
     const kept = (0,react_production_namespaceFn().useMemo)(() => probed.filter((i) => !i.drop), [probed]);
-    /** 达标（已知大小且不小于阈值），按体积从大到小 */
-    const known = (0,react_production_namespaceFn().useMemo)(() => {
-        const list = kept.filter((i) => i.size !== null && i.size >= minBytes);
-        list.sort((a, b) => b.size - a.size);
-        return list;
-    }, [kept, minBytes]);
+    /**
+     * 按会话分组（v26.10.13-v8）。`sections` 是**唯一的排序与分桶口径**：
+     * 下面的计数 / shown / 渲染顺序全部从它派生，避免「计数一套、渲染一套」漂移。
+     * 组内已按体积倒序排好（沿用原有展示习惯）；小于阈值的图不进任何分组（= v26.10.10-v6 的语义）。
+     */
+    const sections = (0,react_production_namespaceFn().useMemo)(() => groupByConversation(kept, convCtx, minBytes).sections, [kept, convCtx, minBytes]);
+    /** 面板要不要画组头：一个具名会话都没有时不画（普通网页上没有「会话」概念，标题只是噪音） */
+    const groupedView = (0,react_production_namespaceFn().useMemo)(() => sections.some((s) => !!s.name), [sections]);
+    /** 达标图（跨组展平，组序 = 渲染序） */
+    const known = (0,react_production_namespaceFn().useMemo)(() => sections.flatMap((s) => s.known), [sections]);
     /** 大小未知：保留、折叠 */
-    const unknown = (0,react_production_namespaceFn().useMemo)(() => kept.filter((i) => i.size === null), [kept]);
+    const unknown = (0,react_production_namespaceFn().useMemo)(() => sections.flatMap((s) => s.unknown), [sections]);
     /**
      * 未被阈值过滤的图（达标 + 大小未知）：**标题计数、全选、批量下载的唯一范围**。
      * 小于阈值的图只影响「列表里没有它」，不该被任何计数或批量动作带上（v26.10.10-v6）。
@@ -73790,8 +74994,27 @@ function SniffModal({ open, onClose, minKB, onMinKBChange }) {
     const pickable = (0,react_production_namespaceFn().useMemo)(() => known.concat(unknown), [known, unknown]);
     /** 「测出来不是图片」被丢弃的张数 */
     const droppedCount = probed.length - kept.length;
-    /** 实际渲染的列表：展开未知组时追加在后面（顺序 = 预览 items 的顺序，必须一致） */
-    const shown = (0,react_production_namespaceFn().useMemo)(() => (unknownOpen ? known.concat(unknown) : known), [known, unknown, unknownOpen]);
+    /**
+     * 实际渲染的列表：某个分组的「大小未知」档展开时，那一组的未知图追加在该组达标图之后。
+     * 顺序**必须**与下面渲染顺序完全一致 —— antd 的 PreviewGroup 靠 items 下标定位当前图。
+     */
+    const shown = (0,react_production_namespaceFn().useMemo)(() => {
+        const out = [];
+        for (const s of sections) {
+            for (const it of s.known)
+                out.push(it);
+            if (openUnknown.has(s.id))
+                for (const it of s.unknown)
+                    out.push(it);
+        }
+        return out;
+    }, [sections, openUnknown]);
+    /** key → 在 shown 里的下标：卡片文件名里的序号、打印/预览定位都按「用户看到的顺序」算 */
+    const shownIndex = (0,react_production_namespaceFn().useMemo)(() => {
+        const m = new Map();
+        shown.forEach((it, i) => m.set(it.key, i));
+        return m;
+    }, [shown]);
     const toggleOne = (0,react_production_namespaceFn().useCallback)((key) => {
         setSelected((prev) => {
             const next = new Set(prev);
@@ -73813,6 +75036,38 @@ function SniffModal({ open, onClose, minKB, onMinKBChange }) {
             return all ? new Set() : new Set(pickable.map((i) => i.key));
         });
     }, [pickable]);
+    /**
+     * 全选 / 取消选中**某一个会话分组**（v26.10.13-v8，分组后才有的动作）。
+     * 范围 = 该组的达标 + 大小未知（与全局「全选」同一套口径，只是限定在组内）——
+     * 用户最常见的诉求是「把这家纳税人的图都下下来」，不该逼他一张张点。
+     */
+    const toggleGroup = (0,react_production_namespaceFn().useCallback)((s) => {
+        const keys = s.known.concat(s.unknown).map((i) => i.key);
+        if (!keys.length)
+            return;
+        setSelected((prev) => {
+            const next = new Set(prev);
+            const all = keys.every((k) => next.has(k));
+            for (const k of keys) {
+                if (all)
+                    next.delete(k);
+                else
+                    next.add(k);
+            }
+            return next;
+        });
+    }, []);
+    /** 展开/收起某个分组的「大小未知」档 */
+    const toggleUnknown = (0,react_production_namespaceFn().useCallback)((sectionId) => {
+        setOpenUnknown((prev) => {
+            const next = new Set(prev);
+            if (next.has(sectionId))
+                next.delete(sectionId);
+            else
+                next.add(sectionId);
+            return next;
+        });
+    }, []);
     /** 打印对话框上的文档标题（react-to-print 会临时改写 document.title 再还原） */
     const printTitleRef = (0,react_production_namespaceFn().useRef)('图片');
     /**
@@ -73829,9 +75084,10 @@ function SniffModal({ open, onClose, minKB, onMinKBChange }) {
      * 打印某一张图的**原图**并按 A4 自适应（横图自动旋转 90 度，见 shared/preview/print.ts）。
      * ⚠️ 不能依赖 <img> 的 onLoad 改样式：react-to-print 克隆的是独立节点，
      *    故先用游离 Image 量出自然宽高，再构造好节点交给 doPrint（同「历史记录」的做法）。
+     * 序号不往参数里传：文件名兜底编号必须与卡片上显示的一致，故统一从 shownIndex 取。
      */
-    const printImage = (0,react_production_namespaceFn().useCallback)((it, idx) => {
-        const fname = sniffFileName(it.url, it.mime, idx);
+    const printImage = (0,react_production_namespaceFn().useCallback)((it) => {
+        const fname = sniffFileName(it.url, it.mime, idxOf(it, shownIndex));
         printTitleRef.current = fname;
         addLog('打印图片: ' + fname, 'success');
         const probe = document.createElement('img');
@@ -73841,10 +75097,10 @@ function SniffModal({ open, onClose, minKB, onMinKBChange }) {
         }));
         probe.onerror = () => doPrint(() => buildA4ImageNode(it.url, fname));
         probe.src = it.url;
-    }, [doPrint]);
+    }, [doPrint, shownIndex]);
     /** 单张下载：跨域图走 GM_xhr 取二进制（直接给 <a download> 会被忽略而变成导航） */
-    const doDownloadOne = (0,react_production_namespaceFn().useCallback)(async (it, idx) => {
-        const fname = sniffFileName(it.url, it.mime, idx);
+    const doDownloadOne = (0,react_production_namespaceFn().useCallback)(async (it) => {
+        const fname = sniffFileName(it.url, it.mime, idxOf(it, shownIndex));
         setBusyKey(it.key);
         try {
             const ok = await downloadImage(it.url, fname);
@@ -73853,7 +75109,7 @@ function SniffModal({ open, onClose, minKB, onMinKBChange }) {
         finally {
             setBusyKey(null);
         }
-    }, []);
+    }, [shownIndex]);
     /**
      * 批量下载：串行 + 间隔，避免浏览器把连续下载当弹窗拦截 / 静默丢弃。
      * 范围是 pickable（未被阈值过滤的图）∩ 选中集：即使用户调高阈值后 selection 里残留了失效的 key，
@@ -73869,8 +75125,8 @@ function SniffModal({ open, onClose, minKB, onMinKBChange }) {
             for (let i = 0; i < list.length; i++) {
                 const it = list[i];
                 // 文件名里的序号用**展示顺序**，与用户看到的一致
-                const at = shown.indexOf(it);
-                if (await downloadImage(it.url, sniffFileName(it.url, it.mime, at >= 0 ? at : i)))
+                const at = shownIndex.get(it.key);
+                if (await downloadImage(it.url, sniffFileName(it.url, it.mime, at === undefined ? i : at)))
                     ok++;
                 setBatch({ done: i + 1, total: list.length });
                 if (i < list.length - 1)
@@ -73881,29 +75137,53 @@ function SniffModal({ open, onClose, minKB, onMinKBChange }) {
         finally {
             setBatch(null);
         }
-    }, [pickable, selected, shown]);
+    }, [pickable, selected, shownIndex]);
     /** 选中的、**未被阈值过滤**的张数：按钮文案与禁用态都用它（选中集里可能残留已失效的 key） */
     const selectedCount = (0,react_production_namespaceFn().useMemo)(() => pickable.filter((i) => selected.has(i.key)).length, [pickable, selected]);
-    /** 单张卡片的元信息（来源、测量方式）合成一句话，hover 可见 */
-    const metaOf = (it) => '来源：' + it.sources.map((s) => SOURCE_LABEL[s]).join(' / ') + '；大小来源：' + VIA_LABEL[it.sizeVia];
-    const renderCard = (it, idx) => {
-        const fname = sniffFileName(it.url, it.mime, idx);
+    /**
+     * 单张卡片的元信息（来源、测量方式、群里的发送者）合成一句话，hover 可见。
+     * 发送者只在「与会话名不同」时显示 —— 单聊里发送者就是纳税人本人，写出来是重复噪音。
+     */
+    const metaOf = (it) => {
+        const conv = it.stem && convCtx ? convCtx.byStem.get(it.stem) : undefined;
+        const sender = conv && conv.sender && conv.sender !== conv.name ? '；发送者：' + conv.sender : '';
+        return ('来源：' +
+            it.sources.map((s) => SOURCE_LABEL[s]).join(' / ') +
+            '；大小来源：' +
+            VIA_LABEL[it.sizeVia] +
+            sender);
+    };
+    /** 卡片（分组只在外面套一层容器，卡片本身与 v26.10.10-v16 完全一致） */
+    const renderCard = (it) => {
+        // 序号按**展示顺序**取：文件名兜底编号（znhd-sniff-N）与打印标题都用它，用户看到的才是一致的
+        const at = shownIndex.get(it.key);
+        const fname = sniffFileName(it.url, it.mime, at === undefined ? 0 : at);
         return ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', flexDirection: 'column', minWidth: 0 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { position: 'relative' }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(ImageOverlayActions, { actions: [
                                 {
                                     label: '下载',
                                     icon: (0,react_jsx_runtime_production_namespaceFn().jsx)(DownloadIcon, { size: 13 }),
                                     loading: busyKey === it.key,
-                                    onClick: () => void doDownloadOne(it, idx),
+                                    onClick: () => void doDownloadOne(it),
                                 },
                                 {
                                     label: '打印',
                                     icon: (0,react_jsx_runtime_production_namespaceFn().jsx)(icons_PrinterOutlined, { style: { fontSize: 13 } }),
-                                    onClick: () => printImage(it, idx),
+                                    onClick: () => printImage(it),
                                 },
                             ], children: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_image, { src: it.url, alt: fname, style: { width: '100%', aspectRatio: '1 / 1', objectFit: 'cover', borderRadius: 8 } }) }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_checkbox, { checked: selected.has(it.key), onChange: () => toggleOne(it.key), style: { position: 'absolute', left: 6, top: 6, zIndex: 2 } })] }), (0,react_jsx_runtime_production_namespaceFn().jsx)(SniffModal_Text, { ellipsis: true, style: { fontSize: 11, marginTop: 4 }, title: fname, children: fname }), (0,react_jsx_runtime_production_namespaceFn().jsxs)(SniffModal_Text, { type: "secondary", style: { fontSize: 11 }, title: metaOf(it), children: [formatBytes(it.size), it.width && it.height ? ' · ' + it.width + '×' + it.height : ''] })] }, it.key));
     };
     /** 进度：已测 / 总数 */
     const percent = total > 0 ? Math.min(100, Math.round((probed.length / total) * 100)) : 0;
+    /** 组头文案：`会话名（N 张）`；未归属分组（id 为空串）显示「未归属会话」 */
+    const groupTitle = (s) => (s.name || '未归属会话') + '（' + (s.known.length + s.unknown.length) + ' 张）';
+    /**
+     * 「量不出字节数…」这句解释挂在第一个带「大小未知」档的分组后面（每个分组都写一遍是噪音）。
+     * 用分组 id 比对而不是 boolean：未归属分组的 id 是空串，`null !== ''`，两者不会混淆。
+     */
+    const explainUnknownId = (0,react_production_namespaceFn().useMemo)(() => {
+        const s = sections.find((x) => x.unknown.length > 0);
+        return s ? s.id : null;
+    }, [sections]);
     return ((0,react_jsx_runtime_production_namespaceFn().jsxs)(modal, { open: open, title: (0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("span", { children: '图片嗅探（共 ' + pickable.length + ' 张）' }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { size: "small", loading: phase === 'measuring', onClick: startScan, children: phase === 'measuring' ? '扫描中…' : '重新扫描' })] }), onCancel: onClose, getContainer: getOverlayContainer, width: 720, styles: { body: { textAlign: 'left' } }, destroyOnHidden: true, 
         // 预览打开时撤掉本弹窗遮罩：预览是全屏浮层，这层遮罩只会让画面多暗一层（同「历史记录」）
         mask: !previewOpen, footer: (0,react_jsx_runtime_production_namespaceFn().jsxs)(es_space, { children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { disabled: !selectedCount || !!batch, loading: !!batch, onClick: () => void doDownloadSelected(), children: batch ? '下载中 ' + batch.done + '/' + batch.total : '下载所选（' + selectedCount + '）' }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { disabled: !selected.size || !!batch, onClick: () => setSelected(new Set()), children: "\u6E05\u7A7A\u9009\u62E9" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { color: "primary", variant: "solid", onClick: onClose, children: "\u5173\u95ED" })] }), children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 8 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(SniffModal_Text, { type: "secondary", style: { fontSize: 12 }, children: "\u53EA\u5217\u51FA \u2265" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(input_number, { size: "small", min: 1, max: 10240, step: 10, value: minKB, addonAfter: "KB", style: { width: 132 }, onChange: (v) => onMinKBChange(Number.isFinite(v) && !!v && v > 0 ? Math.round(v) : DEFAULT_MIN_KB) }), (0,react_jsx_runtime_production_namespaceFn().jsx)(SniffModal_Text, { type: "secondary", style: { fontSize: 12 }, children: '的图片（显示 ' + known.length + ' 张）' }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_checkbox, { checked: allSelected, disabled: !kept.length, onChange: toggleAll, children: "\u5168\u9009" })] }), truncated ? ((0,react_jsx_runtime_production_namespaceFn().jsx)(SniffModal_Text, { type: "warning", style: { fontSize: 12, display: 'block', marginBottom: 8 }, children: '页面元素太多或图片超过 ' + (/* inlined export .MAX_SNIFF */300) + ' 张，本次只扫描了前一部分 —— 结果可能不完整。' })) : null, droppedCount > 0 ? ((0,react_jsx_runtime_production_namespaceFn().jsx)(SniffModal_Text, { type: "secondary", style: { fontSize: 12, display: 'block', marginBottom: 8 }, children: '已排除 ' + droppedCount + ' 个响应不是图片的地址（视频 / 网页 / JSON 等）。' })) : null, excluded > 0 ? ((0,react_jsx_runtime_production_namespaceFn().jsx)(SniffModal_Text, { type: "secondary", style: { fontSize: 12, display: 'block', marginBottom: 8 }, children: '已按文件名排除 ' +
@@ -73914,24 +75194,40 @@ function SniffModal({ open, onClose, minKB, onMinKBChange }) {
                     ? '正在测量大小…'
                     : total
                         ? '扫描到 ' + total + ' 个候选，但都被阈值或类型过滤掉了（可调低阈值再试）'
-                        : '未在当前页面发现图片' })) : ((0,react_jsx_runtime_production_namespaceFn().jsxs)((react_jsx_runtime_production_namespaceFn().Fragment), { children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(es_image.PreviewGroup, { items: shown.map((i) => i.url), preview: {
-                            /**
-                             * ⚠️ 必须显式指定挂载容器（原因见 shared/preview/host.ts）：
-                             * 税务页 body 带 transform 时，antd 默认 portal 到 body 会把预览困在 body 盒子里。
-                             */
-                            getContainer: getPreviewHost,
-                            onOpenChange: (o) => setPreviewOpen(o),
-                            /** 工具栏追加「打印」（走共享层的 appendPreviewActions，与手机页同一份） */
-                            actionsRender: (originalNode, info) => {
-                                const printBtn = ((0,react_jsx_runtime_production_namespaceFn().jsx)("button", { type: "button", className: "ant-image-preview-actions-action", "aria-label": "print", title: "\u6253\u5370\u539F\u56FE", onClick: () => {
-                                        const found = shown.findIndex((i) => i.url === info.image?.url);
-                                        const at = found >= 0 ? found : info.current;
-                                        if (shown[at])
-                                            printImage(shown[at], at);
-                                    }, children: (0,react_jsx_runtime_production_namespaceFn().jsx)(icons_PrinterOutlined, {}) }, "znhd-print"));
-                                return appendPreviewActions(originalNode, printBtn);
-                            },
-                        }, children: (0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { maxHeight: '58vh', overflow: 'auto' }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: GRID_STYLE, children: known.map((it, idx) => renderCard(it, idx)) }), unknownOpen && unknown.length > 0 ? ((0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { ...GRID_STYLE, marginTop: 8 }, children: unknown.map((it, idx) => renderCard(it, known.length + idx)) })) : null] }) }), unknown.length > 0 ? ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { marginTop: 6 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)(es_button, { type: "link", size: "small", style: { padding: 0 }, onClick: () => setUnknownOpen(!unknownOpen), children: [unknownOpen ? '▾' : '▸', " ", '大小未知（' + unknown.length + '）'] }), (0,react_jsx_runtime_production_namespaceFn().jsx)(SniffModal_Text, { type: "secondary", style: { fontSize: 11, marginLeft: 6 }, children: "\u91CF\u4E0D\u51FA\u5B57\u8282\u6570\uFF08\u8DE8\u57DF\u54CD\u5E94\u5934\u88AB\u62D2\u7B49\uFF09\uFF0C\u53EF\u80FD\u6709\u5927\u56FE\uFF0C\u5DF2\u4FDD\u7559" })] })) : null] })), (0,react_jsx_runtime_production_namespaceFn().jsx)(SniffModal_Text, { type: "secondary", style: { fontSize: 12, display: 'block', marginTop: 8 }, children: "\u63D0\u793A\uFF1A\u5355\u51FB\u7F29\u7565\u56FE\u53EF\u653E\u5927 / \u591A\u56FE\u5207\u6362\uFF0C\u653E\u5927\u540E\u5DE5\u5177\u680F\u4E0A\u7684\u300C\u6253\u5370\u300D\u6309 A4 \u6253\u5370\u539F\u56FE\uFF08\u6A2A\u56FE\u81EA\u52A8\u65CB\u8F6C 90 \u5EA6\uFF09\uFF1B \u52FE\u9009\u540E\u53EF\u6279\u91CF\u4E0B\u8F7D\u3002\u89C6\u9891\u5DF2\u5728\u626B\u63CF\u9636\u6BB5\u6392\u9664\uFF0C\u52A8\u56FE\uFF08gif\uFF09\u6309\u56FE\u7247\u4FDD\u7559\u3002" })] }));
+                        : '未在当前页面发现图片' })) : ((0,react_jsx_runtime_production_namespaceFn().jsx)((react_jsx_runtime_production_namespaceFn().Fragment), { children: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_image.PreviewGroup, { items: shown.map((i) => i.url), preview: {
+                        /**
+                         * ⚠️ 必须显式指定挂载容器（原因见 shared/preview/host.ts）：
+                         * 税务页 body 带 transform 时，antd 默认 portal 到 body 会把预览困在 body 盒子里。
+                         */
+                        getContainer: getPreviewHost,
+                        onOpenChange: (o) => setPreviewOpen(o),
+                        /** 工具栏追加「打印」（走共享层的 appendPreviewActions，与手机页同一份） */
+                        actionsRender: (originalNode, info) => {
+                            const printBtn = ((0,react_jsx_runtime_production_namespaceFn().jsx)("button", { type: "button", className: "ant-image-preview-actions-action", "aria-label": "print", title: "\u6253\u5370\u539F\u56FE", onClick: () => {
+                                    const found = shown.findIndex((i) => i.url === info.image?.url);
+                                    const at = found >= 0 ? found : info.current;
+                                    if (shown[at])
+                                        printImage(shown[at]);
+                                }, children: (0,react_jsx_runtime_production_namespaceFn().jsx)(icons_PrinterOutlined, {}) }, "znhd-print"));
+                            return appendPreviewActions(originalNode, printBtn);
+                        },
+                    }, children: (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { maxHeight: '58vh', overflow: 'auto' }, children: sections.map((s, si) => {
+                            const open = openUnknown.has(s.id);
+                            // 该组一张都没有（如「当前会话」恰好全是小于阈值的图）：不占位置
+                            if (!s.known.length && !s.unknown.length)
+                                return null;
+                            return ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { "data-sniff-group": s.id, "data-sniff-group-name": s.name, ...(s.current ? { 'data-sniff-group-current': '1' } : null), style: { marginTop: si === 0 ? 0 : 12 }, children: [groupedView ? ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { "data-sniff-group-header": true, style: {
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: 8,
+                                            flexWrap: 'wrap',
+                                            marginBottom: 6,
+                                        }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(SniffModal_Text, { strong: true, style: { fontSize: 12 }, children: groupTitle(s) }), s.current ? ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_tag, { color: "blue", style: {
+                                                    marginInlineEnd: 0,
+                                                    fontSize: 11,
+                                                    lineHeight: '16px',
+                                                }, children: "\u5F53\u524D\u4F1A\u8BDD" })) : null, (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { type: "link", size: "small", style: { padding: 0, fontSize: 12 }, onClick: () => toggleGroup(s), children: "\u5168\u9009\u672C\u7EC4" })] })) : null, (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: GRID_STYLE, children: s.known.map((it) => renderCard(it)) }), open && s.unknown.length ? ((0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { ...GRID_STYLE, marginTop: 8 }, children: s.unknown.map((it) => renderCard(it)) })) : null, s.unknown.length ? ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { marginTop: 6 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)(es_button, { type: "link", size: "small", style: { padding: 0 }, onClick: () => toggleUnknown(s.id), children: [open ? '▾' : '▸', " ", '大小未知（' + s.unknown.length + '）'] }), explainUnknownId === s.id ? ((0,react_jsx_runtime_production_namespaceFn().jsx)(SniffModal_Text, { type: "secondary", style: { fontSize: 11, marginLeft: 6 }, children: "\u91CF\u4E0D\u51FA\u5B57\u8282\u6570\uFF08\u8DE8\u57DF\u54CD\u5E94\u5934\u88AB\u62D2\u7B49\uFF09\uFF0C\u53EF\u80FD\u6709\u5927\u56FE\uFF0C\u5DF2\u4FDD\u7559" })) : null] })) : null] }, s.id || '__unnamed__'));
+                        }) }) }) })), (0,react_jsx_runtime_production_namespaceFn().jsxs)(SniffModal_Text, { type: "secondary", style: { fontSize: 12, display: 'block', marginTop: 8 }, children: ["\u63D0\u793A\uFF1A", groupedView ? '图片已按会话（纳税人）分组，组头可直接「全选本组」；' : '', "\u5355\u51FB\u7F29\u7565\u56FE\u53EF\u653E\u5927 / \u591A\u56FE\u5207\u6362\uFF0C\u653E\u5927\u540E\u5DE5\u5177\u680F\u4E0A\u7684\u300C\u6253\u5370\u300D\u6309 A4 \u6253\u5370\u539F\u56FE\uFF08\u6A2A\u56FE\u81EA\u52A8\u65CB\u8F6C 90 \u5EA6\uFF09\uFF1B \u52FE\u9009\u540E\u53EF\u6279\u91CF\u4E0B\u8F7D\u3002\u89C6\u9891\u5DF2\u5728\u626B\u63CF\u9636\u6BB5\u6392\u9664\uFF0C\u52A8\u56FE\uFF08gif\uFF09\u6309\u56FE\u7247\u4FDD\u7559\u3002"] })] }));
 }
 
 ;// ./src/lib/ui/transfer/wechatTheme.ts
@@ -111784,708 +113080,6 @@ if (false) // removed by dead control flow
 const list_List = ListWithForwardRef;
 list_List.Item = list_Item;
 /* harmony default export */ const es_list = (list_List);
-;// ./node_modules/antd/es/tag/style/index.js
-
-
-
-
-
-
-// ============================== Styles ==============================
-const tag_style_genBaseStyle = token => {
-  const {
-    paddingXXS,
-    lineWidth,
-    tagPaddingHorizontal,
-    componentCls,
-    calc
-  } = token;
-  const paddingInline = calc(tagPaddingHorizontal).sub(lineWidth).equal();
-  const iconMarginInline = calc(paddingXXS).sub(lineWidth).equal();
-  return {
-    // Result
-    [componentCls]: {
-      ...resetComponent(token),
-      display: 'inline-block',
-      height: 'auto',
-      paddingInline,
-      fontSize: token.tagFontSize,
-      lineHeight: token.tagLineHeight,
-      whiteSpace: 'nowrap',
-      backgroundColor: token.defaultBg,
-      border: `${util_unit(token.lineWidth)} ${token.lineType} ${token.colorBorder}`,
-      borderRadius: token.borderRadiusSM,
-      opacity: 1,
-      transition: `all ${token.motionDurationMid}`,
-      textAlign: 'start',
-      position: 'relative',
-      // RTL
-      [`&${componentCls}-rtl`]: {
-        direction: 'rtl'
-      },
-      '&, a, a:hover': {
-        color: token.defaultColor
-      },
-      [`${componentCls}-close-icon`]: {
-        marginInlineStart: iconMarginInline,
-        fontSize: token.tagIconSize,
-        color: token.colorIcon,
-        cursor: 'pointer',
-        transition: `all ${token.motionDurationMid}`,
-        '&:hover': {
-          color: token.colorTextHeading
-        }
-      },
-      '&-checkable': {
-        backgroundColor: 'transparent',
-        borderColor: 'transparent',
-        cursor: 'pointer',
-        [`&:not(${componentCls}-checkable-checked):hover`]: {
-          color: token.colorPrimary,
-          backgroundColor: token.colorFillSecondary
-        },
-        '&:active, &-checked': {
-          color: token.colorTextLightSolid
-        },
-        '&-checked': {
-          backgroundColor: token.colorPrimary,
-          '&:hover': {
-            backgroundColor: token.colorPrimaryHover
-          }
-        },
-        '&:active': {
-          backgroundColor: token.colorPrimaryActive
-        },
-        '&-disabled': {
-          cursor: 'not-allowed',
-          [`&:not(${componentCls}-checkable-checked)`]: {
-            color: token.colorTextDisabled,
-            '&:hover': {
-              backgroundColor: 'transparent'
-            }
-          },
-          [`&${componentCls}-checkable-checked`]: {
-            color: token.colorTextDisabled,
-            backgroundColor: token.colorBgContainerDisabled
-          },
-          '&:hover, &:active': {
-            backgroundColor: token.colorBgContainerDisabled,
-            color: token.colorTextDisabled
-          },
-          [`&:not(${componentCls}-checkable-checked):hover`]: {
-            color: token.colorTextDisabled
-          }
-        },
-        '&-group': {
-          display: 'flex',
-          flexWrap: 'wrap',
-          gap: token.paddingXS
-        }
-      },
-      '&-hidden': {
-        display: 'none'
-      },
-      // Icons from third-party libraries are a bare `<svg>`, which none of the `.anticon`
-      // rules reach. An `<svg>` has no baseline of its own, so it is aligned by its bottom
-      // margin edge (CSS 2.1 §10.8.1) and rides above the text. Centre it instead: unlike an
-      // `.anticon` (whose `<svg>` is always `1em`, so a fixed `-0.125em` nudge suffices), a
-      // third-party `<svg>` may be sized in `px`, so the correction must not depend on size.
-      // `display: inline-block` keeps it an atomic inline box so `vertical-align` still applies even
-      // under a CSS reset that forces `svg { display: block }` (e.g. Tailwind Preflight), which would
-      // otherwise drop the icon onto its own line. `vertical-align: middle` centres the margin box on
-      // the x-height line; `margin-block-end` then lifts it by half its own value onto the cap-height
-      // centre (capHeight − xHeight ≈ 0.2em across typical fonts), keeping it centred at any icon size.
-      // Only matches a bare `<svg>`: an `.anticon` keeps its `<svg>` one level deeper.
-      '> svg': {
-        display: 'inline-block',
-        verticalAlign: 'middle',
-        marginBlockEnd: '0.2em'
-      },
-      // To ensure that a space will be placed between character and `Icon`.
-      [`> ${token.iconCls} + span, > span + ${token.iconCls}, > svg + span, > span + svg`]: {
-        marginInlineStart: paddingInline
-      }
-    },
-    [`&${token.componentCls}-solid`]: {
-      borderColor: 'transparent',
-      color: token.colorTextLightSolid,
-      backgroundColor: token.colorBgSolid,
-      [`&${componentCls}-default`]: {
-        color: token.solidTextColor
-      }
-    },
-    [`${componentCls}-filled`]: {
-      borderColor: 'transparent',
-      backgroundColor: token.tagBorderlessBg
-    },
-    [`&${componentCls}-disabled`]: {
-      color: token.colorTextDisabled,
-      cursor: 'not-allowed',
-      backgroundColor: token.colorBgContainerDisabled,
-      a: {
-        cursor: 'not-allowed',
-        pointerEvents: 'none',
-        color: token.colorTextDisabled,
-        '&:hover': {
-          color: token.colorTextDisabled
-        }
-      },
-      'a&': {
-        '&:hover, &:active': {
-          color: token.colorTextDisabled
-        }
-      },
-      [`&${componentCls}-outlined`]: {
-        borderColor: token.colorBorderDisabled
-      },
-      [`&${componentCls}-solid, &${componentCls}-filled`]: {
-        color: token.colorTextDisabled,
-        [`${componentCls}-close-icon`]: {
-          color: token.colorTextDisabled
-        }
-      },
-      [`${componentCls}-close-icon`]: {
-        cursor: 'not-allowed',
-        color: token.colorTextDisabled,
-        '&:hover': {
-          color: token.colorTextDisabled
-        }
-      }
-    }
-  };
-};
-// ============================== Export ==============================
-const tag_style_prepareToken = token => {
-  const {
-    lineWidth,
-    fontSizeIcon,
-    calc
-  } = token;
-  const tagFontSize = token.fontSizeSM;
-  const tagToken = statistic_merge(token, {
-    tagFontSize,
-    tagLineHeight: util_unit(calc(token.lineHeightSM).mul(tagFontSize).equal()),
-    tagIconSize: calc(fontSizeIcon).sub(calc(lineWidth).mul(2)).equal(),
-    // Tag icon is much smaller
-    tagPaddingHorizontal: 8,
-    // Fixed padding.
-    tagBorderlessBg: token.defaultBg
-  });
-  return tagToken;
-};
-const tag_style_prepareComponentToken = token => {
-  const solidTextColor = isBright(new AggregationColor(token.colorBgSolid), '#fff') ? '#000' : '#fff';
-  return {
-    defaultBg: new FastColor(token.colorFillTertiary).onBackground(token.colorBgContainer).toHexString(),
-    defaultColor: token.colorText,
-    solidTextColor
-  };
-};
-/* harmony default export */ const tag_style = (genStyleHooks('Tag', token => {
-  const tagToken = tag_style_prepareToken(token);
-  return tag_style_genBaseStyle(tagToken);
-}, tag_style_prepareComponentToken));
-;// ./node_modules/antd/es/tag/CheckableTag.js
-"use client";
-
-
-
-
-
-
-const CheckableTag = /*#__PURE__*/(react_production_namespaceFn().forwardRef)((props, ref) => {
-  const {
-    prefixCls: customizePrefixCls,
-    style,
-    className,
-    checked,
-    children,
-    icon,
-    onChange,
-    onClick,
-    onKeyDown,
-    disabled: customDisabled,
-    ...restProps
-  } = props;
-  const {
-    getPrefixCls,
-    tag
-  } = (react_production_namespaceFn().useContext)(ConfigContext);
-  const disabled = (react_production_namespaceFn().useContext)(config_provider_DisabledContext);
-  const mergedDisabled = customDisabled ?? disabled;
-  const handleClick = e => {
-    if (mergedDisabled) {
-      return;
-    }
-    onChange?.(!checked);
-    onClick?.(e);
-  };
-  const handleKeyDown = e => {
-    onKeyDown?.(e);
-    if (e.defaultPrevented || mergedDisabled) {
-      return;
-    }
-    if (e.key === ' ') {
-      e.preventDefault();
-      if (!e.repeat) {
-        onChange?.(!checked);
-      }
-    }
-  };
-  const prefixCls = getPrefixCls('tag', customizePrefixCls);
-  // Style
-  const [hashId, cssVarCls] = tag_style(prefixCls);
-  const cls = clsx(prefixCls, `${prefixCls}-checkable`, {
-    [`${prefixCls}-checkable-checked`]: checked,
-    [`${prefixCls}-checkable-disabled`]: mergedDisabled
-  }, tag?.className, className, hashId, cssVarCls);
-  return /*#__PURE__*/(react_production_namespaceFn().createElement)("span", {
-    ...restProps,
-    ref: ref,
-    role: "checkbox",
-    "aria-checked": checked,
-    "aria-disabled": mergedDisabled || undefined,
-    tabIndex: mergedDisabled ? -1 : 0,
-    style: {
-      ...tag?.style,
-      ...style
-    },
-    className: cls,
-    onClick: handleClick,
-    onKeyDown: handleKeyDown
-  }, icon, /*#__PURE__*/(react_production_namespaceFn().createElement)("span", null, children));
-});
-/* harmony default export */ const tag_CheckableTag = (CheckableTag);
-;// ./node_modules/antd/es/tag/CheckableTagGroup.js
-"use client";
-
-
-
-
-
-
-
-
-
-
-
-const CheckableTagGroup = /*#__PURE__*/(react_production_namespaceFn().forwardRef)((props, ref) => {
-  const {
-    id,
-    prefixCls: customizePrefixCls,
-    rootClassName,
-    className,
-    style,
-    classNames,
-    styles,
-    disabled,
-    options,
-    value,
-    defaultValue,
-    onChange,
-    multiple,
-    ...restProps
-  } = props;
-  const {
-    getPrefixCls,
-    direction,
-    className: contextClassName,
-    style: contextStyle,
-    classNames: contextClassNames,
-    styles: contextStyles
-  } = useComponentConfig('tag');
-  const prefixCls = getPrefixCls('tag', customizePrefixCls);
-  const groupPrefixCls = `${prefixCls}-checkable-group`;
-  const rootCls = hooks_useCSSVarCls(prefixCls);
-  const [hashId, cssVarCls] = tag_style(prefixCls, rootCls);
-  // ====================== Styles ======================
-  const contextStyleRoot = useSemanticRootStyle(contextStyle);
-  const styleRoot = useSemanticRootStyle(style);
-  const [mergedClassNames, mergedStyles] = useMergeSemantic([contextClassNames, classNames], [contextStyles, contextStyleRoot, styles, styleRoot], {
-    props
-  });
-  // =============================== Option ===============================
-  const parsedOptions = (0,react_production_namespaceFn().useMemo)(() => {
-    if (!Array.isArray(options)) {
-      return [];
-    }
-    return options.map(option => {
-      if (is_isPlainObject(option)) {
-        return option;
-      }
-      return {
-        value: option,
-        label: option
-      };
-    });
-  }, [options]);
-  // =============================== Values ===============================
-  const [mergedValue, setMergedValue] = useControlledState(defaultValue, value);
-  const handleChange = (checked, option) => {
-    let newValue = null;
-    if (multiple) {
-      const valueList = mergedValue || [];
-      newValue = checked ? [].concat(_toConsumableArray(valueList), [option.value]) : valueList.filter(item => item !== option.value);
-    } else {
-      newValue = checked ? option.value : null;
-    }
-    setMergedValue(newValue);
-    onChange?.(newValue); // TS not support generic type in function call
-  };
-  // ================================ Refs ================================
-  const divRef = (react_production_namespaceFn().useRef)(null);
-  (0,react_production_namespaceFn().useImperativeHandle)(ref, () => ({
-    nativeElement: divRef.current
-  }));
-  // ================================ ARIA ================================
-  const ariaProps = pickAttrs(restProps, {
-    aria: true,
-    data: true
-  });
-  // =============================== Render ===============================
-  return /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
-    ...ariaProps,
-    className: clsx(groupPrefixCls, contextClassName, rootClassName, {
-      [`${groupPrefixCls}-disabled`]: disabled,
-      [`${groupPrefixCls}-rtl`]: direction === 'rtl'
-    }, hashId, cssVarCls, className, mergedClassNames.root),
-    style: mergedStyles.root,
-    id: id,
-    ref: divRef
-  }, parsedOptions.map(option => (/*#__PURE__*/(react_production_namespaceFn().createElement)(tag_CheckableTag, {
-    key: option.value,
-    className: clsx(`${groupPrefixCls}-item`, mergedClassNames.item, option.className),
-    style: {
-      ...mergedStyles.item,
-      ...option.style
-    },
-    checked: multiple ? (mergedValue || []).includes(option.value) : mergedValue === option.value,
-    onChange: checked => handleChange(checked, option),
-    disabled: disabled
-  }, option.label))));
-});
-if (false) // removed by dead control flow
-{}
-/* harmony default export */ const tag_CheckableTagGroup = (CheckableTagGroup);
-;// ./node_modules/antd/es/tag/hooks/useColor.js
-
-
-
-/**
- * Convert color related props to a unified object,
- * which is used to flatten the compatibility requirements.
- */
-function useColor(props, contextVariant) {
-  const {
-    color,
-    variant,
-    bordered
-  } = props;
-  return (react_production_namespaceFn().useMemo)(() => {
-    const isInverseColor = color?.endsWith('-inverse');
-    // =================== Variant ===================
-    let nextVariant;
-    if (variant) {
-      // `variant` first
-      nextVariant = variant;
-    } else if (isInverseColor) {
-      // Fallback if using inverse color
-      nextVariant = 'solid';
-    } else if (bordered === false) {
-      // Fallback if using filled
-      nextVariant = 'filled';
-    } else {
-      // Finally not conflict, use context
-      nextVariant = contextVariant || 'filled';
-    }
-    // ==================== Color ====================
-    let nextColor = isInverseColor ? color?.replace('-inverse', '') : color;
-    if (nextColor === undefined && nextVariant === 'solid') {
-      nextColor = 'default';
-    }
-    // =============== Preset & Status ===============
-    const nextIsPreset = isPresetColor(nextColor);
-    const nextIsStatus = isPresetStatusColor(nextColor);
-    // ================== Customize ==================
-    // When `color` is not preset color,
-    // dynamic calculate the color pair.
-    const tagStyle = {};
-    if (!nextIsPreset && !nextIsStatus && nextColor) {
-      if (nextVariant === 'solid') {
-        tagStyle.backgroundColor = color;
-      } else {
-        const hsl = new FastColor(nextColor).toHsl();
-        hsl.l = 0.95;
-        tagStyle.backgroundColor = new FastColor(hsl).toHexString();
-        tagStyle.color = color;
-        if (nextVariant === 'outlined') {
-          tagStyle.borderColor = color;
-        }
-      }
-    }
-    return [nextVariant, nextColor, nextIsPreset, nextIsStatus, tagStyle];
-  }, [color, variant, bordered, contextVariant]);
-}
-;// ./node_modules/antd/es/tag/style/presetCmp.js
-// Style as status component
-
-
-// ============================== Preset ==============================
-const genPresetStyle = token => genPresetColor_genPresetColor(token, (colorKey, {
-  textColor,
-  lightBorderColor,
-  lightColor,
-  darkColor
-}) => ({
-  [`${token.componentCls}${token.componentCls}-${colorKey}:not(${token.componentCls}-disabled)`]: {
-    [`&${token.componentCls}-outlined`]: {
-      backgroundColor: lightColor,
-      borderColor: lightBorderColor,
-      color: textColor
-    },
-    [`&${token.componentCls}-solid`]: {
-      backgroundColor: darkColor,
-      borderColor: darkColor,
-      color: token.colorTextLightSolid
-    },
-    [`&${token.componentCls}-filled`]: {
-      backgroundColor: lightColor,
-      color: textColor
-    }
-  }
-}));
-// ============================== Export ==============================
-/* harmony default export */ const presetCmp = (genSubStyleComponent(['Tag', 'preset'], token => {
-  const tagToken = tag_style_prepareToken(token);
-  return genPresetStyle(tagToken);
-}, tag_style_prepareComponentToken));
-;// ./node_modules/antd/es/_util/capitalize.js
-function capitalize(str) {
-  if (typeof str !== 'string') {
-    return str;
-  }
-  const ret = str.charAt(0).toUpperCase() + str.slice(1);
-  return ret;
-}
-;// ./node_modules/antd/es/tag/style/statusCmp.js
-
-
-
-const genTagStatusStyle = (token, status, cssVariableType) => {
-  const capitalizedCssVariableType = capitalize(cssVariableType);
-  return {
-    [`${token.componentCls}${token.componentCls}-${status}:not(${token.componentCls}-disabled)`]: {
-      [`&${token.componentCls}-outlined`]: {
-        backgroundColor: token[`color${capitalizedCssVariableType}Bg`],
-        borderColor: token[`color${capitalizedCssVariableType}Border`],
-        color: token[`color${cssVariableType}`]
-      },
-      [`&${token.componentCls}-solid`]: {
-        backgroundColor: token[`color${cssVariableType}`],
-        borderColor: token[`color${cssVariableType}`]
-      },
-      [`&${token.componentCls}-filled`]: {
-        backgroundColor: token[`color${capitalizedCssVariableType}Bg`],
-        color: token[`color${cssVariableType}`]
-      }
-    }
-  };
-};
-// ============================== Export ==============================
-/* harmony default export */ const statusCmp = (genSubStyleComponent(['Tag', 'status'], token => {
-  const tagToken = tag_style_prepareToken(token);
-  return [genTagStatusStyle(tagToken, 'success', 'Success'), genTagStatusStyle(tagToken, 'processing', 'Info'), genTagStatusStyle(tagToken, 'error', 'Error'), genTagStatusStyle(tagToken, 'warning', 'Warning')];
-}, tag_style_prepareComponentToken));
-;// ./node_modules/antd/es/tag/index.js
-"use client";
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-const InternalTag = /*#__PURE__*/(react_production_namespaceFn().forwardRef)((props, ref) => {
-  const {
-    prefixCls: customizePrefixCls,
-    className,
-    rootClassName,
-    style,
-    children,
-    icon,
-    color,
-    variant: _variant,
-    onClose,
-    bordered,
-    disabled: customDisabled,
-    href,
-    target,
-    styles,
-    classNames,
-    ...restProps
-  } = props;
-  const {
-    getPrefixCls,
-    direction,
-    className: contextClassName,
-    variant: contextVariant,
-    style: contextStyle,
-    classNames: contextClassNames,
-    styles: contextStyles
-  } = useComponentConfig('tag');
-  // ===================== Warnings =====================
-  if (false) // removed by dead control flow
-{}
-  // ====================== Colors ======================
-  const [mergedVariant, mergedColor, isPreset, isStatus, customTagStyle] = useColor(props, contextVariant);
-  const isInternalColor = isPreset || isStatus;
-  // ===================== Disabled =====================
-  const disabled = (react_production_namespaceFn().useContext)(config_provider_DisabledContext);
-  const mergedDisabled = customDisabled ?? disabled;
-  const {
-    tag: tagContext
-  } = (react_production_namespaceFn().useContext)(ConfigContext);
-  const [visible, setVisible] = (react_production_namespaceFn().useState)(true);
-  const domProps = omit(restProps, ['closeIcon', 'closable']);
-  // =========== Merged Props for Semantic ===========
-  const mergedProps = {
-    ...props,
-    color: mergedColor,
-    variant: mergedVariant,
-    disabled: mergedDisabled
-  };
-  // ====================== Styles ======================
-  const contextStyleRoot = useSemanticRootStyle(contextStyle);
-  const styleRoot = useSemanticRootStyle(style);
-  const [mergedClassNames, mergedStyles] = useMergeSemantic([contextClassNames, classNames], [contextStyles, contextStyleRoot, styles, styleRoot], {
-    props: mergedProps
-  });
-  const tagStyle = (react_production_namespaceFn().useMemo)(() => {
-    let nextTagStyle = mergedStyles.root;
-    if (!mergedDisabled) {
-      nextTagStyle = {
-        ...customTagStyle,
-        ...nextTagStyle
-      };
-    }
-    return nextTagStyle;
-  }, [mergedStyles.root, customTagStyle, mergedDisabled]);
-  const prefixCls = getPrefixCls('tag', customizePrefixCls);
-  const [hashId, cssVarCls] = tag_style(prefixCls);
-  const tagClassName = clsx(prefixCls, contextClassName, mergedClassNames.root, `${prefixCls}-${mergedVariant}`, {
-    [`${prefixCls}-${mergedColor}`]: isInternalColor,
-    [`${prefixCls}-hidden`]: !visible,
-    [`${prefixCls}-rtl`]: direction === 'rtl',
-    [`${prefixCls}-disabled`]: mergedDisabled
-  }, className, rootClassName, hashId, cssVarCls);
-  // ===================== Closable =====================
-  const triggerClose = e => {
-    if (mergedDisabled) {
-      return;
-    }
-    e.stopPropagation();
-    onClose?.(e);
-    if (e.defaultPrevented) {
-      return;
-    }
-    if (href) {
-      e.preventDefault();
-    }
-    setVisible(false);
-  };
-  const handleCloseKeyDown = e => {
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault();
-      if (!e.repeat) {
-        e.currentTarget.click();
-      }
-    }
-  };
-  const [, mergedCloseIcon] = useClosable_useClosable(pickClosable(props), pickClosable(tagContext), {
-    closable: false,
-    closeIconRender: iconNode => {
-      const replacement = /*#__PURE__*/(react_production_namespaceFn().createElement)("span", {
-        role: "button",
-        tabIndex: mergedDisabled ? -1 : 0,
-        "aria-disabled": mergedDisabled || undefined,
-        className: clsx(`${prefixCls}-close-icon`, mergedClassNames.close),
-        onClick: triggerClose,
-        onKeyDown: handleCloseKeyDown,
-        style: mergedStyles.close
-      }, iconNode);
-      return replaceElement(iconNode, replacement, originProps => ({
-        onClick: e => {
-          originProps?.onClick?.(e);
-          triggerClose(e);
-        },
-        onKeyDown: e => {
-          originProps?.onKeyDown?.(e);
-          if (!e.defaultPrevented) {
-            handleCloseKeyDown(e);
-          }
-        },
-        role: 'button',
-        tabIndex: mergedDisabled ? -1 : 0,
-        'aria-disabled': mergedDisabled || undefined,
-        className: clsx(originProps?.className, `${prefixCls}-close-icon`, mergedClassNames.close),
-        style: {
-          ...mergedStyles.close,
-          ...originProps?.style
-        }
-      }));
-    }
-  });
-  // ====================== Render ======================
-  const isNeedWave = isFunction(restProps.onClick) || children && children.type === 'a';
-  const iconNode = cloneElement(icon, {
-    className: clsx(/*#__PURE__*/(react_production_namespaceFn().isValidElement)(icon) ? icon.props?.className : undefined, mergedClassNames.icon),
-    style: mergedStyles.icon
-  });
-  const child = iconNode ? (/*#__PURE__*/(react_production_namespaceFn().createElement)((react_production_namespaceFn().Fragment), null, iconNode, isReactRenderable(children) && (/*#__PURE__*/(react_production_namespaceFn().createElement)("span", {
-    className: mergedClassNames.content,
-    style: mergedStyles.content
-  }, children)))) : children;
-  const TagWrapper = href ? 'a' : 'span';
-  const tagNode = /*#__PURE__*/(react_production_namespaceFn().createElement)(TagWrapper, {
-    ...domProps,
-    ref: ref,
-    className: tagClassName,
-    style: tagStyle,
-    href: mergedDisabled ? undefined : href,
-    target: target,
-    onClick: mergedDisabled ? undefined : domProps.onClick,
-    ...(href && mergedDisabled ? {
-      'aria-disabled': true
-    } : {})
-  }, child, mergedCloseIcon, isPreset && /*#__PURE__*/(react_production_namespaceFn().createElement)(presetCmp, {
-    key: "preset",
-    prefixCls: prefixCls
-  }), isStatus && /*#__PURE__*/(react_production_namespaceFn().createElement)(statusCmp, {
-    key: "status",
-    prefixCls: prefixCls
-  }));
-  return isNeedWave ? /*#__PURE__*/(react_production_namespaceFn().createElement)(wave, {
-    component: "Tag"
-  }, tagNode) : tagNode;
-});
-const Tag = InternalTag;
-if (false) // removed by dead control flow
-{}
-Tag.CheckableTag = tag_CheckableTag;
-Tag.CheckableTagGroup = tag_CheckableTagGroup;
-/* harmony default export */ const es_tag = (Tag);
 ;// ./src/lib/agent/types.ts
 /**
  * ScriptCat Agent API（`CAT.agent.*`）的类型声明与纯工具函数。

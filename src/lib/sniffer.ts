@@ -58,6 +58,12 @@ export interface SniffCandidate {
     key: string;
     /** 可直接喂给 <img src>：http(s) / data: / blob: */
     url: string;
+    /**
+     * 文件名主干（v26.10.13-v8）：URL pathname 末段 → 解码 → 小写，见 urlFileStem。
+     * 「按会话分组」用它当匹配键（页面上 Vuex 消息里的 fileName 与它是同形的一串），
+     * 故必须**在收集阶段就固化**：URL 归一会丢查询串，但 pathname 是稳定的。
+     */
+    stem: string;
     kind: SniffKind;
     /** 从哪几路嗅到的（合并去重后可能多项） */
     sources: SniffSource[];
@@ -222,6 +228,36 @@ export function sniffFileName(url: string, mime: string | null, idx = 0): string
         }
     }
     return downloadFileName(base || 'znhd-sniff-' + (idx + 1), mime, idx);
+}
+
+/**
+ * URL 的文件名主干（v26.10.13-v8）：pathname 末段 → 解码 → 去空白 → 小写。
+ *
+ * 用途只有一个：**「按会话分组」的匹配键**。页面（征纳互动工作台）的 Vuex 消息里
+ * `payload.fileName` / `payload.imageInfoArray[].imageUrl` 与嗅探到的 URL 指向同一张图，
+ * 靠这串名字把它们对上号。因此它必须与 `sniffFileName` 分开：
+ *   · `sniffFileName` 是**给人看/存盘用**的下载名 —— 要消毒非法字符、要按 MIME 补后缀、要兜底编号；
+ *   · 本函数是**给机器比**的键 —— 不做兜底、不补后缀，只做「取末段 + 归一化」，
+ *     否则两个名字会不一致（如 `a.svg.png` 消毒后不变、但补后缀就会漂移）。
+ * 取不到末段（`data:` / `blob:` / 相对路径异常）返回 ''，调用方按「未归属」处理，绝不丢图。
+ */
+export function urlFileStem(url: string): string {
+    const s = String(url || '');
+    if (!s || /^(?:data|blob):/i.test(s)) return '';
+    let seg = '';
+    try {
+        const u = new URL(s, location.href);
+        seg = u.pathname.split('/').filter(Boolean).pop() || '';
+    } catch (e) {
+        // 不是合法 URL（如 Vuex 消息里裸的 uuid）：按最后一段路径字符处理
+        seg = s.split('?')[0].split('/').pop() || '';
+    }
+    try {
+        seg = decodeURIComponent(seg);
+    } catch (e) {
+        /* 百分号编码坏了就用原串 */
+    }
+    return seg.trim().toLowerCase();
 }
 
 /** URL 归一化：非 http(s)/data/blob 一律丢弃；data: 只接受 data:image/* */
@@ -429,6 +465,7 @@ export function collectCandidates(opts: CollectOptions = {}): CollectResult {
         map.set(key, {
             key: key,
             url: url,
+            stem: urlFileStem(url),
             kind: /^data:/i.test(url) ? 'data' : /^blob:/i.test(url) ? 'blob' : 'http',
             sources: [source],
             svgText: extra?.svgText,

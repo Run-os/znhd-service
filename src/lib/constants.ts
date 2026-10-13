@@ -23,6 +23,12 @@ export const CONFIG = {
     // Agent 会话标题的截断长度，与 ScriptCat 官方的自动标题规则保持一致
     // （chat_service.ts 里 `titleText.slice(0, 30)`），这样本地记的标题和 ScriptCat 侧看到的是同一个。
     AGENT_CHAT_TITLE_LENGTH: 30,
+    // 「图片嗅探」会话归属索引的条数上限（v26.10.13-v8，见 SNIFF_CONV_INDEX_KEY）：
+    // 每条只是一小段「文件名 → 会话」，但页面上的图会一直累积，给个上限防止无限增长（超出按最旧丢）。
+    MAX_SNIFF_CONV_STEMS: 2000,
+    // 会话归属索引的有效期（30 天）。文件名里带 uuid，跨天的同名文件几乎不可能，
+    // 过期只为了不让陈年映射无限期留着（且 URL 签名早就失效、那些图也不会再被嗅到）。
+    SNIFF_CONV_TTL: 30 * 24 * 60 * 60 * 1000,
 };
 
 // ==========存储管理==========
@@ -36,6 +42,10 @@ export const PHRASES_CACHE_TTL = 2 * 60 * 60 * 1000; // 缓存有效期：2 小�
 // Agent 会话索引（v26.10.10-v12）：官方 conversation API 没有 list/delete，脚本只能自己记
 // 「有哪些对话、叫什么名字、上次打开的是哪个」。只存索引，对话消息仍在 ScriptCat 的 OPFS 里。
 export const AGENT_CHATS_KEY = 'scriptCat_AgentChats';
+// 「图片嗅探」的会话归属索引（v26.10.13-v8）：文件名主干 → 会话（纳税人）。
+// **只存映射、不存 URL** —— im-cos 直链带签名会过期，存下来下次打开就是一片裂图。
+// 它的价值：切走会话后 Vuex 里已经没有那条消息，但图还留在资源表 / DOM 里时，仍能归回原会话。
+export const SNIFF_CONV_INDEX_KEY = 'scriptCat_SniffConvIndex';
 export const DEFAULTS = {
     voiceEnabled: true,
     // 监控时间段（单位：小时，可含小数，如 13.5 表示 13:30）

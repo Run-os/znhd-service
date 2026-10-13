@@ -128,6 +128,9 @@ const CHECKS = [
   ['sniffSelectScopeOk', '全选/批量下载只覆盖未被阈值过滤的图（小于阈值的不计数、不可选）'],
   ['sniffExcludeOk', '按文件名排除（znhd-sniff / user-woman / user-man）且面板给出排除计数'],
   ['sniffSvgExcludedOk', '按后缀排除 SVG（.svg 与内联 SVG 都不进面板）'],
+  // v26.10.13-v8：按会话（纳税人）分组 —— 归属、当前会话置顶、切会话后靠持久层仍归组
+  ['sniffGroupOk', '图片嗅探按会话分组：当前会话置顶、会话名与张数正确、未归属单独成组'],
+  ['sniffGroupPersistOk', '切走会话后重扫，图片仍归回原会话（会话归属的持久层生效）'],
   ['sniffImgActionsOk', '图片嗅探卡片：下载/打印是右下角的图标按钮（未 hover 隐藏，hover 出现）'],
   // v26.10.10-v8：面板被宿主页重绘删除后必须自愈（watchPanelHost 的回归断言）
   ['selfHeal', '面板被宿主页删除后自动挂回（且不重复挂载）'],
@@ -609,9 +612,11 @@ async function main() {
       !checkPass('sniffScanOk') ||
       !checkPass('sniffUnknownKeptOk') ||
       !checkPass('sniffExcludeOk') ||
-      !checkPass('sniffSvgExcludedOk') ||
-      !checkPass('sniffSelectScopeOk') ||
-      !checkPass('sniffImgActionsOk')
+            !checkPass('sniffSvgExcludedOk') ||
+            !checkPass('sniffSelectScopeOk') ||
+            !checkPass('sniffGroupOk') ||
+            !checkPass('sniffGroupPersistOk') ||
+            !checkPass('sniffImgActionsOk')
     ) {
       console.log('      嗅探快照：' + JSON.stringify(report.sniffSnap));
     }

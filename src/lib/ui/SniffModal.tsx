@@ -1,4 +1,4 @@
-import { Button, Checkbox, Empty, Image, InputNumber, Modal, Progress, Space, Typography } from 'antd';
+import { Button, Checkbox, Empty, Image, InputNumber, Modal, Progress, Space, Tag, Typography } from 'antd';
 import { PrinterOutlined } from '@ant-design/icons';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useReactToPrint } from 'react-to-print';
@@ -10,6 +10,14 @@ import { getOverlayContainer } from '@/lib/ui/panelHost';
 import { OVERLAY_HOST_ID, PANEL_HOST_ID } from '@/lib/ui/panelIds';
 import { DownloadIcon } from '@/lib/ui/icons';
 import ImageOverlayActions from '@/lib/ui/ImageOverlayActions';
+// 会话归属（v26.10.13-v8）：把图片按会话窗口（纳税人）分组，见 lib/sniffConv.ts 的文件头
+import {
+    buildConvContext,
+    groupByConversation,
+    persistConvContext,
+    type ConvContext,
+    type ConvSection,
+} from '@/lib/sniffConv';
 import {
     EXCLUDED_NAME_PATTERNS,
     EXCLUDED_NAME_SUFFIXES,
@@ -58,10 +66,16 @@ const { Text } = Typography;
  * 旧实现里「全选」选的是 kept（含被阈值挡下的那批），于是「下载所选」会把用户根本看不到的小图一起下载。
  *
  * 大小测量阶梯、视频排除规则、去重与 URL 归一化都在 src/lib/sniffer.ts（纯函数，便于单测）；
+ * 「按会话（纳税人）分组」的归属判定与持久化都在 src/lib/sniffConv.ts（同样是纯逻辑 + 读页面 Vuex）；
  * 本文件只负责「合批渲染 + 交互」。测量是异步逐张回来的，所以：
  *  · 结果按 150ms 合批推给状态（300 张图逐张 setState 会把主线程拖哭）；
  *  · 列表在测完之后才按体积排序（边测边排会让卡片来回跳，用户根本点不准）；
  *  · 关闭弹窗 / 重新扫描靠 runIdRef 作废在飞请求的结果（请求本身拦不住，结果丢弃即可）。
+ *
+ * 分组渲染（v26.10.13-v8）：图先按会话分桶再渲染，**组头只在真有具名会话时才画**
+ * （普通网页上没有「会话」概念，硬套一个标题只是噪音；此时分组恰好退化成原来的平铺形态）。
+ * 「当前会话」置顶、未归属殿后、组内按体积倒序 —— 排序规则全在 sniffConv.groupByConversation。
+ * 组头元素带 `data-sniff-group` / `data-sniff-group-name` / `data-sniff-group-current` 钩子（冒烟用）。
  */
 export interface SniffModalProps {
     open: boolean;
@@ -116,6 +130,12 @@ function sleep(ms: number): Promise<void> {
     });
 }
 
+/** 取某张图在「展示顺序」（shown）里的下标：拿不到就 0（只影响兜底文件名的编号，不影响功能） */
+function idxOf(it: { key: string }, index: Map<string, number>): number {
+    const at = index.get(it.key);
+    return at === undefined ? 0 : at;
+}
+
 export default function SniffModal({ open, onClose, minKB, onMinKBChange }: SniffModalProps) {
     /** 本轮扫描到哪一步：测量中 / 测完（测量中显示进度条） */
     const [phase, setPhase] = useState<'measuring' | 'done'>('done');
@@ -127,8 +147,16 @@ export default function SniffModal({ open, onClose, minKB, onMinKBChange }: Snif
     const [truncated, setTruncated] = useState(false);
     /** 被名称规则（EXCLUDED_NAME_PATTERNS + EXCLUDED_NAME_SUFFIXES）排除的张数 —— 让用户知道「不是没扫到，是按规则排掉了」 */
     const [excluded, setExcluded] = useState(0);
-    /** 「大小未知」分组是否展开（默认折叠） */
-    const [unknownOpen, setUnknownOpen] = useState(false);
+    /**
+     * 哪些分组的「大小未知」档是展开的（默认全折叠）。键是分组 id（未归属为 '')。
+     * v26.10.13-v8 起从「一个全局布尔」变成「按分组记」—— 分组后每个会话各有各的未知档。
+     */
+    const [openUnknown, setOpenUnknown] = useState<Set<string>>(() => new Set<string>());
+    /**
+     * 本轮扫描的会话归属上下文（页面上取不到会话信息时为 null ⇒ 面板退化成原来的平铺列表）。
+     * 跟着扫描走而不是每次渲染现读页面：页面状态随时会变，同一次扫描的结果必须口径一致。
+     */
+    const [convCtx, setConvCtx] = useState<ConvContext | null>(null);
     /** 勾选（存 key，不用下标：结果集是异步增长的，下标会错位） */
     const [selected, setSelected] = useState<Set<string>>(() => new Set<string>());
     /** 放大预览是否打开（用于撤掉下层遮罩，同「历史记录」） */
@@ -178,10 +206,16 @@ export default function SniffModal({ open, onClose, minKB, onMinKBChange }: Snif
         setTruncated(false);
         setExcluded(0);
         setSelected(new Set<string>());
-        setUnknownOpen(false);
+        setOpenUnknown(new Set<string>());
         setBusyKey(null);
         setBatch(null);
         setPhase('measuring');
+
+        // 先建「文件名 → 会话」的归属上下文（纯读页面 Vuex + localStorage，零网络），
+        // 再把映射写回持久层：下次即使切走了会话、Vuex 里没有那条消息，图仍能归回原会话。
+        const ctx = buildConvContext();
+        persistConvContext(ctx);
+        setConvCtx(ctx);
 
         addLog('[图片嗅探] 开始扫描当前页面的图片…', 'info');
         const res = collectCandidates({ excludeSelector: SNIFF_EXCLUDE_SELECTOR });
@@ -244,14 +278,21 @@ export default function SniffModal({ open, onClose, minKB, onMinKBChange }: Snif
 
     /** 丢掉「测出来根本不是图片」的条目（Content-Type 明确是 text/video/json 等） */
     const kept = useMemo(() => probed.filter((i) => !i.drop), [probed]);
-    /** 达标（已知大小且不小于阈值），按体积从大到小 */
-    const known = useMemo(() => {
-        const list = kept.filter((i) => i.size !== null && i.size >= minBytes);
-        list.sort((a, b) => (b.size as number) - (a.size as number));
-        return list;
-    }, [kept, minBytes]);
+    /**
+     * 按会话分组（v26.10.13-v8）。`sections` 是**唯一的排序与分桶口径**：
+     * 下面的计数 / shown / 渲染顺序全部从它派生，避免「计数一套、渲染一套」漂移。
+     * 组内已按体积倒序排好（沿用原有展示习惯）；小于阈值的图不进任何分组（= v26.10.10-v6 的语义）。
+     */
+    const sections = useMemo<Array<ConvSection<SniffedImage>>>(
+        () => groupByConversation(kept, convCtx, minBytes).sections,
+        [kept, convCtx, minBytes]
+    );
+    /** 面板要不要画组头：一个具名会话都没有时不画（普通网页上没有「会话」概念，标题只是噪音） */
+    const groupedView = useMemo(() => sections.some((s) => !!s.name), [sections]);
+    /** 达标图（跨组展平，组序 = 渲染序） */
+    const known = useMemo(() => sections.flatMap((s) => s.known), [sections]);
     /** 大小未知：保留、折叠 */
-    const unknown = useMemo(() => kept.filter((i) => i.size === null), [kept]);
+    const unknown = useMemo(() => sections.flatMap((s) => s.unknown), [sections]);
     /**
      * 未被阈值过滤的图（达标 + 大小未知）：**标题计数、全选、批量下载的唯一范围**。
      * 小于阈值的图只影响「列表里没有它」，不该被任何计数或批量动作带上（v26.10.10-v6）。
@@ -259,8 +300,24 @@ export default function SniffModal({ open, onClose, minKB, onMinKBChange }: Snif
     const pickable = useMemo(() => known.concat(unknown), [known, unknown]);
     /** 「测出来不是图片」被丢弃的张数 */
     const droppedCount = probed.length - kept.length;
-    /** 实际渲染的列表：展开未知组时追加在后面（顺序 = 预览 items 的顺序，必须一致） */
-    const shown = useMemo(() => (unknownOpen ? known.concat(unknown) : known), [known, unknown, unknownOpen]);
+    /**
+     * 实际渲染的列表：某个分组的「大小未知」档展开时，那一组的未知图追加在该组达标图之后。
+     * 顺序**必须**与下面渲染顺序完全一致 —— antd 的 PreviewGroup 靠 items 下标定位当前图。
+     */
+    const shown = useMemo(() => {
+        const out: SniffedImage[] = [];
+        for (const s of sections) {
+            for (const it of s.known) out.push(it);
+            if (openUnknown.has(s.id)) for (const it of s.unknown) out.push(it);
+        }
+        return out;
+    }, [sections, openUnknown]);
+    /** key → 在 shown 里的下标：卡片文件名里的序号、打印/预览定位都按「用户看到的顺序」算 */
+    const shownIndex = useMemo(() => {
+        const m = new Map<string, number>();
+        shown.forEach((it, i) => m.set(it.key, i));
+        return m;
+    }, [shown]);
 
     const toggleOne = useCallback((key: string) => {
         setSelected((prev) => {
@@ -284,6 +341,35 @@ export default function SniffModal({ open, onClose, minKB, onMinKBChange }: Snif
         });
     }, [pickable]);
 
+    /**
+     * 全选 / 取消选中**某一个会话分组**（v26.10.13-v8，分组后才有的动作）。
+     * 范围 = 该组的达标 + 大小未知（与全局「全选」同一套口径，只是限定在组内）——
+     * 用户最常见的诉求是「把这家纳税人的图都下下来」，不该逼他一张张点。
+     */
+    const toggleGroup = useCallback((s: ConvSection<SniffedImage>) => {
+        const keys = s.known.concat(s.unknown).map((i) => i.key);
+        if (!keys.length) return;
+        setSelected((prev) => {
+            const next = new Set<string>(prev);
+            const all = keys.every((k) => next.has(k));
+            for (const k of keys) {
+                if (all) next.delete(k);
+                else next.add(k);
+            }
+            return next;
+        });
+    }, []);
+
+    /** 展开/收起某个分组的「大小未知」档 */
+    const toggleUnknown = useCallback((sectionId: string) => {
+        setOpenUnknown((prev) => {
+            const next = new Set<string>(prev);
+            if (next.has(sectionId)) next.delete(sectionId);
+            else next.add(sectionId);
+            return next;
+        });
+    }, []);
+
     /** 打印对话框上的文档标题（react-to-print 会临时改写 document.title 再还原） */
     const printTitleRef = useRef('图片');
 
@@ -302,10 +388,11 @@ export default function SniffModal({ open, onClose, minKB, onMinKBChange }: Snif
      * 打印某一张图的**原图**并按 A4 自适应（横图自动旋转 90 度，见 shared/preview/print.ts）。
      * ⚠️ 不能依赖 <img> 的 onLoad 改样式：react-to-print 克隆的是独立节点，
      *    故先用游离 Image 量出自然宽高，再构造好节点交给 doPrint（同「历史记录」的做法）。
+     * 序号不往参数里传：文件名兜底编号必须与卡片上显示的一致，故统一从 shownIndex 取。
      */
     const printImage = useCallback(
-        (it: SniffedImage, idx: number) => {
-            const fname = sniffFileName(it.url, it.mime, idx);
+        (it: SniffedImage) => {
+            const fname = sniffFileName(it.url, it.mime, idxOf(it, shownIndex));
             printTitleRef.current = fname;
             addLog('打印图片: ' + fname, 'success');
             const probe = document.createElement('img');
@@ -319,20 +406,23 @@ export default function SniffModal({ open, onClose, minKB, onMinKBChange }: Snif
             probe.onerror = () => doPrint(() => buildA4ImageNode(it.url, fname));
             probe.src = it.url;
         },
-        [doPrint]
+        [doPrint, shownIndex]
     );
 
     /** 单张下载：跨域图走 GM_xhr 取二进制（直接给 <a download> 会被忽略而变成导航） */
-    const doDownloadOne = useCallback(async (it: SniffedImage, idx: number) => {
-        const fname = sniffFileName(it.url, it.mime, idx);
-        setBusyKey(it.key);
-        try {
-            const ok = await downloadImage(it.url, fname);
-            addLog(ok ? '图片已下载: ' + fname : '[图片嗅探] 下载失败: ' + fname, ok ? 'success' : 'error');
-        } finally {
-            setBusyKey(null);
-        }
-    }, []);
+    const doDownloadOne = useCallback(
+        async (it: SniffedImage) => {
+            const fname = sniffFileName(it.url, it.mime, idxOf(it, shownIndex));
+            setBusyKey(it.key);
+            try {
+                const ok = await downloadImage(it.url, fname);
+                addLog(ok ? '图片已下载: ' + fname : '[图片嗅探] 下载失败: ' + fname, ok ? 'success' : 'error');
+            } finally {
+                setBusyKey(null);
+            }
+        },
+        [shownIndex]
+    );
 
     /**
      * 批量下载：串行 + 间隔，避免浏览器把连续下载当弹窗拦截 / 静默丢弃。
@@ -348,8 +438,8 @@ export default function SniffModal({ open, onClose, minKB, onMinKBChange }: Snif
             for (let i = 0; i < list.length; i++) {
                 const it = list[i];
                 // 文件名里的序号用**展示顺序**，与用户看到的一致
-                const at = shown.indexOf(it);
-                if (await downloadImage(it.url, sniffFileName(it.url, it.mime, at >= 0 ? at : i))) ok++;
+                const at = shownIndex.get(it.key);
+                if (await downloadImage(it.url, sniffFileName(it.url, it.mime, at === undefined ? i : at))) ok++;
                 setBatch({ done: i + 1, total: list.length });
                 if (i < list.length - 1) await sleep(BATCH_GAP_MS);
             }
@@ -357,17 +447,32 @@ export default function SniffModal({ open, onClose, minKB, onMinKBChange }: Snif
         } finally {
             setBatch(null);
         }
-    }, [pickable, selected, shown]);
+    }, [pickable, selected, shownIndex]);
 
     /** 选中的、**未被阈值过滤**的张数：按钮文案与禁用态都用它（选中集里可能残留已失效的 key） */
     const selectedCount = useMemo(() => pickable.filter((i) => selected.has(i.key)).length, [pickable, selected]);
 
-    /** 单张卡片的元信息（来源、测量方式）合成一句话，hover 可见 */
-    const metaOf = (it: SniffedImage) =>
-        '来源：' + it.sources.map((s) => SOURCE_LABEL[s]).join(' / ') + '；大小来源：' + VIA_LABEL[it.sizeVia];
+    /**
+     * 单张卡片的元信息（来源、测量方式、群里的发送者）合成一句话，hover 可见。
+     * 发送者只在「与会话名不同」时显示 —— 单聊里发送者就是纳税人本人，写出来是重复噪音。
+     */
+    const metaOf = (it: SniffedImage) => {
+        const conv = it.stem && convCtx ? convCtx.byStem.get(it.stem) : undefined;
+        const sender = conv && conv.sender && conv.sender !== conv.name ? '；发送者：' + conv.sender : '';
+        return (
+            '来源：' +
+            it.sources.map((s) => SOURCE_LABEL[s]).join(' / ') +
+            '；大小来源：' +
+            VIA_LABEL[it.sizeVia] +
+            sender
+        );
+    };
 
-    const renderCard = (it: SniffedImage, idx: number) => {
-        const fname = sniffFileName(it.url, it.mime, idx);
+    /** 卡片（分组只在外面套一层容器，卡片本身与 v26.10.10-v16 完全一致） */
+    const renderCard = (it: SniffedImage) => {
+        // 序号按**展示顺序**取：文件名兜底编号（znhd-sniff-N）与打印标题都用它，用户看到的才是一致的
+        const at = shownIndex.get(it.key);
+        const fname = sniffFileName(it.url, it.mime, at === undefined ? 0 : at);
         return (
             <div key={it.key} style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
                 <div style={{ position: 'relative' }}>
@@ -378,12 +483,12 @@ export default function SniffModal({ open, onClose, minKB, onMinKBChange }: Snif
                                 label: '下载',
                                 icon: <DownloadIcon size={13} />,
                                 loading: busyKey === it.key,
-                                onClick: () => void doDownloadOne(it, idx),
+                                onClick: () => void doDownloadOne(it),
                             },
                             {
                                 label: '打印',
                                 icon: <PrinterOutlined style={{ fontSize: 13 }} />,
-                                onClick: () => printImage(it, idx),
+                                onClick: () => printImage(it),
                             },
                         ]}>
                         <Image
@@ -412,6 +517,19 @@ export default function SniffModal({ open, onClose, minKB, onMinKBChange }: Snif
 
     /** 进度：已测 / 总数 */
     const percent = total > 0 ? Math.min(100, Math.round((probed.length / total) * 100)) : 0;
+
+    /** 组头文案：`会话名（N 张）`；未归属分组（id 为空串）显示「未归属会话」 */
+    const groupTitle = (s: ConvSection<SniffedImage>) =>
+        (s.name || '未归属会话') + '（' + (s.known.length + s.unknown.length) + ' 张）';
+
+    /**
+     * 「量不出字节数…」这句解释挂在第一个带「大小未知」档的分组后面（每个分组都写一遍是噪音）。
+     * 用分组 id 比对而不是 boolean：未归属分组的 id 是空串，`null !== ''`，两者不会混淆。
+     */
+    const explainUnknownId = useMemo(() => {
+        const s = sections.find((x) => x.unknown.length > 0);
+        return s ? s.id : null;
+    }, [sections]);
 
     return (
         <Modal
@@ -511,7 +629,7 @@ export default function SniffModal({ open, onClose, minKB, onMinKBChange }: Snif
                 />
             ) : (
                 <>
-                    {/* 预览组包住两个网格：items 顺序必须与下面渲染顺序一致（达标在前、未知组在后） */}
+                    {/* 预览组包住所有分组网格：items 顺序必须与下面渲染顺序一致（组序 → 组内达标 → 组内未知） */}
                     <Image.PreviewGroup
                         items={shown.map((i) => i.url)}
                         preview={{
@@ -533,7 +651,7 @@ export default function SniffModal({ open, onClose, minKB, onMinKBChange }: Snif
                                         onClick={() => {
                                             const found = shown.findIndex((i) => i.url === info.image?.url);
                                             const at = found >= 0 ? found : info.current;
-                                            if (shown[at]) printImage(shown[at], at);
+                                            if (shown[at]) printImage(shown[at]);
                                         }}>
                                         <PrinterOutlined />
                                     </button>
@@ -542,33 +660,85 @@ export default function SniffModal({ open, onClose, minKB, onMinKBChange }: Snif
                             },
                         }}>
                         <div style={{ maxHeight: '58vh', overflow: 'auto' }}>
-                            <div style={GRID_STYLE}>{known.map((it, idx) => renderCard(it, idx))}</div>
-                            {unknownOpen && unknown.length > 0 ? (
-                                <div style={{ ...GRID_STYLE, marginTop: 8 }}>
-                                    {unknown.map((it, idx) => renderCard(it, known.length + idx))}
-                                </div>
-                            ) : null}
+                            {sections.map((s, si) => {
+                                const open = openUnknown.has(s.id);
+                                // 该组一张都没有（如「当前会话」恰好全是小于阈值的图）：不占位置
+                                if (!s.known.length && !s.unknown.length) return null;
+                                return (
+                                    <div
+                                        key={s.id || '__unnamed__'}
+                                        data-sniff-group={s.id}
+                                        data-sniff-group-name={s.name}
+                                        {...(s.current ? { 'data-sniff-group-current': '1' } : null)}
+                                        style={{ marginTop: si === 0 ? 0 : 12 }}>
+                                        {groupedView ? (
+                                            <div
+                                                data-sniff-group-header
+                                                style={{
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    gap: 8,
+                                                    flexWrap: 'wrap',
+                                                    marginBottom: 6,
+                                                }}>
+                                                <Text strong style={{ fontSize: 12 }}>
+                                                    {groupTitle(s)}
+                                                </Text>
+                                                {s.current ? (
+                                                    <Tag
+                                                        color="blue"
+                                                        style={{
+                                                            marginInlineEnd: 0,
+                                                            fontSize: 11,
+                                                            lineHeight: '16px',
+                                                        }}>
+                                                        当前会话
+                                                    </Tag>
+                                                ) : null}
+                                                <Button
+                                                    type="link"
+                                                    size="small"
+                                                    style={{ padding: 0, fontSize: 12 }}
+                                                    onClick={() => toggleGroup(s)}>
+                                                    全选本组
+                                                </Button>
+                                            </div>
+                                        ) : null}
+                                        <div style={GRID_STYLE}>{s.known.map((it) => renderCard(it))}</div>
+                                        {open && s.unknown.length ? (
+                                            <div style={{ ...GRID_STYLE, marginTop: 8 }}>
+                                                {s.unknown.map((it) => renderCard(it))}
+                                            </div>
+                                        ) : null}
+                                        {s.unknown.length ? (
+                                            <div style={{ marginTop: 6 }}>
+                                                <Button
+                                                    type="link"
+                                                    size="small"
+                                                    style={{ padding: 0 }}
+                                                    onClick={() => toggleUnknown(s.id)}>
+                                                    {open ? '▾' : '▸'} {'大小未知（' + s.unknown.length + '）'}
+                                                </Button>
+                                                {/* 解释文案只在第一个带未知档的分组后出现（每个分组都写一遍是噪音） */}
+                                                {explainUnknownId === s.id ? (
+                                                    <Text type="secondary" style={{ fontSize: 11, marginLeft: 6 }}>
+                                                        量不出字节数（跨域响应头被拒等），可能有大图，已保留
+                                                    </Text>
+                                                ) : null}
+                                            </div>
+                                        ) : null}
+                                    </div>
+                                );
+                            })}
                         </div>
                     </Image.PreviewGroup>
-                    {unknown.length > 0 ? (
-                        <div style={{ marginTop: 6 }}>
-                            <Button
-                                type="link"
-                                size="small"
-                                style={{ padding: 0 }}
-                                onClick={() => setUnknownOpen(!unknownOpen)}>
-                                {unknownOpen ? '▾' : '▸'} {'大小未知（' + unknown.length + '）'}
-                            </Button>
-                            <Text type="secondary" style={{ fontSize: 11, marginLeft: 6 }}>
-                                量不出字节数（跨域响应头被拒等），可能有大图，已保留
-                            </Text>
-                        </div>
-                    ) : null}
                 </>
             )}
 
             <Text type="secondary" style={{ fontSize: 12, display: 'block', marginTop: 8 }}>
-                提示：单击缩略图可放大 / 多图切换，放大后工具栏上的「打印」按 A4 打印原图（横图自动旋转 90 度）；
+                提示：
+                {groupedView ? '图片已按会话（纳税人）分组，组头可直接「全选本组」；' : ''}
+                单击缩略图可放大 / 多图切换，放大后工具栏上的「打印」按 A4 打印原图（横图自动旋转 90 度）；
                 勾选后可批量下载。视频已在扫描阶段排除，动图（gif）按图片保留。
             </Text>
         </Modal>
