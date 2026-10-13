@@ -4,6 +4,10 @@ import { flushSaveAllvalue } from '@/lib/storage';
 import { addLog } from '@/lib/logger';
 import { startMonitoring, stopMonitoring } from '@/lib/monitor';
 import { clearSpeechTimer } from '@/lib/speech';
+// v26.10.14-v2：资源表预收要尽早启动 —— 脚本默认 document-end 执行，启动前的资源已进
+// performance 缓冲区（observer 的 buffered:true 会一次性回放），此后的新资源由 observer
+// 实时抄录。放 app() 第一行而不是 sniffer.ts 模块级：那个文件是按需加载的，太晚。
+import { startPerfCollect } from '@/lib/snifferPerf';
 
 /**
  * 脚本入口：本文件只做「装配」，业务实现全部在 src/lib/ 与 src/lib/ui/。
@@ -14,6 +18,10 @@ import { clearSpeechTimer } from '@/lib/speech';
  * @returns {void}
  */
 const app = () => {
+    // ========== 资源表预收（v26.10.14-v2，嗅探「开窗即有大小」的基础）==========
+    // 必须在最前面：越早启动 observer，漏掉的资源越少。内部幂等 + 全异常静默降级。
+    startPerfCollect();
+
     // ========== 挂载主面板 ==========
     try {
         mountPanel();

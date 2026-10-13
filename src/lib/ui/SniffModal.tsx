@@ -23,6 +23,7 @@ import {
     EXCLUDED_NAME_SUFFIXES,
     MAX_SNIFF,
     collectCandidates,
+    downloadBatch,
     downloadImage,
     formatBytes,
     resolveSizes,
@@ -94,7 +95,7 @@ export const SNIFF_EXCLUDE_SELECTOR = ['#' + PANEL_HOST_ID, '#' + OVERLAY_HOST_I
 
 /** 每完成这么多毫秒把测好的图推给界面一次（合批，避免逐张 setState） */
 const FLUSH_MS = 150;
-/** 批量下载之间的间隔：浏览器对同一页面连续触发下载有节流，太快会静默丢文件 */
+/** 批量下载触发段的间隔：浏览器对同一页面连续下载有节流，太快会静默丢文件（v26.10.14-v2 起交给 downloadBatch 的触发段） */
 const BATCH_GAP_MS = 400;
 /**
  * 阈值兜底（KB）。storage.ts 的 loadAllvalue 只对 workingHours 做字段级校验，
@@ -123,12 +124,6 @@ const GRID_STYLE = {
     gap: 8,
     alignContent: 'start',
 } as const;
-
-function sleep(ms: number): Promise<void> {
-    return new Promise<void>((resolve) => {
-        window.setTimeout(resolve, ms);
-    });
-}
 
 /** 取某张图在「展示顺序」（shown）里的下标：拿不到就 0（只影响兜底文件名的编号，不影响功能） */
 function idxOf(it: { key: string }, index: Map<string, number>): number {
@@ -425,25 +420,44 @@ export default function SniffModal({ open, onClose, minKB, onMinKBChange }: Snif
     );
 
     /**
-     * 批量下载：串行 + 间隔，避免浏览器把连续下载当弹窗拦截 / 静默丢弃。
+     * 批量下载（v26.10.14-v2 起走 `downloadBatch` 两段式流水线：预取并发 + 触发串行带间隔）。
      * 范围是 pickable（未被阈值过滤的图）∩ 选中集：即使用户调高阈值后 selection 里残留了失效的 key，
      * 也不会把已经被过滤掉的图下载下来（v26.10.10-v6）。
+     * 文件名里的序号用**展示顺序**（shownIndex），与用户看到的一致。
      */
     const doDownloadSelected = useCallback(async () => {
         const list = pickable.filter((i) => selected.has(i.key));
         if (!list.length) return;
         setBatch({ done: 0, total: list.length });
-        let ok = 0;
         try {
-            for (let i = 0; i < list.length; i++) {
-                const it = list[i];
-                // 文件名里的序号用**展示顺序**，与用户看到的一致
+            const items = list.map((it, i) => {
+                // shownIndex 缺这个 key 时退回选中集内的位次，与旧实现一致
                 const at = shownIndex.get(it.key);
-                if (await downloadImage(it.url, sniffFileName(it.url, it.mime, at === undefined ? i : at))) ok++;
-                setBatch({ done: i + 1, total: list.length });
-                if (i < list.length - 1) await sleep(BATCH_GAP_MS);
-            }
-            addLog('[图片嗅探] 批量下载完成：' + ok + '/' + list.length, ok ? 'success' : 'error');
+                return {
+                    key: it.key,
+                    url: it.url,
+                    filename: sniffFileName(it.url, it.mime, at === undefined ? i : at),
+                };
+            });
+            const res = await downloadBatch(items, {
+                gapMs: BATCH_GAP_MS,
+                onProgress: (done) => setBatch({ done: done, total: list.length }),
+            });
+            const failNote = res.failed.length
+                ? '（失败 ' +
+                  res.failed.length +
+                  '：' +
+                  res.failed
+                      .slice(0, 3)
+                      .map((f) => f.filename)
+                      .join('、') +
+                  (res.failed.length > 3 ? ' 等' : '') +
+                  '）'
+                : '';
+            addLog(
+                '[图片嗅探] 批量下载完成：' + res.ok + '/' + res.total + failNote,
+                res.failed.length ? 'error' : 'success'
+            );
         } finally {
             setBatch(null);
         }

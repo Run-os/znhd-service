@@ -125,6 +125,7 @@ const CHECKS = [
   ['sniffEntryOk', '主面板有「图片嗅探」入口且能打开嗅探弹窗'],
   ['sniffScanOk', '嗅探覆盖 DOM 与 CSS 背景来源并量出大小（HEAD 与 Range 两条阶梯；SVG 已按后缀排除）'],
   ['sniffUnknownKeptOk', '大小未知的图片不丢弃（折叠保留）'],
+  ['sniffPerfFirstOk', '尺寸读取 perf 优先（v26.10.14-v2）：同源真加载的图走资源表读数，零 HEAD/Range 请求'],
   ['sniffSelectScopeOk', '全选/批量下载只覆盖未被阈值过滤的图（小于阈值的不计数、不可选）'],
   ['sniffExcludeOk', '按文件名排除（znhd-sniff / user-woman / user-man）且面板给出排除计数'],
   ['sniffSvgExcludedOk', '按后缀排除 SVG（.svg 与内联 SVG 都不进面板）'],
@@ -465,6 +466,7 @@ async function main() {
       !checkPass('sniffEntryOk') ||
       !checkPass('sniffScanOk') ||
       !checkPass('sniffUnknownKeptOk') ||
+      !checkPass('sniffPerfFirstOk') ||
       !checkPass('sniffExcludeOk') ||
             !checkPass('sniffSvgExcludedOk') ||
             !checkPass('sniffSelectScopeOk') ||

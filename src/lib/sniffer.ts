@@ -21,17 +21,27 @@
  *   · dom  —— <img>（currentSrc / src / srcset 取最大档 / data-* 懒加载属性）+ <picture><source>；
  *   · svg  —— 内联 <svg>（序列化成 data: URL，见下方「内联 SVG」说明）；
  *   · css  —— 所有元素的 background-image（getComputedStyle 全量遍历，元素数有上限防卡死）；
- *   · perf —— performance.getEntriesByType('resource')（能拿到已移出 DOM 的图；⚠️ 默认缓冲区只有
- *            250 条，且只覆盖「已经开始加载」的资源，故只当加分项，不作为唯一来源）。
+ *   · perf —— 资源表。v26.10.14-v2 起分两路并集：
+ *            ⑤a **预收 Map**（`snifferPerf.ts`，脚本启动时扩容缓冲区 + PerformanceObserver
+ *                持续抄录）—— 主力，不受 performance 默认 250 条缓冲区的挤出影响，
+ *                能拿到「已加载但已移出 DOM」的图，也能给 DOM / CSS 路立刻补上字节数；
+ *            ⑤b **实时读表**（performance.getEntriesByType）—— observer 不可用时的兜底，
+ *                只覆盖仍留在缓冲区里的条目。
  *
  * 尺寸测量阶梯（先命中先用，见 probeOne）：
  *   kind==='data' → 本地按 base64/百分号编码算字节；kind==='svg' → 序列化文本的 UTF-8 字节；
  *   kind==='blob' → 页面上下文 fetch(blob:) 拿真实字节与 MIME（CSP 拦截就退回未知）；
- *   资源表 encodedBodySize > 0 → 直接用（零成本、绝对准确）；
+ *   预收/资源表字节数 > 0 → 直接用（零成本、绝对准确；取值 decoded→encoded→transfer，见 snifferPerf）；
  *   GM_xmlhttpRequest HEAD → content-length / content-type；
  *   仍无 → GM_xmlhttpRequest GET + 'Range: bytes=0-0' → content-range 的 total；
  *           服务器忽略 Range（回 200 整份）时用返回 Blob 的 size；
  *   全失败 → size=null（UI 显示「大小未知」并保留，不是丢弃）。
+ *
+ * 批量下载（downloadBatch，v26.10.14-v2 仿 SiteAssetDL 的 runQueue）：
+ *   两段式流水线 —— 预取段**并发**取二进制（GM_xhr → objectURL），触发段**串行**且
+ *   带间隔地 <a download>（浏览器对同页连续下载有节流，太快会静默丢文件）。
+ *   瞬时故障按退避重试；401/403/404/410 判永久错误不重试；连续失败 3 次自适应降并发；
+ *   就绪队列有背压上限（防几百张图全压进内存）；失败逐张记账，结束时交回调用方。
  *
  * 内联 SVG：序列化后**补 xmlns** 再包成 data:image/svg+xml，于是预览/打印/下载三处都能直接用，
  * 不必维护 objectURL 的创建与 revoke。已知局限：靠 <use xlink:href="#id"> 引用同文档 symbol 的
@@ -42,6 +52,8 @@
  */
 
 import { downloadFileName } from './gallery';
+// v26.10.14-v2：资源表预收（脚本启动即扩容缓冲区 + observer 抄录），本文件只读它的 Map
+import { perfBytesOf, perfForEach } from './snifferPerf';
 
 /** 一个候选（还没量尺寸）来源 */
 export type SniffSource = 'dom' | 'svg' | 'css' | 'perf';
@@ -49,7 +61,7 @@ export type SniffSource = 'dom' | 'svg' | 'css' | 'perf';
 /** 候选的 URL 类型（决定用哪条测量阶梯） */
 export type SniffKind = 'http' | 'data' | 'blob' | 'svg';
 
-/** 尺寸是怎么来的：perf=资源表 / local=本地算 / head=HEAD content-length / range=Range / unknown=没测到 */
+/** 尺寸是怎么来的：perf=资源表（预收 Map / 实时表，零请求）/ local=本地算 / head=HEAD content-length / range=Range / unknown=没测到 */
 export type SizeVia = 'perf' | 'local' | 'head' | 'range' | 'unknown';
 
 /** 候选图片（`key` 是去重键，也是 React 的 key） */
@@ -72,7 +84,11 @@ export interface SniffCandidate {
     /** 元素上的显示尺寸（CSS px）——仅用于展示提示，与下载/打印无关 */
     width: number | null;
     height: number | null;
-    /** 资源表里已知的字节数（>0 时零成本直接采用） */
+    /**
+     * 资源表里已知的字节数（>0 时零成本直接采用，probeOne 第一档）。
+     * v26.10.14-v2 起两个来路：add() 时按 URL 查预收 Map（DOM / CSS 路也能立刻补上），
+     * 以及 ⑤ 资源表两路并集（主要是捞「已移出 DOM」的图）。
+     */
     perfBytes: number | null;
     /** 已知 MIME（资源表不提供，基本只有 HEAD/本地路径能给出） */
     mime: string | null;
@@ -448,6 +464,9 @@ export function collectCandidates(opts: CollectOptions = {}): CollectResult {
         }
         // <img>/<picture> 这类「标签本身就是图片」的来源不必猜扩展名；其余来源（CSS/资源表）要猜
         if (!extra?.force && !looksLikeImageUrl(url)) return;
+        // v26.10.14-v2：资源表预收 Map 里已有这条 URL 的字节数 ⇒ 直接挂上，
+        // 测量阶段第一档（perf）命中，一个 HEAD 都不发（SiteAssetDL 的「大小免费拿」同款）
+        const knownPerf = extra && extra.perfBytes ? extra.perfBytes : perfBytesOf(url);
         const key = url;
         const found = map.get(key);
         if (found) {
@@ -455,7 +474,7 @@ export function collectCandidates(opts: CollectOptions = {}): CollectResult {
             if (!found.width && dims && dims.width) found.width = dims.width;
             if (!found.height && dims && dims.height) found.height = dims.height;
             if (!found.mime && extra?.mime) found.mime = extra.mime;
-            if (!found.perfBytes && extra?.perfBytes) found.perfBytes = extra.perfBytes;
+            if (!found.perfBytes && knownPerf) found.perfBytes = knownPerf;
             return;
         }
         if (map.size >= maxItems) {
@@ -471,7 +490,7 @@ export function collectCandidates(opts: CollectOptions = {}): CollectResult {
             svgText: extra?.svgText,
             width: dims?.width ?? null,
             height: dims?.height ?? null,
-            perfBytes: extra?.perfBytes ?? null,
+            perfBytes: knownPerf ?? null,
             mime: extra?.mime ?? null,
         });
     };
@@ -562,7 +581,15 @@ export function collectCandidates(opts: CollectOptions = {}): CollectResult {
         }
     }
 
-    // ⑤ 资源表：能捞到「已经加载过但已移出 DOM」的图；blob: 也算（预览/下载在页面上下文里可用）
+    // ⑤ 资源表（v26.10.14-v2 起两路并集，同一张图由 add() 按 URL 去重）：
+    //   ⑤a 预收 Map —— 脚本启动起由 PerformanceObserver 持续抄录（snifferPerf.ts），
+    //       不受 performance 默认 250 条缓冲区的挤出影响，是这一路的主力；
+    //       顺带把字节数挂到 DOM / CSS 已收过的同 URL 候选上（add() 里也会查，这里补漏）。
+    perfForEach((url, bytes) => {
+        add(url, 'perf', undefined, { perfBytes: bytes });
+    });
+    //   ⑤b 实时读表 —— observer 不可用（老浏览器 / 启动失败）时的兜底，
+    //       只覆盖仍留在缓冲区里的条目。
     try {
         if (typeof performance !== 'undefined' && performance.getEntriesByType) {
             const entries = performance.getEntriesByType('resource') as PerformanceResourceTiming[];
@@ -571,7 +598,11 @@ export function collectCandidates(opts: CollectOptions = {}): CollectResult {
                 if (VIDEO_INITIATORS.indexOf(it) >= 0) continue;
                 const name = String(e.name || '');
                 if (!looksLikeImageUrl(name)) continue;
-                const bytes = Number(e.encodedBodySize || 0) || Number(e.transferSize || 0) || 0;
+                const bytes =
+                    Number(e.decodedBodySize || 0) ||
+                    Number(e.encodedBodySize || 0) ||
+                    Number(e.transferSize || 0) ||
+                    0;
                 add(name, 'perf', undefined, { perfBytes: bytes > 0 ? bytes : null });
             }
         }
@@ -829,4 +860,188 @@ export async function downloadImage(url: string, filename: string): Promise<bool
         /* 落到回退路径 */
     }
     return anchorDownload(url, filename);
+}
+
+// ===== 批量下载（v26.10.14-v2，仿 SiteAssetDL 的 runQueue）=========================
+// 为什么不是「for 里逐个 await downloadImage」：
+//   · 那样预取（GM_xhr 取二进制）与触发（<a download>）互相排队 —— 第 N 张的几百毫秒
+//     网络等待里，浏览器什么都没收到，用户干瞪眼；
+//   · 浏览器对同页连续触发下载有节流（连点会静默丢文件），触发段必须串行且带间隔。
+// 两段式流水线正好各取所长：**预取段并发**取二进制（GM_xhr → objectURL），
+// **触发段串行 + 间隔**地 <a download>，就绪队列有背压上限（防几百张图的 Blob
+// 全压进内存）。瞬时故障指数退避重试；401/403/404/410 判永久错误不重试；
+// 连续失败 3 次自适应降并发。失败逐张记账，结束连同成功数一起交回调用方。
+
+/** 批量下载的一项（key 是调用方的稳定键，回报进度/失败都用它） */
+export interface BatchDownloadItem {
+    key: string;
+    url: string;
+    filename: string;
+}
+
+export interface BatchDownloadOptions {
+    /** 预取段并发（默认 4） */
+    concurrency?: number;
+    /** 触发段间隔 ms（默认 400：浏览器对同页连续下载有节流，太快会静默丢文件） */
+    gapMs?: number;
+    /** 瞬时故障重试次数（默认 2；指数退避 400 / 800ms） */
+    maxRetries?: number;
+    /** 就绪队列背压上限（默认 8：最多几张图的 Blob 同时驻留内存） */
+    maxReady?: number;
+    /** 进度回调（失败也计入 done：进度条必须能走完） */
+    onProgress?: (done: number, total: number) => void;
+    /** 单张结束（成功/最终失败各回调一次） */
+    onItem?: (item: BatchDownloadItem, ok: boolean, reason?: string) => void;
+}
+
+export interface BatchDownloadFailure {
+    key: string;
+    filename: string;
+    reason: string;
+}
+
+export interface BatchDownloadResult {
+    total: number;
+    ok: number;
+    failed: BatchDownloadFailure[];
+}
+
+/** 判永久错误的 HTTP 状态：发了也白发的几种，不重试 */
+const PERMANENT_HTTP_STATUS = [401, 403, 404, 410];
+
+function sleep(ms: number): Promise<void> {
+    return new Promise((r) => setTimeout(r, ms));
+}
+
+/** 带「永久错误」标记的 Error：重试逻辑见到它就原样上抛，不再退避重试 */
+function permanentError(msg: string): Error {
+    const e = new Error(msg);
+    (e as Error & { permanent?: boolean }).permanent = true;
+    return e;
+}
+
+function isPermanent(e: unknown): boolean {
+    return !!(e && (e as Error & { permanent?: boolean }).permanent);
+}
+
+/**
+ * 预取一张图：拿到一个「可以直接喂给 <a download> 的 href」。
+ * data: 原样返回；blob: 在页面上下文 fetch 成 objectURL（拿不到就原样碰运气）；
+ * http(s): GM_xhr 取二进制 → objectURL（跨域也能存成文件的关键）。
+ * 瞬时故障按 maxRetries 指数退避重试；401/403/404/410 直接失败。
+ */
+async function prefetchOne(item: BatchDownloadItem, maxRetries: number): Promise<{ href: string; obj: boolean }> {
+    const url = item.url;
+    if (/^data:/i.test(url)) return { href: url, obj: false };
+    if (/^blob:/i.test(url)) {
+        const blob = await fetchBlobInPage(url);
+        if (blob) return { href: URL.createObjectURL(blob), obj: true };
+        return { href: url, obj: false };
+    }
+    let lastReason = '下载失败';
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+        try {
+            const resp = await gmRequest({ method: 'GET', url: url, responseType: 'blob', timeout: DOWNLOAD_TIMEOUT });
+            if (resp.status && resp.status >= 400) {
+                if (PERMANENT_HTTP_STATUS.indexOf(resp.status) >= 0) throw permanentError('HTTP ' + resp.status);
+                throw new Error('HTTP ' + resp.status);
+            }
+            const blob = resp.response as Blob | undefined;
+            if (blob && blob.size > 0) return { href: URL.createObjectURL(blob), obj: true };
+            throw new Error('空响应');
+        } catch (e) {
+            if (isPermanent(e)) throw e;
+            lastReason = (e && (e as Error).message) || String(e);
+            if (attempt < maxRetries) await sleep(400 * Math.pow(2, attempt));
+        }
+    }
+    throw new Error(lastReason);
+}
+
+/**
+ * 批量下载（两段式流水线，见上方注释）。
+ * @returns 成功数与逐张失败清单（调用方决定怎么向用户汇报）
+ */
+export async function downloadBatch(
+    items: BatchDownloadItem[],
+    opts: BatchDownloadOptions = {}
+): Promise<BatchDownloadResult> {
+    const total = items.length;
+    const result: BatchDownloadResult = { total: total, ok: 0, failed: [] };
+    if (!total) return result;
+
+    const baseConc = Math.max(1, opts.concurrency || 4);
+    const gapMs = opts.gapMs === undefined ? 400 : opts.gapMs;
+    const maxRetries = Math.max(0, opts.maxRetries === undefined ? 2 : opts.maxRetries);
+    const maxReady = Math.max(1, opts.maxReady || 8);
+
+    let nextFetch = 0; // 下一个待预取下标
+    let doneCount = 0; // 已结束（触发成功 + 预取最终失败）计数
+    let dynamicConc = baseConc; // 当前并发上限（连续失败 3 次降一档）
+    let consecutiveFails = 0;
+    let fetchedAll = false; // 预取段是否全部结束
+    const ready: { item: BatchDownloadItem; href: string; obj: boolean }[] = [];
+
+    const failOne = (item: BatchDownloadItem, reason: string) => {
+        doneCount++;
+        result.failed.push({ key: item.key, filename: item.filename, reason: reason });
+        if (opts.onProgress) opts.onProgress(doneCount, total);
+        if (opts.onItem) opts.onItem(item, false, reason);
+    };
+
+    /** 预取段：并发取二进制，背压靠 maxReady */
+    const prefetchLoop = async () => {
+        const inflight = new Set<Promise<void>>();
+        while (nextFetch < total) {
+            if (inflight.size >= dynamicConc || ready.length >= maxReady) {
+                await sleep(20);
+                continue;
+            }
+            const item = items[nextFetch++];
+            const p = (async () => {
+                try {
+                    const r = await prefetchOne(item, maxRetries);
+                    ready.push({ item: item, href: r.href, obj: r.obj });
+                    consecutiveFails = 0;
+                } catch (e) {
+                    const reason = (e && (e as Error).message) || String(e);
+                    consecutiveFails++;
+                    if (consecutiveFails >= 3) {
+                        // 连续三张都跪 ⇒ 多半是源站开始限流，降一档并发给它喘口气
+                        dynamicConc = Math.max(1, dynamicConc - 1);
+                        consecutiveFails = 0;
+                    }
+                    failOne(item, reason);
+                }
+            })().finally(() => inflight.delete(p));
+            inflight.add(p);
+        }
+        while (inflight.size > 0) await sleep(20);
+        fetchedAll = true;
+    };
+
+    /** 触发段：串行 + 间隔，把就绪的 objectURL 逐个喂给 <a download> */
+    const triggerLoop = async () => {
+        for (;;) {
+            while (!ready.length) {
+                if (fetchedAll) return; // 预取结束且队列见底 ⇒ 全部处理完毕
+                await sleep(30);
+            }
+            const one = ready.shift() as { item: BatchDownloadItem; href: string; obj: boolean };
+            const ok = anchorDownload(one.href, one.item.filename);
+            if (one.obj) setTimeout(() => URL.revokeObjectURL(one.href), 1000);
+            doneCount++;
+            if (ok) {
+                result.ok++;
+            } else {
+                result.failed.push({ key: one.item.key, filename: one.item.filename, reason: '触发下载失败' });
+            }
+            if (opts.onProgress) opts.onProgress(doneCount, total);
+            if (opts.onItem) opts.onItem(one.item, ok, ok ? undefined : '触发下载失败');
+            await sleep(gapMs);
+        }
+    };
+
+    await Promise.all([prefetchLoop(), triggerLoop()]);
+    return result;
 }

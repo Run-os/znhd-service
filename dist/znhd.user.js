@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name                征纳互动人数和在线监控v2
 // @namespace           https://scriptcat.org/
-// @version             26.10.14-v1
+// @version             26.10.14-v2
 // @description         实时监控征纳互动等待人数和在线状态，支持语音播报、自定义常用语
 // @author              runos
 // @license             MIT
@@ -73359,6 +73359,133 @@ function downloadFileName(name, mime, idx = 0) {
     return n;
 }
 
+;// ./src/lib/snifferPerf.ts
+/**
+ * 嗅探「资源表预收」（v26.10.14-v2）。
+ *
+ * 解决什么问题：`performance.getEntriesByType('resource')` 的缓冲区默认只有 **250 条**，
+ * 图片稍多的页面（几十张）就会把早期条目挤出去。原来「打开嗅探面板时才读表」，
+ * 于是明明加载过的图也量不到字节数，只能退回 HEAD / Range 逐张发请求 ——
+ * 这才是「嗅探慢」的观感主因（测量是并发 5，几百张图就是几百个请求）。
+ *
+ * 做法（借鉴 SiteAssetDL 的 `boot()`，但只搬零风险的那一半，详见 AGENT.md 红线）：
+ *   · 脚本启动时**立即把缓冲扩容到 20000**（setResourceTimingBufferSize）——
+ *     已丢的条目救不回来，但不再继续丢；
+ *   · 起一个 **PerformanceObserver（buffered:true）**：既能把当前缓冲区里的历史条目
+ *     一次性收回来，又能实时收到之后加载的每条资源，全部抄进模块级 Map ——
+ *     这个 Map 不受缓冲区大小限制，从此「开窗即有数据」，不需要真机配合滚动页面。
+ *
+ * 尺寸取值优先级（与 SiteAssetDL 一致，全部**零请求**）：
+ *   decodedBodySize → encodedBodySize → transferSize，取第一个 > 0 的。
+ *   三者都 ≤ 0 说明拿不到（跨域且响应没有 Timing-Allow-Origin），返回 null，
+ * 由调用方走 HEAD / Range 兜底。
+ *   ⚠️ decodedBodySize 是「去掉 content-coding 后的报文大小」。对 JPEG / PNG / WebP
+ *     这类本身已压缩的格式，服务器不会再套 gzip，故它就等于**文件字节数**
+ *     （不是解码后的位图字节数 —— 资源表不暴露位图大小），可以放心当文件大小用。
+ *
+ * 红线：本模块**只读** performance，不碰页面 DOM、不发任何请求、不注入样式、不改全局对象。
+ */
+/** 扩容目标：performance 资源表默认 250 条，图片多的页面会把早期条目挤出缓冲区 */
+const PERF_BUFFER_SIZE = 20000;
+/** Map 条目上限：与缓冲区对齐，防极端页面把内存吃爆（到顶淘汰最早一条） */
+const MAX_PERF_ENTRIES = 20000;
+/**
+ * 图片扩展名（与 sniffer.ts 的 IMG_EXT_RE 同形）。
+ * 此处独立一份而不是从 sniffer.ts import：sniffer.ts 要 import 本模块，
+ * 互相 import 会成环；规则本身极稳定，改的时候两边一起改（有注释互指）。
+ */
+const IMG_EXT_RE = /\.(?:jpe?g|png|gif|webp|bmp|ico|avif|tiff?|svg)(?:[?#]|$)/i;
+/** 资源表里这些 initiatorType 明确不是图片（与 sniffer.ts 的 VIDEO_INITIATORS 对齐） */
+const VIDEO_INITIATORS = ['video', 'audio'];
+/** url → 字节数（>0）。模块级单例：脚本不开面板也在持续积累 */
+const perfBytes = new Map();
+/** observer 句柄（留着只为将来想 stop 时有处可调） */
+let snifferPerf_observer = null;
+/** 是否已启动（幂等） */
+let started = false;
+/** 一条资源表条目的字节数：decoded → encoded → transfer，取第一个 > 0 的 */
+function entryBytes(e) {
+    const decoded = Number(e.decodedBodySize || 0);
+    if (decoded > 0)
+        return decoded;
+    const encoded = Number(e.encodedBodySize || 0);
+    if (encoded > 0)
+        return encoded;
+    const transfer = Number(e.transferSize || 0);
+    return transfer > 0 ? transfer : 0;
+}
+/** 收一条资源：只留图片 URL（防 Map 被 JS/CSS/XHR 撑爆），字节 ≤ 0 的不要 */
+function remember(name, bytes) {
+    if (!name || bytes <= 0)
+        return;
+    if (!IMG_EXT_RE.test(name))
+        return;
+    if (!perfBytes.has(name) && perfBytes.size >= MAX_PERF_ENTRIES) {
+        // 到顶先淘汰最早的一条（Map 保持插入序），保证新资源仍能进来
+        const oldest = perfBytes.keys().next();
+        if (!oldest.done)
+            perfBytes.delete(oldest.value);
+    }
+    perfBytes.set(name, bytes);
+}
+/** PerformanceObserver 回调：把这一批条目抄进 Map */
+function onEntries(list) {
+    try {
+        const entries = (list && typeof list.getEntries === 'function' ? list.getEntries() : []);
+        for (const e of entries) {
+            const it = String(e.initiatorType || '');
+            if (VIDEO_INITIATORS.indexOf(it) >= 0)
+                continue;
+            remember(String(e.name || ''), entryBytes(e));
+        }
+    }
+    catch (err) {
+        /* 单批出错不影响后续批次 */
+    }
+}
+/**
+ * 启动预收（幂等）：脚本装配时调一次即可，之后无需再管。
+ * 失败一律静默降级 —— sniffer.ts 的 collectCandidates 里仍有「实时读表」一路兜底。
+ */
+function startPerfCollect() {
+    if (started)
+        return;
+    started = true;
+    try {
+        if (typeof performance !== 'undefined' && typeof performance.setResourceTimingBufferSize === 'function') {
+            performance.setResourceTimingBufferSize(PERF_BUFFER_SIZE);
+        }
+    }
+    catch (e) {
+        /* 个别浏览器不让调，忽略 */
+    }
+    try {
+        if (typeof PerformanceObserver === 'undefined')
+            return;
+        snifferPerf_observer = new PerformanceObserver(onEntries);
+        // buffered:true 会把启动前已进入缓冲区（且还没被挤出的）历史条目一并回放
+        snifferPerf_observer.observe({ type: 'resource', buffered: true });
+    }
+    catch (e) {
+        /* 老浏览器没有 PerformanceObserver：靠 collectCandidates 的实时读表兜底 */
+    }
+}
+/** 查某个 URL 已知的字节数；没有（或 ≤ 0）返回 null */
+function perfBytesOf(url) {
+    if (!url)
+        return null;
+    const b = perfBytes.get(url);
+    return b && b > 0 ? b : null;
+}
+/** 遍历全部预收条目（回调形式：不产生中间数组，20000 条也不心疼） */
+function perfForEach(fn) {
+    perfBytes.forEach((bytes, url) => fn(url, bytes));
+}
+/** 预收条目数（调试 / 冒烟用） */
+function perfEntryCount() {
+    return perfBytes.size;
+}
+
 ;// ./src/lib/sniffer.ts
 /**
  * 网页图片嗅探（v26.10.10-v4 新增，配合 `ui/SniffModal.tsx`）。
@@ -73383,17 +73510,27 @@ function downloadFileName(name, mime, idx = 0) {
  *   · dom  —— <img>（currentSrc / src / srcset 取最大档 / data-* 懒加载属性）+ <picture><source>；
  *   · svg  —— 内联 <svg>（序列化成 data: URL，见下方「内联 SVG」说明）；
  *   · css  —— 所有元素的 background-image（getComputedStyle 全量遍历，元素数有上限防卡死）；
- *   · perf —— performance.getEntriesByType('resource')（能拿到已移出 DOM 的图；⚠️ 默认缓冲区只有
- *            250 条，且只覆盖「已经开始加载」的资源，故只当加分项，不作为唯一来源）。
+ *   · perf —— 资源表。v26.10.14-v2 起分两路并集：
+ *            ⑤a **预收 Map**（`snifferPerf.ts`，脚本启动时扩容缓冲区 + PerformanceObserver
+ *                持续抄录）—— 主力，不受 performance 默认 250 条缓冲区的挤出影响，
+ *                能拿到「已加载但已移出 DOM」的图，也能给 DOM / CSS 路立刻补上字节数；
+ *            ⑤b **实时读表**（performance.getEntriesByType）—— observer 不可用时的兜底，
+ *                只覆盖仍留在缓冲区里的条目。
  *
  * 尺寸测量阶梯（先命中先用，见 probeOne）：
  *   kind==='data' → 本地按 base64/百分号编码算字节；kind==='svg' → 序列化文本的 UTF-8 字节；
  *   kind==='blob' → 页面上下文 fetch(blob:) 拿真实字节与 MIME（CSP 拦截就退回未知）；
- *   资源表 encodedBodySize > 0 → 直接用（零成本、绝对准确）；
+ *   预收/资源表字节数 > 0 → 直接用（零成本、绝对准确；取值 decoded→encoded→transfer，见 snifferPerf）；
  *   GM_xmlhttpRequest HEAD → content-length / content-type；
  *   仍无 → GM_xmlhttpRequest GET + 'Range: bytes=0-0' → content-range 的 total；
  *           服务器忽略 Range（回 200 整份）时用返回 Blob 的 size；
  *   全失败 → size=null（UI 显示「大小未知」并保留，不是丢弃）。
+ *
+ * 批量下载（downloadBatch，v26.10.14-v2 仿 SiteAssetDL 的 runQueue）：
+ *   两段式流水线 —— 预取段**并发**取二进制（GM_xhr → objectURL），触发段**串行**且
+ *   带间隔地 <a download>（浏览器对同页连续下载有节流，太快会静默丢文件）。
+ *   瞬时故障按退避重试；401/403/404/410 判永久错误不重试；连续失败 3 次自适应降并发；
+ *   就绪队列有背压上限（防几百张图全压进内存）；失败逐张记账，结束时交回调用方。
  *
  * 内联 SVG：序列化后**补 xmlns** 再包成 data:image/svg+xml，于是预览/打印/下载三处都能直接用，
  * 不必维护 objectURL 的创建与 revoke。已知局限：靠 <use xlink:href="#id"> 引用同文档 symbol 的
@@ -73402,6 +73539,8 @@ function downloadFileName(name, mime, idx = 0) {
  * ⚠️ 跨域取图必须用 GM_xmlhttpRequest 而不是 fetch：税务页 CSP 限 connect-src
  * （结论见 CHANGELOG.md 2026-10 的「跨域取图」条）。本文件不新增任何 @grant。
  */
+
+// v26.10.14-v2：资源表预收（脚本启动即扩容缓冲区 + observer 抄录），本文件只读它的 Map
 
 /** getComputedStyle 遍历的元素数上限：超大页面（上万节点）遍历到底会明显卡顿 */
 const CSS_SCAN_LIMIT = 3000;
@@ -73446,14 +73585,14 @@ const LAZY_ATTRS = [
     'data-echo',
 ];
 /** 图片扩展名：用于识别「没有 <img> 标签」的图（CSS 背景、资源表条目） */
-const IMG_EXT_RE = /\.(?:jpe?g|png|gif|webp|bmp|ico|avif|tiff?|svg)(?:[?#]|$)/i;
+const sniffer_IMG_EXT_RE = /\.(?:jpe?g|png|gif|webp|bmp|ico|avif|tiff?|svg)(?:[?#]|$)/i;
 /**
  * 视频扩展名：命中即排除（用户要求「只图片不要视频」）。
  * ⚠️ 不列 `.ts`（那边既可能是 MPEG-TS 视频，也可能是前端源码，误伤面大于收益）。
  */
 const VIDEO_EXT_RE = /\.(?:mp4|m4v|webm|ogv|ogg|avi|mov|flv|mkv|wmv|3gp|mpe?g|m3u8|mpd)(?:[?#]|$)/i;
 /** 资源表里这些 initiatorType 明确不是图片 */
-const VIDEO_INITIATORS = ['video', 'audio'];
+const sniffer_VIDEO_INITIATORS = ['video', 'audio'];
 /** URL 里取 url(...)（计算样式里的 background-image，可能有多层） */
 const CSS_URL_RE = /url\((['"]?)([^'")]+)\1\)/g;
 /** HEAD 请求超时（毫秒） */
@@ -73561,7 +73700,7 @@ function isVideoUrl(url) {
 }
 /** 这个 URL 看起来是图片吗（用于「没有 <img> 标签」的来源） */
 function looksLikeImageUrl(url) {
-    return /^data:image\//i.test(url) || /^blob:/i.test(url) || IMG_EXT_RE.test(url);
+    return /^data:image\//i.test(url) || /^blob:/i.test(url) || sniffer_IMG_EXT_RE.test(url);
 }
 /** Content-Type 明确不是图片（text/、video/、json 等）；application/octet-stream 不算明确，保留 */
 function isClearlyNotImage(mime) {
@@ -73729,6 +73868,9 @@ function collectCandidates(opts = {}) {
         // <img>/<picture> 这类「标签本身就是图片」的来源不必猜扩展名；其余来源（CSS/资源表）要猜
         if (!extra?.force && !looksLikeImageUrl(url))
             return;
+        // v26.10.14-v2：资源表预收 Map 里已有这条 URL 的字节数 ⇒ 直接挂上，
+        // 测量阶段第一档（perf）命中，一个 HEAD 都不发（SiteAssetDL 的「大小免费拿」同款）
+        const knownPerf = extra && extra.perfBytes ? extra.perfBytes : perfBytesOf(url);
         const key = url;
         const found = map.get(key);
         if (found) {
@@ -73740,8 +73882,8 @@ function collectCandidates(opts = {}) {
                 found.height = dims.height;
             if (!found.mime && extra?.mime)
                 found.mime = extra.mime;
-            if (!found.perfBytes && extra?.perfBytes)
-                found.perfBytes = extra.perfBytes;
+            if (!found.perfBytes && knownPerf)
+                found.perfBytes = knownPerf;
             return;
         }
         if (map.size >= maxItems) {
@@ -73757,7 +73899,7 @@ function collectCandidates(opts = {}) {
             svgText: extra?.svgText,
             width: dims?.width ?? null,
             height: dims?.height ?? null,
-            perfBytes: extra?.perfBytes ?? null,
+            perfBytes: knownPerf ?? null,
             mime: extra?.mime ?? null,
         });
     };
@@ -73864,18 +74006,29 @@ function collectCandidates(opts = {}) {
                 add(u, 'css');
         }
     }
-    // ⑤ 资源表：能捞到「已经加载过但已移出 DOM」的图；blob: 也算（预览/下载在页面上下文里可用）
+    // ⑤ 资源表（v26.10.14-v2 起两路并集，同一张图由 add() 按 URL 去重）：
+    //   ⑤a 预收 Map —— 脚本启动起由 PerformanceObserver 持续抄录（snifferPerf.ts），
+    //       不受 performance 默认 250 条缓冲区的挤出影响，是这一路的主力；
+    //       顺带把字节数挂到 DOM / CSS 已收过的同 URL 候选上（add() 里也会查，这里补漏）。
+    perfForEach((url, bytes) => {
+        add(url, 'perf', undefined, { perfBytes: bytes });
+    });
+    //   ⑤b 实时读表 —— observer 不可用（老浏览器 / 启动失败）时的兜底，
+    //       只覆盖仍留在缓冲区里的条目。
     try {
         if (typeof performance !== 'undefined' && performance.getEntriesByType) {
             const entries = performance.getEntriesByType('resource');
             for (const e of entries) {
                 const it = String(e.initiatorType || '');
-                if (VIDEO_INITIATORS.indexOf(it) >= 0)
+                if (sniffer_VIDEO_INITIATORS.indexOf(it) >= 0)
                     continue;
                 const name = String(e.name || '');
                 if (!looksLikeImageUrl(name))
                     continue;
-                const bytes = Number(e.encodedBodySize || 0) || Number(e.transferSize || 0) || 0;
+                const bytes = Number(e.decodedBodySize || 0) ||
+                    Number(e.encodedBodySize || 0) ||
+                    Number(e.transferSize || 0) ||
+                    0;
                 add(name, 'perf', undefined, { perfBytes: bytes > 0 ? bytes : null });
             }
         }
@@ -74138,6 +74291,148 @@ async function downloadImage(url, filename) {
         /* 落到回退路径 */
     }
     return anchorDownload(url, filename);
+}
+/** 判永久错误的 HTTP 状态：发了也白发的几种，不重试 */
+const PERMANENT_HTTP_STATUS = [401, 403, 404, 410];
+function sleep(ms) {
+    return new Promise((r) => setTimeout(r, ms));
+}
+/** 带「永久错误」标记的 Error：重试逻辑见到它就原样上抛，不再退避重试 */
+function permanentError(msg) {
+    const e = new Error(msg);
+    e.permanent = true;
+    return e;
+}
+function isPermanent(e) {
+    return !!(e && e.permanent);
+}
+/**
+ * 预取一张图：拿到一个「可以直接喂给 <a download> 的 href」。
+ * data: 原样返回；blob: 在页面上下文 fetch 成 objectURL（拿不到就原样碰运气）；
+ * http(s): GM_xhr 取二进制 → objectURL（跨域也能存成文件的关键）。
+ * 瞬时故障按 maxRetries 指数退避重试；401/403/404/410 直接失败。
+ */
+async function prefetchOne(item, maxRetries) {
+    const url = item.url;
+    if (/^data:/i.test(url))
+        return { href: url, obj: false };
+    if (/^blob:/i.test(url)) {
+        const blob = await fetchBlobInPage(url);
+        if (blob)
+            return { href: URL.createObjectURL(blob), obj: true };
+        return { href: url, obj: false };
+    }
+    let lastReason = '下载失败';
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+        try {
+            const resp = await gmRequest({ method: 'GET', url: url, responseType: 'blob', timeout: DOWNLOAD_TIMEOUT });
+            if (resp.status && resp.status >= 400) {
+                if (PERMANENT_HTTP_STATUS.indexOf(resp.status) >= 0)
+                    throw permanentError('HTTP ' + resp.status);
+                throw new Error('HTTP ' + resp.status);
+            }
+            const blob = resp.response;
+            if (blob && blob.size > 0)
+                return { href: URL.createObjectURL(blob), obj: true };
+            throw new Error('空响应');
+        }
+        catch (e) {
+            if (isPermanent(e))
+                throw e;
+            lastReason = (e && e.message) || String(e);
+            if (attempt < maxRetries)
+                await sleep(400 * Math.pow(2, attempt));
+        }
+    }
+    throw new Error(lastReason);
+}
+/**
+ * 批量下载（两段式流水线，见上方注释）。
+ * @returns 成功数与逐张失败清单（调用方决定怎么向用户汇报）
+ */
+async function downloadBatch(items, opts = {}) {
+    const total = items.length;
+    const result = { total: total, ok: 0, failed: [] };
+    if (!total)
+        return result;
+    const baseConc = Math.max(1, opts.concurrency || 4);
+    const gapMs = opts.gapMs === undefined ? 400 : opts.gapMs;
+    const maxRetries = Math.max(0, opts.maxRetries === undefined ? 2 : opts.maxRetries);
+    const maxReady = Math.max(1, opts.maxReady || 8);
+    let nextFetch = 0; // 下一个待预取下标
+    let doneCount = 0; // 已结束（触发成功 + 预取最终失败）计数
+    let dynamicConc = baseConc; // 当前并发上限（连续失败 3 次降一档）
+    let consecutiveFails = 0;
+    let fetchedAll = false; // 预取段是否全部结束
+    const ready = [];
+    const failOne = (item, reason) => {
+        doneCount++;
+        result.failed.push({ key: item.key, filename: item.filename, reason: reason });
+        if (opts.onProgress)
+            opts.onProgress(doneCount, total);
+        if (opts.onItem)
+            opts.onItem(item, false, reason);
+    };
+    /** 预取段：并发取二进制，背压靠 maxReady */
+    const prefetchLoop = async () => {
+        const inflight = new Set();
+        while (nextFetch < total) {
+            if (inflight.size >= dynamicConc || ready.length >= maxReady) {
+                await sleep(20);
+                continue;
+            }
+            const item = items[nextFetch++];
+            const p = (async () => {
+                try {
+                    const r = await prefetchOne(item, maxRetries);
+                    ready.push({ item: item, href: r.href, obj: r.obj });
+                    consecutiveFails = 0;
+                }
+                catch (e) {
+                    const reason = (e && e.message) || String(e);
+                    consecutiveFails++;
+                    if (consecutiveFails >= 3) {
+                        // 连续三张都跪 ⇒ 多半是源站开始限流，降一档并发给它喘口气
+                        dynamicConc = Math.max(1, dynamicConc - 1);
+                        consecutiveFails = 0;
+                    }
+                    failOne(item, reason);
+                }
+            })().finally(() => inflight.delete(p));
+            inflight.add(p);
+        }
+        while (inflight.size > 0)
+            await sleep(20);
+        fetchedAll = true;
+    };
+    /** 触发段：串行 + 间隔，把就绪的 objectURL 逐个喂给 <a download> */
+    const triggerLoop = async () => {
+        for (;;) {
+            while (!ready.length) {
+                if (fetchedAll)
+                    return; // 预取结束且队列见底 ⇒ 全部处理完毕
+                await sleep(30);
+            }
+            const one = ready.shift();
+            const ok = anchorDownload(one.href, one.item.filename);
+            if (one.obj)
+                setTimeout(() => URL.revokeObjectURL(one.href), 1000);
+            doneCount++;
+            if (ok) {
+                result.ok++;
+            }
+            else {
+                result.failed.push({ key: one.item.key, filename: one.item.filename, reason: '触发下载失败' });
+            }
+            if (opts.onProgress)
+                opts.onProgress(doneCount, total);
+            if (opts.onItem)
+                opts.onItem(one.item, ok, ok ? undefined : '触发下载失败');
+            await sleep(gapMs);
+        }
+    };
+    await Promise.all([prefetchLoop(), triggerLoop()]);
+    return result;
 }
 
 ;// ./src/lib/sniffConv.ts
@@ -74792,7 +75087,7 @@ const { Text: SniffModal_Text } = typography;
 const SNIFF_EXCLUDE_SELECTOR = ['#' + PANEL_HOST_ID, '#' + OVERLAY_HOST_ID, '#' + PREVIEW_HOST_ID].join(',');
 /** 每完成这么多毫秒把测好的图推给界面一次（合批，避免逐张 setState） */
 const FLUSH_MS = 150;
-/** 批量下载之间的间隔：浏览器对同一页面连续触发下载有节流，太快会静默丢文件 */
+/** 批量下载触发段的间隔：浏览器对同一页面连续下载有节流，太快会静默丢文件（v26.10.14-v2 起交给 downloadBatch 的触发段） */
 const BATCH_GAP_MS = 400;
 /**
  * 阈值兜底（KB）。storage.ts 的 loadAllvalue 只对 workingHours 做字段级校验，
@@ -74818,11 +75113,6 @@ const GRID_STYLE = {
     gap: 8,
     alignContent: 'start',
 };
-function sleep(ms) {
-    return new Promise((resolve) => {
-        window.setTimeout(resolve, ms);
-    });
-}
 /** 取某张图在「展示顺序」（shown）里的下标：拿不到就 0（只影响兜底文件名的编号，不影响功能） */
 function idxOf(it, index) {
     const at = index.get(it.key);
@@ -75099,28 +75389,42 @@ function SniffModal({ open, onClose, minKB, onMinKBChange }) {
         }
     }, [shownIndex]);
     /**
-     * 批量下载：串行 + 间隔，避免浏览器把连续下载当弹窗拦截 / 静默丢弃。
+     * 批量下载（v26.10.14-v2 起走 `downloadBatch` 两段式流水线：预取并发 + 触发串行带间隔）。
      * 范围是 pickable（未被阈值过滤的图）∩ 选中集：即使用户调高阈值后 selection 里残留了失效的 key，
      * 也不会把已经被过滤掉的图下载下来（v26.10.10-v6）。
+     * 文件名里的序号用**展示顺序**（shownIndex），与用户看到的一致。
      */
     const doDownloadSelected = (0,react_production_namespaceFn().useCallback)(async () => {
         const list = pickable.filter((i) => selected.has(i.key));
         if (!list.length)
             return;
         setBatch({ done: 0, total: list.length });
-        let ok = 0;
         try {
-            for (let i = 0; i < list.length; i++) {
-                const it = list[i];
-                // 文件名里的序号用**展示顺序**，与用户看到的一致
+            const items = list.map((it, i) => {
+                // shownIndex 缺这个 key 时退回选中集内的位次，与旧实现一致
                 const at = shownIndex.get(it.key);
-                if (await downloadImage(it.url, sniffFileName(it.url, it.mime, at === undefined ? i : at)))
-                    ok++;
-                setBatch({ done: i + 1, total: list.length });
-                if (i < list.length - 1)
-                    await sleep(BATCH_GAP_MS);
-            }
-            addLog('[图片嗅探] 批量下载完成：' + ok + '/' + list.length, ok ? 'success' : 'error');
+                return {
+                    key: it.key,
+                    url: it.url,
+                    filename: sniffFileName(it.url, it.mime, at === undefined ? i : at),
+                };
+            });
+            const res = await downloadBatch(items, {
+                gapMs: BATCH_GAP_MS,
+                onProgress: (done) => setBatch({ done: done, total: list.length }),
+            });
+            const failNote = res.failed.length
+                ? '（失败 ' +
+                    res.failed.length +
+                    '：' +
+                    res.failed
+                        .slice(0, 3)
+                        .map((f) => f.filename)
+                        .join('、') +
+                    (res.failed.length > 3 ? ' 等' : '') +
+                    '）'
+                : '';
+            addLog('[图片嗅探] 批量下载完成：' + res.ok + '/' + res.total + failNote, res.failed.length ? 'error' : 'success');
         }
         finally {
             setBatch(null);
@@ -107706,6 +108010,10 @@ function usePanelDrag(host) {
 
 
 
+// v26.10.14-v2：资源表预收要尽早启动 —— 脚本默认 document-end 执行，启动前的资源已进
+// performance 缓冲区（observer 的 buffered:true 会一次性回放），此后的新资源由 observer
+// 实时抄录。放 app() 第一行而不是 sniffer.ts 模块级：那个文件是按需加载的，太晚。
+
 /**
  * 脚本入口：本文件只做「装配」，业务实现全部在 src/lib/ 与 src/lib/ui/。
  * 顺序：挂载 React+antd 面板（内含位置恢复与拖拽） → 注册卸载清理 → 启动监控。
@@ -107715,6 +108023,9 @@ function usePanelDrag(host) {
  * @returns {void}
  */
 const app_app = () => {
+    // ========== 资源表预收（v26.10.14-v2，嗅探「开窗即有大小」的基础）==========
+    // 必须在最前面：越早启动 observer，漏掉的资源越少。内部幂等 + 全异常静默降级。
+    startPerfCollect();
     // ========== 挂载主面板 ==========
     try {
         mountPanel();

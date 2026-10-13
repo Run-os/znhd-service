@@ -392,6 +392,13 @@
           reply(details, '', { responseHeaders: 'content-type: image/png\ncontent-length: 61440' });
           return { abort: () => {} };
         }
+        // ⑫ perf 优先夹具（v26.10.14-v2）：同源图 /sniff-perf.png 真加载、真进资源表（22528 B）。
+        // 尺寸测量若正确走「资源表读数」档，**根本不会请求到这里**；桩故意给一个对不上的
+        // content-length（123456789 → 会显示 117.74 MB），万一身寸逻辑回退到 HEAD 也会被断言抓到。
+        if (url.indexOf('/sniff-perf.png') >= 0) {
+          reply(details, '', { responseHeaders: 'content-type: image/png\ncontent-length: 123456789' });
+          return { abort: () => {} };
+        }
         // 其它一律失败，观察脚本是否优雅降级
         setTimeout(() => {
           if (details && typeof details.onerror === 'function') {
@@ -450,6 +457,11 @@
            域名仍是 *.test（从不出网），体积由 GM 桩按 URL 作答（50 / 60 KB）。 -->
       <img id="sniff-conv-a" src="https://sniff-smoke.test/im-cos/11/sniff-conv-a.png" alt="" />
       <img id="sniff-conv-b" src="https://sniff-smoke.test/im-cos/11/sniff-conv-b.png" alt="" />
+      <!-- ⑫ perf 优先夹具（v26.10.14-v2）：**同源真实加载**的图（server.js 的 /sniff-perf.png，
+           精确 22528 字节 = 22 KB）。只有真加载的图才会进 performance 资源表，跨域假域名不行。
+           测量时必须走「资源表读数」这一档：一个 GM 请求都不发（桩里另有假 content-length
+           123456789，真走到 HEAD 就会显示 117.74 MB，断言一并防它）。 -->
+      <img id="sniff-perf-same-origin" src="/sniff-perf.png" alt="" />
     </div>
 
     <!-- ===== 会话宿主的 DOM 侧（v26.10.13-v8）=====
@@ -1695,7 +1707,7 @@
         if (close) close.click();
       }, 18150);
 
-      /* ===== ⑧ 图片嗅探（v26.10.10-v4；会话分组 v26.10.13-v8）=====
+      /* ===== ⑧ 图片嗅探（v26.10.10-v4；会话分组 v26.10.13-v8；perf 优先 v26.10.14-v2）=====
          点面板入口 → 弹窗自动扫描页面（夹具见 #sniff-fixtures 与 body 末尾的 #app）。
          扫描是异步的（每张 HEAD/Range 各 40ms 桩延迟），故用轮询等「卡片出来且已量到大小」再快照。
          阶段（都在报告采集之前跑完）：
@@ -1706,7 +1718,10 @@
            3) 量卡片右下角的悬浮按钮（下载/打印）几何。
          ⚠️ v26.10.12-v1：这条曾与 Agent 流程**串行**（Agent 收尾后才 kick），避免两个弹窗的
             轮询互相抢时序；v26.10.13-v9 删掉 Agent 后改回固定延时 kick（30000 拍），
-            仍在报告采集之前跑完。 */
+            仍在报告采集之前跑完。
+         v26.10.14-v2：夹具里多一张**同源真加载**的 /sniff-perf.png（server.js 提供，精确
+             22528 字节）—— 只有真加载的图才进 performance 资源表，跨域假域名进不去。
+             它必须走「资源表读数」档出卡片（sniffPerfFirstOk），完成判据因此改成 cards>=5。 */
       const kickSniff = () => {
         // 会话分组夹具必须在**扫描之前**就位：脚本是在「打开弹窗 → 扫描」时读页面 Vuex 的
         window.__sniffChatInstalled = window.__installSniffChat('two');
@@ -1763,6 +1778,14 @@
             rangeSize: t.indexOf('40 KB') >= 0,
             convASize: t.indexOf('50 KB') >= 0,
             convBSize: t.indexOf('60 KB') >= 0,
+            // v26.10.14-v2：perf 优先 —— 同源真加载的 ⑫ 必须走「资源表读数」档：
+            // 卡片在、显示 22 KB（资源表读数，不是 HEAD 桩的假值）、来源标注「资源表读数」、
+            // 且 __gmXhrLog 里**没有**任何 sniff-perf.png 请求（零 HEAD/Range）。
+            perfCardSeen: titles.indexOf('sniff-perf.png') >= 0,
+            perfSizePerf: t.indexOf('22 KB') >= 0,
+            perfBogusNotShown: t.indexOf('117.74 MB') < 0,
+            perfViaLabel: titles.indexOf('资源表读数') >= 0,
+            perfNoHead: !window.__gmXhrLog.some((l) => l.indexOf('sniff-perf.png') >= 0),
             unknownCount: unknownCount,
             // v26.10.10-v6：界面不再出现「另有 N 张小于阈值」这类计数
             belowNoticeShown: t.indexOf('小于阈值') >= 0,
@@ -1778,9 +1801,17 @@
             svgUrlInTitles: titles.indexOf('icon.svg') >= 0,
             svgInTitles: /\.svg/i.test(titles),
           };
-          // 达标卡片 = CSS 背景 ×2（30/40 KB）+ 会话图 ×2（50/60 KB）；SVG 与 < 阈值的都已被排除
+          // 达标卡片 = CSS 背景 ×2（30/40 KB）+ 会话图 ×2（50/60 KB）+ perf 同源图 ×1（22 KB，零请求）；
+          // SVG 与 < 阈值的都已被排除
           const done =
-            snap.modalSeen && cards >= 4 && snap.headSize && snap.rangeSize && snap.convASize && snap.convBSize;
+            snap.modalSeen &&
+            cards >= 5 &&
+            snap.headSize &&
+            snap.rangeSize &&
+            snap.convASize &&
+            snap.convBSize &&
+            snap.perfCardSeen &&
+            snap.perfSizePerf;
 
           if (stage === 0) {
             if (!done || !m) {
@@ -1816,8 +1847,8 @@
 
           const g = window.__sniffGroupFacts();
           const groupCards = g ? g.cards.reduce((a, b) => a + b, 0) : 0;
-          // 重扫完成的判据：卡片数回到 4，且首组变成切换后的会话（组顺序跟着「当前会话」走）
-          if (stage === 2 && tries > 0 && !(g && groupCards >= 4 && g.names[0] === '湖南博大园林建筑有限公司')) {
+          // 重扫完成的判据：卡片数回到 5，且首组变成切换后的会话（组顺序跟着「当前会话」走）
+          if (stage === 2 && tries > 0 && !(g && groupCards >= 5 && g.names[0] === '湖南博大园林建筑有限公司')) {
             setTimeout(() => poll(tries - 1, 2), 200);
             return;
           }
@@ -2376,6 +2407,7 @@
             return false;
           })(),
           // 图片嗅探（v26.10.10-v4）：入口 + 三路来源 + 整条尺寸阶梯 + 未知不丢 + 阈值过滤
+          // + perf 优先（v26.10.14-v2：同源图零请求走资源表读数）
           sniffEntryOk: !!(window.__sniffSnap && window.__sniffSnap.entrySeen && window.__sniffSnap.modalSeen),
           sniffScanOk: !!(
             window.__sniffSnap &&
@@ -2387,6 +2419,17 @@
             !window.__sniffSnap.sourcesSvg
           ),
           sniffUnknownKeptOk: !!(window.__sniffSnap && window.__sniffSnap.unknownCount >= 1),
+          // v26.10.14-v2：尺寸读取 perf 优先 —— 同源真加载的图零请求拿到字节数
+          // （预收 Map 由 document-start 起的 PerformanceObserver 持续抄录，脚本执行前加载的图
+          // 靠 observer 的 buffered:true 回放）。走到 HEAD 就假红。
+          sniffPerfFirstOk: !!(
+            window.__sniffSnap &&
+            window.__sniffSnap.perfCardSeen &&
+            window.__sniffSnap.perfSizePerf &&
+            window.__sniffSnap.perfBogusNotShown &&
+            window.__sniffSnap.perfViaLabel &&
+            window.__sniffSnap.perfNoHead
+          ),
           // 图片嗅探（v26.10.10-v6，用户反馈）：小于阈值的图不显示、不计数、也不进全选/批量下载范围。
           // 判据：① 面板不再出现「小于阈值」字样；② 10 KB 的 ⑦ 不在任何卡片标题里；
           // ③ 点「全选」后按钮文案的张数 === 已渲染卡片数 + 大小未知数（含被阈值过滤的那张就会多 1）。
@@ -2519,6 +2562,7 @@
           report.sniffEntryOk &&
           report.sniffScanOk &&
           report.sniffUnknownKeptOk &&
+          report.sniffPerfFirstOk &&
           report.sniffExcludeOk &&
           report.sniffSvgExcludedOk &&
           report.sniffSelectScopeOk &&

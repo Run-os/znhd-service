@@ -28,6 +28,11 @@
 - 归属判据：`unsafeWindow.document` 的 `#app.__vue__`（当前会话 + `chat.messageList`；其它会话走 `allChat.historyMsg`，**嵌套结构无实测样本**，靠 `walkAny` 宽容遍历兜）；会话名 DOM 兜底 `.group-item.selected .company-name`。**按文件名主干匹配，不按 DOM 位置**。
 - 持久化 `scriptCat_SniffConvIndex`（只记映射不记 URL，按 origin 分桶 / 30 天 / 2000 条）。排序：当前会话置顶 → 其余按消息时间 → 未归属殿后；**没有具名会话就不画组头**（退回平铺）。分组容器挂 `data-sniff-group` / `-name` / `-current` 钩子。
 
+## 嗅探提速：perf 预收 + 下载队列（v26.10.14-v2）
+- `lib/snifferPerf.ts`（新）：`app()` 第一行 `startPerfCollect()`——`setResourceTimingBufferSize(20000)` + `PerformanceObserver(buffered:true)` 把资源条目抄进模块级 Map（只收图片 URL、上限 20000）；取值 `decodedBodySize→encodedBodySize→transferSize`。**纯读 performance，零请求零 DOM**。
+- `lib/sniffer.ts`：`add()` 收集时即 `perfBytesOf(url)` 挂字节数 ⇒ `probeOne` 第一档命中，**零 HEAD**；perf 路 = 预收 Map（主力）+ 实时读表（兜底）并集。`downloadBatch` 两段式下载（预取并发 4/背压 8/连败 3 次降并发/退避重试/401·403·404·410 不重试；触发段串行 + 间隔），`SniffModal`「下载所选」走它。
+- 冒烟 `sniffPerfFirstOk`：同源真加载的 `/sniff-perf.png`（server.js 路由，精确 22528 B）必须走「资源表读数」且 `__gmXhrLog` 零请求；⚠️ **跨域假域名（sniff-smoke.test）的图 DNS 就失败、根本不进资源表**——验 perf 必须用同源真图。
+
 ## 中继与部署
 - 端口 `PORT||5689`；nginx `proxy_pass http://127.0.0.1:5689`（znhd.122050.xyz）。`deploy.yml` 定式：脚本内硬编码 `DEPLOY_PATH` / `CONTAINER_NAME` + 安全阀（根因：ssh-action 不注入顶层 env）。诊断：`Connection refused (111) upstream 5689` = relay 未监听。反相通道改一侧必须同步评估另一侧。
 
