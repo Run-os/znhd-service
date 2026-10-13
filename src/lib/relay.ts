@@ -29,6 +29,8 @@ interface ImageSizeLike {
  */
 type SendToPhonePayload = ({ text: string } | { name: string; mime: string; data: string }) & {
     targets?: 'all' | string[];
+    /** v26.10.14-v3：表情包图片标记（发表情时带上；服务端写进条目，电脑端「全部文件」据此过滤） */
+    emoji?: boolean;
 };
 
 /**
@@ -335,7 +337,14 @@ interface PhoneReceiveOptions {
     uuid: string;
     onStatus?: (text: string) => void;
     /** from（v26.10.13-v6）：发送者手机 ID（中继随条目回传；老中继/未知发送者时为空） */
-    onImage?: (img: { blob: Blob; previewUrl: string; name?: string; mime?: string; from?: string }) => void;
+    onImage?: (img: {
+        blob: Blob;
+        previewUrl: string;
+        name?: string;
+        mime?: string;
+        from?: string;
+        emoji?: boolean;
+    }) => void;
     onText?: (item: { text: string; ts?: number; from?: string }) => void;
     onConnected?: () => void;
 }
@@ -413,6 +422,8 @@ export function startPhoneReceive(opt: PhoneReceiveOptions) {
                                     name: data.name,
                                     mime: data.mime,
                                     from: data.from,
+                                    // v26.10.14-v3：表情包标记透传（老中继不带 → undefined → 当作普通图片）
+                                    emoji: data.emoji === true,
                                 });
                             poll(); // 继续接收下一张
                             return;

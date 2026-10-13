@@ -31,6 +31,7 @@
  * 跑法：`npm run verify:web`（已串进 `npm run verify`）
  */
 const puppeteer = require('puppeteer');
+const http = require('http');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
@@ -140,8 +141,67 @@ async function main() {
     const png = path.join(os.tmpdir(), 'znhd-phone-page-upload.png');
     writeTinyPng(png);
     const port = await freePort();
+
+    // ===== 表情包 fixture（v26.10.14-v3）=====
+    // 手机页表情数据层已改「同源中继优先、CDN 兜底」：中继把整套表情包拉到自己磁盘
+    // （emoji-store，env ZNHD_EMOJI_SOURCES/ZNHD_EMOJI_DIR 指向 fixture），页面只打
+    // 同源 /emoji/*。假 CDN 与 relay.js 同一套做法（回环 http + 临时目录）。
+    const cdnPort = await freePort();
+    const emojiDir = fs.mkdtempSync(path.join(os.tmpdir(), 'znhd-phone-emoji-'));
+    const sourcesFile = path.join(os.tmpdir(), 'znhd-phone-emoji-sources-' + cdnPort + '.json');
+    const FIXTURE_PACKS = [
+        {
+            id: 'stubemoji',
+            items: [
+                { key: '01', file: 'stubemoji-01.png' },
+                { key: '02', file: 'stubemoji-02.png' },
+            ],
+        },
+    ];
+    fs.writeFileSync(
+        sourcesFile,
+        JSON.stringify(
+            FIXTURE_PACKS.map((p) => ({ id: p.id, url: `http://127.0.0.1:${cdnPort}/json/${p.id}.json` }))
+        )
+    );
+    const fixtureCdn = http.createServer((req, res) => {
+        const pm = /^\/json\/([a-z0-9_-]+)\.json$/.exec(req.url || '');
+        if (pm) {
+            const p = FIXTURE_PACKS.find((x) => x.id === pm[1]);
+            if (p) {
+                res.writeHead(200, { 'Content-Type': 'application/json' });
+                res.end(
+                    JSON.stringify({
+                        name: '桩表情合集',
+                        type: 'image',
+                        items: p.items.map((it) => ({
+                            key: it.key,
+                            val: `http://127.0.0.1:${cdnPort}/emo/${it.file}`,
+                        })),
+                    })
+                );
+                return;
+            }
+        }
+        const im = /^\/emo\/([A-Za-z0-9._-]+)$/.exec(req.url || '');
+        if (im) {
+            // 图片就是上传用例那张 8x8 PNG（blob.type=image/png，与既有 mime 断言一致）
+            res.writeHead(200, { 'Content-Type': 'image/png' });
+            res.end(fs.readFileSync(png));
+            return;
+        }
+        res.writeHead(404);
+        res.end('not found');
+    });
+    await new Promise((r) => fixtureCdn.listen(cdnPort, '127.0.0.1', r));
+
     const child = spawn(process.execPath, [path.join(ROOT, 'relay-server', 'server.js')], {
-        env: { ...process.env, PORT: String(port) },
+        env: {
+            ...process.env,
+            PORT: String(port),
+            ZNHD_EMOJI_SOURCES: sourcesFile,
+            ZNHD_EMOJI_DIR: emojiDir,
+        },
         stdio: ['ignore', 'pipe', 'pipe'],
     });
     let childErr = '';
@@ -202,12 +262,29 @@ async function main() {
             };
         });
 
-        // ② CDN 桩 + POST 捕获：表情包清单/图片走 cdn.klyang.com（CORS 实测可用），
-        //    冒烟不依赖外网；同时捕获手机 → 中继的 POST 载荷供表情发送断言。
+        // ② CDN 桩 + POST 捕获 + 表情请求记账（v26.10.14-v3 起表情走同源中继优先）：
+        //    · /emoji/* 请求放行真中继（ fixture 已预热），记路径供「全走中继」断言；
+        //    · cdn.klyang.com 桩降级为**兜底路径**——正常不该被触发，触发了说明中继优先失效；
+        //    · 任何**非本源**请求都记账：表情包全走中继时该项必须为 0。
         const phonePosts = [];
+        const emojiReqs = [];
+        const externalReqs = [];
+        const pageOrigin = `http://127.0.0.1:${port}`;
         await page.setRequestInterception(true);
         page.on('request', (req) => {
             const url = req.url();
+            let u = null;
+            try {
+                u = new URL(url);
+            } catch (e) {
+                u = null; // data: 等怪scheme：不当外部请求，直接放行
+            }
+            if (u && u.origin !== pageOrigin) externalReqs.push(url);
+            if (u && u.pathname.indexOf('/emoji/') === 0) {
+                emojiReqs.push(u.pathname);
+                req.continue();
+                return;
+            }
             if (url.indexOf('https://cdn.klyang.com/json/') === 0) {
                 req.respond({
                     status: 200,
@@ -301,7 +378,22 @@ async function main() {
             !!order && order.emoji >= 0 && order.image >= 0 && order.emoji < order.image
         );
 
-        // ①-D 表情面板与「点一张直接发到电脑」（CDN 已桩；载荷断言见 phonePosts）
+        // ①-D 前置：等中继把表情包 fixture 预热完（/emoji/status.ready）再开面板。
+        // 不wait 的话面板可能在预热完成前就打 /emoji/packs.json（服务端会同步补，也能过），
+        // 但等待让「全走中继」断言面对的是稳定状态，排除时序偶发。
+        let emojiReady = false;
+        for (let i = 0; i < 40 && !emojiReady; i++) {
+            await sleep(250);
+            try {
+                const s = await fetch(`http://127.0.0.1:${port}/emoji/status`).then((r) => r.json());
+                emojiReady = s.ready === true;
+            } catch (e) {
+                /* 还没起来 */
+            }
+        }
+        check('中继表情包预热就绪（/emoji/status.ready=true）', emojiReady);
+
+        // ①-D 表情面板与「点一张直接发到电脑」（v26.10.14-v3 起数据走同源中继）
         await page.click('button[aria-label="表情"]');
         await page.waitForSelector('.znhd-emoji-panel', { timeout: 10000 });
         const panelInfo = await page.evaluate(() => ({
@@ -339,6 +431,19 @@ async function main() {
                 emojiPost.mime === 'image/png' &&
                 /^[a-z0-9_-]+-\d+\.png$/.test(String(emojiPost.name || '')) &&
                 String(emojiPost.data || '').length >= 20
+        );
+
+        // ①-D2 表情包全走中继（v26.10.14-v3，需求③的客户端一半）：
+        //   清单与图片都打同源 /emoji/*，且零外部（CDN）请求 —— 兜底没被触发，
+        //   才是「中继优先」真的生效的直接证据（老实现这里会是 8+2 个 cdn.klyang.com 请求）。
+        if (externalReqs.length) {
+            console.log('     外部请求明细（应为空）：' + JSON.stringify(externalReqs.slice(0, 5)));
+        }
+        check(
+            '表情包全走中继：请求过 /emoji/packs.json 与 /emoji/<合集>/<文件>，且零外部（CDN）请求',
+            emojiReqs.some((p) => p === '/emoji/packs.json') &&
+                emojiReqs.some((p) => /^\/emoji\/[a-z0-9_-]+\/[a-z0-9._-]+\.png$/.test(p)) &&
+                externalReqs.length === 0
         );
 
         // ①-E 键盘弹出：shell 跟随视觉视口（输入区不被键盘挡住），收起后还原 100dvh
@@ -426,6 +531,13 @@ async function main() {
                 recvItems.every((it) => it && it.from === phoneId && (it.type === 'image' || it.type === 'text')) &&
                 recvItems.some((it) => it.type === 'image') &&
                 recvItems.some((it) => it.type === 'text')
+        );
+
+        // v26.10.14-v3：表情发送带 emoji 标记（需求①的服务端回传）。队列顺序 =
+        // ① 表情直发 → ② 上传图 → ③ 文本；服务端只给图片条目写 emoji 字段。
+        check(
+            '表情发送带 emoji 标记：/recv 首条（表情图）emoji=true、上传图 emoji=false',
+            !!recvItems[0] && recvItems[0].emoji === true && !!recvItems[1] && recvItems[1].emoji === false
         );
 
         // ④ 电脑端 → 手机端：真从中继投递一张图，等长轮询收到 → 左侧灰气泡
@@ -573,7 +685,10 @@ async function main() {
     } finally {
         await browser.close();
         child.kill();
+        fixtureCdn.close();
         try {
+            fs.rmSync(emojiDir, { recursive: true, force: true });
+            fs.unlinkSync(sourcesFile);
             fs.unlinkSync(png);
         } catch (e) {
             /* 忽略 */

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name                征纳互动人数和在线监控v2
 // @namespace           https://scriptcat.org/
-// @version             26.10.14-v2
+// @version             26.10.14-v3
 // @description         实时监控征纳互动等待人数和在线状态，支持语音播报、自定义常用语
 // @author              runos
 // @license             MIT
@@ -77150,6 +77150,8 @@ function startPhoneReceive(opt) {
                                     name: data.name,
                                     mime: data.mime,
                                     from: data.from,
+                                    // v26.10.14-v3：表情包标记透传（老中继不带 → undefined → 当作普通图片）
+                                    emoji: data.emoji === true,
                                 });
                             poll(); // 继续接收下一张
                             return;
@@ -77511,55 +77513,141 @@ function ChatBubble({ side, avatar, children, meta, bare, danger, maxWidth = '72
                         }, children: meta })) : null] })] }));
 }
 
+;// ./src/lib/transfer/settings.ts
+/**
+ * 传输助手的自有设置存储（v26.10.12-v1）。
+ *
+ * 与 App 主面板设置**完全隔离**（用户要求：数据、入口、UI 均不共用）：
+ *   · 主面板 `SettingsModal` 里不再有「中继服务器地址」——它搬到了这里；
+ *   · 本模块的设置只进 `scriptCat_TransferSettings`，不写 `scriptCat_Allvalue`。
+ *
+ * 存量迁移（一次性）：老用户的中继地址存在 `scriptCat_Allvalue.relayServer` 里
+ * （可能还是自己改过的地址）。第一次读取本模块设置时若本地没有任何记录，
+ * 就把旧地址搬过来当默认值，避免升级后要重填。
+ */
+/**
+ * 中继服务器默认地址（v26.10.12-v1 起由本模块自有，不再走主面板 DEFAULTS）。
+ * 即原 `DEFAULTS.relayServer` 的线上地址，随「设置隔离」一起搬过来。
+ */
+const DEFAULT_RELAY_SERVER = 'https://znhd.122050.xyz';
+/** 传输助手设置的 localStorage 键（与主设置的 `scriptCat_Allvalue` 分开） */
+const TRANSFER_STORAGE_KEY = 'scriptCat_TransferSettings';
+/** 默认设置：中继地址为线上默认地址 */
+const DEFAULT_TRANSFER_SETTINGS = {
+    relayServer: DEFAULT_RELAY_SERVER,
+    theme: 'light',
+    autoOpenOnReceive: true,
+};
+/**
+ * 读取传输助手设置（与默认值合并；形状损坏一律退化成默认值）。
+ *
+ * @param legacyRelayServer 旧主设置里的中继地址（`runtime.init.relayServer`）：
+ *        仅当本地**从来没有**存过传输助手设置时用作默认值，之后用户在本模块改的值优先。
+ */
+function loadTransferSettings(legacyRelayServer) {
+    let stored = null;
+    try {
+        const raw = localStorage.getItem(TRANSFER_STORAGE_KEY);
+        if (raw) {
+            const parsed = JSON.parse(raw);
+            if (parsed && typeof parsed === 'object' && !Array.isArray(parsed))
+                stored = parsed;
+        }
+    }
+    catch (e) {
+        stored = null;
+    }
+    const base = stored
+        ? { ...DEFAULT_TRANSFER_SETTINGS, ...stored }
+        : {
+            ...DEFAULT_TRANSFER_SETTINGS,
+            // 一次性迁移：老用户在别处填过的中继地址继续生效
+            relayServer: typeof legacyRelayServer === 'string' && legacyRelayServer.trim()
+                ? legacyRelayServer.trim().replace(/\/+$/, '')
+                : DEFAULT_TRANSFER_SETTINGS.relayServer,
+        };
+    return settings_normalize(base);
+}
+/** 保存传输助手设置（同步写入；本模块设置项少，不需要防抖） */
+function saveTransferSettings(settings) {
+    try {
+        localStorage.setItem(TRANSFER_STORAGE_KEY, JSON.stringify(settings));
+    }
+    catch (e) {
+        /* 隐私模式等写不进去时静默：设置仍能在当次会话内生效 */
+    }
+}
+/** 归一化：地址去尾部斜杠、主题只认 light/dark、开关强制布尔 */
+function normalizeTransferSettings(input) {
+    const theme = input.theme === 'dark' ? 'dark' : 'light';
+    return {
+        relayServer: String(input.relayServer || '')
+            .trim()
+            .replace(/\/+$/, ''),
+        theme,
+        autoOpenOnReceive: input.autoOpenOnReceive === undefined ? true : !!input.autoOpenOnReceive,
+    };
+}
+function settings_normalize(input) {
+    return normalizeTransferSettings(input);
+}
+
+;// ./relay-server/emoji-sources.json
+const emoji_sources_namespaceObject = /*#__PURE__*/JSON.parse('[{"id":"aluhedwm","url":"https://cdn.klyang.com/json/aluhedwm.json"},{"id":"alurc","url":"https://cdn.klyang.com/json/alurc.json"},{"id":"alurc2","url":"https://cdn.klyang.com/json/alurc2.json"},{"id":"aluyn","url":"https://cdn.klyang.com/json/aluyn.json"},{"id":"jralu","url":"https://cdn.klyang.com/json/jralu.json"},{"id":"rcxly","url":"https://cdn.klyang.com/json/rcxly.json"},{"id":"tvxds","url":"https://cdn.klyang.com/json/tvxds.json"},{"id":"xhl","url":"https://cdn.klyang.com/json/xhl.json"}]');
 ;// ./src/lib/transfer/emojiPack.ts
 /**
- * 传输助手的**在线表情包**数据层（v26.10.13-v3）。
+ * 传输助手的**在线表情包**数据层（v26.10.14-v3）。
  *
  * ── 为什么从「字符符号面板」换成在线表情包 ──────────────────────────────────
  * 旧面板（`chatEmojis.ts`，本版已删）只能在 BMP 区里挑 `☺ ☝ ★` 这类**老符号**：脚本的主战场是
  * 税务办的 Win7 机器，系统没有 Segoe UI Emoji 字体，U+1F300+ 的彩色 emoji 一律渲染成豆腐块。
  * 换成**图片表情**后这个约束自动消失 —— 图片不靠字体，Win7 上一样是彩色的。
  *
- * ── 数据来源 ────────────────────────────────────────────────────────────────
- * 8 个合集的地址写死在 `EMOJI_PACK_SOURCES`（用户给定，均在 cdn.klyang.com）：
- *   · 清单 JSON：`https://cdn.klyang.com/json/<id>.json`
- *     → `{ name: '阿鲁日常', type: 'image', items: [{ key: '01', val: '<图片地址>' }] }`
- *   · 图片本体：`https://cdn.klyang.com/emo/.../<key>.webp`（静态 webp，实测单张 2–6 KB）
+ * ── 数据来源：中继优先，CDN 兜底（v26.10.14-v3 起）────────────────────────────
+ * 旧实现（v26.10.13-v3）每个客户端都**直连 cdn.klyang.com**：开一次面板打 8 个清单请求 +
+ * N 个图片请求，既慢（跨网 + CDN 排队）又有被限流的风险（用户原话：「我怕触发限流」）。
+ * 现改为：
+ *   · **优先走中继** `<relayServer>/emoji/packs.json` 与 `/emoji/<合集>/<文件>` ——
+ *     中继已把整套表情包拉到**自己的磁盘**（见 relay-server/emoji-store.js），同源、内网、
+ *     可并发；这也是「表情包加载慢」的解药（客户端不再跨网逐张排队）。
+ *   · **中继不可用（未部署 / 老中继没这些路由 / 该图中转失败）时自动回退 CDN 直连**，
+ *     功能不回退 —— `EmojiItem.path` 为空时本来就走 CDN。
+ * 合集清单的**单一来源**是 `relay-server/emoji-sources.json`（CDN 兜底路径与中继共用，
+ * 改合集只改那一处；根 tsconfig 已开 resolveJsonModule）。
  *
  * ── 三个必须绕开的坑 ────────────────────────────────────────────────────────
  * 1. **必须走 `GM_xmlhttpRequest`，不能用 `<img src>` 直接引 CDN**：宿主税务页有 CSP，
  *    img-src 白名单里没有这个域，直接引用会整片裂图；GM 请求不受页面 CSP 约束
- *    （与中继长轮询绕过 connect-src 同一个理由）。
- * 2. **清单必须缓存**：面板每开一次就拉 8 个请求没必要 —— 缓存在 localStorage
- *    （键 `scriptCat_EmojiPacks`）12 小时；表情包是静态资源，TTL 给得长一些，
- *    面板上有「刷新」可强制重拉。
+ *    （与中继长轮询绕过 connect-src 同一个理由）。中继图片同样走 GM：中继地址
+ *    与税务页不同源，一样受 CSP 约束。
+ * 2. **清单必须缓存**：面板每开一次就发 1 个（中继）或 8 个（CDN）请求没必要 ——
+ *    缓存在 localStorage（键 `scriptCat_EmojiPacks`）12 小时；表情包是静态资源，
+ *    TTL 给得长一些，面板上有「刷新」可强制重拉。
  * 3. **图片 blob 也要缓存**：点选表情后要把图片交给「待发图片 → 逐张发送」链路，
  *    本来就需要 blob，面板显示也用同一份（`URL.createObjectURL`）。objectURL **不主动 revoke**：
  *    全套最多几百张、单张几 KB，撤销反而会让面板缩略图与会话里的待发缩略图一起裂掉。
  *
- * 失败处理：单个合集失败就跳过（其余照常显示）；8 个全失败才 reject，面板给出「重试」。
+ * 失败处理：单个合集失败就跳过（其余照常显示）；中继与 CDN **都**拿不到合集才 reject，
+ * 面板给出「重试」。
  */
-/** 用户给定的 8 个合集（顺序即面板里的顺序） */
-const EMOJI_PACK_SOURCES = [
-    { id: 'aluhedwm', url: 'https://cdn.klyang.com/json/aluhedwm.json' },
-    { id: 'alurc', url: 'https://cdn.klyang.com/json/alurc.json' },
-    { id: 'alurc2', url: 'https://cdn.klyang.com/json/alurc2.json' },
-    { id: 'aluyn', url: 'https://cdn.klyang.com/json/aluyn.json' },
-    { id: 'jralu', url: 'https://cdn.klyang.com/json/jralu.json' },
-    { id: 'rcxly', url: 'https://cdn.klyang.com/json/rcxly.json' },
-    { id: 'tvxds', url: 'https://cdn.klyang.com/json/tvxds.json' },
-    { id: 'xhl', url: 'https://cdn.klyang.com/json/xhl.json' },
-];
+
+
+// 合集清单单一来源：relay-server/emoji-sources.json（中继预热与脚本端 CDN 兜底共用一份）
+
+/** CDN 兜底用的 8 个合集（顺序即面板里的顺序；单一来源 = relay-server/emoji-sources.json） */
+const EMOJI_PACK_SOURCES = emoji_sources_namespaceObject;
 const CACHE_KEY = 'scriptCat_EmojiPacks';
-/** 清单缓存时长：表情包基本不变，12 小时足够，避免每次开面板都打 8 个请求 */
+/** 清单缓存时长：表情包基本不变，12 小时足够，避免每次开面板都打请求 */
 const CACHE_TTL = 12 * 60 * 60 * 1000;
+/** 中继清单/图片请求超时（与 CDN 同档；中继在内网通常远快于这个） */
+const RELAY_TIMEOUT = 15000;
 /* ============================ GM 请求（脚本端才有） ============================ */
 function gmGetText(url) {
     return new Promise((resolve, reject) => {
         GM_xmlhttpRequest({
             method: 'GET',
             url,
-            timeout: 15000,
+            timeout: RELAY_TIMEOUT,
             onload: (resp) => {
                 if (resp.status >= 200 && resp.status < 300 && typeof resp.responseText === 'string') {
                     resolve(resp.responseText);
@@ -77572,14 +77660,17 @@ function gmGetText(url) {
         });
     });
 }
-function gmGetBlob(url) {
+function gmGetBlob(url, timeoutMs) {
     return new Promise((resolve, reject) => {
         GM_xmlhttpRequest({
             method: 'GET',
             url,
-            responseType: 'blob',
-            timeout: 20000,
+            timeout: timeoutMs,
             onload: (resp) => {
+                if (resp.status < 200 || resp.status >= 300) {
+                    reject(new Error('HTTP ' + resp.status));
+                    return;
+                }
                 const blob = resp && resp.response;
                 if (!blob || typeof blob.size !== 'number' || !blob.size) {
                     reject(new Error('响应不是有效的图片数据'));
@@ -77592,6 +77683,21 @@ function gmGetBlob(url) {
         });
     });
 }
+/* ============================ 中继地址 ============================ */
+/**
+ * 当前中继地址（表情包缓存服务就挂在这上面）。
+ * 读传输助手设置里用户配的地址；没配过 / 配空了用线上默认地址。
+ * 注意：老中继没有 /emoji 路由时请求会 404，调用方据此回退 CDN，功能不受影响。
+ */
+function currentRelayBase() {
+    try {
+        const base = loadTransferSettings().relayServer;
+        return (base || DEFAULT_RELAY_SERVER).replace(/\/+$/, '');
+    }
+    catch (e) {
+        return DEFAULT_RELAY_SERVER;
+    }
+}
 /* ============================== 清单：拉取 + 缓存 ============================== */
 /** 文件名净化：去掉路径分隔符与控制字符（合集 key 里可能有中文，中文本身不处理） */
 function sanitizeName(s) {
@@ -77601,39 +77707,7 @@ function emojiFileName(packId, key, url) {
     const ext = (url.match(/\.([a-z0-9]{2,5})(?:[?#]|$)/i) || [])[1] || 'webp';
     return sanitizeName(packId + '-' + key) + '.' + ext.toLowerCase();
 }
-function readCache() {
-    try {
-        const raw = localStorage.getItem(CACHE_KEY);
-        if (!raw)
-            return null;
-        const parsed = JSON.parse(raw);
-        if (!parsed || !Array.isArray(parsed.packs) || !parsed.packs.length)
-            return null;
-        if (typeof parsed.ts !== 'number' || Date.now() - parsed.ts > CACHE_TTL)
-            return null;
-        return parsed.packs;
-    }
-    catch (e) {
-        return null;
-    }
-}
-function writeCache(packs) {
-    try {
-        localStorage.setItem(CACHE_KEY, JSON.stringify({ ts: Date.now(), packs }));
-    }
-    catch (e) {
-        /* 存储满 / 隐私模式：缓存失败不影响功能 */
-    }
-}
-/** 清掉清单缓存（面板上的「刷新」用：强制重新拉 8 个合集） */
-function clearEmojiPackCache() {
-    try {
-        localStorage.removeItem(CACHE_KEY);
-    }
-    catch (e) {
-        /* 忽略 */
-    }
-}
+/** CDN 合集 JSON → EmojiPack（无 path，图片走 CDN 直连） */
 function parsePack(srcId, text) {
     const raw = JSON.parse(text);
     // 先落到变量上再 Array.isArray：对「表达式」做类型守卫不会收窄，list 会退化成 unknown
@@ -77654,53 +77728,177 @@ function parsePack(srcId, text) {
     return { id: srcId, name: String((raw && raw.name) || srcId), items };
 }
 /**
- * 拉取全部表情包：命中缓存直接返回，否则并发拉 8 个清单（单个失败跳过）。
+ * 中继合并清单 → EmojiPack[]（带 path，图片走中继）。
+ *
+ * ⚠️ path 必须严格校验：中继地址是用户可配的，恶意/被劫持的中继可能返回任意 path，
+ *   而 GM_xmlhttpRequest 能跨域 —— 不校验就等于替中继打探任意 URL（SSRF 化）。
+ *   只放行 `/emoji/<本合集id>/<白名单文件名>` 形态（与服务端路由正则同一套）。
+ */
+function parseRelayManifest(json) {
+    const obj = json;
+    const rawPacks = obj && typeof obj === 'object' ? obj.packs : undefined;
+    const list = Array.isArray(rawPacks) ? rawPacks : [];
+    const packs = [];
+    list.forEach((p) => {
+        const rec = (p || {});
+        const id = String(rec.id || '');
+        if (!/^[a-zA-Z0-9_-]{1,40}$/.test(id))
+            return;
+        const items = [];
+        const rawItems = Array.isArray(rec.items) ? rec.items : [];
+        rawItems.forEach((it) => {
+            const row = (it || {});
+            const key = String(row.key || '').trim();
+            const src = String(row.src || '').trim();
+            const path = String(row.path || '');
+            if (!key || !/^https?:\/\//i.test(src))
+                return;
+            // path 必须形如 /emoji/<本合集id>/<文件名>，且文件名过服务端同款白名单
+            const m = new RegExp('^/emoji/' + id + '/([A-Za-z0-9._-]{1,80})$').exec(path);
+            if (!m)
+                return;
+            if (!/\.(webp|png|jpe?g|gif|svg|bmp)$/i.test(m[1]))
+                return;
+            items.push({ key, url: src, path, name: String(row.name || '') || emojiFileName(id, key, src) });
+        });
+        if (!items.length)
+            return;
+        packs.push({ id, name: String(rec.name || id), items });
+    });
+    return packs;
+}
+function readCache() {
+    try {
+        const raw = localStorage.getItem(CACHE_KEY);
+        if (!raw)
+            return null;
+        const parsed = JSON.parse(raw);
+        if (!parsed || !Array.isArray(parsed.packs) || !parsed.packs.length)
+            return null;
+        if (typeof parsed.ts !== 'number' || Date.now() - parsed.ts > CACHE_TTL)
+            return null;
+        if (typeof parsed.base !== 'string' || !parsed.base)
+            return null;
+        return { base: parsed.base, packs: parsed.packs };
+    }
+    catch (e) {
+        return null;
+    }
+}
+function writeCache(base, packs) {
+    try {
+        localStorage.setItem(CACHE_KEY, JSON.stringify({ ts: Date.now(), base, packs }));
+    }
+    catch (e) {
+        /* 存储满 / 隐私模式：缓存失败不影响功能 */
+    }
+}
+/** 清掉清单缓存（面板上的「刷新」用：强制重新拉取） */
+function clearEmojiPackCache() {
+    try {
+        localStorage.removeItem(CACHE_KEY);
+    }
+    catch (e) {
+        /* 忽略 */
+    }
+}
+/** 从中继拉合并清单（失败 reject，由调用方回退 CDN） */
+function loadFromRelay(base) {
+    return gmGetText(base + '/emoji/packs.json').then((text) => {
+        let json = null;
+        try {
+            json = JSON.parse(text);
+        }
+        catch (e) {
+            throw new Error('中继清单不是合法 JSON');
+        }
+        const packs = parseRelayManifest(json);
+        if (!packs.length)
+            throw new Error('中继清单为空');
+        return packs;
+    });
+}
+/** 从 CDN 直拉全部合集（旧路径，兜底用；单个失败跳过） */
+function loadFromCdn() {
+    return Promise.all(EMOJI_PACK_SOURCES.map((src) => gmGetText(src.url)
+        .then((text) => parsePack(src.id, text))
+        .catch(() => null))).then((results) => {
+        const packs = results.filter((p) => !!p && p.items.length > 0);
+        if (!packs.length)
+            throw new Error('表情包全部加载失败（中继与 8 个 CDN 合集都没取到）');
+        return packs;
+    });
+}
+/**
+ * 拉取全部表情包：命中缓存直接返回；否则**先试中继，失败回退 CDN**。
  *
  * @param force 忽略缓存强制重拉（面板「刷新」按钮）
  */
 async function loadEmojiPacks(force = false) {
+    const base = currentRelayBase();
     if (!force) {
         const hit = readCache();
-        if (hit)
-            return hit;
+        // 中继地址变过（用户改了设置）：缓存里的 path 属于旧中继，宁可重拉
+        if (hit && hit.base === base)
+            return hit.packs;
     }
-    const results = await Promise.all(EMOJI_PACK_SOURCES.map((src) => gmGetText(src.url)
-        .then((text) => parsePack(src.id, text))
-        .catch(() => null)));
-    const packs = results.filter((p) => !!p && p.items.length > 0);
-    if (!packs.length)
-        throw new Error('表情包全部加载失败（8 个合集都没取到）');
-    writeCache(packs);
+    let packs;
+    try {
+        packs = await loadFromRelay(base);
+    }
+    catch (e) {
+        packs = await loadFromCdn();
+    }
+    writeCache(base, packs);
     return packs;
 }
 const blobCache = new Map();
 const inflight = new Map();
+/** 缓存键：有中继路径就用它（中继优先）；否则 CDN 原址 */
+function blobCacheKey(url, path) {
+    return path || url;
+}
 /** 已经下好的表情图（面板渲染时先查它，避免重复请求） */
-function cachedEmojiBlob(url) {
-    return blobCache.get(url);
+function cachedEmojiBlob(url, path) {
+    return blobCache.get(blobCacheKey(url, path));
 }
 /**
  * 取表情图（带缓存与去重：同一张图面板显示与「点选加入待发」共用一次下载）。
- * 下载失败会 reject，由调用方决定「这张留白 / 提示失败」。
+ *
+ * 优先走中继（`<中继>/<item.path>`），失败自动回退 CDN 原址 —— 中继未部署该图 /
+ * 老中继没有 /emoji 路由时用户无感。两个地址都失败才 reject，由调用方决定
+ * 「这张留白 / 提示失败」。
  */
-function loadEmojiBlob(url) {
-    const hit = blobCache.get(url);
+function loadEmojiBlob(url, path) {
+    const key = blobCacheKey(url, path);
+    const hit = blobCache.get(key);
     if (hit)
         return Promise.resolve(hit);
-    const running = inflight.get(url);
+    const running = inflight.get(key);
     if (running)
         return running;
-    const task = gmGetBlob(url)
-        .then((blob) => {
-        const entry = { blob, objectUrl: URL.createObjectURL(blob) };
-        blobCache.set(url, entry);
-        return entry;
-    })
-        .finally(() => {
-        inflight.delete(url);
+    const task = (async () => {
+        if (path) {
+            try {
+                const blob = await gmGetBlob(currentRelayBase() + path, RELAY_TIMEOUT);
+                return finish(key, blob);
+            }
+            catch (e) {
+                /* 中继这条没拿到：落 CDN 兜底 */
+            }
+        }
+        const blob = await gmGetBlob(url, 20000);
+        return finish(key, blob);
+    })().finally(() => {
+        inflight.delete(key);
     });
-    inflight.set(url, task);
+    inflight.set(key, task);
     return task;
+}
+function finish(key, blob) {
+    const entry = { blob, objectUrl: URL.createObjectURL(blob) };
+    blobCache.set(key, entry);
+    return entry;
 }
 
 ;// ./src/lib/ui/transfer/EmojiPackPanel.tsx
@@ -77802,6 +78000,15 @@ function EmojiPackPanel({ onPick }) {
         load(false);
     }, [load]);
     const activePack = (0,react_production_namespaceFn().useMemo)(() => (packs || []).find((p) => p.id === activeId) || null, [packs, activeId]);
+    /** url → 中继路径（v26.10.14-v3：表情图优先走中继；悬停补图时按 url 反查 path 用） */
+    const pathByUrl = (0,react_production_namespaceFn().useMemo)(() => {
+        const map = {};
+        (activePack ? activePack.items : []).forEach((it) => {
+            if (it.path)
+                map[it.url] = it.path;
+        });
+        return map;
+    }, [activePack]);
     // 当前合集的图片：缓存命中的同步填，其余分批下载（切组合集会取消上一轮）
     (0,react_production_namespaceFn().useEffect)(() => {
         if (!activePack)
@@ -77810,7 +78017,7 @@ function EmojiPackPanel({ onPick }) {
         const cached = {};
         const queue = [];
         activePack.items.forEach((it) => {
-            const hit = cachedEmojiBlob(it.url);
+            const hit = cachedEmojiBlob(it.url, it.path);
             if (hit)
                 cached[it.url] = hit.objectUrl;
             else
@@ -77821,7 +78028,7 @@ function EmojiPackPanel({ onPick }) {
         const run = async () => {
             while (queue.length && !cancelled) {
                 const batch = queue.splice(0, BATCH);
-                const results = await Promise.allSettled(batch.map((it) => loadEmojiBlob(it.url)));
+                const results = await Promise.allSettled(batch.map((it) => loadEmojiBlob(it.url, it.path)));
                 if (cancelled)
                     return;
                 const add = {};
@@ -77841,7 +78048,7 @@ function EmojiPackPanel({ onPick }) {
     const pick = (it) => {
         if (!activePack)
             return;
-        const hit = cachedEmojiBlob(it.url);
+        const hit = cachedEmojiBlob(it.url, it.path);
         if (hit) {
             onPick({ pack: activePack.name, key: it.key, url: it.url, name: it.name, blob: hit.blob });
             return;
@@ -77849,7 +78056,7 @@ function EmojiPackPanel({ onPick }) {
         // 还没下好（用户手比下载快）：等这张下完再交出去 —— 别让点击石沉大海。
         // ⚠️ 不把未就绪的格子做成 disabled：disabled 的按钮点了完全没反馈，用户只会以为坏了。
         setPendingKey(it.url);
-        loadEmojiBlob(it.url)
+        loadEmojiBlob(it.url, it.path)
             .then((entry) => onPick({ pack: activePack.name, key: it.key, url: it.url, name: it.name, blob: entry.blob }))
             .catch(() => {
             /* 下载失败：格子保持占位，用户可重试或点刷新 */
@@ -77889,11 +78096,12 @@ function EmojiPackPanel({ onPick }) {
         }, HOVER_DELAY);
     };
     // 悬停的那张还没下好（面板分批下载中）：补一次，到位后浮层自己换成图
+    // （v26.10.14-v3：带上中继路径，别绕过中继直连 CDN）
     (0,react_production_namespaceFn().useEffect)(() => {
         if (!hover || ready[hover.url])
             return;
         let alive = true;
-        loadEmojiBlob(hover.url)
+        loadEmojiBlob(hover.url, pathByUrl[hover.url])
             .then((entry) => {
             if (alive)
                 setReady((prev) => ({ ...prev, [hover.url]: entry.objectUrl }));
@@ -77904,7 +78112,7 @@ function EmojiPackPanel({ onPick }) {
         return () => {
             alive = false;
         };
-    }, [hover, ready]);
+    }, [hover, ready, pathByUrl]);
     const chip = (pack) => {
         const on = pack.id === activeId;
         return ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { size: "small", type: "text", "aria-pressed": on, onClick: () => setActiveId(pack.id), style: {
@@ -105294,85 +105502,6 @@ function schedulePersist(sessions) {
     }, 800);
 }
 
-;// ./src/lib/transfer/settings.ts
-/**
- * 传输助手的自有设置存储（v26.10.12-v1）。
- *
- * 与 App 主面板设置**完全隔离**（用户要求：数据、入口、UI 均不共用）：
- *   · 主面板 `SettingsModal` 里不再有「中继服务器地址」——它搬到了这里；
- *   · 本模块的设置只进 `scriptCat_TransferSettings`，不写 `scriptCat_Allvalue`。
- *
- * 存量迁移（一次性）：老用户的中继地址存在 `scriptCat_Allvalue.relayServer` 里
- * （可能还是自己改过的地址）。第一次读取本模块设置时若本地没有任何记录，
- * 就把旧地址搬过来当默认值，避免升级后要重填。
- */
-/**
- * 中继服务器默认地址（v26.10.12-v1 起由本模块自有，不再走主面板 DEFAULTS）。
- * 即原 `DEFAULTS.relayServer` 的线上地址，随「设置隔离」一起搬过来。
- */
-const DEFAULT_RELAY_SERVER = 'https://znhd.122050.xyz';
-/** 传输助手设置的 localStorage 键（与主设置的 `scriptCat_Allvalue` 分开） */
-const TRANSFER_STORAGE_KEY = 'scriptCat_TransferSettings';
-/** 默认设置：中继地址为线上默认地址 */
-const DEFAULT_TRANSFER_SETTINGS = {
-    relayServer: DEFAULT_RELAY_SERVER,
-    theme: 'light',
-    autoOpenOnReceive: true,
-};
-/**
- * 读取传输助手设置（与默认值合并；形状损坏一律退化成默认值）。
- *
- * @param legacyRelayServer 旧主设置里的中继地址（`runtime.init.relayServer`）：
- *        仅当本地**从来没有**存过传输助手设置时用作默认值，之后用户在本模块改的值优先。
- */
-function loadTransferSettings(legacyRelayServer) {
-    let stored = null;
-    try {
-        const raw = localStorage.getItem(TRANSFER_STORAGE_KEY);
-        if (raw) {
-            const parsed = JSON.parse(raw);
-            if (parsed && typeof parsed === 'object' && !Array.isArray(parsed))
-                stored = parsed;
-        }
-    }
-    catch (e) {
-        stored = null;
-    }
-    const base = stored
-        ? { ...DEFAULT_TRANSFER_SETTINGS, ...stored }
-        : {
-            ...DEFAULT_TRANSFER_SETTINGS,
-            // 一次性迁移：老用户在别处填过的中继地址继续生效
-            relayServer: typeof legacyRelayServer === 'string' && legacyRelayServer.trim()
-                ? legacyRelayServer.trim().replace(/\/+$/, '')
-                : DEFAULT_TRANSFER_SETTINGS.relayServer,
-        };
-    return settings_normalize(base);
-}
-/** 保存传输助手设置（同步写入；本模块设置项少，不需要防抖） */
-function saveTransferSettings(settings) {
-    try {
-        localStorage.setItem(TRANSFER_STORAGE_KEY, JSON.stringify(settings));
-    }
-    catch (e) {
-        /* 隐私模式等写不进去时静默：设置仍能在当次会话内生效 */
-    }
-}
-/** 归一化：地址去尾部斜杠、主题只认 light/dark、开关强制布尔 */
-function normalizeTransferSettings(input) {
-    const theme = input.theme === 'dark' ? 'dark' : 'light';
-    return {
-        relayServer: String(input.relayServer || '')
-            .trim()
-            .replace(/\/+$/, ''),
-        theme,
-        autoOpenOnReceive: input.autoOpenOnReceive === undefined ? true : !!input.autoOpenOnReceive,
-    };
-}
-function settings_normalize(input) {
-    return normalizeTransferSettings(input);
-}
-
 ;// ./src/lib/transfer/store.ts
 /**
  * 传输助手的运行时存储（v26.10.12-v1，替代原 MainPanel 里的接收循环 / 手机轮询）。
@@ -105561,6 +105690,8 @@ function startReceive(server) {
                 blob: img.blob,
                 previewUrl: img.previewUrl,
                 ts: Date.now(),
+                // v26.10.14-v3：表情包标记（手机端发表情时中继带上；「全部文件」据此过滤）
+                emoji: img.emoji === true,
             });
         },
         onText: (txt) => {
@@ -105841,6 +105972,8 @@ function sendImagesToSession(sessionKey, files, onProgress) {
                 previewUrl: it.url,
                 ts: Date.now(),
                 sendState: 'sending',
+                // v26.10.14-v3：表情包图片不进「全部文件」（会话聊天里照常显示）
+                emoji: it.emoji === true,
             });
             const rd = new FileReader();
             rd.onload = () => {
@@ -105852,7 +105985,7 @@ function sendImagesToSession(sessionKey, files, onProgress) {
                 sendToPhone({
                     server,
                     uuid: getDeviceId(),
-                    payload: { name: out.name, mime: out.mime, data: b64, targets },
+                    payload: { name: out.name, mime: out.mime, data: b64, targets, emoji: it.emoji === true },
                     onOk: () => {
                         sent++;
                         patchMessage(sessionKey, msgId, { sendState: undefined, sendError: undefined });
@@ -106174,6 +106307,9 @@ function TransferDeviceChat({ session, phone, colorIndex, onClear, }) {
                 // 与「图片上传」一样用 objectURL；这张 blob 还会被表情面板的缩略图/浮层引用，
                 // 故这里**不 revoke**（本进程内长期复用同一份 blob，撤销会让面板一起裂掉）
                 url: URL.createObjectURL(emoji.blob),
+                // v26.10.14-v3：表情包标记 —— 随发送进中继、回落到本机消息，
+                // 「全部文件」据此不展示表情包（会话聊天里照常显示）
+                emoji: true,
             },
         ], () => {
             /* 直接发送：没有待发列表要清 */
@@ -106419,7 +106555,12 @@ function TransferFilesView({ messages, scopeLabel, onClearScope, }) {
         pageStyle: PRINT_PAGE_STYLE,
     });
     // 最新在前（与「历史记录」一致：刚收到的先看）
-    const ordered = (0,react_production_namespaceFn().useMemo)(() => messages.slice().sort((a, b) => b.ts - a.ts), [messages]);
+    // v26.10.14-v3：表情包图片不过滤进文件视图（用户要求「发送的表情包图片不要出现在全部文件里面」；
+    // 全部文件与会话文件两个 scope 都走这里，一处过滤全覆盖）。聊天记录里表情照常显示。
+    const ordered = (0,react_production_namespaceFn().useMemo)(() => messages
+        .slice()
+        .filter((m) => !m.emoji)
+        .sort((a, b) => b.ts - a.ts), [messages]);
     const images = ordered.filter((m) => m.type === 'image');
     const texts = ordered.filter((m) => m.type === 'text');
     const printImage = (msg, idx) => {

@@ -74,7 +74,16 @@ export default function TransferFilesView({
     });
 
     // 最新在前（与「历史记录」一致：刚收到的先看）
-    const ordered = useMemo(() => messages.slice().sort((a, b) => b.ts - a.ts), [messages]);
+    // v26.10.14-v3：表情包图片不过滤进文件视图（用户要求「发送的表情包图片不要出现在全部文件里面」；
+    // 全部文件与会话文件两个 scope 都走这里，一处过滤全覆盖）。聊天记录里表情照常显示。
+    const ordered = useMemo(
+        () =>
+            messages
+                .slice()
+                .filter((m) => !m.emoji)
+                .sort((a, b) => b.ts - a.ts),
+        [messages]
+    );
     const images = ordered.filter((m) => m.type === 'image');
     const texts = ordered.filter((m) => m.type === 'text');
 

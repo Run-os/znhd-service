@@ -6,6 +6,9 @@
     "jsx": "react-jsx",
 
     /* Modules */
+    // v26.10.14-v3：开 resolveJsonModule —— 表情包合集清单单一来源是
+    // relay-server/emoji-sources.json（中继预热与脚本端 CDN 兜底共用，改合集只改一处）。
+    "resolveJsonModule": true,
     // v26.10.06-v9：由 commonjs 改为 ESM 输出 —— UI 引入 antd 后，commonjs 会让 TS 产出
     // `require('antd')`（拉整个 barrel，实测 1.62MiB），webpack 无法 tree-shaking；
     // 改 ESM 后 webpack 才能只打包用到的组件。

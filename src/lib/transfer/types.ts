@@ -44,6 +44,12 @@ export interface TransferMessage {
     sendState?: 'sending' | 'failed';
     /** 发送失败原因（sendState === 'failed' 时） */
     sendError?: string;
+    /**
+     * v26.10.14-v3：表情包图片标记（发送方带上，中继随条目回传）。
+     * 「全部文件」视图据此过滤掉表情包——用户要求「发送的表情包图片不要出现在全部文件里面」；
+     * 会话聊天记录里照常显示（表情就是聊天内容）。
+     */
+    emoji?: boolean;
 }
 
 /** 一个会话 = 一台手机（或「手机」聚合会话）；消息按时间正序（旧 → 新） */

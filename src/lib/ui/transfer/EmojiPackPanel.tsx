@@ -123,6 +123,14 @@ export default function EmojiPackPanel({ onPick }: { onPick: (emoji: PickedEmoji
     }, [load]);
 
     const activePack = useMemo(() => (packs || []).find((p) => p.id === activeId) || null, [packs, activeId]);
+    /** url → 中继路径（v26.10.14-v3：表情图优先走中继；悬停补图时按 url 反查 path 用） */
+    const pathByUrl = useMemo(() => {
+        const map: Record<string, string> = {};
+        (activePack ? activePack.items : []).forEach((it) => {
+            if (it.path) map[it.url] = it.path;
+        });
+        return map;
+    }, [activePack]);
 
     // 当前合集的图片：缓存命中的同步填，其余分批下载（切组合集会取消上一轮）
     useEffect(() => {
@@ -131,7 +139,7 @@ export default function EmojiPackPanel({ onPick }: { onPick: (emoji: PickedEmoji
         const cached: Record<string, string> = {};
         const queue: EmojiItem[] = [];
         activePack.items.forEach((it) => {
-            const hit = cachedEmojiBlob(it.url);
+            const hit = cachedEmojiBlob(it.url, it.path);
             if (hit) cached[it.url] = hit.objectUrl;
             else queue.push(it);
         });
@@ -140,7 +148,7 @@ export default function EmojiPackPanel({ onPick }: { onPick: (emoji: PickedEmoji
         const run = async () => {
             while (queue.length && !cancelled) {
                 const batch = queue.splice(0, BATCH);
-                const results = await Promise.allSettled(batch.map((it) => loadEmojiBlob(it.url)));
+                const results = await Promise.allSettled(batch.map((it) => loadEmojiBlob(it.url, it.path)));
                 if (cancelled) return;
                 const add: Record<string, string> = {};
                 results.forEach((r, i) => {
@@ -157,7 +165,7 @@ export default function EmojiPackPanel({ onPick }: { onPick: (emoji: PickedEmoji
 
     const pick = (it: EmojiItem) => {
         if (!activePack) return;
-        const hit = cachedEmojiBlob(it.url);
+        const hit = cachedEmojiBlob(it.url, it.path);
         if (hit) {
             onPick({ pack: activePack.name, key: it.key, url: it.url, name: it.name, blob: hit.blob });
             return;
@@ -165,7 +173,7 @@ export default function EmojiPackPanel({ onPick }: { onPick: (emoji: PickedEmoji
         // 还没下好（用户手比下载快）：等这张下完再交出去 —— 别让点击石沉大海。
         // ⚠️ 不把未就绪的格子做成 disabled：disabled 的按钮点了完全没反馈，用户只会以为坏了。
         setPendingKey(it.url);
-        loadEmojiBlob(it.url)
+        loadEmojiBlob(it.url, it.path)
             .then((entry) =>
                 onPick({ pack: activePack.name, key: it.key, url: it.url, name: it.name, blob: entry.blob })
             )
@@ -206,10 +214,11 @@ export default function EmojiPackPanel({ onPick }: { onPick: (emoji: PickedEmoji
     };
 
     // 悬停的那张还没下好（面板分批下载中）：补一次，到位后浮层自己换成图
+    // （v26.10.14-v3：带上中继路径，别绕过中继直连 CDN）
     useEffect(() => {
         if (!hover || ready[hover.url]) return;
         let alive = true;
-        loadEmojiBlob(hover.url)
+        loadEmojiBlob(hover.url, pathByUrl[hover.url])
             .then((entry) => {
                 if (alive) setReady((prev) => ({ ...prev, [hover.url]: entry.objectUrl }));
             })
@@ -219,7 +228,7 @@ export default function EmojiPackPanel({ onPick }: { onPick: (emoji: PickedEmoji
         return () => {
             alive = false;
         };
-    }, [hover, ready]);
+    }, [hover, ready, pathByUrl]);
 
     const chip = (pack: EmojiPack) => {
         const on = pack.id === activeId;

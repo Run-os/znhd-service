@@ -222,6 +222,8 @@ function startReceive(server: string): void {
                 blob: img.blob,
                 previewUrl: img.previewUrl,
                 ts: Date.now(),
+                // v26.10.14-v3：表情包标记（手机端发表情时中继带上；「全部文件」据此过滤）
+                emoji: img.emoji === true,
             });
         },
         onText: (txt) => {
@@ -444,7 +446,7 @@ export function sendTextToSession(sessionKey: string, text: string): boolean {
  */
 export function sendImagesToSession(
     sessionKey: string,
-    files: { file: File; name: string; mime: string; url: string }[],
+    files: { file: File; name: string; mime: string; url: string; emoji?: boolean }[],
     onProgress?: (done: number, total: number, failed: boolean, text: string) => void
 ): boolean {
     const server = validServer();
@@ -522,6 +524,8 @@ export function sendImagesToSession(
                     previewUrl: it.url,
                     ts: Date.now(),
                     sendState: 'sending',
+                    // v26.10.14-v3：表情包图片不进「全部文件」（会话聊天里照常显示）
+                    emoji: it.emoji === true,
                 });
                 const rd = new FileReader();
                 rd.onload = () => {
@@ -533,7 +537,7 @@ export function sendImagesToSession(
                     sendToPhone({
                         server,
                         uuid: getDeviceId(),
-                        payload: { name: out.name, mime: out.mime, data: b64, targets },
+                        payload: { name: out.name, mime: out.mime, data: b64, targets, emoji: it.emoji === true },
                         onOk: () => {
                             sent++;
                             patchMessage(sessionKey, msgId, { sendState: undefined, sendError: undefined });

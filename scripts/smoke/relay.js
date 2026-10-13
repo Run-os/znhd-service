@@ -12,6 +12,8 @@
  * 前置：无（自己拉起 server.js）。运行：npm run verify:relay
  */
 const http = require('http');
+const fs = require('fs');
+const os = require('os');
 const path = require('path');
 const net = require('net');
 
@@ -38,6 +40,25 @@ const PHONE_A = 'phone-aaaa-0001';
 const PHONE_B = 'phone-bbbb-0002';
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+/** 裸请求（不解析 JSON）：返回 { status, type, body }，表情图片/文本断言用 */
+function reqRaw(method, p) {
+    return new Promise((resolve, reject) => {
+        const r = http.request({ host: HOST, port: PORT, path: p, method }, (res) => {
+            const chunks = [];
+            res.on('data', (c) => chunks.push(c));
+            res.on('end', () =>
+                resolve({
+                    status: res.statusCode,
+                    type: res.headers['content-type'] || '',
+                    body: Buffer.concat(chunks).toString('utf8'),
+                })
+            );
+        });
+        r.on('error', reject);
+        r.end();
+    });
+}
 
 /** 普通请求：返回 { status, json } */
 function req(method, p, body) {
@@ -167,6 +188,66 @@ function check(name, ok) {
 async function main() {
     if (!PORT) PORT = await pickFreePort();
     process.env.PORT = String(PORT);
+
+    // ===== 表情包 fixture（v26.10.14-v3）=====
+    // emoji-store 在**被 require 时**读 ZNHD_EMOJI_SOURCES / ZNHD_EMOJI_DIR，故必须赶在
+    // require(server.js) 之前设好；否则预热会去打真实的 cdn.klyang.com（冒烟不能依赖外网）。
+    // 假 CDN 只服务回环 http（emoji-store 的 urlAllowed 放行 127.0.0.1），数据落临时目录。
+    const cdnPort = await pickFreePort();
+    const emojiDir = fs.mkdtempSync(path.join(os.tmpdir(), 'znhd-emoji-relay-'));
+    const sourcesFile = path.join(os.tmpdir(), 'znhd-emoji-relay-sources-' + cdnPort + '.json');
+    /** 假 CDN 上的图片内容（按文件名区分，供「内容原样回吐」断言） */
+    const fixtureImg = (name) => Buffer.from('FAKE-EMOJI-IMAGE:' + name);
+    const FIXTURE_PACKS = [
+        {
+            id: 'stubemoji',
+            items: [
+                { key: '01', file: 'stubemoji-01.png' },
+                { key: '02', file: 'stubemoji-02.png' },
+            ],
+        },
+        { id: 'stubtwo', items: [{ key: '01', file: 'stubtwo-01.webp' }] },
+    ];
+    fs.writeFileSync(
+        sourcesFile,
+        JSON.stringify(
+            FIXTURE_PACKS.map((p) => ({ id: p.id, url: `http://127.0.0.1:${cdnPort}/json/${p.id}.json` }))
+        )
+    );
+    const fixtureCdn = http.createServer((req, res) => {
+        const pm = /^\/json\/([a-z0-9_-]+)\.json$/.exec(req.url || '');
+        if (pm) {
+            const p = FIXTURE_PACKS.find((x) => x.id === pm[1]);
+            if (p) {
+                res.writeHead(200, { 'Content-Type': 'application/json' });
+                res.end(
+                    JSON.stringify({
+                        name: '桩合集-' + p.id,
+                        type: 'image',
+                        items: p.items.map((it) => ({
+                            key: it.key,
+                            val: `http://127.0.0.1:${cdnPort}/emo/${it.file}`,
+                        })),
+                    })
+                );
+                return;
+            }
+        }
+        const im = /^\/emo\/([A-Za-z0-9._-]+)$/.exec(req.url || '');
+        if (im) {
+            res.writeHead(200, {
+                'Content-Type': im[1].endsWith('.png') ? 'image/png' : 'image/webp',
+            });
+            res.end(fixtureImg(im[1]));
+            return;
+        }
+        res.writeHead(404);
+        res.end('not found');
+    });
+    await new Promise((r) => fixtureCdn.listen(cdnPort, '127.0.0.1', r));
+    process.env.ZNHD_EMOJI_SOURCES = sourcesFile;
+    process.env.ZNHD_EMOJI_DIR = emojiDir;
+
     // server.js 在 require 时就会 listen（并用 5s 定时器做离线扫描），故测试结束要显式 exit
     require(path.join(__dirname, '..', '..', 'relay-server', 'server.js'));
     await sleep(300); // 等 listen
@@ -240,9 +321,94 @@ async function main() {
     const gotNone = await Promise.race([recvPoll().promise, sleep(1500).then(() => undefined)]);
     check('不带 phoneId（老手机页）→ from 为空（旧归组规则兜底）', !!(gotNone && !gotNone.from && gotNone.text === 'from-none'));
 
+    // ===== 9) 表情包缓存服务（v26.10.14-v3）=====
+    // 需求③的服务端一半：整套表情包拉到中继磁盘，客户端只打中继（防 CDN 限流 + 加速）。
+    // fixture 见 main() 开头（假 CDN + 临时数据目录）。覆盖：预热就绪 / 合并清单形态 /
+    // 图片服务（MIME + 内容原样）/ 按需补图 / 目录穿越与非法名 / refresh 限流 /
+    // emoji 标记随正向条目回传（需求①的服务端一半）。
+    let emojiReady = false;
+    for (let i = 0; i < 60 && !emojiReady; i++) {
+        await sleep(250);
+        const s = await req('GET', '/emoji/status');
+        emojiReady = !!(s.json && s.json.ready === true);
+    }
+    check('表情包预热就绪（/emoji/status.ready=true）', emojiReady);
+
+    const stEmoji = await req('GET', '/emoji/status');
+    check(
+        '表情包状态：2 个合集 3 张全部缓存（packs/items/cached/missing）',
+        !!stEmoji.json &&
+            stEmoji.json.packs === 2 &&
+            stEmoji.json.items === 3 &&
+            stEmoji.json.cached === 3 &&
+            stEmoji.json.missing === 0
+    );
+
+    const packsJson = await req('GET', '/emoji/packs.json');
+    check(
+        '/emoji/packs.json 合并清单：2 包，条目带 path（/emoji/<包>/<文件>）与 src（CDN 原址）',
+        !!packsJson.json &&
+            Array.isArray(packsJson.json.packs) &&
+            packsJson.json.packs.length === 2 &&
+            packsJson.json.packs.every(
+                (p) =>
+                    Array.isArray(p.items) &&
+                    p.items.length > 0 &&
+                    p.items.every(
+                        (it) =>
+                            /^\/emoji\/[a-z0-9_-]+\/[a-z0-9._-]+$/.test(it.path || '') &&
+                            /^http:\/\/127\.0\.0\.1:\d+\/emo\//.test(it.src || '')
+                    )
+            )
+    );
+
+    const imgPng = await reqRaw('GET', '/emoji/stubemoji/stubemoji-01.png');
+    check(
+        '表情图片服务：200 + image/png + 内容与 CDN 原样一致',
+        imgPng.status === 200 && imgPng.type === 'image/png' && imgPng.body === fixtureImg('stubemoji-01.png').toString()
+    );
+
+    // 按需补图：预热已缓存过，删掉文件再请求 → 服务端自动从 CDN 补回（single-flight 同语义）
+    const backfillFile = path.join(emojiDir, 'stubtwo', 'stubtwo-01.webp');
+    fs.unlinkSync(backfillFile);
+    const backfill = await reqRaw('GET', '/emoji/stubtwo/stubtwo-01.webp');
+    check(
+        '按需补图：删掉缓存文件后请求自动从 CDN 补回（文件重建 + 200）',
+        backfill.status === 200 && fs.existsSync(backfillFile)
+    );
+
+    // 目录穿越 / 非法名：URL 形态不进路由正则或不过 validFileName，一律 403/404，绝不吐文件内容
+    const trav = await req('GET', '/emoji/stubemoji/..%2f..%2femoji-sources.json');
+    check('目录穿越防护：/emoji/<包>/..%2f.. 形态 404（不进路由正则）', trav.status === 404);
+    const badExt = await req('GET', '/emoji/stubemoji/stubemoji-01.txt');
+    check('非法扩展名 403（.txt 不在图片白名单）', badExt.status === 403);
+    const noSuch = await req('GET', '/emoji/stubemoji/stubemoji-99.png');
+    check('清单中不存在的图 404（客户端据此回退 CDN src）', noSuch.status === 404);
+
+    const rf1 = await req('POST', '/emoji/refresh');
+    const rf2 = await req('POST', '/emoji/refresh');
+    check('POST /emoji/refresh：首次 200，60s 内二次 429（限流）', rf1.status === 200 && rf2.status === 429);
+
+    // emoji 标记（需求①）：手机端/脚本端发表情时载荷带 emoji:true，服务端写进条目随投递回传
+    await req('POST', `/u/${DEVICE}`, { name: 'e.png', mime: 'image/png', data: 'iVBORw0KGgo=', emoji: true, phoneId: PHONE_A });
+    const gotEmoji = await Promise.race([recvPoll().promise, sleep(1500).then(() => undefined)]);
+    check('表情标记随正向条目回传：emoji=true', !!(gotEmoji && gotEmoji.emoji === true));
+    await req('POST', `/u/${DEVICE}`, { name: 'n.png', mime: 'image/png', data: 'iVBORw0KGgo=', phoneId: PHONE_A });
+    const gotPlain = await Promise.race([recvPoll().promise, sleep(1500).then(() => undefined)]);
+    check('普通图片不带表情标记：emoji=false', !!(gotPlain && gotPlain.emoji === false));
+
     pa.abort();
     pb.abort();
     pa2.abort();
+
+    // 收尾：关假 CDN、清临时目录与清单文件（都是本次测试自建的，不碰真实数据）
+    fixtureCdn.close();
+    try {
+        fs.rmSync(emojiDir, { recursive: true, force: true });
+        fs.unlinkSync(sourcesFile);
+    } catch (e) {
+        /* 临时文件清不掉无害（在 os.tmpdir() 里） */
+    }
 
     const failed = results.filter((r) => !r.ok);
     if (failed.length) {

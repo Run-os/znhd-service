@@ -236,7 +236,8 @@ export default function App() {
         });
         try {
             const b64 = await blobToBase64(emoji.blob);
-            const res = await postItem({ name: emoji.name, mime, data: b64 }, phoneId);
+            // emoji:true（v26.10.14-v3）：表情包标记，服务端写进条目，电脑端「全部文件」据此过滤
+            const res = await postItem({ name: emoji.name, mime, data: b64, emoji: true }, phoneId);
             if (res && res.ok) {
                 patchMsg(id, { state: 'ok' });
             } else {

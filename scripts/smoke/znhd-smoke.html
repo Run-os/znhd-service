@@ -56,6 +56,9 @@
       );
 
       window.__gmXhrLog = [];
+      // v26.10.14-v3：表情包数据层改「中继优先、CDN 兜底」后的请求计数
+      // （relayManifest/relayImage 走中继，cdn = 兜底被触发；断言「零 CDN」用）
+      window.__emojiReq = { relayManifest: 0, relayImage: 0, cdn: 0 };
       const PNG_1x1 =
         'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
       // 收到图片的载荷：用 canvas 生成一张**真实尺寸**的 JPEG（480×360），而不是 1×1 占位 PNG。
@@ -196,6 +199,34 @@
       window.GM_notification = () => {};
       window.GM_addValueChangeListener = () => {};
 
+      // 表情图桩图（v26.10.14-v3 起中继 /emoji/ 与 CDN 兜底两条路共用同一张）：
+      // 必须返回**真 webp Blob** —— 代码用 responseType:'blob' 取图，并把 blob.type 当 mime
+      // 一路传给发送链路（压缩层据此判「webp 原样直传」、手机端据此定文件名后缀），
+      // 用 PNG 糊弄会让这些断言全都测不到真东西。
+      const replyEmojiWebp = (details) => {
+        const cv = document.createElement('canvas');
+        cv.width = 32;
+        cv.height = 32;
+        const ctx = cv.getContext('2d');
+        ctx.clearRect(0, 0, 32, 32); // 透明背景：与真实表情图一致
+        ctx.fillStyle = '#07C160';
+        ctx.fillRect(4, 4, 24, 24);
+        cv.toBlob((b) => {
+          setTimeout(() => {
+            if (typeof details.onload === 'function') {
+              details.onload({
+                status: 200,
+                statusText: 'OK',
+                response: b,
+                responseText: '',
+                responseHeaders: 'content-type: image/webp',
+                finalUrl: details.url,
+              });
+            }
+          }, 30);
+        }, 'image/webp');
+      };
+
       window.GM_xmlhttpRequest = (details) => {
         const url = String((details && details.url) || '');
         window.__gmXhrLog.push(((details && details.method) || 'GET') + ' ' + url);
@@ -243,10 +274,71 @@
           }, 'image/png');
           return { abort: () => {} };
         }
-        // ===== 在线表情包（v26.10.13-v3）：清单 JSON + 图片本体都由桩作答 =================
+        // ===== 中继表情包服务（v26.10.14-v3：数据层改为「中继优先、CDN 兜底」）==========
+        // 脚本端先打 <中继地址>/emoji/packs.json（合并清单，条目带 path + src），图片再打
+        // <中继地址>/emoji/<合集>/<文件>；只有中继整体失败才回退下面的 cdn.klyang.com 分支。
+        // 桩按同一优先级作答并分别计数 —— 「兜底零触发」才是中继优先真的生效的直接证据。
+        // 中继地址取自传输助手设置（fixture 清掉了设置 ⇒ 默认 https://znhd.122050.xyz），
+        // 故这里按 URL 路径后缀匹配，不写死主机名。
+        if (url.indexOf('/emoji/packs.json') >= 0) {
+          window.__emojiReq.relayManifest++;
+          reply(details, {
+            version: 1,
+            ts: Date.now(),
+            // 形态与 relay-server/emoji-store.js 的 normalizePack 产出一致
+            // （path = 中继图片路径，src = CDN 原址，客户端中继失败时按 src 兜底）
+            packs: [
+              {
+                id: 'aluhedwm',
+                name: EMOJI_PACK_NAMES.aluhedwm,
+                items: [
+                  {
+                    key: '01',
+                    name: 'aluhedwm-01.webp',
+                    path: '/emoji/aluhedwm/aluhedwm-01.webp',
+                    src: 'https://cdn.klyang.com/emo/smoke/aluhedwm/01.webp',
+                  },
+                  {
+                    key: '02',
+                    name: 'aluhedwm-02.webp',
+                    path: '/emoji/aluhedwm/aluhedwm-02.webp',
+                    src: 'https://cdn.klyang.com/emo/smoke/aluhedwm/02.webp',
+                  },
+                ],
+              },
+              {
+                id: 'alurc',
+                name: EMOJI_PACK_NAMES.alurc,
+                items: [
+                  {
+                    key: '01',
+                    name: 'alurc-01.webp',
+                    path: '/emoji/alurc/alurc-01.webp',
+                    src: 'https://cdn.klyang.com/emo/smoke/alurc/01.webp',
+                  },
+                  {
+                    key: '02',
+                    name: 'alurc-02.webp',
+                    path: '/emoji/alurc/alurc-02.webp',
+                    src: 'https://cdn.klyang.com/emo/smoke/alurc/02.webp',
+                  },
+                ],
+              },
+            ],
+          });
+          return { abort: () => {} };
+        }
+        // 中继图片本体（relay-store 服务形态；真实中继缺失时会按需补图，桩直接给图）
+        if (/\/emoji\/[a-zA-Z0-9_-]{1,40}\/[A-Za-z0-9._-]{1,80}$/.test(url)) {
+          window.__emojiReq.relayImage++;
+          replyEmojiWebp(details);
+          return { abort: () => {} };
+        }
+        // ===== 在线表情包（v26.10.13-v3）：CDN 兜底路径（v26.10.14-v3 起正常不该被走到）====
         // 为什么要桩：表情面板的数据源是公网 CDN，CI / 断网机器拿不到。冒烟只验「拿到数据之后
         // 的 UI 与接入对不对」，真实 CDN 链路由真机验证覆盖。
         if (url.indexOf('cdn.klyang.com/json/') >= 0) {
+          window.__emojiReq.cdn++;
           const id = (url.split('/').pop() || '').replace('.json', '');
           reply(details, {
             name: EMOJI_PACK_NAMES[id] || id,
@@ -258,31 +350,10 @@
           });
           return { abort: () => {} };
         }
-        // 表情图本体：必须返回**真 webp Blob** —— 我们的代码用 `responseType:'blob'` 取图，
-        // 并把 `blob.type` 当 mime 一路传给发送链路（压缩层据此判「webp 原样直传」、
-        // 手机端据此定文件名后缀），用 PNG 糊弄会让这些断言全都测不到真东西。
+        // 表情图本体（CDN 兜底）：与中继路径共用同一张桩图
         if (url.indexOf('cdn.klyang.com/emo/') >= 0) {
-          const cv = document.createElement('canvas');
-          cv.width = 32;
-          cv.height = 32;
-          const ctx = cv.getContext('2d');
-          ctx.clearRect(0, 0, 32, 32); // 透明背景：与真实表情图一致
-          ctx.fillStyle = '#07C160';
-          ctx.fillRect(4, 4, 24, 24);
-          cv.toBlob((b) => {
-            setTimeout(() => {
-              if (typeof details.onload === 'function') {
-                details.onload({
-                  status: 200,
-                  statusText: 'OK',
-                  response: b,
-                  responseText: '',
-                  responseHeaders: 'content-type: image/webp',
-                  finalUrl: url,
-                });
-              }
-            }, 30);
-          }, 'image/webp');
+          window.__emojiReq.cdn++;
+          replyEmojiWebp(details);
           return { abort: () => {} };
         }
         // 「发送测试图片」投递：POST /u/<deviceId>（手机上传同一条路径）→ 记录载荷供断言
@@ -1707,6 +1778,25 @@
         if (close) close.click();
       }, 18150);
 
+      /* ===== 需求①：表情包图片不进「全部文件」（v26.10.14-v3）========================
+         时序依据：⑤「清空消息」（12700ms）之后 A 会话已空，14200ms 发出去的那条**表情图**
+         （带 emoji 标记）是 A 会话里唯一的内容；B 会话还有一条归组测试文本。
+         切到「文件」视图：全部文件应只剩那条文本（图片 0）—— 表情图被 TransferFilesView
+         过滤掉。⚠️ 过滤失效时这里会变成「图片 1」，是需求①的直接回归判据。
+         放在 19000ms：配对窗（16800 关）与设置子窗（18150 关）都已关掉，不会挡住导航点击。 */
+      setTimeout(() => {
+        window.__clickedFilesNavAfterEmoji = clickTransferNav('文件');
+      }, 19000);
+      setTimeout(() => {
+        const m = findTransferModal();
+        const files = m ? m.querySelector('.znhd-transfer-files') : null;
+        window.__transferSnap.filesAfterEmoji = {
+          seen: !!files,
+          countText: !!(files && (files.textContent || '').indexOf('全部文件（图片 0 · 文本 1）') >= 0),
+          imgCount: files ? files.querySelectorAll('.ant-image img').length : -1,
+        };
+      }, 19500);
+
       /* ===== ⑧ 图片嗅探（v26.10.10-v4；会话分组 v26.10.13-v8；perf 优先 v26.10.14-v2）=====
          点面板入口 → 弹窗自动扫描页面（夹具见 #sniff-fixtures 与 body 末尾的 #app）。
          扫描是异步的（每张 HEAD/Range 各 40ms 桩延迟），故用轮询等「卡片出来且已量到大小」再快照。
@@ -2236,6 +2326,29 @@
             ts.emojiReopenForTriggerSeen === true &&
             ts.emojiCloseOnTrigger === false
           ),
+          // 表情包走中继优先（v26.10.14-v3）：清单与图片都打中继的 /emoji/ 路径，
+          // 且 CDN 兜底零触发（relayManifest/relayImage ≥1、cdn === 0）——
+          // 「兜底没被走到」才是中继优先真的生效的直接证据；同时面板照常渲染出合集与图。
+          emojiRelayFirstOk: (() => {
+            const r = window.__emojiReq || {};
+            const p = ts.emojiPanel || {};
+            return !!(
+              r.relayManifest >= 1 &&
+              r.relayImage >= 1 &&
+              r.cdn === 0 &&
+              p.seen &&
+              (p.packs || []).length >= 2 &&
+              p.itemCount >= 2 &&
+              p.imgCount >= 1
+            );
+          })(),
+          // 需求①：表情包图片不进「全部文件」（v26.10.14-v3）。
+          // 判据见 19000ms 那拍的 filesAfterEmoji 快照：A 会话清空后只剩表情图，
+          // 全部文件应只有 B 会话的文本（图片 0）——过滤失效会变成图片 1。
+          emojiNotInFilesOk: (() => {
+            const f = ts.filesAfterEmoji || {};
+            return !!(window.__clickedFilesNavAfterEmoji && f.seen && f.countText && f.imgCount === 0);
+          })(),
 
           // 方案 B：antd 浮层（Modal/Drawer…）必须盖在面板之上
           // （面板宿主 999999 < zIndexPopupBase 1000000）

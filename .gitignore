@@ -1,5 +1,7 @@
 relay-server/node_modules
 tmp/
+# 表情包 CDN 缓存（v26.10.14-v1）：跨部署保留，部署工作流的 git clean -fd 不清 ignored 文件
+relay-server/data/
 
 # 构建/依赖
 # 源码在 src/，发布产物是 dist/znhd.user.js（与 douyu-helper 模板一致，提交进仓库）

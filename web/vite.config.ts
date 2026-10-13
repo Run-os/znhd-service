@@ -19,9 +19,14 @@ export default defineConfig({
     // 共享层在 web/ 之外（仓库根 shared/）。⚠️ 只影响 `npm run dev:web`：
     // 本目录有自己的 package-lock.json ⇒ Vite 判定工作区根就是 web/，默认会拒绝 serve 项目外文件
     // （报 "The request url ... is outside of Vite serving allow list"）。`vite build` 不受影响。
+    // relay-server/ 同样在 web/ 之外：表情包清单单一来源 emoji-sources.json 在那里（v26.10.14-v3）。
     server: {
         fs: {
-            allow: [fileURLToPath(new URL('.', import.meta.url)), fileURLToPath(new URL('../shared', import.meta.url))],
+            allow: [
+                fileURLToPath(new URL('.', import.meta.url)),
+                fileURLToPath(new URL('../shared', import.meta.url)),
+                fileURLToPath(new URL('../relay-server', import.meta.url)),
+            ],
         },
     },
     define: {

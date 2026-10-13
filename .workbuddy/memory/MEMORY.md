@@ -33,6 +33,13 @@
 - `lib/sniffer.ts`：`add()` 收集时即 `perfBytesOf(url)` 挂字节数 ⇒ `probeOne` 第一档命中，**零 HEAD**；perf 路 = 预收 Map（主力）+ 实时读表（兜底）并集。`downloadBatch` 两段式下载（预取并发 4/背压 8/连败 3 次降并发/退避重试/401·403·404·410 不重试；触发段串行 + 间隔），`SniffModal`「下载所选」走它。
 - 冒烟 `sniffPerfFirstOk`：同源真加载的 `/sniff-perf.png`（server.js 路由，精确 22528 B）必须走「资源表读数」且 `__gmXhrLog` 零请求；⚠️ **跨域假域名（sniff-smoke.test）的图 DNS 就失败、根本不进资源表**——验 perf 必须用同源真图。
 
+## 表情包中继磁盘缓存 + 不进全部文件（v26.10.14-v3 / relay 26.10.14-v1）
+- 清单单一来源 `relay-server/emoji-sources.json`（脚本端/手机页都 import；web 侧 `vite.config.ts` 的 `server.fs.allow` 要加 `../relay-server`，引用路径是三级 `../../../`）。
+- 服务端 `relay-server/emoji-store.js`：env **require 时**读（`ZNHD_EMOJI_SOURCES`/`ZNHD_EMOJI_DIR`，fixture 必须赶在 require server.js 前设）；listen 回调触发 `ensureAll()` 后台预热（不阻塞，冷启动 packs.json 同步等预热）；清单 24h TTL、按需补图 single-flight、refresh 限流 60s；`urlAllowed` 仅 https + 回环 http（防 SSRF）。缓存目录 `relay-server/data/`（.gitignore ⇒ `git clean -fd` 不清 ⇒ 跨部署保留）。
+- 两端「中继优先、CDN 兜底」：`EmojiItem.path` = `/emoji/<合集>/<文件名>`，blob 缓存键 = `path || url`；对中继清单 path 做严格正则校验（中继地址用户可配，不校验等于替中继打探任意 URL）。`EmojiPackPanel` 4 处取图入口（缓存命中/分批/pick/hover）都要传 `it.path`——漏传静默走 CDN 且缓存键不同（重复下载）。
+- 需求①五处链路：手机页 `sendEmoji` 载荷 `emoji:true` → relay `parseItemBody` → 脚本端 `relay.ts onImage` → `store.addMessage` → `TransferFilesView` 只过滤文件视图（`messages.filter(m=>!m.emoji)`，聊天照常显示）。
+- 冒烟证据：中继优先 ⇒ 兜底零触发（`cdn===0` / 零外部请求）；`emojiNotInFilesOk` 钉死过滤。
+
 ## 中继与部署
 - 端口 `PORT||5689`；nginx `proxy_pass http://127.0.0.1:5689`（znhd.122050.xyz）。`deploy.yml` 定式：脚本内硬编码 `DEPLOY_PATH` / `CONTAINER_NAME` + 安全阀（根因：ssh-action 不注入顶层 env）。诊断：`Connection refused (111) upstream 5689` = relay 未监听。反相通道改一侧必须同步评估另一侧。
 

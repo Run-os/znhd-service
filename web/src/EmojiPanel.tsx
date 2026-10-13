@@ -62,7 +62,7 @@ export default function EmojiPanel({ onPick }: { onPick: (emoji: PickedEmoji) =>
         const cached: Record<string, string> = {};
         const queue: EmojiItem[] = [];
         activePack.items.forEach((it) => {
-            const hit = cachedEmojiBlob(it.url);
+            const hit = cachedEmojiBlob(it.url, it.path);
             if (hit) cached[it.url] = hit.objectUrl;
             else queue.push(it);
         });
@@ -71,7 +71,7 @@ export default function EmojiPanel({ onPick }: { onPick: (emoji: PickedEmoji) =>
         const run = async () => {
             while (queue.length && !cancelled) {
                 const batch = queue.splice(0, BATCH);
-                const results = await Promise.allSettled(batch.map((it) => loadEmojiBlob(it.url)));
+                const results = await Promise.allSettled(batch.map((it) => loadEmojiBlob(it.url, it.path)));
                 if (cancelled) return;
                 const add: Record<string, string> = {};
                 results.forEach((r, i) => {
@@ -88,7 +88,7 @@ export default function EmojiPanel({ onPick }: { onPick: (emoji: PickedEmoji) =>
 
     const pick = (it: EmojiItem) => {
         if (!activePack) return;
-        const hit = cachedEmojiBlob(it.url);
+        const hit = cachedEmojiBlob(it.url, it.path);
         if (hit) {
             onPick({ pack: activePack.name, key: it.key, url: it.url, name: it.name, blob: hit.blob });
             return;
@@ -96,7 +96,7 @@ export default function EmojiPanel({ onPick }: { onPick: (emoji: PickedEmoji) =>
         // 还没下好（用户手比下载快）：等这张下完再交出去 —— 别让点击石沉大海。
         // ⚠️ 不把未就绪的格子做成 disabled：disabled 的按钮点了完全没反馈，用户只会以为坏了。
         setPendingKey(it.url);
-        loadEmojiBlob(it.url)
+        loadEmojiBlob(it.url, it.path)
             .then((entry) =>
                 onPick({ pack: activePack.name, key: it.key, url: it.url, name: it.name, blob: entry.blob })
             )

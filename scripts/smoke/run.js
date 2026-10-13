@@ -92,6 +92,8 @@ const CHECKS = [
   ['chatBubbleOk', '聊天气泡左右分栏（他人靠左微信灰 / 我的靠右微信绿）+ 头像在气泡外侧 + 时间分隔条'],
   ['chatComposerOk', '输入区（微信式）：工具栏表情/图片上传/附件 + 多行自增高（超上限后框内滚动）+ 右下角发送按钮 + 实心底面板'],
   ['emojiPackOk', '在线表情包：面板加载合集与图片，点一张**直接发送**（不进待发列表，会话里多一条图片气泡）'],
+  ['emojiRelayFirstOk', '表情包走中继优先（v26.10.14-v3）：清单与图片都打中继 /emoji/ 路径，CDN 兜底零触发'],
+  ['emojiNotInFilesOk', '需求①：表情包图片不进「全部文件」（v26.10.14-v3；会话里清空后只剩表情图时应图片 0）'],
   ['emojiHoverOk', '表情悬停放大预览：停 0.5 秒才弹出，浮层显示中移到另一张立即换图'],
   ['emojiAutoCloseOk', '表情面板自动收起：点一张表情后立即收起 / 点面板之外立即收起 / 点触发按钮收起'],
   // ===== 主面板既有断言 =====
@@ -498,6 +500,8 @@ async function main() {
       !checkPass('chatBubbleOk') ||
       !checkPass('chatComposerOk') ||
       !checkPass('emojiPackOk') ||
+      !checkPass('emojiRelayFirstOk') ||
+      !checkPass('emojiNotInFilesOk') ||
       !checkPass('emojiHoverOk') ||
       !checkPass('emojiAutoCloseOk')
     ) {

@@ -71,6 +71,8 @@ interface PendingImage {
     name: string;
     mime: string;
     url: string;
+    /** v26.10.14-v3：表情包图片（发送时带上标记，「全部文件」不过滤） */
+    emoji?: boolean;
 }
 
 /**
@@ -270,6 +272,9 @@ export default function TransferDeviceChat({
                     // 与「图片上传」一样用 objectURL；这张 blob 还会被表情面板的缩略图/浮层引用，
                     // 故这里**不 revoke**（本进程内长期复用同一份 blob，撤销会让面板一起裂掉）
                     url: URL.createObjectURL(emoji.blob),
+                    // v26.10.14-v3：表情包标记 —— 随发送进中继、回落到本机消息，
+                    // 「全部文件」据此不展示表情包（会话聊天里照常显示）
+                    emoji: true,
                 },
             ],
             () => {
