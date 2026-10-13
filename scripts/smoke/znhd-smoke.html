@@ -43,8 +43,6 @@
       // v26.10.12-v1：传输助手有**独立**的设置存储（与主设置隔离，见 lib/transfer/settings.ts）。
       // 这里显式清掉它，确保走「无存量 → 用默认中继地址」这条路径（否则复用上次运行的值会时好时坏）。
       localStorage.removeItem('scriptCat_TransferSettings');
-      // Agent 会话索引同样是脚本自记的本地存储，清掉保证每次从零开始
-      localStorage.removeItem('scriptCat_AgentChats');
       // v26.10.10-v17：故意预置**旧默认**常用语数据源地址，验证 loadAllvalue 会把它迁到新默认
       // （存量用户只要改过任何设置，当时的默认值就会被整份 Allvalue 一起落盘，光改 DEFAULTS 顶不掉）。
       localStorage.setItem(
@@ -477,189 +475,6 @@
       });
     </script>
 
-    <!-- ===== ScriptCat Agent 桩（v26.10.10-v10）=====
-      只在 ScriptCat v1.4+ 存在的 `CAT.agent.*`。这里给出**全量可用的最小实现**，用来断言
-      「入口 → 弹窗 → 建会话 → 流式收分片」这条链路；真实环境里的 LLM / OPFS 不在本 harness 职责内。
-      ⚠️ 桩必须在**被测脚本之前**注入：useAgentChat 在 render 期就调 detectCatAgent()（纯内存判空）。
-      ⚠️ 每条子能力都必须是对象：detectCatAgent 只认 object，缺一项就会整体降级为「不可用」。 -->
-    <script>
-      (function () {
-        const wait = (ms) => new Promise((r) => setTimeout(r, ms));
-        window.__catAgentCalls = [];
-        const log = (name) => window.__catAgentCalls.push(name);
-
-        // v26.10.10-v14：桩回答带上真实形状的 Markdown，用来断言**渲染后**的 DOM。
-        // 既有断言只认子串「（桩回答）」，渲染后 `**` 会被吃掉、文本变成「（桩回答）加粗」，
-        // 所以这里既能被老断言命中，又能证明 Markdown 真的被解析了。
-        const STUB_REPLY =
-          '（桩回答）**加粗**\n\n- 列表甲\n- 列表乙\n\n行内 `code` 片段，还有 [链接](https://example.com/md)。';
-
-        const makeStream = (text, onDone) => {
-          const chunks = [
-            { type: 'thinking_delta', content: '（桩）先想一下' },
-            { type: 'content_delta', content: text },
-            { type: 'done', usage: { inputTokens: 1, outputTokens: 2 } },
-          ];
-          let i = 0;
-          return {
-            [Symbol.asyncIterator]() {
-              return this;
-            },
-            next: async () => {
-              // 分片之间给一点间隔，模拟真实的流式节奏（也保证「正在思考…」这类中间态能被渲染出来）
-              try {
-                if (i > 0) await wait(15);
-                if (i < chunks.length) {
-                  const value = chunks[i++];
-                  // 真实环境里 assistant 消息是这一轮**结束时**才落库的（`tool_loop_orchestrator`
-                  // 里的 `chatRepo.appendMessage`），所以「历史」必须等 done 之后才有 ——
-                  // 这样桩只在「关弹窗再打开」那条路径上给出 object 形状的 thinking，用例聚焦。
-                  if (value.type === 'done' && onDone) onDone();
-                  window.__catAgentCalls.push('chunk:' + value.type);
-                  return { value: value, done: false };
-                }
-              } catch (e) {
-                window.__catAgentCalls.push('next-throw:' + String((e && e.message) || e));
-                throw e;
-              }
-              return { value: undefined, done: true };
-            },
-            return: async () => ({ value: undefined, done: true }),
-          };
-        };
-
-        // 每个对话各自一张消息表（真实环境里 ScriptCat 在 OPFS 里按 conversationId 分开存）。
-        // v26.10.10-v12 起桩必须支持多对话：切换会话要能各自看到自己的历史。
-        const convStore = new Map();
-        let convSeq = 0;
-
-        const makeConversation = (id) => ({
-          id: id,
-          // 官方会在第一条消息之后把标题设成消息前 30 字；桩给个对象形状即可
-          title: '桩对话',
-          modelId: 'stub-model-1',
-          chatStream: async (content) => {
-            log('conversation.chatStream');
-            return makeStream(STUB_REPLY, () => {
-              // 真实环境里 user/assistant 消息是这一轮**结束时**才落库的
-              // （`tool_loop_orchestrator` 里的 `chatRepo.appendMessage`），所以「历史」必须等 done 之后才有 ——
-              // 这样桩只在「关弹窗再打开 / 切换会话」这些路径上给出 object 形状的 thinking，用例聚焦。
-              const list = convStore.get(id) || [];
-              list.push({ id: id + '-u' + list.length, conversationId: id, role: 'user', content: content });
-              list.push({
-                id: id + '-a' + list.length,
-                conversationId: id,
-                role: 'assistant',
-                content: STUB_REPLY,
-                // ⚠️ 必须用真实持久化形状：ScriptCat 存的是**对象**
-                // （官方 ThinkingBlock = { content }，见 tool_loop_orchestrator.ts 的
-                //  `thinking: result.thinking ? { content: result.thinking } : undefined`）。
-                // v26.10.10-v11 修的正是「对象被当字符串渲染 → 整棵面板树被卸载」。
-                thinking: { content: '（桩）历史思考' },
-              });
-              convStore.set(id, list);
-            });
-          },
-          chat: async () => {
-            log('conversation.chat');
-            return { content: STUB_REPLY, usage: { inputTokens: 1, outputTokens: 2 } };
-          },
-          getMessages: async () => {
-            log('conversation.getMessages');
-            return (convStore.get(id) || []).slice();
-          },
-          clear: async () => {
-            log('conversation.clear');
-            convStore.set(id, []);
-          },
-          save: async () => {},
-          attach: async () => ({ attachmentId: 'a1', mimeType: 'image/png' }),
-        });
-
-        window.CAT = {
-          agent: {
-            conversation: {
-              create: async (options) => {
-                log('conversation.create');
-                window.__catAgentCreateOptions = options || {};
-                convSeq += 1;
-                const id = 'stub-conv-' + convSeq;
-                convStore.set(id, []);
-                return makeConversation(id);
-              },
-              // 不存在返回 null（官方语义）：脚本要按「已失效」处理而不是崩掉
-              get: async (id) => {
-                log('conversation.get:' + id);
-                if (!convStore.has(id)) return null;
-                return makeConversation(id);
-              },
-            },
-            model: {
-              list: async () => {
-                log('model.list');
-                return [
-                  {
-                    id: 'stub-model-1',
-                    name: '桩模型',
-                    provider: 'openai',
-                    apiBaseUrl: 'https://example.invalid/v1',
-                    model: 'stub',
-                    maxTokens: 4096,
-                    contextWindow: 128000,
-                    supportsVision: false,
-                    supportsImageOutput: false,
-                  },
-                ];
-              },
-              getDefault: async () => 'stub-model-1',
-              getSummary: async () => '桩摘要',
-            },
-            skills: {
-              list: async () => {
-                log('skills.list');
-                return [
-                  {
-                    name: 'stub-skill',
-                    description: '桩技能',
-                    version: '1.0.0',
-                    toolNames: ['stub_tool'],
-                    referenceNames: [],
-                    hasConfig: false,
-                    enabled: true,
-                    updatetime: 1700000000000,
-                  },
-                ];
-              },
-              remove: async () => {
-                log('skills.remove');
-                return true;
-              },
-              call: async () => null,
-            },
-            task: {
-              list: async () => {
-                log('task.list');
-                return [];
-              },
-              create: async (input) => {
-                log('task.create');
-                window.__catAgentTaskInput = input;
-                return { id: 'stub-task-1', name: input && input.name };
-              },
-              get: async () => null,
-              update: async () => ({}),
-              remove: async () => true,
-              runNow: async () => {
-                log('task.runNow');
-              },
-              addListener: () => {},
-              removeListener: () => {},
-            },
-          },
-        };
-      })();
-    </script>
-
     <!-- ===== 被测对象：构建产物 ===== -->
     <script src="/znhd.user.js"></script>
 
@@ -721,20 +536,21 @@
       /* ===== 传输助手窗口定位（v26.10.12-v1 重构后的新结构）=========================
          「设备互联 / 历史记录 / Agent 助手」三个旧入口已全部收敛进这一个三栏窗口：
            标题条 .znhd-transfer-titlebar —— 右侧自绘关闭按钮（悬浮变红，v26.10.12-v4）
-           第一栏 .znhd-transfer-nav      —— 对话 / Agents / 文件 + 底部设置/企业信息
+           第一栏 .znhd-transfer-nav      —— 对话 / 文件 + 底部设置/企业信息
            第二栏 .znhd-transfer-sessions —— 搜索框 +「＋」+ 会话/设备列表
-           第三栏 .znhd-transfer-main     —— 聊天主区（设备会话 / Agent 对话 / 全部文件）
+           第三栏 .znhd-transfer-main     —— 聊天主区（设备会话 / 全部文件）
          v26.10.12-v2：主窗口**去掉了标题栏**（与第一栏顶部的图标 + 名称重复），改用
          Modal 的 className 钩子 `.znhd-transfer-modal` 定位 —— 不再靠标题文字匹配，
          顺带解决了「传输助手设置」子窗口也含「传输助手」四字的误命中问题。
          v26.10.12-v4：对齐微信桌面版 —— 第一栏改窄图标栏（「设备」改名「对话」、置于
-         Agents 之上），窗口固定微信暗色配色，关闭按钮回到顶部标题条（自绘、悬浮变红）。 */
+         Agents 之上），窗口固定微信暗色配色，关闭按钮回到顶部标题条（自绘、悬浮变红）。
+         v26.10.13-v9：中间那格 Agents 入口已随 Agent 能力整体删除，第一栏只剩「对话 / 文件」。 */
       const findTransferModal = () => document.querySelector('.ant-modal.znhd-transfer-modal');
       const findPairModal = () =>
         Array.from(document.querySelectorAll('.ant-modal')).find((el) =>
           ((el.querySelector('.ant-modal-title') || {}).textContent || '').includes('配对设备')
         );
-      /** 第一栏导航项（aria-label 精确匹配：对话 / Agents / 文件） */
+      /** 第一栏导航项（aria-label 精确匹配：对话 / 文件） */
       const clickTransferNav = (label) => {
         const m = findTransferModal();
         if (!m) return false;
@@ -1314,8 +1130,8 @@
       const SEND_TEXT = '冒烟测试：本机发出的文本';
       // 用原型上的 setter 赋值再派发 input：React 的受控输入依赖原生 setter 触发的 value 跟踪
       // （直接 `el.value = x` 会被 React 缓存的 value 覆盖掉；input 事件必须冒泡到 root）
-      // ⚠️ v26.10.12-v3：设备输入框从**单行 input 换成了多行 textarea**（与 Agent 对话共用
-      //    ChatComposer，用户要求两边样式一致），setter 必须按 tagName 取对应原型 ——
+      // ⚠️ v26.10.12-v3：设备输入框从**单行 input 换成了多行 textarea**（改自与 Agent 对话
+      //    共用的 ChatComposer；Agent 已于 v26.10.13-v9 删除），setter 必须按 tagName 取对应原型 ——
       //    用错原型时 React 收不到变更，表现为「赋值了但发送按钮还是灰的」。
       const typeInto = (el, text) => {
         const proto = el.tagName === 'TEXTAREA' ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
@@ -1323,7 +1139,7 @@
         setter.call(el, text);
         el.dispatchEvent(new Event('input', { bubbles: true }));
       };
-      /** 设备会话的输入框（多行 textarea；按 placeholder 找，与 Agent 的输入框区分） */
+      /** 设备会话的输入框（多行 textarea；按 placeholder 找） */
       const findDeviceInput = () => {
         const m = findTransferModal();
         if (!m) return null;
@@ -1339,7 +1155,7 @@
        * 共用输入区的事实快照（v26.10.12-v3；v26.10.12-v4 改微信结构后同步）。
        *
        * 微信式输入面板：工具栏图标行（上）→ 多行输入框（自动增高、超上限框内滚动）→
-       * 右下角「发送」文字按钮。设备会话与 Agent 对话共用同一个 `ChatComposer`，
+       * 右下角「发送」文字按钮。第三栏只有设备会话一个宿主，输入面板就是 `ChatComposer`，
        * 所以判据只认组件自己的钩子（面板类名 `.znhd-chat-composer` + 按钮 aria-label）。
        */
       const composerFacts = () => {
@@ -1373,7 +1189,7 @@
         if (input) typeInto(input, SEND_TEXT);
       }, 9600);
       setTimeout(() => {
-        // v26.10.12-v3：发送按钮改成圆形图标按钮（与 Agent 同一个 ChatComposer），
+        // v26.10.12-v3：发送按钮改成圆形图标按钮（ChatComposer），
         // 里面没有文字了 —— 只能按 aria-label 找（语义全挂在它上面）。
         const m = findTransferModal();
         const btn = m
@@ -1800,7 +1616,7 @@
         ts.mainAllvalueUntouched = !/relayServer/.test(localStorage.getItem('scriptCat_Allvalue') || '');
       }, 17900);
       setTimeout(() => {
-        // 关掉设置子窗口（普通 antd 弹窗，自带 .ant-modal-close），别挡住后面的 Agents 用例
+        // 关掉设置子窗口（普通 antd 弹窗，自带 .ant-modal-close），别挡住后面的图片嗅探用例
         const sm = Array.from(document.querySelectorAll('.ant-modal')).find((el) =>
           (el.textContent || '').indexOf('收到内容时自动打开传输助手') >= 0
         );
@@ -1809,444 +1625,7 @@
         if (close) close.click();
       }, 18150);
 
-      /* ===== ⑧ Agent 对话（v26.10.12-v1：入口 = 传输助手第一栏 Agents）==================
-         覆盖链路：面板「传输助手」→ 第一栏 Agents → 右侧聊天区 → 三个页签 → 发消息 → 流式回答。
-         ⚠️ 与旧结构（v26.10.10-v10~v17）的差异：
-           · 入口是第一栏的 Agents 导航项（aria-label='Agents'），不再是面板第二行按钮；
-           · 关窗再打开 = 传输助手整体卸载重挂（destroyOnHidden），nav 复位到「设备」，
-             所以重开后必须再点一次 Agents 才回得到对话视图；
-           · 会话列表在第二栏（.znhd-agent-chat-item），消息区在第三栏（.znhd-agent-messages）。 */
-      setTimeout(() => {
-        const findAgentModal = () => {
-          const m = findTransferModal();
-          return m && m.querySelector('.znhd-agent-messages') ? m : null;
-        };
-        // v26.10.10-v13 起「发送 / 中止」是没有文字的图标按钮，语义写在 aria-label 上，
-        // 所以这里按「文案包含」或「aria-label 完全相等」两条路找。aria-label 用完全相等而不是
-        // 包含：否则 `clickBtnWithText(m, '对话')` 会先命中侧栏删除按钮的 aria-label「删除对话」。
-        const clickBtnWithText = (root, text) => {
-          const btn = Array.from(root.querySelectorAll('button')).find(
-            (b) =>
-              (b.textContent || '').indexOf(text) >= 0 || (b.getAttribute('aria-label') || '') === text
-          );
-          if (btn) btn.click();
-          return !!btn;
-        };
-        // 消息区文本：只看第三栏的 .znhd-agent-messages。
-        // （第二栏会话卡片的标题就是该会话的第一条消息，拿整窗 textContent 判断会假阳性。）
-        const messagesText = (m) => {
-          const box = m ? m.querySelector('.znhd-agent-messages') : null;
-          return box ? box.textContent || '' : '';
-        };
-
-        const snap = {
-          entrySeen: false,
-          panelFellBack: false,
-          modalSeen: false,
-          // v26.10.12-v3：技能 / 定时任务从「第三栏页签」提到「第二栏控件」，所以断言名从
-          // tabsOk 改成 panesOk 的语义是「点第二栏控件 → 第三栏换内容」
-          panesOk: false,
-          skillsPanelSeen: false,
-          skillsListed: false,
-          tasksPanelSeen: false,
-          createOptions: null,
-          sendClicked: false,
-          userMsgSeen: false,
-          replySeen: false,
-          errorSeen: false,
-          calls: [],
-          // 「对话过后关窗再打开」回归（v26.10.10-v11）
-          reopenEntryClicked: false,
-          reopenModalSeen: false,
-          reopenHistorySeen: false,
-          panelAliveAfterReopen: false,
-          panelStateAfterReopen: null,
-          reopenReactChildErrors: [],
-          // 「会话索引 + 多会话切换」回归（v26.10.10-v12）
-          chatsStored: null,
-          newChatClicked: false,
-          firstChatCleared: false,
-          sendClicked2: false,
-          secondUserMsgSeen: false,
-          secondReplySeen: false,
-          switchedToFirst: false,
-          switchSelectCount: 0,
-          switchOptionCount: 0,
-          switchOptionTexts: [],
-          switchHistorySeen: false,
-          switchSecondGone: false,
-          switchHistoryThinkingSeen: false,
-          panelAliveAfterSwitch: false,
-          panelStateAfterSwitch: null,
-          chatsStoredAfterSwitch: null,
-          // v26.10.10-v13：会话在第二栏列出，断言改成「侧栏真的列出了这几条」
-          sidebarItemCount: 0,
-          sidebarTitles: [],
-          sidebarNewChatSeen: false,
-          // v26.10.10-v14：助手/用户消息按 Markdown 渲染（渲染后的 DOM 证据）
-          mdStrongText: null,
-          mdListItemCount: 0,
-          mdInlineCodeCount: 0,
-          mdRawStars: null,
-        };
-        window.__agentSnap = snap;
-
-        const panelState = () => {
-          const host = document.getElementById('__znhd_panel_host__');
-          if (!host) return { alive: false, buttons: 0, height: 0 };
-          const buttons = Array.from(host.querySelectorAll('button'));
-          return {
-            alive: true,
-            buttons: buttons.length,
-            height: Math.round(host.getBoundingClientRect().height),
-            hasCollapse: !!host.querySelector('button[aria-label="收起面板"]'),
-            // v26.10.12-v1：Agent 入口从面板移除，「面板仍在」的判据改成传输助手入口
-            hasTransferEntry: buttons.some((b) => (b.textContent || '').indexOf('传输助手') >= 0),
-          };
-        };
-
-        const clickEntry = () => {
-          const host = document.getElementById('__znhd_panel_host__');
-          if (!host) return false;
-          const btn = Array.from(host.querySelectorAll('button')).find(
-            (b) => (b.textContent || '').indexOf('传输助手') >= 0
-          );
-          if (!btn) return false;
-          btn.click();
-          return true;
-        };
-
-        const stageSkills = (tries) => {
-          const m = findAgentModal();
-          if (!m) {
-            if (tries > 0) setTimeout(() => stageSkills(tries - 1), 100);
-            else {
-              snap.stageReached = 'skills-no-modal';
-              finish();
-            }
-            return;
-          }
-          // v26.10.12-v3：控件在**第二栏**（会话列表栏）顶部，点它第三栏才换成技能面板
-          snap.panesOk = clickBtnWithText(m, '技能');
-          setTimeout(() => {
-            if (!snap.panesOk) {
-              snap.stageReached = 'pane-skills-miss';
-              finish();
-              return;
-            }
-            snap.skillsPanelSeen = (m.textContent || '').indexOf('已安装') >= 0;
-            snap.skillsListed = (m.textContent || '').indexOf('stub-skill') >= 0;
-            clickBtnWithText(m, '定时任务');
-            setTimeout(() => {
-              snap.tasksPanelSeen = (m.textContent || '').indexOf('crontab') >= 0;
-              // 回到对话：原来点第三栏的「对话」页签，现在把第一栏 Agents 再点一次
-              // （导航处理里会把第三栏复位成 chat，见 TransferAssistantModal 的 onNav）
-              clickTransferNav('Agents');
-              setTimeout(() => stageSend(0), 300);
-            }, 300);
-          }, 300);
-        };
-
-        // 用原型上的 setter 赋值再派发 input：React 的受控输入依赖原生 setter 触发的 value 跟踪
-        // （直接 `ta.value = x` 会被 React 缓存的 value 覆盖掉；input 事件必须冒泡到 root）
-        const typeMessage = (text) => {
-          const m = findAgentModal();
-          const ta = m ? m.querySelector('textarea') : null;
-          if (!ta) return null;
-          const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value').set;
-          setter.call(ta, text);
-          ta.dispatchEvent(new Event('input', { bubbles: true }));
-          return ta;
-        };
-
-        const stageSend = (tries) => {
-          const m = findAgentModal();
-          if (!m) {
-            if (tries > 0) {
-              setTimeout(() => stageSend(tries - 1), 100);
-              return;
-            }
-            snap.stageReached = 'send-no-modal';
-            finish();
-            return;
-          }
-          const ta = m.querySelector('textarea');
-          snap.taFound = !!ta;
-          if (!ta) {
-            if (tries > 0) {
-              setTimeout(() => stageSend(tries - 1), 100);
-              return;
-            }
-            snap.stageReached = 'send-no-textarea';
-            finish();
-            return;
-          }
-          typeMessage('你好');
-          snap.taValue = ta.value;
-          snap.stageReached = 'send';
-          snap.sendButtons = Array.from(m.querySelectorAll('button'))
-            .map((b) => (b.textContent || '').trim())
-            .filter(Boolean);
-          snap.sendClicked = clickBtnWithText(m, '发送');
-          setTimeout(() => stageReply(35), 250);
-        };
-
-        const stageReply = (tries) => {
-          const m = findAgentModal();
-          const t = messagesText(m);
-          snap.userMsgSeen = t.indexOf('你好') >= 0;
-          snap.replySeen = t.indexOf('（桩回答）') >= 0;
-          snap.thinkingSeen = t.indexOf('先想一下') >= 0;
-          // 助手气泡的错误态直接查类名，并把错误原文带进快照（失败时不必再猜）
-          const errEl = m ? m.querySelector('.znhd-agent-msg-error') : null;
-          snap.errorSeen = !!errEl;
-          snap.errorText = errEl ? (errEl.textContent || '').slice(0, 200) : '';
-          // v26.10.10-v14：Markdown 渲染证据 —— 只看渲染后的 DOM，不看原始文本。
-          // `mdRawStars` 表示消息文本里还残留字面量 `**`（即根本没被解析）。
-          const strongEl = m ? m.querySelector('.znhd-agent-messages strong') : null;
-          snap.mdStrongText = strongEl ? strongEl.textContent || '' : null;
-          snap.mdListItemCount = m ? m.querySelectorAll('.znhd-agent-messages ul li').length : 0;
-          snap.mdInlineCodeCount = m ? m.querySelectorAll('.znhd-agent-messages p code').length : 0;
-          snap.mdRawStars = t.indexOf('**') >= 0;
-          // v26.10.12-v3：Agent 对话必须与设备会话长成同一套 —— 判据就是它们都用了共用的
-          // ChatComposer 外壳（.znhd-chat-composer）与 ChatBubble（.znhd-chat-msg[data-side]）。
-          snap.sharedComposerSeen = !!(m && m.querySelector('.znhd-chat-composer textarea'));
-          snap.sharedComposerLabels = m
-            ? Array.from(m.querySelectorAll('.znhd-chat-composer button[aria-label]')).map((b) =>
-                  b.getAttribute('aria-label')
-              )
-            : [];
-          snap.avatarSeen = !!(
-            m && m.querySelector('.znhd-agent-messages .znhd-chat-msg[data-side="right"] .znhd-chat-avatar')
-          );
-          snap.calls = (window.__catAgentCalls || []).slice();
-          snap.replyTries = tries;
-          if (snap.replySeen && snap.userMsgSeen) {
-            snap.stageReached = 'reply-seen';
-            closeAndReopen();
-            return;
-          }
-          if (tries <= 0) {
-            snap.stageReached = 'reply-timeout';
-            finish();
-            return;
-          }
-          setTimeout(() => stageReply(tries - 1), 100);
-        };
-
-        /* ===== 回归用例（v26.10.10-v11）：对话过后关闭窗口再打开 =====================
-           背景：历史消息里的 `thinking` 是**对象**（官方 ThinkingBlock = { content }），
-           而流式对话时是字符串。若把对象直接交给 React 渲染，会抛
-           `Objects are not valid as a React child (found: object with keys {content})`；
-           面板没有错误边界 ⇒ 整棵面板树被卸载，宿主 div 还在、自愈也救不回来，
-           表现为「主面板整个消失」。所以这条用例的判据不是「窗口能开」，而是
-           **面板本体仍在**（容器有高度、收起按钮与传输助手入口都还在）+ 历史思考文本已渲染。
-           v26.10.12-v1：弹窗从「Agent 助手」变成整个传输助手窗口，关闭 = 卸载重挂。 */
-        const closeAndReopen = () => {
-          const m = findTransferModal();
-          if (m) {
-            const close = m.querySelector('button[aria-label="关闭"]');
-            if (close) close.click();
-          }
-          setTimeout(() => waitModalGone(25), 150);
-        };
-
-        const waitModalGone = (tries) => {
-          if (!findTransferModal()) {
-            snap.reopenEntryClicked = clickEntry();
-            setTimeout(() => waitModalBack(30), 250);
-            return;
-          }
-          if (tries <= 0) {
-            snap.stageReached = 'reopen-close-timeout';
-            finish();
-            return;
-          }
-          setTimeout(() => waitModalGone(tries - 1), 100);
-        };
-
-        const waitModalBack = (tries) => {
-          const m = findTransferModal();
-          if (m) {
-            snap.reopenModalSeen = true;
-            // 重开后 nav 复位到「设备」（组件随窗口卸载重挂），必须再点一次第一栏 Agents
-            clickTransferNav('Agents');
-            // 等历史回填 effect 跑完并渲染（崩溃就发生在这两拍之间）
-            setTimeout(checkReopen, 600);
-            return;
-          }
-          if (tries <= 0) {
-            snap.stageReached = 'reopen-no-modal';
-            finish();
-            return;
-          }
-          setTimeout(() => waitModalBack(tries - 1), 100);
-        };
-
-        const checkReopen = () => {
-          const state = panelState();
-          snap.panelStateAfterReopen = state;
-          snap.panelAliveAfterReopen = !!(state.alive && state.height > 0 && state.hasCollapse && state.hasTransferEntry);
-          const m = findAgentModal();
-          const t = messagesText(m);
-          // 历史里的思考文本只可能来自 getMessages() 回填（流式那条是「先想一下」）
-          snap.reopenHistorySeen = t.indexOf('（桩）历史思考') >= 0;
-          snap.reopenReactChildErrors = (window.__errors || [])
-            .filter((e) => /React child|not valid as a React child/i.test(e))
-            .slice(0, 2);
-          snap.stageReached = 'reopen-checked';
-          // 接着验证 v26.10.10-v12 的多会话：新建 → 切换回上一个
-          stageNewChat(30);
-        };
-
-        /* ===== 回归用例（v26.10.10-v12）：会话索引持久化 + 多会话切换 =============
-           官方 CAT.agent.conversation 只开放 create/get（没有 list/delete），所以「会话列表」
-           是脚本自己记在 localStorage 的 scriptCat_AgentChats 里的。这条用例覆盖：
-           ① 发完一轮后索引里就有这个对话（id + 用首条消息当标题）
-           ② 点「＋」（新建对话）再发一条 → 第二个对话进索引，视图里看不到上一个对话的内容
-           ③ 在第二栏点回第一个对话 → 又看到它自己的历史（含对象形状 thinking 的回填），面板仍在 */
-        const readChatStore = () => {
-          try {
-            return JSON.parse(localStorage.getItem('scriptCat_AgentChats') || 'null');
-          } catch (e) {
-            return { parseError: String((e && e.message) || e) };
-          }
-        };
-
-        const stageNewChat = (tries) => {
-          const m = findAgentModal();
-          if (!m) {
-            snap.stageReached = 'v12-no-modal';
-            finish();
-            return;
-          }
-          snap.chatsStored = readChatStore();
-          // v26.10.12-v3：「新建对话」不再是列表顶部的文字按钮，改成搜索框旁的「＋」
-          // （aria-label=新建对话；设备分组下同一个位置才是「配对设备」）
-          snap.newChatClicked = clickBtnWithText(m, '新建对话');
-          if (!snap.newChatClicked && tries > 0) {
-            setTimeout(() => stageNewChat(tries - 1), 100);
-            return;
-          }
-          setTimeout(() => {
-            const text = messagesText(findAgentModal());
-            // 「新的聊天」只是把视图清空、下次发送时才真正 create（不留空会话）
-            snap.firstChatCleared = text.indexOf('你好') < 0;
-            const ta = typeMessage('第二个问题');
-            snap.taFound2 = !!ta;
-            snap.sendClicked2 = clickBtnWithText(findAgentModal(), '发送');
-            setTimeout(() => stageSecondReply(35), 250);
-          }, 300);
-        };
-
-        const stageSecondReply = (tries) => {
-          const m = findAgentModal();
-          const t = messagesText(m);
-          snap.secondUserMsgSeen = t.indexOf('第二个问题') >= 0;
-          snap.secondReplySeen = t.indexOf('（桩回答）') >= 0;
-          snap.chatsStored = readChatStore();
-          if (snap.secondUserMsgSeen && snap.secondReplySeen) {
-            snap.stageReached = 'second-reply-seen';
-            stageSwitchBack(30);
-            return;
-          }
-          if (tries <= 0) {
-            snap.stageReached = 'second-reply-timeout';
-            finish();
-            return;
-          }
-          setTimeout(() => stageSecondReply(tries - 1), 100);
-        };
-
-        // 切换会话：v26.10.10-v13 起会话列在第二栏，直接点卡片就行（不再有会话下拉，也就不用等浮层）
-        const stageSwitchBack = (tries) => {
-          const m = findAgentModal();
-          if (!m) {
-            snap.stageReached = 'switch-no-modal';
-            finish();
-            return;
-          }
-          const items = Array.from(m.querySelectorAll('.znhd-agent-chat-item'));
-          // 字段名沿用 v12 的（switchSelectCount / switchOption*），语义改成「第二栏卡片数与标题」
-          snap.switchSelectCount = items.length;
-          snap.switchOptionCount = items.length;
-          snap.switchOptionTexts = items.map((el) => (el.textContent || '').trim()).slice(0, 6);
-          // 第一个对话在第二栏里的名字就是它的第一条消息
-          const target = items.find((el) => (el.textContent || '').indexOf('你好') >= 0);
-          if (target) {
-            snap.stageReached = 'switch-item-clicked';
-            target.click();
-            setTimeout(checkSwitch, 400);
-            return;
-          }
-          if (tries <= 0) {
-            snap.stageReached = 'switch-no-item';
-            finish();
-            return;
-          }
-          setTimeout(() => stageSwitchBack(tries - 1), 150);
-        };
-
-        const checkSwitch = () => {
-          const m = findAgentModal();
-          const t = messagesText(m);
-          snap.switchedToFirst = !!m;
-          // 第二栏此时应仍列出两个会话，且搜索框旁有「＋ 新建对话」（v26.10.12-v3 的布局判据）
-          const items = m ? Array.from(m.querySelectorAll('.znhd-agent-chat-item')) : [];
-          snap.sidebarItemCount = items.length;
-          snap.sidebarTitles = items.map((el) => (el.textContent || '').replace(/\s+/g, ' ').trim()).slice(0, 6);
-          snap.sidebarNewChatSeen = !!(
-            m &&
-            m.querySelector('.znhd-agent-chat-list') &&
-            m.querySelector('button[aria-label="新建对话"]')
-          );
-          snap.switchHistorySeen = t.indexOf('你好') >= 0;
-          // 少了这条，用例可能只是「没换视图」也判过
-          snap.switchSecondGone = t.indexOf('第二个问题') < 0;
-          // 只有切回第一个对话并重新回填历史，才会出现 getMessages() 里的思考文本
-          snap.switchHistoryThinkingSeen = t.indexOf('（桩）历史思考') >= 0;
-          const state = panelState();
-          snap.panelStateAfterSwitch = state;
-          snap.panelAliveAfterSwitch = !!(state.alive && state.height > 0 && state.hasCollapse && state.hasTransferEntry);
-          snap.chatsStoredAfterSwitch = readChatStore();
-          // 输入框聚焦蓝框由 run.js 用**真实鼠标点击**验证（页面内 JS focus() 在 antd Modal 下静默失效）
-          snap.stageReached = 'switch-checked';
-          finish();
-        };
-
-        const finish = () => {
-          snap.calls = (window.__catAgentCalls || []).slice();
-          snap.createOptions = window.__catAgentCreateOptions || null;
-          const host = document.getElementById('__znhd_panel_host__');
-          if (host) {
-            const rows = {};
-            Array.from(host.querySelectorAll('button')).forEach((b) => {
-              const label = (b.textContent || '').trim().split(/\s+/)[0];
-              rows[label] = Math.round(b.getBoundingClientRect().top);
-            });
-            snap.rows = rows;
-          }
-        };
-
-        snap.entrySeen = clickTransferNav('Agents');
-        if (!snap.entrySeen) {
-          // 入口都没点到：记录面板退出按钮是否存在，便于区分「没渲染」与「点击没生效」
-          const host = document.getElementById('__znhd_panel_host__');
-          snap.panelFellBack = !!host;
-          finish();
-          return;
-        }
-        setTimeout(() => {
-          snap.modalSeen = !!findAgentModal();
-          if (!snap.modalSeen) {
-            finish();
-            return;
-          }
-          stageSkills(30);
-        }, 450);
-      }, 18500);
-
-      /* ===== ⑨ 图片嗅探（v26.10.10-v4；会话分组 v26.10.13-v8）=====
+      /* ===== ⑧ 图片嗅探（v26.10.10-v4；会话分组 v26.10.13-v8）=====
          点面板入口 → 弹窗自动扫描页面（夹具见 #sniff-fixtures 与 body 末尾的 #app）。
          扫描是异步的（每张 HEAD/Range 各 40ms 桩延迟），故用轮询等「卡片出来且已量到大小」再快照。
          阶段（都在报告采集之前跑完）：
@@ -2255,8 +1634,9 @@
            2) 等重扫完成，读切换后的分组事实 —— 此时 Vuex 里两条消息都没了，
               还能各自归回原会话只能靠脚本的持久层（会话归属索引）；
            3) 量卡片右下角的悬浮按钮（下载/打印）几何。
-         ⚠️ v26.10.12-v1：这条与 Agent 流程**串行**（Agent 收尾后才 kick），
-            避免两个弹窗的轮询互相抢时序（旧夹具里两者是并发的，重构后窗口结构变了，收敛成串行更稳）。 */
+         ⚠️ v26.10.12-v1：这条曾与 Agent 流程**串行**（Agent 收尾后才 kick），避免两个弹窗的
+            轮询互相抢时序；v26.10.13-v9 删掉 Agent 后改回固定延时 kick（30000 拍），
+            仍在报告采集之前跑完。 */
       const kickSniff = () => {
         // 会话分组夹具必须在**扫描之前**就位：脚本是在「打开弹窗 → 扫描」时读页面 Vuex 的
         window.__sniffChatInstalled = window.__installSniffChat('two');
@@ -2664,7 +2044,7 @@
             const s = window.__filesImgActions;
             return !!(s && s.btns === 3 && s.iconOnly && s.hidden && s.inside && s.bottomRight && s.hovered);
           })(),
-          // ===== 共用聊天面板（v26.10.12-v3：设备会话与 Agent 对话同一套气泡 / 输入框）=====
+          // ===== 聊天面板（v26.10.12-v3：气泡 / 输入区抽成共用件）=====
           // 气泡：他人靠左灰底（微信 #2F2F2F）、我的靠右绿底（微信 #07C160）、头像在气泡外侧、
           // 消息组上方有居中的时间分隔条（v26.10.12-v4）
           chatBubbleOk: (() => {
@@ -2751,16 +2131,6 @@
             ts.emojiReopenForTriggerSeen === true &&
             ts.emojiCloseOnTrigger === false
           ),
-          // Agent 侧必须是同一套组件（共用 ChatComposer 外壳 + 带 data-side 的气泡 + 头像）
-          chatPanelSharedOk: (() => {
-            const s = window.__agentSnap || {};
-            const need = ['表情', '图片上传', '附件'];
-            return !!(
-              s.sharedComposerSeen &&
-              need.every((l) => (s.sharedComposerLabels || []).indexOf(l) >= 0) &&
-              s.avatarSeen
-            );
-          })(),
 
           // 方案 B：antd 浮层（Modal/Drawer…）必须盖在面板之上
           // （面板宿主 999999 < zIndexPopupBase 1000000）
@@ -3011,74 +2381,6 @@
               g.cards[1] === 1
             );
           })(),
-          // ===== Agent 对话（v26.10.12-v1：入口改为传输助手第一栏 Agents）=====
-          // 链路：面板「传输助手」→ 第一栏 Agents → 第二栏（技能 / 定时任务 / 对话列表）→ 第三栏内容。
-          // ⚠️ 这些断言在 CAT.agent 桩下跑「可用态」；不可用态（无 CAT）由 buildAgentSnap 的
-          //    panelFellBack/entrySeen 两条覆盖不了 —— 那条路径的判据是弹窗里的 Alert 文案，
-          //    本 harness 不再单独造一份「无 CAT」环境（会与桩冲突）。
-          agentEntryOk: !!(window.__agentSnap && window.__agentSnap.entrySeen && window.__agentSnap.modalSeen),
-          // v26.10.12-v3：技能 / 定时任务由第二栏控件切换（原来是第三栏页签）
-          agentPanesOk: !!(
-            window.__agentSnap &&
-            window.__agentSnap.panesOk &&
-            window.__agentSnap.skillsPanelSeen &&
-            window.__agentSnap.skillsListed &&
-            window.__agentSnap.tasksPanelSeen
-          ),
-          agentChatOk: !!(
-            window.__agentSnap &&
-            window.__agentSnap.sendClicked &&
-            window.__agentSnap.userMsgSeen &&
-            window.__agentSnap.replySeen &&
-            !window.__agentSnap.errorSeen
-          ),
-          // v26.10.10-v11：对话过后关窗再打开 —— 历史 thinking 是对象，渲染不当会让整个面板消失
-          agentReopenOk: !!(
-            window.__agentSnap &&
-            window.__agentSnap.reopenEntryClicked &&
-            window.__agentSnap.reopenModalSeen &&
-            window.__agentSnap.reopenHistorySeen &&
-            window.__agentSnap.panelAliveAfterReopen
-          ),
-          // v26.10.10-v12：会话索引持久化 + 多会话切换（官方只有 create/get，列表是脚本自记的）
-          // v26.10.10-v13：会话列在第二栏，这里补「侧栏真的列出了两条 + 顶部有『新的聊天』」
-          agentChatsOk: (() => {
-            const s = window.__agentSnap;
-            if (!s) return false;
-            const store = s.chatsStored;
-            const items = (store && Array.isArray(store.items) && store.items) || [];
-            const titles = items.map((i) => i && i.title);
-            const sidebarTitles = s.sidebarTitles || [];
-            const sidebarHas = (text) => sidebarTitles.some((x) => (x || '').indexOf(text) >= 0);
-            return !!(
-              items.length >= 2 &&
-              titles.indexOf('你好') >= 0 &&
-              titles.indexOf('第二个问题') >= 0 &&
-              s.newChatClicked &&
-              s.firstChatCleared &&
-              s.sendClicked2 &&
-              s.secondUserMsgSeen &&
-              s.secondReplySeen &&
-              s.switchedToFirst &&
-              s.switchHistorySeen &&
-              s.switchSecondGone &&
-              s.switchHistoryThinkingSeen &&
-              s.panelAliveAfterSwitch &&
-              s.sidebarItemCount >= 2 &&
-              s.sidebarNewChatSeen &&
-              sidebarHas('你好') &&
-              sidebarHas('第二个问题')
-            );
-          })(),
-          // v26.10.10-v14：回答里的 Markdown 真的渲染成了 DOM（而不是把 `**` 原样显示出来）
-          agentMarkdownOk: !!(
-            window.__agentSnap &&
-            window.__agentSnap.mdStrongText === '加粗' &&
-            window.__agentSnap.mdListItemCount >= 2 &&
-            window.__agentSnap.mdInlineCodeCount >= 1 &&
-            !window.__agentSnap.mdRawStars
-          ),
-          agentSnap: window.__agentSnap || null,
           // v26.10.10-v16：图片格子上的功能按钮改成「压在图片右下角、只有图标、hover 才出现」。
           // 文件视图（复制/下载/删除）与图片嗅探（下载/打印）两个窗口都要满足同一组几何与可见性约束。
           filesImgActions: window.__filesImgActions || null,

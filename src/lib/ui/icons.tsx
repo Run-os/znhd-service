@@ -63,7 +63,7 @@ function SvgIcon({ size = 16, color, style, className, children }: IconProps & {
     );
 }
 
-/* ============================================================ 主面板入口（v26.10.10-v4 起 5 个；v26.10.10-v10 加入 Agent 共 6 个） */
+/* ============================================================ 主面板入口（v26.10.10-v4 起 5 个） */
 
 /** 设置（Lucide `settings`：齿轮 + 圆心） */
 export function SettingsIcon(p: IconProps) {
@@ -137,20 +137,6 @@ export function DeviceIcon(p: IconProps) {
             <rect width="20" height="14" x="2" y="3" rx="2" />
             <line x1="8" x2="16" y1="21" y2="21" />
             <line x1="12" x2="12" y1="17" y2="21" />
-        </SvgIcon>
-    );
-}
-
-/** Agent 助手（Lucide `bot`：机器人头 + 两侧天线接口） */
-export function BotIcon(p: IconProps) {
-    return (
-        <SvgIcon {...p}>
-            <path d="M12 8V4H8" />
-            <rect width="16" height="12" x="4" y="8" rx="2" />
-            <path d="M2 14h2" />
-            <path d="M20 14h2" />
-            <path d="M15 13v2" />
-            <path d="M9 13v2" />
         </SvgIcon>
     );
 }
@@ -229,7 +215,7 @@ export function CheckIcon(p: IconProps) {
     );
 }
 
-/* ============================================================ Agent 对话界面（v26.10.10-v13） */
+/* ============================================================ 聊天界面（v26.10.10-v13） */
 
 /**
  * 发送（Lucide `arrow-up`：向上的箭头）。
@@ -380,8 +366,7 @@ export function PanelLeftIcon(p: IconProps) {
 /**
  * 用户头像（Lucide `user`：头 + 肩）。
  *
- * 聊天气泡右侧「我」的头像。设备会话与 Agent 对话共用同一套气泡布局，
- * 所以这个图标两个面板都会用到。
+ * 聊天气泡右侧「我」的头像。传输助手第三栏的收发消息气泡都用它。
  */
 export function UserIcon(p: IconProps) {
     return (
@@ -436,9 +421,12 @@ export function PaperclipIcon(p: IconProps) {
 }
 
 /**
- * 技能（Lucide `layout-grid`：2×2 圆角方块）：第二栏 Agents 分组顶部的「技能」控件。
+ * 技能（Lucide `layout-grid`：2×2 圆角方块）。
  *
- * 取「一格格工具」的语义。没用 Lucide 的 `puzzle` ——那个 path 更长、且随 Lucide 版本改过，
+ * v26.10.13-v9 起只用于第二栏文件分组的「全部文件」条目头像；
+ * 原来是 Agents 分组顶部的「技能」控件图标（已随 Agent 能力删除）。
+ *
+ * 没用 Lucide 的 `puzzle` ——那个 path 更长、且随 Lucide 版本改过，
  * 这里的四宫格是自己写得出来的确定几何，不会因为库升级而变样。
  */
 export function GridIcon(p: IconProps) {
@@ -448,16 +436,6 @@ export function GridIcon(p: IconProps) {
             <rect width="7" height="7" x="14" y="3" rx="1" />
             <rect width="7" height="7" x="14" y="14" rx="1" />
             <rect width="7" height="7" x="3" y="14" rx="1" />
-        </SvgIcon>
-    );
-}
-
-/** 定时任务（Lucide `clock`：表盘 + 指针）：第二栏 Agents 分组顶部的「定时任务」控件 */
-export function ClockIcon(p: IconProps) {
-    return (
-        <SvgIcon {...p}>
-            <circle cx="12" cy="12" r="10" />
-            <path d="M12 6v6l4 2" />
         </SvgIcon>
     );
 }

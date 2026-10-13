@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name                征纳互动人数和在线监控v2
 // @namespace           https://scriptcat.org/
-// @version             26.10.13-v8
+// @version             26.10.13-v9
 // @description         实时监控征纳互动等待人数和在线状态，支持语音播报、自定义常用语
 // @author              runos
 // @license             MIT
@@ -14,10 +14,6 @@
 // @grant               GM_setClipboard
 // @grant               GM_getValue
 // @grant               GM_setValue
-// @grant               CAT.agent.conversation
-// @grant               CAT.agent.model
-// @grant               CAT.agent.skills
-// @grant               CAT.agent.task
 // @connect             *
 // @homepageURL         https://github.com/Run-os/znhd-service
 // @updateURL           https://raw.githubusercontent.com/Run-os/znhd-service/refs/heads/main/dist/znhd.user.js
@@ -36417,6 +36413,7 @@ const useMergedMask = (mask, contextMask, prefixCls, maskClosable) => {
   }, [mask, contextMask, prefixCls, maskClosable]);
 };
 ;// ./node_modules/antd/es/_util/motion.js
+/* unused harmony import specifier */ var motion_isTransitionEvent;
 
 
 // ================== Collapse Motion ==================
@@ -36432,7 +36429,7 @@ const getCurrentHeight = node => ({
   height: node?.offsetHeight ?? 0
 });
 const skipOpacityTransition = (_, event) => {
-  return event?.deadline === true || isTransitionEvent(event) && event.propertyName === 'height';
+  return event?.deadline === true || motion_isTransitionEvent(event) && event.propertyName === 'height';
 };
 const initCollapseMotion = (rootCls = (/* inlined export .defaultPrefixCls */"ant")) => ({
   motionName: `${rootCls}-motion-collapse`,
@@ -36455,7 +36452,7 @@ const motion_getTransitionName = (rootPrefixCls, motion, transitionName) => {
   return `${rootPrefixCls}-${motion}`;
 };
 
-/* harmony default export */ const motion = (initCollapseMotion);
+/* harmony default export */ const motion = ((/* unused pure expression or super */ null && (initCollapseMotion)));
 ;// ./node_modules/antd/es/locale/useLocale.js
 
 
@@ -43744,28 +43741,31 @@ RefForm.List = es_List;
 RefForm.useForm = hooks_useForm;
 RefForm.useWatch = hooks_useWatch;
 
-/* harmony default export */ const form_es = (RefForm);
+/* harmony default export */ const form_es = ((/* unused pure expression or super */ null && (RefForm)));
 ;// ./node_modules/antd/es/form/context.js
+/* unused harmony import specifier */ var context_React;
+/* unused harmony import specifier */ var RcFormProvider;
+/* unused harmony import specifier */ var context_omit;
 "use client";
 
 
 
 
-const context_FormContext = /*#__PURE__*/(react_production_namespaceFn().createContext)({
+const context_FormContext = /*#__PURE__*/(/* unused pure expression or super */ null && (context_React.createContext({
   labelAlign: 'right',
   layout: 'horizontal',
   itemRef: () => {}
-});
-const NoStyleItemContext = /*#__PURE__*/(react_production_namespaceFn().createContext)(null);
+})));
+const NoStyleItemContext = /*#__PURE__*/(/* unused pure expression or super */ null && (context_React.createContext(null)));
 const context_FormProvider = props => {
-  const providerProps = omit(props, ['prefixCls']);
-  return /*#__PURE__*/(react_production_namespaceFn().createElement)(FormProvider, {
+  const providerProps = context_omit(props, ['prefixCls']);
+  return /*#__PURE__*/context_React.createElement(RcFormProvider, {
     ...providerProps
   });
 };
-const FormItemPrefixContext = /*#__PURE__*/(react_production_namespaceFn().createContext)({
+const FormItemPrefixContext = /*#__PURE__*/(/* unused pure expression or super */ null && (context_React.createContext({
   prefixCls: ''
-});
+})));
 const FormItemInputContext = /*#__PURE__*/(react_production_namespaceFn().createContext)({});
 if (false) // removed by dead control flow
 {}
@@ -56192,7 +56192,7 @@ if (false) // removed by dead control flow
 function SvgIcon({ size = 16, color, style, className, children }) {
     return ((0,react_jsx_runtime_production_namespaceFn().jsx)("svg", { xmlns: "http://www.w3.org/2000/svg", width: size, height: size, viewBox: "0 0 24 24", fill: "none", stroke: color || 'currentColor', strokeWidth: 2, strokeLinecap: "round", strokeLinejoin: "round", "aria-hidden": "true", focusable: "false", className: className, style: { display: 'block', flex: '0 0 auto', ...style }, children: children }));
 }
-/* ============================================================ 主面板入口（v26.10.10-v4 起 5 个；v26.10.10-v10 加入 Agent 共 6 个） */
+/* ============================================================ 主面板入口（v26.10.10-v4 起 5 个） */
 /** 设置（Lucide `settings`：齿轮 + 圆心） */
 function SettingsIcon(p) {
     return ((0,react_jsx_runtime_production_namespaceFn().jsxs)(SvgIcon, { ...p, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("path", { d: "M9.671 4.136a2.34 2.34 0 0 1 4.659 0 2.34 2.34 0 0 0 3.319 1.915 2.34 2.34 0 0 1 2.33 4.033 2.34 2.34 0 0 0 0 3.831 2.34 2.34 0 0 1-2.33 4.033 2.34 2.34 0 0 0-3.319 1.915 2.34 2.34 0 0 1-4.659 0 2.34 2.34 0 0 0-3.32-1.915 2.34 2.34 0 0 1-2.33-4.033 2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915" }), (0,react_jsx_runtime_production_namespaceFn().jsx)("circle", { cx: "12", cy: "12", r: "3" })] }));
@@ -56228,10 +56228,6 @@ function SniffIcon(p) {
 function DeviceIcon(p) {
     return ((0,react_jsx_runtime_production_namespaceFn().jsxs)(SvgIcon, { ...p, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("rect", { width: "20", height: "14", x: "2", y: "3", rx: "2" }), (0,react_jsx_runtime_production_namespaceFn().jsx)("line", { x1: "8", x2: "16", y1: "21", y2: "21" }), (0,react_jsx_runtime_production_namespaceFn().jsx)("line", { x1: "12", x2: "12", y1: "17", y2: "21" })] }));
 }
-/** Agent 助手（Lucide `bot`：机器人头 + 两侧天线接口） */
-function BotIcon(p) {
-    return ((0,react_jsx_runtime_production_namespaceFn().jsxs)(SvgIcon, { ...p, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("path", { d: "M12 8V4H8" }), (0,react_jsx_runtime_production_namespaceFn().jsx)("rect", { width: "16", height: "12", x: "4", y: "8", rx: "2" }), (0,react_jsx_runtime_production_namespaceFn().jsx)("path", { d: "M2 14h2" }), (0,react_jsx_runtime_production_namespaceFn().jsx)("path", { d: "M20 14h2" }), (0,react_jsx_runtime_production_namespaceFn().jsx)("path", { d: "M15 13v2" }), (0,react_jsx_runtime_production_namespaceFn().jsx)("path", { d: "M9 13v2" })] }));
-}
 /* ============================================================ 面板其它位置 */
 /** 语音开（Lucide `volume-2`） */
 function VolumeOnIcon(p) {
@@ -56264,7 +56260,7 @@ function CloseIcon(p) {
 function CheckIcon(p) {
     return ((0,react_jsx_runtime_production_namespaceFn().jsx)(SvgIcon, { ...p, children: (0,react_jsx_runtime_production_namespaceFn().jsx)("path", { d: "M20 6 9 17l-5-5" }) }));
 }
-/* ============================================================ Agent 对话界面（v26.10.10-v13） */
+/* ============================================================ 聊天界面（v26.10.10-v13） */
 /**
  * 发送（Lucide `arrow-up`：向上的箭头）。
  *
@@ -56277,7 +56273,7 @@ function SendIcon(p) {
 }
 /** 中止（Lucide `square`：圆角方块）：流式生成中占据发送按钮的同一个位置 */
 function StopIcon(p) {
-    return ((0,react_jsx_runtime_production_namespaceFn().jsx)(SvgIcon, { ...p, children: (0,react_jsx_runtime_production_namespaceFn().jsx)("rect", { width: "18", height: "18", x: "3", y: "3", rx: "2" }) }));
+    return (_jsx(SvgIcon, { ...p, children: _jsx("rect", { width: "18", height: "18", x: "3", y: "3", rx: "2" }) }));
 }
 /** 新建（Lucide `plus`）：侧栏「新的聊天」按钮 */
 function PlusIcon(p) {
@@ -56330,8 +56326,7 @@ function PanelLeftIcon(p) {
 /**
  * 用户头像（Lucide `user`：头 + 肩）。
  *
- * 聊天气泡右侧「我」的头像。设备会话与 Agent 对话共用同一套气泡布局，
- * 所以这个图标两个面板都会用到。
+ * 聊天气泡右侧「我」的头像。传输助手第三栏的收发消息气泡都用它。
  */
 function UserIcon(p) {
     return ((0,react_jsx_runtime_production_namespaceFn().jsxs)(SvgIcon, { ...p, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("path", { d: "M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" }), (0,react_jsx_runtime_production_namespaceFn().jsx)("circle", { cx: "12", cy: "7", r: "4" })] }));
@@ -56360,17 +56355,16 @@ function PaperclipIcon(p) {
     return ((0,react_jsx_runtime_production_namespaceFn().jsx)(SvgIcon, { ...p, children: (0,react_jsx_runtime_production_namespaceFn().jsx)("path", { d: "m16 6-8.414 8.586a2 2 0 0 0 2.829 2.829l8.414-8.586a4 4 0 1 0-5.657-5.657l-8.379 8.551a6 6 0 1 0 8.485 8.485l8.379-8.551" }) }));
 }
 /**
- * 技能（Lucide `layout-grid`：2×2 圆角方块）：第二栏 Agents 分组顶部的「技能」控件。
+ * 技能（Lucide `layout-grid`：2×2 圆角方块）。
  *
- * 取「一格格工具」的语义。没用 Lucide 的 `puzzle` ——那个 path 更长、且随 Lucide 版本改过，
+ * v26.10.13-v9 起只用于第二栏文件分组的「全部文件」条目头像；
+ * 原来是 Agents 分组顶部的「技能」控件图标（已随 Agent 能力删除）。
+ *
+ * 没用 Lucide 的 `puzzle` ——那个 path 更长、且随 Lucide 版本改过，
  * 这里的四宫格是自己写得出来的确定几何，不会因为库升级而变样。
  */
 function GridIcon(p) {
     return ((0,react_jsx_runtime_production_namespaceFn().jsxs)(SvgIcon, { ...p, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("rect", { width: "7", height: "7", x: "3", y: "3", rx: "1" }), (0,react_jsx_runtime_production_namespaceFn().jsx)("rect", { width: "7", height: "7", x: "14", y: "3", rx: "1" }), (0,react_jsx_runtime_production_namespaceFn().jsx)("rect", { width: "7", height: "7", x: "14", y: "14", rx: "1" }), (0,react_jsx_runtime_production_namespaceFn().jsx)("rect", { width: "7", height: "7", x: "3", y: "14", rx: "1" })] }));
-}
-/** 定时任务（Lucide `clock`：表盘 + 指针）：第二栏 Agents 分组顶部的「定时任务」控件 */
-function ClockIcon(p) {
-    return ((0,react_jsx_runtime_production_namespaceFn().jsxs)(SvgIcon, { ...p, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("circle", { cx: "12", cy: "12", r: "10" }), (0,react_jsx_runtime_production_namespaceFn().jsx)("path", { d: "M12 6v6l4 2" })] }));
 }
 /** 对话（Lucide `message-circle`：圆角气泡）：第一栏的「对话」导航图标（原「设备」，v26.10.12-v4） */
 function MessageIcon(p) {
@@ -56396,12 +56390,6 @@ const CONFIG = {
     MAX_SPEECH_QUEUE: 10,
     // 语音队列消息有效期（毫秒），超过该时长的陈旧消息在入队/播放前被剔除，避免播报过时内容
     SPEECH_QUEUE_TTL: 30000,
-    // Agent 会话索引最多保留多少条（v26.10.10-v12）。官方 conversation API 只开放 create/get，
-    // 会话列表由脚本自己记账（见 lib/agent/sessions.ts），故给个上限防止索引无限增长。
-    MAX_AGENT_CHATS: 30,
-    // Agent 会话标题的截断长度，与 ScriptCat 官方的自动标题规则保持一致
-    // （chat_service.ts 里 `titleText.slice(0, 30)`），这样本地记的标题和 ScriptCat 侧看到的是同一个。
-    AGENT_CHAT_TITLE_LENGTH: 30,
     // 「图片嗅探」会话归属索引的条数上限（v26.10.13-v8，见 SNIFF_CONV_INDEX_KEY）：
     // 每条只是一小段「文件名 → 会话」，但页面上的图会一直累积，给个上限防止无限增长（超出按最旧丢）。
     MAX_SNIFF_CONV_STEMS: 2000,
@@ -56417,9 +56405,6 @@ const PANEL_POINT_KEY = 'scriptCat_PanelPoint';
 // 常用语缓存（2 小时内且 URL 未变则跳过网络请求，直接复用本地数据）
 const PHRASES_CACHE_KEY = 'scriptCat_PhrasesCache';
 const PHRASES_CACHE_TTL = 2 * 60 * 60 * 1000; // 缓存有效期：2 小时（毫秒）
-// Agent 会话索引（v26.10.10-v12）：官方 conversation API 没有 list/delete，脚本只能自己记
-// 「有哪些对话、叫什么名字、上次打开的是哪个」。只存索引，对话消息仍在 ScriptCat 的 OPFS 里。
-const AGENT_CHATS_KEY = 'scriptCat_AgentChats';
 // 「图片嗅探」的会话归属索引（v26.10.13-v8）：文件名主干 → 会话（纳税人）。
 // **只存映射、不存 URL** —— im-cos 直链带签名会过期，存下来下次打开就是一片裂图。
 // 它的价值：切走会话后 Vuex 里已经没有那条消息，但图还留在资源表 / DOM 里时，仍能归回原会话。
@@ -61127,6 +61112,9 @@ es_typography_Typography.Title = typography_Title;
 es_typography_Typography.Paragraph = typography_Paragraph;
 /* harmony default export */ const typography = (es_typography_Typography);
 ;// ./node_modules/antd/es/_util/PurePanel.js
+/* unused harmony import specifier */ var _util_PurePanel_React;
+/* unused harmony import specifier */ var PurePanel_useControlledState;
+/* unused harmony import specifier */ var _util_PurePanel_ConfigContext;
 "use client";
 
 
@@ -61151,15 +61139,15 @@ const genPurePanel = (Component, alignPropName, postProps, defaultPrefixCls, get
       prefixCls: customizePrefixCls,
       style
     } = props;
-    const holderRef = (react_production_namespaceFn().useRef)(null);
-    const [popupHeight, setPopupHeight] = (react_production_namespaceFn().useState)(0);
-    const [popupWidth, setPopupWidth] = (react_production_namespaceFn().useState)(0);
-    const [open, setOpen] = useControlledState(false, props.open);
+    const holderRef = _util_PurePanel_React.useRef(null);
+    const [popupHeight, setPopupHeight] = _util_PurePanel_React.useState(0);
+    const [popupWidth, setPopupWidth] = _util_PurePanel_React.useState(0);
+    const [open, setOpen] = PurePanel_useControlledState(false, props.open);
     const {
       getPrefixCls
-    } = (react_production_namespaceFn().useContext)(ConfigContext);
+    } = _util_PurePanel_React.useContext(_util_PurePanel_ConfigContext);
     const prefixCls = getPrefixCls(defaultPrefixCls || 'select', customizePrefixCls);
-    (react_production_namespaceFn().useEffect)(() => {
+    _util_PurePanel_React.useEffect(() => {
       // We do not care about ssr
       setOpen(true);
       if (typeof ResizeObserver !== 'undefined') {
@@ -61210,16 +61198,16 @@ const genPurePanel = (Component, alignPropName, postProps, defaultPrefixCls, get
       position: 'relative',
       minWidth: popupWidth
     };
-    return /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
+    return /*#__PURE__*/_util_PurePanel_React.createElement("div", {
       ref: holderRef,
       style: mergedStyle
-    }, /*#__PURE__*/(react_production_namespaceFn().createElement)(Component, {
+    }, /*#__PURE__*/_util_PurePanel_React.createElement(Component, {
       ...mergedProps
     }));
   };
   return withPureRenderTheme(PurePanel);
 };
-/* harmony default export */ const _util_PurePanel = (genPurePanel);
+/* harmony default export */ const _util_PurePanel = ((/* unused pure expression or super */ null && (genPurePanel)));
 ;// ./node_modules/antd/es/modal/PurePanel.js
 "use client";
 
@@ -73293,7 +73281,7 @@ const PANEL_WIDTH = 238;
  *
  * ── 为什么用 state 而不是 CSS `:hover` ──────────────────────────────────────
  * 宿主税务页有自己的样式表，我们不想为了这个悬浮效果往页面里注入全局 CSS 规则
- * （`:hover` 只能靠样式表实现）。这里沿用 `transfer/AgentConversationList.tsx` 侧栏
+ * （`:hover` 只能靠样式表实现）。这里沿用 `transfer/TransferSessionList.tsx` 侧栏
  * 「hover 才出现的删除图标」的既有做法：`onMouseEnter/onMouseLeave` 改 React state，样式全部内联。
  *
  * ── 为什么隐藏时按钮仍留在 DOM 里 ───────────────────────────────────────────
@@ -75289,12 +75277,14 @@ const NAV_WIDTH = 58;
 /**
  * 第一栏导航项（v26.10.12-v4 改微信式窄栏）。
  *
- * 顺序与命名（用户要求）：**「设备」改名「对话」并置于 Agents 之上**，文件随后。
+ * 顺序与命名（用户要求）：**「设备」改名「对话」并置于最上**，文件随后。
  * 注意 key 保持 `devices` 不变 —— store / 自动弹窗 / 冒烟夹具都按 key 路由，改 key 是纯风险。
+ *
+ * ⚠️ v26.10.13-v9：中间的 **Agents 入口（含 `BotIcon`）已随 Agent 能力整体删除**，
+ * 第一栏现在只有「对话 / 文件」两个入口。
  */
 const NAV_ITEMS = [
     { key: 'devices', label: '对话', icon: MessageIcon },
-    { key: 'agents', label: 'Agents', icon: BotIcon },
     { key: 'files', label: '文件', icon: FilesIcon },
 ];
 /**
@@ -75349,10 +75339,11 @@ function NavIconButton({ label, icon, onClick, active, badge, }) {
 /**
  * 第一栏（最左侧窄导航栏，v26.10.12-v4 微信桌面版样式）。
  *
- * 结构：顶部 logo（头像位）→ 中部图标入口（对话 / Agents / 文件，只放图标不显示文字）
+ * 结构：顶部 logo（头像位）→ 中部图标入口（对话 / 文件，只放图标不显示文字）
  * → 底部设置 / 企业信息。未读总数在「对话」图标右上角挂红色角标（微信同款位置）。
  *
- * 原「外观设置」入口已随窗口固定微信暗色一起移除（见 wechatTheme.ts 头注）。
+ * 原「外观设置」入口已随窗口固定微信暗色一起移除（见 wechatTheme.ts 头注）；
+ * 原中间的 Agents 入口已随 Agent 能力删除（v26.10.13-v9）。
  */
 function TransferNavRail({ nav, onNav, onOpenSettings, onOpenAbout, unreadTotal, }) {
     const { token } = es_theme.useToken();
@@ -75379,6 +75370,192 @@ function TransferNavRail({ nav, onNav, onOpenSettings, onOpenAbout, unreadTotal,
                     const Icon = item.icon;
                     return ((0,react_jsx_runtime_production_namespaceFn().jsx)(NavIconButton, { label: item.label, icon: (0,react_jsx_runtime_production_namespaceFn().jsx)(Icon, { size: 20, color: "currentColor" }), onClick: () => onNav(item.key), active: nav === item.key, badge: item.key === 'devices' ? unreadTotal : 0 }, item.key));
                 }) }), (0,react_jsx_runtime_production_namespaceFn().jsx)("span", { style: { flex: '1 1 auto' } }), (0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', flexDirection: 'column', gap: 6 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(NavIconButton, { label: "\u8BBE\u7F6E", icon: (0,react_jsx_runtime_production_namespaceFn().jsx)(SettingsIcon, { size: 19, color: "currentColor" }), onClick: onOpenSettings }), (0,react_jsx_runtime_production_namespaceFn().jsx)(NavIconButton, { label: "\u4F01\u4E1A\u4FE1\u606F", icon: (0,react_jsx_runtime_production_namespaceFn().jsx)(InfoIcon, { size: 19, color: "currentColor" }), onClick: onOpenAbout })] })] }));
+}
+
+;// ./src/lib/ui/transfer/TransferSessionList.tsx
+
+
+
+
+
+/** 会话列表里对最后一条消息的预览文案 */
+function previewText(msg) {
+    if (!msg)
+        return '';
+    if (msg.type === 'image')
+        return '[图片]';
+    return (msg.text || '').replace(/\s+/g, ' ').slice(0, 40);
+}
+/** 列表里的时间（今天 HH:mm，昨天加「昨天」，否则 MM-DD） */
+function listTime(ts) {
+    if (!ts)
+        return '';
+    const d = new Date(ts);
+    const now = new Date();
+    const pad = (n) => String(n).padStart(2, '0');
+    const dayOf = (x) => x.getFullYear() + '-' + x.getMonth() + '-' + x.getDate();
+    const hm = pad(d.getHours()) + ':' + pad(d.getMinutes());
+    if (dayOf(d) === dayOf(now))
+        return hm;
+    const yesterday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
+    if (dayOf(d) === dayOf(yesterday))
+        return '昨天 ' + hm;
+    return pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+}
+/**
+ * 第二栏（中间会话列表栏，v26.10.12-v1；v26.10.12-v4 微信化）。
+ *
+ * 结构：顶部**搜索框 +「＋」按钮**（仅对话分组有；文件分组没有 —— 用户要求
+ * 文件下不放任何新建入口），下方按第一栏当前分组显示会话列表。
+ * 「＋」的含义：对话分组 →「配对设备」。
+ *
+ * 会话条目为微信结构：左头像 / 中名称 + 预览摘要 / 右时间 + 未读红点角标；
+ * 选中条目用比栏底浅一档的底色高亮（#383838，微信暗色同款），不再用主色底。
+ *
+ * 文件分组（v26.10.13-v5）：条目**可点 = 筛选第三栏的文件视图**（点哪个会话就只显示
+ * 哪个会话的文件，不跳去聊天窗口 —— v26.10.12-v5「只作展示」的行为由此取代）；
+ * 列表最顶上常驻一条「全部文件」，点了回到跨会话汇总。
+ *
+ * ⚠️ v26.10.13-v9：原 Agents 分组（技能 / 定时任务控件 + Agent 会话列表）已随 Agent 能力删除。
+ */
+function TransferSessionList({ nav, search, onSearch, onPair, deviceEntries, activeSessionKey, onSelectSession, filesActiveKey, onSelectFilesSession, }) {
+    const { token } = es_theme.useToken();
+    const isFiles = nav === 'files';
+    /** 文件分组 + 父组件提供了筛选回调 ⇒ 条目可点（= 筛选第三栏文件视图） */
+    const filesMode = isFiles && !!onSelectFilesSession;
+    const keyword = search.trim().toLowerCase();
+    const filtered = keyword
+        ? deviceEntries.filter((e) => e.label.toLowerCase().includes(keyword) || previewText(e.lastMsg).toLowerCase().includes(keyword))
+        : deviceEntries;
+    return ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { className: "znhd-transfer-sessions", style: {
+            flex: '0 0 auto',
+            width: 250,
+            display: 'flex',
+            flexDirection: 'column',
+            background: WECHAT.list,
+            minWidth: 0,
+        }, children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', gap: 6, padding: '10px 10px 8px' }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(es_input, { allowClear: true, prefix: (0,react_jsx_runtime_production_namespaceFn().jsx)(SearchIcon, { size: 14, color: "rgba(255,255,255,0.35)" }), placeholder: "\u641C\u7D22", value: search, onChange: (e) => onSearch(e.target.value), style: {
+                            background: WECHAT.chat,
+                            borderRadius: 6,
+                        } }), isFiles ? null : ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_tooltip, { title: "\u914D\u5BF9\u8BBE\u5907\uFF08\u624B\u673A\u626B\u7801 / \u6253\u5F00\u94FE\u63A5\u5373\u5B8C\u6210\u914D\u5BF9\uFF09", children: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { type: "text", "aria-label": "\u914D\u5BF9\u8BBE\u5907", onClick: onPair, style: {
+                                width: 28,
+                                padding: 0,
+                                color: 'rgba(255,255,255,0.65)',
+                            }, children: (0,react_jsx_runtime_production_namespaceFn().jsx)(PlusIcon, { size: 16 }) }) }))] }), (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { flex: '1 1 auto', minHeight: 0, overflowY: 'auto', padding: '0 6px 10px' }, children: filtered.length ? ((0,react_jsx_runtime_production_namespaceFn().jsxs)((react_jsx_runtime_production_namespaceFn().Fragment), { children: [filesMode ? ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { className: "znhd-transfer-session-item", "data-all-files": "1", title: "\u5168\u90E8\u6587\u4EF6", "aria-label": "\u5168\u90E8\u6587\u4EF6", onClick: () => onSelectFilesSession(''), style: {
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 10,
+                                padding: '9px 10px',
+                                borderRadius: 6,
+                                cursor: 'pointer',
+                                background: filesActiveKey === '' ? WECHAT.selected : 'transparent',
+                            }, onMouseEnter: (ev) => {
+                                if (filesActiveKey !== '')
+                                    ev.currentTarget.style.background = WECHAT.hover;
+                            }, onMouseLeave: (ev) => {
+                                if (filesActiveKey !== '')
+                                    ev.currentTarget.style.background = 'transparent';
+                            }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("span", { style: {
+                                        width: 36,
+                                        height: 36,
+                                        borderRadius: 6,
+                                        flex: '0 0 auto',
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        background: WECHAT.bubblePeer,
+                                        color: 'rgba(255,255,255,0.8)',
+                                    }, children: (0,react_jsx_runtime_production_namespaceFn().jsx)(GridIcon, { size: 18, color: "currentColor" }) }), (0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { flex: '1 1 auto', minWidth: 0 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: {
+                                                fontSize: 13,
+                                                color: 'rgba(255,255,255,0.9)',
+                                                overflow: 'hidden',
+                                                textOverflow: 'ellipsis',
+                                                whiteSpace: 'nowrap',
+                                            }, children: "\u5168\u90E8\u6587\u4EF6" }), (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: {
+                                                fontSize: 12,
+                                                color: 'rgba(255,255,255,0.4)',
+                                                overflow: 'hidden',
+                                                textOverflow: 'ellipsis',
+                                                whiteSpace: 'nowrap',
+                                                marginTop: 1,
+                                            }, children: "\u6240\u6709\u4F1A\u8BDD\u7684\u56FE\u7247\u4E0E\u6587\u672C" })] })] }, "__all_files__")) : null, filtered.map((e) => {
+                            // 文件分组：选中/点击都走「筛选文件视图」；其余分组照旧（选中会话 → 聊天）
+                            const active = filesMode ? e.key === filesActiveKey : e.key === activeSessionKey;
+                            const clickable = filesMode || !isFiles;
+                            const pick = () => {
+                                if (filesMode)
+                                    onSelectFilesSession(e.key);
+                                else
+                                    onSelectSession(e.key);
+                            };
+                            return ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { className: "znhd-transfer-session-item", title: e.label, onClick: clickable ? pick : undefined, style: {
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 10,
+                                    padding: '9px 10px',
+                                    borderRadius: 6,
+                                    cursor: clickable ? 'pointer' : 'default',
+                                    // 选中 = 比栏底浅一档（微信暗色同款）；悬停 = 中间档
+                                    background: active ? WECHAT.selected : 'transparent',
+                                }, onMouseEnter: (ev) => {
+                                    if (clickable && !active)
+                                        ev.currentTarget.style.background = WECHAT.hover;
+                                }, onMouseLeave: (ev) => {
+                                    if (clickable && !active)
+                                        ev.currentTarget.style.background = 'transparent';
+                                }, children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)("span", { style: {
+                                            width: 36,
+                                            height: 36,
+                                            borderRadius: 6,
+                                            flex: '0 0 auto',
+                                            display: 'inline-flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            background: e.isAggregate ? WECHAT.bubblePeer : token.colorPrimaryBg,
+                                            color: e.isAggregate ? 'rgba(255,255,255,0.8)' : token.colorPrimary,
+                                            fontSize: 14,
+                                            fontWeight: 600,
+                                            position: 'relative',
+                                        }, children: [e.isAggregate ? ((0,react_jsx_runtime_production_namespaceFn().jsx)(SmartphoneIcon, { size: 18, color: "currentColor" })) : (e.label.slice(0, 1).toUpperCase()), e.online ? ((0,react_jsx_runtime_production_namespaceFn().jsx)("span", { style: {
+                                                    position: 'absolute',
+                                                    right: -2,
+                                                    bottom: -2,
+                                                    width: 9,
+                                                    height: 9,
+                                                    borderRadius: '50%',
+                                                    background: '#52c41a',
+                                                    border: '1.5px solid ' + WECHAT.list,
+                                                } })) : null] }), (0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { flex: '1 1 auto', minWidth: 0 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: {
+                                                    fontSize: 13,
+                                                    color: 'rgba(255,255,255,0.9)',
+                                                    overflow: 'hidden',
+                                                    textOverflow: 'ellipsis',
+                                                    whiteSpace: 'nowrap',
+                                                }, children: e.label }), (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: {
+                                                    fontSize: 12,
+                                                    color: 'rgba(255,255,255,0.4)',
+                                                    overflow: 'hidden',
+                                                    textOverflow: 'ellipsis',
+                                                    whiteSpace: 'nowrap',
+                                                    marginTop: 1,
+                                                }, children: e.lastMsg ? previewText(e.lastMsg) : e.online ? '在线' : '离线' })] }), (0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { flex: '0 0 auto', textAlign: 'right' }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { fontSize: 11, color: 'rgba(255,255,255,0.35)' }, children: listTime(e.lastTs || 0) }), e.unread > 0 ? ((0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: {
+                                                    marginTop: 3,
+                                                    marginLeft: 'auto',
+                                                    background: '#FA5151',
+                                                    color: '#fff',
+                                                    borderRadius: 9,
+                                                    fontSize: 11,
+                                                    lineHeight: '16px',
+                                                    padding: '0 5px',
+                                                    minWidth: 16,
+                                                    textAlign: 'center',
+                                                }, children: e.unread > 99 ? '99+' : e.unread })) : null] })] }, e.key));
+                        })] })) : ((0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: {
+                        fontSize: 12,
+                        color: 'rgba(255,255,255,0.35)',
+                        padding: '12px 4px',
+                        textAlign: 'center',
+                    }, children: keyword ? '没有匹配的会话 / 设备' : isFiles ? '暂无文件' : '暂无会话——点右上角 + 配对手机' })) })] }));
 }
 
 ;// ./node_modules/antd/es/_util/getRenderPropValue.js
@@ -76066,7355 +76243,1584 @@ popconfirm_Popconfirm._InternalPanelDoNotUseOrYouWillBeFired = popconfirm_PurePa
 if (false) // removed by dead control flow
 {}
 /* harmony default export */ const popconfirm = (popconfirm_Popconfirm);
-;// ./src/lib/agent/sessions.ts
+;// ./shared/image/compress.ts
 /**
- * Agent 会话索引（v26.10.10-v12）。
+ * 图片压缩核心 —— 脚本端与手机上传页**共用一份**（v26.10.08-v13 起）。
  *
- * ── 为什么脚本要自己记一份会话列表 ───────────────────────────────────────────
- * 官方 `CAT.agent.conversation` 只对脚本开放两个方法：`create()` 和 `get(id)`
- * （ScriptCat 侧 `src/types/scriptcat.d.ts:1104-1115`，内容侧实现
- * `src/app/service/content/gm_api/cat_agent.ts:924-960`）。内部的
- * `listConversations()` / `deleteConversation()`（`src/app/repo/agent_chat.ts:173`、`:237`）
- * 没有对应的 `@GMContext.API` 出口，而脚本侧的 `sendMessage` 是 `protected`，绕不过去。
- * 所以「有哪些对话、叫什么名字、上次打开的是哪个」只能由脚本自己记账 —— 就是本模块。
+ * 为什么抽出来：两端原本各有一份**几乎逐行等价**的 canvas 压缩实现，连参数（最大边 1600 / JPEG 0.75）
+ * 也是两份、靠注释「与另一端保持一致」人肉同步 —— 结果已经漂移：脚本端跳过 GIF（canvas 只取首帧，
+ * 会把动图压成静态图），手机端没跳过，同一张动图两端行为不同。抽成一份后，参数、解码兜底、
+ * 「为什么要跳过」这些理由只有一处，两端差异改用**显式选项**表达（见 `prepare.ts`）。
  *
- * ── 这里存的**只是索引** ───────────────────────────────────────────────────
- * 对话消息本体一直在 ScriptCat 的 OPFS 里（本脚本用的是非 ephemeral 对话）。
- * 索引丢了最多是「列表看不到」，消息不会丢；切回某个对话时仍走 `conversation.get(id)` 取历史。
- * 反过来，索引里的 id 在 ScriptCat 侧被清掉时 `get()` 会返回 null，调用方按「已失效」处理。
- *
- * ── 为什么对话 id 是 ScriptCat 生成的 ──────────────────────────────────────
- * `create()` 支持传自定义 id，但没必要：id 拿到就存下来即可，少一处自造 id 的撞号风险。
+ * ⚠️ **共享层的硬约束**（改这个文件前务必先读 `AGENT.md` 的「共享层」小节）：
+ *   · 禁止 import 任何宿主相关模块（`GM_*` / `@/lib/logger` / `panelHost` / `react-to-print` …）：
+ *     手机端 tsconfig 是 `types: ["vite/client"]`，出现 `GM_xmlhttpRequest` 这类全局会直接 typecheck 失败；
+ *   · 手机端开着 `isolatedModules` + `noUnusedLocals` + `noUnusedParameters`，`target` 为 **es2020**
+ *     ⇒ 共享代码必须按**最严的那一套**写（类型再导出用 `export type`、不留未使用变量、不超出 ES2020）；
+ *   · 手机端没装 `@ant-design/icons`、`react-to-print`（未声明）⇒ 只有两端都有的依赖才能 import。
  */
-
-
-const EMPTY_STORE = { activeId: null, items: [] };
-function isSession(value) {
-    if (!value || typeof value !== 'object')
-        return false;
-    const item = value;
-    return typeof item.id === 'string' && !!item.id && typeof item.title === 'string';
+/** 「发送到手机 / 上传到电脑」的压缩参数：两端共用同一组默认值 */
+const DEFAULT_MAX_DIM = 1600;
+const DEFAULT_QUALITY = 0.75;
+/** HEIC/HEIF 判定：MIME 可能为空串或 application/octet-stream，故扩展名也算 */
+function isHeicLike(lowerMime, lowerName) {
+    return (lowerMime === 'image/heic' ||
+        lowerMime === 'image/heif' ||
+        lowerMime === 'image/heic-sequence' ||
+        lowerMime === 'image/heif-sequence' ||
+        /\.(heic|heif)$/.test(lowerName));
+}
+/** SVG 判定：canvas 无法可靠光栅化，且会丢矢量 ⇒ 一律原样直传 */
+function isSvgLike(lowerMime, lowerName) {
+    return lowerMime === 'image/svg+xml' || /\.svg$/.test(lowerName);
+}
+/** GIF 判定：canvas 只取首帧，会把动图压成静态图 ⇒ 默认也原样直传 */
+function isGifLike(lowerMime, lowerName) {
+    return lowerMime === 'image/gif' || /\.gif$/.test(lowerName);
 }
 /**
- * 读索引。任何异常（localStorage 不可用、JSON 被别的东西写坏）都退化成空列表 ——
- * 弹窗打开时读它，绝不能因为一份索引解析失败就整块面板报错。
+ * WebP 判定：默认同样**原样直传**（v26.10.13-v3 加）。两条理由与 SVG/GIF 同源：
+ *   · canvas 只能导出 JPEG ⇒ **透明通道丢失**（JPEG 无 alpha，实现里要铺白底），而聊天用的
+ *     表情图（桌面端在线表情包，cdn.klyang.com 的静态 webp）几乎都是透明背景，压完就会
+ *     变成深色气泡里的一块白方块；
+ *   · 动画 webp 与 GIF 一样只取首帧，会把动图压死。
+ * 何况 webp 本身压缩率就高（表情图单张仅 2–6KB），再压基本只剩「体积变大」的份 ——
+ * 即便不特判，`prepare.ts` 里「压不小就原样发」的兜底也会落到同一结果；
+ * 显式写出来是为了**语义明确**，别让后来人以为这是被兜底意外兜住的。
  */
-function loadAgentChatStore() {
+function isWebpLike(lowerMime, lowerName) {
+    return lowerMime === 'image/webp' || /\.webp$/.test(lowerName);
+}
+/**
+ * 解码：`createImageBitmap` 优先，失败回退 `<img>`（部分内核/格式上前者不可用或直接抛）。
+ * 失败时 reject，由调用方决定回退策略。
+ */
+function decodeToCanvasSource(blob) {
+    const decodeViaImg = () => new Promise((resolve, reject) => {
+        const url = URL.createObjectURL(blob);
+        const img = new Image();
+        img.onload = () => resolve({
+            source: img,
+            width: img.naturalWidth,
+            height: img.naturalHeight,
+            release: () => URL.revokeObjectURL(url),
+        });
+        img.onerror = () => {
+            URL.revokeObjectURL(url);
+            reject(new Error('图片解析失败'));
+        };
+        img.src = url;
+    });
+    if (typeof createImageBitmap !== 'function')
+        return decodeViaImg();
+    return createImageBitmap(blob)
+        .then((bmp) => ({
+        source: bmp,
+        width: bmp.width,
+        height: bmp.height,
+        release: () => {
+            if (bmp.close)
+                bmp.close();
+        },
+    }))
+        .catch(() => decodeViaImg());
+}
+/**
+ * canvas 等比缩放到最大边 → 铺白底 → 导出 JPEG。
+ *
+ * JPEG 无透明通道，**必须先铺白底**，否则透明 PNG 会被压成黑底。
+ * 解码/编码失败一律 resolve(null)（不 reject）：两端调用方都按「失败就原样直传」处理，绝不阻断传输。
+ */
+async function resizeToJpeg(blob, opt = {}) {
+    const maxDim = opt.maxDim && opt.maxDim > 0 ? opt.maxDim : DEFAULT_MAX_DIM;
+    const quality = typeof opt.quality === 'number' ? opt.quality : DEFAULT_QUALITY;
+    let dec = null;
     try {
-        const raw = localStorage.getItem(AGENT_CHATS_KEY);
-        if (!raw)
-            return EMPTY_STORE;
-        const parsed = JSON.parse(raw);
-        if (!parsed || typeof parsed !== 'object')
-            return EMPTY_STORE;
-        const record = parsed;
-        const items = (Array.isArray(record.items) ? record.items : [])
-            .filter(isSession)
-            .slice(0, CONFIG.MAX_AGENT_CHATS)
-            .map((item) => ({
-            id: item.id,
-            title: item.title,
-            createtime: typeof item.createtime === 'number' ? item.createtime : 0,
-            updatetime: typeof item.updatetime === 'number' ? item.updatetime : 0,
-        }));
-        const activeId = typeof record.activeId === 'string' && record.activeId ? record.activeId : null;
-        // activeId 指向的条目不在索引里（索引被手改过 / 写入中断）：当作没有活动对话，避免界面显示一个点不开的选项
-        return { activeId: items.some((item) => item.id === activeId) ? activeId : null, items };
+        dec = await decodeToCanvasSource(blob);
+        const w = Number(dec.width) || 0;
+        const h = Number(dec.height) || 0;
+        if (!w || !h)
+            return null;
+        const scale = Math.min(1, maxDim / Math.max(w, h));
+        const cw = Math.max(1, Math.round(w * scale));
+        const ch = Math.max(1, Math.round(h * scale));
+        const cv = document.createElement('canvas');
+        cv.width = cw;
+        cv.height = ch;
+        const ctx = cv.getContext('2d');
+        if (!ctx)
+            return null;
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(0, 0, cw, ch);
+        ctx.drawImage(dec.source, 0, 0, cw, ch);
+        return await new Promise((resolve) => {
+            cv.toBlob((b) => resolve(b || null), 'image/jpeg', quality);
+        });
     }
-    catch (error) {
-        addLog('[Agent] 读取会话列表失败: ' + (error instanceof Error ? error.message : String(error)), 'warning');
-        return EMPTY_STORE;
+    catch {
+        return null;
     }
-}
-/** 写索引。失败只记日志：会话列表写不进去不该打断正在进行的对话。 */
-function saveAgentChatStore(store) {
-    try {
-        localStorage.setItem(AGENT_CHATS_KEY, JSON.stringify(store));
-    }
-    catch (error) {
-        addLog('[Agent] 保存会话列表失败: ' + (error instanceof Error ? error.message : String(error)), 'warning');
+    finally {
+        // createImageBitmap 的位图要显式 close，否则大图会短暂占住内存
+        if (dec)
+            dec.release();
     }
 }
 /**
- * 由首条用户消息生成会话标题，规则与官方一致（截断长度见 CONFIG.AGENT_CHAT_TITLE_LENGTH）。
- * 换行/连续空白压成单个空格，否则列表里会出现莫名其妙的空白。
+ * 把「注入进来的 heic2any」包成统一形态的转码器。
+ * 两端获取库的方式天生不同（脚本端用 `@require` 的全局，手机页按需注入 `<script>`），故只共享调用方式。
  */
-function agentChatTitle(text) {
-    const flat = text.replace(/\s+/g, ' ').trim();
-    const limit = CONFIG.AGENT_CHAT_TITLE_LENGTH;
-    if (flat.length <= limit)
-        return flat || '新对话';
-    return flat.slice(0, limit) + '…';
-}
-/**
- * 写入/更新一条会话，并把它提到列表最前（最近使用）。
- * 已存在时以传入的 session 为准整条替换，调用方负责决定是否保留原标题。
- */
-function upsertAgentChat(items, session) {
-    const rest = items.filter((item) => item.id !== session.id);
-    return [session, ...rest].slice(0, CONFIG.MAX_AGENT_CHATS);
-}
-/** 从索引里移除一条（删对话时用）。官方没有删除会话的接口，这里只动本地索引。 */
-function removeAgentChat(items, id) {
-    return items.filter((item) => item.id !== id);
-}
-/** 取一条会话的标题，取不到时回退成 id 前 8 位（界面上总得显示点东西） */
-function agentChatLabel(items, id) {
-    const found = items.find((item) => item.id === id);
-    if (found && found.title)
-        return found.title;
-    return id ? id.slice(0, 8) : '新对话';
-}
-
-;// ./src/lib/ui/transfer/AgentConversationList.tsx
-
-
-
-
-
-
-/**
- * 会话卡片上的时间（NextChat 的列表也是这个位置）。
- * 只到分钟：脚本不用 moment/dayjs（零运行时依赖），手写两行足够。
- */
-function chatTimeText(timestamp) {
-    if (!timestamp)
-        return '';
-    const date = new Date(timestamp);
-    if (Number.isNaN(date.getTime()))
-        return '';
-    const pad = (value) => String(value).padStart(2, '0');
-    return (pad(date.getMonth() + 1) + '/' + pad(date.getDate()) + ' ' + pad(date.getHours()) + ':' + pad(date.getMinutes()));
-}
-/**
- * Agent 会话列表（v26.10.12-v1：从 AgentModal 左侧会话栏搬来，作为传输助手第二栏的
- * Agents 内容）。
- *
- * v26.10.12-v3 去掉列表顶部那个「新的聊天」按钮：用户要求把新建的入口并进**搜索框右侧的 ＋**
- * （`TransferSessionList` 里，Agents 分组下它是「新建对话」，设备分组下才是「配对设备」）——
- * 于是这里只剩「标题 + 一条条会话卡片（选中高亮、悬停出删除）」。
- *
- * ⚠️ 类名 `znhd-agent-chat-item` / `znhd-agent-chat-list` 是冒烟断言的定位符
- * （AGENT.md「历史踩坑索引」有记），勿改。
- */
-function AgentConversationList({ chats, activeChatId, onSwitch, onDelete, }) {
-    const { token } = es_theme.useToken();
-    /** 鼠标正悬停的会话卡片：删除图标只在悬停（或选中）时出现，用 state 而不是 CSS 类 */
-    const [hoverChatId, setHoverChatId] = (0,react_production_namespaceFn().useState)('');
-    const renderChatItem = (item) => {
-        const active = item.id === activeChatId;
-        return ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { className: 'znhd-agent-chat-item' + (active ? ' znhd-agent-chat-item-active' : ''), title: agentChatLabel(chats, item.id), onClick: () => onSwitch(item.id), onMouseEnter: () => setHoverChatId(item.id), onMouseLeave: () => setHoverChatId((current) => (current === item.id ? '' : current)), style: {
-                position: 'relative',
-                padding: '6px 24px 6px 8px',
-                marginBottom: 4,
-                borderRadius: 6,
-                cursor: 'pointer',
-                lineHeight: 1.5,
-                background: active ? token.colorPrimaryBg : token.colorFillQuaternary,
-                border: '1px solid ' + (active ? token.colorPrimaryBorder : 'transparent'),
-            }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { fontSize: 12, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }, children: agentChatLabel(chats, item.id) }), (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { fontSize: 11, color: token.colorTextTertiary }, children: chatTimeText(item.updatetime) }), (0,react_jsx_runtime_production_namespaceFn().jsx)("span", { style: {
-                        position: 'absolute',
-                        top: 4,
-                        right: 2,
-                        opacity: active || hoverChatId === item.id ? 1 : 0,
-                    }, onClick: (event) => event.stopPropagation(), children: (0,react_jsx_runtime_production_namespaceFn().jsx)(popconfirm, { title: "\u5220\u9664\u8FD9\u4E2A\u5BF9\u8BDD\uFF1F", description: "\u4F1A\u6E05\u7A7A\u8BE5\u5BF9\u8BDD\u7684\u6D88\u606F\u8BB0\u5F55\uFF0C\u5E76\u4ECE\u4F1A\u8BDD\u5217\u8868\u91CC\u79FB\u9664\u3002", okText: "\u5220\u9664", cancelText: "\u53D6\u6D88", okButtonProps: { danger: true }, onConfirm: () => void onDelete(item.id), children: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { type: "text", size: "small", "aria-label": "\u5220\u9664\u5BF9\u8BDD", icon: (0,react_jsx_runtime_production_namespaceFn().jsx)(TrashIcon, { size: 12 }), style: { width: 20, height: 20, minWidth: 20, padding: 0, color: token.colorTextTertiary } }) }) })] }, item.id));
+function makeHeicConverter(heic2any, quality = 0.9) {
+    return (blob) => {
+        if (typeof heic2any !== 'function')
+            return Promise.reject(new Error('heic2any 未加载'));
+        return Promise.resolve(heic2any({
+            blob,
+            toType: 'image/jpeg',
+            quality,
+        })).then((out) => {
+            // 多图 HEIC 会返回数组，取首帧
+            const b = Array.isArray(out) ? out[0] : out;
+            if (b)
+                return b;
+            throw new Error('heic2any 未产出图片');
+        });
     };
-    return ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', flexDirection: 'column', gap: 4, minHeight: 0, flex: '1 1 auto' }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { fontSize: 11, color: token.colorTextTertiary, padding: '0 2px' }, children: "\u5BF9\u8BDD" }), (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { className: "znhd-agent-chat-list", style: { flex: '1 1 auto', minHeight: 0, overflowY: 'auto', overflowX: 'hidden' }, children: chats.length ? (chats.map(renderChatItem)) : ((0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { fontSize: 12, color: token.colorTextTertiary, padding: '4px 2px' }, children: "\u8FD8\u6CA1\u6709\u5386\u53F2\u5BF9\u8BDD\u3002\u53D1\u51FA\u7B2C\u4E00\u6761\u6D88\u606F\u540E\uFF0C\u5B83\u4F1A\u51FA\u73B0\u5728\u8FD9\u91CC\u3002" })) })] }));
 }
 
-;// ./src/lib/ui/transfer/TransferSessionList.tsx
+;// ./shared/image/prepare.ts
+/**
+ * 「把用户选的图片处理成可直接传输的载荷」—— 脚本端与手机上传页**共用一份**（v26.10.08-v13 起）。
+ *
+ * 统一后的行为（两端差异全部变成显式选项）：
+ *   · SVG 原样直传（canvas 无法可靠光栅化，会丢矢量）；
+ *   · **GIF 也原样直传**（canvas 只取首帧，会把动图压成静态图）—— 原先只有脚本端这么做，
+ *     手机端会压成静态图；这次统一为「跳过」，顺手修掉两端行为不一致；
+ *   · **WebP 也原样直传**（v26.10.13-v3 加，理由同 GIF，另加「JPEG 无透明通道」一条 ——
+ *     桌面端在线表情包是透明背景的 webp，压完会在深色气泡里变成白方块）；
+ *   · HEIC/HEIF 先转 JPEG 再走同一条压缩链（**转码器由调用方注入**：两端取库方式不同）；
+ *     ⚠️ HEIC 的「转码」本身就是目的（既压体积，也修掉安卓端不显示 HEIC 的兼容问题），
+ *     故即使 JPEG 没比原始 HEIC 小也照样发 JPEG；其它格式仍遵循「压不小就不压」；
+ *   · 任何失败都回退原图直传，绝不阻断传输。
+ */
 
-
-
-
-
-
-/** 会话列表里对最后一条消息的预览文案 */
-function previewText(msg) {
-    if (!msg)
-        return '';
-    if (msg.type === 'image')
-        return '[图片]';
-    return (msg.text || '').replace(/\s+/g, ' ').slice(0, 40);
+/**
+ * 把用户选的图片处理成可直接传输的载荷。
+ * 与历史行为逐条对齐（含「压完反而更大就不压」的兜底），失败一律原样直传。
+ */
+async function prepareForTransfer(file, opt = {}) {
+    const name = String(file && file.name ? file.name : 'image.jpg');
+    const mime = String((file && file.type) || 'image/jpeg');
+    const original = { blob: file, name, mime, compressed: false };
+    const lowerName = name.toLowerCase();
+    const lowerMime = mime.toLowerCase();
+    if ((opt.skipSvg === undefined ? true : opt.skipSvg) && isSvgLike(lowerMime, lowerName))
+        return original;
+    if ((opt.skipGif === undefined ? true : opt.skipGif) && isGifLike(lowerMime, lowerName))
+        return original;
+    if ((opt.skipWebp === undefined ? true : opt.skipWebp) && isWebpLike(lowerMime, lowerName))
+        return original;
+    const heic = isHeicLike(lowerMime, lowerName);
+    let source = file;
+    if (heic) {
+        if (!opt.loadHeic)
+            return original; // 库不可用：原图直传，交由接收端处理
+        try {
+            const jpg = await opt.loadHeic(file);
+            if (!jpg)
+                return original;
+            source = jpg;
+        }
+        catch {
+            return original; // 转码失败：原样直传
+        }
+    }
+    const out = await resizeToJpeg(source, {
+        maxDim: opt.maxDim === undefined ? (/* inlined export .DEFAULT_MAX_DIM */1600) : opt.maxDim,
+        quality: opt.quality === undefined ? (/* inlined export .DEFAULT_QUALITY */0.75) : opt.quality,
+    });
+    if (!out)
+        return original; // 解码/编码失败
+    if (!heic && out.size >= (file.size || 0))
+        return original; // 非 HEIC 且压不小 ⇒ 原样发
+    return {
+        blob: out,
+        name: name.replace(/\.[a-z0-9]+$/i, '') + '.jpg',
+        mime: 'image/jpeg',
+        compressed: true,
+    };
 }
-/** 列表里的时间（今天 HH:mm，昨天加「昨天」，否则 MM-DD） */
-function listTime(ts) {
-    if (!ts)
-        return '';
-    const d = new Date(ts);
-    const now = new Date();
-    const pad = (n) => String(n).padStart(2, '0');
-    const dayOf = (x) => x.getFullYear() + '-' + x.getMonth() + '-' + x.getDate();
-    const hm = pad(d.getHours()) + ':' + pad(d.getMinutes());
-    if (dayOf(d) === dayOf(now))
-        return hm;
-    const yesterday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
-    if (dayOf(d) === dayOf(yesterday))
-        return '昨天 ' + hm;
-    return pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+
+;// ./src/lib/relay.ts
+
+// 图片压缩：与手机上传页共用同一份实现（v26.10.08-v13 起），路径见仓库根 shared/
+
+
+/**
+ * 设备互联中继客户端（手机 → 电脑）与图片剪贴板工具。
+ * 模块化 P4：逐字迁移，仅加 export（内部使用的不导出）。
+ * 说明：长轮询而非 WebSocket 是为了绕过税务页 CSP 对 connect-src 的限制。
+ */
+// ========== 手机图片 → 电脑剪贴板 ==========
+// 每台电脑/每个脚本安装实例一个稳定 deviceId（持久化，刷新不变），
+// 拼出上传链接 <relayServer>/u/<deviceId>；手机打开该链接上传，电脑端长轮询取走。
+const DEVICE_ID_KEY = 'znhd_device_id';
+// 单请求体上限，须与 relay-server 的 MAX_BODY 保持一致（服务端按「整段 JSON 体积」掐断）。
+// 发图前据此预检体积，避免 base64 膨胀后超过上限，被服务端拒绝时只见笼统的网络/服务器错误。
+const RELAY_MAX_BODY = 12 * 1024 * 1024;
+/**
+ * 估算把该文件作为一条 POST body（含 name+mime+base64(data) 与 JSON 结构开销）的体积。
+ * 仅用于「发送到手机」发前预检，与服务端 MAX_BODY 对齐（约 12MB）。
+ * @param {File|Blob} file - 待发图片文件
+ * @param {string} [name] - 文件名
+ * @param {string} [mime] - MIME 类型
+ * @returns {number} 估算的 body 字节数
+ */
+function imagePayloadBytes(file, name, mime) {
+    const b64Len = Math.ceil(((file && file.size) || 0) / 3) * 4; // base64 膨胀 ≈ 4/3
+    // name/mime 按 UTF-8 字节数计（服务端 readBody 按字节累加；String.length 是 UTF-16 码元，
+    // 中文文件名会低估约 3 倍，接近上限时预检可能误放行）
+    const enc = typeof TextEncoder === 'function' ? new TextEncoder() : null;
+    const byteLen = enc
+        ? enc.encode(String(name || '') + String(mime || '')).length
+        : (String(name || '') + String(mime || '')).length;
+    return b64Len + byteLen + 120;
+}
+/** 「发送到手机」压缩参数：与手机上传页共用同一份实现与默认值（见 shared/image/compress.ts） */
+const PHONE_MAX_DIM = (/* inlined export .DEFAULT_MAX_DIM */1600);
+const PHONE_JPEG_QUALITY = (/* inlined export .DEFAULT_QUALITY */0.75);
+/**
+ * 「电脑端 → 手机端」发送前的图片压缩。
+ *
+ * v26.10.08-v13 起**实现搬进共享层** `shared/image/prepare.ts`（与手机上传页同一份）。
+ * 规则（SVG/GIF 原样直传、HEIC 先转码、压不小就不压、任何失败都回退原图）全部在那边，
+ * 这里只剩脚本端**特有的一步**：把「HEIC 取库方式」注入进去 ——
+ * 脚本端用的是 `@require` 进来的全局 `heic2any`，手机页是运行期按需注入 `<script>`。
+ *
+ * @param {File|Blob} file - 用户选择的原始图片文件
+ * @returns {Promise<PhoneImagePayload>} 实际要发送的内容
+ */
+function compressImageForPhone(file) {
+    return prepareForTransfer(file, {
+        maxDim: PHONE_MAX_DIM,
+        quality: PHONE_JPEG_QUALITY,
+        loadHeic: (blob) => makeHeicConverter(typeof heic2any === 'function' ? heic2any : null)(blob),
+    });
 }
 /**
- * 第二栏（中间会话列表栏，v26.10.12-v1；v26.10.12-v4 微信化）。
- *
- * 结构：顶部**搜索框 +「＋」按钮**（仅对话 / Agents 分组有；文件分组没有 —— 用户要求
- * 文件下不放任何新建入口），下方按第一栏当前分组显示会话 / 对话列表。
- * 「＋」的含义随分组变：对话分组 →「配对设备」；Agents 分组 →「新建对话」。
- *
- * 会话条目为微信结构：左头像 / 中名称 + 预览摘要 / 右时间 + 未读红点角标；
- * 选中条目用比栏底浅一档的底色高亮（#383838，微信暗色同款），不再用主色底。
- *
- * 文件分组（v26.10.13-v5）：条目**可点 = 筛选第三栏的文件视图**（点哪个会话就只显示
- * 哪个会话的文件，不跳去聊天窗口 —— v26.10.12-v5「只作展示」的行为由此取代）；
- * 列表最顶上常驻一条「全部文件」，点了回到跨会话汇总。
+ * 取得本机稳定设备 ID：首次运行用 crypto.randomUUID() 生成并持久化（GM_setValue），
+ * 之后刷新/重开都读同一值。用于区分不同电脑（A、B 各自不同链接）。
+ * @returns {string} 设备 UUID 字符串
  */
-function TransferSessionList({ nav, search, onSearch, onPair, deviceEntries, activeSessionKey, onSelectSession, filesActiveKey, onSelectFilesSession, agent, agentPane, onAgentPane, }) {
+function getDeviceId() {
+    let id = '';
+    try {
+        id = typeof GM_getValue === 'function' ? GM_getValue(DEVICE_ID_KEY, '') || '' : '';
+    }
+    catch (e) {
+        id = '';
+    }
+    if (!id) {
+        try {
+            id =
+                window.crypto && crypto.randomUUID
+                    ? crypto.randomUUID()
+                    : 'd' + Date.now().toString(16) + Math.random().toString(16).slice(2);
+        }
+        catch (e) {
+            id = 'd' + Date.now().toString(16) + Math.random().toString(16).slice(2);
+        }
+        try {
+            if (typeof GM_setValue === 'function')
+                GM_setValue(DEVICE_ID_KEY, id);
+        }
+        catch (e) {
+            /* 忽略 */
+        }
+    }
+    return id;
+}
+/**
+ * 将 base64 字符串还原为 Blob（用于把中继返回的图片字节写剪贴板）。
+ * @param {string} b64 - base64 文本
+ * @param {string} mime - MIME 类型
+ * @returns {Blob} 图片 Blob
+ */
+function base64ToBlob(b64, mime) {
+    const bin = atob(b64);
+    const len = bin.length;
+    const arr = new Uint8Array(len);
+    for (let i = 0; i < len; i++)
+        arr[i] = bin.charCodeAt(i);
+    return new Blob([arr], { type: mime || 'image/jpeg' });
+}
+/**
+ * 将图片 Blob 转成 PNG Blob（best-effort）。
+ * 原因：异步 Clipboard API（navigator.clipboard.write + ClipboardItem）在部分
+ * Chromium 内核里只可靠支持 image/png；手机传来的图多为 image/jpeg，
+ * 直接以 image/jpeg 写入可能失败。统一转 PNG 可规避该限制。
+ * 若环境不支持位图解码 / Canvas，则返回原 blob。
+ * @param {Blob} blob
+ * @returns {Promise<Blob>}
+ */
+function blobToPng(blob) {
+    return new Promise((resolve) => {
+        if (typeof createImageBitmap !== 'function' || typeof document === 'undefined') {
+            resolve(blob);
+            return;
+        }
+        try {
+            createImageBitmap(blob)
+                .then((bmp) => {
+                const cv = document.createElement('canvas');
+                cv.width = bmp.width;
+                cv.height = bmp.height;
+                const ctx = cv.getContext('2d');
+                if (!ctx) {
+                    if (bmp.close)
+                        bmp.close();
+                    resolve(blob);
+                    return;
+                }
+                ctx.drawImage(bmp, 0, 0);
+                if (bmp.close)
+                    bmp.close();
+                cv.toBlob((b) => {
+                    resolve(b || blob);
+                }, 'image/png');
+            })
+                .catch(() => resolve(blob));
+        }
+        catch (e) {
+            resolve(blob);
+        }
+    });
+}
+/** 统一取可读的异常文本 */
+function errTextOf(e) {
+    const err = e;
+    return err && err.name ? err.name + ': ' + err.message : String((err && err.message) || e);
+}
+/**
+ * 用目标 realm 的原生 Blob 构造器重新包一层。
+ * 跨 realm 直接把「隔离世界的 Blob」交给「页面主世界的 ClipboardItem」可能被拒绝；
+ * 参考实现 qsniyg/maxurl 同样是用页面原生 `native_blob` 构造后再传入 ClipboardItem。
+ */
+function toRealmBlob(blob, BlobCtor) {
+    const type = blob && blob.type ? blob.type : 'image/png';
+    try {
+        return BlobCtor ? new BlobCtor([blob], { type: type }) : blob;
+    }
+    catch (e) {
+        return blob;
+    }
+}
+/**
+ * 在指定 realm 里写**一次**剪贴板（只写 image/png）。
+ *
+ * ⚠️ 为什么只写一次：`clipboard.write()` 通过用户手势校验后就会**消耗**这次手势，失败也不退还。
+ * 所以任何「先拿原图试一下、失败再重试」的兜底都会把手势烧掉，让后面的重试必然 NotAllowedError。
+ * preferPromiseForm=true 时使用 ClipboardItem 的 Promise 形式：write() 在本次点击手势内**同步发起**，
+ * 由浏览器去等异步转换结果 —— 转换耗时（实测约 1s）不再影响手势有效性。
+ * @param {ClipboardRealm} realm - 写入目标
+ * @param {Promise<any>} pngPromise - 解析为 PNG Blob 的 Promise
+ * @param {boolean} preferPromiseForm - 是否优先用 Promise 形式的 ClipboardItem
+ * @returns {Promise<boolean>} 写入是否成功
+ */
+function writeClipboardOnce(realm, pngPromise, preferPromiseForm) {
+    return new Promise((resolve) => {
+        const doWrite = (item) => {
+            try {
+                realm.nav.clipboard.write([item]).then(() => resolve(true), (e) => {
+                    addLog('[复制] 写入剪贴板被拒（' + realm.name + '）: ' + errTextOf(e), 'warning', true);
+                    resolve(false);
+                });
+            }
+            catch (e) {
+                addLog('[复制] 调用 clipboard.write 异常（' + realm.name + '）: ' + errTextOf(e), 'error', true);
+                resolve(false);
+            }
+        };
+        if (preferPromiseForm) {
+            try {
+                doWrite(new realm.CI({ 'image/png': pngPromise }));
+                return;
+            }
+            catch (e) {
+                addLog('[复制] ClipboardItem 不支持 Promise 形式，改为先转换再写入: ' + errTextOf(e), 'warning', true);
+            }
+        }
+        pngPromise.then((png) => {
+            try {
+                doWrite(new realm.CI({ 'image/png': toRealmBlob(png, realm.BlobCtor) }));
+            }
+            catch (e) {
+                addLog('[复制] 构造 ClipboardItem 失败（' + realm.name + '）: ' + errTextOf(e), 'error', true);
+                resolve(false);
+            }
+        });
+    });
+}
+/**
+ * 将图片 Blob 写入系统剪贴板（必须由一次「用户点击」触发）。
+ *
+ * ⚠️ 2026-10-06 重写。旧实现「先按原图类型写一次 → 失败后再转 PNG 重试」是**注定失败**的写法：
+ *   1) Chromium 的异步剪贴板**只支持写 `image/png`**（实测 `ClipboardItem.supports('image/jpeg') === false`），
+ *      而手机传来的图多为 jpeg ⇒ 第一次写入必然失败；
+ *   2) 按规范，`clipboard.write()` 通过手势校验后即**消耗**该手势（失败也不退还）
+ *      ⇒ 转 PNG 后的第二次重试必然 `NotAllowedError: Write permission denied`，用户只看到「复制失败」；
+ *   3) 正确顺序：**先转好 PNG，再只写一次**。
+ *
+ * 参考实现：qsniyg/maxurl（只调用一次 write + 用页面原生 Blob 构造 ClipboardItem + 显式异常分支）。
+ * 本脚本不需要它们「跨域图片经 GM_xmlhttpRequest 取二进制」那一段 —— 图片本来就是中继传进来的 Blob。
+ * @param {Blob} blob - 图片 Blob
+ * @returns {Promise<boolean>} 成功返回 true，失败返回 false（失败原因写入日志）
+ */
+function copyImageToClipboard(blob) {
+    return new Promise((resolve) => {
+        if (!blob) {
+            addLog('[复制] 图片数据为空', 'error', true);
+            resolve(false);
+            return;
+        }
+        const pageWin = typeof unsafeWindow !== 'undefined' ? unsafeWindow : null;
+        const realms = [];
+        // 页面主世界优先：ScriptCat 隔离世界里的 ClipboardItem / 写入常不可用
+        if (pageWin &&
+            pageWin.navigator &&
+            pageWin.navigator.clipboard &&
+            // 用 typeof 判断而非直接取真值：写方法在类型上恒有定义，真值判断会被 TS 判为恒真
+            typeof pageWin.navigator.clipboard.write === 'function' &&
+            pageWin.ClipboardItem) {
+            realms.push({
+                name: '页面主世界',
+                nav: pageWin.navigator,
+                CI: pageWin.ClipboardItem,
+                BlobCtor: pageWin.Blob,
+                isPageRealm: true,
+            });
+        }
+        if (navigator.clipboard &&
+            typeof navigator.clipboard.write === 'function' &&
+            typeof ClipboardItem !== 'undefined') {
+            realms.push({ name: '隔离世界', nav: navigator, CI: ClipboardItem, BlobCtor: Blob, isPageRealm: false });
+        }
+        if (!realms.length) {
+            addLog('[复制] 当前环境不支持图片剪贴板（缺 clipboard.write 或 ClipboardItem）', 'error', true);
+            resolve(false);
+            return;
+        }
+        // 先启动 PNG 转换（不阻塞手势）：Chromium 只认 image/png
+        const pngPromise = (blob.type === 'image/png' ? Promise.resolve(blob) : blobToPng(blob)).then((b) => {
+            if (b && b.type !== 'image/png') {
+                // blobToPng 转换失败时会原样返回原图；此处只提示，成败仍交给写入阶段判定
+                addLog('[复制] 图片转 PNG 失败（内核不支持位图解码/Canvas），可能无法写入剪贴板', 'warning', true);
+            }
+            return b;
+        });
+        (async () => {
+            for (const realm of realms) {
+                // 主世界优先用 Promise 形式（write 落在手势内）；隔离世界退化为「先转换、后写入」
+                const ok = await writeClipboardOnce(realm, pngPromise, realm.isPageRealm);
+                if (ok) {
+                    addLog('[复制] 图片已复制到剪贴板（' + realm.name + '）', 'success', true);
+                    resolve(true);
+                    return;
+                }
+            }
+            addLog('[复制] 图片写入剪贴板失败：常见原因是浏览器/油猴未授予剪贴板权限、页面未获得焦点，或该内核不支持图片剪贴板；可长按图片手动保存', 'error', true);
+            resolve(false);
+        })();
+    });
+}
+/**
+ * 启动「设备互联」长轮询接收循环（直到 stop() 调用）。
+ * 通过 GM_xmlhttpRequest 轮询中继服务器 /recv/<uuid>（绕过税务页面 CSP 对 connect-src 的限制）。
+ * 收到图片时回调 onImage；状态变化回调 onStatus；网络异常自动重连。
+ * @param {PhoneReceiveOptions} opt - { server, uuid, onStatus, onImage, onText, onConnected }
+ * @returns {Function} stop() 停止接收
+ */
+function startPhoneReceive(opt) {
+    const server = (opt.server || '').trim().replace(/\/+$/, '');
+    const uuid = opt.uuid;
+    let stopped = false;
+    let lastXhr = null;
+    let connected = false;
+    let loggedConnFail = false;
+    let firstPoll = true;
+    function markConnected() {
+        if (connected)
+            return;
+        connected = true;
+        loggedConnFail = false; // 恢复连接后复位失败标记，后续再次断线仍会记日志（旧实现不复位，之后断连静默）
+        if (opt.onConnected) {
+            try {
+                opt.onConnected();
+            }
+            catch (e) {
+                /* 忽略 */
+            }
+        }
+    }
+    // 说明：不单独探测 /health。旧版中继可能没有该端点，会导致请求挂起并误报
+    // 「连接服务器超时」，而真正的 /recv 接收始终正常（与用户报告的现象一致）。
+    // 改用「首次 /recv 轮询用极短 maxwait」来快速确认已连上：服务器会很快返回空响应，
+    // 从而 markConnected → onConnected 触发「已自动开始接收」日志（约 1 秒内）。
+    function poll() {
+        if (stopped)
+            return;
+        if (opt.onStatus)
+            opt.onStatus('正在等待手机上传…');
+        // 首次轮询用极短 maxwait 仅用于快速确认「已连上服务器」（服务器会很快返回空），
+        // 让「已自动开始接收」日志尽快出现；后续轮询用长 maxwait 实时等待图片。
+        const maxwait = firstPoll ? 1000 : 25000;
+        firstPoll = false;
+        const url = server + '/recv/' + encodeURIComponent(uuid) + '?maxwait=' + maxwait;
+        try {
+            lastXhr = GM_xmlhttpRequest({
+                method: 'GET',
+                url: url,
+                timeout: maxwait + 5000,
+                onload: function (resp) {
+                    if (stopped)
+                        return;
+                    markConnected(); // 首次成功收到服务器响应即视为已连上
+                    try {
+                        let data = null;
+                        try {
+                            data = JSON.parse(resp.responseText);
+                        }
+                        catch (e) {
+                            data = null;
+                        }
+                        if (data && data.empty) {
+                            poll();
+                            return;
+                        }
+                        if (data && data.type === 'image' && data.data) {
+                            const blob = base64ToBlob(data.data, data.mime || 'image/jpeg');
+                            // 预览统一用 objectURL（与「发送到手机」待发列表一致）：
+                            // ① 画廊上限淘汰/单张移除/清空全部时的 URL.revokeObjectURL 真正生效
+                            //   （data:URL 字符串无法 revoke，旧写法实为无效空操作）；
+                            // ② 避免最多 27 张图的 base64 dataURL 长字符串常驻 JS 堆（可达几十 MB）。
+                            const previewUrl = URL.createObjectURL(blob);
+                            if (opt.onStatus)
+                                opt.onStatus('收到图片：' + (data.name || 'image'));
+                            if (opt.onImage)
+                                opt.onImage({
+                                    blob: blob,
+                                    previewUrl: previewUrl,
+                                    name: data.name,
+                                    mime: data.mime,
+                                    from: data.from,
+                                });
+                            poll(); // 继续接收下一张
+                            return;
+                        }
+                        if (data && data.type === 'text' && typeof data.text === 'string') {
+                            if (opt.onStatus)
+                                opt.onStatus('收到文本');
+                            if (opt.onText)
+                                opt.onText({ text: data.text, ts: data.ts, from: data.from });
+                            poll(); // 继续接收下一条
+                            return;
+                        }
+                        setTimeout(poll, 1000); // 解析失败稍后重试
+                    }
+                    catch (e) {
+                        // 单条数据异常（base64 损坏 atob 抛错、回调抛错等）不得杀死接收循环：
+                        // 记录一次后继续下一次轮询（旧实现无兜底，异常会让 poll 链永久中断、收图静默失效）
+                        addLog('[设备互联] 处理收到数据失败: ' + (e && e.message ? e.message : e), 'error', true);
+                        setTimeout(poll, 1000);
+                    }
+                },
+                onerror: function () {
+                    if (stopped)
+                        return;
+                    if (!loggedConnFail) {
+                        loggedConnFail = true;
+                        addLog('[设备互联] 连接服务器失败，请检查中继地址/网络（' + server + '）', 'error');
+                    }
+                    if (opt.onStatus)
+                        opt.onStatus('连接中断，正在重连…');
+                    setTimeout(poll, 2000);
+                },
+                ontimeout: function () {
+                    if (stopped)
+                        return;
+                    poll(); // 超时继续轮询
+                },
+            });
+        }
+        catch (e) {
+            if (stopped)
+                return;
+            if (opt.onStatus)
+                opt.onStatus('请求异常，正在重连…');
+            setTimeout(poll, 2000);
+        }
+    }
+    poll();
+    return function stop() {
+        stopped = true;
+        try {
+            if (lastXhr && typeof lastXhr.abort === 'function')
+                lastXhr.abort();
+        }
+        catch (e) {
+            /* 忽略 */
+        }
+    };
+}
+/**
+ * 「发送测试图片」用的随机图源（v26.10.08-v10）。
+ * 直接返回一张图片（会 302 到具体图片），故用 GM_xmlhttpRequest 取二进制。
+ */
+const TEST_IMAGE_URL = 'https://t.alcy.cc/fj';
+/** Blob → 不带前缀的 base64（FileReader；与手机上传页同一套做法） */
+function blobToBase64(blob) {
+    return new Promise((resolve, reject) => {
+        const fr = new FileReader();
+        fr.onload = () => resolve(String(fr.result || '').split(',')[1] || '');
+        fr.onerror = () => reject(new Error('读取图片失败'));
+        fr.readAsDataURL(blob);
+    });
+}
+/** 按 MIME 给测试图起个文件名（仅用于日志与下载命名） */
+function testImageName(mime) {
+    const ext = { 'image/jpeg': '.jpg', 'image/png': '.png', 'image/webp': '.webp', 'image/gif': '.gif' }[mime] || '.jpg';
+    return 'test-image-' + Date.now() + ext;
+}
+/**
+ * 「发送测试图片」（v26.10.08-v10）：从随机图源取一张图，**当作手机上传**投递到本机中继
+ * （`POST /u/<本机 deviceId>`），于是它经**正常的「手机 → 电脑」通道**回到本脚本、进历史记录。
+ *
+ * 为什么走中继而不是本地直接塞进数组：这样这条路径与真实收图**完全一致**
+ * （中继入队 → 长轮询取走 → onImage → 历史），可用它验证整条链路，也能同步到同一台电脑的其它标签页。
+ * 代价是必须配置好中继地址（未配置时调用方直接给出提示，不发请求）。
+ *
+ * ⚠️ 用 GM_xmlhttpRequest 而不是 fetch：税务页 CSP 限制 connect-src，跨域取图也需绕过 CORS。
+ */
+function sendTestImage(opt) {
+    const server = (opt.server || '').trim().replace(/\/+$/, '');
+    const url = opt.url || TEST_IMAGE_URL;
+    const fail = (msg) => {
+        if (opt.onFail)
+            opt.onFail(msg);
+    };
+    if (!/^https?:\/\//i.test(server)) {
+        fail('未配置中继服务器，无法投递测试图片');
+        return;
+    }
+    try {
+        GM_xmlhttpRequest({
+            method: 'GET',
+            url: url,
+            responseType: 'blob',
+            timeout: 20000,
+            onload: (resp) => {
+                const blob = resp && resp.response;
+                if (!blob || typeof blob.size !== 'number' || !blob.size) {
+                    fail('取图失败：响应不是有效的二进制图片');
+                    return;
+                }
+                const mime = blob.type || 'image/jpeg';
+                const name = testImageName(mime);
+                // 体积预检：与手机上传同一套判据，避免 base64 膨胀后撞 12MB 上限
+                if (imagePayloadBytes(blob, name, mime) > RELAY_MAX_BODY) {
+                    fail('测试图片过大（超过中继单次上限约 12MB）');
+                    return;
+                }
+                blobToBase64(blob)
+                    .then((b64) => {
+                    if (!b64) {
+                        fail('取图失败：图片内容为空');
+                        return;
+                    }
+                    GM_xmlhttpRequest({
+                        method: 'POST',
+                        url: server + '/u/' + encodeURIComponent(opt.uuid),
+                        headers: { 'Content-Type': 'application/json' },
+                        data: JSON.stringify({ name: name, mime: mime, data: b64 }),
+                        timeout: 20000 + Math.round(b64.length / 200),
+                        onload: (r2) => {
+                            let j = null;
+                            try {
+                                j = JSON.parse(r2.responseText);
+                            }
+                            catch (e) {
+                                j = null;
+                            }
+                            if (j && j.ok) {
+                                if (opt.onOk)
+                                    opt.onOk({ bytes: blob.size, mime: mime });
+                            }
+                            else {
+                                fail((j && j.error) || '投递失败（HTTP ' + r2.status + '）');
+                            }
+                        },
+                        onerror: () => fail('网络错误，无法投递到中继'),
+                        ontimeout: () => fail('投递超时'),
+                    });
+                })
+                    .catch((e) => fail('取图失败：' + ((e && e.message) || '读取错误')));
+            },
+            onerror: () => fail('网络错误，无法获取测试图片'),
+            ontimeout: () => fail('获取测试图片超时'),
+        });
+    }
+    catch (e) {
+        fail('发送测试图片失败：' + ((e && e.message) || '未知错误'));
+    }
+}
+/**
+ * 电脑端 → 手机端 发送（图片或文本）。POST 到中继 /phone/send/<deviceId>。
+ * 仅负责投递；手机是否在线由调用方先查 /phone/status 决定（离线时调用方直接拦截）。
+ * @param {SendToPhoneOptions} opt - { server, uuid, payload, onOk, onFail }
+ *   payload: { text } 或 { name, mime, data(base64) }
+ */
+function sendToPhone(opt) {
+    const server = (opt.server || '').trim().replace(/\/+$/, '');
+    const uuid = opt.uuid;
+    const url = server + '/phone/send/' + encodeURIComponent(uuid);
+    try {
+        const body = JSON.stringify(opt.payload);
+        GM_xmlhttpRequest({
+            method: 'POST',
+            url: url,
+            headers: { 'Content-Type': 'application/json' },
+            data: body,
+            // 超时随载荷缩放：放行的最大单请求约 16MB（base64 膨胀后），固定 20s 在慢上行时会把合法大图误杀
+            timeout: 20000 + Math.round(body.length / 200), // ≈ 20s + 每 200B 1ms；16MB 体 ≈ 100s
+            onload: function (resp) {
+                let j = null;
+                try {
+                    j = JSON.parse(resp.responseText);
+                }
+                catch (e) {
+                    j = null;
+                }
+                if (j && j.ok) {
+                    if (opt.onOk)
+                        opt.onOk();
+                }
+                else {
+                    // 优先用服务端 JSON 里的中文错误（如 413「内容过大」）；否则按状态码给可读提示，避免笼统报错。
+                    let msg = j && j.error ? String(j.error) : '';
+                    if (!msg && resp.status === 413)
+                        msg = '内容过大，请压缩后再发送';
+                    else if (!msg && resp.status >= 400)
+                        msg = '服务器错误（HTTP ' + resp.status + '）';
+                    if (opt.onFail)
+                        opt.onFail(msg || 'HTTP ' + resp.status);
+                }
+            },
+            onerror: function () {
+                if (opt.onFail)
+                    opt.onFail('网络错误，请检查中继地址');
+            },
+            ontimeout: function () {
+                if (opt.onFail)
+                    opt.onFail('发送超时');
+            },
+        });
+    }
+    catch (e) {
+        if (opt.onFail)
+            opt.onFail(e.message);
+    }
+}
+
+;// ./src/lib/ui/transfer/deviceColors.ts
+/**
+ * 设备 ID 的专属配色（v26.10.08-v12 随 PhoneModal 建立；v26.10.12-v1 随「设备互联」
+ * 重构为「传输助手」搬到本文件，逻辑逐字不变）。
+ *
+ * 按用户要求：给设备 ID 加边框和彩色底色，不同设备不同色。
+ *
+ * ⚠️ 用**固定色板 + 哈希取模**，而不是「由 ID 算 HSL」：后者在哈希相邻时会算出几乎一样的色相，
+ *    多台手机并排时反而分不清。色板取 antd 预设色阶的「浅底 / 中边框 / 深字」三档（1 / 3 / 7 号色），
+ *    保证浅色主题下文字对比度足够，也与面板整体配色语言一致。
+ */
+/** 同一 ID 恒定取到同一个颜色（跨会话稳定）；不同 ID 尽量落到不同颜色 */
+const DEVICE_COLORS = [
+    { bg: '#e6f4ff', border: '#91caff', color: '#0958d9' }, // 蓝
+    { bg: '#e6fffb', border: '#87e8de', color: '#08979c' }, // 青
+    { bg: '#f6ffed', border: '#b7eb8f', color: '#389e0d' }, // 绿
+    { bg: '#fffbe6', border: '#ffe58f', color: '#d48806' }, // 黄
+    { bg: '#fff7e6', border: '#ffd591', color: '#d46b08' }, // 橙
+    { bg: '#fff1f0', border: '#ffa39e', color: '#cf1322' }, // 红
+    { bg: '#f9f0ff', border: '#d3adf7', color: '#531dab' }, // 紫
+    { bg: '#fff0f6', border: '#ffadd2', color: '#c41d7f' }, // 洋红
+];
+function hashDeviceId(id) {
+    // FNV-1a（32 位）：对「只差一个字符」的 ID 也敏感。
+    // ⚠️ 别退回 `h = h * 31 + c`：实测两个只差首字符的 ID 会被 `>>>0` 截断成同一个下标，
+    //    导致「不同设备不同底色」失效（本功能第一版就踩了）。
+    let h = 0x811c9dc5;
+    for (let i = 0; i < id.length; i++) {
+        h ^= id.charCodeAt(i);
+        h = Math.imul(h, 0x01000193) >>> 0;
+    }
+    return h >>> 0;
+}
+/**
+ * 为一个**列表**解析「ID → 色板下标」，并把撞色的往后顺延。
+ *
+ * 为什么不能只用哈希：哈希再好也可能撞（实测「前缀重复字符」的 ID 会整批落到同一色），
+ * 而用户要的是「不同设备 ID 不同底色」。故在列表内做贪心分配 ——
+ * 设备数 ≤ 色板数（8）时**一定能拿到互不相同的颜色**。
+ * 先按哈希排序再分配：谁拿哪个色只取决于 ID 集合，与数组顺序无关。
+ */
+function resolveDeviceColors(ids) {
+    const out = {};
+    const used = new Set();
+    const ordered = ids
+        .filter(Boolean)
+        .slice()
+        .sort((a, b) => hashDeviceId(a) - hashDeviceId(b) || (a < b ? -1 : 1));
+    for (const id of ordered) {
+        let idx = hashDeviceId(id) % DEVICE_COLORS.length;
+        for (let step = 0; step < DEVICE_COLORS.length && used.has(idx); step++) {
+            idx = (idx + 1) % DEVICE_COLORS.length;
+        }
+        used.add(idx);
+        out[id] = idx;
+    }
+    return out;
+}
+/** 手机 ID 的展示用短串（UUID 太长，取前 8 位） */
+function shortPhoneId(id) {
+    if (!id)
+        return '未知设备（旧版中继）';
+    return id.length > 8 ? id.slice(0, 8) + '…' : id;
+}
+
+;// ./src/lib/ui/transfer/DeviceIdTag.tsx
+
+
+/**
+ * 带边框与专属底色的设备 ID 标签（v26.10.08-v12；v26.10.12-v1 随传输助手重构搬迁）。
+ * 颜色下标由调用方传入（列表内已做撞色顺延，见 resolveDeviceColors）；不传则按哈希取。
+ */
+function DeviceIdTag({ id, colorIndex }) {
+    const idx = typeof colorIndex === 'number' ? colorIndex : hashDeviceId(id) % DEVICE_COLORS.length;
+    const c = DEVICE_COLORS[idx];
+    return ((0,react_jsx_runtime_production_namespaceFn().jsx)("span", { "data-device-id": id, "data-color-index": idx, style: {
+            display: 'inline-block',
+            padding: '1px 8px',
+            borderRadius: 6,
+            border: '1px solid ' + c.border,
+            background: c.bg,
+            color: c.color,
+            lineHeight: '20px',
+        }, children: shortPhoneId(id) }));
+}
+
+;// ./src/lib/ui/transfer/ChatBubble.tsx
+
+
+
+function ChatBubble({ side, avatar, children, meta, bare, danger, maxWidth = '72%', avatarStyle, }) {
     const { token } = es_theme.useToken();
-    const isAgents = nav === 'agents';
-    const isFiles = nav === 'files';
-    /** 文件分组 + 父组件提供了筛选回调 ⇒ 条目可点（= 筛选第三栏文件视图） */
-    const filesMode = isFiles && !!onSelectFilesSession;
-    const keyword = search.trim().toLowerCase();
-    const filtered = keyword
-        ? deviceEntries.filter((e) => e.label.toLowerCase().includes(keyword) || previewText(e.lastMsg).toLowerCase().includes(keyword))
-        : deviceEntries;
-    /** Agents 分组下的「技能 / 定时任务」控件 */
-    const agentControl = (key, label, icon) => {
-        const active = agentPane === key;
-        return ((0,react_jsx_runtime_production_namespaceFn().jsx)("div", { children: (0,react_jsx_runtime_production_namespaceFn().jsxs)(es_button, { type: "text", block: true, "aria-label": label, onClick: () => onAgentPane && onAgentPane(key), style: {
-                    display: 'flex',
+    const isUser = side === 'right';
+    return ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { className: "znhd-chat-msg", "data-side": side, style: {
+            display: 'flex',
+            flexDirection: isUser ? 'row-reverse' : 'row',
+            alignItems: 'flex-start',
+            gap: 8,
+            marginBottom: 14,
+            minWidth: 0,
+        }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("span", { className: "znhd-chat-avatar", style: {
+                    flex: '0 0 auto',
+                    display: 'inline-flex',
                     alignItems: 'center',
-                    gap: 8,
-                    height: 30,
-                    justifyContent: 'flex-start',
-                    padding: '0 8px',
+                    justifyContent: 'center',
+                    width: 32,
+                    height: 32,
                     borderRadius: 6,
+                    background: isUser ? '#4A4A4A' : token.colorFillSecondary,
+                    color: isUser ? '#fff' : token.colorTextSecondary,
                     fontSize: 13,
-                    color: active ? token.colorPrimary : 'rgba(255,255,255,0.75)',
-                    fontWeight: active ? 600 : 400,
-                }, children: [icon, (0,react_jsx_runtime_production_namespaceFn().jsx)("span", { style: { minWidth: 0, overflow: 'hidden', whiteSpace: 'nowrap' }, children: label })] }) }, key));
+                    fontWeight: 600,
+                    overflow: 'hidden',
+                    ...avatarStyle,
+                }, children: avatar }), (0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: {
+                    minWidth: 0,
+                    maxWidth,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: isUser ? 'flex-end' : 'flex-start',
+                }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("div", { className: "znhd-chat-bubble", style: {
+                            maxWidth: '100%',
+                            padding: bare ? 0 : '8px 12px',
+                            borderRadius: 8,
+                            fontSize: 14,
+                            lineHeight: 1.6,
+                            wordBreak: 'break-word',
+                            background: bare ? 'transparent' : isUser ? token.colorPrimary : WECHAT.bubblePeer,
+                            border: bare ? 'none' : danger ? '1px solid ' + token.colorError : '1px solid transparent',
+                            // 微信绿是中饱和绿：文字必须显式刷白，否则暗色主题下会继承成暗色文字
+                            color: bare ? undefined : isUser ? '#fff' : 'rgba(255,255,255,0.9)',
+                            overflow: 'hidden',
+                        }, children: children }), meta ? ((0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: {
+                            fontSize: 11,
+                            color: token.colorTextTertiary,
+                            marginTop: 2,
+                            maxWidth: '100%',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                        }, children: meta })) : null] })] }));
+}
+
+;// ./src/lib/transfer/emojiPack.ts
+/**
+ * 传输助手的**在线表情包**数据层（v26.10.13-v3）。
+ *
+ * ── 为什么从「字符符号面板」换成在线表情包 ──────────────────────────────────
+ * 旧面板（`chatEmojis.ts`，本版已删）只能在 BMP 区里挑 `☺ ☝ ★` 这类**老符号**：脚本的主战场是
+ * 税务办的 Win7 机器，系统没有 Segoe UI Emoji 字体，U+1F300+ 的彩色 emoji 一律渲染成豆腐块。
+ * 换成**图片表情**后这个约束自动消失 —— 图片不靠字体，Win7 上一样是彩色的。
+ *
+ * ── 数据来源 ────────────────────────────────────────────────────────────────
+ * 8 个合集的地址写死在 `EMOJI_PACK_SOURCES`（用户给定，均在 cdn.klyang.com）：
+ *   · 清单 JSON：`https://cdn.klyang.com/json/<id>.json`
+ *     → `{ name: '阿鲁日常', type: 'image', items: [{ key: '01', val: '<图片地址>' }] }`
+ *   · 图片本体：`https://cdn.klyang.com/emo/.../<key>.webp`（静态 webp，实测单张 2–6 KB）
+ *
+ * ── 三个必须绕开的坑 ────────────────────────────────────────────────────────
+ * 1. **必须走 `GM_xmlhttpRequest`，不能用 `<img src>` 直接引 CDN**：宿主税务页有 CSP，
+ *    img-src 白名单里没有这个域，直接引用会整片裂图；GM 请求不受页面 CSP 约束
+ *    （与中继长轮询绕过 connect-src 同一个理由）。
+ * 2. **清单必须缓存**：面板每开一次就拉 8 个请求没必要 —— 缓存在 localStorage
+ *    （键 `scriptCat_EmojiPacks`）12 小时；表情包是静态资源，TTL 给得长一些，
+ *    面板上有「刷新」可强制重拉。
+ * 3. **图片 blob 也要缓存**：点选表情后要把图片交给「待发图片 → 逐张发送」链路，
+ *    本来就需要 blob，面板显示也用同一份（`URL.createObjectURL`）。objectURL **不主动 revoke**：
+ *    全套最多几百张、单张几 KB，撤销反而会让面板缩略图与会话里的待发缩略图一起裂掉。
+ *
+ * 失败处理：单个合集失败就跳过（其余照常显示）；8 个全失败才 reject，面板给出「重试」。
+ */
+/** 用户给定的 8 个合集（顺序即面板里的顺序） */
+const EMOJI_PACK_SOURCES = [
+    { id: 'aluhedwm', url: 'https://cdn.klyang.com/json/aluhedwm.json' },
+    { id: 'alurc', url: 'https://cdn.klyang.com/json/alurc.json' },
+    { id: 'alurc2', url: 'https://cdn.klyang.com/json/alurc2.json' },
+    { id: 'aluyn', url: 'https://cdn.klyang.com/json/aluyn.json' },
+    { id: 'jralu', url: 'https://cdn.klyang.com/json/jralu.json' },
+    { id: 'rcxly', url: 'https://cdn.klyang.com/json/rcxly.json' },
+    { id: 'tvxds', url: 'https://cdn.klyang.com/json/tvxds.json' },
+    { id: 'xhl', url: 'https://cdn.klyang.com/json/xhl.json' },
+];
+const CACHE_KEY = 'scriptCat_EmojiPacks';
+/** 清单缓存时长：表情包基本不变，12 小时足够，避免每次开面板都打 8 个请求 */
+const CACHE_TTL = 12 * 60 * 60 * 1000;
+/* ============================ GM 请求（脚本端才有） ============================ */
+function gmGetText(url) {
+    return new Promise((resolve, reject) => {
+        GM_xmlhttpRequest({
+            method: 'GET',
+            url,
+            timeout: 15000,
+            onload: (resp) => {
+                if (resp.status >= 200 && resp.status < 300 && typeof resp.responseText === 'string') {
+                    resolve(resp.responseText);
+                    return;
+                }
+                reject(new Error('HTTP ' + resp.status));
+            },
+            onerror: () => reject(new Error('网络请求失败')),
+            ontimeout: () => reject(new Error('请求超时')),
+        });
+    });
+}
+function gmGetBlob(url) {
+    return new Promise((resolve, reject) => {
+        GM_xmlhttpRequest({
+            method: 'GET',
+            url,
+            responseType: 'blob',
+            timeout: 20000,
+            onload: (resp) => {
+                const blob = resp && resp.response;
+                if (!blob || typeof blob.size !== 'number' || !blob.size) {
+                    reject(new Error('响应不是有效的图片数据'));
+                    return;
+                }
+                resolve(blob);
+            },
+            onerror: () => reject(new Error('网络请求失败')),
+            ontimeout: () => reject(new Error('请求超时')),
+        });
+    });
+}
+/* ============================== 清单：拉取 + 缓存 ============================== */
+/** 文件名净化：去掉路径分隔符与控制字符（合集 key 里可能有中文，中文本身不处理） */
+function sanitizeName(s) {
+    return s.replace(/[\\/:*?"<>|\s]+/g, '_').slice(0, 60) || 'emoji';
+}
+function emojiFileName(packId, key, url) {
+    const ext = (url.match(/\.([a-z0-9]{2,5})(?:[?#]|$)/i) || [])[1] || 'webp';
+    return sanitizeName(packId + '-' + key) + '.' + ext.toLowerCase();
+}
+function readCache() {
+    try {
+        const raw = localStorage.getItem(CACHE_KEY);
+        if (!raw)
+            return null;
+        const parsed = JSON.parse(raw);
+        if (!parsed || !Array.isArray(parsed.packs) || !parsed.packs.length)
+            return null;
+        if (typeof parsed.ts !== 'number' || Date.now() - parsed.ts > CACHE_TTL)
+            return null;
+        return parsed.packs;
+    }
+    catch (e) {
+        return null;
+    }
+}
+function writeCache(packs) {
+    try {
+        localStorage.setItem(CACHE_KEY, JSON.stringify({ ts: Date.now(), packs }));
+    }
+    catch (e) {
+        /* 存储满 / 隐私模式：缓存失败不影响功能 */
+    }
+}
+/** 清掉清单缓存（面板上的「刷新」用：强制重新拉 8 个合集） */
+function clearEmojiPackCache() {
+    try {
+        localStorage.removeItem(CACHE_KEY);
+    }
+    catch (e) {
+        /* 忽略 */
+    }
+}
+function parsePack(srcId, text) {
+    const raw = JSON.parse(text);
+    // 先落到变量上再 Array.isArray：对「表达式」做类型守卫不会收窄，list 会退化成 unknown
+    const rawItems = raw ? raw.items : undefined;
+    const list = Array.isArray(rawItems) ? rawItems : [];
+    const items = [];
+    list.forEach((it) => {
+        const row = (it || {});
+        const url = String(row.val || '').trim();
+        // 只收 http(s) 的图片地址，脏数据直接跳过（别让一条坏记录毁掉整个合集）
+        if (!/^https?:\/\//i.test(url))
+            return;
+        const key = String(row.key || '').trim() || 'emoji';
+        items.push({ key, url, name: emojiFileName(srcId, key, url) });
+    });
+    if (!items.length)
+        throw new Error('合集为空');
+    return { id: srcId, name: String((raw && raw.name) || srcId), items };
+}
+/**
+ * 拉取全部表情包：命中缓存直接返回，否则并发拉 8 个清单（单个失败跳过）。
+ *
+ * @param force 忽略缓存强制重拉（面板「刷新」按钮）
+ */
+async function loadEmojiPacks(force = false) {
+    if (!force) {
+        const hit = readCache();
+        if (hit)
+            return hit;
+    }
+    const results = await Promise.all(EMOJI_PACK_SOURCES.map((src) => gmGetText(src.url)
+        .then((text) => parsePack(src.id, text))
+        .catch(() => null)));
+    const packs = results.filter((p) => !!p && p.items.length > 0);
+    if (!packs.length)
+        throw new Error('表情包全部加载失败（8 个合集都没取到）');
+    writeCache(packs);
+    return packs;
+}
+const blobCache = new Map();
+const inflight = new Map();
+/** 已经下好的表情图（面板渲染时先查它，避免重复请求） */
+function cachedEmojiBlob(url) {
+    return blobCache.get(url);
+}
+/**
+ * 取表情图（带缓存与去重：同一张图面板显示与「点选加入待发」共用一次下载）。
+ * 下载失败会 reject，由调用方决定「这张留白 / 提示失败」。
+ */
+function loadEmojiBlob(url) {
+    const hit = blobCache.get(url);
+    if (hit)
+        return Promise.resolve(hit);
+    const running = inflight.get(url);
+    if (running)
+        return running;
+    const task = gmGetBlob(url)
+        .then((blob) => {
+        const entry = { blob, objectUrl: URL.createObjectURL(blob) };
+        blobCache.set(url, entry);
+        return entry;
+    })
+        .finally(() => {
+        inflight.delete(url);
+    });
+    inflight.set(url, task);
+    return task;
+}
+
+;// ./src/lib/ui/transfer/EmojiPackPanel.tsx
+
+/**
+ * 在线表情包面板（v26.10.13-v3）—— `ChatComposer` 表情按钮的 Popover 内容。
+ *
+ * 结构：顶部一行合集 chips（可横向滚动）+ 右上角「刷新」→ 中间图片网格 → 底部一行提示。
+ * 数据层在 `@/lib/transfer/emojiPack`（清单缓存 / GM 拉取 / blob 复用，理由写在那边）。
+ *
+ * ── 三个实现要点 ────────────────────────────────────────────────────────────
+ * 1. **分批下载**：合集最多 134 张，一次并发 8 张 → 首屏很快就有图，剩下的在后台补。
+ *    已下好的（blob 缓存命中）同步填进去，切走再切回来是秒开。
+ * 2. **合集用 chips 而不是下拉**：Popover 里再套一层 antd Select/下拉，点开时会被
+ *    Popover 的「点外部关闭」逻辑抢走点击（要额外配 getPopupContainer），chips 没这个问题。
+ * 3. **点击时直接交 blob**（不再二次下载）：面板显示本来就下过这张图，`onPick` 把 blob 一起
+ *    交回调用方（设备会话**立刻发出去**，见 TransferDeviceChat 的 pickEmojiImage）——
+ *    少一次网络往返，也没有「点了没反应」的空窗。
+ *
+ * ── 悬停放大预览（v26.10.13-v4）──────────────────────────────────────────────
+ * 格子只有 30px，看不清表情细节：**鼠标停在格子上 0.5 秒**后弹出一个 120px 的放大浮层
+ * （跟随光标、`pointerEvents:none` 不吃事件）；预览**已经在屏幕上时**移到别的格子**立即换图**，
+ * 不再重新等 0.5 秒 —— 用户原话「在显示 hover 的情况下移动鼠标到其他表情包，实时显示」。
+ *
+ * ⚠️ 三个实现要点（都踩过或有原因）：
+ *   a) 悬停判定用**网格上的 `mousemove` 委托**（`closest('.znhd-emoji-item')`），**不用每格的
+ *      `onMouseEnter/onMouseLeave`**：React 的 enter/leave 是同一批 mouseover 里成对合成的，
+ *      先派发 leave 再派发 enter ⇒ 移到相邻格子时会**先 close 再重新计时 0.5s**（「实时切换」失效）。
+ *      委托只有一个来源，顺序问题不存在。
+ *   b) 浮层 portal 到 `getPreviewHost()`（共享层的预览宿主，挂在 documentElement 下）：
+ *      税务页 body 常带 transform，挂 body 的 fixed 浮层会以 body 盒子为包含块 → 坐标全错。
+ *   c) 「是否已在显示」用 **ref**（`hoverShown`）而不是读 state：mousemove 每秒几十次，
+ *      用 state 判会读到闭包里的旧值，切换逻辑会退化成重新计时。
+ */
+
+
+
+
+
+const EmojiPackPanel_PANEL_WIDTH = 300;
+/** 每批并发下载的张数：太多会瞬间打满连接，太少首屏出图慢 */
+const BATCH = 8;
+/** 悬停多久后弹出放大预览（用户要求 0.5s：扫过格子时不该闪出大图） */
+const HOVER_DELAY = 500;
+/** 放大预览的方形边长（含内边距） */
+const HOVER_BOX = 120;
+/** 预览相对光标的偏移 */
+const HOVER_OFFSET = 16;
+/** 浮层的 z-index：要盖住 Popover（antd zIndexPopupBase = 1000000） */
+const HOVER_Z = 1000001;
+function EmojiPackPanel({ onPick }) {
+    const { token } = es_theme.useToken();
+    const [packs, setPacks] = (0,react_production_namespaceFn().useState)(null);
+    const [err, setErr] = (0,react_production_namespaceFn().useState)('');
+    const [activeId, setActiveId] = (0,react_production_namespaceFn().useState)('');
+    const [busy, setBusy] = (0,react_production_namespaceFn().useState)(false);
+    /** url -> objectURL（已下好的图） */
+    const [ready, setReady] = (0,react_production_namespaceFn().useState)({});
+    /** 正在临时补下载的那张（用户点得比下载快） */
+    const [pendingKey, setPendingKey] = (0,react_production_namespaceFn().useState)('');
+    /** 放大预览（null = 不显示）：url 为被悬停的那张，x/y 是光标视口坐标 */
+    const [hover, setHover] = (0,react_production_namespaceFn().useState)(null);
+    /** 0.5s 计时器 */
+    const hoverTimer = (0,react_production_namespaceFn().useRef)(null);
+    /** 正在等待计时的那张（同一张继续等，不重置计时） */
+    const hoverPending = (0,react_production_namespaceFn().useRef)('');
+    /** 预览是否已在屏幕上 —— 为 true 时移到别的格子**立即换图**（不再等 0.5s） */
+    const hoverShown = (0,react_production_namespaceFn().useRef)(false);
+    /** 最后一次鼠标位置（计时结束时用它定位，而不是计时开始时的旧位置） */
+    const hoverPos = (0,react_production_namespaceFn().useRef)({ x: 0, y: 0 });
+    const clearHoverTimer = () => {
+        if (hoverTimer.current !== null) {
+            window.clearTimeout(hoverTimer.current);
+            hoverTimer.current = null;
+        }
     };
-    return ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { className: "znhd-transfer-sessions", style: {
+    /** 收起预览（鼠标移出网格 / 移到空白处）：下一次悬停要重新等 0.5s */
+    const closeHover = () => {
+        clearHoverTimer();
+        hoverPending.current = '';
+        hoverShown.current = false;
+        setHover(null);
+    };
+    // 面板被关掉（Popover 卸载）时清掉挂起的计时器，别让它在卸载后 setState
+    (0,react_production_namespaceFn().useEffect)(() => () => clearHoverTimer(), []);
+    const load = (0,react_production_namespaceFn().useCallback)((force) => {
+        setBusy(true);
+        setErr('');
+        loadEmojiPacks(force)
+            .then((list) => {
+            setPacks(list);
+            // 默认选第一组；刷新后尽量留在原来的组
+            setActiveId((prev) => (prev && list.some((p) => p.id === prev) ? prev : list[0].id));
+        })
+            .catch((e) => setErr((e && e.message) || '表情包加载失败'))
+            .finally(() => setBusy(false));
+    }, []);
+    (0,react_production_namespaceFn().useEffect)(() => {
+        load(false);
+    }, [load]);
+    const activePack = (0,react_production_namespaceFn().useMemo)(() => (packs || []).find((p) => p.id === activeId) || null, [packs, activeId]);
+    // 当前合集的图片：缓存命中的同步填，其余分批下载（切组合集会取消上一轮）
+    (0,react_production_namespaceFn().useEffect)(() => {
+        if (!activePack)
+            return;
+        let cancelled = false;
+        const cached = {};
+        const queue = [];
+        activePack.items.forEach((it) => {
+            const hit = cachedEmojiBlob(it.url);
+            if (hit)
+                cached[it.url] = hit.objectUrl;
+            else
+                queue.push(it);
+        });
+        if (Object.keys(cached).length)
+            setReady((prev) => ({ ...prev, ...cached }));
+        const run = async () => {
+            while (queue.length && !cancelled) {
+                const batch = queue.splice(0, BATCH);
+                const results = await Promise.allSettled(batch.map((it) => loadEmojiBlob(it.url)));
+                if (cancelled)
+                    return;
+                const add = {};
+                results.forEach((r, i) => {
+                    if (r.status === 'fulfilled')
+                        add[batch[i].url] = r.value.objectUrl;
+                });
+                if (Object.keys(add).length)
+                    setReady((prev) => ({ ...prev, ...add }));
+            }
+        };
+        void run();
+        return () => {
+            cancelled = true;
+        };
+    }, [activePack]);
+    const pick = (it) => {
+        if (!activePack)
+            return;
+        const hit = cachedEmojiBlob(it.url);
+        if (hit) {
+            onPick({ pack: activePack.name, key: it.key, url: it.url, name: it.name, blob: hit.blob });
+            return;
+        }
+        // 还没下好（用户手比下载快）：等这张下完再交出去 —— 别让点击石沉大海。
+        // ⚠️ 不把未就绪的格子做成 disabled：disabled 的按钮点了完全没反馈，用户只会以为坏了。
+        setPendingKey(it.url);
+        loadEmojiBlob(it.url)
+            .then((entry) => onPick({ pack: activePack.name, key: it.key, url: it.url, name: it.name, blob: entry.blob }))
+            .catch(() => {
+            /* 下载失败：格子保持占位，用户可重试或点刷新 */
+        })
+            .finally(() => setPendingKey((k) => (k === it.url ? '' : k)));
+    };
+    /**
+     * 网格上的鼠标移动（委托）：更新预览位置 / 切换预览目标。
+     * 见文件头 a) —— 这里刻意不用每格的 onMouseEnter/onMouseLeave。
+     */
+    const onGridMove = (e) => {
+        const target = e.target;
+        const cell = target ? target.closest('.znhd-emoji-item') : null;
+        const url = cell ? cell.getAttribute('data-emoji-url') || '' : '';
+        hoverPos.current = { x: e.clientX, y: e.clientY };
+        if (!url) {
+            // 网格的空白处：已显示的收起，正在计时的作废
+            if (hoverShown.current)
+                closeHover();
+            else
+                clearHoverTimer();
+            return;
+        }
+        if (hoverShown.current) {
+            // 预览已在屏幕上 → 实时换图（用户要求的「实时通过 hover 显示其他表情包」）
+            setHover({ url, x: e.clientX, y: e.clientY });
+            return;
+        }
+        if (hoverPending.current === url)
+            return; // 同一格继续等，别重置计时
+        clearHoverTimer();
+        hoverPending.current = url;
+        hoverTimer.current = window.setTimeout(() => {
+            hoverTimer.current = null;
+            hoverShown.current = true;
+            setHover({ url, x: hoverPos.current.x, y: hoverPos.current.y });
+        }, HOVER_DELAY);
+    };
+    // 悬停的那张还没下好（面板分批下载中）：补一次，到位后浮层自己换成图
+    (0,react_production_namespaceFn().useEffect)(() => {
+        if (!hover || ready[hover.url])
+            return;
+        let alive = true;
+        loadEmojiBlob(hover.url)
+            .then((entry) => {
+            if (alive)
+                setReady((prev) => ({ ...prev, [hover.url]: entry.objectUrl }));
+        })
+            .catch(() => {
+            /* 下载失败：浮层留在加载态，移开即消失 */
+        });
+        return () => {
+            alive = false;
+        };
+    }, [hover, ready]);
+    const chip = (pack) => {
+        const on = pack.id === activeId;
+        return ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { size: "small", type: "text", "aria-pressed": on, onClick: () => setActiveId(pack.id), style: {
+                flex: '0 0 auto',
+                height: 22,
+                padding: '0 8px',
+                fontSize: 12,
+                borderRadius: 11,
+                background: on ? 'rgba(7,193,96,0.18)' : 'rgba(255,255,255,0.06)',
+                color: on ? '#07C160' : 'rgba(255,255,255,0.75)',
+            }, children: pack.name }, pack.id));
+    };
+    const body = () => {
+        if (err) {
+            return ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { padding: '18px 0', textAlign: 'center' }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { fontSize: 12, color: 'rgba(255,255,255,0.55)', marginBottom: 8 }, children: err }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { size: "small", onClick: () => load(true), children: "\u91CD\u8BD5" })] }));
+        }
+        if (!packs) {
+            return ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { padding: '22px 0', textAlign: 'center' }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(spin, { size: "small" }), (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { fontSize: 12, color: 'rgba(255,255,255,0.45)', marginTop: 8 }, children: "\u6B63\u5728\u52A0\u8F7D\u8868\u60C5\u5305\u2026" })] }));
+        }
+        return ((0,react_jsx_runtime_production_namespaceFn().jsx)("div", { onMouseMove: onGridMove, onMouseLeave: closeHover, style: {
+                maxHeight: 196,
+                overflowY: 'auto',
+                display: 'grid',
+                gridTemplateColumns: 'repeat(8, minmax(0, 1fr))',
+                gap: 2,
+            }, children: (activePack ? activePack.items : []).map((it) => {
+                const url = ready[it.url];
+                return ((0,react_jsx_runtime_production_namespaceFn().jsx)("button", { type: "button", className: "znhd-emoji-item", "aria-label": '表情 ' + it.name, title: it.key, "aria-busy": pendingKey === it.url, "data-emoji-url": it.url, onClick: () => pick(it), style: {
+                        width: 30,
+                        height: 30,
+                        padding: 0,
+                        border: 'none',
+                        borderRadius: 4,
+                        background: url ? 'transparent' : 'rgba(255,255,255,0.05)',
+                        opacity: pendingKey === it.url ? 0.45 : 1,
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: 'pointer',
+                    }, children: url ? ((0,react_jsx_runtime_production_namespaceFn().jsx)("img", { src: url, alt: it.key, style: { maxWidth: 26, maxHeight: 26, display: 'block' } })) : null }, it.url));
+            }) }));
+    };
+    return ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { width: EmojiPackPanel_PANEL_WIDTH }, className: "znhd-emoji-panel", children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { flex: '1 1 auto', display: 'flex', gap: 4, overflowX: 'auto', paddingBottom: 2 }, children: (packs || []).map(chip) }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { size: "small", type: "text", "aria-label": "\u5237\u65B0\u8868\u60C5\u5305", disabled: busy, onClick: () => load(true), style: {
+                            flex: '0 0 auto',
+                            height: 22,
+                            padding: '0 4px',
+                            fontSize: 12,
+                            color: token.colorTextTertiary,
+                        }, children: "\u5237\u65B0" })] }), body(), (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { fontSize: 11, color: 'rgba(255,255,255,0.35)', marginTop: 6 }, children: "\u70B9\u8868\u60C5\u76F4\u63A5\u53D1\u9001\u5230\u624B\u673A \u00B7 \u60AC\u505C 0.5 \u79D2\u653E\u5927\u67E5\u770B" }), hover
+                ? (0,react_dom_production_namespaceFn().createPortal)((0,react_jsx_runtime_production_namespaceFn().jsx)("div", { className: "znhd-emoji-hover", "data-emoji-url": hover.url, "aria-hidden": "true", style: {
+                        position: 'fixed',
+                        // 跟随光标 + 视口夹紧（贴边时不越界）
+                        left: Math.max(8, Math.min(hover.x + HOVER_OFFSET, window.innerWidth - HOVER_BOX - 8)),
+                        top: Math.max(8, Math.min(hover.y + HOVER_OFFSET, window.innerHeight - HOVER_BOX - 8)),
+                        width: HOVER_BOX,
+                        height: HOVER_BOX,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        background: 'rgba(0,0,0,0.78)',
+                        border: '1px solid rgba(255,255,255,0.16)',
+                        borderRadius: 10,
+                        boxShadow: '0 8px 24px rgba(0,0,0,0.55)',
+                        // 不吃鼠标事件：浮层压在别的格子上也不会打断「移到下一张」
+                        pointerEvents: 'none',
+                        zIndex: HOVER_Z,
+                    }, children: ready[hover.url] ? ((0,react_jsx_runtime_production_namespaceFn().jsx)("img", { src: ready[hover.url], alt: "", style: { maxWidth: HOVER_BOX - 16, maxHeight: HOVER_BOX - 16, display: 'block' } })) : ((0,react_jsx_runtime_production_namespaceFn().jsx)(spin, { size: "small" })) }), getPreviewHost())
+                : null] }));
+}
+
+;// ./src/lib/ui/transfer/ChatComposer.tsx
+
+/**
+ * 聊天输入区（v26.10.12-v3；v26.10.12-v4 改**微信桌面版结构**）：传输助手第三栏的消息输入面板。
+ *
+ * ── 微信原版结构（对齐截图）─────────────────────────────────────────────────
+ *   ┌────────────────────────────────────────┐
+ *   │ 😀 🖼 📎                ← 工具栏图标行（上） │
+ *   │ 多行文本输入框（自动增高，超限框内滚动）      │
+ *   │                        [发送] ← 右下角 │
+ *   └────────────────────────────────────────┘
+ * 整个面板是一块 #262626 的实心底（比聊天区略浅，靠上边框分开），**不再有 v3 那个
+ * 带边框圆角的内层盒子** —— 微信的输入区就是一整块面板。
+ *
+ * ⚠️ 两条实测结论仍然成立，别动：
+ * · **textarea 自己禁 outline / boxShadow**（v26.10.10-v13）：antd `variant="borderless"`
+ *   会在 `:focus-visible` 时给文本域自己画 outline（「框里套框」）。聚焦反馈交给光标，
+ *   不再画外圈（微信输入区也没有聚焦光圈）。
+ * · **必须同时钉住 `minRows` 与 `lineHeight: '20px'`**（v26.10.10-v15）：rc-textarea
+ *   挂载时按 minRows 算高、输入后按「行数 × 行高 + padding」重算，行高不一致会出现
+ *   「打一个字再删空，输入框永久变高」。
+ *
+ * v26.10.13-v3：表情面板由「BMP 字符符号」换成**在线图片表情包**（`EmojiPackPanel`，
+ * 数据层见 `@/lib/transfer/emojiPack`）。点一张表情不再往输入框插字符，而是把图片交回
+ * 调用方（`onPickEmojiImage`）——设备会话据此**直接发出去**（v26.10.13-v4 起）。
+ *
+ * ── 表情面板的两种自动收起（v26.10.13-v7，用户要求）────────────────────────────
+ * ① **点一张表情后立即收起**：点击落在 Popover 内容里，rc-trigger 视作「内部点击」不会关，
+ *    必须在 pick 回调里显式 `setEmojiOpen(false)`（见 `pickEmoji`）。
+ * ② **点面板之外的任何区域立即收起**：由本组件自己挂 document 级 mousedown 判定（见 `useEffect`），
+ *    不依赖 rc-trigger 的 `useWinClick` —— 后者只用「触发元素 / 浮层元素」两个 DOM 判内外，
+ *    在受控 `open` 下行为不够直观，自己管一遍更确定。判据见注释。
+ *
+ * ⚠️ v26.10.13-v9：原为「设备会话与 Agent 对话共用」；删掉 Agent 后本组件只服务设备会话，
+ * 随之下掉了只给 Agent 用的三个 props（`streaming` / `onStop` / `rightExtras`）与 `StopIcon`。
+ */
+
+
+
+
+
+function ChatComposer({ value, onChange, onSend, disabled, placeholder, canSend, actions, notice, onPickEmojiImage, }) {
+    const [emojiOpen, setEmojiOpen] = (0,react_production_namespaceFn().useState)(false);
+    /** 表情面板只在有回调时可用（v26.10.13-v3：换成在线图片表情包，见 EmojiPackPanel） */
+    const emojiEnabled = !!onPickEmojiImage;
+    /**
+     * 点选一张表情：**立即收起面板**，再把图交回调用方。
+     * ⚠️ 不能只靠 Popover 的「点外部关闭」——点击发生在 Popover 内容里，rc-trigger 把它
+     * 当作内部点击，不会触发 onOpenChange；用户要求「点表情发送后立刻隐藏表情窗口」。
+     */
+    const pickEmoji = (emoji) => {
+        setEmojiOpen(false);
+        if (onPickEmojiImage)
+            onPickEmojiImage(emoji);
+    };
+    /**
+     * 点「表情窗口之外」立即收起（v26.10.13-v7，用户要求）。
+     * 由本组件自己接管，不依赖 rc-trigger 的 useWinClick，行为更确定：
+     *   · 点面板内部（合集 chips / 网格 / 刷新 / 滚动条）→ 不动；
+     *   · 点触发按钮 → 交给按钮自身的 toggle（否则会「先被这里关掉、又被 toggle 打开」）；
+     *   · 其余任何地方（消息区、输入框、其它按钮、窗口外）→ 收起。
+     * ⚠️ 面板内容由 Popover portal 到浮层宿主（`#__znhd_overlay_host__`），**不在本组件子树里**，
+     * 所以只能挂 document 级 mousedown，用类名反查（与冒烟夹具 `emojiPanelVisible` 同一套判据）。
+     */
+    (0,react_production_namespaceFn().useEffect)(() => {
+        if (!emojiOpen)
+            return;
+        const onDown = (event) => {
+            const target = event.target;
+            if (target && typeof target.closest === 'function') {
+                if (target.closest('.znhd-emoji-panel'))
+                    return; // 点在面板里
+                if (target.closest('button[aria-label="表情"]'))
+                    return; // 点触发按钮：交给它 toggle
+            }
+            setEmojiOpen(false);
+        };
+        document.addEventListener('mousedown', onDown, true);
+        return () => document.removeEventListener('mousedown', onDown, true);
+    }, [emojiOpen]);
+    const sendDisabled = !!disabled || !(canSend === undefined ? value.trim() : canSend);
+    const iconButton = (label, tooltip, icon, onClick, isDisabled) => ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_tooltip, { title: tooltip, children: (0,react_jsx_runtime_production_namespaceFn().jsx)("span", { style: { display: 'inline-flex' }, children: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { type: "text", size: "small", "aria-label": label, icon: icon, disabled: isDisabled, onClick: onClick, style: { width: 28, height: 28, minWidth: 28, padding: 0, color: 'rgba(255,255,255,0.6)' } }) }) }, label));
+    return ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { 
+        // 类名是冒烟夹具识别「共用输入面板」的钩子（composerFacts / composerBoxOf），勿改
+        className: "znhd-chat-composer", style: {
             flex: '0 0 auto',
-            width: 250,
             display: 'flex',
             flexDirection: 'column',
-            background: WECHAT.list,
-            minWidth: 0,
-        }, children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', gap: 6, padding: '10px 10px 8px' }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(es_input, { allowClear: true, prefix: (0,react_jsx_runtime_production_namespaceFn().jsx)(SearchIcon, { size: 14, color: "rgba(255,255,255,0.35)" }), placeholder: isAgents ? '搜索对话' : '搜索', value: search, onChange: (e) => onSearch(e.target.value), style: {
-                            background: WECHAT.chat,
-                            borderRadius: 6,
-                        } }), isFiles ? null : isAgents ? ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_tooltip, { title: "\u65B0\u5EFA\u5BF9\u8BDD\uFF08\u6E05\u7A7A\u5F53\u524D\u89C6\u56FE\uFF0C\u53D1\u51FA\u4E0B\u4E00\u6761\u6D88\u606F\u65F6\u53E6\u8D77\u4E00\u4E2A\u5BF9\u8BDD\uFF09", children: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { type: "text", "aria-label": "\u65B0\u5EFA\u5BF9\u8BDD", onClick: () => {
-                                if (onAgentPane)
-                                    onAgentPane('chat');
-                                if (agent)
-                                    agent.newChat();
-                            }, style: {
-                                width: 28,
-                                padding: 0,
-                                color: 'rgba(255,255,255,0.65)',
-                            }, children: (0,react_jsx_runtime_production_namespaceFn().jsx)(PlusIcon, { size: 16 }) }) })) : ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_tooltip, { title: "\u914D\u5BF9\u8BBE\u5907\uFF08\u624B\u673A\u626B\u7801 / \u6253\u5F00\u94FE\u63A5\u5373\u5B8C\u6210\u914D\u5BF9\uFF09", children: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { type: "text", "aria-label": "\u914D\u5BF9\u8BBE\u5907", onClick: onPair, style: {
-                                width: 28,
-                                padding: 0,
-                                color: 'rgba(255,255,255,0.65)',
-                            }, children: (0,react_jsx_runtime_production_namespaceFn().jsx)(PlusIcon, { size: 16 }) }) }))] }), isAgents ? ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', flexDirection: 'column', gap: 2, padding: '0 8px 6px' }, children: [agentControl('skills', '技能', (0,react_jsx_runtime_production_namespaceFn().jsx)(GridIcon, { size: 15, color: "currentColor" })), agentControl('tasks', '定时任务', (0,react_jsx_runtime_production_namespaceFn().jsx)(ClockIcon, { size: 15, color: "currentColor" }))] })) : null, (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { flex: '1 1 auto', minHeight: 0, overflowY: 'auto', padding: '0 6px 10px' }, children: isAgents && agent ? ((0,react_jsx_runtime_production_namespaceFn().jsx)(AgentConversationList, { chats: agent.chats, activeChatId: agent.activeChatId, onSwitch: (id) => {
-                        // 从技能 / 定时任务页切回对话（点会话卡片就是「我要看这个对话」）
-                        if (onAgentPane)
-                            onAgentPane('chat');
-                        void agent.switchChat(id);
-                    }, onDelete: (id) => void agent.deleteChat(id) })) : isAgents ? null : filtered.length ? ((0,react_jsx_runtime_production_namespaceFn().jsxs)((react_jsx_runtime_production_namespaceFn().Fragment), { children: [filesMode ? ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { className: "znhd-transfer-session-item", "data-all-files": "1", title: "\u5168\u90E8\u6587\u4EF6", "aria-label": "\u5168\u90E8\u6587\u4EF6", onClick: () => onSelectFilesSession(''), style: {
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: 10,
-                                padding: '9px 10px',
-                                borderRadius: 6,
-                                cursor: 'pointer',
-                                background: filesActiveKey === '' ? WECHAT.selected : 'transparent',
-                            }, onMouseEnter: (ev) => {
-                                if (filesActiveKey !== '')
-                                    ev.currentTarget.style.background = WECHAT.hover;
-                            }, onMouseLeave: (ev) => {
-                                if (filesActiveKey !== '')
-                                    ev.currentTarget.style.background = 'transparent';
-                            }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("span", { style: {
-                                        width: 36,
-                                        height: 36,
-                                        borderRadius: 6,
-                                        flex: '0 0 auto',
-                                        display: 'inline-flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        background: WECHAT.bubblePeer,
-                                        color: 'rgba(255,255,255,0.8)',
-                                    }, children: (0,react_jsx_runtime_production_namespaceFn().jsx)(GridIcon, { size: 18, color: "currentColor" }) }), (0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { flex: '1 1 auto', minWidth: 0 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: {
-                                                fontSize: 13,
-                                                color: 'rgba(255,255,255,0.9)',
-                                                overflow: 'hidden',
-                                                textOverflow: 'ellipsis',
-                                                whiteSpace: 'nowrap',
-                                            }, children: "\u5168\u90E8\u6587\u4EF6" }), (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: {
-                                                fontSize: 12,
-                                                color: 'rgba(255,255,255,0.4)',
-                                                overflow: 'hidden',
-                                                textOverflow: 'ellipsis',
-                                                whiteSpace: 'nowrap',
-                                                marginTop: 1,
-                                            }, children: "\u6240\u6709\u4F1A\u8BDD\u7684\u56FE\u7247\u4E0E\u6587\u672C" })] })] }, "__all_files__")) : null, filtered.map((e) => {
-                            // 文件分组：选中/点击都走「筛选文件视图」；其余分组照旧（选中会话 → 聊天）
-                            const active = filesMode ? e.key === filesActiveKey : e.key === activeSessionKey;
-                            const clickable = filesMode || !isFiles;
-                            const pick = () => {
-                                if (filesMode)
-                                    onSelectFilesSession(e.key);
-                                else
-                                    onSelectSession(e.key);
-                            };
-                            return ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { className: "znhd-transfer-session-item", title: e.label, onClick: clickable ? pick : undefined, style: {
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: 10,
-                                    padding: '9px 10px',
-                                    borderRadius: 6,
-                                    cursor: clickable ? 'pointer' : 'default',
-                                    // 选中 = 比栏底浅一档（微信暗色同款）；悬停 = 中间档
-                                    background: active ? WECHAT.selected : 'transparent',
-                                }, onMouseEnter: (ev) => {
-                                    if (clickable && !active)
-                                        ev.currentTarget.style.background = WECHAT.hover;
-                                }, onMouseLeave: (ev) => {
-                                    if (clickable && !active)
-                                        ev.currentTarget.style.background = 'transparent';
-                                }, children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)("span", { style: {
-                                            width: 36,
-                                            height: 36,
-                                            borderRadius: 6,
-                                            flex: '0 0 auto',
-                                            display: 'inline-flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            background: e.isAggregate ? WECHAT.bubblePeer : token.colorPrimaryBg,
-                                            color: e.isAggregate ? 'rgba(255,255,255,0.8)' : token.colorPrimary,
-                                            fontSize: 14,
-                                            fontWeight: 600,
-                                            position: 'relative',
-                                        }, children: [e.isAggregate ? ((0,react_jsx_runtime_production_namespaceFn().jsx)(SmartphoneIcon, { size: 18, color: "currentColor" })) : (e.label.slice(0, 1).toUpperCase()), e.online ? ((0,react_jsx_runtime_production_namespaceFn().jsx)("span", { style: {
-                                                    position: 'absolute',
-                                                    right: -2,
-                                                    bottom: -2,
-                                                    width: 9,
-                                                    height: 9,
-                                                    borderRadius: '50%',
-                                                    background: '#52c41a',
-                                                    border: '1.5px solid ' + WECHAT.list,
-                                                } })) : null] }), (0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { flex: '1 1 auto', minWidth: 0 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: {
-                                                    fontSize: 13,
-                                                    color: 'rgba(255,255,255,0.9)',
-                                                    overflow: 'hidden',
-                                                    textOverflow: 'ellipsis',
-                                                    whiteSpace: 'nowrap',
-                                                }, children: e.label }), (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: {
-                                                    fontSize: 12,
-                                                    color: 'rgba(255,255,255,0.4)',
-                                                    overflow: 'hidden',
-                                                    textOverflow: 'ellipsis',
-                                                    whiteSpace: 'nowrap',
-                                                    marginTop: 1,
-                                                }, children: e.lastMsg ? previewText(e.lastMsg) : e.online ? '在线' : '离线' })] }), (0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { flex: '0 0 auto', textAlign: 'right' }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { fontSize: 11, color: 'rgba(255,255,255,0.35)' }, children: listTime(e.lastTs || 0) }), e.unread > 0 ? ((0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: {
-                                                    marginTop: 3,
-                                                    marginLeft: 'auto',
-                                                    background: '#FA5151',
-                                                    color: '#fff',
-                                                    borderRadius: 9,
-                                                    fontSize: 11,
-                                                    lineHeight: '16px',
-                                                    padding: '0 5px',
-                                                    minWidth: 16,
-                                                    textAlign: 'center',
-                                                }, children: e.unread > 99 ? '99+' : e.unread })) : null] })] }, e.key));
-                        })] })) : ((0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: {
-                        fontSize: 12,
-                        color: 'rgba(255,255,255,0.35)',
-                        padding: '12px 4px',
-                        textAlign: 'center',
-                    }, children: keyword ? '没有匹配的会话 / 设备' : isFiles ? '暂无文件' : '暂无会话——点右上角 + 配对手机' })) })] }));
+            padding: '6px 12px 8px',
+            background: WECHAT.input,
+            borderTop: '1px solid rgba(0,0,0,0.4)',
+        }, children: [notice, (0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', alignItems: 'center', gap: 2, marginBottom: 2 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(es_popover, { trigger: "click", placement: "topLeft", open: emojiOpen, onOpenChange: setEmojiOpen, 
+                        // 面板内容只在首次打开时挂载（Popover 不渲染关闭态的内容）：表情包清单与图片
+                        // 都是打开面板才去拉，不开面板不产生任何网络请求
+                        // onPick = pickEmoji：点一张即收起面板 + 交回调用方（见上面 pickEmoji 注释）
+                        content: emojiEnabled ? (0,react_jsx_runtime_production_namespaceFn().jsx)(EmojiPackPanel, { onPick: pickEmoji }) : null, children: iconButton('表情', emojiEnabled ? '表情包（点一张直接发送到手机，悬停可放大）' : '当前对话不支持发送表情', (0,react_jsx_runtime_production_namespaceFn().jsx)(SmileIcon, { size: 16 }), () => setEmojiOpen((v) => !v), disabled || !emojiEnabled) }), (actions || []).map((action) => iconButton(action.label, action.tooltip || action.label, action.icon, action.onClick, action.disabled || disabled))] }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_input.TextArea, { value: value, onChange: (event) => onChange(event.target.value), onPressEnter: (event) => {
+                    if (event.shiftKey)
+                        return;
+                    event.preventDefault();
+                    onSend();
+                }, placeholder: placeholder, 
+                // 行数上限 6 行：超过后 rc-textarea 交给原生滚动条（框内滚动），
+                // 输入区高度因此有上限，不会把消息区挤没
+                autoSize: { minRows: 2, maxRows: 6 }, disabled: disabled, variant: "borderless", style: {
+                    resize: 'none',
+                    padding: 0,
+                    fontSize: 14,
+                    lineHeight: '20px',
+                    color: 'rgba(255,255,255,0.9)',
+                    outline: 'none',
+                    boxShadow: 'none',
+                } }), (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 8, marginTop: 4 }, children: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { size: "small", "aria-label": "\u53D1\u9001", disabled: sendDisabled, onClick: onSend, icon: (0,react_jsx_runtime_production_namespaceFn().jsx)(SendIcon, { size: 13 }), style: {
+                        minWidth: 64,
+                        color: sendDisabled ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.9)',
+                        background: sendDisabled ? 'transparent' : 'rgba(255,255,255,0.08)',
+                    }, children: "\u53D1\u9001" }) })] }));
 }
 
-;// ./node_modules/antd/es/alert/style/index.js
-
-
-
-const genAlertTypeStyle = (bgColor, iconColor, alertCls) => ({
-  background: bgColor,
-  [`${alertCls}-icon`]: {
-    color: iconColor
-  }
-});
-const alert_style_genBaseStyle = token => {
-  const {
-    componentCls,
-    motionDurationSlow: duration,
-    marginXS,
-    marginSM,
-    fontSize,
-    fontSizeLG,
-    lineHeight,
-    motionEaseInOutCirc,
-    borderRadius,
-    withDescriptionIconSize,
-    colorText,
-    colorTextHeading,
-    withDescriptionPadding,
-    defaultPadding,
-    lineWidth,
-    lineType,
-    colorSuccessBorder,
-    colorWarningBorder,
-    colorErrorBorder,
-    colorInfoBorder
-  } = token;
-  return {
-    [componentCls]: {
-      ...resetComponent(token),
-      position: 'relative',
-      display: 'flex',
-      alignItems: 'center',
-      padding: defaultPadding,
-      wordWrap: 'break-word',
-      borderRadius,
-      borderWidth: util_unit(lineWidth),
-      borderStyle: lineType,
-      [`&${componentCls}-success`]: {
-        borderColor: colorSuccessBorder
-      },
-      [`&${componentCls}-info`]: {
-        borderColor: colorInfoBorder
-      },
-      [`&${componentCls}-warning`]: {
-        borderColor: colorWarningBorder
-      },
-      [`&${componentCls}-error`]: {
-        borderColor: colorErrorBorder
-      },
-      [`&${componentCls}-filled`]: {
-        borderColor: 'transparent'
-      },
-      [`&${componentCls}-rtl`]: {
-        direction: 'rtl'
-      },
-      [`${componentCls}-section`]: {
-        flex: 1,
-        minWidth: 0
-      },
-      [`${componentCls}-icon`]: {
-        marginInlineEnd: marginXS,
-        lineHeight: 0
-      },
-      '&-description': {
-        display: 'none',
-        fontSize,
-        lineHeight
-      },
-      '&-title': {
-        color: colorTextHeading
-      },
-      [`&${componentCls}-motion-leave`]: {
-        overflow: 'hidden',
-        opacity: 1,
-        transition: [`max-height`, `opacity`, `padding-top`, `padding-bottom`, `margin-bottom`].map(prop => `${prop} ${duration} ${motionEaseInOutCirc}`).join(', ')
-      },
-      [`&${componentCls}-motion-leave-active`]: {
-        maxHeight: 0,
-        marginBottom: '0 !important',
-        paddingTop: 0,
-        paddingBottom: 0,
-        opacity: 0
-      },
-      [`&${componentCls}-with-description`]: {
-        alignItems: 'flex-start',
-        padding: withDescriptionPadding,
-        [`${componentCls}-icon`]: {
-          marginInlineEnd: marginSM,
-          fontSize: withDescriptionIconSize,
-          lineHeight: 0
-        },
-        [`${componentCls}-title`]: {
-          display: 'block',
-          marginBottom: marginXS,
-          color: colorTextHeading,
-          fontSize: fontSizeLG
-        },
-        [`${componentCls}-description`]: {
-          display: 'block',
-          color: colorText
-        }
-      },
-      [`&${componentCls}-banner`]: {
-        marginBottom: 0,
-        border: '0 !important',
-        borderRadius: 0
-      }
-    }
-  };
-};
-const genTypeStyle = token => {
-  const {
-    componentCls,
-    colorSuccess,
-    colorSuccessBg,
-    colorWarning,
-    colorWarningBg,
-    colorError,
-    colorErrorBg,
-    colorInfo,
-    colorInfoBg
-  } = token;
-  return {
-    [componentCls]: {
-      '&-success': genAlertTypeStyle(colorSuccessBg, colorSuccess, componentCls),
-      '&-info': genAlertTypeStyle(colorInfoBg, colorInfo, componentCls),
-      '&-warning': genAlertTypeStyle(colorWarningBg, colorWarning, componentCls),
-      '&-error': {
-        ...genAlertTypeStyle(colorErrorBg, colorError, componentCls),
-        [`${componentCls}-description > pre`]: {
-          margin: 0,
-          padding: 0
-        }
-      }
-    }
-  };
-};
-const genActionStyle = token => {
-  const {
-    componentCls,
-    iconCls,
-    motionDurationMid,
-    marginXS,
-    fontSizeIcon,
-    colorIcon,
-    colorIconHover
-  } = token;
-  return {
-    [componentCls]: {
-      [`${componentCls}-actions`]: {
-        marginInlineStart: marginXS
-      },
-      [`${componentCls}-close-icon`]: {
-        marginInlineStart: marginXS,
-        padding: 0,
-        overflow: 'hidden',
-        fontSize: fontSizeIcon,
-        lineHeight: util_unit(fontSizeIcon),
-        backgroundColor: 'transparent',
-        border: 'none',
-        cursor: 'pointer',
-        ...genFocusStyle(token),
-        [`${iconCls}-close`]: {
-          color: colorIcon,
-          transition: `color ${motionDurationMid}`,
-          '&:hover': {
-            color: colorIconHover
-          }
-        }
-      },
-      '&-close-text': {
-        color: colorIcon,
-        transition: `color ${motionDurationMid}`,
-        '&:hover': {
-          color: colorIconHover
-        }
-      }
-    }
-  };
-};
-const alert_style_prepareComponentToken = token => {
-  const paddingHorizontal = 12; // Fixed value here.
-  return {
-    borderRadius: token.borderRadiusLG,
-    withDescriptionIconSize: token.fontSizeHeading3,
-    defaultPadding: `${token.paddingContentVerticalSM}px ${paddingHorizontal}px`,
-    withDescriptionPadding: `${token.paddingMD}px ${token.paddingContentHorizontalLG}px`
-  };
-};
-/* harmony default export */ const alert_style = (genStyleHooks('Alert', token => [alert_style_genBaseStyle(token), genTypeStyle(token), genActionStyle(token)], alert_style_prepareComponentToken));
-;// ./node_modules/antd/es/alert/Alert.js
-"use client";
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-const IconNode = props => {
-  const {
-    icon,
-    type,
-    className,
-    style,
-    successIcon,
-    infoIcon,
-    warningIcon,
-    errorIcon
-  } = props;
-  const iconMapFilled = {
-    success: successIcon ?? /*#__PURE__*/(react_production_namespaceFn().createElement)(icons_CheckCircleFilled, null),
-    info: infoIcon ?? /*#__PURE__*/(react_production_namespaceFn().createElement)(icons_InfoCircleFilled, null),
-    error: errorIcon ?? /*#__PURE__*/(react_production_namespaceFn().createElement)(icons_CloseCircleFilled, null),
-    warning: warningIcon ?? /*#__PURE__*/(react_production_namespaceFn().createElement)(icons_ExclamationCircleFilled, null)
-  };
-  return /*#__PURE__*/(react_production_namespaceFn().createElement)("span", {
-    className: className,
-    style: style
-  }, icon ?? iconMapFilled[type]);
-};
-const CloseIconNode = props => {
-  const {
-    isClosable,
-    prefixCls,
-    closeIcon,
-    handleClose,
-    ariaProps,
-    className,
-    style
-  } = props;
-  const mergedCloseIcon = closeIcon === true || closeIcon === undefined ? /*#__PURE__*/(react_production_namespaceFn().createElement)(icons_CloseOutlined, null) : closeIcon;
-  return isClosable ? (/*#__PURE__*/(react_production_namespaceFn().createElement)("button", {
-    type: "button",
-    onClick: handleClose,
-    className: clsx(`${prefixCls}-close-icon`, className),
-    tabIndex: 0,
-    style: style,
-    ...ariaProps
-  }, mergedCloseIcon)) : null;
-};
-const Alert = /*#__PURE__*/(react_production_namespaceFn().forwardRef)((props, ref) => {
-  const {
-    description,
-    prefixCls: customizePrefixCls,
-    message,
-    title,
-    banner,
-    className,
-    rootClassName,
-    style,
-    onMouseEnter,
-    onMouseLeave,
-    onClick,
-    afterClose,
-    showIcon,
-    closable,
-    closeText,
-    closeIcon,
-    action,
-    id,
-    styles,
-    classNames,
-    ...otherProps
-  } = props;
-  const mergedTitle = title ?? message;
-  const [closed, setClosed] = (react_production_namespaceFn().useState)(false);
-  if (false) // removed by dead control flow
-{}
-  const internalRef = (react_production_namespaceFn().useRef)(null);
-  (react_production_namespaceFn().useImperativeHandle)(ref, () => ({
-    nativeElement: internalRef.current
-  }));
-  const {
-    getPrefixCls,
-    direction,
-    variant: contextVariant,
-    closable: contextClosable,
-    closeIcon: contextCloseIcon,
-    className: contextClassName,
-    style: contextStyle,
-    classNames: contextClassNames,
-    styles: contextStyles,
-    successIcon,
-    infoIcon,
-    warningIcon,
-    errorIcon
-  } = useComponentConfig('alert');
-  const prefixCls = getPrefixCls('alert', customizePrefixCls);
-  const [hashId, cssVarCls] = alert_style(prefixCls);
-  const {
-    onClose: closableOnClose,
-    afterClose: closableAfterClose
-  } = is_isPlainObject(closable) ? closable : {};
-  const handleClose = e => {
-    setClosed(true);
-    (closableOnClose ?? props.onClose)?.(e);
-  };
-  const type = (react_production_namespaceFn().useMemo)(() => {
-    if (props.type !== undefined) {
-      return props.type;
-    }
-    // banner mode defaults to 'warning'
-    return banner ? 'warning' : 'info';
-  }, [props.type, banner]);
-  const mergedVariant = props.variant ?? contextVariant ?? 'outlined';
-  // closeable when closeText or closeIcon is assigned
-  const isClosable = (react_production_namespaceFn().useMemo)(() => {
-    if (is_isPlainObject(closable)) {
-      return true;
-    }
-    if (closeText) {
-      return true;
-    }
-    if (typeof closable === 'boolean') {
-      return closable;
-    }
-    // should be true when closeIcon is 0 or ''
-    if (closeIcon !== false && isNonNullable(closeIcon)) {
-      return true;
-    }
-    return !!contextClosable;
-  }, [closeText, closeIcon, closable, contextClosable]);
-  // banner mode defaults to Icon
-  const isShowIcon = banner && showIcon === undefined ? true : showIcon;
-  // =========== Merged Props for Semantic ==========
-  const mergedProps = {
-    ...props,
-    prefixCls,
-    variant: mergedVariant,
-    type,
-    showIcon: isShowIcon,
-    closable: isClosable
-  };
-  const contextStyleRoot = useSemanticRootStyle(contextStyle);
-  const styleRoot = useSemanticRootStyle(style);
-  const [mergedClassNames, mergedStyles] = useMergeSemantic([contextClassNames, classNames], [contextStyles, contextStyleRoot, styles, styleRoot], {
-    props: mergedProps
-  });
-  const alertCls = clsx(prefixCls, `${prefixCls}-${type}`, `${prefixCls}-${mergedVariant}`, {
-    [`${prefixCls}-with-description`]: isReactRenderable(description),
-    [`${prefixCls}-no-icon`]: !isShowIcon,
-    [`${prefixCls}-banner`]: !!banner,
-    [`${prefixCls}-rtl`]: direction === 'rtl'
-  }, contextClassName, className, rootClassName, mergedClassNames.root, cssVarCls, hashId);
-  const restProps = pickAttrs(otherProps, {
-    aria: true,
-    data: true
-  });
-  const mergedCloseIcon = (react_production_namespaceFn().useMemo)(() => {
-    if (is_isPlainObject(closable) && closable.closeIcon) {
-      return closable.closeIcon;
-    }
-    if (closeText) {
-      return closeText;
-    }
-    if (closeIcon !== undefined) {
-      return closeIcon;
-    }
-    if (is_isPlainObject(contextClosable) && contextClosable.closeIcon) {
-      return contextClosable.closeIcon;
-    }
-    return contextCloseIcon;
-  }, [closeIcon, closable, contextClosable, closeText, contextCloseIcon]);
-  const mergedAriaProps = (react_production_namespaceFn().useMemo)(() => {
-    const merged = closable ?? contextClosable;
-    if (is_isPlainObject(merged)) {
-      return pickAttrs(merged, {
-        data: true,
-        aria: true
-      });
-    }
-    return {};
-  }, [closable, contextClosable]);
-  return /*#__PURE__*/(react_production_namespaceFn().createElement)(es, {
-    visible: !closed,
-    motionName: `${prefixCls}-motion`,
-    motionAppear: false,
-    motionEnter: false,
-    onLeaveStart: node => ({
-      maxHeight: node.offsetHeight
-    }),
-    onLeaveEnd: closableAfterClose ?? afterClose
-  }, ({
-    className: motionClassName,
-    style: motionStyle
-  }, setRef) => (/*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
-    id: id,
-    ref: composeRef(internalRef, setRef),
-    "data-show": !closed,
-    className: clsx(alertCls, motionClassName),
-    style: {
-      ...mergedStyles.root,
-      ...motionStyle
-    },
-    onMouseEnter: onMouseEnter,
-    onMouseLeave: onMouseLeave,
-    onClick: onClick,
-    role: "alert",
-    ...restProps
-  }, isShowIcon ? (/*#__PURE__*/(react_production_namespaceFn().createElement)(IconNode, {
-    className: clsx(`${prefixCls}-icon`, mergedClassNames.icon),
-    style: mergedStyles.icon,
-    description: description,
-    icon: props.icon,
-    prefixCls: prefixCls,
-    type: type,
-    successIcon: successIcon,
-    infoIcon: infoIcon,
-    warningIcon: warningIcon,
-    errorIcon: errorIcon
-  })) : null, /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
-    className: clsx(`${prefixCls}-section`, mergedClassNames.section),
-    style: mergedStyles.section
-  }, isReactRenderable(mergedTitle) ? (/*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
-    className: clsx(`${prefixCls}-title`, mergedClassNames.title),
-    style: mergedStyles.title
-  }, mergedTitle)) : null, isReactRenderable(description) ? (/*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
-    className: clsx(`${prefixCls}-description`, mergedClassNames.description),
-    style: mergedStyles.description
-  }, description)) : null), isReactRenderable(action) ? (/*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
-    className: clsx(`${prefixCls}-actions`, mergedClassNames.actions),
-    style: mergedStyles.actions
-  }, action)) : null, /*#__PURE__*/(react_production_namespaceFn().createElement)(CloseIconNode, {
-    className: mergedClassNames.close,
-    style: mergedStyles.close,
-    isClosable: isClosable,
-    prefixCls: prefixCls,
-    closeIcon: mergedCloseIcon,
-    handleClose: handleClose,
-    ariaProps: mergedAriaProps
-  }))));
-});
-if (false) // removed by dead control flow
-{}
-/* harmony default export */ const alert_Alert = (Alert);
-;// ./node_modules/@babel/runtime/helpers/esm/callSuper.js
-
-
-
-function _callSuper(t, o, e) {
-  return o = _getPrototypeOf(o), _possibleConstructorReturn(t, _isNativeReflectConstruct() ? Reflect.construct(o, e || [], _getPrototypeOf(t).constructor) : o.apply(t, e));
-}
-
-;// ./node_modules/antd/es/alert/ErrorBoundary.js
-"use client";
-
-
-
-
-
-
-
-
-let ErrorBoundary = /*#__PURE__*/function (_React$PureComponent) {
-  function ErrorBoundary() {
-    var _this;
-    _classCallCheck(this, ErrorBoundary);
-    _this = _callSuper(this, ErrorBoundary, arguments);
-    _this.state = {
-      error: undefined,
-      info: {}
-    };
-    return _this;
-  }
-  _inherits(ErrorBoundary, _React$PureComponent);
-  return _createClass(ErrorBoundary, [{
-    key: "componentDidCatch",
-    value: function componentDidCatch(error, info) {
-      this.setState({
-        error,
-        info
-      });
-    }
-  }, {
-    key: "render",
-    value: function render() {
-      const {
-        message,
-        title,
-        description,
-        id,
-        children
-      } = this.props;
-      const {
-        error,
-        info
-      } = this.state;
-      const mergedTitle = title ?? message;
-      const componentStack = info?.componentStack || null;
-      const errorMessage = isNonNullable(mergedTitle) ? mergedTitle : error?.toString();
-      const errorDescription = isNonNullable(description) ? description : componentStack;
-      if (error) {
-        return /*#__PURE__*/(react_production_namespaceFn().createElement)(alert_Alert, {
-          id: id,
-          type: "error",
-          title: errorMessage,
-          description: /*#__PURE__*/(react_production_namespaceFn().createElement)("pre", {
-            style: {
-              fontSize: '0.9em',
-              overflowX: 'auto'
-            }
-          }, errorDescription)
-        });
-      }
-      return children;
-    }
-  }]);
-}((react_production_namespaceFn().PureComponent));
-/* harmony default export */ const alert_ErrorBoundary = (ErrorBoundary);
-;// ./node_modules/antd/es/alert/index.js
-"use client";
-
-
-
-const es_alert_Alert = alert_Alert;
-es_alert_Alert.ErrorBoundary = alert_ErrorBoundary;
-/* harmony default export */ const es_alert = (es_alert_Alert);
-;// ./node_modules/@rc-component/select/es/hooks/useAllowClear.js
-
-const useAllowClear_useAllowClear = (prefixCls, displayValues, allowClear, clearIcon, disabled = false, mergedSearchValue, mode) => {
-  // Convert boolean to object first
-  const allowClearConfig = (0,react_production_namespaceFn().useMemo)(() => {
-    if (typeof allowClear === 'boolean') {
-      return {
-        allowClear
-      };
-    }
-    if (allowClear && typeof allowClear === 'object') {
-      return allowClear;
-    }
-    return {
-      allowClear: false
-    };
-  }, [allowClear]);
-  return (0,react_production_namespaceFn().useMemo)(() => {
-    const mergedAllowClear = !disabled && allowClearConfig.allowClear !== false && (displayValues.length || mergedSearchValue) && !(mode === 'combobox' && mergedSearchValue === '');
-    return {
-      allowClear: mergedAllowClear,
-      clearIcon: mergedAllowClear ? allowClearConfig.clearIcon || clearIcon || '×' : null,
-      label: mergedAllowClear ? allowClearConfig.label ?? 'Clear' : ''
-    };
-  }, [allowClearConfig, clearIcon, disabled, displayValues.length, mergedSearchValue, mode]);
-};
-;// ./node_modules/@rc-component/select/es/hooks/useBaseProps.js
-/**
- * BaseSelect provide some parsed data into context.
- * You can use this hooks to get them.
- */
-
-
-const BaseSelectContext = /*#__PURE__*/(react_production_namespaceFn().createContext)(null);
-function useBaseProps() {
-  return (react_production_namespaceFn().useContext)(BaseSelectContext);
-}
-;// ./node_modules/@rc-component/select/es/hooks/useLock.js
-
+;// ./src/lib/ui/transfer/ChatPanel.tsx
 
 /**
- * Locker return cached mark.
- * If set to `true`, will return `true` in a short time even if set `false`.
- * If set to `false` and then set to `true`, will change to `true`.
- * And after time duration, it will back to `null` automatically.
- */
-function useLock(duration = 250) {
-  const lockRef = (react_production_namespaceFn().useRef)(null);
-  const timeoutRef = (react_production_namespaceFn().useRef)(null);
-
-  // Clean up
-  (react_production_namespaceFn().useEffect)(() => () => {
-    window.clearTimeout(timeoutRef.current);
-  }, []);
-  function doLock(locked) {
-    if (locked || lockRef.current === null) {
-      lockRef.current = locked;
-    }
-    window.clearTimeout(timeoutRef.current);
-    timeoutRef.current = window.setTimeout(() => {
-      lockRef.current = null;
-    }, duration);
-  }
-  return [() => lockRef.current, doLock];
-}
-;// ./node_modules/@rc-component/select/es/hooks/useSelectTriggerControl.js
-
-
-function isInside(elements, target) {
-  return elements.filter(element => element).some(element => element.contains(target) || element === target);
-}
-function useSelectTriggerControl(elements, open, triggerOpen, customizedTrigger) {
-  const onGlobalMouseDown = hooks_useEvent(event => {
-    // If trigger is customized, Trigger will take control of popupVisible
-    if (customizedTrigger) {
-      return;
-    }
-    let target = event.target;
-    if (target.shadowRoot && event.composed) {
-      target = event.composedPath()[0] || target;
-    }
-    if (event._ori_target) {
-      target = event._ori_target;
-    }
-    if (open &&
-    // Marked by SelectInput mouseDown event
-    !isInside(elements(), target)) {
-      // Should trigger close
-      triggerOpen(false);
-    }
-  });
-  (react_production_namespaceFn().useEffect)(() => {
-    window.addEventListener('mousedown', onGlobalMouseDown);
-    return () => window.removeEventListener('mousedown', onGlobalMouseDown);
-  }, [onGlobalMouseDown]);
-}
-;// ./node_modules/@rc-component/select/es/SelectTrigger.js
-function SelectTrigger_extends() { SelectTrigger_extends = Object.assign ? Object.assign.bind() : function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; }; return SelectTrigger_extends.apply(this, arguments); }
-;
-
-
-const getBuiltInPlacements = popupMatchSelectWidth => {
-  // Enable horizontal overflow auto-adjustment when a custom dropdown width is provided
-  const adjustX = popupMatchSelectWidth === true ? 0 : 1;
-  return {
-    bottomLeft: {
-      points: ['tl', 'bl'],
-      offset: [0, 4],
-      overflow: {
-        adjustX,
-        adjustY: 1
-      },
-      htmlRegion: 'scroll'
-    },
-    bottomRight: {
-      points: ['tr', 'br'],
-      offset: [0, 4],
-      overflow: {
-        adjustX,
-        adjustY: 1
-      },
-      htmlRegion: 'scroll'
-    },
-    topLeft: {
-      points: ['bl', 'tl'],
-      offset: [0, -4],
-      overflow: {
-        adjustX,
-        adjustY: 1
-      },
-      htmlRegion: 'scroll'
-    },
-    topRight: {
-      points: ['br', 'tr'],
-      offset: [0, -4],
-      overflow: {
-        adjustX,
-        adjustY: 1
-      },
-      htmlRegion: 'scroll'
-    }
-  };
-};
-const SelectTrigger = (props, ref) => {
-  const {
-    prefixCls,
-    disabled,
-    visible,
-    children,
-    popupElement,
-    animation,
-    transitionName,
-    popupStyle,
-    popupClassName,
-    direction = 'ltr',
-    placement,
-    builtinPlacements,
-    popupMatchSelectWidth,
-    popupRender,
-    popupAlign,
-    getPopupContainer,
-    empty,
-    onPopupVisibleChange,
-    onPopupMouseEnter,
-    onPopupMouseDown,
-    onPopupBlur,
-    ...restProps
-  } = props;
-
-  // We still use `dropdown` className to keep compatibility
-  // This is used for:
-  // 1. Styles
-  // 2. Animation
-  // 3. Theme customization
-  // Please do not modify this since it's a breaking change
-  const popupPrefixCls = `${prefixCls}-dropdown`;
-  let popupNode = popupElement;
-  if (popupRender) {
-    popupNode = popupRender(popupElement);
-  }
-  const mergedBuiltinPlacements = (react_production_namespaceFn().useMemo)(() => builtinPlacements || getBuiltInPlacements(popupMatchSelectWidth), [builtinPlacements, popupMatchSelectWidth]);
-
-  // ===================== Motion ======================
-  const mergedTransitionName = animation ? `${popupPrefixCls}-${animation}` : transitionName;
-
-  // =================== Popup Width ===================
-  const isNumberPopupWidth = typeof popupMatchSelectWidth === 'number';
-  const stretch = (react_production_namespaceFn().useMemo)(() => {
-    return popupMatchSelectWidth === false || isNumberPopupWidth ? 'minWidth' : 'width';
-  }, [popupMatchSelectWidth, isNumberPopupWidth]);
-  let mergedPopupStyle = popupStyle;
-  if (isNumberPopupWidth) {
-    mergedPopupStyle = {
-      ...popupStyle,
-      width: popupMatchSelectWidth
-    };
-  }
-
-  // ======================= Ref =======================
-  const triggerPopupRef = (react_production_namespaceFn().useRef)(null);
-  (react_production_namespaceFn().useImperativeHandle)(ref, () => ({
-    getPopupElement: () => triggerPopupRef.current?.popupElement
-  }));
-  return /*#__PURE__*/(react_production_namespaceFn().createElement)(trigger_es, SelectTrigger_extends({}, restProps, {
-    showAction: onPopupVisibleChange ? ['click'] : [],
-    hideAction: onPopupVisibleChange ? ['click'] : [],
-    popupPlacement: placement || (direction === 'rtl' ? 'bottomRight' : 'bottomLeft'),
-    builtinPlacements: mergedBuiltinPlacements,
-    prefixCls: popupPrefixCls,
-    popupMotion: {
-      motionName: mergedTransitionName
-    },
-    popup: /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
-      onMouseEnter: onPopupMouseEnter,
-      onMouseDown: onPopupMouseDown,
-      onBlur: onPopupBlur
-    }, popupNode),
-    ref: triggerPopupRef,
-    stretch: stretch,
-    popupAlign: popupAlign,
-    popupVisible: visible,
-    getPopupContainer: getPopupContainer,
-    popupClassName: clsx(popupClassName, {
-      [`${popupPrefixCls}-empty`]: empty
-    }),
-    popupStyle: mergedPopupStyle,
-    onPopupVisibleChange: onPopupVisibleChange
-  }), children);
-};
-const RefSelectTrigger = /*#__PURE__*/(react_production_namespaceFn().forwardRef)(SelectTrigger);
-if (false) // removed by dead control flow
-{}
-/* harmony default export */ const es_SelectTrigger = (RefSelectTrigger);
-;// ./node_modules/@rc-component/select/es/utils/valueUtil.js
-
-function getKey(data, index) {
-  const {
-    key
-  } = data;
-  let value;
-  if ('value' in data) {
-    ({
-      value
-    } = data);
-  }
-  if (key !== null && key !== undefined) {
-    return key;
-  }
-  if (value !== undefined) {
-    return value;
-  }
-  return `rc-index-key-${index}`;
-}
-function isValidCount(value) {
-  return typeof value !== 'undefined' && !Number.isNaN(value);
-}
-function fillFieldNames(fieldNames, childrenAsData) {
-  const {
-    label,
-    value,
-    options,
-    groupLabel
-  } = fieldNames || {};
-  const mergedLabel = label || (childrenAsData ? 'children' : 'label');
-  return {
-    label: mergedLabel,
-    value: value || 'value',
-    options: options || 'options',
-    groupLabel: groupLabel || mergedLabel
-  };
-}
-
-/**
- * Flat options into flatten list.
- * We use `optionOnly` here is aim to avoid user use nested option group.
- * Here is simply set `key` to the index if not provided.
- */
-function flattenOptions(options, {
-  fieldNames,
-  childrenAsData
-} = {}) {
-  const flattenList = [];
-  const {
-    label: fieldLabel,
-    value: fieldValue,
-    options: fieldOptions,
-    groupLabel
-  } = fillFieldNames(fieldNames, false);
-  function dig(list, isGroupOption) {
-    if (!Array.isArray(list)) {
-      return;
-    }
-    list.forEach(data => {
-      if (isGroupOption || !(fieldOptions in data)) {
-        const value = data[fieldValue];
-
-        // Option
-        flattenList.push({
-          key: getKey(data, flattenList.length),
-          groupOption: isGroupOption,
-          data,
-          label: data[fieldLabel],
-          value
-        });
-      } else {
-        let grpLabel = data[groupLabel];
-        if (grpLabel === undefined && childrenAsData) {
-          grpLabel = data.label;
-        }
-
-        // Option Group
-        flattenList.push({
-          key: getKey(data, flattenList.length),
-          group: true,
-          data,
-          label: grpLabel
-        });
-        dig(data[fieldOptions], true);
-      }
-    });
-  }
-  dig(options, false);
-  return flattenList;
-}
-
-/**
- * Inject `props` into `option` for legacy usage
- */
-function injectPropsWithOption(option) {
-  const newOption = {
-    ...option
-  };
-  if (!('props' in newOption)) {
-    Object.defineProperty(newOption, 'props', {
-      get() {
-        es_warning(false, 'Return type is option instead of Option instance. Please read value directly instead of reading from `props`.');
-        return newOption;
-      }
-    });
-  }
-  return newOption;
-}
-const getSeparatedContent = (text, tokens, end) => {
-  if (!tokens || !tokens.length) {
-    return null;
-  }
-  let match = false;
-  const separate = (str, [token, ...restTokens]) => {
-    if (!token) {
-      return [str];
-    }
-    const list = str.split(token);
-    match = match || list.length > 1;
-    return list.reduce((prevList, unitStr) => [...prevList, ...separate(unitStr, restTokens)], []).filter(Boolean);
-  };
-  const list = separate(text, tokens);
-  if (match) {
-    return typeof end !== 'undefined' ? list.slice(0, end) : list;
-  } else {
-    return null;
-  }
-};
-;// ./node_modules/@rc-component/select/es/BaseSelect/Polite.js
-
-function Polite(props) {
-  const {
-    visible,
-    values
-  } = props;
-  if (!visible) {
-    return null;
-  }
-
-  // Only cut part of values since it's a screen reader
-  const MAX_COUNT = 50;
-  return /*#__PURE__*/(react_production_namespaceFn().createElement)("span", {
-    "aria-live": "polite",
-    style: {
-      width: 0,
-      height: 0,
-      position: 'absolute',
-      overflow: 'hidden',
-      opacity: 0
-    }
-  }, `${values.slice(0, MAX_COUNT).map(({
-    label,
-    value
-  }) => ['number', 'string'].includes(typeof label) ? label : value).join(', ')}`, values.length > MAX_COUNT ? ', ...' : null);
-}
-;// ./node_modules/@rc-component/select/es/hooks/useOpen.js
-
-
-const internalMacroTask = fn => {
-  const channel = new MessageChannel();
-  channel.port1.onmessage = fn;
-  channel.port2.postMessage(null);
-};
-const useOpen_macroTask = (fn, times = 1) => {
-  if (times <= 0) {
-    fn();
-    return;
-  }
-  internalMacroTask(() => {
-    useOpen_macroTask(fn, times - 1);
-  });
-};
-
-/**
- * Trigger by latest open call, if nextOpen is undefined, means toggle.
- * `weak` means this call can be ignored if previous call exists.
- */
-
-/**
- * When `open` is controlled, follow the controlled value;
- * Otherwise use uncontrolled logic.
- * Setting `open` takes effect immediately,
- * but setting it to `false` is delayed via MessageChannel.
+ * 聊天面板的共用骨架件（v26.10.12-v3）。
  *
- * SSR handling: During SSR, `open` is always false to avoid Portal issues.
- * On client-side hydration, it syncs with the actual open state.
- */
-function useOpen(defaultOpen, propOpen, onOpen, postOpen) {
-  // SSR not support Portal which means we need delay `open` for the first time render
-  const [rendered, setRendered] = (0,react_production_namespaceFn().useState)(false);
-  (0,react_production_namespaceFn().useEffect)(() => {
-    setRendered(true);
-  }, []);
-  const [stateOpen, internalSetOpen] = useControlledState(defaultOpen, propOpen);
-
-  // Lock for options update
-  const [lock, setLock] = (0,react_production_namespaceFn().useState)(false);
-
-  // During SSR, always return false for open state
-  const ssrSafeOpen = rendered ? stateOpen : false;
-  const mergedOpen = postOpen(ssrSafeOpen);
-  const taskIdRef = (0,react_production_namespaceFn().useRef)(0);
-  const triggerEvent = hooks_useEvent(nextOpen => {
-    if (onOpen && mergedOpen !== nextOpen) {
-      onOpen(nextOpen);
-    }
-    internalSetOpen(nextOpen);
-  });
-  const toggleOpen = hooks_useEvent((nextOpen, config = {}) => {
-    const {
-      cancelFun
-    } = config;
-    taskIdRef.current += 1;
-    const id = taskIdRef.current;
-    const nextOpenVal = typeof nextOpen === 'boolean' ? nextOpen : !mergedOpen;
-    setLock(!nextOpenVal);
-    function triggerUpdate() {
-      if (
-      // Always check if id is match
-      id === taskIdRef.current &&
-      // Check if need to cancel
-      !cancelFun?.()) {
-        triggerEvent(nextOpenVal);
-        setLock(false);
-      }
-    }
-
-    // Weak update can be ignored
-    if (nextOpenVal) {
-      triggerUpdate();
-    } else {
-      useOpen_macroTask(() => {
-        triggerUpdate();
-      });
-    }
-  });
-  return [ssrSafeOpen, mergedOpen, toggleOpen, lock];
-}
-;// ./node_modules/@rc-component/select/es/SelectInput/Affix.js
-
-// Affix is a simple wrapper which should not read context or logical props
-function Affix(props) {
-  const {
-    children,
-    ...restProps
-  } = props;
-  if (!children) {
-    return null;
-  }
-  return /*#__PURE__*/(react_production_namespaceFn().createElement)("div", restProps, children);
-}
-;// ./node_modules/@rc-component/select/es/SelectInput/context.js
-
-const SelectInputContext = /*#__PURE__*/(react_production_namespaceFn().createContext)(null);
-function useSelectInputContext() {
-  return (react_production_namespaceFn().useContext)(SelectInputContext);
-}
-/* harmony default export */ const SelectInput_context = (SelectInputContext);
-;// ./node_modules/@rc-component/select/es/SelectInput/Input.js
-
-
-
-
-
-const SelectInput_Input_Input = /*#__PURE__*/(react_production_namespaceFn().forwardRef)((props, ref) => {
-  const {
-    onChange,
-    onKeyDown,
-    onBlur,
-    style,
-    syncWidth,
-    value,
-    className,
-    autoComplete,
-    ...restProps
-  } = props;
-  const {
-    prefixCls,
-    mode,
-    onSearch,
-    onSearchSubmit,
-    onInputBlur,
-    autoFocus,
-    tokenWithEnter,
-    placeholder,
-    components: {
-      input: InputComponent = 'input'
-    }
-  } = useSelectInputContext();
-  const {
-    id,
-    classNames,
-    styles,
-    open,
-    activeDescendantId,
-    role,
-    disabled
-  } = useBaseProps() || {};
-  const inputCls = clsx(`${prefixCls}-input`, classNames?.input, className);
-
-  // Used to handle input method composition status
-  const compositionStatusRef = (react_production_namespaceFn().useRef)(false);
-
-  // Used to handle paste content, similar to original Selector implementation
-  const pastedTextRef = (react_production_namespaceFn().useRef)(null);
-
-  // ============================== Refs ==============================
-  const inputRef = (react_production_namespaceFn().useRef)(null);
-  (react_production_namespaceFn().useImperativeHandle)(ref, () => inputRef.current);
-
-  // ============================== Data ==============================
-  // Handle input changes
-  const handleChange = event => {
-    let {
-      value: nextVal
-    } = event.target;
-
-    // Handle pasted text with tokenWithEnter, similar to original Selector implementation
-    if (tokenWithEnter && pastedTextRef.current && /[\r\n]/.test(pastedTextRef.current)) {
-      // CRLF will be treated as a single space for input element
-      const replacedText = pastedTextRef.current.replace(/[\r\n]+$/, '').replace(/\r\n/g, ' ').replace(/[\r\n]/g, ' ');
-      nextVal = nextVal.replace(replacedText, pastedTextRef.current);
-    }
-
-    // Reset pasted text reference
-    pastedTextRef.current = null;
-
-    // Call onSearch callback
-    if (onSearch) {
-      onSearch(nextVal, true, compositionStatusRef.current);
-    }
-
-    // Call original onChange callback
-    onChange?.(event);
-  };
-
-  // ============================ Keyboard ============================
-  // Handle keyboard events
-  const handleKeyDown = event => {
-    const {
-      key
-    } = event;
-    const {
-      value: nextVal
-    } = event.currentTarget;
-
-    // Handle Enter key submission - referencing Selector implementation
-    if (key === 'Enter' && mode === 'tags' && !open && !compositionStatusRef.current && onSearchSubmit) {
-      onSearchSubmit(nextVal);
-    }
-
-    // Call original onKeyDown callback
-    onKeyDown?.(event);
-  };
-
-  // Handle blur events
-  const handleBlur = event => {
-    // Call onInputBlur callback
-    onInputBlur?.();
-
-    // Call original onBlur callback
-    onBlur?.(event);
-  };
-
-  // Handle input method composition start
-  const handleCompositionStart = () => {
-    compositionStatusRef.current = true;
-  };
-
-  // Handle input method composition end
-  const handleCompositionEnd = event => {
-    compositionStatusRef.current = false;
-
-    // Trigger search when input method composition ends, similar to original Selector
-    if (mode !== 'combobox') {
-      const {
-        value: nextVal
-      } = event.currentTarget;
-      onSearch?.(nextVal, true, false);
-    }
-  };
-
-  // Handle paste events to track pasted content
-  const handlePaste = event => {
-    const {
-      clipboardData
-    } = event;
-    const pastedValue = clipboardData?.getData('text');
-    pastedTextRef.current = pastedValue || '';
-  };
-
-  // ============================= Width ==============================
-  const [widthCssVar, setWidthCssVar] = (react_production_namespaceFn().useState)(undefined);
-
-  // When syncWidth is enabled, adjust input width based on content
-  hooks_useLayoutEffect(() => {
-    const input = inputRef.current;
-    if (syncWidth && input) {
-      input.style.width = '0px';
-      const scrollWidth = input.scrollWidth;
-      setWidthCssVar(scrollWidth);
-
-      // Reset input style
-      input.style.width = '';
-    }
-  }, [syncWidth, value]);
-
-  // ============================= Render =============================
-  // Extract shared input props
-  const sharedInputProps = {
-    id,
-    type: 'text',
-    ...restProps,
-    ref: inputRef,
-    style: {
-      ...styles?.input,
-      ...style,
-      '--select-input-width': widthCssVar
-    },
-    autoFocus,
-    autoComplete: autoComplete || 'new-password',
-    className: inputCls,
-    disabled,
-    value: value || '',
-    onChange: handleChange,
-    onKeyDown: handleKeyDown,
-    onBlur: handleBlur,
-    onPaste: handlePaste,
-    onCompositionStart: handleCompositionStart,
-    onCompositionEnd: handleCompositionEnd,
-    // Accessibility attributes
-    role: role || 'combobox',
-    'aria-expanded': open || false,
-    'aria-haspopup': 'listbox',
-    'aria-owns': open ? `${id}_list` : undefined,
-    'aria-autocomplete': 'list',
-    'aria-controls': open ? `${id}_list` : undefined,
-    'aria-activedescendant': open ? activeDescendantId : undefined
-  };
-
-  // Handle different InputComponent types
-  if ( /*#__PURE__*/(react_production_namespaceFn().isValidElement)(InputComponent)) {
-    // If InputComponent is a ReactElement, use cloneElement with merged props
-    const existingProps = InputComponent.props || {};
-
-    // Start with shared props as base
-    const mergedProps = {
-      placeholder: props.placeholder || placeholder,
-      ...sharedInputProps,
-      ...existingProps
-    };
-
-    // Batch update function calls
-    Object.keys(existingProps).forEach(key => {
-      const existingValue = existingProps[key];
-      if (typeof existingValue === 'function') {
-        // Merge event handlers
-        mergedProps[key] = (...args) => {
-          existingValue(...args);
-          sharedInputProps[key]?.(...args);
-        };
-      }
-    });
-
-    // Update ref
-    mergedProps.ref = composeRef(InputComponent.ref, sharedInputProps.ref);
-    return /*#__PURE__*/(react_production_namespaceFn().cloneElement)(InputComponent, mergedProps);
-  }
-
-  // If InputComponent is a component type, render normally
-  const Component = InputComponent;
-  return /*#__PURE__*/(react_production_namespaceFn().createElement)(Component, sharedInputProps);
-});
-/* harmony default export */ const SelectInput_Input = (SelectInput_Input_Input);
-;// ./node_modules/@rc-component/select/es/SelectInput/Content/Placeholder.js
-
-
-
-
-function Placeholder(props) {
-  const {
-    prefixCls,
-    placeholder,
-    displayValues
-  } = useSelectInputContext();
-  const {
-    classNames,
-    styles
-  } = useBaseProps();
-  const {
-    show = true
-  } = props;
-  if (displayValues.length) {
-    return null;
-  }
-  return /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
-    className: clsx(`${prefixCls}-placeholder`, classNames?.placeholder),
-    style: {
-      ...(show ? {} : {
-        visibility: 'hidden'
-      }),
-      ...styles?.placeholder
-    }
-  }, placeholder);
-}
-;// ./node_modules/@rc-component/select/es/SelectContext.js
-
-
-// Use any here since we do not get the type during compilation
-/**
- * SelectContext is only used for Select. BaseSelect should not consume this context.
- */
-
-const SelectContext = /*#__PURE__*/(react_production_namespaceFn().createContext)(null);
-/* harmony default export */ const es_SelectContext = (SelectContext);
-;// ./node_modules/@rc-component/select/es/utils/commonUtil.js
-function commonUtil_toArray(value) {
-  if (Array.isArray(value)) {
-    return value;
-  }
-  return value !== undefined ? [value] : [];
-}
-const isClient = typeof window !== 'undefined' && window.document && window.document.documentElement;
-
-/** Is client side and not jsdom */
-const isBrowserClient = (/* unused pure expression or super */ null && ( true && isClient));
-function commonUtil_hasValue(value) {
-  return value !== undefined && value !== null;
-}
-
-/** combo mode no value judgment function */
-function isComboNoValue(value) {
-  return !value && value !== 0;
-}
-function isTitleType(title) {
-  return ['string', 'number'].includes(typeof title);
-}
-function getTitle(item) {
-  let title = undefined;
-  if (item) {
-    if (isTitleType(item.title)) {
-      title = item.title.toString();
-    } else if (isTitleType(item.label)) {
-      title = item.label.toString();
-    }
-  }
-  return title;
-}
-;// ./node_modules/@rc-component/select/es/SelectInput/Content/SingleContent.js
-function SingleContent_extends() { SingleContent_extends = Object.assign ? Object.assign.bind() : function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; }; return SingleContent_extends.apply(this, arguments); }
-;
-
-
-
-
-
-
-
-const SingleContent = /*#__PURE__*/(react_production_namespaceFn().forwardRef)(({
-  inputProps
-}, ref) => {
-  const {
-    prefixCls,
-    searchValue,
-    activeValue,
-    displayValues,
-    maxLength,
-    mode,
-    components
-  } = useSelectInputContext();
-  const {
-    triggerOpen,
-    title: rootTitle,
-    showSearch,
-    classNames,
-    styles
-  } = useBaseProps();
-  const selectContext = (react_production_namespaceFn().useContext)(es_SelectContext);
-  const [inputChanged, setInputChanged] = (react_production_namespaceFn().useState)(false);
-  const combobox = mode === 'combobox';
-  const displayValue = displayValues[0];
-
-  // Implement the same logic as the old SingleSelector
-  const mergedSearchValue = (react_production_namespaceFn().useMemo)(() => {
-    if (combobox && activeValue && !inputChanged && triggerOpen) {
-      return activeValue;
-    }
-    return showSearch ? searchValue : '';
-  }, [combobox, activeValue, inputChanged, triggerOpen, searchValue, showSearch]);
-  const [optionClassName, optionStyle, optionTitle, hasOptionStyle] = (react_production_namespaceFn().useMemo)(() => {
-    let className;
-    let style;
-    let titleValue;
-    if (displayValue && selectContext?.flattenOptions) {
-      const option = selectContext.flattenOptions.find(opt => opt.value === displayValue.value);
-      if (option?.data) {
-        className = option.data.className;
-        style = option.data.style;
-        titleValue = getTitle(option.data);
-      }
-    }
-    if (displayValue && !titleValue) {
-      titleValue = getTitle(displayValue);
-    }
-    if (rootTitle !== undefined) {
-      titleValue = rootTitle;
-    }
-    const nextHasStyle = !!className || !!style;
-    return [className, style, titleValue, nextHasStyle];
-  }, [displayValue, selectContext?.flattenOptions, rootTitle]);
-  (react_production_namespaceFn().useEffect)(() => {
-    if (combobox) {
-      setInputChanged(false);
-    }
-  }, [combobox, activeValue]);
-
-  // ========================== Render ==========================
-  const showHasValueCls = displayValue && displayValue.label !== null && displayValue.label !== undefined && String(displayValue.label).trim() !== '';
-
-  // Render value
-  // Only render value when not using custom input in combobox mode
-  const shouldRenderValue = !(combobox && components?.input);
-  const renderValue = shouldRenderValue ? displayValue ? hasOptionStyle ? /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
-    className: clsx(`${prefixCls}-content-value`, optionClassName),
-    style: {
-      ...(mergedSearchValue ? {
-        visibility: 'hidden'
-      } : {}),
-      ...optionStyle
-    },
-    title: optionTitle
-  }, displayValue.label) : displayValue.label : /*#__PURE__*/(react_production_namespaceFn().createElement)(Placeholder, {
-    show: !mergedSearchValue
-  }) : null;
-  // Render
-  return /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
-    className: clsx(`${prefixCls}-content`, showHasValueCls && `${prefixCls}-content-has-value`, mergedSearchValue && `${prefixCls}-content-has-search-value`, hasOptionStyle && `${prefixCls}-content-has-option-style`, classNames?.content),
-    style: styles?.content,
-    title: hasOptionStyle ? undefined : optionTitle
-  }, renderValue, /*#__PURE__*/(react_production_namespaceFn().createElement)(SelectInput_Input, SingleContent_extends({
-    ref: ref
-  }, inputProps, {
-    value: mergedSearchValue,
-    maxLength: mode === 'combobox' ? maxLength : undefined,
-    onChange: e => {
-      setInputChanged(true);
-      inputProps.onChange?.(e);
-    }
-  })));
-});
-/* harmony default export */ const Content_SingleContent = (SingleContent);
-;// ./node_modules/@rc-component/select/es/TransBtn.js
-
-
-/**
- * Small wrapper for Select icons (clear/arrow/etc.).
- * Prevents default mousedown to avoid blurring or caret moves, and
- * renders a custom icon or a fallback icon span.
+ * ── 为什么抽出来 ─────────────────────────────────────────────────────────────
+ * 当初「设备会话」（`TransferDeviceChat`）与「Agent 对话」（`TransferAgentView`）的第三栏
+ * 是两套自己写的结构：一个用 `header + 消息区 + 输入区` 的三段 div，另一个用
+ * 「页签 + 固定 300px 消息盒 + 输入框」。用户要求两边**长得一模一样**（同一套气泡、
+ * 同一种底部输入框），若各写一份，下次改样式必然只改一边 —— 所以这里把
+ * 「头部 / 滚动消息区 / 气泡行」三件抽成共用件。
  *
- * DOM structure:
- * <span className={className} ...>
- *   { icon || <span className={`${className}-icon`}>{children}</span> }
- * </span>
- */
-const TransBtn = props => {
-  const {
-    className,
-    style,
-    customizeIcon,
-    customizeIconProps,
-    children,
-    onMouseDown,
-    onClick
-  } = props;
-  const icon = typeof customizeIcon === 'function' ? customizeIcon(customizeIconProps) : customizeIcon;
-  return /*#__PURE__*/(react_production_namespaceFn().createElement)("span", {
-    className: className,
-    onMouseDown: event => {
-      event.preventDefault();
-      onMouseDown?.(event);
-    },
-    style: {
-      userSelect: 'none',
-      WebkitUserSelect: 'none',
-      ...style
-    },
-    unselectable: "on",
-    onClick: onClick,
-    "aria-hidden": true
-  }, icon !== undefined ? icon : /*#__PURE__*/(react_production_namespaceFn().createElement)("span", {
-    className: clsx(className.split(/\s+/).map(cls => `${cls}-icon`))
-  }, children));
-};
-/* harmony default export */ const es_TransBtn = (TransBtn);
-;// ./node_modules/@rc-component/select/es/SelectInput/Content/MultipleContent.js
-function MultipleContent_extends() { MultipleContent_extends = Object.assign ? Object.assign.bind() : function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; }; return MultipleContent_extends.apply(this, arguments); }
-;
-
-
-
-
-
-
-
-
-function itemKey(value) {
-  return value.key ?? value.value;
-}
-const onPreventMouseDown = event => {
-  event.preventDefault();
-  event.stopPropagation();
-};
-/* harmony default export */ const MultipleContent = (/*#__PURE__*/(react_production_namespaceFn().forwardRef)(function MultipleContent({
-  inputProps
-}, ref) {
-  const {
-    prefixCls,
-    displayValues,
-    searchValue,
-    mode,
-    onSelectorRemove,
-    removeIcon: removeIconFromContext
-  } = useSelectInputContext();
-  const {
-    disabled,
-    showSearch,
-    triggerOpen,
-    rawOpen,
-    toggleOpen,
-    autoClearSearchValue,
-    tagRender: tagRenderFromContext,
-    maxTagPlaceholder: maxTagPlaceholderFromContext,
-    maxTagTextLength,
-    maxTagCount,
-    classNames,
-    styles
-  } = useBaseProps();
-  const selectionItemPrefixCls = `${prefixCls}-selection-item`;
-
-  // ===================== Search ======================
-  // Apply autoClearSearchValue logic: when dropdown is closed and autoClearSearchValue is not false (default true), clear search value
-  // Use rawOpen to avoid clearing search when emptyListContent blocks open
-  let computedSearchValue = searchValue;
-  if (!rawOpen && mode === 'multiple' && autoClearSearchValue !== false) {
-    computedSearchValue = '';
-  }
-  const inputValue = showSearch ? computedSearchValue || '' : '';
-  const inputEditable = showSearch && !disabled;
-
-  // Props from context with safe defaults
-  const removeIcon = removeIconFromContext ?? '×';
-  const maxTagPlaceholder = maxTagPlaceholderFromContext ?? (omittedValues => `+ ${omittedValues.length} ...`);
-  const tagRender = tagRenderFromContext;
-  const onToggleOpen = newOpen => {
-    toggleOpen(newOpen);
-  };
-  const onRemove = value => {
-    onSelectorRemove?.(value);
-  };
-
-  // ======================== Item ========================
-  // >>> Render Selector Node. Includes Item & Rest
-  const defaultRenderSelector = (item, content, itemDisabled, closable, onClose) => /*#__PURE__*/(react_production_namespaceFn().createElement)("span", {
-    title: getTitle(item),
-    className: clsx(selectionItemPrefixCls, {
-      [`${selectionItemPrefixCls}-disabled`]: itemDisabled
-    }, classNames?.item),
-    style: styles?.item
-  }, /*#__PURE__*/(react_production_namespaceFn().createElement)("span", {
-    className: clsx(`${selectionItemPrefixCls}-content`, classNames?.itemContent),
-    style: styles?.itemContent
-  }, content), closable && /*#__PURE__*/(react_production_namespaceFn().createElement)(es_TransBtn, {
-    className: clsx(`${selectionItemPrefixCls}-remove`, classNames?.itemRemove),
-    style: styles?.itemRemove,
-    onMouseDown: onPreventMouseDown,
-    onClick: onClose,
-    customizeIcon: removeIcon
-  }, "\xD7"));
-  const customizeRenderSelector = (value, content, itemDisabled, closable, onClose, isMaxTag, info) => {
-    const onMouseDown = e => {
-      onPreventMouseDown(e);
-      onToggleOpen(!triggerOpen);
-    };
-    return /*#__PURE__*/(react_production_namespaceFn().createElement)("span", {
-      onMouseDown: onMouseDown
-    }, tagRender({
-      label: content,
-      value,
-      index: info?.index,
-      disabled: itemDisabled,
-      closable,
-      onClose,
-      isMaxTag: !!isMaxTag
-    }));
-  };
-
-  // ====================== Overflow ======================
-  const renderItem = (valueItem, info) => {
-    const {
-      disabled: itemDisabled,
-      label,
-      value
-    } = valueItem;
-    const closable = !disabled && !itemDisabled;
-    let displayLabel = label;
-    if (typeof maxTagTextLength === 'number') {
-      if (typeof label === 'string' || typeof label === 'number') {
-        const strLabel = String(displayLabel);
-        if (strLabel.length > maxTagTextLength) {
-          displayLabel = `${strLabel.slice(0, maxTagTextLength)}...`;
-        }
-      }
-    }
-    const onClose = event => {
-      if (event) {
-        event.stopPropagation();
-      }
-      onRemove(valueItem);
-    };
-    return typeof tagRender === 'function' ? customizeRenderSelector(value, displayLabel, itemDisabled, closable, onClose, undefined, info) : defaultRenderSelector(valueItem, displayLabel, itemDisabled, closable, onClose);
-  };
-  const renderRest = omittedValues => {
-    // https://github.com/ant-design/ant-design/issues/48930
-    if (!displayValues.length) {
-      return null;
-    }
-    const content = typeof maxTagPlaceholder === 'function' ? maxTagPlaceholder(omittedValues) : maxTagPlaceholder;
-    return typeof tagRender === 'function' ? customizeRenderSelector(undefined, content, false, false, undefined, true) : defaultRenderSelector({
-      title: content
-    }, content, false);
-  };
-
-  // ======================= Render =======================
-  return /*#__PURE__*/(react_production_namespaceFn().createElement)(overflow_es, {
-    prefixCls: `${prefixCls}-content`,
-    className: classNames?.content,
-    style: styles?.content,
-    prefix: !displayValues.length && !inputValue && /*#__PURE__*/(react_production_namespaceFn().createElement)(Placeholder, null),
-    data: displayValues,
-    renderItem: renderItem,
-    renderRest: renderRest,
-    suffix: /*#__PURE__*/(react_production_namespaceFn().createElement)(SelectInput_Input, MultipleContent_extends({
-      ref: ref,
-      disabled: disabled,
-      readOnly: !inputEditable
-    }, inputProps, {
-      value: inputValue || '',
-      syncWidth: true
-    })),
-    itemKey: itemKey,
-    maxCount: maxTagCount
-  });
-}));
-;// ./node_modules/@rc-component/select/es/SelectInput/Content/index.js
-
-
-
-
-
-
-const SelectContent = /*#__PURE__*/(react_production_namespaceFn().forwardRef)(function SelectContent(_, ref) {
-  const {
-    multiple,
-    onInputKeyDown,
-    tabIndex
-  } = useSelectInputContext();
-  const baseProps = useBaseProps();
-  const {
-    showSearch
-  } = baseProps;
-  const ariaProps = pickAttrs(baseProps, {
-    aria: true
-  });
-  const sharedInputProps = {
-    ...ariaProps,
-    onKeyDown: onInputKeyDown,
-    readOnly: !showSearch,
-    tabIndex
-  };
-  if (multiple) {
-    return /*#__PURE__*/(react_production_namespaceFn().createElement)(MultipleContent, {
-      ref: ref,
-      inputProps: sharedInputProps
-    });
-  }
-  return /*#__PURE__*/(react_production_namespaceFn().createElement)(Content_SingleContent, {
-    ref: ref,
-    inputProps: sharedInputProps
-  });
-});
-/* harmony default export */ const SelectInput_Content = (SelectContent);
-;// ./node_modules/@rc-component/select/es/utils/keyUtil.js
-
-
-/** keyCode Judgment function */
-function isValidateOpenKey(currentKeyCode) {
-  return (
-    // Undefined for Edge bug:
-    // https://github.com/ant-design/ant-design/issues/51292
-    currentKeyCode &&
-    // Other keys
-    ![
-    // System function button
-    es_KeyCode.ESC, es_KeyCode.SHIFT, es_KeyCode.BACKSPACE, es_KeyCode.TAB, es_KeyCode.WIN_KEY, es_KeyCode.ALT, es_KeyCode.META, es_KeyCode.WIN_KEY_RIGHT, es_KeyCode.CTRL, es_KeyCode.SEMICOLON, es_KeyCode.EQUALS, es_KeyCode.CAPS_LOCK, es_KeyCode.CONTEXT_MENU,
-    // Arrow keys - should not trigger open when navigating in input
-    es_KeyCode.UP,
-    // KeyCode.DOWN,
-    es_KeyCode.LEFT, es_KeyCode.RIGHT,
-    // F1-F12
-    es_KeyCode.F1, es_KeyCode.F2, es_KeyCode.F3, es_KeyCode.F4, es_KeyCode.F5, es_KeyCode.F6, es_KeyCode.F7, es_KeyCode.F8, es_KeyCode.F9, es_KeyCode.F10, es_KeyCode.F11, es_KeyCode.F12].includes(currentKeyCode)
-  );
-}
-;// ./node_modules/@rc-component/select/es/SelectInput/index.js
-function SelectInput_extends() { SelectInput_extends = Object.assign ? Object.assign.bind() : function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; }; return SelectInput_extends.apply(this, arguments); }
-;
-
-
-
-
-
-
-
-const DEFAULT_OMIT_PROPS = ['value', 'onChange', 'removeIcon', 'placeholder', 'maxTagCount', 'maxTagTextLength', 'maxTagPlaceholder', 'choiceTransitionName', 'onInputKeyDown', 'onPopupScroll', 'tabIndex', 'activeValue', 'onSelectorRemove', 'focused'];
-/* harmony default export */ const SelectInput = (/*#__PURE__*/(react_production_namespaceFn().forwardRef)(function SelectInput(props, ref) {
-  const {
-    // Style
-    prefixCls,
-    className,
-    style,
-    // UI
-    prefix,
-    suffix,
-    clearIcon,
-    clearLabel,
-    children,
-    // Data
-    multiple,
-    displayValues,
-    placeholder,
-    mode,
-    // Search
-    searchValue,
-    onSearch,
-    onSearchSubmit,
-    onInputBlur,
-    // Input
-    maxLength,
-    autoFocus,
-    // Events
-    onMouseDown,
-    onClearMouseDown,
-    onInputKeyDown,
-    onSelectorRemove,
-    // Token handling
-    tokenWithEnter,
-    // Components
-    components,
-    ...restProps
-  } = props;
-  const {
-    triggerOpen,
-    toggleOpen,
-    showSearch,
-    disabled,
-    loading,
-    classNames,
-    styles
-  } = useBaseProps();
-  const rootRef = (react_production_namespaceFn().useRef)(null);
-  const inputRef = (react_production_namespaceFn().useRef)(null);
-
-  // Handle keyboard events similar to original Selector
-  const onInternalInputKeyDown = hooks_useEvent(event => {
-    const {
-      which
-    } = event;
-
-    // Compatible with multiple lines in TextArea
-    const isTextAreaElement = inputRef.current instanceof HTMLTextAreaElement;
-
-    // Prevent default behavior for up/down arrows when dropdown is open
-    if (!isTextAreaElement && triggerOpen && (which === es_KeyCode.UP || which === es_KeyCode.DOWN)) {
-      event.preventDefault();
-    }
-
-    // Call the original onInputKeyDown callback
-    if (onInputKeyDown) {
-      onInputKeyDown(event);
-    }
-
-    // Move within the text box for TextArea
-    if (isTextAreaElement && !triggerOpen && ~[es_KeyCode.UP, es_KeyCode.DOWN, es_KeyCode.LEFT, es_KeyCode.RIGHT].indexOf(which)) {
-      return;
-    }
-
-    // Open dropdown when a valid open key is pressed
-    const isModifier = event.ctrlKey || event.altKey || event.metaKey;
-    if (!isModifier && isValidateOpenKey(which)) {
-      toggleOpen(true);
-    }
-  });
-
-  // ====================== Refs ======================
-  (react_production_namespaceFn().useImperativeHandle)(ref, () => {
-    return {
-      focus: options => {
-        // Focus the inner input if available, otherwise fall back to root div.
-        (inputRef.current || rootRef.current).focus?.(options);
-      },
-      blur: () => {
-        (inputRef.current || rootRef.current).blur?.();
-      },
-      // Use getDOM to handle nested nativeElement structure (e.g., when RootComponent is antd Input)
-      nativeElement: getDOM(rootRef.current)
-    };
-  });
-
-  // ====================== Open ======================
-  const onInternalMouseDown = hooks_useEvent(event => {
-    if (!disabled) {
-      const inputDOM = getDOM(inputRef.current);
-
-      // https://github.com/ant-design/ant-design/issues/56002
-      // Tell `useSelectTriggerControl` to ignore this event
-      // When icon is dynamic render, the parentNode will miss
-      // so we need to mark the event directly
-      event.nativeEvent._ori_target = inputDOM;
-      const isClickOnInput = inputDOM === event.target || inputDOM?.contains(event.target);
-      if (inputDOM && !isClickOnInput) {
-        event.preventDefault();
-      }
-
-      // Check if we should prevent closing when clicking on selector
-      // Don't close if: open && not multiple && (combobox mode || showSearch)
-      const shouldPreventCloseOnSingle = triggerOpen && !multiple && (mode === 'combobox' || showSearch);
-
-      // Don't close if: open && multiple && click on input
-      const shouldPreventCloseOnMultipleInput = triggerOpen && multiple && isClickOnInput;
-      const shouldPreventClose = shouldPreventCloseOnSingle || shouldPreventCloseOnMultipleInput;
-      if (!event.nativeEvent._select_lazy) {
-        inputRef.current?.focus();
-
-        // Only toggle open if we should not prevent close
-        if (!shouldPreventClose) {
-          toggleOpen();
-        }
-      } else if (triggerOpen && !multiple) {
-        // Lazy should also close when click clear icon in single select.
-        toggleOpen(false);
-      }
-    }
-    onMouseDown?.(event);
-  });
-
-  // ===================== Clear ======================
-  // The clear button lives inside the select root, whose `onKeyDown` treats
-  // Enter/Space as "open the dropdown" and calls `preventDefault` on them.
-  // That would cancel the native button activation, so keyboard users would
-  // never get the `click` event which performs the clear. Keep the activation
-  // keys scoped to the button itself.
-  const onClearKeyDown = event => {
-    if (event.key === 'Enter' || event.key === ' ') {
-      event.stopPropagation();
-    }
-  };
-
-  // =================== Components ===================
-  const {
-    root: RootComponent
-  } = components;
-
-  // ===================== Render =====================
-  const domProps = omit(restProps, DEFAULT_OMIT_PROPS);
-  const ariaProps = pickAttrs(domProps, {
-    aria: true
-  });
-  const ariaKeys = Object.keys(ariaProps);
-
-  // Create context value with wrapped callbacks
-  const contextValue = {
-    ...props,
-    onInputKeyDown: onInternalInputKeyDown
-  };
-  if (RootComponent) {
-    const originProps = RootComponent.props || {};
-    const mergedProps = {
-      ...originProps,
-      ...domProps
-    };
-    Object.keys(originProps).forEach(key => {
-      const originVal = originProps[key];
-      const domVal = domProps[key];
-      if (typeof originVal === 'function' && typeof domVal === 'function') {
-        mergedProps[key] = (...args) => {
-          domVal(...args);
-          originVal(...args);
-        };
-      }
-    });
-    if ( /*#__PURE__*/(react_production_namespaceFn().isValidElement)(RootComponent)) {
-      return /*#__PURE__*/(react_production_namespaceFn().cloneElement)(RootComponent, {
-        ...mergedProps,
-        ref: composeRef(RootComponent.ref, rootRef)
-      });
-    }
-    return /*#__PURE__*/(react_production_namespaceFn().createElement)(RootComponent, SelectInput_extends({}, mergedProps, {
-      ref: rootRef
-    }));
-  }
-  return /*#__PURE__*/(react_production_namespaceFn().createElement)(SelectInput_context.Provider, {
-    value: contextValue
-  }, /*#__PURE__*/(react_production_namespaceFn().createElement)("div", SelectInput_extends({}, omit(domProps, ariaKeys), {
-    // Style
-    ref: rootRef,
-    className: className,
-    style: style
-    // Mouse Events
-    ,
-    onMouseDown: onInternalMouseDown
-  }), /*#__PURE__*/(react_production_namespaceFn().createElement)(Affix, {
-    className: clsx(`${prefixCls}-prefix`, classNames?.prefix),
-    style: styles?.prefix
-  }, prefix), /*#__PURE__*/(react_production_namespaceFn().createElement)(SelectInput_Content, {
-    ref: inputRef
-  }), /*#__PURE__*/(react_production_namespaceFn().createElement)(Affix, {
-    className: clsx(`${prefixCls}-suffix`, {
-      [`${prefixCls}-suffix-loading`]: loading
-    }, classNames?.suffix),
-    style: styles?.suffix
-  }, suffix), clearIcon && /*#__PURE__*/(react_production_namespaceFn().createElement)("button", {
-    type: "button",
-    "aria-label": clearLabel,
-    className: clsx(`${prefixCls}-clear`, classNames?.clear),
-    style: styles?.clear,
-    onMouseDown: e => {
-      // Keep focus on the input and mark the native event so the root
-      // `onInternalMouseDown` handler does not open the dropdown.
-      // This must run on mousedown because the root handler fires
-      // before the button's onClick.
-      e.preventDefault();
-      e.nativeEvent._select_lazy = true;
-    },
-    onKeyDown: onClearKeyDown
-    // Clearing happens on click so it works for both pointer and
-    // keyboard (Enter/Space) activation.
-    ,
-    onClick: onClearMouseDown
-  }, clearIcon), children));
-}));
-;// ./node_modules/@rc-component/select/es/hooks/useComponents.js
-
-function useComponents(components, getInputElement, getRawInputElement) {
-  return (react_production_namespaceFn().useMemo)(() => {
-    let {
-      root,
-      input
-    } = components || {};
-
-    // root: getRawInputElement
-    if (getRawInputElement) {
-      root = getRawInputElement();
-    }
-
-    // input: getInputElement
-    if (getInputElement) {
-      input = getInputElement();
-    }
-    return {
-      root,
-      input
-    };
-  }, [components, getInputElement, getRawInputElement]);
-}
-;// ./node_modules/@rc-component/select/es/BaseSelect/index.js
-function BaseSelect_extends() { BaseSelect_extends = Object.assign ? Object.assign.bind() : function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; }; return BaseSelect_extends.apply(this, arguments); }
-;
-
-
-
-
-
-
-
-
-
-
-
-
-
-/**
- * ZombieJ:
- * We are currently refactoring the semantic structure of the component. Changelog:
- * - Remove `suffixIcon` and change to `suffix`.
- * - Add `components.root` for replacing response element.
- *   - Remove `getInputElement` and `getRawInputElement` since we can use `components.input` instead.
- */
-
-const isMultiple = mode => mode === 'tags' || mode === 'multiple';
-const BaseSelect = /*#__PURE__*/(react_production_namespaceFn().forwardRef)((props, ref) => {
-  const {
-    id,
-    prefixCls,
-    className,
-    styles,
-    classNames,
-    showSearch,
-    tagRender,
-    showScrollBar = 'optional',
-    direction,
-    omitDomProps,
-    // Value
-    displayValues,
-    onDisplayValuesChange,
-    emptyOptions,
-    notFoundContent = 'Not Found',
-    onClear,
-    maxCount,
-    placeholder,
-    // Mode
-    mode,
-    // Status
-    disabled,
-    loading,
-    // Customize Input
-    getInputElement,
-    getRawInputElement,
-    // Open
-    open,
-    defaultOpen,
-    onPopupVisibleChange,
-    // Active
-    activeValue,
-    onActiveValueChange,
-    activeDescendantId,
-    // Search
-    searchValue,
-    autoClearSearchValue,
-    onSearch,
-    onSearchSplit,
-    tokenSeparators,
-    // Icons
-    allowClear,
-    prefix,
-    suffix,
-    suffixIcon,
-    clearIcon,
-    // Dropdown
-    OptionList,
-    animation,
-    transitionName,
-    popupStyle,
-    popupClassName,
-    popupMatchSelectWidth,
-    popupRender,
-    popupAlign,
-    placement,
-    builtinPlacements,
-    getPopupContainer,
-    // Focus
-    showAction = [],
-    onFocus,
-    onBlur,
-    // Rest Events
-    onKeyUp,
-    onKeyDown,
-    onMouseDown,
-    // Components
-    components,
-    // Rest Props
-    ...restProps
-  } = props;
-
-  // ============================== MISC ==============================
-  const multiple = isMultiple(mode);
-
-  // ============================== Refs ==============================
-  const containerRef = (react_production_namespaceFn().useRef)(null);
-  const triggerRef = (react_production_namespaceFn().useRef)(null);
-  const listRef = (react_production_namespaceFn().useRef)(null);
-
-  /** Used for component focused management */
-  const [focused, setFocused] = (react_production_namespaceFn().useState)(false);
-
-  // =========================== Imperative ===========================
-  (react_production_namespaceFn().useImperativeHandle)(ref, () => ({
-    focus: containerRef.current?.focus,
-    blur: containerRef.current?.blur,
-    scrollTo: arg => listRef.current?.scrollTo(arg),
-    nativeElement: getDOM(containerRef.current)
-  }));
-
-  // =========================== Components ===========================
-  const mergedComponents = useComponents(components, getInputElement, getRawInputElement);
-
-  // ========================== Search Value ==========================
-  const mergedSearchValue = (react_production_namespaceFn().useMemo)(() => {
-    if (mode !== 'combobox') {
-      return searchValue;
-    }
-    const val = displayValues[0]?.value;
-    return typeof val === 'string' || typeof val === 'number' ? String(val) : '';
-  }, [searchValue, mode, displayValues]);
-
-  // ========================== Custom Input ==========================
-  // Only works in `combobox`
-  const customizeInputElement = mode === 'combobox' && typeof getInputElement === 'function' && getInputElement() || null;
-
-  // ============================== Open ==============================
-  // Not trigger `open` when `notFoundContent` is empty
-  const emptyListContent = !notFoundContent && emptyOptions;
-  const [rawOpen, mergedOpen, triggerOpen, lockOptions] = useOpen(defaultOpen || false, open, onPopupVisibleChange, nextOpen => disabled || emptyListContent ? false : nextOpen);
-
-  // ============================= Search =============================
-  const tokenWithEnter = (react_production_namespaceFn().useMemo)(() => typeof tokenSeparators === 'function' || (tokenSeparators || []).some(tokenSeparator => ['\n', '\r\n'].includes(tokenSeparator)), [tokenSeparators]);
-  const splitByTokenSeparators = (react_production_namespaceFn().useMemo)(() => {
-    if (typeof tokenSeparators === 'function') {
-      return (input, end) => {
-        const tokens = tokenSeparators(input);
-        const isUnchanged = Array.isArray(tokens) && tokens.length === 1 && tokens[0] === input;
-        if (!Array.isArray(tokens) || !tokens.length || isUnchanged) {
-          return null;
-        }
-        return typeof end !== 'undefined' ? tokens.slice(0, end) : tokens;
-      };
-    }
-    return (input, end) => getSeparatedContent(input, tokenSeparators, end);
-  }, [tokenSeparators]);
-  const onInternalSearch = (searchText, fromTyping, isCompositing) => {
-    if (multiple && isValidCount(maxCount) && displayValues.length >= maxCount) {
-      return;
-    }
-    let ret = true;
-    let newSearchText = searchText;
-    onActiveValueChange?.(null);
-    const cap = isValidCount(maxCount) ? maxCount - displayValues.length : undefined;
-    const patchLabels = isCompositing ? null : splitByTokenSeparators(searchText, cap);
-
-    // Ignore combobox since it's not split-able
-    if (mode !== 'combobox' && patchLabels) {
-      newSearchText = '';
-      onSearchSplit?.(patchLabels);
-
-      // Should close when paste finish
-      triggerOpen(false);
-
-      // Tell Selector that break next actions
-      ret = false;
-    }
-    if (onSearch && mergedSearchValue !== newSearchText) {
-      onSearch(newSearchText, {
-        source: fromTyping ? 'typing' : 'effect'
-      });
-    }
-
-    // Open if from typing
-    if (searchText && fromTyping && ret) {
-      triggerOpen(true);
-    }
-    return ret;
-  };
-
-  // Only triggered when menu is closed & mode is tags
-  // If menu is open, OptionList will take charge
-  // If mode isn't tags, press enter is not meaningful when you can't see any option
-  const onInternalSearchSubmit = searchText => {
-    // prevent empty tags from appearing when you click the Enter button
-    if (!searchText || !searchText.trim()) {
-      return;
-    }
-    onSearch(searchText, {
-      source: 'submit'
-    });
-  };
-
-  // Clean up search value when the dropdown is closed.
-  // We use `rawOpen` here to avoid clearing the search input when the dropdown is
-  // programmatically closed due to `notFoundContent={null}` and no matching options.
-  // This allows the user to continue typing their search query.
-  (react_production_namespaceFn().useEffect)(() => {
-    if (!rawOpen && !multiple && mode !== 'combobox') {
-      onInternalSearch('', false, false);
-    }
-  }, [rawOpen]);
-
-  // ============================ Disabled ============================
-  // Close dropdown & remove focus state when disabled change
-  (react_production_namespaceFn().useEffect)(() => {
-    // After onBlur is triggered, the focused does not need to be reset
-    if (disabled) {
-      triggerOpen(false);
-      setFocused(false);
-    }
-  }, [disabled, mergedOpen]);
-
-  // ============================ Keyboard ============================
-  /**
-   * We record input value here to check if can press to clean up by backspace
-   * - null: Key is not down, this is reset by key up
-   * - true: Search text is empty when first time backspace down
-   * - false: Search text is not empty when first time backspace down
-   */
-  const [getClearLock, setClearLock] = useLock();
-  const keyLockRef = (react_production_namespaceFn().useRef)(false);
-
-  // KeyDown
-  const onInternalKeyDown = event => {
-    const clearLock = getClearLock();
-    const {
-      key
-    } = event;
-    const isEnterKey = key === 'Enter';
-    const isSpaceKey = key === ' ';
-
-    // Enter or Space opens dropdown (ARIA combobox: spacebar should open)
-    if (isEnterKey || isSpaceKey) {
-      // Do not submit form when type in the input; prevent Space from scrolling page
-      const isCombobox = mode === 'combobox';
-      const isEditable = isCombobox || showSearch;
-      if (isSpaceKey && !isEditable || isEnterKey && !isCombobox) {
-        event.preventDefault();
-      }
-
-      // We only manage open state here, close logic should handle by list component
-      if (!mergedOpen) {
-        triggerOpen(true);
-      }
-    }
-    setClearLock(!!mergedSearchValue);
-
-    // Remove value by `backspace`
-    if (key === 'Backspace' && !clearLock && multiple && !mergedSearchValue && displayValues.length) {
-      const cloneDisplayValues = [...displayValues];
-      let removedDisplayValue = null;
-      for (let i = cloneDisplayValues.length - 1; i >= 0; i -= 1) {
-        const current = cloneDisplayValues[i];
-        if (!current.disabled) {
-          cloneDisplayValues.splice(i, 1);
-          removedDisplayValue = current;
-          break;
-        }
-      }
-      if (removedDisplayValue) {
-        onDisplayValuesChange(cloneDisplayValues, {
-          type: 'remove',
-          values: [removedDisplayValue]
-        });
-      }
-    }
-    if (mergedOpen && (!isEnterKey || !keyLockRef.current) && !isSpaceKey) {
-      // Lock the Enter key after it is pressed to avoid repeated triggering of the onChange event.
-      if (isEnterKey) {
-        keyLockRef.current = true;
-      }
-      listRef.current?.onKeyDown(event);
-    }
-    onKeyDown?.(event);
-  };
-
-  // KeyUp
-  const onInternalKeyUp = (event, ...rest) => {
-    if (mergedOpen) {
-      listRef.current?.onKeyUp(event, ...rest);
-    }
-    if (event.key === 'Enter') {
-      keyLockRef.current = false;
-    }
-    onKeyUp?.(event, ...rest);
-  };
-
-  // ============================ Selector ============================
-  const onSelectorRemove = hooks_useEvent(val => {
-    const newValues = displayValues.filter(i => i !== val);
-    onDisplayValuesChange(newValues, {
-      type: 'remove',
-      values: [val]
-    });
-  });
-  const onInputBlur = () => {
-    // Unlock the Enter key after the input blur; otherwise, the Enter key needs to be pressed twice to trigger the correct effect.
-    keyLockRef.current = false;
-  };
-
-  // ========================== Focus / Blur ==========================
-  const getSelectElements = () => [getDOM(containerRef.current), triggerRef.current?.getPopupElement()];
-
-  // Close when click on non-select element
-  useSelectTriggerControl(getSelectElements, mergedOpen, triggerOpen, !!mergedComponents.root);
-
-  // ========================== Focus / Blur ==========================
-  const internalMouseDownRef = (react_production_namespaceFn().useRef)(false);
-  const onInternalFocus = event => {
-    setFocused(true);
-    if (!disabled) {
-      // `showAction` should handle `focus` if set
-      if (showAction.includes('focus')) {
-        triggerOpen(true);
-      }
-      onFocus?.(event);
-    }
-  };
-  const onRootBlur = () => {
-    // Delay close should check the activeElement
-    if (mergedOpen && !internalMouseDownRef.current) {
-      triggerOpen(false, {
-        cancelFun: () => isInside(getSelectElements(), document.activeElement)
-      });
-    }
-  };
-  const onInternalBlur = event => {
-    setFocused(false);
-    if (mergedSearchValue) {
-      // `tags` mode should move `searchValue` into values
-      if (mode === 'tags') {
-        onSearch(mergedSearchValue, {
-          source: 'submit'
-        });
-      } else if (mode === 'multiple') {
-        // `multiple` mode only clean the search value but not trigger event
-        onSearch('', {
-          source: 'blur'
-        });
-      }
-    }
-    onRootBlur();
-    if (!disabled) {
-      onBlur?.(event);
-    }
-  };
-  const onRootMouseDown = (event, ...restArgs) => {
-    const {
-      target
-    } = event;
-    const popupElement = triggerRef.current?.getPopupElement();
-
-    // We should give focus back to selector if clicked item is not focusable
-    if (popupElement?.contains(target) && triggerOpen) {
-      // Tell `open` not to close since it's safe in the popup
-      triggerOpen(true);
-    }
-    onMouseDown?.(event, ...restArgs);
-    internalMouseDownRef.current = true;
-    useOpen_macroTask(() => {
-      internalMouseDownRef.current = false;
-    });
-  };
-
-  // ============================ Dropdown ============================
-  const [, forceUpdate] = (react_production_namespaceFn().useState)({});
-  // We need force update here since popup dom is render async
-  function onPopupMouseEnter() {
-    forceUpdate({});
-  }
-
-  // Used for raw custom input trigger
-  let onTriggerVisibleChange;
-  if (!!mergedComponents.root) {
-    onTriggerVisibleChange = newOpen => {
-      triggerOpen(newOpen);
-    };
-  }
-
-  // ============================ Context =============================
-  const baseSelectContext = (react_production_namespaceFn().useMemo)(() => ({
-    ...props,
-    notFoundContent,
-    open: mergedOpen,
-    triggerOpen: mergedOpen,
-    rawOpen,
-    id,
-    showSearch,
-    multiple,
-    toggleOpen: triggerOpen,
-    showScrollBar,
-    styles,
-    classNames,
-    lockOptions
-  }), [props, notFoundContent, triggerOpen, id, showSearch, multiple, mergedOpen, rawOpen, showScrollBar, styles, classNames, lockOptions]);
-
-  // ==================================================================
-  // ==                            Render                            ==
-  // ==================================================================
-
-  // ============================= Suffix =============================
-  const mergedSuffixIcon = (react_production_namespaceFn().useMemo)(() => {
-    const nextSuffix = suffix ?? suffixIcon;
-    if (typeof nextSuffix === 'function') {
-      return nextSuffix({
-        searchValue: mergedSearchValue,
-        open: mergedOpen,
-        focused,
-        showSearch,
-        loading
-      });
-    }
-    return nextSuffix;
-  }, [suffix, suffixIcon, mergedSearchValue, mergedOpen, focused, showSearch, loading]);
-
-  // ============================= Clear ==============================
-  const onClearMouseDown = () => {
-    onClear?.();
-    containerRef.current?.focus();
-    onDisplayValuesChange([], {
-      type: 'clear',
-      values: displayValues
-    });
-    onInternalSearch('', false, false);
-  };
-  const {
-    allowClear: mergedAllowClear,
-    clearIcon: clearNode,
-    label: clearLabel
-  } = useAllowClear_useAllowClear(prefixCls, displayValues, allowClear, clearIcon, disabled, mergedSearchValue, mode);
-
-  // =========================== OptionList ===========================
-  const optionList = /*#__PURE__*/(react_production_namespaceFn().createElement)(OptionList, {
-    ref: listRef
-  });
-
-  // ============================= Select =============================
-  const mergedClassName = clsx(prefixCls, className, {
-    [`${prefixCls}-focused`]: focused,
-    [`${prefixCls}-multiple`]: multiple,
-    [`${prefixCls}-single`]: !multiple,
-    [`${prefixCls}-allow-clear`]: mergedAllowClear,
-    [`${prefixCls}-show-arrow`]: mergedSuffixIcon !== undefined && mergedSuffixIcon !== null,
-    [`${prefixCls}-disabled`]: disabled,
-    [`${prefixCls}-loading`]: loading,
-    [`${prefixCls}-open`]: mergedOpen,
-    [`${prefixCls}-customize-input`]: customizeInputElement,
-    [`${prefixCls}-show-search`]: showSearch
-  });
-
-  // >>> Render
-  let renderNode = /*#__PURE__*/(react_production_namespaceFn().createElement)(SelectInput, BaseSelect_extends({}, restProps, {
-    // Ref
-    ref: containerRef
-    // Style
-    ,
-    prefixCls: prefixCls,
-    className: mergedClassName
-    // Focus state
-    ,
-    focused: focused
-    // UI
-    ,
-    prefix: prefix,
-    suffix: mergedSuffixIcon,
-    clearIcon: clearNode,
-    clearLabel: clearLabel
-    // Type or mode
-    ,
-    multiple: multiple,
-    mode: mode
-    // Values
-    ,
-    displayValues: displayValues,
-    placeholder: placeholder,
-    searchValue: mergedSearchValue,
-    activeValue: activeValue,
-    onSearch: onInternalSearch,
-    onSearchSubmit: onInternalSearchSubmit,
-    onInputBlur: onInputBlur,
-    onFocus: onInternalFocus,
-    onBlur: onInternalBlur,
-    onClearMouseDown: onClearMouseDown,
-    onKeyDown: onInternalKeyDown,
-    onKeyUp: onInternalKeyUp,
-    onSelectorRemove: onSelectorRemove
-    // Token handling
-    ,
-    tokenWithEnter: tokenWithEnter
-    // Open
-    ,
-    onMouseDown: onRootMouseDown
-    // Components
-    ,
-    components: mergedComponents
-  }));
-  renderNode = /*#__PURE__*/(react_production_namespaceFn().createElement)(es_SelectTrigger, {
-    ref: triggerRef,
-    disabled: disabled,
-    prefixCls: prefixCls,
-    visible: mergedOpen,
-    popupElement: optionList,
-    animation: animation,
-    transitionName: transitionName,
-    popupStyle: popupStyle,
-    popupClassName: popupClassName,
-    direction: direction,
-    popupMatchSelectWidth: popupMatchSelectWidth,
-    popupRender: popupRender,
-    popupAlign: popupAlign,
-    placement: placement,
-    builtinPlacements: builtinPlacements,
-    getPopupContainer: getPopupContainer,
-    empty: emptyOptions,
-    onPopupVisibleChange: onTriggerVisibleChange,
-    onPopupMouseEnter: onPopupMouseEnter,
-    onPopupMouseDown: onRootMouseDown,
-    onPopupBlur: onRootBlur
-  }, renderNode);
-  return /*#__PURE__*/(react_production_namespaceFn().createElement)(BaseSelectContext.Provider, {
-    value: baseSelectContext
-  }, /*#__PURE__*/(react_production_namespaceFn().createElement)(Polite, {
-    visible: focused && !mergedOpen,
-    values: displayValues
-  }), renderNode);
-});
-
-// Set display name for dev
-if (false) // removed by dead control flow
-{}
-/* harmony default export */ const es_BaseSelect = (BaseSelect);
-;// ./node_modules/@rc-component/select/es/OptGroup.js
-/* istanbul ignore file */
-
-/** This is a placeholder, not real render in dom */
-const OptGroup = () => null;
-OptGroup.isSelectOptGroup = true;
-/* harmony default export */ const es_OptGroup = (OptGroup);
-;// ./node_modules/@rc-component/select/es/Option.js
-/* istanbul ignore file */
-
-/** This is a placeholder, not real render in dom */
-const Option = () => null;
-Option.isSelectOption = true;
-/* harmony default export */ const es_Option = (Option);
-;// ./node_modules/@rc-component/virtual-list/es/Filler.js
-function Filler_extends() { Filler_extends = Object.assign ? Object.assign.bind() : function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; }; return Filler_extends.apply(this, arguments); }
-;
-
-
-/**
- * Fill component to provided the scroll content real height.
- */
-const Filler = /*#__PURE__*/(react_production_namespaceFn().forwardRef)(({
-  height,
-  offsetY,
-  offsetX,
-  children,
-  prefixCls,
-  onInnerResize,
-  innerProps,
-  rtl,
-  extra
-}, ref) => {
-  let outerStyle = {};
-  let innerStyle = {
-    display: 'flex',
-    flexDirection: 'column'
-  };
-  if (offsetY !== undefined) {
-    // Not set `width` since this will break `sticky: right`
-    outerStyle = {
-      height,
-      position: 'relative',
-      overflow: 'hidden'
-    };
-    innerStyle = {
-      ...innerStyle,
-      transform: `translateY(${offsetY}px)`,
-      [rtl ? 'marginRight' : 'marginLeft']: -offsetX || 0,
-      position: 'absolute',
-      left: 0,
-      right: 0,
-      top: 0
-    };
-  }
-  return /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
-    style: outerStyle
-  }, /*#__PURE__*/(react_production_namespaceFn().createElement)(resize_observer_es, {
-    onResize: ({
-      offsetHeight
-    }) => {
-      if (offsetHeight && onInnerResize) {
-        onInnerResize();
-      }
-    }
-  }, /*#__PURE__*/(react_production_namespaceFn().createElement)("div", Filler_extends({
-    style: innerStyle,
-    className: clsx({
-      [`${prefixCls}-holder-inner`]: prefixCls
-    }),
-    ref: ref
-  }, innerProps), children, extra)));
-});
-Filler.displayName = 'Filler';
-/* harmony default export */ const es_Filler = (Filler);
-;// ./node_modules/@rc-component/virtual-list/es/Item.js
-
-function es_Item_Item({
-  children,
-  setRef
-}) {
-  const refFunc = (react_production_namespaceFn().useCallback)(node => {
-    setRef(node);
-  }, [setRef]);
-  return /*#__PURE__*/(react_production_namespaceFn().cloneElement)(children, {
-    ref: refFunc
-  });
-}
-;// ./node_modules/@rc-component/virtual-list/es/hooks/useChildren.js
-
-
-function useChildren(list, startIndex, endIndex, scrollWidth, offsetX, setNodeRef, renderFunc, {
-  getKey
-}) {
-  return list.slice(startIndex, endIndex + 1).map((item, index) => {
-    const eleIndex = startIndex + index;
-    const node = renderFunc(item, eleIndex, {
-      style: {
-        width: scrollWidth
-      },
-      offsetX
-    });
-    const key = getKey(item);
-    return /*#__PURE__*/(react_production_namespaceFn().createElement)(es_Item_Item, {
-      key: key,
-      setRef: ele => setNodeRef(item, ele)
-    }, node);
-  });
-}
-;// ./node_modules/@rc-component/virtual-list/es/utils/algorithmUtil.js
-/**
- * Get index with specific start index one by one. e.g.
- * min: 3, max: 9, start: 6
+ * v26.10.13-v9 删掉 Agent 后，本骨架件由第三栏唯一的宿主 `TransferDeviceChat` 使用。
  *
- * Return index is:
- * [0]: 6
- * [1]: 7
- * [2]: 5
- * [3]: 8
- * [4]: 4
- * [5]: 9
- * [6]: 3
+ * ── 尺寸契约 ─────────────────────────────────────────────────────────────────
+ * 第三栏整体是 `display:flex; flex-direction:column`，其中
+ *   · 头部      `flex: 0 0 auto`（不参与伸缩）；
+ *   · 消息区    `flex: 1 1 auto; minHeight: 0`（**必须 minHeight:0**，否则 flex 子项按内容
+ *               撑高，滚动条永远不出现，输入框会被顶出窗口）；
+ *   · 输入区    `flex: 0 0 auto`（见 ChatComposer）。
+ * 于是「输入框固定吸附在底部、不随消息滚动」是布局算出来的，不是靠 position:fixed 硬钉。
  */
-function getIndexByStartLoc(min, max, start, index) {
-  const beforeCount = start - min;
-  const afterCount = max - start;
-  const balanceCount = Math.min(beforeCount, afterCount) * 2;
-
-  // Balance
-  if (index <= balanceCount) {
-    const stepIndex = Math.floor(index / 2);
-    if (index % 2) {
-      return start + stepIndex + 1;
-    }
-    return start - stepIndex;
-  }
-
-  // One is out of range
-  if (beforeCount > afterCount) {
-    return start - (index - afterCount);
-  }
-  return start + (index - beforeCount);
-}
 
 /**
- * We assume that 2 list has only 1 item diff and others keeping the order.
- * So we can use dichotomy algorithm to find changed one.
- */
-function findListDiffIndex(originList, targetList, getKey) {
-  const originLen = originList.length;
-  const targetLen = targetList.length;
-  let shortList;
-  let longList;
-  if (originLen === 0 && targetLen === 0) {
-    return null;
-  }
-  if (originLen < targetLen) {
-    shortList = originList;
-    longList = targetList;
-  } else {
-    shortList = targetList;
-    longList = originList;
-  }
-  const notExistKey = {
-    __EMPTY_ITEM__: true
-  };
-  function getItemKey(item) {
-    if (item !== undefined) {
-      return getKey(item);
-    }
-    return notExistKey;
-  }
-
-  // Loop to find diff one
-  let diffIndex = null;
-  let multiple = Math.abs(originLen - targetLen) !== 1;
-  for (let i = 0; i < longList.length; i += 1) {
-    const shortKey = getItemKey(shortList[i]);
-    const longKey = getItemKey(longList[i]);
-    if (shortKey !== longKey) {
-      diffIndex = i;
-      multiple = multiple || shortKey !== getItemKey(longList[i + 1]);
-      break;
-    }
-  }
-  return diffIndex === null ? null : {
-    index: diffIndex,
-    multiple
-  };
-}
-;// ./node_modules/@rc-component/virtual-list/es/hooks/useDiffItem.js
-
-
-function useDiffItem(data, getKey, onDiff) {
-  const [prevData, setPrevData] = (react_production_namespaceFn().useState)(data);
-  const [diffItem, setDiffItem] = (react_production_namespaceFn().useState)(null);
-  (react_production_namespaceFn().useEffect)(() => {
-    const diff = findListDiffIndex(prevData || [], data || [], getKey);
-    if (diff?.index !== undefined) {
-      onDiff?.(diff.index);
-      setDiffItem(data[diff.index]);
-    }
-    setPrevData(data);
-  }, [data]);
-  return [diffItem];
-}
-;// ./node_modules/@rc-component/virtual-list/es/utils/isFirefox.js
-const isFF = typeof navigator === 'object' && /Firefox/i.test(navigator.userAgent);
-/* harmony default export */ const isFirefox = (isFF);
-;// ./node_modules/@rc-component/virtual-list/es/hooks/useOriginScroll.js
-
-/* harmony default export */ const useOriginScroll = ((isScrollAtTop, isScrollAtBottom, isScrollAtLeft, isScrollAtRight) => {
-  // Do lock for a wheel when scrolling
-  const lockRef = (0,react_production_namespaceFn().useRef)(false);
-  const lockTimeoutRef = (0,react_production_namespaceFn().useRef)(null);
-  function lockScroll() {
-    clearTimeout(lockTimeoutRef.current);
-    lockRef.current = true;
-    lockTimeoutRef.current = setTimeout(() => {
-      lockRef.current = false;
-    }, 50);
-  }
-
-  // Pass to ref since global add is in closure
-  const scrollPingRef = (0,react_production_namespaceFn().useRef)({
-    top: isScrollAtTop,
-    bottom: isScrollAtBottom,
-    left: isScrollAtLeft,
-    right: isScrollAtRight
-  });
-  scrollPingRef.current.top = isScrollAtTop;
-  scrollPingRef.current.bottom = isScrollAtBottom;
-  scrollPingRef.current.left = isScrollAtLeft;
-  scrollPingRef.current.right = isScrollAtRight;
-  return (isHorizontal, delta, smoothOffset = false) => {
-    const originScroll = isHorizontal ?
-    // Pass origin wheel when on the left
-    delta < 0 && scrollPingRef.current.left ||
-    // Pass origin wheel when on the right
-    delta > 0 && scrollPingRef.current.right // Pass origin wheel when on the top
-    : delta < 0 && scrollPingRef.current.top ||
-    // Pass origin wheel when on the bottom
-    delta > 0 && scrollPingRef.current.bottom;
-    if (smoothOffset && originScroll) {
-      // No need lock anymore when it's smooth offset from touchMove interval
-      clearTimeout(lockTimeoutRef.current);
-      lockRef.current = false;
-    } else if (!originScroll || lockRef.current) {
-      lockScroll();
-    }
-    return !lockRef.current && originScroll;
-  };
-});
-__webpack_require__.dn(useOriginScroll);
-;// ./node_modules/@rc-component/virtual-list/es/hooks/useFrameWheel.js
-
-
-
-
-function useFrameWheel(inVirtual, isScrollAtTop, isScrollAtBottom, isScrollAtLeft, isScrollAtRight, horizontalScroll,
-/***
- * Return `true` when you need to prevent default event
- */
-onWheelDelta) {
-  const offsetRef = (0,react_production_namespaceFn().useRef)(0);
-  const nextFrameRef = (0,react_production_namespaceFn().useRef)(null);
-
-  // Firefox patch
-  const wheelValueRef = (0,react_production_namespaceFn().useRef)(null);
-  const isMouseScrollRef = (0,react_production_namespaceFn().useRef)(false);
-
-  // Scroll status sync
-  const originScroll = useOriginScroll(isScrollAtTop, isScrollAtBottom, isScrollAtLeft, isScrollAtRight);
-  function onWheelY(e, deltaY) {
-    es_raf.cancel(nextFrameRef.current);
-
-    // Do nothing when scroll at the edge, Skip check when is in scroll
-    if (originScroll(false, deltaY)) return;
-
-    // Skip if nest List has handled this event
-    const event = e;
-    if (!event._virtualHandled) {
-      event._virtualHandled = true;
-    } else {
-      return;
-    }
-    offsetRef.current += deltaY;
-    wheelValueRef.current = deltaY;
-
-    // Proxy of scroll events
-    if (!isFirefox) {
-      event.preventDefault();
-    }
-    nextFrameRef.current = es_raf(() => {
-      // Patch a multiple for Firefox to fix wheel number too small
-      // ref: https://github.com/ant-design/ant-design/issues/26372#issuecomment-679460266
-      const patchMultiple = isMouseScrollRef.current ? 10 : 1;
-      onWheelDelta(offsetRef.current * patchMultiple, false);
-      offsetRef.current = 0;
-    });
-  }
-  function onWheelX(event, deltaX) {
-    onWheelDelta(deltaX, true);
-    if (!isFirefox) {
-      event.preventDefault();
-    }
-  }
-
-  // Check for which direction does wheel do. `sx` means `shift + wheel`
-  const wheelDirectionRef = (0,react_production_namespaceFn().useRef)(null);
-  const wheelDirectionCleanRef = (0,react_production_namespaceFn().useRef)(null);
-  function onWheel(event) {
-    if (!inVirtual) return;
-
-    // Wait for 2 frame to clean direction
-    es_raf.cancel(wheelDirectionCleanRef.current);
-    wheelDirectionCleanRef.current = es_raf(() => {
-      wheelDirectionRef.current = null;
-    }, 2);
-    const {
-      deltaX,
-      deltaY,
-      shiftKey
-    } = event;
-    let mergedDeltaX = deltaX;
-    let mergedDeltaY = deltaY;
-    if (wheelDirectionRef.current === 'sx' || !wheelDirectionRef.current && (shiftKey || false) && deltaY && !deltaX) {
-      mergedDeltaX = deltaY;
-      mergedDeltaY = 0;
-      wheelDirectionRef.current = 'sx';
-    }
-    const absX = Math.abs(mergedDeltaX);
-    const absY = Math.abs(mergedDeltaY);
-    if (wheelDirectionRef.current === null) {
-      wheelDirectionRef.current = horizontalScroll && absX > absY ? 'x' : 'y';
-    }
-    if (wheelDirectionRef.current === 'y') {
-      onWheelY(event, mergedDeltaY);
-    } else {
-      onWheelX(event, mergedDeltaX);
-    }
-  }
-
-  // A patch for firefox
-  function onFireFoxScroll(event) {
-    if (!inVirtual) return;
-    isMouseScrollRef.current = event.detail === wheelValueRef.current;
-  }
-  return [onWheel, onFireFoxScroll];
-}
-;// ./node_modules/@rc-component/virtual-list/es/hooks/useGetSize.js
-
-
-/**
- * Size info need loop query for the `heights` which will has the perf issue.
- * Let cache result for each render phase.
- */
-function useGetSize(mergedData, getKey, heights, itemHeight) {
-  const [key2Index, bottomList] = (react_production_namespaceFn().useMemo)(() => [new Map(), []], [mergedData, heights.id, itemHeight]);
-  const getSize = (startKey, endKey = startKey) => {
-    // Get from cache first
-    let startIndex = key2Index.get(startKey);
-    let endIndex = key2Index.get(endKey);
-
-    // Loop to fill the cache
-    if (startIndex === undefined || endIndex === undefined) {
-      const dataLen = mergedData.length;
-      for (let i = bottomList.length; i < dataLen; i += 1) {
-        const item = mergedData[i];
-        const key = getKey(item);
-        key2Index.set(key, i);
-        const cacheHeight = heights.get(key) ?? itemHeight;
-        bottomList[i] = (bottomList[i - 1] || 0) + cacheHeight;
-        if (key === startKey) {
-          startIndex = i;
-        }
-        if (key === endKey) {
-          endIndex = i;
-        }
-        if (startIndex !== undefined && endIndex !== undefined) {
-          break;
-        }
-      }
-    }
-    return {
-      top: bottomList[startIndex - 1] || 0,
-      bottom: bottomList[endIndex]
-    };
-  };
-  return getSize;
-}
-;// ./node_modules/@rc-component/virtual-list/es/utils/CacheMap.js
-// Firefox has low performance of map.
-class CacheMap {
-  maps;
-
-  // Used for cache key
-  // `useMemo` no need to update if `id` not change
-  id = 0;
-  diffRecords = new Map();
-  constructor() {
-    this.maps = Object.create(null);
-  }
-  set(key, value) {
-    // Record prev value
-    this.diffRecords.set(key, this.maps[key]);
-    this.maps[key] = value;
-    this.id += 1;
-  }
-  get(key) {
-    return this.maps[key];
-  }
-
-  /**
-   * CacheMap will record the key changed.
-   * To help to know what's update in the next render.
-   */
-  resetRecord() {
-    this.diffRecords.clear();
-  }
-  getRecord() {
-    return this.diffRecords;
-  }
-}
-/* harmony default export */ const utils_CacheMap = (CacheMap);
-;// ./node_modules/@rc-component/virtual-list/es/hooks/useHeights.js
-
-
-
-function parseNumber(value) {
-  const num = parseFloat(value);
-  return isNaN(num) ? 0 : num;
-}
-function useHeights(getKey, onItemAdd, onItemRemove) {
-  const [updatedMark, setUpdatedMark] = (react_production_namespaceFn().useState)(0);
-  const instanceRef = (0,react_production_namespaceFn().useRef)(new Map());
-  const heightsRef = (0,react_production_namespaceFn().useRef)(new utils_CacheMap());
-  const promiseIdRef = (0,react_production_namespaceFn().useRef)(0);
-  function cancelRaf() {
-    promiseIdRef.current += 1;
-  }
-  function collectHeight(sync = false) {
-    cancelRaf();
-    const doCollect = () => {
-      let changed = false;
-      instanceRef.current.forEach((element, key) => {
-        if (element && element.offsetParent) {
-          const {
-            offsetHeight
-          } = element;
-          const {
-            marginTop,
-            marginBottom
-          } = getComputedStyle(element);
-          const marginTopNum = parseNumber(marginTop);
-          const marginBottomNum = parseNumber(marginBottom);
-          const totalHeight = offsetHeight + marginTopNum + marginBottomNum;
-          if (heightsRef.current.get(key) !== totalHeight) {
-            heightsRef.current.set(key, totalHeight);
-            changed = true;
-          }
-        }
-      });
-
-      // Always trigger update mark to tell parent that should re-calculate heights when resized
-      if (changed) {
-        setUpdatedMark(c => c + 1);
-      }
-    };
-    if (sync) {
-      doCollect();
-    } else {
-      promiseIdRef.current += 1;
-      const id = promiseIdRef.current;
-      Promise.resolve().then(() => {
-        if (id === promiseIdRef.current) {
-          doCollect();
-        }
-      });
-    }
-  }
-  function setInstanceRef(item, instance) {
-    const key = getKey(item);
-    const origin = instanceRef.current.get(key);
-    if (instance) {
-      instanceRef.current.set(key, instance);
-      collectHeight();
-    } else {
-      instanceRef.current.delete(key);
-    }
-
-    // Instance changed
-    if (!origin !== !instance) {
-      if (instance) {
-        onItemAdd?.(item);
-      } else {
-        onItemRemove?.(item);
-      }
-    }
-  }
-  ;(0,react_production_namespaceFn().useEffect)(() => {
-    return cancelRaf;
-  }, []);
-  return [setInstanceRef, collectHeight, heightsRef.current, updatedMark];
-}
-;// ./node_modules/@rc-component/virtual-list/es/hooks/useMobileTouchMove.js
-
-
-const SMOOTH_PTG = 14 / 15;
-function useMobileTouchMove(inVirtual, listRef, callback) {
-  const touchedRef = (0,react_production_namespaceFn().useRef)(false);
-  const touchXRef = (0,react_production_namespaceFn().useRef)(0);
-  const touchYRef = (0,react_production_namespaceFn().useRef)(0);
-  const elementRef = (0,react_production_namespaceFn().useRef)(null);
-
-  // Smooth scroll
-  const intervalRef = (0,react_production_namespaceFn().useRef)(null);
-
-  /* eslint-disable prefer-const */
-  let cleanUpEvents;
-  const onTouchMove = e => {
-    if (touchedRef.current) {
-      const currentX = Math.ceil(e.touches[0].pageX);
-      const currentY = Math.ceil(e.touches[0].pageY);
-      let offsetX = touchXRef.current - currentX;
-      let offsetY = touchYRef.current - currentY;
-      const isHorizontal = Math.abs(offsetX) > Math.abs(offsetY);
-      if (isHorizontal) {
-        touchXRef.current = currentX;
-      } else {
-        touchYRef.current = currentY;
-      }
-      const scrollHandled = callback(isHorizontal, isHorizontal ? offsetX : offsetY, false, e);
-      if (scrollHandled) {
-        e.preventDefault();
-      }
-
-      // Smooth interval
-      clearInterval(intervalRef.current);
-      if (scrollHandled) {
-        intervalRef.current = setInterval(() => {
-          if (isHorizontal) {
-            offsetX *= SMOOTH_PTG;
-          } else {
-            offsetY *= SMOOTH_PTG;
-          }
-          const offset = Math.floor(isHorizontal ? offsetX : offsetY);
-          if (!callback(isHorizontal, offset, true) || Math.abs(offset) <= 0.1) {
-            clearInterval(intervalRef.current);
-          }
-        }, 16);
-      }
-    }
-  };
-  const onTouchEnd = () => {
-    touchedRef.current = false;
-    cleanUpEvents();
-  };
-  const onTouchStart = e => {
-    cleanUpEvents();
-    if (e.touches.length === 1 && !touchedRef.current) {
-      touchedRef.current = true;
-      touchXRef.current = Math.ceil(e.touches[0].pageX);
-      touchYRef.current = Math.ceil(e.touches[0].pageY);
-      elementRef.current = e.target;
-      elementRef.current.addEventListener('touchmove', onTouchMove, {
-        passive: false
-      });
-      elementRef.current.addEventListener('touchend', onTouchEnd, {
-        passive: true
-      });
-    }
-  };
-  cleanUpEvents = () => {
-    if (elementRef.current) {
-      elementRef.current.removeEventListener('touchmove', onTouchMove);
-      elementRef.current.removeEventListener('touchend', onTouchEnd);
-    }
-  };
-  hooks_useLayoutEffect(() => {
-    if (inVirtual) {
-      listRef.current.addEventListener('touchstart', onTouchStart, {
-        passive: true
-      });
-    }
-    return () => {
-      listRef.current?.removeEventListener('touchstart', onTouchStart);
-      cleanUpEvents();
-      clearInterval(intervalRef.current);
-    };
-  }, [inVirtual]);
-}
-;// ./node_modules/@rc-component/virtual-list/es/hooks/useScrollDrag.js
-
-
-function smoothScrollOffset(offset) {
-  return Math.floor(offset ** 0.5);
-}
-function getPageXY(e, horizontal) {
-  const obj = 'touches' in e ? e.touches[0] : e;
-  return obj[horizontal ? 'pageX' : 'pageY'] - window[horizontal ? 'scrollX' : 'scrollY'];
-}
-
-/**
- * Check the element itself or any of its ancestors is draggable.
- * Use the IDL attribute instead of `[draggable]` selector so that
- * implicitly draggable elements (`a[href]`, `img`) are also covered.
- */
-function isDraggable(ele) {
-  let current = ele;
-  while (current) {
-    if (current.draggable) {
-      return true;
-    }
-    current = current.parentElement;
-  }
-  return false;
-}
-function useScrollDrag(inVirtual, componentRef, onScrollOffset) {
-  ;(react_production_namespaceFn().useEffect)(() => {
-    const ele = componentRef.current;
-    if (inVirtual && ele) {
-      let mouseDownLock = false;
-      let rafId;
-      let offset;
-      const stopScroll = () => {
-        es_raf.cancel(rafId);
-      };
-      const continueScroll = () => {
-        stopScroll();
-        rafId = es_raf(() => {
-          onScrollOffset(offset);
-          continueScroll();
-        });
-      };
-      const clearDragState = () => {
-        mouseDownLock = false;
-        stopScroll();
-      };
-      const onMouseDown = e => {
-        // Skip if element set draggable
-        // Note the mousedown target is the deepest node in the event path (e.g. the
-        // title span inside a Tree node), while `draggable` is set on the ancestor.
-        if (isDraggable(e.target) || e.button !== 0) {
-          return;
-        }
-        // Skip if nest List has handled this event
-        const event = e;
-        if (!event._virtualHandled) {
-          event._virtualHandled = true;
-          mouseDownLock = true;
-        }
-      };
-      const onMouseMove = e => {
-        if (mouseDownLock) {
-          const mouseY = getPageXY(e, false);
-          const {
-            top,
-            bottom
-          } = ele.getBoundingClientRect();
-          if (mouseY <= top) {
-            const diff = top - mouseY;
-            offset = -smoothScrollOffset(diff);
-            continueScroll();
-          } else if (mouseY >= bottom) {
-            const diff = mouseY - bottom;
-            offset = smoothScrollOffset(diff);
-            continueScroll();
-          } else {
-            stopScroll();
-          }
-        }
-      };
-      ele.addEventListener('mousedown', onMouseDown);
-      ele.ownerDocument.addEventListener('mouseup', clearDragState);
-      ele.ownerDocument.addEventListener('mousemove', onMouseMove);
-      ele.ownerDocument.addEventListener('dragend', clearDragState);
-      return () => {
-        ele.removeEventListener('mousedown', onMouseDown);
-        ele.ownerDocument.removeEventListener('mouseup', clearDragState);
-        ele.ownerDocument.removeEventListener('mousemove', onMouseMove);
-        ele.ownerDocument.removeEventListener('dragend', clearDragState);
-        stopScroll();
-      };
-    }
-  }, [inVirtual]);
-}
-;// ./node_modules/@rc-component/virtual-list/es/hooks/useScrollTo.js
-
-
-const MAX_TIMES = 10;
-function useScrollTo_getOffset(rawOffset, info) {
-  const resolvedOffset = typeof rawOffset === 'function' ? rawOffset(info) : rawOffset;
-  return Number.isFinite(resolvedOffset) ? resolvedOffset : 0;
-}
-function useScrollTo(containerRef, data, heights, itemHeight, getKey, getSize, collectHeight, syncScrollTop, triggerFlash) {
-  const scrollRef = (react_production_namespaceFn().useRef)(undefined);
-  const [syncState, setSyncState] = (react_production_namespaceFn().useState)(null);
-
-  // ========================== Sync Scroll ==========================
-  hooks_useLayoutEffect(() => {
-    if (syncState && syncState.times < MAX_TIMES) {
-      // Never reach
-      if (!containerRef.current) {
-        setSyncState(ori => ({
-          ...ori
-        }));
-        return;
-      }
-      collectHeight();
-      const {
-        targetAlign,
-        originAlign,
-        offset: rawOffset
-      } = syncState;
-      const index = syncState.index >= 0 ? syncState.index : data.findIndex(item => getKey(item) === syncState.key);
-      const mergedAlign = targetAlign || originAlign;
-      const offset = useScrollTo_getOffset(rawOffset, {
-        getSize,
-        align: mergedAlign
-      });
-      const height = containerRef.current.clientHeight;
-      let needCollectHeight = index < 0;
-      let newTargetAlign = targetAlign;
-      let targetTop = null;
-
-      // Go to next frame if height not exist
-      if (height && index >= 0) {
-        // Get top & bottom
-        let stackTop = 0;
-        let itemTop = 0;
-        let itemBottom = 0;
-        const maxLen = Math.min(data.length - 1, index);
-        for (let i = 0; i <= maxLen; i += 1) {
-          const key = getKey(data[i]);
-          itemTop = stackTop;
-          const cacheHeight = heights.get(key);
-          itemBottom = itemTop + (cacheHeight === undefined ? itemHeight : cacheHeight);
-          stackTop = itemBottom;
-        }
-
-        // Check if need sync height (visible range has item not record height)
-        let leftHeight = mergedAlign === 'top' ? offset : height - offset;
-        for (let i = maxLen; i >= 0; i -= 1) {
-          const key = getKey(data[i]);
-          const cacheHeight = heights.get(key);
-          if (cacheHeight === undefined) {
-            needCollectHeight = true;
-            break;
-          }
-          leftHeight -= cacheHeight;
-          if (leftHeight <= 0) {
-            break;
-          }
-        }
-
-        // Scroll to
-        switch (mergedAlign) {
-          case 'top':
-            targetTop = itemTop - offset;
-            break;
-          case 'bottom':
-            targetTop = itemBottom - height + offset;
-            break;
-          default:
-            {
-              const {
-                scrollTop
-              } = containerRef.current;
-              const scrollBottom = scrollTop + height;
-              if (itemTop < scrollTop) {
-                newTargetAlign = 'top';
-              } else if (itemBottom > scrollBottom) {
-                newTargetAlign = 'bottom';
-              }
-            }
-        }
-        if (targetTop !== null) {
-          syncScrollTop(targetTop);
-        }
-
-        // One more time for sync
-        if (targetTop !== syncState.lastTop) {
-          needCollectHeight = true;
-        }
-      }
-
-      // Trigger next effect
-      if (needCollectHeight) {
-        setSyncState(prev => ({
-          ...prev,
-          times: prev.times + 1,
-          index,
-          targetAlign: newTargetAlign,
-          lastTop: targetTop
-        }));
-      }
-    } else if (false) // removed by dead control flow
-{}
-  }, [syncState, containerRef.current]);
-
-  // =========================== Scroll To ===========================
-  return arg => {
-    // When not argument provided, we think dev may want to show the scrollbar
-    if (arg === null || arg === undefined) {
-      triggerFlash();
-      return;
-    }
-
-    // Normal scroll logic
-    es_raf.cancel(scrollRef.current);
-    if (typeof arg === 'number') {
-      syncScrollTop(arg);
-    } else if (arg && typeof arg === 'object') {
-      let index;
-      let key;
-      const {
-        align
-      } = arg;
-      if ('index' in arg) {
-        ({
-          index
-        } = arg);
-      } else {
-        key = arg.key;
-        index = data.findIndex(item => getKey(item) === key);
-      }
-      const {
-        offset: rawOffset = 0
-      } = arg;
-      setSyncState({
-        times: 0,
-        index,
-        key,
-        offset: rawOffset,
-        originAlign: align
-      });
-    }
-  };
-}
-;// ./node_modules/@rc-component/virtual-list/es/ScrollBar.js
-
-
-
-
-function getScrollOffsetByThumbTop(thumbTop, enabledScrollRange, enabledOffsetRange) {
-  if (enabledScrollRange <= 0 || enabledOffsetRange <= 0) {
-    return 0;
-  }
-  const mergedThumbTop = Math.max(Math.min(thumbTop, enabledOffsetRange), 0);
-  const ptg = mergedThumbTop / enabledOffsetRange;
-  let nextScrollOffset = Math.ceil(ptg * enabledScrollRange);
-  nextScrollOffset = Math.max(nextScrollOffset, 0);
-  nextScrollOffset = Math.min(nextScrollOffset, enabledScrollRange);
-  return nextScrollOffset;
-}
-const ScrollBar = /*#__PURE__*/(react_production_namespaceFn().forwardRef)((props, ref) => {
-  const {
-    prefixCls,
-    rtl,
-    scrollOffset,
-    scrollRange,
-    onStartMove,
-    onStopMove,
-    onScroll,
-    horizontal,
-    spinSize,
-    containerSize,
-    style,
-    thumbStyle: propsThumbStyle,
-    showScrollBar
-  } = props;
-  const [dragging, setDragging] = (react_production_namespaceFn().useState)(false);
-  const [pageXY, setPageXY] = (react_production_namespaceFn().useState)(null);
-  const [startTop, setStartTop] = (react_production_namespaceFn().useState)(null);
-  const isLTR = !rtl;
-
-  // ========================= Refs =========================
-  const scrollbarRef = (react_production_namespaceFn().useRef)(null);
-  const thumbRef = (react_production_namespaceFn().useRef)(null);
-
-  // ======================= Visible ========================
-  const [visible, setVisible] = (react_production_namespaceFn().useState)(showScrollBar);
-  const visibleTimeoutRef = (react_production_namespaceFn().useRef)(undefined);
-  const delayHidden = () => {
-    if (showScrollBar === true || showScrollBar === false) return;
-    clearTimeout(visibleTimeoutRef.current);
-    setVisible(true);
-    visibleTimeoutRef.current = setTimeout(() => {
-      setVisible(false);
-    }, 3000);
-  };
-
-  // ======================== Range =========================
-  const enableScrollRange = scrollRange - containerSize || 0;
-  const enableOffsetRange = containerSize - spinSize || 0;
-
-  // ========================= Top ==========================
-  const top = (react_production_namespaceFn().useMemo)(() => {
-    if (scrollOffset === 0 || enableScrollRange === 0) {
-      return 0;
-    }
-    const ptg = scrollOffset / enableScrollRange;
-    return ptg * enableOffsetRange;
-  }, [scrollOffset, enableScrollRange, enableOffsetRange]);
-
-  // ====================== Container =======================
-  const isThumbTarget = target => {
-    return !!target && thumbRef.current?.contains(target);
-  };
-  const scrollToTrackPosition = e => {
-    const scrollbarEle = scrollbarRef.current;
-    if (!scrollbarEle) {
-      return;
-    }
-    const rect = scrollbarEle.getBoundingClientRect();
-    const pagePosition = getPageXY(e, horizontal);
-    let nextTop;
-    if (!Number.isFinite(pagePosition)) {
-      return;
-    }
-    if (horizontal) {
-      const horizontalStart = isLTR ? rect.left : rect.right;
-      if (!Number.isFinite(horizontalStart)) {
-        return;
-      }
-      nextTop = (isLTR ? pagePosition - horizontalStart : horizontalStart - pagePosition) - spinSize / 2;
-    } else {
-      if (!Number.isFinite(rect.top)) {
-        return;
-      }
-      nextTop = pagePosition - rect.top - spinSize / 2;
-    }
-    onScroll(getScrollOffsetByThumbTop(nextTop, enableScrollRange, enableOffsetRange), horizontal);
-  };
-  const onContainerMouseDown = e => {
-    e.stopPropagation();
-    e.preventDefault();
-    if (e.button !== 0 || isThumbTarget(e.target)) {
-      return;
-    }
-    scrollToTrackPosition(e);
-  };
-
-  // ======================== Thumb =========================
-  const stateRef = (react_production_namespaceFn().useRef)({
-    top,
-    dragging,
-    pageY: pageXY,
-    startTop
-  });
-  stateRef.current = {
-    top,
-    dragging,
-    pageY: pageXY,
-    startTop
-  };
-  const onThumbMouseDown = hooks_useEvent(e => {
-    setDragging(true);
-    setPageXY(getPageXY(e, horizontal));
-    setStartTop(stateRef.current.top);
-    onStartMove();
-    e.stopPropagation();
-    e.preventDefault();
-  });
-
-  // ======================== Effect ========================
-
-  // React make event as passive, but we need to preventDefault
-  // Add event on dom directly instead.
-  // ref: https://github.com/facebook/react/issues/9809
-  (react_production_namespaceFn().useEffect)(() => {
-    const onScrollbarTouchStart = e => {
-      e.preventDefault();
-    };
-    const scrollbarEle = scrollbarRef.current;
-    const thumbEle = thumbRef.current;
-    scrollbarEle.addEventListener('touchstart', onScrollbarTouchStart, {
-      passive: false
-    });
-    thumbEle.addEventListener('touchstart', onThumbMouseDown, {
-      passive: false
-    });
-    return () => {
-      scrollbarEle.removeEventListener('touchstart', onScrollbarTouchStart);
-      thumbEle.removeEventListener('touchstart', onThumbMouseDown);
-    };
-  }, [onThumbMouseDown]);
-
-  // Pass to effect
-  const enableScrollRangeRef = (react_production_namespaceFn().useRef)(undefined);
-  enableScrollRangeRef.current = enableScrollRange;
-  const enableOffsetRangeRef = (react_production_namespaceFn().useRef)(undefined);
-  enableOffsetRangeRef.current = enableOffsetRange;
-  (react_production_namespaceFn().useEffect)(() => {
-    if (dragging) {
-      let moveRafId;
-      const onMouseMove = e => {
-        const {
-          dragging: stateDragging,
-          pageY: statePageY,
-          startTop: stateStartTop
-        } = stateRef.current;
-        es_raf.cancel(moveRafId);
-        const rect = scrollbarRef.current.getBoundingClientRect();
-        const scale = containerSize / (horizontal ? rect.width : rect.height);
-        if (stateDragging) {
-          const offset = (getPageXY(e, horizontal) - statePageY) * scale;
-          let newTop = stateStartTop;
-          if (!isLTR && horizontal) {
-            newTop -= offset;
-          } else {
-            newTop += offset;
-          }
-          const tmpEnableScrollRange = enableScrollRangeRef.current;
-          const tmpEnableOffsetRange = enableOffsetRangeRef.current;
-          const newScrollTop = getScrollOffsetByThumbTop(newTop, tmpEnableScrollRange, tmpEnableOffsetRange);
-          moveRafId = es_raf(() => {
-            onScroll(newScrollTop, horizontal);
-          });
-        }
-      };
-      const onMouseUp = () => {
-        setDragging(false);
-        onStopMove();
-      };
-      window.addEventListener('mousemove', onMouseMove, {
-        passive: true
-      });
-      window.addEventListener('touchmove', onMouseMove, {
-        passive: true
-      });
-      window.addEventListener('mouseup', onMouseUp, {
-        passive: true
-      });
-      window.addEventListener('touchend', onMouseUp, {
-        passive: true
-      });
-      return () => {
-        window.removeEventListener('mousemove', onMouseMove);
-        window.removeEventListener('touchmove', onMouseMove);
-        window.removeEventListener('mouseup', onMouseUp);
-        window.removeEventListener('touchend', onMouseUp);
-        es_raf.cancel(moveRafId);
-      };
-    }
-  }, [dragging]);
-  (react_production_namespaceFn().useEffect)(() => {
-    delayHidden();
-    return () => {
-      clearTimeout(visibleTimeoutRef.current);
-    };
-  }, [scrollOffset]);
-
-  // ====================== Imperative ======================
-  (react_production_namespaceFn().useImperativeHandle)(ref, () => ({
-    delayHidden
-  }));
-
-  // ======================== Render ========================
-  const scrollbarPrefixCls = `${prefixCls}-scrollbar`;
-  const containerStyle = {
-    position: 'absolute',
-    visibility: visible ? null : 'hidden'
-  };
-  const thumbStyle = {
-    position: 'absolute',
-    borderRadius: 99,
-    background: 'var(--rc-virtual-list-scrollbar-bg, rgba(0, 0, 0, 0.5))',
-    cursor: 'pointer',
-    userSelect: 'none'
-  };
-  if (horizontal) {
-    Object.assign(containerStyle, {
-      height: 8,
-      left: 0,
-      right: 0,
-      bottom: 0
-    });
-    Object.assign(thumbStyle, {
-      height: '100%',
-      width: spinSize,
-      [isLTR ? 'left' : 'right']: top
-    });
-  } else {
-    Object.assign(containerStyle, {
-      width: 8,
-      top: 0,
-      bottom: 0,
-      [isLTR ? 'right' : 'left']: 0
-    });
-    Object.assign(thumbStyle, {
-      width: '100%',
-      height: spinSize,
-      top
-    });
-  }
-  return /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
-    ref: scrollbarRef,
-    className: clsx(scrollbarPrefixCls, {
-      [`${scrollbarPrefixCls}-horizontal`]: horizontal,
-      [`${scrollbarPrefixCls}-vertical`]: !horizontal,
-      [`${scrollbarPrefixCls}-visible`]: visible
-    }),
-    style: {
-      ...containerStyle,
-      ...style
-    },
-    onMouseDown: onContainerMouseDown,
-    onMouseMove: delayHidden
-  }, /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
-    ref: thumbRef,
-    className: clsx(`${scrollbarPrefixCls}-thumb`, {
-      [`${scrollbarPrefixCls}-thumb-moving`]: dragging
-    }),
-    style: {
-      ...thumbStyle,
-      ...propsThumbStyle
-    },
-    onMouseDown: onThumbMouseDown
-  }));
-});
-if (false) // removed by dead control flow
-{}
-/* harmony default export */ const es_ScrollBar = (ScrollBar);
-;// ./node_modules/@rc-component/virtual-list/es/utils/scrollbarUtil.js
-const MIN_SIZE = 20;
-function getSpinSize(containerSize = 0, scrollRange = 0) {
-  let baseSize = containerSize / scrollRange * containerSize;
-  if (isNaN(baseSize)) {
-    baseSize = 0;
-  }
-  baseSize = Math.max(baseSize, MIN_SIZE);
-  return Math.floor(baseSize);
-}
-;// ./node_modules/@rc-component/virtual-list/es/List.js
-function List_extends() { List_extends = Object.assign ? Object.assign.bind() : function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; }; return List_extends.apply(this, arguments); }
-;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-const EMPTY_DATA = [];
-const ScrollStyle = {
-  overflowY: 'auto',
-  overflowAnchor: 'none'
-};
-function RawList(props, ref) {
-  const {
-    prefixCls = 'rc-virtual-list',
-    className,
-    height,
-    itemHeight,
-    fullHeight = true,
-    style,
-    data,
-    children,
-    itemKey,
-    virtual,
-    direction,
-    scrollWidth,
-    component: Component = 'div',
-    onScroll,
-    onVirtualScroll,
-    onVisibleChange,
-    innerProps,
-    extraRender,
-    styles,
-    showScrollBar = 'optional',
-    ...restProps
-  } = props;
-
-  // =============================== Item Key ===============================
-  const getKey = (react_production_namespaceFn().useCallback)(item => {
-    if (typeof itemKey === 'function') {
-      return itemKey(item);
-    }
-    return item?.[itemKey];
-  }, [itemKey]);
-
-  // ================================ Height ================================
-  const [setInstanceRef, collectHeight, heights, heightUpdatedMark] = useHeights(getKey, null, null);
-
-  // ================================= MISC =================================
-  const useVirtual = !!(virtual !== false && height && itemHeight);
-  const containerHeight = (react_production_namespaceFn().useMemo)(() => Object.values(heights.maps).reduce((total, curr) => total + curr, 0), [heights.id, heights.maps]);
-  const inVirtual = useVirtual && data && (Math.max(itemHeight * data.length, containerHeight) > height || !!scrollWidth);
-  const isRTL = direction === 'rtl';
-  const mergedClassName = clsx(prefixCls, {
-    [`${prefixCls}-rtl`]: isRTL
-  }, className);
-  const mergedData = data || EMPTY_DATA;
-  const componentRef = (0,react_production_namespaceFn().useRef)(null);
-  const fillerInnerRef = (0,react_production_namespaceFn().useRef)(null);
-  const containerRef = (0,react_production_namespaceFn().useRef)(null);
-
-  // =============================== Item Key ===============================
-
-  const [offsetTop, setOffsetTop] = (0,react_production_namespaceFn().useState)(0);
-  const [offsetLeft, setOffsetLeft] = (0,react_production_namespaceFn().useState)(0);
-  const [scrollMoving, setScrollMoving] = (0,react_production_namespaceFn().useState)(false);
-  const onScrollbarStartMove = () => {
-    setScrollMoving(true);
-  };
-  const onScrollbarStopMove = () => {
-    setScrollMoving(false);
-  };
-  const sharedConfig = {
-    getKey
-  };
-
-  // ================================ Scroll ================================
-  function syncScrollTop(newTop) {
-    setOffsetTop(origin => {
-      let value;
-      if (typeof newTop === 'function') {
-        value = newTop(origin);
-      } else {
-        value = newTop;
-      }
-      const alignedTop = keepInRange(value);
-      componentRef.current.scrollTop = alignedTop;
-      return alignedTop;
-    });
-  }
-
-  // ================================ Legacy ================================
-  // Put ref here since the range is generate by follow
-  const rangeRef = (0,react_production_namespaceFn().useRef)({
-    start: 0,
-    end: mergedData.length
-  });
-  const diffItemRef = (0,react_production_namespaceFn().useRef)(undefined);
-  const [diffItem] = useDiffItem(mergedData, getKey);
-  diffItemRef.current = diffItem;
-
-  // ========================== Visible Calculation =========================
-  const {
-    scrollHeight,
-    start,
-    end,
-    offset: fillerOffset
-  } = (react_production_namespaceFn().useMemo)(() => {
-    if (!useVirtual) {
-      return {
-        scrollHeight: undefined,
-        start: 0,
-        end: mergedData.length - 1,
-        offset: undefined
-      };
-    }
-
-    // Always use virtual scroll bar in avoid shaking
-    if (!inVirtual) {
-      return {
-        scrollHeight: fillerInnerRef.current?.offsetHeight || 0,
-        start: 0,
-        end: mergedData.length - 1,
-        offset: undefined
-      };
-    }
-    let itemTop = 0;
-    let startIndex;
-    let startOffset;
-    let endIndex;
-    const dataLen = mergedData.length;
-    for (let i = 0; i < dataLen; i += 1) {
-      const item = mergedData[i];
-      const key = getKey(item);
-      const cacheHeight = heights.get(key);
-      const currentItemBottom = itemTop + (cacheHeight === undefined ? itemHeight : cacheHeight);
-
-      // Check item top in the range
-      if (currentItemBottom >= offsetTop && startIndex === undefined) {
-        startIndex = i;
-        startOffset = itemTop;
-      }
-
-      // Check item bottom in the range. We will render additional one item for motion usage
-      if (currentItemBottom > offsetTop + height && endIndex === undefined) {
-        endIndex = i;
-      }
-      itemTop = currentItemBottom;
-    }
-
-    // When scrollTop at the end but data cut to small count will reach this
-    if (startIndex === undefined) {
-      startIndex = 0;
-      startOffset = 0;
-      endIndex = Math.ceil(height / itemHeight);
-    }
-    if (endIndex === undefined) {
-      endIndex = mergedData.length - 1;
-    }
-
-    // Give cache to improve scroll experience
-    endIndex = Math.min(endIndex + 1, mergedData.length - 1);
-    return {
-      scrollHeight: itemTop,
-      start: startIndex,
-      end: endIndex,
-      offset: startOffset
-    };
-  }, [inVirtual, useVirtual, offsetTop, mergedData, heightUpdatedMark, height]);
-  rangeRef.current.start = start;
-  rangeRef.current.end = end;
-
-  // When scroll up, first visible item get real height may not same as `itemHeight`,
-  // Which will make scroll jump.
-  // Let's sync scroll top to avoid jump
-  (react_production_namespaceFn().useLayoutEffect)(() => {
-    const changedRecord = heights.getRecord();
-    if (changedRecord.size === 1) {
-      const recordKey = Array.from(changedRecord.keys())[0];
-      const prevCacheHeight = changedRecord.get(recordKey);
-
-      // Quick switch data may cause `start` not in `mergedData` anymore
-      const startItem = mergedData[start];
-      if (startItem && prevCacheHeight === undefined) {
-        const startIndexKey = getKey(startItem);
-        if (startIndexKey === recordKey) {
-          const realStartHeight = heights.get(recordKey);
-          const diffHeight = realStartHeight - itemHeight;
-          syncScrollTop(ori => {
-            return ori + diffHeight;
-          });
-        }
-      }
-    }
-    heights.resetRecord();
-  }, [scrollHeight]);
-
-  // ================================= Size =================================
-  const [size, setSize] = (react_production_namespaceFn().useState)({
-    width: 0,
-    height
-  });
-  const onHolderResize = sizeInfo => {
-    setSize({
-      width: sizeInfo.offsetWidth,
-      height: sizeInfo.offsetHeight
-    });
-  };
-
-  // Hack on scrollbar to enable flash call
-  const verticalScrollBarRef = (0,react_production_namespaceFn().useRef)(null);
-  const horizontalScrollBarRef = (0,react_production_namespaceFn().useRef)(null);
-  const horizontalScrollBarSpinSize = (react_production_namespaceFn().useMemo)(() => getSpinSize(size.width, scrollWidth), [size.width, scrollWidth]);
-  const verticalScrollBarSpinSize = (react_production_namespaceFn().useMemo)(() => getSpinSize(size.height, scrollHeight), [size.height, scrollHeight]);
-
-  // =============================== In Range ===============================
-  const maxScrollHeight = scrollHeight - height;
-  const maxScrollHeightRef = (0,react_production_namespaceFn().useRef)(maxScrollHeight);
-  maxScrollHeightRef.current = maxScrollHeight;
-  function keepInRange(newScrollTop) {
-    let newTop = newScrollTop;
-    if (!Number.isNaN(maxScrollHeightRef.current)) {
-      newTop = Math.min(newTop, maxScrollHeightRef.current);
-    }
-    newTop = Math.max(newTop, 0);
-    return newTop;
-  }
-  const isScrollAtTop = offsetTop <= 0;
-  const isScrollAtBottom = offsetTop >= maxScrollHeight;
-  const isScrollAtLeft = offsetLeft <= 0;
-  const isScrollAtRight = offsetLeft >= scrollWidth;
-  const originScroll = useOriginScroll(isScrollAtTop, isScrollAtBottom, isScrollAtLeft, isScrollAtRight);
-
-  // ================================ Scroll ================================
-  const getVirtualScrollInfo = () => ({
-    x: isRTL ? -offsetLeft : offsetLeft,
-    y: offsetTop
-  });
-  const lastVirtualScrollInfoRef = (0,react_production_namespaceFn().useRef)(getVirtualScrollInfo());
-  const triggerScroll = hooks_useEvent(params => {
-    if (onVirtualScroll) {
-      const nextInfo = {
-        ...getVirtualScrollInfo(),
-        ...params
-      };
-
-      // Trigger when offset changed
-      if (lastVirtualScrollInfoRef.current.x !== nextInfo.x || lastVirtualScrollInfoRef.current.y !== nextInfo.y) {
-        onVirtualScroll(nextInfo);
-        lastVirtualScrollInfoRef.current = nextInfo;
-      }
-    }
-  });
-  function onScrollBar(newScrollOffset, horizontal) {
-    const newOffset = newScrollOffset;
-    if (horizontal) {
-      (0,react_dom_production_namespaceFn().flushSync)(() => {
-        setOffsetLeft(newOffset);
-      });
-      triggerScroll();
-    } else {
-      syncScrollTop(newOffset);
-    }
-  }
-
-  // When data size reduce. It may trigger native scroll event back to fit scroll position
-  function onFallbackScroll(e) {
-    const {
-      scrollTop: newScrollTop
-    } = e.currentTarget;
-    if (newScrollTop !== offsetTop) {
-      syncScrollTop(newScrollTop);
-    }
-
-    // Trigger origin onScroll
-    onScroll?.(e);
-    triggerScroll();
-  }
-  const keepInHorizontalRange = nextOffsetLeft => {
-    let tmpOffsetLeft = nextOffsetLeft;
-    const max = !!scrollWidth ? scrollWidth - size.width : 0;
-    tmpOffsetLeft = Math.max(tmpOffsetLeft, 0);
-    tmpOffsetLeft = Math.min(tmpOffsetLeft, max);
-    return tmpOffsetLeft;
-  };
-  const onWheelDelta = hooks_useEvent((offsetXY, fromHorizontal) => {
-    if (fromHorizontal) {
-      (0,react_dom_production_namespaceFn().flushSync)(() => {
-        setOffsetLeft(left => {
-          const nextOffsetLeft = left + (isRTL ? -offsetXY : offsetXY);
-          return keepInHorizontalRange(nextOffsetLeft);
-        });
-      });
-      triggerScroll();
-    } else {
-      syncScrollTop(top => {
-        const newTop = top + offsetXY;
-        return newTop;
-      });
-    }
-  });
-
-  // Since this added in global,should use ref to keep update
-  const [onRawWheel, onFireFoxScroll] = useFrameWheel(useVirtual, isScrollAtTop, isScrollAtBottom, isScrollAtLeft, isScrollAtRight, !!scrollWidth, onWheelDelta);
-
-  // Mobile touch move
-  useMobileTouchMove(useVirtual, componentRef, (isHorizontal, delta, smoothOffset, e) => {
-    const event = e;
-    if (originScroll(isHorizontal, delta, smoothOffset)) {
-      return false;
-    }
-
-    // Fix nest List trigger TouchMove event
-    if (!event || !event._virtualHandled) {
-      if (event) {
-        event._virtualHandled = true;
-      }
-      onRawWheel({
-        preventDefault() {},
-        deltaX: isHorizontal ? delta : 0,
-        deltaY: isHorizontal ? 0 : delta
-      });
-      return true;
-    }
-    return false;
-  });
-
-  // MouseDown drag for scroll
-  useScrollDrag(inVirtual, componentRef, offset => {
-    syncScrollTop(top => top + offset);
-  });
-  hooks_useLayoutEffect(() => {
-    // Firefox only
-    function onMozMousePixelScroll(e) {
-      // scrolling at top/bottom limit
-      const scrollingUpAtTop = isScrollAtTop && e.detail < 0;
-      const scrollingDownAtBottom = isScrollAtBottom && e.detail > 0;
-      if (useVirtual && !scrollingUpAtTop && !scrollingDownAtBottom) {
-        e.preventDefault();
-      }
-    }
-    const componentEle = componentRef.current;
-    componentEle.addEventListener('wheel', onRawWheel, {
-      passive: false
-    });
-    componentEle.addEventListener('DOMMouseScroll', onFireFoxScroll, {
-      passive: true
-    });
-    componentEle.addEventListener('MozMousePixelScroll', onMozMousePixelScroll, {
-      passive: false
-    });
-    return () => {
-      componentEle.removeEventListener('wheel', onRawWheel);
-      componentEle.removeEventListener('DOMMouseScroll', onFireFoxScroll);
-      componentEle.removeEventListener('MozMousePixelScroll', onMozMousePixelScroll);
-    };
-  }, [useVirtual, isScrollAtTop, isScrollAtBottom]);
-
-  // Sync scroll left
-  hooks_useLayoutEffect(() => {
-    if (scrollWidth) {
-      const newOffsetLeft = keepInHorizontalRange(offsetLeft);
-      setOffsetLeft(newOffsetLeft);
-      triggerScroll({
-        x: newOffsetLeft
-      });
-    }
-  }, [size.width, scrollWidth]);
-
-  // ================================= Ref ==================================
-  const delayHideScrollBar = () => {
-    verticalScrollBarRef.current?.delayHidden();
-    horizontalScrollBarRef.current?.delayHidden();
-  };
-  const getSize = useGetSize(mergedData, getKey, heights, itemHeight);
-  const scrollTo = useScrollTo(componentRef, mergedData, heights, itemHeight, getKey, getSize, () => collectHeight(true), syncScrollTop, delayHideScrollBar);
-  (react_production_namespaceFn().useImperativeHandle)(ref, () => ({
-    nativeElement: containerRef.current,
-    getScrollInfo: getVirtualScrollInfo,
-    scrollTo: config => {
-      function isPosScroll(arg) {
-        return arg && typeof arg === 'object' && ('left' in arg || 'top' in arg);
-      }
-      if (isPosScroll(config)) {
-        // Scroll X
-        if (config.left !== undefined) {
-          setOffsetLeft(keepInHorizontalRange(config.left));
-        }
-
-        // Scroll Y
-        scrollTo(config.top);
-      } else {
-        scrollTo(config);
-      }
-    }
-  }));
-
-  // ================================ Effect ================================
-  /** We need told outside that some list not rendered */
-  hooks_useLayoutEffect(() => {
-    if (onVisibleChange) {
-      const renderList = mergedData.slice(start, end + 1);
-      onVisibleChange(renderList, mergedData);
-    }
-  }, [start, end, mergedData]);
-
-  // ================================ Extra =================================
-  const extraContent = extraRender?.({
-    start,
-    end,
-    virtual: inVirtual,
-    offsetX: offsetLeft,
-    scrollTop: offsetTop,
-    offsetY: fillerOffset,
-    rtl: isRTL,
-    getSize
-  });
-
-  // ================================ Render ================================
-  const listChildren = useChildren(mergedData, start, end, scrollWidth, offsetLeft, setInstanceRef, children, sharedConfig);
-  let componentStyle = null;
-  if (height) {
-    componentStyle = {
-      [fullHeight ? 'height' : 'maxHeight']: height,
-      ...ScrollStyle
-    };
-    if (useVirtual) {
-      componentStyle.overflowY = 'hidden';
-      if (scrollWidth) {
-        componentStyle.overflowX = 'hidden';
-      }
-      if (scrollMoving) {
-        componentStyle.pointerEvents = 'none';
-      }
-    }
-  }
-  const containerProps = {};
-  if (isRTL) {
-    containerProps.dir = 'rtl';
-  }
-  return /*#__PURE__*/(react_production_namespaceFn().createElement)("div", List_extends({
-    ref: containerRef,
-    style: {
-      ...style,
-      position: 'relative'
-    },
-    className: mergedClassName
-  }, containerProps, restProps), /*#__PURE__*/(react_production_namespaceFn().createElement)(resize_observer_es, {
-    onResize: onHolderResize
-  }, /*#__PURE__*/(react_production_namespaceFn().createElement)(Component, {
-    className: `${prefixCls}-holder`,
-    style: componentStyle,
-    ref: componentRef,
-    onScroll: onFallbackScroll,
-    onMouseEnter: delayHideScrollBar
-  }, /*#__PURE__*/(react_production_namespaceFn().createElement)(es_Filler, {
-    prefixCls: prefixCls,
-    height: scrollHeight,
-    offsetX: offsetLeft,
-    offsetY: fillerOffset,
-    scrollWidth: scrollWidth,
-    onInnerResize: collectHeight,
-    ref: fillerInnerRef,
-    innerProps: innerProps,
-    rtl: isRTL,
-    extra: extraContent
-  }, listChildren))), inVirtual && scrollHeight > height && /*#__PURE__*/(react_production_namespaceFn().createElement)(es_ScrollBar, {
-    ref: verticalScrollBarRef,
-    prefixCls: prefixCls,
-    scrollOffset: offsetTop,
-    scrollRange: scrollHeight,
-    rtl: isRTL,
-    onScroll: onScrollBar,
-    onStartMove: onScrollbarStartMove,
-    onStopMove: onScrollbarStopMove,
-    spinSize: verticalScrollBarSpinSize,
-    containerSize: size.height,
-    style: styles?.verticalScrollBar,
-    thumbStyle: styles?.verticalScrollBarThumb,
-    showScrollBar: showScrollBar
-  }), inVirtual && scrollWidth > size.width && /*#__PURE__*/(react_production_namespaceFn().createElement)(es_ScrollBar, {
-    ref: horizontalScrollBarRef,
-    prefixCls: prefixCls,
-    scrollOffset: offsetLeft,
-    scrollRange: scrollWidth,
-    rtl: isRTL,
-    onScroll: onScrollBar,
-    onStartMove: onScrollbarStartMove,
-    onStopMove: onScrollbarStopMove,
-    spinSize: horizontalScrollBarSpinSize,
-    containerSize: size.width,
-    horizontal: true,
-    style: styles?.horizontalScrollBar,
-    thumbStyle: styles?.horizontalScrollBarThumb,
-    showScrollBar: showScrollBar
-  }));
-}
-const List_List = /*#__PURE__*/(react_production_namespaceFn().forwardRef)(RawList);
-List_List.displayName = 'List';
-/* harmony default export */ const virtual_list_es_List = (List_List);
-;// ./node_modules/@rc-component/virtual-list/es/mock.js
-
-
-const mock_List = /*#__PURE__*/(react_production_namespaceFn().forwardRef)((props, ref) => RawList({
-  ...props,
-  virtual: false
-}, ref));
-mock_List.displayName = 'List';
-/* harmony default export */ const mock = ((/* unused pure expression or super */ null && (mock_List)));
-;// ./node_modules/@rc-component/virtual-list/es/index.js
-
-
-/* harmony default export */ const virtual_list_es = (virtual_list_es_List);
-;// ./node_modules/@rc-component/select/es/utils/platformUtil.js
-/* istanbul ignore file */
-function isPlatformMac() {
-  return /(mac\sos|macintosh)/i.test(navigator.appVersion);
-}
-;// ./node_modules/@rc-component/select/es/OptionList.js
-function OptionList_extends() { OptionList_extends = Object.assign ? Object.assign.bind() : function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; }; return OptionList_extends.apply(this, arguments); }
-;
-
-
-
-
-
-
-
-
-
-
-// export interface OptionListProps<OptionsType extends object[]> {
-
-function OptionList_isTitleType(content) {
-  return typeof content === 'string' || typeof content === 'number';
-}
-
-/**
- * Using virtual list of option display.
- * Will fallback to dom if use customize render.
- */
-const OptionList = (_, ref) => {
-  const {
-    prefixCls,
-    id,
-    open,
-    multiple,
-    mode,
-    searchValue,
-    toggleOpen,
-    notFoundContent,
-    onPopupScroll,
-    showScrollBar,
-    lockOptions
-  } = useBaseProps();
-  const {
-    maxCount,
-    flattenOptions,
-    onActiveValue,
-    defaultActiveFirstOption,
-    onSelect,
-    menuItemSelectedIcon,
-    rawValues,
-    fieldNames,
-    virtual,
-    direction,
-    listHeight,
-    listItemHeight,
-    optionRender,
-    classNames: contextClassNames,
-    styles: contextStyles
-  } = (react_production_namespaceFn().useContext)(es_SelectContext);
-  const itemPrefixCls = `${prefixCls}-item`;
-  const memoFlattenOptions = useMemo_useMemo(() => flattenOptions, [open, lockOptions], (prev, next) => next[0] && !next[1]);
-
-  // =========================== List ===========================
-  const listRef = (react_production_namespaceFn().useRef)(null);
-  const overMaxCount = (react_production_namespaceFn().useMemo)(() => multiple && isValidCount(maxCount) && rawValues?.size >= maxCount, [multiple, maxCount, rawValues?.size]);
-  const onListMouseDown = event => {
-    event.preventDefault();
-  };
-  const scrollIntoView = args => {
-    listRef.current?.scrollTo(typeof args === 'number' ? {
-      index: args
-    } : args);
-  };
-
-  // https://github.com/ant-design/ant-design/issues/34975
-  const isSelected = (react_production_namespaceFn().useCallback)(value => {
-    if (mode === 'combobox') {
-      return false;
-    }
-    return rawValues.has(value);
-  }, [mode, [...rawValues].toString(), rawValues.size]);
-
-  // ========================== Active ==========================
-  const getEnabledActiveIndex = (index, offset = 1) => {
-    const len = memoFlattenOptions.length;
-    for (let i = 0; i < len; i += 1) {
-      const current = (index + i * offset + len) % len;
-      const {
-        group,
-        data
-      } = memoFlattenOptions[current] || {};
-      if (!group && !data?.disabled && (isSelected(data.value) || !overMaxCount)) {
-        return current;
-      }
-    }
-    return -1;
-  };
-  const [activeIndex, setActiveIndex] = (react_production_namespaceFn().useState)(() => getEnabledActiveIndex(0));
-  const setActive = (index, fromKeyboard = false) => {
-    setActiveIndex(index);
-    const info = {
-      source: fromKeyboard ? 'keyboard' : 'mouse'
-    };
-
-    // Trigger active event
-    const flattenItem = memoFlattenOptions[index];
-    if (!flattenItem) {
-      onActiveValue(null, -1, info);
-      return;
-    }
-    onActiveValue(flattenItem.value, index, info);
-  };
-
-  // Auto active first item when list length or searchValue changed
-  (0,react_production_namespaceFn().useEffect)(() => {
-    setActive(defaultActiveFirstOption !== false ? getEnabledActiveIndex(0) : -1);
-  }, [memoFlattenOptions.length, searchValue]);
-
-  // https://github.com/ant-design/ant-design/issues/48036
-  const isAriaSelected = (react_production_namespaceFn().useCallback)(value => {
-    if (mode === 'combobox') {
-      return String(value).toLowerCase() === searchValue.toLowerCase();
-    }
-    return rawValues.has(value);
-  }, [mode, searchValue, [...rawValues].toString(), rawValues.size]);
-
-  // Auto scroll to item position in single mode
-  (0,react_production_namespaceFn().useEffect)(() => {
-    /**
-     * React will skip `onChange` when component update.
-     * `setActive` function will call root accessibility state update which makes re-render.
-     * So we need to delay to let Input component trigger onChange first.
-     */
-    let timeoutId;
-    if (!multiple && open && rawValues.size === 1) {
-      const value = Array.from(rawValues)[0];
-      // Scroll to the option closest to the searchValue if searching.
-      const index = memoFlattenOptions.findIndex(({
-        data
-      }) => searchValue ? String(data.value).startsWith(searchValue) : data.value === value);
-      if (index !== -1) {
-        setActive(index);
-        timeoutId = setTimeout(() => {
-          scrollIntoView(index);
-        });
-      }
-    }
-
-    // Force trigger scrollbar visible when open
-    if (open) {
-      listRef.current?.scrollTo(undefined);
-    }
-    return () => clearTimeout(timeoutId);
-  }, [open, searchValue]);
-
-  // ========================== Values ==========================
-  const onSelectValue = value => {
-    if (value !== undefined) {
-      onSelect(value, {
-        selected: !rawValues.has(value)
-      });
-    }
-
-    // Single mode should always close by select
-    if (!multiple) {
-      toggleOpen(false);
-    }
-  };
-
-  // ========================= Keyboard =========================
-  (react_production_namespaceFn().useImperativeHandle)(ref, () => ({
-    onKeyDown: event => {
-      const {
-        which,
-        ctrlKey
-      } = event;
-      switch (which) {
-        // >>> Arrow keys & ctrl + n/p on Mac
-        case es_KeyCode.N:
-        case es_KeyCode.P:
-        case es_KeyCode.UP:
-        case es_KeyCode.DOWN:
-          {
-            let offset = 0;
-            if (which === es_KeyCode.UP) {
-              offset = -1;
-            } else if (which === es_KeyCode.DOWN) {
-              offset = 1;
-            } else if (isPlatformMac() && ctrlKey) {
-              if (which === es_KeyCode.N) {
-                offset = 1;
-              } else if (which === es_KeyCode.P) {
-                offset = -1;
-              }
-            }
-            if (offset !== 0) {
-              const nextActiveIndex = getEnabledActiveIndex(activeIndex + offset, offset);
-              scrollIntoView(nextActiveIndex);
-              setActive(nextActiveIndex, true);
-            }
-            break;
-          }
-
-        // >>> Select (Tab / Enter)
-        case es_KeyCode.TAB:
-        case es_KeyCode.ENTER:
-          {
-            // value
-            const item = memoFlattenOptions[activeIndex];
-            if (!item || item.data.disabled) {
-              return onSelectValue(undefined);
-            }
-            if (!overMaxCount || rawValues.has(item.value)) {
-              onSelectValue(item.value);
-            } else {
-              onSelectValue(undefined);
-            }
-            if (open) {
-              event.preventDefault();
-            }
-            break;
-          }
-
-        // >>> Close
-        case es_KeyCode.ESC:
-          {
-            toggleOpen(false);
-            if (open) {
-              event.stopPropagation();
-            }
-          }
-      }
-    },
-    onKeyUp: () => {},
-    scrollTo: index => {
-      scrollIntoView(index);
-    }
-  }));
-
-  // ========================== Render ==========================
-  if (memoFlattenOptions.length === 0) {
-    return /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
-      role: "listbox",
-      id: `${id}_list`,
-      className: `${itemPrefixCls}-empty`,
-      onMouseDown: onListMouseDown
-    }, notFoundContent);
-  }
-  const omitFieldNameList = Object.keys(fieldNames).map(key => fieldNames[key]);
-  const getLabel = item => item.label;
-  function getItemAriaProps(item, index) {
-    const {
-      group
-    } = item;
-    return {
-      role: group ? 'presentation' : 'option',
-      id: `${id}_list_${index}`
-    };
-  }
-  const renderItem = index => {
-    const item = memoFlattenOptions[index];
-    if (!item) {
-      return null;
-    }
-    const itemData = item.data || {};
-    const {
-      value,
-      disabled
-    } = itemData;
-    const {
-      group
-    } = item;
-    const attrs = pickAttrs(itemData, true);
-    const mergedLabel = getLabel(item);
-    return item ? /*#__PURE__*/(react_production_namespaceFn().createElement)("div", OptionList_extends({
-      "aria-label": typeof mergedLabel === 'string' && !group ? mergedLabel : null
-    }, attrs, {
-      key: index
-    }, getItemAriaProps(item, index), {
-      "aria-selected": isAriaSelected(value),
-      "aria-disabled": disabled
-    }), value) : null;
-  };
-  const a11yProps = {
-    role: 'listbox',
-    id: `${id}_list`
-  };
-  return /*#__PURE__*/(react_production_namespaceFn().createElement)((react_production_namespaceFn().Fragment), null, virtual && /*#__PURE__*/(react_production_namespaceFn().createElement)("div", OptionList_extends({}, a11yProps, {
-    style: {
-      height: 0,
-      width: 0,
-      overflow: 'hidden'
-    }
-  }), renderItem(activeIndex - 1), renderItem(activeIndex), renderItem(activeIndex + 1)), /*#__PURE__*/(react_production_namespaceFn().createElement)(virtual_list_es, {
-    prefixCls: `${prefixCls}-dropdown-list`,
-    itemKey: "key",
-    ref: listRef,
-    data: memoFlattenOptions,
-    height: listHeight,
-    itemHeight: listItemHeight,
-    fullHeight: false,
-    onMouseDown: onListMouseDown,
-    onScroll: onPopupScroll,
-    virtual: virtual,
-    direction: direction,
-    innerProps: virtual ? null : a11yProps,
-    showScrollBar: showScrollBar,
-    className: contextClassNames?.popup?.list,
-    style: contextStyles?.popup?.list
-  }, (item, itemIndex) => {
-    const {
-      group,
-      groupOption,
-      data,
-      label,
-      value
-    } = item;
-    const {
-      key
-    } = data;
-
-    // Group
-    if (group) {
-      const groupTitle = data.title ?? (OptionList_isTitleType(label) ? label.toString() : undefined);
-      return /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
-        className: clsx(itemPrefixCls, `${itemPrefixCls}-group`, data.className),
-        title: groupTitle
-      }, label !== undefined ? label : key);
-    }
-    const {
-      disabled,
-      title,
-      children,
-      style,
-      className,
-      ...otherProps
-    } = data;
-    const passedProps = omit(otherProps, omitFieldNameList);
-
-    // Option
-    const selected = isSelected(value);
-    const mergedDisabled = disabled || !selected && overMaxCount;
-    const optionPrefixCls = `${itemPrefixCls}-option`;
-    const optionClassName = clsx(itemPrefixCls, optionPrefixCls, className, contextClassNames?.popup?.listItem, {
-      [`${optionPrefixCls}-grouped`]: groupOption,
-      [`${optionPrefixCls}-active`]: activeIndex === itemIndex && !mergedDisabled,
-      [`${optionPrefixCls}-disabled`]: mergedDisabled,
-      [`${optionPrefixCls}-selected`]: selected
-    });
-    const mergedLabel = getLabel(item);
-    const iconVisible = !menuItemSelectedIcon || typeof menuItemSelectedIcon === 'function' || selected;
-
-    // https://github.com/ant-design/ant-design/issues/34145
-    const content = typeof mergedLabel === 'number' ? mergedLabel : mergedLabel || value;
-    // https://github.com/ant-design/ant-design/issues/26717
-    let optionTitle = OptionList_isTitleType(content) ? content.toString() : undefined;
-    if (title !== undefined) {
-      optionTitle = title;
-    }
-    return /*#__PURE__*/(react_production_namespaceFn().createElement)("div", OptionList_extends({}, pickAttrs(passedProps), !virtual ? getItemAriaProps(item, itemIndex) : {}, {
-      "aria-selected": virtual ? undefined : isAriaSelected(value),
-      "aria-disabled": mergedDisabled,
-      className: optionClassName,
-      title: optionTitle,
-      onMouseMove: () => {
-        if (activeIndex === itemIndex || mergedDisabled) {
-          return;
-        }
-        setActive(itemIndex);
-      },
-      onClick: () => {
-        if (!mergedDisabled) {
-          onSelectValue(value);
-        }
-      },
-      style: {
-        ...contextStyles?.popup?.listItem,
-        ...style
-      }
-    }), /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
-      className: `${optionPrefixCls}-content`
-    }, typeof optionRender === 'function' ? optionRender(item, {
-      index: itemIndex
-    }) : content), /*#__PURE__*/(react_production_namespaceFn().isValidElement)(menuItemSelectedIcon) || selected, iconVisible && /*#__PURE__*/(react_production_namespaceFn().createElement)(es_TransBtn, {
-      className: `${itemPrefixCls}-option-state`,
-      customizeIcon: menuItemSelectedIcon,
-      customizeIconProps: {
-        value,
-        disabled: mergedDisabled,
-        isSelected: selected
-      }
-    }, selected ? '✓' : null));
-  }));
-};
-const RefOptionList = /*#__PURE__*/(react_production_namespaceFn().forwardRef)(OptionList);
-if (false) // removed by dead control flow
-{}
-/* harmony default export */ const es_OptionList = (RefOptionList);
-;// ./node_modules/@rc-component/select/es/hooks/useCache.js
-
-/**
- * Cache `value` related LabeledValue & options.
- */
-/* harmony default export */ const useCache = ((labeledValues, valueOptions) => {
-  const cacheRef = (react_production_namespaceFn().useRef)({
-    values: new Map(),
-    options: new Map()
-  });
-  const filledLabeledValues = (react_production_namespaceFn().useMemo)(() => {
-    const {
-      values: prevValueCache,
-      options: prevOptionCache
-    } = cacheRef.current;
-
-    // Fill label by cache
-    const patchedValues = labeledValues.map(item => {
-      if (item.label === undefined) {
-        return {
-          ...item,
-          label: prevValueCache.get(item.value)?.label
-        };
-      }
-      return item;
-    });
-
-    // Refresh cache
-    const valueCache = new Map();
-    const optionCache = new Map();
-    patchedValues.forEach(item => {
-      valueCache.set(item.value, item);
-      optionCache.set(item.value, valueOptions.get(item.value) || prevOptionCache.get(item.value));
-    });
-    cacheRef.current.values = valueCache;
-    cacheRef.current.options = optionCache;
-    return patchedValues;
-  }, [labeledValues, valueOptions]);
-  const getOption = (react_production_namespaceFn().useCallback)(val => valueOptions.get(val) || cacheRef.current.options.get(val), [valueOptions]);
-  return [filledLabeledValues, getOption];
-});
-__webpack_require__.dn(useCache);
-;// ./node_modules/@rc-component/select/es/hooks/useFilterOptions.js
-
-
-
-function includes(test, search) {
-  return commonUtil_toArray(test).join('').toUpperCase().includes(search);
-}
-/* harmony default export */ const useFilterOptions = ((options, fieldNames, searchValue, filterOption, optionFilterProp) => {
-  return (react_production_namespaceFn().useMemo)(() => {
-    if (!searchValue || filterOption === false) {
-      return options;
-    }
-    const {
-      options: fieldOptions,
-      label: fieldLabel,
-      value: fieldValue
-    } = fieldNames;
-    const filteredOptions = [];
-    const customizeFilter = typeof filterOption === 'function';
-    const upperSearch = searchValue.toUpperCase();
-    const filterFunc = customizeFilter ? filterOption : (_, option) => {
-      // Use provided `optionFilterProp`
-      if (optionFilterProp && optionFilterProp.length) {
-        return optionFilterProp.some(prop => includes(option[prop], upperSearch));
-      }
-
-      // Auto select `label` or `value` by option type
-      if (option[fieldOptions]) {
-        // hack `fieldLabel` since `OptionGroup` children is not `label`
-        return includes(option[fieldLabel !== 'children' ? fieldLabel : 'label'], upperSearch);
-      }
-      return includes(option[fieldValue], upperSearch);
-    };
-    const wrapOption = customizeFilter ? opt => injectPropsWithOption(opt) : opt => opt;
-    options.forEach(item => {
-      // Group should check child options
-      if (item[fieldOptions]) {
-        // Check group first
-        const matchGroup = filterFunc(searchValue, wrapOption(item));
-        if (matchGroup) {
-          filteredOptions.push(item);
-        } else {
-          // Check option
-          const subOptions = item[fieldOptions].filter(subItem => filterFunc(searchValue, wrapOption(subItem)));
-          if (subOptions.length) {
-            filteredOptions.push({
-              ...item,
-              [fieldOptions]: subOptions
-            });
-          }
-        }
-        return;
-      }
-      if (filterFunc(searchValue, wrapOption(item))) {
-        filteredOptions.push(item);
-      }
-    });
-    return filteredOptions;
-  }, [options, filterOption, optionFilterProp, searchValue, fieldNames]);
-});
-__webpack_require__.dn(useFilterOptions);
-;// ./node_modules/@rc-component/select/es/utils/legacyUtil.js
-
-
-function convertNodeToOption(node) {
-  const {
-    key,
-    props: {
-      children,
-      value,
-      ...restProps
-    }
-  } = node;
-  return {
-    key,
-    value: value !== undefined ? value : key,
-    children,
-    ...restProps
-  };
-}
-function convertChildrenToData(nodes, optionOnly = false) {
-  return toArray_toArray(nodes).map((node, index) => {
-    if (! /*#__PURE__*/(react_production_namespaceFn().isValidElement)(node) || !node.type) {
-      return null;
-    }
-    const {
-      type: {
-        isSelectOptGroup
-      },
-      key,
-      props: {
-        children,
-        ...restProps
-      }
-    } = node;
-    if (optionOnly || !isSelectOptGroup) {
-      return convertNodeToOption(node);
-    }
-    return {
-      key: `__RC_SELECT_GRP__${key === null ? index : key}__`,
-      label: key,
-      ...restProps,
-      options: convertChildrenToData(children)
-    };
-  }).filter(data => data);
-}
-;// ./node_modules/@rc-component/select/es/hooks/useOptions.js
-
-
-
-/**
- * Parse `children` to `options` if `options` is not provided.
- * Then flatten the `options`.
- */
-const useOptions = (options, children, fieldNames, optionFilterProp, optionLabelProp) => {
-  return (react_production_namespaceFn().useMemo)(() => {
-    let mergedOptions = options;
-    const childrenAsData = !options;
-    if (childrenAsData) {
-      mergedOptions = convertChildrenToData(children);
-    }
-    const valueOptions = new Map();
-    const labelOptions = new Map();
-    const setLabelOptions = (labelOptionsMap, option, key) => {
-      if (key && typeof key === 'string') {
-        labelOptionsMap.set(option[key], option);
-      }
-    };
-    const dig = (optionList, isChildren = false) => {
-      // for loop to speed up collection speed
-      for (let i = 0; i < optionList.length; i += 1) {
-        const option = optionList[i];
-        if (!option[fieldNames.options] || isChildren) {
-          valueOptions.set(option[fieldNames.value], option);
-          setLabelOptions(labelOptions, option, fieldNames.label);
-          // https://github.com/ant-design/ant-design/issues/35304
-          optionFilterProp.forEach(prop => {
-            setLabelOptions(labelOptions, option, prop);
-          });
-          setLabelOptions(labelOptions, option, optionLabelProp);
-        } else {
-          dig(option[fieldNames.options], true);
-        }
-      }
-    };
-    dig(mergedOptions);
-    return {
-      options: mergedOptions,
-      valueOptions,
-      labelOptions
-    };
-  }, [options, children, fieldNames, optionFilterProp, optionLabelProp]);
-};
-/* harmony default export */ const hooks_useOptions = (useOptions);
-;// ./node_modules/@rc-component/select/es/hooks/useRefFunc.js
-
-
-/**
- * Same as `React.useCallback` but always return a memoized function
- * but redirect to real function.
- */
-function useRefFunc(callback) {
-  const funcRef = (react_production_namespaceFn().useRef)(callback);
-  funcRef.current = callback;
-  const cacheFn = (react_production_namespaceFn().useCallback)((...args) => {
-    return funcRef.current(...args);
-  }, []);
-  return cacheFn;
-}
-;// ./node_modules/@rc-component/select/es/utils/warningPropsUtil.js
-/* unused harmony import specifier */ var warningPropsUtil_warning;
-/* unused harmony import specifier */ var warningPropsUtil_noteOnce;
-/* unused harmony import specifier */ var toNodeArray;
-/* unused harmony import specifier */ var warningPropsUtil_React;
-/* unused harmony import specifier */ var warningPropsUtil_isMultiple;
-/* unused harmony import specifier */ var warningPropsUtil_toArray;
-/* unused harmony import specifier */ var warningPropsUtil_convertChildrenToData;
-
-
-
-
-
-function warningProps(props) {
-  const {
-    mode,
-    options,
-    children,
-    backfill,
-    allowClear,
-    placeholder,
-    getInputElement,
-    showSearch,
-    onSearch,
-    defaultOpen,
-    autoFocus,
-    labelInValue,
-    value,
-    optionLabelProp
-  } = props;
-  const multiple = warningPropsUtil_isMultiple(mode);
-  const mergedShowSearch = showSearch !== undefined ? showSearch : multiple || mode === 'combobox';
-  const mergedOptions = options || warningPropsUtil_convertChildrenToData(children);
-
-  // `tags` should not set option as disabled
-  warningPropsUtil_warning(mode !== 'tags' || mergedOptions.every(opt => !opt.disabled), 'Please avoid setting option to disabled in tags mode since user can always type text as tag.');
-
-  // `combobox` & `tags` should option be `string` type
-  if (mode === 'tags' || mode === 'combobox') {
-    const hasNumberValue = mergedOptions.some(item => {
-      if (item.options) {
-        return item.options.some(opt => typeof ('value' in opt ? opt.value : opt.key) === 'number');
-      }
-      return typeof ('value' in item ? item.value : item.key) === 'number';
-    });
-    warningPropsUtil_warning(!hasNumberValue, '`value` of Option should not use number type when `mode` is `tags` or `combobox`.');
-  }
-
-  // `combobox` should not use `optionLabelProp`
-  warningPropsUtil_warning(mode !== 'combobox' || !optionLabelProp, '`combobox` mode not support `optionLabelProp`. Please set `value` on Option directly.');
-
-  // Only `combobox` support `backfill`
-  warningPropsUtil_warning(mode === 'combobox' || !backfill, '`backfill` only works with `combobox` mode.');
-
-  // Only `combobox` support `getInputElement`
-  warningPropsUtil_warning(mode === 'combobox' || !getInputElement, '`getInputElement` only work with `combobox` mode.');
-
-  // Customize `getInputElement` should not use `allowClear` & `placeholder`
-  warningPropsUtil_noteOnce(mode !== 'combobox' || !getInputElement || !allowClear || !placeholder, 'Customize `getInputElement` should customize clear and placeholder logic instead of configuring `allowClear` and `placeholder`.');
-
-  // `onSearch` should use in `combobox` or `showSearch`
-  if (onSearch && !mergedShowSearch && mode !== 'combobox' && mode !== 'tags') {
-    warningPropsUtil_warning(false, '`onSearch` should work with `showSearch` instead of use alone.');
-  }
-  warningPropsUtil_noteOnce(!defaultOpen || autoFocus, '`defaultOpen` makes Select open without focus which means it will not close by click outside. You can set `autoFocus` if needed.');
-  if (value !== undefined && value !== null) {
-    const values = warningPropsUtil_toArray(value);
-    warningPropsUtil_warning(!labelInValue || values.every(val => typeof val === 'object' && ('key' in val || 'value' in val)), '`value` should in shape of `{ value: string | number, label?: ReactNode }` when you set `labelInValue` to `true`');
-    warningPropsUtil_warning(!multiple || Array.isArray(value), '`value` should be array when `mode` is `multiple` or `tags`');
-  }
-
-  // Syntactic sugar should use correct children type
-  if (children) {
-    let invalidateChildType = null;
-    toNodeArray(children).some(node => {
-      if (! /*#__PURE__*/warningPropsUtil_React.isValidElement(node) || !node.type) {
-        return false;
-      }
-      const {
-        type
-      } = node;
-      if (type.isSelectOption) {
-        return false;
-      }
-      if (type.isSelectOptGroup) {
-        const allChildrenValid = toNodeArray(node.props.children).every(subNode => {
-          if (! /*#__PURE__*/warningPropsUtil_React.isValidElement(subNode) || !node.type || subNode.type.isSelectOption) {
-            return true;
-          }
-          invalidateChildType = subNode.type;
-          return false;
-        });
-        if (allChildrenValid) {
-          return false;
-        }
-        return true;
-      }
-      invalidateChildType = type;
-      return true;
-    });
-    if (invalidateChildType) {
-      warningPropsUtil_warning(false, `\`children\` should be \`Select.Option\` or \`Select.OptGroup\` instead of \`${invalidateChildType.displayName || invalidateChildType.name || invalidateChildType}\`.`);
-    }
-  }
-}
-
-// value in Select option should not be null
-// note: OptGroup has options too
-function warningNullOptions(options, fieldNames) {
-  if (options) {
-    const recursiveOptions = (optionsList, inGroup = false) => {
-      for (let i = 0; i < optionsList.length; i++) {
-        const option = optionsList[i];
-        if (option[fieldNames?.value] === null) {
-          warningPropsUtil_warning(false, '`value` in Select options should not be `null`.');
-          return true;
-        }
-        if (!inGroup && Array.isArray(option[fieldNames?.options]) && recursiveOptions(option[fieldNames?.options], true)) {
-          break;
-        }
-      }
-    };
-    recursiveOptions(options);
-  }
-}
-/* harmony default export */ const warningPropsUtil = ((/* unused pure expression or super */ null && (warningProps)));
-;// ./node_modules/@rc-component/select/es/hooks/useSearchConfig.js
-
-
-// Convert `showSearch` to unique config
-function useSearchConfig(showSearch, props, mode) {
-  const {
-    filterOption,
-    searchValue,
-    optionFilterProp,
-    filterSort,
-    onSearch,
-    autoClearSearchValue
-  } = props;
-  return (react_production_namespaceFn().useMemo)(() => {
-    const isObject = typeof showSearch === 'object';
-    const searchConfig = {
-      filterOption,
-      searchValue,
-      optionFilterProp,
-      filterSort,
-      onSearch,
-      autoClearSearchValue,
-      ...(isObject ? showSearch : {})
-    };
-    return [isObject || mode === 'combobox' || mode === 'tags' || mode === 'multiple' && showSearch === undefined ? true : showSearch, searchConfig];
-  }, [mode, showSearch, filterOption, searchValue, optionFilterProp, filterSort, onSearch, autoClearSearchValue]);
-}
-;// ./node_modules/@rc-component/select/es/Select.js
-function Select_extends() { Select_extends = Object.assign ? Object.assign.bind() : function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; }; return Select_extends.apply(this, arguments); }
-/**
- * To match accessibility requirement, we always provide an input in the component.
- * Other element will not set `tabIndex` to avoid `onBlur` sequence problem.
- * For focused select, we set `aria-live="polite"` to update the accessibility content.
+ * 第三栏头部（微信式会话标题栏：左头像 + 名称，右操作图标）。
  *
- * ref:
- * - keyboard: https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Roles/listbox_role#Keyboard_interactions
- *
- * New api:
- * - listHeight
- * - listItemHeight
- * - component
- *
- * Remove deprecated api:
- * - multiple
- * - tags
- * - combobox
- * - firstActiveValue
- * - dropdownMenuStyle
- * - openClassName (Not list in api)
- *
- * Update:
- * - `backfill` only support `combobox` mode
- * - `combobox` mode not support `labelInValue` since it's meaningless
- * - `getInputElement` only support `combobox` mode
- * - `onChange` return OptionData instead of ReactNode
- * - `filterOption` `onChange` `onSelect` accept OptionData instead of ReactNode
- * - `combobox` mode trigger `onChange` will get `undefined` if no `value` match in Option
- * - `combobox` mode not support `optionLabelProp`
+ * v26.10.12-v4 起关闭按钮移到窗口顶部自绘标题条（znhd-transfer-titlebar）里，
+ * 不再浮在第三栏右上角 —— 这里不再需要 48px 让位（v26.10.12-v2/v3 的历史约束随之解除）。
  */
-
-;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-const OMIT_DOM_PROPS = ['inputValue'];
-function isRawValue(value) {
-  return !value || typeof value !== 'object';
-}
-const Select = /*#__PURE__*/(react_production_namespaceFn().forwardRef)((props, ref) => {
-  const {
-    id,
-    mode,
-    prefixCls = 'rc-select',
-    backfill,
-    fieldNames,
-    // Search
-    showSearch,
-    searchValue: legacySearchValue,
-    onSearch: legacyOnSearch,
-    autoClearSearchValue: legacyAutoClearSearchValue,
-    filterOption: legacyFilterOption,
-    optionFilterProp: legacyOptionFilterProp,
-    filterSort: legacyFilterSort,
-    // Select
-    onSelect,
-    onDeselect,
-    onActive,
-    popupMatchSelectWidth = true,
-    optionLabelProp,
-    options,
-    optionRender,
-    children,
-    defaultActiveFirstOption,
-    menuItemSelectedIcon,
-    virtual,
-    direction,
-    listHeight = 200,
-    listItemHeight = 20,
-    labelRender,
-    // Value
-    value,
-    defaultValue,
-    labelInValue,
-    onChange,
-    maxCount,
-    classNames,
-    styles,
-    ...restProps
-  } = props;
-  const searchProps = {
-    searchValue: legacySearchValue,
-    onSearch: legacyOnSearch,
-    autoClearSearchValue: legacyAutoClearSearchValue,
-    filterOption: legacyFilterOption,
-    optionFilterProp: legacyOptionFilterProp,
-    filterSort: legacyFilterSort
-  };
-  const [mergedShowSearch, searchConfig] = useSearchConfig(showSearch, searchProps, mode);
-  const {
-    filterOption,
-    searchValue,
-    optionFilterProp,
-    filterSort,
-    onSearch,
-    autoClearSearchValue = true
-  } = searchConfig;
-  const normalizedOptionFilterProp = (react_production_namespaceFn().useMemo)(() => {
-    if (!optionFilterProp) return [];
-    return Array.isArray(optionFilterProp) ? optionFilterProp : [optionFilterProp];
-  }, [optionFilterProp]);
-  const mergedId = hooks_useId(id);
-  const multiple = isMultiple(mode);
-  const childrenAsData = !!(!options && children);
-  const mergedFilterOption = (react_production_namespaceFn().useMemo)(() => {
-    if (filterOption === undefined && mode === 'combobox') {
-      return false;
-    }
-    return filterOption;
-  }, [filterOption, mode]);
-
-  // ========================= FieldNames =========================
-  const mergedFieldNames = (react_production_namespaceFn().useMemo)(() => fillFieldNames(fieldNames, childrenAsData), /* eslint-disable react-hooks/exhaustive-deps */
-  [
-  // We stringify fieldNames to avoid unnecessary re-renders.
-  JSON.stringify(fieldNames), childrenAsData]
-  /* eslint-enable react-hooks/exhaustive-deps */);
-
-  // =========================== Search ===========================
-  const [internalSearchValue, setSearchValue] = useControlledState('', searchValue);
-  const mergedSearchValue = internalSearchValue || '';
-
-  // =========================== Option ===========================
-  const parsedOptions = hooks_useOptions(options, children, mergedFieldNames, normalizedOptionFilterProp, optionLabelProp);
-  const {
-    valueOptions,
-    labelOptions,
-    options: mergedOptions
-  } = parsedOptions;
-
-  // ========================= Wrap Value =========================
-  const convert2LabelValues = (react_production_namespaceFn().useCallback)(draftValues => {
-    // Convert to array
-    const valueList = commonUtil_toArray(draftValues);
-
-    // Convert to labelInValue type
-    return valueList.map(val => {
-      let rawValue;
-      let rawLabel;
-      let rawDisabled;
-      let rawTitle;
-
-      // Fill label & value
-      if (isRawValue(val)) {
-        rawValue = val;
-      } else {
-        rawLabel = val.label;
-        rawValue = val.value;
-      }
-      const option = valueOptions.get(rawValue);
-      if (option) {
-        // Fill missing props
-        if (rawLabel === undefined) rawLabel = option?.[optionLabelProp || mergedFieldNames.label];
-        rawDisabled = option?.disabled;
-        rawTitle = option?.title;
-
-        // Warning if label not same as provided
-        if (false) // removed by dead control flow
-{}
-      }
-      return {
-        label: rawLabel,
-        value: rawValue,
-        key: rawValue,
-        disabled: rawDisabled,
-        title: rawTitle
-      };
-    });
-  }, [mergedFieldNames, optionLabelProp, valueOptions]);
-
-  // =========================== Values ===========================
-  const [internalValue, setInternalValue] = useControlledState(defaultValue, value);
-
-  // Merged value with LabelValueType
-  const rawLabeledValues = (react_production_namespaceFn().useMemo)(() => {
-    const newInternalValue = multiple && internalValue === null ? [] : internalValue;
-    const values = convert2LabelValues(newInternalValue);
-
-    // combobox no need save value when it's no value (exclude value equal 0)
-    if (mode === 'combobox' && isComboNoValue(values[0]?.value)) {
-      return [];
-    }
-    return values;
-  }, [internalValue, convert2LabelValues, mode, multiple]);
-
-  // Fill label with cache to avoid option remove
-  const [mergedValues, getMixedOption] = useCache(rawLabeledValues, valueOptions);
-  const displayValues = (react_production_namespaceFn().useMemo)(() => {
-    // `null` need show as placeholder instead
-    // https://github.com/ant-design/ant-design/issues/25057
-    if (!mode && mergedValues.length === 1) {
-      const firstValue = mergedValues[0];
-      if (firstValue.value === null && (firstValue.label === null || firstValue.label === undefined)) {
-        return [];
-      }
-    }
-    return mergedValues.map(item => ({
-      ...item,
-      label: (typeof labelRender === 'function' ? labelRender(item) : item.label) ?? item.value
-    }));
-  }, [mode, mergedValues, labelRender]);
-
-  /** Convert `displayValues` to raw value type set */
-  const rawValues = (react_production_namespaceFn().useMemo)(() => new Set(mergedValues.map(val => val.value)), [mergedValues]);
-  (react_production_namespaceFn().useEffect)(() => {
-    if (mode === 'combobox') {
-      const strValue = mergedValues[0]?.value;
-      setSearchValue(commonUtil_hasValue(strValue) ? String(strValue) : '');
-    }
-  }, [mergedValues]);
-
-  // ======================= Display Option =======================
-  // Create a placeholder item if not exist in `options`
-  const createTagOption = useRefFunc((val, label) => {
-    const mergedLabel = label ?? val;
-    return {
-      [mergedFieldNames.value]: val,
-      [mergedFieldNames.label]: mergedLabel
-    };
-  });
-
-  // Fill tag as option if mode is `tags`
-  const filledTagOptions = (react_production_namespaceFn().useMemo)(() => {
-    if (mode !== 'tags') {
-      return mergedOptions;
-    }
-
-    // >>> Tag mode
-    const cloneOptions = [...mergedOptions];
-
-    // Check if value exist in options (include new patch item)
-    const existOptions = val => valueOptions.has(val);
-
-    // Fill current value as option
-    [...mergedValues].sort((a, b) => a.value < b.value ? -1 : 1).forEach(item => {
-      const val = item.value;
-      if (!existOptions(val)) {
-        cloneOptions.push(createTagOption(val, item.label));
-      }
-    });
-    return cloneOptions;
-  }, [createTagOption, mergedOptions, valueOptions, mergedValues, mode]);
-  const filteredOptions = useFilterOptions(filledTagOptions, mergedFieldNames, mergedSearchValue, mergedFilterOption, normalizedOptionFilterProp);
-
-  // Fill options with search value if needed
-  const filledSearchOptions = (react_production_namespaceFn().useMemo)(() => {
-    const hasItemMatchingSearch = item => {
-      if (normalizedOptionFilterProp.length) {
-        return normalizedOptionFilterProp.some(prop => item?.[prop] === mergedSearchValue);
-      }
-      return item?.value === mergedSearchValue;
-    };
-    if (mode !== 'tags' || !mergedSearchValue || filteredOptions.some(item => hasItemMatchingSearch(item))) {
-      return filteredOptions;
-    }
-    // ignore when search value equal select input value
-    if (filteredOptions.some(item => item[mergedFieldNames.value] === mergedSearchValue)) {
-      return filteredOptions;
-    }
-    // Skip creating temp tag option if it matches a disabled option value
-    if (valueOptions.get(mergedSearchValue)?.disabled) {
-      return filteredOptions;
-    }
-    // Fill search value as option
-    return [createTagOption(mergedSearchValue), ...filteredOptions];
-  }, [createTagOption, normalizedOptionFilterProp, mode, filteredOptions, mergedSearchValue, mergedFieldNames, valueOptions]);
-  const sorter = inputOptions => {
-    const sortedOptions = [...inputOptions].sort((a, b) => filterSort(a, b, {
-      searchValue: mergedSearchValue
-    }));
-    return sortedOptions.map(item => {
-      if (Array.isArray(item.options)) {
-        return {
-          ...item,
-          options: item.options.length > 0 ? sorter(item.options) : item.options
-        };
-      }
-      return item;
-    });
-  };
-  const orderedFilteredOptions = (react_production_namespaceFn().useMemo)(() => {
-    if (!filterSort) {
-      return filledSearchOptions;
-    }
-    return sorter(filledSearchOptions);
-  }, [filledSearchOptions, filterSort, mergedSearchValue]);
-  const displayOptions = (react_production_namespaceFn().useMemo)(() => flattenOptions(orderedFilteredOptions, {
-    fieldNames: mergedFieldNames,
-    childrenAsData
-  }), [orderedFilteredOptions, mergedFieldNames, childrenAsData]);
-
-  // =========================== Change ===========================
-  const triggerChange = values => {
-    const labeledValues = convert2LabelValues(values);
-    setInternalValue(labeledValues);
-    if (onChange && (
-    // Trigger event only when value changed
-    labeledValues.length !== mergedValues.length || labeledValues.some((newVal, index) => mergedValues[index]?.value !== newVal?.value))) {
-      const returnValues = labelInValue ? labeledValues.map(({
-        label: l,
-        value: v
-      }) => ({
-        label: l,
-        value: v
-      })) : labeledValues.map(v => v.value);
-      const returnOptions = labeledValues.map(v => injectPropsWithOption(getMixedOption(v.value)));
-      onChange(
-      // Value
-      multiple ? returnValues : returnValues[0],
-      // Option
-      multiple ? returnOptions : returnOptions[0]);
-    }
-  };
-
-  // ======================= Accessibility ========================
-  const [activeValue, setActiveValue] = (react_production_namespaceFn().useState)(null);
-  const [accessibilityIndex, setAccessibilityIndex] = (react_production_namespaceFn().useState)(0);
-  const mergedDefaultActiveFirstOption = defaultActiveFirstOption !== undefined ? defaultActiveFirstOption : mode !== 'combobox';
-  const activeEventRef = (react_production_namespaceFn().useRef)(undefined);
-  const onActiveValue = (react_production_namespaceFn().useCallback)((active, index, {
-    source = 'keyboard'
-  } = {}) => {
-    setAccessibilityIndex(index);
-    if (backfill && mode === 'combobox' && active !== null && source === 'keyboard') {
-      setActiveValue(String(active));
-    }
-
-    // Active will call multiple times.
-    // We only need trigger the last one.
-    const promise = Promise.resolve().then(() => {
-      if (activeEventRef.current === promise) {
-        onActive?.(active);
-      }
-    });
-    activeEventRef.current = promise;
-  }, [backfill, mode, onActive]);
-
-  // ========================= OptionList =========================
-  const triggerSelect = (val, selected, type) => {
-    const getSelectEnt = () => {
-      const option = getMixedOption(val);
-      return [labelInValue ? {
-        label: option?.[mergedFieldNames.label],
-        value: val
-      } : val, injectPropsWithOption(option)];
-    };
-    if (selected && onSelect) {
-      const [wrappedValue, option] = getSelectEnt();
-      onSelect(wrappedValue, option);
-    } else if (!selected && onDeselect && type !== 'clear') {
-      const [wrappedValue, option] = getSelectEnt();
-      onDeselect(wrappedValue, option);
-    }
-  };
-
-  // Used for OptionList selection
-  const onInternalSelect = useRefFunc((val, info) => {
-    let cloneValues;
-
-    // Single mode always trigger select only with option list
-    const mergedSelect = multiple ? info.selected : true;
-    if (mergedSelect) {
-      cloneValues = multiple ? [...mergedValues, val] : [val];
-    } else {
-      cloneValues = mergedValues.filter(v => v.value !== val);
-    }
-    triggerChange(cloneValues);
-    triggerSelect(val, mergedSelect);
-
-    // Clean search value if single or configured
-    if (mode === 'combobox') {
-      setActiveValue('');
-    } else if (!isMultiple || autoClearSearchValue) {
-      setSearchValue('');
-      setActiveValue('');
-    }
-  });
-
-  // ======================= Display Change =======================
-  // BaseSelect display values change
-  const onDisplayValuesChange = (nextValues, info) => {
-    triggerChange(nextValues);
-    const {
-      type,
-      values
-    } = info;
-    if (type === 'remove' || type === 'clear') {
-      values.forEach(item => {
-        triggerSelect(item.value, false, type);
-      });
-    }
-  };
-
-  // =========================== Search ===========================
-  const onInternalSearch = (searchText, info) => {
-    setSearchValue(searchText);
-    setActiveValue(null);
-
-    // [Submit] Tag mode should flush input
-    if (info.source === 'submit') {
-      const formatted = (searchText || '').trim();
-      // prevent empty tags from appearing when you click the Enter button
-      if (formatted) {
-        // Skip disabled options in tags mode
-        if (valueOptions.get(formatted)?.disabled) {
-          setSearchValue('');
-          return;
-        }
-        const newRawValues = Array.from(new Set([...rawValues, formatted]));
-        triggerChange(newRawValues);
-        triggerSelect(formatted, true);
-        setSearchValue('');
-      }
-      return;
-    }
-    if (info.source !== 'blur') {
-      if (mode === 'combobox') {
-        triggerChange(searchText);
-      }
-      onSearch?.(searchText);
-    }
-  };
-  const onInternalSearchSplit = words => {
-    let patchValues = words;
-    if (mode !== 'tags') {
-      patchValues = words.map(word => {
-        const opt = labelOptions.get(word);
-        return opt?.value;
-      }).filter(val => val !== undefined);
-    }
-
-    // Filter out disabled option values in tags mode
-    if (mode === 'tags') {
-      patchValues = patchValues.filter(val => !valueOptions.get(val)?.disabled);
-    }
-    const newRawValues = Array.from(new Set([...rawValues, ...patchValues]));
-    triggerChange(newRawValues);
-    newRawValues.forEach(newRawValue => {
-      triggerSelect(newRawValue, true);
-    });
-  };
-
-  // ========================== Context ===========================
-  const selectContext = (react_production_namespaceFn().useMemo)(() => {
-    const realVirtual = virtual !== false && popupMatchSelectWidth !== false;
-    return {
-      ...parsedOptions,
-      flattenOptions: displayOptions,
-      onActiveValue,
-      defaultActiveFirstOption: mergedDefaultActiveFirstOption,
-      onSelect: onInternalSelect,
-      menuItemSelectedIcon,
-      rawValues,
-      fieldNames: mergedFieldNames,
-      virtual: realVirtual,
-      direction,
-      listHeight,
-      listItemHeight,
-      childrenAsData,
-      maxCount,
-      optionRender,
-      classNames,
-      styles
-    };
-  }, [maxCount, parsedOptions, displayOptions, onActiveValue, mergedDefaultActiveFirstOption, onInternalSelect, menuItemSelectedIcon, rawValues, mergedFieldNames, virtual, popupMatchSelectWidth, direction, listHeight, listItemHeight, childrenAsData, optionRender, classNames, styles]);
-
-  // ========================== Warning ===========================
-  if (false) // removed by dead control flow
-{}
-
-  // ==============================================================
-  // ==                          Render                          ==
-  // ==============================================================
-  return /*#__PURE__*/(react_production_namespaceFn().createElement)(es_SelectContext.Provider, {
-    value: selectContext
-  }, /*#__PURE__*/(react_production_namespaceFn().createElement)(es_BaseSelect, Select_extends({}, restProps, {
-    // >>> MISC
-    id: mergedId,
-    prefixCls: prefixCls,
-    ref: ref,
-    omitDomProps: OMIT_DOM_PROPS,
-    mode: mode
-    // >>> Style
-    ,
-    classNames: classNames,
-    styles: styles
-    // >>> Values
-    ,
-    displayValues: displayValues,
-    onDisplayValuesChange: onDisplayValuesChange,
-    maxCount: maxCount
-    // >>> Trigger
-    ,
-    direction: direction
-    // >>> Search
-    ,
-    showSearch: mergedShowSearch,
-    searchValue: mergedSearchValue,
-    onSearch: onInternalSearch,
-    autoClearSearchValue: autoClearSearchValue,
-    onSearchSplit: onInternalSearchSplit,
-    popupMatchSelectWidth: popupMatchSelectWidth
-    // >>> OptionList
-    ,
-    OptionList: es_OptionList,
-    emptyOptions: !displayOptions.length
-    // >>> Accessibility
-    ,
-    activeValue: activeValue,
-    activeDescendantId: `${mergedId}_list_${accessibilityIndex}`
-  })));
-});
-if (false) // removed by dead control flow
-{}
-const TypedSelect = Select;
-TypedSelect.Option = es_Option;
-TypedSelect.OptGroup = es_OptGroup;
-/* harmony default export */ const es_Select = (TypedSelect);
-;// ./node_modules/@rc-component/select/es/index.js
-
-
-
-
-
-
-/* harmony default export */ const select_es = (es_Select);
-;// ./node_modules/antd/es/_util/normalizeIcon.js
-const normalizeIcon = (value, key, fallback) => {
-  if (value === false) {
-    return null; // Explicitly return null when value is false
-  }
-  if (value === true) {
-    return fallback; // Return fallback when value is true
-  }
-  // More explicit if statement, avoiding inline if
-  if (value && key && value[key] !== undefined) {
-    return value[key]; // Return value[key] if it's explicitly defined
-  }
-  return fallback; // Return fallback when no value is found
-};
-/* harmony default export */ const _util_normalizeIcon = (normalizeIcon);
-;// ./node_modules/antd/es/config-provider/defaultRenderEmpty.js
-"use client";
-
-
-
-
-const DefaultRenderEmpty = props => {
-  const {
-    componentName
-  } = props;
-  const {
-    getPrefixCls
-  } = (0,react_production_namespaceFn().useContext)(ConfigContext);
-  const prefix = getPrefixCls('empty');
-  switch (componentName) {
-    case 'Table':
-    case 'List':
-      return /*#__PURE__*/(react_production_namespaceFn().createElement)(es_empty, {
-        image: es_empty.PRESENTED_IMAGE_SIMPLE
-      });
-    case 'Select':
-    case 'TreeSelect':
-    case 'Cascader':
-    case 'Transfer':
-    case 'Mentions':
-      return /*#__PURE__*/(react_production_namespaceFn().createElement)(es_empty, {
-        image: es_empty.PRESENTED_IMAGE_SIMPLE,
-        className: `${prefix}-small`
-      });
-    /**
-     * This type of component should satisfy the nullish coalescing operator(??) on the left-hand side.
-     * to let the component itself implement the logic.
-     * For example `Table.filter`.
-     */
-    case 'Table.filter':
-      // why `null`? legacy react16 node type `undefined` is not allowed.
-      return null;
-    default:
-      // Should never hit if we take all the component into consider.
-      return /*#__PURE__*/(react_production_namespaceFn().createElement)(es_empty, null);
-  }
-};
-/* harmony default export */ const defaultRenderEmpty = (DefaultRenderEmpty);
-;// ./node_modules/antd/es/select/mergedBuiltinPlacements.js
-const mergedBuiltinPlacements_getBuiltInPlacements = popupOverflow => {
-  const htmlRegion = popupOverflow === 'scroll' ? 'scroll' : 'visible';
-  const sharedConfig = {
-    overflow: {
-      adjustX: true,
-      adjustY: true,
-      shiftY: true
-    },
-    htmlRegion,
-    dynamicInset: true
-  };
-  return {
-    bottomLeft: {
-      ...sharedConfig,
-      points: ['tl', 'bl'],
-      offset: [0, 4]
-    },
-    bottomRight: {
-      ...sharedConfig,
-      points: ['tr', 'br'],
-      offset: [0, 4]
-    },
-    topLeft: {
-      ...sharedConfig,
-      points: ['bl', 'tl'],
-      offset: [0, -4]
-    },
-    topRight: {
-      ...sharedConfig,
-      points: ['br', 'tr'],
-      offset: [0, -4]
-    }
-  };
-};
-function mergedBuiltinPlacements(buildInPlacements, popupOverflow) {
-  return buildInPlacements || mergedBuiltinPlacements_getBuiltInPlacements(popupOverflow);
-}
-/* harmony default export */ const select_mergedBuiltinPlacements = (mergedBuiltinPlacements);
-;// ./node_modules/antd/es/style/motion/move.js
-
-
-const moveDownIn = new Keyframes('antMoveDownIn', {
-  '0%': {
-    transform: 'translate3d(0, 100%, 0)',
-    transformOrigin: '0 0',
-    opacity: 0
-  },
-  '100%': {
-    transform: 'translate3d(0, 0, 0)',
-    transformOrigin: '0 0',
-    opacity: 1
-  }
-});
-const moveDownOut = new Keyframes('antMoveDownOut', {
-  '0%': {
-    transform: 'translate3d(0, 0, 0)',
-    transformOrigin: '0 0',
-    opacity: 1
-  },
-  '100%': {
-    transform: 'translate3d(0, 100%, 0)',
-    transformOrigin: '0 0',
-    opacity: 0
-  }
-});
-const moveLeftIn = new Keyframes('antMoveLeftIn', {
-  '0%': {
-    transform: 'translate3d(-100%, 0, 0)',
-    transformOrigin: '0 0',
-    opacity: 0
-  },
-  '100%': {
-    transform: 'translate3d(0, 0, 0)',
-    transformOrigin: '0 0',
-    opacity: 1
-  }
-});
-const moveLeftOut = new Keyframes('antMoveLeftOut', {
-  '0%': {
-    transform: 'translate3d(0, 0, 0)',
-    transformOrigin: '0 0',
-    opacity: 1
-  },
-  '100%': {
-    transform: 'translate3d(-100%, 0, 0)',
-    transformOrigin: '0 0',
-    opacity: 0
-  }
-});
-const moveRightIn = new Keyframes('antMoveRightIn', {
-  '0%': {
-    transform: 'translate3d(100%, 0, 0)',
-    transformOrigin: '0 0',
-    opacity: 0
-  },
-  '100%': {
-    transform: 'translate3d(0, 0, 0)',
-    transformOrigin: '0 0',
-    opacity: 1
-  }
-});
-const moveRightOut = new Keyframes('antMoveRightOut', {
-  '0%': {
-    transform: 'translate3d(0, 0, 0)',
-    transformOrigin: '0 0',
-    opacity: 1
-  },
-  '100%': {
-    transform: 'translate3d(100%, 0, 0)',
-    transformOrigin: '0 0',
-    opacity: 0
-  }
-});
-const moveUpIn = new Keyframes('antMoveUpIn', {
-  '0%': {
-    transform: 'translate3d(0, -100%, 0)',
-    transformOrigin: '0 0',
-    opacity: 0
-  },
-  '100%': {
-    transform: 'translate3d(0, 0, 0)',
-    transformOrigin: '0 0',
-    opacity: 1
-  }
-});
-const moveUpOut = new Keyframes('antMoveUpOut', {
-  '0%': {
-    transform: 'translate3d(0, 0, 0)',
-    transformOrigin: '0 0',
-    opacity: 1
-  },
-  '100%': {
-    transform: 'translate3d(0, -100%, 0)',
-    transformOrigin: '0 0',
-    opacity: 0
-  }
-});
-const moveMotion = {
-  'move-up': {
-    inKeyframes: moveUpIn,
-    outKeyframes: moveUpOut
-  },
-  'move-down': {
-    inKeyframes: moveDownIn,
-    outKeyframes: moveDownOut
-  },
-  'move-left': {
-    inKeyframes: moveLeftIn,
-    outKeyframes: moveLeftOut
-  },
-  'move-right': {
-    inKeyframes: moveRightIn,
-    outKeyframes: moveRightOut
-  }
-};
-const initMoveMotion = (token, motionName) => {
-  const {
-    antCls
-  } = token;
-  const motionCls = `${antCls}-${motionName}`;
-  const {
-    inKeyframes,
-    outKeyframes
-  } = moveMotion[motionName];
-  return [initMotion(motionCls, inKeyframes, outKeyframes, token.motionDurationMid), {
-    [`
-        ${motionCls}-enter,
-        ${motionCls}-appear
-      `]: {
-      opacity: 0,
-      animationTimingFunction: token.motionEaseOutCirc
-    },
-    [`${motionCls}-leave`]: {
-      animationTimingFunction: token.motionEaseInOutCirc
-    }
-  }];
-};
-;// ./node_modules/antd/es/select/style/dropdown.js
-
-
-const genItemStyle = token => {
-  const {
-    optionHeight,
-    optionFontSize,
-    optionLineHeight,
-    optionPadding
-  } = token;
-  return {
-    position: 'relative',
-    display: 'block',
-    minHeight: optionHeight,
-    padding: optionPadding,
-    color: token.colorText,
-    fontWeight: 'normal',
-    fontSize: optionFontSize,
-    lineHeight: optionLineHeight,
-    boxSizing: 'border-box'
-  };
-};
-const genSingleStyle = token => {
-  const {
-    antCls,
-    componentCls
-  } = token;
-  const selectItemCls = `${componentCls}-item`;
-  const slideUpEnterActive = `&${antCls}-slide-up-enter${antCls}-slide-up-enter-active`;
-  const slideUpAppearActive = `&${antCls}-slide-up-appear${antCls}-slide-up-appear-active`;
-  const slideUpLeaveActive = `&${antCls}-slide-up-leave${antCls}-slide-up-leave-active`;
-  const dropdownPlacementCls = `${componentCls}-dropdown-placement-`;
-  const selectedItemCls = `${selectItemCls}-option-selected`;
-  return [{
-    [`${componentCls}-dropdown`]: {
-      // ========================== Popup ==========================
-      ...resetComponent(token),
-      position: 'absolute',
-      top: -9999,
-      zIndex: token.zIndexPopup,
-      boxSizing: 'border-box',
-      padding: token.paddingXXS,
-      overflow: 'hidden',
-      fontSize: token.fontSize,
-      // Fix select render lag of long text in chrome
-      // https://github.com/ant-design/ant-design/issues/11456
-      // https://github.com/ant-design/ant-design/issues/11843
-      fontVariant: 'initial',
-      backgroundColor: token.colorBgElevated,
-      borderRadius: token.borderRadiusLG,
-      outline: 'none',
-      boxShadow: token.boxShadowSecondary,
-      [`
-          ${slideUpEnterActive}${dropdownPlacementCls}bottomLeft,
-          ${slideUpAppearActive}${dropdownPlacementCls}bottomLeft
-        `]: {
-        animationName: slideUpIn
-      },
-      [`
-          ${slideUpEnterActive}${dropdownPlacementCls}topLeft,
-          ${slideUpAppearActive}${dropdownPlacementCls}topLeft,
-          ${slideUpEnterActive}${dropdownPlacementCls}topRight,
-          ${slideUpAppearActive}${dropdownPlacementCls}topRight
-        `]: {
-        animationName: slideDownIn
-      },
-      [`${slideUpLeaveActive}${dropdownPlacementCls}bottomLeft`]: {
-        animationName: slideUpOut
-      },
-      [`
-          ${slideUpLeaveActive}${dropdownPlacementCls}topLeft,
-          ${slideUpLeaveActive}${dropdownPlacementCls}topRight
-        `]: {
-        animationName: slideDownOut
-      },
-      '&-hidden': {
-        display: 'none'
-      },
-      [`${componentCls}-dropdown-list-scrollbar`]: {
-        cursor: 'pointer',
-        '&:hover': {
-          backgroundColor: token.colorFillQuaternary
-        }
-      },
-      [selectItemCls]: {
-        ...genItemStyle(token),
-        cursor: 'pointer',
-        transition: `background-color ${token.motionDurationSlow} ease`,
-        borderRadius: token.borderRadiusSM,
-        // =========== Group ============
-        '&-group': {
-          color: token.colorTextDescription,
-          fontSize: token.fontSizeSM,
-          cursor: 'default'
-        },
-        // =========== Option ===========
-        '&-option': {
-          display: 'flex',
-          '&-content': {
-            flex: 'auto',
-            ...textEllipsis
-          },
-          '&-state': {
-            flex: 'none',
+function ChatHeader({ left, right }) {
+    return ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { className: "znhd-chat-header", style: {
             display: 'flex',
-            alignItems: 'center'
-          },
-          [`&-selected:not(${selectItemCls}-option-disabled)`]: {
-            color: token.optionSelectedColor,
-            fontWeight: token.optionSelectedFontWeight,
-            backgroundColor: token.optionSelectedBg,
-            [`${selectItemCls}-option-state`]: {
-              color: token.colorPrimary
-            }
-          },
-          [`&-active:not(${selectItemCls}-option-disabled)`]: {
-            backgroundColor: token.optionActiveBg
-          },
-          [`&-selected${selectItemCls}-option-active:not(${selectItemCls}-option-disabled)`]: {
-            backgroundColor: token.controlItemBgActiveHover
-          },
-          '&-disabled': {
-            [`&${selectItemCls}-option-selected`]: {
-              backgroundColor: token.colorBgContainerDisabled
-            },
-            color: token.colorTextDisabled,
-            cursor: 'not-allowed'
-          },
-          '&-grouped': {
-            paddingInlineStart: token.calc(token.controlPaddingHorizontal).mul(2).equal()
-          }
-        },
-        '&-empty': {
-          ...genItemStyle(token),
-          color: token.colorTextDisabled
-        }
-      },
-      // https://github.com/ant-design/ant-design/pull/46646
-      [`${selectedItemCls}:has(+ ${selectedItemCls})`]: {
-        borderEndStartRadius: 0,
-        borderEndEndRadius: 0,
-        [`& + ${selectedItemCls}`]: {
-          borderStartStartRadius: 0,
-          borderStartEndRadius: 0
-        }
-      },
-      // =========================== RTL ===========================
-      '&-rtl': {
-        direction: 'rtl'
-      }
-    }
-  },
-  // Follow code may reuse in other components
-  initSlideMotion(token, 'slide-up'), initSlideMotion(token, 'slide-down'), initMoveMotion(token, 'move-up'), initMoveMotion(token, 'move-down')];
-};
-/* harmony default export */ const dropdown = (genSingleStyle);
-;// ./node_modules/antd/es/select/style/select-input-customize.js
-const genSelectInputCustomizeStyle = token => {
-  const {
-    antCls,
-    componentCls
-  } = token;
-  const transparentBackground = {
-    background: 'transparent'
-  };
-  const disabledCustomizedInputSelector = ['> input[disabled]', '> textarea[disabled]', `> ${componentCls}-input`, `> ${antCls}-input-affix-wrapper-disabled`, `> ${antCls}-input-search`].join(', ');
-  return {
-    [`&${componentCls}-customize`]: {
-      border: 0,
-      padding: 0,
-      fontSize: 'inherit',
-      lineHeight: 'inherit',
-      [`${componentCls}-placeholder`]: {
-        display: 'none'
-      },
-      [`${componentCls}-content`]: {
-        margin: 0,
-        padding: 0,
-        '&-value': {
-          display: 'none'
-        }
-      },
-      [`&${componentCls}-filled ${componentCls}-content`]: {
-        [`${antCls}-input-filled`]: transparentBackground
-      },
-      [`&${componentCls}-disabled ${componentCls}-content`]: {
-        [disabledCustomizedInputSelector]: transparentBackground,
-        'input[disabled], textarea[disabled]': transparentBackground
-      }
-    }
-  };
-};
-/* harmony default export */ const select_input_customize = (genSelectInputCustomizeStyle);
-;// ./node_modules/antd/es/select/style/select-input-multiple.js
-
-
-const FIXED_INPUT_MIN_WIDTH = 4;
-const genSelectInputMultipleStyle = token => {
-  const {
-    componentCls,
-    calc,
-    iconCls,
-    paddingXS,
-    paddingXXS,
-    INTERNAL_FIXED_ITEM_MARGIN,
-    lineWidth,
-    lineType,
-    colorIcon,
-    colorIconHover,
-    inputPaddingHorizontalBase,
-    antCls
-  } = token;
-  const [varName, varRef] = genCssVar(antCls, 'select');
-  return {
-    '&-multiple': {
-      [varName('multi-item-background')]: token.multipleItemBg,
-      [varName('multi-item-border-color')]: 'transparent',
-      [varName('multi-item-border-radius')]: token.borderRadiusSM,
-      [varName('multi-item-height')]: token.multipleItemHeight,
-      [varName('multi-padding-base')]: `calc((${varRef('height')} - ${varRef('multi-item-height')}) / 2)`,
-      [varName('multi-padding-vertical')]: `calc(${varRef('multi-padding-base')} - ${INTERNAL_FIXED_ITEM_MARGIN} - ${lineWidth})`,
-      [varName('multi-item-padding-horizontal')]: `calc(${inputPaddingHorizontalBase} - ${varRef('multi-padding-vertical')} - ${lineWidth} * 2)`,
-      // ========================================================
-      // ==                        Base                        ==
-      // ========================================================
-      // ========================= Root =========================
-      paddingBlock: varRef('multi-padding-vertical'),
-      paddingInlineStart: `calc(${varRef('multi-padding-base')} - ${lineWidth})`,
-      // ======================== Prefix ========================
-      [`${componentCls}-prefix`]: {
-        marginInlineStart: varRef('multi-item-padding-horizontal')
-      },
-      [`${componentCls}-prefix + ${componentCls}-content`]: {
-        [`${componentCls}-placeholder`]: {
-          insetInlineStart: 0
-        },
-        [`${componentCls}-content-item${componentCls}-content-item-suffix`]: {
-          marginInlineStart: 0
-        }
-      },
-      // ===================== Placeholder ======================
-      [`${componentCls}-placeholder`]: {
-        position: 'absolute',
-        lineHeight: varRef('line-height'),
-        insetInlineStart: varRef('multi-item-padding-horizontal'),
-        width: `calc(100% - ${varRef('multi-item-padding-horizontal')})`,
-        top: '50%',
-        transform: 'translateY(-50%)'
-      },
-      // ======================= Content ========================
-      [`${componentCls}-content`]: {
-        flexWrap: 'wrap',
-        alignItems: 'center',
-        lineHeight: 1,
-        '&-item-prefix': {
-          height: varRef('font-size')
-        },
-        '&-item': {
-          lineHeight: 1,
-          maxWidth: `calc(100% - ${FIXED_INPUT_MIN_WIDTH}px)`
-        },
-        [`${componentCls}-content-item-prefix + ${componentCls}-content-item-suffix,
-          ${componentCls}-content-item-suffix:first-child`]: {
-          marginInlineStart: varRef('multi-item-padding-horizontal')
-        },
-        [`${componentCls}-selection-item`]: {
-          lineHeight: `calc(${varRef('multi-item-height')} - ${lineWidth} * 2)`,
-          border: `${lineWidth} ${lineType} ${varRef('multi-item-border-color')}`,
-          display: 'flex',
-          marginBlock: INTERNAL_FIXED_ITEM_MARGIN,
-          marginInlineEnd: calc(INTERNAL_FIXED_ITEM_MARGIN).mul(2).equal(),
-          background: varRef('multi-item-background'),
-          borderRadius: varRef('multi-item-border-radius'),
-          paddingInlineStart: paddingXS,
-          paddingInlineEnd: paddingXXS,
-          transition: ['height', 'line-height', 'padding'].map(key => `${key} ${token.motionDurationSlow}`).join(','),
-          // >>> Content
-          '&-content': {
-            ...textEllipsis,
-            marginInlineEnd: paddingXXS
-          },
-          // >>> Remove
-          '&-remove': {
-            ...resetIcon(),
-            display: 'inline-flex',
             alignItems: 'center',
-            color: colorIcon,
-            fontWeight: 'bold',
-            fontSize: 10,
-            lineHeight: 'inherit',
-            cursor: 'pointer',
-            [`> ${iconCls}`]: {
-              verticalAlign: '-0.2em'
-            },
-            '&:hover': {
-              color: colorIconHover
-            }
-          }
-        },
-        [`${componentCls}-input`]: {
-          lineHeight: calc(INTERNAL_FIXED_ITEM_MARGIN).mul(2).add(varRef('multi-item-height')).equal(),
-          width: `calc(var(--select-input-width, 0) * 1px)`,
-          minWidth: FIXED_INPUT_MIN_WIDTH,
-          maxWidth: '100%',
-          transition: `line-height ${token.motionDurationSlow}`
-        }
-      },
-      // ========================================================
-      // ==                        Size                        ==
-      // ========================================================
-      [`&${componentCls}-sm`]: {
-        [varName('multi-item-height')]: token.multipleItemHeightSM,
-        [varName('multi-item-border-radius')]: token.borderRadiusXS
-      },
-      [`&${componentCls}-lg`]: {
-        [varName('multi-item-height')]: token.multipleItemHeightLG,
-        [varName('multi-item-border-radius')]: token.borderRadius
-      },
-      // ========================================================
-      // ==                      Variants                      ==
-      // ========================================================
-      [`&${componentCls}-filled`]: {
-        [varName('multi-item-border-color')]: token.colorSplit,
-        [varName('multi-item-background')]: token.colorBgContainer,
-        [`&${componentCls}-disabled`]: {
-          [varName('multi-item-border-color')]: 'transparent'
-        }
-      }
-    }
-  };
-};
-/* harmony default export */ const select_input_multiple = (genSelectInputMultipleStyle);
-;// ./node_modules/antd/es/select/style/select-input.js
-
-
-
-
-
-/** Set CSS variables and hover/focus styles for a Select input based on provided colors. */
-const genSelectInputVariableStyle = (token, colors) => {
-  const {
-    componentCls,
-    antCls
-  } = token;
-  const [varName] = genCssVar(antCls, 'select');
-  const {
-    border,
-    borderHover,
-    borderActive,
-    borderOutline
-  } = colors;
-  const baseBG = colors.background || token.selectorBg || token.colorBgContainer;
-  return {
-    [varName('border-color')]: border,
-    [varName('background-color')]: baseBG,
-    [varName('affix-color')]: colors.affixColor,
-    [`&:not(${componentCls}-disabled)`]: {
-      '&:hover': {
-        [varName('border-color')]: borderHover,
-        [varName('background-color')]: colors.backgroundHover || baseBG
-      },
-      [`&${componentCls}-focused`]: {
-        [varName('border-color')]: borderActive,
-        [varName('background-color')]: colors.backgroundActive || baseBG,
-        boxShadow: `0 0 0 ${util_unit(token.controlOutlineWidth)} ${borderOutline}`
-      }
-    },
-    [`&${componentCls}-disabled`]: {
-      [varName('border-color')]: colors.borderDisabled || colors.border,
-      [varName('background-color')]: colors.backgroundDisabled || colors.background
-    }
-  };
-};
-/** Generate variant-scoped variable styles and status overrides for a Select input */
-const genSelectInputVariantStyle = (token, variant, colors, errorColors, warningColors, patchStyle) => {
-  const {
-    componentCls
-  } = token;
-  return {
-    [`&${componentCls}-${variant}`]: [genSelectInputVariableStyle(token, colors), {
-      [`&${componentCls}-status-error`]: genSelectInputVariableStyle(token, {
-        ...colors,
-        ...errorColors
-      }),
-      [`&${componentCls}-status-warning`]: genSelectInputVariableStyle(token, {
-        ...colors,
-        ...warningColors
-      })
-    }, patchStyle]
-  };
-};
-const genSelectInputFocusVisibleStyle = (token, outlineColor) => ({
-  outline: `${util_unit(token.lineWidthFocus)} ${token.lineType} ${outlineColor}`,
-  outlineOffset: util_unit(token.calc(token.lineWidth).mul(-1).equal()),
-  transition: [`outline-offset`, `outline`].map(prop => `${prop} 0s`).join(', ')
-});
-const genSelectInputStyle = token => {
-  const {
-    componentCls,
-    fontHeight,
-    controlHeight,
-    fontSizeIcon,
-    showArrowPaddingInlineEnd,
-    iconCls,
-    antCls,
-    max,
-    calc
-  } = token;
-  const [varName, varRef] = genCssVar(antCls, 'select');
-  const contentMarginInlineEnd = max(calc(showArrowPaddingInlineEnd).sub(fontSizeIcon).equal(), 0);
-  return {
-    [componentCls]: [{
-      // Border
-      [varName('border-radius')]: token.borderRadius,
-      [varName('border-color')]: '#000',
-      [varName('border-size')]: token.lineWidth,
-      // Background
-      [varName('background-color')]: token.colorBgContainer,
-      // Font
-      [varName('font-size')]: token.fontSize,
-      [varName('line-height')]: token.lineHeight,
-      [varName('font-height')]: fontHeight,
-      [varName('color')]: token.colorText,
-      [varName('affix-color')]: token.colorText,
-      // Size
-      [varName('height')]: controlHeight,
-      [varName('padding-horizontal')]: calc(token.paddingSM).sub(token.lineWidth).equal(),
-      [varName('padding-vertical')]: `calc((${varRef('height')} - ${varRef('font-height')}) / 2 - ${varRef('border-size')})`,
-      // ==========================================================
-      // ==                         Base                         ==
-      // ==========================================================
-      ...resetComponent(token),
-      display: 'inline-flex',
-      // gap: calc(token.paddingXXS).mul(1.5).equal(),
-      flexWrap: 'nowrap',
-      position: 'relative',
-      transition: `all ${token.motionDurationSlow}`,
-      alignItems: 'flex-start',
-      outline: 0,
-      cursor: 'pointer',
-      // Border
-      borderRadius: varRef('border-radius'),
-      borderWidth: varRef('border-size'),
-      borderStyle: token.lineType,
-      borderColor: varRef('border-color'),
-      // Background
-      background: varRef('background-color'),
-      // Font
-      fontSize: varRef('font-size'),
-      lineHeight: varRef('line-height'),
-      color: varRef('color'),
-      // Padding
-      paddingInline: varRef('padding-horizontal'),
-      paddingBlock: varRef('padding-vertical'),
-      // ========================= Prefix =========================
-      [`${componentCls}-prefix`]: {
-        color: varRef('affix-color'),
-        flex: 'none',
-        lineHeight: 1
-      },
-      // ====================== Placeholder =======================
-      [`${componentCls}-placeholder`]: {
-        ...textEllipsis,
-        color: token.colorTextPlaceholder,
-        pointerEvents: 'none',
-        zIndex: 1
-      },
-      // ======================== Content =========================
-      [`${componentCls}-content`]: {
-        flex: 'auto',
-        minWidth: 0,
-        position: 'relative',
-        display: 'flex',
-        marginInlineEnd: contentMarginInlineEnd,
-        '&:before': {
-          content: '"\\a0"',
-          width: 0,
-          overflow: 'hidden'
-        },
-        // >>> Value
-        '&-value': {
-          visibility: 'inherit'
-        },
-        // >>> Input: should only take effect for not customize mode
-        // input element with readOnly use cursor pointer
-        'input[readonly]': {
-          cursor: 'inherit',
-          caretColor: 'transparent'
-        }
-      },
-      // ========================= Suffix =========================
-      [`${componentCls}-suffix`]: {
-        flex: 'none',
-        color: token.colorTextQuaternary,
-        fontSize: token.fontSizeIcon,
-        lineHeight: 1,
-        transition: ['opacity', 'color'].map(prop => `${prop} ${token.motionDurationMid} ease`).join(', '),
-        '> :not(:last-child)': {
-          marginInlineEnd: token.marginXS
-        }
-      },
-      [`${componentCls}-prefix, ${componentCls}-suffix`]: {
-        alignSelf: 'center',
-        [iconCls]: {
-          verticalAlign: 'top'
-        }
-      },
-      // ==========================================================
-      // ==                       Disabled                       ==
-      // ==========================================================
-      '&-disabled': {
-        background: token.colorBgContainerDisabled,
-        [varName('color')]: token.colorTextDisabled,
-        cursor: 'not-allowed',
-        input: {
-          cursor: 'not-allowed'
-        }
-      },
-      // ==========================================================
-      // ==                         Size                         ==
-      // ==========================================================
-      '&-sm': {
-        [varName('height')]: token.controlHeightSM,
-        [varName('padding-horizontal')]: calc(token.paddingXS).sub(token.lineWidth).equal(),
-        [varName('border-radius')]: token.borderRadiusSM,
-        [`${componentCls}-clear`]: {
-          insetInlineEnd: varRef('padding-horizontal')
-        }
-      },
-      '&-lg': {
-        [varName('height')]: token.controlHeightLG,
-        [varName('font-size')]: token.fontSizeLG,
-        [varName('line-height')]: token.lineHeightLG,
-        [varName('font-height')]: token.fontHeightLG,
-        [varName('border-radius')]: token.borderRadiusLG
-      }
-    },
-    // ============================================================
-    // ==                         Input                          ==
-    // ============================================================
-    {
-      [`&:not(${componentCls}-customize)`]: {
-        [`${componentCls}-input`]: {
-          outline: 'none',
-          background: 'transparent',
-          appearance: 'none',
-          border: 0,
-          margin: 0,
-          padding: 0,
-          color: varRef('color'),
-          fontFamily: 'inherit',
-          fontSize: 'inherit',
-          '&::-webkit-search-cancel-button': {
-            display: 'none',
-            appearance: 'none'
-          }
-        }
-      }
-    },
-    // ============================================================
-    // ==                         Single                         ==
-    // ============================================================
-    {
-      [`&-single:not(${componentCls}-customize)`]: {
-        [`${componentCls}-input`]: {
-          position: 'absolute',
-          inset: 0,
-          lineHeight: 'inherit'
-        },
-        // Content center align
-        [`${componentCls}-content`]: {
-          ...textEllipsis,
-          alignSelf: 'center',
-          '&-has-value': {
-            display: 'block',
-            '&:before': {
-              display: 'none'
-            }
-          },
-          '&-has-search-value': {
-            color: 'transparent',
-            [`> *:not(${componentCls}-input)`]: {
-              opacity: 0
-            }
-          },
-          // >>> Value
-          '&-value': {
-            transition: `all ${token.motionDurationMid} ${token.motionEaseInOut}`,
-            zIndex: 1,
-            opacity: 1
-          }
-        },
-        // Dim the selected content while the dropdown is open. Shared by all select-like
-        // components (Select / Cascader / TreeSelect) since they render through the same
-        // `content` structure.
-        [`&${componentCls}-open ${componentCls}-content`]: {
-          '&-has-value': {
-            opacity: 0.25
-          },
-          '&-has-search-value': {
-            opacity: 1,
-            transition: `opacity ${token.motionDurationMid} ${token.motionEaseInOut}`,
-            color: 'transparent',
-            [`> *:not(${componentCls}-input)`]: {
-              opacity: 0
-            }
-          }
-        }
-      }
-    },
-    // ======================== Show Search =======================
-    {
-      [`&-show-search:not(${componentCls}-customize-input):not(${componentCls}-disabled)`]: {
-        cursor: 'text'
-      }
-    },
-    // ============================================================
-    // ==                        Multiple                        ==
-    // ============================================================
-    select_input_multiple(token),
-    // ========================= Variant ==========================
-    // >>> Outlined
-    genSelectInputVariantStyle(token, 'outlined', {
-      border: token.colorBorder,
-      borderHover: token.hoverBorderColor,
-      borderActive: token.activeBorderColor,
-      borderOutline: token.activeOutlineColor,
-      borderDisabled: token.colorBorderDisabled
-    },
-    // Error
-    {
-      border: token.colorError,
-      borderHover: token.colorErrorBorderHover,
-      borderActive: token.colorError,
-      borderOutline: token.colorErrorOutline,
-      affixColor: token.colorErrorAffix
-    },
-    // Warning
-    {
-      border: token.colorWarning,
-      borderHover: token.colorWarningHover,
-      borderActive: token.colorWarning,
-      borderOutline: token.colorWarningOutline,
-      affixColor: token.colorWarningAffix
-    }),
-    // >>> Filled
-    genSelectInputVariantStyle(token, 'filled', {
-      border: 'transparent',
-      borderHover: 'transparent',
-      borderActive: token.activeBorderColor,
-      borderOutline: 'transparent',
-      borderDisabled: token.colorBorderDisabled,
-      background: token.colorFillTertiary,
-      backgroundHover: token.colorFillSecondary,
-      backgroundActive: token.colorBgContainer
-    },
-    // Error
-    {
-      color: token.colorErrorText,
-      background: token.colorErrorBg,
-      backgroundHover: token.colorErrorBgHover,
-      borderActive: token.colorError
-    },
-    // Warning
-    {
-      background: token.colorWarningBg,
-      backgroundHover: token.colorWarningBgHover,
-      borderActive: token.colorWarning
-    }),
-    // >>> Borderless
-    genSelectInputVariantStyle(token, 'borderless', {
-      border: 'transparent',
-      borderHover: 'transparent',
-      borderActive: 'transparent',
-      borderOutline: 'transparent',
-      background: 'transparent'
-    }, {}, {}, {
-      [`&:not(${componentCls}-disabled):has(input:focus-visible), &:not(${componentCls}-disabled):has(textarea:focus-visible)`]: genSelectInputFocusVisibleStyle(token, token.activeBorderColor),
-      [`&${componentCls}-status-error:not(${componentCls}-disabled):has(input:focus-visible), &${componentCls}-status-error:not(${componentCls}-disabled):has(textarea:focus-visible)`]: genSelectInputFocusVisibleStyle(token, token.colorError),
-      [`&${componentCls}-status-warning:not(${componentCls}-disabled):has(input:focus-visible), &${componentCls}-status-warning:not(${componentCls}-disabled):has(textarea:focus-visible)`]: genSelectInputFocusVisibleStyle(token, token.colorWarning)
-    }),
-    // Underlined
-    genSelectInputVariantStyle(token, 'underlined', {
-      border: token.colorBorder,
-      borderHover: token.hoverBorderColor,
-      borderActive: token.activeBorderColor,
-      borderOutline: 'transparent'
-    },
-    // Error
-    {
-      border: token.colorError,
-      borderHover: token.colorErrorBorderHover,
-      borderActive: token.colorError
-    },
-    // Warning
-    {
-      border: token.colorWarning,
-      borderHover: token.colorWarningHover,
-      borderActive: token.colorWarning
-    }, {
-      borderRadius: 0,
-      borderTopColor: 'transparent',
-      borderInlineColor: 'transparent'
-    }),
-    // ============================================================
-    // ==                         Custom                         ==
-    // ============================================================
-    select_input_customize(token)]
-  };
-};
-/* harmony default export */ const select_input = (genSelectInputStyle);
-;// ./node_modules/antd/es/select/style/token.js
-const select_style_token_prepareComponentToken = token => {
-  const {
-    fontSize,
-    lineHeight,
-    lineWidth,
-    lineWidthFocus,
-    controlHeight,
-    controlHeightSM,
-    controlHeightLG,
-    paddingXXS,
-    controlPaddingHorizontal,
-    zIndexPopupBase,
-    colorText,
-    fontWeightStrong,
-    controlItemBgActive,
-    controlItemBgHover,
-    colorBgContainer,
-    colorFillSecondary,
-    colorBgContainerDisabled,
-    colorTextDisabled,
-    colorPrimaryHover,
-    colorPrimary,
-    controlOutline
-  } = token;
-  // Item height default use `controlHeight - 2 * paddingXXS`,
-  // but some case `paddingXXS=0`.
-  // Let's fallback it.
-  const dblPaddingXXS = paddingXXS * 2;
-  const dblLineWidth = lineWidth * 2;
-  const multipleItemHeight = Math.min(controlHeight - dblPaddingXXS, controlHeight - dblLineWidth);
-  const multipleItemHeightSM = Math.min(controlHeightSM - dblPaddingXXS, controlHeightSM - dblLineWidth);
-  const multipleItemHeightLG = Math.min(controlHeightLG - dblPaddingXXS, controlHeightLG - dblLineWidth);
-  // FIXED_ITEM_MARGIN is a hardcode calculation since calc not support rounding
-  const INTERNAL_FIXED_ITEM_MARGIN = Math.floor(paddingXXS / 2);
-  const componentToken = {
-    lineWidthFocus: lineWidthFocus === 0 ? 0 : lineWidth,
-    INTERNAL_FIXED_ITEM_MARGIN,
-    zIndexPopup: zIndexPopupBase + 50,
-    optionSelectedColor: colorText,
-    optionSelectedFontWeight: fontWeightStrong,
-    optionSelectedBg: controlItemBgActive,
-    optionActiveBg: controlItemBgHover,
-    optionPadding: `${(controlHeight - fontSize * lineHeight) / 2}px ${controlPaddingHorizontal}px`,
-    optionFontSize: fontSize,
-    optionLineHeight: lineHeight,
-    optionHeight: controlHeight,
-    selectorBg: colorBgContainer,
-    clearBg: colorBgContainer,
-    singleItemHeightLG: controlHeightLG,
-    multipleItemBg: colorFillSecondary,
-    multipleItemBorderColor: 'transparent',
-    multipleItemHeight,
-    multipleItemHeightSM,
-    multipleItemHeightLG,
-    multipleSelectorBgDisabled: colorBgContainerDisabled,
-    multipleItemColorDisabled: colorTextDisabled,
-    multipleItemBorderColorDisabled: 'transparent',
-    showArrowPaddingInlineEnd: Math.ceil(token.fontSize * 1.25),
-    hoverBorderColor: colorPrimaryHover,
-    activeBorderColor: colorPrimary,
-    activeOutlineColor: controlOutline,
-    selectAffixPadding: paddingXXS
-  };
-  return componentToken;
-};
-;// ./node_modules/antd/es/select/style/index.js
-
-
-
-
-
-
-// =============================== Base ===============================
-const select_style_genBaseStyle = token => {
-  const {
-    antCls,
-    componentCls,
-    motionDurationMid,
-    inputPaddingHorizontalBase
-  } = token;
-  const hoverShowClearStyle = {
-    [`${componentCls}-clear`]: {
-      opacity: 1
-    },
-    [`${componentCls}-suffix:not(:last-child)`]: {
-      opacity: 0,
-      pointerEvents: 'none'
-    },
-    [`&${componentCls}-allow-clear:not(${componentCls}-show-arrow):not(${componentCls}-customize) ${componentCls}-content`]: {
-      marginInlineEnd: token.showArrowPaddingInlineEnd
-    }
-  };
-  return {
-    [componentCls]: {
-      ...resetComponent(token),
-      // ======================== Selection ========================
-      [`${componentCls}-selection-item`]: {
-        flex: 1,
-        fontWeight: 'normal',
-        position: 'relative',
-        userSelect: 'none',
-        ...textEllipsis,
-        // https://github.com/ant-design/ant-design/issues/40421
-        [`> ${antCls}-typography`]: {
-          display: 'inline'
-        }
-      },
-      // ========================= Prefix ==========================
-      [`${componentCls}-prefix`]: {
-        flex: 'none',
-        marginInlineEnd: token.selectAffixPadding
-      },
-      // ========================== Clear ==========================
-      [`${componentCls}-clear`]: {
-        position: 'absolute',
-        top: '50%',
-        insetInlineStart: 'auto',
-        insetInlineEnd: inputPaddingHorizontalBase,
-        zIndex: 1,
-        display: 'inline-block',
-        width: token.fontSizeIcon,
-        height: token.fontSizeIcon,
-        marginTop: token.calc(token.fontSizeIcon).mul(-1).div(2).equal(),
-        padding: 0,
-        background: 'transparent',
-        color: token.colorTextQuaternary,
-        fontSize: token.fontSizeIcon,
-        fontFamily: 'inherit',
-        fontStyle: 'normal',
-        lineHeight: 1,
-        textAlign: 'center',
-        textTransform: 'none',
-        appearance: 'none',
-        border: 0,
-        cursor: 'pointer',
-        opacity: 0,
-        transition: ['color', 'opacity'].map(prop => `${prop} ${motionDurationMid} ease`).join(', '),
-        textRendering: 'auto',
-        // https://github.com/ant-design/ant-design/issues/54205
-        // Force GPU compositing on Safari to prevent flickering on opacity/transform transitions
-        transform: 'translateZ(0)',
-        '&:before': {
-          display: 'block'
-        },
-        '&:hover': {
-          color: token.colorIcon
-        }
-      },
-      '@media(hover:none)': hoverShowClearStyle,
-      '&:hover': hoverShowClearStyle
-    },
-    // ========================= Feedback ==========================
-    [`${componentCls}-status`]: {
-      '&-error, &-warning, &-success, &-validating': {
-        [`&${componentCls}-has-feedback`]: {
-          [`${componentCls}-clear`]: {
-            insetInlineEnd: token.calc(inputPaddingHorizontalBase).add(token.fontSize).add(token.paddingXS).equal()
-          }
-        }
-      }
-    }
-  };
-};
-// ============================== Styles ==============================
-const genSelectStyle = token => {
-  const {
-    componentCls
-  } = token;
-  return [{
-    [componentCls]: {
-      // ==================== In Form ====================
-      [`&${componentCls}-in-form-item`]: {
-        width: '100%'
-      }
-    }
-  },
-  // =====================================================
-  // ==                       LTR                       ==
-  // =====================================================
-  // Base
-  select_style_genBaseStyle(token),
-  // Dropdown
-  dropdown(token),
-  // =====================================================
-  // ==                       RTL                       ==
-  // =====================================================
-  {
-    [`${componentCls}-rtl`]: {
-      direction: 'rtl'
-    }
-  },
-  // =====================================================
-  // ==             Space Compact                       ==
-  // =====================================================
-  genCompactItemStyle(token, {
-    focusElCls: `${componentCls}-focused`
-  })];
-};
-// ============================== Export ==============================
-/* harmony default export */ const select_style = (genStyleHooks('Select', (token, {
-  rootPrefixCls
-}) => {
-  const selectToken = statistic_merge(token, {
-    rootPrefixCls,
-    inputPaddingHorizontalBase: token.calc(token.paddingSM).sub(token.lineWidth).equal(),
-    multipleSelectItemHeight: token.multipleItemHeight,
-    selectHeight: token.controlHeight
-  });
-  return [genSelectStyle(selectToken), select_input(selectToken)];
-}, select_style_token_prepareComponentToken, {
-  unitless: {
-    optionLineHeight: true,
-    optionSelectedFontWeight: true
-  }
-}));
-;// ./node_modules/antd/es/select/useIcons.js
-"use client";
-
-
-
-
-
-
-
-
-
-
-function useIcons({
-  suffixIcon,
-  contextSuffixIcon,
-  clearIcon,
-  contextClearIcon,
-  menuItemSelectedIcon,
-  contextMenuItemSelectedIcon,
-  removeIcon,
-  contextRemoveIcon,
-  loading,
-  loadingIcon,
-  contextLoadingIcon,
-  searchIcon,
-  contextSearchIcon,
-  multiple,
-  hasFeedback,
-  showSuffixIcon,
-  feedbackIcon,
-  showArrow,
-  componentName
-}) {
-  if (false) // removed by dead control flow
-{}
-  return (react_production_namespaceFn().useMemo)(() => {
-    // Clear Icon
-    const mergedClearIcon = fallbackProp(clearIcon, contextClearIcon, /*#__PURE__*/(react_production_namespaceFn().createElement)(icons_CloseCircleFilled, null));
-    // Validation Feedback Icon
-    const getSuffixIconNode = arrowIcon => {
-      if (suffixIcon === null && !hasFeedback && !showArrow) {
-        return null;
-      }
-      return /*#__PURE__*/(react_production_namespaceFn().createElement)((react_production_namespaceFn().Fragment), null, showSuffixIcon !== false && arrowIcon, hasFeedback && feedbackIcon);
-    };
-    // Arrow item icon
-    let mergedSuffixIcon = null;
-    if (suffixIcon !== undefined) {
-      mergedSuffixIcon = getSuffixIconNode(suffixIcon);
-    } else if (loading) {
-      mergedSuffixIcon = getSuffixIconNode(fallbackProp(loadingIcon, contextLoadingIcon, /*#__PURE__*/(react_production_namespaceFn().createElement)(icons_LoadingOutlined, {
-        spin: true
-      })));
-    } else {
-      mergedSuffixIcon = ({
-        open,
-        showSearch
-      }) => {
-        if (open && showSearch) {
-          return getSuffixIconNode(fallbackProp(searchIcon, contextSearchIcon, /*#__PURE__*/(react_production_namespaceFn().createElement)(icons_SearchOutlined, null)));
-        }
-        return getSuffixIconNode(fallbackProp(contextSuffixIcon, /*#__PURE__*/(react_production_namespaceFn().createElement)(icons_DownOutlined, null)));
-      };
-    }
-    // Checked item icon
-    const mergedItemIcon = fallbackProp(menuItemSelectedIcon, contextMenuItemSelectedIcon, multiple ? /*#__PURE__*/(react_production_namespaceFn().createElement)(icons_CheckOutlined, null) : null);
-    const mergedRemoveIcon = fallbackProp(removeIcon, contextRemoveIcon, /*#__PURE__*/(react_production_namespaceFn().createElement)(icons_CloseOutlined, null));
-    return {
-      clearIcon: mergedClearIcon,
-      suffixIcon: mergedSuffixIcon,
-      itemIcon: mergedItemIcon,
-      removeIcon: mergedRemoveIcon
-    };
-  }, [suffixIcon, contextSuffixIcon, clearIcon, contextClearIcon, menuItemSelectedIcon, contextMenuItemSelectedIcon, removeIcon, contextRemoveIcon, loading, loadingIcon, contextLoadingIcon, searchIcon, contextSearchIcon, multiple, hasFeedback, showSuffixIcon, feedbackIcon, showArrow]);
+            gap: 8,
+            padding: '10px 12px',
+            borderBottom: '1px solid rgba(0,0,0,0.4)',
+            flex: '0 0 auto',
+            minWidth: 0,
+        }, children: [left, (0,react_jsx_runtime_production_namespaceFn().jsx)("span", { style: { flex: '1 1 auto' } }), right] }));
 }
-;// ./node_modules/antd/es/select/usePopupRender.js
-"use client";
-
-
-
-function usePopupRender(renderFn) {
-  return (react_production_namespaceFn().useMemo)(() => {
-    if (!renderFn) {
-      return undefined;
-    }
-    return (...args) => /*#__PURE__*/(react_production_namespaceFn().createElement)(_util_ContextIsolator, {
-      space: true
-    }, renderFn.apply(void 0, args));
-  }, [renderFn]);
-}
-/* harmony default export */ const select_usePopupRender = (usePopupRender);
-;// ./node_modules/antd/es/select/useShowArrow.js
 /**
- * Since Select, TreeSelect, Cascader is same Select like component.
- * We just use same hook to handle this logic.
+ * 消息滚动容器：新消息到达时自动滚到底。
  *
- * If `suffixIcon` is not equal to `null`, always show it.
+ * ⚠️ `scrollbarGutter: 'stable'` 不是装饰：消息区出现/消失滚动条时，没有它会**整列左右抖动**
+ * （Windows 上原生滚动条占 10px）。占用固定槽位后宽度不再跳。
+ * 滚动条外观本身由 `uiReset` 统一美化（`.ant-modal-root *` 的 ::-webkit-scrollbar 规则）。
  */
-function useShowArrow(suffixIcon, showArrow) {
-  return showArrow !== undefined ? showArrow : suffixIcon !== null;
+function ChatScroll({ className, scrollDep, children, }) {
+    const ref = (0,react_production_namespaceFn().useRef)(null);
+    (0,react_production_namespaceFn().useEffect)(() => {
+        const el = ref.current;
+        if (!el)
+            return;
+        el.scrollTop = el.scrollHeight;
+    }, [scrollDep]);
+    return ((0,react_jsx_runtime_production_namespaceFn().jsx)("div", { ref: ref, className: className, style: {
+            flex: '1 1 auto',
+            minHeight: 0,
+            overflowY: 'auto',
+            overflowX: 'hidden',
+            padding: '10px 12px',
+            scrollbarGutter: 'stable',
+        }, children: children }));
 }
-;// ./node_modules/antd/es/select/index.js
-"use client";
 
-// TODO: 4.0 - codemod should help to change `filterOption` to support node props.
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-const SECRET_COMBOBOX_MODE_DO_NOT_USE = 'SECRET_COMBOBOX_MODE_DO_NOT_USE';
-const InternalSelect = (props, ref) => {
-  const {
-    prefixCls: customizePrefixCls,
-    bordered,
-    className,
-    rootClassName,
-    getPopupContainer,
-    popupClassName,
-    dropdownClassName,
-    listHeight = 256,
-    placement,
-    listItemHeight: customListItemHeight,
-    size: customizeSize,
-    disabled: customDisabled,
-    notFoundContent,
-    status: customStatus,
-    builtinPlacements,
-    dropdownMatchSelectWidth,
-    popupMatchSelectWidth,
-    direction: propDirection,
-    style,
-    allowClear,
-    variant: customizeVariant,
-    popupStyle,
-    dropdownStyle,
-    transitionName,
-    tagRender,
-    maxCount,
-    prefix,
-    dropdownRender,
-    /**
-     * @since 5.25.0
-     */
-    popupRender,
-    onDropdownVisibleChange,
-    onOpenChange,
-    styles,
-    classNames,
-    clearIcon,
-    showSearch,
-    ...rest
-  } = props;
-  const {
-    getPopupContainer: getContextPopupContainer,
-    getPrefixCls,
-    renderEmpty,
-    direction: contextDirection,
-    virtual,
-    popupMatchSelectWidth: contextPopupMatchSelectWidth,
-    popupOverflow
-  } = (react_production_namespaceFn().useContext)(ConfigContext);
-  const {
-    showSearch: contextShowSearch,
-    allowClear: contextAllowClear,
-    style: contextStyle,
-    styles: contextStyles,
-    className: contextClassName,
-    classNames: contextClassNames,
-    clearIcon: contextClearIcon,
-    loadingIcon: contextLoadingIcon,
-    menuItemSelectedIcon: contextMenuItemSelectedIcon,
-    removeIcon: contextRemoveIcon,
-    suffixIcon: contextSuffixIcon
-  } = useComponentConfig('select');
-  const [, token] = useToken();
-  const listItemHeight = customListItemHeight ?? token?.controlHeight;
-  const prefixCls = getPrefixCls('select', customizePrefixCls);
-  const rootPrefixCls = getPrefixCls();
-  const direction = propDirection ?? contextDirection;
-  const {
-    compactSize,
-    compactItemClassnames
-  } = useCompactItemContext(prefixCls, direction);
-  const [variant, enableVariantCls] = useVariants('select', customizeVariant, bordered);
-  const rootCls = hooks_useCSSVarCls(prefixCls);
-  const [hashId, cssVarCls] = select_style(prefixCls, rootCls);
-  const mode = (react_production_namespaceFn().useMemo)(() => {
-    const {
-      mode: m
-    } = props;
-    if (m === 'combobox') {
-      return undefined;
-    }
-    if (m === SECRET_COMBOBOX_MODE_DO_NOT_USE) {
-      return 'combobox';
-    }
-    return m;
-  }, [props.mode]);
-  const isMultiple = mode === 'multiple' || mode === 'tags';
-  const showSuffixIcon = useShowArrow(props.suffixIcon, props.showArrow);
-  const mergedPopupMatchSelectWidth = popupMatchSelectWidth ?? dropdownMatchSelectWidth ?? contextPopupMatchSelectWidth;
-  const mergedPopupRender = select_usePopupRender(popupRender || dropdownRender);
-  const mergedOnOpenChange = onOpenChange || onDropdownVisibleChange;
-  // ===================== Form Status =====================
-  const {
-    status: contextStatus,
-    hasFeedback,
-    isFormItemInput,
-    feedbackIcon
-  } = (react_production_namespaceFn().useContext)(FormItemInputContext);
-  const mergedStatus = getMergedStatus(contextStatus, customStatus);
-  // ===================== Empty =====================
-  let mergedNotFound;
-  if (notFoundContent !== undefined) {
-    mergedNotFound = notFoundContent;
-  } else if (mode === 'combobox') {
-    mergedNotFound = null;
-  } else {
-    mergedNotFound = renderEmpty?.('Select') || /*#__PURE__*/(react_production_namespaceFn().createElement)(defaultRenderEmpty, {
-      componentName: "Select"
-    });
-  }
-  // ===================== Icons =====================
-  const {
-    suffixIcon,
-    itemIcon,
-    removeIcon,
-    clearIcon: mergedClearIcon
-  } = useIcons({
-    ...rest,
-    multiple: isMultiple,
-    hasFeedback,
-    feedbackIcon,
-    showSuffixIcon,
-    prefixCls,
-    componentName: 'Select',
-    clearIcon,
-    searchIcon: _util_normalizeIcon(showSearch, 'searchIcon'),
-    contextClearIcon,
-    contextLoadingIcon,
-    contextMenuItemSelectedIcon,
-    contextRemoveIcon,
-    contextSearchIcon: _util_normalizeIcon(contextShowSearch, 'searchIcon'),
-    contextSuffixIcon
-  });
-  const finalAllowClear = allowClear ?? contextAllowClear;
-  const mergedAllowClear = finalAllowClear === true ? {
-    clearIcon: mergedClearIcon
-  } : finalAllowClear;
-  const mergedShowSearch = showSearch ?? contextShowSearch;
-  const selectProps = omit(rest, ['suffixIcon', 'itemIcon']);
-  const mergedSize = hooks_useSize(ctx => customizeSize ?? compactSize ?? ctx);
-  // ===================== Disabled =====================
-  const disabled = (react_production_namespaceFn().useContext)(config_provider_DisabledContext);
-  const mergedDisabled = customDisabled ?? disabled;
-  // ========== Merged Props for Semantic ==================
-  const mergedProps = {
-    ...props,
-    variant,
-    status: mergedStatus,
-    disabled: mergedDisabled,
-    size: mergedSize
-  };
-  const contextStyleRoot = useSemanticRootStyle(contextStyle);
-  const styleRoot = useSemanticRootStyle(style);
-  const [mergedClassNames, mergedStyles] = useMergeSemantic([contextClassNames, classNames], [contextStyles, contextStyleRoot, styles, styleRoot], {
-    props: mergedProps
-  }, {
-    popup: {
-      _default: 'root'
-    }
-  });
-  const mergedPopupClassName = clsx(mergedClassNames.popup.root, popupClassName, dropdownClassName, {
-    [`${prefixCls}-dropdown-${direction}`]: direction === 'rtl'
-  }, rootClassName, cssVarCls, rootCls, hashId);
-  const mergedPopupStyle = {
-    ...mergedStyles.popup?.root,
-    ...(popupStyle ?? dropdownStyle)
-  };
-  const mergedClassName = clsx({
-    [`${prefixCls}-lg`]: mergedSize === 'large',
-    [`${prefixCls}-sm`]: mergedSize === 'small',
-    [`${prefixCls}-rtl`]: direction === 'rtl',
-    [`${prefixCls}-${variant}`]: enableVariantCls,
-    [`${prefixCls}-in-form-item`]: isFormItemInput
-  }, getStatusClassNames(prefixCls, mergedStatus, hasFeedback), compactItemClassnames, contextClassName, className, mergedClassNames.root, rootClassName, cssVarCls, rootCls, hashId);
-  // ===================== Placement =====================
-  const memoPlacement = (react_production_namespaceFn().useMemo)(() => {
-    if (placement !== undefined) {
-      return placement;
-    }
-    return direction === 'rtl' ? 'bottomRight' : 'bottomLeft';
-  }, [placement, direction]);
-  // ====================== Warning ======================
-  if (false) // removed by dead control flow
-{}
-  // ====================== zIndex =========================
-  const [zIndex] = useZIndex('SelectLike', mergedStyles.popup.root?.zIndex ?? mergedPopupStyle.zIndex);
-  // ====================== Render =======================
-  return /*#__PURE__*/(react_production_namespaceFn().createElement)(select_es, {
-    ref: ref,
-    virtual: virtual,
-    classNames: mergedClassNames,
-    styles: mergedStyles,
-    showSearch: mergedShowSearch,
-    ...selectProps,
-    style: mergedStyles.root,
-    popupMatchSelectWidth: mergedPopupMatchSelectWidth,
-    transitionName: motion_getTransitionName(rootPrefixCls, 'slide-up', transitionName),
-    builtinPlacements: select_mergedBuiltinPlacements(builtinPlacements, popupOverflow),
-    listHeight: listHeight,
-    listItemHeight: listItemHeight,
-    mode: mode,
-    prefixCls: prefixCls,
-    placement: memoPlacement,
-    direction: direction,
-    prefix: prefix,
-    suffixIcon: suffixIcon,
-    menuItemSelectedIcon: itemIcon,
-    removeIcon: removeIcon,
-    allowClear: mergedAllowClear,
-    notFoundContent: mergedNotFound,
-    className: mergedClassName,
-    getPopupContainer: getPopupContainer || getContextPopupContainer,
-    popupClassName: mergedPopupClassName,
-    disabled: mergedDisabled,
-    popupStyle: {
-      ...mergedStyles.popup.root,
-      ...mergedPopupStyle,
-      zIndex
-    },
-    maxCount: isMultiple ? maxCount : undefined,
-    tagRender: isMultiple ? tagRender : undefined,
-    popupRender: mergedPopupRender,
-    onPopupVisibleChange: mergedOnOpenChange
-  });
-};
-if (false) // removed by dead control flow
-{}
-const select_Select = /*#__PURE__*/(react_production_namespaceFn().forwardRef)(InternalSelect);
-// We don't care debug panel
-/* istanbul ignore next */
-const select_PurePanel = _util_PurePanel(select_Select, 'popupAlign');
-select_Select.SECRET_COMBOBOX_MODE_DO_NOT_USE = SECRET_COMBOBOX_MODE_DO_NOT_USE;
-select_Select.Option = es_Option;
-select_Select.OptGroup = es_OptGroup;
-select_Select._InternalPanelDoNotUseOrYouWillBeFired = select_PurePanel;
-if (false) // removed by dead control flow
-{}
-/* harmony default export */ const es_select = (select_Select);
 ;// ./node_modules/devlop/lib/default.js
 function deprecate(fn) {
   return fn
@@ -110323,10 +104729,11 @@ function remarkBreaks() {
   }
 }
 
-;// ./src/lib/ui/agent/MarkdownBody.tsx
+;// ./src/lib/ui/MarkdownBody.tsx
 
 /**
- * Agent 消息的 Markdown 渲染（v26.10.10-v14 起，对话页签两侧消息都走它）。
+ * 聊天消息的 Markdown 渲染（v26.10.10-v14 起；原文案为「Agent 消息」，v26.10.13-v9 删掉 Agent
+ * 之后成为**传输助手第三栏消息气泡**的公共渲染件 —— 收发两侧的文本消息都走它）。
  *
  * 为什么是 react-markdown + remark-gfm（选型实测数据见 AGENT.md）：
  *   · **默认不渲染原始 HTML** —— 没有 `rehype-raw`，模型输出里的 `<img onerror=…>` /`<script>`
@@ -110428,6895 +104835,6 @@ function MarkdownBody({ content, inverted }) {
                 input: ({ checked, type }) => ((0,react_jsx_runtime_production_namespaceFn().jsx)("input", { type: type, checked: checked, readOnly: true, style: { marginRight: 4, verticalAlign: 'middle' } })),
                 strong: ({ children }) => (0,react_jsx_runtime_production_namespaceFn().jsx)("strong", { style: { fontWeight: 600 }, children: children }),
             }, children: content }) }));
-}
-
-;// ./node_modules/antd/es/_util/responsiveObserver.js
-
-
-
-const responsiveArray = ['xxxl', 'xxl', 'xl', 'lg', 'md', 'sm', 'xs'];
-const responsiveArrayReversed = [].concat(responsiveArray).reverse();
-const getResponsiveMap = token => ({
-  xs: `(max-width: ${token.screenXSMax}px)`,
-  sm: `(min-width: ${token.screenSM}px)`,
-  md: `(min-width: ${token.screenMD}px)`,
-  lg: `(min-width: ${token.screenLG}px)`,
-  xl: `(min-width: ${token.screenXL}px)`,
-  xxl: `(min-width: ${token.screenXXL}px)`,
-  xxxl: `(min-width: ${token.screenXXXL}px)`
-});
-/**
- * Ensures that the breakpoints token are valid, in good order
- * For each breakpoint : screenMin <= screen <= screenMax and screenMax <= nextScreenMin
- */
-const validateBreakpoints = token => {
-  const indexableToken = token;
-  const revBreakpoints = [].concat(responsiveArray).reverse();
-  revBreakpoints.forEach((breakpoint, i) => {
-    const breakpointUpper = breakpoint.toUpperCase();
-    const screenMin = `screen${breakpointUpper}Min`;
-    const screen = `screen${breakpointUpper}`;
-    if (!(indexableToken[screenMin] <= indexableToken[screen])) {
-      throw new Error(`${screenMin}<=${screen} fails : !(${indexableToken[screenMin]}<=${indexableToken[screen]})`);
-    }
-    if (i < revBreakpoints.length - 1) {
-      const screenMax = `screen${breakpointUpper}Max`;
-      if (!(indexableToken[screen] <= indexableToken[screenMax])) {
-        throw new Error(`${screen}<=${screenMax} fails : !(${indexableToken[screen]}<=${indexableToken[screenMax]})`);
-      }
-      const nextBreakpointUpperMin = revBreakpoints[i + 1].toUpperCase();
-      const nextScreenMin = `screen${nextBreakpointUpperMin}Min`;
-      if (!(indexableToken[screenMax] <= indexableToken[nextScreenMin])) {
-        throw new Error(`${screenMax}<=${nextScreenMin} fails : !(${indexableToken[screenMax]}<=${indexableToken[nextScreenMin]})`);
-      }
-    }
-  });
-  return token;
-};
-const matchScreen = (screens, screenSizes) => {
-  if (!screenSizes) {
-    return;
-  }
-  for (const breakpoint of responsiveArray) {
-    if (screens[breakpoint] && screenSizes?.[breakpoint] !== undefined) {
-      return screenSizes[breakpoint];
-    }
-  }
-};
-const useResponsiveObserver = () => {
-  const [, token] = useToken();
-  const responsiveMap = getResponsiveMap(validateBreakpoints(token));
-  // To avoid repeat create instance, we add `useMemo` here.
-  return (react_production_namespaceFn().useMemo)(() => {
-    const subscribers = new Map();
-    let subUid = -1;
-    let screens = {};
-    return {
-      responsiveMap,
-      matchHandlers: {},
-      dispatch(pointMap) {
-        screens = pointMap;
-        subscribers.forEach(func => {
-          func(screens);
-        });
-        return subscribers.size >= 1;
-      },
-      subscribe(func) {
-        if (!subscribers.size) {
-          this.register();
-        }
-        subUid += 1;
-        subscribers.set(subUid, func);
-        func(screens);
-        return subUid;
-      },
-      unsubscribe(paramToken) {
-        subscribers.delete(paramToken);
-        if (!subscribers.size) {
-          this.unregister();
-        }
-      },
-      register() {
-        Object.entries(responsiveMap).forEach(([screen, mediaQuery]) => {
-          const listener = ({
-            matches
-          }) => {
-            this.dispatch({
-              ...screens,
-              [screen]: matches
-            });
-          };
-          const mql = window.matchMedia(mediaQuery);
-          if (isFunction(mql.addEventListener)) {
-            mql.addEventListener('change', listener);
-          }
-          this.matchHandlers[mediaQuery] = {
-            mql,
-            listener
-          };
-          listener(mql);
-        });
-      },
-      unregister() {
-        Object.values(responsiveMap).forEach(mediaQuery => {
-          const handler = this.matchHandlers[mediaQuery];
-          if (isFunction(handler?.mql.removeEventListener)) {
-            handler.mql.removeEventListener('change', handler?.listener);
-          }
-        });
-        subscribers.clear();
-      }
-    };
-  }, [responsiveMap]);
-};
-/* harmony default export */ const _util_responsiveObserver = (useResponsiveObserver);
-;// ./node_modules/antd/es/_util/hooks/useForceUpdate.js
-
-const useForceUpdate = () => {
-  return (react_production_namespaceFn().useReducer)(ori => ori + 1, 0);
-};
-;// ./node_modules/antd/es/grid/hooks/useBreakpoint.js
-"use client";
-
-
-
-
-
-function useBreakpoint(refreshOnChange = true, defaultScreens = {}) {
-  const screensRef = (0,react_production_namespaceFn().useRef)(defaultScreens);
-  const [, forceUpdate] = useForceUpdate();
-  const responsiveObserver = _util_responsiveObserver();
-  hooks_useLayoutEffect(() => {
-    const token = responsiveObserver.subscribe(supportScreens => {
-      screensRef.current = supportScreens;
-      if (refreshOnChange) {
-        forceUpdate();
-      }
-    });
-    return () => responsiveObserver.unsubscribe(token);
-  }, [refreshOnChange]);
-  return screensRef.current;
-}
-/* harmony default export */ const hooks_useBreakpoint = (useBreakpoint);
-;// ./node_modules/antd/es/grid/hooks/useGutter.js
-
-
-function useGutter(gutter, screens) {
-  const results = [undefined, undefined];
-  const normalizedGutter = Array.isArray(gutter) ? gutter : [gutter, undefined];
-  // By default use as `xs`
-  const mergedScreens = screens || {
-    xs: true,
-    sm: true,
-    md: true,
-    lg: true,
-    xl: true,
-    xxl: true,
-    xxxl: true
-  };
-  normalizedGutter.forEach((g, index) => {
-    if (is_isPlainObject(g)) {
-      for (let i = 0; i < responsiveArray.length; i++) {
-        const breakpoint = responsiveArray[i];
-        if (mergedScreens[breakpoint] && g[breakpoint] !== undefined) {
-          results[index] = g[breakpoint];
-          break;
-        }
-      }
-    } else {
-      results[index] = g;
-    }
-  });
-  return results;
-}
-;// ./node_modules/antd/es/grid/RowContext.js
-
-const RowContext = /*#__PURE__*/(0,react_production_namespaceFn().createContext)({});
-/* harmony default export */ const grid_RowContext = (RowContext);
-;// ./node_modules/antd/es/grid/row.js
-"use client";
-
-
-
-
-
-
-
-
-
-
-const _RowAligns = (/* unused pure expression or super */ null && (['top', 'middle', 'bottom', 'stretch']));
-const _RowJustify = (/* unused pure expression or super */ null && (['start', 'end', 'center', 'space-around', 'space-between', 'space-evenly']));
-const getMergedPropByScreen = (oriProp, screen) => {
-  if (isString(oriProp)) {
-    return oriProp;
-  }
-  if (is_isPlainObject(oriProp)) {
-    for (let i = 0; i < responsiveArray.length; i++) {
-      const breakpoint = responsiveArray[i];
-      if (!screen || !screen[breakpoint]) {
-        continue;
-      }
-      const curVal = oriProp[breakpoint];
-      if (curVal !== undefined) {
-        return curVal;
-      }
-    }
-  }
-  return '';
-};
-const Row = /*#__PURE__*/(react_production_namespaceFn().forwardRef)((props, ref) => {
-  const {
-    prefixCls: customizePrefixCls,
-    justify,
-    align,
-    className,
-    style,
-    children,
-    gutter = 0,
-    wrap,
-    ...others
-  } = props;
-  const {
-    getPrefixCls,
-    direction
-  } = (react_production_namespaceFn().useContext)(ConfigContext);
-  const screens = hooks_useBreakpoint(true, null);
-  const mergedAlign = getMergedPropByScreen(align, screens);
-  const mergedJustify = getMergedPropByScreen(justify, screens);
-  const prefixCls = getPrefixCls('row', customizePrefixCls);
-  const [hashId, cssVarCls] = useRowStyle(prefixCls);
-  const gutters = useGutter(gutter, screens);
-  const classes = clsx(prefixCls, {
-    [`${prefixCls}-no-wrap`]: wrap === false,
-    [`${prefixCls}-${mergedJustify}`]: mergedJustify,
-    [`${prefixCls}-${mergedAlign}`]: mergedAlign,
-    [`${prefixCls}-rtl`]: direction === 'rtl'
-  }, className, hashId, cssVarCls);
-  // Add gutter related style
-  const rowStyle = {};
-  if (gutters?.[0]) {
-    const horizontalGutter = isNumber(gutters[0]) ? `${gutters[0] / -2}px` : `calc(${gutters[0]} / -2)`;
-    rowStyle.marginInline = horizontalGutter;
-  }
-  // "gutters" is a new array in each rendering phase, it'll make 'React.useMemo' effectless.
-  // So we deconstruct "gutters" variable here.
-  const [gutterH, gutterV] = gutters;
-  rowStyle.rowGap = gutterV;
-  const rowContext = (react_production_namespaceFn().useMemo)(() => ({
-    gutter: [gutterH, gutterV],
-    wrap
-  }), [gutterH, gutterV, wrap]);
-  return /*#__PURE__*/(react_production_namespaceFn().createElement)(grid_RowContext.Provider, {
-    value: rowContext
-  }, /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
-    ...others,
-    className: classes,
-    style: {
-      ...rowStyle,
-      ...style
-    },
-    ref: ref
-  }, children));
-});
-if (false) // removed by dead control flow
-{}
-/* harmony default export */ const grid_row = (Row);
-;// ./node_modules/@ant-design/icons-svg/es/asn/DoubleLeftOutlined.js
-// This icon file is generated automatically.
-var DoubleLeftOutlined = { "icon": { "tag": "svg", "attrs": { "viewBox": "64 64 896 896", "focusable": "false" }, "children": [{ "tag": "path", "attrs": { "d": "M272.9 512l265.4-339.1c4.1-5.2.4-12.9-6.3-12.9h-77.3c-4.9 0-9.6 2.3-12.6 6.1L186.8 492.3a31.99 31.99 0 000 39.5l255.3 326.1c3 3.9 7.7 6.1 12.6 6.1H532c6.7 0 10.4-7.7 6.3-12.9L272.9 512zm304 0l265.4-339.1c4.1-5.2.4-12.9-6.3-12.9h-77.3c-4.9 0-9.6 2.3-12.6 6.1L490.8 492.3a31.99 31.99 0 000 39.5l255.3 326.1c3 3.9 7.7 6.1 12.6 6.1H836c6.7 0 10.4-7.7 6.3-12.9L576.9 512z" } }] }, "name": "double-left", "theme": "outlined" };
-/* harmony default export */ const asn_DoubleLeftOutlined = (DoubleLeftOutlined);
-
-;// ./node_modules/@ant-design/icons/es/icons/DoubleLeftOutlined.js
-function DoubleLeftOutlined_extends() { DoubleLeftOutlined_extends = Object.assign ? Object.assign.bind() : function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; }; return DoubleLeftOutlined_extends.apply(this, arguments); }
-// GENERATED BY ./scripts/generate.ts
-// DO NOT EDIT IT MANUALLY
-
-;
-
-
-const DoubleLeftOutlined_DoubleLeftOutlined = (props, ref) => /*#__PURE__*/(react_production_namespaceFn().createElement)(AntdIconLight, DoubleLeftOutlined_extends({}, props, {
-  ref: ref,
-  icon: asn_DoubleLeftOutlined
-}));
-
-/**![double-left](data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTAiIGhlaWdodD0iNTAiIGZpbGw9IiNjYWNhY2EiIHZpZXdCb3g9IjY0IDY0IDg5NiA4OTYiIGZvY3VzYWJsZT0iZmFsc2UiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHBhdGggZD0iTTI3Mi45IDUxMmwyNjUuNC0zMzkuMWM0LjEtNS4yLjQtMTIuOS02LjMtMTIuOWgtNzcuM2MtNC45IDAtOS42IDIuMy0xMi42IDYuMUwxODYuOCA0OTIuM2EzMS45OSAzMS45OSAwIDAwMCAzOS41bDI1NS4zIDMyNi4xYzMgMy45IDcuNyA2LjEgMTIuNiA2LjFINTMyYzYuNyAwIDEwLjQtNy43IDYuMy0xMi45TDI3Mi45IDUxMnptMzA0IDBsMjY1LjQtMzM5LjFjNC4xLTUuMi40LTEyLjktNi4zLTEyLjloLTc3LjNjLTQuOSAwLTkuNiAyLjMtMTIuNiA2LjFMNDkwLjggNDkyLjNhMzEuOTkgMzEuOTkgMCAwMDAgMzkuNWwyNTUuMyAzMjYuMWMzIDMuOSA3LjcgNi4xIDEyLjYgNi4xSDgzNmM2LjcgMCAxMC40LTcuNyA2LjMtMTIuOUw1NzYuOSA1MTJ6IiAvPjwvc3ZnPg==) */
-const DoubleLeftOutlined_RefIcon = /*#__PURE__*/(react_production_namespaceFn().forwardRef)(DoubleLeftOutlined_DoubleLeftOutlined);
-if (false) // removed by dead control flow
-{}
-/* harmony default export */ const icons_DoubleLeftOutlined = (DoubleLeftOutlined_RefIcon);
-;// ./node_modules/@ant-design/icons-svg/es/asn/DoubleRightOutlined.js
-// This icon file is generated automatically.
-var DoubleRightOutlined = { "icon": { "tag": "svg", "attrs": { "viewBox": "64 64 896 896", "focusable": "false" }, "children": [{ "tag": "path", "attrs": { "d": "M533.2 492.3L277.9 166.1c-3-3.9-7.7-6.1-12.6-6.1H188c-6.7 0-10.4 7.7-6.3 12.9L447.1 512 181.7 851.1A7.98 7.98 0 00188 864h77.3c4.9 0 9.6-2.3 12.6-6.1l255.3-326.1c9.1-11.7 9.1-27.9 0-39.5zm304 0L581.9 166.1c-3-3.9-7.7-6.1-12.6-6.1H492c-6.7 0-10.4 7.7-6.3 12.9L751.1 512 485.7 851.1A7.98 7.98 0 00492 864h77.3c4.9 0 9.6-2.3 12.6-6.1l255.3-326.1c9.1-11.7 9.1-27.9 0-39.5z" } }] }, "name": "double-right", "theme": "outlined" };
-/* harmony default export */ const asn_DoubleRightOutlined = (DoubleRightOutlined);
-
-;// ./node_modules/@ant-design/icons/es/icons/DoubleRightOutlined.js
-function DoubleRightOutlined_extends() { DoubleRightOutlined_extends = Object.assign ? Object.assign.bind() : function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; }; return DoubleRightOutlined_extends.apply(this, arguments); }
-// GENERATED BY ./scripts/generate.ts
-// DO NOT EDIT IT MANUALLY
-
-;
-
-
-const DoubleRightOutlined_DoubleRightOutlined = (props, ref) => /*#__PURE__*/(react_production_namespaceFn().createElement)(AntdIconLight, DoubleRightOutlined_extends({}, props, {
-  ref: ref,
-  icon: asn_DoubleRightOutlined
-}));
-
-/**![double-right](data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTAiIGhlaWdodD0iNTAiIGZpbGw9IiNjYWNhY2EiIHZpZXdCb3g9IjY0IDY0IDg5NiA4OTYiIGZvY3VzYWJsZT0iZmFsc2UiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHBhdGggZD0iTTUzMy4yIDQ5Mi4zTDI3Ny45IDE2Ni4xYy0zLTMuOS03LjctNi4xLTEyLjYtNi4xSDE4OGMtNi43IDAtMTAuNCA3LjctNi4zIDEyLjlMNDQ3LjEgNTEyIDE4MS43IDg1MS4xQTcuOTggNy45OCAwIDAwMTg4IDg2NGg3Ny4zYzQuOSAwIDkuNi0yLjMgMTIuNi02LjFsMjU1LjMtMzI2LjFjOS4xLTExLjcgOS4xLTI3LjkgMC0zOS41em0zMDQgMEw1ODEuOSAxNjYuMWMtMy0zLjktNy43LTYuMS0xMi42LTYuMUg0OTJjLTYuNyAwLTEwLjQgNy43LTYuMyAxMi45TDc1MS4xIDUxMiA0ODUuNyA4NTEuMUE3Ljk4IDcuOTggMCAwMDQ5MiA4NjRoNzcuM2M0LjkgMCA5LjYtMi4zIDEyLjYtNi4xbDI1NS4zLTMyNi4xYzkuMS0xMS43IDkuMS0yNy45IDAtMzkuNXoiIC8+PC9zdmc+) */
-const DoubleRightOutlined_RefIcon = /*#__PURE__*/(react_production_namespaceFn().forwardRef)(DoubleRightOutlined_DoubleRightOutlined);
-if (false) // removed by dead control flow
-{}
-/* harmony default export */ const icons_DoubleRightOutlined = (DoubleRightOutlined_RefIcon);
-;// ./node_modules/@rc-component/pagination/es/locale/zh_CN.js
-const zh_CN_locale = {
-  // Options
-  items_per_page: '条/页',
-  jump_to: '跳至',
-  jump_to_confirm: '确定',
-  page: '页',
-  // Pagination
-  prev_page: '上一页',
-  next_page: '下一页',
-  prev_5: '向前 5 页',
-  next_5: '向后 5 页',
-  prev_3: '向前 3 页',
-  next_3: '向后 3 页',
-  page_size: '页码'
-};
-/* harmony default export */ const locale_zh_CN = (zh_CN_locale);
-;// ./node_modules/@rc-component/pagination/es/Options.js
-
-
-const defaultPageSizeOptions = [10, 20, 50, 100];
-const Options_Options = props => {
-  const {
-    pageSizeOptions = defaultPageSizeOptions,
-    locale,
-    changeSize,
-    pageSize,
-    goButton,
-    quickGo,
-    rootPrefixCls,
-    disabled,
-    buildOptionText,
-    showSizeChanger,
-    sizeChangerRender
-  } = props;
-  const [goInputText, setGoInputText] = (react_production_namespaceFn().useState)('');
-  const getValidValue = (react_production_namespaceFn().useMemo)(() => {
-    return !goInputText || Number.isNaN(goInputText) ? undefined : Number(goInputText);
-  }, [goInputText]);
-  const mergeBuildOptionText = typeof buildOptionText === 'function' ? buildOptionText : value => `${value} ${locale.items_per_page}`;
-  const handleChange = e => {
-    const value = e.target.value;
-    if (/^\d*$/.test(value)) {
-      setGoInputText(value);
-    }
-  };
-  const handleBlur = e => {
-    if (goButton || goInputText === '') {
-      return;
-    }
-    setGoInputText('');
-    if (e.relatedTarget && (e.relatedTarget.className.includes(`${rootPrefixCls}-item-link`) || e.relatedTarget.className.includes(`${rootPrefixCls}-item`))) {
-      return;
-    }
-    quickGo?.(getValidValue);
-  };
-  const go = e => {
-    if (goInputText === '') {
-      return;
-    }
-    if (e.keyCode === es_KeyCode.ENTER || e.type === 'click') {
-      setGoInputText('');
-      quickGo?.(getValidValue);
-    }
-  };
-  const getPageSizeOptions = () => {
-    if (pageSizeOptions.some(option => option.toString() === pageSize.toString())) {
-      return pageSizeOptions;
-    }
-    return pageSizeOptions.concat([pageSize]).sort((a, b) => {
-      const numberA = Number.isNaN(Number(a)) ? 0 : Number(a);
-      const numberB = Number.isNaN(Number(b)) ? 0 : Number(b);
-      return numberA - numberB;
-    });
-  };
-  // ============== cls ==============
-  const prefixCls = `${rootPrefixCls}-options`;
-
-  // ============== render ==============
-
-  if (!showSizeChanger && !quickGo) {
-    return null;
-  }
-  let changeSelect = null;
-  let goInput = null;
-  let gotoButton = null;
-
-  // >>>>> Size Changer
-  if (showSizeChanger && sizeChangerRender) {
-    changeSelect = sizeChangerRender({
-      disabled,
-      size: pageSize,
-      onSizeChange: nextValue => {
-        changeSize?.(Number(nextValue));
-      },
-      'aria-label': locale.page_size,
-      className: `${prefixCls}-size-changer`,
-      options: getPageSizeOptions().map(opt => ({
-        label: mergeBuildOptionText(opt),
-        value: opt
-      }))
-    });
-  }
-
-  // >>>>> Quick Go
-  if (quickGo) {
-    if (goButton) {
-      gotoButton = typeof goButton === 'boolean' ? /*#__PURE__*/(react_production_namespaceFn().createElement)("button", {
-        type: "button",
-        onClick: go,
-        onKeyUp: go,
-        disabled: disabled,
-        className: `${prefixCls}-quick-jumper-button`
-      }, locale.jump_to_confirm) : /*#__PURE__*/(react_production_namespaceFn().createElement)("span", {
-        onClick: go,
-        onKeyUp: go
-      }, goButton);
-    }
-    goInput = /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
-      className: `${prefixCls}-quick-jumper`
-    }, locale.jump_to, /*#__PURE__*/(react_production_namespaceFn().createElement)("input", {
-      disabled: disabled,
-      type: "text",
-      value: goInputText,
-      onChange: handleChange,
-      onKeyUp: go,
-      onBlur: handleBlur,
-      "aria-label": locale.page
-    }), locale.page, gotoButton);
-  }
-  return /*#__PURE__*/(react_production_namespaceFn().createElement)("li", {
-    className: prefixCls
-  }, changeSelect, goInput);
-};
-if (false) // removed by dead control flow
-{}
-/* harmony default export */ const es_Options = (Options_Options);
-;// ./node_modules/@rc-component/pagination/es/Pager.js
-/* eslint react/prop-types: 0 */
-
-
-const Pager = props => {
-  const {
-    rootPrefixCls,
-    page,
-    active,
-    className,
-    style,
-    showTitle,
-    onClick,
-    onKeyPress,
-    itemRender
-  } = props;
-  const prefixCls = `${rootPrefixCls}-item`;
-  const cls = clsx(prefixCls, `${prefixCls}-${page}`, {
-    [`${prefixCls}-active`]: active,
-    [`${prefixCls}-disabled`]: !page
-  }, className);
-  const handleClick = () => {
-    onClick(page);
-  };
-  const handleKeyPress = e => {
-    onKeyPress(e, onClick, page);
-  };
-  const pager = itemRender(page, 'page', /*#__PURE__*/(react_production_namespaceFn().createElement)("a", {
-    rel: "nofollow"
-  }, page));
-  return pager ? /*#__PURE__*/(react_production_namespaceFn().createElement)("li", {
-    title: showTitle ? String(page) : null,
-    className: cls,
-    style: style,
-    onClick: handleClick,
-    onKeyDown: handleKeyPress,
-    tabIndex: 0
-  }, pager) : null;
-};
-if (false) // removed by dead control flow
-{}
-/* harmony default export */ const es_Pager = (Pager);
-;// ./node_modules/@rc-component/pagination/es/Pagination.js
-function Pagination_extends() { Pagination_extends = Object.assign ? Object.assign.bind() : function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; }; return Pagination_extends.apply(this, arguments); }
-;
-
-
-
-
-
-const defaultItemRender = (_, __, element) => element;
-function Pagination_noop() {}
-function isInteger(v) {
-  const value = Number(v);
-  return typeof value === 'number' && !Number.isNaN(value) && isFinite(value) && Math.floor(value) === value;
-}
-function calculatePage(p, pageSize, total) {
-  const _pageSize = typeof p === 'undefined' ? pageSize : p;
-  return Math.floor((total - 1) / _pageSize) + 1;
-}
-const Pagination_Pagination = props => {
-  const {
-    // cls
-    prefixCls = 'rc-pagination',
-    selectPrefixCls = 'rc-select',
-    className,
-    classNames: paginationClassNames,
-    styles,
-    // control
-    current: currentProp,
-    defaultCurrent = 1,
-    total = 0,
-    pageSize: pageSizeProp,
-    defaultPageSize = 10,
-    onChange = Pagination_noop,
-    // config
-    hideOnSinglePage,
-    align,
-    showPrevNextJumpers = true,
-    showQuickJumper,
-    showLessItems,
-    showTitle = true,
-    onShowSizeChange = Pagination_noop,
-    locale = locale_zh_CN,
-    style,
-    totalBoundaryShowSizeChanger = 50,
-    disabled,
-    simple,
-    showTotal,
-    showSizeChanger = total > totalBoundaryShowSizeChanger,
-    sizeChangerRender,
-    pageSizeOptions,
-    // render
-    itemRender = defaultItemRender,
-    jumpPrevIcon,
-    jumpNextIcon,
-    prevIcon,
-    nextIcon
-  } = props;
-  const paginationRef = (react_production_namespaceFn().useRef)(null);
-  const [pageSize, setPageSize] = useControlledState(defaultPageSize, pageSizeProp);
-  const [internalCurrent, setCurrent] = useControlledState(defaultCurrent, currentProp);
-  const current = Math.max(1, Math.min(internalCurrent, calculatePage(undefined, pageSize, total)));
-  const [internalInputVal, setInternalInputVal] = (react_production_namespaceFn().useState)(current);
-  (0,react_production_namespaceFn().useEffect)(() => {
-    setInternalInputVal(current);
-  }, [current]);
-  const hasOnChange = onChange !== Pagination_noop;
-  const hasCurrent = ('current' in props);
-  if (false) // removed by dead control flow
-{}
-  const jumpPrevPage = Math.max(1, current - (showLessItems ? 3 : 5));
-  const jumpNextPage = Math.min(calculatePage(undefined, pageSize, total), current + (showLessItems ? 3 : 5));
-  function getItemIcon(icon, label) {
-    let iconNode = icon || /*#__PURE__*/(react_production_namespaceFn().createElement)("button", {
-      type: "button",
-      "aria-label": label,
-      className: `${prefixCls}-item-link`
-    });
-    if (typeof icon === 'function') {
-      iconNode = /*#__PURE__*/(react_production_namespaceFn().createElement)(icon, props);
-    }
-    return iconNode;
-  }
-  function getValidValue(e) {
-    const inputValue = e.target.value;
-    const allPages = calculatePage(undefined, pageSize, total);
-    let value;
-    if (inputValue === '') {
-      value = inputValue;
-    } else if (Number.isNaN(Number(inputValue))) {
-      value = internalInputVal;
-    } else if (inputValue >= allPages) {
-      value = allPages;
-    } else {
-      value = Number(inputValue);
-    }
-    return value;
-  }
-  function isValid(page) {
-    return isInteger(page) && page !== current && isInteger(total) && total > 0;
-  }
-  const shouldDisplayQuickJumper = total > pageSize ? showQuickJumper : false;
-
-  /**
-   * prevent "up arrow" key reseting cursor position within textbox
-   * @see https://stackoverflow.com/a/1081114
-   */
-  function handleKeyDown(event) {
-    if (event.keyCode === es_KeyCode.UP || event.keyCode === es_KeyCode.DOWN) {
-      event.preventDefault();
-    }
-  }
-  function handleKeyUp(event) {
-    const value = getValidValue(event);
-    if (value !== internalInputVal) {
-      setInternalInputVal(value);
-    }
-    switch (event.keyCode) {
-      case es_KeyCode.ENTER:
-        handleChange(value);
-        break;
-      case es_KeyCode.UP:
-        handleChange(value - 1);
-        break;
-      case es_KeyCode.DOWN:
-        handleChange(value + 1);
-        break;
-      default:
-        break;
-    }
-  }
-  function handleBlur(event) {
-    handleChange(getValidValue(event));
-  }
-  function changePageSize(size) {
-    const newCurrent = calculatePage(size, pageSize, total);
-    const nextCurrent = current > newCurrent && newCurrent !== 0 ? newCurrent : current;
-    setPageSize(size);
-    setInternalInputVal(nextCurrent);
-    onShowSizeChange?.(current, size);
-    setCurrent(nextCurrent);
-    onChange?.(nextCurrent, size);
-  }
-  function handleChange(page) {
-    if (isValid(page) && !disabled) {
-      const currentPage = calculatePage(undefined, pageSize, total);
-      let newPage = page;
-      if (page > currentPage) {
-        newPage = currentPage;
-      } else if (page < 1) {
-        newPage = 1;
-      }
-      if (newPage !== internalInputVal) {
-        setInternalInputVal(newPage);
-      }
-      setCurrent(newPage);
-      onChange?.(newPage, pageSize);
-      return newPage;
-    }
-    return current;
-  }
-  const hasPrev = current > 1;
-  const hasNext = current < calculatePage(undefined, pageSize, total);
-  function prevHandle() {
-    if (hasPrev) handleChange(current - 1);
-  }
-  function nextHandle() {
-    if (hasNext) handleChange(current + 1);
-  }
-  function jumpPrevHandle() {
-    handleChange(jumpPrevPage);
-  }
-  function jumpNextHandle() {
-    handleChange(jumpNextPage);
-  }
-  function runIfEnter(event, callback, ...restParams) {
-    if (event.key === 'Enter' || event.charCode === es_KeyCode.ENTER || event.keyCode === es_KeyCode.ENTER) {
-      callback(...restParams);
-    }
-  }
-  function runIfEnterPrev(event) {
-    runIfEnter(event, prevHandle);
-  }
-  function runIfEnterNext(event) {
-    runIfEnter(event, nextHandle);
-  }
-  function runIfEnterJumpPrev(event) {
-    runIfEnter(event, jumpPrevHandle);
-  }
-  function runIfEnterJumpNext(event) {
-    runIfEnter(event, jumpNextHandle);
-  }
-  function renderPrev(prevPage) {
-    const prevButton = itemRender(prevPage, 'prev', getItemIcon(prevIcon, 'prev page'));
-    return /*#__PURE__*/(react_production_namespaceFn().isValidElement)(prevButton) ? /*#__PURE__*/(react_production_namespaceFn().cloneElement)(prevButton, {
-      disabled: !hasPrev
-    }) : prevButton;
-  }
-  function renderNext(nextPage) {
-    const nextButton = itemRender(nextPage, 'next', getItemIcon(nextIcon, 'next page'));
-    return /*#__PURE__*/(react_production_namespaceFn().isValidElement)(nextButton) ? /*#__PURE__*/(react_production_namespaceFn().cloneElement)(nextButton, {
-      disabled: !hasNext
-    }) : nextButton;
-  }
-  function handleGoTO(event) {
-    if (event.type === 'click' || event.keyCode === es_KeyCode.ENTER) {
-      handleChange(internalInputVal);
-    }
-  }
-  let jumpPrev = null;
-  const dataOrAriaAttributeProps = pickAttrs(props, {
-    aria: true,
-    data: true
-  });
-  const totalText = showTotal && /*#__PURE__*/(react_production_namespaceFn().createElement)("li", {
-    className: `${prefixCls}-total-text`
-  }, showTotal(total, [total === 0 ? 0 : (current - 1) * pageSize + 1, current * pageSize > total ? total : current * pageSize]));
-  let jumpNext = null;
-  const allPages = calculatePage(undefined, pageSize, total);
-
-  // ================== Render ==================
-  // When hideOnSinglePage is true and there is only 1 page, hide the pager
-  if (hideOnSinglePage && total <= pageSize) {
-    return null;
-  }
-  const pagerList = [];
-  const pagerProps = {
-    rootPrefixCls: prefixCls,
-    onClick: handleChange,
-    onKeyPress: runIfEnter,
-    showTitle,
-    itemRender,
-    page: -1,
-    className: paginationClassNames?.item,
-    style: styles?.item
-  };
-  const prevPage = current - 1 > 0 ? current - 1 : 0;
-  const nextPage = current + 1 < allPages ? current + 1 : allPages;
-  const goButton = showQuickJumper && showQuickJumper.goButton;
-
-  // ================== Simple ==================
-  // FIXME: ts type
-  const isReadOnly = typeof simple === 'object' ? simple.readOnly : !simple;
-  let gotoButton = goButton;
-  let simplePager = null;
-  if (simple) {
-    // ====== Simple quick jump ======
-    if (goButton) {
-      if (typeof goButton === 'boolean') {
-        gotoButton = /*#__PURE__*/(react_production_namespaceFn().createElement)("button", {
-          type: "button",
-          onClick: handleGoTO,
-          onKeyUp: handleGoTO
-        }, locale.jump_to_confirm);
-      } else {
-        gotoButton = /*#__PURE__*/(react_production_namespaceFn().createElement)("span", {
-          onClick: handleGoTO,
-          onKeyUp: handleGoTO
-        }, goButton);
-      }
-      gotoButton = /*#__PURE__*/(react_production_namespaceFn().createElement)("li", {
-        title: showTitle ? `${locale.jump_to}${current}/${allPages}` : null,
-        className: `${prefixCls}-simple-pager`
-      }, gotoButton);
-    }
-    simplePager = /*#__PURE__*/(react_production_namespaceFn().createElement)("li", {
-      title: showTitle ? `${current}/${allPages}` : null,
-      className: clsx(`${prefixCls}-simple-pager`, paginationClassNames?.item),
-      style: styles?.item
-    }, isReadOnly ? internalInputVal : /*#__PURE__*/(react_production_namespaceFn().createElement)("input", {
-      type: "text",
-      "aria-label": locale.jump_to,
-      value: internalInputVal,
-      disabled: disabled,
-      onKeyDown: handleKeyDown,
-      onKeyUp: handleKeyUp,
-      onChange: handleKeyUp,
-      onBlur: handleBlur,
-      size: 3
-    }), /*#__PURE__*/(react_production_namespaceFn().createElement)("span", {
-      className: `${prefixCls}-slash`
-    }, "/"), allPages);
-  }
-
-  // ====================== Normal ======================
-  const pageBufferSize = showLessItems ? 1 : 2;
-  if (allPages <= 3 + pageBufferSize * 2) {
-    if (!allPages) {
-      pagerList.push( /*#__PURE__*/(react_production_namespaceFn().createElement)(es_Pager, Pagination_extends({}, pagerProps, {
-        key: "noPager",
-        page: 1,
-        className: `${prefixCls}-item-disabled`
-      })));
-    }
-    for (let i = 1; i <= allPages; i += 1) {
-      pagerList.push( /*#__PURE__*/(react_production_namespaceFn().createElement)(es_Pager, Pagination_extends({}, pagerProps, {
-        key: i,
-        page: i,
-        active: current === i
-      })));
-    }
-  } else {
-    const prevItemTitle = showLessItems ? locale.prev_3 : locale.prev_5;
-    const nextItemTitle = showLessItems ? locale.next_3 : locale.next_5;
-    const jumpPrevContent = itemRender(jumpPrevPage, 'jump-prev', getItemIcon(jumpPrevIcon, 'prev page'));
-    const jumpNextContent = itemRender(jumpNextPage, 'jump-next', getItemIcon(jumpNextIcon, 'next page'));
-    if (showPrevNextJumpers) {
-      jumpPrev = jumpPrevContent ? /*#__PURE__*/(react_production_namespaceFn().createElement)("li", {
-        title: showTitle ? prevItemTitle : null,
-        key: "prev",
-        onClick: jumpPrevHandle,
-        tabIndex: 0,
-        onKeyDown: runIfEnterJumpPrev,
-        className: clsx(`${prefixCls}-jump-prev`, {
-          [`${prefixCls}-jump-prev-custom-icon`]: !!jumpPrevIcon
-        })
-      }, jumpPrevContent) : null;
-      jumpNext = jumpNextContent ? /*#__PURE__*/(react_production_namespaceFn().createElement)("li", {
-        title: showTitle ? nextItemTitle : null,
-        key: "next",
-        onClick: jumpNextHandle,
-        tabIndex: 0,
-        onKeyDown: runIfEnterJumpNext,
-        className: clsx(`${prefixCls}-jump-next`, {
-          [`${prefixCls}-jump-next-custom-icon`]: !!jumpNextIcon
-        })
-      }, jumpNextContent) : null;
-    }
-    let left = Math.max(1, current - pageBufferSize);
-    let right = Math.min(current + pageBufferSize, allPages);
-    if (current - 1 <= pageBufferSize) {
-      right = 1 + pageBufferSize * 2;
-    }
-    if (allPages - current <= pageBufferSize) {
-      left = allPages - pageBufferSize * 2;
-    }
-    const hasJumpPrev = !!jumpPrev && current - 1 >= pageBufferSize * 2 && current !== 1 + 2;
-    const hasJumpNext = !!jumpNext && allPages - current >= pageBufferSize * 2 && current !== allPages - 2;
-    if (!showLessItems && hasJumpPrev && right !== allPages) {
-      left += 1;
-    }
-    if (!showLessItems && hasJumpNext && left !== 1) {
-      right -= 1;
-    }
-    for (let i = left; i <= right; i += 1) {
-      pagerList.push( /*#__PURE__*/(react_production_namespaceFn().createElement)(es_Pager, Pagination_extends({}, pagerProps, {
-        key: i,
-        page: i,
-        active: current === i
-      })));
-    }
-    if (hasJumpPrev) {
-      pagerList[0] = /*#__PURE__*/(react_production_namespaceFn().cloneElement)(pagerList[0], {
-        className: clsx(`${prefixCls}-item-after-jump-prev`, pagerList[0].props.className)
-      });
-      pagerList.unshift(jumpPrev);
-    }
-    if (hasJumpNext) {
-      const lastOne = pagerList[pagerList.length - 1];
-      pagerList[pagerList.length - 1] = /*#__PURE__*/(react_production_namespaceFn().cloneElement)(lastOne, {
-        className: clsx(`${prefixCls}-item-before-jump-next`, lastOne.props.className)
-      });
-      pagerList.push(jumpNext);
-    }
-    if (left !== 1) {
-      pagerList.unshift( /*#__PURE__*/(react_production_namespaceFn().createElement)(es_Pager, Pagination_extends({}, pagerProps, {
-        key: 1,
-        page: 1
-      })));
-    }
-    if (right !== allPages) {
-      pagerList.push( /*#__PURE__*/(react_production_namespaceFn().createElement)(es_Pager, Pagination_extends({}, pagerProps, {
-        key: allPages,
-        page: allPages
-      })));
-    }
-  }
-  let prev = renderPrev(prevPage);
-  if (prev) {
-    const prevDisabled = !hasPrev || !allPages;
-    prev = /*#__PURE__*/(react_production_namespaceFn().createElement)("li", {
-      title: showTitle ? locale.prev_page : null,
-      onClick: prevHandle,
-      tabIndex: prevDisabled ? null : 0,
-      onKeyDown: runIfEnterPrev,
-      className: clsx(`${prefixCls}-prev`, paginationClassNames?.item, {
-        [`${prefixCls}-disabled`]: prevDisabled
-      }),
-      style: styles?.item,
-      "aria-disabled": prevDisabled
-    }, prev);
-  }
-  let next = renderNext(nextPage);
-  if (next) {
-    let nextDisabled, nextTabIndex;
-    if (simple) {
-      nextDisabled = !hasNext;
-      nextTabIndex = hasPrev ? 0 : null;
-    } else {
-      nextDisabled = !hasNext || !allPages;
-      nextTabIndex = nextDisabled ? null : 0;
-    }
-    next = /*#__PURE__*/(react_production_namespaceFn().createElement)("li", {
-      title: showTitle ? locale.next_page : null,
-      onClick: nextHandle,
-      tabIndex: nextTabIndex,
-      onKeyDown: runIfEnterNext,
-      className: clsx(`${prefixCls}-next`, paginationClassNames?.item, {
-        [`${prefixCls}-disabled`]: nextDisabled
-      }),
-      style: styles?.item,
-      "aria-disabled": nextDisabled
-    }, next);
-  }
-  const cls = clsx(prefixCls, className, {
-    [`${prefixCls}-start`]: align === 'start',
-    [`${prefixCls}-center`]: align === 'center',
-    [`${prefixCls}-end`]: align === 'end',
-    [`${prefixCls}-simple`]: simple,
-    [`${prefixCls}-disabled`]: disabled
-  });
-  return /*#__PURE__*/(react_production_namespaceFn().createElement)("ul", Pagination_extends({
-    className: cls,
-    style: style,
-    ref: paginationRef
-  }, dataOrAriaAttributeProps), totalText, prev, simple ? simplePager : pagerList, next, /*#__PURE__*/(react_production_namespaceFn().createElement)(es_Options, {
-    locale: locale,
-    rootPrefixCls: prefixCls,
-    disabled: disabled,
-    selectPrefixCls: selectPrefixCls,
-    changeSize: changePageSize,
-    pageSize: pageSize,
-    pageSizeOptions: pageSizeOptions,
-    quickGo: shouldDisplayQuickJumper ? handleChange : null,
-    goButton: gotoButton,
-    showSizeChanger: showSizeChanger,
-    sizeChangerRender: sizeChangerRender
-  }));
-};
-if (false) // removed by dead control flow
-{}
-/* harmony default export */ const es_Pagination = (Pagination_Pagination);
-;// ./node_modules/@rc-component/pagination/es/index.js
-
-;// ./node_modules/antd/es/pagination/style/index.js
-
-
-
-
-
-
-const genPaginationDisabledStyle = token => {
-  const {
-    componentCls
-  } = token;
-  return {
-    [`${componentCls}-disabled`]: {
-      '&, &:hover': {
-        cursor: 'not-allowed',
-        [`${componentCls}-item-link`]: {
-          color: token.colorTextDisabled,
-          cursor: 'not-allowed'
-        }
-      },
-      '&:focus-visible': {
-        cursor: 'not-allowed',
-        [`${componentCls}-item-link`]: {
-          color: token.colorTextDisabled,
-          cursor: 'not-allowed'
-        }
-      }
-    },
-    [`&${componentCls}-disabled`]: {
-      cursor: 'not-allowed',
-      [`${componentCls}-item`]: {
-        cursor: 'not-allowed',
-        backgroundColor: 'transparent',
-        '&:hover, &:active': {
-          backgroundColor: 'transparent'
-        },
-        a: {
-          color: token.colorTextDisabled,
-          backgroundColor: 'transparent',
-          border: 'none',
-          cursor: 'not-allowed'
-        },
-        '&-active': {
-          borderColor: token.colorBorder,
-          backgroundColor: token.itemActiveBgDisabled,
-          '&:hover, &:active': {
-            backgroundColor: token.itemActiveBgDisabled
-          },
-          a: {
-            color: token.itemActiveColorDisabled
-          }
-        }
-      },
-      [`${componentCls}-item-link`]: {
-        color: token.colorTextDisabled,
-        cursor: 'not-allowed',
-        '&:hover, &:active': {
-          backgroundColor: 'transparent'
-        },
-        [`${componentCls}-simple&`]: {
-          backgroundColor: 'transparent',
-          '&:hover, &:active': {
-            backgroundColor: 'transparent'
-          }
-        }
-      },
-      [`${componentCls}-simple-pager`]: {
-        color: token.colorTextDisabled
-      },
-      [`${componentCls}-jump-prev, ${componentCls}-jump-next`]: {
-        [`${componentCls}-item-link-icon`]: {
-          opacity: 0
-        },
-        [`${componentCls}-item-ellipsis`]: {
-          opacity: 1
-        }
-      }
-    }
-  };
-};
-const genPaginationSmallStyle = token => {
-  const {
-    componentCls
-  } = token;
-  return {
-    [`&${componentCls}-small ${componentCls}-options`]: {
-      marginInlineStart: token.paginationMiniOptionsMarginInlineStart,
-      '&-quick-jumper': {
-        input: {
-          ...genInputSmallStyle(token),
-          width: token.paginationMiniQuickJumperInputWidth
-        }
-      }
-    }
-  };
-};
-const genPaginationLargeStyle = token => {
-  const {
-    componentCls
-  } = token;
-  return {
-    [`&${componentCls}-large ${componentCls}-options`]: {
-      '&-quick-jumper': {
-        input: {
-          ...genInputLargeStyle(token)
-        }
-      }
-    }
-  };
-};
-const genPaginationSimpleStyle = token => {
-  const {
-    componentCls,
-    antCls
-  } = token;
-  const [, varRef] = genCssVar(antCls, 'pagination');
-  return {
-    [`&${componentCls}-simple`]: {
-      [`${componentCls}-prev, ${componentCls}-next`]: {
-        height: varRef(`item-size-actual`),
-        lineHeight: varRef(`item-size-actual`),
-        verticalAlign: 'top',
-        [`${componentCls}-item-link`]: {
-          height: varRef(`item-size-actual`),
-          backgroundColor: 'transparent',
-          border: 0,
-          '&:hover': {
-            backgroundColor: token.colorBgTextHover
-          },
-          '&:active': {
-            backgroundColor: token.colorBgTextActive
-          },
-          '&::after': {
-            height: varRef(`item-size-actual`),
-            lineHeight: varRef(`item-size-actual`)
-          }
-        }
-      },
-      [`${componentCls}-simple-pager`]: {
-        display: 'inline-flex',
-        alignItems: 'center',
-        height: varRef(`item-size-actual`),
-        marginInlineEnd: varRef(`item-spacing-actual`),
-        input: {
-          boxSizing: 'border-box',
-          height: '100%',
-          width: token.quickJumperInputWidth,
-          padding: `0 ${util_unit(token.paginationItemPaddingInline)}`,
-          textAlign: 'center',
-          backgroundColor: token.itemInputBg,
-          border: `${util_unit(token.lineWidth)} ${token.lineType} ${token.colorBorder}`,
-          borderRadius: token.borderRadius,
-          outline: 'none',
-          transition: `border-color ${token.motionDurationMid}`,
-          color: 'inherit',
-          '&:hover': {
-            borderColor: token.colorPrimary
-          },
-          '&:focus': {
-            borderColor: token.colorPrimaryHover,
-            boxShadow: `${util_unit(token.inputOutlineOffset)} 0 ${util_unit(token.controlOutlineWidth)} ${token.controlOutline}`
-          },
-          '&[disabled]': {
-            color: token.colorTextDisabled,
-            backgroundColor: token.colorBgContainerDisabled,
-            borderColor: token.colorBorder,
-            cursor: 'not-allowed'
-          }
-        }
-      },
-      [`&${componentCls}-disabled`]: {
-        [`${componentCls}-prev, ${componentCls}-next`]: {
-          [`${componentCls}-item-link`]: {
-            '&:hover, &:active': {
-              backgroundColor: 'transparent'
-            }
-          }
-        }
-      },
-      [`&${componentCls}-small`]: {
-        [`${componentCls}-simple-pager`]: {
-          input: {
-            width: token.paginationMiniQuickJumperInputWidth
-          }
-        }
-      }
-    }
-  };
-};
-const genPaginationInputVariantStyle = token => {
-  const {
-    componentCls
-  } = token;
-  const inputSelector = `${componentCls}-options-quick-jumper input, ${componentCls}-simple-pager input`;
-  return {
-    [`&${componentCls}-filled`]: {
-      [inputSelector]: {
-        background: token.colorFillTertiary,
-        borderColor: 'transparent',
-        '&:hover': {
-          background: token.colorFillSecondary
-        },
-        '&:focus': {
-          borderColor: token.activeBorderColor,
-          outline: 0,
-          backgroundColor: token.activeBg
-        },
-        '&[disabled]': {
-          ...genDisabledStyle(token)
-        }
-      }
-    },
-    [`&${componentCls}-borderless`]: {
-      [inputSelector]: {
-        background: 'transparent',
-        border: 'none',
-        '&:focus': {
-          outline: 'none',
-          boxShadow: 'none'
-        },
-        '&[disabled]': {
-          color: token.colorTextDisabled,
-          cursor: 'not-allowed'
-        }
-      }
-    },
-    [`&${componentCls}-underlined`]: {
-      [inputSelector]: {
-        background: token.colorBgContainer,
-        borderWidth: `${util_unit(token.lineWidth)} 0`,
-        borderStyle: `${token.lineType} none`,
-        borderColor: `transparent transparent ${token.colorBorder} transparent`,
-        borderRadius: 0,
-        '&:hover': {
-          borderColor: `transparent transparent ${token.hoverBorderColor} transparent`,
-          backgroundColor: token.hoverBg
-        },
-        '&:focus': {
-          borderColor: `transparent transparent ${token.activeBorderColor} transparent`,
-          outline: 0,
-          backgroundColor: token.activeBg
-        },
-        '&[disabled]': {
-          color: token.colorTextDisabled,
-          boxShadow: 'none',
-          cursor: 'not-allowed'
-        }
-      }
-    }
-  };
-};
-const genPaginationJumpStyle = token => {
-  const {
-    componentCls,
-    iconCls,
-    sizeLG,
-    antCls
-  } = token;
-  const [, varRef] = genCssVar(antCls, 'pagination');
-  return {
-    [`${componentCls}-jump-prev, ${componentCls}-jump-next`]: {
-      outline: 0,
-      [`${componentCls}-item-container`]: {
-        position: 'relative',
-        [`${componentCls}-item-link-icon`]: {
-          color: token.colorPrimary,
-          fontSize: token.fontSizeSM,
-          opacity: 0,
-          transition: `all ${token.motionDurationMid}`,
-          '&-svg': {
-            top: 0,
-            insetInlineEnd: 0,
-            bottom: 0,
-            insetInlineStart: 0,
-            margin: 'auto'
-          }
-        },
-        [`${componentCls}-item-ellipsis`]: {
-          position: 'absolute',
-          inset: 0,
-          display: 'inline-flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          margin: 'auto',
-          color: token.colorTextDisabled,
-          textAlign: 'center',
-          opacity: 1,
-          transition: `all ${token.motionDurationMid}`,
-          [`${iconCls}-ellipsis > svg`]: {
-            width: sizeLG,
-            height: sizeLG
-          }
-        }
-      },
-      '&:hover': {
-        [`${componentCls}-item-link-icon`]: {
-          opacity: 1
-        },
-        [`${componentCls}-item-ellipsis`]: {
-          opacity: 0
-        }
-      }
-    },
-    [`
-    ${componentCls}-prev,
-    ${componentCls}-jump-prev,
-    ${componentCls}-jump-next
-    `]: {
-      marginInlineEnd: varRef(`item-spacing-actual`)
-    },
-    [`
-    ${componentCls}-prev,
-    ${componentCls}-next,
-    ${componentCls}-jump-prev,
-    ${componentCls}-jump-next
-    `]: {
-      display: 'inline-block',
-      minWidth: varRef(`item-size-actual`),
-      height: varRef(`item-size-actual`),
-      color: token.colorText,
-      fontFamily: token.fontFamily,
-      lineHeight: varRef(`item-size-actual`),
-      textAlign: 'center',
-      verticalAlign: 'middle',
-      listStyle: 'none',
-      borderRadius: token.borderRadius,
-      cursor: 'pointer',
-      transition: `all ${token.motionDurationMid}`
-    },
-    [`${componentCls}-prev, ${componentCls}-next`]: {
-      outline: 0,
-      button: {
-        color: token.colorText,
-        cursor: 'pointer',
-        userSelect: 'none'
-      },
-      [`${componentCls}-item-link`]: {
-        display: 'block',
-        width: '100%',
-        height: '100%',
-        padding: 0,
-        fontSize: token.fontSizeSM,
-        textAlign: 'center',
-        backgroundColor: 'transparent',
-        border: `${util_unit(token.lineWidth)} ${token.lineType} transparent`,
-        borderRadius: token.borderRadius,
-        outline: 'none',
-        transition: `all ${token.motionDurationMid}`
-      },
-      [`&:hover ${componentCls}-item-link`]: {
-        backgroundColor: token.colorBgTextHover
-      },
-      [`&:active ${componentCls}-item-link`]: {
-        backgroundColor: token.colorBgTextActive
-      },
-      [`&${componentCls}-disabled:hover`]: {
-        [`${componentCls}-item-link`]: {
-          backgroundColor: 'transparent'
-        }
-      }
-    },
-    [`${componentCls}-slash`]: {
-      marginInlineEnd: token.paginationSlashMarginInlineEnd,
-      marginInlineStart: token.paginationSlashMarginInlineStart
-    },
-    [`${componentCls}-options`]: {
-      display: 'inline-block',
-      marginInlineStart: token.margin,
-      verticalAlign: 'middle',
-      [`&-size-changer, &-size-changer${componentCls}-options-size-changer-select`]: {
-        width: 'auto'
-      },
-      '&-quick-jumper': {
-        display: 'inline-block',
-        height: varRef(`item-size-actual`),
-        marginInlineStart: token.marginXS,
-        lineHeight: varRef(`item-size-actual`),
-        verticalAlign: 'baseline',
-        input: {
-          ...genBasicInputStyle(token),
-          ...genBaseOutlinedStyle(token, {
-            borderColor: token.colorBorder,
-            hoverBorderColor: token.colorPrimaryHover,
-            activeBorderColor: token.colorPrimary,
-            activeShadow: token.activeShadow
-          }),
-          '&[disabled]': {
-            ...genDisabledStyle(token)
-          },
-          width: token.quickJumperInputWidth,
-          height: varRef(`item-size-actual`),
-          boxSizing: 'border-box',
-          margin: 0,
-          marginInlineStart: varRef(`item-spacing-actual`),
-          marginInlineEnd: varRef(`item-spacing-actual`)
-        }
-      }
-    }
-  };
-};
-const genPaginationItemStyle = token => {
-  const {
-    componentCls,
-    antCls
-  } = token;
-  const [, varRef] = genCssVar(antCls, 'pagination');
-  return {
-    [`${componentCls}-item`]: {
-      display: 'inline-block',
-      minWidth: varRef(`item-size-actual`),
-      height: varRef(`item-size-actual`),
-      marginInlineEnd: varRef(`item-spacing-actual`),
-      fontFamily: token.fontFamily,
-      lineHeight: util_unit(token.calc(varRef('item-size-actual')).sub(2).equal()),
-      textAlign: 'center',
-      verticalAlign: 'middle',
-      listStyle: 'none',
-      backgroundColor: token.itemBg,
-      border: `${util_unit(token.lineWidth)} ${token.lineType} transparent`,
-      borderRadius: token.borderRadius,
-      outline: 0,
-      cursor: 'pointer',
-      userSelect: 'none',
-      a: {
-        display: 'block',
-        padding: `0 ${util_unit(token.paginationItemPaddingInline)}`,
-        color: token.colorText,
-        '&:hover': {
-          textDecoration: 'none'
-        }
-      },
-      [`&:not(${componentCls}-item-active)`]: {
-        '&:hover': {
-          transition: `all ${token.motionDurationMid}`,
-          backgroundColor: token.colorBgTextHover
-        },
-        '&:active': {
-          backgroundColor: token.colorBgTextActive
-        }
-      },
-      '&-active': {
-        fontWeight: token.fontWeightStrong,
-        backgroundColor: token.itemActiveBg,
-        borderColor: token.colorPrimary,
-        a: {
-          color: token.itemActiveColor
-        },
-        '&:hover': {
-          borderColor: token.colorPrimaryHover
-        },
-        '&:hover a': {
-          color: token.itemActiveColorHover
-        }
-      }
-    }
-  };
-};
-const genPaginationStyle = token => {
-  const {
-    componentCls,
-    antCls
-  } = token;
-  const [varName, varRef] = genCssVar(antCls, 'pagination');
-  return {
-    [componentCls]: {
-      [varName(`item-size-actual`)]: util_unit(token.itemSize),
-      [varName(`item-spacing-actual`)]: util_unit(token.marginXS),
-      '&-small': {
-        [varName(`item-size-actual`)]: util_unit(token.itemSizeSM),
-        [varName(`item-spacing-actual`)]: util_unit(token.marginXXS)
-      },
-      '&-large': {
-        [varName(`item-size-actual`)]: util_unit(token.itemSizeLG),
-        [varName(`item-spacing-actual`)]: util_unit(token.marginSM)
-      },
-      ...resetComponent(token),
-      display: 'flex',
-      alignItems: 'center',
-      '&-start': {
-        justifyContent: 'start'
-      },
-      '&-center': {
-        justifyContent: 'center'
-      },
-      '&-end': {
-        justifyContent: 'end'
-      },
-      'ul, ol': {
-        margin: 0,
-        padding: 0,
-        listStyle: 'none'
-      },
-      '&::after': {
-        display: 'block',
-        clear: 'both',
-        height: 0,
-        overflow: 'hidden',
-        visibility: 'hidden',
-        content: '""'
-      },
-      [`${componentCls}-total-text`]: {
-        display: 'inline-block',
-        height: varRef(`item-size-actual`),
-        marginInlineEnd: varRef(`item-spacing-actual`),
-        lineHeight: util_unit(token.calc(varRef(`item-size-actual`)).sub(2).equal()),
-        verticalAlign: 'middle'
-      },
-      // item style
-      ...genPaginationItemStyle(token),
-      // jump btn style
-      ...genPaginationJumpStyle(token),
-      // simple style
-      ...genPaginationSimpleStyle(token),
-      // input variant style
-      ...genPaginationInputVariantStyle(token),
-      // size style
-      ...genPaginationSmallStyle(token),
-      ...genPaginationLargeStyle(token),
-      // disabled style
-      ...genPaginationDisabledStyle(token),
-      // media query style
-      [`@media only screen and (max-width: ${token.screenLG}px)`]: {
-        [`${componentCls}-item`]: {
-          '&-after-jump-prev, &-before-jump-next': {
-            display: 'none'
-          }
-        }
-      },
-      [`@media only screen and (max-width: ${token.screenSM}px)`]: {
-        [`${componentCls}-options`]: {
-          display: 'none'
-        }
-      }
-    },
-    // rtl style
-    [`&${token.componentCls}-rtl`]: {
-      direction: 'rtl'
-    }
-  };
-};
-const genPaginationFocusStyle = token => {
-  const {
-    componentCls
-  } = token;
-  return {
-    [`${componentCls}:not(${componentCls}-disabled)`]: {
-      [`${componentCls}-item`]: {
-        ...genFocusStyle(token)
-      },
-      [`${componentCls}-jump-prev, ${componentCls}-jump-next`]: {
-        '&:focus-visible': {
-          [`${componentCls}-item-link-icon`]: {
-            opacity: 1
-          },
-          [`${componentCls}-item-ellipsis`]: {
-            opacity: 0
-          },
-          ...genFocusOutline(token)
-        }
-      },
-      [`${componentCls}-prev, ${componentCls}-next`]: {
-        [`&:focus-visible ${componentCls}-item-link`]: genFocusOutline(token)
-      }
-    }
-  };
-};
-const pagination_style_prepareComponentToken = token => ({
-  itemBg: token.colorBgContainer,
-  itemSize: token.controlHeight,
-  itemSizeSM: token.controlHeightSM,
-  itemSizeLG: token.controlHeightLG,
-  itemActiveBg: token.colorBgContainer,
-  itemActiveColor: token.colorPrimary,
-  itemActiveColorHover: token.colorPrimaryHover,
-  itemLinkBg: token.colorBgContainer,
-  itemActiveColorDisabled: token.colorTextDisabled,
-  itemActiveBgDisabled: token.controlItemBgActiveDisabled,
-  itemInputBg: token.colorBgContainer,
-  miniOptionsSizeChangerTop: 0,
-  ...initComponentToken(token)
-});
-const pagination_style_prepareToken = token => statistic_merge(token, {
-  inputOutlineOffset: 0,
-  quickJumperInputWidth: token.calc(token.controlHeightLG).mul(1.25).equal(),
-  paginationMiniOptionsMarginInlineStart: token.calc(token.marginXXS).div(2).equal(),
-  paginationMiniQuickJumperInputWidth: token.calc(token.controlHeightLG).mul(1.1).equal(),
-  paginationItemPaddingInline: token.calc(token.marginXXS).mul(1.5).equal(),
-  paginationEllipsisLetterSpacing: token.calc(token.marginXXS).div(2).equal(),
-  paginationSlashMarginInlineStart: token.marginSM,
-  paginationSlashMarginInlineEnd: token.marginSM,
-  paginationEllipsisTextIndent: '0.13em' // magic for ui experience
-}, initInputToken(token));
-// ============================== Export ==============================
-/* harmony default export */ const pagination_style = (genStyleHooks('Pagination', token => {
-  const paginationToken = pagination_style_prepareToken(token);
-  return [genPaginationStyle(paginationToken), genPaginationFocusStyle(paginationToken)];
-}, pagination_style_prepareComponentToken));
-;// ./node_modules/antd/es/pagination/style/bordered.js
-
-
-
-const genBorderedStyle = token => {
-  const {
-    componentCls
-  } = token;
-  return {
-    [`${componentCls}${componentCls}-bordered${componentCls}-disabled`]: {
-      '&, &:hover': {
-        [`${componentCls}-item-link`]: {
-          borderColor: token.colorBorder
-        }
-      },
-      '&:focus-visible': {
-        [`${componentCls}-item-link`]: {
-          borderColor: token.colorBorder
-        }
-      },
-      [`${componentCls}-item, ${componentCls}-item-link`]: {
-        backgroundColor: token.colorBgContainerDisabled,
-        borderColor: token.colorBorder,
-        [`&:hover:not(${componentCls}-item-active)`]: {
-          backgroundColor: token.colorBgContainerDisabled,
-          borderColor: token.colorBorder,
-          a: {
-            color: token.colorTextDisabled
-          }
-        },
-        [`&${componentCls}-item-active`]: {
-          backgroundColor: token.itemActiveBgDisabled
-        }
-      },
-      [`${componentCls}-prev, ${componentCls}-next`]: {
-        '&:hover button': {
-          backgroundColor: token.colorBgContainerDisabled,
-          borderColor: token.colorBorder,
-          color: token.colorTextDisabled
-        },
-        [`${componentCls}-item-link`]: {
-          backgroundColor: token.colorBgContainerDisabled,
-          borderColor: token.colorBorder
-        }
-      }
-    },
-    [`${componentCls}${componentCls}-bordered`]: {
-      [`${componentCls}-prev, ${componentCls}-next`]: {
-        '&:hover button': {
-          borderColor: token.colorPrimaryHover,
-          backgroundColor: token.itemBg
-        },
-        [`${componentCls}-item-link`]: {
-          backgroundColor: token.itemLinkBg,
-          borderColor: token.colorBorder
-        },
-        [`&:hover ${componentCls}-item-link`]: {
-          borderColor: token.colorPrimary,
-          backgroundColor: token.itemBg,
-          color: token.colorPrimary
-        },
-        [`&${componentCls}-disabled`]: {
-          [`${componentCls}-item-link`]: {
-            borderColor: token.colorBorder,
-            color: token.colorTextDisabled
-          }
-        }
-      },
-      [`${componentCls}-item`]: {
-        backgroundColor: token.itemBg,
-        border: `${util_unit(token.lineWidth)} ${token.lineType} ${token.colorBorder}`,
-        [`&:hover:not(${componentCls}-item-active)`]: {
-          borderColor: token.colorPrimary,
-          backgroundColor: token.itemBg,
-          a: {
-            color: token.colorPrimary
-          }
-        },
-        '&-active': {
-          borderColor: token.colorPrimary
-        }
-      }
-    }
-  };
-};
-/* harmony default export */ const bordered = (genSubStyleComponent(['Pagination', 'bordered'], token => {
-  const paginationToken = pagination_style_prepareToken(token);
-  return genBorderedStyle(paginationToken);
-}, pagination_style_prepareComponentToken));
-;// ./node_modules/antd/es/pagination/useShowSizeChanger.js
-
-
-function useShowSizeChanger(showSizeChanger) {
-  return (0,react_production_namespaceFn().useMemo)(() => {
-    if (typeof showSizeChanger === 'boolean') {
-      return [showSizeChanger, {}];
-    }
-    if (is_isPlainObject(showSizeChanger)) {
-      return [true, showSizeChanger];
-    }
-    return [undefined, undefined];
-  }, [showSizeChanger]);
-}
-;// ./node_modules/antd/es/pagination/Pagination.js
-"use client";
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-const pagination_Pagination_Pagination = props => {
-  const {
-    align,
-    prefixCls: customizePrefixCls,
-    selectPrefixCls: customizeSelectPrefixCls,
-    className,
-    rootClassName,
-    style,
-    size: customizeSize,
-    locale: customLocale,
-    responsive,
-    showSizeChanger,
-    components,
-    selectComponentClass,
-    pageSizeOptions,
-    styles,
-    classNames,
-    ...restProps
-  } = props;
-  const {
-    xs
-  } = hooks_useBreakpoint(responsive);
-  const [, token] = useToken();
-  const {
-    getPrefixCls,
-    direction,
-    showSizeChanger: contextShowSizeChangerConfig,
-    className: contextClassName,
-    style: contextStyle,
-    classNames: contextClassNames,
-    styles: contextStyles,
-    totalBoundaryShowSizeChanger: contextTotalBoundaryShowSizeChanger
-  } = useComponentConfig('pagination');
-  const prefixCls = getPrefixCls('pagination', customizePrefixCls);
-  // Style
-  const [hashId, cssVarCls] = pagination_style(prefixCls);
-  // ============================== Size ==============================
-  const mergedSize = hooks_useSize(customizeSize);
-  const isSmall = mergedSize === 'small' || !!(xs && !mergedSize && responsive);
-  const [inputVariant, enableInputVariantCls] = useVariants('input');
-  // =========== Merged Props for Semantic ==========
-  const mergedProps = {
-    ...props,
-    size: mergedSize
-  };
-  // ========================= Style ==========================
-  const contextStyleRoot = useSemanticRootStyle(contextStyle);
-  const styleRoot = useSemanticRootStyle(style);
-  const [mergedClassNames, mergedStyles] = useMergeSemantic([contextClassNames, classNames], [contextStyles, contextStyleRoot, styles, styleRoot], {
-    props: mergedProps
-  });
-  // ============================= Locale =============================
-  const [contextLocale] = locale_useLocale('Pagination', en_US);
-  const locale = {
-    ...contextLocale,
-    ...customLocale
-  };
-  // ========================== Size Changer ==========================
-  // Merge the props showSizeChanger
-  const [propShowSizeChanger, propSizeChangerSelectProps] = useShowSizeChanger(showSizeChanger);
-  const [contextShowSizeChanger, contextSizeChangerSelectProps] = useShowSizeChanger(contextShowSizeChangerConfig);
-  const mergedShowSizeChanger = propShowSizeChanger ?? contextShowSizeChanger;
-  const mergedShowSizeChangerSelectProps = propSizeChangerSelectProps ?? contextSizeChangerSelectProps;
-  const SizeChanger = selectComponentClass || es_select;
-  // Generate options
-  const mergedPageSizeOptions = (react_production_namespaceFn().useMemo)(() => {
-    return pageSizeOptions ? pageSizeOptions.map(Number) : undefined;
-  }, [pageSizeOptions]);
-  // Render size changer
-  const sizeChangerRender = info => {
-    const {
-      disabled,
-      size: pageSize,
-      onSizeChange,
-      'aria-label': ariaLabel,
-      className: sizeChangerClassName,
-      options
-    } = info;
-    const SizeChangerComponent = components?.sizeChanger;
-    if (SizeChangerComponent) {
-      return /*#__PURE__*/(react_production_namespaceFn().createElement)(SizeChangerComponent, {
-        value: pageSize,
-        onChange: onSizeChange,
-        disabled: !!disabled,
-        className: sizeChangerClassName
-      });
-    }
-    const {
-      className: propSizeChangerClassName,
-      onChange: propSizeChangerOnChange
-    } = mergedShowSizeChangerSelectProps || {};
-    // Origin Select is using Select.Option,
-    // So it make the option value must be string
-    // Just for compatible
-    const selectedValue = options.find(option => String(option.value) === String(pageSize))?.value;
-    return /*#__PURE__*/(react_production_namespaceFn().createElement)(SizeChanger, {
-      disabled: disabled,
-      showSearch: true,
-      popupMatchSelectWidth: false,
-      getPopupContainer: triggerNode => triggerNode.parentNode,
-      "aria-label": ariaLabel,
-      options: options,
-      ...mergedShowSizeChangerSelectProps,
-      value: selectedValue,
-      onChange: (nextSize, option) => {
-        onSizeChange?.(nextSize);
-        propSizeChangerOnChange?.(nextSize, option);
-      },
-      size: mergedSize,
-      className: clsx(`${prefixCls}-options-size-changer-select`, sizeChangerClassName, propSizeChangerClassName)
-    });
-  };
-  if (false) // removed by dead control flow
-{}
-  // ============================= Render =============================
-  const iconsProps = (react_production_namespaceFn().useMemo)(() => {
-    const ellipsis = /*#__PURE__*/(react_production_namespaceFn().createElement)("span", {
-      className: `${prefixCls}-item-ellipsis`
-    }, /*#__PURE__*/(react_production_namespaceFn().createElement)(icons_EllipsisOutlined, null));
-    const prevIcon = /*#__PURE__*/(react_production_namespaceFn().createElement)("button", {
-      className: `${prefixCls}-item-link`,
-      type: "button",
-      tabIndex: -1
-    }, direction === 'rtl' ? /*#__PURE__*/(react_production_namespaceFn().createElement)(icons_RightOutlined, null) : /*#__PURE__*/(react_production_namespaceFn().createElement)(icons_LeftOutlined, null));
-    const nextIcon = /*#__PURE__*/(react_production_namespaceFn().createElement)("button", {
-      className: `${prefixCls}-item-link`,
-      type: "button",
-      tabIndex: -1
-    }, direction === 'rtl' ? /*#__PURE__*/(react_production_namespaceFn().createElement)(icons_LeftOutlined, null) : /*#__PURE__*/(react_production_namespaceFn().createElement)(icons_RightOutlined, null));
-    const jumpPrevIcon = /*#__PURE__*/(react_production_namespaceFn().createElement)("a", {
-      className: `${prefixCls}-item-link`
-    }, /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
-      className: `${prefixCls}-item-container`
-    }, direction === 'rtl' ? (/*#__PURE__*/(react_production_namespaceFn().createElement)(icons_DoubleRightOutlined, {
-      className: `${prefixCls}-item-link-icon`
-    })) : (/*#__PURE__*/(react_production_namespaceFn().createElement)(icons_DoubleLeftOutlined, {
-      className: `${prefixCls}-item-link-icon`
-    })), ellipsis));
-    const jumpNextIcon = /*#__PURE__*/(react_production_namespaceFn().createElement)("a", {
-      className: `${prefixCls}-item-link`
-    }, /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
-      className: `${prefixCls}-item-container`
-    }, direction === 'rtl' ? (/*#__PURE__*/(react_production_namespaceFn().createElement)(icons_DoubleLeftOutlined, {
-      className: `${prefixCls}-item-link-icon`
-    })) : (/*#__PURE__*/(react_production_namespaceFn().createElement)(icons_DoubleRightOutlined, {
-      className: `${prefixCls}-item-link-icon`
-    })), ellipsis));
-    return {
-      prevIcon,
-      nextIcon,
-      jumpPrevIcon,
-      jumpNextIcon
-    };
-  }, [direction, prefixCls]);
-  const selectPrefixCls = getPrefixCls('select', customizeSelectPrefixCls);
-  const extendedClassName = clsx({
-    [`${prefixCls}-${align}`]: !!align,
-    [`${prefixCls}-${mergedSize}`]: mergedSize,
-    [`${prefixCls}-${inputVariant}`]: enableInputVariantCls && inputVariant !== 'outlined',
-    /** @deprecated Should be removed in v7 */
-    [`${prefixCls}-mini`]: isSmall,
-    [`${prefixCls}-rtl`]: direction === 'rtl',
-    [`${prefixCls}-bordered`]: token.wireframe
-  }, contextClassName, className, rootClassName, mergedClassNames.root, hashId, cssVarCls);
-  const mergedStyle = {
-    ...mergedStyles.root
-  };
-  return /*#__PURE__*/(react_production_namespaceFn().createElement)((react_production_namespaceFn().Fragment), null, token.wireframe && /*#__PURE__*/(react_production_namespaceFn().createElement)(bordered, {
-    prefixCls: prefixCls
-  }), /*#__PURE__*/(react_production_namespaceFn().createElement)(es_Pagination, {
-    ...iconsProps,
-    ...restProps,
-    styles: mergedStyles,
-    classNames: mergedClassNames,
-    style: mergedStyle,
-    prefixCls: prefixCls,
-    selectPrefixCls: selectPrefixCls,
-    className: extendedClassName,
-    locale: locale,
-    pageSizeOptions: mergedPageSizeOptions,
-    showSizeChanger: mergedShowSizeChanger,
-    totalBoundaryShowSizeChanger: restProps.totalBoundaryShowSizeChanger ?? contextTotalBoundaryShowSizeChanger,
-    sizeChangerRender: sizeChangerRender
-  }));
-};
-if (false) // removed by dead control flow
-{}
-/* harmony default export */ const pagination_Pagination = (pagination_Pagination_Pagination);
-;// ./node_modules/antd/es/pagination/index.js
-"use client";
-
-
-/* harmony default export */ const es_pagination = (pagination_Pagination);
-;// ./node_modules/antd/es/list/context.js
-
-const context_ListContext = /*#__PURE__*/(react_production_namespaceFn().createContext)({});
-const ListConsumer = context_ListContext.Consumer;
-;// ./node_modules/antd/es/grid/col.js
-"use client";
-
-
-
-
-
-
-
-
-
-
-function parseFlex(flex) {
-  if (flex === 'auto') {
-    return '1 1 auto';
-  }
-  if (isNumber(flex)) {
-    return `${flex} ${flex} auto`;
-  }
-  if (/^\d+(\.\d+)?(px|em|rem|%)$/.test(flex)) {
-    return `0 0 ${flex}`;
-  }
-  return flex;
-}
-const Col = /*#__PURE__*/(react_production_namespaceFn().forwardRef)((props, ref) => {
-  const {
-    getPrefixCls,
-    direction
-  } = (react_production_namespaceFn().useContext)(ConfigContext);
-  const {
-    gutter,
-    wrap
-  } = (react_production_namespaceFn().useContext)(grid_RowContext);
-  const {
-    prefixCls: customizePrefixCls,
-    span,
-    order,
-    offset,
-    push,
-    pull,
-    className,
-    children,
-    flex,
-    style,
-    ...others
-  } = props;
-  const prefixCls = getPrefixCls('col', customizePrefixCls);
-  const rootPrefixCls = getPrefixCls();
-  const [hashId, cssVarCls] = useColStyle(prefixCls);
-  const [varName] = genCssVar(rootPrefixCls, 'col');
-  // ===================== Size ======================
-  const sizeStyle = {};
-  let sizeClassObj = {};
-  responsiveArrayReversed.forEach(size => {
-    let sizeProps = {};
-    const propSize = props[size];
-    if (isNumber(propSize)) {
-      sizeProps.span = propSize;
-    } else if (is_isPlainObject(propSize)) {
-      sizeProps = propSize || {};
-    }
-    delete others[size];
-    sizeClassObj = {
-      ...sizeClassObj,
-      [`${prefixCls}-${size}-${sizeProps.span}`]: isNonNullable(sizeProps.span),
-      [`${prefixCls}-${size}-order-${sizeProps.order}`]: sizeProps.order || sizeProps.order === 0,
-      [`${prefixCls}-${size}-offset-${sizeProps.offset}`]: sizeProps.offset || sizeProps.offset === 0,
-      [`${prefixCls}-${size}-push-${sizeProps.push}`]: sizeProps.push || sizeProps.push === 0,
-      [`${prefixCls}-${size}-pull-${sizeProps.pull}`]: sizeProps.pull || sizeProps.pull === 0,
-      [`${prefixCls}-rtl`]: direction === 'rtl'
-    };
-    // Responsive flex layout
-    if (sizeProps.flex || sizeProps.flex === 0) {
-      sizeClassObj[`${prefixCls}-${size}-flex`] = true;
-      sizeStyle[varName(`${size}-flex`)] = parseFlex(sizeProps.flex);
-    }
-  });
-  // ==================== Normal =====================
-  const classes = clsx(prefixCls, {
-    [`${prefixCls}-${span}`]: span !== undefined,
-    [`${prefixCls}-order-${order}`]: order,
-    [`${prefixCls}-offset-${offset}`]: offset,
-    [`${prefixCls}-push-${push}`]: push,
-    [`${prefixCls}-pull-${pull}`]: pull
-  }, className, sizeClassObj, hashId, cssVarCls);
-  const mergedStyle = {};
-  // Horizontal gutter use padding
-  if (gutter?.[0]) {
-    const horizontalGutter = isNumber(gutter[0]) ? `${gutter[0] / 2}px` : `calc(${gutter[0]} / 2)`;
-    mergedStyle.paddingInline = horizontalGutter;
-  }
-  if (flex || flex === 0) {
-    mergedStyle.flex = parseFlex(flex);
-    // Hack for Firefox to avoid size issue
-    // https://github.com/ant-design/ant-design/pull/20023#issuecomment-564389553
-    if (wrap === false && !mergedStyle.minWidth) {
-      mergedStyle.minWidth = 0;
-    }
-  }
-  // ==================== Render =====================
-  return /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
-    ...others,
-    style: {
-      ...mergedStyle,
-      ...style,
-      ...sizeStyle
-    },
-    className: classes,
-    ref: ref
-  }, children);
-});
-if (false) // removed by dead control flow
-{}
-/* harmony default export */ const grid_col = (Col);
-;// ./node_modules/antd/es/list/Item.js
-"use client";
-
-
-
-
-
-
-
-
-
-const Item_Meta = /*#__PURE__*/(react_production_namespaceFn().forwardRef)((props, ref) => {
-  const {
-    prefixCls: customizePrefixCls,
-    className,
-    avatar,
-    title,
-    description,
-    ...others
-  } = props;
-  const {
-    getPrefixCls
-  } = (0,react_production_namespaceFn().useContext)(ConfigContext);
-  const prefixCls = getPrefixCls('list', customizePrefixCls);
-  const classString = clsx(`${prefixCls}-item-meta`, className);
-  const nativeElementRef = (react_production_namespaceFn().useRef)(null);
-  (react_production_namespaceFn().useImperativeHandle)(ref, () => ({
-    nativeElement: nativeElementRef.current
-  }));
-  const content = /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
-    className: `${prefixCls}-item-meta-content`
-  }, title && /*#__PURE__*/(react_production_namespaceFn().createElement)("h4", {
-    className: `${prefixCls}-item-meta-title`
-  }, title), description && /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
-    className: `${prefixCls}-item-meta-description`
-  }, description));
-  return /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
-    ref: nativeElementRef,
-    ...others,
-    className: classString
-  }, avatar && /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
-    className: `${prefixCls}-item-meta-avatar`
-  }, avatar), (title || description) && content);
-});
-const Item_InternalItem = /*#__PURE__*/(react_production_namespaceFn().forwardRef)((props, ref) => {
-  const {
-    prefixCls: customizePrefixCls,
-    children,
-    actions,
-    extra,
-    styles,
-    className,
-    classNames: customizeClassNames,
-    colStyle,
-    ...others
-  } = props;
-  const {
-    grid,
-    itemLayout
-  } = (0,react_production_namespaceFn().useContext)(context_ListContext);
-  const {
-    getPrefixCls,
-    list
-  } = (0,react_production_namespaceFn().useContext)(ConfigContext);
-  const moduleClass = moduleName => clsx(list?.item?.classNames?.[moduleName], customizeClassNames?.[moduleName]);
-  const moduleStyle = moduleName => ({
-    ...list?.item?.styles?.[moduleName],
-    ...styles?.[moduleName]
-  });
-  const isItemContainsTextNodeAndNotSingular = () => {
-    const childNodes = toArray_toArray(children);
-    const hasTextNode = childNodes.some(isString);
-    return hasTextNode && childNodes.length > 1;
-  };
-  const isFlexMode = () => {
-    if (itemLayout === 'vertical') {
-      return !!extra;
-    }
-    return !isItemContainsTextNodeAndNotSingular();
-  };
-  const prefixCls = getPrefixCls('list', customizePrefixCls);
-  const actionsContent = actions && actions.length > 0 && (/*#__PURE__*/(react_production_namespaceFn().createElement)("ul", {
-    className: clsx(`${prefixCls}-item-action`, moduleClass('actions')),
-    key: "actions",
-    style: moduleStyle('actions')
-  }, actions.map((action, i) => (/*#__PURE__*/(react_production_namespaceFn().createElement)("li", {
-    key: `${prefixCls}-item-action-${i}`
-  }, action, i !== actions.length - 1 && /*#__PURE__*/(react_production_namespaceFn().createElement)("em", {
-    className: `${prefixCls}-item-action-split`
-  }))))));
-  const Element = grid ? 'div' : 'li';
-  const itemChildren = /*#__PURE__*/(react_production_namespaceFn().createElement)(Element, {
-    ...others,
-    ...(!grid ? {
-      ref
-    } : {}),
-    className: clsx(`${prefixCls}-item`, {
-      [`${prefixCls}-item-no-flex`]: !isFlexMode()
-    }, className)
-  }, itemLayout === 'vertical' && extra ? [/*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
-    className: `${prefixCls}-item-main`,
-    key: "content"
-  }, children, actionsContent), /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
-    className: clsx(`${prefixCls}-item-extra`, moduleClass('extra')),
-    key: "extra",
-    style: moduleStyle('extra')
-  }, extra)] : [children, actionsContent, cloneElement(extra, {
-    key: 'extra'
-  })]);
-  return grid ? (/*#__PURE__*/(react_production_namespaceFn().createElement)(grid_col, {
-    ref: ref,
-    flex: 1,
-    style: colStyle
-  }, itemChildren)) : itemChildren;
-});
-const list_Item_Item = Item_InternalItem;
-list_Item_Item.Meta = Item_Meta;
-/* harmony default export */ const list_Item = (list_Item_Item);
-;// ./node_modules/antd/es/list/style/index.js
-
-
-
-const style_genBorderedStyle = token => {
-  const {
-    listBorderedCls,
-    componentCls,
-    paddingLG,
-    margin,
-    itemPaddingSM,
-    itemPaddingLG,
-    marginLG,
-    borderRadiusLG
-  } = token;
-  const innerCornerBorderRadius = util_unit(token.calc(borderRadiusLG).sub(token.lineWidth).equal());
-  return {
-    [listBorderedCls]: {
-      border: `${util_unit(token.lineWidth)} ${token.lineType} ${token.colorBorder}`,
-      borderRadius: borderRadiusLG,
-      [`${componentCls}-header`]: {
-        borderRadius: `${innerCornerBorderRadius} ${innerCornerBorderRadius} 0 0`
-      },
-      [`${componentCls}-footer`]: {
-        borderRadius: `0 0 ${innerCornerBorderRadius} ${innerCornerBorderRadius}`
-      },
-      [`${componentCls}-header,${componentCls}-footer,${componentCls}-item`]: {
-        paddingInline: paddingLG
-      },
-      [`${componentCls}-pagination`]: {
-        margin: `${util_unit(margin)} ${util_unit(marginLG)}`
-      }
-    },
-    [`${listBorderedCls}${componentCls}-sm`]: {
-      [`${componentCls}-item,${componentCls}-header,${componentCls}-footer`]: {
-        padding: itemPaddingSM
-      }
-    },
-    [`${listBorderedCls}${componentCls}-lg`]: {
-      [`${componentCls}-item,${componentCls}-header,${componentCls}-footer`]: {
-        padding: itemPaddingLG
-      }
-    }
-  };
-};
-const genResponsiveStyle = token => {
-  const {
-    componentCls,
-    screenSM,
-    screenMD,
-    marginLG,
-    marginSM,
-    margin
-  } = token;
-  return {
-    [`@media screen and (max-width:${screenMD}px)`]: {
-      [componentCls]: {
-        [`${componentCls}-item`]: {
-          [`${componentCls}-item-action`]: {
-            marginInlineStart: marginLG
-          }
-        }
-      },
-      [`${componentCls}-vertical`]: {
-        [`${componentCls}-item`]: {
-          [`${componentCls}-item-extra`]: {
-            marginInlineStart: marginLG
-          }
-        }
-      }
-    },
-    [`@media screen and (max-width: ${screenSM}px)`]: {
-      [componentCls]: {
-        [`${componentCls}-item`]: {
-          flexWrap: 'wrap',
-          [`${componentCls}-action`]: {
-            marginInlineStart: marginSM
-          }
-        }
-      },
-      [`${componentCls}-vertical`]: {
-        [`${componentCls}-item`]: {
-          flexWrap: 'wrap-reverse',
-          [`${componentCls}-item-main`]: {
-            minWidth: token.contentWidth
-          },
-          [`${componentCls}-item-extra`]: {
-            margin: `auto auto ${util_unit(margin)}`
-          }
-        }
-      }
-    }
-  };
-};
-// =============================== Base ===============================
-const list_style_genBaseStyle = token => {
-  const {
-    componentCls,
-    antCls,
-    controlHeight,
-    minHeight,
-    paddingSM,
-    marginLG,
-    padding,
-    itemPadding,
-    colorPrimary,
-    itemPaddingSM,
-    itemPaddingLG,
-    paddingXS,
-    margin,
-    colorText,
-    colorTextDescription,
-    motionDurationSlow,
-    lineWidth,
-    headerBg,
-    footerBg,
-    emptyTextPadding,
-    metaMarginBottom,
-    avatarMarginRight,
-    titleMarginBottom,
-    descriptionFontSize
-  } = token;
-  return {
-    [componentCls]: {
-      ...resetComponent(token),
-      position: 'relative',
-      // fix https://github.com/ant-design/ant-design/issues/46177
-      ['--rc-virtual-list-scrollbar-bg']: token.colorSplit,
-      '*': {
-        outline: 'none'
-      },
-      [`${componentCls}-header`]: {
-        background: headerBg
-      },
-      [`${componentCls}-footer`]: {
-        background: footerBg
-      },
-      [`${componentCls}-header, ${componentCls}-footer`]: {
-        paddingBlock: paddingSM
-      },
-      [`${componentCls}-pagination`]: {
-        marginBlockStart: marginLG,
-        // https://github.com/ant-design/ant-design/issues/20037
-        [`${antCls}-pagination-options`]: {
-          textAlign: 'start'
-        }
-      },
-      [`${componentCls}-spin`]: {
-        minHeight,
-        textAlign: 'center'
-      },
-      [`${componentCls}-items`]: {
-        margin: 0,
-        padding: 0,
-        listStyle: 'none'
-      },
-      [`${componentCls}-item`]: {
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        padding: itemPadding,
-        color: colorText,
-        [`${componentCls}-item-meta`]: {
-          display: 'flex',
-          flex: 1,
-          alignItems: 'flex-start',
-          maxWidth: '100%',
-          [`${componentCls}-item-meta-avatar`]: {
-            marginInlineEnd: avatarMarginRight
-          },
-          [`${componentCls}-item-meta-content`]: {
-            flex: '1 0',
-            width: 0,
-            color: colorText
-          },
-          [`${componentCls}-item-meta-title`]: {
-            margin: `0 0 ${util_unit(token.marginXXS)} 0`,
-            color: colorText,
-            fontSize: token.fontSize,
-            lineHeight: token.lineHeight,
-            '> a': {
-              color: colorText,
-              transition: `all ${motionDurationSlow}`,
-              '&:hover': {
-                color: colorPrimary
-              }
-            }
-          },
-          [`${componentCls}-item-meta-description`]: {
-            color: colorTextDescription,
-            fontSize: descriptionFontSize,
-            lineHeight: token.lineHeight
-          }
-        },
-        [`${componentCls}-item-action`]: {
-          flex: '0 0 auto',
-          marginInlineStart: token.marginXXL,
-          padding: 0,
-          fontSize: 0,
-          listStyle: 'none',
-          '& > li': {
-            position: 'relative',
-            display: 'inline-block',
-            padding: `0 ${util_unit(paddingXS)}`,
-            color: colorTextDescription,
-            fontSize: token.fontSize,
-            lineHeight: token.lineHeight,
-            textAlign: 'center',
-            '&:first-child': {
-              paddingInlineStart: 0
-            }
-          },
-          [`${componentCls}-item-action-split`]: {
-            position: 'absolute',
-            insetBlockStart: '50%',
-            insetInlineEnd: 0,
-            width: lineWidth,
-            height: token.calc(token.fontHeight).sub(token.calc(token.marginXXS).mul(2)).equal(),
-            transform: 'translateY(-50%)',
-            backgroundColor: token.colorSplit
-          }
-        }
-      },
-      [`${componentCls}-empty`]: {
-        padding: `${util_unit(padding)} 0`,
-        color: colorTextDescription,
-        fontSize: token.fontSizeSM,
-        textAlign: 'center'
-      },
-      [`${componentCls}-empty-text`]: {
-        padding: emptyTextPadding,
-        color: token.colorTextDisabled,
-        fontSize: token.fontSize,
-        textAlign: 'center'
-      },
-      // ============================ without flex ============================
-      [`${componentCls}-item-no-flex`]: {
-        display: 'block'
-      }
-    },
-    [`${componentCls}-grid ${antCls}-col > ${componentCls}-item`]: {
-      display: 'block',
-      maxWidth: '100%',
-      marginBlockEnd: margin,
-      paddingBlock: 0,
-      borderBlockEnd: 'none'
-    },
-    [`${componentCls}-vertical ${componentCls}-item`]: {
-      alignItems: 'initial',
-      [`${componentCls}-item-main`]: {
-        display: 'block',
-        flex: 1
-      },
-      [`${componentCls}-item-extra`]: {
-        marginInlineStart: marginLG
-      },
-      [`${componentCls}-item-meta`]: {
-        marginBlockEnd: metaMarginBottom,
-        [`${componentCls}-item-meta-title`]: {
-          marginBlockStart: 0,
-          marginBlockEnd: titleMarginBottom,
-          color: colorText,
-          fontSize: token.fontSizeLG,
-          lineHeight: token.lineHeightLG
-        }
-      },
-      [`${componentCls}-item-action`]: {
-        marginBlockStart: padding,
-        marginInlineStart: 'auto',
-        '> li': {
-          padding: `0 ${util_unit(padding)}`,
-          '&:first-child': {
-            paddingInlineStart: 0
-          }
-        }
-      }
-    },
-    [`${componentCls}-split ${componentCls}-item`]: {
-      borderBlockEnd: `${util_unit(token.lineWidth)} ${token.lineType} ${token.colorSplit}`,
-      '&:last-child': {
-        borderBlockEnd: 'none'
-      }
-    },
-    [`${componentCls}-split ${componentCls}-header`]: {
-      borderBlockEnd: `${util_unit(token.lineWidth)} ${token.lineType} ${token.colorSplit}`
-    },
-    [`${componentCls}-split${componentCls}-empty ${componentCls}-footer`]: {
-      borderTop: `${util_unit(token.lineWidth)} ${token.lineType} ${token.colorSplit}`
-    },
-    [`${componentCls}-loading ${componentCls}-spin-nested-loading`]: {
-      minHeight: controlHeight
-    },
-    [`${componentCls}-split${componentCls}-something-after-last-item ${antCls}-spin-container > ${componentCls}-items > ${componentCls}-item:last-child`]: {
-      borderBlockEnd: `${util_unit(token.lineWidth)} ${token.lineType} ${token.colorSplit}`
-    },
-    [`${componentCls}-lg ${componentCls}-item`]: {
-      padding: itemPaddingLG
-    },
-    [`${componentCls}-sm ${componentCls}-item`]: {
-      padding: itemPaddingSM
-    },
-    // Horizontal
-    [`${componentCls}:not(${componentCls}-vertical)`]: {
-      [`${componentCls}-item-no-flex`]: {
-        [`${componentCls}-item-action`]: {
-          float: 'right'
-        }
-      }
-    }
-  };
-};
-const list_style_prepareComponentToken = token => ({
-  contentWidth: 220,
-  itemPadding: `${util_unit(token.paddingContentVertical)} 0`,
-  itemPaddingSM: `${util_unit(token.paddingContentVerticalSM)} ${util_unit(token.paddingContentHorizontal)}`,
-  itemPaddingLG: `${util_unit(token.paddingContentVerticalLG)} ${util_unit(token.paddingContentHorizontalLG)}`,
-  headerBg: 'transparent',
-  footerBg: 'transparent',
-  emptyTextPadding: token.padding,
-  metaMarginBottom: token.padding,
-  avatarMarginRight: token.padding,
-  titleMarginBottom: token.paddingSM,
-  descriptionFontSize: token.fontSize
-});
-// ============================== Export ==============================
-/* harmony default export */ const list_style = (genStyleHooks('List', token => {
-  const listToken = statistic_merge(token, {
-    listBorderedCls: `${token.componentCls}-bordered`,
-    minHeight: token.controlHeightLG
-  });
-  return [list_style_genBaseStyle(listToken), style_genBorderedStyle(listToken), genResponsiveStyle(listToken)];
-}, list_style_prepareComponentToken, {
-  extraCssVarPrefixCls: ({
-    prefixCls
-  }) => [`${prefixCls}-container`]
-}));
-;// ./node_modules/antd/es/list/index.js
-"use client";
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-const InternalList = (props, ref) => {
-  const {
-    pagination = false,
-    prefixCls: customizePrefixCls,
-    bordered = false,
-    split = true,
-    className,
-    rootClassName,
-    style,
-    children,
-    itemLayout,
-    loadMore,
-    grid,
-    dataSource = [],
-    size: customizeSize,
-    header,
-    footer,
-    loading = false,
-    rowKey,
-    renderItem,
-    locale,
-    ...rest
-  } = props;
-  const paginationObj = is_isPlainObject(pagination) ? pagination : {};
-  const [paginationCurrent, setPaginationCurrent] = (react_production_namespaceFn().useState)(paginationObj.defaultCurrent || 1);
-  const [paginationSize, setPaginationSize] = (react_production_namespaceFn().useState)(paginationObj.defaultPageSize || 10);
-  const {
-    getPrefixCls,
-    direction,
-    className: contextClassName,
-    style: contextStyle
-  } = useComponentConfig('list');
-  const {
-    renderEmpty
-  } = (react_production_namespaceFn().useContext)(ConfigContext);
-  const defaultPaginationProps = {
-    current: 1,
-    total: 0,
-    position: 'bottom'
-  };
-  const triggerPaginationEvent = eventName => (page, pageSize) => {
-    setPaginationCurrent(page);
-    setPaginationSize(pageSize);
-    if (pagination) {
-      pagination?.[eventName]?.(page, pageSize);
-    }
-  };
-  const onPaginationChange = triggerPaginationEvent('onChange');
-  const onPaginationShowSizeChange = triggerPaginationEvent('onShowSizeChange');
-  const renderInternalItem = (item, index) => {
-    if (!renderItem) {
-      return null;
-    }
-    let key;
-    if (isFunction(rowKey)) {
-      key = rowKey(item);
-    } else if (rowKey) {
-      key = item[rowKey];
-    } else {
-      key = item.key;
-    }
-    key ?? (key = `list-item-${index}`);
-    return /*#__PURE__*/(react_production_namespaceFn().createElement)((react_production_namespaceFn().Fragment), {
-      key: key
-    }, renderItem(item, index));
-  };
-  const isSomethingAfterLastItem = !!(loadMore || pagination || footer);
-  const prefixCls = getPrefixCls('list', customizePrefixCls);
-  // Style
-  const [hashId, cssVarCls] = list_style(prefixCls);
-  let loadingProp = loading;
-  if (typeof loadingProp === 'boolean') {
-    loadingProp = {
-      spinning: loadingProp
-    };
-  }
-  const isLoading = !!loadingProp?.spinning;
-  const mergedSize = hooks_useSize(customizeSize);
-  // large => lg
-  // small => sm
-  let sizeCls = '';
-  switch (mergedSize) {
-    case 'large':
-      sizeCls = 'lg';
-      break;
-    case 'small':
-      sizeCls = 'sm';
-      break;
-    default:
-      break;
-  }
-  const classString = clsx(prefixCls, {
-    [`${prefixCls}-vertical`]: itemLayout === 'vertical',
-    [`${prefixCls}-${sizeCls}`]: sizeCls,
-    [`${prefixCls}-split`]: split,
-    [`${prefixCls}-bordered`]: bordered,
-    [`${prefixCls}-loading`]: isLoading,
-    [`${prefixCls}-grid`]: !!grid,
-    [`${prefixCls}-something-after-last-item`]: isSomethingAfterLastItem,
-    [`${prefixCls}-rtl`]: direction === 'rtl'
-  }, contextClassName, className, rootClassName, hashId, cssVarCls);
-  const containerCls = `${prefixCls}-container`;
-  const paginationProps = es_mergeProps(defaultPaginationProps, {
-    total: dataSource.length,
-    current: paginationCurrent,
-    pageSize: paginationSize
-  }, pagination || {});
-  const largestPage = Math.ceil(paginationProps.total / paginationProps.pageSize);
-  paginationProps.current = Math.min(paginationProps.current, largestPage);
-  const paginationContent = pagination && (/*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
-    className: clsx(`${prefixCls}-pagination`)
-  }, /*#__PURE__*/(react_production_namespaceFn().createElement)(es_pagination, {
-    align: "end",
-    ...paginationProps,
-    onChange: onPaginationChange,
-    onShowSizeChange: onPaginationShowSizeChange
-  })));
-  let splitDataSource = _toConsumableArray(dataSource);
-  if (pagination) {
-    if (dataSource.length > (paginationProps.current - 1) * paginationProps.pageSize) {
-      splitDataSource = _toConsumableArray(dataSource).splice((paginationProps.current - 1) * paginationProps.pageSize, paginationProps.pageSize);
-    }
-  }
-  const needResponsive = Object.keys(grid || {}).some(key => responsiveArray.includes(key));
-  const screens = hooks_useBreakpoint(needResponsive);
-  const currentBreakpoint = (react_production_namespaceFn().useMemo)(() => {
-    for (let i = 0; i < responsiveArray.length; i += 1) {
-      const breakpoint = responsiveArray[i];
-      if (screens[breakpoint]) {
-        return breakpoint;
-      }
-    }
-    return undefined;
-  }, [screens]);
-  const colStyle = (react_production_namespaceFn().useMemo)(() => {
-    if (!grid) {
-      return undefined;
-    }
-    const columnCount = currentBreakpoint && grid[currentBreakpoint] ? grid[currentBreakpoint] : grid.column;
-    if (columnCount) {
-      return {
-        width: `${100 / columnCount}%`,
-        maxWidth: `${100 / columnCount}%`
-      };
-    }
-  }, [JSON.stringify(grid), currentBreakpoint]);
-  let childrenContent = isLoading && /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
-    style: {
-      minHeight: 53
-    }
-  });
-  if (splitDataSource.length > 0) {
-    const items = splitDataSource.map(renderInternalItem);
-    childrenContent = grid ? (/*#__PURE__*/(react_production_namespaceFn().createElement)(grid_row, {
-      className: clsx(containerCls, cssVarCls),
-      gutter: grid.gutter
-    }, (react_production_namespaceFn().Children).map(items, child => (/*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
-      key: child?.key,
-      style: colStyle
-    }, child))))) : (/*#__PURE__*/(react_production_namespaceFn().createElement)("ul", {
-      className: clsx(`${prefixCls}-items`, containerCls, cssVarCls)
-    }, items));
-  } else if (!children && !isLoading) {
-    childrenContent = /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
-      className: `${prefixCls}-empty-text`
-    }, locale?.emptyText || renderEmpty?.('List') || /*#__PURE__*/(react_production_namespaceFn().createElement)(defaultRenderEmpty, {
-      componentName: "List"
-    }));
-  }
-  const paginationPosition = paginationProps.position;
-  const contextValue = (react_production_namespaceFn().useMemo)(() => ({
-    grid,
-    itemLayout
-  }), [JSON.stringify(grid), itemLayout]);
-  if (false) // removed by dead control flow
-{}
-  return /*#__PURE__*/(react_production_namespaceFn().createElement)(context_ListContext.Provider, {
-    value: contextValue
-  }, /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
-    ref: ref,
-    style: {
-      ...contextStyle,
-      ...style
-    },
-    className: classString,
-    ...rest
-  }, (paginationPosition === 'top' || paginationPosition === 'both') && paginationContent, header && /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
-    className: `${prefixCls}-header`
-  }, header), /*#__PURE__*/(react_production_namespaceFn().createElement)(spin, {
-    ...loadingProp
-  }, childrenContent, children), footer && /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
-    className: `${prefixCls}-footer`
-  }, footer), loadMore || (paginationPosition === 'bottom' || paginationPosition === 'both') && paginationContent));
-};
-const ListWithForwardRef = /*#__PURE__*/(react_production_namespaceFn().forwardRef)(InternalList);
-if (false) // removed by dead control flow
-{}
-const list_List = ListWithForwardRef;
-list_List.Item = list_Item;
-/* harmony default export */ const es_list = (list_List);
-;// ./src/lib/agent/types.ts
-/**
- * ScriptCat Agent API（`CAT.agent.*`）的类型声明与纯工具函数。
- *
- * ── 为什么这里自己声明（v26.10.10-v10）──────────────────────────────────────
- * 官方 d.ts 随 ScriptCat 仓库发布（`src/app/service/agent/core/types.ts` 与
- * `src/types/scriptcat.d.ts`），**不进本仓库的 node_modules**：本脚本是油猴脚本，
- * `npm run typecheck` 用的是本仓库 tsconfig，拿不到 `declare const CAT`。
- * 故此处按官方类型等价声明一份，唯一约束是「只声明 UI 真正用到的字段」。
- *
- * ⚠️ **本文件按官方源码（而非官方文档）对齐**，三处文档与实现不一致已在下方逐条标注
- * `[与文档不符]`。改这里之前建议先回看官方 `src/app/service/agent/core/types.ts`。
- *
- * ── 可用性前提 ─────────────────────────────────────────────────────────────
- * 整套 `CAT.agent.*` 是 **ScriptCat v1.4+** 才有的能力，且需逐项 `@grant`
- * （见 `config/common.meta.json`）。Tampermonkey 等其它管理器里 `CAT` 全局根本不存在，
- * 故所有调用都必须先过 `src/lib/agent/api.ts` 的探测，**绝不能直接摸 `CAT.agent`**。
- *
- * ── 本文件不做任何运行时副作用 ─────────────────────────────────────────────
- * 只有类型 + 纯函数（内容压平 / 工具名去命名空间），可被 UI 复用。
- */
-/** 把正文压成一行可显示文本（图片/文件/音频退化成占位标记） */
-function contentToText(content) {
-    if (typeof content === 'string')
-        return content;
-    if (!Array.isArray(content))
-        return '';
-    return content
-        .map((block) => {
-        if (!block || typeof block !== 'object')
-            return '';
-        switch (block.type) {
-            case 'text':
-                return typeof block.text === 'string' ? block.text : '';
-            case 'image':
-                return '[图片]';
-            case 'file':
-                return '[文件 ' + (typeof block.filename === 'string' ? block.filename : '') + ']';
-            case 'audio':
-                return '[音频]';
-            default:
-                return '';
-        }
-    })
-        .join('');
-}
-/**
- * 把思考过程归一成字符串。
- *
- * ⚠️ 只有 `chat()` / 流式分片累加出来的是**字符串**；`getMessages()` 返回的历史消息里
- * `thinking` 是**对象**（官方 `ThinkingBlock = { content: string }`，见 scriptcat
- * `core/types.ts:94-96` 与 `tool_loop_orchestrator.ts:696` 的
- * `thinking: result.thinking ? { content: result.thinking } : undefined`）。
- * 直接把对象交给 React 渲染会抛
- * `Objects are not valid as a React child (found: object with keys {content})`，
- * 而面板没有错误边界 ⇒ 整棵面板树被卸载（v26.10.10-v11 之前线上真实踩到：
- * 对话过后关弹窗再打开，主面板整个消失且不自愈）。
- */
-function thinkingToText(thinking) {
-    if (typeof thinking === 'string')
-        return thinking;
-    if (thinking && typeof thinking === 'object' && typeof thinking.content === 'string')
-        return thinking.content;
-    return '';
-}
-/**
- * 工具名既可能是裸名（`read_file`），也可能带服务端命名空间（`mcp__xxx__read_file`）。
- * 面板上只显示最后一段，避免超长名把按钮撑破。
- */
-function toolDisplayName(name) {
-    const raw = typeof name === 'string' ? name : '';
-    const parts = raw.split('__').filter((segment) => segment.length > 0);
-    return parts.length > 1 ? parts[parts.length - 1] : raw || '工具';
-}
-/** 四个子能力，用于逐项探测可用性（顺序即面板提示里的列出顺序） */
-const CAT_AGENT_PARTS = ['conversation', 'model', 'skills', 'task'];
-
-;// ./src/lib/agent/api.ts
-/**
- * ScriptCat Agent 服务层：能力探测 + 四个子 API 的薄封装（v26.10.10-v10）。
- *
- * ── 为什么要有这一层，而不是让 UI 直接摸 `CAT.agent` ─────────────────────────
- * ① `CAT` 全局**只在 ScriptCat 里存在**。本脚本同时支持 Tampermonkey（`@match` 含税务页与
- *    example.com），在 TM 里访问 `CAT.agent` 是 ReferenceError —— 直接写就是「打开面板即崩」。
- * ② 就算在 ScriptCat 里，四个子能力也是**逐项 `@grant`** 的：老版本 ScriptCat（< 1.4）、
- *    或用户在管理页里拒绝某项授权，都会让单个子 API 缺失。故这里按能力逐个探测，
- *    缺哪块只在对应页签里提示，不牵连其它功能。
- * ③ 官方 API 的返回形状有 3 处文档与实现不一致（见 types.ts 的 `[与文档不符]`），
- *    纠偏逻辑集中放在这里，UI 只面对规整后的数据。
- *
- * ── 探测时机与代价 ─────────────────────────────────────────────────────────
- * `detectCatAgent()` 是**纯内存判空**（`typeof` + 逐层取属性），不发起任何异步调用，
- * 因此可以放心在组件 render 期调用；真正的 `model.list()` / `conversation.create()`
- * 等异步动作只在用户打开弹窗时才发生。
- *
- * ── ephemeral 之外的对话会落到 OPFS ───────────────────────────────────────
- * 本脚本用的是**非 ephemeral** 对话（持久化、带内置工具），关掉弹窗再打开仍能接着聊；
- * 「新建对话」走 `conversation.create()` 换新实例，不是 `clear()`。
- * v26.10.10-v12 起多了「会话列表」：官方只开放 `create`/`get`，没有 list/delete，
- * 列表由脚本自己记账（见 `lib/agent/sessions.ts`），`clear()` 只在「删除」时用来清消息。
- */
-
-
-const MISSING_CAT_REASON = '当前脚本管理器没有 Agent 能力：需要 ScriptCat v1.4 及以上（Tampermonkey 等其它管理器不支持）。';
-/** 探测 `CAT.agent.*`。纯内存判空，可安全重复调用（不缓存，避免脚本管理器热重载后状态过期） */
-function detectCatAgent() {
-    const unavailable = (reason) => ({
-        api: null,
-        parts: { conversation: false, model: false, skills: false, task: false },
-        reason,
-    });
-    if (typeof CAT === 'undefined' || !CAT)
-        return unavailable(MISSING_CAT_REASON);
-    let agent;
-    try {
-        agent = CAT.agent;
-    }
-    catch {
-        // 极端情况下 getter 抛错（不该发生），当作不可用而不是让整个面板崩掉
-        return unavailable(MISSING_CAT_REASON);
-    }
-    if (!agent || typeof agent !== 'object') {
-        return unavailable('当前 ScriptCat 版本未提供 Agent 功能，请升级到 v1.4 及以上。');
-    }
-    const record = agent;
-    const parts = {};
-    const missing = [];
-    for (const part of CAT_AGENT_PARTS) {
-        const ok = !!record[part] && typeof record[part] === 'object';
-        parts[part] = ok;
-        if (!ok)
-            missing.push(part);
-    }
-    if (missing.length) {
-        return {
-            api: null,
-            parts,
-            reason: 'Agent 的「' +
-                missing.join(' / ') +
-                '」权限不可用：请在 ScriptCat 里重新安装脚本并允许对应授权（脚本需要 CAT.agent.conversation / model / skills / task 四项）。',
-        };
-    }
-    return { api: agent, parts, reason: '' };
-}
-/* ============================================================ 错误文案 */
-const ERROR_CODE_TEXT = {
-    rate_limit: '触发模型限流，请稍后重试。',
-    auth: '模型鉴权失败：请在 ScriptCat 设置里检查该模型的 API Key。',
-    tool_timeout: '工具执行超时。',
-    context_too_large: '对话上下文超出模型窗口，请新建对话或清空历史。',
-    api_error: '模型接口报错。',
-};
-/** 把任意抛出物压成一句话（供日志与界面共用） */
-function agentErrorMessage(error) {
-    if (error instanceof Error)
-        return error.message || error.name || '未知错误';
-    if (typeof error === 'string')
-        return error;
-    if (error && typeof error === 'object') {
-        const maybe = error;
-        if (typeof maybe.message === 'string' && maybe.message)
-            return maybe.message;
-        if (typeof maybe.error === 'string' && maybe.error)
-            return maybe.error;
-        try {
-            return JSON.stringify(error);
-        }
-        catch {
-            return '未知错误';
-        }
-    }
-    return String(error);
-}
-/** 按 errorCode 补充中文提示，界面统一走这个 */
-function describeAgentError(error, errorCode) {
-    const raw = agentErrorMessage(error);
-    const hint = errorCode ? ERROR_CODE_TEXT[errorCode] : '';
-    if (!hint)
-        return raw;
-    return raw && raw !== hint ? hint + '（' + raw + '）' : hint;
-}
-/* ============================================================ 模型 */
-function isModelSummary(value) {
-    if (!value || typeof value !== 'object')
-        return false;
-    const model = value;
-    return typeof model.id === 'string';
-}
-/** 列出可用模型；任何一步失败都返回空数组（界面显示「未配置模型」而不是报错弹窗） */
-async function listModels(api) {
-    try {
-        const list = await api.model.list();
-        return Array.isArray(list) ? list.filter(isModelSummary) : [];
-    }
-    catch (error) {
-        addLog('[Agent] 读取模型列表失败: ' + agentErrorMessage(error), 'warning');
-        return [];
-    }
-}
-/**
- * 取默认模型 id。⚠️ `model.getDefault()` 的返回形状在官方 d.ts / 文档 / 实现之间不一致：
- * 可能是字符串、ModelSummary、或 {modelId}/{id}/{name} 包装对象，故逐一判型后兜底。
- */
-async function pickDefaultModelId(api) {
-    let value;
-    try {
-        value = await api.model.getDefault();
-    }
-    catch (error) {
-        addLog('[Agent] 读取默认模型失败: ' + agentErrorMessage(error), 'warning');
-        return '';
-    }
-    if (typeof value === 'string')
-        return value;
-    if (isModelSummary(value))
-        return value.id;
-    if (value && typeof value === 'object') {
-        const wrapper = value;
-        if (typeof wrapper.modelId === 'string')
-            return wrapper.modelId;
-        if (typeof wrapper.id === 'string')
-            return wrapper.id;
-        if (typeof wrapper.summary === 'string')
-            return wrapper.summary;
-        if (isModelSummary(wrapper.summary))
-            return wrapper.summary.id;
-    }
-    return '';
-}
-/* ============================================================ 对话 */
-/** 新建对话。system 用于交代脚本自身上下文；不传 model 时由 ScriptCat 用默认模型 */
-async function createConversation(api, options) {
-    return api.conversation.create(options);
-}
-/** 读取历史消息并统一成界面结构（跳过 system 消息：那是脚本自己注入的提示词） */
-async function readConversationMessages(conversation) {
-    const messages = await conversation.getMessages();
-    if (!Array.isArray(messages))
-        return [];
-    return messages.filter((message) => message && message.role !== 'system');
-}
-/**
- * 按 id 接回已有对话（打开弹窗时恢复上次的会话、或切换会话）。
- * 官方签名是「不存在返回 null」，这里把抛错也一并折成 null —— 界面按「已失效」提示，
- * 不能因为一个取不到的 id 就把对话页签打挂。
- */
-async function getConversation(api, id) {
-    if (!id)
-        return null;
-    try {
-        const conversation = await api.conversation.get(id);
-        return conversation || null;
-    }
-    catch (error) {
-        addLog('[Agent] 打开对话失败: ' + agentErrorMessage(error), 'warning');
-        return null;
-    }
-}
-/**
- * 删对话时清空该对话的消息。
- * ⚠️ 官方没有开放删除会话的接口（`deleteConversation` 只存在于内部 repo 层），
- * `clear()` 的语义是「清空消息历史」（映射到 `{action:"clearMessages"}`），**不删会话记录**。
- * 所以本脚本的「删除」= 这里清消息 + 从本地索引移除，ScriptCat 里会留一条空记录。
- * 返回是否清空成功（没成功也照样从索引移除：对用户来说「看不见了」才算删掉）。
- */
-async function clearConversation(conversation) {
-    try {
-        await conversation.clear();
-        return true;
-    }
-    catch (error) {
-        addLog('[Agent] 清空对话消息失败: ' + agentErrorMessage(error), 'warning');
-        return false;
-    }
-}
-/** 消费一次流式对话；`timeoutMs` 是**静默看门狗**（默认 2 分钟无任何分片即中止） */
-async function streamConversation(conversation, content, handlers = {}, timeoutMs = 120_000) {
-    const outcome = { content: '', thinking: '' };
-    const stream = await conversation.chatStream(content);
-    const iterator = stream[Symbol.asyncIterator]();
-    let timedOut = false;
-    try {
-        for (;;) {
-            let timer;
-            const guard = new Promise((resolve) => {
-                timer = setTimeout(() => resolve('timeout'), timeoutMs);
-            });
-            const next = await Promise.race([iterator.next(), guard]);
-            if (timer)
-                clearTimeout(timer);
-            if (next === 'timeout') {
-                timedOut = true;
-                break;
-            }
-            if (next.done)
-                break;
-            const chunk = next.value;
-            if (!chunk || typeof chunk !== 'object')
-                continue;
-            switch (chunk.type) {
-                case 'content_delta':
-                    if (chunk.content) {
-                        outcome.content += chunk.content;
-                        handlers.onContent?.(chunk.content);
-                    }
-                    break;
-                case 'thinking_delta':
-                    if (chunk.content) {
-                        outcome.thinking += chunk.content;
-                        handlers.onThinking?.(chunk.content);
-                    }
-                    break;
-                case 'tool_call':
-                case 'tool_call_complete':
-                    if (chunk.toolCall)
-                        handlers.onToolCall?.(chunk.toolCall);
-                    break;
-                case 'system_warning':
-                    if (chunk.warning)
-                        handlers.onWarning?.(chunk.warning);
-                    break;
-                case 'done':
-                    outcome.usage = chunk.usage;
-                    outcome.durationMs = chunk.durationMs;
-                    if (chunk.warning)
-                        handlers.onWarning?.(chunk.warning);
-                    break;
-                case 'error':
-                    outcome.error = describeAgentError(chunk.error || '模型返回错误', chunk.errorCode);
-                    outcome.errorCode = chunk.errorCode;
-                    outcome.usage = chunk.usage;
-                    break;
-                default:
-                    // content_block / new_message 等：本轮 UI 不做区分展示
-                    break;
-            }
-        }
-    }
-    finally {
-        // 正常 `done` 之后迭代器自己已断开连接；提前 break / 超时 / 抛错时必须显式 return()，
-        // 否则 SW 侧的 port 会一直挂着（官方 processStream 的注释专门写了这一点）
-        await iterator.return?.();
-    }
-    if (timedOut && !outcome.content && !outcome.error) {
-        outcome.error = '等待模型响应超过 ' + Math.round(timeoutMs / 1000) + ' 秒，已中止本次请求。';
-        outcome.errorCode = 'timeout';
-    }
-    return outcome;
-}
-/* ============================================================ 技能 */
-async function listSkills(api) {
-    const list = await api.skills.list();
-    return Array.isArray(list) ? list : [];
-}
-async function removeSkill(api, name) {
-    return api.skills.remove(name);
-}
-/* ============================================================ 定时任务 */
-async function listTasks(api) {
-    const list = await api.task.list();
-    return Array.isArray(list) ? list : [];
-}
-/** 任务动作的薄封装：把「哪个动作失败」写进日志，便于用户回看运行日志定位 */
-async function runTaskAction(api, action, run) {
-    try {
-        await run(api.task);
-        addLog('[Agent] 定时任务' + action + '成功', 'success');
-    }
-    catch (error) {
-        const message = agentErrorMessage(error);
-        addLog('[Agent] 定时任务' + action + '失败: ' + message, 'error');
-        throw error;
-    }
-}
-function buildTaskInput(draft) {
-    return {
-        name: draft.name.trim(),
-        crontab: draft.crontab.trim(),
-        prompt: draft.prompt.trim(),
-        mode: 'internal',
-        enabled: true,
-        notify: false,
-    };
-}
-/**
- * 五字段 crontab 的**轻量**校验（分 时 日 月 周）。
- * 只挡明显写错（字段数不对、出现非法字符），不做完整 cron 语义校验 ——
- * 真正的合法性由 ScriptCat 的 TaskScheduler 判定，这里的作用是让用户尽早得到反馈。
- */
-function validateCrontab(expression) {
-    const text = expression.trim();
-    if (!text)
-        return '请填写 crontab（五段：分 时 日 月 周）';
-    const fields = text.split(/\s+/);
-    if (fields.length !== 5)
-        return 'crontab 需要 5 段（分 时 日 月 周），当前 ' + fields.length + ' 段';
-    for (const field of fields) {
-        if (!/^[\d*,\-/]+$/.test(field))
-            return 'crontab 里有不支持的字符：' + field;
-    }
-    return '';
-}
-/** 判断某个已安装技能是否被 agent 对话自动加载（仅用于界面提示措辞） */
-function skillToolSummary(skill) {
-    const tools = Array.isArray(skill.toolNames) ? skill.toolNames : [];
-    if (!tools.length)
-        return '无工具';
-    const shown = tools.slice(0, 3).map(toolDisplayName).join('、');
-    return tools.length > 3 ? shown + ' 等 ' + tools.length + ' 个' : shown;
-}
-
-;// ./src/lib/ui/agent/SkillsPanel.tsx
-
-
-
-
-
-
-function formatTime(value) {
-    if (!value || !Number.isFinite(value))
-        return '';
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime()))
-        return '';
-    const pad = (num) => String(num).padStart(2, '0');
-    return (date.getFullYear() +
-        '-' +
-        pad(date.getMonth() + 1) +
-        '-' +
-        pad(date.getDate()) +
-        ' ' +
-        pad(date.getHours()) +
-        ':' +
-        pad(date.getMinutes()));
-}
-/**
- * 已安装技能列表（v26.10.10-v10）。
- *
- * 定位：**只做只读盘点 + 卸载**。技能的安装属于 ScriptCat 自己那套流程（技能市场 / 管理页），
- * 在面板里再实现一套「粘贴 skillMd 安装」既重复又容易与官方流程打架，故此处不放安装入口，
- * 只在没有技能时把「去哪儿装」写清楚。对话页创建会话时用的是 `skills: 'auto'`，
- * 也就是已启用的技能会被 Agent 自动加载并自行决定何时调用，不需要在这里逐个勾选。
- */
-function SkillsPanel({ api, version, onChange }) {
-    const [skills, setSkills] = (0,react_production_namespaceFn().useState)([]);
-    const [loading, setLoading] = (0,react_production_namespaceFn().useState)(false);
-    const [error, setError] = (0,react_production_namespaceFn().useState)('');
-    const reload = (0,react_production_namespaceFn().useCallback)(async () => {
-        setLoading(true);
-        try {
-            const list = await listSkills(api);
-            setSkills(list);
-            setError('');
-        }
-        catch (err) {
-            setError(agentErrorMessage(err));
-        }
-        finally {
-            setLoading(false);
-        }
-    }, [api]);
-    (0,react_production_namespaceFn().useEffect)(() => {
-        void reload();
-    }, [reload, version]);
-    const handleRemove = (0,react_production_namespaceFn().useCallback)(async (name) => {
-        try {
-            await removeSkill(api, name);
-            notify.success('已卸载技能 ' + name);
-            addLog('[Agent] 已卸载技能 ' + name, 'info');
-            await reload();
-            onChange();
-        }
-        catch (err) {
-            const message = agentErrorMessage(err);
-            notify.error('卸载失败：' + message);
-            addLog('[Agent] 卸载技能失败: ' + message, 'error');
-        }
-    }, [api, reload, onChange]);
-    if (error) {
-        return ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', flexDirection: 'column', gap: 8 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(es_alert, { type: "error", showIcon: true, message: '读取技能失败：' + error }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { size: "small", onClick: () => void reload(), children: "\u91CD\u8BD5" })] }));
-    }
-    return ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', flexDirection: 'column', gap: 8 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(typography.Text, { type: "secondary", style: { fontSize: 12 }, children: '已安装 ' + skills.length + ' 个技能；对话时已启用的技能会自动加载。' }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { size: "small", loading: loading, onClick: () => void reload(), children: "\u5237\u65B0" })] }), loading && !skills.length ? ((0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { padding: '24px 0', textAlign: 'center' }, children: (0,react_jsx_runtime_production_namespaceFn().jsx)(spin, { size: "small" }) })) : skills.length ? ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_list, { size: "small", bordered: true, dataSource: skills, style: { maxHeight: 380, overflowY: 'auto' }, renderItem: (skill) => ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_list.Item, { actions: [
-                        (0,react_jsx_runtime_production_namespaceFn().jsx)(popconfirm, { title: '卸载技能 ' + skill.name + '？', description: "\u5378\u8F7D\u540E Agent \u4E0D\u518D\u4F7F\u7528\u8BE5\u6280\u80FD\u3002", okText: "\u5378\u8F7D", cancelText: "\u53D6\u6D88", onConfirm: () => void handleRemove(skill.name), children: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { type: "link", size: "small", danger: true, children: "\u5378\u8F7D" }) }, "remove"),
-                    ], children: (0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(typography.Text, { strong: true, style: { fontSize: 13 }, children: skill.name }), skill.version ? ((0,react_jsx_runtime_production_namespaceFn().jsxs)(es_tag, { color: "blue", style: { marginInlineEnd: 0 }, children: ["v", skill.version] })) : null, (0,react_jsx_runtime_production_namespaceFn().jsx)(es_tag, { color: skill.enabled ? 'green' : 'default', style: { marginInlineEnd: 0 }, children: skill.enabled ? '已启用' : '已停用' }), skill.hasConfig ? ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_tooltip, { title: "\u8BE5\u6280\u80FD\u6709\u53EF\u914D\u7F6E\u9879\uFF0C\u8BF7\u5728 ScriptCat \u7684\u6280\u80FD\u8BBE\u7F6E\u91CC\u8C03\u6574", children: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_tag, { style: { marginInlineEnd: 0 }, children: "\u53EF\u914D\u7F6E" }) })) : null] }), skill.description ? ((0,react_jsx_runtime_production_namespaceFn().jsx)(typography.Text, { type: "secondary", style: { fontSize: 12 }, children: skill.description })) : null, (0,react_jsx_runtime_production_namespaceFn().jsx)(typography.Text, { type: "secondary", style: { fontSize: 11 }, children: '工具：' +
-                                    skillToolSummary(skill) +
-                                    (skill.referenceNames?.length
-                                        ? '　参考资料：' + skill.referenceNames.length + ' 份'
-                                        : '') +
-                                    (formatTime(skill.updatetime)
-                                        ? '　更新于 ' + formatTime(skill.updatetime)
-                                        : '') })] }) })) })) : ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_empty, { image: es_empty.PRESENTED_IMAGE_SIMPLE, description: (0,react_jsx_runtime_production_namespaceFn().jsx)("span", { style: { fontSize: 12 }, children: "\u8FD8\u6CA1\u6709\u5B89\u88C5\u4EFB\u4F55\u6280\u80FD\u3002\u6280\u80FD\u53EF\u5728 ScriptCat \u7684\u6280\u80FD\u5E02\u573A / \u7BA1\u7406\u9875\u5B89\u88C5\uFF0C\u88C5\u597D\u540E\u56DE\u5230\u8FD9\u91CC\u5237\u65B0\u5373\u53EF\u3002" }) })), (0,react_jsx_runtime_production_namespaceFn().jsx)(typography.Text, { type: "secondary", style: { fontSize: 11 }, children: "\u63D0\u793A\uFF1A\u6280\u80FD\u7531 ScriptCat \u7EDF\u4E00\u7BA1\u7406\uFF0C\u672C\u9762\u677F\u53EA\u505A\u76D8\u70B9\u4E0E\u5378\u8F7D\uFF0C\u4E0D\u63D0\u4F9B\u5B89\u88C5\u5165\u53E3\uFF08\u907F\u514D\u4E0E\u5B98\u65B9\u6D41\u7A0B\u91CD\u590D\uFF09\u3002" })] }));
-}
-
-;// ./node_modules/antd/es/form/hooks/useDebounce.js
-
-
-function useDebounce(value) {
-  const [cacheValue, setCacheValue] = useDelayState(value);
-  (react_production_namespaceFn().useEffect)(() => {
-    setCacheValue(value, {
-      ms: value.length ? 0 : 10
-    });
-  }, [value]);
-  return cacheValue;
-}
-;// ./node_modules/antd/es/style/motion/collapse.js
-const genCollapseMotion = token => {
-  const {
-    componentCls,
-    antCls,
-    motionDurationMid,
-    motionEaseInOut
-  } = token;
-  return {
-    [componentCls]: {
-      // For common/openAnimation
-      [`${antCls}-motion-collapse-legacy`]: {
-        overflow: 'hidden',
-        '&-active': {
-          transition: `${['height', 'opacity'].map(prop => `${prop} ${motionDurationMid} ${motionEaseInOut}`).join(', ')} !important`
-        }
-      },
-      [`${antCls}-motion-collapse`]: {
-        overflow: 'hidden',
-        transition: `${['height', 'opacity'].map(prop => `${prop} ${motionDurationMid} ${motionEaseInOut}`).join(', ')} !important`
-      }
-    }
-  };
-};
-/* harmony default export */ const motion_collapse = (genCollapseMotion);
-;// ./node_modules/antd/es/form/style/explain.js
-const genFormValidateMotionStyle = token => {
-  const {
-    componentCls,
-    motionDurationFast,
-    motionEaseInOut
-  } = token;
-  const helpCls = `${componentCls}-show-help`;
-  const helpItemCls = `${componentCls}-show-help-item`;
-  return {
-    [helpCls]: {
-      // Explain holder
-      transition: `opacity ${motionDurationFast} ${motionEaseInOut}`,
-      '&-appear, &-enter': {
-        opacity: 0,
-        '&-active': {
-          opacity: 1
-        }
-      },
-      '&-leave': {
-        opacity: 1,
-        '&-active': {
-          opacity: 0
-        }
-      },
-      // Explain
-      [helpItemCls]: {
-        overflow: 'hidden',
-        transition: `${['height', 'opacity', 'transform'].map(prop => `${prop} ${motionDurationFast} ${motionEaseInOut}`).join(', ')} !important`,
-        [`&${helpItemCls}-appear, &${helpItemCls}-enter`]: {
-          transform: `translateY(-5px)`,
-          opacity: 0,
-          '&-active': {
-            transform: 'translateY(0)',
-            opacity: 1
-          }
-        },
-        [`&${helpItemCls}-leave-active`]: {
-          transform: `translateY(-5px)`
-        }
-      }
-    }
-  };
-};
-/* harmony default export */ const explain = (genFormValidateMotionStyle);
-;// ./node_modules/antd/es/form/style/index.js
-
-
-
-
-
-
-const resetForm = token => ({
-  legend: {
-    display: 'block',
-    width: '100%',
-    marginBottom: token.marginLG,
-    padding: 0,
-    color: token.colorTextDescription,
-    fontSize: token.fontSizeLG,
-    lineHeight: 'inherit',
-    border: 0,
-    borderBottom: `${util_unit(token.lineWidth)} ${token.lineType} ${token.colorBorder}`
-  },
-  'input[type="search"]': {
-    boxSizing: 'border-box'
-  },
-  // Position radios and checkboxes better
-  'input[type="radio"], input[type="checkbox"]': {
-    lineHeight: 'normal'
-  },
-  'input[type="file"]': {
-    display: 'block'
-  },
-  // Make range inputs behave like textual form controls
-  'input[type="range"]': {
-    display: 'block',
-    width: '100%'
-  },
-  // Make multiple select elements height not fixed
-  'select[multiple], select[size]': {
-    height: 'auto'
-  },
-  // Focus for file, radio, and checkbox
-  "input[type='file']:focus, input[type='radio']:focus, input[type='checkbox']:focus": {
-    outline: 0,
-    boxShadow: `0 0 0 ${util_unit(token.controlOutlineWidth)} ${token.controlOutline}`
-  },
-  // Adjust output element
-  output: {
-    display: 'block',
-    paddingTop: 15,
-    color: token.colorText,
-    fontSize: token.fontSize,
-    lineHeight: token.lineHeight
-  }
-});
-const genFormSize = (token, height) => {
-  const {
-    formItemCls
-  } = token;
-  return {
-    [formItemCls]: {
-      [`${formItemCls}-label > label`]: {
-        height
-      },
-      [`${formItemCls}-control-input`]: {
-        minHeight: height
-      }
-    }
-  };
-};
-const genFormStyle = token => {
-  const {
-    componentCls
-  } = token;
-  return {
-    [componentCls]: {
-      ...resetComponent(token),
-      ...resetForm(token),
-      [`${componentCls}-text`]: {
-        display: 'inline-block',
-        paddingInlineEnd: token.paddingSM
-      },
-      // ================================================================
-      // =                             Size                             =
-      // ================================================================
-      '&-small': {
-        ...genFormSize(token, token.controlHeightSM)
-      },
-      '&-large': {
-        ...genFormSize(token, token.controlHeightLG)
-      }
-    }
-  };
-};
-const genFormItemStyle = token => {
-  const {
-    formItemCls,
-    iconCls,
-    rootPrefixCls,
-    antCls,
-    labelRequiredMarkColor,
-    labelColor,
-    labelFontSize,
-    labelHeight,
-    labelColonMarginInlineStart,
-    labelColonMarginInlineEnd,
-    itemMarginBottom
-  } = token;
-  const [varName] = genCssVar(antCls, 'grid');
-  return {
-    [formItemCls]: {
-      ...resetComponent(token),
-      marginBottom: itemMarginBottom,
-      verticalAlign: 'top',
-      '&-with-help': {
-        transition: 'none'
-      },
-      [`&-hidden,
-        &-hidden${antCls}-row`]: {
-        // https://github.com/ant-design/ant-design/issues/26141
-        display: 'none'
-      },
-      // ==============================================================
-      // =                            Label                           =
-      // ==============================================================
-      [`${formItemCls}-label`]: {
-        flexGrow: 0,
-        overflow: 'hidden',
-        whiteSpace: 'nowrap',
-        textAlign: 'end',
-        verticalAlign: 'middle',
-        '&-left': {
-          textAlign: 'start'
-        },
-        '&-wrap': {
-          overflow: 'unset',
-          lineHeight: token.lineHeight,
-          whiteSpace: 'unset',
-          '> label': {
-            verticalAlign: 'middle',
-            textWrap: 'balance'
-          }
-        },
-        '> label': {
-          position: 'relative',
-          display: 'inline-flex',
-          alignItems: 'center',
-          maxWidth: '100%',
-          height: labelHeight,
-          color: labelColor,
-          fontSize: labelFontSize,
-          [`> ${iconCls}`]: {
-            fontSize: token.fontSize,
-            verticalAlign: 'top'
-          },
-          [`&${formItemCls}-required`]: {
-            '&::before': {
-              display: 'inline-block',
-              marginInlineEnd: token.marginXXS,
-              color: labelRequiredMarkColor,
-              fontSize: token.fontSize,
-              fontFamily: 'sans-serif',
-              lineHeight: 1,
-              content: '"*"'
-            },
-            [`&${formItemCls}-required-mark-hidden, &${formItemCls}-required-mark-optional`]: {
-              '&::before': {
-                display: 'none'
-              }
-            }
-          },
-          // Optional mark
-          [`${formItemCls}-optional`]: {
-            display: 'inline-block',
-            marginInlineStart: token.marginXXS,
-            color: token.colorTextDescription,
-            [`&${formItemCls}-required-mark-hidden`]: {
-              display: 'none'
-            }
-          },
-          // Optional mark
-          [`${formItemCls}-tooltip`]: {
-            color: token.colorTextDescription,
-            cursor: 'help',
-            writingMode: 'horizontal-tb',
-            marginInlineStart: token.marginXXS
-          },
-          '&::after': {
-            content: '":"',
-            position: 'relative',
-            marginBlock: 0,
-            marginInlineStart: labelColonMarginInlineStart,
-            marginInlineEnd: labelColonMarginInlineEnd
-          },
-          [`&${formItemCls}-no-colon::after`]: {
-            content: '"\\a0"'
-          }
-        }
-      },
-      // ==============================================================
-      // =                            Input                           =
-      // ==============================================================
-      [`${formItemCls}-control`]: {
-        [varName('display')]: 'flex',
-        flexDirection: 'column',
-        flexGrow: 1,
-        [`&:first-child:not([class^="'${rootPrefixCls}-col-'"]):not([class*="' ${rootPrefixCls}-col-'"])`]: {
-          width: '100%'
-        },
-        '&-input': {
-          position: 'relative',
-          display: 'flex',
-          alignItems: 'center',
-          minHeight: token.controlHeight,
-          '&-content': {
-            flex: 'auto',
-            maxWidth: '100%',
-            // Fix https://github.com/ant-design/ant-design/issues/54042
-            // Remove impact of whitespaces
-            [`&:has(> ${antCls}-switch:only-child, > ${antCls}-rate:only-child)`]: {
-              display: 'flex',
-              alignItems: 'center'
-            }
-          }
-        }
-      },
-      // ==============================================================
-      // =                           Explain                          =
-      // ==============================================================
-      [formItemCls]: {
-        '&-additional': {
-          display: 'flex',
-          flexDirection: 'column'
-        },
-        '&-explain, &-extra': {
-          clear: 'both',
-          color: token.colorTextDescription,
-          fontSize: token.fontSize,
-          lineHeight: token.lineHeight
-        },
-        '&-explain-connected': {
-          width: '100%'
-        },
-        '&-extra': {
-          minHeight: token.controlHeightSM,
-          transition: `color ${token.motionDurationMid} ${token.motionEaseOut}` // sync input color transition
-        },
-        '&-explain': {
-          '&-error': {
-            color: token.colorError
-          },
-          '&-warning': {
-            color: token.colorWarning
-          }
-        }
-      },
-      [`&-with-help ${formItemCls}-explain`]: {
-        height: 'auto',
-        opacity: 1
-      },
-      // ==============================================================
-      // =                        Feedback Icon                       =
-      // ==============================================================
-      [`${formItemCls}-feedback-icon`]: {
-        fontSize: token.fontSize,
-        textAlign: 'center',
-        visibility: 'visible',
-        animationName: zoomIn,
-        animationDuration: token.motionDurationMid,
-        animationTimingFunction: token.motionEaseOutBack,
-        pointerEvents: 'none',
-        '&-success': {
-          color: token.colorSuccess
-        },
-        '&-error': {
-          color: token.colorError
-        },
-        '&-warning': {
-          color: token.colorWarning
-        },
-        '&-validating': {
-          color: token.colorPrimary
-        }
-      }
-    }
-  };
-};
-const makeVerticalLayoutLabelBase = token => ({
-  padding: token.verticalLabelPadding,
-  whiteSpace: 'initial',
-  textAlign: 'start',
-  '> label': {
-    margin: 0,
-    '&::after': {
-      // https://github.com/ant-design/ant-design/issues/43538
-      visibility: 'hidden'
-    }
-  }
-});
-const makeVerticalLayoutLabel = token => ({
-  ...makeVerticalLayoutLabelBase(token),
-  margin: token.verticalLabelMargin
-});
-const makeVerticalLayoutLabelWithOffset = token => {
-  const [formVarName] = genCssVar(token.antCls, 'form');
-  return {
-    ...makeVerticalLayoutLabelBase(token),
-    [formVarName('item-label-margin')]: token.verticalLabelMargin
-  };
-};
-const genHorizontalStyle = token => {
-  const {
-    antCls,
-    formItemCls
-  } = token;
-  return {
-    [`${formItemCls}-horizontal`]: {
-      [`${formItemCls}-label`]: {
-        flexGrow: 0
-      },
-      [`${formItemCls}-control`]: {
-        flex: '1 1 0',
-        // https://github.com/ant-design/ant-design/issues/32777
-        // https://github.com/ant-design/ant-design/issues/33773
-        minWidth: 0
-      },
-      // Do not change this to `ant-col-24`! `-24` match all the responsive rules
-      // https://github.com/ant-design/ant-design/issues/32980
-      // https://github.com/ant-design/ant-design/issues/34903
-      // https://github.com/ant-design/ant-design/issues/44538
-      [`${formItemCls}-label[class$='-24'], ${formItemCls}-label[class*='-24 ']`]: {
-        [`& + ${formItemCls}-control`]: {
-          minWidth: 'unset'
-        }
-      },
-      [`> ${formItemCls}-row > ${antCls}-col-24${formItemCls}-label,
-        > ${formItemCls}-row > ${antCls}-col-xl-24${formItemCls}-label`]: makeVerticalLayoutLabel(token)
-    }
-  };
-};
-const genInlineStyle = token => {
-  const {
-    componentCls,
-    formItemCls,
-    inlineItemMarginBottom
-  } = token;
-  return {
-    [`${componentCls}-inline`]: {
-      display: 'flex',
-      flexWrap: 'wrap',
-      [`${formItemCls}-inline`]: {
-        flex: 'none',
-        marginInlineEnd: token.margin,
-        marginBottom: inlineItemMarginBottom,
-        '&-row': {
-          flexWrap: 'nowrap'
-        },
-        [`> ${formItemCls}-label,
-        > ${formItemCls}-control`]: {
-          display: 'inline-block',
-          verticalAlign: 'top'
-        },
-        [`> ${formItemCls}-label`]: {
-          flex: 'none'
-        },
-        [`${componentCls}-text`]: {
-          display: 'inline-block'
-        },
-        [`${formItemCls}-has-feedback`]: {
-          display: 'inline-block'
-        }
-      }
-    }
-  };
-};
-const makeVerticalLayout = token => {
-  const {
-    componentCls,
-    formItemCls,
-    rootPrefixCls
-  } = token;
-  return {
-    [`${formItemCls}:not(${formItemCls}-vertical) > ${formItemCls}-row > ${formItemCls}-label`]: makeVerticalLayoutLabel(token),
-    // ref: https://github.com/ant-design/ant-design/issues/45122
-    [`${componentCls}:not(${componentCls}-inline)`]: {
-      [formItemCls]: {
-        flexWrap: 'wrap',
-        [`${formItemCls}-label, ${formItemCls}-control`]: {
-          // When developer pass `xs: { span }`,
-          // It should follow the `xs` screen config
-          // ref: https://github.com/ant-design/ant-design/issues/44386
-          [`&:not([class*=" ${rootPrefixCls}-col-xs"])`]: {
-            flex: '0 0 100%',
-            maxWidth: '100%'
-          }
-        }
-      }
-    }
-  };
-};
-const genVerticalStyle = token => {
-  const {
-    componentCls,
-    formItemCls,
-    antCls,
-    verticalLabelHeight
-  } = token;
-  const [formVarName, formVarRef] = genCssVar(antCls, 'form');
-  return {
-    [formItemCls]: {
-      [formVarName('item-label-margin')]: 'initial'
-    },
-    [`${formItemCls}-label`]: {
-      margin: formVarRef('item-label-margin')
-    },
-    [`${formItemCls}-vertical`]: {
-      [`${formItemCls}-row`]: {
-        flexDirection: 'column'
-      },
-      [`${formItemCls}-label > label`]: {
-        height: verticalLabelHeight
-      },
-      [`${formItemCls}-control`]: {
-        width: '100%',
-        flex: 'none'
-      },
-      [`> ${formItemCls}-row > ${formItemCls}-label,
-        > ${formItemCls}-row > ${antCls}-col-24${formItemCls}-label,
-        > ${formItemCls}-row > ${antCls}-col-xl-24${formItemCls}-label`]: makeVerticalLayoutLabelWithOffset(token)
-    },
-    [`@media (max-width: ${util_unit(token.screenXSMax)})`]: [makeVerticalLayout(token), {
-      [componentCls]: {
-        [`${formItemCls}:not(${formItemCls}-horizontal):not(${formItemCls}-vertical)`]: {
-          [`> ${formItemCls}-row > ${antCls}-col-xs-24${formItemCls}-label`]: makeVerticalLayoutLabel(token)
-        }
-      }
-    }],
-    [`@media (max-width: ${util_unit(token.screenSMMax)})`]: {
-      [componentCls]: {
-        [`${formItemCls}:not(${formItemCls}-horizontal):not(${formItemCls}-vertical)`]: {
-          [`> ${formItemCls}-row > ${antCls}-col-sm-24${formItemCls}-label`]: makeVerticalLayoutLabel(token)
-        }
-      }
-    },
-    [`@media (max-width: ${util_unit(token.screenMDMax)})`]: {
-      [componentCls]: {
-        [`${formItemCls}:not(${formItemCls}-horizontal):not(${formItemCls}-vertical)`]: {
-          [`> ${formItemCls}-row > ${antCls}-col-md-24${formItemCls}-label`]: makeVerticalLayoutLabel(token)
-        }
-      }
-    },
-    [`@media (max-width: ${util_unit(token.screenLGMax)})`]: {
-      [componentCls]: {
-        [`${formItemCls}:not(${formItemCls}-horizontal):not(${formItemCls}-vertical)`]: {
-          [`> ${formItemCls}-row > ${antCls}-col-lg-24${formItemCls}-label`]: makeVerticalLayoutLabel(token)
-        }
-      }
-    }
-  };
-};
-// ============================== Export ==============================
-const form_style_prepareComponentToken = token => ({
-  labelRequiredMarkColor: token.colorError,
-  labelColor: token.colorTextHeading,
-  labelFontSize: token.fontSize,
-  labelHeight: token.controlHeight,
-  verticalLabelHeight: token.labelHeight ?? 'auto',
-  labelColonMarginInlineStart: token.marginXXS / 2,
-  labelColonMarginInlineEnd: token.marginXS,
-  itemMarginBottom: token.marginLG,
-  verticalLabelPadding: `0 0 ${token.paddingXS}px`,
-  verticalLabelMargin: 0,
-  inlineItemMarginBottom: 0
-});
-const form_style_prepareToken = (token, rootPrefixCls) => {
-  const formToken = statistic_merge(token, {
-    formItemCls: `${token.componentCls}-item`,
-    rootPrefixCls
-  });
-  return formToken;
-};
-/* harmony default export */ const form_style = (genStyleHooks('Form', (token, {
-  rootPrefixCls
-}) => {
-  const formToken = form_style_prepareToken(token, rootPrefixCls);
-  return [genFormStyle(formToken), genFormItemStyle(formToken), explain(formToken), genHorizontalStyle(formToken), genInlineStyle(formToken), genVerticalStyle(formToken), motion_collapse(formToken), zoomIn];
-}, form_style_prepareComponentToken, {
-  // Let From style before the Grid
-  // ref https://github.com/ant-design/ant-design/issues/44386
-  order: -1000
-}));
-;// ./node_modules/antd/es/form/ErrorList.js
-"use client";
-
-
-
-
-
-
-
-
-
-
-
-const ErrorList_EMPTY_LIST = [];
-function toErrorEntity(error, prefix, errorStatus, index = 0) {
-  return {
-    key: typeof error === 'string' ? error : `${prefix}-${index}`,
-    error,
-    errorStatus
-  };
-}
-const ErrorList = ({
-  help,
-  helpStatus,
-  errors = ErrorList_EMPTY_LIST,
-  warnings = ErrorList_EMPTY_LIST,
-  className: rootClassName,
-  fieldId,
-  onVisibleChanged
-}) => {
-  const {
-    prefixCls
-  } = (react_production_namespaceFn().useContext)(FormItemPrefixContext);
-  const {
-    classNames: contextClassNames,
-    styles: contextStyles
-  } = (react_production_namespaceFn().useContext)(context_FormContext);
-  const baseClassName = `${prefixCls}-item-explain`;
-  const rootCls = hooks_useCSSVarCls(prefixCls);
-  const [hashId, cssVarCls] = form_style(prefixCls, rootCls);
-  const collapseMotion = (react_production_namespaceFn().useMemo)(() => motion(prefixCls), [prefixCls]);
-  // We have to debounce here again since somewhere use ErrorList directly still need no shaking
-  // ref: https://github.com/ant-design/ant-design/issues/36336
-  const debounceErrors = useDebounce(errors);
-  const debounceWarnings = useDebounce(warnings);
-  const hasHelp = isNonNullable(help);
-  const fullKeyList = (react_production_namespaceFn().useMemo)(() => {
-    if (hasHelp) {
-      return [toErrorEntity(help, 'help', helpStatus)];
-    }
-    return [].concat(_toConsumableArray(debounceErrors.map((error, index) => toErrorEntity(error, 'error', 'error', index))), _toConsumableArray(debounceWarnings.map((warning, index) => toErrorEntity(warning, 'warning', 'warning', index))));
-  }, [help, helpStatus, hasHelp, debounceErrors, debounceWarnings]);
-  const filledKeyFullKeyList = (react_production_namespaceFn().useMemo)(() => {
-    const keysCount = {};
-    fullKeyList.forEach(({
-      key
-    }) => {
-      keysCount[key] = (keysCount[key] || 0) + 1;
-    });
-    return fullKeyList.map((entity, index) => ({
-      ...entity,
-      key: keysCount[entity.key] > 1 ? `${entity.key}-fallback-${index}` : entity.key
-    }));
-  }, [fullKeyList]);
-  const helpProps = {};
-  if (fieldId) {
-    helpProps.id = `${fieldId}_help`;
-  }
-  return /*#__PURE__*/(react_production_namespaceFn().createElement)(es, {
-    motionDeadline: collapseMotion.motionDeadline,
-    motionName: `${prefixCls}-show-help`,
-    visible: !!filledKeyFullKeyList.length,
-    onVisibleChanged: onVisibleChanged
-  }, holderProps => {
-    const {
-      className: holderClassName,
-      style: holderStyle
-    } = holderProps;
-    return /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
-      ...helpProps,
-      className: clsx(baseClassName, holderClassName, contextClassNames?.help, cssVarCls, rootCls, rootClassName, hashId),
-      style: {
-        ...contextStyles?.help,
-        ...holderStyle
-      }
-    }, /*#__PURE__*/(react_production_namespaceFn().createElement)(CSSMotionList, {
-      keys: filledKeyFullKeyList,
-      ...motion(prefixCls),
-      motionName: `${prefixCls}-show-help-item`,
-      component: false
-    }, itemProps => {
-      const {
-        key,
-        error,
-        errorStatus,
-        className: itemClassName,
-        style: itemStyle
-      } = itemProps;
-      return /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
-        key: key,
-        className: clsx(itemClassName, contextClassNames?.helpItem, {
-          [`${baseClassName}-${errorStatus}`]: errorStatus
-        }),
-        style: {
-          ...contextStyles?.helpItem,
-          ...itemStyle
-        }
-      }, error);
-    }));
-  });
-};
-/* harmony default export */ const form_ErrorList = (ErrorList);
-;// ./node_modules/compute-scroll-into-view/dist/index.js
-const dist_t=t=>"object"==typeof t&&null!=t&&1===t.nodeType,dist_e=(t,e)=>(!e||"hidden"!==t)&&("visible"!==t&&"clip"!==t),dist_n=(t,n)=>{if(t.clientHeight<t.scrollHeight||t.clientWidth<t.scrollWidth){const o=getComputedStyle(t,null);return dist_e(o.overflowY,n)||dist_e(o.overflowX,n)||(t=>{const e=(t=>{if(!t.ownerDocument||!t.ownerDocument.defaultView)return null;try{return t.ownerDocument.defaultView.frameElement}catch(t){return null}})(t);return!!e&&(e.clientHeight<t.scrollHeight||e.clientWidth<t.scrollWidth)})(t)}return!1},dist_o=(t,e,n,o,l,r,i,s)=>r<t&&i>e||r>t&&i<e?0:r<=t&&s<=n||i>=e&&s>=n?r-t-o:i>e&&s<n||r<t&&s>n?i-e+l:0,l=t=>{const e=t.parentElement;return null==e?t.getRootNode().host||null:e},dist_r=(e,r)=>{var i,s,d,h;if("undefined"==typeof document)return[];const{scrollMode:c,block:f,inline:u,boundary:a,skipOverflowHiddenElements:g}=r,p="function"==typeof a?a:t=>t!==a;if(!dist_t(e))throw new TypeError("Invalid target");const m=document.scrollingElement||document.documentElement,w=[];let W=e;for(;dist_t(W)&&p(W);){if(W=l(W),W===m){w.push(W);break}null!=W&&W===document.body&&dist_n(W)&&!dist_n(document.documentElement)||null!=W&&dist_n(W,g)&&w.push(W)}const b=null!=(s=null==(i=window.visualViewport)?void 0:i.width)?s:innerWidth,H=null!=(h=null==(d=window.visualViewport)?void 0:d.height)?h:innerHeight,{scrollX:y,scrollY:M}=window,{height:v,width:E,top:x,right:C,bottom:I,left:R}=e.getBoundingClientRect(),{top:T,right:B,bottom:F,left:V}=(t=>{const e=window.getComputedStyle(t);return{top:parseFloat(e.scrollMarginTop)||0,right:parseFloat(e.scrollMarginRight)||0,bottom:parseFloat(e.scrollMarginBottom)||0,left:parseFloat(e.scrollMarginLeft)||0}})(e);let k="start"===f||"nearest"===f?x-T:"end"===f?I+F:x+v/2-T+F,D="center"===u?R+E/2-V+B:"end"===u?C+B:R-V;const L=[];for(let t=0;t<w.length;t++){const e=w[t],{height:l,width:r,top:i,right:s,bottom:d,left:h}=e.getBoundingClientRect();if("if-needed"===c&&x>=0&&R>=0&&I<=H&&C<=b&&(e===m&&!dist_n(e)||x>=i&&I<=d&&R>=h&&C<=s))return L;const a=getComputedStyle(e),g=parseInt(a.borderLeftWidth,10),p=parseInt(a.borderTopWidth,10),W=parseInt(a.borderRightWidth,10),T=parseInt(a.borderBottomWidth,10);let B=0,F=0;const V="offsetWidth"in e?e.offsetWidth-e.clientWidth-g-W:0,S="offsetHeight"in e?e.offsetHeight-e.clientHeight-p-T:0,X="offsetWidth"in e?0===e.offsetWidth?0:r/e.offsetWidth:0,Y="offsetHeight"in e?0===e.offsetHeight?0:l/e.offsetHeight:0;if(m===e)B="start"===f?k:"end"===f?k-H:"nearest"===f?dist_o(M,M+H,H,p,T,M+k,M+k+v,v):k-H/2,F="start"===u?D:"center"===u?D-b/2:"end"===u?D-b:dist_o(y,y+b,b,g,W,y+D,y+D+E,E),B=Math.max(0,B+M),F=Math.max(0,F+y);else{B="start"===f?k-i-p:"end"===f?k-d+T+S:"nearest"===f?dist_o(i,d,l,p,T+S,k,k+v,v):k-(i+l/2)+S/2,F="start"===u?D-h-g:"center"===u?D-(h+r/2)+V/2:"end"===u?D-s+W+V:dist_o(h,s,r,g,W+V,D,D+E,E);const{scrollLeft:t,scrollTop:n}=e;B=0===Y?0:Math.max(0,Math.min(n+B/Y,e.scrollHeight-l/Y+S)),F=0===X?0:Math.max(0,Math.min(t+F/X,e.scrollWidth-r/X+V)),k+=n-B,D+=t-F}L.push({el:e,top:B,left:F})}return L};//# sourceMappingURL=index.js.map
-
-;// ./node_modules/scroll-into-view-if-needed/dist/index.js
-const scroll_into_view_if_needed_dist_o=t=>!1===t?{block:"end",inline:"nearest"}:(t=>t===Object(t)&&0!==Object.keys(t).length)(t)?t:{block:"start",inline:"nearest"};function scroll_into_view_if_needed_dist_e(e,r){if(!e.isConnected||!(t=>{let o=t;for(;o&&o.parentNode;){if(o.parentNode===document)return!0;o=o.parentNode instanceof ShadowRoot?o.parentNode.host:o.parentNode}return!1})(e))return;const n=(t=>{const o=window.getComputedStyle(t);return{top:parseFloat(o.scrollMarginTop)||0,right:parseFloat(o.scrollMarginRight)||0,bottom:parseFloat(o.scrollMarginBottom)||0,left:parseFloat(o.scrollMarginLeft)||0}})(e);if((t=>"object"==typeof t&&"function"==typeof t.behavior)(r))return r.behavior(dist_r(e,r));const l="boolean"==typeof r||null==r?void 0:r.behavior;for(const{el:a,top:i,left:s}of dist_r(e,scroll_into_view_if_needed_dist_o(r))){const t=i-n.top+n.bottom,o=s-n.left+n.right;a.scroll({top:t,left:o,behavior:l})}}//# sourceMappingURL=index.js.map
-
-;// ./node_modules/antd/es/form/util.js
-// form item name black list.  in form ,you can use form.id get the form item element.
-// use object hasOwnProperty will get better performance if black list is longer.
-const formItemNameBlackList = ['parentNode'];
-// default form item id prefix.
-const defaultItemNamePrefixCls = 'form_item';
-function util_toArray(candidate) {
-  if (candidate === undefined || candidate === false) {
-    return [];
-  }
-  return Array.isArray(candidate) ? candidate : [candidate];
-}
-function getFieldId(namePath, formName) {
-  if (!namePath.length) {
-    return undefined;
-  }
-  const mergedId = namePath.join('_');
-  if (formName) {
-    return `${formName}_${mergedId}`;
-  }
-  const isIllegalName = formItemNameBlackList.includes(mergedId);
-  return isIllegalName ? `${defaultItemNamePrefixCls}_${mergedId}` : mergedId;
-}
-/**
- * Get merged status by meta or passed `validateStatus`.
- */
-function getStatus(errors, warnings, meta, defaultValidateStatus, hasFeedback, validateStatus) {
-  let status = defaultValidateStatus;
-  if (validateStatus !== undefined) {
-    status = validateStatus;
-  } else if (meta.validating) {
-    status = 'validating';
-  } else if (errors.length) {
-    status = 'error';
-  } else if (warnings.length) {
-    status = 'warning';
-  } else if (meta.touched || hasFeedback && meta.validated) {
-    // success feedback should display when pass hasFeedback prop and current value is valid value
-    status = 'success';
-  }
-  return status;
-}
-;// ./node_modules/antd/es/form/hooks/useForm.js
-
-
-
-
-
-
-function toNamePathStr(name) {
-  const namePath = util_toArray(name);
-  return namePath.join('_');
-}
-function getFieldDOMNode(name, wrapForm) {
-  const field = wrapForm.getFieldInstance(name);
-  const fieldDom = getDOM(field);
-  if (fieldDom) {
-    return fieldDom;
-  }
-  const fieldId = getFieldId(util_toArray(name), wrapForm.__INTERNAL__.name);
-  if (fieldId) {
-    return document.getElementById(fieldId);
-  }
-}
-function useForm_useForm(form) {
-  const [rcForm] = hooks_useForm();
-  const itemsRef = (react_production_namespaceFn().useRef)({});
-  const wrapForm = (react_production_namespaceFn().useMemo)(() => form ?? {
-    ...rcForm,
-    __INTERNAL__: {
-      itemRef: name => node => {
-        const namePathStr = toNamePathStr(name);
-        if (node) {
-          itemsRef.current[namePathStr] = node;
-        } else {
-          delete itemsRef.current[namePathStr];
-        }
-      }
-    },
-    scrollToField: (name, options = {}) => {
-      const {
-        focus,
-        ...restOpt
-      } = options;
-      const node = getFieldDOMNode(name, wrapForm);
-      if (node) {
-        scroll_into_view_if_needed_dist_e(node, {
-          scrollMode: 'if-needed',
-          block: 'nearest',
-          ...restOpt
-        });
-        // Focus if scroll success
-        if (focus) {
-          wrapForm.focusField(name);
-        }
-      }
-    },
-    focusField: name => {
-      const itemRef = wrapForm.getFieldInstance(name);
-      if (isFunction(itemRef?.focus)) {
-        itemRef.focus();
-      } else {
-        getFieldDOMNode(name, wrapForm)?.focus?.();
-      }
-    },
-    getFieldInstance: name => {
-      const namePathStr = toNamePathStr(name);
-      return itemsRef.current[namePathStr];
-    }
-  }, [form, rcForm]);
-  return [wrapForm];
-}
-;// ./node_modules/antd/es/form/Form.js
-"use client";
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-const Form_InternalForm = (props, ref) => {
-  const contextDisabled = (react_production_namespaceFn().useContext)(config_provider_DisabledContext);
-  const {
-    getPrefixCls,
-    direction,
-    requiredMark: contextRequiredMark,
-    colon: contextColon,
-    scrollToFirstError: contextScrollToFirstError,
-    className: contextClassName,
-    style: contextStyle,
-    styles: contextStyles,
-    classNames: contextClassNames,
-    tooltip: contextTooltip,
-    labelAlign: contextLabelAlign,
-    labelWrap: contextLabelWrap
-  } = useComponentConfig('form');
-  const {
-    prefixCls: customizePrefixCls,
-    className,
-    rootClassName,
-    size,
-    disabled = contextDisabled,
-    form,
-    colon,
-    labelAlign,
-    labelWrap,
-    labelCol,
-    wrapperCol,
-    layout = 'horizontal',
-    scrollToFirstError,
-    requiredMark,
-    onFinishFailed,
-    name,
-    style,
-    feedbackIcons,
-    variant,
-    classNames,
-    styles,
-    tooltip,
-    ...restFormProps
-  } = props;
-  const mergedSize = hooks_useSize(size);
-  const contextValidateMessages = (react_production_namespaceFn().useContext)(validateMessagesContext);
-  if (false) // removed by dead control flow
-{}
-  const mergedRequiredMark = (react_production_namespaceFn().useMemo)(() => {
-    if (requiredMark !== undefined) {
-      return requiredMark;
-    }
-    if (contextRequiredMark !== undefined) {
-      return contextRequiredMark;
-    }
-    return true;
-  }, [requiredMark, contextRequiredMark]);
-  const mergedColon = colon ?? contextColon;
-  const mergedLabelAlign = labelAlign ?? contextLabelAlign;
-  const mergedLabelWrap = labelWrap ?? contextLabelWrap;
-  const mergedTooltip = {
-    ...contextTooltip,
-    ...tooltip
-  };
-  const prefixCls = getPrefixCls('form', customizePrefixCls);
-  // Style
-  const rootCls = hooks_useCSSVarCls(prefixCls);
-  const [hashId, cssVarCls] = form_style(prefixCls, rootCls);
-  // =========== Merged Props for Semantic ===========
-  const mergedProps = {
-    ...props,
-    size: mergedSize,
-    disabled,
-    layout,
-    colon: mergedColon,
-    requiredMark: mergedRequiredMark,
-    labelAlign: mergedLabelAlign,
-    labelWrap: mergedLabelWrap
-  };
-  const contextStyleRoot = useSemanticRootStyle(contextStyle);
-  const styleRoot = useSemanticRootStyle(style);
-  const [mergedClassNames, mergedStyles] = useMergeSemantic([contextClassNames, classNames], [contextStyles, contextStyleRoot, styles, styleRoot], {
-    props: mergedProps
-  });
-  const formClassName = clsx(prefixCls, `${prefixCls}-${layout}`, {
-    [`${prefixCls}-hide-required-mark`]: mergedRequiredMark === false,
-    // todo: remove in next major version
-    [`${prefixCls}-rtl`]: direction === 'rtl',
-    [`${prefixCls}-large`]: mergedSize === 'large',
-    [`${prefixCls}-small`]: mergedSize === 'small'
-  }, cssVarCls, rootCls, hashId, contextClassName, className, rootClassName, mergedClassNames.root);
-  const [wrapForm] = useForm_useForm(form);
-  const {
-    __INTERNAL__
-  } = wrapForm;
-  __INTERNAL__.name = name;
-  const formContextValue = (react_production_namespaceFn().useMemo)(() => ({
-    name,
-    labelAlign: mergedLabelAlign,
-    labelCol,
-    labelWrap: mergedLabelWrap,
-    wrapperCol,
-    layout,
-    colon: mergedColon,
-    requiredMark: mergedRequiredMark,
-    itemRef: __INTERNAL__.itemRef,
-    form: wrapForm,
-    feedbackIcons,
-    tooltip: mergedTooltip,
-    classNames: mergedClassNames,
-    styles: mergedStyles
-  }), [name, mergedLabelAlign, mergedLabelWrap, labelCol, wrapperCol, layout, mergedColon, mergedRequiredMark, wrapForm, feedbackIcons, mergedClassNames, mergedStyles, mergedTooltip]);
-  const nativeElementRef = (react_production_namespaceFn().useRef)(null);
-  (react_production_namespaceFn().useImperativeHandle)(ref, () => ({
-    ...wrapForm,
-    nativeElement: nativeElementRef.current?.nativeElement
-  }));
-  const scrollToField = (options, fieldName) => {
-    if (options) {
-      let defaultScrollToFirstError = {
-        block: 'nearest'
-      };
-      if (is_isPlainObject(options)) {
-        defaultScrollToFirstError = {
-          ...defaultScrollToFirstError,
-          ...options
-        };
-      }
-      wrapForm.scrollToField(fieldName, defaultScrollToFirstError);
-    }
-  };
-  const onInternalFinishFailed = errorInfo => {
-    onFinishFailed?.(errorInfo);
-    if (errorInfo.errorFields.length) {
-      const fieldName = errorInfo.errorFields[0].name;
-      if (scrollToFirstError !== undefined) {
-        scrollToField(scrollToFirstError, fieldName);
-        return;
-      }
-      if (contextScrollToFirstError !== undefined) {
-        scrollToField(contextScrollToFirstError, fieldName);
-      }
-    }
-  };
-  return /*#__PURE__*/(react_production_namespaceFn().createElement)(VariantContext.Provider, {
-    value: variant
-  }, /*#__PURE__*/(react_production_namespaceFn().createElement)(DisabledContextProvider, {
-    disabled: disabled
-  }, /*#__PURE__*/(react_production_namespaceFn().createElement)(config_provider_SizeContext.Provider, {
-    value: mergedSize
-  }, /*#__PURE__*/(react_production_namespaceFn().createElement)(context_FormProvider, {
-    // This is not list in API, we pass with spread
-    validateMessages: contextValidateMessages
-  }, /*#__PURE__*/(react_production_namespaceFn().createElement)(context_FormContext.Provider, {
-    value: formContextValue
-  }, /*#__PURE__*/(react_production_namespaceFn().createElement)(NoFormStyle, {
-    status: true
-  }, /*#__PURE__*/(react_production_namespaceFn().createElement)(form_es, {
-    id: name,
-    ...restFormProps,
-    name: name,
-    onFinishFailed: onInternalFinishFailed,
-    form: wrapForm,
-    ref: nativeElementRef,
-    style: mergedStyles?.root,
-    className: formClassName
-  })))))));
-};
-const form_Form_Form = /*#__PURE__*/(react_production_namespaceFn().forwardRef)(Form_InternalForm);
-if (false) // removed by dead control flow
-{}
-
-/* harmony default export */ const form_Form = (form_Form_Form);
-;// ./node_modules/antd/es/form/hooks/useChildren.js
-
-
-const useChildren_useChildren = children => {
-  if (isFunction(children)) {
-    return children;
-  }
-  const childList = toArray_toArray(children);
-  return childList.length <= 1 ? childList[0] : childList;
-};
-/* harmony default export */ const hooks_useChildren = (useChildren_useChildren);
-;// ./node_modules/antd/es/form/hooks/useFormItemStatus.js
-
-
-
-const useFormItemStatus = () => {
-  const {
-    status,
-    errors = [],
-    warnings = []
-  } = (react_production_namespaceFn().useContext)(FormItemInputContext);
-  if (false) // removed by dead control flow
-{}
-  return {
-    status,
-    errors,
-    warnings
-  };
-};
-// Only used for compatible package. Not promise this will work on future version.
-useFormItemStatus.Context = FormItemInputContext;
-/* harmony default export */ const hooks_useFormItemStatus = (useFormItemStatus);
-;// ./node_modules/antd/es/form/hooks/useFrameState.js
-
-
-function useFrameState(defaultValue) {
-  const [value, setValue] = (react_production_namespaceFn().useState)(defaultValue);
-  const frameRef = (react_production_namespaceFn().useRef)(null);
-  const batchRef = (react_production_namespaceFn().useRef)([]);
-  const destroyRef = (react_production_namespaceFn().useRef)(false);
-  (react_production_namespaceFn().useEffect)(() => {
-    destroyRef.current = false;
-    return () => {
-      destroyRef.current = true;
-      es_raf.cancel(frameRef.current);
-      frameRef.current = null;
-    };
-  }, []);
-  function setFrameValue(updater) {
-    if (destroyRef.current) {
-      return;
-    }
-    if (frameRef.current === null) {
-      batchRef.current = [];
-      frameRef.current = es_raf(() => {
-        frameRef.current = null;
-        setValue(prevValue => {
-          let current = prevValue;
-          batchRef.current.forEach(func => {
-            current = func(current);
-          });
-          return current;
-        });
-      });
-    }
-    batchRef.current.push(updater);
-  }
-  return [value, setFrameValue];
-}
-;// ./node_modules/antd/es/form/hooks/useItemRef.js
-
-
-
-
-const useItemRef = () => {
-  const {
-    itemRef
-  } = (react_production_namespaceFn().useContext)(context_FormContext);
-  const cacheRef = (react_production_namespaceFn().useRef)({});
-  const getRef = (name, children) => {
-    // Outer caller already check the `supportRef`
-    const childrenRef = children && is_isPlainObject(children) && getNodeRef(children);
-    const nameStr = name.join('_');
-    if (cacheRef.current.name !== nameStr || cacheRef.current.originRef !== childrenRef) {
-      cacheRef.current.name = nameStr;
-      cacheRef.current.originRef = childrenRef;
-      cacheRef.current.ref = composeRef(itemRef(name), childrenRef);
-    }
-    return cacheRef.current.ref;
-  };
-  return getRef;
-};
-/* harmony default export */ const hooks_useItemRef = (useItemRef);
-;// ./node_modules/antd/es/form/style/fallbackCmp.js
-/**
- * Fallback of IE.
- * Safe to remove.
- */
-
-
-// ============================= Fallback =============================
-const genFallbackStyle = token => {
-  const {
-    formItemCls
-  } = token;
-  return {
-    '@media screen and (-ms-high-contrast: active), (-ms-high-contrast: none)': {
-      // Fallback for IE, safe to remove we not support it anymore
-      [`${formItemCls}-control`]: {
-        display: 'flex'
-      }
-    }
-  };
-};
-// ============================== Export ==============================
-/* harmony default export */ const fallbackCmp = (genSubStyleComponent(['Form', 'item-item'], (token, {
-  rootPrefixCls
-}) => {
-  const formToken = form_style_prepareToken(token, rootPrefixCls);
-  return genFallbackStyle(formToken);
-}));
-;// ./node_modules/antd/es/form/FormItemInput.js
-"use client";
-
-
-
-
-
-
-
-
-
-
-
-const GRID_MAX = 24;
-const FormItemInput = props => {
-  const {
-    prefixCls,
-    status,
-    labelCol,
-    wrapperCol,
-    children,
-    errors,
-    warnings,
-    _internalItemRender: formItemRender,
-    extra,
-    help,
-    fieldId,
-    marginBottom,
-    onErrorVisibleChanged,
-    label
-  } = props;
-  const baseClassName = `${prefixCls}-item`;
-  const formContext = (react_production_namespaceFn().useContext)(context_FormContext);
-  const {
-    classNames: contextClassNames,
-    styles: contextStyles
-  } = formContext;
-  const mergedWrapperCol = (react_production_namespaceFn().useMemo)(() => {
-    let mergedWrapper = {
-      ...(wrapperCol || formContext.wrapperCol || {})
-    };
-    if (label === null && !labelCol && !wrapperCol && formContext.labelCol) {
-      const list = [undefined].concat(_toConsumableArray(responsiveArrayReversed));
-      list.forEach(size => {
-        const _size = size ? [size] : [];
-        const formLabel = get_get(formContext.labelCol, _size);
-        const formLabelObj = is_isPlainObject(formLabel) ? formLabel : {};
-        const wrapper = get_get(mergedWrapper, _size);
-        const wrapperObj = is_isPlainObject(wrapper) ? wrapper : {};
-        if ('span' in formLabelObj && !('offset' in wrapperObj) && formLabelObj.span < GRID_MAX) {
-          mergedWrapper = set_set(mergedWrapper, [].concat(_size, ['offset']), formLabelObj.span);
-        }
-      });
-    }
-    return mergedWrapper;
-  }, [wrapperCol, formContext.wrapperCol, formContext.labelCol, label, labelCol]);
-  const className = clsx(`${baseClassName}-control`, mergedWrapperCol.className);
-  // Pass to sub FormItem should not with col info
-  const subFormContext = (react_production_namespaceFn().useMemo)(() => {
-    const {
-      labelCol: _labelCol,
-      wrapperCol: _wrapperCol,
-      ...rest
-    } = formContext;
-    return rest;
-  }, [formContext]);
-  const extraRef = (react_production_namespaceFn().useRef)(null);
-  const [extraHeight, setExtraHeight] = (react_production_namespaceFn().useState)(0);
-  const hasExtra = isReactRenderable(extra);
-  hooks_useLayoutEffect(() => {
-    if (hasExtra && extraRef.current) {
-      setExtraHeight(extraRef.current.clientHeight);
-    } else {
-      setExtraHeight(0);
-    }
-  }, [extra, hasExtra]);
-  const inputDom = /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
-    className: `${baseClassName}-control-input`
-  }, /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
-    className: clsx(`${baseClassName}-control-input-content`, contextClassNames?.content),
-    style: contextStyles?.content
-  }, children));
-  const formItemContext = (react_production_namespaceFn().useMemo)(() => ({
-    prefixCls,
-    status
-  }), [prefixCls, status]);
-  const errorListDom = marginBottom !== null || errors.length || warnings.length ? (/*#__PURE__*/(react_production_namespaceFn().createElement)(FormItemPrefixContext.Provider, {
-    value: formItemContext
-  }, /*#__PURE__*/(react_production_namespaceFn().createElement)(form_ErrorList, {
-    fieldId: fieldId,
-    errors: errors,
-    warnings: warnings,
-    help: help,
-    helpStatus: status,
-    className: `${baseClassName}-explain-connected`,
-    onVisibleChanged: onErrorVisibleChanged
-  }))) : null;
-  const extraProps = {};
-  if (fieldId) {
-    extraProps.id = `${fieldId}_extra`;
-  }
-  const extraDom = hasExtra ? (/*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
-    ...extraProps,
-    className: clsx(`${baseClassName}-extra`, contextClassNames?.extra),
-    style: contextStyles?.extra,
-    ref: extraRef
-  }, extra)) : null;
-  const additionalDom = errorListDom || extraDom ? (/*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
-    className: `${baseClassName}-additional`,
-    style: marginBottom ? {
-      minHeight: marginBottom + extraHeight
-    } : {}
-  }, errorListDom, extraDom)) : null;
-  const dom = formItemRender && formItemRender.mark === 'pro_table_render' && formItemRender.render ? formItemRender.render(props, {
-    input: inputDom,
-    errorList: errorListDom,
-    extra: extraDom
-  }) : (/*#__PURE__*/(react_production_namespaceFn().createElement)((react_production_namespaceFn().Fragment), null, inputDom, additionalDom));
-  return /*#__PURE__*/(react_production_namespaceFn().createElement)(context_FormContext.Provider, {
-    value: subFormContext
-  }, /*#__PURE__*/(react_production_namespaceFn().createElement)(grid_col, {
-    ...mergedWrapperCol,
-    className: className
-  }, dom), /*#__PURE__*/(react_production_namespaceFn().createElement)(fallbackCmp, {
-    prefixCls: prefixCls
-  }));
-};
-/* harmony default export */ const form_FormItemInput = (FormItemInput);
-;// ./node_modules/@ant-design/icons-svg/es/asn/QuestionCircleOutlined.js
-// This icon file is generated automatically.
-var QuestionCircleOutlined = { "icon": { "tag": "svg", "attrs": { "viewBox": "64 64 896 896", "focusable": "false" }, "children": [{ "tag": "path", "attrs": { "d": "M512 64C264.6 64 64 264.6 64 512s200.6 448 448 448 448-200.6 448-448S759.4 64 512 64zm0 820c-205.4 0-372-166.6-372-372s166.6-372 372-372 372 166.6 372 372-166.6 372-372 372z" } }, { "tag": "path", "attrs": { "d": "M623.6 316.7C593.6 290.4 554 276 512 276s-81.6 14.5-111.6 40.7C369.2 344 352 380.7 352 420v7.6c0 4.4 3.6 8 8 8h48c4.4 0 8-3.6 8-8V420c0-44.1 43.1-80 96-80s96 35.9 96 80c0 31.1-22 59.6-56.1 72.7-21.2 8.1-39.2 22.3-52.1 40.9-13.1 19-19.9 41.8-19.9 64.9V620c0 4.4 3.6 8 8 8h48c4.4 0 8-3.6 8-8v-22.7a48.3 48.3 0 0130.9-44.8c59-22.7 97.1-74.7 97.1-132.5.1-39.3-17.1-76-48.3-103.3zM472 732a40 40 0 1080 0 40 40 0 10-80 0z" } }] }, "name": "question-circle", "theme": "outlined" };
-/* harmony default export */ const asn_QuestionCircleOutlined = (QuestionCircleOutlined);
-
-;// ./node_modules/@ant-design/icons/es/icons/QuestionCircleOutlined.js
-function QuestionCircleOutlined_extends() { QuestionCircleOutlined_extends = Object.assign ? Object.assign.bind() : function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; }; return QuestionCircleOutlined_extends.apply(this, arguments); }
-// GENERATED BY ./scripts/generate.ts
-// DO NOT EDIT IT MANUALLY
-
-;
-
-
-const QuestionCircleOutlined_QuestionCircleOutlined = (props, ref) => /*#__PURE__*/(react_production_namespaceFn().createElement)(AntdIconLight, QuestionCircleOutlined_extends({}, props, {
-  ref: ref,
-  icon: asn_QuestionCircleOutlined
-}));
-
-/**![question-circle](data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTAiIGhlaWdodD0iNTAiIGZpbGw9IiNjYWNhY2EiIHZpZXdCb3g9IjY0IDY0IDg5NiA4OTYiIGZvY3VzYWJsZT0iZmFsc2UiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHBhdGggZD0iTTUxMiA2NEMyNjQuNiA2NCA2NCAyNjQuNiA2NCA1MTJzMjAwLjYgNDQ4IDQ0OCA0NDggNDQ4LTIwMC42IDQ0OC00NDhTNzU5LjQgNjQgNTEyIDY0em0wIDgyMGMtMjA1LjQgMC0zNzItMTY2LjYtMzcyLTM3MnMxNjYuNi0zNzIgMzcyLTM3MiAzNzIgMTY2LjYgMzcyIDM3Mi0xNjYuNiAzNzItMzcyIDM3MnoiIC8+PHBhdGggZD0iTTYyMy42IDMxNi43QzU5My42IDI5MC40IDU1NCAyNzYgNTEyIDI3NnMtODEuNiAxNC41LTExMS42IDQwLjdDMzY5LjIgMzQ0IDM1MiAzODAuNyAzNTIgNDIwdjcuNmMwIDQuNCAzLjYgOCA4IDhoNDhjNC40IDAgOC0zLjYgOC04VjQyMGMwLTQ0LjEgNDMuMS04MCA5Ni04MHM5NiAzNS45IDk2IDgwYzAgMzEuMS0yMiA1OS42LTU2LjEgNzIuNy0yMS4yIDguMS0zOS4yIDIyLjMtNTIuMSA0MC45LTEzLjEgMTktMTkuOSA0MS44LTE5LjkgNjQuOVY2MjBjMCA0LjQgMy42IDggOCA4aDQ4YzQuNCAwIDgtMy42IDgtOHYtMjIuN2E0OC4zIDQ4LjMgMCAwMTMwLjktNDQuOGM1OS0yMi43IDk3LjEtNzQuNyA5Ny4xLTEzMi41LjEtMzkuMy0xNy4xLTc2LTQ4LjMtMTAzLjN6TTQ3MiA3MzJhNDAgNDAgMCAxMDgwIDAgNDAgNDAgMCAxMC04MCAweiIgLz48L3N2Zz4=) */
-const QuestionCircleOutlined_RefIcon = /*#__PURE__*/(react_production_namespaceFn().forwardRef)(QuestionCircleOutlined_QuestionCircleOutlined);
-if (false) // removed by dead control flow
-{}
-/* harmony default export */ const icons_QuestionCircleOutlined = (QuestionCircleOutlined_RefIcon);
-;// ./node_modules/antd/es/_util/convertToTooltipProps.js
-
-
-
-const convertToTooltipProps = (tooltip, context) => {
-  if (!isReactRenderable(tooltip)) {
-    return null;
-  }
-  if (is_isPlainObject(tooltip) && ! /*#__PURE__*/(0,react_production_namespaceFn().isValidElement)(tooltip)) {
-    return {
-      ...context,
-      ...tooltip
-    };
-  }
-  return {
-    ...context,
-    title: tooltip
-  };
-};
-/* harmony default export */ const _util_convertToTooltipProps = (convertToTooltipProps);
-;// ./node_modules/antd/es/form/FormItemLabel.js
-"use client";
-
-
-
-
-
-
-
-
-
-
-
-
-const FormItemLabel = ({
-  prefixCls,
-  label,
-  htmlFor,
-  labelCol,
-  labelAlign,
-  colon,
-  required,
-  requiredMark,
-  tooltip,
-  vertical
-}) => {
-  const [formLocale] = locale_useLocale('Form');
-  const {
-    labelAlign: contextLabelAlign,
-    labelCol: contextLabelCol,
-    labelWrap,
-    colon: contextColon,
-    classNames: contextClassNames,
-    styles: contextStyles,
-    tooltip: contextTooltip
-  } = (react_production_namespaceFn().useContext)(context_FormContext);
-  if (!isReactRenderable(label)) {
-    return null;
-  }
-  const mergedLabelCol = labelCol || contextLabelCol || {};
-  const mergedLabelAlign = labelAlign || contextLabelAlign;
-  const labelClsBasic = `${prefixCls}-item-label`;
-  const labelColClassName = clsx(labelClsBasic, mergedLabelAlign === 'left' && `${labelClsBasic}-left`, mergedLabelCol.className, {
-    [`${labelClsBasic}-wrap`]: !!labelWrap
-  });
-  let labelChildren = label;
-  // Keep label is original where there should have no colon
-  const computedColon = colon === true || contextColon !== false && colon !== false;
-  const haveColon = computedColon && !vertical;
-  // Remove duplicated user input colon
-  if (haveColon && typeof label === 'string' && label.trim()) {
-    labelChildren = label.replace(/[:|：]\s*$/, '');
-  }
-  const tooltipProps = _util_convertToTooltipProps(tooltip, contextTooltip);
-  if (tooltipProps) {
-    const tooltipNode = /*#__PURE__*/(react_production_namespaceFn().createElement)(es_tooltip, {
-      ...tooltipProps
-    }, /*#__PURE__*/(react_production_namespaceFn().createElement)("span", {
-      className: `${prefixCls}-item-tooltip`,
-      onClick: e => {
-        e.preventDefault();
-      },
-      tabIndex: -1
-    }, tooltipProps.icon || tooltipProps.children || /*#__PURE__*/(react_production_namespaceFn().createElement)(icons_QuestionCircleOutlined, null)));
-    labelChildren = /*#__PURE__*/(react_production_namespaceFn().createElement)((react_production_namespaceFn().Fragment), null, labelChildren, tooltipNode);
-  }
-  // Required Mark
-  const isOptionalMark = requiredMark === 'optional';
-  const isRenderMark = isFunction(requiredMark);
-  const hideRequiredMark = requiredMark === false;
-  if (isRenderMark) {
-    labelChildren = requiredMark(labelChildren, {
-      required: !!required
-    });
-  } else if (isOptionalMark && !required) {
-    labelChildren = /*#__PURE__*/(react_production_namespaceFn().createElement)((react_production_namespaceFn().Fragment), null, labelChildren, /*#__PURE__*/(react_production_namespaceFn().createElement)("span", {
-      className: `${prefixCls}-item-optional`
-    }, formLocale?.optional || es_locale_en_US.Form?.optional));
-  }
-  // https://github.com/ant-design/ant-design/pull/52950#discussion_r1980880316
-  let markType;
-  if (hideRequiredMark) {
-    markType = 'hidden';
-  } else if (isOptionalMark || isRenderMark) {
-    markType = 'optional';
-  }
-  const labelClassName = clsx(contextClassNames?.label, {
-    [`${prefixCls}-item-required`]: required,
-    [`${prefixCls}-item-required-mark-${markType}`]: markType,
-    [`${prefixCls}-item-no-colon`]: !computedColon
-  });
-  return /*#__PURE__*/(react_production_namespaceFn().createElement)(grid_col, {
-    ...mergedLabelCol,
-    className: labelColClassName
-  }, /*#__PURE__*/(react_production_namespaceFn().createElement)("label", {
-    htmlFor: htmlFor,
-    className: labelClassName,
-    style: contextStyles?.label,
-    title: typeof label === 'string' ? label : undefined
-  }, labelChildren));
-};
-/* harmony default export */ const form_FormItemLabel = (FormItemLabel);
-;// ./node_modules/antd/es/form/FormItem/StatusProvider.js
-"use client";
-
-
-
-
-
-
-
-
-
-const iconMap = {
-  success: icons_CheckCircleFilled,
-  warning: icons_ExclamationCircleFilled,
-  error: icons_CloseCircleFilled,
-  validating: icons_LoadingOutlined
-};
-function StatusProvider({
-  children,
-  errors,
-  warnings,
-  hasFeedback,
-  validateStatus,
-  prefixCls,
-  meta,
-  noStyle,
-  name
-}) {
-  const itemPrefixCls = `${prefixCls}-item`;
-  const {
-    feedbackIcons
-  } = (react_production_namespaceFn().useContext)(context_FormContext);
-  const mergedValidateStatus = getStatus(errors, warnings, meta, null, !!hasFeedback, validateStatus);
-  const {
-    isFormItemInput: parentIsFormItemInput,
-    status: parentStatus,
-    hasFeedback: parentHasFeedback,
-    feedbackIcon: parentFeedbackIcon,
-    name: parentName
-  } = (react_production_namespaceFn().useContext)(FormItemInputContext);
-  // ====================== Context =======================
-  const formItemStatusContext = (react_production_namespaceFn().useMemo)(() => {
-    let feedbackIcon;
-    if (hasFeedback) {
-      const customIcons = hasFeedback !== true && hasFeedback.icons || feedbackIcons;
-      const customIconNode = mergedValidateStatus && customIcons?.({
-        status: mergedValidateStatus,
-        errors,
-        warnings
-      })?.[mergedValidateStatus];
-      const IconNode = mergedValidateStatus ? iconMap[mergedValidateStatus] : null;
-      feedbackIcon = customIconNode !== false && IconNode ? (/*#__PURE__*/(react_production_namespaceFn().createElement)("span", {
-        className: clsx(`${itemPrefixCls}-feedback-icon`, `${itemPrefixCls}-feedback-icon-${mergedValidateStatus}`)
-      }, customIconNode || /*#__PURE__*/(react_production_namespaceFn().createElement)(IconNode, null))) : null;
-    }
-    const context = {
-      status: mergedValidateStatus || '',
-      errors,
-      warnings,
-      hasFeedback: !!hasFeedback,
-      feedbackIcon,
-      isFormItemInput: true,
-      name
-    };
-    // No style will follow parent context
-    if (noStyle) {
-      context.status = (mergedValidateStatus ?? parentStatus) || '';
-      context.isFormItemInput = parentIsFormItemInput;
-      context.hasFeedback = !!(hasFeedback ?? parentHasFeedback);
-      context.feedbackIcon = hasFeedback !== undefined ? context.feedbackIcon : parentFeedbackIcon;
-      context.name = name ?? parentName;
-    }
-    return context;
-  }, [mergedValidateStatus, errors, warnings, hasFeedback, feedbackIcons, noStyle, name, parentIsFormItemInput, parentStatus, itemPrefixCls, parentHasFeedback, parentFeedbackIcon, parentName]);
-  // ======================= Render =======================
-  return /*#__PURE__*/(react_production_namespaceFn().createElement)(FormItemInputContext.Provider, {
-    value: formItemStatusContext
-  }, children);
-}
-/* harmony default export */ const FormItem_StatusProvider = (StatusProvider);
-;// ./node_modules/antd/es/form/FormItem/ItemHolder.js
-"use client";
-
-
-
-
-
-
-
-
-
-
-
-function ItemHolder(props) {
-  const {
-    prefixCls,
-    className,
-    rootClassName,
-    style,
-    help,
-    errors,
-    warnings,
-    validateStatus,
-    meta,
-    hasFeedback,
-    hidden,
-    children,
-    fieldId,
-    required,
-    isRequired,
-    onSubItemMetaChange,
-    layout: propsLayout,
-    name,
-    ...restProps
-  } = props;
-  const itemPrefixCls = `${prefixCls}-item`;
-  const {
-    requiredMark,
-    layout: formLayout
-  } = (react_production_namespaceFn().useContext)(context_FormContext);
-  const layout = propsLayout || formLayout;
-  const vertical = layout === 'vertical';
-  // ======================== Margin ========================
-  const itemRef = (react_production_namespaceFn().useRef)(null);
-  const debounceErrors = useDebounce(errors);
-  const debounceWarnings = useDebounce(warnings);
-  const hasHelp = isNonNullable(help);
-  const hasError = !!(hasHelp || debounceErrors.length || debounceWarnings.length);
-  const isOnScreen = !!itemRef.current && isVisible(itemRef.current);
-  const [marginBottom, setMarginBottom] = (react_production_namespaceFn().useState)(null);
-  hooks_useLayoutEffect(() => {
-    if (hasError && itemRef.current) {
-      // The element must be part of the DOMTree to use getComputedStyle
-      // https://stackoverflow.com/questions/35360711/getcomputedstyle-returns-a-cssstyledeclaration-but-all-properties-are-empty-on-a
-      const itemStyle = getComputedStyle(itemRef.current);
-      setMarginBottom(Number.parseInt(itemStyle.marginBottom, 10));
-    }
-  }, [hasError, isOnScreen]);
-  const onErrorVisibleChanged = nextVisible => {
-    if (!nextVisible && !hasError) {
-      setMarginBottom(null);
-    }
-  };
-  // ======================== Status ========================
-  const getValidateState = (isDebounce = false) => {
-    const _errors = isDebounce ? debounceErrors : meta.errors;
-    const _warnings = isDebounce ? debounceWarnings : meta.warnings;
-    return getStatus(_errors, _warnings, meta, '', !!hasFeedback, validateStatus);
-  };
-  const mergedValidateStatus = getValidateState();
-  // ======================== Render ========================
-  const itemClassName = clsx(itemPrefixCls, className, rootClassName, {
-    [`${itemPrefixCls}-with-help`]: hasHelp || debounceErrors.length || debounceWarnings.length,
-    // Status
-    [`${itemPrefixCls}-has-feedback`]: mergedValidateStatus && hasFeedback,
-    [`${itemPrefixCls}-has-success`]: mergedValidateStatus === 'success',
-    [`${itemPrefixCls}-has-warning`]: mergedValidateStatus === 'warning',
-    [`${itemPrefixCls}-has-error`]: mergedValidateStatus === 'error',
-    [`${itemPrefixCls}-is-validating`]: mergedValidateStatus === 'validating',
-    [`${itemPrefixCls}-hidden`]: hidden,
-    // Layout
-    [`${itemPrefixCls}-${layout}`]: layout
-  });
-  return /*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
-    className: itemClassName,
-    style: style,
-    ref: itemRef
-  }, /*#__PURE__*/(react_production_namespaceFn().createElement)(grid_row, {
-    className: `${itemPrefixCls}-row`,
-    ...omit(restProps, ['_internalItemRender', 'colon', 'dependencies', 'extra', 'fieldKey', 'getValueFromEvent', 'getValueProps', 'htmlFor', 'id',
-    // It is deprecated because `htmlFor` is its replacement.
-    'initialValue', 'isListField', 'label', 'labelAlign', 'labelCol', 'labelWrap', 'messageVariables', 'name', 'normalize', 'noStyle', 'preserve', 'requiredMark', 'rules', 'shouldUpdate', 'trigger', 'tooltip', 'validateFirst', 'validateTrigger', 'valuePropName', 'wrapperCol', 'validateDebounce'])
-  }, /*#__PURE__*/(react_production_namespaceFn().createElement)(form_FormItemLabel, {
-    htmlFor: fieldId,
-    ...props,
-    requiredMark: requiredMark,
-    required: required ?? isRequired,
-    prefixCls: prefixCls,
-    vertical: vertical
-  }), /*#__PURE__*/(react_production_namespaceFn().createElement)(form_FormItemInput, {
-    ...props,
-    ...meta,
-    errors: debounceErrors,
-    warnings: debounceWarnings,
-    prefixCls: prefixCls,
-    status: mergedValidateStatus,
-    help: help,
-    marginBottom: marginBottom,
-    onErrorVisibleChanged: onErrorVisibleChanged
-  }, /*#__PURE__*/(react_production_namespaceFn().createElement)(NoStyleItemContext.Provider, {
-    value: onSubItemMetaChange
-  }, /*#__PURE__*/(react_production_namespaceFn().createElement)(FormItem_StatusProvider, {
-    prefixCls: prefixCls,
-    meta: meta,
-    errors: meta.errors,
-    warnings: meta.warnings,
-    hasFeedback: hasFeedback,
-    // Already calculated
-    validateStatus: mergedValidateStatus,
-    name: name
-  }, children)))), !!marginBottom && (/*#__PURE__*/(react_production_namespaceFn().createElement)("div", {
-    className: `${itemPrefixCls}-margin-offset`,
-    style: {
-      marginBottom: -marginBottom
-    }
-  })));
-}
-;// ./node_modules/antd/es/form/FormItem/index.js
-"use client";
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-const NAME_SPLIT = '__SPLIT__';
-const _ValidateStatuses = (/* unused pure expression or super */ null && (['success', 'warning', 'error', 'validating', '']));
-// https://github.com/ant-design/ant-design/issues/46417
-// `getValueProps` may modify the value props name,
-// we should check if the control is similar.
-function isSimilarControl(a, b) {
-  const keysA = Object.keys(a);
-  const keysB = Object.keys(b);
-  return keysA.length === keysB.length && keysA.every(key => {
-    const propValueA = a[key];
-    const propValueB = b[key];
-    return propValueA === propValueB || isFunction(propValueA) || isFunction(propValueB);
-  });
-}
-const MemoInput = /*#__PURE__*/(react_production_namespaceFn().memo)(props => props.children, (prev, next) => isSimilarControl(prev.control, next.control) && prev.update === next.update && prev.childProps.length === next.childProps.length && prev.childProps.every((value, index) => value === next.childProps[index]));
-function genEmptyMeta() {
-  return {
-    errors: [],
-    warnings: [],
-    touched: false,
-    validating: false,
-    name: [],
-    validated: false
-  };
-}
-function InternalFormItem(props) {
-  const {
-    name,
-    noStyle,
-    className,
-    dependencies,
-    prefixCls: customizePrefixCls,
-    shouldUpdate,
-    rules,
-    children,
-    required,
-    label,
-    messageVariables,
-    trigger = 'onChange',
-    validateTrigger,
-    hidden,
-    help,
-    layout
-  } = props;
-  const {
-    getPrefixCls
-  } = (react_production_namespaceFn().useContext)(ConfigContext);
-  const {
-    name: formName
-  } = (react_production_namespaceFn().useContext)(context_FormContext);
-  const mergedChildren = hooks_useChildren(children);
-  const isRenderProps = isFunction(mergedChildren);
-  const notifyParentMetaChange = (react_production_namespaceFn().useContext)(NoStyleItemContext);
-  const {
-    validateTrigger: contextValidateTrigger
-  } = (react_production_namespaceFn().useContext)(FieldContext);
-  const mergedValidateTrigger = isNonNullable(validateTrigger) ? validateTrigger : contextValidateTrigger;
-  const hasName = isNonNullable(name);
-  const prefixCls = getPrefixCls('form', customizePrefixCls);
-  // Style
-  const rootCls = hooks_useCSSVarCls(prefixCls);
-  const [hashId, cssVarCls] = form_style(prefixCls, rootCls);
-  // ========================= Warn =========================
-  const warning = useDevWarning('Form.Item');
-  if (false) // removed by dead control flow
-{}
-  // ========================= MISC =========================
-  // Get `noStyle` required info
-  const listContext = (react_production_namespaceFn().useContext)(es_ListContext);
-  const fieldKeyPathRef = (react_production_namespaceFn().useRef)(null);
-  // ======================== Errors ========================
-  // >>>>> Collect sub field errors
-  const [subFieldErrors, setSubFieldErrors] = useFrameState({});
-  // >>>>> Current field errors
-  const [meta, setMeta] = hooks_useState(() => genEmptyMeta());
-  const onMetaChange = nextMeta => {
-    // This keyInfo is not correct when field is removed
-    // Since origin keyManager no longer keep the origin key anymore
-    // Which means we need cache origin one and reuse when removed
-    const keyInfo = listContext?.getKey(nextMeta.name);
-    // Destroy will reset all the meta
-    setMeta(nextMeta.destroy ? genEmptyMeta() : nextMeta, true);
-    // Bump to parent since noStyle
-    if (noStyle && help !== false && notifyParentMetaChange) {
-      let namePath = nextMeta.name;
-      if (!nextMeta.destroy) {
-        if (keyInfo !== undefined) {
-          const [fieldKey, restPath] = keyInfo;
-          namePath = [fieldKey].concat(_toConsumableArray(restPath));
-          fieldKeyPathRef.current = namePath;
-        }
-      } else {
-        // Use origin cache data
-        namePath = fieldKeyPathRef.current || namePath;
-      }
-      notifyParentMetaChange(nextMeta, namePath);
-    }
-  };
-  // >>>>> Collect noStyle Field error to the top FormItem
-  const onSubItemMetaChange = (subMeta, uniqueKeys) => {
-    // Only `noStyle` sub item will trigger
-    setSubFieldErrors(prevSubFieldErrors => {
-      const clone = {
-        ...prevSubFieldErrors
-      };
-      // name: ['user', 1] + key: [4] = ['user', 4]
-      const mergedNamePath = [].concat(_toConsumableArray(subMeta.name.slice(0, -1)), _toConsumableArray(uniqueKeys));
-      const mergedNameKey = mergedNamePath.join(NAME_SPLIT);
-      if (subMeta.destroy) {
-        // Remove
-        delete clone[mergedNameKey];
-      } else {
-        // Update
-        clone[mergedNameKey] = subMeta;
-      }
-      return clone;
-    });
-  };
-  // >>>>> Get merged errors
-  const [mergedErrors, mergedWarnings] = (react_production_namespaceFn().useMemo)(() => {
-    const errorList = _toConsumableArray(meta.errors);
-    const warningList = _toConsumableArray(meta.warnings);
-    Object.values(subFieldErrors).forEach(subFieldError => {
-      errorList.push.apply(errorList, _toConsumableArray(subFieldError.errors || []));
-      warningList.push.apply(warningList, _toConsumableArray(subFieldError.warnings || []));
-    });
-    return [errorList, warningList];
-  }, [subFieldErrors, meta.errors, meta.warnings]);
-  // ===================== Children Ref =====================
-  const getItemRef = hooks_useItemRef();
-  // ======================== Render ========================
-  function renderLayout(baseChildren, fieldId, isRequired) {
-    if (noStyle && !hidden) {
-      return /*#__PURE__*/(react_production_namespaceFn().createElement)(FormItem_StatusProvider, {
-        prefixCls: prefixCls,
-        hasFeedback: props.hasFeedback,
-        validateStatus: props.validateStatus,
-        meta: meta,
-        errors: mergedErrors,
-        warnings: mergedWarnings,
-        noStyle: true,
-        name: name
-      }, baseChildren);
-    }
-    return /*#__PURE__*/(react_production_namespaceFn().createElement)(ItemHolder, {
-      key: "row",
-      ...props,
-      className: clsx(className, cssVarCls, rootCls, hashId),
-      prefixCls: prefixCls,
-      fieldId: fieldId,
-      isRequired: isRequired,
-      errors: mergedErrors,
-      warnings: mergedWarnings,
-      meta: meta,
-      onSubItemMetaChange: onSubItemMetaChange,
-      layout: layout,
-      name: name
-    }, baseChildren);
-  }
-  if (!hasName && !isRenderProps && !dependencies) {
-    return renderLayout(mergedChildren);
-  }
-  let variables = {};
-  if (typeof label === 'string') {
-    variables.label = label;
-  } else if (name) {
-    variables.label = String(name);
-  }
-  if (messageVariables) {
-    variables = {
-      ...variables,
-      ...messageVariables
-    };
-  }
-  // >>>>> With Field
-  return /*#__PURE__*/(react_production_namespaceFn().createElement)(es_Field, {
-    ...props,
-    messageVariables: variables,
-    trigger: trigger,
-    validateTrigger: mergedValidateTrigger,
-    onMetaChange: onMetaChange
-  }, (control, renderMeta, context) => {
-    const mergedName = util_toArray(name).length && renderMeta ? renderMeta.name : [];
-    const fieldId = getFieldId(mergedName, formName);
-    const isRequired = required !== undefined ? required : rules?.some(rule => {
-      if (is_isPlainObject(rule) && rule.required && !rule.warningOnly) {
-        return true;
-      }
-      if (isFunction(rule)) {
-        const ruleEntity = rule(context);
-        return ruleEntity?.required && !ruleEntity?.warningOnly;
-      }
-      return false;
-    });
-    // ======================= Children =======================
-    const mergedControl = {
-      ...control
-    };
-    let childNode = null;
-     false ? 0 : void 0;
-    if (Array.isArray(mergedChildren) && hasName) {
-       false ? 0 : void 0;
-      childNode = mergedChildren;
-    } else if (isRenderProps && (!(shouldUpdate || dependencies) || hasName)) {
-       false ? 0 : void 0;
-       false ? 0 : void 0;
-    } else if (dependencies && !isRenderProps && !hasName) {
-       false ? 0 : void 0;
-    } else if (/*#__PURE__*/(react_production_namespaceFn().isValidElement)(mergedChildren)) {
-       false ? 0 : void 0;
-      const childProps = {
-        ...mergedChildren.props,
-        ...mergedControl
-      };
-      if (!childProps.id) {
-        childProps.id = fieldId;
-      }
-      const hasExtra = isReactRenderable(props.extra);
-      if (help || mergedErrors.length > 0 || mergedWarnings.length > 0 || hasExtra) {
-        const describedbyArr = [];
-        if (help || mergedErrors.length > 0) {
-          describedbyArr.push(`${fieldId}_help`);
-        }
-        if (hasExtra) {
-          describedbyArr.push(`${fieldId}_extra`);
-        }
-        childProps['aria-describedby'] = describedbyArr.join(' ');
-      }
-      if (mergedErrors.length > 0) {
-        childProps['aria-invalid'] = 'true';
-      }
-      if (isRequired) {
-        childProps['aria-required'] = 'true';
-      }
-      if (supportRef(mergedChildren)) {
-        childProps.ref = getItemRef(mergedName, mergedChildren);
-      }
-      // We should keep user origin event handler
-      const triggers = new Set([].concat(_toConsumableArray(util_toArray(trigger)), _toConsumableArray(util_toArray(mergedValidateTrigger))));
-      triggers.forEach(eventName => {
-        childProps[eventName] = (...args) => {
-          mergedControl[eventName]?.(...args);
-          mergedChildren.props[eventName]?.(...args);
-        };
-      });
-      // List of props that need to be watched for changes -> if changes are detected in MemoInput -> rerender
-      const watchingChildProps = [childProps['aria-required'], childProps['aria-invalid'], childProps['aria-describedby']];
-      childNode = /*#__PURE__*/(react_production_namespaceFn().createElement)(MemoInput, {
-        control: mergedControl,
-        update: mergedChildren,
-        childProps: watchingChildProps
-      }, cloneElement(mergedChildren, childProps));
-    } else if (isRenderProps && (shouldUpdate || dependencies) && !hasName) {
-      childNode = mergedChildren(context);
-    } else {
-       false ? 0 : void 0;
-      childNode = mergedChildren;
-    }
-    return renderLayout(childNode, fieldId, isRequired);
-  });
-}
-const FormItem = InternalFormItem;
-FormItem.useStatus = hooks_useFormItemStatus;
-/* harmony default export */ const form_FormItem = (FormItem);
-;// ./node_modules/antd/es/form/FormList.js
-"use client";
-
-
-
-
-
-
-
-const FormList = ({
-  prefixCls: customizePrefixCls,
-  children,
-  ...props
-}) => {
-  if (false) // removed by dead control flow
-{}
-  const {
-    getPrefixCls
-  } = (react_production_namespaceFn().useContext)(ConfigContext);
-  const prefixCls = getPrefixCls('form', customizePrefixCls);
-  const contextValue = (react_production_namespaceFn().useMemo)(() => ({
-    prefixCls,
-    status: 'error'
-  }), [prefixCls]);
-  return /*#__PURE__*/(react_production_namespaceFn().createElement)(es_List, {
-    ...props
-  }, (fields, operation, meta) => (/*#__PURE__*/(react_production_namespaceFn().createElement)(FormItemPrefixContext.Provider, {
-    value: contextValue
-  }, children(fields.map(field => ({
-    ...field,
-    fieldKey: field.key
-  })), operation, {
-    errors: meta.errors,
-    warnings: meta.warnings
-  }))));
-};
-/* harmony default export */ const form_FormList = (FormList);
-;// ./node_modules/antd/es/form/hooks/useFormInstance.js
-
-
-function useFormInstance() {
-  const {
-    form
-  } = (react_production_namespaceFn().useContext)(context_FormContext);
-  return form;
-}
-;// ./node_modules/antd/es/form/index.js
-"use client";
-
-
-
-
-
-
-
-const es_form_Form = form_Form;
-es_form_Form.Item = form_FormItem;
-es_form_Form.List = form_FormList;
-es_form_Form.ErrorList = form_ErrorList;
-es_form_Form.useForm = useForm_useForm;
-es_form_Form.useFormInstance = useFormInstance;
-es_form_Form.useWatch = hooks_useWatch;
-es_form_Form.Provider = context_FormProvider;
-/* harmony default export */ const es_form = (es_form_Form);
-;// ./src/lib/ui/agent/TaskPanel.tsx
-
-
-
-
-
-const STATUS_COLOR = {
-    success: 'green',
-    failed: 'red',
-    running: 'blue',
-};
-const STATUS_TEXT = {
-    success: '成功',
-    failed: '失败',
-    running: '运行中',
-    skipped: '已跳过',
-};
-function statusColor(status) {
-    return (status && STATUS_COLOR[status]) || 'default';
-}
-function statusText(status) {
-    if (!status)
-        return '未运行';
-    return STATUS_TEXT[status] || status;
-}
-function TaskPanel_formatTime(value) {
-    if (!value || !Number.isFinite(value))
-        return '—';
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime()))
-        return '—';
-    const pad = (num) => String(num).padStart(2, '0');
-    return (pad(date.getMonth() + 1) + '-' + pad(date.getDate()) + ' ' + pad(date.getHours()) + ':' + pad(date.getMinutes()));
-}
-/**
- * 定时任务面板（v26.10.10-v10）。
- *
- * 任务由 ScriptCat 的 TaskScheduler 在后台按 crontab 触发，即便这个弹窗关着、甚至宿主页关掉，
- * 到点仍会执行（`mode: 'internal'`）。所以这里只负责「增删改查 + 立即跑一次」。
- *
- * 时间显示一律用本地时区（`new Date(ms)`），因为用户填的 crontab 也是本地时间语义。
- */
-function TaskPanel({ api, version, onChange }) {
-    const { token } = es_theme.useToken();
-    const [tasks, setTasks] = (0,react_production_namespaceFn().useState)([]);
-    const [loading, setLoading] = (0,react_production_namespaceFn().useState)(false);
-    const [error, setError] = (0,react_production_namespaceFn().useState)('');
-    const [form] = es_form.useForm();
-    const [submitting, setSubmitting] = (0,react_production_namespaceFn().useState)(false);
-    const reload = (0,react_production_namespaceFn().useCallback)(async () => {
-        setLoading(true);
-        try {
-            const list = await listTasks(api);
-            setTasks(list);
-            setError('');
-        }
-        catch (err) {
-            setError(agentErrorMessage(err));
-        }
-        finally {
-            setLoading(false);
-        }
-    }, [api]);
-    (0,react_production_namespaceFn().useEffect)(() => {
-        void reload();
-    }, [reload, version]);
-    const handleCreate = (0,react_production_namespaceFn().useCallback)(async (values) => {
-        const cronError = validateCrontab(values.crontab);
-        if (cronError) {
-            notify.warning(cronError);
-            return;
-        }
-        const payload = buildTaskInput(values);
-        if (!payload.name) {
-            notify.warning('请填写任务名称');
-            return;
-        }
-        if (!payload.prompt) {
-            notify.warning('请填写任务要执行的内容');
-            return;
-        }
-        setSubmitting(true);
-        try {
-            await runTaskAction(api, '创建', (task) => task.create(payload));
-            notify.success('已创建定时任务 ' + payload.name);
-            form.resetFields();
-            await reload();
-            onChange();
-        }
-        catch (err) {
-            notify.error('创建失败：' + agentErrorMessage(err));
-        }
-        finally {
-            setSubmitting(false);
-        }
-    }, [api, form, reload, onChange]);
-    const patchTask = (0,react_production_namespaceFn().useCallback)(async (id, patch, action) => {
-        try {
-            await runTaskAction(api, action, (task) => task.update(id, patch));
-            await reload();
-            onChange();
-        }
-        catch (err) {
-            notify.error(action + '失败：' + agentErrorMessage(err));
-        }
-    }, [api, reload, onChange]);
-    const handleRunNow = (0,react_production_namespaceFn().useCallback)(async (task) => {
-        try {
-            await runTaskAction(api, '立即执行', (apiTask) => apiTask.runNow(task.id));
-            notify.success('已触发「' + task.name + '」，结果会写进运行日志');
-        }
-        catch (err) {
-            notify.error('触发失败：' + agentErrorMessage(err));
-        }
-    }, [api]);
-    const handleRemove = (0,react_production_namespaceFn().useCallback)(async (task) => {
-        try {
-            await runTaskAction(api, '删除', (apiTask) => apiTask.remove(task.id));
-            notify.success('已删除任务 ' + task.name);
-            await reload();
-            onChange();
-        }
-        catch (err) {
-            notify.error('删除失败：' + agentErrorMessage(err));
-        }
-    }, [api, reload, onChange]);
-    if (error) {
-        return ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', flexDirection: 'column', gap: 8 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(es_alert, { type: "error", showIcon: true, message: '读取定时任务失败：' + error }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { size: "small", onClick: () => void reload(), children: "\u91CD\u8BD5" })] }));
-    }
-    return ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', flexDirection: 'column', gap: 10 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)(es_form, { form: form, layout: "vertical", size: "small", requiredMark: false, onFinish: (values) => void handleCreate(values), children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(es_form.Item, { name: "name", label: "\u4EFB\u52A1\u540D\u79F0", rules: [{ required: true, message: '请填写任务名称' }], style: { marginBottom: 8 }, children: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_input, { placeholder: "\u4F8B\u5982\uFF1A\u6BCF\u5929\u4E0A\u73ED\u524D\u63D0\u9192\u6211\u68C0\u67E5\u76D1\u63A7", maxLength: 40 }) }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_form.Item, { name: "crontab", label: "\u6267\u884C\u65F6\u95F4\uFF08crontab\uFF1A\u5206 \u65F6 \u65E5 \u6708 \u5468\uFF09", rules: [{ required: true, message: '请填写 crontab' }], extra: "\u4F8B\uFF1A9 \u70B9\u6574 \u2192 0 9 * * *\u3000\uFF1B\u6BCF\u4E2A\u5DE5\u4F5C\u65E5 8:30 \u2192 30 8 * * 1-5", style: { marginBottom: 8 }, children: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_input, { placeholder: "0 9 * * *" }) }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_form.Item, { name: "prompt", label: "\u8BA9 Agent \u505A\u4EC0\u4E48", rules: [{ required: true, message: '请填写要执行的内容' }], extra: "\u4EFB\u52A1\u5230\u70B9\u4F1A\u628A\u8FD9\u53E5\u8BDD\u4EA4\u7ED9 Agent \u6267\u884C\uFF0C\u7ED3\u679C\u5199\u8FDB\u8FD0\u884C\u65E5\u5FD7\u3002", style: { marginBottom: 8 }, children: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_input.TextArea, { placeholder: "\u4F8B\u5982\uFF1A\u6C47\u603B\u5F53\u524D\u9875\u9762\u4E0A\u7684\u7B49\u5F85\u4EBA\u6570\u5E76\u63D0\u9192\u6211", autoSize: { minRows: 2, maxRows: 4 } }) }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { type: "primary", htmlType: "submit", size: "small", loading: submitting, children: "\u521B\u5EFA\u4EFB\u52A1" })] }), (0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(typography.Text, { type: "secondary", style: { fontSize: 12 }, children: '已有 ' + tasks.length + ' 个任务' }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { size: "small", loading: loading, onClick: () => void reload(), children: "\u5237\u65B0" })] }), loading && !tasks.length ? ((0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { padding: '24px 0', textAlign: 'center' }, children: (0,react_jsx_runtime_production_namespaceFn().jsx)(spin, { size: "small" }) })) : tasks.length ? ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_list, { size: "small", bordered: true, dataSource: tasks, style: { maxHeight: 300, overflowY: 'auto' }, renderItem: (task) => ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_list.Item, { actions: [
-                        (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { type: "link", size: "small", onClick: () => void handleRunNow(task), children: "\u7ACB\u5373\u6267\u884C" }, "run"),
-                        (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { type: "link", size: "small", onClick: () => void patchTask(task.id, { enabled: !task.enabled }, task.enabled ? '停用' : '启用'), children: task.enabled ? '停用' : '启用' }, "toggle"),
-                        (0,react_jsx_runtime_production_namespaceFn().jsx)(popconfirm, { title: '删除任务 ' + task.name + '？', description: "\u5220\u9664\u540E\u4E0D\u518D\u6309\u8BA1\u5212\u6267\u884C\u3002", okText: "\u5220\u9664", cancelText: "\u53D6\u6D88", onConfirm: () => void handleRemove(task), children: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { type: "link", size: "small", danger: true, children: "\u5220\u9664" }) }, "remove"),
-                    ], children: (0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(typography.Text, { strong: true, style: { fontSize: 13 }, children: task.name }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_tag, { color: task.enabled ? 'blue' : 'default', style: { marginInlineEnd: 0 }, children: task.crontab }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_tag, { color: statusColor(task.lastRunStatus), style: { marginInlineEnd: 0 }, children: statusText(task.lastRunStatus) })] }), (0,react_jsx_runtime_production_namespaceFn().jsx)(typography.Text, { type: "secondary", style: { fontSize: 11 }, children: '上次：' +
-                                    TaskPanel_formatTime(task.lastruntime) +
-                                    '　下次：' +
-                                    TaskPanel_formatTime(task.nextruntime) +
-                                    (task.lastRunError ? '　错误：' + task.lastRunError : '') })] }) })) })) : ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_empty, { image: es_empty.PRESENTED_IMAGE_SIMPLE, description: (0,react_jsx_runtime_production_namespaceFn().jsx)("span", { style: { fontSize: 12 }, children: "\u8FD8\u6CA1\u6709\u5B9A\u65F6\u4EFB\u52A1\uFF0C\u7528\u4E0A\u9762\u7684\u8868\u5355\u5EFA\u4E00\u4E2A\u3002" }) })), (0,react_jsx_runtime_production_namespaceFn().jsx)(typography.Text, { type: "secondary", style: { fontSize: 11 }, children: (0,react_jsx_runtime_production_namespaceFn().jsx)("span", { style: { color: token.colorTextTertiary }, children: '任务由 ScriptCat 在后台按计划触发，关闭本弹窗或关掉网页也会照常执行。' }) })] }));
-}
-
-;// ./src/lib/ui/transfer/ChatBubble.tsx
-
-
-
-function ChatBubble({ side, avatar, children, meta, bare, danger, maxWidth = '72%', avatarStyle, }) {
-    const { token } = es_theme.useToken();
-    const isUser = side === 'right';
-    return ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { className: "znhd-chat-msg", "data-side": side, style: {
-            display: 'flex',
-            flexDirection: isUser ? 'row-reverse' : 'row',
-            alignItems: 'flex-start',
-            gap: 8,
-            marginBottom: 14,
-            minWidth: 0,
-        }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("span", { className: "znhd-chat-avatar", style: {
-                    flex: '0 0 auto',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    width: 32,
-                    height: 32,
-                    borderRadius: 6,
-                    background: isUser ? '#4A4A4A' : token.colorFillSecondary,
-                    color: isUser ? '#fff' : token.colorTextSecondary,
-                    fontSize: 13,
-                    fontWeight: 600,
-                    overflow: 'hidden',
-                    ...avatarStyle,
-                }, children: avatar }), (0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: {
-                    minWidth: 0,
-                    maxWidth,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: isUser ? 'flex-end' : 'flex-start',
-                }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("div", { className: "znhd-chat-bubble", style: {
-                            maxWidth: '100%',
-                            padding: bare ? 0 : '8px 12px',
-                            borderRadius: 8,
-                            fontSize: 14,
-                            lineHeight: 1.6,
-                            wordBreak: 'break-word',
-                            background: bare ? 'transparent' : isUser ? token.colorPrimary : WECHAT.bubblePeer,
-                            border: bare ? 'none' : danger ? '1px solid ' + token.colorError : '1px solid transparent',
-                            // 微信绿是中饱和绿：文字必须显式刷白，否则暗色主题下会继承成暗色文字
-                            color: bare ? undefined : isUser ? '#fff' : 'rgba(255,255,255,0.9)',
-                            overflow: 'hidden',
-                        }, children: children }), meta ? ((0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: {
-                            fontSize: 11,
-                            color: token.colorTextTertiary,
-                            marginTop: 2,
-                            maxWidth: '100%',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap',
-                        }, children: meta })) : null] })] }));
-}
-
-;// ./src/lib/transfer/emojiPack.ts
-/**
- * 传输助手的**在线表情包**数据层（v26.10.13-v3）。
- *
- * ── 为什么从「字符符号面板」换成在线表情包 ──────────────────────────────────
- * 旧面板（`chatEmojis.ts`，本版已删）只能在 BMP 区里挑 `☺ ☝ ★` 这类**老符号**：脚本的主战场是
- * 税务办的 Win7 机器，系统没有 Segoe UI Emoji 字体，U+1F300+ 的彩色 emoji 一律渲染成豆腐块。
- * 换成**图片表情**后这个约束自动消失 —— 图片不靠字体，Win7 上一样是彩色的。
- *
- * ── 数据来源 ────────────────────────────────────────────────────────────────
- * 8 个合集的地址写死在 `EMOJI_PACK_SOURCES`（用户给定，均在 cdn.klyang.com）：
- *   · 清单 JSON：`https://cdn.klyang.com/json/<id>.json`
- *     → `{ name: '阿鲁日常', type: 'image', items: [{ key: '01', val: '<图片地址>' }] }`
- *   · 图片本体：`https://cdn.klyang.com/emo/.../<key>.webp`（静态 webp，实测单张 2–6 KB）
- *
- * ── 三个必须绕开的坑 ────────────────────────────────────────────────────────
- * 1. **必须走 `GM_xmlhttpRequest`，不能用 `<img src>` 直接引 CDN**：宿主税务页有 CSP，
- *    img-src 白名单里没有这个域，直接引用会整片裂图；GM 请求不受页面 CSP 约束
- *    （与中继长轮询绕过 connect-src 同一个理由）。
- * 2. **清单必须缓存**：面板每开一次就拉 8 个请求没必要 —— 缓存在 localStorage
- *    （键 `scriptCat_EmojiPacks`）12 小时；表情包是静态资源，TTL 给得长一些，
- *    面板上有「刷新」可强制重拉。
- * 3. **图片 blob 也要缓存**：点选表情后要把图片交给「待发图片 → 逐张发送」链路，
- *    本来就需要 blob，面板显示也用同一份（`URL.createObjectURL`）。objectURL **不主动 revoke**：
- *    全套最多几百张、单张几 KB，撤销反而会让面板缩略图与会话里的待发缩略图一起裂掉。
- *
- * 失败处理：单个合集失败就跳过（其余照常显示）；8 个全失败才 reject，面板给出「重试」。
- */
-/** 用户给定的 8 个合集（顺序即面板里的顺序） */
-const EMOJI_PACK_SOURCES = [
-    { id: 'aluhedwm', url: 'https://cdn.klyang.com/json/aluhedwm.json' },
-    { id: 'alurc', url: 'https://cdn.klyang.com/json/alurc.json' },
-    { id: 'alurc2', url: 'https://cdn.klyang.com/json/alurc2.json' },
-    { id: 'aluyn', url: 'https://cdn.klyang.com/json/aluyn.json' },
-    { id: 'jralu', url: 'https://cdn.klyang.com/json/jralu.json' },
-    { id: 'rcxly', url: 'https://cdn.klyang.com/json/rcxly.json' },
-    { id: 'tvxds', url: 'https://cdn.klyang.com/json/tvxds.json' },
-    { id: 'xhl', url: 'https://cdn.klyang.com/json/xhl.json' },
-];
-const CACHE_KEY = 'scriptCat_EmojiPacks';
-/** 清单缓存时长：表情包基本不变，12 小时足够，避免每次开面板都打 8 个请求 */
-const CACHE_TTL = 12 * 60 * 60 * 1000;
-/* ============================ GM 请求（脚本端才有） ============================ */
-function gmGetText(url) {
-    return new Promise((resolve, reject) => {
-        GM_xmlhttpRequest({
-            method: 'GET',
-            url,
-            timeout: 15000,
-            onload: (resp) => {
-                if (resp.status >= 200 && resp.status < 300 && typeof resp.responseText === 'string') {
-                    resolve(resp.responseText);
-                    return;
-                }
-                reject(new Error('HTTP ' + resp.status));
-            },
-            onerror: () => reject(new Error('网络请求失败')),
-            ontimeout: () => reject(new Error('请求超时')),
-        });
-    });
-}
-function gmGetBlob(url) {
-    return new Promise((resolve, reject) => {
-        GM_xmlhttpRequest({
-            method: 'GET',
-            url,
-            responseType: 'blob',
-            timeout: 20000,
-            onload: (resp) => {
-                const blob = resp && resp.response;
-                if (!blob || typeof blob.size !== 'number' || !blob.size) {
-                    reject(new Error('响应不是有效的图片数据'));
-                    return;
-                }
-                resolve(blob);
-            },
-            onerror: () => reject(new Error('网络请求失败')),
-            ontimeout: () => reject(new Error('请求超时')),
-        });
-    });
-}
-/* ============================== 清单：拉取 + 缓存 ============================== */
-/** 文件名净化：去掉路径分隔符与控制字符（合集 key 里可能有中文，中文本身不处理） */
-function sanitizeName(s) {
-    return s.replace(/[\\/:*?"<>|\s]+/g, '_').slice(0, 60) || 'emoji';
-}
-function emojiFileName(packId, key, url) {
-    const ext = (url.match(/\.([a-z0-9]{2,5})(?:[?#]|$)/i) || [])[1] || 'webp';
-    return sanitizeName(packId + '-' + key) + '.' + ext.toLowerCase();
-}
-function readCache() {
-    try {
-        const raw = localStorage.getItem(CACHE_KEY);
-        if (!raw)
-            return null;
-        const parsed = JSON.parse(raw);
-        if (!parsed || !Array.isArray(parsed.packs) || !parsed.packs.length)
-            return null;
-        if (typeof parsed.ts !== 'number' || Date.now() - parsed.ts > CACHE_TTL)
-            return null;
-        return parsed.packs;
-    }
-    catch (e) {
-        return null;
-    }
-}
-function writeCache(packs) {
-    try {
-        localStorage.setItem(CACHE_KEY, JSON.stringify({ ts: Date.now(), packs }));
-    }
-    catch (e) {
-        /* 存储满 / 隐私模式：缓存失败不影响功能 */
-    }
-}
-/** 清掉清单缓存（面板上的「刷新」用：强制重新拉 8 个合集） */
-function clearEmojiPackCache() {
-    try {
-        localStorage.removeItem(CACHE_KEY);
-    }
-    catch (e) {
-        /* 忽略 */
-    }
-}
-function parsePack(srcId, text) {
-    const raw = JSON.parse(text);
-    // 先落到变量上再 Array.isArray：对「表达式」做类型守卫不会收窄，list 会退化成 unknown
-    const rawItems = raw ? raw.items : undefined;
-    const list = Array.isArray(rawItems) ? rawItems : [];
-    const items = [];
-    list.forEach((it) => {
-        const row = (it || {});
-        const url = String(row.val || '').trim();
-        // 只收 http(s) 的图片地址，脏数据直接跳过（别让一条坏记录毁掉整个合集）
-        if (!/^https?:\/\//i.test(url))
-            return;
-        const key = String(row.key || '').trim() || 'emoji';
-        items.push({ key, url, name: emojiFileName(srcId, key, url) });
-    });
-    if (!items.length)
-        throw new Error('合集为空');
-    return { id: srcId, name: String((raw && raw.name) || srcId), items };
-}
-/**
- * 拉取全部表情包：命中缓存直接返回，否则并发拉 8 个清单（单个失败跳过）。
- *
- * @param force 忽略缓存强制重拉（面板「刷新」按钮）
- */
-async function loadEmojiPacks(force = false) {
-    if (!force) {
-        const hit = readCache();
-        if (hit)
-            return hit;
-    }
-    const results = await Promise.all(EMOJI_PACK_SOURCES.map((src) => gmGetText(src.url)
-        .then((text) => parsePack(src.id, text))
-        .catch(() => null)));
-    const packs = results.filter((p) => !!p && p.items.length > 0);
-    if (!packs.length)
-        throw new Error('表情包全部加载失败（8 个合集都没取到）');
-    writeCache(packs);
-    return packs;
-}
-const blobCache = new Map();
-const inflight = new Map();
-/** 已经下好的表情图（面板渲染时先查它，避免重复请求） */
-function cachedEmojiBlob(url) {
-    return blobCache.get(url);
-}
-/**
- * 取表情图（带缓存与去重：同一张图面板显示与「点选加入待发」共用一次下载）。
- * 下载失败会 reject，由调用方决定「这张留白 / 提示失败」。
- */
-function loadEmojiBlob(url) {
-    const hit = blobCache.get(url);
-    if (hit)
-        return Promise.resolve(hit);
-    const running = inflight.get(url);
-    if (running)
-        return running;
-    const task = gmGetBlob(url)
-        .then((blob) => {
-        const entry = { blob, objectUrl: URL.createObjectURL(blob) };
-        blobCache.set(url, entry);
-        return entry;
-    })
-        .finally(() => {
-        inflight.delete(url);
-    });
-    inflight.set(url, task);
-    return task;
-}
-
-;// ./src/lib/ui/transfer/EmojiPackPanel.tsx
-
-/**
- * 在线表情包面板（v26.10.13-v3）—— `ChatComposer` 表情按钮的 Popover 内容。
- *
- * 结构：顶部一行合集 chips（可横向滚动）+ 右上角「刷新」→ 中间图片网格 → 底部一行提示。
- * 数据层在 `@/lib/transfer/emojiPack`（清单缓存 / GM 拉取 / blob 复用，理由写在那边）。
- *
- * ── 三个实现要点 ────────────────────────────────────────────────────────────
- * 1. **分批下载**：合集最多 134 张，一次并发 8 张 → 首屏很快就有图，剩下的在后台补。
- *    已下好的（blob 缓存命中）同步填进去，切走再切回来是秒开。
- * 2. **合集用 chips 而不是下拉**：Popover 里再套一层 antd Select/下拉，点开时会被
- *    Popover 的「点外部关闭」逻辑抢走点击（要额外配 getPopupContainer），chips 没这个问题。
- * 3. **点击时直接交 blob**（不再二次下载）：面板显示本来就下过这张图，`onPick` 把 blob 一起
- *    交回调用方（设备会话**立刻发出去**，见 TransferDeviceChat 的 pickEmojiImage）——
- *    少一次网络往返，也没有「点了没反应」的空窗。
- *
- * ── 悬停放大预览（v26.10.13-v4）──────────────────────────────────────────────
- * 格子只有 30px，看不清表情细节：**鼠标停在格子上 0.5 秒**后弹出一个 120px 的放大浮层
- * （跟随光标、`pointerEvents:none` 不吃事件）；预览**已经在屏幕上时**移到别的格子**立即换图**，
- * 不再重新等 0.5 秒 —— 用户原话「在显示 hover 的情况下移动鼠标到其他表情包，实时显示」。
- *
- * ⚠️ 三个实现要点（都踩过或有原因）：
- *   a) 悬停判定用**网格上的 `mousemove` 委托**（`closest('.znhd-emoji-item')`），**不用每格的
- *      `onMouseEnter/onMouseLeave`**：React 的 enter/leave 是同一批 mouseover 里成对合成的，
- *      先派发 leave 再派发 enter ⇒ 移到相邻格子时会**先 close 再重新计时 0.5s**（「实时切换」失效）。
- *      委托只有一个来源，顺序问题不存在。
- *   b) 浮层 portal 到 `getPreviewHost()`（共享层的预览宿主，挂在 documentElement 下）：
- *      税务页 body 常带 transform，挂 body 的 fixed 浮层会以 body 盒子为包含块 → 坐标全错。
- *   c) 「是否已在显示」用 **ref**（`hoverShown`）而不是读 state：mousemove 每秒几十次，
- *      用 state 判会读到闭包里的旧值，切换逻辑会退化成重新计时。
- */
-
-
-
-
-
-const EmojiPackPanel_PANEL_WIDTH = 300;
-/** 每批并发下载的张数：太多会瞬间打满连接，太少首屏出图慢 */
-const BATCH = 8;
-/** 悬停多久后弹出放大预览（用户要求 0.5s：扫过格子时不该闪出大图） */
-const HOVER_DELAY = 500;
-/** 放大预览的方形边长（含内边距） */
-const HOVER_BOX = 120;
-/** 预览相对光标的偏移 */
-const HOVER_OFFSET = 16;
-/** 浮层的 z-index：要盖住 Popover（antd zIndexPopupBase = 1000000） */
-const HOVER_Z = 1000001;
-function EmojiPackPanel({ onPick }) {
-    const { token } = es_theme.useToken();
-    const [packs, setPacks] = (0,react_production_namespaceFn().useState)(null);
-    const [err, setErr] = (0,react_production_namespaceFn().useState)('');
-    const [activeId, setActiveId] = (0,react_production_namespaceFn().useState)('');
-    const [busy, setBusy] = (0,react_production_namespaceFn().useState)(false);
-    /** url -> objectURL（已下好的图） */
-    const [ready, setReady] = (0,react_production_namespaceFn().useState)({});
-    /** 正在临时补下载的那张（用户点得比下载快） */
-    const [pendingKey, setPendingKey] = (0,react_production_namespaceFn().useState)('');
-    /** 放大预览（null = 不显示）：url 为被悬停的那张，x/y 是光标视口坐标 */
-    const [hover, setHover] = (0,react_production_namespaceFn().useState)(null);
-    /** 0.5s 计时器 */
-    const hoverTimer = (0,react_production_namespaceFn().useRef)(null);
-    /** 正在等待计时的那张（同一张继续等，不重置计时） */
-    const hoverPending = (0,react_production_namespaceFn().useRef)('');
-    /** 预览是否已在屏幕上 —— 为 true 时移到别的格子**立即换图**（不再等 0.5s） */
-    const hoverShown = (0,react_production_namespaceFn().useRef)(false);
-    /** 最后一次鼠标位置（计时结束时用它定位，而不是计时开始时的旧位置） */
-    const hoverPos = (0,react_production_namespaceFn().useRef)({ x: 0, y: 0 });
-    const clearHoverTimer = () => {
-        if (hoverTimer.current !== null) {
-            window.clearTimeout(hoverTimer.current);
-            hoverTimer.current = null;
-        }
-    };
-    /** 收起预览（鼠标移出网格 / 移到空白处）：下一次悬停要重新等 0.5s */
-    const closeHover = () => {
-        clearHoverTimer();
-        hoverPending.current = '';
-        hoverShown.current = false;
-        setHover(null);
-    };
-    // 面板被关掉（Popover 卸载）时清掉挂起的计时器，别让它在卸载后 setState
-    (0,react_production_namespaceFn().useEffect)(() => () => clearHoverTimer(), []);
-    const load = (0,react_production_namespaceFn().useCallback)((force) => {
-        setBusy(true);
-        setErr('');
-        loadEmojiPacks(force)
-            .then((list) => {
-            setPacks(list);
-            // 默认选第一组；刷新后尽量留在原来的组
-            setActiveId((prev) => (prev && list.some((p) => p.id === prev) ? prev : list[0].id));
-        })
-            .catch((e) => setErr((e && e.message) || '表情包加载失败'))
-            .finally(() => setBusy(false));
-    }, []);
-    (0,react_production_namespaceFn().useEffect)(() => {
-        load(false);
-    }, [load]);
-    const activePack = (0,react_production_namespaceFn().useMemo)(() => (packs || []).find((p) => p.id === activeId) || null, [packs, activeId]);
-    // 当前合集的图片：缓存命中的同步填，其余分批下载（切组合集会取消上一轮）
-    (0,react_production_namespaceFn().useEffect)(() => {
-        if (!activePack)
-            return;
-        let cancelled = false;
-        const cached = {};
-        const queue = [];
-        activePack.items.forEach((it) => {
-            const hit = cachedEmojiBlob(it.url);
-            if (hit)
-                cached[it.url] = hit.objectUrl;
-            else
-                queue.push(it);
-        });
-        if (Object.keys(cached).length)
-            setReady((prev) => ({ ...prev, ...cached }));
-        const run = async () => {
-            while (queue.length && !cancelled) {
-                const batch = queue.splice(0, BATCH);
-                const results = await Promise.allSettled(batch.map((it) => loadEmojiBlob(it.url)));
-                if (cancelled)
-                    return;
-                const add = {};
-                results.forEach((r, i) => {
-                    if (r.status === 'fulfilled')
-                        add[batch[i].url] = r.value.objectUrl;
-                });
-                if (Object.keys(add).length)
-                    setReady((prev) => ({ ...prev, ...add }));
-            }
-        };
-        void run();
-        return () => {
-            cancelled = true;
-        };
-    }, [activePack]);
-    const pick = (it) => {
-        if (!activePack)
-            return;
-        const hit = cachedEmojiBlob(it.url);
-        if (hit) {
-            onPick({ pack: activePack.name, key: it.key, url: it.url, name: it.name, blob: hit.blob });
-            return;
-        }
-        // 还没下好（用户手比下载快）：等这张下完再交出去 —— 别让点击石沉大海。
-        // ⚠️ 不把未就绪的格子做成 disabled：disabled 的按钮点了完全没反馈，用户只会以为坏了。
-        setPendingKey(it.url);
-        loadEmojiBlob(it.url)
-            .then((entry) => onPick({ pack: activePack.name, key: it.key, url: it.url, name: it.name, blob: entry.blob }))
-            .catch(() => {
-            /* 下载失败：格子保持占位，用户可重试或点刷新 */
-        })
-            .finally(() => setPendingKey((k) => (k === it.url ? '' : k)));
-    };
-    /**
-     * 网格上的鼠标移动（委托）：更新预览位置 / 切换预览目标。
-     * 见文件头 a) —— 这里刻意不用每格的 onMouseEnter/onMouseLeave。
-     */
-    const onGridMove = (e) => {
-        const target = e.target;
-        const cell = target ? target.closest('.znhd-emoji-item') : null;
-        const url = cell ? cell.getAttribute('data-emoji-url') || '' : '';
-        hoverPos.current = { x: e.clientX, y: e.clientY };
-        if (!url) {
-            // 网格的空白处：已显示的收起，正在计时的作废
-            if (hoverShown.current)
-                closeHover();
-            else
-                clearHoverTimer();
-            return;
-        }
-        if (hoverShown.current) {
-            // 预览已在屏幕上 → 实时换图（用户要求的「实时通过 hover 显示其他表情包」）
-            setHover({ url, x: e.clientX, y: e.clientY });
-            return;
-        }
-        if (hoverPending.current === url)
-            return; // 同一格继续等，别重置计时
-        clearHoverTimer();
-        hoverPending.current = url;
-        hoverTimer.current = window.setTimeout(() => {
-            hoverTimer.current = null;
-            hoverShown.current = true;
-            setHover({ url, x: hoverPos.current.x, y: hoverPos.current.y });
-        }, HOVER_DELAY);
-    };
-    // 悬停的那张还没下好（面板分批下载中）：补一次，到位后浮层自己换成图
-    (0,react_production_namespaceFn().useEffect)(() => {
-        if (!hover || ready[hover.url])
-            return;
-        let alive = true;
-        loadEmojiBlob(hover.url)
-            .then((entry) => {
-            if (alive)
-                setReady((prev) => ({ ...prev, [hover.url]: entry.objectUrl }));
-        })
-            .catch(() => {
-            /* 下载失败：浮层留在加载态，移开即消失 */
-        });
-        return () => {
-            alive = false;
-        };
-    }, [hover, ready]);
-    const chip = (pack) => {
-        const on = pack.id === activeId;
-        return ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { size: "small", type: "text", "aria-pressed": on, onClick: () => setActiveId(pack.id), style: {
-                flex: '0 0 auto',
-                height: 22,
-                padding: '0 8px',
-                fontSize: 12,
-                borderRadius: 11,
-                background: on ? 'rgba(7,193,96,0.18)' : 'rgba(255,255,255,0.06)',
-                color: on ? '#07C160' : 'rgba(255,255,255,0.75)',
-            }, children: pack.name }, pack.id));
-    };
-    const body = () => {
-        if (err) {
-            return ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { padding: '18px 0', textAlign: 'center' }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { fontSize: 12, color: 'rgba(255,255,255,0.55)', marginBottom: 8 }, children: err }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { size: "small", onClick: () => load(true), children: "\u91CD\u8BD5" })] }));
-        }
-        if (!packs) {
-            return ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { padding: '22px 0', textAlign: 'center' }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(spin, { size: "small" }), (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { fontSize: 12, color: 'rgba(255,255,255,0.45)', marginTop: 8 }, children: "\u6B63\u5728\u52A0\u8F7D\u8868\u60C5\u5305\u2026" })] }));
-        }
-        return ((0,react_jsx_runtime_production_namespaceFn().jsx)("div", { onMouseMove: onGridMove, onMouseLeave: closeHover, style: {
-                maxHeight: 196,
-                overflowY: 'auto',
-                display: 'grid',
-                gridTemplateColumns: 'repeat(8, minmax(0, 1fr))',
-                gap: 2,
-            }, children: (activePack ? activePack.items : []).map((it) => {
-                const url = ready[it.url];
-                return ((0,react_jsx_runtime_production_namespaceFn().jsx)("button", { type: "button", className: "znhd-emoji-item", "aria-label": '表情 ' + it.name, title: it.key, "aria-busy": pendingKey === it.url, "data-emoji-url": it.url, onClick: () => pick(it), style: {
-                        width: 30,
-                        height: 30,
-                        padding: 0,
-                        border: 'none',
-                        borderRadius: 4,
-                        background: url ? 'transparent' : 'rgba(255,255,255,0.05)',
-                        opacity: pendingKey === it.url ? 0.45 : 1,
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        cursor: 'pointer',
-                    }, children: url ? ((0,react_jsx_runtime_production_namespaceFn().jsx)("img", { src: url, alt: it.key, style: { maxWidth: 26, maxHeight: 26, display: 'block' } })) : null }, it.url));
-            }) }));
-    };
-    return ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { width: EmojiPackPanel_PANEL_WIDTH }, className: "znhd-emoji-panel", children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { flex: '1 1 auto', display: 'flex', gap: 4, overflowX: 'auto', paddingBottom: 2 }, children: (packs || []).map(chip) }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { size: "small", type: "text", "aria-label": "\u5237\u65B0\u8868\u60C5\u5305", disabled: busy, onClick: () => load(true), style: {
-                            flex: '0 0 auto',
-                            height: 22,
-                            padding: '0 4px',
-                            fontSize: 12,
-                            color: token.colorTextTertiary,
-                        }, children: "\u5237\u65B0" })] }), body(), (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { fontSize: 11, color: 'rgba(255,255,255,0.35)', marginTop: 6 }, children: "\u70B9\u8868\u60C5\u76F4\u63A5\u53D1\u9001\u5230\u624B\u673A \u00B7 \u60AC\u505C 0.5 \u79D2\u653E\u5927\u67E5\u770B" }), hover
-                ? (0,react_dom_production_namespaceFn().createPortal)((0,react_jsx_runtime_production_namespaceFn().jsx)("div", { className: "znhd-emoji-hover", "data-emoji-url": hover.url, "aria-hidden": "true", style: {
-                        position: 'fixed',
-                        // 跟随光标 + 视口夹紧（贴边时不越界）
-                        left: Math.max(8, Math.min(hover.x + HOVER_OFFSET, window.innerWidth - HOVER_BOX - 8)),
-                        top: Math.max(8, Math.min(hover.y + HOVER_OFFSET, window.innerHeight - HOVER_BOX - 8)),
-                        width: HOVER_BOX,
-                        height: HOVER_BOX,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        background: 'rgba(0,0,0,0.78)',
-                        border: '1px solid rgba(255,255,255,0.16)',
-                        borderRadius: 10,
-                        boxShadow: '0 8px 24px rgba(0,0,0,0.55)',
-                        // 不吃鼠标事件：浮层压在别的格子上也不会打断「移到下一张」
-                        pointerEvents: 'none',
-                        zIndex: HOVER_Z,
-                    }, children: ready[hover.url] ? ((0,react_jsx_runtime_production_namespaceFn().jsx)("img", { src: ready[hover.url], alt: "", style: { maxWidth: HOVER_BOX - 16, maxHeight: HOVER_BOX - 16, display: 'block' } })) : ((0,react_jsx_runtime_production_namespaceFn().jsx)(spin, { size: "small" })) }), getPreviewHost())
-                : null] }));
-}
-
-;// ./src/lib/ui/transfer/ChatComposer.tsx
-
-/**
- * 聊天输入区（v26.10.12-v3；v26.10.12-v4 改**微信桌面版结构**）：设备会话与 Agent 对话
- * **共用同一个输入面板**。
- *
- * ── 微信原版结构（对齐截图）─────────────────────────────────────────────────
- *   ┌────────────────────────────────────────┐
- *   │ 😀 🖼 📎                ← 工具栏图标行（上） │
- *   │ 多行文本输入框（自动增高，超限框内滚动）      │
- *   │                        [发送] ← 右下角 │
- *   └────────────────────────────────────────┘
- * 整个面板是一块 #262626 的实心底（比聊天区略浅，靠上边框分开），**不再有 v3 那个
- * 带边框圆角的内层盒子** —— 微信的输入区就是一整块面板。
- *
- * ⚠️ 两条实测结论仍然成立，别动：
- * · **textarea 自己禁 outline / boxShadow**（v26.10.10-v13）：antd `variant="borderless"`
- *   会在 `:focus-visible` 时给文本域自己画 outline（「框里套框」）。聚焦反馈交给光标，
- *   不再画外圈（微信输入区也没有聚焦光圈）。
- * · **必须同时钉住 `minRows` 与 `lineHeight: '20px'`**（v26.10.10-v15）：rc-textarea
- *   挂载时按 minRows 算高、输入后按「行数 × 行高 + padding」重算，行高不一致会出现
- *   「打一个字再删空，输入框永久变高」。冒烟 `agentInputHeightOk` 严格相等守着。
- *
- * v26.10.13-v3：表情面板由「BMP 字符符号」换成**在线图片表情包**（`EmojiPackPanel`，
- * 数据层见 `@/lib/transfer/emojiPack`）。点一张表情不再往输入框插字符，而是把图片交回
- * 调用方（`onPickEmojiImage`）——设备会话据此**直接发出去**（v26.10.13-v4 起）；
- * **不传这个回调的宿主（Agent 对话）表情按钮自动禁用**（那条通道只收文本）。
- *
- * ── 表情面板的两种自动收起（v26.10.13-v7，用户要求）────────────────────────────
- * ① **点一张表情后立即收起**：点击落在 Popover 内容里，rc-trigger 视作「内部点击」不会关，
- *    必须在 pick 回调里显式 `setEmojiOpen(false)`（见 `pickEmoji`）。
- * ② **点面板之外的任何区域立即收起**：由本组件自己挂 document 级 mousedown 判定（见 `useEffect`），
- *    不依赖 rc-trigger 的 `useWinClick` —— 后者只用「触发元素 / 浮层元素」两个 DOM 判内外，
- *    在受控 `open` 下行为不够直观，自己管一遍更确定。判据见注释。
- */
-
-
-
-
-
-function ChatComposer({ value, onChange, onSend, disabled, streaming, onStop, placeholder, canSend, actions, rightExtras, notice, onPickEmojiImage, emojiDisabledReason, }) {
-    const [emojiOpen, setEmojiOpen] = (0,react_production_namespaceFn().useState)(false);
-    /** 表情面板只在有回调时可用（v26.10.13-v3：换成在线图片表情包，见 EmojiPackPanel） */
-    const emojiEnabled = !!onPickEmojiImage;
-    /**
-     * 点选一张表情：**立即收起面板**，再把图交回调用方。
-     * ⚠️ 不能只靠 Popover 的「点外部关闭」——点击发生在 Popover 内容里，rc-trigger 把它
-     * 当作内部点击，不会触发 onOpenChange；用户要求「点表情发送后立刻隐藏表情窗口」。
-     */
-    const pickEmoji = (emoji) => {
-        setEmojiOpen(false);
-        if (onPickEmojiImage)
-            onPickEmojiImage(emoji);
-    };
-    /**
-     * 点「表情窗口之外」立即收起（v26.10.13-v7，用户要求）。
-     * 由本组件自己接管，不依赖 rc-trigger 的 useWinClick，行为更确定：
-     *   · 点面板内部（合集 chips / 网格 / 刷新 / 滚动条）→ 不动；
-     *   · 点触发按钮 → 交给按钮自身的 toggle（否则会「先被这里关掉、又被 toggle 打开」）；
-     *   · 其余任何地方（消息区、输入框、其它按钮、窗口外）→ 收起。
-     * ⚠️ 面板内容由 Popover portal 到浮层宿主（`#__znhd_overlay_host__`），**不在本组件子树里**，
-     * 所以只能挂 document 级 mousedown，用类名反查（与冒烟夹具 `emojiPanelVisible` 同一套判据）。
-     */
-    (0,react_production_namespaceFn().useEffect)(() => {
-        if (!emojiOpen)
-            return;
-        const onDown = (event) => {
-            const target = event.target;
-            if (target && typeof target.closest === 'function') {
-                if (target.closest('.znhd-emoji-panel'))
-                    return; // 点在面板里
-                if (target.closest('button[aria-label="表情"]'))
-                    return; // 点触发按钮：交给它 toggle
-            }
-            setEmojiOpen(false);
-        };
-        document.addEventListener('mousedown', onDown, true);
-        return () => document.removeEventListener('mousedown', onDown, true);
-    }, [emojiOpen]);
-    const sendDisabled = !!disabled || streaming || !(canSend === undefined ? value.trim() : canSend);
-    const iconButton = (label, tooltip, icon, onClick, isDisabled) => ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_tooltip, { title: tooltip, children: (0,react_jsx_runtime_production_namespaceFn().jsx)("span", { style: { display: 'inline-flex' }, children: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { type: "text", size: "small", "aria-label": label, icon: icon, disabled: isDisabled, onClick: onClick, style: { width: 28, height: 28, minWidth: 28, padding: 0, color: 'rgba(255,255,255,0.6)' } }) }) }, label));
-    return ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { 
-        // 类名是冒烟夹具识别「共用输入面板」的钩子（composerFacts / composerBoxOf），勿改
-        className: "znhd-chat-composer", style: {
-            flex: '0 0 auto',
-            display: 'flex',
-            flexDirection: 'column',
-            padding: '6px 12px 8px',
-            background: WECHAT.input,
-            borderTop: '1px solid rgba(0,0,0,0.4)',
-        }, children: [notice, (0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', alignItems: 'center', gap: 2, marginBottom: 2 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(es_popover, { trigger: "click", placement: "topLeft", open: emojiOpen, onOpenChange: setEmojiOpen, 
-                        // 面板内容只在首次打开时挂载（Popover 不渲染关闭态的内容）：表情包清单与图片
-                        // 都是打开面板才去拉，不开面板不产生任何网络请求
-                        // onPick = pickEmoji：点一张即收起面板 + 交回调用方（见上面 pickEmoji 注释）
-                        content: emojiEnabled ? (0,react_jsx_runtime_production_namespaceFn().jsx)(EmojiPackPanel, { onPick: pickEmoji }) : null, children: iconButton('表情', emojiEnabled
-                            ? '表情包（点一张直接发送到手机，悬停可放大）'
-                            : emojiDisabledReason || '当前对话不支持发送表情', (0,react_jsx_runtime_production_namespaceFn().jsx)(SmileIcon, { size: 16 }), () => setEmojiOpen((v) => !v), disabled || !emojiEnabled) }), (actions || []).map((action) => iconButton(action.label, action.tooltip || action.label, action.icon, action.onClick, action.disabled || disabled))] }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_input.TextArea, { value: value, onChange: (event) => onChange(event.target.value), onPressEnter: (event) => {
-                    if (event.shiftKey)
-                        return;
-                    event.preventDefault();
-                    onSend();
-                }, placeholder: placeholder, 
-                // 行数上限 6 行：超过后 rc-textarea 交给原生滚动条（框内滚动），
-                // 输入区高度因此有上限，不会把消息区挤没
-                autoSize: { minRows: 2, maxRows: 6 }, disabled: disabled, variant: "borderless", style: {
-                    resize: 'none',
-                    padding: 0,
-                    fontSize: 14,
-                    lineHeight: '20px',
-                    color: 'rgba(255,255,255,0.9)',
-                    outline: 'none',
-                    boxShadow: 'none',
-                } }), (0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 8, marginTop: 4 }, children: [rightExtras, streaming ? ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_tooltip, { title: "\u4E2D\u6B62\u672C\u8F6E\u56DE\u7B54", children: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { shape: "circle", size: "small", danger: true, "aria-label": "\u4E2D\u6B62", icon: (0,react_jsx_runtime_production_namespaceFn().jsx)(StopIcon, { size: 12 }), onClick: () => onStop && onStop() }) })) : ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { size: "small", "aria-label": "\u53D1\u9001", disabled: sendDisabled, onClick: onSend, icon: (0,react_jsx_runtime_production_namespaceFn().jsx)(SendIcon, { size: 13 }), style: {
-                            minWidth: 64,
-                            color: sendDisabled ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.9)',
-                            background: sendDisabled ? 'transparent' : 'rgba(255,255,255,0.08)',
-                        }, children: "\u53D1\u9001" }))] })] }));
-}
-
-;// ./src/lib/ui/transfer/ChatPanel.tsx
-
-/**
- * 聊天面板的共用骨架件（v26.10.12-v3）。
- *
- * ── 为什么抽出来 ─────────────────────────────────────────────────────────────
- * 「设备会话」（`TransferDeviceChat`）与「Agent 对话」（`TransferAgentView`）的第三栏
- * 原来是两套自己写的结构：一个用 `header + 消息区 + 输入区` 的三段 div，另一个用
- * 「页签 + 固定 300px 消息盒 + 输入框」。用户要求两边**长得一模一样**（同一套气泡、
- * 同一种底部输入框），若各写一份，下次改样式必然只改一边 —— 所以这里把
- * 「头部 / 滚动消息区 / 气泡行」三件抽成共用件，两个面板只能通过它们拼装。
- *
- * ── 尺寸契约 ─────────────────────────────────────────────────────────────────
- * 第三栏整体是 `display:flex; flex-direction:column`，其中
- *   · 头部      `flex: 0 0 auto`（不参与伸缩）；
- *   · 消息区    `flex: 1 1 auto; minHeight: 0`（**必须 minHeight:0**，否则 flex 子项按内容
- *               撑高，滚动条永远不出现，输入框会被顶出窗口）；
- *   · 输入区    `flex: 0 0 auto`（见 ChatComposer）。
- * 于是「输入框固定吸附在底部、不随消息滚动」是布局算出来的，不是靠 position:fixed 硬钉。
- */
-
-/**
- * 第三栏头部（微信式会话标题栏：左头像 + 名称，右操作图标）。
- *
- * v26.10.12-v4 起关闭按钮移到窗口顶部自绘标题条（znhd-transfer-titlebar）里，
- * 不再浮在第三栏右上角 —— 这里不再需要 48px 让位（v26.10.12-v2/v3 的历史约束随之解除）。
- */
-function ChatHeader({ left, right }) {
-    return ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { className: "znhd-chat-header", style: {
-            display: 'flex',
-            alignItems: 'center',
-            gap: 8,
-            padding: '10px 12px',
-            borderBottom: '1px solid rgba(0,0,0,0.4)',
-            flex: '0 0 auto',
-            minWidth: 0,
-        }, children: [left, (0,react_jsx_runtime_production_namespaceFn().jsx)("span", { style: { flex: '1 1 auto' } }), right] }));
-}
-/**
- * 消息滚动容器：新消息到达时自动滚到底。
- *
- * ⚠️ `scrollbarGutter: 'stable'` 不是装饰：消息区出现/消失滚动条时，没有它会**整列左右抖动**
- * （Windows 上原生滚动条占 10px）。占用固定槽位后宽度不再跳。
- * 滚动条外观本身由 `uiReset` 统一美化（`.ant-modal-root *` 的 ::-webkit-scrollbar 规则）。
- */
-function ChatScroll({ className, scrollDep, children, }) {
-    const ref = (0,react_production_namespaceFn().useRef)(null);
-    (0,react_production_namespaceFn().useEffect)(() => {
-        const el = ref.current;
-        if (!el)
-            return;
-        el.scrollTop = el.scrollHeight;
-    }, [scrollDep]);
-    return ((0,react_jsx_runtime_production_namespaceFn().jsx)("div", { ref: ref, className: className, style: {
-            flex: '1 1 auto',
-            minHeight: 0,
-            overflowY: 'auto',
-            overflowX: 'hidden',
-            padding: '10px 12px',
-            scrollbarGutter: 'stable',
-        }, children: children }));
-}
-
-;// ./src/lib/ui/transfer/TransferAgentView.tsx
-
-
-
-
-
-
-
-
-
-
-
-
-/**
- * Agent 视图（v26.10.12-v1：原「Agent 助手」弹窗的对话区，搬进传输助手右侧主聊天区）。
- *
- * v26.10.12-v3 两处改动（用户要求「设备菜单和 agent 菜单下的对话主区域使用相同的样式」）：
- *   · 第三栏**不再有页签**：显示什么由第二栏的两个控件（技能 / 定时任务）决定 ——
- *     状态提在 `TransferAssistantModal`（`pane` 属性），本组件只按值渲染；
- *   · 对话 pane 的排版与设备会话**完全共用** ChatHeader / ChatScroll / ChatBubble / ChatComposer
- *     （气泡左右分栏 + 头像、底部吸附输入框、Enter 发送 / Shift+Enter 换行 …）。
- * 输入框那两条实测结论（禁聚焦蓝框、高度稳定）跟着 ChatComposer 走，理由写在那边。
- */
-function TransferAgentView({ agent, pane }) {
-    const { token } = es_theme.useToken();
-    /** 技能 / 任务面板的数据版本：卸载技能、增删任务后 +1 触发重拉（与旧实现同一机制） */
-    const [skillsVersion, setSkillsVersion] = (0,react_production_namespaceFn().useState)(0);
-    const [tasksVersion, setTasksVersion] = (0,react_production_namespaceFn().useState)(0);
-    const renderMessage = (message) => {
-        const isUser = message.role === 'user';
-        return ((0,react_jsx_runtime_production_namespaceFn().jsxs)(ChatBubble, { side: isUser ? 'right' : 'left', maxWidth: "86%", avatar: isUser ? (0,react_jsx_runtime_production_namespaceFn().jsx)(UserIcon, { size: 15 }) : (0,react_jsx_runtime_production_namespaceFn().jsx)(BotIcon, { size: 15 }), children: [!isUser && message.toolCalls?.length ? ((0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { marginBottom: 6, display: 'flex', flexWrap: 'wrap', gap: 4 }, children: message.toolCalls.map((toolCall, index) => ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_tooltip, { title: toolCall.arguments ? toolCall.arguments.slice(0, 300) : toolCall.name, children: (0,react_jsx_runtime_production_namespaceFn().jsxs)("span", { style: {
-                                fontSize: 11,
-                                padding: '1px 6px',
-                                borderRadius: 9,
-                                background: token.colorFillTertiary,
-                                color: token.colorTextSecondary,
-                            }, children: [toolDisplayName(toolCall.name), toolCall.status === 'running' ? ' …' : ''] }) }, (toolCall.id || toolCall.name) + '-' + index))) })) : null, !isUser && message.thinking ? ((0,react_jsx_runtime_production_namespaceFn().jsxs)("details", { style: { marginBottom: 6 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("summary", { style: { cursor: 'pointer', fontSize: 12, color: token.colorTextTertiary }, children: "\u601D\u8003\u8FC7\u7A0B" }), (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { fontSize: 12, color: token.colorTextSecondary, marginTop: 4 }, children: message.thinking })] })) : null, message.content ? ((0,react_jsx_runtime_production_namespaceFn().jsx)(MarkdownBody, { content: message.content, inverted: isUser })) : message.pending ? ((0,react_jsx_runtime_production_namespaceFn().jsx)(typography.Text, { type: "secondary", style: { fontSize: 12 }, children: "\u6B63\u5728\u601D\u8003\u2026" })) : null, message.cancelled ? ((0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { fontSize: 12, color: token.colorTextTertiary, marginTop: 4 }, children: "\uFF08\u5DF2\u4E2D\u6B62\uFF09" })) : null, message.error ? ((0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { fontSize: 12, color: token.colorError, marginTop: 6 }, children: message.error })) : null] }, message.key));
-    };
-    const renderChat = () => {
-        if (!agent.api) {
-            return ((0,react_jsx_runtime_production_namespaceFn().jsxs)((react_jsx_runtime_production_namespaceFn().Fragment), { children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(ChatHeader, { left: (0,react_jsx_runtime_production_namespaceFn().jsx)(typography.Text, { strong: true, children: "Agents" }) }), (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { padding: 12 }, children: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_alert, { type: "warning", showIcon: true, icon: (0,react_jsx_runtime_production_namespaceFn().jsx)(BotIcon, { size: 16 }), message: "Agent \u529F\u80FD\u4E0D\u53EF\u7528", description: agent.availability.reason }) })] }));
-        }
-        return ((0,react_jsx_runtime_production_namespaceFn().jsxs)((react_jsx_runtime_production_namespaceFn().Fragment), { children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(ChatHeader, { left: (0,react_jsx_runtime_production_namespaceFn().jsxs)((react_jsx_runtime_production_namespaceFn().Fragment), { children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("span", { style: {
-                                    width: 30,
-                                    height: 30,
-                                    borderRadius: 6,
-                                    flex: '0 0 auto',
-                                    display: 'inline-flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    background: '#4A4A4A',
-                                    color: '#fff',
-                                }, children: (0,react_jsx_runtime_production_namespaceFn().jsx)(BotIcon, { size: 16, color: "currentColor" }) }), (0,react_jsx_runtime_production_namespaceFn().jsx)(typography.Text, { strong: true, style: { fontSize: 15 }, ellipsis: true, children: agent.activeChatId ? agentChatLabel(agent.chats, agent.activeChatId) : '新的聊天' }), (0,react_jsx_runtime_production_namespaceFn().jsxs)(typography.Text, { type: "secondary", style: { fontSize: 11, flex: '0 0 auto' }, children: ["\u5171 ", agent.chats.length, " \u6761\u5BF9\u8BDD"] })] }) }), agent.fatalError ? ((0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { padding: '8px 12px 0' }, children: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_alert, { type: "error", showIcon: true, message: agent.fatalError }) })) : null, (0,react_jsx_runtime_production_namespaceFn().jsx)(ChatScroll, { className: "znhd-agent-messages", scrollDep: agent.messages, children: agent.messages.length ? (agent.messages.map(renderMessage)) : ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_empty, { image: es_empty.PRESENTED_IMAGE_SIMPLE, description: (0,react_jsx_runtime_production_namespaceFn().jsx)("span", { style: { fontSize: 12 }, children: "\u76F4\u63A5\u63D0\u95EE\u5373\u53EF\u3002\u53EF\u4EE5\u8BD5\u8BD5\u300C\u5E2E\u6211\u603B\u7ED3\u8FD9\u4E2A\u9875\u9762\u80FD\u505A\u4EC0\u4E48\u300D\u300C\u5F81\u7EB3\u4E92\u52A8\u6389\u7EBF\u63D0\u9192\u6CA1\u58F0\u97F3\u600E\u4E48\u529E\u300D" }) })) }), (0,react_jsx_runtime_production_namespaceFn().jsx)(ChatComposer, { value: agent.input, onChange: agent.setInput, onSend: () => void agent.send(), disabled: !agent.api, streaming: agent.streaming, onStop: agent.stopStreaming, canSend: !!agent.input.trim(), 
-                    // 表情包是「图片」：Agent 通道只吃文本，故不传 onPickEmojiImage（按钮禁用），
-                    // 说明与紧邻的「图片上传 / 附件」两个灰按钮保持一致
-                    emojiDisabledReason: "\u6682\u4E0D\u652F\u6301\uFF1AScriptCat Agent \u76EE\u524D\u53EA\u63A5\u53D7\u6587\u672C", placeholder: agent.models.length
-                        ? '输入问题，Enter 发送，Shift + Enter 换行'
-                        : '还没在 ScriptCat 里配置模型：请先到 ScriptCat 的 Agent 设置里添加一个模型', rightExtras: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_select, { size: "small", variant: "borderless", style: { maxWidth: 190 }, value: agent.modelId || undefined, placeholder: agent.models.length ? '选择模型' : '未配置模型', disabled: agent.streaming, options: agent.models.map((model) => ({
-                            value: model.id,
-                            label: model.name + '（' + model.provider + '）',
-                        })), onChange: (value) => agent.setModelId(value) }), actions: [
-                        {
-                            key: 'image',
-                            label: '图片上传',
-                            tooltip: '暂不支持：ScriptCat Agent 目前只接受文本',
-                            icon: (0,react_jsx_runtime_production_namespaceFn().jsx)(ImageIcon, { size: 15 }),
-                            disabled: true,
-                        },
-                        {
-                            key: 'file',
-                            label: '附件',
-                            tooltip: '暂不支持：ScriptCat Agent 目前只接受文本',
-                            icon: (0,react_jsx_runtime_production_namespaceFn().jsx)(PaperclipIcon, { size: 15 }),
-                            disabled: true,
-                        },
-                    ] })] }));
-    };
-    /** 技能 / 定时任务：第二栏点了控件才渲染到这里（第三栏顶部给个标题，避免「这是哪儿」） */
-    const renderPanel = (kind) => {
-        const title = kind === 'skills' ? '技能' : '定时任务';
-        if (!agent.api) {
-            return ((0,react_jsx_runtime_production_namespaceFn().jsxs)((react_jsx_runtime_production_namespaceFn().Fragment), { children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(ChatHeader, { left: (0,react_jsx_runtime_production_namespaceFn().jsx)(typography.Text, { strong: true, children: title }) }), (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { padding: 12 }, children: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_alert, { type: "warning", showIcon: true, message: title + '不可用', description: agent.availability.reason }) })] }));
-        }
-        return ((0,react_jsx_runtime_production_namespaceFn().jsxs)((react_jsx_runtime_production_namespaceFn().Fragment), { children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(ChatHeader, { left: (0,react_jsx_runtime_production_namespaceFn().jsxs)(typography.Text, { strong: true, style: { display: 'inline-flex', alignItems: 'center', gap: 6 }, children: [kind === 'skills' ? (0,react_jsx_runtime_production_namespaceFn().jsx)(GridIcon, { size: 15 }) : (0,react_jsx_runtime_production_namespaceFn().jsx)(ClockIcon, { size: 15 }), title] }), right: (0,react_jsx_runtime_production_namespaceFn().jsx)(typography.Text, { type: "secondary", style: { fontSize: 11, flex: '0 0 auto' }, children: kind === 'skills'
-                            ? '对话时已启用的技能会自动加载，不必逐个勾选'
-                            : '由 ScriptCat 调度器在后台执行，关掉网页也照跑' }) }), (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { flex: '1 1 auto', minHeight: 0, overflowY: 'auto', padding: 12 }, children: kind === 'skills' ? ((0,react_jsx_runtime_production_namespaceFn().jsx)(SkillsPanel, { api: agent.api, version: skillsVersion, onChange: () => setSkillsVersion((v) => v + 1) })) : ((0,react_jsx_runtime_production_namespaceFn().jsx)(TaskPanel, { api: agent.api, version: tasksVersion, onChange: () => setTasksVersion((v) => v + 1) })) })] }));
-    };
-    return ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', flexDirection: 'column', minHeight: 0, flex: '1 1 auto' }, children: [pane === 'chat' ? renderChat() : null, pane === 'skills' ? renderPanel('skills') : null, pane === 'tasks' ? renderPanel('tasks') : null] }));
-}
-
-;// ./shared/image/compress.ts
-/**
- * 图片压缩核心 —— 脚本端与手机上传页**共用一份**（v26.10.08-v13 起）。
- *
- * 为什么抽出来：两端原本各有一份**几乎逐行等价**的 canvas 压缩实现，连参数（最大边 1600 / JPEG 0.75）
- * 也是两份、靠注释「与另一端保持一致」人肉同步 —— 结果已经漂移：脚本端跳过 GIF（canvas 只取首帧，
- * 会把动图压成静态图），手机端没跳过，同一张动图两端行为不同。抽成一份后，参数、解码兜底、
- * 「为什么要跳过」这些理由只有一处，两端差异改用**显式选项**表达（见 `prepare.ts`）。
- *
- * ⚠️ **共享层的硬约束**（改这个文件前务必先读 `AGENT.md` 的「共享层」小节）：
- *   · 禁止 import 任何宿主相关模块（`GM_*` / `@/lib/logger` / `panelHost` / `react-to-print` …）：
- *     手机端 tsconfig 是 `types: ["vite/client"]`，出现 `GM_xmlhttpRequest` 这类全局会直接 typecheck 失败；
- *   · 手机端开着 `isolatedModules` + `noUnusedLocals` + `noUnusedParameters`，`target` 为 **es2020**
- *     ⇒ 共享代码必须按**最严的那一套**写（类型再导出用 `export type`、不留未使用变量、不超出 ES2020）；
- *   · 手机端没装 `@ant-design/icons`、`react-to-print`（未声明）⇒ 只有两端都有的依赖才能 import。
- */
-/** 「发送到手机 / 上传到电脑」的压缩参数：两端共用同一组默认值 */
-const DEFAULT_MAX_DIM = 1600;
-const DEFAULT_QUALITY = 0.75;
-/** HEIC/HEIF 判定：MIME 可能为空串或 application/octet-stream，故扩展名也算 */
-function isHeicLike(lowerMime, lowerName) {
-    return (lowerMime === 'image/heic' ||
-        lowerMime === 'image/heif' ||
-        lowerMime === 'image/heic-sequence' ||
-        lowerMime === 'image/heif-sequence' ||
-        /\.(heic|heif)$/.test(lowerName));
-}
-/** SVG 判定：canvas 无法可靠光栅化，且会丢矢量 ⇒ 一律原样直传 */
-function isSvgLike(lowerMime, lowerName) {
-    return lowerMime === 'image/svg+xml' || /\.svg$/.test(lowerName);
-}
-/** GIF 判定：canvas 只取首帧，会把动图压成静态图 ⇒ 默认也原样直传 */
-function isGifLike(lowerMime, lowerName) {
-    return lowerMime === 'image/gif' || /\.gif$/.test(lowerName);
-}
-/**
- * WebP 判定：默认同样**原样直传**（v26.10.13-v3 加）。两条理由与 SVG/GIF 同源：
- *   · canvas 只能导出 JPEG ⇒ **透明通道丢失**（JPEG 无 alpha，实现里要铺白底），而聊天用的
- *     表情图（桌面端在线表情包，cdn.klyang.com 的静态 webp）几乎都是透明背景，压完就会
- *     变成深色气泡里的一块白方块；
- *   · 动画 webp 与 GIF 一样只取首帧，会把动图压死。
- * 何况 webp 本身压缩率就高（表情图单张仅 2–6KB），再压基本只剩「体积变大」的份 ——
- * 即便不特判，`prepare.ts` 里「压不小就原样发」的兜底也会落到同一结果；
- * 显式写出来是为了**语义明确**，别让后来人以为这是被兜底意外兜住的。
- */
-function isWebpLike(lowerMime, lowerName) {
-    return lowerMime === 'image/webp' || /\.webp$/.test(lowerName);
-}
-/**
- * 解码：`createImageBitmap` 优先，失败回退 `<img>`（部分内核/格式上前者不可用或直接抛）。
- * 失败时 reject，由调用方决定回退策略。
- */
-function decodeToCanvasSource(blob) {
-    const decodeViaImg = () => new Promise((resolve, reject) => {
-        const url = URL.createObjectURL(blob);
-        const img = new Image();
-        img.onload = () => resolve({
-            source: img,
-            width: img.naturalWidth,
-            height: img.naturalHeight,
-            release: () => URL.revokeObjectURL(url),
-        });
-        img.onerror = () => {
-            URL.revokeObjectURL(url);
-            reject(new Error('图片解析失败'));
-        };
-        img.src = url;
-    });
-    if (typeof createImageBitmap !== 'function')
-        return decodeViaImg();
-    return createImageBitmap(blob)
-        .then((bmp) => ({
-        source: bmp,
-        width: bmp.width,
-        height: bmp.height,
-        release: () => {
-            if (bmp.close)
-                bmp.close();
-        },
-    }))
-        .catch(() => decodeViaImg());
-}
-/**
- * canvas 等比缩放到最大边 → 铺白底 → 导出 JPEG。
- *
- * JPEG 无透明通道，**必须先铺白底**，否则透明 PNG 会被压成黑底。
- * 解码/编码失败一律 resolve(null)（不 reject）：两端调用方都按「失败就原样直传」处理，绝不阻断传输。
- */
-async function resizeToJpeg(blob, opt = {}) {
-    const maxDim = opt.maxDim && opt.maxDim > 0 ? opt.maxDim : DEFAULT_MAX_DIM;
-    const quality = typeof opt.quality === 'number' ? opt.quality : DEFAULT_QUALITY;
-    let dec = null;
-    try {
-        dec = await decodeToCanvasSource(blob);
-        const w = Number(dec.width) || 0;
-        const h = Number(dec.height) || 0;
-        if (!w || !h)
-            return null;
-        const scale = Math.min(1, maxDim / Math.max(w, h));
-        const cw = Math.max(1, Math.round(w * scale));
-        const ch = Math.max(1, Math.round(h * scale));
-        const cv = document.createElement('canvas');
-        cv.width = cw;
-        cv.height = ch;
-        const ctx = cv.getContext('2d');
-        if (!ctx)
-            return null;
-        ctx.fillStyle = '#fff';
-        ctx.fillRect(0, 0, cw, ch);
-        ctx.drawImage(dec.source, 0, 0, cw, ch);
-        return await new Promise((resolve) => {
-            cv.toBlob((b) => resolve(b || null), 'image/jpeg', quality);
-        });
-    }
-    catch {
-        return null;
-    }
-    finally {
-        // createImageBitmap 的位图要显式 close，否则大图会短暂占住内存
-        if (dec)
-            dec.release();
-    }
-}
-/**
- * 把「注入进来的 heic2any」包成统一形态的转码器。
- * 两端获取库的方式天生不同（脚本端用 `@require` 的全局，手机页按需注入 `<script>`），故只共享调用方式。
- */
-function makeHeicConverter(heic2any, quality = 0.9) {
-    return (blob) => {
-        if (typeof heic2any !== 'function')
-            return Promise.reject(new Error('heic2any 未加载'));
-        return Promise.resolve(heic2any({
-            blob,
-            toType: 'image/jpeg',
-            quality,
-        })).then((out) => {
-            // 多图 HEIC 会返回数组，取首帧
-            const b = Array.isArray(out) ? out[0] : out;
-            if (b)
-                return b;
-            throw new Error('heic2any 未产出图片');
-        });
-    };
-}
-
-;// ./shared/image/prepare.ts
-/**
- * 「把用户选的图片处理成可直接传输的载荷」—— 脚本端与手机上传页**共用一份**（v26.10.08-v13 起）。
- *
- * 统一后的行为（两端差异全部变成显式选项）：
- *   · SVG 原样直传（canvas 无法可靠光栅化，会丢矢量）；
- *   · **GIF 也原样直传**（canvas 只取首帧，会把动图压成静态图）—— 原先只有脚本端这么做，
- *     手机端会压成静态图；这次统一为「跳过」，顺手修掉两端行为不一致；
- *   · **WebP 也原样直传**（v26.10.13-v3 加，理由同 GIF，另加「JPEG 无透明通道」一条 ——
- *     桌面端在线表情包是透明背景的 webp，压完会在深色气泡里变成白方块）；
- *   · HEIC/HEIF 先转 JPEG 再走同一条压缩链（**转码器由调用方注入**：两端取库方式不同）；
- *     ⚠️ HEIC 的「转码」本身就是目的（既压体积，也修掉安卓端不显示 HEIC 的兼容问题），
- *     故即使 JPEG 没比原始 HEIC 小也照样发 JPEG；其它格式仍遵循「压不小就不压」；
- *   · 任何失败都回退原图直传，绝不阻断传输。
- */
-
-/**
- * 把用户选的图片处理成可直接传输的载荷。
- * 与历史行为逐条对齐（含「压完反而更大就不压」的兜底），失败一律原样直传。
- */
-async function prepareForTransfer(file, opt = {}) {
-    const name = String(file && file.name ? file.name : 'image.jpg');
-    const mime = String((file && file.type) || 'image/jpeg');
-    const original = { blob: file, name, mime, compressed: false };
-    const lowerName = name.toLowerCase();
-    const lowerMime = mime.toLowerCase();
-    if ((opt.skipSvg === undefined ? true : opt.skipSvg) && isSvgLike(lowerMime, lowerName))
-        return original;
-    if ((opt.skipGif === undefined ? true : opt.skipGif) && isGifLike(lowerMime, lowerName))
-        return original;
-    if ((opt.skipWebp === undefined ? true : opt.skipWebp) && isWebpLike(lowerMime, lowerName))
-        return original;
-    const heic = isHeicLike(lowerMime, lowerName);
-    let source = file;
-    if (heic) {
-        if (!opt.loadHeic)
-            return original; // 库不可用：原图直传，交由接收端处理
-        try {
-            const jpg = await opt.loadHeic(file);
-            if (!jpg)
-                return original;
-            source = jpg;
-        }
-        catch {
-            return original; // 转码失败：原样直传
-        }
-    }
-    const out = await resizeToJpeg(source, {
-        maxDim: opt.maxDim === undefined ? (/* inlined export .DEFAULT_MAX_DIM */1600) : opt.maxDim,
-        quality: opt.quality === undefined ? (/* inlined export .DEFAULT_QUALITY */0.75) : opt.quality,
-    });
-    if (!out)
-        return original; // 解码/编码失败
-    if (!heic && out.size >= (file.size || 0))
-        return original; // 非 HEIC 且压不小 ⇒ 原样发
-    return {
-        blob: out,
-        name: name.replace(/\.[a-z0-9]+$/i, '') + '.jpg',
-        mime: 'image/jpeg',
-        compressed: true,
-    };
-}
-
-;// ./src/lib/relay.ts
-
-// 图片压缩：与手机上传页共用同一份实现（v26.10.08-v13 起），路径见仓库根 shared/
-
-
-/**
- * 设备互联中继客户端（手机 → 电脑）与图片剪贴板工具。
- * 模块化 P4：逐字迁移，仅加 export（内部使用的不导出）。
- * 说明：长轮询而非 WebSocket 是为了绕过税务页 CSP 对 connect-src 的限制。
- */
-// ========== 手机图片 → 电脑剪贴板 ==========
-// 每台电脑/每个脚本安装实例一个稳定 deviceId（持久化，刷新不变），
-// 拼出上传链接 <relayServer>/u/<deviceId>；手机打开该链接上传，电脑端长轮询取走。
-const DEVICE_ID_KEY = 'znhd_device_id';
-// 单请求体上限，须与 relay-server 的 MAX_BODY 保持一致（服务端按「整段 JSON 体积」掐断）。
-// 发图前据此预检体积，避免 base64 膨胀后超过上限，被服务端拒绝时只见笼统的网络/服务器错误。
-const RELAY_MAX_BODY = 12 * 1024 * 1024;
-/**
- * 估算把该文件作为一条 POST body（含 name+mime+base64(data) 与 JSON 结构开销）的体积。
- * 仅用于「发送到手机」发前预检，与服务端 MAX_BODY 对齐（约 12MB）。
- * @param {File|Blob} file - 待发图片文件
- * @param {string} [name] - 文件名
- * @param {string} [mime] - MIME 类型
- * @returns {number} 估算的 body 字节数
- */
-function imagePayloadBytes(file, name, mime) {
-    const b64Len = Math.ceil(((file && file.size) || 0) / 3) * 4; // base64 膨胀 ≈ 4/3
-    // name/mime 按 UTF-8 字节数计（服务端 readBody 按字节累加；String.length 是 UTF-16 码元，
-    // 中文文件名会低估约 3 倍，接近上限时预检可能误放行）
-    const enc = typeof TextEncoder === 'function' ? new TextEncoder() : null;
-    const byteLen = enc
-        ? enc.encode(String(name || '') + String(mime || '')).length
-        : (String(name || '') + String(mime || '')).length;
-    return b64Len + byteLen + 120;
-}
-/** 「发送到手机」压缩参数：与手机上传页共用同一份实现与默认值（见 shared/image/compress.ts） */
-const PHONE_MAX_DIM = (/* inlined export .DEFAULT_MAX_DIM */1600);
-const PHONE_JPEG_QUALITY = (/* inlined export .DEFAULT_QUALITY */0.75);
-/**
- * 「电脑端 → 手机端」发送前的图片压缩。
- *
- * v26.10.08-v13 起**实现搬进共享层** `shared/image/prepare.ts`（与手机上传页同一份）。
- * 规则（SVG/GIF 原样直传、HEIC 先转码、压不小就不压、任何失败都回退原图）全部在那边，
- * 这里只剩脚本端**特有的一步**：把「HEIC 取库方式」注入进去 ——
- * 脚本端用的是 `@require` 进来的全局 `heic2any`，手机页是运行期按需注入 `<script>`。
- *
- * @param {File|Blob} file - 用户选择的原始图片文件
- * @returns {Promise<PhoneImagePayload>} 实际要发送的内容
- */
-function compressImageForPhone(file) {
-    return prepareForTransfer(file, {
-        maxDim: PHONE_MAX_DIM,
-        quality: PHONE_JPEG_QUALITY,
-        loadHeic: (blob) => makeHeicConverter(typeof heic2any === 'function' ? heic2any : null)(blob),
-    });
-}
-/**
- * 取得本机稳定设备 ID：首次运行用 crypto.randomUUID() 生成并持久化（GM_setValue），
- * 之后刷新/重开都读同一值。用于区分不同电脑（A、B 各自不同链接）。
- * @returns {string} 设备 UUID 字符串
- */
-function getDeviceId() {
-    let id = '';
-    try {
-        id = typeof GM_getValue === 'function' ? GM_getValue(DEVICE_ID_KEY, '') || '' : '';
-    }
-    catch (e) {
-        id = '';
-    }
-    if (!id) {
-        try {
-            id =
-                window.crypto && crypto.randomUUID
-                    ? crypto.randomUUID()
-                    : 'd' + Date.now().toString(16) + Math.random().toString(16).slice(2);
-        }
-        catch (e) {
-            id = 'd' + Date.now().toString(16) + Math.random().toString(16).slice(2);
-        }
-        try {
-            if (typeof GM_setValue === 'function')
-                GM_setValue(DEVICE_ID_KEY, id);
-        }
-        catch (e) {
-            /* 忽略 */
-        }
-    }
-    return id;
-}
-/**
- * 将 base64 字符串还原为 Blob（用于把中继返回的图片字节写剪贴板）。
- * @param {string} b64 - base64 文本
- * @param {string} mime - MIME 类型
- * @returns {Blob} 图片 Blob
- */
-function base64ToBlob(b64, mime) {
-    const bin = atob(b64);
-    const len = bin.length;
-    const arr = new Uint8Array(len);
-    for (let i = 0; i < len; i++)
-        arr[i] = bin.charCodeAt(i);
-    return new Blob([arr], { type: mime || 'image/jpeg' });
-}
-/**
- * 将图片 Blob 转成 PNG Blob（best-effort）。
- * 原因：异步 Clipboard API（navigator.clipboard.write + ClipboardItem）在部分
- * Chromium 内核里只可靠支持 image/png；手机传来的图多为 image/jpeg，
- * 直接以 image/jpeg 写入可能失败。统一转 PNG 可规避该限制。
- * 若环境不支持位图解码 / Canvas，则返回原 blob。
- * @param {Blob} blob
- * @returns {Promise<Blob>}
- */
-function blobToPng(blob) {
-    return new Promise((resolve) => {
-        if (typeof createImageBitmap !== 'function' || typeof document === 'undefined') {
-            resolve(blob);
-            return;
-        }
-        try {
-            createImageBitmap(blob)
-                .then((bmp) => {
-                const cv = document.createElement('canvas');
-                cv.width = bmp.width;
-                cv.height = bmp.height;
-                const ctx = cv.getContext('2d');
-                if (!ctx) {
-                    if (bmp.close)
-                        bmp.close();
-                    resolve(blob);
-                    return;
-                }
-                ctx.drawImage(bmp, 0, 0);
-                if (bmp.close)
-                    bmp.close();
-                cv.toBlob((b) => {
-                    resolve(b || blob);
-                }, 'image/png');
-            })
-                .catch(() => resolve(blob));
-        }
-        catch (e) {
-            resolve(blob);
-        }
-    });
-}
-/** 统一取可读的异常文本 */
-function errTextOf(e) {
-    const err = e;
-    return err && err.name ? err.name + ': ' + err.message : String((err && err.message) || e);
-}
-/**
- * 用目标 realm 的原生 Blob 构造器重新包一层。
- * 跨 realm 直接把「隔离世界的 Blob」交给「页面主世界的 ClipboardItem」可能被拒绝；
- * 参考实现 qsniyg/maxurl 同样是用页面原生 `native_blob` 构造后再传入 ClipboardItem。
- */
-function toRealmBlob(blob, BlobCtor) {
-    const type = blob && blob.type ? blob.type : 'image/png';
-    try {
-        return BlobCtor ? new BlobCtor([blob], { type: type }) : blob;
-    }
-    catch (e) {
-        return blob;
-    }
-}
-/**
- * 在指定 realm 里写**一次**剪贴板（只写 image/png）。
- *
- * ⚠️ 为什么只写一次：`clipboard.write()` 通过用户手势校验后就会**消耗**这次手势，失败也不退还。
- * 所以任何「先拿原图试一下、失败再重试」的兜底都会把手势烧掉，让后面的重试必然 NotAllowedError。
- * preferPromiseForm=true 时使用 ClipboardItem 的 Promise 形式：write() 在本次点击手势内**同步发起**，
- * 由浏览器去等异步转换结果 —— 转换耗时（实测约 1s）不再影响手势有效性。
- * @param {ClipboardRealm} realm - 写入目标
- * @param {Promise<any>} pngPromise - 解析为 PNG Blob 的 Promise
- * @param {boolean} preferPromiseForm - 是否优先用 Promise 形式的 ClipboardItem
- * @returns {Promise<boolean>} 写入是否成功
- */
-function writeClipboardOnce(realm, pngPromise, preferPromiseForm) {
-    return new Promise((resolve) => {
-        const doWrite = (item) => {
-            try {
-                realm.nav.clipboard.write([item]).then(() => resolve(true), (e) => {
-                    addLog('[复制] 写入剪贴板被拒（' + realm.name + '）: ' + errTextOf(e), 'warning', true);
-                    resolve(false);
-                });
-            }
-            catch (e) {
-                addLog('[复制] 调用 clipboard.write 异常（' + realm.name + '）: ' + errTextOf(e), 'error', true);
-                resolve(false);
-            }
-        };
-        if (preferPromiseForm) {
-            try {
-                doWrite(new realm.CI({ 'image/png': pngPromise }));
-                return;
-            }
-            catch (e) {
-                addLog('[复制] ClipboardItem 不支持 Promise 形式，改为先转换再写入: ' + errTextOf(e), 'warning', true);
-            }
-        }
-        pngPromise.then((png) => {
-            try {
-                doWrite(new realm.CI({ 'image/png': toRealmBlob(png, realm.BlobCtor) }));
-            }
-            catch (e) {
-                addLog('[复制] 构造 ClipboardItem 失败（' + realm.name + '）: ' + errTextOf(e), 'error', true);
-                resolve(false);
-            }
-        });
-    });
-}
-/**
- * 将图片 Blob 写入系统剪贴板（必须由一次「用户点击」触发）。
- *
- * ⚠️ 2026-10-06 重写。旧实现「先按原图类型写一次 → 失败后再转 PNG 重试」是**注定失败**的写法：
- *   1) Chromium 的异步剪贴板**只支持写 `image/png`**（实测 `ClipboardItem.supports('image/jpeg') === false`），
- *      而手机传来的图多为 jpeg ⇒ 第一次写入必然失败；
- *   2) 按规范，`clipboard.write()` 通过手势校验后即**消耗**该手势（失败也不退还）
- *      ⇒ 转 PNG 后的第二次重试必然 `NotAllowedError: Write permission denied`，用户只看到「复制失败」；
- *   3) 正确顺序：**先转好 PNG，再只写一次**。
- *
- * 参考实现：qsniyg/maxurl（只调用一次 write + 用页面原生 Blob 构造 ClipboardItem + 显式异常分支）。
- * 本脚本不需要它们「跨域图片经 GM_xmlhttpRequest 取二进制」那一段 —— 图片本来就是中继传进来的 Blob。
- * @param {Blob} blob - 图片 Blob
- * @returns {Promise<boolean>} 成功返回 true，失败返回 false（失败原因写入日志）
- */
-function copyImageToClipboard(blob) {
-    return new Promise((resolve) => {
-        if (!blob) {
-            addLog('[复制] 图片数据为空', 'error', true);
-            resolve(false);
-            return;
-        }
-        const pageWin = typeof unsafeWindow !== 'undefined' ? unsafeWindow : null;
-        const realms = [];
-        // 页面主世界优先：ScriptCat 隔离世界里的 ClipboardItem / 写入常不可用
-        if (pageWin &&
-            pageWin.navigator &&
-            pageWin.navigator.clipboard &&
-            // 用 typeof 判断而非直接取真值：写方法在类型上恒有定义，真值判断会被 TS 判为恒真
-            typeof pageWin.navigator.clipboard.write === 'function' &&
-            pageWin.ClipboardItem) {
-            realms.push({
-                name: '页面主世界',
-                nav: pageWin.navigator,
-                CI: pageWin.ClipboardItem,
-                BlobCtor: pageWin.Blob,
-                isPageRealm: true,
-            });
-        }
-        if (navigator.clipboard &&
-            typeof navigator.clipboard.write === 'function' &&
-            typeof ClipboardItem !== 'undefined') {
-            realms.push({ name: '隔离世界', nav: navigator, CI: ClipboardItem, BlobCtor: Blob, isPageRealm: false });
-        }
-        if (!realms.length) {
-            addLog('[复制] 当前环境不支持图片剪贴板（缺 clipboard.write 或 ClipboardItem）', 'error', true);
-            resolve(false);
-            return;
-        }
-        // 先启动 PNG 转换（不阻塞手势）：Chromium 只认 image/png
-        const pngPromise = (blob.type === 'image/png' ? Promise.resolve(blob) : blobToPng(blob)).then((b) => {
-            if (b && b.type !== 'image/png') {
-                // blobToPng 转换失败时会原样返回原图；此处只提示，成败仍交给写入阶段判定
-                addLog('[复制] 图片转 PNG 失败（内核不支持位图解码/Canvas），可能无法写入剪贴板', 'warning', true);
-            }
-            return b;
-        });
-        (async () => {
-            for (const realm of realms) {
-                // 主世界优先用 Promise 形式（write 落在手势内）；隔离世界退化为「先转换、后写入」
-                const ok = await writeClipboardOnce(realm, pngPromise, realm.isPageRealm);
-                if (ok) {
-                    addLog('[复制] 图片已复制到剪贴板（' + realm.name + '）', 'success', true);
-                    resolve(true);
-                    return;
-                }
-            }
-            addLog('[复制] 图片写入剪贴板失败：常见原因是浏览器/油猴未授予剪贴板权限、页面未获得焦点，或该内核不支持图片剪贴板；可长按图片手动保存', 'error', true);
-            resolve(false);
-        })();
-    });
-}
-/**
- * 启动「设备互联」长轮询接收循环（直到 stop() 调用）。
- * 通过 GM_xmlhttpRequest 轮询中继服务器 /recv/<uuid>（绕过税务页面 CSP 对 connect-src 的限制）。
- * 收到图片时回调 onImage；状态变化回调 onStatus；网络异常自动重连。
- * @param {PhoneReceiveOptions} opt - { server, uuid, onStatus, onImage, onText, onConnected }
- * @returns {Function} stop() 停止接收
- */
-function startPhoneReceive(opt) {
-    const server = (opt.server || '').trim().replace(/\/+$/, '');
-    const uuid = opt.uuid;
-    let stopped = false;
-    let lastXhr = null;
-    let connected = false;
-    let loggedConnFail = false;
-    let firstPoll = true;
-    function markConnected() {
-        if (connected)
-            return;
-        connected = true;
-        loggedConnFail = false; // 恢复连接后复位失败标记，后续再次断线仍会记日志（旧实现不复位，之后断连静默）
-        if (opt.onConnected) {
-            try {
-                opt.onConnected();
-            }
-            catch (e) {
-                /* 忽略 */
-            }
-        }
-    }
-    // 说明：不单独探测 /health。旧版中继可能没有该端点，会导致请求挂起并误报
-    // 「连接服务器超时」，而真正的 /recv 接收始终正常（与用户报告的现象一致）。
-    // 改用「首次 /recv 轮询用极短 maxwait」来快速确认已连上：服务器会很快返回空响应，
-    // 从而 markConnected → onConnected 触发「已自动开始接收」日志（约 1 秒内）。
-    function poll() {
-        if (stopped)
-            return;
-        if (opt.onStatus)
-            opt.onStatus('正在等待手机上传…');
-        // 首次轮询用极短 maxwait 仅用于快速确认「已连上服务器」（服务器会很快返回空），
-        // 让「已自动开始接收」日志尽快出现；后续轮询用长 maxwait 实时等待图片。
-        const maxwait = firstPoll ? 1000 : 25000;
-        firstPoll = false;
-        const url = server + '/recv/' + encodeURIComponent(uuid) + '?maxwait=' + maxwait;
-        try {
-            lastXhr = GM_xmlhttpRequest({
-                method: 'GET',
-                url: url,
-                timeout: maxwait + 5000,
-                onload: function (resp) {
-                    if (stopped)
-                        return;
-                    markConnected(); // 首次成功收到服务器响应即视为已连上
-                    try {
-                        let data = null;
-                        try {
-                            data = JSON.parse(resp.responseText);
-                        }
-                        catch (e) {
-                            data = null;
-                        }
-                        if (data && data.empty) {
-                            poll();
-                            return;
-                        }
-                        if (data && data.type === 'image' && data.data) {
-                            const blob = base64ToBlob(data.data, data.mime || 'image/jpeg');
-                            // 预览统一用 objectURL（与「发送到手机」待发列表一致）：
-                            // ① 画廊上限淘汰/单张移除/清空全部时的 URL.revokeObjectURL 真正生效
-                            //   （data:URL 字符串无法 revoke，旧写法实为无效空操作）；
-                            // ② 避免最多 27 张图的 base64 dataURL 长字符串常驻 JS 堆（可达几十 MB）。
-                            const previewUrl = URL.createObjectURL(blob);
-                            if (opt.onStatus)
-                                opt.onStatus('收到图片：' + (data.name || 'image'));
-                            if (opt.onImage)
-                                opt.onImage({
-                                    blob: blob,
-                                    previewUrl: previewUrl,
-                                    name: data.name,
-                                    mime: data.mime,
-                                    from: data.from,
-                                });
-                            poll(); // 继续接收下一张
-                            return;
-                        }
-                        if (data && data.type === 'text' && typeof data.text === 'string') {
-                            if (opt.onStatus)
-                                opt.onStatus('收到文本');
-                            if (opt.onText)
-                                opt.onText({ text: data.text, ts: data.ts, from: data.from });
-                            poll(); // 继续接收下一条
-                            return;
-                        }
-                        setTimeout(poll, 1000); // 解析失败稍后重试
-                    }
-                    catch (e) {
-                        // 单条数据异常（base64 损坏 atob 抛错、回调抛错等）不得杀死接收循环：
-                        // 记录一次后继续下一次轮询（旧实现无兜底，异常会让 poll 链永久中断、收图静默失效）
-                        addLog('[设备互联] 处理收到数据失败: ' + (e && e.message ? e.message : e), 'error', true);
-                        setTimeout(poll, 1000);
-                    }
-                },
-                onerror: function () {
-                    if (stopped)
-                        return;
-                    if (!loggedConnFail) {
-                        loggedConnFail = true;
-                        addLog('[设备互联] 连接服务器失败，请检查中继地址/网络（' + server + '）', 'error');
-                    }
-                    if (opt.onStatus)
-                        opt.onStatus('连接中断，正在重连…');
-                    setTimeout(poll, 2000);
-                },
-                ontimeout: function () {
-                    if (stopped)
-                        return;
-                    poll(); // 超时继续轮询
-                },
-            });
-        }
-        catch (e) {
-            if (stopped)
-                return;
-            if (opt.onStatus)
-                opt.onStatus('请求异常，正在重连…');
-            setTimeout(poll, 2000);
-        }
-    }
-    poll();
-    return function stop() {
-        stopped = true;
-        try {
-            if (lastXhr && typeof lastXhr.abort === 'function')
-                lastXhr.abort();
-        }
-        catch (e) {
-            /* 忽略 */
-        }
-    };
-}
-/**
- * 「发送测试图片」用的随机图源（v26.10.08-v10）。
- * 直接返回一张图片（会 302 到具体图片），故用 GM_xmlhttpRequest 取二进制。
- */
-const TEST_IMAGE_URL = 'https://t.alcy.cc/fj';
-/** Blob → 不带前缀的 base64（FileReader；与手机上传页同一套做法） */
-function blobToBase64(blob) {
-    return new Promise((resolve, reject) => {
-        const fr = new FileReader();
-        fr.onload = () => resolve(String(fr.result || '').split(',')[1] || '');
-        fr.onerror = () => reject(new Error('读取图片失败'));
-        fr.readAsDataURL(blob);
-    });
-}
-/** 按 MIME 给测试图起个文件名（仅用于日志与下载命名） */
-function testImageName(mime) {
-    const ext = { 'image/jpeg': '.jpg', 'image/png': '.png', 'image/webp': '.webp', 'image/gif': '.gif' }[mime] || '.jpg';
-    return 'test-image-' + Date.now() + ext;
-}
-/**
- * 「发送测试图片」（v26.10.08-v10）：从随机图源取一张图，**当作手机上传**投递到本机中继
- * （`POST /u/<本机 deviceId>`），于是它经**正常的「手机 → 电脑」通道**回到本脚本、进历史记录。
- *
- * 为什么走中继而不是本地直接塞进数组：这样这条路径与真实收图**完全一致**
- * （中继入队 → 长轮询取走 → onImage → 历史），可用它验证整条链路，也能同步到同一台电脑的其它标签页。
- * 代价是必须配置好中继地址（未配置时调用方直接给出提示，不发请求）。
- *
- * ⚠️ 用 GM_xmlhttpRequest 而不是 fetch：税务页 CSP 限制 connect-src，跨域取图也需绕过 CORS。
- */
-function sendTestImage(opt) {
-    const server = (opt.server || '').trim().replace(/\/+$/, '');
-    const url = opt.url || TEST_IMAGE_URL;
-    const fail = (msg) => {
-        if (opt.onFail)
-            opt.onFail(msg);
-    };
-    if (!/^https?:\/\//i.test(server)) {
-        fail('未配置中继服务器，无法投递测试图片');
-        return;
-    }
-    try {
-        GM_xmlhttpRequest({
-            method: 'GET',
-            url: url,
-            responseType: 'blob',
-            timeout: 20000,
-            onload: (resp) => {
-                const blob = resp && resp.response;
-                if (!blob || typeof blob.size !== 'number' || !blob.size) {
-                    fail('取图失败：响应不是有效的二进制图片');
-                    return;
-                }
-                const mime = blob.type || 'image/jpeg';
-                const name = testImageName(mime);
-                // 体积预检：与手机上传同一套判据，避免 base64 膨胀后撞 12MB 上限
-                if (imagePayloadBytes(blob, name, mime) > RELAY_MAX_BODY) {
-                    fail('测试图片过大（超过中继单次上限约 12MB）');
-                    return;
-                }
-                blobToBase64(blob)
-                    .then((b64) => {
-                    if (!b64) {
-                        fail('取图失败：图片内容为空');
-                        return;
-                    }
-                    GM_xmlhttpRequest({
-                        method: 'POST',
-                        url: server + '/u/' + encodeURIComponent(opt.uuid),
-                        headers: { 'Content-Type': 'application/json' },
-                        data: JSON.stringify({ name: name, mime: mime, data: b64 }),
-                        timeout: 20000 + Math.round(b64.length / 200),
-                        onload: (r2) => {
-                            let j = null;
-                            try {
-                                j = JSON.parse(r2.responseText);
-                            }
-                            catch (e) {
-                                j = null;
-                            }
-                            if (j && j.ok) {
-                                if (opt.onOk)
-                                    opt.onOk({ bytes: blob.size, mime: mime });
-                            }
-                            else {
-                                fail((j && j.error) || '投递失败（HTTP ' + r2.status + '）');
-                            }
-                        },
-                        onerror: () => fail('网络错误，无法投递到中继'),
-                        ontimeout: () => fail('投递超时'),
-                    });
-                })
-                    .catch((e) => fail('取图失败：' + ((e && e.message) || '读取错误')));
-            },
-            onerror: () => fail('网络错误，无法获取测试图片'),
-            ontimeout: () => fail('获取测试图片超时'),
-        });
-    }
-    catch (e) {
-        fail('发送测试图片失败：' + ((e && e.message) || '未知错误'));
-    }
-}
-/**
- * 电脑端 → 手机端 发送（图片或文本）。POST 到中继 /phone/send/<deviceId>。
- * 仅负责投递；手机是否在线由调用方先查 /phone/status 决定（离线时调用方直接拦截）。
- * @param {SendToPhoneOptions} opt - { server, uuid, payload, onOk, onFail }
- *   payload: { text } 或 { name, mime, data(base64) }
- */
-function sendToPhone(opt) {
-    const server = (opt.server || '').trim().replace(/\/+$/, '');
-    const uuid = opt.uuid;
-    const url = server + '/phone/send/' + encodeURIComponent(uuid);
-    try {
-        const body = JSON.stringify(opt.payload);
-        GM_xmlhttpRequest({
-            method: 'POST',
-            url: url,
-            headers: { 'Content-Type': 'application/json' },
-            data: body,
-            // 超时随载荷缩放：放行的最大单请求约 16MB（base64 膨胀后），固定 20s 在慢上行时会把合法大图误杀
-            timeout: 20000 + Math.round(body.length / 200), // ≈ 20s + 每 200B 1ms；16MB 体 ≈ 100s
-            onload: function (resp) {
-                let j = null;
-                try {
-                    j = JSON.parse(resp.responseText);
-                }
-                catch (e) {
-                    j = null;
-                }
-                if (j && j.ok) {
-                    if (opt.onOk)
-                        opt.onOk();
-                }
-                else {
-                    // 优先用服务端 JSON 里的中文错误（如 413「内容过大」）；否则按状态码给可读提示，避免笼统报错。
-                    let msg = j && j.error ? String(j.error) : '';
-                    if (!msg && resp.status === 413)
-                        msg = '内容过大，请压缩后再发送';
-                    else if (!msg && resp.status >= 400)
-                        msg = '服务器错误（HTTP ' + resp.status + '）';
-                    if (opt.onFail)
-                        opt.onFail(msg || 'HTTP ' + resp.status);
-                }
-            },
-            onerror: function () {
-                if (opt.onFail)
-                    opt.onFail('网络错误，请检查中继地址');
-            },
-            ontimeout: function () {
-                if (opt.onFail)
-                    opt.onFail('发送超时');
-            },
-        });
-    }
-    catch (e) {
-        if (opt.onFail)
-            opt.onFail(e.message);
-    }
-}
-
-;// ./src/lib/ui/transfer/deviceColors.ts
-/**
- * 设备 ID 的专属配色（v26.10.08-v12 随 PhoneModal 建立；v26.10.12-v1 随「设备互联」
- * 重构为「传输助手」搬到本文件，逻辑逐字不变）。
- *
- * 按用户要求：给设备 ID 加边框和彩色底色，不同设备不同色。
- *
- * ⚠️ 用**固定色板 + 哈希取模**，而不是「由 ID 算 HSL」：后者在哈希相邻时会算出几乎一样的色相，
- *    多台手机并排时反而分不清。色板取 antd 预设色阶的「浅底 / 中边框 / 深字」三档（1 / 3 / 7 号色），
- *    保证浅色主题下文字对比度足够，也与面板整体配色语言一致。
- */
-/** 同一 ID 恒定取到同一个颜色（跨会话稳定）；不同 ID 尽量落到不同颜色 */
-const DEVICE_COLORS = [
-    { bg: '#e6f4ff', border: '#91caff', color: '#0958d9' }, // 蓝
-    { bg: '#e6fffb', border: '#87e8de', color: '#08979c' }, // 青
-    { bg: '#f6ffed', border: '#b7eb8f', color: '#389e0d' }, // 绿
-    { bg: '#fffbe6', border: '#ffe58f', color: '#d48806' }, // 黄
-    { bg: '#fff7e6', border: '#ffd591', color: '#d46b08' }, // 橙
-    { bg: '#fff1f0', border: '#ffa39e', color: '#cf1322' }, // 红
-    { bg: '#f9f0ff', border: '#d3adf7', color: '#531dab' }, // 紫
-    { bg: '#fff0f6', border: '#ffadd2', color: '#c41d7f' }, // 洋红
-];
-function hashDeviceId(id) {
-    // FNV-1a（32 位）：对「只差一个字符」的 ID 也敏感。
-    // ⚠️ 别退回 `h = h * 31 + c`：实测两个只差首字符的 ID 会被 `>>>0` 截断成同一个下标，
-    //    导致「不同设备不同底色」失效（本功能第一版就踩了）。
-    let h = 0x811c9dc5;
-    for (let i = 0; i < id.length; i++) {
-        h ^= id.charCodeAt(i);
-        h = Math.imul(h, 0x01000193) >>> 0;
-    }
-    return h >>> 0;
-}
-/**
- * 为一个**列表**解析「ID → 色板下标」，并把撞色的往后顺延。
- *
- * 为什么不能只用哈希：哈希再好也可能撞（实测「前缀重复字符」的 ID 会整批落到同一色），
- * 而用户要的是「不同设备 ID 不同底色」。故在列表内做贪心分配 ——
- * 设备数 ≤ 色板数（8）时**一定能拿到互不相同的颜色**。
- * 先按哈希排序再分配：谁拿哪个色只取决于 ID 集合，与数组顺序无关。
- */
-function resolveDeviceColors(ids) {
-    const out = {};
-    const used = new Set();
-    const ordered = ids
-        .filter(Boolean)
-        .slice()
-        .sort((a, b) => hashDeviceId(a) - hashDeviceId(b) || (a < b ? -1 : 1));
-    for (const id of ordered) {
-        let idx = hashDeviceId(id) % DEVICE_COLORS.length;
-        for (let step = 0; step < DEVICE_COLORS.length && used.has(idx); step++) {
-            idx = (idx + 1) % DEVICE_COLORS.length;
-        }
-        used.add(idx);
-        out[id] = idx;
-    }
-    return out;
-}
-/** 手机 ID 的展示用短串（UUID 太长，取前 8 位） */
-function shortPhoneId(id) {
-    if (!id)
-        return '未知设备（旧版中继）';
-    return id.length > 8 ? id.slice(0, 8) + '…' : id;
-}
-
-;// ./src/lib/ui/transfer/DeviceIdTag.tsx
-
-
-/**
- * 带边框与专属底色的设备 ID 标签（v26.10.08-v12；v26.10.12-v1 随传输助手重构搬迁）。
- * 颜色下标由调用方传入（列表内已做撞色顺延，见 resolveDeviceColors）；不传则按哈希取。
- */
-function DeviceIdTag({ id, colorIndex }) {
-    const idx = typeof colorIndex === 'number' ? colorIndex : hashDeviceId(id) % DEVICE_COLORS.length;
-    const c = DEVICE_COLORS[idx];
-    return ((0,react_jsx_runtime_production_namespaceFn().jsx)("span", { "data-device-id": id, "data-color-index": idx, style: {
-            display: 'inline-block',
-            padding: '1px 8px',
-            borderRadius: 6,
-            border: '1px solid ' + c.border,
-            background: c.bg,
-            color: c.color,
-            lineHeight: '20px',
-        }, children: shortPhoneId(id) }));
 }
 
 ;// ./src/lib/transfer/persist.ts
@@ -118142,8 +105660,9 @@ const TIME_GAP = 5 * 60 * 1000;
  *   · 底部输入区发文本 / 选图发送，逐张压缩后按序投递。
  *
  * v26.10.12-v3：气泡、滚动区、输入框全部换成 `ChatBubble` / `ChatScroll` / `ChatComposer`
- * （与 Agent 对话共用同一套）。用户要求「设备菜单和 agent 菜单下的对话主区域使用相同的样式」，
- * 所以这里**只负责数据与动作**，排版一律走共用件 —— 想改外观请改共用件，别在这里另写一套。
+ * （当时是为「设备菜单和 agent 菜单下的对话主区域使用相同的样式」而抽出的共用件；
+ * v26.10.13-v9 删掉 Agent 后仍由它们承担第三栏排版）。所以这里**只负责数据与动作**，
+ * 排版一律走共用件 —— 想改外观请改共用件，别在这里另写一套。
  */
 function TransferDeviceChat({ session, phone, colorIndex, onClear, }) {
     const { token } = es_theme.useToken();
@@ -118945,7 +106464,7 @@ function TransferSettingsModal({ open, onClose }) {
 
 const { Text: TransferAboutModal_Text } = typography;
 /** 一行「标签 — 值」 */
-function TransferAboutModal_Row({ label, children }) {
+function Row({ label, children }) {
     return ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', gap: 12, padding: '7px 0', borderBottom: '1px solid rgba(128,128,128,0.12)' }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("span", { style: { flex: '0 0 92px', fontSize: 13, color: 'inherit', opacity: 0.65 }, children: label }), (0,react_jsx_runtime_production_namespaceFn().jsx)("span", { style: { flex: '1 1 auto', minWidth: 0, fontSize: 13, wordBreak: 'break-all' }, children: children })] }));
 }
 /**
@@ -118961,375 +106480,10 @@ function TransferAboutModal({ open, onClose }) {
     const colors = resolveDeviceColors(s.phones.map((p) => p.id));
     return ((0,react_jsx_runtime_production_namespaceFn().jsxs)(modal, { open: open, title: "\u4F01\u4E1A\u4FE1\u606F", onCancel: onClose, getContainer: getOverlayContainer, 
         // v26.10.12-v5：小窗口垂直居中（默认 top:100px 会顶到传输助手窗口上沿）
-        centered: true, width: 440, styles: { body: { textAlign: 'left' } }, destroyOnHidden: true, footer: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { color: "primary", variant: "solid", onClick: onClose, children: "\u5173\u95ED" }), children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(TransferAboutModal_Row, { label: "\u4E2D\u7EE7\u670D\u52A1\u5668", children: s.settings.relayServer || '（未配置）' }), (0,react_jsx_runtime_production_namespaceFn().jsx)(TransferAboutModal_Row, { label: "\u672C\u673A\u8BBE\u5907", children: (0,react_jsx_runtime_production_namespaceFn().jsxs)("span", { style: { display: 'inline-flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(DeviceIdTag, { id: deviceId }), (0,react_jsx_runtime_production_namespaceFn().jsx)("span", { style: { fontSize: 11, opacity: 0.65 }, children: deviceId }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { size: "small", type: "text", "aria-label": "\u590D\u5236\u8BBE\u5907 ID", title: "\u590D\u5236\u8BBE\u5907 ID", style: { color: token.colorTextTertiary }, onClick: () => safeCopyText(deviceId), children: (0,react_jsx_runtime_production_namespaceFn().jsx)(CopyIcon, { size: 13 }) })] }) }), (0,react_jsx_runtime_production_namespaceFn().jsx)(TransferAboutModal_Row, { label: "\u5728\u7EBF\u624B\u673A", children: s.phones.length ? ((0,react_jsx_runtime_production_namespaceFn().jsxs)("span", { style: { display: 'inline-flex', gap: 6, flexWrap: 'wrap' }, children: [s.phones.map((p) => ((0,react_jsx_runtime_production_namespaceFn().jsx)(DeviceIdTag, { id: p.id, colorIndex: colors[p.id] }, p.id || 'unknown'))), (0,react_jsx_runtime_production_namespaceFn().jsxs)("span", { style: { fontSize: 11, opacity: 0.65 }, children: ["\u5171 ", s.phones.length, " \u53F0"] })] })) : ((0,react_jsx_runtime_production_namespaceFn().jsx)(TransferAboutModal_Text, { type: "secondary", children: "\u6682\u65E0\uFF08\u624B\u673A\u7AEF\u6253\u5F00\u672C\u673A\u94FE\u63A5\u540E\u51FA\u73B0\uFF09" })) }), (0,react_jsx_runtime_production_namespaceFn().jsx)(TransferAboutModal_Row, { label: "\u811A\u672C\u7248\u672C", children: (GM_info.script && GM_info.script.version) || '未知' }), (0,react_jsx_runtime_production_namespaceFn().jsx)(TransferAboutModal_Row, { label: "\u9879\u76EE\u4E3B\u9875", children: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { type: "link", style: { padding: 0, height: 'auto' }, onClick: () => window.open('https://github.com/Run-os/znhd-service', '_blank'), children: "github.com/Run-os/znhd-service" }) }), (0,react_jsx_runtime_production_namespaceFn().jsx)(TransferAboutModal_Text, { type: "secondary", style: { fontSize: 12, display: 'block', marginTop: 10 }, children: "\u63D0\u793A\uFF1A\u6392\u67E5\u300C\u8FDE\u4E0D\u4E0A\u300D\u65F6\u5148\u770B\u8FD9\u91CC \u2014\u2014 \u4E2D\u7EE7\u5730\u5740\u662F\u5426\u53EF\u8FBE\u3001\u624B\u673A\u662F\u5426\u51FA\u73B0\u5728\u5728\u7EBF\u5217\u8868\u91CC\uFF1B \u4F1A\u8BDD\u8BB0\u5F55\u4FDD\u5B58\u5728\u672C\u673A\uFF08IndexedDB\uFF09\uFF0C\u4EC5\u4FDD\u7559\u6700\u8FD1 7 \u5929\uFF0C\u8D85\u671F\u81EA\u52A8\u6E05\u7406\u3002" })] }));
-}
-
-;// ./src/lib/ui/transfer/useAgentChat.ts
-
-
-
-
-
-/**
- * 交代脚本自身的上下文，让 Agent 知道「自己在哪、能干什么」。刻意写短：
- * 太长会与用户的真实问题抢注意力，而且它是每轮都要付的 token。
- */
-const SYSTEM_PROMPT = [
-    '你是「征纳互动人数和在线监控」油猴脚本内置的助手。',
-    '这个脚本运行在税务人员的工作电脑上：监控征纳互动的等待人数与掉线弹窗、语音播报提醒、',
-    '还有常用语、传输助手（手机 ↔ 电脑互传文件）、图片嗅探几个面板入口。',
-    '回答请用简体中文，尽量简短直接；涉及操作步骤时说清楚点哪个按钮。',
-].join('\n');
-/**
- * Agent 对话状态机（v26.10.12-v1 从原 AgentModal 抽取）。
- *
- * 重构背景：「Agent 助手」不再是独立弹窗，而是传输助手第一栏的 Agents 入口 ——
- * 点击后在右侧主聊天区直接打开对话。本 hook 把原弹窗里的全部会话逻辑原样搬过来，
- * 由传输助手窗口（第一栏 Agents 选中时）持有；`active` 即「Agent 视图当前可见」。
- *
- * ⚠️ 以下实测结论全部沿用（原 AgentModal 已于 v26.10.12-v1 删除，结论随本 hook 保留），改前必读 AGENT.md 对应条目：
- *   · 流式分片回调早于 `await` 返回值可用 ⇒ 增量累加必须用调用前建好的独立对象（TDZ）；
- *   · 历史消息的 `thinking` 是对象，必须过 `thinkingToText()` 再进 JSX；
- *   · 官方没有 list/delete 会话接口，列表是本地索引（`scriptCat_AgentChats`）；
- *   · `clear()` 只清消息、不删会话记录，UI 不承诺「彻底删除」。
- */
-function useAgentChat(active) {
-    // 探测是纯内存判空，每次 render 重算也无所谓（不缓存，避免 ScriptCat 热重载后状态过期）
-    const availability = detectCatAgent();
-    const api = availability.api;
-    const [models, setModels] = (0,react_production_namespaceFn().useState)([]);
-    const [modelId, setModelId] = (0,react_production_namespaceFn().useState)('');
-    const [messages, setMessages] = (0,react_production_namespaceFn().useState)([]);
-    const [input, setInput] = (0,react_production_namespaceFn().useState)('');
-    const [streaming, setStreaming] = (0,react_production_namespaceFn().useState)(false);
-    const [fatalError, setFatalError] = (0,react_production_namespaceFn().useState)('');
-    const [conversation, setConversation] = (0,react_production_namespaceFn().useState)(null);
-    const [chats, setChats] = (0,react_production_namespaceFn().useState)([]);
-    /** 当前会话 id；空串 = 空白对话（发第一条消息时才会真正创建） */
-    const [activeChatId, setActiveChatId] = (0,react_production_namespaceFn().useState)('');
-    const keyRef = (0,react_production_namespaceFn().useRef)(0);
-    /** 会话索引的最新值：回调里要读它，不能依赖 state 快照（否则连发两条会用同一份旧列表去 upsert） */
-    const chatsRef = (0,react_production_namespaceFn().useRef)([]);
-    const streamTokenRef = (0,react_production_namespaceFn().useRef)(0);
-    const nextKey = (0,react_production_namespaceFn().useCallback)(() => {
-        keyRef.current += 1;
-        return keyRef.current;
-    }, []);
-    /**
-     * 会话索引的唯一写入口：同时更新 ref（回调里读最新值）、state（触发渲染）与 localStorage。
-     * activeId 用空串表示「当前没有活动对话」，落盘时统一换成 null。
-     */
-    const persistChats = (0,react_production_namespaceFn().useCallback)((items, activeId) => {
-        chatsRef.current = items;
-        setChats(items);
-        setActiveChatId(activeId);
-        saveAgentChatStore({ activeId: activeId || null, items });
-    }, []);
-    /* ---------------------------------------------------------- 模型列表 */
-    (0,react_production_namespaceFn().useEffect)(() => {
-        if (!active || !api)
-            return;
-        let alive = true;
-        void (async () => {
-            const [list, preferred] = await Promise.all([listModels(api), pickDefaultModelId(api)]);
-            if (!alive)
-                return;
-            setModels(list);
-            setModelId((current) => current || preferred || list[0]?.id || '');
-        })();
-        return () => {
-            alive = false;
-        };
-    }, [active, api]);
-    /* ---------------------------------------------------------- 接回上次的会话 */
-    /**
-     * Agent 视图变为可见时先把本地会话索引读出来，再按上次的 activeId 把那个对话接回来。
-     * 这一步就是「刷新网页 / 关掉窗口后对话还在」的关键：对话本体一直在 ScriptCat 的 OPFS 里，
-     * 缺的只是脚本这边记住「上次聊的是哪一个」。
-     */
-    (0,react_production_namespaceFn().useEffect)(() => {
-        if (!active)
-            return;
-        const store = loadAgentChatStore();
-        chatsRef.current = store.items;
-        setChats(store.items);
-        if (!store.activeId) {
-            // 上次停在「新建但还没发第一条消息」的空白对话：保持空白，不接任何历史
-            setActiveChatId('');
-            setConversation(null);
-            return;
-        }
-        if (!api)
-            return;
-        let alive = true;
-        void (async () => {
-            const conv = await getConversation(api, store.activeId);
-            if (!alive)
-                return;
-            if (!conv) {
-                // ScriptCat 侧已经找不到这个对话（用户在 Agent 设置里清过数据）：回到空白对话，
-                // 索引条目留着让用户自己删，但绝不因为取不到就报错或让面板崩掉。
-                setActiveChatId('');
-                setConversation(null);
-                addLog('[Agent] 上次的对话已不存在，已回到空白对话', 'warning');
-                return;
-            }
-            setActiveChatId(conv.id || store.activeId);
-            setConversation(conv);
-        })();
-        return () => {
-            alive = false;
-        };
-    }, [active, api]);
-    /** 打开 Agent 视图时把该对话已有的历史拉回来，切走再切回仍能接着看 */
-    (0,react_production_namespaceFn().useEffect)(() => {
-        if (!active || !conversation)
-            return;
-        let alive = true;
-        void (async () => {
-            try {
-                const history = await readConversationMessages(conversation);
-                if (!alive || !history.length)
-                    return;
-                setMessages(history
-                    .filter((message) => message.role === 'user' || message.role === 'assistant')
-                    .map((message) => ({
-                    key: nextKey(),
-                    role: message.role,
-                    content: contentToText(message.content),
-                    // 历史消息的 thinking 是官方 ThinkingBlock（对象 { content }），
-                    // 必须归一成字符串再交给 React，否则整棵树会被卸载（v26.10.10-v11）。
-                    thinking: thinkingToText(message.thinking),
-                    toolCalls: message.toolCalls,
-                })));
-            }
-            catch (error) {
-                if (alive)
-                    addLog('[Agent] 读取对话历史失败: ' + agentErrorMessage(error), 'warning');
-            }
-        })();
-        return () => {
-            alive = false;
-        };
-        // conversation 变化（新建对话）时也要重新拉
-    }, [active, conversation, nextKey]);
-    const patchLast = (0,react_production_namespaceFn().useCallback)((patch) => {
-        setMessages((prev) => {
-            if (!prev.length)
-                return prev;
-            const next = prev.slice();
-            const last = next[next.length - 1];
-            if (last.role !== 'assistant')
-                return prev;
-            next[next.length - 1] = { ...last, ...patch };
-            return next;
-        });
-    }, []);
-    /** 把流式分片里的工具调用合并进最后一条助手消息（同名 id 只保留一份，状态取最新） */
-    const mergeToolCall = (0,react_production_namespaceFn().useCallback)((toolCall) => {
-        setMessages((prev) => {
-            if (!prev.length)
-                return prev;
-            const next = prev.slice();
-            const last = next[next.length - 1];
-            if (last.role !== 'assistant')
-                return prev;
-            const list = last.toolCalls ? last.toolCalls.slice() : [];
-            const id = toolCall.id || toolCall.name;
-            const index = list.findIndex((item) => (item.id || item.name) === id);
-            if (index >= 0)
-                list[index] = { ...list[index], ...toolCall };
-            else
-                list.push(toolCall);
-            next[next.length - 1] = { ...last, toolCalls: list };
-            return next;
-        });
-    }, []);
-    const stopStreaming = (0,react_production_namespaceFn().useCallback)(() => {
-        // 递增令牌即可让正在跑的消费循环在下一个分片处 break（并走 finally → iterator.return()）
-        streamTokenRef.current += 1;
-    }, []);
-    const send = (0,react_production_namespaceFn().useCallback)(async () => {
-        const text = input.trim();
-        if (!api || !text || streaming)
-            return;
-        let conv = conversation;
-        if (!conv) {
-            try {
-                conv = await createConversation(api, {
-                    system: SYSTEM_PROMPT,
-                    model: modelId || undefined,
-                    skills: 'auto',
-                });
-                setConversation(conv);
-                addLog('[Agent] 已创建对话 ' + (conv.id || ''), 'info');
-            }
-            catch (error) {
-                const message = describeAgentError(error);
-                setFatalError('无法创建对话：' + message);
-                addLog('[Agent] 创建对话失败: ' + message, 'error');
-                return;
-            }
-        }
-        // 登记进本地会话索引：新对话用首条消息当标题（规则对齐官方自动标题），
-        // 已有对话只更新时间戳并把原标题留住 —— 否则接着聊会把标题改成最新那条消息。
-        const now = Date.now();
-        const known = chatsRef.current.find((item) => item.id === conv.id);
-        persistChats(upsertAgentChat(chatsRef.current, {
-            id: conv.id,
-            title: known && known.title ? known.title : agentChatTitle(text),
-            createtime: known && known.createtime ? known.createtime : now,
-            updatetime: now,
-        }), conv.id);
-        const token = streamTokenRef.current + 1;
-        streamTokenRef.current = token;
-        setFatalError('');
-        setStreaming(true);
-        setInput('');
-        setMessages((prev) => [
-            ...prev,
-            { key: nextKey(), role: 'user', content: text },
-            { key: nextKey(), role: 'assistant', content: '', pending: true },
-        ]);
-        try {
-            // ⚠️ 分片回调会在 streamConversation 的 Promise resolve 之前就被调用，那一刻
-            // `const outcome = await ...` 还处于 TDZ，读它会抛 ReferenceError（表现为「对话异常」
-            // 且回答永远不落地）。所以增量累加用独立对象承载，不依赖返回值。
-            const live = { content: '', thinking: '' };
-            const outcome = await streamConversation(conv, text, {
-                onContent: (delta) => {
-                    if (streamTokenRef.current !== token)
-                        return;
-                    live.content += delta;
-                    patchLast({ content: live.content, pending: true });
-                },
-                onThinking: (delta) => {
-                    if (streamTokenRef.current !== token)
-                        return;
-                    live.thinking += delta;
-                    patchLast({ thinking: live.thinking, pending: true });
-                },
-                onToolCall: (toolCall) => {
-                    if (streamTokenRef.current !== token)
-                        return;
-                    mergeToolCall(toolCall);
-                },
-                onWarning: (warning) => {
-                    if (streamTokenRef.current !== token)
-                        return;
-                    addLog('[Agent] ' + warning, 'warning');
-                },
-            });
-            if (streamTokenRef.current !== token) {
-                patchLast({ pending: false, cancelled: true, content: live.content, thinking: live.thinking });
-                return;
-            }
-            patchLast({
-                pending: false,
-                content: live.content,
-                thinking: live.thinking,
-                error: outcome.error,
-            });
-            if (outcome.error) {
-                addLog('[Agent] 对话出错: ' + outcome.error, 'error');
-            }
-            else if (outcome.usage) {
-                addLog('[Agent] 本轮完成：输入 ' +
-                    outcome.usage.inputTokens +
-                    ' / 输出 ' +
-                    outcome.usage.outputTokens +
-                    ' tokens', 'info');
-            }
-        }
-        catch (error) {
-            const message = describeAgentError(error);
-            if (streamTokenRef.current === token)
-                patchLast({ pending: false, error: message });
-            addLog('[Agent] 对话异常: ' + message, 'error');
-        }
-        finally {
-            setStreaming(false);
-        }
-    }, [api, input, streaming, conversation, modelId, nextKey, patchLast, mergeToolCall, persistChats]);
-    const newChat = (0,react_production_namespaceFn().useCallback)(() => {
-        stopStreaming();
-        setStreaming(false);
-        setConversation(null);
-        setMessages([]);
-        setFatalError('');
-        // 只清指针：真正的对话等第一条消息发出去时才创建，避免列表里堆一堆没内容的空对话
-        persistChats(chatsRef.current, '');
-        addLog('[Agent] 已新建对话（发出第一条消息后才会出现在会话列表里）', 'info');
-    }, [persistChats, stopStreaming]);
-    /** 切换会话：先中止正在跑的流，再按 id 把那个对话接回来 */
-    const switchChat = (0,react_production_namespaceFn().useCallback)(async (id) => {
-        if (!api || !id || id === activeChatId)
-            return;
-        stopStreaming();
-        setStreaming(false);
-        setFatalError('');
-        const conv = await getConversation(api, id);
-        // 先清空消息：目标对话没有历史时，不能把上一个对话的内容留在屏幕上
-        setMessages([]);
-        setConversation(conv);
-        setActiveChatId(id);
-        saveAgentChatStore({ activeId: id, items: chatsRef.current });
-        if (!conv) {
-            setFatalError('这个对话在 ScriptCat 里已经不存在了（可能被清理过）。可以删掉它，或直接发消息另起一个。');
-            addLog('[Agent] 切换对话失败：ScriptCat 里找不到 ' + id, 'warning');
-            return;
-        }
-        addLog('[Agent] 已切换到对话「' + agentChatLabel(chatsRef.current, id) + '」', 'info');
-    }, [api, activeChatId, stopStreaming]);
-    /**
-     * 删除某个会话：清空它的消息 + 从本地索引移除（官方没有删除会话的接口，见 sessions.ts）。
-     * 传输助手的会话列表里每条都能删，所以这里按 id 工作，不再是「只能删当前这条」。
-     */
-    const deleteChat = (0,react_production_namespaceFn().useCallback)(async (id) => {
-        if (!id)
-            return;
-        const label = agentChatLabel(chatsRef.current, id);
-        // 只有手里正拿着的实例才能 clear；索引里那条在 ScriptCat 侧已失效时本来也没有消息可清
-        if (conversation && conversation.id === id) {
-            stopStreaming();
-            setStreaming(false);
-            await clearConversation(conversation);
-            setConversation(null);
-            setMessages([]);
-            setFatalError('');
-            persistChats(removeAgentChat(chatsRef.current, id), '');
-        }
-        else {
-            // 删的是别的会话：当前视图与 activeId 都不动，只把它从列表里去掉
-            persistChats(removeAgentChat(chatsRef.current, id), activeChatId);
-        }
-        addLog('[Agent] 已删除对话「' + label + '」', 'info');
-    }, [activeChatId, conversation, persistChats, stopStreaming]);
-    return {
-        availability,
-        api,
-        models,
-        modelId,
-        setModelId,
-        messages,
-        input,
-        setInput,
-        streaming,
-        fatalError,
-        chats,
-        activeChatId,
-        send,
-        stopStreaming,
-        newChat,
-        switchChat,
-        deleteChat,
-        nextKey,
-    };
+        centered: true, width: 440, styles: { body: { textAlign: 'left' } }, destroyOnHidden: true, footer: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { color: "primary", variant: "solid", onClick: onClose, children: "\u5173\u95ED" }), children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(Row, { label: "\u4E2D\u7EE7\u670D\u52A1\u5668", children: s.settings.relayServer || '（未配置）' }), (0,react_jsx_runtime_production_namespaceFn().jsx)(Row, { label: "\u672C\u673A\u8BBE\u5907", children: (0,react_jsx_runtime_production_namespaceFn().jsxs)("span", { style: { display: 'inline-flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(DeviceIdTag, { id: deviceId }), (0,react_jsx_runtime_production_namespaceFn().jsx)("span", { style: { fontSize: 11, opacity: 0.65 }, children: deviceId }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { size: "small", type: "text", "aria-label": "\u590D\u5236\u8BBE\u5907 ID", title: "\u590D\u5236\u8BBE\u5907 ID", style: { color: token.colorTextTertiary }, onClick: () => safeCopyText(deviceId), children: (0,react_jsx_runtime_production_namespaceFn().jsx)(CopyIcon, { size: 13 }) })] }) }), (0,react_jsx_runtime_production_namespaceFn().jsx)(Row, { label: "\u5728\u7EBF\u624B\u673A", children: s.phones.length ? ((0,react_jsx_runtime_production_namespaceFn().jsxs)("span", { style: { display: 'inline-flex', gap: 6, flexWrap: 'wrap' }, children: [s.phones.map((p) => ((0,react_jsx_runtime_production_namespaceFn().jsx)(DeviceIdTag, { id: p.id, colorIndex: colors[p.id] }, p.id || 'unknown'))), (0,react_jsx_runtime_production_namespaceFn().jsxs)("span", { style: { fontSize: 11, opacity: 0.65 }, children: ["\u5171 ", s.phones.length, " \u53F0"] })] })) : ((0,react_jsx_runtime_production_namespaceFn().jsx)(TransferAboutModal_Text, { type: "secondary", children: "\u6682\u65E0\uFF08\u624B\u673A\u7AEF\u6253\u5F00\u672C\u673A\u94FE\u63A5\u540E\u51FA\u73B0\uFF09" })) }), (0,react_jsx_runtime_production_namespaceFn().jsx)(Row, { label: "\u811A\u672C\u7248\u672C", children: (GM_info.script && GM_info.script.version) || '未知' }), (0,react_jsx_runtime_production_namespaceFn().jsx)(Row, { label: "\u9879\u76EE\u4E3B\u9875", children: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { type: "link", style: { padding: 0, height: 'auto' }, onClick: () => window.open('https://github.com/Run-os/znhd-service', '_blank'), children: "github.com/Run-os/znhd-service" }) }), (0,react_jsx_runtime_production_namespaceFn().jsx)(TransferAboutModal_Text, { type: "secondary", style: { fontSize: 12, display: 'block', marginTop: 10 }, children: "\u63D0\u793A\uFF1A\u6392\u67E5\u300C\u8FDE\u4E0D\u4E0A\u300D\u65F6\u5148\u770B\u8FD9\u91CC \u2014\u2014 \u4E2D\u7EE7\u5730\u5740\u662F\u5426\u53EF\u8FBE\u3001\u624B\u673A\u662F\u5426\u51FA\u73B0\u5728\u5728\u7EBF\u5217\u8868\u91CC\uFF1B \u4F1A\u8BDD\u8BB0\u5F55\u4FDD\u5B58\u5728\u672C\u673A\uFF08IndexedDB\uFF09\uFF0C\u4EC5\u4FDD\u7559\u6700\u8FD1 7 \u5929\uFF0C\u8D85\u671F\u81EA\u52A8\u6E05\u7406\u3002" })] }));
 }
 
 ;// ./src/lib/ui/transfer/TransferAssistantModal.tsx
-
-
 
 
 
@@ -119351,7 +106505,7 @@ function useAgentChat(active) {
  *
  * ── 布局（v26.10.12-v4 起**对齐微信桌面版**）────────────────────────────────
  *   标题条（与第一栏同色 #2E2E2E，v26.10.12-v5 起）：右侧自绘关闭按钮（悬浮变红，微信同款）
- *   第一栏（窄图标栏 #2E2E2E）：logo → 对话 / Agents / 文件 → 设置 / 企业信息
+ *   第一栏（窄图标栏 #2E2E2E）：logo → 对话 / 文件 → 设置 / 企业信息
  *   第二栏（会话列表 #252525）：搜索框 +「＋」→ 会话列表
  *   第三栏（聊天主区 #1E1E1E，最深）：当前会话的聊天区，未选中显示空状态
  *
@@ -119362,8 +106516,10 @@ function useAgentChat(active) {
  *   · **自绘关闭按钮**：antd Modal 的 `closable=false` 关掉默认 ×，标题条右侧放自己的
  *     按钮（悬浮变红 #E81123）。Esc / 点遮罩关闭仍走 onCancel，不受影响；
  *   · **数据隔离**：设置走 `scriptCat_TransferSettings`，收发明明在模块级 store
- *     （窗口不开时照常收件、按设置自动弹窗），见 `lib/transfer/store.ts` 头注；
- *   · **Agents 直达**：点第一栏 Agents 就在右侧主聊天区打开对话（useAgentChat）。
+ *     （窗口不开时照常收件、按设置自动弹窗），见 `lib/transfer/store.ts` 头注。
+ *
+ * ⚠️ v26.10.13-v9：原第一栏的 **Agents 入口与 Agent 对话第三栏已整体删除**
+ * （含 `useAgentChat` / `TransferAgentView` / 技能·定时任务面板）。
  */
 /** 标题条高度（含自绘关闭按钮；微信桌面版约 32px） */
 const TITLE_BAR_HEIGHT = 36;
@@ -119371,12 +106527,6 @@ function TransferAssistantModal({ open, onClose }) {
     const s = useTransferStore();
     // ── 窗口自身的 UI 状态（与 store 的持久状态分开）──────────────────────
     const [nav, setNav] = (0,react_production_namespaceFn().useState)('devices');
-    /**
-     * Agents 分组下第三栏显示什么（v26.10.12-v3）：对话 / 技能 / 定时任务。
-     * 「技能」「定时任务」由第二栏顶部的两个控件切换（原来是第三栏的页签）。
-     * 三处会把它复位到 chat：切第一栏导航、点会话卡片、点搜索框旁的「＋」新建对话。
-     */
-    const [agentPane, setAgentPane] = (0,react_production_namespaceFn().useState)('chat');
     const [search, setSearch] = (0,react_production_namespaceFn().useState)('');
     /**
      * 文件视图的会话筛选（v26.10.13-v5）：'' = 全部文件（跨会话汇总）；
@@ -119389,12 +106539,6 @@ function TransferAssistantModal({ open, onClose }) {
     const [aboutOpen, setAboutOpen] = (0,react_production_namespaceFn().useState)(false);
     /** 自绘关闭按钮的悬浮态（变红，微信/Windows 同款交互） */
     const [closeHover, setCloseHover] = (0,react_production_namespaceFn().useState)(false);
-    /**
-     * Agent 对话控制器：第一栏选中 Agents 且窗口开着才算 active（不活跃时 hook 内部
-     * 暂停流式与轮询，但会话索引照常留在 localStorage，重进不丢）。
-     * ⚠️ hook 必须无条件调用（不能塞进 `nav === 'agents'` 分支里）。
-     */
-    const agent = useAgentChat(nav === 'agents' && open);
     // 窗口开合 → 通知 store（决定未读累计与自动弹窗行为）
     (0,react_production_namespaceFn().useEffect)(() => {
         setTransferWindowOpen(open);
@@ -119482,25 +106626,17 @@ function TransferAssistantModal({ open, onClose }) {
         setActiveSession(key);
     };
     /**
-     * 第一栏导航：切到 Agents 时把第三栏复位成「对话」。
-     * 没有这一步会出现「上次停在技能页 → 关窗重开 → 点 Agents 看到技能页」这种摸不着头脑的状态
-     * （重开虽然会重置 state，但**同一次会话内**来回切第一栏不会）。
+     * 第一栏导航：离开文件分组就还原成「全部文件」——筛选是文件视图的临时状态，
+     * 保留到下次进来会出现「明明点的是文件却只看到某个会话」的困惑。
      */
     const onNav = (next) => {
         setNav(next);
-        if (next === 'agents')
-            setAgentPane('chat');
-        // 离开文件分组就还原成「全部文件」：筛选是文件视图的临时状态，
-        // 保留到下次进来会出现「明明点的是文件却只看到某个会话」的困惑
         if (next !== 'files')
             setFilesFilterKey('');
     };
     /** 第三栏路由 */
     let main = null;
-    if (nav === 'agents') {
-        main = (0,react_jsx_runtime_production_namespaceFn().jsx)(TransferAgentView, { agent: agent, pane: agentPane });
-    }
-    else if (nav === 'files') {
+    if (nav === 'files') {
         main = ((0,react_jsx_runtime_production_namespaceFn().jsx)(TransferFilesView, { messages: filesMessages, scopeLabel: filesScopeLabel, onClearScope: filesFilterKey
                 ? () => {
                     clearTransferSession(filesFilterKey);
@@ -119576,7 +106712,7 @@ function TransferAssistantModal({ open, onClose }) {
                                 color: closeHover ? '#fff' : 'rgba(255,255,255,0.65)',
                                 // ⚠️ 不加 transition：冒烟会在派发 mouseover 的同一帧量底色，
                                 // 有过渡就会量到半路的透明 → 假红（微信的关闭变红本身也是瞬时的）
-                            }, children: (0,react_jsx_runtime_production_namespaceFn().jsx)(CloseIcon, { size: 15, color: "currentColor" }) })] }), (0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { flex: '1 1 auto', minHeight: 0, display: 'flex', flexDirection: 'row' }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(TransferNavRail, { nav: nav, onNav: onNav, onOpenSettings: () => setSettingsOpen(true), onOpenAbout: () => setAboutOpen(true), unreadTotal: unreadTotal }), (0,react_jsx_runtime_production_namespaceFn().jsx)(TransferSessionList, { nav: nav, search: search, onSearch: setSearch, onPair: () => setPairOpen(true), deviceEntries: deviceEntries, activeSessionKey: s.activeSessionKey, onSelectSession: onSelectSession, filesActiveKey: filesFilterKey, onSelectFilesSession: setFilesFilterKey, agent: nav === 'agents' ? agent : undefined, agentPane: agentPane, onAgentPane: setAgentPane }), (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { className: "znhd-transfer-main", style: {
+                            }, children: (0,react_jsx_runtime_production_namespaceFn().jsx)(CloseIcon, { size: 15, color: "currentColor" }) })] }), (0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { flex: '1 1 auto', minHeight: 0, display: 'flex', flexDirection: 'row' }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(TransferNavRail, { nav: nav, onNav: onNav, onOpenSettings: () => setSettingsOpen(true), onOpenAbout: () => setAboutOpen(true), unreadTotal: unreadTotal }), (0,react_jsx_runtime_production_namespaceFn().jsx)(TransferSessionList, { nav: nav, search: search, onSearch: setSearch, onPair: () => setPairOpen(true), deviceEntries: deviceEntries, activeSessionKey: s.activeSessionKey, onSelectSession: onSelectSession, filesActiveKey: filesFilterKey, onSelectFilesSession: setFilesFilterKey }), (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { className: "znhd-transfer-main", style: {
                                 flex: '1 1 auto',
                                 minWidth: 0,
                                 display: 'flex',
@@ -119689,8 +106825,11 @@ const PANEL_CSS = `
  *
  * v26.10.12-v1「设备互联 → 传输助手」重构后的入口变化：
  *   · 删「历史记录」：收件历史已并入传输助手第三栏的「文件」分组；
- *   · 「设备互联」改名「传输助手」：点它打开三栏传输助手窗口（收发、配对、Agent 全在里面）；
- *   · 删「Agent 助手」按钮与旧独立窗口：Agent 改为传输助手第一栏 Agents 入口，直达右侧聊天区。
+ *   · 「设备互联」改名「传输助手」：点它打开三栏传输助手窗口（收发、配对全在里面）。
+ *
+ * ⚠️ v26.10.13-v9：主面板第二行的「Agent 助手」按钮与 Agent 独立窗口早在 v26.10.12-v1
+ * 就并入了传输助手第一栏的 Agents 入口，该入口现已随 Agent 能力整体删除 —— 主面板只剩
+ * 下方这一行入口，不再有任何 Agent 相关按钮。
  */
 const PANEL_ACTIONS = [
     { key: 'settings', icon: SettingsIcon, label: '设置' },
@@ -119699,8 +106838,8 @@ const PANEL_ACTIONS = [
     { key: 'sniff', icon: SniffIcon, label: '图片嗅探' },
 ];
 /**
- * 主面板入口按钮（图标 + 文案）。第一行 5 个与第二行的 Agent 共用同一结构，
- * 只允许传「图标 / 文案 / 主题色 / 点击」，不接收任意属性透传 —— 样式完全由 .znhd-panel-btn 决定。
+ * 主面板入口按钮（图标 + 文案）。只允许传「图标 / 文案 / 主题色 / 点击」，
+ * 不接收任意属性透传 —— 样式完全由 .znhd-panel-btn 决定。
  */
 function PanelEntryButton({ icon: Icon, label, onClick, color, }) {
     return ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_tooltip, { title: label, placement: "bottom", children: (0,react_jsx_runtime_production_namespaceFn().jsxs)(es_button, { className: "znhd-panel-btn", size: "large", style: { padding: '0 4px' }, onClick: onClick, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(Icon, { size: 15, color: color }), (0,react_jsx_runtime_production_namespaceFn().jsx)("span", { className: "znhd-panel-btn-text", style: { fontSize: 11, marginLeft: 2 }, children: label })] }) }));
@@ -119740,7 +106879,7 @@ function MainPanel({ host }) {
     const [Allvalue, setAllvalue] = (0,react_production_namespaceFn().useState)(() => state_runtime.init);
     const [settingsOpen, setSettingsOpen] = (0,react_production_namespaceFn().useState)(false);
     const [phrasesOpen, setPhrasesOpen] = (0,react_production_namespaceFn().useState)(false);
-    /** 传输助手三栏窗口（v26.10.12-v1：原「设备互联」+「历史记录」+「Agent 助手」三者的收敛） */
+    /** 传输助手三栏窗口（v26.10.12-v1：原「设备互联」+「历史记录」+「Agent 助手」三者的收敛；Agents 部分已删） */
     const [transferOpen, setTransferOpen] = (0,react_production_namespaceFn().useState)(false);
     const [logOpen, setLogOpen] = (0,react_production_namespaceFn().useState)(false);
     const [changelogOpen, setChangelogOpen] = (0,react_production_namespaceFn().useState)(false);

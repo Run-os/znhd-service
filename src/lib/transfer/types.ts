@@ -9,15 +9,6 @@
 /** 传输助手的外观主题（与 App 主面板的主题完全独立，只影响传输助手窗口） */
 export type TransferTheme = 'light' | 'dark';
 
-/**
- * 第一栏选中 Agents 时，第三栏显示什么（v26.10.12-v3）。
- *
- * 「技能」「定时任务」原来是第三栏顶部的两个页签；用户要求把它们提到**第二栏**（会话列表栏）
- * 顶部当控件，点了才在第三栏显示对应内容 —— 所以第三栏的内容变成一个三选一的状态，
- * 由 `TransferAssistantModal` 持有（切第一栏导航、点会话卡片、点「＋」都会复位到 chat）。
- */
-export type AgentPane = 'chat' | 'skills' | 'tasks';
-
 /** 传输助手的自有设置（localStorage `scriptCat_TransferSettings`） */
 export interface TransferSettings {
     /** 中继服务器公网地址（末尾不带 /）；留空则配对/收发全部不可用 */

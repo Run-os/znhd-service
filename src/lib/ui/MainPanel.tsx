@@ -128,8 +128,11 @@ const PANEL_CSS = `
  *
  * v26.10.12-v1「设备互联 → 传输助手」重构后的入口变化：
  *   · 删「历史记录」：收件历史已并入传输助手第三栏的「文件」分组；
- *   · 「设备互联」改名「传输助手」：点它打开三栏传输助手窗口（收发、配对、Agent 全在里面）；
- *   · 删「Agent 助手」按钮与旧独立窗口：Agent 改为传输助手第一栏 Agents 入口，直达右侧聊天区。
+ *   · 「设备互联」改名「传输助手」：点它打开三栏传输助手窗口（收发、配对全在里面）。
+ *
+ * ⚠️ v26.10.13-v9：主面板第二行的「Agent 助手」按钮与 Agent 独立窗口早在 v26.10.12-v1
+ * 就并入了传输助手第一栏的 Agents 入口，该入口现已随 Agent 能力整体删除 —— 主面板只剩
+ * 下方这一行入口，不再有任何 Agent 相关按钮。
  */
 const PANEL_ACTIONS = [
     { key: 'settings', icon: SettingsIcon, label: '设置' },
@@ -139,8 +142,8 @@ const PANEL_ACTIONS = [
 ] as const;
 
 /**
- * 主面板入口按钮（图标 + 文案）。第一行 5 个与第二行的 Agent 共用同一结构，
- * 只允许传「图标 / 文案 / 主题色 / 点击」，不接收任意属性透传 —— 样式完全由 .znhd-panel-btn 决定。
+ * 主面板入口按钮（图标 + 文案）。只允许传「图标 / 文案 / 主题色 / 点击」，
+ * 不接收任意属性透传 —— 样式完全由 .znhd-panel-btn 决定。
  */
 function PanelEntryButton({
     icon: Icon,
@@ -212,7 +215,7 @@ export default function MainPanel({ host }: MainPanelProps) {
     const [Allvalue, setAllvalue] = useState<Allvalue>(() => runtime.init);
     const [settingsOpen, setSettingsOpen] = useState(false);
     const [phrasesOpen, setPhrasesOpen] = useState(false);
-    /** 传输助手三栏窗口（v26.10.12-v1：原「设备互联」+「历史记录」+「Agent 助手」三者的收敛） */
+    /** 传输助手三栏窗口（v26.10.12-v1：原「设备互联」+「历史记录」+「Agent 助手」三者的收敛；Agents 部分已删） */
     const [transferOpen, setTransferOpen] = useState(false);
     const [logOpen, setLogOpen] = useState(false);
     const [changelogOpen, setChangelogOpen] = useState(false);
@@ -637,7 +640,7 @@ export default function MainPanel({ host }: MainPanelProps) {
                 onMinKBChange={(kb) => patchAllvalue({ sniffMinKB: kb })}
             />
 
-            {/* 传输助手（v26.10.12-v1）：三栏窗口，内含设备收发 / 配对 / 文件 / Agents 对话 */}
+            {/* 传输助手（v26.10.12-v1）：三栏窗口，内含设备收发 / 配对 / 文件 */}
             <TransferAssistantModal open={transferOpen} onClose={() => setTransferOpen(false)} />
         </Card>
     );

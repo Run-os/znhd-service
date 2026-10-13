@@ -22,7 +22,7 @@ import ChatComposer from '@/lib/ui/transfer/ChatComposer';
 import type { PickedEmoji } from '@/lib/ui/transfer/EmojiPackPanel';
 import { ChatHeader, ChatScroll } from '@/lib/ui/transfer/ChatPanel';
 import { DEVICE_COLORS, hashDeviceId, shortPhoneId } from '@/lib/ui/transfer/deviceColors';
-import MarkdownBody from '@/lib/ui/agent/MarkdownBody';
+import MarkdownBody from '@/lib/ui/MarkdownBody';
 import {
     PHONE_SESSION_KEY,
     PHONE_SESSION_LABEL,
@@ -82,8 +82,9 @@ interface PendingImage {
  *   · 底部输入区发文本 / 选图发送，逐张压缩后按序投递。
  *
  * v26.10.12-v3：气泡、滚动区、输入框全部换成 `ChatBubble` / `ChatScroll` / `ChatComposer`
- * （与 Agent 对话共用同一套）。用户要求「设备菜单和 agent 菜单下的对话主区域使用相同的样式」，
- * 所以这里**只负责数据与动作**，排版一律走共用件 —— 想改外观请改共用件，别在这里另写一套。
+ * （当时是为「设备菜单和 agent 菜单下的对话主区域使用相同的样式」而抽出的共用件；
+ * v26.10.13-v9 删掉 Agent 后仍由它们承担第三栏排版）。所以这里**只负责数据与动作**，
+ * 排版一律走共用件 —— 想改外观请改共用件，别在这里另写一套。
  */
 export default function TransferDeviceChat({
     session,
@@ -392,7 +393,7 @@ export default function TransferDeviceChat({
                 meta={metaOf(msg)}
                 avatar={isUser ? <UserIcon size={15} /> : peerAvatar}
                 avatarStyle={isUser ? undefined : peerAvatarStyle}>
-                {/* 两侧都按 Markdown 渲染：与 Agent 对话保持同一种文字排版；
+                {/* 两侧都按 Markdown 渲染（共用 `MarkdownBody`）；
                     用户气泡是主色实心，故走反色档（否则链接/代码块会「蓝压蓝」看不见） */}
                 <MarkdownBody content={msg.text || ''} inverted={isUser} />
                 {msg.sendState === 'failed' && msg.sendError ? (
@@ -618,7 +619,7 @@ export default function TransferDeviceChat({
                 </div>
             )}
 
-            {/* 输入区（与 Agent 对话同一个 ChatComposer） */}
+            {/* 输入区（共用 ChatComposer） */}
             <ChatComposer
                 value={sendText}
                 onChange={setSendText}

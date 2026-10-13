@@ -1,11 +1,8 @@
-import type { ReactNode } from 'react';
 import { Button, Input, Tooltip } from 'antd';
 import { theme } from 'antd';
-import { ClockIcon, GridIcon, PlusIcon, SearchIcon, SmartphoneIcon } from '@/lib/ui/icons';
+import { GridIcon, PlusIcon, SearchIcon, SmartphoneIcon } from '@/lib/ui/icons';
 import { WECHAT } from '@/lib/ui/transfer/wechatTheme';
-import AgentConversationList from '@/lib/ui/transfer/AgentConversationList';
-import type { AgentChatController } from '@/lib/ui/transfer/useAgentChat';
-import type { AgentPane, TransferMessage } from '@/lib/transfer/types';
+import type { TransferMessage } from '@/lib/transfer/types';
 import type { TransferNav } from '@/lib/ui/transfer/TransferNavRail';
 
 /** 第二栏的一条设备会话（由父组件从 store 汇总） */
@@ -45,9 +42,9 @@ function listTime(ts: number): string {
 /**
  * 第二栏（中间会话列表栏，v26.10.12-v1；v26.10.12-v4 微信化）。
  *
- * 结构：顶部**搜索框 +「＋」按钮**（仅对话 / Agents 分组有；文件分组没有 —— 用户要求
- * 文件下不放任何新建入口），下方按第一栏当前分组显示会话 / 对话列表。
- * 「＋」的含义随分组变：对话分组 →「配对设备」；Agents 分组 →「新建对话」。
+ * 结构：顶部**搜索框 +「＋」按钮**（仅对话分组有；文件分组没有 —— 用户要求
+ * 文件下不放任何新建入口），下方按第一栏当前分组显示会话列表。
+ * 「＋」的含义：对话分组 →「配对设备」。
  *
  * 会话条目为微信结构：左头像 / 中名称 + 预览摘要 / 右时间 + 未读红点角标；
  * 选中条目用比栏底浅一档的底色高亮（#383838，微信暗色同款），不再用主色底。
@@ -55,6 +52,8 @@ function listTime(ts: number): string {
  * 文件分组（v26.10.13-v5）：条目**可点 = 筛选第三栏的文件视图**（点哪个会话就只显示
  * 哪个会话的文件，不跳去聊天窗口 —— v26.10.12-v5「只作展示」的行为由此取代）；
  * 列表最顶上常驻一条「全部文件」，点了回到跨会话汇总。
+ *
+ * ⚠️ v26.10.13-v9：原 Agents 分组（技能 / 定时任务控件 + Agent 会话列表）已随 Agent 能力删除。
  */
 export default function TransferSessionList({
     nav,
@@ -66,9 +65,6 @@ export default function TransferSessionList({
     onSelectSession,
     filesActiveKey,
     onSelectFilesSession,
-    agent,
-    agentPane,
-    onAgentPane,
 }: {
     nav: TransferNav;
     search: string;
@@ -81,14 +77,8 @@ export default function TransferSessionList({
     filesActiveKey?: string;
     /** 文件分组：点击会话条目 = 筛选文件视图（不传则条目退回纯展示） */
     onSelectFilesSession?: (key: string) => void;
-    /** Agents 分组时的会话控制器（对话列表 + 新建 / 切换 / 删除） */
-    agent?: AgentChatController;
-    /** Agents 分组下第三栏正在显示哪一块（chat / skills / tasks） */
-    agentPane?: AgentPane;
-    onAgentPane?: (pane: AgentPane) => void;
 }) {
     const { token } = theme.useToken();
-    const isAgents = nav === 'agents';
     const isFiles = nav === 'files';
     /** 文件分组 + 父组件提供了筛选回调 ⇒ 条目可点（= 筛选第三栏文件视图） */
     const filesMode = isFiles && !!onSelectFilesSession;
@@ -99,35 +89,6 @@ export default function TransferSessionList({
               (e) => e.label.toLowerCase().includes(keyword) || previewText(e.lastMsg).toLowerCase().includes(keyword)
           )
         : deviceEntries;
-
-    /** Agents 分组下的「技能 / 定时任务」控件 */
-    const agentControl = (key: AgentPane, label: string, icon: ReactNode) => {
-        const active = agentPane === key;
-        return (
-            <div key={key}>
-                <Button
-                    type="text"
-                    block
-                    aria-label={label}
-                    onClick={() => onAgentPane && onAgentPane(key)}
-                    style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 8,
-                        height: 30,
-                        justifyContent: 'flex-start',
-                        padding: '0 8px',
-                        borderRadius: 6,
-                        fontSize: 13,
-                        color: active ? token.colorPrimary : 'rgba(255,255,255,0.75)',
-                        fontWeight: active ? 600 : 400,
-                    }}>
-                    {icon}
-                    <span style={{ minWidth: 0, overflow: 'hidden', whiteSpace: 'nowrap' }}>{label}</span>
-                </Button>
-            </div>
-        );
-    };
 
     return (
         <div
@@ -140,12 +101,12 @@ export default function TransferSessionList({
                 background: WECHAT.list,
                 minWidth: 0,
             }}>
-            {/* 搜索框 +「＋」（对话=配对 / Agents=新建对话；文件分组没有「＋」） */}
+            {/* 搜索框 +「＋」（对话=配对；文件分组没有「＋」） */}
             <div style={{ display: 'flex', gap: 6, padding: '10px 10px 8px' }}>
                 <Input
                     allowClear
                     prefix={<SearchIcon size={14} color="rgba(255,255,255,0.35)" />}
-                    placeholder={isAgents ? '搜索对话' : '搜索'}
+                    placeholder="搜索"
                     value={search}
                     onChange={(e) => onSearch(e.target.value)}
                     style={{
@@ -153,24 +114,7 @@ export default function TransferSessionList({
                         borderRadius: 6,
                     }}
                 />
-                {isFiles ? null : isAgents ? (
-                    <Tooltip title="新建对话（清空当前视图，发出下一条消息时另起一个对话）">
-                        <Button
-                            type="text"
-                            aria-label="新建对话"
-                            onClick={() => {
-                                if (onAgentPane) onAgentPane('chat');
-                                if (agent) agent.newChat();
-                            }}
-                            style={{
-                                width: 28,
-                                padding: 0,
-                                color: 'rgba(255,255,255,0.65)',
-                            }}>
-                            <PlusIcon size={16} />
-                        </Button>
-                    </Tooltip>
-                ) : (
+                {isFiles ? null : (
                     <Tooltip title="配对设备（手机扫码 / 打开链接即完成配对）">
                         <Button
                             type="text"
@@ -187,28 +131,9 @@ export default function TransferSessionList({
                 )}
             </div>
 
-            {/* Agents 分组：技能 / 定时任务（点在第三栏显示） */}
-            {isAgents ? (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 2, padding: '0 8px 6px' }}>
-                    {agentControl('skills', '技能', <GridIcon size={15} color="currentColor" />)}
-                    {agentControl('tasks', '定时任务', <ClockIcon size={15} color="currentColor" />)}
-                </div>
-            ) : null}
-
             {/* 列表 */}
             <div style={{ flex: '1 1 auto', minHeight: 0, overflowY: 'auto', padding: '0 6px 10px' }}>
-                {isAgents && agent ? (
-                    <AgentConversationList
-                        chats={agent.chats}
-                        activeChatId={agent.activeChatId}
-                        onSwitch={(id) => {
-                            // 从技能 / 定时任务页切回对话（点会话卡片就是「我要看这个对话」）
-                            if (onAgentPane) onAgentPane('chat');
-                            void agent.switchChat(id);
-                        }}
-                        onDelete={(id) => void agent.deleteChat(id)}
-                    />
-                ) : isAgents ? null : filtered.length ? (
+                {filtered.length ? (
                     <>
                         {/* 文件分组：常驻「全部文件」入口（回到跨会话汇总；data 钩子供冒烟定位） */}
                         {filesMode ? (

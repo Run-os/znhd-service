@@ -1,5 +1,6 @@
 /**
- * Agent 消息的 Markdown 渲染（v26.10.10-v14 起，对话页签两侧消息都走它）。
+ * 聊天消息的 Markdown 渲染（v26.10.10-v14 起；原文案为「Agent 消息」，v26.10.13-v9 删掉 Agent
+ * 之后成为**传输助手第三栏消息气泡**的公共渲染件 —— 收发两侧的文本消息都走它）。
  *
  * 为什么是 react-markdown + remark-gfm（选型实测数据见 AGENT.md）：
  *   · **默认不渲染原始 HTML** —— 没有 `rehype-raw`，模型输出里的 `<img onerror=…>` /`<script>`

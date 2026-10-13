@@ -1,6 +1,5 @@
 /**
- * 聊天输入区（v26.10.12-v3；v26.10.12-v4 改**微信桌面版结构**）：设备会话与 Agent 对话
- * **共用同一个输入面板**。
+ * 聊天输入区（v26.10.12-v3；v26.10.12-v4 改**微信桌面版结构**）：传输助手第三栏的消息输入面板。
  *
  * ── 微信原版结构（对齐截图）─────────────────────────────────────────────────
  *   ┌────────────────────────────────────────┐
@@ -17,12 +16,11 @@
  *   不再画外圈（微信输入区也没有聚焦光圈）。
  * · **必须同时钉住 `minRows` 与 `lineHeight: '20px'`**（v26.10.10-v15）：rc-textarea
  *   挂载时按 minRows 算高、输入后按「行数 × 行高 + padding」重算，行高不一致会出现
- *   「打一个字再删空，输入框永久变高」。冒烟 `agentInputHeightOk` 严格相等守着。
+ *   「打一个字再删空，输入框永久变高」。
  *
  * v26.10.13-v3：表情面板由「BMP 字符符号」换成**在线图片表情包**（`EmojiPackPanel`，
  * 数据层见 `@/lib/transfer/emojiPack`）。点一张表情不再往输入框插字符，而是把图片交回
- * 调用方（`onPickEmojiImage`）——设备会话据此**直接发出去**（v26.10.13-v4 起）；
- * **不传这个回调的宿主（Agent 对话）表情按钮自动禁用**（那条通道只收文本）。
+ * 调用方（`onPickEmojiImage`）——设备会话据此**直接发出去**（v26.10.13-v4 起）。
  *
  * ── 表情面板的两种自动收起（v26.10.13-v7，用户要求）────────────────────────────
  * ① **点一张表情后立即收起**：点击落在 Popover 内容里，rc-trigger 视作「内部点击」不会关，
@@ -30,11 +28,14 @@
  * ② **点面板之外的任何区域立即收起**：由本组件自己挂 document 级 mousedown 判定（见 `useEffect`），
  *    不依赖 rc-trigger 的 `useWinClick` —— 后者只用「触发元素 / 浮层元素」两个 DOM 判内外，
  *    在受控 `open` 下行为不够直观，自己管一遍更确定。判据见注释。
+ *
+ * ⚠️ v26.10.13-v9：原为「设备会话与 Agent 对话共用」；删掉 Agent 后本组件只服务设备会话，
+ * 随之下掉了只给 Agent 用的三个 props（`streaming` / `onStop` / `rightExtras`）与 `StopIcon`。
  */
 
 import { useEffect, useState, type ReactNode } from 'react';
 import { Button, Input, Popover, Tooltip } from 'antd';
-import { SendIcon, SmileIcon, StopIcon } from '@/lib/ui/icons';
+import { SendIcon, SmileIcon } from '@/lib/ui/icons';
 import EmojiPackPanel, { type PickedEmoji } from '@/lib/ui/transfer/EmojiPackPanel';
 import { WECHAT } from '@/lib/ui/transfer/wechatTheme';
 
@@ -56,27 +57,17 @@ export interface ChatComposerProps {
     onChange: (value: string) => void;
     /** 发送（按钮点击或 Enter） */
     onSend: () => void;
-    /** 整个输入区不可用（Agent 能力缺失 / 当前无在线手机） */
+    /** 整个输入区不可用（当前无在线手机） */
     disabled?: boolean;
-    /** 正在流式回答：发送按钮原位变成中止按钮 */
-    streaming?: boolean;
-    onStop?: () => void;
     placeholder?: string;
     /** 发送按钮是否可点，默认「有非空白内容」 */
     canSend?: boolean;
     /** 表情之后的附加功能按钮 */
     actions?: ComposerAction[];
-    /** 发送按钮左侧的附加控件（Agent 的模型下拉） */
-    rightExtras?: ReactNode;
     /** 输入面板上方的提示行（无在线手机 / 待发图片计数等） */
     notice?: ReactNode;
-    /**
-     * 点选一张**在线表情**（v26.10.13-v3）。设备会话收到后**直接发送到手机**（v26.10.13-v4）；
-     * **不传则表情按钮禁用**（Agent 对话只收文本，与旁边的「图片上传 / 附件」同为灰态）。
-     */
+    /** 点选一张**在线表情**（v26.10.13-v3）：设备会话收到后**直接发送到手机**（v26.10.13-v4） */
     onPickEmojiImage?: (emoji: PickedEmoji) => void;
-    /** 表情按钮禁用时的 hover 说明（不传 onPickEmojiImage 时用） */
-    emojiDisabledReason?: string;
 }
 
 export default function ChatComposer({
@@ -84,15 +75,11 @@ export default function ChatComposer({
     onChange,
     onSend,
     disabled,
-    streaming,
-    onStop,
     placeholder,
     canSend,
     actions,
-    rightExtras,
     notice,
     onPickEmojiImage,
-    emojiDisabledReason,
 }: ChatComposerProps) {
     const [emojiOpen, setEmojiOpen] = useState(false);
 
@@ -132,7 +119,7 @@ export default function ChatComposer({
         return () => document.removeEventListener('mousedown', onDown, true);
     }, [emojiOpen]);
 
-    const sendDisabled = !!disabled || streaming || !(canSend === undefined ? value.trim() : canSend);
+    const sendDisabled = !!disabled || !(canSend === undefined ? value.trim() : canSend);
 
     const iconButton = (
         label: string,
@@ -183,9 +170,7 @@ export default function ChatComposer({
                     content={emojiEnabled ? <EmojiPackPanel onPick={pickEmoji} /> : null}>
                     {iconButton(
                         '表情',
-                        emojiEnabled
-                            ? '表情包（点一张直接发送到手机，悬停可放大）'
-                            : emojiDisabledReason || '当前对话不支持发送表情',
+                        emojiEnabled ? '表情包（点一张直接发送到手机，悬停可放大）' : '当前对话不支持发送表情',
                         <SmileIcon size={16} />,
                         () => setEmojiOpen((v) => !v),
                         disabled || !emojiEnabled
@@ -227,33 +212,19 @@ export default function ChatComposer({
             />
             {/* 底部一行：右侧发送按钮（微信同位置；Enter 发送 / Shift+Enter 换行走 onPressEnter） */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 8, marginTop: 4 }}>
-                {rightExtras}
-                {streaming ? (
-                    <Tooltip title="中止本轮回答">
-                        <Button
-                            shape="circle"
-                            size="small"
-                            danger
-                            aria-label="中止"
-                            icon={<StopIcon size={12} />}
-                            onClick={() => onStop && onStop()}
-                        />
-                    </Tooltip>
-                ) : (
-                    <Button
-                        size="small"
-                        aria-label="发送"
-                        disabled={sendDisabled}
-                        onClick={onSend}
-                        icon={<SendIcon size={13} />}
-                        style={{
-                            minWidth: 64,
-                            color: sendDisabled ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.9)',
-                            background: sendDisabled ? 'transparent' : 'rgba(255,255,255,0.08)',
-                        }}>
-                        发送
-                    </Button>
-                )}
+                <Button
+                    size="small"
+                    aria-label="发送"
+                    disabled={sendDisabled}
+                    onClick={onSend}
+                    icon={<SendIcon size={13} />}
+                    style={{
+                        minWidth: 64,
+                        color: sendDisabled ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.9)',
+                        background: sendDisabled ? 'transparent' : 'rgba(255,255,255,0.08)',
+                    }}>
+                    发送
+                </Button>
             </div>
         </div>
     );

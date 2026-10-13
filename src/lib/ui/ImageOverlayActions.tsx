@@ -9,7 +9,7 @@
  *
  * ── 为什么用 state 而不是 CSS `:hover` ──────────────────────────────────────
  * 宿主税务页有自己的样式表，我们不想为了这个悬浮效果往页面里注入全局 CSS 规则
- * （`:hover` 只能靠样式表实现）。这里沿用 `transfer/AgentConversationList.tsx` 侧栏
+ * （`:hover` 只能靠样式表实现）。这里沿用 `transfer/TransferSessionList.tsx` 侧栏
  * 「hover 才出现的删除图标」的既有做法：`onMouseEnter/onMouseLeave` 改 React state，样式全部内联。
  *
  * ── 为什么隐藏时按钮仍留在 DOM 里 ───────────────────────────────────────────

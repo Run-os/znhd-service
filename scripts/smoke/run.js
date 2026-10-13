@@ -11,7 +11,7 @@
  *   文件视图（九宫格 + 文本分区） / 设备会话收发（文本 + 压缩后图片） / 配对窗口（二维码 + 手机列表） /
  *   常用语 YAML 解析 / 常用语抽屉可打开 / 更新日志弹窗（最新 10 条 + 获取更多日志） /
  *   缩略图放大显示主图 / 图片复制只写 PNG / 打印 A4 自适应 /
- *   Agent 对话（第一栏 Agents 入口） / 图片嗅探 / 页面无脚本自身报错
+ *   Agent 对话（v26.10.13-v9 已随 Agent 能力整体删除） / 图片嗅探 / 页面无脚本自身报错
  *
  * 前置：先 `npm run build` 生成 dist/znhd.user.js。
  */
@@ -86,14 +86,13 @@ const CHECKS = [
   ['transferThemeOk', '窗口固定微信暗色：标题条与第一栏同色 #2E2E2E、三栏深浅分层（聊天区最深）'],
   ['transferSettingsIsolatedOk', '传输助手设置独立存储 scriptCat_TransferSettings（不污染主设置）'],
   ['filesImgActionsOk', '「文件」视图图片格子：复制/下载/删除是右下角图标按钮（未 hover 隐藏，hover 出现）'],
-  // v26.10.12-v3：用户要求「设备菜单和 agent 菜单下的对话主区域使用相同的样式」，
-  // 于是气泡、滚动区、底部输入框都抽成了共用件 —— 这三条守的就是「共用件真的长出来了」
+  // v26.10.12-v3：气泡、滚动区、底部输入框抽成共用件（当时是为设备会话与 Agent 对话同款；
+  // Agent 已于 v26.10.13-v9 删除，这三条继续守共用件本身）
   ['chatBubbleOk', '聊天气泡左右分栏（他人靠左微信灰 / 我的靠右微信绿）+ 头像在气泡外侧 + 时间分隔条'],
   ['chatComposerOk', '输入区（微信式）：工具栏表情/图片上传/附件 + 多行自增高（超上限后框内滚动）+ 右下角发送按钮 + 实心底面板'],
   ['emojiPackOk', '在线表情包：面板加载合集与图片，点一张**直接发送**（不进待发列表，会话里多一条图片气泡）'],
   ['emojiHoverOk', '表情悬停放大预览：停 0.5 秒才弹出，浮层显示中移到另一张立即换图'],
   ['emojiAutoCloseOk', '表情面板自动收起：点一张表情后立即收起 / 点面板之外立即收起 / 点触发按钮收起'],
-  ['chatPanelSharedOk', 'Agent 对话与设备会话共用同一套聊天面板（同一个输入框外壳 + 带 data-side 的气泡 + 头像）'],
   // ===== 主面板既有断言 =====
   ['phrasesLoaded', '常用语 YAML 解析'],
   ['phrasesClicked', '常用语侧边栏可打开'],
@@ -134,21 +133,6 @@ const CHECKS = [
   ['sniffImgActionsOk', '图片嗅探卡片：下载/打印是右下角的图标按钮（未 hover 隐藏，hover 出现）'],
   // v26.10.10-v8：面板被宿主页重绘删除后必须自愈（watchPanelHost 的回归断言）
   ['selfHeal', '面板被宿主页删除后自动挂回（且不重复挂载）'],
-  // v26.10.12-v1：Agent 助手不再是独立弹窗，改为传输助手第一栏 Agents → 右侧聊天区
-  ['agentEntryOk', '第一栏 Agents 入口打开右侧聊天区（可用态）'],
-  ['agentPanesOk', '第二栏「技能 / 定时任务」控件切换第三栏内容，两个面板都渲染（桩数据）'],
-  ['agentChatOk', 'Agent 对话能发出并落地流式回答（桩分片）'],
-  // v26.10.10-v11：历史消息的 thinking 是对象，渲染不当会让整棵面板树被卸载
-  ['agentReopenOk', '对话后关窗再打开：历史思考正常渲染且主面板仍在（v26.10.10-v11）'],
-  // v26.10.10-v12：官方 conversation API 只有 create/get，会话列表是脚本自记的本地索引
-  // v26.10.10-v13：会话搬进第二栏（消息级断言必须只看 .znhd-agent-messages，否则侧栏的会话标题会假阳性）
-  ['agentChatsOk', '多会话：会话在第二栏列出、索引落盘、新建后点侧栏切回上一个对话仍看到自己的历史'],
-  // v26.10.10-v13：borderless 输入框聚焦时 antd 会自己在文本域上画 outline 聚焦框（= 看起来像蓝框）
-  ['agentInputNoRingOk', '输入框聚焦时没有 antd borderless 变体自带的 outline 蓝框（v26.10.10-v13）'],
-  // v26.10.10-v14：回答里的 Markdown 渲染成 DOM（`**加粗**`→<strong>、列表→<li>、行内代码→<code>）
-  ['agentMarkdownOk', 'Agent 消息按 Markdown 渲染：加粗/列表/行内代码出成 DOM 且文本里不再有字面量 **（v26.10.10-v14）'],
-  // v26.10.10-v15：输入框高度不能「打一个字再删掉就变高」（重开弹窗后的初始高度 = 删空后的高度）
-  ['agentInputHeightOk', 'Agent 输入框高度稳定：空着/打过字/删空之后一样高（v26.10.10-v15）'],
   // v26.10.10-v17：常用语数据源迁到 cnb.cool，且存量存储里的**旧默认值**要被自动迁移
   // （夹具在脚本加载前预置了旧默认地址，故这里必须看到 cnb.cool，否则就是迁移没生效）
   ['phrasesSourceOk', '常用语数据源用 cnb.cool 新默认（存量存储里的旧默认地址已自动迁移，v26.10.10-v17）'],
@@ -235,152 +219,6 @@ async function main() {
       title: document.title,
     }));
 
-    // —— 输入框聚焦蓝框（v26.10.10-v13）——
-    // 为什么不在页面内用 JS `ta.focus()` 后读计算样式：这条路**注定假绿**。踩过的坑：
-    //   ① 夹具会把「运行日志」弹窗一直开着盖住 Agent 视图，antd 的焦点陷阱随即把我们
-    //      对 Agent 输入框的 focus() 抢回去（连关闭按钮都 focus 不上），
-    //      于是 `document.activeElement !== ta`、`ta.matches(':focus-visible')` 恒为 false，
-    //      「没聚焦」被读成「没有 outline」；
-    //   ② 冒烟视口是 800x600，而传输助手窗口比视口高，输入框通常落在折线以下，
-    //      `elementFromPoint` 返回 null、合成点击也打不到它。
-    // 所以这里按用户真实路径做：关掉压在上面的弹窗 → 把输入框滚进视口 → **真实鼠标点击**它
-    // → 读 `:focus-visible` 生效后的计算样式。断言里同时要求 focused && focusVisible，
-    // 任何一个没成立都判红，避免再次出现「什么都没验证到却通过」。
-    // ⚠️ 必须排在下面的拖拽用例之前：那段会点掉所有 `.ant-modal-close`。
-    // v26.10.12-v1：Agent 对话搬进传输助手窗口（第一栏 Agents → 右侧聊天区），
-    // 输入框定位从「标题含 Agent 助手的独立弹窗」改为「传输助手窗口且正停在 Agents 视图」。
-    // v26.10.12-v2：主窗口去掉了标题栏（与第一栏顶部图标 + 名称重复），改用 Modal 的
-    // className 钩子定位 —— 不再需要「标题精确相等」那套绕法。
-    await page.evaluate(() => {
-      window.__findTransferModal = () => document.querySelector('.ant-modal.znhd-transfer-modal');
-      window.__findAgentTextarea = () => {
-        const modal = window.__findTransferModal();
-        // 必须正停在 Agents 视图（有 .znhd-agent-messages），否则可能拿到别处的输入框
-        if (!modal || !modal.querySelector('.znhd-agent-messages')) return null;
-        return modal.querySelector('textarea');
-      };
-      // 重开窗口后 nav 会被 effect 复位到「设备」，用这个 helper 点第一栏 Agents 回到对话视图
-      window.__clickAgentsNav = () => {
-        const modal = window.__findTransferModal();
-        if (!modal) return false;
-        const btn = Array.from(modal.querySelectorAll('button')).find(
-          (b) => (b.getAttribute('aria-label') || '') === 'Agents'
-        );
-        if (btn) btn.click();
-        return !!btn;
-      };
-    });
-    report.agentInputRing = await (async () => {
-      // 清掉可能残留的全屏预览浮层（拖拽用例里也做了同样的事）：它盖在弹窗上方会吞掉点击
-      await page.evaluate(() => {
-        document
-          .querySelectorAll('.ant-image-preview-root, .ant-image-preview-wrap')
-          .forEach((e) => e.remove());
-        const transfer = window.__findTransferModal();
-        document.querySelectorAll('.ant-modal-close').forEach((btn) => {
-          if (!transfer || !transfer.contains(btn)) btn.click();
-        });
-      });
-      await sleep(400);
-      // —— 关掉传输助手窗口再重新点开（v26.10.10-v15）——
-      // 复现用户报告的路径：「第一次打开 Agent 窗口」时输入框是矮的，打过字再删掉就变高了。
-      // 只有**重新挂载**过的窗口才是真正的初始态（destroyOnHidden），所以在测高度之前先重开一次。
-      await page.evaluate(() => {
-        const transfer = window.__findTransferModal();
-        const close = transfer ? transfer.querySelector('.ant-modal-close') : null;
-        if (close) close.click();
-      });
-      await sleep(500);
-      await page.evaluate(() => {
-        const host = document.getElementById('__znhd_panel_host__');
-        if (!host) return;
-        const btn = Array.from(host.querySelectorAll('button')).find(
-          (b) => (b.textContent || '').indexOf('传输助手') >= 0
-        );
-        if (btn) btn.click();
-      });
-      await sleep(700);
-      // 重开后 nav 被 effect 复位到「设备」：再点第一栏 Agents 才回得到对话视图
-      await page.evaluate(() => {
-        window.__clickAgentsNav();
-      });
-      await sleep(600);
-      const box = await page.evaluate(() => {
-        const ta = window.__findAgentTextarea();
-        if (!ta) return null;
-        ta.scrollIntoView({ block: 'center', inline: 'nearest' });
-        const r = ta.getBoundingClientRect();
-        if (r.width < 1 || r.height < 1) return null;
-        const x = Math.round(r.x + r.width / 2);
-        const y = Math.round(r.y + r.height / 2);
-        const hit = document.elementFromPoint(x, y);
-        return {
-          x,
-          y,
-          // 万一将来又被谁盖住，快照里能直接看出点击打在哪个元素上
-          hit: hit ? String(hit.className || hit.tagName).slice(0, 60) : 'none',
-        };
-      });
-      if (!box) return { found: false };
-      await page.mouse.click(box.x, box.y);
-      await sleep(120);
-      const ring = await page.evaluate(() => {
-        const ta = window.__findAgentTextarea();
-        if (!ta) return { found: false };
-        const cs = window.getComputedStyle(ta);
-        const r = ta.getBoundingClientRect();
-        return {
-          found: true,
-          focused: document.activeElement === ta,
-          focusVisible: ta.matches(':focus-visible'),
-          outlineStyle: cs.outlineStyle,
-          outlineWidth: cs.outlineWidth,
-          boxShadow: cs.boxShadow,
-          rect: Math.round(r.width) + 'x' + Math.round(r.height),
-          valueEmpty: ta.value === '',
-          heightEmpty: Math.round(r.height),
-        };
-      });
-      if (!ring.found) return { ...ring, hit: box.hit };
-      // —— 输入框高度稳定性（v26.10.10-v15）——
-      // 用户路径：空着（初始高度）→ 打一个字符 → 全删掉。三次高度必须一致，
-      // 否则就是「打一个字再删掉，输入框莫名变高」。真实键盘事件（page.keyboard）而不是
-      // 直接改 value，才能触发 React 的受控更新与 rc-textarea 的 autoSize 重算。
-      if (!ring.valueEmpty) return { ...ring, hit: box.hit, heightStable: false, heightNote: '重开后输入框不是空的' };
-      await page.keyboard.type('a');
-      await sleep(150);
-      const heightTyped = await page.evaluate(() => {
-        const ta = window.__findAgentTextarea();
-        return ta ? Math.round(ta.getBoundingClientRect().height) : -1;
-      });
-      await page.keyboard.press('Backspace');
-      await sleep(150);
-      const after = await page.evaluate(() => {
-        const ta = window.__findAgentTextarea();
-        return ta
-          ? { heightCleared: Math.round(ta.getBoundingClientRect().height), valueEmpty: ta.value === '' }
-          : { heightCleared: -1, valueEmpty: false };
-      });
-      return {
-        ...ring,
-        hit: box.hit,
-        heightTyped,
-        heightCleared: after.heightCleared,
-        clearedEmpty: after.valueEmpty,
-        heightStable: ring.heightEmpty === after.heightCleared && after.heightCleared > 0,
-      };
-    })();
-    // 四条一起判：没聚焦 / 没命中 :focus-visible 都算红 —— 否则这条断言可能什么都没验证到
-    report.agentInputNoRingOk = !!(
-      report.agentInputRing.found &&
-      report.agentInputRing.focused &&
-      report.agentInputRing.focusVisible &&
-      report.agentInputRing.outlineStyle === 'none' &&
-      (report.agentInputRing.boxShadow === 'none' || report.agentInputRing.boxShadow === '')
-    );
-    // 输入框高度：空着 / 打过字 / 删空之后必须一样高（用户报告过「打一个字再删掉就变高」）
-    report.agentInputHeightOk = !!(report.agentInputRing.found && report.agentInputRing.heightStable);
-
     // —— 表情面板自动收起（v26.10.13-v7，用户要求）：**真实鼠标**复验 ——
     // 页面内那条断言走合成事件（覆盖的是我们自己的 document mousedown 判定 + React onClick）；
     // 这里按用户真实路径用真实鼠标再跑一遍：① 点一张表情应立即收起；② 点面板之外应立即收起。
@@ -431,6 +269,21 @@ async function main() {
         }
       });
       await sleep(700);
+      // ⚠️ 先清出干净的上层再点（v26.10.13-v9 实测踩到）：
+      // 跑到这里时本页同时开着 5 个 antd Modal，它们的 z-index 全是 zIndexPopupBase=1000000、
+      // **DOM 在后的那个压在上面**；运行日志弹窗恰好盖住表情按钮的位置，于是 `elementFromPoint`
+      // 取到底下的日志文本 `SPAN.znhd-log-msg`、`triggerPoint()` 按设计返回 null（宁红不假绿），
+      // 整条断言恒红。⚠️ 这不是本仓库某次改动引入的：在 v26.10.13-v8（HEAD）上按同一段夹具复现，
+      // `hit` 完全一致 —— 属夹具没清场的历史问题。做法同下面 `ballDragOk` 的既有套路。
+      await page.evaluate(() => {
+        document.querySelectorAll('.ant-modal-wrap').forEach((w) => {
+          if (w.querySelector('.znhd-transfer-modal')) return; // 被测窗口留着
+          const close = w.querySelector('.ant-modal-close');
+          if (close) close.click();
+        });
+        document.querySelectorAll('.ant-drawer-close').forEach((b) => b.click());
+      });
+      await sleep(600);
       await page.evaluate(() => {
         const m = document.querySelector('.ant-modal.znhd-transfer-modal');
         const nav = m
@@ -657,24 +510,6 @@ async function main() {
     // v26.10.10-v16：图片格子悬浮按钮的几何/可见性事实（只在失败时打）
     if (!checkPass('filesImgActionsOk')) {
       console.log('      文件视图悬浮按钮快照：' + JSON.stringify(report.filesImgActions));
-    }
-    // Agent 断言失败时打快照：能区分「入口没点到」「弹窗没开」「桩没被调用」「分片没落到 UI」
-    // 以及 v26.10.10-v11 的「重开弹窗后面板是否还在」、v26.10.10-v12 的「会话索引/切换」
-    if (
-      !checkPass('agentEntryOk') ||
-      !checkPass('agentPanesOk') ||
-      !checkPass('agentChatOk') ||
-      !checkPass('agentReopenOk') ||
-      !checkPass('agentChatsOk') ||
-      !checkPass('agentInputNoRingOk') ||
-      !checkPass('agentMarkdownOk') ||
-      !checkPass('agentInputHeightOk') ||
-      !checkPass('chatPanelSharedOk')
-    ) {
-      console.log('      Agent 快照：' + JSON.stringify(report.agentSnap));
-    }
-    if (!checkPass('agentInputNoRingOk') || !checkPass('agentInputHeightOk')) {
-      console.log('      输入框快照（真实鼠标点击后）：' + JSON.stringify(report.agentInputRing));
     }
     // 发送压缩失败时把实际 POST 的载荷事实打出来（区分「没发出去」「没压缩」「解码失败」）
     if (!checkPass('phoneSendCompressedOk')) {

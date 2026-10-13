@@ -1,9 +1,9 @@
 import { useState, type ReactElement } from 'react';
 import { Tooltip, theme } from 'antd';
 import { WECHAT } from '@/lib/ui/transfer/wechatTheme';
-import { BotIcon, FilesIcon, InfoIcon, MessageIcon, SettingsIcon, TransferIcon, type IconProps } from '@/lib/ui/icons';
+import { FilesIcon, InfoIcon, MessageIcon, SettingsIcon, TransferIcon, type IconProps } from '@/lib/ui/icons';
 
-export type TransferNav = 'agents' | 'devices' | 'files';
+export type TransferNav = 'devices' | 'files';
 
 /** 第一栏宽度：微信式窄侧边栏（只放图标，不可折叠 —— 折叠开关随宽栏一起移除） */
 export const NAV_WIDTH = 58;
@@ -11,12 +11,14 @@ export const NAV_WIDTH = 58;
 /**
  * 第一栏导航项（v26.10.12-v4 改微信式窄栏）。
  *
- * 顺序与命名（用户要求）：**「设备」改名「对话」并置于 Agents 之上**，文件随后。
+ * 顺序与命名（用户要求）：**「设备」改名「对话」并置于最上**，文件随后。
  * 注意 key 保持 `devices` 不变 —— store / 自动弹窗 / 冒烟夹具都按 key 路由，改 key 是纯风险。
+ *
+ * ⚠️ v26.10.13-v9：中间的 **Agents 入口（含 `BotIcon`）已随 Agent 能力整体删除**，
+ * 第一栏现在只有「对话 / 文件」两个入口。
  */
 const NAV_ITEMS: Array<{ key: TransferNav; label: string; icon: (p: IconProps) => ReactElement }> = [
     { key: 'devices', label: '对话', icon: MessageIcon },
-    { key: 'agents', label: 'Agents', icon: BotIcon },
     { key: 'files', label: '文件', icon: FilesIcon },
 ];
 
@@ -104,10 +106,11 @@ function NavIconButton({
 /**
  * 第一栏（最左侧窄导航栏，v26.10.12-v4 微信桌面版样式）。
  *
- * 结构：顶部 logo（头像位）→ 中部图标入口（对话 / Agents / 文件，只放图标不显示文字）
+ * 结构：顶部 logo（头像位）→ 中部图标入口（对话 / 文件，只放图标不显示文字）
  * → 底部设置 / 企业信息。未读总数在「对话」图标右上角挂红色角标（微信同款位置）。
  *
- * 原「外观设置」入口已随窗口固定微信暗色一起移除（见 wechatTheme.ts 头注）。
+ * 原「外观设置」入口已随窗口固定微信暗色一起移除（见 wechatTheme.ts 头注）；
+ * 原中间的 Agents 入口已随 Agent 能力删除（v26.10.13-v9）。
  */
 export default function TransferNavRail({
     nav,
@@ -154,7 +157,7 @@ export default function TransferNavRail({
                 <TransferIcon size={18} color="#fff" />
             </span>
 
-            {/* 中部入口（对话在最上，其次 Agents、文件） */}
+            {/* 中部入口（对话在最上，其次文件） */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                 {NAV_ITEMS.map((item) => {
                     const Icon = item.icon;

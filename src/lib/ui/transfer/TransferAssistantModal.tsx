@@ -5,13 +5,11 @@ import { getOverlayContainer } from '@/lib/ui/panelHost';
 import { CloseIcon, DeviceIcon } from '@/lib/ui/icons';
 import TransferNavRail, { type TransferNav } from '@/lib/ui/transfer/TransferNavRail';
 import TransferSessionList, { type DeviceEntry } from '@/lib/ui/transfer/TransferSessionList';
-import TransferAgentView from '@/lib/ui/transfer/TransferAgentView';
 import TransferDeviceChat from '@/lib/ui/transfer/TransferDeviceChat';
 import TransferFilesView from '@/lib/ui/transfer/TransferFilesView';
 import TransferPairModal from '@/lib/ui/transfer/TransferPairModal';
 import TransferSettingsModal from '@/lib/ui/transfer/TransferSettingsModal';
 import TransferAboutModal from '@/lib/ui/transfer/TransferAboutModal';
-import { useAgentChat } from '@/lib/ui/transfer/useAgentChat';
 import { resolveDeviceColors, shortPhoneId } from '@/lib/ui/transfer/deviceColors';
 import { WECHAT } from '@/lib/ui/transfer/wechatTheme';
 import {
@@ -24,14 +22,14 @@ import {
     setTransferWindowOpen,
     useTransferStore,
 } from '@/lib/transfer/store';
-import type { AgentPane, DeviceSession, TransferMessage } from '@/lib/transfer/types';
+import type { DeviceSession, TransferMessage } from '@/lib/transfer/types';
 
 /**
  * 传输助手主窗口（v26.10.12-v1）：原「设备互联」重构后的三栏窗口。
  *
  * ── 布局（v26.10.12-v4 起**对齐微信桌面版**）────────────────────────────────
  *   标题条（与第一栏同色 #2E2E2E，v26.10.12-v5 起）：右侧自绘关闭按钮（悬浮变红，微信同款）
- *   第一栏（窄图标栏 #2E2E2E）：logo → 对话 / Agents / 文件 → 设置 / 企业信息
+ *   第一栏（窄图标栏 #2E2E2E）：logo → 对话 / 文件 → 设置 / 企业信息
  *   第二栏（会话列表 #252525）：搜索框 +「＋」→ 会话列表
  *   第三栏（聊天主区 #1E1E1E，最深）：当前会话的聊天区，未选中显示空状态
  *
@@ -42,8 +40,10 @@ import type { AgentPane, DeviceSession, TransferMessage } from '@/lib/transfer/t
  *   · **自绘关闭按钮**：antd Modal 的 `closable=false` 关掉默认 ×，标题条右侧放自己的
  *     按钮（悬浮变红 #E81123）。Esc / 点遮罩关闭仍走 onCancel，不受影响；
  *   · **数据隔离**：设置走 `scriptCat_TransferSettings`，收发明明在模块级 store
- *     （窗口不开时照常收件、按设置自动弹窗），见 `lib/transfer/store.ts` 头注；
- *   · **Agents 直达**：点第一栏 Agents 就在右侧主聊天区打开对话（useAgentChat）。
+ *     （窗口不开时照常收件、按设置自动弹窗），见 `lib/transfer/store.ts` 头注。
+ *
+ * ⚠️ v26.10.13-v9：原第一栏的 **Agents 入口与 Agent 对话第三栏已整体删除**
+ * （含 `useAgentChat` / `TransferAgentView` / 技能·定时任务面板）。
  */
 
 /** 标题条高度（含自绘关闭按钮；微信桌面版约 32px） */
@@ -54,12 +54,6 @@ export default function TransferAssistantModal({ open, onClose }: { open: boolea
 
     // ── 窗口自身的 UI 状态（与 store 的持久状态分开）──────────────────────
     const [nav, setNav] = useState<TransferNav>('devices');
-    /**
-     * Agents 分组下第三栏显示什么（v26.10.12-v3）：对话 / 技能 / 定时任务。
-     * 「技能」「定时任务」由第二栏顶部的两个控件切换（原来是第三栏的页签）。
-     * 三处会把它复位到 chat：切第一栏导航、点会话卡片、点搜索框旁的「＋」新建对话。
-     */
-    const [agentPane, setAgentPane] = useState<AgentPane>('chat');
     const [search, setSearch] = useState('');
     /**
      * 文件视图的会话筛选（v26.10.13-v5）：'' = 全部文件（跨会话汇总）；
@@ -72,13 +66,6 @@ export default function TransferAssistantModal({ open, onClose }: { open: boolea
     const [aboutOpen, setAboutOpen] = useState(false);
     /** 自绘关闭按钮的悬浮态（变红，微信/Windows 同款交互） */
     const [closeHover, setCloseHover] = useState(false);
-
-    /**
-     * Agent 对话控制器：第一栏选中 Agents 且窗口开着才算 active（不活跃时 hook 内部
-     * 暂停流式与轮询，但会话索引照常留在 localStorage，重进不丢）。
-     * ⚠️ hook 必须无条件调用（不能塞进 `nav === 'agents'` 分支里）。
-     */
-    const agent = useAgentChat(nav === 'agents' && open);
 
     // 窗口开合 → 通知 store（决定未读累计与自动弹窗行为）
     useEffect(() => {
@@ -183,23 +170,17 @@ export default function TransferAssistantModal({ open, onClose }: { open: boolea
     };
 
     /**
-     * 第一栏导航：切到 Agents 时把第三栏复位成「对话」。
-     * 没有这一步会出现「上次停在技能页 → 关窗重开 → 点 Agents 看到技能页」这种摸不着头脑的状态
-     * （重开虽然会重置 state，但**同一次会话内**来回切第一栏不会）。
+     * 第一栏导航：离开文件分组就还原成「全部文件」——筛选是文件视图的临时状态，
+     * 保留到下次进来会出现「明明点的是文件却只看到某个会话」的困惑。
      */
     const onNav = (next: TransferNav) => {
         setNav(next);
-        if (next === 'agents') setAgentPane('chat');
-        // 离开文件分组就还原成「全部文件」：筛选是文件视图的临时状态，
-        // 保留到下次进来会出现「明明点的是文件却只看到某个会话」的困惑
         if (next !== 'files') setFilesFilterKey('');
     };
 
     /** 第三栏路由 */
     let main: ReactNode = null;
-    if (nav === 'agents') {
-        main = <TransferAgentView agent={agent} pane={agentPane} />;
-    } else if (nav === 'files') {
+    if (nav === 'files') {
         main = (
             <TransferFilesView
                 messages={filesMessages}
@@ -348,9 +329,6 @@ export default function TransferAssistantModal({ open, onClose }: { open: boolea
                         onSelectSession={onSelectSession}
                         filesActiveKey={filesFilterKey}
                         onSelectFilesSession={setFilesFilterKey}
-                        agent={nav === 'agents' ? agent : undefined}
-                        agentPane={agentPane}
-                        onAgentPane={setAgentPane}
                     />
 
                     {/* 第三栏：聊天主区（三栏里最深的一层） */}

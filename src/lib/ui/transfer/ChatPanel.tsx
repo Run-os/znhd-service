@@ -2,11 +2,13 @@
  * 聊天面板的共用骨架件（v26.10.12-v3）。
  *
  * ── 为什么抽出来 ─────────────────────────────────────────────────────────────
- * 「设备会话」（`TransferDeviceChat`）与「Agent 对话」（`TransferAgentView`）的第三栏
- * 原来是两套自己写的结构：一个用 `header + 消息区 + 输入区` 的三段 div，另一个用
+ * 当初「设备会话」（`TransferDeviceChat`）与「Agent 对话」（`TransferAgentView`）的第三栏
+ * 是两套自己写的结构：一个用 `header + 消息区 + 输入区` 的三段 div，另一个用
  * 「页签 + 固定 300px 消息盒 + 输入框」。用户要求两边**长得一模一样**（同一套气泡、
  * 同一种底部输入框），若各写一份，下次改样式必然只改一边 —— 所以这里把
- * 「头部 / 滚动消息区 / 气泡行」三件抽成共用件，两个面板只能通过它们拼装。
+ * 「头部 / 滚动消息区 / 气泡行」三件抽成共用件。
+ *
+ * v26.10.13-v9 删掉 Agent 后，本骨架件由第三栏唯一的宿主 `TransferDeviceChat` 使用。
  *
  * ── 尺寸契约 ─────────────────────────────────────────────────────────────────
  * 第三栏整体是 `display:flex; flex-direction:column`，其中
@@ -57,7 +59,7 @@ export function ChatScroll({
     scrollDep,
     children,
 }: {
-    /** 冒烟夹具按这个类名找消息区（设备 `.znhd-transfer-messages` / Agent `.znhd-agent-messages`） */
+    /** 冒烟夹具按这个类名找消息区（第三栏设备会话用 `.znhd-transfer-messages`） */
     className: string;
     /** 变化即滚到底（传消息数组） */
     scrollDep: unknown;
