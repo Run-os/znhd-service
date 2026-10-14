@@ -8,7 +8,8 @@
  */
 
 export interface RecvItem {
-    type?: 'image' | 'text';
+    /** v26.10.14-v6：'file' = 任意非图片文件（中继按 mime 分流） */
+    type?: 'image' | 'file' | 'text';
     data?: string;
     mime?: string;
     name?: string;

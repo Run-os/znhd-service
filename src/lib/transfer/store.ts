@@ -44,7 +44,13 @@ export function sessionKeyOf(phoneId: string): string {
 
 interface TransferState {
     settings: TransferSettings;
-    /** 在线手机列表（/phone/status 每 5s 刷新） */
+    /**
+     * 在线手机列表。来源（v26.10.14-v7 起）：
+     *  ① 正向长轮询每个响应捎带的 `phones`（常态，≤25s 一次且随消息即时）；
+     *  ② 手机上线 / 下线时服务器主动唤醒的那一条 `{type:'phones'}`（亚秒级）；
+     *  ③ 窗口打开时 + 60s 兜底 tick 的按需 `/phone/status` 查询（老中继兜底）。
+     * ⚠️ 不再是 5s 定时轮询 —— 那是 8h 里 5760 次请求、占了近一半的最大头。
+     */
     phones: PhoneInfo[];
     /** 有消息的会话（按最后消息时间倒序；UI 再与在线手机并集） */
     sessions: DeviceSession[];
@@ -117,7 +123,12 @@ export function updateTransferSettings(patch: Partial<TransferSettings>): void {
 
 /* ============================================================ 生命周期 */
 
-let phonePollTimer: number | null = null;
+let phoneFallbackTimer: number | null = null;
+/**
+ * 最近一次从**长轮询**拿到在线名单的时刻（v26.10.14-v7）。
+ * 兜底轮询据此判断「名单是不是已经由推送渠道送达」—— 送达过就跳过这一轮，一个请求都不打。
+ */
+let phonesSeenAt = 0;
 let receiveStop: (() => void) | null = null;
 let knownPhones = new Set<string>();
 let inited = false;
@@ -127,7 +138,7 @@ function validServer(): string {
     return /^https?:\/\//i.test(s) ? s : '';
 }
 
-/** 启停接收循环 + 手机在线轮询（幂等：先停后启） */
+/** 启停接收循环 + 在线名单兜底轮询（幂等：先停后启） */
 function restartLoops(): void {
     stopLoops();
     const server = validServer();
@@ -137,14 +148,14 @@ function restartLoops(): void {
         emit();
         return;
     }
-    startPhonePoll(server);
+    startPhonesWatch();
     startReceive(server);
 }
 
 function stopLoops(): void {
-    if (phonePollTimer) {
-        clearInterval(phonePollTimer);
-        phonePollTimer = null;
+    if (phoneFallbackTimer) {
+        clearInterval(phoneFallbackTimer);
+        phoneFallbackTimer = null;
     }
     if (receiveStop) {
         receiveStop();
@@ -152,55 +163,99 @@ function stopLoops(): void {
     }
 }
 
+/** 两份名单是否等价（只比 id 集合与顺序；lastSeen 每次都变，比它等于永远「不等」） */
+function samePhones(a: PhoneInfo[], b: PhoneInfo[]): boolean {
+    if (a.length !== b.length) return false;
+    for (let i = 0; i < a.length; i++) {
+        if (a[i].id !== b[i].id) return false;
+    }
+    return true;
+}
+
 /**
- * 手机在线状态轮询（5s）。连接 / 断开写运行日志（与重构前一致，且不依赖窗口是否打开）。
- * 老版中继只回 `{online:true}` 没有 phones 时按「1 台未知手机」处理。
+ * 应用一份在线手机名单 —— 三个来源共用：长轮询 piggyback、上下线唤醒、按需查询。
+ * 连接 / 断开写运行日志（与重构前一致，且不依赖窗口是否打开）；
+ * 名单没变就**不 emit**（长轮询每 ≤25s 捎带一次，无谓重建 state 会让整个窗口跟着重渲染）。
  */
-function startPhonePoll(server: string): void {
-    const uuid = getDeviceId();
-    const check = () => {
-        try {
-            GM_xmlhttpRequest({
-                method: 'GET',
-                url: server + '/phone/status/' + encodeURIComponent(uuid),
-                timeout: 8000,
-                onload: (r) => {
-                    let j: { online?: boolean; phones?: { id?: string; lastSeen?: number }[] } | null = null;
-                    try {
-                        j = JSON.parse(r.responseText);
-                    } catch (e) {
-                        j = null;
-                    }
-                    const list: PhoneInfo[] =
-                        j && Array.isArray(j.phones)
-                            ? j.phones.map((p) => ({ id: String(p.id || ''), lastSeen: Number(p.lastSeen) || 0 }))
-                            : j && j.online
-                            ? [{ id: '', lastSeen: 0 }]
-                            : [];
-                    state = { ...state, phones: list };
-                    const nowIds = new Set(list.map((p) => p.id).filter(Boolean));
-                    knownPhones.forEach((id) => {
-                        if (!nowIds.has(id)) addLog('[传输助手] 手机已断开：' + id, 'warning');
-                    });
-                    nowIds.forEach((id) => {
-                        if (!knownPhones.has(id)) addLog('[传输助手] 手机已连接：' + id, 'success');
-                    });
-                    knownPhones = nowIds;
+function applyPhones(list: PhoneInfo[]): void {
+    const nowIds = new Set(list.map((p) => p.id).filter(Boolean));
+    knownPhones.forEach((id) => {
+        if (!nowIds.has(id)) addLog('[传输助手] 手机已断开：' + id, 'warning');
+    });
+    nowIds.forEach((id) => {
+        if (!knownPhones.has(id)) addLog('[传输助手] 手机已连接：' + id, 'success');
+    });
+    knownPhones = nowIds;
+    if (samePhones(state.phones, list)) return;
+    state = { ...state, phones: list };
+    emit();
+}
+
+/** 正在飞的按需查询（避免窗口连续开合时并发打同一接口） */
+let phoneRefreshInFlight = false;
+
+/**
+ * 按需查询一次在线状态（v26.10.14-v7，替代原来 5s 一次的定时轮询）。
+ * 调用点：① 传输助手窗口打开时；② 60s 兜底 tick 发现长轮询长时间没捎带名单时。
+ * 接口 `/phone/status` 的形态与语义完全没变（老中继也能应答）。
+ */
+export function refreshPhones(): void {
+    const server = validServer();
+    if (!server || phoneRefreshInFlight) return;
+    phoneRefreshInFlight = true;
+    try {
+        GM_xmlhttpRequest({
+            method: 'GET',
+            url: server + '/phone/status/' + encodeURIComponent(getDeviceId()),
+            timeout: 8000,
+            onload: (r) => {
+                phoneRefreshInFlight = false;
+                let j: { online?: boolean; phones?: { id?: string; lastSeen?: number }[] } | null = null;
+                try {
+                    j = JSON.parse(r.responseText);
+                } catch (e) {
+                    j = null;
+                }
+                // 老版中继只回 {online:true} 没有 phones 时按「1 台未知手机」处理
+                const list: PhoneInfo[] =
+                    j && Array.isArray(j.phones)
+                        ? j.phones.map((p) => ({ id: String(p.id || ''), lastSeen: Number(p.lastSeen) || 0 }))
+                        : j && j.online
+                        ? [{ id: '', lastSeen: 0 }]
+                        : [];
+                applyPhones(list);
+            },
+            onerror: () => {
+                phoneRefreshInFlight = false;
+                if (state.phones.length) {
+                    state = { ...state, phones: [] };
                     emit();
-                },
-                onerror: () => {
-                    if (state.phones.length) {
-                        state = { ...state, phones: [] };
-                        emit();
-                    }
-                },
-            });
-        } catch (e) {
-            /* 忽略单轮异常，5s 后自然重试 */
-        }
+                }
+            },
+        });
+    } catch (e) {
+        phoneRefreshInFlight = false;
+    }
+}
+
+/**
+ * 在线名单兜底轮询（v26.10.14-v7）。
+ *
+ * 正常路径：名单由正向长轮询 piggyback（每个响应都带）+ 上下线唤醒实时送达，
+ * 此时本定时器每一轮都会「看到长轮询刚捎带过」而**直接跳过，零请求**。
+ *
+ * 它存在的唯一理由是**兼容尚未升级的中继**：老中继不返回 `phones` 字段，
+ * 若没有这条兜底，`state.phones` 会永远是空 —— 发送按钮恒不可用、无 `from` 的条目
+ * 永远归聚合会话。60s 粒度足够兜住（浏览器开启时仍会立刻查一次）。
+ */
+function startPhonesWatch(): void {
+    const tick = () => {
+        if (!validServer()) return;
+        if (Date.now() - phonesSeenAt < 55000) return; // 推送渠道在送名单，无需兜底
+        refreshPhones();
     };
-    check();
-    phonePollTimer = setInterval(check, 5000) as unknown as number;
+    tick(); // 启动时先查一次（拿到名单再进入「推送为主」的稳态）
+    phoneFallbackTimer = setInterval(tick, 60000) as unknown as number;
 }
 
 /** 接收循环（长轮询 /recv）：收到图片 / 文本进对应会话，并按设置自动弹窗 */
@@ -209,6 +264,12 @@ function startReceive(server: string): void {
         server,
         uuid: getDeviceId(),
         onConnected: () => addLog('[传输助手] 已自动开始接收（' + server + '）', 'info'),
+        // v26.10.14-v7（P0-b/P0-c）：在线名单改由长轮询**捎带/唤醒**送达（原来靠 5s 轮询）。
+        // 记下送达时刻，60s 兜底轮询据此判断「推送渠道是否在正常工作」。
+        onPhones: (list) => {
+            phonesSeenAt = Date.now();
+            applyPhones(list);
+        },
         onImage: (img) => {
             addLog('[传输助手] 收到图片：' + (img.name || 'image') + '（' + (img.mime || 'image') + '）', 'success');
             const key = sessionKeyForIncoming(img.from);
@@ -237,6 +298,26 @@ function startReceive(server: string): void {
                 sessionKey: key,
                 text: t,
                 ts: txt.ts || Date.now(),
+            });
+        },
+        // v26.10.14-v6：任意文件（中继按 mime 分流，非 image/* 的都走这里）。
+        // 与图片走同一条「会话落消息」路径，只是 type 用 'file'（渲染成文件卡片而非缩略图）。
+        onFile: (f) => {
+            addLog(
+                '[传输助手] 收到文件：' + (f.name || 'file') + '（' + (f.mime || 'application/octet-stream') + '）',
+                'success'
+            );
+            const key = sessionKeyForIncoming(f.from);
+            addMessage(key, {
+                id: nextId(),
+                type: 'file',
+                direction: 'in',
+                sessionKey: key,
+                name: f.name,
+                mime: f.mime,
+                blob: f.blob,
+                previewUrl: f.previewUrl,
+                ts: Date.now(),
             });
         },
     });
@@ -362,6 +443,9 @@ export function setTransferWindowOpen(open: boolean): void {
     if (state.windowOpen === open) return;
     state = { ...state, windowOpen: open };
     emit();
+    // 用户正要看名单 → 现查一次（v26.10.14-v7 的「按需查询」，替代原 5s 定时轮询）。
+    // 只在实际发生「关 → 开」跳变时打，一次开窗 1 个请求。
+    if (open) refreshPhones();
 }
 
 /** 已读：窗口开着且正停在该会话上时清零未读 */
@@ -440,7 +524,7 @@ export function sendTextToSession(sessionKey: string, text: string): boolean {
 /**
  * 发送图片到某会话：逐张顺序发送（一张成功再发下一张，保证到达顺序）。
  * 图片先经 `compressImageForPhone` 压缩（与「手机 → 电脑」同套规格：最长边 1600、JPEG 0.75；
- * SVG/GIF、解码失败、压不小都回退原图），超 12MB 上限即停止。
+ * SVG/GIF、解码失败、压不小都回退原图），超 100MB 上限即停止。
  *
  * @returns 是否开始了发送（调用方用于清空待发列表 / 显示进度）
  */
@@ -489,7 +573,7 @@ export function sendImagesToSession(
                     addLog(
                         '[传输助手] 第 ' +
                             (sent + 1) +
-                            ' 张压缩后仍超限（单张约 12MB 上限），已停止（已发 ' +
+                            ' 张压缩后仍超限（单张约 100MB 上限），已停止（已发 ' +
                             sent +
                             '/' +
                             total +
@@ -497,7 +581,7 @@ export function sendImagesToSession(
                         'error',
                         true
                     );
-                    failAt('压缩后仍超过单张上限（约 12MB）');
+                    failAt('压缩后仍超过单张上限（约 100MB）');
                     return;
                 }
                 addLog(
@@ -560,6 +644,130 @@ export function sendImagesToSession(
 /** 体积显示：统一按 KB（不足 1KB 也显示 1KB） */
 function kbText(bytes: number): string {
     return Math.max(1, Math.round((Number(bytes) || 0) / 1024)) + 'KB';
+}
+
+/**
+ * 发送任意文件到某会话（v26.10.14-v6 新增）。
+ *
+ * 与 `sendImagesToSession` 的两点关键差异：
+ *  ① **不做压缩** —— 文件不是图片，画布解码无意义（PDF/zip/视频解码必然失败）。原样直传。
+ *  ② **按体积预检** —— 用 `imagePayloadBytes`（同一套 base64 膨胀估算，对任意二进制同样成立）
+ *     与 `RELAY_MAX_BODY` 比对，超限即停止，避免 base64 膨胀后撞中继 413。
+ *
+ * 逐条顺序发送（一条成功再发下一条，保证到达顺序），与图片一致。
+ *
+ * @returns 是否开始了发送（调用方用于清空待发列表 / 显示进度）
+ */
+export function sendFilesToSession(
+    sessionKey: string,
+    files: { file: File; name: string; mime: string; url: string }[],
+    onProgress?: (done: number, total: number, failed: boolean, text: string) => void
+): boolean {
+    const server = validServer();
+    if (!files.length) return false;
+    if (!server) {
+        addLog('[传输助手] 尚未配置中继服务器，无法发送', 'error', true);
+        return false;
+    }
+    if (!sessionSendable(sessionKey)) {
+        addLog('[传输助手] 当前无在线设备，无法发送', 'error', true);
+        return false;
+    }
+    const targets = sendTargets(sessionKey);
+    const list = files.slice();
+    const total = list.length;
+    let sent = 0;
+
+    const failAt = (reason: string, msgId?: string) => {
+        if (msgId) patchMessage(sessionKey, msgId, { sendState: 'failed', sendError: reason });
+        addLog(
+            '[传输助手] 第 ' + (sent + 1) + ' 个文件发送失败：' + reason + '（已发 ' + sent + '/' + total + '）',
+            'error'
+        );
+        onProgress?.(sent, total, true, '已发送 ' + sent + '/' + total + '，已停止');
+    };
+
+    const sendNext = () => {
+        if (sent >= total) {
+            addLog('[传输助手] ' + total + ' 个文件已全部发送', 'success');
+            onProgress?.(total, total, false, '已发送 ' + total + '/' + total);
+            return;
+        }
+        const it = list[sent];
+        // 体积预检：base64 膨胀 ≈4/3，超限就停（与图片同判据、同上限）
+        const est = imagePayloadBytes(it.file, it.name, it.mime);
+        if (est > RELAY_MAX_BODY) {
+            addLog(
+                '[传输助手] 第 ' +
+                    (sent + 1) +
+                    ' 个文件过大（' +
+                    kbText(it.file.size) +
+                    '，编码后约 ' +
+                    kbText(est) +
+                    '，超过单次上限约 100MB），已停止（已发 ' +
+                    sent +
+                    '/' +
+                    total +
+                    '）',
+                'error',
+                true
+            );
+            failAt('文件过大（编码后约 ' + kbText(est) + '，超过单次上限约 100MB）');
+            return;
+        }
+        addLog(
+            '[传输助手] 正在发送文件（' +
+                (sent + 1) +
+                '/' +
+                total +
+                '）：' +
+                it.name +
+                '（' +
+                kbText(it.file.size) +
+                '）',
+            'info'
+        );
+        onProgress?.(sent, total, false, '发送中… ' + sent + '/' + total + '（第 ' + (sent + 1) + ' 个）');
+        const msgId = nextId();
+        // 先落一条「发送中」的文件卡片气泡，成功/失败再改状态
+        addMessage(sessionKey, {
+            id: msgId,
+            type: 'file',
+            direction: 'out',
+            sessionKey,
+            name: it.name,
+            mime: it.mime,
+            blob: it.file,
+            previewUrl: it.url,
+            ts: Date.now(),
+            sendState: 'sending',
+        });
+        const rd = new FileReader();
+        rd.onload = () => {
+            const b64 = ((rd.result as string) || '').split(',')[1] || '';
+            if (!b64) {
+                failAt('读取文件失败', msgId);
+                return;
+            }
+            sendToPhone({
+                server,
+                uuid: getDeviceId(),
+                payload: { name: it.name, mime: it.mime, data: b64, targets },
+                onOk: () => {
+                    sent++;
+                    patchMessage(sessionKey, msgId, { sendState: undefined, sendError: undefined });
+                    onProgress?.(sent, total, false, '已发送 ' + sent + '/' + total);
+                    sendNext();
+                },
+                onFail: (e) => failAt(e, msgId),
+            });
+        };
+        rd.onerror = () => failAt('读取文件失败', msgId);
+        rd.readAsDataURL(it.file);
+    };
+
+    sendNext();
+    return true;
 }
 
 /* ============================================================ 启动 / 停止 */
@@ -635,5 +843,6 @@ export function stopTransfer(): void {
         pruneTimer = null;
     }
     knownPhones = new Set();
+    phonesSeenAt = 0;
     inited = false;
 }

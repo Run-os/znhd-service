@@ -14,12 +14,21 @@
 //
 //   反向（电脑 → 手机）：
 //   1) 手机打开 /u/<deviceId> 后，周期性 POST /phone/heartbeat/<deviceId> 报活（声明在线）
-//   2) 电脑端「发送到手机」前先 GET /phone/status/<deviceId> 判断手机是否在线
+//   2) 电脑端不再定期轮询 GET /phone/status/<deviceId>，而是在**正向长轮询的响应里捎带**
+//      在线手机名单（P0-b piggyback），并在手机上下线时被服务器主动唤醒（P0-c）；
+//      /phone/status 退化为「窗口打开」与「60s 兜底」时的按需查询（接口形态未变）
 //   3) 电脑端 POST /phone/send/<deviceId>（图片 {data,mime,name} 或文本 {text}）
 //   4) 手机端长轮询 /phone/recv/<deviceId> 取走条目 → 全屏看图/复制文本
 //
 // 说明：电脑端使用长轮询而非 WebSocket，是为了绕过征纳互动页面的 CSP 对 connect-src 的限制
 //       （GM_xmlhttpRequest 不受页面 CSP 约束）。手机端页面由本服务同源托管，也无 CORS 问题。
+//       v26.10.14-v7：在长轮询之上加 notify()（服务器主动结束挂起请求）后，推送延迟已与
+//       WebSocket 同级（亚秒级），但零依赖、零 CSP 风险、不改协议 —— 故仍不换 WebSocket。
+//
+// ⚠️ 长轮询是**闭环**：一次请求要么「等到消息提前返回」要么「等满 maxwait」，返回后立刻重连，
+//    故请求数 ≈ 时长 / maxwait，**与期间来多少消息无关**。notify() 不是新机制（deliver()
+//    早就在做同一件事），只是把「提前结束」扩展到上下线事件；它只在状态翻转时触发，
+//    额外开销 = 上下线次数（一天几十次），换来的是删掉 5s 轮询省下的几千次请求。
 
 const http = require('http');
 const fs = require('fs');
@@ -55,10 +64,16 @@ const ASSET_MIME = {
 };
 
 const PENDING_TTL = 60 * 1000;      // 暂存有效期 60s（手机先传、电脑后开也来得及）
-const MAX_BODY = 12 * 1024 * 1024; // 单图体积上限 12MB
+const MAX_BODY = 100 * 1024 * 1024; // 单次请求体上限 100MB（v26.10.14-v6：原 12MB；含图片与任意文件）
 // 每设备最多暂存条目数（内存保护上限；手机端选图张数已不限制），超出丢弃最旧。
 // 队列化（FIFO）以支持多选连发（旧实现是单槽，连发会互相覆盖丢图）。
+// ⚠️ 与 MAX_BODY 相乘是单设备理论内存峰值（100MB × 100 = 10GB，远超普通机器）。
+//    实际受 MAX_QUEUE_BYTES 兜底：条目按体积累计，超预算就从队头丢，先丢最旧、再大也不至于爆。
 const MAX_QUEUE = 100;
+// 每设备队列的**字节预算**（v26.10.14-v6）：MAX_BODY 提到 100MB 后，仅靠条数上限不足以防内存，
+// 故加一层体积上限；超出即从队头（最旧）丢弃，直到落回预算内。留 2 倍单条余量，
+// 保证「一条 100MB 刚投递、队列里还能再放一条中等体积」的正常多选连发不被自己挤掉。
+const MAX_QUEUE_BYTES = 256 * 1024 * 1024;
 const BODY_TIMEOUT = 60 * 1000;     // 读取请求体超时兜底（慢客户端/卡住连接），超时回 408 并断开
 
 // ===== 反向通道在线状态：电脑端 → 手机端 =====
@@ -78,6 +93,28 @@ function phoneMap(deviceId) {
 function shortId(id) {
   const s = String(id || '');
   return s.length > 8 ? s.slice(0, 8) + '…' : s;
+}
+
+/**
+ * 某台电脑的在线手机快照：`{ online, phones:[{id,lastSeen}] }`（按 lastSeen 倒序）。
+ * 顺手清掉已过期的（全局 sweep 每 5s 也做，这里保证**返回值即时准确**）。
+ *
+ * ⚠️ 单一来源：`/phone/status`（按需查询）与正向长轮询的 piggyback（P0-b）都走这里，
+ *    避免两处各写一份「过期判定」而语义漂移。
+ */
+function listPhones(deviceId) {
+  const now = Date.now();
+  const m = phoneOnline.get(deviceId);
+  const phones = [];
+  if (m) {
+    for (const [pid, last] of Array.from(m)) {
+      if (now - last < PHONE_TTL) phones.push({ id: pid, lastSeen: last });
+      else m.delete(pid);
+    }
+    if (m.size === 0) phoneOnline.delete(deviceId);
+  }
+  phones.sort((a, b) => b.lastSeen - a.lastSeen);
+  return { online: phones.length > 0, phones: phones };
 }
 
 // ===== 运行日志（每条前面带「精确到秒」的时间戳） =====
@@ -140,7 +177,8 @@ function sendMethodNotAllowed(res, allow) {
 //  - deliver 每次只投递队头一条，「广播」给所有正在等待的长轮询连接（每个连接各得一份拷贝），
 //    同一设备多标签页同时接收互不抢图；无人等待时保留队列等下一个连接来取，不会漏；
 //  - 投递前丢弃队头已过期（> PENDING_TTL）条目，绝不投递过期内容；
-//  - 长轮询 maxwait 钳制 [1000,30000]（默认 25000），到期返回 {empty:true}。
+//  - 长轮询 maxwait 钳制 [1000,30000]（默认 25000），到期返回 {empty:true}；
+//  - notify() 可让服务器**在业务条目之外**提前结束挂起的长轮询（P0-a，上下线事件推送）。
 //
 // 相对旧实现（每连接 400ms tick 轮询）的改进：投递本就由「POST 入队时同步 deliver」与
 // 「连接注册时立即查队」两条同步路径全覆盖，tick 定时器属空转；现改为
@@ -151,17 +189,52 @@ function createChannel(labels, opts) {
   // opts:
   //   perRecipient   —— true 时按「接收者（手机）」定向投递（反向通道用）；默认 false = 保持原「广播」语义
   //   recipientFromUrl(u) —— 从长轮询 URL 里取接收者标识；返回 null 表示该请求缺少接收者身份
+  //   decorate(uuid, obj) —— 给本通道每个 JSON 响应挂附加字段（P0-b piggyback）；返回对象则合并
   const perRecipient = !!(opts && opts.perRecipient);
   const recipientFromUrl = (opts && opts.recipientFromUrl) || null;
+  // P0-b：给本通道的**每一个** JSON 响应挂附加字段（piggyback）。返回 null/非对象即不挂。
+  // 正向通道用它捎带在线手机名单 —— 长轮询本来就每 ≤maxwait 秒回一次，白搭一辆车，
+  // 客户端因此不必再去 5s 轮询 /phone/status。
+  const decorate = (opts && opts.decorate) || null;
   const pending = new Map(); // deviceId -> Array<item> 待取走的条目队列（FIFO）
   const waiting = new Map(); // deviceId -> Set<res> 当前正在长轮询等待的连接（用于「广播」）
+  // 队列内全部条目的字节数总和（v26.10.14-v6）：配合 MAX_QUEUE_BYTES 防「体积上限提到 100MB 后
+  // 仅靠条数上限挡不住的内存爆」。入队加、任何出队路径（deliver 投递 / sweepExpired / dropExpired /
+  // enqueue 自身丢最旧）都要减——这里集中用 queueBytes -= itemBytes(it) 记账。
+  let queueBytes = 0;
+
+  function itemBytes(it) {
+    if (it && typeof it.data === 'string') return it.data.length;
+    if (it && typeof it.text === 'string') return it.text.length;
+    return 0;
+  }
+
+  /** 从队列中移除第 i 条并同步字节账（所有出队路径统一走它，避免漏减导致预算虚高） */
+  function removeAt(q, i) {
+    queueBytes -= itemBytes(q[i]);
+    q.splice(i, 1);
+  }
+
+  /**
+   * 本通道 JSON 响应的**统一出口**：先把 `decorate(uuid)` 的附加字段并入 obj 再写。
+   * 所有「会结束一次长轮询」的回复（投递 / 超时 empty / 主动唤醒）都必须走这里，
+   * 少走一处就会出现「那条长轮询没捎带名单」的缝隙。
+   */
+  function reply(res, uuid, code, obj) {
+    if (decorate) {
+      let extra = null;
+      try { extra = decorate(uuid, obj); } catch (e) { extra = null; }
+      if (extra && typeof extra === 'object') obj = Object.assign({}, obj, extra);
+    }
+    sendJson(res, code, obj);
+  }
 
   // 清理队列中全部已过期条目，清空则移除 Map 键（内存回收；由全局周期任务调用）
   function sweepExpired() {
     const now = Date.now();
     for (const [uuid, q] of pending) {
       for (let i = q.length - 1; i >= 0; i--) {
-        if (now - q[i].ts >= PENDING_TTL) q.splice(i, 1);
+        if (now - q[i].ts >= PENDING_TTL) removeAt(q, i);
       }
       if (q.length === 0) pending.delete(uuid);
     }
@@ -171,7 +244,7 @@ function createChannel(labels, opts) {
   function dropExpired(q) {
     const now = Date.now();
     for (let i = q.length - 1; i >= 0; i--) {
-      if (now - q[i].ts >= PENDING_TTL) q.splice(i, 1);
+      if (now - q[i].ts >= PENDING_TTL) removeAt(q, i);
     }
   }
 
@@ -210,7 +283,7 @@ function createChannel(labels, opts) {
       if (q.length === 0) pending.delete(uuid);
       waiting.delete(uuid);
       for (const r of conns) {
-        try { sendJson(r, 200, p); }
+        try { reply(r, uuid, 200, p); }
         catch (e) { /* 已断开的连接，忽略 */ }
       }
       logEvent(`[投递] 设备 ${uuid} 已向 ${conns.length} 个${labels.recv}投递条目（${p.type}）${q.length ? `，队列剩余 ${q.length} 条` : ''}`);
@@ -226,7 +299,7 @@ function createChannel(labels, opts) {
       if (q.length === 0) pending.delete(uuid);
       waiting.delete(uuid);
       for (const r of conns) {
-        try { sendJson(r, 200, p); sent++; }
+        try { reply(r, uuid, 200, p); sent++; }
         catch (e) { /* 已断开的连接，忽略 */ }
       }
       logEvent(`[投递] 设备 ${uuid} 已向 ${sent} 个${labels.recv}投递条目（${p.type}·发给全部手机）${q.length ? `，队列剩余 ${q.length} 条` : ''}`);
@@ -240,7 +313,7 @@ function createChannel(labels, opts) {
       );
       if (idx < 0) continue; // 没有发给它的条目：保持等待（不结束这次长轮询）
       const p = q[idx];
-      try { sendJson(r, 200, p); sent++; }
+      try { reply(r, uuid, 200, p); sent++; }
       catch (e) { continue; }
       set.delete(r);
       p.deliveredTo.add(rid);
@@ -253,14 +326,20 @@ function createChannel(labels, opts) {
     }
   }
 
-  // 入队（FIFO）：超出 MAX_QUEUE 丢弃最旧一条；入队后若存在等待连接立即投递。
+  // 入队（FIFO）：超出 MAX_QUEUE 条或 MAX_QUEUE_BYTES 字节即丢弃最旧一条；
+  // 入队后若存在等待连接立即投递。
+  // v26.10.14-v6：MAX_BODY 从 12MB 提到 100MB 后，仅靠条数上限（100 条）不再能防内存爆，
+  //   故补一层字节预算：按 queueBytes 累计，从队头（最旧）丢到落回预算内为止。
+  //   （itemBytes / queueBytes 定义在 createChannel 顶部，见 removeAt 附近。）
   function enqueue(uuid, item) {
     if (!pending.has(uuid)) pending.set(uuid, []);
     const q = pending.get(uuid);
     q.push(item);
-    if (q.length > MAX_QUEUE) {
+    queueBytes += itemBytes(item);
+    while (q.length > MAX_QUEUE || (queueBytes > MAX_QUEUE_BYTES && q.length > 1)) {
       const dropped = q.shift();
-      logEvent(`[丢弃] 设备 ${uuid} ${labels.dropQ}已满（>${MAX_QUEUE}），丢弃最旧条目（${dropped.type}）`);
+      queueBytes -= itemBytes(dropped);
+      logEvent(`[丢弃] 设备 ${uuid} ${labels.dropQ}已满（>${MAX_QUEUE} 条 / >${Math.round(MAX_QUEUE_BYTES / 1024 / 1024)}MB），丢弃最旧条目（${dropped.type}）`);
     }
     if (item.type === 'image') {
       logEvent(labels.sendImg(uuid, item, q.length));
@@ -290,6 +369,10 @@ function createChannel(labels, opts) {
 
     if (!waiting.has(uuid)) waiting.set(uuid, new Set());
     waiting.get(uuid).add(res);
+    // P0-c 协商标记：客户端带 `?phones=1` 表示「我认识 type:'phones' 这种主动唤醒」。
+    // ⚠️ 老客户端不带该参数 → 服务端**绝不**主动唤醒它：它收到不认识的载荷只会 1s 后重连，
+    //    被无谓唤醒反而放大请求数，与本次优化目标背道而驰。（`res.__recipient` 同款挂标记做法。）
+    res.__wakeSub = u.searchParams.get('phones') === '1';
 
     let timer = null;
     // 幂等清理：从等待集合移除并撤销定时器。res 'close' 在「响应已发出（投递/超时）」与
@@ -316,24 +399,67 @@ function createChannel(labels, opts) {
     timer = setTimeout(() => {
       timer = null;
       if (res.writableEnded || res.destroyed) { cleanup(); return; }
-      try { sendJson(res, 200, { empty: true }); } catch (e) { /* 已断开，忽略 */ }
+      try { reply(res, uuid, 200, { empty: true }); } catch (e) { /* 已断开，忽略 */ }
       cleanup();
     }, maxwait);
     return true;
   }
 
-  return { pending, waiting, enqueue, deliver, handlePoll, sweepExpired };
+  /**
+   * 主动唤醒（P0-a）：立即结束该设备当前挂起的全部长轮询，并回一条 payload。
+   *
+   * 用途：手机**上线 / 下线**这类「没有业务条目、但接收端必须立刻知道」的事件 ——
+   * 长轮询本身就挂在服务器上，服务器随时可以提前收尾，延迟上等价于 WebSocket 推送
+   * （亚秒级），却零依赖、零 CSP 风险、零协议变更。
+   *
+   * @param {string} uuid 设备 ID
+   * @param {object} payload 回给客户端的 JSON（如 `{ type:'phones', phones:[...] }`）
+   * @param {{subscribersOnly?: boolean}} [o] subscribersOnly=true 时只唤醒声明过 `?phones=1` 的连接
+   * @returns {number} 实际被唤醒的连接数（0 = 当时没有在等的连接，属正常情况）
+   */
+  function notify(uuid, payload, o) {
+    const set = waiting.get(uuid);
+    if (!set || set.size === 0) return 0;
+    // ⚠️ 与 deliver 用**同一份**连接有效性过滤（B6 的教训：绝不向已结束/已销毁的 res 写）
+    const conns = Array.from(set).filter(
+      r => !r.writableEnded && !r.destroyed && (!o || !o.subscribersOnly || r.__wakeSub === true)
+    );
+    if (conns.length === 0) return 0;
+    let n = 0;
+    for (const r of conns) {
+      try { reply(r, uuid, 200, payload); n++; } catch (e) { continue; }
+      // 逐个摘除（不是整表 delete）——非订阅连接必须留在等待集合里继续等业务条目
+      set.delete(r);
+    }
+    if (set.size === 0) waiting.delete(uuid);
+    if (n > 0) {
+      logEvent(`[唤醒] 设备 ${uuid} 已提前结束 ${n} 个${labels.recv}长轮询（${(payload && payload.type) || 'event'}）`);
+    }
+    return n;
+  }
+
+  return { pending, waiting, enqueue, deliver, handlePoll, sweepExpired, notify };
 }
 
 // 正向通道：手机 → 电脑（POST /u 入队，GET /recv 长轮询取走）
 // v26.10.13-v3：入队时带上发送者手机 ID（item.from，见 parseItemBody 的 withPhoneId），
 // 投递时随条目回传，电脑端按它把内容归到对应手机的会话（多台在线不再全进聚合会话）。
-const forwardChannel = createChannel({
-  recv: '电脑端接收端',
-  dropQ: '暂存队列',
-  sendImg: (uuid, item, len) => `[发送] 设备 ${uuid} 手机端发送图片：${cleanLogName(item.name)}（${item.mime}，约 ${b64SizeKB(item.data)}KB）${fromText(item)}，队列 ${len} 条`,
-  sendTxt: (uuid, item) => `[发送] 设备 ${uuid} 手机端发送文本：${previewText(item.text)}${fromText(item)}`
-});
+const forwardChannel = createChannel(
+  {
+    recv: '电脑端接收端',
+    dropQ: '暂存队列',
+    sendImg: (uuid, item, len) => `[发送] 设备 ${uuid} 手机端发送图片：${cleanLogName(item.name)}（${item.mime}，约 ${b64SizeKB(item.data)}KB）${fromText(item)}，队列 ${len} 条`,
+    sendTxt: (uuid, item) => `[发送] 设备 ${uuid} 手机端发送文本：${previewText(item.text)}${fromText(item)}`
+  },
+  {
+    // P0-b：正向长轮询的**每个**响应都捎带当前在线手机名单（含投递条目与 {empty:true} 超时）。
+    // 电脑端因此不必再 5s 轮询 /phone/status —— 长轮询本就每 ≤25s 回一次，白搭一辆车。
+    // ⚠️ 纯新增字段：老脚本 JSON.parse 后忽略未知字段；老**中继**不返回该字段时，
+    //    电脑端有 60s 兜底轮询（见 src/lib/transfer/store.ts 的 startPhonesWatch），
+    //    故两端可各自独立升级。⚠️ 必须走 createChannel 的**第二参数** opts（不是 labels）。
+    decorate: (uuid) => ({ phones: listPhones(uuid).phones })
+  }
+);
 
 // 反向通道：电脑 → 手机（POST /phone/send 入队，GET /phone/recv 长轮询取走）
 // v26.10.06-v4 起开启**按手机定向投递**：条目带 targets，长轮询按 URL 上的 phoneId 过滤。
@@ -379,7 +505,7 @@ async function parseItemBody(req, res, opts) {
   } catch (e) {
     // 请求体超限（> MAX_BODY）：明确回 413（Payload Too Large）而非通用 500/静默断开。
     // 旧实现 req.destroy() 会掐断连接，客户端只见笼统的「网络错误」，无从定位是体积问题。
-    if (e && e.statusCode === 413) sendJson(res, 413, { error: '内容过大，超过单次上限（约 12MB），请压缩后再发送' });
+    if (e && e.statusCode === 413) sendJson(res, 413, { error: '内容过大，超过单次上限（约 100MB），请压缩后再发送' });
     else if (e && e.statusCode === 408) sendJson(res, 408, { error: '读取请求超时，请检查网络后重试' });
     else sendJson(res, 400, { error: '读取请求失败' });
     return null;
@@ -398,11 +524,15 @@ async function parseItemBody(req, res, opts) {
     return { type: 'text', text: payload.text.slice(0, MAX_BODY), ts: Date.now(), targets, deliveredTo: new Set(), from };
   }
   if (typeof payload.data === 'string') {
-    // 图片（base64）
+    // 带 data 的载荷 = 二进制（base64）。v26.10.14-v6 起按 mime 分流：
+    //   image/* → type 'image'（电脑端走图片气泡/九宫格）；其它 → type 'file'（走文件卡片）。
+    // 缺 mime 时按图片处理（兼容只发图片的老手机页）。
+    const mime = String(payload.mime || 'image/jpeg').slice(0, 100);
+    const isImage = /^image\//i.test(mime);
     return {
-      type: 'image',
-      name: String(payload.name || 'image.jpg').slice(0, 200),
-      mime: String(payload.mime || 'image/jpeg').slice(0, 100),
+      type: isImage ? 'image' : 'file',
+      name: String(payload.name || (isImage ? 'image.jpg' : 'file.bin')).slice(0, 200),
+      mime,
       data: payload.data.slice(0, MAX_BODY),
       ts: Date.now(),
       targets,
@@ -654,6 +784,9 @@ const server = http.createServer(async (req, res) => {
       if (!wasOnline) {
         phoneWasOnline.add(key);
         logEvent(`[连接] 设备 ${id} 的手机 ${phoneId} 已连接（手机端在线）`);
+        // P0-c：主动唤醒电脑端挂起的长轮询 → 手机上线**秒级**可见（原来要等 5s 轮询）。
+        // subscribersOnly：只唤醒声明过 `?phones=1` 的新客户端，老脚本不受打扰。
+        forwardChannel.notify(id, { type: 'phones', phones: listPhones(id).phones }, { subscribersOnly: true });
       }
       sendJson(res, 200, { ok: true, phoneId: phoneId, phoneCount: m.size });
       return;
@@ -662,22 +795,12 @@ const server = http.createServer(async (req, res) => {
 
     // /phone/status/<deviceId> ：电脑端查询**有哪些手机在线**（用于显示数量 + 发送时选择目标）
     // 返回 { online, phones:[{id,lastSeen}] }；`online` 保留给老脚本（= phones.length > 0）。
+    // ⚠️ v26.10.14-v7 起电脑端**不再 5s 轮询这个接口**（那是 8h 里 5760 次请求的最大头）：
+    //    名单改由正向长轮询 piggyback 实时捎带（见 createChannel 的 decorate）+ 上下线唤醒；
+    //    这里只在「窗口打开」与「兜底 60s」时被按需调用，接口本身语义与形态完全不变。
     const st = /^\/phone\/status\/([a-z0-9-]{8,64})$/i.exec(path);
     if (st && method === 'GET') {
-      const id = st[1];
-      const now = Date.now();
-      const m = phoneOnline.get(id);
-      const phones = [];
-      if (m) {
-        for (const [pid, last] of Array.from(m)) {
-          // 顺手清掉已过期的（全局 sweep 每 5s 也做，这里保证接口返回即时准确）
-          if (now - last < PHONE_TTL) phones.push({ id: pid, lastSeen: last });
-          else m.delete(pid);
-        }
-        if (m.size === 0) phoneOnline.delete(id);
-      }
-      phones.sort((a, b) => b.lastSeen - a.lastSeen);
-      sendJson(res, 200, { online: phones.length > 0, phones: phones });
+      sendJson(res, 200, listPhones(st[1]));
       return;
     }
     if (st) { sendMethodNotAllowed(res, 'GET'); return; }
@@ -724,6 +847,9 @@ setInterval(() => {
         if (phoneWasOnline.has(key)) {
           phoneWasOnline.delete(key);
           logEvent(`[断开] 设备 ${id} 的手机 ${pid} 已断开（离线超时）`);
+          // P0-c：下线同样主动唤醒（与上线对称）。清扫周期是 5s，故「真离线」的时刻
+          // 精度本就受 PHONE_TTL + 清扫周期限制；唤醒只保证「服务端判定之后」客户端秒级知道。
+          forwardChannel.notify(id, { type: 'phones', phones: listPhones(id).phones }, { subscribersOnly: true });
         }
       }
     }

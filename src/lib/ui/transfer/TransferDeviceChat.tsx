@@ -9,6 +9,7 @@ import {
     CheckIcon,
     CopyIcon,
     DownloadIcon,
+    FileTextIcon,
     ImageIcon,
     PaperclipIcon,
     SmartphoneIcon,
@@ -28,10 +29,12 @@ import {
     PHONE_SESSION_KEY,
     PHONE_SESSION_LABEL,
     removeTransferMessage,
+    sendFilesToSession,
     sendImagesToSession,
     sendTextToSession,
     sessionSendable,
 } from '@/lib/transfer/store';
+import { formatBytes } from '@/lib/sniffer';
 import type { DeviceSession, PhoneInfo, TransferMessage } from '@/lib/transfer/types';
 // 预览相关的通用件全部来自共享层（与手机上传页同一份，v26.10.08-v13 起）
 import { appendPreviewActions } from '../../../../shared/preview/actions';
@@ -75,6 +78,14 @@ interface PendingImage {
     emoji?: boolean;
 }
 
+/** 待发文件（v26.10.14-v6）：与待发图片同构，但不走压缩、单独一个列表 */
+interface PendingFile {
+    file: File;
+    name: string;
+    mime: string;
+    url: string;
+}
+
 /**
  * 设备会话聊天区（v26.10.12-v1，传输助手第三栏的主体）。
  *
@@ -103,6 +114,8 @@ export default function TransferDeviceChat({
     const { token } = theme.useToken();
     const [sendText, setSendText] = useState('');
     const [pendingImages, setPendingImages] = useState<PendingImage[]>([]);
+    /** v26.10.14-v6：待发文件列表（与待发图片分开显示与发送；文件不压缩、不限图片 MIME） */
+    const [pendingFiles, setPendingFiles] = useState<PendingFile[]>([]);
     const [sending, setSending] = useState(false);
     const [progress, setProgress] = useState<{ done: number; total: number; failed: boolean; text: string } | null>(
         null
@@ -175,6 +188,20 @@ export default function TransferDeviceChat({
         a.remove();
         window.setTimeout(() => URL.revokeObjectURL(a.href), 1000);
         addLog('图片已下载: ' + fname, 'success');
+    };
+
+    /** 下载文件（v26.10.14-v6）：与图片下载同一套「锚点 + objectURL」做法 */
+    const doDownloadFile = (msg: TransferMessage) => {
+        if (!msg.blob) return;
+        const fname = msg.name || 'file.bin';
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(msg.blob);
+        a.download = fname;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+        addLog('文件已下载: ' + fname, 'success');
     };
 
     const doSendText = () => {
@@ -299,6 +326,90 @@ export default function TransferDeviceChat({
         });
     };
 
+    /**
+     * 选文件（v26.10.14-v6）：与选图同构（加入待发列表，点「发送」才真正上传）。
+     * ⚠️ 与 `pickImages` 的两点差异：
+     *  ① `accept` 留空（任意类型；用户需求就是「任意文件传输」）；
+     *  ② 不设 `multiple` 限制其实也可以，但**保持 multiple** 以便一次发多个文件。
+     * 中继按 mime 分流：这里若选中图片也会走 file 通道（type:'file'，电脑端显示为文件卡片）——
+     * 这本就是用户选了「文件」按钮的语义（要发图片请用「图片上传」按钮，那条路会压缩）。
+     */
+    const pickFiles = () => {
+        if (!sendable) {
+            addLog('[传输助手] 当前无在线设备，无法发送', 'error', true);
+            return;
+        }
+        const inp = document.createElement('input');
+        inp.type = 'file';
+        inp.multiple = true;
+        inp.style.display = 'none';
+        document.body.appendChild(inp);
+        const cleanupFocus = () => {
+            window.removeEventListener('focus', cleanupFocus);
+            try {
+                inp.remove();
+            } catch (e) {
+                /* 已移除 */
+            }
+        };
+        inp.onchange = () => {
+            const files = Array.prototype.slice.call(inp.files || []);
+            window.removeEventListener('focus', cleanupFocus);
+            inp.remove();
+            if (!files.length) return;
+            setPendingFiles((prev) =>
+                prev.concat(
+                    files.map((f: File) => ({
+                        file: f,
+                        name: f.name || 'file.bin',
+                        mime: f.type || 'application/octet-stream',
+                        url: URL.createObjectURL(f),
+                    }))
+                )
+            );
+        };
+        window.addEventListener('focus', cleanupFocus);
+        inp.click();
+    };
+
+    const removePendingFile = (i: number) => {
+        if (sending) return;
+        setPendingFiles((prev) => {
+            const arr = prev.slice();
+            const removed = arr.splice(i, 1)[0];
+            if (removed) {
+                try {
+                    URL.revokeObjectURL(removed.url);
+                } catch (e) {
+                    /* 忽略 */
+                }
+            }
+            return arr;
+        });
+    };
+
+    /** 投递一批文件（不压缩、按体积预检，逐条顺序发送；进度复用同一个 progress 条） */
+    const sendFilesNow = (list: PendingFile[], afterOk: () => void) => {
+        setSending(true);
+        const ok = sendFilesToSession(session.key, list, (done, total, failed, text) => {
+            setProgress({ done, total, failed, text });
+            if (done >= total || failed) {
+                setSending(false);
+                if (!failed) {
+                    afterOk();
+                    setProgress(null);
+                }
+            }
+        });
+        if (!ok) setSending(false);
+    };
+
+    const confirmSendFiles = () => {
+        if (!pendingFiles.length || !sendable) return;
+        const snapshot = pendingFiles.slice();
+        sendFilesNow(snapshot, () => setPendingFiles([]));
+    };
+
     const confirmSendImage = () => {
         if (!pendingImages.length || !sendable) return;
         // 发送按**快照**进行：列表在发送期间被清空/改动都不影响这一批
@@ -387,6 +498,73 @@ export default function TransferDeviceChat({
                             }}
                         />
                     </ImageOverlayActions>
+                </ChatBubble>
+            );
+        }
+        // v26.10.14-v6：文件气泡（与图片分开渲染——文件不缩略图、不预览，走「图标 + 文件名 + 大小 + 下载」）
+        if (msg.type === 'file') {
+            return (
+                <ChatBubble
+                    key={msg.id}
+                    side={side}
+                    maxWidth="74%"
+                    danger={msg.sendState === 'failed'}
+                    meta={metaOf(msg)}
+                    avatar={isUser ? <UserIcon size={15} /> : peerAvatar}
+                    avatarStyle={isUser ? undefined : peerAvatarStyle}>
+                    <div
+                        data-transfer-file-bubble="1"
+                        style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 10,
+                            minWidth: 0,
+                            opacity: msg.sendState === 'sending' ? 0.55 : 1,
+                        }}>
+                        <span
+                            style={{
+                                flex: '0 0 auto',
+                                width: 32,
+                                height: 32,
+                                borderRadius: 6,
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                // 表情/图片气泡是实心主色，这里用半透明底以适配左右两侧底色
+                                background: isUser ? 'rgba(255,255,255,0.22)' : token.colorFillSecondary,
+                                color: isUser ? '#fff' : token.colorTextSecondary,
+                            }}>
+                            <FileTextIcon size={18} />
+                        </span>
+                        <div style={{ flex: '1 1 auto', minWidth: 0 }}>
+                            <div
+                                title={msg.name || 'file'}
+                                style={{
+                                    fontSize: 13,
+                                    fontWeight: 500,
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    whiteSpace: 'nowrap',
+                                }}>
+                                {msg.name || 'file'}
+                            </div>
+                            <div style={{ fontSize: 11, opacity: 0.75, marginTop: 1 }}>
+                                {formatBytes(msg.blob ? msg.blob.size : 0)}
+                                {msg.mime ? ' · ' + msg.mime : ''}
+                            </div>
+                        </div>
+                        <Button
+                            size="small"
+                            aria-label="下载文件"
+                            disabled={msg.sendState === 'sending' || !msg.blob}
+                            onClick={() => doDownloadFile(msg)}
+                            style={{ flex: '0 0 auto' }}>
+                            下载
+                        </Button>
+                    </div>
+                    {msg.sendState === 'failed' && msg.sendError ? (
+                        <div style={{ fontSize: 11, marginTop: 4 }}>{msg.sendError}</div>
+                    ) : null}
                 </ChatBubble>
             );
         }
@@ -611,6 +789,78 @@ export default function TransferDeviceChat({
                     </Button>
                 </div>
             )}
+            {/* 待发送文件（v26.10.14-v6）：横向卡片列表，点「发送」才上传；文件不压缩、不走缩略图 */}
+            {pendingFiles.length > 0 && (
+                <div style={{ flex: '0 0 auto', padding: '8px 12px 0' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+                        <span style={{ fontSize: 12, color: token.colorTextSecondary }}>待发送文件</span>
+                        <span style={{ fontSize: 12, color: token.colorTextTertiary }}>
+                            已选 {pendingFiles.length} 个
+                        </span>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                        {pendingFiles.map((f, i) => (
+                            <div
+                                key={f.url}
+                                style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 8,
+                                    padding: '6px 10px',
+                                    borderRadius: 8,
+                                    border: '1px solid ' + token.colorBorderSecondary,
+                                    background: token.colorFillQuaternary,
+                                    minWidth: 0,
+                                }}>
+                                <FileTextIcon size={16} />
+                                <div style={{ flex: '1 1 auto', minWidth: 0 }}>
+                                    <div
+                                        title={f.name}
+                                        style={{
+                                            fontSize: 12,
+                                            overflow: 'hidden',
+                                            textOverflow: 'ellipsis',
+                                            whiteSpace: 'nowrap',
+                                        }}>
+                                        {f.name}
+                                    </div>
+                                    <div style={{ fontSize: 11, color: token.colorTextTertiary }}>
+                                        {formatBytes(f.file.size)}
+                                    </div>
+                                </div>
+                                <span
+                                    title="移除这个文件"
+                                    onClick={() => removePendingFile(i)}
+                                    style={{
+                                        flex: '0 0 auto',
+                                        width: 20,
+                                        height: 20,
+                                        borderRadius: '50%',
+                                        background: 'rgba(0,0,0,0.35)',
+                                        color: '#fff',
+                                        fontSize: 13,
+                                        lineHeight: '20px',
+                                        textAlign: 'center',
+                                        cursor: sending ? 'not-allowed' : 'pointer',
+                                        userSelect: 'none',
+                                    }}>
+                                    ×
+                                </span>
+                            </div>
+                        ))}
+                    </div>
+                    <Button
+                        color="primary"
+                        variant="solid"
+                        block
+                        disabled={!sendable}
+                        loading={sending}
+                        onClick={confirmSendFiles}
+                        style={{ marginTop: 8 }}>
+                        发送 {pendingFiles.length} 个文件
+                    </Button>
+                </div>
+            )}
             {progress && (
                 <div style={{ flex: '0 0 auto', padding: '8px 12px 0' }}>
                     <Progress
@@ -652,10 +902,11 @@ export default function TransferDeviceChat({
                     },
                     {
                         key: 'file',
-                        label: '附件',
-                        tooltip: '暂不支持发送附件：中继服务只转发图片与文本',
+                        label: '文件',
+                        tooltip: '选择任意文件发送到手机（不压缩，单次上限约 100MB）',
                         icon: <PaperclipIcon size={15} />,
-                        disabled: true,
+                        onClick: pickFiles,
+                        disabled: !sendable || sending,
                     },
                 ]}
             />

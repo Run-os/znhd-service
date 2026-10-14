@@ -448,3 +448,19 @@ export function MessageIcon(p: IconProps) {
         </SvgIcon>
     );
 }
+
+/**
+ * 单个文件（Lucide `file-text`）：v26.10.14-v6 新增，用于「任意文件传输」的文件卡片图标。
+ * 与 `FilesIcon`（folder，第一栏「文件」分组入口）区分：那个是分组入口，这个是单条文件本体。
+ */
+export function FileTextIcon(p: IconProps) {
+    return (
+        <SvgIcon {...p}>
+            <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" />
+            <path d="M14 2v4a2 2 0 0 0 2 2h4" />
+            <path d="M10 9H8" />
+            <path d="M16 13H8" />
+            <path d="M16 17H8" />
+        </SvgIcon>
+    );
+}

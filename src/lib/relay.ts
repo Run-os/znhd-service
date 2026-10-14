@@ -15,7 +15,8 @@ import { prepareForTransfer } from '../../shared/image/prepare';
 const DEVICE_ID_KEY = 'znhd_device_id';
 // 单请求体上限，须与 relay-server 的 MAX_BODY 保持一致（服务端按「整段 JSON 体积」掐断）。
 // 发图前据此预检体积，避免 base64 膨胀后超过上限，被服务端拒绝时只见笼统的网络/服务器错误。
-export const RELAY_MAX_BODY = 12 * 1024 * 1024;
+// v26.10.14-v6：12MB → 100MB（用户指定；同时支持任意文件传输）。
+export const RELAY_MAX_BODY = 100 * 1024 * 1024;
 /** 待发图片：File（带 name）或裸 Blob（无 name）。用交叉类型收窄，避免断言与 any */
 type ImageFile = Blob & { name?: string };
 /** 体积预检只看 size（name/mime 由入参单独传），故用结构类型兼容 File/Blob 与空值 */
@@ -35,7 +36,7 @@ type SendToPhonePayload = ({ text: string } | { name: string; mime: string; data
 
 /**
  * 估算把该文件作为一条 POST body（含 name+mime+base64(data) 与 JSON 结构开销）的体积。
- * 仅用于「发送到手机」发前预检，与服务端 MAX_BODY 对齐（约 12MB）。
+ * 仅用于「发送到手机」发前预检，与服务端 MAX_BODY 对齐（约 100MB）。
  * @param {File|Blob} file - 待发图片文件
  * @param {string} [name] - 文件名
  * @param {string} [mime] - MIME 类型
@@ -336,6 +337,14 @@ interface PhoneReceiveOptions {
     server?: string | null;
     uuid: string;
     onStatus?: (text: string) => void;
+    /**
+     * 在线手机名单（v26.10.14-v7，P0-b/P0-c）：
+     * 中继会在**每个**长轮询响应里捎带 `phones`（piggyback），并在手机上下线时主动结束
+     * 当前挂起的长轮询回一条 `{type:'phones', phones}`（唤醒）。两路都走这个回调。
+     * 电脑端据此免去 5s 一次的 `/phone/status` 轮询 —— 那是 8h 里 5760 次请求的最大头。
+     * ⚠️ 老中继不返回该字段 → 回调不会被调用，由 store 的 60s 兜底轮询接管。
+     */
+    onPhones?: (list: { id: string; lastSeen: number }[]) => void;
     /** from（v26.10.13-v6）：发送者手机 ID（中继随条目回传；老中继/未知发送者时为空） */
     onImage?: (img: {
         blob: Blob;
@@ -345,6 +354,11 @@ interface PhoneReceiveOptions {
         from?: string;
         emoji?: boolean;
     }) => void;
+    /**
+     * 收到任意文件（v26.10.14-v6）：中继按 mime 分流，非 image/* 的一律走这里。
+     * 与 onImage 分开，是因为两者的落库/渲染语义不同（图片走缩略图九宫格，文件走文件卡片）。
+     */
+    onFile?: (file: { blob: Blob; previewUrl: string; name?: string; mime?: string; from?: string }) => void;
     onText?: (item: { text: string; ts?: number; from?: string }) => void;
     onConnected?: () => void;
 }
@@ -387,7 +401,10 @@ export function startPhoneReceive(opt: PhoneReceiveOptions) {
         // 让「已自动开始接收」日志尽快出现；后续轮询用长 maxwait 实时等待图片。
         const maxwait = firstPoll ? 1000 : 25000;
         firstPoll = false;
-        const url = server + '/recv/' + encodeURIComponent(uuid) + '?maxwait=' + maxwait;
+        // `phones=1`（v26.10.14-v7）= 协商标记：告诉中继「本客户端认识 `type:'phones'` 主动唤醒」。
+        // 中继只唤醒带该标记的连接 —— 老脚本不带，就不会被上下线事件无谓打断（它收到不认识的
+        // 载荷只会 1s 后重连，白打请求）。参数对老中继是无害的未知 query，向后兼容。
+        const url = server + '/recv/' + encodeURIComponent(uuid) + '?maxwait=' + maxwait + '&phones=1';
         try {
             lastXhr = GM_xmlhttpRequest({
                 method: 'GET',
@@ -403,19 +420,61 @@ export function startPhoneReceive(opt: PhoneReceiveOptions) {
                         } catch (e) {
                             data = null;
                         }
+                        // v26.10.14-v7（P0-b/P0-c）：先消化随响应捎带的在线手机名单 ——
+                        // 长轮询的**每个**响应（含 {empty:true} 超时与主动唤醒）都会带它。
+                        // 必须在分支判断之前处理，否则 {empty:true} 会提前 return 把名单丢掉。
+                        if (data && Array.isArray(data.phones)) {
+                            if (opt.onPhones) {
+                                try {
+                                    opt.onPhones(
+                                        data.phones
+                                            .filter((p: unknown) => !!p)
+                                            .map((p: { id?: unknown; lastSeen?: unknown }) => ({
+                                                id: String(p.id || ''),
+                                                lastSeen: Number(p.lastSeen) || 0,
+                                            }))
+                                    );
+                                } catch (e) {
+                                    /* 单次名单异常不影响接收循环 */
+                                }
+                            }
+                        }
+                        // 上下线唤醒：只有名单、没有业务条目 → 更新完继续等待
+                        if (data && data.type === 'phones') {
+                            poll();
+                            return;
+                        }
                         if (data && data.empty) {
                             poll();
                             return;
                         }
-                        if (data && data.type === 'image' && data.data) {
-                            const blob = base64ToBlob(data.data, data.mime || 'image/jpeg');
+                        if (data && (data.type === 'image' || data.type === 'file') && data.data) {
+                            // v26.10.14-v6：type 'file' 与 'image' 共用同一条二进制解码路径，
+                            // 只是回调不同（文件不回 emoji 标记、不参与表情包过滤）。
+                            const isFile = data.type === 'file';
+                            const blob = base64ToBlob(
+                                data.data,
+                                data.mime || (isFile ? 'application/octet-stream' : 'image/jpeg')
+                            );
                             // 预览统一用 objectURL（与「发送到手机」待发列表一致）：
                             // ① 画廊上限淘汰/单张移除/清空全部时的 URL.revokeObjectURL 真正生效
                             //   （data:URL 字符串无法 revoke，旧写法实为无效空操作）；
                             // ② 避免最多 27 张图的 base64 dataURL 长字符串常驻 JS 堆（可达几十 MB）。
                             const previewUrl = URL.createObjectURL(blob);
-                            if (opt.onStatus) opt.onStatus('收到图片：' + (data.name || 'image'));
-                            if (opt.onImage)
+                            if (opt.onStatus)
+                                opt.onStatus(
+                                    (isFile ? '收到文件：' : '收到图片：') + (data.name || (isFile ? 'file' : 'image'))
+                                );
+                            if (isFile) {
+                                if (opt.onFile)
+                                    opt.onFile({
+                                        blob: blob,
+                                        previewUrl: previewUrl,
+                                        name: data.name,
+                                        mime: data.mime,
+                                        from: data.from,
+                                    });
+                            } else if (opt.onImage) {
                                 opt.onImage({
                                     blob: blob,
                                     previewUrl: previewUrl,
@@ -425,6 +484,7 @@ export function startPhoneReceive(opt: PhoneReceiveOptions) {
                                     // v26.10.14-v3：表情包标记透传（老中继不带 → undefined → 当作普通图片）
                                     emoji: data.emoji === true,
                                 });
+                            }
                             poll(); // 继续接收下一张
                             return;
                         }
@@ -550,9 +610,9 @@ export function sendTestImage(opt: SendTestImageOptions) {
                 }
                 const mime = blob.type || 'image/jpeg';
                 const name = testImageName(mime);
-                // 体积预检：与手机上传同一套判据，避免 base64 膨胀后撞 12MB 上限
+                // 体积预检：与手机上传同一套判据，避免 base64 膨胀后撞 100MB 上限
                 if (imagePayloadBytes(blob, name, mime) > RELAY_MAX_BODY) {
-                    fail('测试图片过大（超过中继单次上限约 12MB）');
+                    fail('测试图片过大（超过中继单次上限约 100MB）');
                     return;
                 }
                 blobToBase64(blob)

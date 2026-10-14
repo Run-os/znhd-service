@@ -22,6 +22,8 @@ export interface DeviceEntry {
 function previewText(msg?: TransferMessage): string {
     if (!msg) return '';
     if (msg.type === 'image') return '[图片]';
+    // v26.10.14-v6：文件预览带文件名（纯 [文件] 看不出是哪个，用户在列表里选会话时没有信息量）
+    if (msg.type === 'file') return '[文件] ' + (msg.name || '');
     return (msg.text || '').replace(/\s+/g, ' ').slice(0, 40);
 }
 
@@ -200,7 +202,7 @@ export default function TransferSessionList({
                                             whiteSpace: 'nowrap',
                                             marginTop: 1,
                                         }}>
-                                        所有会话的图片与文本
+                                        所有会话的图片、文件与文本
                                     </div>
                                 </div>
                             </div>

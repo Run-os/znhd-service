@@ -215,6 +215,63 @@ body {
     border-radius: 8px;
 }
 
+/* 文件气泡（v26.10.14-v6）：图标 + 文件名 + 大小 + 下载；比图片气泡略窄，不留白 */
+.znhd-chat-bubble-file {
+    padding: 8px 10px;
+}
+
+.znhd-chat-file {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    max-width: min(260px, 62vw);
+}
+
+.znhd-chat-file-icon {
+    flex: 0 0 auto;
+    display: inline-flex;
+    width: 32px;
+    height: 32px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    background: rgba(0, 0, 0, 0.18);
+    color: inherit;
+}
+
+.znhd-chat-file-main {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.znhd-chat-file-name {
+    font-size: 13px;
+    font-weight: 500;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.znhd-chat-file-size {
+    font-size: 11px;
+    opacity: 0.75;
+    margin-top: 1px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.znhd-chat-file-dl {
+    flex: 0 0 auto;
+    font-size: 12px;
+    color: inherit;
+    text-decoration: underline;
+    opacity: 0.9;
+}
+
 /* 收到文本的「复制」小按钮 */
 .znhd-chat-copy {
     display: block;

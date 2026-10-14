@@ -19,22 +19,29 @@ export interface TransferSettings {
     autoOpenOnReceive: boolean;
 }
 
-/** 一条传输记录（收 / 发共用；图片带 blob 与 objectURL，文本带 text） */
+/** 一条传输记录（收 / 发共用；图片/文件带 blob 与 objectURL，文本带 text） */
 export interface TransferMessage {
     /** 模块内唯一 id（`ts-随机后缀`） */
     id: string;
-    type: 'image' | 'text';
+    /**
+     * 消息类型（v26.10.14-v6 起新增 'file'）：
+     *  · 'image' —— 图片（走缩略图/九宫格 + 放大预览 + 复制/打印）；
+     *  · 'file'  —— 任意非图片文件（走文件卡片：图标 + 文件名 + 大小 + 下载）；
+     *  · 'text'  —— 纯文本。
+     * 由中继按 mime 判定（`image/*` → image，其余 → file），两端据此分流渲染。
+     */
+    type: 'image' | 'file' | 'text';
     /** in = 手机发来；out = 本机发出 */
     direction: 'in' | 'out';
     /** 对方手机 ID（老版中继无法归组时为聚合会话键，见 store.ts 的 PHONE_SESSION_KEY） */
     sessionKey: string;
-    /** 图片文件名 */
+    /** 文件名（图片与文件共用） */
     name?: string;
-    /** 图片 MIME */
+    /** MIME（图片与文件共用；文件卡片按它选图标） */
     mime?: string;
-    /** 图片本体（复制 / 下载 / 打印都用它；注意移除时要 revoke previewUrl） */
+    /** 二进制本体（图片 / 文件共用；复制 / 下载 / 打印都用它；注意移除时要 revoke previewUrl） */
     blob?: Blob;
-    /** 图片预览 objectURL（缩略图与放大预览都用它） */
+    /** 预览 objectURL（图片缩略图用它；文件卡片不用但一并保留，便于「点击下载」复用同一 blob 源） */
     previewUrl?: string;
     /** 文本内容 */
     text?: string;

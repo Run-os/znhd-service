@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { App as AntApp, Badge, Button, Image, Input, Tag } from 'antd';
-import { PictureOutlined, PrinterOutlined, SendOutlined, SmileOutlined } from '@ant-design/icons';
+import { PaperClipOutlined, PictureOutlined, PrinterOutlined, SendOutlined, SmileOutlined } from '@ant-design/icons';
 import { useReactToPrint } from 'react-to-print';
 import {
     blobToBase64,
@@ -52,14 +52,17 @@ const TIME_GAP_MS = 5 * 60 * 1000;
 
 interface ChatMsg {
     id: string;
-    type: 'image' | 'text';
+    /** v26.10.14-v6：'file' = 任意文件（气泡渲染为文件卡片，可下载） */
+    type: 'image' | 'file' | 'text';
     /** out = 手机发到电脑；in = 电脑发来 */
     side: 'in' | 'out';
     text?: string;
-    /** 图片展示地址（out = objectURL；in = data:URL） */
+    /** 图片展示地址（out = objectURL；in = data:URL）；文件消息里它是 Blob 的 objectURL（供下载） */
     url?: string;
     name?: string;
     mime?: string;
+    /** 文件消息的字节数（气泡里显示大小；图片不需要，靠自然尺寸展示） */
+    size?: number;
     /** 发送状态（仅 out；发送中 / 已发送 / 发送失败） */
     state?: 'sending' | 'failed' | 'ok';
     err?: string;
@@ -82,6 +85,29 @@ function timeLabel(ts: number): string {
     return pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + ' ' + hm;
 }
 
+/**
+ * 体积显示（v26.10.14-v6，文件气泡用）。
+ * 手机页原本没有任何体积格式化（图片靠自然尺寸展示、不显示字节数），这里为文件新增一份。
+ * 与脚本端 `formatBytes` 的档位一致（B / KB / MB / GB）。
+ */
+function fmtSize(n: number): string {
+    if (!Number.isFinite(n) || n <= 0) return '';
+    if (n < 1024) return n + ' B';
+    if (n < 1024 * 1024) return (n / 1024).toFixed(n < 10 * 1024 ? 1 : 0) + ' KB';
+    if (n < 1024 * 1024 * 1024) return (n / 1024 / 1024).toFixed(2) + ' MB';
+    return (n / 1024 / 1024 / 1024).toFixed(2) + ' GB';
+}
+
+/**
+ * 由 base64 字符串估算原始字节数（仅用于显示大小；文件消息本机不解码）。
+ * base64 长度 × 3/4 再扣掉结尾 padding，误差 ≤2 字节。
+ */
+function fileDataSize(b64: string): number {
+    const s = String(b64 || '');
+    const pad = s.endsWith('==') ? 2 : s.endsWith('=') ? 1 : 0;
+    return Math.max(0, Math.floor((s.length * 3) / 4) - pad);
+}
+
 export default function App() {
     const { message } = AntApp.useApp();
     const deviceId = useMemo(() => parseDeviceId(window.location.pathname), []);
@@ -96,6 +122,8 @@ export default function App() {
     /** 表情面板展开态（v26.10.13-v3：内嵌在输入区里、工具栏上方） */
     const [emojiOpen, setEmojiOpen] = useState(false);
     const fileRef = useRef<HTMLInputElement>(null);
+    /** v26.10.14-v6：任意文件的隐藏 input（accept 留空 = 不过滤类型） */
+    const fileAnyRef = useRef<HTMLInputElement>(null);
     const scrollRef = useRef<HTMLDivElement>(null);
 
     // 整页骨架跟随视觉视口（键盘弹出 / 工具栏收放时输入区仍贴最底）
@@ -128,6 +156,21 @@ export default function App() {
                     ts: item.ts || Date.now(),
                 });
                 message.success('收到电脑发来的图片');
+            } else if (item.type === 'file' && item.data) {
+                // v26.10.14-v6：任意文件。data:URL 不用在 <img> 上，而是挂到 <a download> 交给浏览器下载。
+                // 用 data:URL 而非 objectURL：收件项是事件回调里的瞬时值，没有生命周期管理点来 revoke
+                // （与图片同一取舍：图片也是直接 data:URL 渲染）。
+                pushMsg({
+                    id: uid(),
+                    type: 'file',
+                    side: 'in',
+                    url: 'data:' + (item.mime || 'application/octet-stream') + ';base64,' + item.data,
+                    mime: item.mime || 'application/octet-stream',
+                    name: item.name || 'file',
+                    size: fileDataSize(item.data),
+                    ts: item.ts || Date.now(),
+                });
+                message.success('收到电脑发来的文件');
             } else if (item.type === 'text') {
                 pushMsg({ id: uid(), type: 'text', side: 'in', text: item.text || '', ts: item.ts || Date.now() });
                 message.success('收到电脑发来的文本');
@@ -188,6 +231,54 @@ export default function App() {
                     }
                 } catch (e: any) {
                     patchMsg(it.id, { state: 'failed', err: (e && e.message) || '读取图片失败' });
+                    break;
+                }
+            }
+        } finally {
+            setPreparing(false);
+        }
+    };
+
+    // ===== 选文件（任意类型，多选）→ 不压缩 → 顺序发送（v26.10.14-v6）=====
+    // 与选图的关键差异：**不做 canvas 压缩**（PDF/zip/视频解码必然失败），原样 base64 后投递。
+    // 中继按 mime 分流：非 image/* 的落到 type 'file'，电脑端显示为文件卡片。
+    const onPickFiles = async (files: FileList | null) => {
+        const list = Array.from(files || []);
+        if (!list.length) return;
+        setPreparing(true);
+        try {
+            const queued: Array<{ id: string; blob: Blob; name: string; mime: string; size: number }> = [];
+            for (const f of list) {
+                const id = uid();
+                const name = f.name || 'file.bin';
+                const mime = f.type || 'application/octet-stream';
+                queued.push({ id, blob: f, name, mime, size: f.size });
+                pushMsg({
+                    id,
+                    type: 'file',
+                    side: 'out',
+                    url: URL.createObjectURL(f),
+                    name,
+                    mime,
+                    size: f.size,
+                    state: 'sending',
+                    ts: Date.now(),
+                });
+            }
+            // 逐条顺序发送（保证到达顺序）；失败即停，剩余保持「发送中」标记为失败
+            for (const it of queued) {
+                try {
+                    const b64 = await blobToBase64(it.blob);
+                    const res = await postItem({ name: it.name, mime: it.mime, data: b64 }, phoneId);
+                    if (res && res.ok) {
+                        patchMsg(it.id, { state: 'ok' });
+                    } else {
+                        patchMsg(it.id, { state: 'failed', err: (res && res.error) || '未知错误' });
+                        message.error(it.name + ' 发送失败，可重新选择重试');
+                        break;
+                    }
+                } catch (e: any) {
+                    patchMsg(it.id, { state: 'failed', err: (e && e.message) || '读取文件失败' });
                     break;
                 }
             }
@@ -366,13 +457,57 @@ export default function App() {
                                     {m.side === 'out' ? '我' : '电'}
                                 </span>
                                 <div style={{ minWidth: 0, maxWidth: '78%' }}>
-                                    <div className={'znhd-chat-bubble' + (m.type === 'image' ? ' znhd-chat-bubble-img' : '')}>
+                                    <div
+                                        className={
+                                            'znhd-chat-bubble' +
+                                            (m.type === 'image' ? ' znhd-chat-bubble-img' : '') +
+                                            (m.type === 'file' ? ' znhd-chat-bubble-file' : '')
+                                        }>
                                         {m.type === 'image' ? (
                                             m.side === 'in' ? (
                                                 renderInImage(m)
                                             ) : (
                                                 <img className="znhd-chat-img" src={m.url} alt={m.name || 'image'} />
                                             )
+                                        ) : m.type === 'file' ? (
+                                            /* v26.10.14-v6：文件卡片（图标 + 文件名 + 大小 + 下载） */
+                                            <div className="znhd-chat-file">
+                                                <span className="znhd-chat-file-icon" aria-hidden="true">
+                                                    {/* 内联 SVG（Win7 无 emoji 字体，绝不用 📄 之类的码位） */}
+                                                    <svg
+                                                        width="18"
+                                                        height="18"
+                                                        viewBox="0 0 24 24"
+                                                        fill="none"
+                                                        stroke="currentColor"
+                                                        strokeWidth="2"
+                                                        strokeLinecap="round"
+                                                        strokeLinejoin="round">
+                                                        <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" />
+                                                        <path d="M14 2v4a2 2 0 0 0 2 2h4" />
+                                                        <path d="M10 9H8" />
+                                                        <path d="M16 13H8" />
+                                                        <path d="M16 17H8" />
+                                                    </svg>
+                                                </span>
+                                                <span className="znhd-chat-file-main">
+                                                    <span className="znhd-chat-file-name" title={m.name}>
+                                                        {m.name || 'file'}
+                                                    </span>
+                                                    <span className="znhd-chat-file-size">
+                                                        {fmtSize(m.size || 0)}
+                                                        {m.mime ? ' · ' + m.mime : ''}
+                                                    </span>
+                                                </span>
+                                                <a
+                                                    className="znhd-chat-file-dl"
+                                                    href={m.url}
+                                                    download={m.name || 'file'}
+                                                    /* 电脑发来的文件才能落盘（手机自己发出去的那条 url 也是本地 blob，同样可下） */
+                                                    aria-label="下载文件">
+                                                    下载
+                                                </a>
+                                            </div>
                                         ) : (
                                             <span>{m.text}</span>
                                         )}
@@ -423,6 +558,24 @@ export default function App() {
                         onChange={(e) => {
                             void onPick(e.target.files);
                             e.target.value = ''; // 允许再次选同一批
+                        }}
+                    />
+                    <Button
+                        type="text"
+                        aria-label="文件上传"
+                        loading={preparing}
+                        onClick={() => fileAnyRef.current?.click()}
+                        icon={<PaperClipOutlined />}
+                    />
+                    <input
+                        ref={fileAnyRef}
+                        type="file"
+                        /* accept 留空 = 任意类型（v26.10.14-v6「任意文件传输」） */
+                        multiple
+                        hidden
+                        onChange={(e) => {
+                            void onPickFiles(e.target.files);
+                            e.target.value = '';
                         }}
                     />
                 </div>

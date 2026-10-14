@@ -120,7 +120,7 @@ const VIA_LABEL: Record<SizeVia, string> = {
 
 const GRID_STYLE = {
     display: 'grid',
-    gridTemplateColumns: 'repeat(3, minmax(0,1fr))',
+    gridTemplateColumns: 'repeat(5, minmax(0,1fr))',
     gap: 8,
     alignContent: 'start',
 } as const;
@@ -558,7 +558,7 @@ export default function SniffModal({ open, onClose, minKB, onMinKBChange }: Snif
             }
             onCancel={onClose}
             getContainer={getOverlayContainer}
-            width={720}
+            width={828}
             styles={{ body: { textAlign: 'left' } }}
             destroyOnHidden
             // 预览打开时撤掉本弹窗遮罩：预览是全屏浮层，这层遮罩只会让画面多暗一层（同「历史记录」）

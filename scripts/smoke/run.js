@@ -69,7 +69,7 @@ const CHECKS = [
   ['transferAutoOpenOk', '收到手机内容时自动打开传输助手窗口（窗口不开也收件）'],
   ['transferWindowOk', '传输助手三栏窗口：导航/会话/主聊天区 + 会话列表 + 收到的消息'],
   ['transferNoTitleOk', '窗口无标题栏；顶部自绘标题条的关闭按钮贴右上角、悬浮变红（微信同款）'],
-  ['filesViewOk', '「文件」视图：图片九宫格 + 文本分区 + 计数（原历史记录弹窗搬迁）'],
+  ['filesViewOk', '「文件」视图：图片九宫格 + 文件卡片 + 文本分区 + 计数（原历史记录弹窗搬迁）'],
   ['filesNoJumpOk', '文件分组下点击第二栏设备条目不跳转会话窗口（点击=筛选文件视图）'],
   ['filesFilterOk', '文件视图跟随第二栏选择：点会话只显示该会话的文件，点「全部文件」还原汇总'],
   ['navStatesOk', '第一栏图标三态：选中=绿色填充无底板、未选中 hover=深色圆角底板（选中优先）'],
@@ -86,11 +86,19 @@ const CHECKS = [
   ['transferThemeOk', '窗口固定微信暗色：标题条与第一栏同色 #2E2E2E、三栏深浅分层（聊天区最深）'],
   ['transferLayeredOk', '圆角+层级（v26.10.13-v10；v26.10.14-v1 起露出层与第一栏同色）：外框大圆角、第二三栏内嵌圆角卡片、第一栏贴满高度、输入区圆角浮起卡片'],
   ['transferSettingsIsolatedOk', '传输助手设置独立存储 scriptCat_TransferSettings（不污染主设置）'],
+  ['fileChannelOk', '任意文件通道（v26.10.14-v6）：中继按 mime 分流 type:file → 「全部文件」有文件卡片 + 文件名'],
+  // 轮询优化（v26.10.14-v7）：在线名单改由长轮询捎带 + 上下线唤醒送达，5s 轮询删除。
+  // ⚠️ 这三条必须登记在这里才会参与最终判定 —— 页面里的 ALL-OK 标题是另一条链路
+  //    （title 只用于报错信息），只往页面加断言而忘了这里 = 断言形同虚设（实测踩到过一次）。
+  ['phonesNegotiatedOk', '长轮询声明 `phones=1` 订阅（中继只唤醒带该标记的连接，老脚本不受打扰）'],
+  ['phonesViaLongPollOk', '在线名单随长轮询响应 piggyback 送达（不再单独轮询）'],
+  ['onDemandStatusQueryOk', '/phone/status 退化为按需查询（启动/开窗时才打）'],
+  ['phoneStatusPollRemovedOk', '5s 定时轮询已删除（同样时长内请求数远低于旧的每 5s 一次）'],
   ['filesImgActionsOk', '「文件」视图图片格子：复制/下载/删除是右下角图标按钮（未 hover 隐藏，hover 出现）'],
   // v26.10.12-v3：气泡、滚动区、底部输入框抽成共用件（当时是为设备会话与 Agent 对话同款；
   // Agent 已于 v26.10.13-v9 删除，这三条继续守共用件本身）
   ['chatBubbleOk', '聊天气泡左右分栏（他人靠左微信灰 / 我的靠右微信绿）+ 头像在气泡外侧 + 时间分隔条'],
-  ['chatComposerOk', '输入区（微信式）：工具栏表情/图片上传/附件 + 多行自增高（超上限后框内滚动）+ 右下角发送按钮 + 实心底面板'],
+  ['chatComposerOk', '输入区（微信式）：工具栏表情/图片上传/文件 + 多行自增高（超上限后框内滚动）+ 右下角发送按钮 + 实心底面板'],
   ['emojiPackOk', '在线表情包：面板加载合集与图片，点一张**直接发送**（不进待发列表，会话里多一条图片气泡）'],
   ['emojiRelayFirstOk', '表情包走中继优先（v26.10.14-v3）：清单与图片都打中继 /emoji/ 路径，CDN 兜底零触发'],
   ['emojiNotInFilesOk', '需求①：表情包图片不进「全部文件」（v26.10.14-v3；会话里清空后只剩表情图时应图片 0）'],
@@ -492,6 +500,7 @@ async function main() {
       !checkPass('transferWindowOk') ||
       !checkPass('transferNoTitleOk') ||
       !checkPass('filesViewOk') ||
+      !checkPass('fileChannelOk') ||
       !checkPass('filesNoJumpOk') ||
       !checkPass('filesFilterOk') ||
       !checkPass('sessionChatOk') ||

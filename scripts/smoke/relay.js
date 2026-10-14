@@ -7,7 +7,9 @@
  *
  * 覆盖：心跳必须带 phoneId（缺则 400）、/phone/status 返回手机列表、定向条目只投给目标手机、
  *      广播条目所有人都收、recv 缺 phoneId 回 400、正向 /u 上传带 phoneId → /recv 条目带 from
- *      （v26.10.13-v3：电脑端据此把内容归到对应手机的会话）。
+ *      （v26.10.13-v3：电脑端据此把内容归到对应手机的会话）；
+ *      v26.10.14-v7 轮询优化：/recv 响应 piggyback 在线名单（P0-b）、手机上线主动唤醒
+ *      挂起的长轮询（P0-a/P0-c）、且**不带 `phones=1` 的老客户端不被唤醒**（兼容红线）。
  *
  * 前置：无（自己拉起 server.js）。运行：npm run verify:relay
  */
@@ -38,6 +40,9 @@ const HOST = '127.0.0.1';
 const DEVICE = 'test-device-0001';
 const PHONE_A = 'phone-aaaa-0001';
 const PHONE_B = 'phone-bbbb-0002';
+/** 专供「上下线主动唤醒」用例：独立设备，避免被 A/B 已注册的历史状态干扰 */
+const DEVICE2 = 'test-device-0002';
+const PHONE_C = 'phone-cccc-0003';
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -137,12 +142,21 @@ function poll(phoneId, maxwait = 2000) {
 }
 
 /** 发起一次正向（/recv）长轮询，返回可查询是否已结束/可中止的句柄 */
-function recvPoll(maxwait = 2000) {
+/**
+ * @param {{device?:string, maxwait?:number, phones?:boolean}} [opt]
+ *   `phones:true` = 带 `?phones=1` 协商标记（等价于 v26.10.14-v7 起的新客户端）；
+ *   不带 = 模拟老客户端（服务端**不得**主动唤醒它）。
+ */
+function recvPoll(opt) {
+    const o = opt || {};
+    const device = o.device || DEVICE;
+    const maxwait = o.maxwait || 2000;
+    const qs = `?maxwait=${maxwait}` + (o.phones ? '&phones=1' : '');
     let settled = false;
     let resolveFn;
     const promise = new Promise((res) => (resolveFn = res));
     const r = http.request(
-        { host: HOST, port: PORT, path: `/recv/${DEVICE}?maxwait=${maxwait}`, method: 'GET' },
+        { host: HOST, port: PORT, path: `/recv/${device}${qs}`, method: 'GET' },
         (res) => {
             let b = '';
             res.setEncoding('utf8');
@@ -278,6 +292,43 @@ async function main() {
     const badPoll = await req('GET', `/phone/recv/${DEVICE}?maxwait=1000`);
     check('长轮询缺 phoneId 回 400', badPoll.status === 400);
 
+    // ===== 4b) 轮询优化 P0-a / P0-b / P0-c（v26.10.14-v7）=====
+    // P0-b：正向长轮询的**每个**响应都捎带在线手机名单。这里走的是 {empty:true} 超时路径
+    // （此刻 DEVICE 队列为空，maxwait=1000 后到期返回）—— 超时路径最容易漏挂 decorate。
+    const piggy = await recvPoll({ maxwait: 1000 }).promise;
+    check(
+        '/recv 超时响应捎带 phones 名单（P0-b piggyback，含 A 与 B）',
+        !!piggy &&
+            piggy.empty === true &&
+            Array.isArray(piggy.phones) &&
+            piggy.phones.length === 2 &&
+            piggy.phones.some((p) => p.id === PHONE_A) &&
+            piggy.phones.some((p) => p.id === PHONE_B)
+    );
+
+    // P0-c：手机**上线**时服务端主动结束挂起的长轮询（原实现没有任何唤醒能力）。
+    // 用全新设备 DEVICE2：A/B 早已注册过，不会再触发 !wasOnline 那个钩子。
+    const wakeSub = recvPoll({ device: DEVICE2, maxwait: 5000, phones: true });
+    const wakeOld = recvPoll({ device: DEVICE2, maxwait: 1000, phones: false });
+    await sleep(150); // 等两条长轮询注册进等待集合
+    const t0 = Date.now();
+    await req('POST', `/phone/heartbeat/${DEVICE2}`, { phoneId: PHONE_C });
+    const woken = await Promise.race([wakeSub.promise, sleep(1500).then(() => undefined)]);
+    const wakeMs = Date.now() - t0;
+    check(
+        '手机上线主动唤醒（P0-c）：带 phones=1 的长轮询被秒级结束，载荷含 type=phones',
+        !!woken && woken.type === 'phones' && Array.isArray(woken.phones) && woken.phones.some((p) => p.id === PHONE_C)
+    );
+    check('唤醒延迟 < 1s（对比原实现的 5s 轮询粒度）', wakeMs < 1000, wakeMs + 'ms');
+
+    // 兼容性红线：**不带** `phones=1` 的老客户端绝不被打扰（它不认识 type:'phones'，
+    // 被唤醒只会 1s 后重连，反而放大请求数）。
+    await sleep(400);
+    check('老客户端（不带 phones=1）不被上下线事件唤醒', !wakeOld.isSettled());
+    const oldTimedOut = await Promise.race([wakeOld.promise, sleep(1500).then(() => undefined)]);
+    check('老客户端仍走正常超时路径（收到 empty）', !!(oldTimedOut && oldTimedOut.empty === true));
+    wakeSub.abort();
+
     // 5) 定向：只发给 A，B 不能收到
     const pa = poll(PHONE_A);
     const pb = poll(PHONE_B);
@@ -320,6 +371,47 @@ async function main() {
     await req('POST', `/u/${DEVICE}`, { text: 'from-none' });
     const gotNone = await Promise.race([recvPoll().promise, sleep(1500).then(() => undefined)]);
     check('不带 phoneId（老手机页）→ from 为空（旧归组规则兜底）', !!(gotNone && !gotNone.from && gotNone.text === 'from-none'));
+
+    // 8b) 任意文件通道（v26.10.14-v6）：parseItemBody 按 mime 分流 ——
+    //     image/* → type 'image'，其余 → type 'file'；缺 mime 兜底按图片处理（兼容老手机页）。
+    await req('POST', `/u/${DEVICE}`, {
+        name: 'report.pdf',
+        mime: 'application/pdf',
+        data: 'JVBERi0xLjQK',
+        phoneId: PHONE_A,
+    });
+    const gotFile = await Promise.race([recvPoll().promise, sleep(1500).then(() => undefined)]);
+    check(
+        '非图片 mime → type=file（含 name/mime/data 原样回传）',
+        !!(gotFile && gotFile.type === 'file' && gotFile.name === 'report.pdf' && gotFile.mime === 'application/pdf')
+    );
+
+    await req('POST', `/u/${DEVICE}`, { name: 'pic.png', mime: 'image/png', data: 'iVBORw0KGgo=' });
+    const gotImg = await Promise.race([recvPoll().promise, sleep(1500).then(() => undefined)]);
+    check(
+        'image/* mime → type=image（分流未误伤图片）',
+        !!(gotImg && gotImg.type === 'image' && gotImg.mime === 'image/png')
+    );
+
+    await req('POST', `/u/${DEVICE}`, { name: 'nomime.bin', data: 'AAECAwQ=' });
+    const gotNoMime = await Promise.race([recvPoll().promise, sleep(1500).then(() => undefined)]);
+    check(
+        '缺 mime → 兜底 type=image（兼容老手机页）',
+        !!(gotNoMime && gotNoMime.type === 'image' && gotNoMime.mime === 'image/jpeg')
+    );
+
+    // 8c) 体积上限提到 100MB（v26.10.14-v6）：约 20MB 的载荷（远超旧 12MB 上限）必须放行。
+    //     用 20MB 而非满 100MB —— 冒烟要快，而这条断言的目的是「旧上限确实被抬掉了」。
+    const bigB64 = 'A'.repeat(20 * 1024 * 1024);
+    const bigRes = await req('POST', `/u/${DEVICE}`, { name: 'big.bin', mime: 'application/octet-stream', data: bigB64 });
+    check('20MB 载荷放行（旧 12MB 上限已抬到 100MB）', !!(bigRes.json && bigRes.json.ok === true));
+    // 消费掉这条大条目，避免它卡在队列里影响后续用例
+    await Promise.race([recvPoll().promise, sleep(1500).then(() => undefined)]);
+
+    // 8d) 超过 100MB 仍应回 413（上限不是「取消」而是「抬高」）
+    const tooBig = 'A'.repeat(101 * 1024 * 1024);
+    const tooBigRes = await req('POST', `/u/${DEVICE}`, { name: 'huge.bin', data: tooBig });
+    check('超过 100MB 回 413（上限仍然生效）', tooBigRes.status === 413);
 
     // ===== 9) 表情包缓存服务（v26.10.14-v3）=====
     // 需求③的服务端一半：整套表情包拉到中继磁盘，客户端只打中继（防 CDN 限流 + 加速）。

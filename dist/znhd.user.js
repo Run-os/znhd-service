@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name                征纳互动人数和在线监控v2
 // @namespace           https://scriptcat.org/
-// @version             26.10.14-v5
+// @version             26.10.14-v7
 // @description         实时监控征纳互动等待人数和在线状态，支持语音播报、自定义常用语
 // @author              runos
 // @license             MIT
@@ -56370,6 +56370,13 @@ function GridIcon(p) {
 function MessageIcon(p) {
     return ((0,react_jsx_runtime_production_namespaceFn().jsx)(SvgIcon, { ...p, children: (0,react_jsx_runtime_production_namespaceFn().jsx)("path", { d: "M7.9 20A9 9 0 1 0 4 16.1L2 22Z" }) }));
 }
+/**
+ * 单个文件（Lucide `file-text`）：v26.10.14-v6 新增，用于「任意文件传输」的文件卡片图标。
+ * 与 `FilesIcon`（folder，第一栏「文件」分组入口）区分：那个是分组入口，这个是单条文件本体。
+ */
+function FileTextIcon(p) {
+    return ((0,react_jsx_runtime_production_namespaceFn().jsxs)(SvgIcon, { ...p, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("path", { d: "M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" }), (0,react_jsx_runtime_production_namespaceFn().jsx)("path", { d: "M14 2v4a2 2 0 0 0 2 2h4" }), (0,react_jsx_runtime_production_namespaceFn().jsx)("path", { d: "M10 9H8" }), (0,react_jsx_runtime_production_namespaceFn().jsx)("path", { d: "M16 13H8" }), (0,react_jsx_runtime_production_namespaceFn().jsx)("path", { d: "M16 17H8" })] }));
+}
 
 ;// ./src/lib/constants.ts
 /**
@@ -75433,7 +75440,7 @@ const VIA_LABEL = {
 };
 const GRID_STYLE = {
     display: 'grid',
-    gridTemplateColumns: 'repeat(3, minmax(0,1fr))',
+    gridTemplateColumns: 'repeat(5, minmax(0,1fr))',
     gap: 8,
     alignContent: 'start',
 };
@@ -75800,7 +75807,7 @@ function SniffModal({ open, onClose, minKB, onMinKBChange }) {
         const s = sections.find((x) => x.unknown.length > 0);
         return s ? s.id : null;
     }, [sections]);
-    return ((0,react_jsx_runtime_production_namespaceFn().jsxs)(modal, { open: open, title: (0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("span", { children: '图片嗅探（共 ' + pickable.length + ' 张）' }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { size: "small", loading: phase === 'measuring', onClick: startScan, children: phase === 'measuring' ? '扫描中…' : '重新扫描' })] }), onCancel: onClose, getContainer: getOverlayContainer, width: 720, styles: { body: { textAlign: 'left' } }, destroyOnHidden: true, 
+    return ((0,react_jsx_runtime_production_namespaceFn().jsxs)(modal, { open: open, title: (0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("span", { children: '图片嗅探（共 ' + pickable.length + ' 张）' }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { size: "small", loading: phase === 'measuring', onClick: startScan, children: phase === 'measuring' ? '扫描中…' : '重新扫描' })] }), onCancel: onClose, getContainer: getOverlayContainer, width: 828, styles: { body: { textAlign: 'left' } }, destroyOnHidden: true, 
         // 预览打开时撤掉本弹窗遮罩：预览是全屏浮层，这层遮罩只会让画面多暗一层（同「历史记录」）
         mask: !previewOpen, footer: (0,react_jsx_runtime_production_namespaceFn().jsxs)(es_space, { children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { disabled: !selectedCount || !!batch, loading: !!batch, onClick: () => void doDownloadSelected(), children: batch ? '下载中 ' + batch.done + '/' + batch.total : '下载所选（' + selectedCount + '）' }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { disabled: !selected.size || !!batch, onClick: () => setSelected(new Set()), children: "\u6E05\u7A7A\u9009\u62E9" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { color: "primary", variant: "solid", onClick: onClose, children: "\u5173\u95ED" })] }), children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 8 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(SniffModal_Text, { type: "secondary", style: { fontSize: 12 }, children: "\u53EA\u5217\u51FA \u2265" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(input_number, { size: "small", min: 1, max: 10240, step: 10, value: minKB, addonAfter: "KB", style: { width: 132 }, onChange: (v) => onMinKBChange(Number.isFinite(v) && !!v && v > 0 ? Math.round(v) : DEFAULT_MIN_KB) }), (0,react_jsx_runtime_production_namespaceFn().jsx)(SniffModal_Text, { type: "secondary", style: { fontSize: 12 }, children: '的图片（显示 ' + known.length + ' 张）' }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_checkbox, { checked: allSelected, disabled: !kept.length, onChange: toggleAll, children: "\u5168\u9009" })] }), truncated ? ((0,react_jsx_runtime_production_namespaceFn().jsx)(SniffModal_Text, { type: "warning", style: { fontSize: 12, display: 'block', marginBottom: 8 }, children: '页面元素太多或图片超过 ' + (/* inlined export .MAX_SNIFF */300) + ' 张，本次只扫描了前一部分 —— 结果可能不完整。' })) : null, droppedCount > 0 ? ((0,react_jsx_runtime_production_namespaceFn().jsx)(SniffModal_Text, { type: "secondary", style: { fontSize: 12, display: 'block', marginBottom: 8 }, children: '已排除 ' + droppedCount + ' 个响应不是图片的地址（视频 / 网页 / JSON 等）。' })) : null, excluded > 0 ? ((0,react_jsx_runtime_production_namespaceFn().jsx)(SniffModal_Text, { type: "secondary", style: { fontSize: 12, display: 'block', marginBottom: 8 }, children: '已按文件名排除 ' +
                     excluded +
@@ -76152,6 +76159,9 @@ function previewText(msg) {
         return '';
     if (msg.type === 'image')
         return '[图片]';
+    // v26.10.14-v6：文件预览带文件名（纯 [文件] 看不出是哪个，用户在列表里选会话时没有信息量）
+    if (msg.type === 'file')
+        return '[文件] ' + (msg.name || '');
     return (msg.text || '').replace(/\s+/g, ' ').slice(0, 40);
 }
 /** 列表里的时间（今天 HH:mm，昨天加「昨天」，否则 MM-DD） */
@@ -76253,7 +76263,7 @@ function TransferSessionList({ nav, search, onSearch, onPair, deviceEntries, act
                                                 textOverflow: 'ellipsis',
                                                 whiteSpace: 'nowrap',
                                                 marginTop: 1,
-                                            }, children: "\u6240\u6709\u4F1A\u8BDD\u7684\u56FE\u7247\u4E0E\u6587\u672C" })] })] }, "__all_files__")) : null, filtered.map((e) => {
+                                            }, children: "\u6240\u6709\u4F1A\u8BDD\u7684\u56FE\u7247\u3001\u6587\u4EF6\u4E0E\u6587\u672C" })] })] }, "__all_files__")) : null, filtered.map((e) => {
                             // 文件分组：选中/点击都走「筛选文件视图」；其余分组照旧（选中会话 → 聊天）
                             const active = filesMode ? e.key === filesActiveKey : e.key === activeSessionKey;
                             const clickable = filesMode || !isFiles;
@@ -77242,10 +77252,11 @@ async function prepareForTransfer(file, opt = {}) {
 const DEVICE_ID_KEY = 'znhd_device_id';
 // 单请求体上限，须与 relay-server 的 MAX_BODY 保持一致（服务端按「整段 JSON 体积」掐断）。
 // 发图前据此预检体积，避免 base64 膨胀后超过上限，被服务端拒绝时只见笼统的网络/服务器错误。
-const RELAY_MAX_BODY = 12 * 1024 * 1024;
+// v26.10.14-v6：12MB → 100MB（用户指定；同时支持任意文件传输）。
+const RELAY_MAX_BODY = 100 * 1024 * 1024;
 /**
  * 估算把该文件作为一条 POST body（含 name+mime+base64(data) 与 JSON 结构开销）的体积。
- * 仅用于「发送到手机」发前预检，与服务端 MAX_BODY 对齐（约 12MB）。
+ * 仅用于「发送到手机」发前预检，与服务端 MAX_BODY 对齐（约 100MB）。
  * @param {File|Blob} file - 待发图片文件
  * @param {string} [name] - 文件名
  * @param {string} [mime] - MIME 类型
@@ -77550,7 +77561,10 @@ function startPhoneReceive(opt) {
         // 让「已自动开始接收」日志尽快出现；后续轮询用长 maxwait 实时等待图片。
         const maxwait = firstPoll ? 1000 : 25000;
         firstPoll = false;
-        const url = server + '/recv/' + encodeURIComponent(uuid) + '?maxwait=' + maxwait;
+        // `phones=1`（v26.10.14-v7）= 协商标记：告诉中继「本客户端认识 `type:'phones'` 主动唤醒」。
+        // 中继只唤醒带该标记的连接 —— 老脚本不带，就不会被上下线事件无谓打断（它收到不认识的
+        // 载荷只会 1s 后重连，白打请求）。参数对老中继是无害的未知 query，向后兼容。
+        const url = server + '/recv/' + encodeURIComponent(uuid) + '?maxwait=' + maxwait + '&phones=1';
         try {
             lastXhr = GM_xmlhttpRequest({
                 method: 'GET',
@@ -77568,20 +77582,56 @@ function startPhoneReceive(opt) {
                         catch (e) {
                             data = null;
                         }
+                        // v26.10.14-v7（P0-b/P0-c）：先消化随响应捎带的在线手机名单 ——
+                        // 长轮询的**每个**响应（含 {empty:true} 超时与主动唤醒）都会带它。
+                        // 必须在分支判断之前处理，否则 {empty:true} 会提前 return 把名单丢掉。
+                        if (data && Array.isArray(data.phones)) {
+                            if (opt.onPhones) {
+                                try {
+                                    opt.onPhones(data.phones
+                                        .filter((p) => !!p)
+                                        .map((p) => ({
+                                        id: String(p.id || ''),
+                                        lastSeen: Number(p.lastSeen) || 0,
+                                    })));
+                                }
+                                catch (e) {
+                                    /* 单次名单异常不影响接收循环 */
+                                }
+                            }
+                        }
+                        // 上下线唤醒：只有名单、没有业务条目 → 更新完继续等待
+                        if (data && data.type === 'phones') {
+                            poll();
+                            return;
+                        }
                         if (data && data.empty) {
                             poll();
                             return;
                         }
-                        if (data && data.type === 'image' && data.data) {
-                            const blob = base64ToBlob(data.data, data.mime || 'image/jpeg');
+                        if (data && (data.type === 'image' || data.type === 'file') && data.data) {
+                            // v26.10.14-v6：type 'file' 与 'image' 共用同一条二进制解码路径，
+                            // 只是回调不同（文件不回 emoji 标记、不参与表情包过滤）。
+                            const isFile = data.type === 'file';
+                            const blob = base64ToBlob(data.data, data.mime || (isFile ? 'application/octet-stream' : 'image/jpeg'));
                             // 预览统一用 objectURL（与「发送到手机」待发列表一致）：
                             // ① 画廊上限淘汰/单张移除/清空全部时的 URL.revokeObjectURL 真正生效
                             //   （data:URL 字符串无法 revoke，旧写法实为无效空操作）；
                             // ② 避免最多 27 张图的 base64 dataURL 长字符串常驻 JS 堆（可达几十 MB）。
                             const previewUrl = URL.createObjectURL(blob);
                             if (opt.onStatus)
-                                opt.onStatus('收到图片：' + (data.name || 'image'));
-                            if (opt.onImage)
+                                opt.onStatus((isFile ? '收到文件：' : '收到图片：') + (data.name || (isFile ? 'file' : 'image')));
+                            if (isFile) {
+                                if (opt.onFile)
+                                    opt.onFile({
+                                        blob: blob,
+                                        previewUrl: previewUrl,
+                                        name: data.name,
+                                        mime: data.mime,
+                                        from: data.from,
+                                    });
+                            }
+                            else if (opt.onImage) {
                                 opt.onImage({
                                     blob: blob,
                                     previewUrl: previewUrl,
@@ -77591,6 +77641,7 @@ function startPhoneReceive(opt) {
                                     // v26.10.14-v3：表情包标记透传（老中继不带 → undefined → 当作普通图片）
                                     emoji: data.emoji === true,
                                 });
+                            }
                             poll(); // 继续接收下一张
                             return;
                         }
@@ -77703,9 +77754,9 @@ function sendTestImage(opt) {
                 }
                 const mime = blob.type || 'image/jpeg';
                 const name = testImageName(mime);
-                // 体积预检：与手机上传同一套判据，避免 base64 膨胀后撞 12MB 上限
+                // 体积预检：与手机上传同一套判据，避免 base64 膨胀后撞 100MB 上限
                 if (imagePayloadBytes(blob, name, mime) > RELAY_MAX_BODY) {
-                    fail('测试图片过大（超过中继单次上限约 12MB）');
+                    fail('测试图片过大（超过中继单次上限约 100MB）');
                     return;
                 }
                 blobToBase64(blob)
@@ -106025,7 +106076,12 @@ function updateTransferSettings(patch) {
         restartLoops();
 }
 /* ============================================================ 生命周期 */
-let phonePollTimer = null;
+let phoneFallbackTimer = null;
+/**
+ * 最近一次从**长轮询**拿到在线名单的时刻（v26.10.14-v7）。
+ * 兜底轮询据此判断「名单是不是已经由推送渠道送达」—— 送达过就跳过这一轮，一个请求都不打。
+ */
+let phonesSeenAt = 0;
 let receiveStop = null;
 let knownPhones = new Set();
 let inited = false;
@@ -106033,7 +106089,7 @@ function validServer() {
     const s = (store_state.settings.relayServer || '').trim().replace(/\/+$/, '');
     return /^https?:\/\//i.test(s) ? s : '';
 }
-/** 启停接收循环 + 手机在线轮询（幂等：先停后启） */
+/** 启停接收循环 + 在线名单兜底轮询（幂等：先停后启） */
 function restartLoops() {
     stopLoops();
     const server = validServer();
@@ -106043,71 +106099,117 @@ function restartLoops() {
         emit();
         return;
     }
-    startPhonePoll(server);
+    startPhonesWatch();
     startReceive(server);
 }
 function stopLoops() {
-    if (phonePollTimer) {
-        clearInterval(phonePollTimer);
-        phonePollTimer = null;
+    if (phoneFallbackTimer) {
+        clearInterval(phoneFallbackTimer);
+        phoneFallbackTimer = null;
     }
     if (receiveStop) {
         receiveStop();
         receiveStop = null;
     }
 }
+/** 两份名单是否等价（只比 id 集合与顺序；lastSeen 每次都变，比它等于永远「不等」） */
+function samePhones(a, b) {
+    if (a.length !== b.length)
+        return false;
+    for (let i = 0; i < a.length; i++) {
+        if (a[i].id !== b[i].id)
+            return false;
+    }
+    return true;
+}
 /**
- * 手机在线状态轮询（5s）。连接 / 断开写运行日志（与重构前一致，且不依赖窗口是否打开）。
- * 老版中继只回 `{online:true}` 没有 phones 时按「1 台未知手机」处理。
+ * 应用一份在线手机名单 —— 三个来源共用：长轮询 piggyback、上下线唤醒、按需查询。
+ * 连接 / 断开写运行日志（与重构前一致，且不依赖窗口是否打开）；
+ * 名单没变就**不 emit**（长轮询每 ≤25s 捎带一次，无谓重建 state 会让整个窗口跟着重渲染）。
  */
-function startPhonePoll(server) {
-    const uuid = getDeviceId();
-    const check = () => {
-        try {
-            GM_xmlhttpRequest({
-                method: 'GET',
-                url: server + '/phone/status/' + encodeURIComponent(uuid),
-                timeout: 8000,
-                onload: (r) => {
-                    let j = null;
-                    try {
-                        j = JSON.parse(r.responseText);
-                    }
-                    catch (e) {
-                        j = null;
-                    }
-                    const list = j && Array.isArray(j.phones)
-                        ? j.phones.map((p) => ({ id: String(p.id || ''), lastSeen: Number(p.lastSeen) || 0 }))
-                        : j && j.online
-                            ? [{ id: '', lastSeen: 0 }]
-                            : [];
-                    store_state = { ...store_state, phones: list };
-                    const nowIds = new Set(list.map((p) => p.id).filter(Boolean));
-                    knownPhones.forEach((id) => {
-                        if (!nowIds.has(id))
-                            addLog('[传输助手] 手机已断开：' + id, 'warning');
-                    });
-                    nowIds.forEach((id) => {
-                        if (!knownPhones.has(id))
-                            addLog('[传输助手] 手机已连接：' + id, 'success');
-                    });
-                    knownPhones = nowIds;
+function applyPhones(list) {
+    const nowIds = new Set(list.map((p) => p.id).filter(Boolean));
+    knownPhones.forEach((id) => {
+        if (!nowIds.has(id))
+            addLog('[传输助手] 手机已断开：' + id, 'warning');
+    });
+    nowIds.forEach((id) => {
+        if (!knownPhones.has(id))
+            addLog('[传输助手] 手机已连接：' + id, 'success');
+    });
+    knownPhones = nowIds;
+    if (samePhones(store_state.phones, list))
+        return;
+    store_state = { ...store_state, phones: list };
+    emit();
+}
+/** 正在飞的按需查询（避免窗口连续开合时并发打同一接口） */
+let phoneRefreshInFlight = false;
+/**
+ * 按需查询一次在线状态（v26.10.14-v7，替代原来 5s 一次的定时轮询）。
+ * 调用点：① 传输助手窗口打开时；② 60s 兜底 tick 发现长轮询长时间没捎带名单时。
+ * 接口 `/phone/status` 的形态与语义完全没变（老中继也能应答）。
+ */
+function refreshPhones() {
+    const server = validServer();
+    if (!server || phoneRefreshInFlight)
+        return;
+    phoneRefreshInFlight = true;
+    try {
+        GM_xmlhttpRequest({
+            method: 'GET',
+            url: server + '/phone/status/' + encodeURIComponent(getDeviceId()),
+            timeout: 8000,
+            onload: (r) => {
+                phoneRefreshInFlight = false;
+                let j = null;
+                try {
+                    j = JSON.parse(r.responseText);
+                }
+                catch (e) {
+                    j = null;
+                }
+                // 老版中继只回 {online:true} 没有 phones 时按「1 台未知手机」处理
+                const list = j && Array.isArray(j.phones)
+                    ? j.phones.map((p) => ({ id: String(p.id || ''), lastSeen: Number(p.lastSeen) || 0 }))
+                    : j && j.online
+                        ? [{ id: '', lastSeen: 0 }]
+                        : [];
+                applyPhones(list);
+            },
+            onerror: () => {
+                phoneRefreshInFlight = false;
+                if (store_state.phones.length) {
+                    store_state = { ...store_state, phones: [] };
                     emit();
-                },
-                onerror: () => {
-                    if (store_state.phones.length) {
-                        store_state = { ...store_state, phones: [] };
-                        emit();
-                    }
-                },
-            });
-        }
-        catch (e) {
-            /* 忽略单轮异常，5s 后自然重试 */
-        }
+                }
+            },
+        });
+    }
+    catch (e) {
+        phoneRefreshInFlight = false;
+    }
+}
+/**
+ * 在线名单兜底轮询（v26.10.14-v7）。
+ *
+ * 正常路径：名单由正向长轮询 piggyback（每个响应都带）+ 上下线唤醒实时送达，
+ * 此时本定时器每一轮都会「看到长轮询刚捎带过」而**直接跳过，零请求**。
+ *
+ * 它存在的唯一理由是**兼容尚未升级的中继**：老中继不返回 `phones` 字段，
+ * 若没有这条兜底，`state.phones` 会永远是空 —— 发送按钮恒不可用、无 `from` 的条目
+ * 永远归聚合会话。60s 粒度足够兜住（浏览器开启时仍会立刻查一次）。
+ */
+function startPhonesWatch() {
+    const tick = () => {
+        if (!validServer())
+            return;
+        if (Date.now() - phonesSeenAt < 55000)
+            return; // 推送渠道在送名单，无需兜底
+        refreshPhones();
     };
-    check();
-    phonePollTimer = setInterval(check, 5000);
+    tick(); // 启动时先查一次（拿到名单再进入「推送为主」的稳态）
+    phoneFallbackTimer = setInterval(tick, 60000);
 }
 /** 接收循环（长轮询 /recv）：收到图片 / 文本进对应会话，并按设置自动弹窗 */
 function startReceive(server) {
@@ -106115,6 +106217,12 @@ function startReceive(server) {
         server,
         uuid: getDeviceId(),
         onConnected: () => addLog('[传输助手] 已自动开始接收（' + server + '）', 'info'),
+        // v26.10.14-v7（P0-b/P0-c）：在线名单改由长轮询**捎带/唤醒**送达（原来靠 5s 轮询）。
+        // 记下送达时刻，60s 兜底轮询据此判断「推送渠道是否在正常工作」。
+        onPhones: (list) => {
+            phonesSeenAt = Date.now();
+            applyPhones(list);
+        },
         onImage: (img) => {
             addLog('[传输助手] 收到图片：' + (img.name || 'image') + '（' + (img.mime || 'image') + '）', 'success');
             const key = sessionKeyForIncoming(img.from);
@@ -106143,6 +106251,23 @@ function startReceive(server) {
                 sessionKey: key,
                 text: t,
                 ts: txt.ts || Date.now(),
+            });
+        },
+        // v26.10.14-v6：任意文件（中继按 mime 分流，非 image/* 的都走这里）。
+        // 与图片走同一条「会话落消息」路径，只是 type 用 'file'（渲染成文件卡片而非缩略图）。
+        onFile: (f) => {
+            addLog('[传输助手] 收到文件：' + (f.name || 'file') + '（' + (f.mime || 'application/octet-stream') + '）', 'success');
+            const key = sessionKeyForIncoming(f.from);
+            addMessage(key, {
+                id: nextId(),
+                type: 'file',
+                direction: 'in',
+                sessionKey: key,
+                name: f.name,
+                mime: f.mime,
+                blob: f.blob,
+                previewUrl: f.previewUrl,
+                ts: Date.now(),
             });
         },
     });
@@ -106266,6 +106391,10 @@ function setTransferWindowOpen(open) {
         return;
     store_state = { ...store_state, windowOpen: open };
     emit();
+    // 用户正要看名单 → 现查一次（v26.10.14-v7 的「按需查询」，替代原 5s 定时轮询）。
+    // 只在实际发生「关 → 开」跳变时打，一次开窗 1 个请求。
+    if (open)
+        refreshPhones();
 }
 /** 已读：窗口开着且正停在该会话上时清零未读 */
 function markSessionRead(sessionKey) {
@@ -106340,7 +106469,7 @@ function sendTextToSession(sessionKey, text) {
 /**
  * 发送图片到某会话：逐张顺序发送（一张成功再发下一张，保证到达顺序）。
  * 图片先经 `compressImageForPhone` 压缩（与「手机 → 电脑」同套规格：最长边 1600、JPEG 0.75；
- * SVG/GIF、解码失败、压不小都回退原图），超 12MB 上限即停止。
+ * SVG/GIF、解码失败、压不小都回退原图），超 100MB 上限即停止。
  *
  * @returns 是否开始了发送（调用方用于清空待发列表 / 显示进度）
  */
@@ -106381,12 +106510,12 @@ function sendImagesToSession(sessionKey, files, onProgress) {
             if (imagePayloadBytes(out.blob, out.name, out.mime) > RELAY_MAX_BODY) {
                 addLog('[传输助手] 第 ' +
                     (sent + 1) +
-                    ' 张压缩后仍超限（单张约 12MB 上限），已停止（已发 ' +
+                    ' 张压缩后仍超限（单张约 100MB 上限），已停止（已发 ' +
                     sent +
                     '/' +
                     total +
                     '）', 'error', true);
-                failAt('压缩后仍超过单张上限（约 12MB）');
+                failAt('压缩后仍超过单张上限（约 100MB）');
                 return;
             }
             addLog('[传输助手] ' +
@@ -106444,6 +106573,114 @@ function sendImagesToSession(sessionKey, files, onProgress) {
 /** 体积显示：统一按 KB（不足 1KB 也显示 1KB） */
 function kbText(bytes) {
     return Math.max(1, Math.round((Number(bytes) || 0) / 1024)) + 'KB';
+}
+/**
+ * 发送任意文件到某会话（v26.10.14-v6 新增）。
+ *
+ * 与 `sendImagesToSession` 的两点关键差异：
+ *  ① **不做压缩** —— 文件不是图片，画布解码无意义（PDF/zip/视频解码必然失败）。原样直传。
+ *  ② **按体积预检** —— 用 `imagePayloadBytes`（同一套 base64 膨胀估算，对任意二进制同样成立）
+ *     与 `RELAY_MAX_BODY` 比对，超限即停止，避免 base64 膨胀后撞中继 413。
+ *
+ * 逐条顺序发送（一条成功再发下一条，保证到达顺序），与图片一致。
+ *
+ * @returns 是否开始了发送（调用方用于清空待发列表 / 显示进度）
+ */
+function sendFilesToSession(sessionKey, files, onProgress) {
+    const server = validServer();
+    if (!files.length)
+        return false;
+    if (!server) {
+        addLog('[传输助手] 尚未配置中继服务器，无法发送', 'error', true);
+        return false;
+    }
+    if (!sessionSendable(sessionKey)) {
+        addLog('[传输助手] 当前无在线设备，无法发送', 'error', true);
+        return false;
+    }
+    const targets = sendTargets(sessionKey);
+    const list = files.slice();
+    const total = list.length;
+    let sent = 0;
+    const failAt = (reason, msgId) => {
+        if (msgId)
+            patchMessage(sessionKey, msgId, { sendState: 'failed', sendError: reason });
+        addLog('[传输助手] 第 ' + (sent + 1) + ' 个文件发送失败：' + reason + '（已发 ' + sent + '/' + total + '）', 'error');
+        onProgress?.(sent, total, true, '已发送 ' + sent + '/' + total + '，已停止');
+    };
+    const sendNext = () => {
+        if (sent >= total) {
+            addLog('[传输助手] ' + total + ' 个文件已全部发送', 'success');
+            onProgress?.(total, total, false, '已发送 ' + total + '/' + total);
+            return;
+        }
+        const it = list[sent];
+        // 体积预检：base64 膨胀 ≈4/3，超限就停（与图片同判据、同上限）
+        const est = imagePayloadBytes(it.file, it.name, it.mime);
+        if (est > RELAY_MAX_BODY) {
+            addLog('[传输助手] 第 ' +
+                (sent + 1) +
+                ' 个文件过大（' +
+                kbText(it.file.size) +
+                '，编码后约 ' +
+                kbText(est) +
+                '，超过单次上限约 100MB），已停止（已发 ' +
+                sent +
+                '/' +
+                total +
+                '）', 'error', true);
+            failAt('文件过大（编码后约 ' + kbText(est) + '，超过单次上限约 100MB）');
+            return;
+        }
+        addLog('[传输助手] 正在发送文件（' +
+            (sent + 1) +
+            '/' +
+            total +
+            '）：' +
+            it.name +
+            '（' +
+            kbText(it.file.size) +
+            '）', 'info');
+        onProgress?.(sent, total, false, '发送中… ' + sent + '/' + total + '（第 ' + (sent + 1) + ' 个）');
+        const msgId = nextId();
+        // 先落一条「发送中」的文件卡片气泡，成功/失败再改状态
+        addMessage(sessionKey, {
+            id: msgId,
+            type: 'file',
+            direction: 'out',
+            sessionKey,
+            name: it.name,
+            mime: it.mime,
+            blob: it.file,
+            previewUrl: it.url,
+            ts: Date.now(),
+            sendState: 'sending',
+        });
+        const rd = new FileReader();
+        rd.onload = () => {
+            const b64 = (rd.result || '').split(',')[1] || '';
+            if (!b64) {
+                failAt('读取文件失败', msgId);
+                return;
+            }
+            sendToPhone({
+                server,
+                uuid: getDeviceId(),
+                payload: { name: it.name, mime: it.mime, data: b64, targets },
+                onOk: () => {
+                    sent++;
+                    patchMessage(sessionKey, msgId, { sendState: undefined, sendError: undefined });
+                    onProgress?.(sent, total, false, '已发送 ' + sent + '/' + total);
+                    sendNext();
+                },
+                onFail: (e) => failAt(e, msgId),
+            });
+        };
+        rd.onerror = () => failAt('读取文件失败', msgId);
+        rd.readAsDataURL(it.file);
+    };
+    sendNext();
+    return true;
 }
 /* ============================================================ 启动 / 停止 */
 /** 每小时跑一次超期裁剪（长开的税务页一挂一整天，TTL 不能只在启动时执行一次） */
@@ -106519,10 +106756,12 @@ function stopTransfer() {
         pruneTimer = null;
     }
     knownPhones = new Set();
+    phonesSeenAt = 0;
     inited = false;
 }
 
 ;// ./src/lib/ui/transfer/TransferDeviceChat.tsx
+
 
 
 
@@ -106589,6 +106828,8 @@ function TransferDeviceChat({ session, phone, colorIndex, onClear, }) {
     const { token } = es_theme.useToken();
     const [sendText, setSendText] = (0,react_production_namespaceFn().useState)('');
     const [pendingImages, setPendingImages] = (0,react_production_namespaceFn().useState)([]);
+    /** v26.10.14-v6：待发文件列表（与待发图片分开显示与发送；文件不压缩、不限图片 MIME） */
+    const [pendingFiles, setPendingFiles] = (0,react_production_namespaceFn().useState)([]);
     const [sending, setSending] = (0,react_production_namespaceFn().useState)(false);
     const [progress, setProgress] = (0,react_production_namespaceFn().useState)(null);
     /** 图片复制的反馈：记录是哪一条消息，避免所有图一起改文案 */
@@ -106652,6 +106893,20 @@ function TransferDeviceChat({ session, phone, colorIndex, onClear, }) {
         a.remove();
         window.setTimeout(() => URL.revokeObjectURL(a.href), 1000);
         addLog('图片已下载: ' + fname, 'success');
+    };
+    /** 下载文件（v26.10.14-v6）：与图片下载同一套「锚点 + objectURL」做法 */
+    const doDownloadFile = (msg) => {
+        if (!msg.blob)
+            return;
+        const fname = msg.name || 'file.bin';
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(msg.blob);
+        a.download = fname;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+        addLog('文件已下载: ' + fname, 'success');
     };
     const doSendText = () => {
         const t = sendText.trim();
@@ -106770,6 +107025,88 @@ function TransferDeviceChat({ session, phone, colorIndex, onClear, }) {
             return arr;
         });
     };
+    /**
+     * 选文件（v26.10.14-v6）：与选图同构（加入待发列表，点「发送」才真正上传）。
+     * ⚠️ 与 `pickImages` 的两点差异：
+     *  ① `accept` 留空（任意类型；用户需求就是「任意文件传输」）；
+     *  ② 不设 `multiple` 限制其实也可以，但**保持 multiple** 以便一次发多个文件。
+     * 中继按 mime 分流：这里若选中图片也会走 file 通道（type:'file'，电脑端显示为文件卡片）——
+     * 这本就是用户选了「文件」按钮的语义（要发图片请用「图片上传」按钮，那条路会压缩）。
+     */
+    const pickFiles = () => {
+        if (!sendable) {
+            addLog('[传输助手] 当前无在线设备，无法发送', 'error', true);
+            return;
+        }
+        const inp = document.createElement('input');
+        inp.type = 'file';
+        inp.multiple = true;
+        inp.style.display = 'none';
+        document.body.appendChild(inp);
+        const cleanupFocus = () => {
+            window.removeEventListener('focus', cleanupFocus);
+            try {
+                inp.remove();
+            }
+            catch (e) {
+                /* 已移除 */
+            }
+        };
+        inp.onchange = () => {
+            const files = Array.prototype.slice.call(inp.files || []);
+            window.removeEventListener('focus', cleanupFocus);
+            inp.remove();
+            if (!files.length)
+                return;
+            setPendingFiles((prev) => prev.concat(files.map((f) => ({
+                file: f,
+                name: f.name || 'file.bin',
+                mime: f.type || 'application/octet-stream',
+                url: URL.createObjectURL(f),
+            }))));
+        };
+        window.addEventListener('focus', cleanupFocus);
+        inp.click();
+    };
+    const removePendingFile = (i) => {
+        if (sending)
+            return;
+        setPendingFiles((prev) => {
+            const arr = prev.slice();
+            const removed = arr.splice(i, 1)[0];
+            if (removed) {
+                try {
+                    URL.revokeObjectURL(removed.url);
+                }
+                catch (e) {
+                    /* 忽略 */
+                }
+            }
+            return arr;
+        });
+    };
+    /** 投递一批文件（不压缩、按体积预检，逐条顺序发送；进度复用同一个 progress 条） */
+    const sendFilesNow = (list, afterOk) => {
+        setSending(true);
+        const ok = sendFilesToSession(session.key, list, (done, total, failed, text) => {
+            setProgress({ done, total, failed, text });
+            if (done >= total || failed) {
+                setSending(false);
+                if (!failed) {
+                    afterOk();
+                    setProgress(null);
+                }
+            }
+        });
+        if (!ok)
+            setSending(false);
+    };
+    const confirmSendFiles = () => {
+        if (!pendingFiles.length || !sendable)
+            return;
+        const snapshot = pendingFiles.slice();
+        sendFilesNow(snapshot, () => setPendingFiles([]));
+    };
     const confirmSendImage = () => {
         if (!pendingImages.length || !sendable)
             return;
@@ -106827,6 +107164,33 @@ function TransferDeviceChat({ session, phone, colorIndex, onClear, }) {
                             border: msg.sendState === 'failed' ? '1px solid ' + token.colorError : 'none',
                             display: 'block',
                         } }) }) }, msg.id));
+        }
+        // v26.10.14-v6：文件气泡（与图片分开渲染——文件不缩略图、不预览，走「图标 + 文件名 + 大小 + 下载」）
+        if (msg.type === 'file') {
+            return ((0,react_jsx_runtime_production_namespaceFn().jsxs)(ChatBubble, { side: side, maxWidth: "74%", danger: msg.sendState === 'failed', meta: metaOf(msg), avatar: isUser ? (0,react_jsx_runtime_production_namespaceFn().jsx)(UserIcon, { size: 15 }) : peerAvatar, avatarStyle: isUser ? undefined : peerAvatarStyle, children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { "data-transfer-file-bubble": "1", style: {
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 10,
+                            minWidth: 0,
+                            opacity: msg.sendState === 'sending' ? 0.55 : 1,
+                        }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("span", { style: {
+                                    flex: '0 0 auto',
+                                    width: 32,
+                                    height: 32,
+                                    borderRadius: 6,
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    // 表情/图片气泡是实心主色，这里用半透明底以适配左右两侧底色
+                                    background: isUser ? 'rgba(255,255,255,0.22)' : token.colorFillSecondary,
+                                    color: isUser ? '#fff' : token.colorTextSecondary,
+                                }, children: (0,react_jsx_runtime_production_namespaceFn().jsx)(FileTextIcon, { size: 18 }) }), (0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { flex: '1 1 auto', minWidth: 0 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("div", { title: msg.name || 'file', style: {
+                                            fontSize: 13,
+                                            fontWeight: 500,
+                                            overflow: 'hidden',
+                                            textOverflow: 'ellipsis',
+                                            whiteSpace: 'nowrap',
+                                        }, children: msg.name || 'file' }), (0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { fontSize: 11, opacity: 0.75, marginTop: 1 }, children: [formatBytes(msg.blob ? msg.blob.size : 0), msg.mime ? ' · ' + msg.mime : ''] })] }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { size: "small", "aria-label": "\u4E0B\u8F7D\u6587\u4EF6", disabled: msg.sendState === 'sending' || !msg.blob, onClick: () => doDownloadFile(msg), style: { flex: '0 0 auto' }, children: "\u4E0B\u8F7D" })] }), msg.sendState === 'failed' && msg.sendError ? ((0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { fontSize: 11, marginTop: 4 }, children: msg.sendError })) : null] }, msg.id));
         }
         return ((0,react_jsx_runtime_production_namespaceFn().jsxs)(ChatBubble, { side: side, maxWidth: "74%", danger: msg.sendState === 'failed', meta: metaOf(msg), avatar: isUser ? (0,react_jsx_runtime_production_namespaceFn().jsx)(UserIcon, { size: 15 }) : peerAvatar, avatarStyle: isUser ? undefined : peerAvatarStyle, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(MarkdownBody, { content: msg.text || '', inverted: isUser }), msg.sendState === 'failed' && msg.sendError ? ((0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { fontSize: 11, marginTop: 4 }, children: msg.sendError })) : null] }, msg.id));
     };
@@ -106913,7 +107277,33 @@ function TransferDeviceChat({ session, phone, colorIndex, onClear, }) {
                                         textAlign: 'center',
                                         cursor: sending ? 'not-allowed' : 'pointer',
                                         userSelect: 'none',
-                                    }, children: "\u00D7" })] }, img.url))) }), (0,react_jsx_runtime_production_namespaceFn().jsxs)(es_button, { color: "primary", variant: "solid", block: true, disabled: !sendable, loading: sending, onClick: confirmSendImage, style: { marginTop: 8 }, children: ["\u53D1\u9001 ", pendingImages.length, " \u5F20\u56FE\u7247"] })] })), progress && ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { flex: '0 0 auto', padding: '8px 12px 0' }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(es_progress, { percent: percent, size: "small", strokeColor: progress.failed ? '#e4393c' : '#1677ff', status: progress.failed ? 'exception' : 'normal' }), (0,react_jsx_runtime_production_namespaceFn().jsx)(TransferDeviceChat_Text, { type: progress.failed ? 'danger' : 'secondary', style: { fontSize: 12 }, children: progress.text })] })), (0,react_jsx_runtime_production_namespaceFn().jsx)(ChatComposer, { value: sendText, onChange: setSendText, onSend: doSendText, disabled: !sendable, canSend: !!sendText.trim(), placeholder: "\u8F93\u5165\u8981\u53D1\u9001\u5230\u624B\u673A\u7684\u6587\u672C\u2026\uFF08Enter \u53D1\u9001\uFF0CShift+Enter \u6362\u884C\uFF09", onPickEmojiImage: sendEmojiNow, notice: sendable ? undefined : ((0,react_jsx_runtime_production_namespaceFn().jsx)(TransferDeviceChat_Text, { type: "warning", style: { fontSize: 12, display: 'block', marginBottom: 6 }, children: "\u5F53\u524D\u6CA1\u6709\u5728\u7EBF\u624B\u673A\uFF0C\u8FDE\u4E0A\u624B\u673A\u540E\u624D\u80FD\u53D1\u9001\u3002" })), actions: [
+                                    }, children: "\u00D7" })] }, img.url))) }), (0,react_jsx_runtime_production_namespaceFn().jsxs)(es_button, { color: "primary", variant: "solid", block: true, disabled: !sendable, loading: sending, onClick: confirmSendImage, style: { marginTop: 8 }, children: ["\u53D1\u9001 ", pendingImages.length, " \u5F20\u56FE\u7247"] })] })), pendingFiles.length > 0 && ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { flex: '0 0 auto', padding: '8px 12px 0' }, children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', justifyContent: 'space-between', marginBottom: 6 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("span", { style: { fontSize: 12, color: token.colorTextSecondary }, children: "\u5F85\u53D1\u9001\u6587\u4EF6" }), (0,react_jsx_runtime_production_namespaceFn().jsxs)("span", { style: { fontSize: 12, color: token.colorTextTertiary }, children: ["\u5DF2\u9009 ", pendingFiles.length, " \u4E2A"] })] }), (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { display: 'flex', flexDirection: 'column', gap: 6 }, children: pendingFiles.map((f, i) => ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: {
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 8,
+                                padding: '6px 10px',
+                                borderRadius: 8,
+                                border: '1px solid ' + token.colorBorderSecondary,
+                                background: token.colorFillQuaternary,
+                                minWidth: 0,
+                            }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(FileTextIcon, { size: 16 }), (0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { flex: '1 1 auto', minWidth: 0 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("div", { title: f.name, style: {
+                                                fontSize: 12,
+                                                overflow: 'hidden',
+                                                textOverflow: 'ellipsis',
+                                                whiteSpace: 'nowrap',
+                                            }, children: f.name }), (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { fontSize: 11, color: token.colorTextTertiary }, children: formatBytes(f.file.size) })] }), (0,react_jsx_runtime_production_namespaceFn().jsx)("span", { title: "\u79FB\u9664\u8FD9\u4E2A\u6587\u4EF6", onClick: () => removePendingFile(i), style: {
+                                        flex: '0 0 auto',
+                                        width: 20,
+                                        height: 20,
+                                        borderRadius: '50%',
+                                        background: 'rgba(0,0,0,0.35)',
+                                        color: '#fff',
+                                        fontSize: 13,
+                                        lineHeight: '20px',
+                                        textAlign: 'center',
+                                        cursor: sending ? 'not-allowed' : 'pointer',
+                                        userSelect: 'none',
+                                    }, children: "\u00D7" })] }, f.url))) }), (0,react_jsx_runtime_production_namespaceFn().jsxs)(es_button, { color: "primary", variant: "solid", block: true, disabled: !sendable, loading: sending, onClick: confirmSendFiles, style: { marginTop: 8 }, children: ["\u53D1\u9001 ", pendingFiles.length, " \u4E2A\u6587\u4EF6"] })] })), progress && ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { flex: '0 0 auto', padding: '8px 12px 0' }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(es_progress, { percent: percent, size: "small", strokeColor: progress.failed ? '#e4393c' : '#1677ff', status: progress.failed ? 'exception' : 'normal' }), (0,react_jsx_runtime_production_namespaceFn().jsx)(TransferDeviceChat_Text, { type: progress.failed ? 'danger' : 'secondary', style: { fontSize: 12 }, children: progress.text })] })), (0,react_jsx_runtime_production_namespaceFn().jsx)(ChatComposer, { value: sendText, onChange: setSendText, onSend: doSendText, disabled: !sendable, canSend: !!sendText.trim(), placeholder: "\u8F93\u5165\u8981\u53D1\u9001\u5230\u624B\u673A\u7684\u6587\u672C\u2026\uFF08Enter \u53D1\u9001\uFF0CShift+Enter \u6362\u884C\uFF09", onPickEmojiImage: sendEmojiNow, notice: sendable ? undefined : ((0,react_jsx_runtime_production_namespaceFn().jsx)(TransferDeviceChat_Text, { type: "warning", style: { fontSize: 12, display: 'block', marginBottom: 6 }, children: "\u5F53\u524D\u6CA1\u6709\u5728\u7EBF\u624B\u673A\uFF0C\u8FDE\u4E0A\u624B\u673A\u540E\u624D\u80FD\u53D1\u9001\u3002" })), actions: [
                     {
                         key: 'image',
                         label: '图片上传',
@@ -106924,15 +107314,17 @@ function TransferDeviceChat({ session, phone, colorIndex, onClear, }) {
                     },
                     {
                         key: 'file',
-                        label: '附件',
-                        tooltip: '暂不支持发送附件：中继服务只转发图片与文本',
+                        label: '文件',
+                        tooltip: '选择任意文件发送到手机（不压缩，单次上限约 100MB）',
                         icon: (0,react_jsx_runtime_production_namespaceFn().jsx)(PaperclipIcon, { size: 15 }),
-                        disabled: true,
+                        onClick: pickFiles,
+                        disabled: !sendable || sending,
                     },
                 ] })] }));
 }
 
 ;// ./src/lib/ui/transfer/TransferFilesView.tsx
+
 
 
 
@@ -107000,6 +107392,8 @@ function TransferFilesView({ messages, scopeLabel, onClearScope, }) {
         .filter((m) => !m.emoji)
         .sort((a, b) => b.ts - a.ts), [messages]);
     const images = ordered.filter((m) => m.type === 'image');
+    // v26.10.14-v6：文件与文本分开统计（文件走卡片，文本走原有的 pre 列表）
+    const files = ordered.filter((m) => m.type === 'file');
     const texts = ordered.filter((m) => m.type === 'text');
     const printImage = (msg, idx) => {
         const fname = downloadFileName(msg.name, msg.mime, idx);
@@ -107050,10 +107444,24 @@ function TransferFilesView({ messages, scopeLabel, onClearScope, }) {
             window.setTimeout(() => setCopyState(null), 1500);
         });
     };
+    /** 文件（v26.10.14-v6）：下载原文件（与图片下载同一套「锚点 + objectURL」做法） */
+    const doDownloadFile = (msg) => {
+        const fname = msg.name || 'file.bin';
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(msg.blob);
+        a.download = fname;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+        addLog('文件已下载: ' + fname, 'success');
+    };
     if (!ordered.length) {
-        return ((0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { flex: '1 1 auto', display: 'flex', alignItems: 'center', justifyContent: 'center' }, children: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_empty, { image: es_empty.PRESENTED_IMAGE_SIMPLE, description: (0,react_jsx_runtime_production_namespaceFn().jsx)("span", { style: { fontSize: 12 }, children: onClearScope ? '该会话暂无图片 / 文本' : '暂无文件——手机发来的图片 / 文本会汇总在这里' }) }) }));
+        return ((0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { flex: '1 1 auto', display: 'flex', alignItems: 'center', justifyContent: 'center' }, children: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_empty, { image: es_empty.PRESENTED_IMAGE_SIMPLE, description: (0,react_jsx_runtime_production_namespaceFn().jsx)("span", { style: { fontSize: 12 }, children: onClearScope
+                        ? '该会话暂无图片 / 文件 / 文本'
+                        : '暂无文件——手机发来的图片 / 文件 / 文本会汇总在这里' }) }) }));
     }
-    return ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { className: "znhd-transfer-files", style: { flex: '1 1 auto', minHeight: 0, overflowY: 'auto', padding: '10px 12px' }, children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 8 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)(TransferFilesView_Text, { strong: true, style: { fontSize: 14 }, children: [scopeLabel, "\uFF08\u56FE\u7247 ", images.length, " \u00B7 \u6587\u672C ", texts.length, "\uFF09"] }), (0,react_jsx_runtime_production_namespaceFn().jsx)("span", { style: { flex: '1 1 auto' } }), onClearScope ? ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { danger: true, size: "small", onClick: () => {
+    return ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { className: "znhd-transfer-files", style: { flex: '1 1 auto', minHeight: 0, overflowY: 'auto', padding: '10px 12px' }, children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 8 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)(TransferFilesView_Text, { strong: true, style: { fontSize: 14 }, children: [scopeLabel, "\uFF08\u56FE\u7247 ", images.length, " \u00B7 \u6587\u4EF6 ", files.length, " \u00B7 \u6587\u672C ", texts.length, "\uFF09"] }), (0,react_jsx_runtime_production_namespaceFn().jsx)("span", { style: { flex: '1 1 auto' } }), onClearScope ? ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { danger: true, size: "small", onClick: () => {
                             onClearScope();
                             addLog('[传输助手] 已清空该会话的文件与消息', 'success');
                         }, children: "\u6E05\u7A7A\u672C\u4F1A\u8BDD" })) : ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { danger: true, size: "small", onClick: clearAllTransferFiles, children: "\u6E05\u7A7A\u5168\u90E8" }))] }), images.length ? ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_image.PreviewGroup, { items: images.map((m) => m.previewUrl), preview: {
@@ -107100,7 +107508,46 @@ function TransferFilesView({ messages, scopeLabel, onClearScope, }) {
                                         aspectRatio: '1 / 1',
                                         objectFit: 'cover',
                                         borderRadius: 8,
-                                    } }) }), (0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { fontSize: 11, color: token.colorTextTertiary, marginTop: 2 }, children: [sourceLabel(msg), " \u00B7 ", TransferFilesView_fmtTime(msg.ts), " \u00B7 ", msg.direction === 'in' ? '收到' : '发出'] })] }, msg.id))) }) })) : null, texts.length ? ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { marginTop: images.length ? 16 : 0 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)(TransferFilesView_Text, { strong: true, style: { fontSize: 13, display: 'block', marginBottom: 6 }, children: ["\u6587\u672C\uFF08", texts.length, "\uFF09"] }), texts.map((msg) => ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: {
+                                    } }) }), (0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { fontSize: 11, color: token.colorTextTertiary, marginTop: 2 }, children: [sourceLabel(msg), " \u00B7 ", TransferFilesView_fmtTime(msg.ts), " \u00B7 ", msg.direction === 'in' ? '收到' : '发出'] })] }, msg.id))) }) })) : null, files.length ? ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { marginTop: images.length ? 16 : 0 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)(TransferFilesView_Text, { strong: true, style: { fontSize: 13, display: 'block', marginBottom: 6 }, children: ["\u6587\u4EF6\uFF08", files.length, "\uFF09"] }), (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: {
+                            display: 'grid',
+                            // 与图片九宫格同策略：auto-fill + 220px 下限，窄栏（主聊天区约 300px 时）
+                            // 自动退成 1 列，不把文件名挤成一条线。
+                            gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
+                            gap: 8,
+                            alignContent: 'start',
+                        }, children: files.map((msg) => ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { "data-transfer-file-card": "1", style: {
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 10,
+                                padding: '8px 10px',
+                                borderRadius: 8,
+                                border: '1px solid ' + token.colorBorderSecondary,
+                                background: token.colorFillQuaternary,
+                                minWidth: 0,
+                            }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("span", { style: {
+                                        flex: '0 0 auto',
+                                        width: 32,
+                                        height: 32,
+                                        borderRadius: 6,
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        background: token.colorFillSecondary,
+                                        color: token.colorTextSecondary,
+                                    }, children: (0,react_jsx_runtime_production_namespaceFn().jsx)(FileTextIcon, { size: 18 }) }), (0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { flex: '1 1 auto', minWidth: 0 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("div", { title: msg.name || 'file', style: {
+                                                fontSize: 13,
+                                                color: token.colorText,
+                                                overflow: 'hidden',
+                                                textOverflow: 'ellipsis',
+                                                whiteSpace: 'nowrap',
+                                            }, children: msg.name || 'file' }), (0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: {
+                                                fontSize: 11,
+                                                color: token.colorTextTertiary,
+                                                overflow: 'hidden',
+                                                textOverflow: 'ellipsis',
+                                                whiteSpace: 'nowrap',
+                                                marginTop: 1,
+                                            }, children: [formatBytes(msg.blob ? msg.blob.size : 0), " \u00B7 ", sourceLabel(msg), " \u00B7", ' ', TransferFilesView_fmtTime(msg.ts), " \u00B7 ", msg.direction === 'in' ? '收到' : '发出'] })] }), (0,react_jsx_runtime_production_namespaceFn().jsxs)(es_space, { size: 4, style: { flex: '0 0 auto' }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { size: "small", "aria-label": "\u4E0B\u8F7D\u6587\u4EF6", disabled: !msg.blob, onClick: () => doDownloadFile(msg), children: "\u4E0B\u8F7D" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { size: "small", danger: true, "aria-label": "\u5220\u9664\u6587\u4EF6", onClick: () => removeTransferMessage(msg.sessionKey, msg.id), children: "\u00D7" })] })] }, msg.id))) })] })) : null, texts.length ? ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { marginTop: images.length || files.length ? 16 : 0 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)(TransferFilesView_Text, { strong: true, style: { fontSize: 13, display: 'block', marginBottom: 6 }, children: ["\u6587\u672C\uFF08", texts.length, "\uFF09"] }), texts.map((msg) => ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: {
                             display: 'flex',
                             gap: 8,
                             alignItems: 'flex-start',

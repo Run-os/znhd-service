@@ -81,6 +81,20 @@
           return PNG_1x1; // canvas 不可用时退回占位图（可见尺寸断言会因此失败，属预期）
         }
       })();
+      // 收到文件的载荷（v26.10.14-v6：任意文件传输通道）。内容无需是真实 PDF —— 脚本端只做
+      // base64 → Blob → objectURL 与「按 mime 走文件卡片」的判断，不解码文件本体；
+      // 给一段确定性字节即可（这里用可读文本，失败时肉眼也能看出是哪条夹具）。
+      const SMOKE_FILE_B64 = (() => {
+        const raw = 'znhd-smoke-file-payload: v26.10.14-v6 文件通道夹具\n';
+        try {
+          const bytes = new TextEncoder().encode(raw);
+          let s = '';
+          for (let i = 0; i < bytes.length; i++) s += String.fromCharCode(bytes[i]);
+          return btoa(s);
+        } catch (e) {
+          return btoa('znhd-smoke-file');
+        }
+      })();
       const PHRASES_YAML = ['冒烟常用语A: |', '  A 的内容', '冒烟常用语B: |', '  B 的内容', ''].join('\n');
       /** 在线表情包合集名（v26.10.13-v3）：对应 cdn.klyang.com/json/<id>.json 的 name 字段 */
       const EMOJI_PACK_NAMES = { aluhedwm: '阿鲁和动物们', alurc: '阿鲁日常' };
@@ -393,15 +407,25 @@
         // 中继收件长轮询：先空响应确认连接，再给一条文本、一张图片，之后空转。
         // v26.10.13-v6：文本/图片都带 `from` = 手机 A —— 两台在线时内容按发送者归组，
         // 进各自手机的会话，不再全挤进聚合会话「手机」（用户报的 bug 的回归断言）。
-        // 第 4 次起且 __routePhase 已置位：补发一条**来自手机 B** 的文本（只发一次），
+        // 第 4 次：一条**文件**（v26.10.14-v6 新增的文件通道；中继按 mime 分流 → type 'file'）。
+        // 第 5 次起且 __routePhase 已置位：补发一条**来自手机 B** 的文本（只发一次），
         // 供 sessionRouteBySenderOk 断言「B 的内容进 B 的会话、且不在当前会话里」。
         if (/\/recv\//.test(url)) {
           const n = (window.__recvCount = (window.__recvCount || 0) + 1);
-          if (n === 1) reply(details, { empty: true });
+          // v26.10.14-v7（P0-b）：真实中继会给**每一个** /recv 响应捎带在线手机名单
+          // （投递条目 / {empty:true} 超时都得带）。桩照做，让「名单由长轮询 piggyback
+          // 送达」这条新路径在冒烟里被真正走到 —— 否则断言只在按需查询那条路上过。
+          window.__recvPhonesSeen = (window.__recvPhonesSeen || 0) + 1;
+          const _PHONES = [
+            { id: _SMOKE_PHONE_A, lastSeen: Date.now() },
+            { id: _SMOKE_PHONE_B, lastSeen: Date.now() },
+          ];
+          const rv = (obj) => reply(details, Object.assign({ phones: _PHONES }, obj));
+          if (n === 1) rv({ empty: true });
           else if (n === 2)
-            reply(details, { type: 'text', text: '冒烟测试文本：收到一条文本消息', ts: Date.now(), from: _SMOKE_PHONE_A });
+            rv({ type: 'text', text: '冒烟测试文本：收到一条文本消息', ts: Date.now(), from: _SMOKE_PHONE_A });
           else if (n === 3)
-            reply(details, {
+            rv({
               type: 'image',
               name: 'smoke.jpg',
               mime: 'image/jpeg',
@@ -409,15 +433,24 @@
               ts: Date.now(),
               from: _SMOKE_PHONE_A,
             });
-          else if (n >= 4 && window.__routePhase && !window.__routeTextSent) {
+          else if (n === 4)
+            rv({
+              type: 'file',
+              name: '冒烟测试文档.pdf',
+              mime: 'application/pdf',
+              data: SMOKE_FILE_B64,
+              ts: Date.now(),
+              from: _SMOKE_PHONE_A,
+            });
+          else if (n >= 5 && window.__routePhase && !window.__routeTextSent) {
             window.__routeTextSent = true;
-            reply(details, {
+            rv({
               type: 'text',
               text: '归组测试：来自第二台手机的文本',
               ts: Date.now(),
               from: _SMOKE_PHONE_B,
             });
-          } else reply(details, { empty: true });
+          } else rv({ empty: true });
           return { abort: () => {} };
         }
         // ===== 图片嗅探夹具（v26.10.10-v4）：按 URL 分支作答，覆盖测量阶梯 =====
@@ -1019,9 +1052,13 @@
         const files = m ? m.querySelector('.znhd-transfer-files') : null;
         const ts = window.__transferSnap;
         ts.filesViewSeen = !!files;
-        ts.filesCountText = !!(files && (files.textContent || '').indexOf('全部文件（图片 1 · 文本 1）') >= 0);
+        ts.filesCountText = !!(files && (files.textContent || '').indexOf('全部文件（图片 1 · 文件 1 · 文本 1）') >= 0);
         ts.filesImgCount = files ? files.querySelectorAll('.ant-image img').length : 0;
         ts.filesTextSeen = !!(files && (files.textContent || '').indexOf('冒烟测试文本：收到一条文本消息') >= 0);
+        // v26.10.14-v6：文件通道（中继 type:'file'）——「全部文件」里应有一张文件卡片，
+        // 且卡片上带着夹具文件名（证明「按 mime 分流 → 文件卡片」这条链路真的通了）。
+        ts.fileCards = files ? files.querySelectorAll('[data-transfer-file-card="1"]').length : 0;
+        ts.fileNameSeen = !!(files && (files.textContent || '').indexOf('冒烟测试文档.pdf') >= 0);
       }, 6200);
 
       // v26.10.12-v5：文件分组下点设备条目不得跳去会话窗口；
@@ -1045,10 +1082,10 @@
           files &&
           m.querySelector('.znhd-transfer-nav button[aria-label="文件"][aria-current="page"]')
         );
-        // 筛选生效：标题变成「<会话名>的文件（图片 1 · 文本 1）」，图片仍在该会话里
+        // 筛选生效：标题变成「<会话名>的文件（图片 1 · 文件 1 · 文本 1）」，图片仍在该会话里
         ts.filesFilterSeen = !!(
           files &&
-          (files.textContent || '').indexOf('的文件（图片 1 · 文本 1）') >= 0 &&
+          (files.textContent || '').indexOf('的文件（图片 1 · 文件 1 · 文本 1）') >= 0 &&
           files.querySelectorAll('.ant-image img').length === 1
         );
       }, 6500);
@@ -1064,7 +1101,7 @@
         const files = m ? m.querySelector('.znhd-transfer-files') : null;
         window.__transferSnap.filesAllRestored = !!(
           files &&
-          (files.textContent || '').indexOf('全部文件（图片 1 · 文本 1）') >= 0
+          (files.textContent || '').indexOf('全部文件（图片 1 · 文件 1 · 文本 1）') >= 0
         );
       }, 6580);
 
@@ -1816,7 +1853,7 @@
         const files = m ? m.querySelector('.znhd-transfer-files') : null;
         window.__transferSnap.filesAfterEmoji = {
           seen: !!files,
-          countText: !!(files && (files.textContent || '').indexOf('全部文件（图片 0 · 文本 1）') >= 0),
+          countText: !!(files && (files.textContent || '').indexOf('全部文件（图片 0 · 文件 0 · 文本 1）') >= 0),
           imgCount: files ? files.querySelectorAll('.ant-image img').length : -1,
         };
       }, 19500);
@@ -2232,8 +2269,10 @@
             ts.transferRecvTextSeen &&
             ts.transferRecvImgSeen
           ),
-          // 「文件」视图：图片九宫格 + 文本分区 + 计数正确
+          // 「文件」视图：图片九宫格 + 文件卡片 + 文本分区 + 计数正确
           filesViewOk: !!(ts.filesViewSeen && ts.filesCountText && ts.filesImgCount >= 1 && ts.filesTextSeen),
+          // 任意文件通道（v26.10.14-v6）：中继按 mime 分流 type:'file' → 「全部文件」出一张文件卡片
+          fileChannelOk: !!(ts.fileCards >= 1 && ts.fileNameSeen),
           // 文件分组下点设备条目不跳会话（v26.10.13-v5 起：点击 = 筛选文件视图）
           filesNoJumpOk: !!(window.__clickedFilesItem && ts.filesNoJumpSeen),
           // 文件视图跟随第二栏选择（v26.10.13-v5）：点会话只显示该会话的文件，点「全部文件」还原
@@ -2267,6 +2306,25 @@
           phoneCountOk: !!ps.pairCountOk,
           phoneListOk: !!ps.pairListOk,
           phoneIdColorOk: !!ps.idColorOk,
+          // ===== 轮询优化（v26.10.14-v7）：名单改由长轮询送达 + 删掉 5s 轮询 =====
+          // ① 客户端在**每一次**长轮询上都声明了 `phones=1`（中继只唤醒带此标记的连接，
+          //    老脚本不受打扰）—— ⚠️ 必须要求样本非空，否则 `/recv` 一条都没发时
+          //    `[].every()` 会空集通过（假绿）。
+          phonesNegotiatedOk: (() => {
+            const recvs = window.__gmXhrLog.filter((l) => l.indexOf('/recv/') >= 0);
+            return recvs.length >= 3 && recvs.every((l) => l.indexOf('phones=1') >= 0);
+          })(),
+          // ② 长轮询的响应确实捎带了名单（桩在作答处计数）。
+          //    ⚠️ 这条只证明「服务端形态 + 客户端拿到」；名单是否被**正确解析**由
+          //    relay.js 的 `/recv 超时响应捎带 phones 名单` 断言按内容逐字段锁死。
+          phonesViaLongPollOk: (window.__recvPhonesSeen || 0) >= 1,
+          // ③ 5s 定时轮询已删除，但**按需查询的钩子还在**（启动时的兜底 tick 会真发一次）。
+          //    整个冒烟跑约 38.5s：删掉后 /phone/status 只该被按需打（启动 1 次 + 每次
+          //    窗口打开 1 次；60s 兜底 tick 在 38.5s 内还没到点），旧的 5s 固定轮询在同样
+          //    时长里必然 ≥7 次 ⇒ 上限 4 足以区分，且容忍窗口多次开合。
+          onDemandStatusQueryOk: window.__gmXhrLog.filter((l) => l.indexOf('/phone/status/') >= 0).length >= 1,
+          phoneStatusPollRemovedOk:
+            window.__gmXhrLog.filter((l) => l.indexOf('/phone/status/') >= 0).length <= 4,
           // 配对窗口 footer 的「发送测试图片」
           pairTestImageBtnOk: !!ps.testBtnOk,
           testImageSentOk: !!ps.testImageSent,
@@ -2301,13 +2359,14 @@
               b.timeSep
             );
           })(),
-          // 输入区（微信式）：多行自增高（超上限后框内滚动）+ 工具栏表情/图片上传/附件
+          // 输入区（微信式）：多行自增高（超上限后框内滚动）+ 工具栏表情/图片上传/文件
           // + 右下角「发送」文字按钮 + 实心底圆角浮起卡片（v26.10.13-v10 起四边留白）
+          // v26.10.14-v6：「附件」占位按钮改成了可用的「文件」按钮（任意文件通道），断言随之改名
           chatComposerOk: (() => {
             const a = ts.composerEmpty || {};
             const g = ts.composerGrown || {};
             const sc = ts.composerScroll || {};
-            const need = ['表情', '图片上传', '附件'];
+            const need = ['表情', '图片上传', '文件'];
             const has = (list) => need.every((l) => (list || []).indexOf(l) >= 0);
             return !!(
               a.shell &&
@@ -2726,6 +2785,11 @@
           report.pairModalOk &&
           report.qrNoRadius &&
           report.phoneIdColorOk &&
+          // 轮询优化（v26.10.14-v7）：名单走长轮询 piggyback + 声明订阅 + 已删 5s 轮询
+          report.phonesNegotiatedOk &&
+          report.phonesViaLongPollOk &&
+          report.onDemandStatusQueryOk &&
+          report.phoneStatusPollRemovedOk &&
           report.pairTestImageBtnOk &&
           report.testImageSentOk &&
           report.transferThemeOk &&

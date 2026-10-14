@@ -6,9 +6,10 @@ import { addLog } from '@/lib/logger';
 import { copyImageToClipboard } from '@/lib/relay';
 import { safeCopyText } from '@/lib/clipboard';
 import { downloadFileName } from '@/lib/gallery';
-import { CheckIcon, CopyIcon, DownloadIcon, TrashIcon } from '@/lib/ui/icons';
+import { CheckIcon, CopyIcon, DownloadIcon, FileTextIcon, TrashIcon } from '@/lib/ui/icons';
 import ImageOverlayActions from '@/lib/ui/ImageOverlayActions';
 import { clearAllTransferFiles, PHONE_SESSION_KEY, removeTransferMessage } from '@/lib/transfer/store';
+import { formatBytes } from '@/lib/sniffer';
 import { shortPhoneId } from '@/lib/ui/transfer/deviceColors';
 import type { TransferMessage } from '@/lib/transfer/types';
 // 预览相关的通用件全部来自共享层（与手机上传页同一份，v26.10.08-v13 起）
@@ -85,6 +86,8 @@ export default function TransferFilesView({
         [messages]
     );
     const images = ordered.filter((m) => m.type === 'image');
+    // v26.10.14-v6：文件与文本分开统计（文件走卡片，文本走原有的 pre 列表）
+    const files = ordered.filter((m) => m.type === 'file');
     const texts = ordered.filter((m) => m.type === 'text');
 
     const printImage = (msg: TransferMessage, idx: number) => {
@@ -139,6 +142,19 @@ export default function TransferFilesView({
         });
     };
 
+    /** 文件（v26.10.14-v6）：下载原文件（与图片下载同一套「锚点 + objectURL」做法） */
+    const doDownloadFile = (msg: TransferMessage) => {
+        const fname = msg.name || 'file.bin';
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(msg.blob as Blob);
+        a.download = fname;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+        addLog('文件已下载: ' + fname, 'success');
+    };
+
     if (!ordered.length) {
         return (
             <div style={{ flex: '1 1 auto', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -146,7 +162,9 @@ export default function TransferFilesView({
                     image={Empty.PRESENTED_IMAGE_SIMPLE}
                     description={
                         <span style={{ fontSize: 12 }}>
-                            {onClearScope ? '该会话暂无图片 / 文本' : '暂无文件——手机发来的图片 / 文本会汇总在这里'}
+                            {onClearScope
+                                ? '该会话暂无图片 / 文件 / 文本'
+                                : '暂无文件——手机发来的图片 / 文件 / 文本会汇总在这里'}
                         </span>
                     }
                 />
@@ -160,7 +178,7 @@ export default function TransferFilesView({
             style={{ flex: '1 1 auto', minHeight: 0, overflowY: 'auto', padding: '10px 12px' }}>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 8 }}>
                 <Text strong style={{ fontSize: 14 }}>
-                    {scopeLabel}（图片 {images.length} · 文本 {texts.length}）
+                    {scopeLabel}（图片 {images.length} · 文件 {files.length} · 文本 {texts.length}）
                 </Text>
                 <span style={{ flex: '1 1 auto' }} />
                 {onClearScope ? (
@@ -263,8 +281,97 @@ export default function TransferFilesView({
                 </Image.PreviewGroup>
             ) : null}
 
-            {texts.length ? (
+            {files.length ? (
                 <div style={{ marginTop: images.length ? 16 : 0 }}>
+                    <Text strong style={{ fontSize: 13, display: 'block', marginBottom: 6 }}>
+                        文件（{files.length}）
+                    </Text>
+                    <div
+                        style={{
+                            display: 'grid',
+                            // 与图片九宫格同策略：auto-fill + 220px 下限，窄栏（主聊天区约 300px 时）
+                            // 自动退成 1 列，不把文件名挤成一条线。
+                            gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
+                            gap: 8,
+                            alignContent: 'start',
+                        }}>
+                        {files.map((msg) => (
+                            <div
+                                key={msg.id}
+                                data-transfer-file-card="1"
+                                style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 10,
+                                    padding: '8px 10px',
+                                    borderRadius: 8,
+                                    border: '1px solid ' + token.colorBorderSecondary,
+                                    background: token.colorFillQuaternary,
+                                    minWidth: 0,
+                                }}>
+                                <span
+                                    style={{
+                                        flex: '0 0 auto',
+                                        width: 32,
+                                        height: 32,
+                                        borderRadius: 6,
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        background: token.colorFillSecondary,
+                                        color: token.colorTextSecondary,
+                                    }}>
+                                    <FileTextIcon size={18} />
+                                </span>
+                                <div style={{ flex: '1 1 auto', minWidth: 0 }}>
+                                    <div
+                                        title={msg.name || 'file'}
+                                        style={{
+                                            fontSize: 13,
+                                            color: token.colorText,
+                                            overflow: 'hidden',
+                                            textOverflow: 'ellipsis',
+                                            whiteSpace: 'nowrap',
+                                        }}>
+                                        {msg.name || 'file'}
+                                    </div>
+                                    <div
+                                        style={{
+                                            fontSize: 11,
+                                            color: token.colorTextTertiary,
+                                            overflow: 'hidden',
+                                            textOverflow: 'ellipsis',
+                                            whiteSpace: 'nowrap',
+                                            marginTop: 1,
+                                        }}>
+                                        {formatBytes(msg.blob ? msg.blob.size : 0)} · {sourceLabel(msg)} ·{' '}
+                                        {fmtTime(msg.ts)} · {msg.direction === 'in' ? '收到' : '发出'}
+                                    </div>
+                                </div>
+                                <Space size={4} style={{ flex: '0 0 auto' }}>
+                                    <Button
+                                        size="small"
+                                        aria-label="下载文件"
+                                        disabled={!msg.blob}
+                                        onClick={() => doDownloadFile(msg)}>
+                                        下载
+                                    </Button>
+                                    <Button
+                                        size="small"
+                                        danger
+                                        aria-label="删除文件"
+                                        onClick={() => removeTransferMessage(msg.sessionKey, msg.id)}>
+                                        ×
+                                    </Button>
+                                </Space>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            ) : null}
+
+            {texts.length ? (
+                <div style={{ marginTop: images.length || files.length ? 16 : 0 }}>
                     <Text strong style={{ fontSize: 13, display: 'block', marginBottom: 6 }}>
                         文本（{texts.length}）
                     </Text>
