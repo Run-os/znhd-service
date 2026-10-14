@@ -24,6 +24,14 @@
 - ⚠️ **`relay.js` 里那条 P3 断言是本仓唯一必须真等 31s 的**（钳制值是常量，新旧上限**唯一**可观测差异就是挂起时长）⇒ 探测在 `main()` **最早期**启动、与后面所有断言**并行**跑，末尾才补足到 31s 判定；别写成串行 `await sleep(31000)` 白白串行化。
 - **版本号跨午夜判例**：本次改动从 10-14 23:50 延续到 10-15 00:1x ⇒ 版本号跟**提交时刻的真实日期**走，起新号 `26.10.15-v1`（不接 10-14 的 v9）。relay 同步 `26.10.15-v1`。
 
+## 手机端连接模型（v26.10.15-v2 / 轮询优化 P4）
+- 手机端只挂**一条**连接：`POST /phone/poll/<deviceId>?maxwait=`（body `{phoneId}`）= 报活 + 收件合一（8h 请求数 ~4880 → **~1280**，心跳 3600 归零，任务书「<1500 次」达成）。老端点 `/phone/heartbeat` + `/phone/recv` **原样保留** ⇒ 老手机页零影响；新手机页遇 404 自动降级（`mode: 'unknown'|'poll'|'legacy'`，只在 `unknown` 时判 404）。
+- ⚠️ **在线判定语义变了**：旧「距上次心跳 < `PHONE_TTL`(20s)」→ 新「**挂起中的 poll 算在线** + 断开后 TTL 判离线」。`pollAliveSet()` 被 `listPhones` 与周期清扫**两处冗余使用**（`res.__pollAlive` 标记，只认它 ⇒ 老手机页语义零变化）；`refreshPhone()` 在 close 时静默补时间戳。真离线仍 ~20~25s。
+- ⚠️ 手机端**未确认连上时必须用 1s 短 maxwait**（`confirmed` 标志）：否则「已连接」要等 45s（旧行为 ≤8s）；看门狗也要同步缩到 `maxwait+5000`。
+- ⚠️ **反向验证要同时关两层**（只关 sweep 时 `listPhones` 会兜住、断言仍全绿）—— 本仓**第二次**踩「分层兜底 ⇒ 单点关闭假绿」（第一次是 sniffConv 的 `AliasTable`）。
+- ⚠️ **慢断言要共用等待窗口**：P3 的 31s 挂起探测与 P4 的 20s 在线边界并行跑 ⇒ `verify:relay` 仍 ~38s。
+- 轮询优化四批全部落地：P0/P1/P2（v26.10.14-v7）+ P5（v8）+ P3（v26.10.15-v1）+ P4（v2）。**请求数 11664 → ~1280（-89%）**。
+
 ## 硬规矩
 - 三块：`znhd.user.js`（税务页油猴脚本，自建宿主 + React 19 + antd v6；宿主 id 见 `src/lib/ui/panelIds.ts`）、`relay-server/`（零依赖中继；手机页 = `web/` 构建产物，托管 `/u/<deviceId>`）、`src/lib/*` 业务。
 - **版本号 `YY.M.D-vN`**（改动当天真实日期 + 当天第 N 次）。油猴**三写**：`config/common.meta.json` / `package.json` / `package-lock.json`；relay 独立版本。

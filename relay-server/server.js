@@ -13,12 +13,17 @@
 //      `from` = 发送者手机 ID；老手机页不带 phoneId 时 from 为空，电脑端按旧规则归组）
 //
 //   反向（电脑 → 手机）：
-//   1) 手机打开 /u/<deviceId> 后，周期性 POST /phone/heartbeat/<deviceId> 报活（声明在线）
+//   1) 手机打开 /u/<deviceId> 后**声明在线并等待内容**（P4，v26.10.15-v2 起两者合一）：
+//      POST /phone/poll/<deviceId>（body `{phoneId}`）挂起 maxwait 秒 —— 有内容立刻返回，
+//      没有则到期回 {empty:true}，返回后客户端立即重连。**一次请求同时完成「报活」与「收件」**，
+//      手机端因此只挂一条连接（旧模型是「8s 心跳」+「长轮询」两条并行，8h 多 3600 次请求）。
+//      ⚠️ 老手机页仍可走老模型：POST /phone/heartbeat/<deviceId> 报活 + GET /phone/recv/<deviceId>
+//      收件，两个端点原样保留；反过来，新手机页连老中继时会收到 404 并**自动降级**回老模型。
 //   2) 电脑端不再定期轮询 GET /phone/status/<deviceId>，而是在**正向长轮询的响应里捎带**
 //      在线手机名单（P0-b piggyback），并在手机上下线时被服务器主动唤醒（P0-c）；
 //      /phone/status 退化为「窗口打开」与「60s 兜底」时的按需查询（接口形态未变）
 //   3) 电脑端 POST /phone/send/<deviceId>（图片 {data,mime,name} 或文本 {text}）
-//   4) 手机端长轮询 /phone/recv/<deviceId> 取走条目 → 全屏看图/复制文本
+//   4) 手机端从上面那条挂起的请求里取走条目 → 全屏看图/复制文本
 //
 // 说明：电脑端使用长轮询而非 WebSocket，是为了绕过征纳互动页面的 CSP 对 connect-src 的限制
 //       （GM_xmlhttpRequest 不受页面 CSP 约束）。手机端页面由本服务同源托管，也无 CORS 问题。
@@ -77,7 +82,11 @@ const MAX_QUEUE_BYTES = 256 * 1024 * 1024;
 const BODY_TIMEOUT = 60 * 1000;     // 读取请求体超时兜底（慢客户端/卡住连接），超时回 408 并断开
 
 // ===== 反向通道在线状态：电脑端 → 手机端 =====
-const PHONE_TTL = 20 * 1000;       // 手机在线判定：超过该时长无心跳视为离线（心跳 8s 一次）
+const PHONE_TTL = 20 * 1000;       // 手机在线判定：超过该时长无「报活」视为离线。
+                                   // 旧模型 = 8s 心跳（每 8s 刷新时间戳）；
+                                   // P4（v26.10.15-v2）后 = 「**挂起中的 poll 算在线**」
+                                   // （新模型一次 poll 可挂 45s，远大于本值，见 pollAliveSet），
+                                   // 真离线 = 长轮询断开后 TTL + 清扫周期（≈20~25s，与改动前一致）。
 // v26.10.06-v4：由「一台电脑一个布尔位」升级为**多手机注册表**。
 //   deviceId(电脑) -> Map<phoneId(手机) -> lastSeen(ms)>
 // 手机身份来自手机页自己生成的持久化 UUID（localStorage），心跳时带上；
@@ -96,25 +105,81 @@ function shortId(id) {
 }
 
 /**
+ * 该电脑当前**挂起中的手机 poll** 集合（键 = `deviceId + '/' + phoneId`）。
+ *
+ * P4（v26.10.15-v2）为什么需要它：新模型下一次 poll 可挂满 maxwait（45s），**远大于**
+ * `PHONE_TTL`（20s）⇒ 若只看「距上次报活多久」，一台正常在线的手机挂 20s 后就会被误判离线
+ * （名单抖动 + 假的「已断开」日志）。故「挂起中」必须视为在线：在线判定（周期清扫）与
+ * 名单构造（`listPhones`）**两处都用它**，否则会出现「sweep 认为在线、但名单里没有它」的分裂。
+ *
+ * ⚠️ 只认带 `__pollAlive` 的连接（`/phone/poll` 独有）。老手机页走 `/phone/recv`，不带该标记，
+ *    其在线判定仍**完全由 8s 心跳**决定 —— 对老手机页的语义零变化。
+ */
+function pollAliveSet(deviceId) {
+  const out = new Set();
+  const set = reverseChannel.waiting.get(deviceId);
+  if (!set) return out;
+  for (const r of set) {
+    if (r.__pollAlive && !r.writableEnded && !r.destroyed) out.add(deviceId + '/' + r.__pollAlive);
+  }
+  return out;
+}
+
+/**
  * 某台电脑的在线手机快照：`{ online, phones:[{id,lastSeen}] }`（按 lastSeen 倒序）。
  * 顺手清掉已过期的（全局 sweep 每 5s 也做，这里保证**返回值即时准确**）。
  *
  * ⚠️ 单一来源：`/phone/status`（按需查询）与正向长轮询的 piggyback（P0-b）都走这里，
  *    避免两处各写一份「过期判定」而语义漂移。
+ * ⚠️ v26.10.15-v2（P4）：过期判定放宽为「超过 PHONE_TTL **且**不在挂起 poll 里」——
+ *    见 `pollAliveSet` 的注释。
  */
 function listPhones(deviceId) {
   const now = Date.now();
   const m = phoneOnline.get(deviceId);
   const phones = [];
+  const alive = pollAliveSet(deviceId);
   if (m) {
     for (const [pid, last] of Array.from(m)) {
-      if (now - last < PHONE_TTL) phones.push({ id: pid, lastSeen: last });
+      if (now - last < PHONE_TTL || alive.has(deviceId + '/' + pid)) phones.push({ id: pid, lastSeen: last });
       else m.delete(pid);
     }
     if (m.size === 0) phoneOnline.delete(deviceId);
   }
   phones.sort((a, b) => b.lastSeen - a.lastSeen);
   return { online: phones.length > 0, phones: phones };
+}
+
+/**
+ * 手机报活（`/phone/heartbeat` 与 `/phone/poll` 共用 —— v26.10.15-v2 起 P4 把心跳并进长轮询）：
+ * 写在线表；**首次上线**时记日志并主动唤醒电脑端挂起的长轮询（P0-c）。
+ * @returns {boolean} true = 本次是新上线（false = 本来就在线，只刷新了时间戳）
+ */
+function touchPhone(id, phoneId) {
+  const now = Date.now();
+  const m = phoneMap(id);
+  const key = id + '/' + phoneId;
+  const last = m.get(phoneId) || 0;
+  const wasOnline = phoneWasOnline.has(key) && (now - last) < PHONE_TTL;
+  m.set(phoneId, now);
+  if (wasOnline) return false;
+  phoneWasOnline.add(key);
+  logEvent(`[连接] 设备 ${id} 的手机 ${phoneId} 已连接（手机端在线）`);
+  // P0-c：主动唤醒电脑端挂起的长轮询 → 手机上线**秒级**可见（原来要等 5s 轮询）。
+  // subscribersOnly：只唤醒声明过 `?phones=1` 的新客户端，老脚本不受打扰。
+  forwardChannel.notify(id, { type: 'phones', phones: listPhones(id).phones }, { subscribersOnly: true });
+  return true;
+}
+
+/**
+ * 静默刷新在线时间戳（不写上线日志、不唤醒）。用于 `/phone/poll` 的请求结束：
+ * 长轮询返回后客户端要重连，中间有几毫秒「不在等待集合里」的空窗（此刻挂起判定救不了它），
+ * 若 sweep 恰好跑到，仅靠 PHONE_TTL 会误判离线并打出假的「已断开」日志。
+ * ⚠️ **只在仍登记时刷新**（已判离线的不复活），否则一个刚被杀掉的手机页会被「僵尸复活」。
+ */
+function refreshPhone(id, phoneId) {
+  const m = phoneOnline.get(id);
+  if (m && m.has(phoneId)) m.set(phoneId, Date.now());
 }
 
 // ===== 运行日志（每条前面带「精确到秒」的时间戳） =====
@@ -364,7 +429,10 @@ function createChannel(labels, opts) {
 
     // 接收者身份（反向通道 = 手机 ID）：定向投递必须知道是谁在轮询。
     // ⚠️ 缺失即拒收（v26.10.06-v4 起手机页必须升级；服务端不再兼容不带手机 ID 的老页面）。
-    if (recipientFromUrl) {
+    // v26.10.15-v2（P4）：身份也可由**路由预先**挂在 res 上 —— /phone/poll 把 phoneId 放在
+    // body 里，路由解析后已设 res.__recipient。已有就直接用，否则新端点会因 URL 上没有
+    // phoneId 而被 400 拒掉。
+    if (recipientFromUrl && !res.__recipient) {
       const rid = recipientFromUrl(u);
       if (!rid) {
         sendJson(res, 400, { error: 'missing phoneId：手机页版本过旧，请刷新手机页面后重试' });
@@ -781,19 +849,9 @@ const server = http.createServer(async (req, res) => {
         sendJson(res, 400, { error: 'missing phoneId：手机页面版本过旧，请刷新手机页面后重试' });
         return;
       }
-      const now = Date.now();
+      // v26.10.15-v2：报活逻辑抽成 touchPhone（与 /phone/poll 共用，避免两处各写一份漂移）
       const m = phoneMap(id);
-      const key = id + '/' + phoneId;
-      const last = m.get(phoneId) || 0;
-      const wasOnline = phoneWasOnline.has(key) && (now - last) < PHONE_TTL;
-      m.set(phoneId, now);
-      if (!wasOnline) {
-        phoneWasOnline.add(key);
-        logEvent(`[连接] 设备 ${id} 的手机 ${phoneId} 已连接（手机端在线）`);
-        // P0-c：主动唤醒电脑端挂起的长轮询 → 手机上线**秒级**可见（原来要等 5s 轮询）。
-        // subscribersOnly：只唤醒声明过 `?phones=1` 的新客户端，老脚本不受打扰。
-        forwardChannel.notify(id, { type: 'phones', phones: listPhones(id).phones }, { subscribersOnly: true });
-      }
+      touchPhone(id, phoneId);
       sendJson(res, 200, { ok: true, phoneId: phoneId, phoneCount: m.size });
       return;
     }
@@ -831,6 +889,51 @@ const server = http.createServer(async (req, res) => {
     }
     if (pr) { sendMethodNotAllowed(res, 'GET'); return; }
 
+    // /phone/poll/<deviceId> ：手机端**报活 + 收件**合一（v26.10.15-v2 轮询优化 P4）。
+    // 一次 POST 同时完成「声明我在线」与「挂起等电脑发来的内容」：有消息立刻返回，
+    // 没消息则挂到 maxwait 到期回 {empty:true}。手机端因此只挂**一条**连接
+    // （旧模型是 8s 心跳 + 45s 长轮询两条并行），8h 请求数再减 3600 次 —— 心跳整条消失。
+    //
+    // ⚠️ **在线判定语义随之改变**（这是 P4 唯一的风险点）：
+    //    旧模型 = 「距上次心跳 < PHONE_TTL(20s) 算在线」；
+    //    新模型下一次 poll 可挂满 maxwait(45s) ≫ TTL ⇒ 只看时间戳必然误判离线。
+    //    故 sweep 增加「**挂起中的 poll 视为在线**」判定（见 res.__pollAlive 与周期清扫），
+    //    再加上请求结束时 refreshPhone 补掉「返回 → 重连」的毫秒空窗。
+    //    结果：手机页关闭后仍是 ~20s（TTL）+ ~5s（清扫周期）后判离线，与改动前一致。
+    //
+    // ⚠️ 兼容性：老中继**没有**这个端点 ⇒ 新手机页会收到 404 并**自动降级**回
+    //    「心跳 + /phone/recv」老模型（见 web/src/lib/relay.ts）。老手机页完全不受影响 ——
+    //    /phone/heartbeat 与 /phone/recv 两个端点都原样保留。
+    const pp = /^\/phone\/poll\/([a-z0-9-]{8,64})$/i.exec(path);
+    if (pp && method === 'POST') {
+      const id = pp[1];
+      let phoneId = '';
+      try {
+        const buf = await readBody(req);
+        let body = {};
+        try { body = JSON.parse(buf.toString('utf8')) || {}; } catch (e) { body = {}; }
+        phoneId = String(body.phoneId || '');
+      } catch (e) {
+        sendJson(res, e && e.statusCode === 413 ? 413 : 400, { error: '读取请求体失败' });
+        return;
+      }
+      if (!/^[a-zA-Z0-9_-]{8,64}$/.test(phoneId)) {
+        sendJson(res, 400, { error: 'missing phoneId：手机页面版本过旧，请刷新手机页面后重试' });
+        return;
+      }
+      // ① 报活（与 /phone/heartbeat 完全同一套：上线记日志 + 唤醒电脑端）
+      touchPhone(id, phoneId);
+      // ② 请求结束时静默刷新时间戳，补掉「长轮询返回 → 客户端重连」之间的毫秒空窗
+      res.on('close', () => refreshPhone(id, phoneId));
+      // ③ 身份在 body 里，路由解析后预置到 res 上（handlePoll 见 res.__recipient 就不再取 URL）
+      res.__recipient = phoneId;
+      // ④ 挂起取件（与 /phone/recv 共用同一份长轮询实现与定向投递语义）
+      res.__pollAlive = phoneId; // sweep 据此判「挂起中 = 在线」
+      reverseChannel.handlePoll(req, res, id, u);
+      return;
+    }
+    if (pp) { sendMethodNotAllowed(res, 'POST'); return; }
+
     res.writeHead(404); res.end('not found');
   } catch (e) {
     if (res.destroyed || res.writableEnded) return; // 客户端已断开，不再尝试回 500
@@ -846,10 +949,16 @@ const server = http.createServer(async (req, res) => {
 setInterval(() => {
   const now = Date.now();
   for (const [id, m] of Array.from(phoneOnline)) {
+    // P4（v26.10.15-v2）：挂起中的手机 poll 一律视为在线（理由见 pollAliveSet 注释）。
+    const alive = pollAliveSet(id);
     for (const [pid, last] of Array.from(m)) {
+      const key = id + '/' + pid;
+      if (alive.has(key)) {
+        m.set(pid, now); // 续命 —— 让 listPhones 的即时判定与 sweep 的结论保持一致
+        continue;
+      }
       if (now - last >= PHONE_TTL) {
         m.delete(pid);
-        const key = id + '/' + pid;
         if (phoneWasOnline.has(key)) {
           phoneWasOnline.delete(key);
           logEvent(`[断开] 设备 ${id} 的手机 ${pid} 已断开（离线超时）`);

@@ -175,7 +175,7 @@
 2. 手机 GET `/u/<id>` 拿上传页（`web/` 构建产物）→ 前端压缩/HEIC 转码 → POST `/u/<id>` 入 `forwardChannel`（FIFO，超 `MAX_QUEUE` 丢最旧）。**v26.10.13-v3 起 POST 体带 `phoneId`**（手机页持久化 UUID），服务端归一化后写进 `item.from` 随投递回传。
 3. 服务端 `forwardChannel` 入队即投递：把队头一条**广播**给所有在等连接（各一份拷贝）；无连接等待时条目留队列。
 4. 电脑端 `GM_xmlhttpRequest` 长轮询 `/recv/<id>`（绕过税务页 CSP）→ `lib/transfer/store.ts` 的 `onImage`/`onText` → `addMessage()` 进**会话**（归组规则 v26.10.13-v6 起**按发送者**：条目带 `from`（发送者手机 ID）就归那台的会话，多台在线也各归各的；不带 `from`（老中继/老手机页/发送测试图）才走旧规则——恰好 1 台在线归该机会话，否则聚合会话 `__phone__`）；未读累计 + 窗关着时 `autoOpenListeners` 通知主面板 `setTransferOpen(true)` 弹窗。
-5. 反向：手机每 8s POST `/phone/heartbeat/<电脑ID>`（**body 必须带 `{phoneId}`**，v26.10.06-v4 起）报活；服务端每 5s 扫描超 `PHONE_TTL` 判离线（逐台、只告警一次）。发送走 `POST /phone/send`（body 可带 `targets: 'all' | [手机ID...]`——`store.sendTargets()`：具体会话=定向，聚合会话='all'），手机端长轮询 `/phone/recv/<电脑ID>?phoneId=xxx`：**定向条目只投给目标手机，广播条目所有人都收**，详见 `createChannel` 的 `perRecipient` 分支。
+5. 反向：手机**声明在线并等待内容**。v26.10.15-v2（P4）起两者合一 —— `POST /phone/poll/<电脑ID>`（**body 必须带 `{phoneId}`**）挂起 maxwait 秒：有内容立刻返回、没有则到期回 `{empty:true}`，返回后客户端立即重连（一次请求同时完成「报活」与「收件」，手机端只挂**一条**连接，详见第 9 条）。**老模型**（`POST /phone/heartbeat` 每 8s 报活 + `GET /phone/recv` 长轮询取件，body 必须带 `{phoneId}`，v26.10.06-v4 起）两个端点原样保留 ⇒ 老手机页照常工作；新手机页连老中继时自动降级回老模型。发送走 `POST /phone/send`（body 可带 `targets: 'all' | [手机ID...]`——`store.sendTargets()`：具体会话=定向，聚合会话='all'），**定向条目只投给目标手机，广播条目所有人都收**，详见 `createChannel` 的 `perRecipient` 分支。服务端每 5s 扫描超 `PHONE_TTL` 判离线（逐台、只告警一次）。
 6. **在线名单的送达方式（v26.10.14-v7 轮询优化，改这块前必读）**：电脑端**不再**每 5s `GET /phone/status`（那是 8h 里 5760 次请求、占 49.4% 的最大头）。现在三条路：
    - **P0-b piggyback**：`forwardChannel` 的 `opts.decorate(uuid)` 让 `/recv` 的**每个**响应（含 `{empty:true}` 超时）都带 `phones`；脚本端 `startPhoneReceive` 的 `onload` 里**必须在 `data.empty` 分支之前**先消化它（放在后面会被 `{empty:true}` 提前 return 丢掉）。
    - **P0-c 主动唤醒**：手机上线（`/phone/heartbeat` 的 `if (!wasOnline)`）与下线（周期清扫的离线判定）各调一次 `forwardChannel.notify(id, {type:'phones', phones: listPhones(id).phones}, {subscribersOnly:true})`。
@@ -183,15 +183,27 @@
    - ⚠️ **`phones=1` 协商红线**：脚本端在 `/recv` URL 上带 `?phones=1`，中继**只唤醒带该标记的连接**（`res.__wakeSub`）。老脚本不带 → 绝不被唤醒（它不认识 `type:'phones'`，被唤醒只会 1s 后重连，**反而放大请求数**）。
    - ⚠️ **数学前提**：长轮询是闭环（一次请求 = 等到消息早返回 **或** 等满 maxwait，返回即重连）⇒ 请求数 ≈ 时长/maxwait，**与消息条数无关**。所以「捎带」不增加请求数，`notify()` 也不是新机制（`deliver()` 早就在做同一件事，只是现在扩展到上下线事件）。
 
-8. **长轮询挂起时长（v26.10.15-v1 轮询优化 P3，改这块前必读）**：中继 `handlePoll` 的钳制是 `Math.min(Math.max(maxwait, 1000), 60000)`（**上限 30s → 60s**，**默认值仍 25000 不变** ⇒ 不带该参数的老客户端行为零变化）。两端稳态取值 **45s**（不是上限 60s，留余量）：脚本端 `src/lib/relay.ts` 的 `const maxwait = firstPoll ? 1000 : 45000`（首次仍 1000，只为快速确认「已连上」；`timeout: maxwait + 5000` 自动跟随）；手机页 `web/src/lib/relay.ts` 的 `&maxwait=45000` + 看门狗 **55000**（保持既有的 `maxwait + 10s` 节奏，看门狗必须 > maxwait，否则接收会静默停摆）。
+7. **长轮询挂起时长（v26.10.15-v1 轮询优化 P3，改这块前必读）**：中继 `handlePoll` 的钳制是 `Math.min(Math.max(maxwait, 1000), 60000)`（**上限 30s → 60s**，**默认值仍 25000 不变** ⇒ 不带该参数的老客户端行为零变化）。两端稳态取值 **45s**（不是上限 60s，留余量）：脚本端 `src/lib/relay.ts` 的 `const maxwait = firstPoll ? 1000 : 45000`（首次仍 1000，只为快速确认「已连上」；`timeout: maxwait + 5000` 自动跟随）；手机页 `web/src/lib/relay.ts` 的 `&maxwait=45000` + 看门狗 **55000**（保持既有的 `maxwait + 10s` 节奏，看门狗必须 > maxwait，否则接收会静默停摆）。
    - ⚠️ **反代前提（本次实测确认）**：1Panel 的 openresty 在 **http 级**设了 `proxy_read_timeout 3600s`（`/opt/1panel/apps/openresty/openresty/conf/nginx.conf:49`），而 `znhd.122050.xyz` 站点的 `location /` **未覆盖**该值 ⇒ 60s 挂起余量充足。**下次再放宽前先重查这两处**（站点 conf 位于 `/opt/1panel/1panel/www/conf.d/znhd.122050.xyz.conf`；容器名 `1Panel-openresty-AP4d`，配置从宿主机 `/opt/1panel/1panel/www` 与 `/opt/1panel/apps/openresty/...` 挂进去）。线上实测手法：`curl --resolve znhd.122050.xyz:443:127.0.0.1 'https://znhd.122050.xyz/recv/<uuid>?maxwait=30000'` 看耗时是否 ≈ maxwait 且回 `200 {"empty":true}`。
    - ⚠️ **断言的等待成本**：`relay.js` 里那条 P3 断言是本仓**唯一必须真等 31s** 的断言（钳制值是常量，「上限 30000」与「上限 60000」唯一可观测差异就是挂起时长）。探测要在 `main()` **最早期**启动并和后续断言**并行**跑，末尾才补足等待 —— 别写成串行 `await sleep(31000)` 白白串行化。
 
-7. **取件失败的重试退避（v26.10.14-v8 轮询优化 P5，改这块前必读）**：两端共用纯函数 `shared/kit/backoff.ts` 的 `nextRetryDelay(prevMs, httpStatus?)`，**状态（当前退避值）由各端闭包自己持有**（`src/lib/relay.ts` 的 `startPhoneReceive` / `web/src/lib/relay.ts` 的 `startPhoneRelay` 各一个 `retryDelay`，故多台中继地址各自独立退避）。
+8. **取件失败的重试退避（v26.10.14-v8 轮询优化 P5，改这块前必读）**：两端共用纯函数 `shared/kit/backoff.ts` 的 `nextRetryDelay(prevMs, httpStatus?)`，**状态（当前退避值）由各端闭包自己持有**（`src/lib/relay.ts` 的 `startPhoneReceive` / `web/src/lib/relay.ts` 的 `startPhoneRelay` 各一个 `retryDelay`，故多台中继地址各自独立退避）。
    - 序列：首次失败 **2s**，逐次翻倍 **2 → 4 → 8 → 16 → 32 → 60（封顶）**；**任一成功响应后立刻复位**回 2s；**429 直接跳到 60s**。
    - 脚本端：`onerror` 与 `GM_xmlhttpRequest` 抛错的 `catch` 走退避；`onload` 的「429 / 5xx」分支必须排在 `markConnected()` **之前** —— 这类响应**不算连上**，也不该把退避复位。
    - 客户端：`pollRecv` 的 429/5xx 判据必须排在 `r.json()` **之前**（否则错误页被当 JSON 解析、直接落进 `catch`，丢掉 429 的「服务端要求放缓」语义）；用一个 `Symbol` 哨兵把「HTTP 层失败、已安排好重试」与「解析出 null」区分开，否则同一次失败会被排两次重试。
    - ⚠️ **只对「连接故障」退避**：`src/lib/relay.ts` 里两处 `setTimeout(poll, 1000)`（响应解析失败 / 单条 base64 损坏）**故意不退避** —— 那是「服务器通了，但这一条我不认」，一张坏图若退避到 60s，接收会停摆一分钟。改退避时按「失败类型」分流，别按「所有 catch」一刀切。
+
+9. **心跳并入长轮询（v26.10.15-v2 轮询优化 P4，改手机端连接模型前必读）**：手机端从「8s 心跳 + 45s 长轮询」**两条连接**变成**一条** `POST /phone/poll/<deviceId>?maxwait=`（body `{phoneId}`）—— 8h 请求数 ~4880 → **~1280**（心跳 3600 归零，任务书的「<1500 次」由此达成）。
+   - **中继侧**（`server.js` 的 `/phone/poll` 路由）：解析 body 拿 phoneId → `touchPhone()` 报活（**与 `/phone/heartbeat` 共用同一函数**：写在线表 + 首次上线记日志 + `notify()` 唤醒电脑端）→ `res.__recipient = phoneId` → `res.__pollAlive = phoneId` → 复用 `reverseChannel.handlePoll()`；`res.on('close')` 里调 `refreshPhone()`。
+     - ⚠️ `handlePoll` 已加「**`res.__recipient` 已被路由预设就不再从 URL 取**」分支 —— 不加的话新端点会因为没有 URL `phoneId` 被 400 拒掉（这是 P4 的第一个坑）。
+   - ⚠️ **在线判定语义变了（P4 唯一的风险点，改这两个函数前必读）**：旧 = 「距上次心跳 < `PHONE_TTL`(20s) 算在线」；新模型下一次 poll 可挂 45s ≫ 20s ⇒ 必须新增「**挂起中的 poll 视为在线**」。实现 = `pollAliveSet(deviceId)`（扫 `reverseChannel.waiting` 里带 `__pollAlive` 且在途的连接），**`listPhones` 与周期清扫两处都要判**；再加 `refreshPhone()` 在请求结束时静默补时间戳，消除「长轮询返回 → 客户端重连」之间的毫秒空窗（否则 sweep 恰好撞上就打出假的「已断开」日志）。
+     - ⚠️ **只认 `__pollAlive`** ⇒ 老手机页的 `/phone/recv` 不带该标记，它的在线判定仍完全由 8s 心跳决定，语义零变化。
+     - 真离线仍是「长轮询断开后 `PHONE_TTL` + 清扫周期 ≈ 20~25s」，**与改动前一致**（手机页关闭后的感知延迟没有退化）。
+   - **手机端**（`web/src/lib/relay.ts`）：`pollRecv()` → `tick()`；新增 `mode: 'unknown'|'poll'|'legacy'` 状态机；`onConn` 状态改由长轮询本身驱动（原来靠心跳的 onload/catch）；`setInterval(heartbeat, 8000)` 删除（`heartbeat()` 只留给降级路径）。
+     - ⚠️ **未确认连上时必须用 1s 短 maxwait**（`confirmed` 标志）：新模型没有「8s 心跳」这种快速探针了，一上来就挂 45s 会让「已连接」等 45 秒（旧行为 ≤8s）。
+     - ⚠️ **降级红线**：老中继返回 404 ⇒ 切 `mode='legacy'` + 补启 `startHeartbeat()`。**只在 `mode === 'unknown'` 时判** —— 锁定新模型后即便偶发 404（如反代配错）也不来回横跳。
+   - **断言**：relay +8 条（含「挂起中的 poll 超过 TTL 仍在线」与「只报活一次的手机照常判离线」这对**必须成对**的断言 —— 前者防误判、后者防「把判定整个废掉」）；手机页 +3 条（主页面 `poll>0 && heartbeat===0`；用请求拦截把 `/phone/poll` 改成 404 **在本地造一个老中继**，断言真会降级）。
+     - ⚠️ **这两条慢断言要共用等待窗口**：P3 的 31s 挂起探测与 P4 的「越过 `PHONE_TTL`」边界都必须在 `main()` 最早期启动、并行跑，否则 relay 测试会从 38s 变成 60s+。
 
 ### 监控/语音（内部要点；对外细节见 ReadMe）
 - `startMonitoring` 每 `CHECK_INTERVAL=3000ms`；非工作时段跳过；人数取自 `.count:nth-child(2)`。
@@ -336,6 +348,8 @@
 | **验「后台已经在跑」必须开窗前后各取一次样** | `sniffPreMeasureOk` 的判据是两次取样 + 一次比对：12000 拍（嗅探窗 30000 拍才开）时 `/sniff-head.png`（跨域假域名 ⇒ 只能走 HEAD 桩）**已被请求过**；开窗那一刻记基线，快照时再数一次，**不得新增**。只验「开窗后有请求」等于验旧行为（开窗才测也满足），只验「开窗后没新增」则可能压根没人测过 —— 两个条件缺一不可 | **v26.10.14-v4** |
 | **会话 ID 是逐张解析的 ⇒ 同一窗口会分裂成同名两组** | 用户 2026-10-14 读 `scriptCat_SniffConvIndex` 给出的证据：同一窗口的图一半记成真实 `GROUP…`、一半记成 `name:<显示名>` 回退键，显示名相同就在面板上冒出两个同名分组。根因是 `toConv` 逐张解析、解析不出就退化成名字键且**再没有改正机会**（`conversationInfo` 拿不到 ID 时，当前会话的名字会当种子把整个窗口的图推进同一个回退键）。v26.10.14-v5 三层修法：① `AliasTable`（显示名 → 真实 ID，匹配三级「精确 → 归一化去括号尾注 → 唯一包含」，**指向不唯一一律放弃**，宁可拆组不张冠李戴）；② `buildConvContext` **走两遍**（先只认带真实 ID 的消息学别名 + 纠正当前会话 ID，再正式收集）；③ **回退键后置合并** —— `saveStoredConv` 写时迁移 + `loadStoredConv` 读时纠正 + `groupByConversation` 的 `convKey` 兜底，三处缺一处就会出现「重扫一次又分裂」。持久层同一桶新增 `aliases`（同 TTL、`MAX_SNIFF_CONV_ALIASES=200`） | **v26.10.14-v5** |
 | **反向验证要关掉「整条链路」，只关一层会假绿** | 验 `sniffConvAliasOk` 是否真有判别力时，先只把 `toConv` 的别名查询与「当前会话 ID 纠正」关掉 —— **冒烟仍全绿**，因为分组渲染的 `convKey` 与持久层的读写纠正各自也能合并。正确做法是让 `AliasTable.add()` 整体空转（别名表恒空 ⇒ 四层同时失效）再跑：此时「同名两组」复现、`sniffGroupOk` / `sniffConvAliasOk` 必须双红。教训：分层兜底越多，**单点关闭越不足以复现旧行为** | **v26.10.14-v5** |
+| **「挂起中算在线」有两层实现 ⇒ 反向验证必须同时关掉两层** | P4 的 `pollAliveSet()` 同时被 `listPhones`（名单构造）与周期清扫（`m.set(pid, now)` 续命）使用，**互为冗余**：只关 sweep 那一层时，`listPhones` 自己的 `alive.has(...)` 照样把手机算作在线 ⇒ 「挂起中的 poll 超过 `PHONE_TTL` 仍算在线」这条断言**仍全绿**（实测踩到，差点当成「改动无副作用」）。两层同时关掉该断言才如期变红，而「只报活一次的手机照常判离线」保持绿（1:1 对应）。同上一条同源：分层兜底越多，单点关闭越不足以复现旧行为 | **v26.10.15-v2** |
+| **手机端「快速确认已连接」原来靠 8s 心跳，合并进长轮询后必须补一个短探测** | P4 把心跳并进长轮询后，手机页若一上来就发 45s 的长轮询，用户要等 45 秒才看到「已连接」（旧行为 ≤8s，是明显退化）。故未确认连上时用 **1s 短 maxwait** 探测（`confirmed` 标志），连上后再转 45s —— 实测 ~1 秒内显示「已连接」，比旧行为还快。⚠️ 看门狗也要跟着缩（`maxwait + 5000`），否则一次探测要挂 55 秒才失败 | **v26.10.15-v2** |
 
 ## 技术债务
 

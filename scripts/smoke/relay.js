@@ -45,6 +45,11 @@ const DEVICE2 = 'test-device-0002';
 const PHONE_C = 'phone-cccc-0003';
 /** P3（v26.10.15-v1）专用设备：只在「maxwait 上限被放宽」那条慢断言里用，避免干扰其它等待集合 */
 const P3_DEVICE = 'test-device-p3ck';
+/** P4（v26.10.15-v2）专用设备与三台手机（心跳并入长轮询）；与 P3 共用同一个 31s 等待窗口 */
+const P4_DEVICE = 'test-device-p4ck';
+const PHONE_D = 'phone-dddd-0004'; // 挂起 25s 且不被投递 ⇒ 验「挂起中仍在线」
+const PHONE_E = 'phone-eeee-0005'; // 挂起后立刻收到定向条目 ⇒ 验「有消息立即返回」
+const PHONE_F = 'phone-ffff-0006'; // 只报活一次、之后不再续 ⇒ 验离线判定没被废掉
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -195,6 +200,61 @@ function recvPoll(opt) {
     };
 }
 
+/**
+ * 发起一次 `POST /phone/poll/<device>?maxwait=` —— v26.10.15-v2（P4）的新端点：
+ * **报活 + 收件合一**（手机端只挂这一条连接，替代「8s 心跳 + /phone/recv」两条）。
+ * 返回与 `recvPoll` 同形的句柄。用它才能真验 P4 唯一的风险点 ——「挂起中算在线」。
+ */
+function phonePoll(device, phoneId, maxwait = 2000) {
+    let settled = false;
+    let resolveFn;
+    const promise = new Promise((res) => (resolveFn = res));
+    const body = JSON.stringify({ phoneId: phoneId });
+    const r = http.request(
+        {
+            host: HOST,
+            port: PORT,
+            path: `/phone/poll/${device}?maxwait=${maxwait}`,
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) },
+        },
+        (res) => {
+            let b = '';
+            res.setEncoding('utf8');
+            res.on('data', (c) => (b += c));
+            res.on('end', () => {
+                if (settled) return;
+                settled = true;
+                let j = null;
+                try {
+                    j = JSON.parse(b);
+                } catch (e) {
+                    j = null;
+                }
+                resolveFn(j);
+            });
+        }
+    );
+    r.on('error', () => {
+        if (settled) return;
+        settled = true;
+        resolveFn(null);
+    });
+    r.write(body);
+    r.end();
+    return {
+        promise,
+        isSettled: () => settled,
+        abort: () => {
+            try {
+                r.destroy();
+            } catch (e) {
+                /* 忽略 */
+            }
+        },
+    };
+}
+
 const results = [];
 function check(name, ok) {
     results.push({ name, ok });
@@ -277,6 +337,32 @@ async function main() {
     //    为不额外拖长测试，探测在此**尽早启动**、与后面所有断言并行跑，末尾补足到 31s 再判定。
     const p3Start = Date.now();
     const p3Probe = recvPoll({ device: P3_DEVICE, maxwait: 45000 });
+
+    // ===== P4（v26.10.15-v2）：心跳并入长轮询（POST /phone/poll）=====
+    // ⚠️ 这组断言与上面的 P3 探测**共用同一个 31s 等待窗口**（两者都必须真等，串起来要 50s+）。
+    // 布局：D 挂起 25s 且期间不投递给它（验「挂起中仍在线」）；E 挂起后立刻收到定向条目
+    // （验「有消息立即返回」+ 定向语义没变）；F 只报活一次、之后不再续（验「挂起中算在线」
+    // 没有把离线判定整个废掉 —— 只做加法不做减法才是对的）。
+    const p4D = phonePoll(P4_DEVICE, PHONE_D, 25000);
+    const p4E = phonePoll(P4_DEVICE, PHONE_E, 25000);
+    const hbF = await req('POST', `/phone/heartbeat/${P4_DEVICE}`, { phoneId: PHONE_F });
+    check('P4：老端点 /phone/heartbeat 仍照常工作（老手机页完全不受影响）', hbF.status === 200);
+    await sleep(250); // 等两个 poll 注册进等待集合
+    await req('POST', `/phone/send/${P4_DEVICE}`, { text: 'p4-only-E', targets: [PHONE_E] });
+    const gotE = await p4E.promise;
+    check(
+        'P4：/phone/poll 有消息时立即返回（定向条目只给目标手机）',
+        !!(gotE && gotE.text === 'p4-only-E')
+    );
+    check('P4：非目标手机的 poll 继续挂起（定向投递语义未变）', !p4D.isSettled());
+    const p4NoId = await req('POST', `/phone/poll/${P4_DEVICE}`, {});
+    check('P4：/phone/poll 缺 phoneId 回 400（与心跳同一套身份校验）', p4NoId.status === 400);
+    const p4List = await req('GET', `/phone/status/${P4_DEVICE}`);
+    const ids4 = (p4List.json && p4List.json.phones) || [];
+    check(
+        'P4：/phone/poll 也登记在线（名单含挂起中的 D 与已收件的 E）',
+        ids4.some((p) => p.id === PHONE_D) && ids4.some((p) => p.id === PHONE_E)
+    );
 
     // 1) 心跳必须带 phoneId
     const hbNoId = await req('POST', `/phone/heartbeat/${DEVICE}`, {});
@@ -502,6 +588,22 @@ async function main() {
     pa.abort();
     pb.abort();
     pa2.abort();
+
+    // ===== P4 判定（句柄见 main() 开头，与上面所有断言并行跑了 20 多秒）=====
+    // 等到 t≈23s：既在 P3 的 31s 窗口内，又刚好越过 PHONE_TTL(20s) —— 这正是要验的边界。
+    await sleep(Math.max(0, 23000 - (Date.now() - p3Start)));
+    const st4 = await req('GET', `/phone/status/${P4_DEVICE}`);
+    const ids4b = (st4.json && st4.json.phones) || [];
+    check(
+        'P4：挂起中的 poll 超过 PHONE_TTL(20s) 仍算在线（否则正常在线的手机每 20s 就被误判离线）',
+        ids4b.some((p) => p.id === PHONE_D)
+    );
+    check(
+        'P4：只报活一次、不再续的手机超过 PHONE_TTL 后照常判离线（「挂起中算在线」没废掉离线判定）',
+        !ids4b.some((p) => p.id === PHONE_F)
+    );
+    const p4Dres = await p4D.promise; // 25s 到点，回 empty
+    check('P4：/phone/poll 无消息时挂满 maxwait 回 {empty:true}', !!(p4Dres && p4Dres.empty === true));
 
     // ===== P3 判定（探测句柄见 main() 开头，与上面所有断言并行跑了 31s）=====
     // 发的是 maxwait=45000：若服务端上限仍是 30000，它早在第 30 秒就回 {empty:true} 了。

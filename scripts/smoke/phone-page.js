@@ -269,6 +269,9 @@ async function main() {
         const phonePosts = [];
         const emojiReqs = [];
         const externalReqs = [];
+        // P4（v26.10.15-v2）：手机页应当只走 /phone/poll（报活+收件合一），不再发 /phone/heartbeat
+        let pollPathHits = 0;
+        let hbPathHits = 0;
         const pageOrigin = `http://127.0.0.1:${port}`;
         await page.setRequestInterception(true);
         page.on('request', (req) => {
@@ -279,6 +282,8 @@ async function main() {
             } catch (e) {
                 u = null; // data: 等怪scheme：不当外部请求，直接放行
             }
+            if (u && u.pathname.indexOf('/phone/poll/') === 0) pollPathHits++;
+            if (u && u.pathname.indexOf('/phone/heartbeat/') === 0) hbPathHits++;
             if (u && u.origin !== pageOrigin) externalReqs.push(url);
             if (u && u.pathname.indexOf('/emoji/') === 0) {
                 emojiReqs.push(u.pathname);
@@ -320,6 +325,14 @@ async function main() {
         await page.goto(`http://127.0.0.1:${port}/u/test-device-0001`, { waitUntil: 'load', timeout: 60000 });
         await page.waitForSelector('.znhd-phone-chat', { timeout: 30000 });
         await sleep(500);
+
+        // P4（v26.10.15-v2）：新模型下手机页只挂一条连接 —— 走 POST /phone/poll（兼报活），
+        // 不再发 /phone/heartbeat。⚠️ 两条都要判：「poll>0」防止「压根没连上」也算通过，
+        // 「hb===0」才是真正省掉的那 3600 次/8h。
+        check(
+            'P4：手机页只走 /phone/poll（已发 ' + pollPathHits + ' 次），不再发 /phone/heartbeat（' + hbPathHits + ' 次）',
+            pollPathHits > 0 && hbPathHits === 0
+        );
 
         // ① 骨架三件套：头部 / 消息滚动区 / 底部输入区（flex 吸底契约的载体）
         const skeleton = await page.evaluate(() => ({
@@ -682,6 +695,38 @@ async function main() {
             '桌面版：弹窗不占满视口（宽高均小于视口）',
             win.w < win.vw && win.h < win.vh
         );
+
+        // ===== P4 降级路径（v26.10.15-v2）=====
+        // 新手机页先试 POST /phone/poll；**老中继没有该端点 ⇒ 404 ⇒ 必须自动降级**回
+        // 「8s 心跳 + /phone/recv」。这是 P4 的兼容性红线（新客户端 + 老服务端不能坏），
+        // 只靠 typecheck 兜不住，必须真跑一次。
+        // 手法：新开一页装请求拦截，把 /phone/poll 一律改成 404 —— 等于在本地造一个老中继；
+        // 然后断言页面**先试过**新端点、并且**随后发出了** /phone/heartbeat。
+        const lgPage = await browser.newPage();
+        lgPage.setDefaultTimeout(30000);
+        let lgSawPoll = false;
+        let lgSawHeartbeat = false;
+        let lgSawRecv = false;
+        await lgPage.setRequestInterception(true);
+        lgPage.on('request', (req) => {
+            const u = req.url();
+            if (u.indexOf('/phone/poll/') >= 0) {
+                lgSawPoll = true;
+                req.respond({ status: 404, contentType: 'text/plain', body: 'not found' });
+                return;
+            }
+            if (u.indexOf('/phone/heartbeat/') >= 0) lgSawHeartbeat = true;
+            if (u.indexOf('/phone/recv/') >= 0) lgSawRecv = true;
+            req.continue();
+        });
+        await lgPage.goto(`http://127.0.0.1:${port}/u/test-device-0001`, { waitUntil: 'load', timeout: 60000 });
+        for (let i = 0; i < 25 && !(lgSawHeartbeat && lgSawRecv); i++) await sleep(200);
+        check('P4 降级：确实先试过新端点 /phone/poll（否则这条测的不是降级）', lgSawPoll);
+        check(
+            'P4 降级：老中继（/phone/poll 返回 404）下手机页自动回到 /phone/heartbeat + /phone/recv 老模型',
+            lgSawHeartbeat && lgSawRecv
+        );
+        await lgPage.close();
     } finally {
         await browser.close();
         child.kill();
