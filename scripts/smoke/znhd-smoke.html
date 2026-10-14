@@ -463,6 +463,13 @@
           reply(details, '', { responseHeaders: 'content-type: image/png\ncontent-length: 61440' });
           return { abort: () => {} };
         }
+        // ⑬ 会话分组「双路径合并」夹具（v26.10.14-v5）：与 sniff-conv-a 同属当前会话，
+        //    但它的消息**不带** conversationID（模拟历史/懒加载渲染出来的那条路）。修复前它会退化成
+        //    `name:刘永增` 键 ⇒ 同一个当前会话被拆成两组（见 sniffConvAliasOk）。
+        if (url.indexOf('/im-cos/11/sniff-conv-c.png') >= 0) {
+          reply(details, '', { responseHeaders: 'content-type: image/png\ncontent-length: 71680' });
+          return { abort: () => {} };
+        }
         // ⑫ perf 优先夹具（v26.10.14-v2）：同源图 /sniff-perf.png 真加载、真进资源表（22528 B）。
         // 尺寸测量若正确走「资源表读数」档，**根本不会请求到这里**；桩故意给一个对不上的
         // content-length（123456789 → 会显示 117.74 MB），万一身寸逻辑回退到 HEAD 也会被断言抓到。
@@ -528,6 +535,9 @@
            域名仍是 *.test（从不出网），体积由 GM 桩按 URL 作答（50 / 60 KB）。 -->
       <img id="sniff-conv-a" src="https://sniff-smoke.test/im-cos/11/sniff-conv-a.png" alt="" />
       <img id="sniff-conv-b" src="https://sniff-smoke.test/im-cos/11/sniff-conv-b.png" alt="" />
+      <!-- ⑬ 与 sniff-conv-a 同属当前会话，但它的消息没有 conversationID（v26.10.14-v5 双路径夹具）：
+           修复前它会退化成 `name:刘永增` 键，与 GROUP_CUR_A 分成两组 ⇒ 同一个会话名出现两次。 -->
+      <img id="sniff-conv-c" src="https://sniff-smoke.test/im-cos/11/sniff-conv-c.png" alt="" />
       <!-- ⑫ perf 优先夹具（v26.10.14-v2）：**同源真实加载**的图（server.js 的 /sniff-perf.png，
            精确 22528 字节 = 22 KB）。只有真加载的图才会进 performance 资源表，跨域假域名不行。
            测量时必须走「资源表读数」这一档：一个 GM 请求都不发（桩里另有假 content-length
@@ -773,10 +783,13 @@
          **历史会话**的图走 `state.allChat.historyMsg`（嵌套结构、脚本端用宽容遍历认）。
          脚本是经 unsafeWindow.document 读 `#app.__vue__` 的；本 harness 把 window.unsafeWindow
          指向了同一个 window，所以这里直接往 `#app` 上挂 __vue__ 就等于挂在页面主世界。 */
-      window.__sniffConvMsg = (fileName, sender, time) => ({
+      window.__sniffConvMsg = (fileName, sender, time, conversationID) => ({
         type: 'TIMImageElem',
         sendUserName: sender,
         time: time,
+        // v26.10.14-v5：真实页面上「一部分消息带 conversationID、一部分不带」正是分组双路径的根因，
+        // 故这里让它可选 —— 不给就是不带给（`str(undefined)` 为空，与页面缺字段等价）。
+        conversationID: conversationID,
         payload: {
           fileName: fileName,
           uuid: 'uuid-' + fileName,
@@ -788,9 +801,15 @@
       });
 
       /**
-       * mode = 'two'      ：当前会话「刘永增」+ 历史会话「湖南博大园林建筑有限公司」，各一张图；
+       * mode = 'two'      ：当前会话「刘永增」+ 历史会话「湖南博大园林建筑有限公司」；
        *        'switched' ：当前会话换成「湖南博大」，且两条消息**都不给** ——
        *                     此时还能把两张图各自归回原会话，只能靠脚本的持久层（会话归属索引）。
+       *
+       * v26.10.14-v5（分组双路径夹具）：
+       *   · 当前会话的 `conversationInfo` **故意不给 conversationID**，只给名字 ——
+       *     这正是用户实测到的那条路（页面解析不出群组 ID，名字来自 Vuex/DOM）；
+       *   · 当前窗口两条消息：sniff-conv-a **带** conversationID（`GROUP_CUR_A`，脚本据此学到别名），
+       *     sniff-conv-c **不带**（修复前退化 `name:刘永增` ⇒ 同一会话被拆成两组）。
        */
       window.__installSniffChat = (mode) => {
         const app = document.getElementById('app');
@@ -802,10 +821,15 @@
               chat: {
                 selectItem: {
                   conversationInfo: two
-                    ? { conversationID: 'GROUP_CUR_A', groupProfile: { name: '刘永增' } }
+                    ? { groupProfile: { name: '刘永增' } }
                     : { conversationID: 'GROUP_HIST_B', groupProfile: { name: '湖南博大园林建筑有限公司' } },
                 },
-                messageList: two ? [window.__sniffConvMsg('sniff-conv-a.png', '刘永增', 1700000001000)] : [],
+                messageList: two
+                  ? [
+                      window.__sniffConvMsg('sniff-conv-a.png', '刘永增', 1700000001000, 'GROUP_CUR_A'),
+                      window.__sniffConvMsg('sniff-conv-c.png', '刘永增', 1700000002000),
+                    ]
+                  : [],
               },
               allChat: {
                 historyMsg: two
@@ -2604,7 +2628,9 @@
           // 判据（三条一起看，缺一条都说明归属/排序/渲染有一处没接上）：
           //   ① 恰好 3 组：刘永增 / 湖南博大园林建筑有限公司 / 未归属（name 为空串）；
           //   ② 「当前会话」标签落在第 0 组（= Vuex 的 selectItem 那一组）；
-          //   ③ 每组的卡片数与卡片标题对得上（a 图在第 0 组、b 图在第 1 组，各 1 张）。
+          //   ③ 每组的卡片数与卡片标题对得上（第 0 组 2 张：a 带 conversationID、c 不带，见下）。
+          // v26.10.14-v5：当前会话的 conversationInfo **故意不给 ID** ⇒ 当前组的 ID 只能靠
+          // 「同一窗口另一张图带的 ID」学出来，故 ③ 里两张图都在第 0 组是本次修复的直接证据。
           sniffGroupOk: (() => {
             const s = window.__sniffSnap;
             const g = s && s.groups;
@@ -2616,15 +2642,37 @@
               g.names[1] === '湖南博大园林建筑有限公司' &&
               g.names[2] === '' &&
               g.currentIndex === 0 &&
-              g.cards[0] === 1 &&
+              g.cards[0] === 2 &&
               g.cards[1] === 1 &&
               g.titles[0].indexOf('sniff-conv-a.png') >= 0 &&
+              g.titles[0].indexOf('sniff-conv-c.png') >= 0 &&
               g.titles[1].indexOf('sniff-conv-b.png') >= 0 &&
-              g.headers[0].indexOf('1 张') >= 0
+              g.headers[0].indexOf('2 张') >= 0
+            );
+          })(),
+          // 会话归属的双路径合并（v26.10.14-v5，用户 2026-10-14 反馈的「同名两组」）：
+          // 同一个会话窗口里，带 conversationID 的图与不带的分属两条解析路径。修复前后者退化成
+          // `name:刘永增` 键 ⇒ 面板出现 4 组、两个「刘永增」。三条判据：
+          //   ① 组名不重复（同名两组是本 bug 的可见症状）；
+          //   ② 恰好 3 组（多出来的那组就是回退键）；
+          //   ③ 第 0 组 2 张卡且 a、c 都在里面（两条路径真正并成一组，而不是各少一张）。
+          sniffConvAliasOk: (() => {
+            const s = window.__sniffSnap;
+            const g = s && s.groups;
+            if (!g) return false;
+            const names = g.names.filter((n) => !!n);
+            return !!(
+              s.chatInstalled &&
+              new Set(names).size === names.length &&
+              g.count === 3 &&
+              g.cards[0] === 2 &&
+              g.titles[0].indexOf('sniff-conv-a.png') >= 0 &&
+              g.titles[0].indexOf('sniff-conv-c.png') >= 0
             );
           })(),
           // 会话归属的持久化（v26.10.13-v8）：切走会话（Vuex 里两条消息都不再提供）后重扫，
           // 两张图仍各自归回原会话 —— 少了持久层的话它们只会落进「未归属」，names 前两项都是空串。
+          // v26.10.14-v5：当前会话那组的 2 张（a + c）都要回来，且 c 的 `name:` 键已被迁移合并。
           sniffGroupPersistOk: (() => {
             const s = window.__sniffSnap;
             const g = s && s.groupsAfterSwitch;
@@ -2638,7 +2686,7 @@
               g.names[2] === '' &&
               g.currentIndex === 0 &&
               g.cards[0] === 1 &&
-              g.cards[1] === 1
+              g.cards[1] === 2
             );
           })(),
           // v26.10.10-v16：图片格子上的功能按钮改成「压在图片右下角、只有图标、hover 才出现」。
@@ -2710,7 +2758,9 @@
           report.sniffSvgExcludedOk &&
           report.sniffSelectScopeOk &&
           // 会话分组（v26.10.13-v8）：分组渲染 + 切会话后仍靠持久层归组
+          // v26.10.14-v5：再加「双路径合并」（同窗口带/不带 ID 的图必须同组、无同名两组）
           report.sniffGroupOk &&
+          report.sniffConvAliasOk &&
           report.sniffGroupPersistOk
             ? 'ALL-OK'
             : 'PARTIAL');

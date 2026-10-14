@@ -27,6 +27,7 @@
 - 分工：`lib/sniffer.ts` 仍是**不碰页面的纯函数**（只加 `urlFileStem` + 候选的 `stem`）；归属/分桶/持久化全在 `lib/sniffConv.ts`。
 - 归属判据：`unsafeWindow.document` 的 `#app.__vue__`（当前会话 + `chat.messageList`；其它会话走 `allChat.historyMsg`，**嵌套结构无实测样本**，靠 `walkAny` 宽容遍历兜）；会话名 DOM 兜底 `.group-item.selected .company-name`。**按文件名主干匹配，不按 DOM 位置**。
 - 持久化 `scriptCat_SniffConvIndex`（只记映射不记 URL，按 origin 分桶 / 30 天 / 2000 条）。排序：当前会话置顶 → 其余按消息时间 → 未归属殿后；**没有具名会话就不画组头**（退回平铺）。分组容器挂 `data-sniff-group` / `-name` / `-current` 钩子。
+- **v26.10.14-v5 修「同一会话拆成同名两组」**：会话 ID 逐张解析 ⇒ 一半图给真实 `GROUP…`、一半退化成 `name:<名>` 回退键。三层：`AliasTable`（显示名→真实 ID，精确→归一化去括号尾注→**唯一**包含，指向不唯一一律放弃）+ `buildConvContext` **两遍走**（先学别名 + 纠正当前会话 ID，再收集）+ 回退键后置合并（`saveStoredConv` 写时迁移 / `loadStoredConv` 读时纠正 / `groupByConversation` 的 `convKey` 兜底，**三处缺一处就会「重扫又分裂」**）。持久层同桶新增 `aliases`（同 TTL、`MAX_SNIFF_CONV_ALIASES=200`）。⚠️ 反向验证必须让 `AliasTable.add()` 整体空转 —— 只关一层（如 `toConv`）冒烟**仍全绿**（其它层各自也能合并）。
 
 ## 嗅探提速：perf 预收 + 下载队列（v26.10.14-v2）
 - `lib/snifferPerf.ts`（新）：`app()` 第一行 `startPerfCollect()`——`setResourceTimingBufferSize(20000)` + `PerformanceObserver(buffered:true)` 把资源条目抄进模块级 Map（只收图片 URL、上限 20000）；取值 `decodedBodySize→encodedBodySize→transferSize`。**纯读 performance，零请求零 DOM**。

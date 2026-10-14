@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name                征纳互动人数和在线监控v2
 // @namespace           https://scriptcat.org/
-// @version             26.10.14-v4
+// @version             26.10.14-v5
 // @description         实时监控征纳互动等待人数和在线状态，支持语音播报、自定义常用语
 // @author              runos
 // @license             MIT
@@ -56393,6 +56393,9 @@ const CONFIG = {
     // 「图片嗅探」会话归属索引的条数上限（v26.10.13-v8，见 SNIFF_CONV_INDEX_KEY）：
     // 每条只是一小段「文件名 → 会话」，但页面上的图会一直累积，给个上限防止无限增长（超出按最旧丢）。
     MAX_SNIFF_CONV_STEMS: 2000,
+    // 会话别名（显示名 → 真实会话 ID，v26.10.14-v5，与上面那份索引同一个 localStorage 桶）的条数上限。
+    // 别名是「会话级」而不是「图片级」的，正常页面只有几十个会话；给 200 只为兜住改名/重名造成的堆积。
+    MAX_SNIFF_CONV_ALIASES: 200,
     // 会话归属索引的有效期（30 天）。文件名里带 uuid，跨天的同名文件几乎不可能，
     // 过期只为了不让陈年映射无限期留着（且 URL 签名早就失效、那些图也不会再被嗅到）。
     SNIFF_CONV_TTL: 30 * 24 * 60 * 60 * 1000,
@@ -74591,6 +74594,23 @@ async function downloadBatch(items, opts = {}) {
  * 但图还留在 DOM / 资源表里时仍能归回原会话」，也是「重新扫描不丢分组」的原因。
  * 本次从页面读到的映射**优先于**持久记录（页面才是最新真相）。
  *
+ * ── 同一会话被拆成两组：两条解析路径的合并（v26.10.14-v5） ──────────────────
+ * 用户的实测证据（读 `scriptCat_SniffConvIndex` 得到）：同一个会话窗口的图，一部分记成了真实
+ * 群组 ID（`GROUP…`，来自带 `conversationID` 的消息），另一部分记成了 `name:<显示名>`
+ * （解析不出 ID 时的回退键，来自不带 ID 的那条路径 —— 页面刷新 / 历史懒加载渲染出来的消息常见）。
+ * 两边显示名相同时，面板上就出现「同一个会话名、两个分组」。
+ *
+ * 根因是**逐张图片独立解析会话**：解析不出的那些各自退化成名字键，之后就再没机会改正。
+ * 现在的三层修法（都在本文件内，不改页面读取方式）：
+ *   ① 别名表 `AliasTable`（显示名 → 真实 ID）：解析出真实 ID 的消息顺手把「名字 ↔ ID」记进表；
+ *   ② **以会话窗口为单位解析一次**：`buildConvContext` 走两遍 —— 第一遍只认带真实 ID 的消息，
+ *      学出别名与「当前会话的真实 ID」；第二遍才正式收集，此时无 ID 的消息直接复用窗口的真实 ID；
+ *   ③ **回退键后置合并**：持久层里历史遗留的 `name:` 条目，一旦别名表认得这个名字就改写回真实 ID
+ *      （读时纠正 + 写时迁移），面板侧 `groupByConversation` 也按别名解析分组键兜最后一道。
+ * 名字匹配按「精确 → 归一化（去空白/去括号尾注，如「（个体工商户）」）→ 唯一包含」三级，
+ * 因为同一个会话的名字在页面上有多个来源（群资料给简称、DOM 给全称）。
+ * ⚠️ 宁可拆组也不张冠李戴：任何一级只要指向**不唯一**就放弃匹配，保持原样。
+ *
  * ── 现场待确认（唯一一处） ────────────────────────────────────────────────
  * `allChat.historyMsg` 的实际嵌套结构没有实测样本（当时环境里没有历史会话）。本模块按
  * 「容器自带 `conversationID` / `conversationInfo` / `groupProfile.name`」以及
@@ -74623,6 +74643,108 @@ function num(v) {
 /** ID 的短尾（给「取不到会话名」时的兜底显示用，如 `会话 aPKJKKK1`） */
 function shortId(id) {
     return id.length > 8 ? id.slice(-8) : id;
+}
+/** `name:` 回退键的判据（v26.10.14-v5）：解析不出真实会话 ID 时，用会话显示名拼的键 */
+function isFallbackId(id) {
+    return id.indexOf('name:') === 0;
+}
+/** 从回退键里取回会话显示名（不是回退键时返回空串） */
+function fallbackName(id) {
+    return isFallbackId(id) ? id.slice(5) : '';
+}
+/**
+ * 会话名的归一化（只用于**匹配**，展示一律用原文）：去空白 + 去括号尾注（全/半角）+ 小写。
+ * 同一个会话在页面上有多个名字来源 —— 群资料给简称（「财猫商贸店」）、DOM / 消息头给全称
+ * （「衡阳市南岳区财猫商贸店（个体工商户）」）—— 不做这一步就会因为一个「（个体工商户）」
+ * 而认不出是同一个会话。
+ */
+function normName(name) {
+    return str(name)
+        .replace(/[（(][^（()）]*[)）]/g, '')
+        .replace(/\s+/g, '')
+        .toLowerCase();
+}
+/** 「唯一包含」匹配的最小长度：一两个字的键（「长沙」）包含关系太容易误配，直接不参与 */
+const MIN_CONTAIN_LEN = 4;
+/** 取集合里的唯一元素（调用方已确保 size === 1） */
+function firstOf(set) {
+    for (const v of set)
+        return v;
+    return null;
+}
+/**
+ * 会话别名表（v26.10.14-v5）：**显示名 → 真实会话 ID**。
+ *
+ * 存在的理由：会话 ID 是逐张图片解析的，同一条路径有时给得出 `conversationID`、有时给不出。
+ * 给得出的那些顺手把「名字 ↔ ID」记下来，给不出的就能靠名字复用同一个 ID，不再退化成 `name:` 键
+ * （回退键会让同一个会话在面板上分裂成两个分组，用户 2026-10-14 反馈的问题）。
+ *
+ * 匹配三级：精确 → 归一化（须唯一）→ 唯一「包含」（长短名混用时的兜底）。
+ * 任何一级**指向不唯一就返回 null** —— 宁可拆组也不把两个不同的会话合成一个（张冠李戴比重复更糟）。
+ */
+class AliasTable {
+    /** 原始名 → 真实 ID（先到先得：页面顺序即「最新真相」的顺序） */
+    byExact = new Map();
+    /** 归一化名 → 真实 ID 集合（size > 1 表示这个名字指向不唯一，匹配时放弃） */
+    byNorm = new Map();
+    /** 全部（归一化名, 真实 ID）对，供「唯一包含」匹配 */
+    pairs = [];
+    /** 表里有多少条别名（判「要不要写持久层」用） */
+    get size() {
+        return this.byExact.size;
+    }
+    /** 记一条「名字 → 真实 ID」；名字为空、ID 为空、或 ID 本身就是回退键时忽略 */
+    add(name, id) {
+        const n = str(name);
+        if (!n || !id || isFallbackId(id))
+            return;
+        if (!this.byExact.has(n))
+            this.byExact.set(n, id);
+        const k = normName(n);
+        if (!k)
+            return;
+        let set = this.byNorm.get(k);
+        if (!set) {
+            set = new Set();
+            this.byNorm.set(k, set);
+        }
+        if (set.has(id))
+            return;
+        set.add(id);
+        this.pairs.push([k, id]);
+    }
+    /** 查一个（可能不完整的）会话名对应的真实 ID；查不到或指向不唯一返回 null */
+    lookup(name) {
+        const n = str(name);
+        if (!n)
+            return null;
+        const exact = this.byExact.get(n);
+        if (exact)
+            return exact;
+        const k = normName(n);
+        if (!k)
+            return null;
+        const hit = this.byNorm.get(k);
+        if (hit && hit.size === 1)
+            return firstOf(hit);
+        if (k.length < MIN_CONTAIN_LEN)
+            return null;
+        // 唯一「包含」：`衡阳市南岳区财猫商贸店` 与别名里的 `财猫商贸店` 属于同一条时才算命中；
+        // 命中的候选若指向多个不同会话（如同时有「…二部」），同样放弃。
+        const ids = new Set();
+        for (const pair of this.pairs) {
+            const k2 = pair[0];
+            if (k2 === k || k2.length < MIN_CONTAIN_LEN)
+                continue;
+            if (k.indexOf(k2) >= 0 || k2.indexOf(k) >= 0)
+                ids.add(pair[1]);
+        }
+        return ids.size === 1 ? firstOf(ids) : null;
+    }
+    /** 全部别名（原始名 → 真实 ID），持久化用 */
+    entries() {
+        return Array.from(this.byExact.entries());
+    }
 }
 /** 页面主世界的 document（拿不到就用隔离世界的，两者指向同一棵 DOM） */
 function hostDoc() {
@@ -74779,11 +74901,18 @@ function walkAny(node, ctx, depth, visit) {
     }
 }
 /** 把一条消息折算成会话（ID 优先取消息自身的，其次容器的，最后才是当前会话） */
-function toConv(msg, ctx, current) {
-    const id = str(msg.conversationID) || str(msg.conversationId) || str(msg.sessionID) || ctx.id;
+function toConv(msg, ctx, current, aliases) {
+    let id = str(msg.conversationID) || str(msg.conversationId) || str(msg.sessionID) || ctx.id;
     let name = str(msg.conversationName) || str(msg.groupName) || ctx.name;
     if (!name && current && id && id === current.id)
         name = current.name;
+    // v26.10.14-v5：拿不到真实 ID 时，先拿别名表兜一次 —— 同一个会话窗口里带 ID 的那张图
+    // 已经把「名字 → ID」记进表了（见 buildConvContext 第一遍），这里复用即不再退化成 `name:` 键。
+    if (!id || isFallbackId(id)) {
+        const alias = aliases ? aliases.lookup(name) : null;
+        if (alias)
+            id = alias;
+    }
     // 三者都拿不到就归 null：那不是「未知会话」，而是**根本不知道属于谁**，
     // 调用方会让这些图落到「未归属」分组（与页面上压根没有会话概念的图同一个去处）。
     if (!id && !name)
@@ -74812,10 +74941,29 @@ function readBucket() {
         return null;
     }
 }
-/** 载入未过期的持久映射（过期/坏值直接跳过，不报错） */
-function loadStoredConv() {
+/** 载入未过期的别名（过期/坏值直接跳过，不报错） */
+function loadStoredAliases(bucket) {
     const out = [];
-    const bucket = readBucket();
+    if (!bucket || !bucket.aliases || typeof bucket.aliases !== 'object')
+        return out;
+    const now = Date.now();
+    for (const name of Object.keys(bucket.aliases)) {
+        const r = bucket.aliases[name];
+        if (!r || typeof r.id !== 'string' || !r.id)
+            continue;
+        if (!Number.isFinite(r.at) || now - r.at > CONFIG.SNIFF_CONV_TTL)
+            continue;
+        out.push([name, r.id]);
+    }
+    return out;
+}
+/**
+ * 载入未过期的持久映射（过期/坏值直接跳过，不报错）。
+ * v26.10.14-v5：`name:` 回退条目**读时即纠正** —— 别名表里认得这个名字就用真实 ID 顶掉，
+ * 于是历史遗留（本版之前写下的）双路径条目不用等它自然过期就自动收敛。
+ */
+function loadStoredConv(bucket, aliases) {
+    const out = [];
     if (!bucket)
         return out;
     const now = Date.now();
@@ -74825,11 +74973,15 @@ function loadStoredConv() {
             continue;
         if (!Number.isFinite(r.at) || now - r.at > CONFIG.SNIFF_CONV_TTL)
             continue;
+        const fb = fallbackName(r.id);
+        // 回退键的名字可能记在 id 里（`name:X`），也可能记在 name 字段里 —— 两个都试
+        const fixed = fb ? aliases.lookup(r.name) || aliases.lookup(fb) : null;
+        const id = fixed || r.id;
         out.push([
             k,
             {
-                id: r.id,
-                name: typeof r.name === 'string' && r.name ? r.name : '会话 ' + shortId(r.id),
+                id,
+                name: typeof r.name === 'string' && r.name ? r.name : '会话 ' + shortId(id),
                 sender: typeof r.sender === 'string' ? r.sender : null,
                 time: num(r.time),
             },
@@ -74837,28 +74989,64 @@ function loadStoredConv() {
     }
     return out;
 }
-/** 保存映射（合并 → 清过期 → 超限按最旧丢）。任何失败都只记日志，不影响扫描 */
-function saveStoredConv(fresh) {
+/** 超限时按 `at` 最旧丢（items 与 aliases 共用这一套） */
+function pruneOldest(map, max) {
+    const keys = Object.keys(map);
+    if (keys.length <= max)
+        return;
+    keys.sort((a, b) => (map[a].at || 0) - (map[b].at || 0));
+    for (const k of keys.slice(0, keys.length - max))
+        delete map[k];
+}
+/**
+ * 保存映射（合并 → 别名入表 → 回退键迁移 → 清过期 → 超限按最旧丢）。任何失败都只记日志，不影响扫描。
+ * v26.10.14-v5 新增中间两步，就是为了让「同一会话两条解析路径」在持久层里也合成一条。
+ */
+function saveStoredConv(fresh, aliases) {
     try {
         const now = Date.now();
         const bucket = readBucket() || { origin: location.origin, items: {} };
         bucket.origin = location.origin;
+        if (!bucket.aliases || typeof bucket.aliases !== 'object')
+            bucket.aliases = {};
         for (const [stem, conv] of fresh) {
             bucket.items[stem] = { id: conv.id, name: conv.name, sender: conv.sender, time: conv.time, at: now };
+        }
+        // 别名入表（只收真实 ID；回退键进不了表）：下次扫描时同窗口的另一条路径就能直接并进来
+        for (const [name, id] of aliases.entries()) {
+            bucket.aliases[name] = { id, at: now };
+        }
+        // 回退键后置合并：别名表认得这个名字 ⇒ 把历史遗留的 `name:<名>` 条目改写到真实 ID 下。
+        // （面板侧还有一道同样的兜底，见 groupByConversation —— 两边都做才不会「重扫一次又变回来」）
+        let merged = 0;
+        for (const k of Object.keys(bucket.items)) {
+            const r = bucket.items[k];
+            if (!r || !isFallbackId(r.id))
+                continue;
+            const fb = fallbackName(r.id);
+            const id = aliases.lookup(r.name) || aliases.lookup(fb);
+            if (!id)
+                continue;
+            if (!r.name)
+                r.name = fb;
+            r.id = id;
+            merged++;
         }
         for (const k of Object.keys(bucket.items)) {
             const r = bucket.items[k];
             if (!r || !Number.isFinite(r.at) || now - r.at > CONFIG.SNIFF_CONV_TTL)
                 delete bucket.items[k];
         }
-        const keys = Object.keys(bucket.items);
-        const max = CONFIG.MAX_SNIFF_CONV_STEMS;
-        if (keys.length > max) {
-            keys.sort((a, b) => (bucket.items[a].at || 0) - (bucket.items[b].at || 0));
-            for (const k of keys.slice(0, keys.length - max))
-                delete bucket.items[k];
+        for (const name of Object.keys(bucket.aliases)) {
+            const a = bucket.aliases[name];
+            if (!a || !Number.isFinite(a.at) || now - a.at > CONFIG.SNIFF_CONV_TTL)
+                delete bucket.aliases[name];
         }
+        pruneOldest(bucket.items, CONFIG.MAX_SNIFF_CONV_STEMS);
+        pruneOldest(bucket.aliases, CONFIG.MAX_SNIFF_CONV_ALIASES);
         localStorage.setItem(SNIFF_CONV_INDEX_KEY, JSON.stringify(bucket));
+        if (merged)
+            addLog('[图片嗅探] 会话归属：合并 ' + merged + ' 条回退键到真实会话 ID', 'info');
     }
     catch (e) {
         addLog('[图片嗅探] 会话归属记录保存失败: ' + e.message, 'error', true);
@@ -74867,13 +75055,47 @@ function saveStoredConv(fresh) {
 /**
  * 建一次扫描要用的归属上下文：**页面 Vuex（当前会话消息 → 历史会话）优先，持久记录补空缺**。
  * 每次扫描重建（页面数据是最新真相），创建阶段不发网络请求、不做 DOM 扫描，纯读。
+ *
+ * v26.10.14-v5 改成**走两遍**（见文件头「同一会话被拆成两组」）：
+ *   第一遍只认带真实 ID 的消息，学出「显示名 → 真实 ID」别名，并顺手纠正当前会话的 ID；
+ *   第二遍才正式收集归属 —— 此时同一窗口里那些不带 ID 的图会直接复用窗口的真实 ID。
+ * 走两遍的代价只是一次纯对象遍历（深度有上限、消息只有几十上百条），换来的是不再分裂分组。
  */
 function buildConvContext() {
-    const current = getCurrentConv();
+    let current = getCurrentConv();
+    const aliases = new AliasTable();
+    const bucket = readBucket();
+    // 持久层的别名先入表：跨扫描复用（本次页面读到的会补充它）
+    for (const [name, id] of loadStoredAliases(bucket))
+        aliases.add(name, id);
+    const st = readChatState();
+    const chat = st && st.chat;
+    const allChat = st && st.allChat;
+    /** 两条路各走一遍：① 当前会话（结构已实测，最可靠）② 历史会话（结构未实测，靠宽容遍历） */
+    const walkAll = (seed, visit) => {
+        if (chat)
+            walkAny(chat.messageList, seed, 0, visit);
+        if (allChat)
+            walkAny(allChat.historyMsg, { id: '', name: '', sender: null }, 0, visit);
+    };
+    // ── 第一遍：只认「消息自带真实 ID」的，学出别名（此时不能信任当前会话的 ID，它可能只是回退键）──
+    walkAll({ id: current ? current.id : '', name: current ? current.name : '', sender: null }, (msg, ctx) => {
+        const conv = toConv(msg, ctx, current, aliases);
+        if (conv && !isFallbackId(conv.id))
+            aliases.add(conv.name, conv.id);
+    });
+    // ── 纠正当前会话（窗口级解析一次）：Vuex 没给 conversationID 时它只是个 `name:` 键，
+    //    不纠正的话第二遍会把「没带 ID 的图」整体挂到这个名字键上，照样分裂成两组 ──
+    if (current && isFallbackId(current.id)) {
+        const id = aliases.lookup(current.name) || aliases.lookup(domCurrentName());
+        if (id)
+            current = { ...current, id };
+    }
+    // ── 第二遍：正式收集（别名表与当前会话 ID 都已就绪）──
     const byStem = new Map();
     const fresh = [];
     const out = (msg, ctx) => {
-        const conv = toConv(msg, ctx, current);
+        const conv = toConv(msg, ctx, current, aliases);
         if (!conv)
             return;
         const payload = msg.payload;
@@ -74885,21 +75107,10 @@ function buildConvContext() {
             fresh.push([k, conv]);
         }
     };
-    const st = readChatState();
-    const chat = st && st.chat;
-    if (chat) {
-        // ① 当前会话：结构已实测，最可靠的一路
-        const seed = { id: current ? current.id : '', name: current ? current.name : '', sender: null };
-        walkAny(chat.messageList, seed, 0, out);
-    }
-    const allChat = st && st.allChat;
-    if (allChat) {
-        // ② 历史会话：嵌套结构未实测（见文件头「现场待确认」），靠宽容遍历
-        walkAny(allChat.historyMsg, { id: '', name: '', sender: null }, 0, out);
-    }
+    walkAll({ id: current ? current.id : '', name: current ? current.name : '', sender: null }, out);
     const fromPage = byStem.size;
     // ③ 持久记录只补空缺：页面读到的一定更新（会话可能改名、也可能这次不在页面上）
-    for (const [k, v] of loadStoredConv()) {
+    for (const [k, v] of loadStoredConv(bucket, aliases)) {
         if (!byStem.has(k))
             byStem.set(k, v);
     }
@@ -74908,23 +75119,40 @@ function buildConvContext() {
             fromPage +
             ' 个文件名（含历史记录共 ' +
             byStem.size +
-            ' 个；' +
+            ' 个；会话别名 ' +
+            aliases.size +
+            ' 条；' +
             (current ? '当前会话「' + current.name + '」' : '当前会话未识别') +
             '）', 'info');
     }
-    return { current, byStem, fresh };
+    return { current, byStem, fresh, aliases };
 }
-/** 把本次从页面读到的映射写进持久层（没有新映射时不写，避免无谓的 localStorage 写入） */
+/** 把本次从页面读到的映射与别名写进持久层（都没有新内容时不写，避免无谓的 localStorage 写入） */
 function persistConvContext(ctx) {
-    if (!ctx.fresh.length)
+    if (!ctx.fresh.length && !ctx.aliases.size)
         return;
-    saveStoredConv(ctx.fresh);
+    saveStoredConv(ctx.fresh, ctx.aliases);
 }
 /** 取一张图归属的会话（未归属返回 null） */
 function convOfItem(it, ctx) {
     if (!ctx || !it.stem)
         return null;
     return ctx.byStem.get(it.stem) || null;
+}
+/**
+ * 分组的实际键（v26.10.14-v5）：`name:` 回退键若能借别名表认出真实会话，就用真实 ID。
+ * 这一层是为了**兜住持久层里还没被迁移的存量条目**（老版本写下的 `name:` 条目），
+ * 与 saveStoredConv 的迁移互为保险 —— 缺任何一边，都会出现「重扫一次又分裂」。
+ */
+function convKey(conv, aliases) {
+    if (!conv)
+        return UNNAMED_CONV_ID;
+    if (isFallbackId(conv.id) && aliases) {
+        const id = aliases.lookup(conv.name) || aliases.lookup(fallbackName(conv.id));
+        if (id)
+            return id;
+    }
+    return conv.id;
 }
 /**
  * 把嗅探结果按会话分组。
@@ -74939,13 +75167,16 @@ function convOfItem(it, ctx) {
  */
 function groupByConversation(items, ctx, minBytes) {
     const buckets = new Map();
+    const aliases = ctx ? ctx.aliases : null;
+    // 「当前会话」也按别名解析后的键比（当前会话可能只有回退键，而组里已经是真实 ID —— 那样会置顶失败）
+    const curKey = ctx && ctx.current ? convKey(ctx.current, aliases) : '';
     const bucketOf = (conv) => {
-        const id = conv ? conv.id : UNNAMED_CONV_ID;
+        const id = convKey(conv, aliases);
         let b = buckets.get(id);
         if (!b) {
             b = {
                 name: conv ? conv.name : '',
-                current: !!(conv && ctx && ctx.current && ctx.current.id === conv.id),
+                current: !!(conv && curKey && id === curKey),
                 time: conv ? conv.time : null,
                 known: [],
                 unknown: [],
