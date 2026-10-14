@@ -32,6 +32,7 @@
 - `lib/snifferPerf.ts`（新）：`app()` 第一行 `startPerfCollect()`——`setResourceTimingBufferSize(20000)` + `PerformanceObserver(buffered:true)` 把资源条目抄进模块级 Map（只收图片 URL、上限 20000）；取值 `decodedBodySize→encodedBodySize→transferSize`。**纯读 performance，零请求零 DOM**。
 - `lib/sniffer.ts`：`add()` 收集时即 `perfBytesOf(url)` 挂字节数 ⇒ `probeOne` 第一档命中，**零 HEAD**；perf 路 = 预收 Map（主力）+ 实时读表（兜底）并集。`downloadBatch` 两段式下载（预取并发 4/背压 8/连败 3 次降并发/退避重试/401·403·404·410 不重试；触发段串行 + 间隔），`SniffModal`「下载所选」走它。
 - 冒烟 `sniffPerfFirstOk`：同源真加载的 `/sniff-perf.png`（server.js 路由，精确 22528 B）必须走「资源表读数」且 `__gmXhrLog` 零请求；⚠️ **跨域假域名（sniff-smoke.test）的图 DNS 就失败、根本不进资源表**——验 perf 必须用同源真图。
+- **v26.10.14-v4 起「测量」也提前到后台**（用户指定，明知代价）：`lib/snifferPre.ts` 启动 5s 首轮 + 每 60s 一轮，结果进 `lib/snifferCache.ts`（进程内、不落盘、**失败也记**）；`resolveSizes` 命中即免请求（**唯一读点**，UI 零配合）。⚠️ **这是脚本里唯一会在「没开嗅探窗」时发请求的地方** ⇒ 四条安全阀（零成本项先测 / 单轮网络 60 张 / 并发 2 / 后台 CSS 遍历上限 1200）+ 开关 `Allvalue.sniffPreMeasure`（默认开，设置里可即时关）。`SNIFF_EXCLUDE_SELECTOR` 已下沉到叶子 `ui/sniffSelector.ts`。冒烟 `sniffPreMeasureOk` = 开窗前已测量 + 开窗后不重发（两条缺一不可）。
 
 ## 表情包中继磁盘缓存 + 不进全部文件（v26.10.14-v3 / relay 26.10.14-v1）
 - 清单单一来源 `relay-server/emoji-sources.json`（脚本端/手机页都 import；web 侧 `vite.config.ts` 的 `server.fs.allow` 要加 `../relay-server`，引用路径是三级 `../../../`）。

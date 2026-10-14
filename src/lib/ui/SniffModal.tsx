@@ -3,11 +3,12 @@ import { PrinterOutlined } from '@ant-design/icons';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useReactToPrint } from 'react-to-print';
 import { addLog } from '@/lib/logger';
-// ⚠️ 三个宿主 id 必须来自**叶子模块**：本文件的 `SNIFF_EXCLUDE_SELECTOR` 是模块级常量，
+// ⚠️ 三个宿主 id 必须来自**叶子模块**：扫描排除选择器是模块级常量，
 // 若从 panelHost 取 OVERLAY_HOST_ID，会因 MainPanel → SniffModal → panelHost 的循环 import
 // 命中 TDZ（Cannot access 'OVERLAY_HOST_ID' before initialization），脚本启动即挂（v26.10.10-v4 踩过）。
+// v26.10.14-v4：选择器本身也下沉到 `ui/sniffSelector.ts`（后台预测量要用它，见该文件头）。
 import { getOverlayContainer } from '@/lib/ui/panelHost';
-import { OVERLAY_HOST_ID, PANEL_HOST_ID } from '@/lib/ui/panelIds';
+import { SNIFF_EXCLUDE_SELECTOR } from '@/lib/ui/sniffSelector';
 import { DownloadIcon } from '@/lib/ui/icons';
 import ImageOverlayActions from '@/lib/ui/ImageOverlayActions';
 // 会话归属（v26.10.13-v8）：把图片按会话窗口（纳税人）分组，见 lib/sniffConv.ts 的文件头
@@ -34,7 +35,7 @@ import {
 } from '@/lib/sniffer';
 // 预览相关通用件全部来自共享层（与「历史记录」、手机上传页同一份实现）
 import { appendPreviewActions } from '../../../shared/preview/actions';
-import { PREVIEW_HOST_ID, getPreviewHost } from '../../../shared/preview/host';
+import { getPreviewHost } from '../../../shared/preview/host';
 import { syncPreviewMask } from '../../../shared/preview/mask';
 import { buildA4ImageNode, PRINT_PAGE_STYLE } from '../../../shared/preview/print';
 
@@ -88,10 +89,9 @@ export interface SniffModalProps {
 
 /**
  * 扫描时要跳过的子树：本脚本自己的三个宿主。
- * 它们都挂在 documentElement 下（见 panelHost.tsx 与 shared/preview/host.ts 的取舍说明），
- * 故这里是三个 id 的并集，而不是一个前缀匹配。
+ * ⚠️ v26.10.14-v4 起定义在 `ui/sniffSelector.ts`（后台预测量 snifferPre.ts 也要用它，
+ *    故下沉到叶子模块，避免 lib 模块 import antd 组件文件）；本文件只 import。
  */
-export const SNIFF_EXCLUDE_SELECTOR = ['#' + PANEL_HOST_ID, '#' + OVERLAY_HOST_ID, '#' + PREVIEW_HOST_ID].join(',');
 
 /** 每完成这么多毫秒把测好的图推给界面一次（合批，避免逐张 setState） */
 const FLUSH_MS = 150;

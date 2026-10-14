@@ -25,6 +25,9 @@ export interface SettingsModalProps {
     onChangeCommonPhrasesUrl: (url: string) => void;
     useCdn: boolean;
     onChangeUseCdn: (v: boolean) => void;
+    /** 「图片嗅探」后台预测量开关（v26.10.14-v4，见 lib/snifferPre.ts） */
+    sniffPreMeasure: boolean;
+    onChangeSniffPreMeasure: (v: boolean) => void;
 }
 
 /**
@@ -44,6 +47,8 @@ export default function SettingsModal({
     onChangeCommonPhrasesUrl,
     useCdn,
     onChangeUseCdn,
+    sniffPreMeasure,
+    onChangeSniffPreMeasure,
 }: SettingsModalProps) {
     const wh = workingHours || { morningStart: 9, morningEnd: 12, afternoonStart: 13.5, afternoonEnd: 18 };
 
@@ -120,6 +125,17 @@ export default function SettingsModal({
                 <Text strong>使用 CDN 加速（Fastly 镜像）加载资源</Text>
                 <Switch checked={!!useCdn} onChange={(v) => onChangeUseCdn(v)} />
             </Space>
+
+            {/* 图片嗅探：后台预测量（v26.10.14-v4）。默认开 —— 打开嗅探窗口即刻出大小；
+                关掉则只在开窗时测量（更省对页面图片服务器的请求）。 */}
+            <Space size={8} style={{ marginBottom: 4 }}>
+                <Text strong>图片嗅探：先在后台预测量图片大小</Text>
+                <Switch checked={!!sniffPreMeasure} onChange={(v) => onChangeSniffPreMeasure(v)} />
+            </Space>
+            <Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 12 }}>
+                开启后打开嗅探窗口即刻显示大小（不必当场等测量）。代价：页面上的图若只能靠请求测大小
+                （跨域且拿不到资源表读数），脚本会在**没打开窗口时**就去测量 —— 关掉此项可避免这类请求。
+            </Text>
 
             <Text strong style={{ display: 'block', marginBottom: 8 }}>
                 监控时间段（点击选择时间）

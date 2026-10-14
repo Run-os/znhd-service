@@ -1,6 +1,6 @@
 // ========== 依赖（模块化抽出的 lib / ui 模块） ==========
 import { mountPanel, watchPanelHost, unwatchPanelHost } from '@/lib/ui/panelHost';
-import { flushSaveAllvalue } from '@/lib/storage';
+import { flushSaveAllvalue, loadAllvalue } from '@/lib/storage';
 import { addLog } from '@/lib/logger';
 import { startMonitoring, stopMonitoring } from '@/lib/monitor';
 import { clearSpeechTimer } from '@/lib/speech';
@@ -8,6 +8,10 @@ import { clearSpeechTimer } from '@/lib/speech';
 // performance 缓冲区（observer 的 buffered:true 会一次性回放），此后的新资源由 observer
 // 实时抄录。放 app() 第一行而不是 sniffer.ts 模块级：那个文件是按需加载的，太晚。
 import { startPerfCollect } from '@/lib/snifferPerf';
+// v26.10.14-v4：嗅探「后台预测量」（用户指定：测量也要在打开嗅探窗口之前跑）——
+// 与上面的 perf 预收是互补的两件事：perf 只读资源表（零请求，覆盖同源图），
+// 本模块专治资源表拿不到字节数的图（会发请求，故有开关与限额，见 lib/snifferPre.ts）。
+import { setPreMeasureEnabled } from '@/lib/snifferPre';
 
 /**
  * 脚本入口：本文件只做「装配」，业务实现全部在 src/lib/ 与 src/lib/ui/。
@@ -21,6 +25,15 @@ const app = () => {
     // ========== 资源表预收（v26.10.14-v2，嗅探「开窗即有大小」的基础）==========
     // 必须在最前面：越早启动 observer，漏掉的资源越少。内部幂等 + 全异常静默降级。
     startPerfCollect();
+
+    // ========== 嗅探后台预测量（v26.10.14-v4）==========
+    // 按设置项决定是否跑（默认开）。首轮延后 5 秒（等首屏图先加载完），之后每 60 秒补一轮。
+    // ⚠️ 这是唯一会在「用户没打开嗅探窗口」时发请求的地方，安全阀见 lib/snifferPre.ts 文件头。
+    try {
+        setPreMeasureEnabled(loadAllvalue().sniffPreMeasure !== false);
+    } catch (e) {
+        /* 读设置失败就当关掉：宁可不预测量，也不能连累启动 */
+    }
 
     // ========== 挂载主面板 ==========
     try {

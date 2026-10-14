@@ -26,6 +26,8 @@ import PhrasesDrawer from '@/lib/ui/PhrasesDrawer';
 import LogModal from '@/lib/ui/LogModal';
 import ChangelogModal from '@/lib/ui/ChangelogModal';
 import SniffModal from '@/lib/ui/SniffModal';
+// v26.10.14-v4：嗅探后台预测量的开关即时生效（设置项变化时调它，见 SettingsModal 的那个 Switch）
+import { setPreMeasureEnabled } from '@/lib/snifferPre';
 import TransferAssistantModal from '@/lib/ui/transfer/TransferAssistantModal';
 import { initTransfer, onTransferAutoOpen, stopTransfer } from '@/lib/transfer/store';
 
@@ -603,6 +605,13 @@ export default function MainPanel({ host }: MainPanelProps) {
                 onChangeUseCdn={(v: boolean) => {
                     patchAllvalue({ useCdn: !!v });
                     addLog('CDN 加速已' + (v ? '开启' : '关闭'), 'info');
+                }}
+                sniffPreMeasure={Allvalue.sniffPreMeasure !== false}
+                onChangeSniffPreMeasure={(v: boolean) => {
+                    patchAllvalue({ sniffPreMeasure: !!v });
+                    // 开关即时生效（不必重开页面）：开 ⇒ 5 秒后跑第一轮，关 ⇒ 停掉待跑的轮次
+                    setPreMeasureEnabled(!!v);
+                    addLog('图片嗅探：后台预测量已' + (v ? '开启' : '关闭'), 'info');
                 }}
             />
 

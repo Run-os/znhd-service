@@ -29,6 +29,9 @@
  *                只覆盖仍留在缓冲区里的条目。
  *
  * 尺寸测量阶梯（先命中先用，见 probeOne）：
+ *   **已测缓存命中（v26.10.14-v4）** → 直接采用上次结论，整条阶梯都不走、零请求；
+ *   缓存由 `snifferCache.ts` 持有，后台预测量（`snifferPre.ts`）与每次开窗扫描都往里写，
+ *   故「开窗即有大小」不只靠 perf 一路（详见 resolveSizes 内的注释）；
  *   kind==='data' → 本地按 base64/百分号编码算字节；kind==='svg' → 序列化文本的 UTF-8 字节；
  *   kind==='blob' → 页面上下文 fetch(blob:) 拿真实字节与 MIME（CSP 拦截就退回未知）；
  *   预收/资源表字节数 > 0 → 直接用（零成本、绝对准确；取值 decoded→encoded→transfer，见 snifferPerf）；
@@ -54,6 +57,8 @@
 import { downloadFileName } from './gallery';
 // v26.10.14-v2：资源表预收（脚本启动即扩容缓冲区 + observer 抄录），本文件只读它的 Map
 import { perfBytesOf, perfForEach } from './snifferPerf';
+// v26.10.14-v4：已测尺寸缓存（后台预测量与开窗扫描共用同一份，见 snifferCache.ts）
+import { measuredOf, rememberMeasured } from './snifferCache';
 
 /** 一个候选（还没量尺寸）来源 */
 export type SniffSource = 'dom' | 'svg' | 'css' | 'perf';
@@ -792,20 +797,38 @@ export async function resolveSizes(items: SniffCandidate[], opts: ResolveOptions
     await runPool(items.length, concurrency, async (i) => {
         const it = items[i];
         if (stopped()) return;
-        let probe: SizeProbe;
-        try {
-            probe = await probeOne(it);
-        } catch (e) {
-            probe = { size: null, mime: it.mime, via: 'unknown', drop: false };
+        // v26.10.14-v4：后台预测量（snifferPre.ts）可能已经量过这张图 —— 命中缓存就直接采用，
+        // 一个 HEAD / Range 都不发（「开窗即有大小」的关键）。**展示字段仍取本次候选的**
+        // （sources / 元素尺寸 / perfBytes 会随页面变），只有测量结论来自缓存。
+        const cached = measuredOf(it.key);
+        let img: SniffedImage;
+        if (cached) {
+            img = {
+                ...it,
+                size: cached.size,
+                mime: cached.mime || it.mime,
+                sizeVia: cached.sizeVia,
+                drop: cached.drop,
+            };
+        } else {
+            let probe: SizeProbe;
+            try {
+                probe = await probeOne(it);
+            } catch (e) {
+                probe = { size: null, mime: it.mime, via: 'unknown', drop: false };
+            }
+            if (stopped()) return;
+            img = {
+                ...it,
+                size: probe.size,
+                mime: probe.mime || it.mime,
+                sizeVia: probe.via,
+                drop: probe.drop,
+            };
+            // 测过就记下来（成功失败都记）：后台预测量与后续每次重扫都从这里复用，
+            // 同一个 URL 在本次页面会话里最多只被网络测量一次。
+            rememberMeasured(img);
         }
-        if (stopped()) return;
-        const img: SniffedImage = {
-            ...it,
-            size: probe.size,
-            mime: probe.mime || it.mime,
-            sizeVia: probe.via,
-            drop: probe.drop,
-        };
         out.push(img);
         if (opts.onItem) opts.onItem(img);
     });

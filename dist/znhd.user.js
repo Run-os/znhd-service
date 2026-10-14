@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name                征纳互动人数和在线监控v2
 // @namespace           https://scriptcat.org/
-// @version             26.10.14-v3
+// @version             26.10.14-v4
 // @description         实时监控征纳互动等待人数和在线状态，支持语音播报、自定义常用语
 // @author              runos
 // @license             MIT
@@ -56440,6 +56440,13 @@ const DEFAULTS = {
     // 只影响**显示与批量下载**的筛选，不影响网络请求策略（不会先探测再决定要不要请求；扫描阶段一律测量）。
     // 消费点在 SniffModal：storage.ts 只对 workingHours 做字段级校验，故那边自行兜非数字/非正数（回退 20）。
     sniffMinKB: 20,
+    // 「图片嗅探」后台预测量（v26.10.14-v4，用户指定「测量也要在打开嗅探窗口之前跑」）。
+    // 开：脚本启动 5 秒后在后台把页面上的图量一遍，之后每 60 秒补一轮新图 —— 打开嗅探窗口时
+    //     直接用缓存里的大小，不再当场等 HEAD/Range（见 lib/snifferPre.ts 的安全阀说明）。
+    //     ⚠️ 代价：**不开窗也会向页面图片服务器发请求**（只对资源表拿不到字节数的图；同源图零请求）。
+    // 关：只在打开嗅探窗口时测量（= v26.10.14-v2 及以前的行为）。
+    // 改开关不需要重扫：MainPanel 里即时调 setPreMeasureEnabled 生效。
+    sniffPreMeasure: true,
 };
 // 常用语数据源的旧默认地址（v26.10.10-v17 之前）。存量用户的 localStorage 里可能冻结着它：
 // saveAllvalue 存的是**整份** Allvalue，用户只要改过任何一个设置，当时的默认值就被一起写进去了，
@@ -62799,7 +62806,7 @@ const { Text: SettingsModal_Text } = typography;
  * v26.10.12-v1：「中继服务器地址」已移到传输助手的独立设置面板（`ui/transfer/TransferSettingsModal`），
  * 与主面板设置完全分开；本弹窗不再有任何中继相关字段。
  */
-function SettingsModal({ open, onClose, onOpenChangelog, workingHours, onChangeWorkingHours, commonPhrasesUrl, onChangeCommonPhrasesUrl, useCdn, onChangeUseCdn, }) {
+function SettingsModal({ open, onClose, onOpenChangelog, workingHours, onChangeWorkingHours, commonPhrasesUrl, onChangeCommonPhrasesUrl, useCdn, onChangeUseCdn, sniffPreMeasure, onChangeSniffPreMeasure, }) {
     const wh = workingHours || { morningStart: 9, morningEnd: 12, afternoonStart: 13.5, afternoonEnd: 18 };
     // 原生 <input type="time"> 被清空时 hhmmToHours 返回 null（v26.10.06-v16 换掉 antd TimePicker 后
     // 才有这个形态）：此时保持原值不动，避免把 undefined/NaN 写进配置。
@@ -62835,7 +62842,7 @@ function SettingsModal({ open, onClose, onOpenChangelog, workingHours, onChangeW
     };
     return ((0,react_jsx_runtime_production_namespaceFn().jsxs)(modal, { open: open, title: "\u8BBE\u7F6E\u83DC\u5355", onCancel: onClose, getContainer: getOverlayContainer, width: 520, 
         // 显式左对齐：宿主页面常有全局 text-align:center（税务页就是），不设会整屏居中
-        styles: { body: { textAlign: 'left' } }, destroyOnHidden: true, footer: (0,react_jsx_runtime_production_namespaceFn().jsxs)(es_space, { children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { onClick: onClose, children: "\u53D6\u6D88" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { color: "primary", variant: "solid", onClick: onClose, children: "\u786E\u5B9A" })] }), children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)(es_space, { size: 4, wrap: true, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { type: "link", onClick: () => window.open('https://github.com/Run-os/znhd-service', '_blank'), children: "[\u811A\u672C\u4E3B\u9875]" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { type: "link", onClick: () => window.open((GM_info.scriptUpdateURL || GM_info.script.updateURL), '_blank'), children: "[\u66F4\u65B0\u811A\u672C]" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { type: "link", onClick: () => onOpenChangelog(), children: "[\u66F4\u65B0\u65E5\u5FD7]" })] }), (0,react_jsx_runtime_production_namespaceFn().jsx)(divider, { style: { margin: '8px 0' }, children: "\u5176\u4ED6\u8BBE\u7F6E" }), (0,react_jsx_runtime_production_namespaceFn().jsxs)(es_space, { size: 8, style: { marginBottom: 12 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(SettingsModal_Text, { strong: true, children: "\u4F7F\u7528 CDN \u52A0\u901F\uFF08Fastly \u955C\u50CF\uFF09\u52A0\u8F7D\u8D44\u6E90" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_switch, { checked: !!useCdn, onChange: (v) => onChangeUseCdn(v) })] }), (0,react_jsx_runtime_production_namespaceFn().jsx)(SettingsModal_Text, { strong: true, style: { display: 'block', marginBottom: 8 }, children: "\u76D1\u63A7\u65F6\u95F4\u6BB5\uFF08\u70B9\u51FB\u9009\u62E9\u65F6\u95F4\uFF09" }), (0,react_jsx_runtime_production_namespaceFn().jsxs)(es_space, { size: 8, wrap: true, style: { marginBottom: 8 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(SettingsModal_Text, { children: "\u4E0A\u5348" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_input, { type: "time", step: 300, value: hoursToHHmm(wh.morningStart), onChange: (e) => updateWh('morningStart', hhmmToHours(e.target.value)), style: { width: 110 } }), (0,react_jsx_runtime_production_namespaceFn().jsx)(SettingsModal_Text, { children: "\u81F3" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_input, { type: "time", step: 300, value: hoursToHHmm(wh.morningEnd), onChange: (e) => updateWh('morningEnd', hhmmToHours(e.target.value)), style: { width: 110 } })] }), (0,react_jsx_runtime_production_namespaceFn().jsxs)(es_space, { size: 8, wrap: true, style: { marginBottom: 8 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(SettingsModal_Text, { children: "\u4E0B\u5348" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_input, { type: "time", step: 300, value: hoursToHHmm(wh.afternoonStart), onChange: (e) => updateWh('afternoonStart', hhmmToHours(e.target.value)), style: { width: 110 } }), (0,react_jsx_runtime_production_namespaceFn().jsx)(SettingsModal_Text, { children: "\u81F3" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_input, { type: "time", step: 300, value: hoursToHHmm(wh.afternoonEnd), onChange: (e) => updateWh('afternoonEnd', hhmmToHours(e.target.value)), style: { width: 110 } })] }), (0,react_jsx_runtime_production_namespaceFn().jsx)(SettingsModal_Text, { type: "secondary", style: { fontSize: 12, display: 'block', marginBottom: 12 }, children: "\u63D0\u793A\uFF1A\u5C06\u300C\u4E0B\u5348\u5F00\u59CB\u300D\u8BBE\u4E3A\u4E0E\u300C\u4E0A\u5348\u7ED3\u675F\u300D\u76F8\u540C\uFF08\u5982\u90FD\u8BBE\u4E3A 12:00\uFF09\uFF0C\u5373\u53EF\u5348\u4F11\u65F6\u6BB5\u4E5F\u76D1\u63A7\u3002" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(SettingsModal_Text, { strong: true, style: { display: 'block', marginBottom: 8 }, children: "\u5E38\u7528\u8BED\u6570\u636E\u5730\u5740\uFF08\u53EF\u81EA\u5B9A\u4E49\u8FDC\u7A0B YAML\uFF09" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_input, { placeholder: "https://.../commonPhrases.yaml", value: urlDraft, onChange: (e) => onUrlChange(e.target.value), onBlur: onUrlBlur, allowClear: true, style: { marginBottom: 8 } }), (0,react_jsx_runtime_production_namespaceFn().jsx)(SettingsModal_Text, { type: "secondary", style: { fontSize: 12, display: 'block' }, children: "\u4FEE\u6539\u540E\u8BF7\u5728\u300C\u5E38\u7528\u8BED\u300D\u9762\u677F\u70B9\u300C\u91CD\u65B0\u52A0\u8F7D\u5E38\u7528\u8BED\u300D\u751F\u6548\uFF1B\u7559\u7A7A\u5E76\u70B9\u51FB\u5176\u4ED6\u533A\u57DF\uFF08\u5931\u7126\uFF09\u540E\u6062\u590D\u9ED8\u8BA4\u5730\u5740\u3002" })] }));
+        styles: { body: { textAlign: 'left' } }, destroyOnHidden: true, footer: (0,react_jsx_runtime_production_namespaceFn().jsxs)(es_space, { children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { onClick: onClose, children: "\u53D6\u6D88" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { color: "primary", variant: "solid", onClick: onClose, children: "\u786E\u5B9A" })] }), children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)(es_space, { size: 4, wrap: true, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { type: "link", onClick: () => window.open('https://github.com/Run-os/znhd-service', '_blank'), children: "[\u811A\u672C\u4E3B\u9875]" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { type: "link", onClick: () => window.open((GM_info.scriptUpdateURL || GM_info.script.updateURL), '_blank'), children: "[\u66F4\u65B0\u811A\u672C]" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { type: "link", onClick: () => onOpenChangelog(), children: "[\u66F4\u65B0\u65E5\u5FD7]" })] }), (0,react_jsx_runtime_production_namespaceFn().jsx)(divider, { style: { margin: '8px 0' }, children: "\u5176\u4ED6\u8BBE\u7F6E" }), (0,react_jsx_runtime_production_namespaceFn().jsxs)(es_space, { size: 8, style: { marginBottom: 12 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(SettingsModal_Text, { strong: true, children: "\u4F7F\u7528 CDN \u52A0\u901F\uFF08Fastly \u955C\u50CF\uFF09\u52A0\u8F7D\u8D44\u6E90" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_switch, { checked: !!useCdn, onChange: (v) => onChangeUseCdn(v) })] }), (0,react_jsx_runtime_production_namespaceFn().jsxs)(es_space, { size: 8, style: { marginBottom: 4 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(SettingsModal_Text, { strong: true, children: "\u56FE\u7247\u55C5\u63A2\uFF1A\u5148\u5728\u540E\u53F0\u9884\u6D4B\u91CF\u56FE\u7247\u5927\u5C0F" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_switch, { checked: !!sniffPreMeasure, onChange: (v) => onChangeSniffPreMeasure(v) })] }), (0,react_jsx_runtime_production_namespaceFn().jsx)(SettingsModal_Text, { type: "secondary", style: { fontSize: 12, display: 'block', marginBottom: 12 }, children: "\u5F00\u542F\u540E\u6253\u5F00\u55C5\u63A2\u7A97\u53E3\u5373\u523B\u663E\u793A\u5927\u5C0F\uFF08\u4E0D\u5FC5\u5F53\u573A\u7B49\u6D4B\u91CF\uFF09\u3002\u4EE3\u4EF7\uFF1A\u9875\u9762\u4E0A\u7684\u56FE\u82E5\u53EA\u80FD\u9760\u8BF7\u6C42\u6D4B\u5927\u5C0F \uFF08\u8DE8\u57DF\u4E14\u62FF\u4E0D\u5230\u8D44\u6E90\u8868\u8BFB\u6570\uFF09\uFF0C\u811A\u672C\u4F1A\u5728**\u6CA1\u6253\u5F00\u7A97\u53E3\u65F6**\u5C31\u53BB\u6D4B\u91CF \u2014\u2014 \u5173\u6389\u6B64\u9879\u53EF\u907F\u514D\u8FD9\u7C7B\u8BF7\u6C42\u3002" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(SettingsModal_Text, { strong: true, style: { display: 'block', marginBottom: 8 }, children: "\u76D1\u63A7\u65F6\u95F4\u6BB5\uFF08\u70B9\u51FB\u9009\u62E9\u65F6\u95F4\uFF09" }), (0,react_jsx_runtime_production_namespaceFn().jsxs)(es_space, { size: 8, wrap: true, style: { marginBottom: 8 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(SettingsModal_Text, { children: "\u4E0A\u5348" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_input, { type: "time", step: 300, value: hoursToHHmm(wh.morningStart), onChange: (e) => updateWh('morningStart', hhmmToHours(e.target.value)), style: { width: 110 } }), (0,react_jsx_runtime_production_namespaceFn().jsx)(SettingsModal_Text, { children: "\u81F3" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_input, { type: "time", step: 300, value: hoursToHHmm(wh.morningEnd), onChange: (e) => updateWh('morningEnd', hhmmToHours(e.target.value)), style: { width: 110 } })] }), (0,react_jsx_runtime_production_namespaceFn().jsxs)(es_space, { size: 8, wrap: true, style: { marginBottom: 8 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(SettingsModal_Text, { children: "\u4E0B\u5348" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_input, { type: "time", step: 300, value: hoursToHHmm(wh.afternoonStart), onChange: (e) => updateWh('afternoonStart', hhmmToHours(e.target.value)), style: { width: 110 } }), (0,react_jsx_runtime_production_namespaceFn().jsx)(SettingsModal_Text, { children: "\u81F3" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_input, { type: "time", step: 300, value: hoursToHHmm(wh.afternoonEnd), onChange: (e) => updateWh('afternoonEnd', hhmmToHours(e.target.value)), style: { width: 110 } })] }), (0,react_jsx_runtime_production_namespaceFn().jsx)(SettingsModal_Text, { type: "secondary", style: { fontSize: 12, display: 'block', marginBottom: 12 }, children: "\u63D0\u793A\uFF1A\u5C06\u300C\u4E0B\u5348\u5F00\u59CB\u300D\u8BBE\u4E3A\u4E0E\u300C\u4E0A\u5348\u7ED3\u675F\u300D\u76F8\u540C\uFF08\u5982\u90FD\u8BBE\u4E3A 12:00\uFF09\uFF0C\u5373\u53EF\u5348\u4F11\u65F6\u6BB5\u4E5F\u76D1\u63A7\u3002" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(SettingsModal_Text, { strong: true, style: { display: 'block', marginBottom: 8 }, children: "\u5E38\u7528\u8BED\u6570\u636E\u5730\u5740\uFF08\u53EF\u81EA\u5B9A\u4E49\u8FDC\u7A0B YAML\uFF09" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_input, { placeholder: "https://.../commonPhrases.yaml", value: urlDraft, onChange: (e) => onUrlChange(e.target.value), onBlur: onUrlBlur, allowClear: true, style: { marginBottom: 8 } }), (0,react_jsx_runtime_production_namespaceFn().jsx)(SettingsModal_Text, { type: "secondary", style: { fontSize: 12, display: 'block' }, children: "\u4FEE\u6539\u540E\u8BF7\u5728\u300C\u5E38\u7528\u8BED\u300D\u9762\u677F\u70B9\u300C\u91CD\u65B0\u52A0\u8F7D\u5E38\u7528\u8BED\u300D\u751F\u6548\uFF1B\u7559\u7A7A\u5E76\u70B9\u51FB\u5176\u4ED6\u533A\u57DF\uFF08\u5931\u7126\uFF09\u540E\u6062\u590D\u9ED8\u8BA4\u5730\u5740\u3002" })] }));
 }
 
 ;// ./node_modules/@rc-component/drawer/es/context.js
@@ -73268,6 +73275,53 @@ const OVERLAY_HOST_ID = '__znhd_overlay_host__';
  */
 const PANEL_WIDTH = 238;
 
+;// ./shared/preview/host.ts
+/**
+ * 放大预览浮层的挂载容器 —— 两端共用（v26.10.08-v13 起）。
+ *
+ * ⚠️ **必须自己建一个挂在 `documentElement` 下的宿主 div，不能直接用「documentElement 本身」**：
+ * antd 的 Image 预览是 `position: fixed` 浮层，**默认 portal 到 `document.body`**；而税务页的 `body`
+ * 常被加 `transform`/`filter` 形成独立层叠上下文（本仓库 `panelHost.tsx` 已记录这个坑），
+ * 一旦被放进去，浮层就以 **body 的盒子**而不是视口为包含块 ⇒ 工具栏被推到视口外、图片占住它的位置。
+ *
+ * 实测（1280×800、页面滚到 y=600、`body{transform:translateZ(0)}`）：
+ *   · 不传：预览根 `y=-579 h=3000`（= body 盒子），工具栏 `y=2330`（视口外），命中测试拿到的是 `img`；
+ *   · 传「返回 documentElement 的函数」：**仍然被挂到 body**（实测，本 antd/rc-portal 版本下不生效，别改回去）；
+ *   · 传本函数（自建宿主 div）：预览根 `y=0`，工具栏回到视口内，命中测试通过。
+ *
+ * ⚠️ 共享层约束：本文件只碰 DOM，不得 import 任何宿主相关模块（见 `shared/image/compress.ts` 头部说明）。
+ */
+/** 宿主 div 的 id（v26.10.10-v4 起对外导出：图片嗅探要把它整棵子树排除在扫描之外） */
+const PREVIEW_HOST_ID = '__znhd_preview_host__';
+/** 取得（必要时创建）预览浮层的宿主 div —— 传给 antd 的 `preview.getContainer` */
+function getPreviewHost() {
+    let el = document.getElementById(PREVIEW_HOST_ID);
+    if (!el) {
+        el = document.createElement('div');
+        el.id = PREVIEW_HOST_ID;
+        document.documentElement.appendChild(el);
+    }
+    return el;
+}
+
+;// ./src/lib/ui/sniffSelector.ts
+/**
+ * 「图片嗅探」扫描时要跳过的子树选择器（v26.10.14-v4 起从 SniffModal 下沉到本叶子模块）。
+ *
+ * 原先它是 `ui/SniffModal.tsx` 的模块级常量。v26.10.14-v4 加了**后台预测量**（`lib/snifferPre.ts`，
+ * 不开窗口也在跑）后，那个非 UI 的后台任务同样需要这份选择器 —— 若从 SniffModal 取，等于让一个
+ * lib 模块 import 一个 antd 组件文件：既把整棵 UI 依赖树拉进后台任务，又正好撞上 SniffModal 那条
+ * 循环 import 的雷（MainPanel → SniffModal → panelHost，见 panelIds.ts 里 TDZ 的踩坑记录）。
+ *
+ * 故下沉到这里：**只 import 三个宿主 id 的叶子模块**，谁要用谁来取。
+ * 判据本身不变 —— 我们的面板 / 浮层 / 预览三层都挂在 documentElement 下，扫描必须整棵排除，
+ * 否则就是「自己嗅自己」（图标全是内联 SVG，面板里还有一堆 antd 自带插图）。
+ */
+
+
+/** 本脚本自己的三个宿主：面板 / 浮层（弹窗抽屉的 portal 容器）/ 预览 */
+const SNIFF_EXCLUDE_SELECTOR = ['#' + PANEL_HOST_ID, '#' + OVERLAY_HOST_ID, '#' + PREVIEW_HOST_ID].join(',');
+
 ;// ./src/lib/ui/ImageOverlayActions.tsx
 
 /**
@@ -73486,6 +73540,50 @@ function perfEntryCount() {
     return perfBytes.size;
 }
 
+;// ./src/lib/snifferCache.ts
+/**
+ * 「图片嗅探」已测尺寸的进程内缓存（v26.10.14-v4）。
+ *
+ * 为什么需要它：v26.10.14-v4 起后台会**在用户打开嗅探窗口之前**先把页面上的图量一遍
+ * （见 `lib/snifferPre.ts`）。开窗那一刻 SniffModal 仍会重新收集候选 —— 页面随时在变，
+ * 候选必须重扫 —— 但「这张图上次已经量过」这个结论可以复用：直接取缓存里的字节数，
+ * 不再发 HEAD / Range。于是「开窗即有大小」不再受网络往返影响，后台那一遍的请求也不算白花。
+ *
+ * 写入口只有一处：`sniffer.ts` 的 `resolveSizes`（无论是后台预测量还是开窗扫描，测完都记进来）。
+ *
+ * 生命周期：**只活在本次页面会话里**（模块级 Map，不落盘）。理由同 `sniffConv` 只存映射不存 URL ——
+ * 页面上的直链带签名会过期，存进 localStorage 下次打开就是一批失效地址；而尺寸本身也是跟着
+ * 那一次资源加载走的，跨页复用价值低。上限 MAX_MEASURED，到顶淘汰最早一条（Map 保持插入序）。
+ *
+ * ⚠️ 本模块**不 import 任何运行时代码**：`SniffedImage` 是 type-only import（编译期即被擦除），
+ * 否则 sniffer.ts ↔ snifferCache.ts 会成环。
+ */
+/** 缓存条数上限：防极端页面把内存吃爆（超出淘汰最早一条） */
+const MAX_MEASURED = 2000;
+/** key（归一化 URL / 内联 SVG 的内容哈希）→ 已测结果 */
+const measured = new Map();
+/** 记一张已测的图（重复 key 覆盖：后测的那次更新） */
+function rememberMeasured(img) {
+    if (!img || !img.key)
+        return;
+    if (!measured.has(img.key) && measured.size >= MAX_MEASURED) {
+        const oldest = measured.keys().next();
+        if (!oldest.done)
+            measured.delete(oldest.value);
+    }
+    measured.set(img.key, img);
+}
+/** 查某张图是否已测过；没有返回 null（调用方走正常测量阶梯） */
+function measuredOf(key) {
+    if (!key)
+        return null;
+    return measured.get(key) || null;
+}
+/** 已测条数（调试 / 冒烟用） */
+function measuredCount() {
+    return measured.size;
+}
+
 ;// ./src/lib/sniffer.ts
 /**
  * 网页图片嗅探（v26.10.10-v4 新增，配合 `ui/SniffModal.tsx`）。
@@ -73518,6 +73616,9 @@ function perfEntryCount() {
  *                只覆盖仍留在缓冲区里的条目。
  *
  * 尺寸测量阶梯（先命中先用，见 probeOne）：
+ *   **已测缓存命中（v26.10.14-v4）** → 直接采用上次结论，整条阶梯都不走、零请求；
+ *   缓存由 `snifferCache.ts` 持有，后台预测量（`snifferPre.ts`）与每次开窗扫描都往里写，
+ *   故「开窗即有大小」不只靠 perf 一路（详见 resolveSizes 内的注释）；
  *   kind==='data' → 本地按 base64/百分号编码算字节；kind==='svg' → 序列化文本的 UTF-8 字节；
  *   kind==='blob' → 页面上下文 fetch(blob:) 拿真实字节与 MIME（CSP 拦截就退回未知）；
  *   预收/资源表字节数 > 0 → 直接用（零成本、绝对准确；取值 decoded→encoded→transfer，见 snifferPerf）；
@@ -73541,6 +73642,8 @@ function perfEntryCount() {
  */
 
 // v26.10.14-v2：资源表预收（脚本启动即扩容缓冲区 + observer 抄录），本文件只读它的 Map
+
+// v26.10.14-v4：已测尺寸缓存（后台预测量与开窗扫描共用同一份，见 snifferCache.ts）
 
 /** getComputedStyle 遍历的元素数上限：超大页面（上万节点）遍历到底会明显卡顿 */
 const CSS_SCAN_LIMIT = 3000;
@@ -74219,22 +74322,41 @@ async function resolveSizes(items, opts = {}) {
         const it = items[i];
         if (stopped())
             return;
-        let probe;
-        try {
-            probe = await probeOne(it);
+        // v26.10.14-v4：后台预测量（snifferPre.ts）可能已经量过这张图 —— 命中缓存就直接采用，
+        // 一个 HEAD / Range 都不发（「开窗即有大小」的关键）。**展示字段仍取本次候选的**
+        // （sources / 元素尺寸 / perfBytes 会随页面变），只有测量结论来自缓存。
+        const cached = measuredOf(it.key);
+        let img;
+        if (cached) {
+            img = {
+                ...it,
+                size: cached.size,
+                mime: cached.mime || it.mime,
+                sizeVia: cached.sizeVia,
+                drop: cached.drop,
+            };
         }
-        catch (e) {
-            probe = { size: null, mime: it.mime, via: 'unknown', drop: false };
+        else {
+            let probe;
+            try {
+                probe = await probeOne(it);
+            }
+            catch (e) {
+                probe = { size: null, mime: it.mime, via: 'unknown', drop: false };
+            }
+            if (stopped())
+                return;
+            img = {
+                ...it,
+                size: probe.size,
+                mime: probe.mime || it.mime,
+                sizeVia: probe.via,
+                drop: probe.drop,
+            };
+            // 测过就记下来（成功失败都记）：后台预测量与后续每次重扫都从这里复用，
+            // 同一个 URL 在本次页面会话里最多只被网络测量一次。
+            rememberMeasured(img);
         }
-        if (stopped())
-            return;
-        const img = {
-            ...it,
-            size: probe.size,
-            mime: probe.mime || it.mime,
-            sizeVia: probe.via,
-            drop: probe.drop,
-        };
         out.push(img);
         if (opts.onItem)
             opts.onItem(img);
@@ -74894,35 +75016,6 @@ function appendPreviewActions(originalNode, extra) {
     return (0,react_production_namespaceFn().cloneElement)(node, {}, [...(react_production_namespaceFn().Children).toArray(node.props.children), extra]);
 }
 
-;// ./shared/preview/host.ts
-/**
- * 放大预览浮层的挂载容器 —— 两端共用（v26.10.08-v13 起）。
- *
- * ⚠️ **必须自己建一个挂在 `documentElement` 下的宿主 div，不能直接用「documentElement 本身」**：
- * antd 的 Image 预览是 `position: fixed` 浮层，**默认 portal 到 `document.body`**；而税务页的 `body`
- * 常被加 `transform`/`filter` 形成独立层叠上下文（本仓库 `panelHost.tsx` 已记录这个坑），
- * 一旦被放进去，浮层就以 **body 的盒子**而不是视口为包含块 ⇒ 工具栏被推到视口外、图片占住它的位置。
- *
- * 实测（1280×800、页面滚到 y=600、`body{transform:translateZ(0)}`）：
- *   · 不传：预览根 `y=-579 h=3000`（= body 盒子），工具栏 `y=2330`（视口外），命中测试拿到的是 `img`；
- *   · 传「返回 documentElement 的函数」：**仍然被挂到 body**（实测，本 antd/rc-portal 版本下不生效，别改回去）；
- *   · 传本函数（自建宿主 div）：预览根 `y=0`，工具栏回到视口内，命中测试通过。
- *
- * ⚠️ 共享层约束：本文件只碰 DOM，不得 import 任何宿主相关模块（见 `shared/image/compress.ts` 头部说明）。
- */
-/** 宿主 div 的 id（v26.10.10-v4 起对外导出：图片嗅探要把它整棵子树排除在扫描之外） */
-const PREVIEW_HOST_ID = '__znhd_preview_host__';
-/** 取得（必要时创建）预览浮层的宿主 div —— 传给 antd 的 `preview.getContainer` */
-function getPreviewHost() {
-    let el = document.getElementById(PREVIEW_HOST_ID);
-    if (!el) {
-        el = document.createElement('div');
-        el.id = PREVIEW_HOST_ID;
-        document.documentElement.appendChild(el);
-    }
-    return el;
-}
-
 ;// ./shared/preview/mask.ts
 /**
  * 「预览期间压掉所有下层浮层遮罩」—— 两端共用（v26.10.08-v13 起）。
@@ -75063,9 +75156,10 @@ function buildA4ImageNode(src, alt, natural) {
 
 
 
-// ⚠️ 三个宿主 id 必须来自**叶子模块**：本文件的 `SNIFF_EXCLUDE_SELECTOR` 是模块级常量，
+// ⚠️ 三个宿主 id 必须来自**叶子模块**：扫描排除选择器是模块级常量，
 // 若从 panelHost 取 OVERLAY_HOST_ID，会因 MainPanel → SniffModal → panelHost 的循环 import
 // 命中 TDZ（Cannot access 'OVERLAY_HOST_ID' before initialization），脚本启动即挂（v26.10.10-v4 踩过）。
+// v26.10.14-v4：选择器本身也下沉到 `ui/sniffSelector.ts`（后台预测量要用它，见该文件头）。
 
 
 
@@ -75081,10 +75175,9 @@ function buildA4ImageNode(src, alt, natural) {
 const { Text: SniffModal_Text } = typography;
 /**
  * 扫描时要跳过的子树：本脚本自己的三个宿主。
- * 它们都挂在 documentElement 下（见 panelHost.tsx 与 shared/preview/host.ts 的取舍说明），
- * 故这里是三个 id 的并集，而不是一个前缀匹配。
+ * ⚠️ v26.10.14-v4 起定义在 `ui/sniffSelector.ts`（后台预测量 snifferPre.ts 也要用它，
+ *    故下沉到叶子模块，避免 lib 模块 import antd 组件文件）；本文件只 import。
  */
-const SNIFF_EXCLUDE_SELECTOR = ['#' + PANEL_HOST_ID, '#' + OVERLAY_HOST_ID, '#' + PREVIEW_HOST_ID].join(',');
 /** 每完成这么多毫秒把测好的图推给界面一次（合批，避免逐张 setState） */
 const FLUSH_MS = 150;
 /** 批量下载触发段的间隔：浏览器对同一页面连续下载有节流，太快会静默丢文件（v26.10.14-v2 起交给 downloadBatch 的触发段） */
@@ -75520,6 +75613,120 @@ function SniffModal({ open, onClose, minKB, onMinKBChange }) {
                                                     lineHeight: '16px',
                                                 }, children: "\u5F53\u524D\u4F1A\u8BDD" })) : null, (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { type: "link", size: "small", style: { padding: 0, fontSize: 12 }, onClick: () => toggleGroup(s), children: "\u5168\u9009\u672C\u7EC4" })] })) : null, (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: GRID_STYLE, children: s.known.map((it) => renderCard(it)) }), open && s.unknown.length ? ((0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { ...GRID_STYLE, marginTop: 8 }, children: s.unknown.map((it) => renderCard(it)) })) : null, s.unknown.length ? ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { marginTop: 6 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)(es_button, { type: "link", size: "small", style: { padding: 0 }, onClick: () => toggleUnknown(s.id), children: [open ? '▾' : '▸', " ", '大小未知（' + s.unknown.length + '）'] }), explainUnknownId === s.id ? ((0,react_jsx_runtime_production_namespaceFn().jsx)(SniffModal_Text, { type: "secondary", style: { fontSize: 11, marginLeft: 6 }, children: "\u91CF\u4E0D\u51FA\u5B57\u8282\u6570\uFF08\u8DE8\u57DF\u54CD\u5E94\u5934\u88AB\u62D2\u7B49\uFF09\uFF0C\u53EF\u80FD\u6709\u5927\u56FE\uFF0C\u5DF2\u4FDD\u7559" })) : null] })) : null] }, s.id || '__unnamed__'));
                         }) }) }) })), (0,react_jsx_runtime_production_namespaceFn().jsxs)(SniffModal_Text, { type: "secondary", style: { fontSize: 12, display: 'block', marginTop: 8 }, children: ["\u63D0\u793A\uFF1A", groupedView ? '图片已按会话（纳税人）分组，组头可直接「全选本组」；' : '', "\u5355\u51FB\u7F29\u7565\u56FE\u53EF\u653E\u5927 / \u591A\u56FE\u5207\u6362\uFF0C\u653E\u5927\u540E\u5DE5\u5177\u680F\u4E0A\u7684\u300C\u6253\u5370\u300D\u6309 A4 \u6253\u5370\u539F\u56FE\uFF08\u6A2A\u56FE\u81EA\u52A8\u65CB\u8F6C 90 \u5EA6\uFF09\uFF1B \u52FE\u9009\u540E\u53EF\u6279\u91CF\u4E0B\u8F7D\u3002\u89C6\u9891\u5DF2\u5728\u626B\u63CF\u9636\u6BB5\u6392\u9664\uFF0C\u52A8\u56FE\uFF08gif\uFF09\u6309\u56FE\u7247\u4FDD\u7559\u3002"] })] }));
+}
+
+;// ./src/lib/snifferPre.ts
+/**
+ * 「图片嗅探」后台预测量（v26.10.14-v4，用户指定：测量也要在开窗之前跑）。
+ *
+ * 解决什么问题：嗅探一直坚持「开窗才测量」（先零成本列出候选，再对没进过资源表的图发 HEAD/Range）。
+ * v26.10.14-v2 的 perf 预收把**同源 / 可读资源表**的图变成了零成本，但**跨域且响应没有
+ * Timing-Allow-Origin 的图**仍要等开窗后才逐张 HEAD —— 用户开窗后看到的「正在测量大小…」
+ * 进度条就是这么来的。本模块把那一遍测量**提前到后台**：脚本启动后先等首屏稳定，再按固定
+ * 间隔把页面上的图量一遍，结论记进 `snifferCache`；用户开窗时 SniffModal 照旧重扫（候选必须重收，
+ * 页面随时在变），但每张图只要上次量过就直接用缓存 ⇒ 开窗即时出大小，不再等网络。
+ *
+ * ⚠️ 代价（用户已知情拍板）：**不开窗也会向页面图片服务器发请求**。故下面四个安全阀不可删：
+ *   ① 零成本项优先：资源表已给字节数的图 / `data:` / 内联 svg / `blob:`（页面内 fetch，不出网）
+ *      —— 这批一个请求都不发，绝大多数同源图都落在这里；
+ *   ② 单轮**网络测量**张数上限 PRE_MAX_NET_PER_ROUND，超出的顺延到下一轮（把请求摊到时间上，
+ *      绝不瞬间打爆）；
+ *   ③ 并发只有 PRE_CONCURRENCY，远低于开窗时的 5：后台任务不许抢用户的带宽；
+ *   ④ 后台收集的 CSS 遍历上限收到 PRE_CSS_LIMIT（开窗时是 3000）：getComputedStyle 是主线程开销，
+ *      后台每轮都全量扫会给页面添卡顿；扫不到的图开窗那次照扫不误，不会丢。
+ *   另有总开关：设置项 `sniffPreMeasure`（默认开），关掉即彻底不跑（见 setPreMeasureEnabled）。
+ *
+ * 与 perf 预收的分工（两者互补，别混）：`snifferPerf.ts` **只读 performance、零请求**，从脚本
+ * 第一行就在收，负责「本来就免费的字节数」；本模块专治**perf 拿不到**的那部分图，是唯一会发
+ * 后台请求的地方。两者最终写进同一个缓存，开窗时一视同仁。
+ *
+ * 失败不重试：测量失败的图也会带 `size: null` 进缓存（见 snifferCache），于是同一个 URL
+ * 在本次页面会话里只会被后台尝试一次 —— 这是防「每轮 60s 反复捶一个挂掉的地址」的关键。
+ *
+ * 幂等 / 不可重入：`setPreMeasureEnabled` 重复调用无副作用；单轮用 running 标志挡住重入。
+ */
+
+
+
+/** 首次测量延时（毫秒）：等首屏图片先加载完，别在页面最忙的时候抢带宽 */
+const PRE_INITIAL_DELAY = 5000;
+/** 之后每轮间隔（毫秒）：页面会陆续长出新图，低频兜住即可 */
+const PRE_INTERVAL = 60000;
+/** 后台测量并发：远低于开窗时的 5 */
+const PRE_CONCURRENCY = 2;
+/** 单轮「要发网络请求」的张数上限，超出的留到下一轮 */
+const PRE_MAX_NET_PER_ROUND = 60;
+/** 后台收集时 getComputedStyle 的遍历元素数上限（开窗那次仍是 CSS_SCAN_LIMIT=3000） */
+const PRE_CSS_LIMIT = 1200;
+/** 是否启用（由设置项驱动） */
+let enabled = false;
+/** 下一轮的定时器句柄 */
+let snifferPre_timer = null;
+/** 单轮不可重入 */
+let running = false;
+/** 已跑轮数（调试 / 冒烟用） */
+let rounds = 0;
+/** 排下一轮（已在排队 / 未启用时不重排） */
+function schedule(delay) {
+    if (!enabled || snifferPre_timer !== null)
+        return;
+    snifferPre_timer = window.setTimeout(() => {
+        snifferPre_timer = null;
+        void runRound();
+    }, delay);
+}
+/** 这张图测量要不要发网络请求？false = 纯本地 / 资源表读数，零成本 */
+function isZeroCost(it) {
+    if (it.kind !== 'http')
+        return true; // data: / svg / blob:（blob 走页面上下文 fetch，不出网）
+    return !!(it.perfBytes && it.perfBytes > 0);
+}
+/** 跑一轮：收集（零网络）→ 只测没测过的 → 结论自动进缓存（由 resolveSizes 写） */
+async function runRound() {
+    if (!enabled || running)
+        return;
+    running = true;
+    try {
+        const res = collectCandidates({ excludeSelector: SNIFF_EXCLUDE_SELECTOR, cssLimit: PRE_CSS_LIMIT });
+        const fresh = res.items.filter((it) => !measuredOf(it.key));
+        if (fresh.length) {
+            const zero = fresh.filter(isZeroCost);
+            const paid = fresh.filter((it) => !isZeroCost(it)).slice(0, PRE_MAX_NET_PER_ROUND);
+            if (zero.length || paid.length) {
+                await resolveSizes(zero.concat(paid), { concurrency: PRE_CONCURRENCY });
+            }
+        }
+        rounds++;
+    }
+    catch (e) {
+        /* 静默：后台任务绝不许把异常抛进主流程，也不写日志刷屏 */
+    }
+    finally {
+        running = false;
+        if (enabled)
+            schedule(PRE_INTERVAL);
+    }
+}
+/**
+ * 开关后台预测量。开 ⇒ 5 秒后跑第一轮，之后每 60 秒一轮；关 ⇒ 清掉待跑的定时器
+ * （**已经在飞的那一轮不打断**：请求已经发出去了，拦下来也不会省下什么，让它跑完即可）。
+ */
+function setPreMeasureEnabled(v) {
+    const next = !!v;
+    if (next === enabled)
+        return;
+    enabled = next;
+    if (next) {
+        schedule(PRE_INITIAL_DELAY);
+    }
+    else if (snifferPre_timer !== null) {
+        window.clearTimeout(snifferPre_timer);
+        snifferPre_timer = null;
+    }
+}
+/** 当前状态（调试 / 冒烟用） */
+function preMeasureStatus() {
+    return { enabled: enabled, running: running, rounds: rounds };
 }
 
 ;// ./src/lib/ui/transfer/wechatTheme.ts
@@ -107263,6 +107470,8 @@ function TransferAssistantModal({ open, onClose }) {
 
 
 
+// v26.10.14-v4：嗅探后台预测量的开关即时生效（设置项变化时调它，见 SettingsModal 的那个 Switch）
+
 
 
 // 常用语请求序号（loadPhrasesData 用）：仅最新一次请求可落地结果，防慢的旧响应后到覆盖新数据
@@ -107654,6 +107863,11 @@ function MainPanel({ host }) {
                 }, useCdn: Allvalue.useCdn, onChangeUseCdn: (v) => {
                     patchAllvalue({ useCdn: !!v });
                     addLog('CDN 加速已' + (v ? '开启' : '关闭'), 'info');
+                }, sniffPreMeasure: Allvalue.sniffPreMeasure !== false, onChangeSniffPreMeasure: (v) => {
+                    patchAllvalue({ sniffPreMeasure: !!v });
+                    // 开关即时生效（不必重开页面）：开 ⇒ 5 秒后跑第一轮，关 ⇒ 停掉待跑的轮次
+                    setPreMeasureEnabled(!!v);
+                    addLog('图片嗅探：后台预测量已' + (v ? '开启' : '关闭'), 'info');
                 } }), (0,react_jsx_runtime_production_namespaceFn().jsx)(PhrasesDrawer, { open: phrasesOpen, onClose: () => setPhrasesOpen(false), phrasesData: phrasesData, phrasesLoading: phrasesLoading, searchKeyword: searchKeyword, setSearchKeyword: setSearchKeyword, loadPhrasesData: loadPhrasesData, commonPhrasesUrl: Allvalue.commonPhrasesUrl }), (0,react_jsx_runtime_production_namespaceFn().jsx)(LogModal, { open: logOpen, onClose: () => setLogOpen(false), logEntries: logEntries, onClear: clearLogs, autoRefresh: !!Allvalue.logAutoRefresh, onAutoRefreshChange: (v) => {
                     // 只改设置、不写日志：这是「看日志的方式」，不是被监控的业务动作，
                     // 记一条日志反而会在冻结列表时制造困惑。
@@ -108155,6 +108369,10 @@ function usePanelDrag(host) {
 // performance 缓冲区（observer 的 buffered:true 会一次性回放），此后的新资源由 observer
 // 实时抄录。放 app() 第一行而不是 sniffer.ts 模块级：那个文件是按需加载的，太晚。
 
+// v26.10.14-v4：嗅探「后台预测量」（用户指定：测量也要在打开嗅探窗口之前跑）——
+// 与上面的 perf 预收是互补的两件事：perf 只读资源表（零请求，覆盖同源图），
+// 本模块专治资源表拿不到字节数的图（会发请求，故有开关与限额，见 lib/snifferPre.ts）。
+
 /**
  * 脚本入口：本文件只做「装配」，业务实现全部在 src/lib/ 与 src/lib/ui/。
  * 顺序：挂载 React+antd 面板（内含位置恢复与拖拽） → 注册卸载清理 → 启动监控。
@@ -108167,6 +108385,15 @@ const app_app = () => {
     // ========== 资源表预收（v26.10.14-v2，嗅探「开窗即有大小」的基础）==========
     // 必须在最前面：越早启动 observer，漏掉的资源越少。内部幂等 + 全异常静默降级。
     startPerfCollect();
+    // ========== 嗅探后台预测量（v26.10.14-v4）==========
+    // 按设置项决定是否跑（默认开）。首轮延后 5 秒（等首屏图先加载完），之后每 60 秒补一轮。
+    // ⚠️ 这是唯一会在「用户没打开嗅探窗口」时发请求的地方，安全阀见 lib/snifferPre.ts 文件头。
+    try {
+        setPreMeasureEnabled(loadAllvalue().sniffPreMeasure !== false);
+    }
+    catch (e) {
+        /* 读设置失败就当关掉：宁可不预测量，也不能连累启动 */
+    }
     // ========== 挂载主面板 ==========
     try {
         mountPanel();

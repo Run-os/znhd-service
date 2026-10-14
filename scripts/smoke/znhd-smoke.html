@@ -1812,10 +1812,25 @@
          v26.10.14-v2：夹具里多一张**同源真加载**的 /sniff-perf.png（server.js 提供，精确
              22528 字节）—— 只有真加载的图才进 performance 资源表，跨域假域名进不去。
              它必须走「资源表读数」档出卡片（sniffPerfFirstOk），完成判据因此改成 cards>=5。 */
+      /* ===== ⑬ 后台预测量（v26.10.14-v4）===========================================
+         嗅探窗要到 30000 拍才开，而脚本启动后约 PRE_INITIAL_DELAY(5s) 就应在**后台**把页面上的图
+         量过一遍。这里在开窗**之前**取样，确认跨域假域名的 CSS 背景图（/sniff-head.png 只能走
+         HEAD 桩）那时已经被请求过 —— 只断言「开窗后有请求」是不行的，那正是旧行为（开窗才测）。
+         之后再比一次：开窗扫描**不得**为它新增请求（缓存命中，见 sniffPreMeasureOk）。 */
+      setTimeout(() => {
+        window.__sniffPreHeadBeforeOpen = window.__gmXhrLog.filter(
+          (l) => l.indexOf('/sniff-head.png') >= 0
+        ).length;
+      }, 12000);
+
       const kickSniff = () => {
         // 会话分组夹具必须在**扫描之前**就位：脚本是在「打开弹窗 → 扫描」时读页面 Vuex 的
         window.__sniffChatInstalled = window.__installSniffChat('two');
         window.__sniffSnap = {};
+        // 开窗前那一刻的请求基线（随后只发生「开窗扫描」这一件事，用它判缓存是否被复用）
+        window.__sniffPreHeadAtOpen = window.__gmXhrLog.filter(
+          (l) => l.indexOf('/sniff-head.png') >= 0
+        ).length;
         window.__clickedSniff = clickByText('图片嗅探');
         /** 点标题条上的「重新扫描」（扫描中时按钮文案是「扫描中…」，故两个文案都认） */
         const clickRescan = (m) => {
@@ -1876,6 +1891,11 @@
             perfBogusNotShown: t.indexOf('117.74 MB') < 0,
             perfViaLabel: titles.indexOf('资源表读数') >= 0,
             perfNoHead: !window.__gmXhrLog.some((l) => l.indexOf('sniff-perf.png') >= 0),
+            // v26.10.14-v4：后台预测量 —— 开窗前已为 /sniff-head.png（只能走 HEAD 的跨域图）发过请求，
+            // 且开窗扫描**没有**为它新增请求（缓存命中 ⇒ 一个 HEAD 都不重发）。
+            preHeadBeforeOpen: window.__sniffPreHeadBeforeOpen || 0,
+            preHeadAtOpen: window.__sniffPreHeadAtOpen || 0,
+            preHeadAfterScan: window.__gmXhrLog.filter((l) => l.indexOf('/sniff-head.png') >= 0).length,
             unknownCount: unknownCount,
             // v26.10.10-v6：界面不再出现「另有 N 张小于阈值」这类计数
             belowNoticeShown: t.indexOf('小于阈值') >= 0,
@@ -2542,6 +2562,16 @@
             window.__sniffSnap.perfBogusNotShown &&
             window.__sniffSnap.perfViaLabel &&
             window.__sniffSnap.perfNoHead
+          ),
+          // v26.10.14-v4：嗅探后台预测量 —— 测量发生在**打开窗口之前**（12000 拍取样时，
+          // /sniff-head.png 这个只能走 HEAD 桩的跨域图就已经被请求过），且开窗扫描复用缓存、
+          // 不为它重发请求。两个条件缺一不可：只满足前者是「后台跑了但缓存没接上」，
+          // 只满足后者是「本来就没人发过请求」（旧行为）。
+          sniffPreMeasureOk: !!(
+            window.__sniffSnap &&
+            window.__sniffSnap.preHeadBeforeOpen >= 1 &&
+            window.__sniffSnap.preHeadAtOpen >= window.__sniffSnap.preHeadBeforeOpen &&
+            window.__sniffSnap.preHeadAfterScan === window.__sniffSnap.preHeadAtOpen
           ),
           // 图片嗅探（v26.10.10-v6，用户反馈）：小于阈值的图不显示、不计数、也不进全选/批量下载范围。
           // 判据：① 面板不再出现「小于阈值」字样；② 10 KB 的 ⑦ 不在任何卡片标题里；
