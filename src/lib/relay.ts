@@ -2,6 +2,8 @@ import { addLog } from '@/lib/logger';
 // 图片压缩：与手机上传页共用同一份实现（v26.10.08-v13 起），路径见仓库根 shared/
 import { DEFAULT_MAX_DIM, DEFAULT_QUALITY, makeHeicConverter } from '../../shared/image/compress';
 import { prepareForTransfer } from '../../shared/image/prepare';
+// 重试退避：与客户端（web/）共用同一份算法（v26.10.14-v8），避免两端各写一份后漂移
+import { nextRetryDelay } from '../../shared/kit/backoff';
 
 /**
  * 设备互联中继客户端（手机 → 电脑）与图片剪贴板工具。
@@ -378,6 +380,9 @@ export function startPhoneReceive(opt: PhoneReceiveOptions) {
     let connected = false;
     let loggedConnFail = false;
     let firstPoll = true;
+    // P5（v26.10.14-v8）：当前退避值。0 = 上一轮成功；失败时由 nextRetryDelay 递增到 60s 封顶。
+    // 放在闭包里（而非模块级）—— 多台中继地址各自独立退避，互不影响。
+    let retryDelay = 0;
     function markConnected() {
         if (connected) return;
         connected = true;
@@ -412,7 +417,17 @@ export function startPhoneReceive(opt: PhoneReceiveOptions) {
                 timeout: maxwait + 5000,
                 onload: function (resp) {
                     if (stopped) return;
+                    // P5（v26.10.14-v8）：HTTP 层失败也走退避 —— 429 = 服务端明确要求放缓；
+                    // 5xx = 服务端故障/重启（最容易雪崩的时刻）。旧实现会固定 2s 打回来。
+                    // ⚠️ 必须在 markConnected 之前判：这些响应**不算连上**，也不能把退避复位。
+                    if (resp.status === 429 || resp.status >= 500) {
+                        if (opt.onStatus) opt.onStatus('服务器繁忙，稍后重试…');
+                        retryDelay = nextRetryDelay(retryDelay, resp.status);
+                        setTimeout(poll, retryDelay);
+                        return;
+                    }
                     markConnected(); // 首次成功收到服务器响应即视为已连上
+                    retryDelay = 0; // 拿到正常响应 ⇒ 退避复位（下次失败重新从 2s 起）
                     try {
                         let data = null;
                         try {
@@ -494,11 +509,15 @@ export function startPhoneReceive(opt: PhoneReceiveOptions) {
                             poll(); // 继续接收下一条
                             return;
                         }
+                        // ⚠️ 这一条**故意不并入 P5 退避**：它表示「服务器通了，但某个字段不认识」
+                        // （老中继 / 代理回 HTML / 载荷残缺），属单条数据异常而非连接故障。
+                        // 若在这里退避到 60s，一张坏图就会让接收停摆一分钟。
                         setTimeout(poll, 1000); // 解析失败稍后重试
                     } catch (e) {
                         // 单条数据异常（base64 损坏 atob 抛错、回调抛错等）不得杀死接收循环：
                         // 记录一次后继续下一次轮询（旧实现无兜底，异常会让 poll 链永久中断、收图静默失效）
                         addLog('[设备互联] 处理收到数据失败: ' + (e && e.message ? e.message : e), 'error', true);
+                        // 同上：单条数据损坏（atob 抛错等）不退避，1s 后继续下一条
                         setTimeout(poll, 1000);
                     }
                 },
@@ -509,7 +528,10 @@ export function startPhoneReceive(opt: PhoneReceiveOptions) {
                         addLog('[设备互联] 连接服务器失败，请检查中继地址/网络（' + server + '）', 'error');
                     }
                     if (opt.onStatus) opt.onStatus('连接中断，正在重连…');
-                    setTimeout(poll, 2000);
+                    // P5（v26.10.14-v8）：网络层失败按指数退避重连（旧实现固定 2s —— 中继重启时
+                    // 所有脚本同节奏敲门）。成功后 onload 会把 retryDelay 复位。
+                    retryDelay = nextRetryDelay(retryDelay);
+                    setTimeout(poll, retryDelay);
                 },
                 ontimeout: function () {
                     if (stopped) return;
@@ -519,7 +541,8 @@ export function startPhoneReceive(opt: PhoneReceiveOptions) {
         } catch (e) {
             if (stopped) return;
             if (opt.onStatus) opt.onStatus('请求异常，正在重连…');
-            setTimeout(poll, 2000);
+            retryDelay = nextRetryDelay(retryDelay);
+            setTimeout(poll, retryDelay);
         }
     }
     poll();

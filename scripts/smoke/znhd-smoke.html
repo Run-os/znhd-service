@@ -411,6 +411,24 @@
         // 第 5 次起且 __routePhase 已置位：补发一条**来自手机 B** 的文本（只发一次），
         // 供 sessionRouteBySenderOk 断言「B 的内容进 B 的会话、且不在当前会话里」。
         if (/\/recv\//.test(url)) {
+          // P5 指数退避探针（v26.10.14-v8）：探针窗口内一律拒绝，逼客户端走重试/退避分支。
+          // ⚠️ 必须排在 __recvCount 自增**之前** —— 否则探针会吃掉正常内容序列（文本/图片/文件），
+          //    后面三条内容断言会莫名其妙地红。
+          if (window.__recvProbeActive) {
+            if (window.__recvFailWith === 429) {
+              reply(details, { error: 'probe: too many requests' }, {
+                status: 429,
+                statusText: 'Too Many Requests',
+              });
+            } else {
+              setTimeout(() => {
+                if (details && typeof details.onerror === 'function') {
+                  details.onerror({ status: 0, statusText: 'backoff-probe' });
+                }
+              }, 40);
+            }
+            return { abort: () => {} };
+          }
           const n = (window.__recvCount = (window.__recvCount || 0) + 1);
           // v26.10.14-v7（P0-b）：真实中继会给**每一个** /recv 响应捎带在线手机名单
           // （投递条目 / {empty:true} 超时都得带）。桩照做，让「名单由长轮询 piggyback
@@ -518,6 +536,109 @@
         }, 40);
         return { abort: () => {} };
       };
+    </script>
+
+    <!-- ===== P5 指数退避探针（v26.10.14-v8）=====
+         验证「中继持续失败时，客户端重试间隔按指数增长」这条新行为。三个小探针：
+           A（onerror）：应得到 2000 → 4000 → 8000 → 16000 → 32000 → 60000 → 60000（到顶保持）
+           C（复位）  ：A 之后让连接成功一次、再失败 ⇒ 必须**回到 2000**（退避复位）
+           B（429）   ：桩回 429 ⇒ 首次重试即 60000（服务端明说「慢点」就别在 2/4/8 上磨）
+         手法：只在本探针窗口内包一层 window.setTimeout —— 把**恰好等于退避值**的延时记下来，
+               并把真实等待改成 0ms，于是一瞬间就能跑完整个退避序列，不必真等 2+4+8+16+32=62 秒
+               （那会把冒烟从 38.5s 拖到 100s+）。
+               ⚠️ 必须按**精确值**过滤：若按「≥1000ms」放行，本页 30s / 36.5s / 38.4s 那几个
+               定时器会被一起提前触发（报告提前生成、整页断言全乱）。
+         反向验证：把退避改回固定 2s ⇒ A 记到 [2000,2000,…] ⇒ recvBackoffOk 变红。 -->
+    <script>
+      (function () {
+        // 真实 setTimeout 的底座引用。此后探针一律以它为底，避免包装套包装。
+        var TRUE_SET_TIMEOUT = window.setTimeout;
+        var BACKOFF_VALUES = [2000, 4000, 8000, 16000, 32000, 60000];
+
+        /**
+         * 跑一轮探针：让 /recv 持续失败，收集客户端排出的重试间隔。
+         * @param {number|null} httpStatus null = 桩回 onerror（网络层失败）；429 = 桩回 429 响应
+         * @param {number} limit 收满几个间隔就收手
+         * @param {Function} done 收手后回调（入参为收集到的间隔数组）
+         */
+        window.__backoffProbe = function (httpStatus, limit, done) {
+          var orig = TRUE_SET_TIMEOUT;
+          window.setTimeout = orig; // 归一：摘掉上一轮可能残留的包装
+          var delays = [];
+          var active = true;
+          window.__backoffDelays = delays;
+          window.__recvFailWith = httpStatus;
+          window.__recvProbeActive = true;
+
+          var finish = function () {
+            if (!active) return;
+            active = false;
+            window.__recvProbeActive = false;
+            window.__recvFailWith = null;
+            window.setTimeout = orig;
+            if (done) done(delays);
+          };
+          // 安全网：万一客户端不再重试（limit 凑不满），3s 后无条件收手并还原 ——
+          // 绝不能把包装留在页面里（否则后面所有定时器的延时语义都被改写）。
+          orig.call(window, finish, 3000);
+
+          window.setTimeout = function (fn, ms) {
+            if (active && typeof ms === 'number' && BACKOFF_VALUES.indexOf(ms) >= 0) {
+              delays.push(ms);
+              if (delays.length >= limit) {
+                finish();
+                return orig.call(window, fn, 300); // 收手：300ms 后让客户端回到正常轮询
+              }
+              return orig.call(window, fn, 0); // 跳过真实等待，立刻进入下一轮重试
+            }
+            return orig.apply(window, arguments);
+          };
+        };
+
+        // 探针排在 26s：内容流（≤19.5s）已跑完、kickSniff（30s）还没到，是一段安静窗口。
+        TRUE_SET_TIMEOUT.call(
+          window,
+          function () {
+            // —— A：网络层失败 → 退避序列 ——
+            window.__backoffProbe(null, 7, function (a) {
+              window.__backoffA = a.slice();
+              window.__backoffOk = (function () {
+                if (a.length < 7) return false;
+                // 前五档必须严格翻倍：2000 → 4000 → 8000 → 16000 → 32000
+                for (var i = 1; i < 5; i++) if (a[i] !== a[i - 1] * 2) return false;
+                // 且到 60s 封顶（不允许无限增长）
+                return a[0] === 2000 && a[4] === 32000 && a[5] === 60000 && a[6] === 60000;
+              })();
+
+              // —— C：先让连接成功一次（退避该复位），再失败 → 首值必须回到 2000 ——
+              TRUE_SET_TIMEOUT.call(
+                window,
+                function () {
+                  window.__backoffProbe(null, 1, function (c) {
+                    window.__backoffC = c.slice();
+                    window.__backoffResetOk = c.length >= 1 && c[0] === 2000;
+
+                    // —— B：429 → 首次重试即 60000 ——
+                    TRUE_SET_TIMEOUT.call(
+                      window,
+                      function () {
+                        window.__backoffProbe(429, 1, function (b) {
+                          window.__backoffB = b.slice();
+                          window.__backoff429Ok = b.length >= 1 && b[0] === 60000;
+                          window.__backoffProbeDone = true;
+                        });
+                      },
+                      600
+                    );
+                  });
+                },
+                600
+              );
+            });
+          },
+          26000
+        );
+      })();
     </script>
 
     <!-- ===== 与 userscript @require 完全相同的依赖 =====
@@ -2325,6 +2446,17 @@
           onDemandStatusQueryOk: window.__gmXhrLog.filter((l) => l.indexOf('/phone/status/') >= 0).length >= 1,
           phoneStatusPollRemovedOk:
             window.__gmXhrLog.filter((l) => l.indexOf('/phone/status/') >= 0).length <= 4,
+          // P5 指数退避（v26.10.14-v8）：三个探针的判定 + 原始记录（原始值留在报告里便于定位）。
+          // A 守「2→4→8→16→32→60 封顶」、C 守「成功后复位」、B 守「429 直接跳到 60s」。
+          recvBackoffOk: !!window.__backoffOk,
+          recvBackoffResetOk: !!window.__backoffResetOk,
+          recvBackoff429Ok: !!window.__backoff429Ok,
+          recvBackoffDelays: {
+            onerror: window.__backoffA || null,
+            resetAfterSuccess: window.__backoffC || null,
+            http429: window.__backoffB || null,
+            probeError: window.__backoffProbeError || null,
+          },
           // 配对窗口 footer 的「发送测试图片」
           pairTestImageBtnOk: !!ps.testBtnOk,
           testImageSentOk: !!ps.testImageSent,
@@ -2790,6 +2922,10 @@
           report.phonesViaLongPollOk &&
           report.onDemandStatusQueryOk &&
           report.phoneStatusPollRemovedOk &&
+          // P5 指数退避（v26.10.14-v8）：退避序列 / 成功复位 / 429 直跳上限
+          report.recvBackoffOk &&
+          report.recvBackoffResetOk &&
+          report.recvBackoff429Ok &&
           report.pairTestImageBtnOk &&
           report.testImageSentOk &&
           report.transferThemeOk &&

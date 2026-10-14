@@ -94,6 +94,10 @@ const CHECKS = [
   ['phonesViaLongPollOk', '在线名单随长轮询响应 piggyback 送达（不再单独轮询）'],
   ['onDemandStatusQueryOk', '/phone/status 退化为按需查询（启动/开窗时才打）'],
   ['phoneStatusPollRemovedOk', '5s 定时轮询已删除（同样时长内请求数远低于旧的每 5s 一次）'],
+  // P5 指数退避（v26.10.14-v8）：官方口径仍是「只往页面加断言不进这里 = 断言形同虚设」
+  ['recvBackoffOk', '重试指数退避（v26.10.14-v8）：2s→4s→8s→16s→32s→60s 逐档翻倍并封顶'],
+  ['recvBackoffResetOk', '退避复位：成功收到一次响应后，下一次失败的等待回到 2s（不长期迟钝）'],
+  ['recvBackoff429Ok', 'HTTP 429 直跳退避上限：首次重试就等 60s，不在 2/4/8 档位上空磨'],
   ['filesImgActionsOk', '「文件」视图图片格子：复制/下载/删除是右下角图标按钮（未 hover 隐藏，hover 出现）'],
   // v26.10.12-v3：气泡、滚动区、底部输入框抽成共用件（当时是为设备会话与 Agent 对话同款；
   // Agent 已于 v26.10.13-v9 删除，这三条继续守共用件本身）

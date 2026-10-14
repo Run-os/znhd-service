@@ -11,6 +11,13 @@
 - **Tampermonkey 实际注入哪个 world 未实测**（MV3 下走 `userScripts` API 的 `USER_SCRIPT` world）。要确证只能在真机跑一行 `new WebSocket('wss://…')`。
 - **落地结论不变**：即便 ws 技术可行，也不换 —— 换 ws 要手写 Node WS 帧解析（**破 relay 零依赖红线**），而 **`notify()`（服务器主动结束长轮询）用零依赖拿到同样的亚秒级推送**。轮询优化走 P2 + P0-a/b → P1 + P0-c + P5（见 `2026-10-14.md`）。
 
+## 重试退避（v26.10.14-v8 / 轮询优化 P5）
+- 单一来源 `shared/kit/backoff.ts`（纯函数 `nextRetryDelay(prevMs, httpStatus?)`）：首次 2s → 翻倍 → **60s 封顶**；**任一成功响应后复位**；**429 直跳 60s**。两端各持一个 `retryDelay` 闭包变量（多台中继地址各自独立退避）。
+- **退避只对「连接故障」生效**：`src/lib/relay.ts` 里那两处 `setTimeout(poll, 1000)`（响应解析失败 / 单条 base64 损坏）**故意不退避** —— 那是「服务器通了但这条不认」，并进去会让一张坏图停摆 60s。
+- 顺序红线：脚本端 `onload` 的 429/5xx 分支要排在 `markConnected()` **之前**；客户端 `pollRecv` 的 429/5xx 判据要排在 `r.json()` **之前**（否则错误页被当 JSON 解析、落进 catch 丢掉 429 语义）。
+- **验「定时重试间隔」的巧劲**：真等要 62s ⇒ 在探针窗口内包一层 `window.setTimeout`，把**恰好等于退避值**的延时记下并把真实等待改 0ms。⚠️ 过滤必须**精确值**（按「≥1000ms」放行会把本页 30s/36.5s/38.4s 的定时器一起提前触发，报告提前生成、整页断言全乱）；安全网要用**包装前捕获的真实 setTimeout 底座**来排。探针排在冒烟 26s（内容流 ≤19.5s 完、`kickSniff` 30s 前）。
+- 反向验证要**分轮**：把 `onerror` 改成「不写 retryDelay」会掩盖「复位」断言的破坏（retryDelay 恒 0）⇒ 复位必须单独一轮验。
+
 ## 硬规矩
 - 三块：`znhd.user.js`（税务页油猴脚本，自建宿主 + React 19 + antd v6；宿主 id 见 `src/lib/ui/panelIds.ts`）、`relay-server/`（零依赖中继；手机页 = `web/` 构建产物，托管 `/u/<deviceId>`）、`src/lib/*` 业务。
 - **版本号 `YY.M.D-vN`**（改动当天真实日期 + 当天第 N 次）。油猴**三写**：`config/common.meta.json` / `package.json` / `package-lock.json`；relay 独立版本。

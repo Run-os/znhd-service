@@ -7,6 +7,9 @@
  *     abort 只允许出现在「看门狗超时、原请求还挂着」的 catch 分支。
  */
 
+// 重试退避：与脚本端（src/）共用同一份算法（v26.10.14-v8），避免两端各写一份后漂移
+import { nextRetryDelay } from '../../../shared/kit/backoff';
+
 export interface RecvItem {
     /** v26.10.14-v6：'file' = 任意非图片文件（中继按 mime 分流） */
     type?: 'image' | 'file' | 'text';
@@ -100,6 +103,10 @@ export function startPhoneRelay(opts: RelayOptions): () => void {
     const { deviceId, phoneId, onConn, onItem } = opts;
     let stopped = false;
     const timers = new Set<number>();
+    // P5（v26.10.14-v8）：当前退避值。0 = 上一轮成功；失败时由 nextRetryDelay 递增到 60s 封顶。
+    let retryDelay = 0;
+    /** HTTP 层失败的哨兵：告诉下一个 then「重试已经安排好了，别再往下走一遍」 */
+    const HTTP_FAIL: unique symbol = Symbol('znhd-http-fail');
 
     const later = (fn: () => void, ms: number) => {
         const t = window.setTimeout(() => {
@@ -170,18 +177,31 @@ export function startPhoneRelay(opts: RelayOptions): () => void {
             ]
         )
             .then((r: any) => {
+                // P5（v26.10.14-v8）：429（服务端明确要求放缓）/ 5xx（服务端故障或重启）→ 退避后重连，
+                // **不**解析响应体。旧实现固定 1.5s 重试，中继重启时所有手机同节奏敲门。
+                // ⚠️ 判据放在这里（r.json() 之前）—— 否则会把错误页当 JSON 解析，落到下面的 catch，
+                //    那一路同样是重连，但会把 5xx 当成「网络抖动」，退避起步值也拿不到 429 的语义。
+                if (r && (r.status === 429 || r.status >= 500)) {
+                    retryDelay = nextRetryDelay(retryDelay, r.status);
+                    later(pollRecv, retryDelay);
+                    return HTTP_FAIL;
+                }
                 // ⚠️ 不要在这里 abort（见文件头说明 2）
                 return r.json();
             })
-            .then((j: RecvItem) => {
+            .then((j: RecvItem | typeof HTTP_FAIL) => {
                 if (stopped) return;
+                if (j === HTTP_FAIL) return; // HTTP 层失败：退避重试已排好，不再往下走
+                retryDelay = 0; // 拿到正常响应 ⇒ 退避复位（下次失败重新从 2s 起）
                 if (j && j.type) onItem(j);
                 pollRecv();
             })
             .catch(() => {
                 if (stopped) return;
                 if (ctrl) ctrl.abort();
-                later(pollRecv, 1500);
+                // P5：网络层失败（fetch 抛错 / 看门狗超时 / 解析异常）按指数退避重连
+                retryDelay = nextRetryDelay(retryDelay);
+                later(pollRecv, retryDelay);
             });
     }
 
