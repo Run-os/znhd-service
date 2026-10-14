@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name                征纳互动人数和在线监控v2
 // @namespace           https://scriptcat.org/
-// @version             26.10.14-v8
+// @version             26.10.15-v1
 // @description         实时监控征纳互动等待人数和在线状态，支持语音播报、自定义常用语
 // @author              runos
 // @license             MIT
@@ -77600,7 +77600,10 @@ function startPhoneReceive(opt) {
             opt.onStatus('正在等待手机上传…');
         // 首次轮询用极短 maxwait 仅用于快速确认「已连上服务器」（服务器会很快返回空），
         // 让「已自动开始接收」日志尽快出现；后续轮询用长 maxwait 实时等待图片。
-        const maxwait = firstPoll ? 1000 : 25000;
+        // P3（v26.10.15-v1）：稳态 maxwait 25000 → 45000。长轮询是闭环（一次请求 = 等到消息
+        // 早返回 或 等满 maxwait，返回即重连）⇒ 请求数 ≈ 时长/maxwait，放宽挂起时长**线性**
+        // 减少请求数。取 45s 而非服务端上限 60s：给 `timeout`（下方 maxwait+5000）与反代留余量。
+        const maxwait = firstPoll ? 1000 : 45000;
         firstPoll = false;
         // `phones=1`（v26.10.14-v7）= 协商标记：告诉中继「本客户端认识 `type:'phones'` 主动唤醒」。
         // 中继只唤醒带该标记的连接 —— 老脚本不带，就不会被上下线事件无谓打断（它收到不认识的

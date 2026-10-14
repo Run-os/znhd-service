@@ -18,6 +18,12 @@
 - **验「定时重试间隔」的巧劲**：真等要 62s ⇒ 在探针窗口内包一层 `window.setTimeout`，把**恰好等于退避值**的延时记下并把真实等待改 0ms。⚠️ 过滤必须**精确值**（按「≥1000ms」放行会把本页 30s/36.5s/38.4s 的定时器一起提前触发，报告提前生成、整页断言全乱）；安全网要用**包装前捕获的真实 setTimeout 底座**来排。探针排在冒烟 26s（内容流 ≤19.5s 完、`kickSniff` 30s 前）。
 - 反向验证要**分轮**：把 `onerror` 改成「不写 retryDelay」会掩盖「复位」断言的破坏（retryDelay 恒 0）⇒ 复位必须单独一轮验。
 
+## 长轮询挂起时长（v26.10.15-v1 / 轮询优化 P3）
+- 取值：中继 `handlePoll` 钳制 **`[1000, 60000]`**（上限 30s→60s，**默认仍 25000** ⇒ 不带该参数的老客户端行为零变化）；两端稳态取 **45s**（不是上限 60s，留余量）：脚本端 `const maxwait = firstPoll ? 1000 : 45000`（首次仍 1000 只为快速确认「已连上」；`timeout: maxwait+5000` 自动跟随）、手机页 `&maxwait=45000` + 看门狗 **55000**（保持既有的 `maxwait+10s` 节奏，看门狗必须 > maxwait）。8h 请求数 ~5904 → ~4880。
+- **反代事实（下次再放宽前先重查这两处）**：znhd 的反代是 **1Panel 的 openresty 容器**（`1Panel-openresty-AP4d`），**不是宿主机 nginx**（宿主机 `/etc/nginx/` 里根本没有 znhd，别在那儿找）。站点块 = `/opt/1panel/1panel/www/conf.d/znhd.122050.xyz.conf`（只有 `proxy_pass http://127.0.0.1:5689`，**无 timeout 覆盖**）；**http 级 `proxy_read_timeout 3600s`** 在 `/opt/1panel/apps/openresty/openresty/conf/nginx.conf:49` ⇒ 60s 挂起余量 59 倍。线上实测手法：`curl -s --resolve znhd.122050.xyz:443:127.0.0.1 -w 'HTTP=%{http_code} 耗时=%{time_total}s\n' 'https://znhd.122050.xyz/recv/<uuid>?maxwait=30000'` → `200 / 30.13s / {"empty":true}`。
+- ⚠️ **`relay.js` 里那条 P3 断言是本仓唯一必须真等 31s 的**（钳制值是常量，新旧上限**唯一**可观测差异就是挂起时长）⇒ 探测在 `main()` **最早期**启动、与后面所有断言**并行**跑，末尾才补足到 31s 判定；别写成串行 `await sleep(31000)` 白白串行化。
+- **版本号跨午夜判例**：本次改动从 10-14 23:50 延续到 10-15 00:1x ⇒ 版本号跟**提交时刻的真实日期**走，起新号 `26.10.15-v1`（不接 10-14 的 v9）。relay 同步 `26.10.15-v1`。
+
 ## 硬规矩
 - 三块：`znhd.user.js`（税务页油猴脚本，自建宿主 + React 19 + antd v6；宿主 id 见 `src/lib/ui/panelIds.ts`）、`relay-server/`（零依赖中继；手机页 = `web/` 构建产物，托管 `/u/<deviceId>`）、`src/lib/*` 业务。
 - **版本号 `YY.M.D-vN`**（改动当天真实日期 + 当天第 N 次）。油猴**三写**：`config/common.meta.json` / `package.json` / `package-lock.json`；relay 独立版本。
@@ -32,7 +38,7 @@
 - 清理：备份标签 → **在 `origin/main` 上** rebase → 解冲突（changelog 取并集；`relay-server/public/*` 取 origin 侧并 `git rm` 过期 hash）→ `build:web` + `build` → verify。追加修复用 `--fixup` + `rebase -i --autosquash`。
 - `workbuddy/*` 分支不能 `git branch -d`（被 WorkBuddy worktree 占用）⇒ 只删远端。
 
-## 传输助手（微信桌面版暗色；现行 v26.10.14-v7）
+## 传输助手（微信桌面版暗色；现行 v26.10.15-v1）
 - **在线手机名单的送达（v26.10.14-v7 轮询优化，改传输链路前必读）**：**已删掉 5s `/phone/status` 轮询**（那是 8h 里 5760 次 = 49.4% 的请求）。三条路：① **piggyback** —— `forwardChannel` 的 `opts.decorate(uuid)` 让 `/recv` 的**每个**响应（含 `{empty:true}` 超时）都带 `phones`，脚本端 `onload` 里**必须先消化 `data.phones`、再判 `data.empty`**（否则常态超时响应会把名单丢掉）；② **`notify()` 主动唤醒** —— `createChannel` 新能力，手机上线（heartbeat 的 `if(!wasOnline)`）与下线（5s 清扫判定）各唤醒一次 `{type:'phones'}`，亚秒级；③ **按需查询**（窗口打开）+ **60s 兜底 tick**（`Date.now() - phonesSeenAt < 55000` 就跳过 ⇒ 正常状态零请求；兜底只为**未升级的老中继**）。⚠️ **`phones=1` 协商红线**：中继只唤醒 `res.__wakeSub === true` 的连接，老脚本不带该参数就绝不被唤醒。⚠️ `createChannel(labels, opts)` 是**两参数**，`decorate`/`perRecipient` 都在 `opts` 里（v7 踩过：写进 labels 静默失效）；`deliver` 的 3 处 + `handlePoll` 超时的 1 处响应**统一走 `reply()`**，漏一处就是「有时不捎带」的缝隙。改动后 relay 端 5 条 + 浏览器端 4 条断言守。
 - 入口 = 主面板一行 4 个（设置/常用语/传输助手/图片嗅探）；三栏 = `TransferNavRail`（对话 key 仍 `devices` / 文件 + 底部设置·企业信息）→ `TransferSessionList` → 第三栏（`TransferDeviceChat` / `TransferFilesView`）。⚠️ **Agent 能力（第一栏 Agents 入口 + 技能/定时任务控件 + Agent 对话第三栏 + `lib/agent/`）已于 v26.10.13-v9 整体删除**，公共件 `MarkdownBody` 已从 `ui/agent/` 移到 `ui/`。
 - **圆角 + 层级（v26.10.13-v10 用户 excalidraw 白板稿；v26.10.14-v1 露出层与第一栏同色）**：圆角唯一入口 `wechatTheme.ts` 的 `RADIUS`（window 14 / panel 10 / card 12 / control 8）；外框大圆角 = ConfigProvider `borderRadiusLG`（子弹窗同族）；第二三栏包在 `.znhd-transfer-content` 内嵌圆角卡片里（右缩进 10 / 下缩进 8），第一栏贴满窗口高度；⚠️ **v26.10.14-v1 起卡片露出层 = Modal body 底色 = `WECHAT.rail`（#2E2E2E，与第一栏/标题条同色）**——用户明确要求最下面不与第一栏有色差断层（v10 曾露 `WECHAT.frame` #383838，已改）；输入区（`ChatComposer`）是四边留白 12px 的圆角浮起卡片（**全边框不能删**——冒烟 `panelBordered` 判 `borderTopWidth>0`）。冒烟 `transferLayeredOk` 守全部几何量 + `frameMatchesRail`（容器底色 === 第一栏底色，同色比较不写死 hex）。
@@ -64,7 +70,10 @@
 - 冒烟证据：中继优先 ⇒ 兜底零触发（`cdn===0` / 零外部请求）；`emojiNotInFilesOk` 钉死过滤。
 
 ## 中继与部署
-- 端口 `PORT||5689`；nginx `proxy_pass http://127.0.0.1:5689`（znhd.122050.xyz）。`deploy.yml` 定式：脚本内硬编码 `DEPLOY_PATH` / `CONTAINER_NAME` + 安全阀（根因：ssh-action 不注入顶层 env）。诊断：`Connection refused (111) upstream 5689` = relay 未监听。反相通道改一侧必须同步评估另一侧。
+- 服务器 = **极点云-HK**（`45.207.199.216:65000`，OneSSH host 名 `极点云-HK`；本机 `~/.workbuddy/mcp.json` 里没有这台）。容器 `znhd`（`1panel/node:25.9.0`）端口 `0.0.0.0:5689`；代码根 `/opt/znhd-service`（`relay-server/` 挂进容器 `/app`）。
+- 反代 = **1Panel openresty 容器**（不是宿主机 nginx，见上方 P3 节的路径与 `proxy_read_timeout` 事实）。
+- `deploy.yml` 定式：脚本内硬编码 `DEPLOY_PATH` / `CONTAINER_NAME` + 安全阀（根因：ssh-action 不注入顶层 env）。诊断：`Connection refused (111) upstream 5689` = relay 未监听。反相通道改一侧必须同步评估另一侧。
+- `/health` 返回 `{ok:true,version:"<relay 版本>"}` —— 判断「线上跑的是哪个 relay 版本」最快的一招。
 
 ## UI 与排查
 - 图标一律内联 SVG（Win7 无 emoji 字体 ⇒ U+1F300+ 是豆腐块），走 `src/lib/ui/icons.tsx`；⚠️ `@ant-design/icons` 组件 **props 不接受 `style`**（TS2322）⇒ 挂外层 span。面板按钮容器查询阈值 `PANEL_CSS` 65px 与图标字号/标签字数耦合，改任一个都要回算。

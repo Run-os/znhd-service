@@ -183,6 +183,10 @@
    - ⚠️ **`phones=1` 协商红线**：脚本端在 `/recv` URL 上带 `?phones=1`，中继**只唤醒带该标记的连接**（`res.__wakeSub`）。老脚本不带 → 绝不被唤醒（它不认识 `type:'phones'`，被唤醒只会 1s 后重连，**反而放大请求数**）。
    - ⚠️ **数学前提**：长轮询是闭环（一次请求 = 等到消息早返回 **或** 等满 maxwait，返回即重连）⇒ 请求数 ≈ 时长/maxwait，**与消息条数无关**。所以「捎带」不增加请求数，`notify()` 也不是新机制（`deliver()` 早就在做同一件事，只是现在扩展到上下线事件）。
 
+8. **长轮询挂起时长（v26.10.15-v1 轮询优化 P3，改这块前必读）**：中继 `handlePoll` 的钳制是 `Math.min(Math.max(maxwait, 1000), 60000)`（**上限 30s → 60s**，**默认值仍 25000 不变** ⇒ 不带该参数的老客户端行为零变化）。两端稳态取值 **45s**（不是上限 60s，留余量）：脚本端 `src/lib/relay.ts` 的 `const maxwait = firstPoll ? 1000 : 45000`（首次仍 1000，只为快速确认「已连上」；`timeout: maxwait + 5000` 自动跟随）；手机页 `web/src/lib/relay.ts` 的 `&maxwait=45000` + 看门狗 **55000**（保持既有的 `maxwait + 10s` 节奏，看门狗必须 > maxwait，否则接收会静默停摆）。
+   - ⚠️ **反代前提（本次实测确认）**：1Panel 的 openresty 在 **http 级**设了 `proxy_read_timeout 3600s`（`/opt/1panel/apps/openresty/openresty/conf/nginx.conf:49`），而 `znhd.122050.xyz` 站点的 `location /` **未覆盖**该值 ⇒ 60s 挂起余量充足。**下次再放宽前先重查这两处**（站点 conf 位于 `/opt/1panel/1panel/www/conf.d/znhd.122050.xyz.conf`；容器名 `1Panel-openresty-AP4d`，配置从宿主机 `/opt/1panel/1panel/www` 与 `/opt/1panel/apps/openresty/...` 挂进去）。线上实测手法：`curl --resolve znhd.122050.xyz:443:127.0.0.1 'https://znhd.122050.xyz/recv/<uuid>?maxwait=30000'` 看耗时是否 ≈ maxwait 且回 `200 {"empty":true}`。
+   - ⚠️ **断言的等待成本**：`relay.js` 里那条 P3 断言是本仓**唯一必须真等 31s** 的断言（钳制值是常量，「上限 30000」与「上限 60000」唯一可观测差异就是挂起时长）。探测要在 `main()` **最早期**启动并和后续断言**并行**跑，末尾才补足等待 —— 别写成串行 `await sleep(31000)` 白白串行化。
+
 7. **取件失败的重试退避（v26.10.14-v8 轮询优化 P5，改这块前必读）**：两端共用纯函数 `shared/kit/backoff.ts` 的 `nextRetryDelay(prevMs, httpStatus?)`，**状态（当前退避值）由各端闭包自己持有**（`src/lib/relay.ts` 的 `startPhoneReceive` / `web/src/lib/relay.ts` 的 `startPhoneRelay` 各一个 `retryDelay`，故多台中继地址各自独立退避）。
    - 序列：首次失败 **2s**，逐次翻倍 **2 → 4 → 8 → 16 → 32 → 60（封顶）**；**任一成功响应后立刻复位**回 2s；**429 直接跳到 60s**。
    - 脚本端：`onerror` 与 `GM_xmlhttpRequest` 抛错的 `catch` 走退避；`onload` 的「429 / 5xx」分支必须排在 `markConnected()` **之前** —— 这类响应**不算连上**，也不该把退避复位。

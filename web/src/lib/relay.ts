@@ -158,10 +158,11 @@ export function startPhoneRelay(opts: RelayOptions): () => void {
         const ctrl = 'AbortController' in window ? new AbortController() : null;
         const opt: RequestInit = { method: 'GET' };
         if (ctrl) opt.signal = ctrl.signal;
-        // 看门狗：服务器 maxwait=25s 到期必回 empty；被系统冻结/代理卡住时 35s 强制重连，
-        // 避免接收静默停摆（必须大于 maxwait）。
+        // 看门狗：服务器 maxwait=45s 到期必回 empty；被系统冻结/代理卡住时 55s 强制重连，
+        // 避免接收静默停摆（必须大于 maxwait，保持既有的 maxwait + 10s 节奏）。
+        // P3（v26.10.15-v1）：maxwait 25s→45s，看门狗 35s→55s 同步。
         const watchdog = new Promise<Response>((_, rej) => {
-            later(() => rej(new Error('timeout')), 35000);
+            later(() => rej(new Error('timeout')), 55000);
         });
         Promise.race(
             [
@@ -170,7 +171,7 @@ export function startPhoneRelay(opts: RelayOptions): () => void {
                         deviceId +
                         '?phoneId=' +
                         encodeURIComponent(phoneId) +
-                        '&maxwait=25000',
+                        '&maxwait=45000',
                     opt
                 ),
                 watchdog,

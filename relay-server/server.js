@@ -177,7 +177,11 @@ function sendMethodNotAllowed(res, allow) {
 //  - deliver 每次只投递队头一条，「广播」给所有正在等待的长轮询连接（每个连接各得一份拷贝），
 //    同一设备多标签页同时接收互不抢图；无人等待时保留队列等下一个连接来取，不会漏；
 //  - 投递前丢弃队头已过期（> PENDING_TTL）条目，绝不投递过期内容；
-//  - 长轮询 maxwait 钳制 [1000,30000]（默认 25000），到期返回 {empty:true}；
+//  - 长轮询 maxwait 钳制 [1000,60000]（默认 25000），到期返回 {empty:true}；
+//    （P3，v26.10.15-v1：上限 30000 → 60000。长轮询是闭环，请求数 ≈ 时长/maxwait，
+//     故放宽挂起时长**线性**减少请求数。nginx 侧无风险：1Panel openresty 在 http 级设了
+//     `proxy_read_timeout 3600s` 且本站点 location 未覆盖；2026-10-14 实测线上 maxwait=30000
+//     挂满 30.13s 正常回 200 {empty:true}。默认值仍 25000 —— 老客户端不带该参数时行为不变。）
 //  - notify() 可让服务器**在业务条目之外**提前结束挂起的长轮询（P0-a，上下线事件推送）。
 //
 // 相对旧实现（每连接 400ms tick 轮询）的改进：投递本就由「POST 入队时同步 deliver」与
@@ -354,7 +358,9 @@ function createChannel(labels, opts) {
   function handlePoll(req, res, uuid, u) {
     let maxwait = parseInt(u.searchParams.get('maxwait') || '', 10);
     if (!Number.isFinite(maxwait)) maxwait = 25000;
-    maxwait = Math.min(Math.max(maxwait, 1000), 30000);
+    // P3（v26.10.15-v1）：上限 30000 → 60000。放宽的是**上限**不是默认值，老客户端不受影响。
+    // 新端（脚本 45s / 手机页 45s）保守取 45s，给反代与客户端超时留出余量。
+    maxwait = Math.min(Math.max(maxwait, 1000), 60000);
 
     // 接收者身份（反向通道 = 手机 ID）：定向投递必须知道是谁在轮询。
     // ⚠️ 缺失即拒收（v26.10.06-v4 起手机页必须升级；服务端不再兼容不带手机 ID 的老页面）。

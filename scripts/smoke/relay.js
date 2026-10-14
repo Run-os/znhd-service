@@ -43,6 +43,8 @@ const PHONE_B = 'phone-bbbb-0002';
 /** 专供「上下线主动唤醒」用例：独立设备，避免被 A/B 已注册的历史状态干扰 */
 const DEVICE2 = 'test-device-0002';
 const PHONE_C = 'phone-cccc-0003';
+/** P3（v26.10.15-v1）专用设备：只在「maxwait 上限被放宽」那条慢断言里用，避免干扰其它等待集合 */
+const P3_DEVICE = 'test-device-p3ck';
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -268,6 +270,14 @@ async function main() {
 
     console.log(`中继服务端测试（多手机 + 定向投递，端口 ${PORT}）：`);
 
+    // ===== P3（v26.10.15-v1）：长轮询 maxwait 上限 30000 → 60000 =====
+    // 钳制值是个常量，「上限 30000」与「上限 60000」唯一的可观测差异就是**挂起时长**：
+    // 旧上限下 maxwait=45000 会在第 30 秒被钳成 30000 而回 {empty:true}，新代码才会一直挂到 45s。
+    // ⚠️ 故这条断言**必须等 ≥31s**（没有更短的区分手段，除非读源码文本）。
+    //    为不额外拖长测试，探测在此**尽早启动**、与后面所有断言并行跑，末尾补足到 31s 再判定。
+    const p3Start = Date.now();
+    const p3Probe = recvPoll({ device: P3_DEVICE, maxwait: 45000 });
+
     // 1) 心跳必须带 phoneId
     const hbNoId = await req('POST', `/phone/heartbeat/${DEVICE}`, {});
     check('心跳缺 phoneId 回 400（不兼容老手机页）', hbNoId.status === 400);
@@ -492,6 +502,15 @@ async function main() {
     pa.abort();
     pb.abort();
     pa2.abort();
+
+    // ===== P3 判定（探测句柄见 main() 开头，与上面所有断言并行跑了 31s）=====
+    // 发的是 maxwait=45000：若服务端上限仍是 30000，它早在第 30 秒就回 {empty:true} 了。
+    await sleep(Math.max(0, 31000 - (Date.now() - p3Start)));
+    check(
+        'P3：/recv?maxwait=45000 未被钳到旧的 30000 上限（31s 后仍挂起；旧上限会在 30s 返回 empty）',
+        !p3Probe.isSettled()
+    );
+    p3Probe.abort();
 
     // 收尾：关假 CDN、清临时目录与清单文件（都是本次测试自建的，不碰真实数据）
     fixtureCdn.close();
