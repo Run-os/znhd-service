@@ -170,6 +170,23 @@ function PanelEntryButton({
     );
 }
 
+/** 状态点（行首在线指示灯：绿=在线 / 红=掉线） */
+function Dot({ color }: { color: string }) {
+    return (
+        <span
+            style={{
+                display: 'inline-block',
+                width: 6,
+                height: 6,
+                borderRadius: '50%',
+                background: color,
+                marginRight: 6,
+                verticalAlign: 'middle',
+            }}
+        />
+    );
+}
+
 /** 「上次播报」的展示文案（面板每 3s 随监控状态重渲染，所以相对时间会自动更新） */
 function lastSpeakText(last: MonitorState['lastSpeak']): string {
     if (!last) return '暂无播报记录';
@@ -464,11 +481,12 @@ export default function MainPanel({ host }: MainPanelProps) {
             }>
             <style>{PANEL_CSS}</style>
 
-            {/* 人数 / 工作时段（单行极简版）
+            {/* 人数 / 工作时段（单行 + 行首在线指示灯）
                 v26.10.15-v3：由「30px 大字人数 + 在线/工作时段两个状态点」的双栏卡片压缩成一行文本：
                 工作时段 →「当前等待人数：N 人」；非工作时段 →「当前非工作时段」。
-                ⚠️ 原卡片里的「在线/掉线」视觉提示（绿/红点）已随之移除 —— 掉线只剩语音提醒，
-                这是用户明确要求（2026-10-15）。若日后要恢复视觉告警，需重新设计这一行的形态。 */}
+                v26.10.15-v4：行首恢复**一个**在线指示灯（绿=在线 / 红=掉线，只表在线状态，
+                不再有「工作时段」那颗蓝点 —— 时段信息已由文案本身表达）；掉线/在线的明细走日志。
+                ⚠️ 指示灯只给视觉提示，详细状态以「日志」为准。 */}
             <div
                 style={{
                     background: '#f7f8fa',
@@ -478,6 +496,7 @@ export default function MainPanel({ host }: MainPanelProps) {
                     fontSize: 13,
                     color: mon.inWorkingHours ? '#262626' : '#8c8c8c',
                 }}>
+                <Dot color={mon.online ? '#52c41a' : '#ff4d4f'} />
                 {mon.inWorkingHours
                     ? '当前等待人数：' + (mon.waiting === null ? '—' : mon.waiting) + ' 人'
                     : '当前非工作时段'}
