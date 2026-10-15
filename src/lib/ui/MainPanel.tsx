@@ -170,23 +170,6 @@ function PanelEntryButton({
     );
 }
 
-/** 状态点 */
-function Dot({ color }: { color: string }) {
-    return (
-        <span
-            style={{
-                display: 'inline-block',
-                width: 6,
-                height: 6,
-                borderRadius: '50%',
-                background: color,
-                marginRight: 6,
-                verticalAlign: 'middle',
-            }}
-        />
-    );
-}
-
 /** 「上次播报」的展示文案（面板每 3s 随监控状态重渲染，所以相对时间会自动更新） */
 function lastSpeakText(last: MonitorState['lastSpeak']): string {
     if (!last) return '暂无播报记录';
@@ -481,43 +464,23 @@ export default function MainPanel({ host }: MainPanelProps) {
             }>
             <style>{PANEL_CSS}</style>
 
-            {/* 人数 + 状态 */}
+            {/* 人数 / 工作时段（单行极简版）
+                v26.10.15-v3：由「30px 大字人数 + 在线/工作时段两个状态点」的双栏卡片压缩成一行文本：
+                工作时段 →「当前等待人数：N 人」；非工作时段 →「当前非工作时段」。
+                ⚠️ 原卡片里的「在线/掉线」视觉提示（绿/红点）已随之移除 —— 掉线只剩语音提醒，
+                这是用户明确要求（2026-10-15）。若日后要恢复视觉告警，需重新设计这一行的形态。 */}
             <div
                 style={{
                     background: '#f7f8fa',
                     borderRadius: 10,
-                    padding: '10px 12px',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    gap: 12,
+                    padding: '8px 12px',
                     marginBottom: 10,
+                    fontSize: 13,
+                    color: mon.inWorkingHours ? '#262626' : '#8c8c8c',
                 }}>
-                <div>
-                    <div style={{ fontSize: 12, color: '#8c8c8c' }}>当前等待人数</div>
-                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
-                        <span style={{ fontSize: 30, fontWeight: 700, color: '#1677ff', lineHeight: 1.15 }}>
-                            {mon.waiting === null ? '—' : mon.waiting}
-                        </span>
-                        <span style={{ fontSize: 12, color: '#8c8c8c' }}>人</span>
-                    </div>
-                </div>
-                <div
-                    style={{
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: 4,
-                        justifyContent: 'center',
-                        fontSize: 12,
-                    }}>
-                    <div>
-                        <Dot color={mon.online ? '#52c41a' : '#ff4d4f'} />
-                        {mon.online ? '在线 · 正常监控' : '掉线'}
-                    </div>
-                    <div>
-                        <Dot color="#1677ff" />
-                        {mon.inWorkingHours ? '工作时段内' : '非工作时段'}
-                    </div>
-                </div>
+                {mon.inWorkingHours
+                    ? '当前等待人数：' + (mon.waiting === null ? '—' : mon.waiting) + ' 人'
+                    : '当前非工作时段'}
             </div>
 
             {/* 语音播报开关 */}

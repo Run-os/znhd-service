@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name                征纳互动人数和在线监控v2
 // @namespace           https://scriptcat.org/
-// @version             26.10.15-v2
+// @version             26.10.15-v3
 // @description         实时监控征纳互动等待人数和在线状态，支持语音播报、自定义常用语
 // @author              runos
 // @license             MIT
@@ -108316,18 +108316,6 @@ const PANEL_ACTIONS = [
 function PanelEntryButton({ icon: Icon, label, onClick, color, }) {
     return ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_tooltip, { title: label, placement: "bottom", children: (0,react_jsx_runtime_production_namespaceFn().jsxs)(es_button, { className: "znhd-panel-btn", size: "large", style: { padding: '0 4px' }, onClick: onClick, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(Icon, { size: 15, color: color }), (0,react_jsx_runtime_production_namespaceFn().jsx)("span", { className: "znhd-panel-btn-text", style: { fontSize: 11, marginLeft: 2 }, children: label })] }) }));
 }
-/** 状态点 */
-function Dot({ color }) {
-    return ((0,react_jsx_runtime_production_namespaceFn().jsx)("span", { style: {
-            display: 'inline-block',
-            width: 6,
-            height: 6,
-            borderRadius: '50%',
-            background: color,
-            marginRight: 6,
-            verticalAlign: 'middle',
-        } }));
-}
 /** 「上次播报」的展示文案（面板每 3s 随监控状态重渲染，所以相对时间会自动更新） */
 function lastSpeakText(last) {
     if (!last)
@@ -108558,21 +108546,16 @@ function MainPanel({ host }) {
                         fontSize: 11,
                         fontWeight: 400,
                         flex: '0 0 auto',
-                    }, children: ["v", GM_info.script.version] })] }), extra: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { type: "text", size: "small", title: "\u6536\u8D77\u9762\u677F\uFF08\u70B9\u5706\u5F62\u6309\u94AE\u53EF\u5C55\u5F00\uFF09", "aria-label": "\u6536\u8D77\u9762\u677F", onClick: () => setCollapsed(true), children: (0,react_jsx_runtime_production_namespaceFn().jsx)(CloseIcon, { size: 16, color: "currentColor" }) }), children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("style", { children: PANEL_CSS }), (0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: {
+                    }, children: ["v", GM_info.script.version] })] }), extra: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { type: "text", size: "small", title: "\u6536\u8D77\u9762\u677F\uFF08\u70B9\u5706\u5F62\u6309\u94AE\u53EF\u5C55\u5F00\uFF09", "aria-label": "\u6536\u8D77\u9762\u677F", onClick: () => setCollapsed(true), children: (0,react_jsx_runtime_production_namespaceFn().jsx)(CloseIcon, { size: 16, color: "currentColor" }) }), children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("style", { children: PANEL_CSS }), (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: {
                     background: '#f7f8fa',
                     borderRadius: 10,
-                    padding: '10px 12px',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    gap: 12,
+                    padding: '8px 12px',
                     marginBottom: 10,
-                }, children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { fontSize: 12, color: '#8c8c8c' }, children: "\u5F53\u524D\u7B49\u5F85\u4EBA\u6570" }), (0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', alignItems: 'baseline', gap: 4 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("span", { style: { fontSize: 30, fontWeight: 700, color: '#1677ff', lineHeight: 1.15 }, children: mon.waiting === null ? '—' : mon.waiting }), (0,react_jsx_runtime_production_namespaceFn().jsx)("span", { style: { fontSize: 12, color: '#8c8c8c' }, children: "\u4EBA" })] })] }), (0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: {
-                            display: 'flex',
-                            flexDirection: 'column',
-                            gap: 4,
-                            justifyContent: 'center',
-                            fontSize: 12,
-                        }, children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(Dot, { color: mon.online ? '#52c41a' : '#ff4d4f' }), mon.online ? '在线 · 正常监控' : '掉线'] }), (0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(Dot, { color: "#1677ff" }), mon.inWorkingHours ? '工作时段内' : '非工作时段'] })] })] }), (0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: {
+                    fontSize: 13,
+                    color: mon.inWorkingHours ? '#262626' : '#8c8c8c',
+                }, children: mon.inWorkingHours
+                    ? '当前等待人数：' + (mon.waiting === null ? '—' : mon.waiting) + ' 人'
+                    : '当前非工作时段' }), (0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: {
                     background: '#f7f8fa',
                     borderRadius: 10,
                     padding: '8px 12px',
