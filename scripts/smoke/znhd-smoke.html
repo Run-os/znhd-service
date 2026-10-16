@@ -1022,11 +1022,26 @@
        *  · cards        —— 每组渲染出的卡片数
        *  · cardNames    —— 每组卡片对应的文件名合集（读 <img alt>；v26.10.16-v1 起卡片不再
        *                    显示文件名，alt 是文件名的唯一观测面）
+       *  · cardNamesAll —— **全部**卡片的文件名合集（跨组展平，与 cardNames 同源）——
+       *                    断言常要「跨组按名字找卡片」，逐组拼字符串再 indexOf 容易漏组
+       *  · ringNames    —— 带红圈（boxShadow 含红）卡片的**组内文件名合集**（v26.10.16-v3）
        */
       window.__sniffGroupFacts = () => {
         const m = window.__findSniffModal();
         if (!m) return null;
         const sections = Array.from(m.querySelectorAll('[data-sniff-group]'));
+        // v26.10.16-v3：红圈的观测量 = 卡片缩略图的 inline boxShadow 里有没有红色分量。
+        // ⚠️ 必须读 inline style 的属性而不是 getComputedStyle：antd/浏览器可能给图片本身
+        // 加别的阴影，比字符串会连「别的红阴影」也算进来；而组件是显式把 NO_TIME_RING 写进 style 的。
+        // ⚠️ 判据只认 RGB 三元组，不能连 `rgba(` 的前缀与 alpha 一起比：inline style 里的
+        // 红值可能被规范化成 `rgb(255, 77, 79)`（alpha 为 1 时）也可能原样保留 `rgba(255, 77, 79, 0.95)`
+        // —— 两种形态都要认。写成 `rgb\(255,77,79\)` 会漏掉后者（实测踩到，恒假红）。
+        const ring = (img) => {
+          const bs = (img.style && img.style.boxShadow) || '';
+          return /rgba?\(\s*255,\s*77,\s*79[,\s)]/.test(bs) || /#ff4d4f/i.test(bs);
+        };
+        const imgsOf = (s) => Array.from(s.querySelectorAll('.ant-image img'));
+        const namesOf = (list) => list.map((img) => img.getAttribute('alt') || '');
         return {
           count: sections.length,
           names: sections.map((s) => s.getAttribute('data-sniff-group-name') || ''),
@@ -1035,10 +1050,15 @@
           ),
           currentIndex: sections.findIndex((s) => s.getAttribute('data-sniff-group-current') === '1'),
           cards: sections.map((s) => s.querySelectorAll('.ant-image').length),
-          cardNames: sections.map((s) =>
-            Array.from(s.querySelectorAll('.ant-image img'))
-              .map((img) => img.getAttribute('alt') || '')
-              .join(' | ')
+          cardNames: sections.map((s) => namesOf(imgsOf(s)).join(' | ')),
+          cardNamesAll: sections.flatMap((s) => namesOf(imgsOf(s))).join(' | '),
+          ringNames: sections.map((s) => namesOf(imgsOf(s).filter(ring)).join(' | ')),
+          // 调试面：把卡片图上 inline boxShadow 原样带出来（断言红了时不用改代码就知道是
+          // 「样式根本没写上去」还是「选择器取错了元素」）
+          ringDebug: sections.map((s) =>
+            imgsOf(s)
+              .map((img) => (img.getAttribute('alt') || '?') + '=' + ((img.style && img.style.boxShadow) || 'NONE'))
+              .join(' # ')
           ),
         };
       };
@@ -2922,6 +2942,36 @@
             const ih = row.indexOf('sniff-head.png');
             return !!(s.chatInstalled && g.names[2] === '' && ir >= 0 && ih >= 0 && ir < ih);
           })(),
+          /**
+           * 没有消息时间的图 → 卡片四周加红圈（v26.10.16-v3，用户要求）。
+           *
+           * 夹具的分布是**互斥三态**（缺任何一半都判不出真假）：
+           *   · 有时间的：当前会话组的 a / c（消息时间 …003000 / …002000）⇒ **不许**带红圈；
+           *   · 没时间的：未归属组的 head / range / perf（byStem 里没有它们）⇒ **必须**带红圈。
+           * 故断言要同时钉住两侧：漏标（该红没红）与误标（不该红却红了）都要红。
+           *
+           * ⚠️ 三条前置条件都不能省：
+           *   ① `names[2] === ''`（未归属组确实存在，位置没变）—— 否则读到的可能是别的组；
+           *   ② 组内 `ringNames[2]` 里三张没时间的图都在 —— 「一张卡都没渲染」同样满足「都没带圈」；
+           *   ③ 有时间的组 `ringNames[0]` 为空 —— 少了它，一个「把红圈无条件加给所有卡片」的
+           *      实现也能过（那正好是本次需求的镜像 bug）。empty 时 join 出来是 `' | '` 之类的空串，
+           *      故用「有没有出现 .png 名字」判，而不是直接比空串。
+           */
+          sniffNoTimeRingOk: (() => {
+            const s = window.__sniffSnap;
+            const g = s && s.groups;
+            if (!g) return false;
+            const unknownRing = g.ringNames[2] || '';
+            const timedRing = (g.ringNames[0] || '') + ' | ' + (g.ringNames[1] || '');
+            return !!(
+              s.chatInstalled &&
+              g.names[2] === '' &&
+              unknownRing.indexOf('sniff-range.png') >= 0 &&
+              unknownRing.indexOf('sniff-head.png') >= 0 &&
+              unknownRing.indexOf('sniff-perf.png') >= 0 &&
+              !/\.png/i.test(timedRing)
+            );
+          })(),
           // 会话归属的持久化（v26.10.13-v8）：切走会话（Vuex 里两条消息都不再提供）后重扫，
           // 两张图仍各自归回原会话 —— 少了持久层的话它们只会落进「未归属」，names 前两项都是空串。
           // v26.10.14-v5：当前会话那组的 2 张（a + c）都要回来，且 c 的 `name:` 键已被迁移合并。
@@ -3026,6 +3076,8 @@
           // v26.10.16-v2：组内按消息时间排序 + 「取不到时间时退回体积倒序」的兜底
           report.sniffConvTimeOrderOk &&
           report.sniffConvNoTimeFallbackOk &&
+          // v26.10.16-v3：没有消息时间的图四周带红圈（有时间的图不许带）
+          report.sniffNoTimeRingOk &&
           report.sniffGroupPersistOk
             ? 'ALL-OK'
             : 'PARTIAL');

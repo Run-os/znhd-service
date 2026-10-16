@@ -640,6 +640,23 @@ function convOfItem(it: { stem: string }, ctx: ConvContext | null): SniffConv | 
 }
 
 /**
+ * 取一张图所属消息的**时间**（v26.10.16-v3）。
+ *
+ * 用途只有一个：面板要能标出「这张图**没拿到时间**」——排序虽然把无时间的图殿后，
+ * 但用户看不出「为什么这张跑到最后」，于是给卡片加红圈提示。属**纯展示**用途，
+ * 不参与任何分桶/排序决策，故与 `convOfItem` 一样是「现取」，不往 `SniffedImage` 上挂字段。
+ *
+ * ⚠️ 判据是 `null` 而不是 `!time`：`time` 是毫秒时间戳，`0` 理论上只可能是坏数据，
+ * 但按 null 判定与 `byTimeDesc`（`va === null`）严格同源 —— 提示要红的地方必须**恰好**是
+ * 排序里被殿后的那批，两边口径一旦分叉就会出现「红圈但排在有时间的图前面」这种自相矛盾。
+ * 未归属的图（`byStem` 里没有它的主干）同样返回 null ⇒ 也会被标红。
+ */
+export function timeOfItem(it: { stem: string }, ctx: ConvContext | null): number | null {
+    const conv = convOfItem(it, ctx);
+    return conv ? conv.time : null;
+}
+
+/**
  * 分组的实际键（v26.10.14-v5）：`name:` 回退键若能借别名表认出真实会话，就用真实 ID。
  * 这一层是为了**兜住持久层里还没被迁移的存量条目**（老版本写下的 `name:` 条目），
  * 与 saveStoredConv 的迁移互为保险 —— 缺任何一边，都会出现「重扫一次又分裂」。

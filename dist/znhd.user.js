@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name                征纳互动人数和在线监控v2
 // @namespace           https://scriptcat.org/
-// @version             26.10.16-v2
+// @version             26.10.16-v3
 // @description         实时监控征纳互动等待人数和在线状态，支持语音播报、自定义常用语
 // @author              runos
 // @license             MIT
@@ -75147,6 +75147,22 @@ function convOfItem(it, ctx) {
     return ctx.byStem.get(it.stem) || null;
 }
 /**
+ * 取一张图所属消息的**时间**（v26.10.16-v3）。
+ *
+ * 用途只有一个：面板要能标出「这张图**没拿到时间**」——排序虽然把无时间的图殿后，
+ * 但用户看不出「为什么这张跑到最后」，于是给卡片加红圈提示。属**纯展示**用途，
+ * 不参与任何分桶/排序决策，故与 `convOfItem` 一样是「现取」，不往 `SniffedImage` 上挂字段。
+ *
+ * ⚠️ 判据是 `null` 而不是 `!time`：`time` 是毫秒时间戳，`0` 理论上只可能是坏数据，
+ * 但按 null 判定与 `byTimeDesc`（`va === null`）严格同源 —— 提示要红的地方必须**恰好**是
+ * 排序里被殿后的那批，两边口径一旦分叉就会出现「红圈但排在有时间的图前面」这种自相矛盾。
+ * 未归属的图（`byStem` 里没有它的主干）同样返回 null ⇒ 也会被标红。
+ */
+function timeOfItem(it, ctx) {
+    const conv = convOfItem(it, ctx);
+    return conv ? conv.time : null;
+}
+/**
  * 分组的实际键（v26.10.14-v5）：`name:` 回退键若能借别名表认出真实会话，就用真实 ID。
  * 这一层是为了**兜住持久层里还没被迁移的存量条目**（老版本写下的 `name:` 条目），
  * 与 saveStoredConv 的迁移互为保险 —— 缺任何一边，都会出现「重扫一次又分裂」。
@@ -75471,6 +75487,20 @@ const GRID_STYLE = {
     gridTemplateColumns: 'repeat(5, minmax(0,1fr))',
     gap: 8,
     alignContent: 'start',
+};
+/**
+ * 「没拿到消息时间」时给卡片四周加的红圈（v26.10.16-v3，用户要求）。
+ *
+ * 用**阴影**而不是 `border` / `outline`：阴影画在盒子外面、不占布局位，
+ * 于是「有圈」与「没圈」的卡片外框尺寸完全一致，5 列网格不会因为多了一圈而错位
+ * （`border` 会把内容挤小、`outline` 在某些浏览器下会被 `overflow:hidden` 的祖先裁掉）。
+ *
+ * ⚠️ 要铺**两层**（缩略图 + 卡片容器）：antd 的 `.ant-image` 内容盒是 `overflow:hidden`
+ * （专门裁圆角内的图），只铺在 `<img>` 上时外扩的阴影会被它裁成方形硬边。
+ * 卡片那层的 `padding: 6` 就是给阴影留的落点，两层半径分别对齐各自的 `borderRadius`（8 / 12）。
+ */
+const NO_TIME_RING = {
+    boxShadow: '0 0 0 2px rgba(255, 77, 79, 0.95), 0 0 10px 3px rgba(255, 77, 79, 0.6)',
 };
 /** 取某张图在「展示顺序」（shown）里的下标：拿不到就 0（只影响兜底文件名的编号，不影响功能） */
 function idxOf(it, index) {
@@ -75805,12 +75835,31 @@ function SniffModal({ open, onClose, minKB, onMinKBChange }) {
             VIA_LABEL[it.sizeVia] +
             sender);
     };
+    /**
+     * 这张图**没拿到消息时间**（v26.10.16-v3，用户要求：四周加一层红阴影）。
+     *
+     * ⚠️ 判据必须复用 `timeOfItem`（= 排序用的同一个 `conv.time`，同为 `null` 判定）：
+     * 红圈要标的正是「排序里被殿后那批」。若在渲染层自己另算一套（比如按 `stem` 有没有命中）
+     * 就会出现「没红圈却排在最后」的自相矛盾 —— 提示一旦与行为不符就是误导。
+     */
+    const noTimeOf = (it) => timeOfItem(it, convCtx) === null;
     /** 卡片（分组只在外面套一层容器，卡片本身与 v26.10.10-v16 完全一致） */
     const renderCard = (it) => {
         // 序号按**展示顺序**取：下载/打印的文件名兜底编号（znhd-sniff-N）都用它
         const at = shownIndex.get(it.key);
         const fname = sniffFileName(it.url, it.mime, at === undefined ? 0 : at);
-        return ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', flexDirection: 'column', minWidth: 0 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { position: 'relative' }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(ImageOverlayActions, { actions: [
+        const noTime = noTimeOf(it);
+        return ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { 
+            // 红圈第二层：把阴影铺在**整张卡片**（缩略图 + 下面那行大小信息）四周。
+            // 阴影画在 padding 里（不占布局位）⇒ 有圈/无圈的卡片尺寸与网格位置完全一致，不会错位。
+            style: {
+                display: 'flex',
+                flexDirection: 'column',
+                minWidth: 0,
+                padding: 6,
+                borderRadius: 12,
+                ...(noTime ? NO_TIME_RING : null),
+            }, children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { position: 'relative' }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(ImageOverlayActions, { actions: [
                                 {
                                     label: '下载',
                                     icon: (0,react_jsx_runtime_production_namespaceFn().jsx)(DownloadIcon, { size: 13 }),
@@ -75822,7 +75871,13 @@ function SniffModal({ open, onClose, minKB, onMinKBChange }) {
                                     icon: (0,react_jsx_runtime_production_namespaceFn().jsx)(icons_PrinterOutlined, { style: { fontSize: 13 } }),
                                     onClick: () => printImage(it),
                                 },
-                            ], children: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_image, { src: it.url, alt: fname, style: { width: '100%', aspectRatio: '1 / 1', objectFit: 'cover', borderRadius: 8 } }) }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_checkbox, { checked: selected.has(it.key), onChange: () => toggleOne(it.key), style: { position: 'absolute', left: 6, top: 6, zIndex: 2 } })] }), (0,react_jsx_runtime_production_namespaceFn().jsxs)(SniffModal_Text, { type: "secondary", style: { fontSize: 11 }, title: metaOf(it), children: [formatBytes(it.size), it.width && it.height ? ' · ' + it.width + '×' + it.height : ''] })] }, it.key));
+                            ], children: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_image, { src: it.url, alt: fname, style: {
+                                    width: '100%',
+                                    aspectRatio: '1 / 1',
+                                    objectFit: 'cover',
+                                    borderRadius: 8,
+                                    ...(noTime ? NO_TIME_RING : null),
+                                } }) }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_checkbox, { checked: selected.has(it.key), onChange: () => toggleOne(it.key), style: { position: 'absolute', left: 6, top: 6, zIndex: 2 } })] }), (0,react_jsx_runtime_production_namespaceFn().jsxs)(SniffModal_Text, { type: "secondary", style: { fontSize: 11 }, title: metaOf(it), children: [formatBytes(it.size), it.width && it.height ? ' · ' + it.width + '×' + it.height : ''] })] }));
     };
     /** 进度：已测 / 总数 */
     const percent = total > 0 ? Math.min(100, Math.round((probed.length / total) * 100)) : 0;

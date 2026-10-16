@@ -150,6 +150,7 @@ const CHECKS = [
   ['sniffConvAliasOk', '会话归属双路径合并（v26.10.14-v5）：同窗口带/不带 conversationID 的图并成一组，无同名两组'],
   ['sniffConvTimeOrderOk', '组内按消息时间从新到旧（v26.10.16-v2）：最新的图排在组内最前'],
   ['sniffConvNoTimeFallbackOk', '取不到消息时间的图（未归属组）退回「体积倒序」——普通网页观感与旧版一致'],
+  ['sniffNoTimeRingOk', '没有消息时间的卡片四周加红圈（v26.10.16-v3）：未归属组都红、有时间的组都不红'],
   ['sniffGroupPersistOk', '切走会话后重扫，图片仍归回原会话（会话归属的持久层生效）'],
   ['sniffImgActionsOk', '图片嗅探卡片：下载/打印是右下角的图标按钮（未 hover 隐藏，hover 出现）'],
   // v26.10.10-v8：面板被宿主页重绘删除后必须自愈（watchPanelHost 的回归断言）
@@ -495,6 +496,7 @@ async function main() {
             !checkPass('sniffConvAliasOk') ||
             !checkPass('sniffConvTimeOrderOk') ||
             !checkPass('sniffConvNoTimeFallbackOk') ||
+            !checkPass('sniffNoTimeRingOk') ||
             !checkPass('sniffGroupPersistOk') ||
             !checkPass('sniffImgActionsOk')
     ) {
