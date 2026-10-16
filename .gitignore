@@ -9,3 +9,8 @@ node_modules/
 dist/*
 !/dist/znhd.user.js
 .archify/
+
+# 一次性产出（v26.10.16-v2 补）：CSP/WS 探针、gate 日志、评审报告等临时产物。
+# ⚠️ 都是本地跑一次就丢的东西，**不进仓库**；此前一直没有这条规则，
+# 裸 `git add -A` 会把它们一并带上（曾误提交 7 个文件，已 amend 剔除）。
+outputs/
