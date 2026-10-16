@@ -2,12 +2,13 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { ConfigProvider, Modal, theme } from 'antd';
 import { addLog } from '@/lib/logger';
 import { getOverlayContainer } from '@/lib/ui/panelHost';
-import { CloseIcon, DeviceIcon } from '@/lib/ui/icons';
+import { CloseIcon } from '@/lib/ui/icons';
 import TransferNavRail, { type TransferNav } from '@/lib/ui/transfer/TransferNavRail';
 import TransferSessionList, { type DeviceEntry } from '@/lib/ui/transfer/TransferSessionList';
 import TransferDeviceChat from '@/lib/ui/transfer/TransferDeviceChat';
 import TransferFilesView from '@/lib/ui/transfer/TransferFilesView';
 import TransferPairModal from '@/lib/ui/transfer/TransferPairModal';
+import TransferPairPanel from '@/lib/ui/transfer/TransferPairPanel';
 import TransferSettingsModal from '@/lib/ui/transfer/TransferSettingsModal';
 import TransferAboutModal from '@/lib/ui/transfer/TransferAboutModal';
 import { resolveDeviceColors, shortPhoneId } from '@/lib/ui/transfer/deviceColors';
@@ -219,22 +220,21 @@ export default function TransferAssistantModal({ open, onClose }: { open: boolea
             />
         );
     } else {
+        // v26.10.17-v1（用户要求）：未选中会话时第三栏直接展示「配对设备」信息
+        // （二维码 / 链接 / 在线状态 / 已连接手机），不再显示「选择一个会话」的提示文案
         main = (
             <div
-                className="znhd-transfer-empty"
+                className="znhd-transfer-empty znhd-transfer-pair"
                 style={{
                     flex: '1 1 auto',
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: 10,
+                    justifyContent: 'flex-start',
+                    minHeight: 0,
+                    overflow: 'auto',
                 }}>
-                <DeviceIcon size={44} color="rgba(255,255,255,0.18)" />
-                <div style={{ fontSize: 14, fontWeight: 600, color: 'rgba(255,255,255,0.65)' }}>暂无消息</div>
-                <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>
-                    在「对话」里选择一个会话开始收发，或点右上角 ＋ 配对手机
-                </div>
+                <TransferPairPanel relayServer={s.settings.relayServer} phones={s.phones} />
             </div>
         );
     }

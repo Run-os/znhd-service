@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name                征纳互动人数和在线监控v2
 // @namespace           https://scriptcat.org/
-// @version             26.10.16-v3
+// @version             26.10.17-v1
 // @description         实时监控征纳互动等待人数和在线状态，支持语音播报、自定义常用语
 // @author              runos
 // @license             MIT
@@ -56226,7 +56226,7 @@ function SniffIcon(p) {
 }
 /** 设备互联（Lucide `monitor`：显示器 + 底座） */
 function DeviceIcon(p) {
-    return ((0,react_jsx_runtime_production_namespaceFn().jsxs)(SvgIcon, { ...p, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("rect", { width: "20", height: "14", x: "2", y: "3", rx: "2" }), (0,react_jsx_runtime_production_namespaceFn().jsx)("line", { x1: "8", x2: "16", y1: "21", y2: "21" }), (0,react_jsx_runtime_production_namespaceFn().jsx)("line", { x1: "12", x2: "12", y1: "17", y2: "21" })] }));
+    return (_jsxs(SvgIcon, { ...p, children: [_jsx("rect", { width: "20", height: "14", x: "2", y: "3", rx: "2" }), _jsx("line", { x1: "8", x2: "16", y1: "21", y2: "21" }), _jsx("line", { x1: "12", x2: "12", y1: "17", y2: "21" })] }));
 }
 /* ============================================================ 面板其它位置 */
 /** 语音开（Lucide `volume-2`） */
@@ -107772,7 +107772,7 @@ function genQrDataUrl(text) {
     });
 }
 
-;// ./src/lib/ui/transfer/TransferPairModal.tsx
+;// ./src/lib/ui/transfer/TransferPairPanel.tsx
 
 
 
@@ -107783,17 +107783,17 @@ function genQrDataUrl(text) {
 
 
 
-
-
-const { Text: TransferPairModal_Text } = typography;
+const { Text: TransferPairPanel_Text } = typography;
 /**
- * 配对窗口（v26.10.12-v1，由原「设备互联」弹窗的配对部分搬迁而来）。
+ * 配对面板正文（v26.10.17-v1，从 TransferPairModal 抽出的可复用内容）：
+ * 二维码 / 链接、在线状态、已连接手机列表、发送测试图片。
  *
- * 入口统一收在第二栏搜索框右侧的「+」按钮（不再散落在主面板）。本窗口只负责
- * **配对与连通性验证**：二维码 / 链接、在线状态、已连接手机列表、发送测试图片。
- * 真正的收发（文本 / 图片）在右侧聊天区按会话进行，不在这里。
+ * 两个使用方：
+ *  - TransferPairModal（第二栏「＋」弹窗，带标题与底部按钮）；
+ *  - TransferAssistantModal 第三栏空状态（未选中会话时直接展示配对信息，
+ *    用户不再看到「选择一个会话」的纯提示）。
  */
-function TransferPairModal({ open, onClose, relayServer, phones, }) {
+function TransferPairPanel({ relayServer, phones, }) {
     const { token } = es_theme.useToken();
     const deviceId = getDeviceId();
     const [qrUrl, setQrUrl] = (0,react_production_namespaceFn().useState)('');
@@ -107818,13 +107818,10 @@ function TransferPairModal({ open, onClose, relayServer, phones, }) {
             .catch((e) => {
             addLog('[配对] 二维码失败: ' + (e && e.message), 'error', true);
         });
-    }, [relayServer, open, deviceId]);
+    }, [relayServer, deviceId]);
     /**
-     * 「发送测试图片」（v26.10.08-v10 起提供，从原「历史记录」弹窗标题栏迁到此处）：
-     * 从 `TEST_IMAGE_URL` 取一张随机图，**当作手机上传**投递到中继 `/u/<本机 deviceId>`，
-     * 再经正常的「手机 → 电脑」通道回到本脚本、进对应会话。
-     *
-     * 这样配对完成后不必掏手机就能一键验证「中继 → 收件 → 会话」整条链路。
+     * 「发送测试图片」：从 `TEST_IMAGE_URL` 取一张随机图，**当作手机上传**投递到
+     * 中继 `/u/<本机 deviceId>`，再经正常的「手机 → 电脑」通道回到本脚本、进对应会话。
      * ⚠️ 需要先配置中继地址（未配置时 sendTestImage 会直接失败并给出提示，不发请求）。
      */
     const doSendTestImage = () => {
@@ -107849,9 +107846,19 @@ function TransferPairModal({ open, onClose, relayServer, phones, }) {
             },
         });
     };
-    return ((0,react_jsx_runtime_production_namespaceFn().jsxs)(modal, { open: open, title: (0,react_jsx_runtime_production_namespaceFn().jsxs)("span", { style: { display: 'inline-flex', alignItems: 'center', gap: 6 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(SmartphoneIcon, { size: 16 }), "\u914D\u5BF9\u8BBE\u5907", (0,react_jsx_runtime_production_namespaceFn().jsx)(es_tag, { style: { marginLeft: 0, fontWeight: 400 }, color: "default", children: "\u624B\u673A\u626B\u7801\u5373\u914D\u5BF9" })] }), onCancel: onClose, getContainer: getOverlayContainer, 
-        // v26.10.12-v5：小窗口垂直居中（默认 top:100px 会顶到传输助手窗口上沿）
-        centered: true, width: 520, styles: { body: { textAlign: 'left' } }, destroyOnHidden: true, footer: (0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', alignItems: 'center', gap: 8 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { loading: testSending, onClick: doSendTestImage, children: "\u53D1\u9001\u6D4B\u8BD5\u56FE\u7247" }), (0,react_jsx_runtime_production_namespaceFn().jsx)("span", { style: { flex: '1 1 auto' } }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { color: "primary", variant: "solid", onClick: onClose, children: "\u5173\u95ED" })] }), children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: {
+    return ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { width: '100%', maxWidth: 560, padding: '16px 18px', overflow: 'auto' }, children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: {
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: 8,
+                    marginBottom: 12,
+                }, children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)("span", { style: {
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 6,
+                            fontSize: 14,
+                            fontWeight: 600,
+                        }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(SmartphoneIcon, { size: 16 }), "\u914D\u5BF9\u8BBE\u5907"] }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_tag, { style: { margin: 0, fontWeight: 400 }, color: "default", children: "\u624B\u673A\u626B\u7801\u5373\u914D\u5BF9" })] }), (0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: {
                     border: '1px solid ' + token.colorBorderSecondary,
                     borderRadius: 10,
                     padding: '12px 14px',
@@ -107887,7 +107894,7 @@ function TransferPairModal({ open, onClose, relayServer, phones, }) {
                                             background: token.colorFillQuaternary,
                                             maxHeight: 56,
                                             overflow: 'auto',
-                                        }, children: link }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { color: "primary", variant: "solid", block: true, style: { marginTop: 10 }, onClick: () => link && safeCopyText(link), children: "\u590D\u5236\u94FE\u63A5" })] })] })) : ((0,react_jsx_runtime_production_namespaceFn().jsx)(TransferPairModal_Text, { type: "danger", children: "\u5C1A\u672A\u914D\u7F6E\u4E2D\u7EE7\u670D\u52A1\u5668\uFF0C\u8BF7\u5230\u7B2C\u4E00\u680F\u300C\u8BBE\u7F6E\u300D\u586B\u5199\u3002" }))] }), (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { textAlign: 'center', marginBottom: 12 }, children: (0,react_jsx_runtime_production_namespaceFn().jsxs)("span", { style: {
+                                        }, children: link }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { color: "primary", variant: "solid", block: true, style: { marginTop: 10 }, onClick: () => link && safeCopyText(link), children: "\u590D\u5236\u94FE\u63A5" })] })] })) : ((0,react_jsx_runtime_production_namespaceFn().jsx)(TransferPairPanel_Text, { type: "danger", children: "\u5C1A\u672A\u914D\u7F6E\u4E2D\u7EE7\u670D\u52A1\u5668\uFF0C\u8BF7\u5230\u7B2C\u4E00\u680F\u300C\u8BBE\u7F6E\u300D\u586B\u5199\u3002" }))] }), (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { textAlign: 'center', marginBottom: 12 }, children: (0,react_jsx_runtime_production_namespaceFn().jsxs)("span", { style: {
                         display: 'inline-block',
                         border: '1px solid ' + (phoneOnline ? token.colorSuccessBorder : token.colorErrorBorder),
                         background: phoneOnline ? token.colorSuccessBg : token.colorErrorBg,
@@ -107907,7 +107914,38 @@ function TransferPairModal({ open, onClose, relayServer, phones, }) {
                     border: '1px solid ' + token.colorBorderSecondary,
                     borderRadius: 10,
                     padding: '10px 14px',
-                }, children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { fontSize: 13, fontWeight: 600, marginBottom: 6 }, children: ["\u5DF2\u8FDE\u63A5\u624B\u673A\uFF08", phones.length, "\uFF09"] }), (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { display: 'flex', flexWrap: 'wrap', gap: 6 }, children: phones.map((p) => ((0,react_jsx_runtime_production_namespaceFn().jsx)(DeviceIdTag, { id: p.id, colorIndex: deviceColors[p.id] }, p.id || 'unknown'))) }), (0,react_jsx_runtime_production_namespaceFn().jsx)(TransferPairModal_Text, { type: "secondary", style: { fontSize: 11 }, children: "\u5728\u5DE6\u4FA7\u300C\u8BBE\u5907\u300D\u5206\u7EC4\u70B9\u5BF9\u5E94\u624B\u673A\u5373\u53EF\u8FDB\u5165\u4F1A\u8BDD\uFF1B\u53D1\u7ED9\u8C01\u7531\u6240\u5728\u4F1A\u8BDD\u51B3\u5B9A\u3002" })] }))] }));
+                    marginBottom: 12,
+                }, children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { fontSize: 13, fontWeight: 600, marginBottom: 6 }, children: ["\u5DF2\u8FDE\u63A5\u624B\u673A\uFF08", phones.length, "\uFF09"] }), (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { display: 'flex', flexWrap: 'wrap', gap: 6 }, children: phones.map((p) => ((0,react_jsx_runtime_production_namespaceFn().jsx)(DeviceIdTag, { id: p.id, colorIndex: deviceColors[p.id] }, p.id || 'unknown'))) }), (0,react_jsx_runtime_production_namespaceFn().jsx)(TransferPairPanel_Text, { type: "secondary", style: { fontSize: 11 }, children: "\u5728\u5DE6\u4FA7\u300C\u8BBE\u5907\u300D\u5206\u7EC4\u70B9\u5BF9\u5E94\u624B\u673A\u5373\u53EF\u8FDB\u5165\u4F1A\u8BDD\uFF1B\u53D1\u7ED9\u8C01\u7531\u6240\u5728\u4F1A\u8BDD\u51B3\u5B9A\u3002" })] })), (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { display: 'flex', justifyContent: 'flex-start' }, children: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { loading: testSending, onClick: doSendTestImage, children: "\u53D1\u9001\u6D4B\u8BD5\u56FE\u7247" }) })] }));
+}
+
+;// ./src/lib/ui/transfer/TransferPairModal.tsx
+
+
+
+
+
+/**
+ * 配对窗口（v26.10.12-v1，由原「设备互联」弹窗的配对部分搬迁而来）。
+ *
+ * 入口统一收在第二栏搜索框右侧的「+」按钮（不再散落在主面板）。本窗口只负责
+ * **配对与连通性验证**：二维码 / 链接、在线状态、已连接手机列表、发送测试图片。
+ * 真正的收发（文本 / 图片）在右侧聊天区按会话进行，不在这里。
+ *
+ * ⚠️ v26.10.17-v1：正文内容抽到 `TransferPairPanel`（第三栏未选中会话时的空状态
+ * 也复用同一份配对信息），本组件只剩弹窗壳：标题 + 底部按钮。
+ */
+function TransferPairModal({ open, onClose, relayServer, phones, }) {
+    return ((0,react_jsx_runtime_production_namespaceFn().jsx)(modal, { open: open, title: (0,react_jsx_runtime_production_namespaceFn().jsxs)("span", { style: { display: 'inline-flex', alignItems: 'center', gap: 6 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(SmartphoneIcon, { size: 16 }), "\u914D\u5BF9\u8BBE\u5907"] }), onCancel: onClose, getContainer: getOverlayContainer, 
+        // v26.10.12-v5：小窗口垂直居中（默认 top:100px 会顶到传输助手窗口上沿）
+        centered: true, width: 520, destroyOnHidden: true, footer: (0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', alignItems: 'center', gap: 8 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("span", { style: { flex: '1 1 auto' } }), (0,react_jsx_runtime_production_namespaceFn().jsx)("span", { style: { fontSize: 12, color: 'rgba(255,255,255,0.45)' }, children: "\u624B\u673A\u626B\u7801\u5373\u914D\u5BF9" }), (0,react_jsx_runtime_production_namespaceFn().jsx)("button", { type: "button", onClick: onClose, style: {
+                        border: 'none',
+                        borderRadius: 6,
+                        padding: '4px 14px',
+                        cursor: 'pointer',
+                        background: 'rgba(255,255,255,0.12)',
+                        color: '#fff',
+                        fontSize: 13,
+                    }, children: "\u5173\u95ED" })] }), children: (0,react_jsx_runtime_production_namespaceFn().jsx)(TransferPairPanel, { relayServer: relayServer, phones: phones }) }));
 }
 
 ;// ./src/lib/ui/transfer/TransferSettingsModal.tsx
@@ -108003,6 +108041,7 @@ function TransferAboutModal({ open, onClose }) {
 }
 
 ;// ./src/lib/ui/transfer/TransferAssistantModal.tsx
+
 
 
 
@@ -108180,14 +108219,17 @@ function TransferAssistantModal({ open, onClose }) {
             } }));
     }
     else {
-        main = ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { className: "znhd-transfer-empty", style: {
+        // v26.10.17-v1（用户要求）：未选中会话时第三栏直接展示「配对设备」信息
+        // （二维码 / 链接 / 在线状态 / 已连接手机），不再显示「选择一个会话」的提示文案
+        main = ((0,react_jsx_runtime_production_namespaceFn().jsx)("div", { className: "znhd-transfer-empty znhd-transfer-pair", style: {
                 flex: '1 1 auto',
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
-                justifyContent: 'center',
-                gap: 10,
-            }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(DeviceIcon, { size: 44, color: "rgba(255,255,255,0.18)" }), (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { fontSize: 14, fontWeight: 600, color: 'rgba(255,255,255,0.65)' }, children: "\u6682\u65E0\u6D88\u606F" }), (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { fontSize: 12, color: 'rgba(255,255,255,0.4)' }, children: "\u5728\u300C\u5BF9\u8BDD\u300D\u91CC\u9009\u62E9\u4E00\u4E2A\u4F1A\u8BDD\u5F00\u59CB\u6536\u53D1\uFF0C\u6216\u70B9\u53F3\u4E0A\u89D2 \uFF0B \u914D\u5BF9\u624B\u673A" })] }));
+                justifyContent: 'flex-start',
+                minHeight: 0,
+                overflow: 'auto',
+            }, children: (0,react_jsx_runtime_production_namespaceFn().jsx)(TransferPairPanel, { relayServer: s.settings.relayServer, phones: s.phones }) }));
     }
     return ((0,react_jsx_runtime_production_namespaceFn().jsx)(config_provider
     // 暗色算法 + 微信绿主色只作用于传输助手窗口（嵌套 provider：locale / zIndexPopupBase 等
