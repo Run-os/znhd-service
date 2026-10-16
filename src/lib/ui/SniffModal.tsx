@@ -20,8 +20,6 @@ import {
     type ConvSection,
 } from '@/lib/sniffConv';
 import {
-    EXCLUDED_NAME_PATTERNS,
-    EXCLUDED_NAME_SUFFIXES,
     MAX_SNIFF,
     collectCandidates,
     downloadBatch,
@@ -58,10 +56,15 @@ const { Text } = Typography;
  *  3) **大小未知的图不丢**：跨域 HEAD/Range 被拒、blob: 图、部分懒加载图都量不出字节数，
  *     但它们完全可能是用户真正想要的大图，故折叠保留、可照常预览/下载/打印。
  *
- * 名称排除（v26.10.10-v5）：名字含 EXCLUDED_NAME_PATTERNS 的图在**收集阶段**就被丢掉（不测大小、不发请求），
- * 面板顶部给出「已按文件名排除 N 张」的提示 —— 否则用户删不掉页面上那些头像/无名字的噪声图。
+ * 名称排除（v26.10.10-v5）：名字含 EXCLUDED_NAME_PATTERNS 的图在**收集阶段**就被丢掉（不测大小、不发请求）。
  * 后缀排除（v26.10.10-v7）：名字以 EXCLUDED_NAME_SUFFIXES（`.svg`）结尾的图同样在收集阶段丢掉。
  * ⚠️ 内联 <svg> 的显示名是 inline-svg-N.svg，因此**内联 SVG 一路也不再有卡片**（有意为之）。
+ *
+ * v26.10.16-v1（用户要求，两处瘦身）：
+ *  · 排除计数**不再在界面上显示**（「已按文件名排除 N 张」那句提示已删）—— 计数只作为
+ *    `data-sniff-excluded` 钩子挂在顶部调参行上，供冒烟断言读（否则那条断言只能退化成「没出现就算过」）。
+ *  · 卡片**不再显示文件名**（用户评价「没有意义」）。文件名仍写进 <Image alt>：既是语义属性，
+ *    也是冒烟里唯一的文件名观测面（卡片可见文本里已不含任何文件名）。
  *
  * 阈值的作用范围（v26.10.10-v6，用户反馈后收紧）：小于阈值的图**只被过滤掉，不再出现在任何计数里**
  * （此前头部会写「另有 N 张小于阈值」），并且**全选 / 批量下载的范围只含未被过滤的图**（达标 + 大小未知）。
@@ -140,7 +143,7 @@ export default function SniffModal({ open, onClose, minKB, onMinKBChange }: Snif
     const [total, setTotal] = useState(0);
     /** 候选被上限截断（CSS 遍历元素数 / MAX_SNIFF）—— 必须明确告诉用户「不止这些」 */
     const [truncated, setTruncated] = useState(false);
-    /** 被名称规则（EXCLUDED_NAME_PATTERNS + EXCLUDED_NAME_SUFFIXES）排除的张数 —— 让用户知道「不是没扫到，是按规则排掉了」 */
+    /** 被名称规则（EXCLUDED_NAME_PATTERNS + EXCLUDED_NAME_SUFFIXES）排除的张数 —— v26.10.16-v1 起不显示，只输出为 data-sniff-excluded 钩子 */
     const [excluded, setExcluded] = useState(0);
     /**
      * 哪些分组的「大小未知」档是展开的（默认全折叠）。键是分组 id（未归属为 '')。
@@ -307,7 +310,7 @@ export default function SniffModal({ open, onClose, minKB, onMinKBChange }: Snif
         }
         return out;
     }, [sections, openUnknown]);
-    /** key → 在 shown 里的下标：卡片文件名里的序号、打印/预览定位都按「用户看到的顺序」算 */
+    /** key → 在 shown 里的下标：下载/打印文件名的序号、预览定位都按「用户看到的顺序」算 */
     const shownIndex = useMemo(() => {
         const m = new Map<string, number>();
         shown.forEach((it, i) => m.set(it.key, i));
@@ -484,7 +487,7 @@ export default function SniffModal({ open, onClose, minKB, onMinKBChange }: Snif
 
     /** 卡片（分组只在外面套一层容器，卡片本身与 v26.10.10-v16 完全一致） */
     const renderCard = (it: SniffedImage) => {
-        // 序号按**展示顺序**取：文件名兜底编号（znhd-sniff-N）与打印标题都用它，用户看到的才是一致的
+        // 序号按**展示顺序**取：下载/打印的文件名兜底编号（znhd-sniff-N）都用它
         const at = shownIndex.get(it.key);
         const fname = sniffFileName(it.url, it.mime, at === undefined ? 0 : at);
         return (
@@ -518,9 +521,8 @@ export default function SniffModal({ open, onClose, minKB, onMinKBChange }: Snif
                         style={{ position: 'absolute', left: 6, top: 6, zIndex: 2 }}
                     />
                 </div>
-                <Text ellipsis style={{ fontSize: 11, marginTop: 4 }} title={fname}>
-                    {fname}
-                </Text>
+                {/* v26.10.16-v1：不再显示文件名（用户要求）。fname 仍写进上面的 <Image alt>，
+                    下载 / 打印 / 预览标题也都继续用它 —— 只是卡片上不写这一行文字。 */}
                 <Text type="secondary" style={{ fontSize: 11 }} title={metaOf(it)}>
                     {formatBytes(it.size)}
                     {it.width && it.height ? ' · ' + it.width + '×' + it.height : ''}
@@ -579,7 +581,12 @@ export default function SniffModal({ open, onClose, minKB, onMinKBChange }: Snif
                     </Button>
                 </Space>
             }>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
+            {/* data-sniff-excluded：被名称/后缀规则排除的张数。v26.10.16-v1 起界面上不再显示这句提示，
+                但仍作为钩子输出 —— 否则「按文件名排除生效」这条断言只能靠「名字没出现」判定，而
+                「什么都没渲染」同样满足它（假绿）。详见文件头说明。 */}
+            <div
+                data-sniff-excluded={excluded}
+                style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
                 <Text type="secondary" style={{ fontSize: 12 }}>
                     只列出 ≥
                 </Text>
@@ -612,15 +619,6 @@ export default function SniffModal({ open, onClose, minKB, onMinKBChange }: Snif
             {droppedCount > 0 ? (
                 <Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 8 }}>
                     {'已排除 ' + droppedCount + ' 个响应不是图片的地址（视频 / 网页 / JSON 等）。'}
-                </Text>
-            ) : null}
-            {excluded > 0 ? (
-                <Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 8 }}>
-                    {'已按文件名排除 ' +
-                        excluded +
-                        ' 张（' +
-                        EXCLUDED_NAME_PATTERNS.concat(EXCLUDED_NAME_SUFFIXES).join(' / ') +
-                        '）。'}
                 </Text>
             ) : null}
 

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name                征纳互动人数和在线监控v2
 // @namespace           https://scriptcat.org/
-// @version             26.10.15-v4
+// @version             26.10.16-v1
 // @description         实时监控征纳互动等待人数和在线状态，支持语音播报、自定义常用语
 // @author              runos
 // @license             MIT
@@ -75458,7 +75458,7 @@ function SniffModal({ open, onClose, minKB, onMinKBChange }) {
     const [total, setTotal] = (0,react_production_namespaceFn().useState)(0);
     /** 候选被上限截断（CSS 遍历元素数 / MAX_SNIFF）—— 必须明确告诉用户「不止这些」 */
     const [truncated, setTruncated] = (0,react_production_namespaceFn().useState)(false);
-    /** 被名称规则（EXCLUDED_NAME_PATTERNS + EXCLUDED_NAME_SUFFIXES）排除的张数 —— 让用户知道「不是没扫到，是按规则排掉了」 */
+    /** 被名称规则（EXCLUDED_NAME_PATTERNS + EXCLUDED_NAME_SUFFIXES）排除的张数 —— v26.10.16-v1 起不显示，只输出为 data-sniff-excluded 钩子 */
     const [excluded, setExcluded] = (0,react_production_namespaceFn().useState)(0);
     /**
      * 哪些分组的「大小未知」档是展开的（默认全折叠）。键是分组 id（未归属为 '')。
@@ -75618,7 +75618,7 @@ function SniffModal({ open, onClose, minKB, onMinKBChange }) {
         }
         return out;
     }, [sections, openUnknown]);
-    /** key → 在 shown 里的下标：卡片文件名里的序号、打印/预览定位都按「用户看到的顺序」算 */
+    /** key → 在 shown 里的下标：下载/打印文件名的序号、预览定位都按「用户看到的顺序」算 */
     const shownIndex = (0,react_production_namespaceFn().useMemo)(() => {
         const m = new Map();
         shown.forEach((it, i) => m.set(it.key, i));
@@ -75778,7 +75778,7 @@ function SniffModal({ open, onClose, minKB, onMinKBChange }) {
     };
     /** 卡片（分组只在外面套一层容器，卡片本身与 v26.10.10-v16 完全一致） */
     const renderCard = (it) => {
-        // 序号按**展示顺序**取：文件名兜底编号（znhd-sniff-N）与打印标题都用它，用户看到的才是一致的
+        // 序号按**展示顺序**取：下载/打印的文件名兜底编号（znhd-sniff-N）都用它
         const at = shownIndex.get(it.key);
         const fname = sniffFileName(it.url, it.mime, at === undefined ? 0 : at);
         return ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', flexDirection: 'column', minWidth: 0 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { position: 'relative' }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(ImageOverlayActions, { actions: [
@@ -75793,7 +75793,7 @@ function SniffModal({ open, onClose, minKB, onMinKBChange }) {
                                     icon: (0,react_jsx_runtime_production_namespaceFn().jsx)(icons_PrinterOutlined, { style: { fontSize: 13 } }),
                                     onClick: () => printImage(it),
                                 },
-                            ], children: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_image, { src: it.url, alt: fname, style: { width: '100%', aspectRatio: '1 / 1', objectFit: 'cover', borderRadius: 8 } }) }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_checkbox, { checked: selected.has(it.key), onChange: () => toggleOne(it.key), style: { position: 'absolute', left: 6, top: 6, zIndex: 2 } })] }), (0,react_jsx_runtime_production_namespaceFn().jsx)(SniffModal_Text, { ellipsis: true, style: { fontSize: 11, marginTop: 4 }, title: fname, children: fname }), (0,react_jsx_runtime_production_namespaceFn().jsxs)(SniffModal_Text, { type: "secondary", style: { fontSize: 11 }, title: metaOf(it), children: [formatBytes(it.size), it.width && it.height ? ' · ' + it.width + '×' + it.height : ''] })] }, it.key));
+                            ], children: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_image, { src: it.url, alt: fname, style: { width: '100%', aspectRatio: '1 / 1', objectFit: 'cover', borderRadius: 8 } }) }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_checkbox, { checked: selected.has(it.key), onChange: () => toggleOne(it.key), style: { position: 'absolute', left: 6, top: 6, zIndex: 2 } })] }), (0,react_jsx_runtime_production_namespaceFn().jsxs)(SniffModal_Text, { type: "secondary", style: { fontSize: 11 }, title: metaOf(it), children: [formatBytes(it.size), it.width && it.height ? ' · ' + it.width + '×' + it.height : ''] })] }, it.key));
     };
     /** 进度：已测 / 总数 */
     const percent = total > 0 ? Math.min(100, Math.round((probed.length / total) * 100)) : 0;
@@ -75809,11 +75809,7 @@ function SniffModal({ open, onClose, minKB, onMinKBChange }) {
     }, [sections]);
     return ((0,react_jsx_runtime_production_namespaceFn().jsxs)(modal, { open: open, title: (0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)("span", { children: '图片嗅探（共 ' + pickable.length + ' 张）' }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { size: "small", loading: phase === 'measuring', onClick: startScan, children: phase === 'measuring' ? '扫描中…' : '重新扫描' })] }), onCancel: onClose, getContainer: getOverlayContainer, width: 828, styles: { body: { textAlign: 'left' } }, destroyOnHidden: true, 
         // 预览打开时撤掉本弹窗遮罩：预览是全屏浮层，这层遮罩只会让画面多暗一层（同「历史记录」）
-        mask: !previewOpen, footer: (0,react_jsx_runtime_production_namespaceFn().jsxs)(es_space, { children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { disabled: !selectedCount || !!batch, loading: !!batch, onClick: () => void doDownloadSelected(), children: batch ? '下载中 ' + batch.done + '/' + batch.total : '下载所选（' + selectedCount + '）' }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { disabled: !selected.size || !!batch, onClick: () => setSelected(new Set()), children: "\u6E05\u7A7A\u9009\u62E9" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { color: "primary", variant: "solid", onClick: onClose, children: "\u5173\u95ED" })] }), children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 8 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(SniffModal_Text, { type: "secondary", style: { fontSize: 12 }, children: "\u53EA\u5217\u51FA \u2265" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(input_number, { size: "small", min: 1, max: 10240, step: 10, value: minKB, addonAfter: "KB", style: { width: 132 }, onChange: (v) => onMinKBChange(Number.isFinite(v) && !!v && v > 0 ? Math.round(v) : DEFAULT_MIN_KB) }), (0,react_jsx_runtime_production_namespaceFn().jsx)(SniffModal_Text, { type: "secondary", style: { fontSize: 12 }, children: '的图片（显示 ' + known.length + ' 张）' }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_checkbox, { checked: allSelected, disabled: !kept.length, onChange: toggleAll, children: "\u5168\u9009" })] }), truncated ? ((0,react_jsx_runtime_production_namespaceFn().jsx)(SniffModal_Text, { type: "warning", style: { fontSize: 12, display: 'block', marginBottom: 8 }, children: '页面元素太多或图片超过 ' + (/* inlined export .MAX_SNIFF */300) + ' 张，本次只扫描了前一部分 —— 结果可能不完整。' })) : null, droppedCount > 0 ? ((0,react_jsx_runtime_production_namespaceFn().jsx)(SniffModal_Text, { type: "secondary", style: { fontSize: 12, display: 'block', marginBottom: 8 }, children: '已排除 ' + droppedCount + ' 个响应不是图片的地址（视频 / 网页 / JSON 等）。' })) : null, excluded > 0 ? ((0,react_jsx_runtime_production_namespaceFn().jsx)(SniffModal_Text, { type: "secondary", style: { fontSize: 12, display: 'block', marginBottom: 8 }, children: '已按文件名排除 ' +
-                    excluded +
-                    ' 张（' +
-                    EXCLUDED_NAME_PATTERNS.concat(EXCLUDED_NAME_SUFFIXES).join(' / ') +
-                    '）。' })) : null, phase === 'measuring' && !probed.length ? ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { padding: '24px 0', textAlign: 'center' }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(es_progress, { percent: percent, size: "small", style: { maxWidth: 320 } }), (0,react_jsx_runtime_production_namespaceFn().jsx)(SniffModal_Text, { type: "secondary", style: { fontSize: 12, display: 'block', marginTop: 8 }, children: '正在测量大小…（' + probed.length + '/' + total + '）' })] })) : !kept.length ? ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_empty, { description: phase === 'measuring'
+        mask: !previewOpen, footer: (0,react_jsx_runtime_production_namespaceFn().jsxs)(es_space, { children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { disabled: !selectedCount || !!batch, loading: !!batch, onClick: () => void doDownloadSelected(), children: batch ? '下载中 ' + batch.done + '/' + batch.total : '下载所选（' + selectedCount + '）' }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { disabled: !selected.size || !!batch, onClick: () => setSelected(new Set()), children: "\u6E05\u7A7A\u9009\u62E9" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { color: "primary", variant: "solid", onClick: onClose, children: "\u5173\u95ED" })] }), children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { "data-sniff-excluded": excluded, style: { display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 8 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(SniffModal_Text, { type: "secondary", style: { fontSize: 12 }, children: "\u53EA\u5217\u51FA \u2265" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(input_number, { size: "small", min: 1, max: 10240, step: 10, value: minKB, addonAfter: "KB", style: { width: 132 }, onChange: (v) => onMinKBChange(Number.isFinite(v) && !!v && v > 0 ? Math.round(v) : DEFAULT_MIN_KB) }), (0,react_jsx_runtime_production_namespaceFn().jsx)(SniffModal_Text, { type: "secondary", style: { fontSize: 12 }, children: '的图片（显示 ' + known.length + ' 张）' }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_checkbox, { checked: allSelected, disabled: !kept.length, onChange: toggleAll, children: "\u5168\u9009" })] }), truncated ? ((0,react_jsx_runtime_production_namespaceFn().jsx)(SniffModal_Text, { type: "warning", style: { fontSize: 12, display: 'block', marginBottom: 8 }, children: '页面元素太多或图片超过 ' + (/* inlined export .MAX_SNIFF */300) + ' 张，本次只扫描了前一部分 —— 结果可能不完整。' })) : null, droppedCount > 0 ? ((0,react_jsx_runtime_production_namespaceFn().jsx)(SniffModal_Text, { type: "secondary", style: { fontSize: 12, display: 'block', marginBottom: 8 }, children: '已排除 ' + droppedCount + ' 个响应不是图片的地址（视频 / 网页 / JSON 等）。' })) : null, phase === 'measuring' && !probed.length ? ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { padding: '24px 0', textAlign: 'center' }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(es_progress, { percent: percent, size: "small", style: { maxWidth: 320 } }), (0,react_jsx_runtime_production_namespaceFn().jsx)(SniffModal_Text, { type: "secondary", style: { fontSize: 12, display: 'block', marginTop: 8 }, children: '正在测量大小…（' + probed.length + '/' + total + '）' })] })) : !kept.length ? ((0,react_jsx_runtime_production_namespaceFn().jsx)(es_empty, { description: phase === 'measuring'
                     ? '正在测量大小…'
                     : total
                         ? '扫描到 ' + total + ' 个候选，但都被阈值或类型过滤掉了（可调低阈值再试）'

@@ -1012,7 +1012,8 @@
        *  · headers      —— 组头文案（`会话名（N 张）`）
        *  · currentIndex —— 「当前会话」标签落在第几组（-1 = 没有）
        *  · cards        —— 每组渲染出的卡片数
-       *  · titles       —— 每组卡片上的 title 合集（文件名 + 来源提示都在这）
+       *  · cardNames    —— 每组卡片对应的文件名合集（读 <img alt>；v26.10.16-v1 起卡片不再
+       *                    显示文件名，alt 是文件名的唯一观测面）
        */
       window.__sniffGroupFacts = () => {
         const m = window.__findSniffModal();
@@ -1026,9 +1027,9 @@
           ),
           currentIndex: sections.findIndex((s) => s.getAttribute('data-sniff-group-current') === '1'),
           cards: sections.map((s) => s.querySelectorAll('.ant-image').length),
-          titles: sections.map((s) =>
-            Array.from(s.querySelectorAll('[title]'))
-              .map((el) => el.getAttribute('title') || '')
+          cardNames: sections.map((s) =>
+            Array.from(s.querySelectorAll('.ant-image img'))
+              .map((img) => img.getAttribute('alt') || '')
               .join(' | ')
           ),
         };
@@ -2035,6 +2036,13 @@
                 .join(' | ')
             : '';
           const hay = t + ' || ' + titles;
+          // v26.10.16-v1：卡片不再显示文件名（用户要求）⇒ 文件名的唯一观测面是 <img alt>。
+          // titles 仍保留：卡片 meta 行的「来源 / 大小来源」提示挂在 title 属性上。
+          const names = m
+            ? Array.from(m.querySelectorAll('.ant-image img'))
+                .map((img) => img.getAttribute('alt') || '')
+                .join(' | ')
+            : '';
           const cards = m ? m.querySelectorAll('.ant-image').length : 0;
           // v26.10.13-v8：分组后「大小未知」是**每个分组各一个**折叠档，必须把所有匹配求和 ——
           // 仍取第一个的话总数会算少，下面 selectAllCount 的等式断言必假红（本次踩到）。
@@ -2042,7 +2050,9 @@
             (sum, x) => sum + Number(x[1]),
             0
           );
-          const excludedNotice = /已按文件名排除\s*(\d+)\s*张/.exec(t);
+          // v26.10.16-v1：界面上不再显示「已按文件名排除 N 张」，改从面板的 data-sniff-excluded 钩子读
+          const exclEl = m ? m.querySelector('[data-sniff-excluded]') : null;
+          const excludedAttr = exclEl ? Number(exclEl.getAttribute('data-sniff-excluded')) : -1;
           // 全选后的按钮文案「下载所选（N）」= 全选范围（v26.10.10-v6 起必须等于「卡片 + 大小未知」）
           const dlBtn = m
             ? Array.from(m.querySelectorAll('.ant-modal-footer button')).find(
@@ -2068,7 +2078,8 @@
             // v26.10.14-v2：perf 优先 —— 同源真加载的 ⑫ 必须走「资源表读数」档：
             // 卡片在、显示 22 KB（资源表读数，不是 HEAD 桩的假值）、来源标注「资源表读数」、
             // 且 __gmXhrLog 里**没有**任何 sniff-perf.png 请求（零 HEAD/Range）。
-            perfCardSeen: titles.indexOf('sniff-perf.png') >= 0,
+            perfCardSeen: names.indexOf('sniff-perf.png') >= 0,
+            namesSample: names.slice(0, 400),
             perfSizePerf: t.indexOf('22 KB') >= 0,
             perfBogusNotShown: t.indexOf('117.74 MB') < 0,
             perfViaLabel: titles.indexOf('资源表读数') >= 0,
@@ -2081,17 +2092,19 @@
             unknownCount: unknownCount,
             // v26.10.10-v6：界面不再出现「另有 N 张小于阈值」这类计数
             belowNoticeShown: t.indexOf('小于阈值') >= 0,
-            // 10 KB 的 ⑦ 被阈值过滤 ⇒ 它不该出现在任何卡片标题里
-            smallInTitles: titles.indexOf('sniff-small.png') >= 0,
+            // 10 KB 的 ⑦ 被阈值过滤 ⇒ 它不该出现在任何卡片上（文件名观测面 = <img alt>）
+            smallInCards: names.indexOf('sniff-small.png') >= 0,
             selectAllClicked: !!window.__sniffSelectAllClicked,
             selectAllLabel: dlText,
             selectAllCount: dlCount ? Number(dlCount[1]) : -1,
-            excludedCount: excludedNotice ? Number(excludedNotice[1]) : -1,
-            // 只看**卡片标题**（文件名 / 来源提示），不看弹窗正文：排除提示里本身就含这些字样
-            excludedNameInTitles: /znhd-sniff|user-man|user-woman/.test(titles),
+            excludedCount: excludedAttr,
+            // 只看**卡片上的文件名**（<img alt>），不看弹窗正文（正文里本来也不含文件名）
+            excludedNameInCards: /znhd-sniff|user-man|user-woman/.test(names),
+            // v26.10.16-v1（用户要求）：面板可见文本里不许出现任何文件名
+            nameInVisibleText: /(sniff-[a-z0-9-]+\.png|icon\.svg|znhd-sniff)/i.test(t),
             // v26.10.10-v7：SVG 一律不进面板 —— 后缀规则要同时挡住「URL 就是 .svg」与「内联 SVG」两路
-            svgUrlInTitles: titles.indexOf('icon.svg') >= 0,
-            svgInTitles: /\.svg/i.test(titles),
+            svgUrlInCards: names.indexOf('icon.svg') >= 0,
+            svgInCards: /\.svg/i.test(names),
           };
           // 达标卡片 = CSS 背景 ×2（30/40 KB）+ 会话图 ×2（50/60 KB）+ perf 同源图 ×1（22 KB，零请求）；
           // SVG 与 < 阈值的都已被排除
@@ -2795,24 +2808,34 @@
             window.__sniffSnap &&
             window.__sniffSnap.selectAllClicked &&
             !window.__sniffSnap.belowNoticeShown &&
-            !window.__sniffSnap.smallInTitles &&
+            !window.__sniffSnap.smallInCards &&
             window.__sniffSnap.selectAllCount ===
               window.__sniffSnap.cards + window.__sniffSnap.unknownCount &&
             window.__sniffSnap.selectAllCount >= 1
           ),
-          // 图片嗅探（v26.10.10-v5）：名称排除——命中规则的图不进候选（连请求都不发），
-          // 面板给出排除计数，且被排除的名字一个都不许出现在卡片标题里。
+          // 图片嗅探（v26.10.10-v5；v26.10.16-v1 换观测面）：名称排除——命中规则的图不进候选
+          // （连请求都不发），被排除的名字一个都不许出现在卡片上。计数自 v26.10.16-v1 起不再显示在
+          // 界面上，改从面板的 data-sniff-excluded 钩子读 —— 否则断言只剩「名字没出现」，
+          // 而「一张卡都没渲染」同样满足它（假绿）。
           sniffExcludeOk: !!(
             window.__sniffSnap &&
             window.__sniffSnap.excludedCount >= 2 &&
-            !window.__sniffSnap.excludedNameInTitles
+            !window.__sniffSnap.excludedNameInCards
+          ),
+          // v26.10.16-v1（用户要求）：卡片不再显示文件名。两条判据缺一不可：
+          //   ① 文件名确实在卡片上（<img alt> 有值）—— 没有它的话「一张卡都没渲染」也会过；
+          //   ② 面板可见文本（modal.textContent：调参行/组头/提示/按钮）里一个文件名都没有。
+          sniffNoNameTextOk: !!(
+            window.__sniffSnap &&
+            /sniff-[a-z0-9-]+\.png/i.test(window.__sniffSnap.namesSample) &&
+            !window.__sniffSnap.nameInVisibleText
           ),
           // 后缀排除（v26.10.10-v7）：URL 是 .svg 的与内联 SVG 都不进面板。
           // excludedCount >= 4 = 名称规则那 3 张（data 大/小 + user-man）+ 至少 1 张 SVG。
           sniffSvgExcludedOk: !!(
             window.__sniffSnap &&
-            !window.__sniffSnap.svgUrlInTitles &&
-            !window.__sniffSnap.svgInTitles &&
+            !window.__sniffSnap.svgUrlInCards &&
+            !window.__sniffSnap.svgInCards &&
             window.__sniffSnap.excludedCount >= 4
           ),
           // 会话分组（v26.10.13-v8）：两张会话图各归各的组，当前会话置顶，未归属单独成组。
@@ -2835,9 +2858,9 @@
               g.currentIndex === 0 &&
               g.cards[0] === 2 &&
               g.cards[1] === 1 &&
-              g.titles[0].indexOf('sniff-conv-a.png') >= 0 &&
-              g.titles[0].indexOf('sniff-conv-c.png') >= 0 &&
-              g.titles[1].indexOf('sniff-conv-b.png') >= 0 &&
+              g.cardNames[0].indexOf('sniff-conv-a.png') >= 0 &&
+              g.cardNames[0].indexOf('sniff-conv-c.png') >= 0 &&
+              g.cardNames[1].indexOf('sniff-conv-b.png') >= 0 &&
               g.headers[0].indexOf('2 张') >= 0
             );
           })(),
@@ -2857,8 +2880,8 @@
               new Set(names).size === names.length &&
               g.count === 3 &&
               g.cards[0] === 2 &&
-              g.titles[0].indexOf('sniff-conv-a.png') >= 0 &&
-              g.titles[0].indexOf('sniff-conv-c.png') >= 0
+              g.cardNames[0].indexOf('sniff-conv-a.png') >= 0 &&
+              g.cardNames[0].indexOf('sniff-conv-c.png') >= 0
             );
           })(),
           // 会话归属的持久化（v26.10.13-v8）：切走会话（Vuex 里两条消息都不再提供）后重扫，
@@ -2955,6 +2978,7 @@
           report.sniffUnknownKeptOk &&
           report.sniffPerfFirstOk &&
           report.sniffExcludeOk &&
+          report.sniffNoNameTextOk &&
           report.sniffSvgExcludedOk &&
           report.sniffSelectScopeOk &&
           // 会话分组（v26.10.13-v8）：分组渲染 + 切会话后仍靠持久层归组

@@ -142,7 +142,8 @@ const CHECKS = [
   ['sniffPerfFirstOk', '尺寸读取 perf 优先（v26.10.14-v2）：同源真加载的图走资源表读数，零 HEAD/Range 请求'],
   ['sniffPreMeasureOk', '嗅探后台预测量（v26.10.14-v4）：打开窗口前就已量好，开窗后缓存命中不再重发请求'],
   ['sniffSelectScopeOk', '全选/批量下载只覆盖未被阈值过滤的图（小于阈值的不计数、不可选）'],
-  ['sniffExcludeOk', '按文件名排除（znhd-sniff / user-woman / user-man）且面板给出排除计数'],
+  ['sniffExcludeOk', '按文件名排除（znhd-sniff / user-woman / user-man）—— 被排除的名字不出现在卡片上（计数走 data-sniff-excluded 钩子）'],
+  ['sniffNoNameTextOk', '嗅探卡片不再显示文件名（v26.10.16-v1）：文件名只走 <img alt>，面板可见文本里没有'],
   ['sniffSvgExcludedOk', '按后缀排除 SVG（.svg 与内联 SVG 都不进面板）'],
   // v26.10.13-v8：按会话（纳税人）分组 —— 归属、当前会话置顶、切会话后靠持久层仍归组
   ['sniffGroupOk', '图片嗅探按会话分组：当前会话置顶、会话名与张数正确、未归属单独成组'],
@@ -485,6 +486,7 @@ async function main() {
       !checkPass('sniffPerfFirstOk') ||
       !checkPass('sniffPreMeasureOk') ||
       !checkPass('sniffExcludeOk') ||
+      !checkPass('sniffNoNameTextOk') ||
             !checkPass('sniffSvgExcludedOk') ||
             !checkPass('sniffSelectScopeOk') ||
             !checkPass('sniffGroupOk') ||
