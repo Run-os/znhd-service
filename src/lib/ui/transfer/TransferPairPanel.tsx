@@ -88,7 +88,7 @@ export default function TransferPairPanel({
     };
 
     return (
-        <div style={{ width: '100%', maxWidth: 560, padding: '16px 18px', overflow: 'auto' }}>
+        <div style={{ width: '100%', maxWidth: 560, padding: '16px 18px', overflow: 'auto', margin: 'auto' }}>
             <div
                 style={{
                     display: 'flex',

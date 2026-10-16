@@ -234,6 +234,8 @@ export default function TransferAssistantModal({ open, onClose }: { open: boolea
                     minHeight: 0,
                     overflow: 'auto',
                 }}>
+                {/* margin:auto 在 flex 里双轴安全居中：内容不超高时水平+垂直都居中，
+                    超高时自动退化为贴顶可滚动（不会被 justify-content:center 裁掉顶部） */}
                 <TransferPairPanel relayServer={s.settings.relayServer} phones={s.phones} />
             </div>
         );

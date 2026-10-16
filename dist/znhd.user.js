@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name                征纳互动人数和在线监控v2
 // @namespace           https://scriptcat.org/
-// @version             26.10.17-v1
+// @version             26.10.17-v2
 // @description         实时监控征纳互动等待人数和在线状态，支持语音播报、自定义常用语
 // @author              runos
 // @license             MIT
@@ -107846,7 +107846,7 @@ function TransferPairPanel({ relayServer, phones, }) {
             },
         });
     };
-    return ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { width: '100%', maxWidth: 560, padding: '16px 18px', overflow: 'auto' }, children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: {
+    return ((0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { width: '100%', maxWidth: 560, padding: '16px 18px', overflow: 'auto', margin: 'auto' }, children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
