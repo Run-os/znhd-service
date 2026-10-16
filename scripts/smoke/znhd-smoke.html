@@ -686,12 +686,18 @@
       <img id="sniff-svg-http" src="https://sniff-smoke.test/media/icon.svg" alt="" />
       <!-- ⑩⑪ 会话分组夹具（v26.10.13-v8）：URL 末段与下面的 Vuex 桩里的 fileName 同名
            ⇒ 分别归属到「刘永增」（当前会话）与「湖南博大园林建筑有限公司」（历史会话）。
-           域名仍是 *.test（从不出网），体积由 GM 桩按 URL 作答（50 / 60 KB）。 -->
-      <img id="sniff-conv-a" src="https://sniff-smoke.test/im-cos/11/sniff-conv-a.png" alt="" />
+           域名仍是 *.test（从不出网），体积由 GM 桩按 URL 作答（50 / 60 / 70 KB）。
+           ⚠️ v26.10.16-v2：组内改为「按消息时间从新到旧」后，这里的 **DOM 顺序故意与时间顺序相反**
+           （c 在 a 前面），否则「按时间排」与「保持扫描顺序」两种实现都满足断言（断不出真假）。 -->
       <img id="sniff-conv-b" src="https://sniff-smoke.test/im-cos/11/sniff-conv-b.png" alt="" />
       <!-- ⑬ 与 sniff-conv-a 同属当前会话，但它的消息没有 conversationID（v26.10.14-v5 双路径夹具）：
-           修复前它会退化成 `name:刘永增` 键，与 GROUP_CUR_A 分成两组 ⇒ 同一个会话名出现两次。 -->
+           修复前它会退化成 `name:刘永增` 键，与 GROUP_CUR_A 分成两组 ⇒ 同一个会话名出现两次。
+           v26.10.16-v2：c 的 **DOM 位次在 a 之前、体积（70KB）又比 a（50KB）大，但消息时间更旧**
+           （见下面 Vuex 桩：a = 1700000003000 > c = 1700000002000）—— 三种可能的实现在当前会话组里
+           顺序两两不同，断言才有判别力：
+             · 按消息时间（现在）→ a, c　· 按体积（v26.10.16-v1 及更早）→ c, a　· 不排序（扫描序）→ c, a -->
       <img id="sniff-conv-c" src="https://sniff-smoke.test/im-cos/11/sniff-conv-c.png" alt="" />
+      <img id="sniff-conv-a" src="https://sniff-smoke.test/im-cos/11/sniff-conv-a.png" alt="" />
       <!-- ⑫ perf 优先夹具（v26.10.14-v2）：**同源真实加载**的图（server.js 的 /sniff-perf.png，
            精确 22528 字节 = 22 KB）。只有真加载的图才会进 performance 资源表，跨域假域名不行。
            测量时必须走「资源表读数」这一档：一个 GM 请求都不发（桩里另有假 content-length
@@ -980,7 +986,9 @@
                 },
                 messageList: two
                   ? [
-                      window.__sniffConvMsg('sniff-conv-a.png', '刘永增', 1700000001000, 'GROUP_CUR_A'),
+                      // ⚠️ v26.10.16-v2（组内按时间排序的判据）：a 的时间**故意比 c 新**，
+                      // 而 a 的体积更小、DOM 位次更靠后 ⇒ 「按时间」与「按体积 / 不排序」在组内顺序相反。
+                      window.__sniffConvMsg('sniff-conv-a.png', '刘永增', 1700000003000, 'GROUP_CUR_A'),
                       window.__sniffConvMsg('sniff-conv-c.png', '刘永增', 1700000002000),
                     ]
                   : [],
@@ -2884,6 +2892,36 @@
               g.cardNames[0].indexOf('sniff-conv-c.png') >= 0
             );
           })(),
+          // 组内按消息时间排序（v26.10.16-v2，用户要求「最新的图片在前面」）。
+          // 夹具（见 HTML 里的 ⑩⑪⑬ 与 __installSniffChat）把三种可能的实现**两两区分开**：
+          //   · 按消息时间（现在） → 当前会话组 a, c
+          //   · 按体积（v26.10.16-v1 及更早） → c, a（c 是 70KB，a 是 50KB）
+          //   · 不排序（扫描 / DOM 序） → c, a（c 的 <img> 故意排在 a 前面）
+          // 所以「a 的出现位置严格早于 c」这一条只对「按时间」成立。
+          // 前置条件 a、c **两张都要在**：否则只有一张卡时 indexOf 也可能满足大小关系（假绿）。
+          sniffConvTimeOrderOk: (() => {
+            const s = window.__sniffSnap;
+            const g = s && s.groups;
+            if (!g) return false;
+            const row = g.cardNames[0] || '';
+            const ia = row.indexOf('sniff-conv-a.png');
+            const ic = row.indexOf('sniff-conv-c.png');
+            return !!(s.chatInstalled && ia >= 0 && ic >= 0 && ia < ic);
+          })(),
+          // 组内排序的**兜底**（v26.10.16-v2）：取不到消息时间的图（未归属组整组都没有）退回老口径
+          // 「体积倒序」—— 普通网页上没有「会话」概念，观感必须与旧版完全一致。
+          // 判据取未归属组（names[2] === ''）：40 KB 的 range 必须排在 30 KB 的 head 之前。
+          // 同样要求两张都在（「一张都没渲染」不满足）。旧实现下这一条也是绿的 —— 它守的是「时间排序
+          // 不要误伤没有时间的图」，不是本次改动的前后差异（那由 sniffConvTimeOrderOk 守）。
+          sniffConvNoTimeFallbackOk: (() => {
+            const s = window.__sniffSnap;
+            const g = s && s.groups;
+            if (!g) return false;
+            const row = g.cardNames[2] || '';
+            const ir = row.indexOf('sniff-range.png');
+            const ih = row.indexOf('sniff-head.png');
+            return !!(s.chatInstalled && g.names[2] === '' && ir >= 0 && ih >= 0 && ir < ih);
+          })(),
           // 会话归属的持久化（v26.10.13-v8）：切走会话（Vuex 里两条消息都不再提供）后重扫，
           // 两张图仍各自归回原会话 —— 少了持久层的话它们只会落进「未归属」，names 前两项都是空串。
           // v26.10.14-v5：当前会话那组的 2 张（a + c）都要回来，且 c 的 `name:` 键已被迁移合并。
@@ -2985,6 +3023,9 @@
           // v26.10.14-v5：再加「双路径合并」（同窗口带/不带 ID 的图必须同组、无同名两组）
           report.sniffGroupOk &&
           report.sniffConvAliasOk &&
+          // v26.10.16-v2：组内按消息时间排序 + 「取不到时间时退回体积倒序」的兜底
+          report.sniffConvTimeOrderOk &&
+          report.sniffConvNoTimeFallbackOk &&
           report.sniffGroupPersistOk
             ? 'ALL-OK'
             : 'PARTIAL');

@@ -148,6 +148,8 @@ const CHECKS = [
   // v26.10.13-v8：按会话（纳税人）分组 —— 归属、当前会话置顶、切会话后靠持久层仍归组
   ['sniffGroupOk', '图片嗅探按会话分组：当前会话置顶、会话名与张数正确、未归属单独成组'],
   ['sniffConvAliasOk', '会话归属双路径合并（v26.10.14-v5）：同窗口带/不带 conversationID 的图并成一组，无同名两组'],
+  ['sniffConvTimeOrderOk', '组内按消息时间从新到旧（v26.10.16-v2）：最新的图排在组内最前'],
+  ['sniffConvNoTimeFallbackOk', '取不到消息时间的图（未归属组）退回「体积倒序」——普通网页观感与旧版一致'],
   ['sniffGroupPersistOk', '切走会话后重扫，图片仍归回原会话（会话归属的持久层生效）'],
   ['sniffImgActionsOk', '图片嗅探卡片：下载/打印是右下角的图标按钮（未 hover 隐藏，hover 出现）'],
   // v26.10.10-v8：面板被宿主页重绘删除后必须自愈（watchPanelHost 的回归断言）
@@ -491,6 +493,8 @@ async function main() {
             !checkPass('sniffSelectScopeOk') ||
             !checkPass('sniffGroupOk') ||
             !checkPass('sniffConvAliasOk') ||
+            !checkPass('sniffConvTimeOrderOk') ||
+            !checkPass('sniffConvNoTimeFallbackOk') ||
             !checkPass('sniffGroupPersistOk') ||
             !checkPass('sniffImgActionsOk')
     ) {

@@ -91,7 +91,7 @@ export interface ConvSection<T> {
     name: string;
     /** 是否当前会话（面板加「当前会话」标签） */
     current: boolean;
-    /** 达标（≥ 阈值）的图，组内按体积从大到小 */
+    /** 达标（≥ 阈值）的图，组内按消息时间从新到旧（无时间的殿后，内部按体积倒序） */
     known: T[];
     /** 大小未知的图（折叠保留，不丢） */
     unknown: T[];
@@ -662,9 +662,12 @@ export interface GroupableImage {
 /**
  * 把嗅探结果按会话分组。
  *
- * 排序规则（用户没指定，按「最可能想看的排最前」定）：
+ * 排序规则：
  *   ① 当前会话置顶；② 其余会话按最新消息时间倒序；③ 未归属永远排最后。
- * 组内：达标图按体积从大到小（沿用原有的展示习惯），大小未知的单独一档。
+ * 组内（v26.10.16-v2，用户指定「最新的图片在前面」）：**按各自消息的消息时间从新到旧**，
+ * 大小未知的那一档同样按时间排。取不到消息时间的图（Vuex 那条路没认出会话、或整组都是未归属）
+ * 排在有时间的之后，它们之间沿用 v26.10.16-v1 之前的老口径「体积倒序」——
+ * 这样「普通网页（没有会话概念）」上的观感与旧版完全一致，且顺序永远确定、不随扫描顺序抖动。
  *
  * 返回值里的 `grouped` 决定面板要不要画组头：**一个具名分组都没有时不画**
  * （普通网页上根本没有「会话」概念，硬套一个「未归属会话」标题只是噪音；
@@ -713,10 +716,33 @@ export function groupByConversation<T extends GroupableImage>(
         // 其余（已知但小于阈值）只被过滤，不进入任何分组 —— 与面板的「只列出 ≥ N KB」一致
     }
 
+    /** 体积倒序（v26.10.16-v1 之前的组内老口径）：现在只做**次级判据**——时间相同或都没有时间时用它 */
     const bySizeDesc = (a: T, b: T): number => (b.size === null ? 0 : b.size) - (a.size === null ? 0 : a.size);
+    /**
+     * 组内排序（v26.10.16-v2，用户要求「最新的图片在前面」）：按**该图所属消息的 `time`** 从新到旧。
+     *
+     * ⚠️ 时间在排序时逐张现取，而不是随分桶一起存一份：`convOfItem` 只是 `byStem` 的一次 Map 查询
+     * （n ≤ MAX_SNIFF），重算不吃亏，却省掉了「T 的对象引用必须唯一」这个不成立就出错的隐含假设。
+     * 取不到时间的（`null`）一律**殿后** —— 未归属组整组没有时间，于是自动退回 bySizeDesc，
+     * 普通网页上的观感与旧版完全一致；有时间的图之间若时间相同也退回 bySizeDesc，保证顺序确定。
+     */
+    const byTimeDesc = (a: T, b: T): number => {
+        const ca = convOfItem(a, ctx);
+        const cb = convOfItem(b, ctx);
+        const va = ca ? ca.time : null;
+        const vb = cb ? cb.time : null;
+        if (va !== vb) {
+            if (va === null) return 1;
+            if (vb === null) return -1;
+            return vb - va;
+        }
+        return bySizeDesc(a, b);
+    };
     const list: Array<{ id: string; time: number | null; current: boolean; bucket: Bucket }> = [];
     for (const [id, bucket] of buckets) {
-        bucket.known.sort(bySizeDesc);
+        bucket.known.sort(byTimeDesc);
+        // 大小未知那一档同样按时间排（它渲染在该组达标图之后，口径不一致会让「展开后顺序突变」）
+        bucket.unknown.sort(byTimeDesc);
         list.push({ id, time: bucket.time, current: bucket.current, bucket });
     }
     list.sort((a, b) => {

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name                征纳互动人数和在线监控v2
 // @namespace           https://scriptcat.org/
-// @version             26.10.16-v1
+// @version             26.10.16-v2
 // @description         实时监控征纳互动等待人数和在线状态，支持语音播报、自定义常用语
 // @author              runos
 // @license             MIT
@@ -75164,9 +75164,12 @@ function convKey(conv, aliases) {
 /**
  * 把嗅探结果按会话分组。
  *
- * 排序规则（用户没指定，按「最可能想看的排最前」定）：
+ * 排序规则：
  *   ① 当前会话置顶；② 其余会话按最新消息时间倒序；③ 未归属永远排最后。
- * 组内：达标图按体积从大到小（沿用原有的展示习惯），大小未知的单独一档。
+ * 组内（v26.10.16-v2，用户指定「最新的图片在前面」）：**按各自消息的消息时间从新到旧**，
+ * 大小未知的那一档同样按时间排。取不到消息时间的图（Vuex 那条路没认出会话、或整组都是未归属）
+ * 排在有时间的之后，它们之间沿用 v26.10.16-v1 之前的老口径「体积倒序」——
+ * 这样「普通网页（没有会话概念）」上的观感与旧版完全一致，且顺序永远确定、不随扫描顺序抖动。
  *
  * 返回值里的 `grouped` 决定面板要不要画组头：**一个具名分组都没有时不画**
  * （普通网页上根本没有「会话」概念，硬套一个「未归属会话」标题只是噪音；
@@ -75205,10 +75208,35 @@ function groupByConversation(items, ctx, minBytes) {
             b.known.push(it);
         // 其余（已知但小于阈值）只被过滤，不进入任何分组 —— 与面板的「只列出 ≥ N KB」一致
     }
+    /** 体积倒序（v26.10.16-v1 之前的组内老口径）：现在只做**次级判据**——时间相同或都没有时间时用它 */
     const bySizeDesc = (a, b) => (b.size === null ? 0 : b.size) - (a.size === null ? 0 : a.size);
+    /**
+     * 组内排序（v26.10.16-v2，用户要求「最新的图片在前面」）：按**该图所属消息的 `time`** 从新到旧。
+     *
+     * ⚠️ 时间在排序时逐张现取，而不是随分桶一起存一份：`convOfItem` 只是 `byStem` 的一次 Map 查询
+     * （n ≤ MAX_SNIFF），重算不吃亏，却省掉了「T 的对象引用必须唯一」这个不成立就出错的隐含假设。
+     * 取不到时间的（`null`）一律**殿后** —— 未归属组整组没有时间，于是自动退回 bySizeDesc，
+     * 普通网页上的观感与旧版完全一致；有时间的图之间若时间相同也退回 bySizeDesc，保证顺序确定。
+     */
+    const byTimeDesc = (a, b) => {
+        const ca = convOfItem(a, ctx);
+        const cb = convOfItem(b, ctx);
+        const va = ca ? ca.time : null;
+        const vb = cb ? cb.time : null;
+        if (va !== vb) {
+            if (va === null)
+                return 1;
+            if (vb === null)
+                return -1;
+            return vb - va;
+        }
+        return bySizeDesc(a, b);
+    };
     const list = [];
     for (const [id, bucket] of buckets) {
-        bucket.known.sort(bySizeDesc);
+        bucket.known.sort(byTimeDesc);
+        // 大小未知那一档同样按时间排（它渲染在该组达标图之后，口径不一致会让「展开后顺序突变」）
+        bucket.unknown.sort(byTimeDesc);
         list.push({ id, time: bucket.time, current: bucket.current, bucket });
     }
     list.sort((a, b) => {
@@ -75587,7 +75615,8 @@ function SniffModal({ open, onClose, minKB, onMinKBChange }) {
     /**
      * 按会话分组（v26.10.13-v8）。`sections` 是**唯一的排序与分桶口径**：
      * 下面的计数 / shown / 渲染顺序全部从它派生，避免「计数一套、渲染一套」漂移。
-     * 组内已按体积倒序排好（沿用原有展示习惯）；小于阈值的图不进任何分组（= v26.10.10-v6 的语义）。
+     * 组内已按消息时间从新到旧排好（v26.10.16-v2；无时间的殿后按体积倒序）；
+     * 小于阈值的图不进任何分组（= v26.10.10-v6 的语义）。
      */
     const sections = (0,react_production_namespaceFn().useMemo)(() => groupByConversation(kept, convCtx, minBytes).sections, [kept, convCtx, minBytes]);
     /** 面板要不要画组头：一个具名会话都没有时不画（普通网页上没有「会话」概念，标题只是噪音） */

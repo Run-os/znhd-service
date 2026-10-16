@@ -74,12 +74,13 @@ const { Text } = Typography;
  * 「按会话（纳税人）分组」的归属判定与持久化都在 src/lib/sniffConv.ts（同样是纯逻辑 + 读页面 Vuex）；
  * 本文件只负责「合批渲染 + 交互」。测量是异步逐张回来的，所以：
  *  · 结果按 150ms 合批推给状态（300 张图逐张 setState 会把主线程拖哭）；
- *  · 列表在测完之后才按体积排序（边测边排会让卡片来回跳，用户根本点不准）；
+ *  · 列表在测完之后才排序（边测边排会让卡片来回跳，用户根本点不准）；
  *  · 关闭弹窗 / 重新扫描靠 runIdRef 作废在飞请求的结果（请求本身拦不住，结果丢弃即可）。
  *
  * 分组渲染（v26.10.13-v8）：图先按会话分桶再渲染，**组头只在真有具名会话时才画**
  * （普通网页上没有「会话」概念，硬套一个标题只是噪音；此时分组恰好退化成原来的平铺形态）。
- * 「当前会话」置顶、未归属殿后、组内按体积倒序 —— 排序规则全在 sniffConv.groupByConversation。
+ * 「当前会话」置顶、未归属殿后；组内按**消息时间从新到旧**（v26.10.16-v2，用户要求），
+ * 取不到时间的图殿后、按体积倒序 —— 排序规则全在 sniffConv.groupByConversation。
  * 组头元素带 `data-sniff-group` / `data-sniff-group-name` / `data-sniff-group-current` 钩子（冒烟用）。
  */
 export interface SniffModalProps {
@@ -279,7 +280,8 @@ export default function SniffModal({ open, onClose, minKB, onMinKBChange }: Snif
     /**
      * 按会话分组（v26.10.13-v8）。`sections` 是**唯一的排序与分桶口径**：
      * 下面的计数 / shown / 渲染顺序全部从它派生，避免「计数一套、渲染一套」漂移。
-     * 组内已按体积倒序排好（沿用原有展示习惯）；小于阈值的图不进任何分组（= v26.10.10-v6 的语义）。
+     * 组内已按消息时间从新到旧排好（v26.10.16-v2；无时间的殿后按体积倒序）；
+     * 小于阈值的图不进任何分组（= v26.10.10-v6 的语义）。
      */
     const sections = useMemo<Array<ConvSection<SniffedImage>>>(
         () => groupByConversation(kept, convCtx, minBytes).sections,
