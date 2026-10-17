@@ -307,6 +307,10 @@
         // 腾讯文档常用语（v26.10.17-v3）：GM_xmlhttpRequest 走的 dop-api/opendoc，回快照 JSON
         if (url.indexOf('dop-api/opendoc') >= 0) {
           window.__gmDocPhrasesHit = (window.__gmDocPhrasesHit || 0) + 1;
+          // ⚠️ 真接口**校验 Referer**（实测：不带 = 401，带文档页地址 = 200）。
+          // 在税务页里发这个请求，默认 Referer 是本页或为空 ⇒ 必须由代码显式设置。
+          // 这里记下实际发出的 Referer，供 docPhrasesRefererOk 断言（漏设 ⇒ 真机 401）。
+          window.__gmDocReferer = (details && details.headers && details.headers.Referer) || '';
           reply(details, SMOKE_DOC_PAYLOAD);
           return { abort: () => {} };
         }
@@ -2832,6 +2836,13 @@
           // 会去找名为 "docPhrasesHit>0" 的字段（恒 undefined）⇒ 断言永久假红（本次踩过）。
           // 数值计数单独留给诊断输出，判定用这个布尔量。
           docPhrasesHitOk: (window.__gmDocPhrasesHit || 0) > 0,
+          // 腾讯文档接口**校验 Referer**（无 = 401）。这条守的是「代码显式带了文档页地址」，
+          // 因为真机上默认 Referer 是税务页/空 ⇒ 漏设就是真机 401（冒烟桩不校验，只能靠这条盯着）。
+          docPhrasesRefererOk: (() => {
+            const r = window.__gmDocReferer || '';
+            return r.indexOf('docs.qq.com/doc/') >= 0 && r.indexOf('DRsmokeFakeDocForPhrases') >= 0;
+          })(),
+          docPhrasesReferer: window.__gmDocReferer || '',
           docPhrasesTitlesOk:
             !!window.__docPhrasesSnap &&
             window.__docPhrasesSnap.indexOf('冒烟文档标题一') >= 0 &&

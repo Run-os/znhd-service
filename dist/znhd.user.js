@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name                征纳互动人数和在线监控v2
 // @namespace           https://scriptcat.org/
-// @version             26.10.17-v3
+// @version             26.10.17-v4
 // @description         实时监控征纳互动等待人数和在线状态，支持语音播报、自定义常用语
 // @author              runos
 // @license             MIT
@@ -108777,12 +108777,26 @@ function MainPanel({ host }) {
             method: 'GET',
             url: requestUrl,
             timeout: 15000,
+            /**
+             * ⚠️ 腾讯文档的 `dop-api/opendoc` **会校验 Referer**（实测 2026-10-17：
+             * 不带 Referer 一律 `401`，带上文档页地址才是 `200`）。
+             * 在税务页里发这个请求时，GM_xmlhttpRequest 的默认 Referer 是本页
+             * （`znhd.hunan.chinatax.gov.cn`）或干脆为空 ⇒ 会被判 401。
+             * 故显式把 Referer 设成文档自己的地址（同源），两个数据源都安全：
+             * YAML 源多这个头无副作用。
+             */
+            headers: docMode ? { Referer: sourceUrl } : undefined,
             onload: function (response) {
                 if (seq !== phrasesRequestSeq)
                     return;
                 try {
-                    if (response.status !== 200)
+                    if (response.status !== 200) {
+                        // 腾讯文档 401 几乎只有一种原因：文档没开「获得链接的人可阅读」
+                        if (docMode && response.status === 401) {
+                            throw new Error('HTTP 401：腾讯文档未开放匿名阅读，请把分享权限设为「获得链接的人可阅读」');
+                        }
                         throw new Error('数据源返回 HTTP ' + response.status);
+                    }
                     const data = parseResponse(response.responseText);
                     setPhrasesData(data);
                     savePhrasesCache(state_runtime.commonPhrasesUrl, data);

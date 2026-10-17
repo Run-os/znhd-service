@@ -116,6 +116,7 @@ const CHECKS = [
   // 其下文本 = 正文」解析，第一个一级标题之前的说明文字必须丢弃。
   ['docPhrasesSwitchOk', '腾讯文档数据源：设置里填 docs.qq.com/doc/… 链接后真的切过去了（否则下面三条会假绿）'],
   ['docPhrasesHitOk', '腾讯文档数据源：请求走 dop-api/opendoc（不是 YAML 的 resolveGithubUrl）'],
+  ['docPhrasesRefererOk', '腾讯文档数据源：请求带上文档页 Referer（该接口无 Referer 一律 401）'],
   ['docPhrasesTitlesOk', '腾讯文档数据源：两个一级标题都解析成常用语标题'],
   ['docPhrasesBodyOk', '腾讯文档数据源：一级标题下的多行正文拼进同一条常用语'],
   ['docPhrasesNoPreamble', '腾讯文档数据源：第一个一级标题之前的说明文字不进常用语'],
@@ -560,13 +561,13 @@ async function main() {
     if (!checkPass('phrasesSourceOk')) {
       console.log('      常用语数据源快照：' + JSON.stringify(report.phrasesSourceUrl));
     }
-    // v26.10.17-v3：腾讯文档数据源五条断言里**任意一条**失败，就把定位过程 + 抽屉实况全打出来。
-    // 这条链路的失败面很宽（输入框没定位到 / 请求没走 dop-api / 解析没出标题 / 正文没合并），
-    // 不打这些事实就只能靠改代码猜，故保留。
-    const docKeys = ['docPhrasesSwitchOk', 'docPhrasesHitOk', 'docPhrasesTitlesOk', 'docPhrasesBodyOk', 'docPhrasesNoPreamble'];
+    // v26.10.17-v3：腾讯文档数据源六条断言里**任意一条**失败，就把定位过程 + 抽屉实况全打出来。
+    // 这条链路的失败面很宽（输入框没定位到 / 请求没走 dop-api / 漏带 Referer / 解析没出标题 /
+    // 正文没合并），不打这些事实就只能靠改代码猜，故保留。
+    const docKeys = ['docPhrasesSwitchOk', 'docPhrasesHitOk', 'docPhrasesRefererOk', 'docPhrasesTitlesOk', 'docPhrasesBodyOk', 'docPhrasesNoPreamble'];
     if (docKeys.some((k) => !checkPass(k))) {
       console.log('      腾讯文档快照：' + JSON.stringify(report.docPhrasesDbg));
-      console.log('      腾讯文档命中数：' + report.docPhrasesHit + ' XHR=' + JSON.stringify(report.docPhrasesXhr));
+      console.log('      腾讯文档命中数：' + report.docPhrasesHit + ' Referer=' + JSON.stringify(report.docPhrasesReferer));
       console.log('      腾讯文档抽屉按钮：' + JSON.stringify(report.docPhrasesBtnTitles));
       console.log('      点击命中=' + report.docPhrasesClickedItem + ' 剪贴板正文=' + JSON.stringify(report.docPhrasesClip));
     }
