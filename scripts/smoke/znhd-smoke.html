@@ -103,6 +103,13 @@
        *  ② 所有 mp 的 bl 恒等于全文长度（真实快照就是这样），只有 bi 能定位；
        *  ③ bi 指向段落**内容首字符**，不是段落分隔符。
        * 另外第一段是「说明」，位于第一个一级标题之前 ⇒ 必须被丢弃。
+       *
+       * v26.10.17-v5 追加列表夹具（用户反馈「无序/有序列表没解析出来」）：
+       *  ④ 列表项靠 `mp.pr.paragraph.numPr = {ilvl, numId}` 标记，`numId` 要在 `ms` 的
+       *     `numbering` 里换成 `abstractNum[..].lvl[ilvl]` 才知道是 decimal 还是 bullet；
+       *  ⑤ **同一个 numId 被普通段落隔开就是两个列表，序号各自从 1 重数**（Word 语义）；
+       *  ⑥ bullet 的 `lvlText` 在真实文档里是 Wingdings 私有区字符（U+F06C），
+       *     夹具**故意照着写成 U+F06C** —— 若解析器直接透传，卡片上会出现豆腐块。
        */
       const SMOKE_DOC_PAYLOAD = (() => {
         const paras = [
@@ -110,9 +117,14 @@
           '这个说明不该出现在常用语里', // 1
           '冒烟文档标题一', // 2  ← heading 1
           '正文第一行', // 3
-          '正文第二行', // 4
-          '冒烟文档标题二', // 5  ← heading 1
-          '第二段正文', // 6
+          '有序甲', // 4  ← 有序列表 A 第 1 条
+          '有序乙', // 5  ← 有序列表 A 第 2 条
+          '中间插一句普通段落', // 6  ← 打断列表
+          '有序丙', // 7  ← 同 numId 但被打断 ⇒ 重新从 1 数
+          '无序甲', // 8  ← 无序列表第 1 条
+          '无序乙', // 9  ← 无序列表第 2 条
+          '冒烟文档标题二', // 10 ← heading 1
+          '第二段正文', // 11
         ];
         // 段落起始偏移（\r 分隔）
         const starts = [];
@@ -128,10 +140,41 @@
           ty: 'ms',
           pr: { styles: { style: { '000001': { name: 'Normal', styleId: '000001' }, '000002': { name: 'heading 1', styleId: '000002' } } } },
         });
+        // 编号定义表（真实结构：num[numId].abstractNumId → abstractNum[abs].lvl[ilvl]）
+        //  ordered1 = 十进制「%1.」；bullet1 = Wingdings 圆点（照抄真实文档的 U+F06C）
+        mutations.push({
+          ty: 'ms',
+          pr: {
+            numbering: {
+              num: {
+                numOrdered1: { numId: 'numOrdered1', abstractNumId: { val: 'absOrdered1' } },
+                numBullet1: { numId: 'numBullet1', abstractNumId: { val: 'absBullet1' } },
+              },
+              abstractNum: {
+                absOrdered1: {
+                  lvl: { '0': { ilvl: 0, numFmt: { val: 'STNumberFormat_decimal' }, lvlText: { val: '%1.' } } },
+                },
+                absBullet1: {
+                  lvl: { '0': { ilvl: 0, numFmt: { val: 'STNumberFormat_bullet' }, lvlText: { val: '\uF06C' } } },
+                },
+              },
+            },
+          },
+        });
         // 段落级属性：bl 一律写成全文长度（复现真实快照的坑），用 bi 定位
+        const para = (idx, extra) => Object.assign({ ty: 'mp', mt: 'paragraph', bi: starts[idx], bl: total, pr: { paragraph: Object.assign({ pStyle: { val: '000001' } }, extra || {}) } });
         mutations.push({ ty: 'mp', mt: 'paragraph', bi: starts[0], bl: total, pr: { paragraph: { pStyle: { val: '000001' } } } });
         mutations.push({ ty: 'mp', mt: 'paragraph', bi: starts[2], bl: total, pr: { paragraph: { pStyle: { val: '000002' } } } });
-        mutations.push({ ty: 'mp', mt: 'paragraph', bi: starts[5], bl: total, pr: { paragraph: { pStyle: { val: '000002' } } } });
+        mutations.push({ ty: 'mp', mt: 'paragraph', bi: starts[10], bl: total, pr: { paragraph: { pStyle: { val: '000002' } } } });
+        // 有序列表：4、5 连续；7 被普通段落（6）隔开 ⇒ 必须重新从 1 数
+        const ordered = { numPr: { numId: { val: 'numOrdered1' }, ilvl: { val: 0 } } };
+        mutations.push(para(4, ordered));
+        mutations.push(para(5, ordered));
+        mutations.push(para(7, ordered));
+        // 无序列表：8、9 连续
+        const bullet = { numPr: { numId: { val: 'numBullet1' }, ilvl: { val: 0 } } };
+        mutations.push(para(8, bullet));
+        mutations.push(para(9, bullet));
         return {
           clientVars: { collab_client_vars: { initialAttributedText: { text: [{ commands: [{ type: 'DocKeyframe', mutations }] }], attribs: '' } } },
         };
@@ -2854,10 +2897,31 @@
           docPhrasesBodyOk:
             !!window.__docPhrasesClip &&
             window.__docPhrasesClip.indexOf('正文第一行') >= 0 &&
-            window.__docPhrasesClip.indexOf('正文第二行') >= 0,
+            window.__docPhrasesClip.indexOf('有序甲') >= 0,
           docPhrasesClip: window.__docPhrasesClip || '',
           docPhrasesClickedItem: !!window.__docPhrasesClickedItem,
           docPhrasesNoPreamble: !!window.__docPhrasesSnap && window.__docPhrasesSnap.indexOf('这个说明不该出现在常用语里') < 0,
+          // ── 列表（v26.10.17-v5）：三条各钉一个独立事实 ────────────────────────
+          // ① 有序列表要真的带上序号（`numPr` + `numbering` 两跳都走通才会有「1. 」）
+          docPhrasesListOrderedOk: (() => {
+            const c = window.__docPhrasesClip || '';
+            return c.indexOf('\n1. 有序甲') >= 0 && c.indexOf('\n2. 有序乙') >= 0;
+          })(),
+          // ② 无序列表要换成**通用圆点**，不能透传文档里的 Wingdings 私有区字符（U+F06C，
+          //    中文环境会渲染成豆腐块）。⚠️ 夹具故意照抄真实文档的 U+F06C ⇒ 直接透传这条必红。
+          docPhrasesListBulletOk: (() => {
+            const c = window.__docPhrasesClip || '';
+            if (c.indexOf('\n• 无序甲') < 0) return false;
+            if (c.indexOf('\n• 无序乙') < 0) return false;
+            // 私有区字符（U+E000-U+F8FF）一个都不许留在正文里
+            return !/[\uE000-\uF8FF]/.test(c);
+          })(),
+          // ③ 同一个 numId 被普通段落隔开 ⇒ 是**两个列表**，序号各自从 1 重数（Word 语义）。
+          //    错写成「全局累加」会得到「3. 有序丙」⇒ 这条专门抓那种实现。
+          docPhrasesListRestartOk: (() => {
+            const c = window.__docPhrasesClip || '';
+            return c.indexOf('\n1. 有序丙') >= 0 && c.indexOf('3. 有序丙') < 0;
+          })(),
           // 更新日志：入口可点 → 弹窗出现 → 渲染 mock 正文 → 底部按钮 → 条数提示（12 条只渲染 10）
           settingsClicked: !!window.__clickedSettings,
           changelogClicked: !!window.__clickedChangelog,

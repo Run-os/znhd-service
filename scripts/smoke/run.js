@@ -120,6 +120,11 @@ const CHECKS = [
   ['docPhrasesTitlesOk', '腾讯文档数据源：两个一级标题都解析成常用语标题'],
   ['docPhrasesBodyOk', '腾讯文档数据源：一级标题下的多行正文拼进同一条常用语'],
   ['docPhrasesNoPreamble', '腾讯文档数据源：第一个一级标题之前的说明文字不进常用语'],
+  // v26.10.17-v5：列表解析（用户反馈「无序/有序列表没解析出来」）。三条各钉一个独立事实：
+  // 有序要带序号 / 无序要换成通用圆点且不留私有区字符 / 被普通段落隔开的列表要重新从 1 数。
+  ['docPhrasesListOrderedOk', '腾讯文档数据源：有序列表解析成「1. 2.」序号'],
+  ['docPhrasesListBulletOk', '腾讯文档数据源：无序列表换成「•」且不透传 Wingdings 私有区字符'],
+  ['docPhrasesListRestartOk', '腾讯文档数据源：列表被普通段落隔开后序号重新从 1 开始'],
   ['primaryTokenBlue', '主色 token 为 antd 蓝 blue-6 #1677FF'],
   ['panelBtnsUniform', '入口按钮样式一致（无主色实心按钮；v26.10.12-v1 起 4 个）'],
   ['panelBtnsOneRow', '入口按钮排在同一行（v26.10.12-v1 起 4 个）'],
@@ -561,10 +566,14 @@ async function main() {
     if (!checkPass('phrasesSourceOk')) {
       console.log('      常用语数据源快照：' + JSON.stringify(report.phrasesSourceUrl));
     }
-    // v26.10.17-v3：腾讯文档数据源六条断言里**任意一条**失败，就把定位过程 + 抽屉实况全打出来。
+    // v26.10.17-v3：腾讯文档数据源九条断言里**任意一条**失败，就把定位过程 + 抽屉实况全打出来。
     // 这条链路的失败面很宽（输入框没定位到 / 请求没走 dop-api / 漏带 Referer / 解析没出标题 /
-    // 正文没合并），不打这些事实就只能靠改代码猜，故保留。
-    const docKeys = ['docPhrasesSwitchOk', 'docPhrasesHitOk', 'docPhrasesRefererOk', 'docPhrasesTitlesOk', 'docPhrasesBodyOk', 'docPhrasesNoPreamble'];
+    // 正文没合并 / 列表没带序号），不打这些事实就只能靠改代码猜，故保留。
+    const docKeys = [
+      'docPhrasesSwitchOk', 'docPhrasesHitOk', 'docPhrasesRefererOk', 'docPhrasesTitlesOk',
+      'docPhrasesBodyOk', 'docPhrasesNoPreamble', 'docPhrasesListOrderedOk', 'docPhrasesListBulletOk',
+      'docPhrasesListRestartOk',
+    ];
     if (docKeys.some((k) => !checkPass(k))) {
       console.log('      腾讯文档快照：' + JSON.stringify(report.docPhrasesDbg));
       console.log('      腾讯文档命中数：' + report.docPhrasesHit + ' Referer=' + JSON.stringify(report.docPhrasesReferer));

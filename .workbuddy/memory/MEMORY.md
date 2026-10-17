@@ -41,8 +41,9 @@
 - 入口 `Allvalue.commonPhrasesUrl`；分流**只在** `MainPanel.loadPhrasesData` 的 `requestUrl` + `parseResponse`（其余 onload/缓存/日志共用）。解析器 `src/lib/phrasesDoc.ts`（纯函数零依赖）。
 - 接口 `GET /dop-api/opendoc?id=<ID>&normal=1&outformat=1&noEscape=1`，**必须带 Referer**。切分规则（用户指定）：**一级标题 = 标题，其下文本 = 正文，第一个一级标题之前整段丢弃**。
 - 快照三坑：① `bl` 恒等于全文长度 ⇒ **只有 `bi` 能定位**（且指向内容首字符）；② 样式名要去 `{ty:'ms'…style:{<id>:{name:{val}}}}` 查（⚠️ `name` 是**对象**），`000002`=`heading 1`；③ 超链接是 Word 字段 `\x13…\x14…\x15`，需去重 + 清控制符（正则走 `String.fromCharCode`，否则 `no-control-regex`）。
+- **列表第四坑（v5）**：列表靠 `pr.paragraph.numPr = {ilvl,numId}`，`numId` 要再跳 `numbering.num[numId].abstractNumId.val` → `abstractNum[abs].lvl[ilvl]` 才拿到 `numFmt`/`lvlText`（**两跳缺一步就认不出**）。⚠️ bullet 的 `lvlText` 是 **Wingdings 私有区字符**（U+F06C）⇒ 必须换成 `• ◦ ▪` 并过滤 `U+E000-U+F8FF`（否则豆腐块）；⚠️ **序号只在同一 `numId` 的连续段落里递增**（被普通段落隔开 = 两个列表，各自从 1 重数）；有 `numPr` 查不到定义时退化回普通段落，**绝不丢内容**。
 - **不支持 `/aio/`**（`errcode 999` / `retcode 12607`）；匿名能看页面 ≠ 匿名能调正文接口，不绕权限、不塞 Cookie。
-- 6 条断言：`docPhrasesSwitchOk` / `HitOk` / `RefererOk` / `TitlesOk` / `BodyOk` / `NoPreamble`。
+- 9 条断言：`docPhrasesSwitchOk` / `HitOk` / `RefererOk` / `TitlesOk` / `BodyOk` / `NoPreamble` / `ListOrderedOk` / `ListBulletOk` / `ListRestartOk`。
 
 ## 表情包中继缓存
 - 清单单一来源 `relay-server/emoji-sources.json`（两端 import，web 侧要改 vite `fs.allow`）；`emoji-store.js` 的 env **在 require 时读**（fixture 必须赶在 require 前设）；缓存目录 `relay-server/data/`（.gitignore ⇒ 跨部署保留）。

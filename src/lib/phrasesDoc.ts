@@ -84,7 +84,9 @@ function decorate(text: string): string {
     );
 }
 
-/** 从样式表里取「样式 ID → 样式名」映射（heading 1 / Normal / …） */
+/**
+ * 从样式表里取「样式 ID → 样式名」映射（heading 1 / Normal / …）
+ */
 function styleNames(mutations: Record<string, unknown>[]): Record<string, string> {
     const map: Record<string, string> = {};
     for (const m of mutations) {
@@ -97,6 +99,179 @@ function styleNames(mutations: Record<string, unknown>[]): Record<string, string
         }
     }
     return map;
+}
+
+// ── 列表（有序 / 无序）──────────────────────────────────────────────────────
+// 段落带 `pr.paragraph.numPr = { ilvl:{val}, numId:{val} }` 才算列表项；
+// `numId` 要在样式表的 `numbering.num[numId].abstractNumId.val` 里换成
+// `numbering.abstractNum[abs].lvl[ilvl]`，那里才有 `numFmt`（decimal / bullet …）
+// 与 `lvlText`（`%1.` 这种序号模板）。**缺任一步就认不出列表**。
+
+/** 无序列表各级的显示字符。⚠️ 不能用文档里的 `lvlText` 原字符（是 Wingdings 私有区） */
+const BULLETS = ['•', '◦', '▪'];
+
+/** Wingdings / Symbol 私有区字符（U+F000-U+F0FF、U+A1）⇒ 中文环境会显示成豆腐块 */
+function isSymbolFontChar(ch: string): boolean {
+    const c = ch.charCodeAt(0);
+    return (c >= 0xf000 && c <= 0xf0ff) || c === 0xa1;
+}
+
+/** 编号格式 → 一个可读的序号（只覆盖 Word 常用的几种；认不出就用十进制，绝不会返回空） */
+function formatNumber(n: number, numFmt: string): string {
+    const fmt = numFmt.replace('STNumberFormat_', '');
+    const roman = (x: number): string => {
+        const table: [number, string][] = [
+            [1000, 'm'],
+            [900, 'cm'],
+            [500, 'd'],
+            [400, 'cd'],
+            [100, 'c'],
+            [90, 'xc'],
+            [50, 'l'],
+            [40, 'xl'],
+            [10, 'x'],
+            [9, 'ix'],
+            [5, 'v'],
+            [4, 'iv'],
+            [1, 'i'],
+        ];
+        let out = '';
+        let rest = x;
+        for (const [v, s] of table) {
+            while (rest >= v) {
+                out += s;
+                rest -= v;
+            }
+        }
+        return out;
+    };
+    const letters = (x: number): string => {
+        // 1→a、26→z、27→aa（Word 的字母编号规则）
+        let out = '';
+        let rest = x;
+        while (rest > 0) {
+            rest -= 1;
+            out = String.fromCharCode(97 + (rest % 26)) + out;
+            rest = Math.floor(rest / 26);
+        }
+        return out;
+    };
+    switch (fmt) {
+        case 'lowerLetter':
+            return letters(n);
+        case 'upperLetter':
+            return letters(n).toUpperCase();
+        case 'lowerRoman':
+            return roman(n);
+        case 'upperRoman':
+            return roman(n).toUpperCase();
+        case 'chineseCounting':
+        case 'chineseCountingThousand':
+        case 'ideographDigital':
+            return chineseNumber(n);
+        case 'decimalEnclosedCircle':
+        case 'decimalEnclosedCircleChinese':
+            return n >= 1 && n <= 20 ? String.fromCharCode(0x2460 + n - 1) : String(n);
+        case 'decimalZero':
+            return n < 10 ? '0' + n : String(n);
+        case 'none':
+            return '';
+        default:
+            // decimal / decimalHalfWidth / decimalFullWidth / 未知格式
+            return String(n);
+    }
+}
+
+/** 1 → 一、12 → 十二、105 → 一百零五（列表序号只会用到小数目，但写成通用的） */
+function chineseNumber(n: number): string {
+    const digit = ['零', '一', '二', '三', '四', '五', '六', '七', '八', '九'];
+    const unit = ['', '十', '百', '千'];
+    if (n <= 0) return String(n);
+    if (n < 11) return n === 10 ? '十' : digit[n];
+    const s = String(n);
+    let out = '';
+    let zero = false;
+    for (let i = 0; i < s.length; i++) {
+        const d = Number(s[i]);
+        const u = s.length - 1 - i;
+        if (d === 0) {
+            zero = true;
+            continue;
+        }
+        if (zero && out) out += '零';
+        zero = false;
+        // 「十一」不写「一十一」
+        out += (d === 1 && u === 1 && !out ? '' : digit[d]) + unit[u];
+    }
+    return out;
+}
+
+type ListDef = { kind: 'ordered' | 'bullet'; numFmt: string; lvlText: string };
+
+/** 建「numId@ilvl → 列表定义」表（一次遍历样式表，供所有段落复用） */
+function listDefs(mutations: Record<string, unknown>[]): Map<string, ListDef> {
+    const out = new Map<string, ListDef>();
+    for (const m of mutations) {
+        const pr = m.pr as
+            | {
+                  numbering?: {
+                      abstractNum?: Record<string, { lvl?: Record<string, unknown> }>;
+                      num?: Record<string, { abstractNumId?: { val?: string } }>;
+                  };
+              }
+            | undefined;
+        const numbering = pr && pr.numbering;
+        if (!numbering || !numbering.abstractNum || !numbering.num) continue;
+        for (const numId of Object.keys(numbering.num)) {
+            const absId = numbering.num[numId].abstractNumId?.val;
+            const abs = absId ? numbering.abstractNum[absId] : undefined;
+            if (!abs || !abs.lvl) continue;
+            for (const lvKey of Object.keys(abs.lvl)) {
+                const lv = abs.lvl[lvKey] as {
+                    numFmt?: { val?: string };
+                    lvlText?: { val?: string };
+                };
+                const numFmt = (lv && lv.numFmt && lv.numFmt.val) || 'STNumberFormat_decimal';
+                const lvlText = (lv && lv.lvlText && lv.lvlText.val) || '';
+                const isBullet = numFmt === 'STNumberFormat_bullet';
+                out.set(numId + '@' + Number(lvKey), {
+                    kind: isBullet ? 'bullet' : 'ordered',
+                    numFmt,
+                    lvlText,
+                });
+            }
+        }
+    }
+    return out;
+}
+
+/**
+ * 把一段的列表定义渲染成行首前缀。
+ *
+ * ⚠️ **序号只在「同一个 numId 的连续段落」里递增** —— 这是 Word 的语义：
+ * 同一个 numId 表示「同一个列表」，被普通段落隔开就是两个新列表，各自从 start 重新数。
+ * 故计数状态由调用方按「是否连续」维护，本函数只负责套模板。
+ */
+function renderListPrefix(def: ListDef, counters: Map<number, number>, ilvl: number): string {
+    const indent = '    '.repeat(Math.max(0, Math.min(ilvl, 4)));
+    if (def.kind === 'bullet') {
+        // 文档里的 lvlText 是 Wingdings 字符（U+F06C 等），在中文环境会变豆腐块 ⇒ 换成通用圆点
+        const mark = BULLETS[Math.min(ilvl, BULLETS.length - 1)];
+        return indent + mark + ' ';
+    }
+    const n = counters.get(ilvl) || 1;
+    const unit = formatNumber(n, def.numFmt);
+    // `%1.` / `%2)` / `%1` —— 把 %N 换成对应级别的序号；模板里没有 %N 就自己拼一个
+    const text = def.lvlText && def.lvlText.indexOf('%') >= 0 ? def.lvlText : '%' + (ilvl + 1) + '.';
+    const prefix = text.replace(/%(\d+)/g, (_m, d: string) => {
+        const lv = Number(d) - 1;
+        return lv === ilvl ? unit : formatNumber(counters.get(lv) || 1, def.numFmt);
+    });
+    // 序号模板里的私有区字符（极少见）也换成普通字符，避免豆腐块
+    const safe = Array.from(prefix)
+        .filter((ch) => !isSymbolFontChar(ch))
+        .join('');
+    return indent + safe + ' ';
 }
 
 /**
@@ -136,16 +311,24 @@ export function parseTencentDocPhrases(payload: unknown): Record<string, string>
         off += seg.length + 1;
     }
 
-    // 3) 段落样式：mp(paragraph).pStyle，用 bi 定位到所在段落
+    // 3) 段落样式 + 列表属性：mp(paragraph).pStyle / numPr，用 bi 定位到所在段落
     const names = styleNames(mutations);
+    const defs = listDefs(mutations);
     const paraStyle = new Map<number, string>();
+    const paraList = new Map<number, { numId: string; ilvl: number }>();
     for (const m of mutations) {
         if (m.ty !== 'mp') continue;
-        const pr = m.pr as { paragraph?: { pStyle?: { val?: string } } } | undefined;
-        const styleId = pr && pr.paragraph && pr.paragraph.pStyle && pr.paragraph.pStyle.val;
-        if (!styleId) continue;
+        const pr = m.pr as
+            | {
+                  paragraph?: {
+                      pStyle?: { val?: string };
+                      numPr?: { numId?: { val?: string }; ilvl?: { val?: number | string } };
+                  };
+              }
+            | undefined;
+        const para = pr && pr.paragraph;
         const pos = typeof m.bi === 'number' ? m.bi : -1;
-        if (pos < 0) continue;
+        if (!para || pos < 0) continue;
         // bi 指向段落内容首字符 ⇒ 落在 [start, start+len] 区间内
         let idx = -1;
         for (let i = 0; i < paras.length; i++) {
@@ -154,7 +337,14 @@ export function parseTencentDocPhrases(payload: unknown): Record<string, string>
                 break;
             }
         }
-        if (idx >= 0) paraStyle.set(idx, styleId);
+        if (idx < 0) continue;
+        const styleId = para.pStyle && para.pStyle.val;
+        if (styleId) paraStyle.set(idx, styleId);
+        const numId = para.numPr && para.numPr.numId && para.numPr.numId.val;
+        if (numId) {
+            const lvl = para.numPr && para.numPr.ilvl ? Number(para.numPr.ilvl.val) : 0;
+            paraList.set(idx, { numId: String(numId), ilvl: Number.isFinite(lvl) ? lvl : 0 });
+        }
     }
 
     // 4) 找出所有 heading 1 段落
@@ -174,13 +364,48 @@ export function parseTencentDocPhrases(payload: unknown): Record<string, string>
         const title = decorate(paras[startIdx].text);
         if (!title) return;
         const lines: string[] = [];
+        // 列表计数器：每个 numId 一份「级别 → 当前序号」，**只在连续段落里递增**
+        const counters = new Map<string, Map<number, number>>();
+        let openKey = '';
         for (let i = startIdx + 1; i < endIdx; i++) {
             const line = decorate(paras[i].text);
-            if (line) lines.push(line);
+            const listItem = paraList.get(i);
+            if (!listItem) {
+                // 普通段落：打断列表连续性
+                openKey = '';
+                if (line) lines.push(line);
+                continue;
+            }
+            const def = defs.get(listItem.numId + '@' + listItem.ilvl);
+            if (!def) {
+                // 有 numPr 但样式表里查不到定义（少见）⇒ 退化成普通段落，绝不丢内容
+                openKey = '';
+                if (line) lines.push(line);
+                continue;
+            }
+            if (openKey !== listItem.numId) {
+                // 换了一个列表（或列表被打断后重新开始）⇒ 该 numId 从 1 重新数
+                counters.delete(listItem.numId);
+                openKey = listItem.numId;
+            }
+            let byLvl = counters.get(listItem.numId);
+            if (!byLvl) {
+                byLvl = new Map<number, number>();
+                counters.set(listItem.numId, byLvl);
+            }
+            const next = (byLvl.get(listItem.ilvl) || 0) + 1;
+            byLvl.set(listItem.ilvl, next);
+            // 更深的层级重新计数（与 Word 一致）
+            for (const lv of Array.from(byLvl.keys())) {
+                if (lv > listItem.ilvl) byLvl.delete(lv);
+            }
+            if (!line) continue;
+            lines.push(renderListPrefix(def, byLvl, listItem.ilvl) + line);
         }
         // 有同名标题时后者覆盖前者——与 YAML 里重复键的行为一致
         out[title] = lines.join('\n');
     });
+
     if (!Object.keys(out).length) throw new Error('一级标题下面的内容都是空的');
     return out;
 }
