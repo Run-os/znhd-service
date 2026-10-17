@@ -2,7 +2,7 @@
 
 > 细节以 `AGENT.md`（内部约束/踩坑索引）与 `ReadMe.md`（对外）为准；此处只留「下次开工必须先知道的硬规矩」。
 
-## 硬规矩
+## 硬规矩（门禁 / 版本 / 文档）
 - 三块：`znhd.user.js`（税务页油猴脚本 = **脚本端**，自建宿主 + React 19 + antd v6；宿主 id 见 `src/lib/ui/panelIds.ts`）、`relay-server/`（**零依赖**中继；**客户端**页面 = `web/` 构建产物，托管 `/u/<deviceId>`）、`src/lib/*` 业务。
 - **版本号 `YY.M.D-vN`**（改动当天真实日期 + 当天第 N 次；跨午夜跟**提交时刻**走）。油猴**三写**：`config/common.meta.json` / `package.json` / `package-lock.json`；relay 独立版本。
 - **未经明确许可绝不 `git push`**（push 即部署）。文档三处同步：`ReadMe.md` / `AGENT.md` / `changelogs/2026-10.md`（最新在最上）；**改代码后必须回查 ReadMe**。
@@ -10,6 +10,12 @@
 - 门禁 = `typecheck` + `lint` + `build` + `verify`（smoke/relay/web 三段全绿）。⚠️ `verify` 约 **2 分 10 秒**，前台 Bash 会被 120s 超时截断 ⇒ 一律后台跑。
 - **加冒烟断言必须改两处 + 反向验证**：`scripts/smoke/znhd-smoke.html`（产出 report 字段 + 接进页面 `title` 的 `&&` 链）**和** `scripts/smoke/run.js` 的 `CHECKS` 数组；最终判定只认 `CHECKS`（只改页面 = 断言形同虚设）。**改完必须故意破坏一次确认变红**；反向验证别绕过 `npm run build`（要写 `dist/.build-stamp`，否则 verify 以「产物与源码不一致」拒跑）。
 - ⚠️ **分层兜底 ⇒ 单点关闭假绿**（已踩两次：sniffConv 的 `AliasTable`、手机在线判定的 `pollAliveSet`）⇒ 反向验证要把所有兜底层一起关。
+- 仓库根 `.gitignore` 有 `outputs/` 规则（本地一次性产物：CSP/WS 探针、gate 日志、评审报告）。加文件前先 `git status`，别裸 `git add -A`。
+
+## 中继与部署
+- 服务器 = **极点云-HK**（`45.207.199.216:65000`，OneSSH host 名 `极点云-HK`）。容器 `znhd`（`1panel/node:25.9.0`）端口 `0.0.0.0:5689`；代码根 `/opt/znhd-service`（`relay-server/` 挂进容器 `/app`）。
+- 反代 = **1Panel openresty 容器**（`1Panel-openresty-AP4d`，**不是宿主机 nginx**）。站点块 = `/opt/1panel/1panel/www/conf.d/znhd.122050.xyz.conf`（只有 `proxy_pass http://127.0.0.1:5689`，**无 timeout 覆盖**）；**http 级 `proxy_read_timeout 3600s`** 在 `/opt/1panel/apps/openresty/openresty/conf/nginx.conf:49` ⇒ 60s 挂起余量 59 倍（放宽 maxwait 前先重查这两处）。线上实测：`curl -s --resolve znhd.122050.xyz:443:127.0.0.1 -w 'HTTP=%{http_code} 耗时=%{time_total}s\n' 'https://znhd.122050.xyz/recv/<uuid>?maxwait=30000'` → `200 / 30.13s / {"empty":true}`。
+- `deploy.yml` 定式：脚本内硬编码 `DEPLOY_PATH` / `CONTAINER_NAME` + 安全阀（根因：ssh-action 不注入顶层 env）。诊断：`Connection refused (111) upstream 5689` = relay 未监听。`/health` → `{ok:true,version:"<relay 版本>"}` = 判断「线上跑哪个 relay 版本」最快的一招；⚠️ 部署脚本**只校验 relay 版本**，脚本端版本看 `dist/znhd.user.js` 的 `@version`。
 
 ## 轮询优化（P0–P5 全落地；8h 请求数 11664 → ~1280，-89%）
 - **数学前提（讨论任何轮询前先记住）**：长轮询闭环 ⇒ **请求数 ≈ 时长/maxwait，与消息条数无关**；故「响应里捎带数据」不增请求数，`notify()`（服务器主动结束挂起）也不是新机制。**唯一推高请求数的写法 = 对不认识新载荷的老客户端做无协商推送**（老客户端遇未知响应 1s 后重连）⇒ 一切服务器主动推送必须带协商标记（本项目 `?phones=1` + `res.__wakeSub`）。
@@ -28,6 +34,10 @@
 - **但「隔离世界仍吃 connect-src」是错的**（我一度误判，已实测推翻）：MV3 `content_scripts` 的 **`ISOLATED` world 发起 WebSocket / EventSource / fetch 豁免页面 CSP**；`MAIN` world（`@grant none`）才被拦（实证 `outputs/csp-ws-probe/`，Chrome 154 真 101 握手）。**隔离世界只绕 CSP、不绕 CORS**；CSP+CORS 双绕只有 `GM_xmlhttpRequest`。测量陷阱：隔离世界与主世界是两个 window 对象 ⇒ 跨世界回传必须 `document.dispatchEvent(new CustomEvent(...))`。
 - **落地结论不变**：即便 ws 可行也不换 —— 换 ws 要手写 Node WS 帧解析（**破零依赖红线**），而 `notify()` 用零依赖拿到同样的亚秒级推送。
 
+## 表情包中继磁盘缓存 + 不进全部文件
+- 清单单一来源 `relay-server/emoji-sources.json`（两端都 import；web 侧 `vite.config.ts` 的 `server.fs.allow` 要加 `../relay-server`，引用路径三级 `../../../`）。服务端 `relay-server/emoji-store.js`：env **require 时**读（fixture 必须赶在 require server.js 前设）；listen 回调触发 `ensureAll()` 后台预热；清单 24h TTL、按需补图 single-flight、refresh 限流 60s；`urlAllowed` 仅 https + 回环 http（防 SSRF）；缓存目录 `relay-server/data/`（.gitignore ⇒ `git clean -fd` 不清 ⇒ 跨部署保留）。
+- 两端「中继优先、CDN 兜底」：`EmojiItem.path` = `/emoji/<合集>/<文件名>`，blob 缓存键 = `path || url`；对中继清单 path 严格正则校验。`EmojiPackPanel` 4 处取图入口（缓存命中/分批/pick/hover）都要传 `it.path` —— 漏传静默走 CDN 且缓存键不同。链路：客户端 `sendEmoji` 载荷 `emoji:true` → relay `parseItemBody` → 脚本端 `relay.ts onImage` → `store.addMessage` → `TransferFilesView` 只过滤文件视图（`messages.filter(m=>!m.emoji)`）。证据：中继优先 ⇒ `cdn===0` 零外部请求；`emojiNotInFilesOk` 钉死过滤。
+
 ## 传输助手（微信桌面版暗色）
 - 入口 = 主面板一行 4 个（设置/常用语/传输助手/图片嗅探）；三栏 = `TransferNavRail`（对话 key 仍 `devices` / 文件 + 底部设置·企业信息）→ `TransferSessionList` → 第三栏（`TransferDeviceChat` / `TransferFilesView`）。⚠️ **Agent 能力（Agents 入口 + 技能/定时任务控件 + Agent 对话 + `lib/agent/`）已于 v26.10.13-v9 整体删除**，`MarkdownBody` 从 `ui/agent/` 移到 `ui/`。
 - **圆角 + 层级**：圆角唯一入口 `wechatTheme.ts` 的 `RADIUS`（window 14 / panel 10 / card 12 / control 8）；外框大圆角 = ConfigProvider `borderRadiusLG`；第二三栏包在 `.znhd-transfer-content` 内嵌圆角卡片（右缩进 10 / 下缩进 8），第一栏贴满窗口高度；⚠️ 卡片**露出层 = Modal body 底色 = `WECHAT.rail`（#2E2E2E，与第一栏同色，用户不允许色差断层）**；输入区 `ChatComposer` 四边留白 12px 圆角浮起卡片（**全边框不能删**——冒烟 `panelBordered` 判 `borderTopWidth>0`）。守：`transferLayeredOk` + `frameMatchesRail`（同色比较不写死 hex）。
@@ -39,22 +49,14 @@
 - 客户端 `web/` 与脚本端第三栏同款暗色，**改 `web/` 必须 `build:web`**；版本链 = `relay-server/package.json` → vite `__APP_VERSION__`。
 
 ## 图片嗅探
-- **按会话分组（v8）**：`lib/sniffer.ts` 是**不碰页面的纯函数**；归属/分桶/持久化全在 `lib/sniffConv.ts`。归属判据 = `unsafeWindow.document` 的 `#app.__vue__`（当前会话 `chat.messageList`；其它会话 `allChat.historyMsg` —— **嵌套结构无实测样本**，靠 `walkAny` 宽容遍历兜）；会话名 DOM 兜底 `.group-item.selected .company-name`。**按文件名主干匹配，不按 DOM 位置**。持久化 `scriptCat_SniffConvIndex`（按 origin 分桶 / 30 天 / 2000 条）；**排序 = 组间（当前会话置顶 → 未归属殿后 → 其余按组内最新消息时间倒序）+ 组内（该图消息时间从新到旧；无时间的殿后、按体积倒序 —— 见下条）**；**没有具名会话就不画组头**（退回平铺）；容器钩子 `data-sniff-group` / `-name` / `-current`。
+- **按会话分组（v8）**：`lib/sniffer.ts` 是**不碰页面的纯函数**；归属/分桶/持久化全在 `lib/sniffConv.ts`。归属判据 = `unsafeWindow.document` 的 `#app.__vue__`（当前会话 `chat.messageList`；其它会话 `allChat.historyMsg` —— **嵌套结构无实测样本**，靠 `walkAny` 宽容遍历兜）；会话名 DOM 兜底 `.group-item.selected .company-name`。**按文件名主干匹配，不按 DOM 位置**。持久化 `scriptCat_SniffConvIndex`（按 origin 分桶 / 30 天 / 2000 条）；**排序 = 组间（当前会话置顶 → 未归属殿后 → 其余按组内最新消息时间倒序）+ 组内（该图消息时间从新到旧；无时间的殿后、按体积倒序）**；**没有具名会话就不画组头**（退回平铺）；容器钩子 `data-sniff-group` / `-name` / `-current`。
 - **v5 修「同一会话拆成同名两组」**：会话 ID 逐张解析 ⇒ 一半真实 `GROUP…`、一半退化 `name:<名>`。三层：`AliasTable`（显示名→真实 ID；精确 → 去括号尾注归一化 → **唯一**包含，不唯一放弃）+ `buildConvContext` **两遍走** + 回退键后置合并（`saveStoredConv` 写时迁移 / `loadStoredConv` 读时纠正 / `groupByConversation` 的 `convKey` 兜底 —— **缺一处就「重扫又分裂」**）。持久层同桶新增 `aliases`（同 TTL、上限 200）。
 - **提速（v2/v4）**：`lib/snifferPerf.ts` 在 `app()` 第一行 `startPerfCollect()` —— `setResourceTimingBufferSize(20000)` + `PerformanceObserver(buffered:true)` 抄资源条目进模块级 Map（只收图片、上限 20000），取值 `decodedBodySize→encodedBodySize→transferSize`，**纯读 performance、零请求零 DOM**；`add()` 时即挂 `perfBytesOf(url)` ⇒ `probeOne` 第一档命中、**零 HEAD**。`downloadBatch` 两段式（预取并发 4 / 背压 8 / 连败 3 次降并发 / 退避重试 / 401·403·404·410 不重试）。⚠️ 验 perf 必须用**同源真图**（`/sniff-perf.png` = 22528 B，`__gmXhrLog` 零请求）；跨域假域名 DNS 就失败、根本不进资源表。
 - **v4 起「测量」提前到后台**（用户指定，明知代价）：`lib/snifferPre.ts` 启动 5s 首轮 + 每 60s 一轮 → `lib/snifferCache.ts`（进程内、**失败也记**）；`resolveSizes` 命中即免请求（**唯一读点**）。⚠️ **这是脚本里唯一会在「没开嗅探窗」时发请求的地方** ⇒ 四条安全阀（零成本项先测 / 单轮网络 60 张 / 并发 2 / 后台 CSS 遍历上限 1200）+ 开关 `Allvalue.sniffPreMeasure`（默认开，设置里可即时关）。冒烟 `sniffPreMeasureOk` = 开窗前已测量 **且** 开窗后不重发。
 - **5 列缩略图（v6）**：`SniffModal` 网格 `repeat(5,minmax(0,1fr))` + `width 828`（720 的 +15%）。5 列后单元格图 138×138、按钮条 50×26（下载/打印**两个**图标）；`sniffImgActionsOk` 的 `inside`/`bottomRight` 仍满足，改任一项要回算这两条几何断言。
-- **卡片瘦身（v26.10.16-v1，用户要求）**：卡片**不再显示文件名** ⇒ **文件名只写进 `<Image alt>`，那是冒烟唯一的文件名观测面**（`znhd-smoke.html` 的 `names` / `__sniffGroupFacts().cardNames`，6 条断言已从卡片 `title` 换源到 `alt`：perf/selectScope/exclude/svgExcluded/group/convAlias）⇒ **改卡片结构别把 `alt` 弄丢**。「已按文件名排除 N 张」提示也删了，计数改输出为 `data-sniff-excluded` 钩子（拆掉 ⇒ `excludedCount:-1` ⇒ 断言红）；新增 `sniffNoNameTextOk`（`alt` 有名字 **且** 可见文本无名字）。排除规则本身未动。
-- **组内按时间排序（v26.10.16-v2，用户要求「最新的图片在前面」）**：`groupByConversation` 里 `known` 与 `unknown` 都改用 `byTimeDesc`（原 `bySizeDesc` **降级为次级判据**）。时间 `convOfItem(it) → .time` 在**比较时现取**（不随分桶存一份 ⇒ 免掉「T 的对象引用唯一」这个隐含假设）；**`time` 逐张解析且已持久化（`StoredRec.time`）⇒ 只改排序、协议/存储零改动**。⚠️ **无时间（null）一律殿后**并退回体积倒序 ⇒ **未归属组整组无时间 ⇒ 普通网页排列与旧版一致**（本版兼容性承诺）。⚠️ 夹具要做成**互斥三态**（a 时间最新 + 体积最小 + DOM 位次最靠后）才能区分「按时间 / 按体积 / 不排序」；断言 `sniffConvTimeOrderOk`（须**两张卡都在**）+ `sniffConvNoTimeFallbackOk`（未归属组 40KB 先于 30KB —— 守的是「别误伤无时间的图」，不是本次前后差异）。下载兜底序号/打印顺序跟着变（全取 `shownIndex`）。
-
-## 表情包中继磁盘缓存 + 不进全部文件
-- 清单单一来源 `relay-server/emoji-sources.json`（两端都 import；web 侧 `vite.config.ts` 的 `server.fs.allow` 要加 `../relay-server`，引用路径三级 `../../../`）。服务端 `relay-server/emoji-store.js`：env **require 时**读（fixture 必须赶在 require server.js 前设）；listen 回调触发 `ensureAll()` 后台预热；清单 24h TTL、按需补图 single-flight、refresh 限流 60s；`urlAllowed` 仅 https + 回环 http（防 SSRF）；缓存目录 `relay-server/data/`（.gitignore ⇒ `git clean -fd` 不清 ⇒ 跨部署保留）。
-- 两端「中继优先、CDN 兜底」：`EmojiItem.path` = `/emoji/<合集>/<文件名>`，blob 缓存键 = `path || url`；对中继清单 path 严格正则校验。`EmojiPackPanel` 4 处取图入口（缓存命中/分批/pick/hover）都要传 `it.path` —— 漏传静默走 CDN 且缓存键不同。链路：客户端 `sendEmoji` 载荷 `emoji:true` → relay `parseItemBody` → 脚本端 `relay.ts onImage` → `store.addMessage` → `TransferFilesView` 只过滤文件视图（`messages.filter(m=>!m.emoji)`）。证据：中继优先 ⇒ `cdn===0` 零外部请求；`emojiNotInFilesOk` 钉死过滤。
-
-## 中继与部署
-- 服务器 = **极点云-HK**（`45.207.199.216:65000`，OneSSH host 名 `极点云-HK`）。容器 `znhd`（`1panel/node:25.9.0`）端口 `0.0.0.0:5689`；代码根 `/opt/znhd-service`（`relay-server/` 挂进容器 `/app`）。
-- 反代 = **1Panel openresty 容器**（`1Panel-openresty-AP4d`，**不是宿主机 nginx**）。站点块 = `/opt/1panel/1panel/www/conf.d/znhd.122050.xyz.conf`（只有 `proxy_pass http://127.0.0.1:5689`，**无 timeout 覆盖**）；**http 级 `proxy_read_timeout 3600s`** 在 `/opt/1panel/apps/openresty/openresty/conf/nginx.conf:49` ⇒ 60s 挂起余量 59 倍（放宽 maxwait 前先重查这两处）。线上实测：`curl -s --resolve znhd.122050.xyz:443:127.0.0.1 -w 'HTTP=%{http_code} 耗时=%{time_total}s\n' 'https://znhd.122050.xyz/recv/<uuid>?maxwait=30000'` → `200 / 30.13s / {"empty":true}`。
-- `deploy.yml` 定式：脚本内硬编码 `DEPLOY_PATH` / `CONTAINER_NAME` + 安全阀（根因：ssh-action 不注入顶层 env）。诊断：`Connection refused (111) upstream 5689` = relay 未监听。`/health` → `{ok:true,version:"<relay 版本>"}` = 判断「线上跑哪个 relay 版本」最快的一招；⚠️ 部署脚本**只校验 relay 版本**，脚本端版本看 `dist/znhd.user.js` 的 `@version`。
+- **卡片瘦身（v26.10.16-v1）**：卡片**不再显示文件名** ⇒ **文件名只写进 `<Image alt>`，那是冒烟唯一的文件名观测面**（`znhd-smoke.html` 的 `names` / `__sniffGroupFacts().cardNames`，6 条断言已从卡片 `title` 换源到 `alt`：perf/selectScope/exclude/svgExcluded/group/convAlias）⇒ **改卡片结构别把 `alt` 弄丢**。「已按文件名排除 N 张」提示也删了，计数改输出为 `data-sniff-excluded` 钩子（拆掉 ⇒ `excludedCount:-1` ⇒ 断言红）；新增 `sniffNoNameTextOk`（`alt` 有名字 **且** 可见文本无名字）。排除规则本身未动。
+- **组内按时间排序（v2）**：`groupByConversation` 里 `known` 与 `unknown` 都改用 `byTimeDesc`（原 `bySizeDesc` **降级为次级判据**）。时间 `convOfItem(it) → .time` 在**比较时现取**；**`time` 逐张解析且已持久化（`StoredRec.time`）⇒ 只改排序、协议/存储零改动**。⚠️ **无时间（null）一律殿后**并退回体积倒序 ⇒ **未归属组整组无时间 ⇒ 普通网页排列与旧版一致**。⚠️ 夹具要做成**互斥三态**（a 时间最新 + 体积最小 + DOM 位次最靠后）才能区分「按时间 / 按体积 / 不排序」；断言 `sniffConvTimeOrderOk`（须**两张卡都在**）+ `sniffConvNoTimeFallbackOk`。
+- **无时间红圈（v26.10.16-v3）**：判据单一来源 = `sniffConv.ts` 导出的 `timeOfItem(it, ctx)`；卡片 `boxShadow: 0 0 0 2px rgba(255,77,79,.95), 0 0 10px 3px rgba(255,77,79,.6)`（**用 box-shadow，不用 border/outline** —— 后者会挤压 138×138 网格几何）。冒烟从 **inline `img.style.boxShadow`** 读，正则必须 `/rgba?\(/`（内联值原样是 `rgba(`，不会归一化成 `rgb(`）；`__sniffGroupFacts` 暴露 `ringNames` / `ringDebug`。断言 `sniffNoTimeRingOk`。
 
 ## Git 合并
 - 本仓用 GitHub「Rebase and merge」⇒ 合进 main 后本地分支显示「n 领先 / n 落后」的**幽灵重复**（committer 变成 GitHub 账号）。判据 = 同 patch-id + `git diff <分支tip> <main tip>` 为空，**别急着重合代码**。
