@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name                征纳互动人数和在线监控v2
 // @namespace           https://scriptcat.org/
-// @version             26.10.17-v5
+// @version             26.10.18-v1
 // @description         实时监控征纳互动等待人数和在线状态，支持语音播报、自定义常用语
 // @author              runos
 // @license             MIT
@@ -78363,6 +78363,20 @@ function sendToPhone(opt) {
             url: url,
             headers: { 'Content-Type': 'application/json' },
             data: body,
+            // v26.10.18-v1：上传进度。只在调用方真的要进度时才挂 upload 字段
+            //（部分宿主对空对象也会走特殊路径，没必要冒这个险）。
+            ...(opt.onUploadProgress
+                ? {
+                    upload: {
+                        onprogress: function (ev) {
+                            if (!ev || !ev.total)
+                                return;
+                            if (opt.onUploadProgress)
+                                opt.onUploadProgress(Math.round((ev.loaded / ev.total) * 100));
+                        },
+                    },
+                }
+                : {}),
             // 超时随载荷缩放：放行的最大单请求约 16MB（base64 膨胀后），固定 20s 在慢上行时会把合法大图误杀
             timeout: 20000 + Math.round(body.length / 200), // ≈ 20s + 每 200B 1ms；16MB 体 ≈ 100s
             onload: function (resp) {
@@ -107036,10 +107050,30 @@ function sendImagesToSession(sessionKey, files, onProgress) {
     let sent = 0;
     const failAt = (reason, msgId) => {
         if (msgId)
-            patchMessage(sessionKey, msgId, { sendState: 'failed', sendError: reason });
+            patchMessage(sessionKey, msgId, { sendState: 'failed', sendError: reason, sendProgress: undefined });
         addLog('[传输助手] 第 ' + (sent + 1) + ' 张发送失败：' + reason + '（已发 ' + sent + '/' + total + '）', 'error');
         onProgress?.(sent, total, true, '已发送 ' + sent + '/' + total + '，已停止');
     };
+    // v26.10.18-v1：**先把所有待发图片落成「发送中」气泡**（预览用待发对象自带的 objectURL，
+    // 压缩前后显示的是同一张图），用户选完立刻能在会话里看到传的是什么；
+    // 压缩完成后再把气泡的 blob/name/mime 替换成压缩产物。
+    const msgIds = list.map(() => nextId());
+    list.forEach((it, i) => {
+        addMessage(sessionKey, {
+            id: msgIds[i],
+            type: 'image',
+            direction: 'out',
+            sessionKey,
+            name: it.name,
+            mime: it.mime,
+            blob: it.file,
+            previewUrl: it.url,
+            ts: Date.now(),
+            sendState: 'sending',
+            // v26.10.14-v3：表情包图片不进「全部文件」（会话聊天里照常显示）
+            emoji: it.emoji === true,
+        });
+    });
     const sendNext = () => {
         if (sent >= total) {
             addLog('[传输助手] ' + total + ' 张图片已全部发送', 'success');
@@ -107047,9 +107081,9 @@ function sendImagesToSession(sessionKey, files, onProgress) {
             return;
         }
         const it = list[sent];
+        const msgId = msgIds[sent];
         addLog('[传输助手] 正在处理（' + (sent + 1) + '/' + total + '）：' + (it.name || 'image'), 'info');
         onProgress?.(sent, total, false, '处理中… ' + sent + '/' + total + '（第 ' + (sent + 1) + ' 张）');
-        const msgId = nextId();
         compressImageForPhone(it.file)
             .then((out) => {
             if (imagePayloadBytes(out.blob, out.name, out.mime) > RELAY_MAX_BODY) {
@@ -107060,7 +107094,7 @@ function sendImagesToSession(sessionKey, files, onProgress) {
                     '/' +
                     total +
                     '）', 'error', true);
-                failAt('压缩后仍超过单张上限（约 100MB）');
+                failAt('压缩后仍超过单张上限（约 100MB）', msgId);
                 return;
             }
             addLog('[传输助手] ' +
@@ -107072,21 +107106,8 @@ function sendImagesToSession(sessionKey, files, onProgress) {
                 '/' +
                 total +
                 '）', 'info');
-            // 先落一条「发送中」的气泡（缩略图用待发对象），成功/失败再改状态
-            addMessage(sessionKey, {
-                id: msgId,
-                type: 'image',
-                direction: 'out',
-                sessionKey,
-                name: out.name,
-                mime: out.mime,
-                blob: out.blob,
-                previewUrl: it.url,
-                ts: Date.now(),
-                sendState: 'sending',
-                // v26.10.14-v3：表情包图片不进「全部文件」（会话聊天里照常显示）
-                emoji: it.emoji === true,
-            });
+            // 压缩产物回填进第一步已落好的气泡（blob/文件名/MIME 以压缩结果为准）
+            patchMessage(sessionKey, msgId, { blob: out.blob, name: out.name, mime: out.mime });
             const rd = new FileReader();
             rd.onload = () => {
                 const b64 = (rd.result || '').split(',')[1] || '';
@@ -107094,13 +107115,25 @@ function sendImagesToSession(sessionKey, files, onProgress) {
                     failAt('读取图片失败', msgId);
                     return;
                 }
+                let lastPct = -1; // 同值不重发：progress 事件比百分比密，避免无谓重渲染
                 sendToPhone({
                     server,
                     uuid: getDeviceId(),
                     payload: { name: out.name, mime: out.mime, data: b64, targets, emoji: it.emoji === true },
+                    // v26.10.18-v1：上传进度逐事件写回气泡
+                    onUploadProgress: (pct) => {
+                        if (pct !== lastPct) {
+                            lastPct = pct;
+                            patchMessage(sessionKey, msgId, { sendProgress: pct });
+                        }
+                    },
                     onOk: () => {
                         sent++;
-                        patchMessage(sessionKey, msgId, { sendState: undefined, sendError: undefined });
+                        patchMessage(sessionKey, msgId, {
+                            sendState: undefined,
+                            sendError: undefined,
+                            sendProgress: undefined,
+                        });
                         onProgress?.(sent, total, false, '已发送 ' + sent + '/' + total);
                         sendNext();
                     },
@@ -107110,7 +107143,7 @@ function sendImagesToSession(sessionKey, files, onProgress) {
             rd.onerror = () => failAt('读取图片失败', msgId);
             rd.readAsDataURL(out.blob);
         })
-            .catch((e) => failAt((e && e.message) || '图片处理失败'));
+            .catch((e) => failAt((e && e.message) || '图片处理失败', msgIds[sent]));
     };
     sendNext();
     return true;
@@ -107149,10 +107182,26 @@ function sendFilesToSession(sessionKey, files, onProgress) {
     let sent = 0;
     const failAt = (reason, msgId) => {
         if (msgId)
-            patchMessage(sessionKey, msgId, { sendState: 'failed', sendError: reason });
+            patchMessage(sessionKey, msgId, { sendState: 'failed', sendError: reason, sendProgress: undefined });
         addLog('[传输助手] 第 ' + (sent + 1) + ' 个文件发送失败：' + reason + '（已发 ' + sent + '/' + total + '）', 'error');
         onProgress?.(sent, total, true, '已发送 ' + sent + '/' + total + '，已停止');
     };
+    // v26.10.18-v1：与图片一致 —— 先把所有待发文件落成「发送中」气泡再逐个发送
+    const msgIds = list.map(() => nextId());
+    list.forEach((it, i) => {
+        addMessage(sessionKey, {
+            id: msgIds[i],
+            type: 'file',
+            direction: 'out',
+            sessionKey,
+            name: it.name,
+            mime: it.mime,
+            blob: it.file,
+            previewUrl: it.url,
+            ts: Date.now(),
+            sendState: 'sending',
+        });
+    });
     const sendNext = () => {
         if (sent >= total) {
             addLog('[传输助手] ' + total + ' 个文件已全部发送', 'success');
@@ -107160,6 +107209,7 @@ function sendFilesToSession(sessionKey, files, onProgress) {
             return;
         }
         const it = list[sent];
+        const msgId = msgIds[sent];
         // 体积预检：base64 膨胀 ≈4/3，超限就停（与图片同判据、同上限）
         const est = imagePayloadBytes(it.file, it.name, it.mime);
         if (est > RELAY_MAX_BODY) {
@@ -107174,7 +107224,7 @@ function sendFilesToSession(sessionKey, files, onProgress) {
                 '/' +
                 total +
                 '）', 'error', true);
-            failAt('文件过大（编码后约 ' + kbText(est) + '，超过单次上限约 100MB）');
+            failAt('文件过大（编码后约 ' + kbText(est) + '，超过单次上限约 100MB）', msgId);
             return;
         }
         addLog('[传输助手] 正在发送文件（' +
@@ -107187,20 +107237,6 @@ function sendFilesToSession(sessionKey, files, onProgress) {
             kbText(it.file.size) +
             '）', 'info');
         onProgress?.(sent, total, false, '发送中… ' + sent + '/' + total + '（第 ' + (sent + 1) + ' 个）');
-        const msgId = nextId();
-        // 先落一条「发送中」的文件卡片气泡，成功/失败再改状态
-        addMessage(sessionKey, {
-            id: msgId,
-            type: 'file',
-            direction: 'out',
-            sessionKey,
-            name: it.name,
-            mime: it.mime,
-            blob: it.file,
-            previewUrl: it.url,
-            ts: Date.now(),
-            sendState: 'sending',
-        });
         const rd = new FileReader();
         rd.onload = () => {
             const b64 = (rd.result || '').split(',')[1] || '';
@@ -107208,13 +107244,25 @@ function sendFilesToSession(sessionKey, files, onProgress) {
                 failAt('读取文件失败', msgId);
                 return;
             }
+            let lastPct = -1; // 同值不重发：progress 事件比百分比密，避免无谓重渲染
             sendToPhone({
                 server,
                 uuid: getDeviceId(),
                 payload: { name: it.name, mime: it.mime, data: b64, targets },
+                // v26.10.18-v1：上传进度逐事件写回气泡
+                onUploadProgress: (pct) => {
+                    if (pct !== lastPct) {
+                        lastPct = pct;
+                        patchMessage(sessionKey, msgId, { sendProgress: pct });
+                    }
+                },
                 onOk: () => {
                     sent++;
-                    patchMessage(sessionKey, msgId, { sendState: undefined, sendError: undefined });
+                    patchMessage(sessionKey, msgId, {
+                        sendState: undefined,
+                        sendError: undefined,
+                        sendProgress: undefined,
+                    });
                     onProgress?.(sent, total, false, '已发送 ' + sent + '/' + total);
                     sendNext();
                 },
@@ -107671,44 +107719,75 @@ function TransferDeviceChat({ session, phone, colorIndex, onClear, }) {
     };
     const peerAvatar = isAggregate ? ((0,react_jsx_runtime_production_namespaceFn().jsx)(SmartphoneIcon, { size: 15, color: "currentColor" })) : (shortPhoneId(session.key).slice(0, 1).toUpperCase());
     /** 时间分隔条之后才轮到发送状态：meta 只在「发送中 / 失败」时出现（时间在分隔条上，微信规则） */
-    const metaOf = (msg) => msg.sendState === 'sending' ? '发送中…' : msg.sendState === 'failed' ? '发送失败' : undefined;
+    const metaOf = (msg) => msg.sendState === 'sending'
+        ? typeof msg.sendProgress === 'number'
+            ? '发送中 ' + msg.sendProgress + '%'
+            : '发送中…'
+        : msg.sendState === 'failed'
+            ? '发送失败'
+            : undefined;
+    /**
+     * v26.10.18-v1：气泡内上传进度条。只在「发送中**且已收到进度事件**」时画 ——
+     * 脚本宿主不支持 GM_xmlhttpRequest upload.onprogress 时保持「发送中…」静默降级，
+     * 不画一根永远停在 0% 的假进度条。
+     * 两种底色各配一套配色：图片气泡是透明底（fill 用微信绿），文件气泡是实心绿底
+     * （fill 用白色，绿压绿看不见）。
+     */
+    const progressBarOf = (msg, onGreen) => {
+        if (msg.sendState !== 'sending' || typeof msg.sendProgress !== 'number')
+            return null;
+        const pct = Math.min(100, Math.max(2, msg.sendProgress));
+        return ((0,react_jsx_runtime_production_namespaceFn().jsx)("div", { "data-transfer-progress": String(msg.sendProgress), style: {
+                width: '100%',
+                height: 4,
+                borderRadius: 2,
+                background: onGreen ? 'rgba(0,0,0,0.28)' : 'rgba(255,255,255,0.22)',
+                overflow: 'hidden',
+            }, children: (0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: {
+                    width: pct + '%',
+                    height: '100%',
+                    borderRadius: 2,
+                    background: onGreen ? '#fff' : '#07C160',
+                    transition: 'width 120ms linear',
+                } }) }));
+    };
     const renderMessage = (msg) => {
         const isUser = msg.direction === 'out';
         const side = isUser ? 'right' : 'left';
         if (msg.type === 'image') {
             const idx = imageMessages.findIndex((m) => m.id === msg.id);
-            return ((0,react_jsx_runtime_production_namespaceFn().jsx)(ChatBubble, { side: side, bare: true, maxWidth: "62%", danger: msg.sendState === 'failed', meta: metaOf(msg), avatar: isUser ? (0,react_jsx_runtime_production_namespaceFn().jsx)(UserIcon, { size: 15 }) : peerAvatar, avatarStyle: isUser ? undefined : peerAvatarStyle, children: (0,react_jsx_runtime_production_namespaceFn().jsx)(ImageOverlayActions, { actions: [
-                        {
-                            label: '复制',
-                            tooltip: copyHint(msg),
-                            icon: imgCopy && imgCopy.id === msg.id && imgCopy.state === 'ok' ? ((0,react_jsx_runtime_production_namespaceFn().jsx)(CheckIcon, { size: 13 })) : ((0,react_jsx_runtime_production_namespaceFn().jsx)(CopyIcon, { size: 13 })),
-                            loading: !!(imgCopy && imgCopy.id === msg.id && imgCopy.state === 'busy'),
-                            onClick: () => doCopy(msg),
-                        },
-                        {
-                            label: '下载',
-                            icon: (0,react_jsx_runtime_production_namespaceFn().jsx)(DownloadIcon, { size: 13 }),
-                            onClick: () => doDownload(msg, idx),
-                        },
-                        {
-                            label: '删除',
-                            danger: true,
-                            icon: (0,react_jsx_runtime_production_namespaceFn().jsx)(TrashIcon, { size: 13 }),
-                            onClick: () => removeTransferMessage(session.key, msg.id),
-                        },
-                    ], children: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_image, { src: msg.previewUrl, alt: msg.name || 'image', style: {
-                            // 微信规则：按图片自身尺寸显示（宽高 auto + 只给上限），
-                            // 比例永远保持、完整可见 —— 不用 aspectRatio/objectFit 裁切
-                            maxWidth: 240,
-                            maxHeight: 360,
-                            width: 'auto',
-                            height: 'auto',
-                            borderRadius: 8,
-                            // 发送中的图半透明，失败加红框
-                            opacity: msg.sendState === 'sending' ? 0.55 : 1,
-                            border: msg.sendState === 'failed' ? '1px solid ' + token.colorError : 'none',
-                            display: 'block',
-                        } }) }) }, msg.id));
+            return ((0,react_jsx_runtime_production_namespaceFn().jsxs)(ChatBubble, { side: side, bare: true, maxWidth: "62%", danger: msg.sendState === 'failed', meta: metaOf(msg), avatar: isUser ? (0,react_jsx_runtime_production_namespaceFn().jsx)(UserIcon, { size: 15 }) : peerAvatar, avatarStyle: isUser ? undefined : peerAvatarStyle, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(ImageOverlayActions, { actions: [
+                            {
+                                label: '复制',
+                                tooltip: copyHint(msg),
+                                icon: imgCopy && imgCopy.id === msg.id && imgCopy.state === 'ok' ? ((0,react_jsx_runtime_production_namespaceFn().jsx)(CheckIcon, { size: 13 })) : ((0,react_jsx_runtime_production_namespaceFn().jsx)(CopyIcon, { size: 13 })),
+                                loading: !!(imgCopy && imgCopy.id === msg.id && imgCopy.state === 'busy'),
+                                onClick: () => doCopy(msg),
+                            },
+                            {
+                                label: '下载',
+                                icon: (0,react_jsx_runtime_production_namespaceFn().jsx)(DownloadIcon, { size: 13 }),
+                                onClick: () => doDownload(msg, idx),
+                            },
+                            {
+                                label: '删除',
+                                danger: true,
+                                icon: (0,react_jsx_runtime_production_namespaceFn().jsx)(TrashIcon, { size: 13 }),
+                                onClick: () => removeTransferMessage(session.key, msg.id),
+                            },
+                        ], children: (0,react_jsx_runtime_production_namespaceFn().jsx)(es_image, { src: msg.previewUrl, alt: msg.name || 'image', style: {
+                                // 微信规则：按图片自身尺寸显示（宽高 auto + 只给上限），
+                                // 比例永远保持、完整可见 —— 不用 aspectRatio/objectFit 裁切
+                                maxWidth: 240,
+                                maxHeight: 360,
+                                width: 'auto',
+                                height: 'auto',
+                                borderRadius: 8,
+                                // 发送中的图半透明，失败加红框
+                                opacity: msg.sendState === 'sending' ? 0.55 : 1,
+                                border: msg.sendState === 'failed' ? '1px solid ' + token.colorError : 'none',
+                                display: 'block',
+                            } }) }), progressBarOf(msg, false)] }, msg.id));
         }
         // v26.10.14-v6：文件气泡（与图片分开渲染——文件不缩略图、不预览，走「图标 + 文件名 + 大小 + 下载」）
         if (msg.type === 'file') {
@@ -107735,7 +107814,7 @@ function TransferDeviceChat({ session, phone, colorIndex, onClear, }) {
                                             overflow: 'hidden',
                                             textOverflow: 'ellipsis',
                                             whiteSpace: 'nowrap',
-                                        }, children: msg.name || 'file' }), (0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { fontSize: 11, opacity: 0.75, marginTop: 1 }, children: [formatBytes(msg.blob ? msg.blob.size : 0), msg.mime ? ' · ' + msg.mime : ''] })] }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { size: "small", "aria-label": "\u4E0B\u8F7D\u6587\u4EF6", disabled: msg.sendState === 'sending' || !msg.blob, onClick: () => doDownloadFile(msg), style: { flex: '0 0 auto' }, children: "\u4E0B\u8F7D" })] }), msg.sendState === 'failed' && msg.sendError ? ((0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { fontSize: 11, marginTop: 4 }, children: msg.sendError })) : null] }, msg.id));
+                                        }, children: msg.name || 'file' }), (0,react_jsx_runtime_production_namespaceFn().jsxs)("div", { style: { fontSize: 11, opacity: 0.75, marginTop: 1 }, children: [formatBytes(msg.blob ? msg.blob.size : 0), msg.mime ? ' · ' + msg.mime : ''] })] }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { size: "small", "aria-label": "\u4E0B\u8F7D\u6587\u4EF6", disabled: msg.sendState === 'sending' || !msg.blob, onClick: () => doDownloadFile(msg), style: { flex: '0 0 auto' }, children: "\u4E0B\u8F7D" })] }), progressBarOf(msg, true), msg.sendState === 'failed' && msg.sendError ? ((0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { fontSize: 11, marginTop: 4 }, children: msg.sendError })) : null] }, msg.id));
         }
         return ((0,react_jsx_runtime_production_namespaceFn().jsxs)(ChatBubble, { side: side, maxWidth: "74%", danger: msg.sendState === 'failed', meta: metaOf(msg), avatar: isUser ? (0,react_jsx_runtime_production_namespaceFn().jsx)(UserIcon, { size: 15 }) : peerAvatar, avatarStyle: isUser ? undefined : peerAvatarStyle, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(MarkdownBody, { content: msg.text || '', inverted: isUser }), msg.sendState === 'failed' && msg.sendError ? ((0,react_jsx_runtime_production_namespaceFn().jsx)("div", { style: { fontSize: 11, marginTop: 4 }, children: msg.sendError })) : null] }, msg.id));
     };

@@ -549,13 +549,34 @@ export function sendImagesToSession(
     let sent = 0;
 
     const failAt = (reason: string, msgId?: string) => {
-        if (msgId) patchMessage(sessionKey, msgId, { sendState: 'failed', sendError: reason });
+        if (msgId) patchMessage(sessionKey, msgId, { sendState: 'failed', sendError: reason, sendProgress: undefined });
         addLog(
             '[传输助手] 第 ' + (sent + 1) + ' 张发送失败：' + reason + '（已发 ' + sent + '/' + total + '）',
             'error'
         );
         onProgress?.(sent, total, true, '已发送 ' + sent + '/' + total + '，已停止');
     };
+
+    // v26.10.18-v1：**先把所有待发图片落成「发送中」气泡**（预览用待发对象自带的 objectURL，
+    // 压缩前后显示的是同一张图），用户选完立刻能在会话里看到传的是什么；
+    // 压缩完成后再把气泡的 blob/name/mime 替换成压缩产物。
+    const msgIds = list.map(() => nextId());
+    list.forEach((it, i) => {
+        addMessage(sessionKey, {
+            id: msgIds[i],
+            type: 'image',
+            direction: 'out',
+            sessionKey,
+            name: it.name,
+            mime: it.mime,
+            blob: it.file,
+            previewUrl: it.url,
+            ts: Date.now(),
+            sendState: 'sending',
+            // v26.10.14-v3：表情包图片不进「全部文件」（会话聊天里照常显示）
+            emoji: it.emoji === true,
+        });
+    });
 
     const sendNext = () => {
         if (sent >= total) {
@@ -564,9 +585,9 @@ export function sendImagesToSession(
             return;
         }
         const it = list[sent];
+        const msgId = msgIds[sent];
         addLog('[传输助手] 正在处理（' + (sent + 1) + '/' + total + '）：' + (it.name || 'image'), 'info');
         onProgress?.(sent, total, false, '处理中… ' + sent + '/' + total + '（第 ' + (sent + 1) + ' 张）');
-        const msgId = nextId();
         compressImageForPhone(it.file)
             .then((out: { blob: Blob; name: string; mime: string; compressed?: boolean }) => {
                 if (imagePayloadBytes(out.blob, out.name, out.mime) > RELAY_MAX_BODY) {
@@ -581,7 +602,7 @@ export function sendImagesToSession(
                         'error',
                         true
                     );
-                    failAt('压缩后仍超过单张上限（约 100MB）');
+                    failAt('压缩后仍超过单张上限（约 100MB）', msgId);
                     return;
                 }
                 addLog(
@@ -596,21 +617,8 @@ export function sendImagesToSession(
                         '）',
                     'info'
                 );
-                // 先落一条「发送中」的气泡（缩略图用待发对象），成功/失败再改状态
-                addMessage(sessionKey, {
-                    id: msgId,
-                    type: 'image',
-                    direction: 'out',
-                    sessionKey,
-                    name: out.name,
-                    mime: out.mime,
-                    blob: out.blob,
-                    previewUrl: it.url,
-                    ts: Date.now(),
-                    sendState: 'sending',
-                    // v26.10.14-v3：表情包图片不进「全部文件」（会话聊天里照常显示）
-                    emoji: it.emoji === true,
-                });
+                // 压缩产物回填进第一步已落好的气泡（blob/文件名/MIME 以压缩结果为准）
+                patchMessage(sessionKey, msgId, { blob: out.blob, name: out.name, mime: out.mime });
                 const rd = new FileReader();
                 rd.onload = () => {
                     const b64 = ((rd.result as string) || '').split(',')[1] || '';
@@ -618,13 +626,25 @@ export function sendImagesToSession(
                         failAt('读取图片失败', msgId);
                         return;
                     }
+                    let lastPct = -1; // 同值不重发：progress 事件比百分比密，避免无谓重渲染
                     sendToPhone({
                         server,
                         uuid: getDeviceId(),
                         payload: { name: out.name, mime: out.mime, data: b64, targets, emoji: it.emoji === true },
+                        // v26.10.18-v1：上传进度逐事件写回气泡
+                        onUploadProgress: (pct) => {
+                            if (pct !== lastPct) {
+                                lastPct = pct;
+                                patchMessage(sessionKey, msgId, { sendProgress: pct });
+                            }
+                        },
                         onOk: () => {
                             sent++;
-                            patchMessage(sessionKey, msgId, { sendState: undefined, sendError: undefined });
+                            patchMessage(sessionKey, msgId, {
+                                sendState: undefined,
+                                sendError: undefined,
+                                sendProgress: undefined,
+                            });
                             onProgress?.(sent, total, false, '已发送 ' + sent + '/' + total);
                             sendNext();
                         },
@@ -634,7 +654,7 @@ export function sendImagesToSession(
                 rd.onerror = () => failAt('读取图片失败', msgId);
                 rd.readAsDataURL(out.blob);
             })
-            .catch((e: { message?: string }) => failAt((e && e.message) || '图片处理失败'));
+            .catch((e: { message?: string }) => failAt((e && e.message) || '图片处理失败', msgIds[sent]));
     };
 
     sendNext();
@@ -679,13 +699,30 @@ export function sendFilesToSession(
     let sent = 0;
 
     const failAt = (reason: string, msgId?: string) => {
-        if (msgId) patchMessage(sessionKey, msgId, { sendState: 'failed', sendError: reason });
+        if (msgId) patchMessage(sessionKey, msgId, { sendState: 'failed', sendError: reason, sendProgress: undefined });
         addLog(
             '[传输助手] 第 ' + (sent + 1) + ' 个文件发送失败：' + reason + '（已发 ' + sent + '/' + total + '）',
             'error'
         );
         onProgress?.(sent, total, true, '已发送 ' + sent + '/' + total + '，已停止');
     };
+
+    // v26.10.18-v1：与图片一致 —— 先把所有待发文件落成「发送中」气泡再逐个发送
+    const msgIds = list.map(() => nextId());
+    list.forEach((it, i) => {
+        addMessage(sessionKey, {
+            id: msgIds[i],
+            type: 'file',
+            direction: 'out',
+            sessionKey,
+            name: it.name,
+            mime: it.mime,
+            blob: it.file,
+            previewUrl: it.url,
+            ts: Date.now(),
+            sendState: 'sending',
+        });
+    });
 
     const sendNext = () => {
         if (sent >= total) {
@@ -694,6 +731,7 @@ export function sendFilesToSession(
             return;
         }
         const it = list[sent];
+        const msgId = msgIds[sent];
         // 体积预检：base64 膨胀 ≈4/3，超限就停（与图片同判据、同上限）
         const est = imagePayloadBytes(it.file, it.name, it.mime);
         if (est > RELAY_MAX_BODY) {
@@ -712,7 +750,7 @@ export function sendFilesToSession(
                 'error',
                 true
             );
-            failAt('文件过大（编码后约 ' + kbText(est) + '，超过单次上限约 100MB）');
+            failAt('文件过大（编码后约 ' + kbText(est) + '，超过单次上限约 100MB）', msgId);
             return;
         }
         addLog(
@@ -728,20 +766,6 @@ export function sendFilesToSession(
             'info'
         );
         onProgress?.(sent, total, false, '发送中… ' + sent + '/' + total + '（第 ' + (sent + 1) + ' 个）');
-        const msgId = nextId();
-        // 先落一条「发送中」的文件卡片气泡，成功/失败再改状态
-        addMessage(sessionKey, {
-            id: msgId,
-            type: 'file',
-            direction: 'out',
-            sessionKey,
-            name: it.name,
-            mime: it.mime,
-            blob: it.file,
-            previewUrl: it.url,
-            ts: Date.now(),
-            sendState: 'sending',
-        });
         const rd = new FileReader();
         rd.onload = () => {
             const b64 = ((rd.result as string) || '').split(',')[1] || '';
@@ -749,13 +773,25 @@ export function sendFilesToSession(
                 failAt('读取文件失败', msgId);
                 return;
             }
+            let lastPct = -1; // 同值不重发：progress 事件比百分比密，避免无谓重渲染
             sendToPhone({
                 server,
                 uuid: getDeviceId(),
                 payload: { name: it.name, mime: it.mime, data: b64, targets },
+                // v26.10.18-v1：上传进度逐事件写回气泡
+                onUploadProgress: (pct) => {
+                    if (pct !== lastPct) {
+                        lastPct = pct;
+                        patchMessage(sessionKey, msgId, { sendProgress: pct });
+                    }
+                },
                 onOk: () => {
                     sent++;
-                    patchMessage(sessionKey, msgId, { sendState: undefined, sendError: undefined });
+                    patchMessage(sessionKey, msgId, {
+                        sendState: undefined,
+                        sendError: undefined,
+                        sendProgress: undefined,
+                    });
                     onProgress?.(sent, total, false, '已发送 ' + sent + '/' + total);
                     sendNext();
                 },

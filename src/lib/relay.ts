@@ -566,6 +566,12 @@ interface SendToPhoneOptions {
     payload: SendToPhonePayload;
     onOk?: () => void;
     onFail?: (msg: string) => void;
+    /**
+     * v26.10.18-v1：上传进度回调（0–100，仅大载荷有观测意义）。
+     * 走 `GM_xmlhttpRequest` 的 `upload.onprogress` —— Tampermonkey / ScriptCat 都支持；
+     * 宿主不支持时该回调**一个都不会被调**（调用方据此保持「发送中…」的静默降级态）。
+     */
+    onUploadProgress?: (percent: number) => void;
 }
 
 /**
@@ -697,6 +703,18 @@ export function sendToPhone(opt: SendToPhoneOptions) {
             url: url,
             headers: { 'Content-Type': 'application/json' },
             data: body,
+            // v26.10.18-v1：上传进度。只在调用方真的要进度时才挂 upload 字段
+            //（部分宿主对空对象也会走特殊路径，没必要冒这个险）。
+            ...(opt.onUploadProgress
+                ? {
+                      upload: {
+                          onprogress: function (ev: { lengthComputable?: boolean; loaded: number; total: number }) {
+                              if (!ev || !ev.total) return;
+                              if (opt.onUploadProgress) opt.onUploadProgress(Math.round((ev.loaded / ev.total) * 100));
+                          },
+                      },
+                  }
+                : {}),
             // 超时随载荷缩放：放行的最大单请求约 16MB（base64 膨胀后），固定 20s 在慢上行时会把合法大图误杀
             timeout: 20000 + Math.round(body.length / 200), // ≈ 20s + 每 200B 1ms；16MB 体 ≈ 100s
             onload: function (resp) {

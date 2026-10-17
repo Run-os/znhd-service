@@ -83,16 +83,44 @@ export function blobToBase64(blob: Blob): Promise<string> {
  * POST 一条内容到本设备的中继路径（图片 {name,mime,data} / 文本 {text}）。
  * phoneId（v26.10.13-v3）：带上本机手机 ID，服务端会把它写进条目的 `from` 随投递回传，
  * 电脑端据此把内容归到**这台手机**的会话 —— 多台手机同时在线也不再全挤进聚合会话。
+ *
+ * v26.10.18-v1：fetch 改 XMLHttpRequest —— 大文件上传需要 `xhr.upload.onprogress`
+ * 逐事件回写气泡进度条，fetch 的请求体进度没有跨浏览器观测面。
+ * onProgress 只在上传阶段触发；不传时行为与旧 fetch 版本完全一致。
+ * 本页与中继同源（页面就托管在中继上），XHR 没有跨域/CSP 顾虑。
  */
-export function postItem(payload: Record<string, unknown>, phoneId?: string): Promise<{ ok?: boolean; error?: string }> {
+export function postItem(
+    payload: Record<string, unknown>,
+    phoneId?: string,
+    onProgress?: (percent: number) => void
+): Promise<{ ok?: boolean; error?: string }> {
     const body = phoneId ? { ...payload, phoneId } : payload;
-    return fetch(window.location.pathname, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-    })
-        .then((r) => r.json())
-        .catch((e: any) => ({ ok: false, error: (e && e.message) || '网络错误' }));
+    return new Promise((resolve) => {
+        try {
+            const xhr = new XMLHttpRequest();
+            xhr.open('POST', window.location.pathname);
+            xhr.setRequestHeader('Content-Type', 'application/json');
+            if (onProgress) {
+                xhr.upload.onprogress = (ev) => {
+                    if (ev.lengthComputable && ev.total > 0) onProgress(Math.round((ev.loaded / ev.total) * 100));
+                };
+            }
+            xhr.onload = () => {
+                let j: { ok?: boolean; error?: string } | null = null;
+                try {
+                    j = JSON.parse(xhr.responseText);
+                } catch (e) {
+                    j = null;
+                }
+                if (j) resolve(j);
+                else resolve({ ok: false, error: 'HTTP ' + xhr.status });
+            };
+            xhr.onerror = () => resolve({ ok: false, error: '网络错误' });
+            xhr.send(JSON.stringify(body));
+        } catch (e: any) {
+            resolve({ ok: false, error: (e && e.message) || '网络错误' });
+        }
+    });
 }
 
 export interface RelayOptions {

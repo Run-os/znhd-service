@@ -65,6 +65,12 @@ interface ChatMsg {
     size?: number;
     /** 发送状态（仅 out；发送中 / 已发送 / 发送失败） */
     state?: 'sending' | 'failed' | 'ok';
+    /**
+     * v26.10.18-v1：上传进度（0–100，仅 state==='sending' 时有意义）。
+     * **首个 upload.onprogress 事件到达前是 undefined** —— 此时气泡保持「发送中…」
+     * 不画进度条（大文件在 FileReader base64 / JSON 序列化阶段本就还没有进度可报）。
+     */
+    progress?: number;
     err?: string;
     ts: number;
 }
@@ -194,43 +200,60 @@ export default function App() {
         if (el) el.scrollTop = el.scrollHeight;
     }, [msgs, emojiOpen]);
 
-    // ===== 选图（多选）→ 逐张压缩 → 变成「发送中」气泡 → 顺序发送 =====
+    // ===== 选图（多选）→ 先出「发送中」气泡 → 逐张压缩 → 顺序发送 =====
+    // v26.10.18-v1：气泡**先于压缩**落进会话（预览先用原图 objectURL），压缩完成后
+    // 再把气泡的 url/name/mime 换成压缩产物并回收原图 URL —— 用户选完立刻能看到要传什么。
     const onPick = async (files: FileList | null) => {
         const list = Array.from(files || []);
         if (!list.length) return;
         setPreparing(true);
         try {
-            const queued: Array<{ id: string; blob: Blob; name: string; mime: string }> = [];
+            const queued: Array<{ id: string; blob: Blob; name: string; mime: string; tmpUrl?: string }> = [];
             for (const f of list) {
-                const prepared = await prepareImage(f);
                 const id = uid();
-                queued.push({ id, blob: prepared.blob, name: prepared.name, mime: prepared.mime });
+                const tmpUrl = URL.createObjectURL(f);
                 pushMsg({
                     id,
                     type: 'image',
                     side: 'out',
-                    url: URL.createObjectURL(prepared.blob),
-                    name: prepared.name,
-                    mime: prepared.mime,
+                    url: tmpUrl,
+                    name: f.name || 'image.jpg',
+                    mime: f.type || 'image/jpeg',
                     state: 'sending',
                     ts: Date.now(),
                 });
+                const prepared = await prepareImage(f);
+                const url = URL.createObjectURL(prepared.blob);
+                queued.push({ id, blob: prepared.blob, name: prepared.name, mime: prepared.mime, tmpUrl });
+                // 压缩产物回填气泡（名称/类型以压缩结果为准），并回收原图 URL
+                patchMsg(id, { url, name: prepared.name, mime: prepared.mime });
+                if (tmpUrl !== url) URL.revokeObjectURL(tmpUrl);
             }
             // 逐张顺序发送（保证到达顺序）；失败即停，剩余保持「发送中」标记为失败
             for (const it of queued) {
                 try {
                     const b64 = await blobToBase64(it.blob);
+                    let lastPct = -1; // 同值不重发：progress 事件比百分比密，避免无谓重渲染
                     // 带 phoneId：服务端随投递回传 from，电脑端把内容归到本台手机的会话（v26.10.13-v3）
-                    const res = await postItem({ name: it.name, mime: it.mime, data: b64 }, phoneId);
+                    const res = await postItem(
+                        { name: it.name, mime: it.mime, data: b64 },
+                        phoneId,
+                        (pct) => {
+                            if (pct !== lastPct) {
+                                lastPct = pct;
+                                patchMsg(it.id, { progress: pct });
+                            }
+                        }
+                    );
                     if (res && res.ok) {
-                        patchMsg(it.id, { state: 'ok' });
+                        patchMsg(it.id, { state: 'ok', progress: undefined });
                     } else {
-                        patchMsg(it.id, { state: 'failed', err: (res && res.error) || '未知错误' });
+                        patchMsg(it.id, { state: 'failed', err: (res && res.error) || '未知错误', progress: undefined });
                         message.error('第 ' + it.name + ' 发送失败，可重新选图重试');
                         break;
                     }
                 } catch (e: any) {
-                    patchMsg(it.id, { state: 'failed', err: (e && e.message) || '读取图片失败' });
+                    patchMsg(it.id, { state: 'failed', err: (e && e.message) || '读取图片失败', progress: undefined });
                     break;
                 }
             }
@@ -269,16 +292,26 @@ export default function App() {
             for (const it of queued) {
                 try {
                     const b64 = await blobToBase64(it.blob);
-                    const res = await postItem({ name: it.name, mime: it.mime, data: b64 }, phoneId);
+                    let lastPct = -1; // 同值不重发：progress 事件比百分比密，避免无谓重渲染
+                    const res = await postItem(
+                        { name: it.name, mime: it.mime, data: b64 },
+                        phoneId,
+                        (pct) => {
+                            if (pct !== lastPct) {
+                                lastPct = pct;
+                                patchMsg(it.id, { progress: pct });
+                            }
+                        }
+                    );
                     if (res && res.ok) {
-                        patchMsg(it.id, { state: 'ok' });
+                        patchMsg(it.id, { state: 'ok', progress: undefined });
                     } else {
-                        patchMsg(it.id, { state: 'failed', err: (res && res.error) || '未知错误' });
+                        patchMsg(it.id, { state: 'failed', err: (res && res.error) || '未知错误', progress: undefined });
                         message.error(it.name + ' 发送失败，可重新选择重试');
                         break;
                     }
                 } catch (e: any) {
-                    patchMsg(it.id, { state: 'failed', err: (e && e.message) || '读取文件失败' });
+                    patchMsg(it.id, { state: 'failed', err: (e && e.message) || '读取文件失败', progress: undefined });
                     break;
                 }
             }
@@ -378,6 +411,38 @@ export default function App() {
         return <Badge status="default" text="连接中…" />;
     };
 
+    /**
+     * v26.10.18-v1：气泡内上传进度条。只在「发送中**且已收到进度事件**」时画 ——
+     * FileReader base64 / JSON 序列化阶段本就无进度可报，不画一根永远停在 0% 的假进度条。
+     * 我方气泡是实心微信绿 ⇒ 填充用白色（绿压绿看不见）、轨道用半透明黑。
+     */
+    const progressBar = (m: ChatMsg) => {
+        if (m.state !== 'sending' || typeof m.progress !== 'number') return null;
+        const pct = Math.min(100, Math.max(2, m.progress));
+        return (
+            <div
+                data-chat-progress={String(m.progress)}
+                style={{
+                    width: '100%',
+                    height: 4,
+                    borderRadius: 2,
+                    background: 'rgba(0,0,0,0.28)',
+                    overflow: 'hidden',
+                    marginTop: m.type === 'image' ? 4 : 6,
+                }}>
+                <div
+                    style={{
+                        width: pct + '%',
+                        height: '100%',
+                        borderRadius: 2,
+                        background: '#fff',
+                        transition: 'width 120ms linear',
+                    }}
+                />
+            </div>
+        );
+    };
+
     /** 收到的图片（可预览 + 打印）：与脚本端共用 shared/preview 的整套集成。
      *  ⚠️ 预览配置必须长在**每张 Image 自己的 preview prop** 上：PreviewGroup 的 React context
      *  只对它的**子树**生效，气泡里的 Image 不在 Group 子树内时点击会走 antd 默认预览
@@ -442,7 +507,9 @@ export default function App() {
                     const meta =
                         m.side === 'out'
                             ? m.state === 'sending'
-                                ? '发送中…'
+                                ? typeof m.progress === 'number'
+                                    ? '发送中 ' + m.progress + '%'
+                                    : '发送中…'
                                 : m.state === 'failed'
                                 ? '发送失败' + (m.err ? '：' + m.err : '')
                                 : '已发送'
@@ -467,7 +534,11 @@ export default function App() {
                                             m.side === 'in' ? (
                                                 renderInImage(m)
                                             ) : (
-                                                <img className="znhd-chat-img" src={m.url} alt={m.name || 'image'} />
+                                                <>
+                                                    <img className="znhd-chat-img" src={m.url} alt={m.name || 'image'} />
+                                                    {/* v26.10.18-v1：上传进度条贴在图片正下方 */}
+                                                    {progressBar(m)}
+                                                </>
                                             )
                                         ) : m.type === 'file' ? (
                                             /* v26.10.14-v6：文件卡片（图标 + 文件名 + 大小 + 下载） */
@@ -511,6 +582,8 @@ export default function App() {
                                         ) : (
                                             <span>{m.text}</span>
                                         )}
+                                        {/* v26.10.18-v1：文件卡片内的上传进度条（图片在上方分支已插） */}
+                                        {m.type === 'file' ? progressBar(m) : null}
                                     </div>
                                     {m.side === 'in' && m.type === 'text' ? (
                                         <button type="button" className="znhd-chat-copy" onClick={() => void copyInText(m.text || '')}>

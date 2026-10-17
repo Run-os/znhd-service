@@ -52,6 +52,13 @@ export interface TransferMessage {
     /** 发送失败原因（sendState === 'failed' 时） */
     sendError?: string;
     /**
+     * v26.10.18-v1：发送进度（0–100，仅 sendState === 'sending' 时有意义）。
+     * 上传阶段由 `GM_xmlhttpRequest` 的 `upload.onprogress` 逐事件回写；
+     * **首个进度事件到达前是 undefined**（脚本宿主可能不支持 upload.onprogress，
+     * 此时气泡保持「发送中…」不画进度条 —— 静默降级，不假装 0%）。成功后清掉。
+     */
+    sendProgress?: number;
+    /**
      * v26.10.14-v3：表情包图片标记（发送方带上，中继随条目回传）。
      * 「全部文件」视图据此过滤掉表情包——用户要求「发送的表情包图片不要出现在全部文件里面」；
      * 会话聊天记录里照常显示（表情就是聊天内容）。

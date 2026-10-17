@@ -437,7 +437,46 @@ export default function TransferDeviceChat({
 
     /** 时间分隔条之后才轮到发送状态：meta 只在「发送中 / 失败」时出现（时间在分隔条上，微信规则） */
     const metaOf = (msg: TransferMessage): ReactNode =>
-        msg.sendState === 'sending' ? '发送中…' : msg.sendState === 'failed' ? '发送失败' : undefined;
+        msg.sendState === 'sending'
+            ? typeof msg.sendProgress === 'number'
+                ? '发送中 ' + msg.sendProgress + '%'
+                : '发送中…'
+            : msg.sendState === 'failed'
+            ? '发送失败'
+            : undefined;
+
+    /**
+     * v26.10.18-v1：气泡内上传进度条。只在「发送中**且已收到进度事件**」时画 ——
+     * 脚本宿主不支持 GM_xmlhttpRequest upload.onprogress 时保持「发送中…」静默降级，
+     * 不画一根永远停在 0% 的假进度条。
+     * 两种底色各配一套配色：图片气泡是透明底（fill 用微信绿），文件气泡是实心绿底
+     * （fill 用白色，绿压绿看不见）。
+     */
+    const progressBarOf = (msg: TransferMessage, onGreen: boolean): ReactNode => {
+        if (msg.sendState !== 'sending' || typeof msg.sendProgress !== 'number') return null;
+        const pct = Math.min(100, Math.max(2, msg.sendProgress));
+        return (
+            <div
+                data-transfer-progress={String(msg.sendProgress)}
+                style={{
+                    width: '100%',
+                    height: 4,
+                    borderRadius: 2,
+                    background: onGreen ? 'rgba(0,0,0,0.28)' : 'rgba(255,255,255,0.22)',
+                    overflow: 'hidden',
+                }}>
+                <div
+                    style={{
+                        width: pct + '%',
+                        height: '100%',
+                        borderRadius: 2,
+                        background: onGreen ? '#fff' : '#07C160',
+                        transition: 'width 120ms linear',
+                    }}
+                />
+            </div>
+        );
+    };
 
     const renderMessage = (msg: TransferMessage) => {
         const isUser = msg.direction === 'out';
@@ -498,6 +537,8 @@ export default function TransferDeviceChat({
                             }}
                         />
                     </ImageOverlayActions>
+                    {/* v26.10.18-v1：上传进度条贴在图片正下方（气泡宽度 = 图片宽度） */}
+                    {progressBarOf(msg, false)}
                 </ChatBubble>
             );
         }
@@ -562,6 +603,8 @@ export default function TransferDeviceChat({
                             下载
                         </Button>
                     </div>
+                    {/* v26.10.18-v1：进度条画在文件卡片内部（实心绿底 ⇒ 白色填充） */}
+                    {progressBarOf(msg, true)}
                     {msg.sendState === 'failed' && msg.sendError ? (
                         <div style={{ fontSize: 11, marginTop: 4 }}>{msg.sendError}</div>
                     ) : null}
