@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name                征纳互动人数和在线监控v2
 // @namespace           https://scriptcat.org/
-// @version             26.10.17-v2
+// @version             26.10.17-v3
 // @description         实时监控征纳互动等待人数和在线状态，支持语音播报、自定义常用语
 // @author              runos
 // @license             MIT
@@ -57221,6 +57221,202 @@ function stopMonitoring() {
     }
 }
 
+;// ./src/lib/phrasesDoc.ts
+/**
+ * 常用语数据源解析（v26.10.17-v3）。
+ *
+ * ── 为什么要有这个文件 ───────────────────────────────────────────────────
+ * 常用语原本只支持「远程 YAML」（`commonPhrasesUrl` → js-yaml 解析）。用户希望
+ * 直接用腾讯文档维护常用语，于是这里加一条**腾讯文档普通文档**（`/doc/<id>`）通道：
+ *
+ *   GET https://docs.qq.com/dop-api/opendoc?id=<id>&normal=1&outformat=1&noEscape=1
+ *
+ * 该接口**匿名可读**（分享权限为「获得链接的人可阅读」时 `canRead:true`），返回纯 JSON，
+ * 正文在 `clientVars.collab_client_vars.initialAttributedText`。⚠️ 只支持普通文档：
+ * 智能文档（`/aio/`，smartcanvas）正文要另走 `POST /api/smartdoc/get/records`，
+ * 匿名请求返回 `12607 没有权限`（实测），**不要**试图在这里兼容。
+ *
+ * ── 文档约定（用户指定）────────────────────────────────────────────────────
+ *   · **一级标题（heading 1）** 作为常用语的「标题」（即键名）；
+ *   · 该一级标题之下的所有文本 = 该条常用语的正文（多行用换行连接）；
+ *   · 第一个一级标题**之前**的内容（通常是说明文字）整段丢弃；
+ *   · 超链接写成 `\u0013HYPERLINK <url> ... \u0014<显示文字>\u0015` 的字段结构，
+ *     显示文字其实就等于 URL（腾讯文档导出习惯），故直接收敛成一个 URL，避免重复。
+ *
+ * ── 快照结构里的坑（本文件最容易改错的地方）─────────────────────────────
+ *   · 文本只在一条 `{ty:'is', s}` 里，**段落用 `\r` 分隔**；富文本属性全在
+ *     `mp`（mt: 'run' / 'paragraph' / 'story'）里，数量远少于段落数；
+ *   · 段落样式 `mp.pr.paragraph.pStyle.val` 是样式 ID（如 `000002`），
+ *     **必须**去 `ms` 的 `pr.styles.style[<id>].name` 里查名字才知道哪个是 heading 1；
+ *   · ⚠️ 这些 `mp` 的 `bl` 恒等于全文长度（4506），**不能**按数组顺序或 `bl` 归位；
+ *     唯一可靠的定位依据是 `bi`（字符偏移），且它指向**该段落内容的首字符**
+ *     （不是段落分隔符 `\r`），所以要先切段落、再按区间反查段落下标。
+ */
+/** 腾讯文档普通文档的链接形态：https://docs.qq.com/doc/<ID>[?...] */
+const QQDOC_RE = /^https?:\/\/docs\.qq\.com\/doc\/([A-Za-z0-9_-]+)/i;
+/** 智能文档（/aio/）——明确不支持，给出可读的错误提示 */
+const QQ_AIO_RE = /^https?:\/\/docs\.qq\.com\/(aio|sheet|slide|pdf|mind)\//i;
+/** 是否是需要走「腾讯文档」通道的地址 */
+function isTencentDocUrl(url) {
+    return QQDOC_RE.test((url || '').trim());
+}
+/** 从腾讯文档链接里取文件 ID（取不到返回空串） */
+function tencentDocId(url) {
+    const m = QQDOC_RE.exec((url || '').trim());
+    return m ? m[1] : '';
+}
+/**
+ * 构造匿名读取用的接口地址。
+ * `outformat=1&noEscape=1` 是让正文以「不转义」的形态返回（否则 `\r` 会被转义）。
+ */
+function tencentDocApiUrl(id) {
+    return 'https://docs.qq.com/dop-api/opendoc?id=' + encodeURIComponent(id) + '&normal=1&outformat=1&noEscape=1';
+}
+// 腾讯文档正文里的字段标记（Word 二进制格式遗留）：\u0013 = 字段开始、\u0014 = 结果开始、\u0015 = 字段结束
+const FIELD_BEGIN = String.fromCharCode(0x13);
+const FIELD_SEP = String.fromCharCode(0x14);
+const FIELD_END = String.fromCharCode(0x15);
+// 其余不可打印控制符（保留 \t \n \r，它们是段落与缩进的语义）
+// eslint-disable-next-line no-control-regex -- 就是要过滤控制符，这里是有意为之
+const CTRL_RE = new RegExp('[\\u0000-\\u0008\\u000b\\u000c\\u000e-\\u001f\\u007f]', 'g');
+// 超链接字段：<0x13>HYPERLINK <url> …<0x14><显示文字><0x15>
+const LINK_RE = new RegExp(FIELD_BEGIN + 'HYPERLINK\\s+(\\S+)[\\s\\S]*?' + FIELD_SEP + '([\\s\\S]*?)' + FIELD_END, 'g');
+// 兜底：没闭合的超链接字段，至少把 URL 留下
+const LINK_OPEN_RE = new RegExp(FIELD_BEGIN + 'HYPERLINK\\s+(\\S+)[\\s\\S]*?' + FIELD_SEP, 'g');
+/** 把一句话里的控制符 / 超链接字段整理成普通文本 */
+function decorate(text) {
+    return (text
+        .replace(LINK_RE, (_m, url, label) => {
+        const shown = (label || '').trim();
+        // 显示文字等于 URL（或为空）时只留一份，否则写成「显示文字 URL」
+        if (!shown || shown === url)
+            return ' ' + url + ' ';
+        return ' ' + shown + ' ' + url + ' ';
+    })
+        .replace(LINK_OPEN_RE, (_m, url) => ' ' + url + ' ')
+        // 其余字段标记与不可打印控制符一律去掉
+        .replace(CTRL_RE, '')
+        .replace(/[ \t]{2,}/g, ' ')
+        .trim());
+}
+/** 从样式表里取「样式 ID → 样式名」映射（heading 1 / Normal / …） */
+function styleNames(mutations) {
+    const map = {};
+    for (const m of mutations) {
+        const pr = m.pr;
+        const styles = pr && pr.styles && pr.styles.style;
+        if (!styles)
+            continue;
+        for (const id of Object.keys(styles)) {
+            const name = styles[id] && styles[id].name;
+            map[id] = String(typeof name === 'string' ? name : (name && name.val) || '');
+        }
+    }
+    return map;
+}
+/**
+ * 把 opendoc 接口的 JSON 解析成「标题 → 正文」键值对。
+ *
+ * 只认 heading 1 作为分割点；第一个 heading 1 之前的内容全部丢弃。
+ * 解析不出任何一级标题时抛错（让调用方提示「文档格式不符合约定」，
+ * 而不是静默变成一份空常用语）。
+ */
+function parseTencentDocPhrases(payload) {
+    const cv = payload?.clientVars;
+    const ccv = cv?.collab_client_vars;
+    const iat = ccv && ccv.initialAttributedText;
+    if (!iat)
+        throw new Error('腾讯文档返回的数据里没有正文（可能已删除、或无阅读权限）');
+    const parts = iat.text || [];
+    const mutations = [];
+    for (const part of parts) {
+        for (const cmd of part.commands || []) {
+            if (cmd.type !== 'DocKeyframe')
+                continue;
+            for (const m of cmd.mutations || [])
+                mutations.push(m);
+        }
+    }
+    if (!mutations.length)
+        throw new Error('腾讯文档正文为空');
+    // 1) 全文（段落用 \r 分隔）
+    let raw = '';
+    for (const m of mutations) {
+        if (m.ty === 'is' && typeof m.s === 'string')
+            raw += m.s;
+    }
+    // 2) 段落 + 每段起始偏移（用于把 bi 偏移换算成段落下标）
+    const paras = [];
+    let off = 0;
+    for (const seg of raw.split('\r')) {
+        paras.push({ start: off, text: seg });
+        off += seg.length + 1;
+    }
+    // 3) 段落样式：mp(paragraph).pStyle，用 bi 定位到所在段落
+    const names = styleNames(mutations);
+    const paraStyle = new Map();
+    for (const m of mutations) {
+        if (m.ty !== 'mp')
+            continue;
+        const pr = m.pr;
+        const styleId = pr && pr.paragraph && pr.paragraph.pStyle && pr.paragraph.pStyle.val;
+        if (!styleId)
+            continue;
+        const pos = typeof m.bi === 'number' ? m.bi : -1;
+        if (pos < 0)
+            continue;
+        // bi 指向段落内容首字符 ⇒ 落在 [start, start+len] 区间内
+        let idx = -1;
+        for (let i = 0; i < paras.length; i++) {
+            if (pos >= paras[i].start && pos <= paras[i].start + paras[i].text.length) {
+                idx = i;
+                break;
+            }
+        }
+        if (idx >= 0)
+            paraStyle.set(idx, styleId);
+    }
+    // 4) 找出所有 heading 1 段落
+    const h1 = [];
+    paraStyle.forEach((styleId, idx) => {
+        if (names[styleId] === 'heading 1')
+            h1.push(idx);
+    });
+    h1.sort((a, b) => a - b);
+    if (!h1.length) {
+        throw new Error('文档里没有找到「一级标题」，请按约定把每条常用语的名称设为一级标题');
+    }
+    // 5) 按一级标题切块（第一个标题之前的内容直接丢弃）
+    const out = {};
+    h1.forEach((startIdx, n) => {
+        const endIdx = n + 1 < h1.length ? h1[n + 1] : paras.length;
+        const title = decorate(paras[startIdx].text);
+        if (!title)
+            return;
+        const lines = [];
+        for (let i = startIdx + 1; i < endIdx; i++) {
+            const line = decorate(paras[i].text);
+            if (line)
+                lines.push(line);
+        }
+        // 有同名标题时后者覆盖前者——与 YAML 里重复键的行为一致
+        out[title] = lines.join('\n');
+    });
+    if (!Object.keys(out).length)
+        throw new Error('一级标题下面的内容都是空的');
+    return out;
+}
+/** 供加载链路调用的统一入口：URL → 键值对（非腾讯文档链接返回 null，交回 YAML 分支） */
+function phrasesFromTencentDoc(url, payload) {
+    if (!isTencentDocUrl(url)) {
+        if (QQ_AIO_RE.test((url || '').trim())) {
+            throw new Error('暂不支持智能文档（/aio/），请改用「文档」类型（链接形如 docs.qq.com/doc/…）');
+        }
+        return null;
+    }
+    return parseTencentDocPhrases(payload);
+}
+
 ;// ./node_modules/@ant-design/icons-svg/es/asn/EditOutlined.js
 // This icon file is generated automatically.
 var EditOutlined = { "icon": { "tag": "svg", "attrs": { "viewBox": "64 64 896 896", "focusable": "false" }, "children": [{ "tag": "path", "attrs": { "d": "M257.7 752c2 0 4-.2 6-.5L431.9 722c2-.4 3.9-1.3 5.3-2.8l423.9-423.9a9.96 9.96 0 000-14.1L694.9 114.9c-1.9-1.9-4.4-2.9-7.1-2.9s-5.2 1-7.1 2.9L256.8 538.8c-1.5 1.5-2.4 3.3-2.8 5.3l-29.5 168.2a33.5 33.5 0 009.4 29.8c6.6 6.4 14.9 9.9 23.8 9.9zm67.4-174.4L687.8 215l73.3 73.3-362.7 362.6-88.9 15.7 15.6-89zM880 836H144c-17.7 0-32 14.3-32 32v36c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-36c0-17.7-14.3-32-32-32z" } }] }, "name": "edit", "theme": "outlined" };
@@ -62852,7 +63048,7 @@ function SettingsModal({ open, onClose, onOpenChangelog, workingHours, onChangeW
     };
     return ((0,react_jsx_runtime_production_namespaceFn().jsxs)(modal, { open: open, title: "\u8BBE\u7F6E\u83DC\u5355", onCancel: onClose, getContainer: getOverlayContainer, width: 520, 
         // 显式左对齐：宿主页面常有全局 text-align:center（税务页就是），不设会整屏居中
-        styles: { body: { textAlign: 'left' } }, destroyOnHidden: true, footer: (0,react_jsx_runtime_production_namespaceFn().jsxs)(es_space, { children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { onClick: onClose, children: "\u53D6\u6D88" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { color: "primary", variant: "solid", onClick: onClose, children: "\u786E\u5B9A" })] }), children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)(es_space, { size: 4, wrap: true, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { type: "link", onClick: () => window.open('https://github.com/Run-os/znhd-service', '_blank'), children: "[\u811A\u672C\u4E3B\u9875]" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { type: "link", onClick: () => window.open((GM_info.scriptUpdateURL || GM_info.script.updateURL), '_blank'), children: "[\u66F4\u65B0\u811A\u672C]" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { type: "link", onClick: () => onOpenChangelog(), children: "[\u66F4\u65B0\u65E5\u5FD7]" })] }), (0,react_jsx_runtime_production_namespaceFn().jsx)(divider, { style: { margin: '8px 0' }, children: "\u5176\u4ED6\u8BBE\u7F6E" }), (0,react_jsx_runtime_production_namespaceFn().jsxs)(es_space, { size: 8, style: { marginBottom: 12 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(SettingsModal_Text, { strong: true, children: "\u4F7F\u7528 CDN \u52A0\u901F\uFF08Fastly \u955C\u50CF\uFF09\u52A0\u8F7D\u8D44\u6E90" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_switch, { checked: !!useCdn, onChange: (v) => onChangeUseCdn(v) })] }), (0,react_jsx_runtime_production_namespaceFn().jsxs)(es_space, { size: 8, style: { marginBottom: 4 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(SettingsModal_Text, { strong: true, children: "\u56FE\u7247\u55C5\u63A2\uFF1A\u5148\u5728\u540E\u53F0\u9884\u6D4B\u91CF\u56FE\u7247\u5927\u5C0F" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_switch, { checked: !!sniffPreMeasure, onChange: (v) => onChangeSniffPreMeasure(v) })] }), (0,react_jsx_runtime_production_namespaceFn().jsx)(SettingsModal_Text, { type: "secondary", style: { fontSize: 12, display: 'block', marginBottom: 12 }, children: "\u5F00\u542F\u540E\u6253\u5F00\u55C5\u63A2\u7A97\u53E3\u5373\u523B\u663E\u793A\u5927\u5C0F\uFF08\u4E0D\u5FC5\u5F53\u573A\u7B49\u6D4B\u91CF\uFF09\u3002\u4EE3\u4EF7\uFF1A\u9875\u9762\u4E0A\u7684\u56FE\u82E5\u53EA\u80FD\u9760\u8BF7\u6C42\u6D4B\u5927\u5C0F \uFF08\u8DE8\u57DF\u4E14\u62FF\u4E0D\u5230\u8D44\u6E90\u8868\u8BFB\u6570\uFF09\uFF0C\u811A\u672C\u4F1A\u5728**\u6CA1\u6253\u5F00\u7A97\u53E3\u65F6**\u5C31\u53BB\u6D4B\u91CF \u2014\u2014 \u5173\u6389\u6B64\u9879\u53EF\u907F\u514D\u8FD9\u7C7B\u8BF7\u6C42\u3002" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(SettingsModal_Text, { strong: true, style: { display: 'block', marginBottom: 8 }, children: "\u76D1\u63A7\u65F6\u95F4\u6BB5\uFF08\u70B9\u51FB\u9009\u62E9\u65F6\u95F4\uFF09" }), (0,react_jsx_runtime_production_namespaceFn().jsxs)(es_space, { size: 8, wrap: true, style: { marginBottom: 8 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(SettingsModal_Text, { children: "\u4E0A\u5348" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_input, { type: "time", step: 300, value: hoursToHHmm(wh.morningStart), onChange: (e) => updateWh('morningStart', hhmmToHours(e.target.value)), style: { width: 110 } }), (0,react_jsx_runtime_production_namespaceFn().jsx)(SettingsModal_Text, { children: "\u81F3" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_input, { type: "time", step: 300, value: hoursToHHmm(wh.morningEnd), onChange: (e) => updateWh('morningEnd', hhmmToHours(e.target.value)), style: { width: 110 } })] }), (0,react_jsx_runtime_production_namespaceFn().jsxs)(es_space, { size: 8, wrap: true, style: { marginBottom: 8 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(SettingsModal_Text, { children: "\u4E0B\u5348" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_input, { type: "time", step: 300, value: hoursToHHmm(wh.afternoonStart), onChange: (e) => updateWh('afternoonStart', hhmmToHours(e.target.value)), style: { width: 110 } }), (0,react_jsx_runtime_production_namespaceFn().jsx)(SettingsModal_Text, { children: "\u81F3" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_input, { type: "time", step: 300, value: hoursToHHmm(wh.afternoonEnd), onChange: (e) => updateWh('afternoonEnd', hhmmToHours(e.target.value)), style: { width: 110 } })] }), (0,react_jsx_runtime_production_namespaceFn().jsx)(SettingsModal_Text, { type: "secondary", style: { fontSize: 12, display: 'block', marginBottom: 12 }, children: "\u63D0\u793A\uFF1A\u5C06\u300C\u4E0B\u5348\u5F00\u59CB\u300D\u8BBE\u4E3A\u4E0E\u300C\u4E0A\u5348\u7ED3\u675F\u300D\u76F8\u540C\uFF08\u5982\u90FD\u8BBE\u4E3A 12:00\uFF09\uFF0C\u5373\u53EF\u5348\u4F11\u65F6\u6BB5\u4E5F\u76D1\u63A7\u3002" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(SettingsModal_Text, { strong: true, style: { display: 'block', marginBottom: 8 }, children: "\u5E38\u7528\u8BED\u6570\u636E\u5730\u5740\uFF08\u53EF\u81EA\u5B9A\u4E49\u8FDC\u7A0B YAML\uFF09" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_input, { placeholder: "https://.../commonPhrases.yaml", value: urlDraft, onChange: (e) => onUrlChange(e.target.value), onBlur: onUrlBlur, allowClear: true, style: { marginBottom: 8 } }), (0,react_jsx_runtime_production_namespaceFn().jsx)(SettingsModal_Text, { type: "secondary", style: { fontSize: 12, display: 'block' }, children: "\u4FEE\u6539\u540E\u8BF7\u5728\u300C\u5E38\u7528\u8BED\u300D\u9762\u677F\u70B9\u300C\u91CD\u65B0\u52A0\u8F7D\u5E38\u7528\u8BED\u300D\u751F\u6548\uFF1B\u7559\u7A7A\u5E76\u70B9\u51FB\u5176\u4ED6\u533A\u57DF\uFF08\u5931\u7126\uFF09\u540E\u6062\u590D\u9ED8\u8BA4\u5730\u5740\u3002" })] }));
+        styles: { body: { textAlign: 'left' } }, destroyOnHidden: true, footer: (0,react_jsx_runtime_production_namespaceFn().jsxs)(es_space, { children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { onClick: onClose, children: "\u53D6\u6D88" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { color: "primary", variant: "solid", onClick: onClose, children: "\u786E\u5B9A" })] }), children: [(0,react_jsx_runtime_production_namespaceFn().jsxs)(es_space, { size: 4, wrap: true, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { type: "link", onClick: () => window.open('https://github.com/Run-os/znhd-service', '_blank'), children: "[\u811A\u672C\u4E3B\u9875]" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { type: "link", onClick: () => window.open((GM_info.scriptUpdateURL || GM_info.script.updateURL), '_blank'), children: "[\u66F4\u65B0\u811A\u672C]" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_button, { type: "link", onClick: () => onOpenChangelog(), children: "[\u66F4\u65B0\u65E5\u5FD7]" })] }), (0,react_jsx_runtime_production_namespaceFn().jsx)(divider, { style: { margin: '8px 0' }, children: "\u5176\u4ED6\u8BBE\u7F6E" }), (0,react_jsx_runtime_production_namespaceFn().jsxs)(es_space, { size: 8, style: { marginBottom: 12 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(SettingsModal_Text, { strong: true, children: "\u4F7F\u7528 CDN \u52A0\u901F\uFF08Fastly \u955C\u50CF\uFF09\u52A0\u8F7D\u8D44\u6E90" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_switch, { checked: !!useCdn, onChange: (v) => onChangeUseCdn(v) })] }), (0,react_jsx_runtime_production_namespaceFn().jsxs)(es_space, { size: 8, style: { marginBottom: 4 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(SettingsModal_Text, { strong: true, children: "\u56FE\u7247\u55C5\u63A2\uFF1A\u5148\u5728\u540E\u53F0\u9884\u6D4B\u91CF\u56FE\u7247\u5927\u5C0F" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_switch, { checked: !!sniffPreMeasure, onChange: (v) => onChangeSniffPreMeasure(v) })] }), (0,react_jsx_runtime_production_namespaceFn().jsx)(SettingsModal_Text, { type: "secondary", style: { fontSize: 12, display: 'block', marginBottom: 12 }, children: "\u5F00\u542F\u540E\u6253\u5F00\u55C5\u63A2\u7A97\u53E3\u5373\u523B\u663E\u793A\u5927\u5C0F\uFF08\u4E0D\u5FC5\u5F53\u573A\u7B49\u6D4B\u91CF\uFF09\u3002\u4EE3\u4EF7\uFF1A\u9875\u9762\u4E0A\u7684\u56FE\u82E5\u53EA\u80FD\u9760\u8BF7\u6C42\u6D4B\u5927\u5C0F \uFF08\u8DE8\u57DF\u4E14\u62FF\u4E0D\u5230\u8D44\u6E90\u8868\u8BFB\u6570\uFF09\uFF0C\u811A\u672C\u4F1A\u5728**\u6CA1\u6253\u5F00\u7A97\u53E3\u65F6**\u5C31\u53BB\u6D4B\u91CF \u2014\u2014 \u5173\u6389\u6B64\u9879\u53EF\u907F\u514D\u8FD9\u7C7B\u8BF7\u6C42\u3002" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(SettingsModal_Text, { strong: true, style: { display: 'block', marginBottom: 8 }, children: "\u76D1\u63A7\u65F6\u95F4\u6BB5\uFF08\u70B9\u51FB\u9009\u62E9\u65F6\u95F4\uFF09" }), (0,react_jsx_runtime_production_namespaceFn().jsxs)(es_space, { size: 8, wrap: true, style: { marginBottom: 8 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(SettingsModal_Text, { children: "\u4E0A\u5348" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_input, { type: "time", step: 300, value: hoursToHHmm(wh.morningStart), onChange: (e) => updateWh('morningStart', hhmmToHours(e.target.value)), style: { width: 110 } }), (0,react_jsx_runtime_production_namespaceFn().jsx)(SettingsModal_Text, { children: "\u81F3" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_input, { type: "time", step: 300, value: hoursToHHmm(wh.morningEnd), onChange: (e) => updateWh('morningEnd', hhmmToHours(e.target.value)), style: { width: 110 } })] }), (0,react_jsx_runtime_production_namespaceFn().jsxs)(es_space, { size: 8, wrap: true, style: { marginBottom: 8 }, children: [(0,react_jsx_runtime_production_namespaceFn().jsx)(SettingsModal_Text, { children: "\u4E0B\u5348" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_input, { type: "time", step: 300, value: hoursToHHmm(wh.afternoonStart), onChange: (e) => updateWh('afternoonStart', hhmmToHours(e.target.value)), style: { width: 110 } }), (0,react_jsx_runtime_production_namespaceFn().jsx)(SettingsModal_Text, { children: "\u81F3" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_input, { type: "time", step: 300, value: hoursToHHmm(wh.afternoonEnd), onChange: (e) => updateWh('afternoonEnd', hhmmToHours(e.target.value)), style: { width: 110 } })] }), (0,react_jsx_runtime_production_namespaceFn().jsx)(SettingsModal_Text, { type: "secondary", style: { fontSize: 12, display: 'block', marginBottom: 12 }, children: "\u63D0\u793A\uFF1A\u5C06\u300C\u4E0B\u5348\u5F00\u59CB\u300D\u8BBE\u4E3A\u4E0E\u300C\u4E0A\u5348\u7ED3\u675F\u300D\u76F8\u540C\uFF08\u5982\u90FD\u8BBE\u4E3A 12:00\uFF09\uFF0C\u5373\u53EF\u5348\u4F11\u65F6\u6BB5\u4E5F\u76D1\u63A7\u3002" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(SettingsModal_Text, { strong: true, style: { display: 'block', marginBottom: 8 }, children: "\u5E38\u7528\u8BED\u6570\u636E\u5730\u5740\uFF08\u8FDC\u7A0B YAML \u6216\u817E\u8BAF\u6587\u6863\uFF09" }), (0,react_jsx_runtime_production_namespaceFn().jsx)(es_input, { placeholder: "https://.../commonPhrases.yaml \u6216 https://docs.qq.com/doc/xxxx", value: urlDraft, onChange: (e) => onUrlChange(e.target.value), onBlur: onUrlBlur, allowClear: true, style: { marginBottom: 8 } }), (0,react_jsx_runtime_production_namespaceFn().jsxs)(SettingsModal_Text, { type: "secondary", style: { fontSize: 12, display: 'block' }, children: ["\u586B docs.qq.com/doc/\u2026 \u94FE\u63A5\u65F6\u6309\u300C\u4E00\u7EA7\u6807\u9898 = \u6807\u9898\u3001\u6807\u9898\u4E0B\u7684\u6587\u672C = \u6B63\u6587\u300D\u89E3\u6790\uFF08\u7B2C\u4E00\u4E2A\u4E00\u7EA7\u6807\u9898\u4E4B\u524D\u7684\u5185\u5BB9\u5FFD\u7565\uFF09\uFF1B \u6587\u6863\u9700\u8BBE\u4E3A\u300C\u83B7\u5F97\u94FE\u63A5\u7684\u4EBA\u53EF\u9605\u8BFB\u300D\uFF0C\u4E14\u5FC5\u987B\u662F", (0,react_jsx_runtime_production_namespaceFn().jsx)("b", { children: "\u6587\u6863" }), "\u7C7B\u578B\uFF08\u4E0D\u652F\u6301\u667A\u80FD\u6587\u6863 /aio/\uFF09\u3002 \u4FEE\u6539\u540E\u8BF7\u5728\u300C\u5E38\u7528\u8BED\u300D\u9762\u677F\u70B9\u300C\u91CD\u65B0\u52A0\u8F7D\u5E38\u7528\u8BED\u300D\u751F\u6548\uFF1B\u7559\u7A7A\u5E76\u70B9\u51FB\u5176\u4ED6\u533A\u57DF\uFF08\u5931\u7126\uFF09\u540E\u6062\u590D\u9ED8\u8BA4\u5730\u5740\u3002"] })] }));
 }
 
 ;// ./node_modules/@rc-component/drawer/es/context.js
@@ -108325,6 +108521,8 @@ function TransferAssistantModal({ open, onClose }) {
 
 
 
+// v26.10.17-v3：常用语支持直接用腾讯文档（普通文档 /doc/）维护，解析逻辑见 lib/phrasesDoc.ts
+
 
 
 
@@ -108545,9 +108743,39 @@ function MainPanel({ host }) {
         }
         const seq = ++phrasesRequestSeq;
         setPhrasesLoading(true);
+        /**
+         * v26.10.17-v3：数据源分两路 ——
+         *   · 腾讯文档普通文档（docs.qq.com/doc/<id>）→ 打 dop-api/opendoc 拿快照 JSON，
+         *     按「一级标题 = 标题、其下文本 = 正文」解析（见 lib/phrasesDoc.ts）；
+         *   · 其它地址 → 仍是远程 YAML（js-yaml 解析）。
+         * 两条路的网络/成功/失败收尾完全一致，故只在这里分流，其余回调共用。
+         */
+        const sourceUrl = state_runtime.commonPhrasesUrl || DEFAULTS.commonPhrasesUrl;
+        const docMode = isTencentDocUrl(sourceUrl);
+        const requestUrl = docMode ? tencentDocApiUrl(tencentDocId(sourceUrl)) : resolveGithubUrl(sourceUrl);
+        const parseResponse = (text) => {
+            if (docMode) {
+                let payload;
+                try {
+                    payload = JSON.parse(text);
+                }
+                catch {
+                    throw new Error('腾讯文档返回的不是 JSON（链接是否正确、是否已删除？）');
+                }
+                const data = phrasesFromTencentDoc(sourceUrl, payload);
+                if (!data)
+                    throw new Error('腾讯文档解析失败');
+                return data;
+            }
+            const data = jsyaml.load(text);
+            if (typeof data !== 'object' || data === null || Array.isArray(data)) {
+                throw new Error('数据源不是有效的键值对象（可能返回了网页/错误页）');
+            }
+            return data;
+        };
         GM_xmlhttpRequest({
             method: 'GET',
-            url: resolveGithubUrl(state_runtime.commonPhrasesUrl || DEFAULTS.commonPhrasesUrl),
+            url: requestUrl,
             timeout: 15000,
             onload: function (response) {
                 if (seq !== phrasesRequestSeq)
@@ -108555,10 +108783,7 @@ function MainPanel({ host }) {
                 try {
                     if (response.status !== 200)
                         throw new Error('数据源返回 HTTP ' + response.status);
-                    const data = jsyaml.load(response.responseText);
-                    if (typeof data !== 'object' || data === null || Array.isArray(data)) {
-                        throw new Error('数据源不是有效的键值对象（可能返回了网页/错误页）');
-                    }
+                    const data = parseResponse(response.responseText);
                     setPhrasesData(data);
                     savePhrasesCache(state_runtime.commonPhrasesUrl, data);
                     addLog('常用语加载成功，共 ' + Object.keys(data).length + ' 条', 'success');

@@ -112,6 +112,13 @@ const CHECKS = [
   ['phrasesLoaded', '常用语 YAML 解析'],
   ['phrasesClicked', '常用语侧边栏可打开'],
   ['phrasesIsDrawer', '常用语是 antd Drawer 侧边栏（非 Modal）'],
+  // v26.10.17-v3：常用语可以改用腾讯文档普通文档（/doc/）维护 —— 按「一级标题 = 标题、
+  // 其下文本 = 正文」解析，第一个一级标题之前的说明文字必须丢弃。
+  ['docPhrasesSwitchOk', '腾讯文档数据源：设置里填 docs.qq.com/doc/… 链接后真的切过去了（否则下面三条会假绿）'],
+  ['docPhrasesHitOk', '腾讯文档数据源：请求走 dop-api/opendoc（不是 YAML 的 resolveGithubUrl）'],
+  ['docPhrasesTitlesOk', '腾讯文档数据源：两个一级标题都解析成常用语标题'],
+  ['docPhrasesBodyOk', '腾讯文档数据源：一级标题下的多行正文拼进同一条常用语'],
+  ['docPhrasesNoPreamble', '腾讯文档数据源：第一个一级标题之前的说明文字不进常用语'],
   ['primaryTokenBlue', '主色 token 为 antd 蓝 blue-6 #1677FF'],
   ['panelBtnsUniform', '入口按钮样式一致（无主色实心按钮；v26.10.12-v1 起 4 个）'],
   ['panelBtnsOneRow', '入口按钮排在同一行（v26.10.12-v1 起 4 个）'],
@@ -552,6 +559,16 @@ async function main() {
     // v26.10.10-v17：常用语数据源迁移失败时把实际请求地址打出来（区分「没请求」与「请求了旧地址」）
     if (!checkPass('phrasesSourceOk')) {
       console.log('      常用语数据源快照：' + JSON.stringify(report.phrasesSourceUrl));
+    }
+    // v26.10.17-v3：腾讯文档数据源五条断言里**任意一条**失败，就把定位过程 + 抽屉实况全打出来。
+    // 这条链路的失败面很宽（输入框没定位到 / 请求没走 dop-api / 解析没出标题 / 正文没合并），
+    // 不打这些事实就只能靠改代码猜，故保留。
+    const docKeys = ['docPhrasesSwitchOk', 'docPhrasesHitOk', 'docPhrasesTitlesOk', 'docPhrasesBodyOk', 'docPhrasesNoPreamble'];
+    if (docKeys.some((k) => !checkPass(k))) {
+      console.log('      腾讯文档快照：' + JSON.stringify(report.docPhrasesDbg));
+      console.log('      腾讯文档命中数：' + report.docPhrasesHit + ' XHR=' + JSON.stringify(report.docPhrasesXhr));
+      console.log('      腾讯文档抽屉按钮：' + JSON.stringify(report.docPhrasesBtnTitles));
+      console.log('      点击命中=' + report.docPhrasesClickedItem + ' 剪贴板正文=' + JSON.stringify(report.docPhrasesClip));
     }
 
     const allErrors = (report.relevantErrors || []).concat(pageErrors);

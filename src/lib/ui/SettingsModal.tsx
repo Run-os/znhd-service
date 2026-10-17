@@ -181,10 +181,10 @@ export default function SettingsModal({
             </Text>
 
             <Text strong style={{ display: 'block', marginBottom: 8 }}>
-                常用语数据地址（可自定义远程 YAML）
+                常用语数据地址（远程 YAML 或腾讯文档）
             </Text>
             <Input
-                placeholder="https://.../commonPhrases.yaml"
+                placeholder="https://.../commonPhrases.yaml 或 https://docs.qq.com/doc/xxxx"
                 value={urlDraft}
                 onChange={(e) => onUrlChange(e.target.value)}
                 onBlur={onUrlBlur}
@@ -192,6 +192,9 @@ export default function SettingsModal({
                 style={{ marginBottom: 8 }}
             />
             <Text type="secondary" style={{ fontSize: 12, display: 'block' }}>
+                填 docs.qq.com/doc/… 链接时按「一级标题 = 标题、标题下的文本 =
+                正文」解析（第一个一级标题之前的内容忽略）； 文档需设为「获得链接的人可阅读」，且必须是<b>文档</b>
+                类型（不支持智能文档 /aio/）。
                 修改后请在「常用语」面板点「重新加载常用语」生效；留空并点击其他区域（失焦）后恢复默认地址。
             </Text>
         </Modal>

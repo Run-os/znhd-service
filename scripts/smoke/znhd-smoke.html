@@ -96,6 +96,48 @@
         }
       })();
       const PHRASES_YAML = ['冒烟常用语A: |', '  A 的内容', '冒烟常用语B: |', '  B 的内容', ''].join('\n');
+      /**
+       * 腾讯文档常用语夹具（v26.10.17-v3）。
+       * 结构与真实 opendoc 快照一致，但**故意保留了三处真实踩过的坑**，用于把解析逻辑钉死：
+       *  ① 段落样式只存在于 mp.pr.paragraph.pStyle，样式 ID（000002=heading 1）要查 ms 的样式表；
+       *  ② 所有 mp 的 bl 恒等于全文长度（真实快照就是这样），只有 bi 能定位；
+       *  ③ bi 指向段落**内容首字符**，不是段落分隔符。
+       * 另外第一段是「说明」，位于第一个一级标题之前 ⇒ 必须被丢弃。
+       */
+      const SMOKE_DOC_PAYLOAD = (() => {
+        const paras = [
+          '使用说明', // 0：一级标题之前，丢弃
+          '这个说明不该出现在常用语里', // 1
+          '冒烟文档标题一', // 2  ← heading 1
+          '正文第一行', // 3
+          '正文第二行', // 4
+          '冒烟文档标题二', // 5  ← heading 1
+          '第二段正文', // 6
+        ];
+        // 段落起始偏移（\r 分隔）
+        const starts = [];
+        let off = 0;
+        paras.forEach((t) => {
+          starts.push(off);
+          off += t.length + 1;
+        });
+        const total = paras.join('\r').length;
+        const mutations = [{ ty: 'is', bi: 0, bl: 0, s: paras.join('\r') }];
+        // 样式表：000002 = heading 1，000001 = Normal
+        mutations.push({
+          ty: 'ms',
+          pr: { styles: { style: { '000001': { name: 'Normal', styleId: '000001' }, '000002': { name: 'heading 1', styleId: '000002' } } } },
+        });
+        // 段落级属性：bl 一律写成全文长度（复现真实快照的坑），用 bi 定位
+        mutations.push({ ty: 'mp', mt: 'paragraph', bi: starts[0], bl: total, pr: { paragraph: { pStyle: { val: '000001' } } } });
+        mutations.push({ ty: 'mp', mt: 'paragraph', bi: starts[2], bl: total, pr: { paragraph: { pStyle: { val: '000002' } } } });
+        mutations.push({ ty: 'mp', mt: 'paragraph', bi: starts[5], bl: total, pr: { paragraph: { pStyle: { val: '000002' } } } });
+        return {
+          clientVars: { collab_client_vars: { initialAttributedText: { text: [{ commands: [{ type: 'DocKeyframe', mutations }] }], attribs: '' } } },
+        };
+      })();
+      /** 腾讯文档下载地址里带的标记（用来断言真的走了 dop-api 分支） */
+      const SMOKE_DOC_URL = 'https://docs.qq.com/doc/DRsmokeFakeDocForPhrases';
       /** 在线表情包合集名（v26.10.13-v3）：对应 cdn.klyang.com/json/<id>.json 的 name 字段 */
       const EMOJI_PACK_NAMES = { aluhedwm: '阿鲁和动物们', alurc: '阿鲁日常' };
       // 更新日志：给 12 条，验证「默认只显示最新 10 条」+ 条数提示（多出的 2 条不渲染）
@@ -208,7 +250,13 @@
         document.head.appendChild(s);
         return s;
       };
-      window.GM_setClipboard = () => {};
+      // v26.10.17-v3：剪贴板桩改成**记录**写入内容 —— 常用语按钮点一下会把正文
+      // `safeCopyText(value)` 进来，这是「正文是否按一级标题正确合并」唯一可从外部
+      // 观测到的界面（按钮上只渲染标题 key，正文挂在 Tooltip 的 title 上、hover 才渲染）。
+      window.__gmClipLog = [];
+      window.GM_setClipboard = (text) => {
+        window.__gmClipLog.push(String(text == null ? '' : text));
+      };
       window.GM_getResourceText = () => '';
       window.GM_notification = () => {};
       window.GM_addValueChangeListener = () => {};
@@ -254,6 +302,12 @@
         // 常用语 YAML：走成功路径
         if (url.includes('commonPhrases.yaml')) {
           reply(details, PHRASES_YAML);
+          return { abort: () => {} };
+        }
+        // 腾讯文档常用语（v26.10.17-v3）：GM_xmlhttpRequest 走的 dop-api/opendoc，回快照 JSON
+        if (url.indexOf('dop-api/opendoc') >= 0) {
+          window.__gmDocPhrasesHit = (window.__gmDocPhrasesHit || 0) + 1;
+          reply(details, SMOKE_DOC_PAYLOAD);
           return { abort: () => {} };
         }
         // 更新日志 changelogs/YYYY-MM.md（当月文件）：走成功路径
@@ -1152,17 +1206,107 @@
         if (btn) btn.click();
       }, 2200);
 
+      // 打开「设置」抽屉 → 点它里面的「更新日志」，验证新入口 + 弹窗 + 只显示最新 10 条
       setTimeout(() => {
         window.__clickedPhrases = clickByText('常用语');
       }, 3000);
-
-      // 打开「设置」抽屉 → 点它里面的「更新日志」，验证新入口 + 弹窗 + 只显示最新 10 条
       setTimeout(() => {
         window.__clickedSettings = clickByText('设置');
       }, 3400);
       setTimeout(() => {
         window.__clickedChangelog = clickByText('[更新日志]');
       }, 3800);
+
+      /* ===== 常用语切到腾讯文档数据源（v26.10.17-v3）=============================
+         走**真实 UI 路径**：先打开设置，在「常用语数据地址」输入框里填腾讯文档链接
+         （onChange 逐字提交，填完即写回 runtime + localStorage），关掉设置；
+         再回到常用语抽屉点「重新加载常用语」，让它走 dop-api/opendoc 分支。
+         ⚠️ 必须排在 YAML 那一步（3000ms）之后：phrasesLoaded / phrasesSourceOk 两条既有
+         断言读的是**切地址前**的状态，抢跑会把它们弄成一片乱麻。 */
+      const setPhrasesUrlByInput = (url) => {
+        // 定位「常用语数据地址」那个输入框。三条踩过的坑都记在这里：
+        //  ① 别按 placeholder 的**整段**文案匹配：placeholder 随功能演化会变（v26.10.17-v3 加了
+        //     腾讯文档就改成「…/commonPhrases.yaml 或 https://docs.qq.com/doc/xxxx」），
+        //     旧判据 indexOf('commonPhrases') 尚可用，但仍属脆弱 —— 这里用「带 placeholder」
+        //     这个稳定特征 + 标签文本双重约束。
+        //  ② 别取「第一个无子元素的匹配节点」：整页 <body> 的 textContent 也含这句文案
+        //     （实测 hostTag=BODY ⇒ parentElement 直接跳出弹窗），必须取**最深**的那个。
+        //  ③ 向上爬祖先时不能用 `querySelector('input')` 一把抓：设置弹窗里排在前面的
+        //     「工作时间」4 个 `<input type="time">` 会先命中（实测 before="09:00" ⇒
+        //     把链接写进了时间段输入框，链接没生效、时间反被改坏）。故只认**带 placeholder**
+        //     的 input —— 时间段输入框没有 placeholder。
+        const hits = Array.from(document.querySelectorAll('*')).filter(
+          (el) => el.children.length === 0 && (el.textContent || '').indexOf('常用语数据地址') >= 0
+        );
+        const label = hits.length ? hits[hits.length - 1] : null;
+        const pickInput = (root) =>
+          Array.from(root.querySelectorAll('input')).find((i) => (i.placeholder || '').length > 0) || null;
+        let el = null;
+        for (let p = label; p && p !== document.body && !el; p = p.parentElement) {
+          el = pickInput(p);
+        }
+        window.__docPhrasesDbg = {
+          labelFound: !!label,
+          hitCount: hits.length,
+          labelTag: label ? label.tagName : '',
+          inputFound: !!el,
+          before: el ? el.value : '',
+          after: '',
+        };
+        if (!el) return false;
+        const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+        setter.call(el, url);
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+        // 失焦兜底（草稿为空时才会回填默认地址，这里 url 非空，只是确认提交）
+        el.dispatchEvent(new Event('blur', { bubbles: true }));
+        // 立刻回读：确认 React 没把值弹回旧值（受控组件写不进去的典型症状）
+        window.__docPhrasesDbg.after = el.value;
+        return el.value === url;
+      };
+      setTimeout(() => {
+        clickByText('设置');
+      }, 4110);
+      setTimeout(() => {
+        window.__docPhrasesSwitch = setPhrasesUrlByInput(SMOKE_DOC_URL);
+        /* ⚠️ 时间段输入框必须在这一刻（设置弹窗还开着）就量掉：
+           4310ms 一点「取消」，设置 Modal 卸载，报告时刻再查 `.ant-modal input[type=time]`
+           必然是 0 个 ⇒ `timeInputsOk` 假红。
+           实测这次踩到的直接诱因更隐蔽：修好前的 `setPhrasesUrlByInput` 用
+           `querySelector('input')` 一把抓，把腾讯文档链接写进了**第一个时间段输入框**
+           （before="09:00"），值不再是 HH:mm，两条断言一起变红。 */
+        window.__timeInputsSeen = (() => {
+          const els = Array.from(document.querySelectorAll('.ant-modal input[type="time"]'));
+          return { count: els.length, values: els.map((el) => el.value) };
+        })();
+      }, 4210);
+      setTimeout(() => {
+        // 设置是叠在常用语抽屉上面的 Modal，取消只会关掉设置，抽屉仍然在
+        window.__docSettingsClosed = clickByText('取消');
+      }, 4310);
+      setTimeout(() => {
+        window.__docPhrasesReload = clickByText('重新加载常用语');
+      }, 4410);
+      setTimeout(() => {
+        /* ① 记录抽屉 DOM 实况（诊断用）；
+           ② **点一下第一条常用语**：正文只能这样观测 —— 按钮上只有标题 key，
+              正文走 Tooltip 的 title（hover 才渲染），点击时才 `safeCopyText(value)`
+              写进剪贴板。`window.__gmClipLog` 是 GM_setClipboard 的记录。 */
+        const body = document.querySelector('.ant-drawer.ant-drawer-right .ant-drawer-body');
+        // ⚠️ Drawer 的存在性必须在这一刻就记下来（后面点了常用语 ⇒ Drawer 会自己关掉，
+        // 报告时刻再查必然为 null ⇒ phrasesIsDrawer 假红，本次踩过）。
+        window.__phrasesIsDrawerSeen = !!body;
+        window.__docPhrasesSnap = body ? (body.textContent || '').replace(/\s+/g, ' ') : null;
+        window.__docPhrasesBtnTitles = Array.from(document.querySelectorAll('.ant-drawer .ant-btn')).map((b) =>
+            ((b.textContent || '').trim() + '|' + (b.closest('[title]') ? b.closest('[title]').getAttribute('title') : '')).slice(0, 80)
+        );
+        window.__gmClipLog = [];
+        const first = Array.from(document.querySelectorAll('.ant-drawer .ant-btn')).find(
+          (b) => (b.textContent || '').trim() === '冒烟文档标题一'
+        );
+        window.__docPhrasesClickedItem = !!first;
+        if (first) first.click();
+        window.__docPhrasesClip = (window.__gmClipLog || []).slice(-1)[0] || '';
+      }, 4700);
 
       /* ===== ② 面板入口重开传输助手 + 三栏结构 + 收到的消息（v26.10.12-v1）=========== */
       setTimeout(() => {
@@ -2667,6 +2811,42 @@
           // 常用语成功路径（YAML 解析出按钮）
           phrasesLoaded: text.includes('冒烟常用语A'),
           phrasesClicked: !!window.__clickedPhrases,
+          /**
+           * 腾讯文档数据源（v26.10.17-v3）：切到 docs.qq.com/doc/… 后重新加载常用语。
+           *  · switchOk —— 设置里填地址这一步真的生效（不生效则下面几条会因为仍在读 YAML 而假绿）；
+           *  · hit —— GM_xmlhttpRequest 里出现过 dop-api/opendoc（证明走了腾讯文档分支）；
+           *  · titles/body/noPreamble —— 两个 heading 1 成为标题、多行正文拼进同一条、
+           *    第一个 heading 1 之前的「使用说明」被丢弃。
+           * 文案取 4700ms 那一刻的快照（报告时抽屉早被后面的步骤关掉了）。
+           */
+          docPhrasesSwitchOk: !!window.__docPhrasesSwitch,
+          docPhrasesSettingsClosed: !!window.__docSettingsClosed,
+          docPhrasesXhr: window.__gmXhrLog.filter(
+            (l) => l.indexOf('commonPhrases') >= 0 || l.indexOf('dop-api') >= 0 || l.indexOf('docs.qq.com') >= 0
+          ),
+          docPhrasesSnap: window.__docPhrasesSnap || null,
+          docPhrasesBtnTitles: window.__docPhrasesBtnTitles || [],
+          docPhrasesDbg: window.__docPhrasesDbg || null,
+          docPhrasesHit: window.__gmDocPhrasesHit || 0,
+          // ⚠️ 别把判据写成 key 'docPhrasesHit>0'：run.js 的 checkPass 是 `!!report[key]`，
+          // 会去找名为 "docPhrasesHit>0" 的字段（恒 undefined）⇒ 断言永久假红（本次踩过）。
+          // 数值计数单独留给诊断输出，判定用这个布尔量。
+          docPhrasesHitOk: (window.__gmDocPhrasesHit || 0) > 0,
+          docPhrasesTitlesOk:
+            !!window.__docPhrasesSnap &&
+            window.__docPhrasesSnap.indexOf('冒烟文档标题一') >= 0 &&
+            window.__docPhrasesSnap.indexOf('冒烟文档标题二') >= 0,
+          // ⚠️ 正文校验必须走**点击后的剪贴板内容**（`__docPhrasesClip`），不能查 DOM 文本：
+          // 抽屉按钮上只渲染标题 key，正文挂在 antd Tooltip 的 title 上（hover 才渲染成浮层），
+          // `textContent` 里永远没有（实测按钮文本就是「冒烟文档标题一|」）。
+          // 点一下按钮 → `safeCopyText(value)` → GM_setClipboard 桩记录 → 这里比对。
+          docPhrasesBodyOk:
+            !!window.__docPhrasesClip &&
+            window.__docPhrasesClip.indexOf('正文第一行') >= 0 &&
+            window.__docPhrasesClip.indexOf('正文第二行') >= 0,
+          docPhrasesClip: window.__docPhrasesClip || '',
+          docPhrasesClickedItem: !!window.__docPhrasesClickedItem,
+          docPhrasesNoPreamble: !!window.__docPhrasesSnap && window.__docPhrasesSnap.indexOf('这个说明不该出现在常用语里') < 0,
           // 更新日志：入口可点 → 弹窗出现 → 渲染 mock 正文 → 底部按钮 → 条数提示（12 条只渲染 10）
           settingsClicked: !!window.__clickedSettings,
           changelogClicked: !!window.__clickedChangelog,
@@ -2740,15 +2920,20 @@
           previewSingleMaskOk: !!(window.__snap && window.__snap.singleMask),
           // 监控时间段是 4 个原生 <input type="time">（v26.10.06-v16 换掉 antd TimePicker：
           // 去掉 rc-picker + dayjs，产物实测 -325KB），值必须是 HH:mm
+          // ⚠️ 读 4210ms 那一刻的快照（设置弹窗还开着），不能在这里现查：
+          //    4310ms 点「取消」后 Modal 已卸载，现查必然是 0 个 ⇒ 假红。
           timeInputsOk: (() => {
-            const els = Array.from(document.querySelectorAll('.ant-modal input[type="time"]'));
-            if (els.length !== 4) return false;
-            return els.every((el) => /^\d{2}:\d{2}$/.test(el.value));
+            const snap = window.__timeInputsSeen;
+            if (!snap || snap.count !== 4) return false;
+            return snap.values.every((v) => /^\d{2}:\d{2}$/.test(v));
           })(),
+          timeInputsSeen: window.__timeInputsSeen || null,
           // 常用语必须是 antd **Drawer**（侧边栏），不是 Modal：v26.10.06-v14 按需求改的。
           // ⚠️ 断言用 `.ant-drawer-body`（v5/v6 都有）；**不要用 `.ant-drawer-content`** ——
           //    v6 已把它改名为 `.ant-drawer-section`，用旧名会假失败（本条踩过）。
-          phrasesIsDrawer: !!document.querySelector('.ant-drawer.ant-drawer-right .ant-drawer-body'),
+          // ⚠️ 读的是 4700ms 那一刻记录的快照（`__phrasesIsDrawerSeen`），不能在这里现查：
+          //    4700ms 点了常用语按钮会顺手关掉 Drawer，报告时刻 DOM 里已没有 ⇒ 假红。
+          phrasesIsDrawer: !!window.__phrasesIsDrawerSeen,
           // 发送到手机：必须先压缩再发（v26.10.06-v6 回归断言）。判定要点：
           // 实际 POST 的字节是 JPEG、最长边 ≤1600（压缩上限）、且比原图小。
           phoneSendCheck: window.__phoneSendCheck || null,
@@ -2763,6 +2948,8 @@
           // v26.10.10-v17：常用语实际请求的数据源地址（用来断言「旧默认值被迁移到 cnb.cool 新默认」）。
           // 夹具在脚本加载前预置了旧默认地址，所以这里必须看到 cnb.cool；否则说明迁移没生效。
           phrasesSourceUrl: (function () {
+            // v26.10.17-v3：日志里现在有两类常用语请求（先 YAML，后 dop-api/opendoc），
+            // 这条断言只关心**YAML 那一次**，故只取 commonPhrases.yaml 的那条。
             const hit = window.__gmXhrLog.find(function (line) {
               return line.indexOf('commonPhrases.yaml') >= 0;
             });
