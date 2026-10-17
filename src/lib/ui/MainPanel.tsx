@@ -18,6 +18,8 @@ import { runtime } from '@/lib/state';
 import { resolveGithubUrl, hoursToHHmm } from '@/lib/utils';
 import { clearSpeechQueue } from '@/lib/speech';
 import { getMonitorState, resetWaitCountBaseline, setMonitorStateSink, type MonitorState } from '@/lib/monitor';
+// v26.10.17-v3：常用语支持直接用腾讯文档（普通文档 /doc/）维护，解析逻辑见 lib/phrasesDoc.ts
+import { isTencentDocUrl, phrasesFromTencentDoc, tencentDocApiUrl, tencentDocId } from '@/lib/phrasesDoc';
 import { notify } from '@/lib/ui/notify';
 import { clampHostIntoView, usePanelDrag } from '@/lib/ui/panelHost';
 import { PANEL_WIDTH } from '@/lib/ui/panelIds';
@@ -298,19 +300,59 @@ export default function MainPanel({ host }: MainPanelProps) {
         }
         const seq = ++phrasesRequestSeq;
         setPhrasesLoading(true);
+        /**
+         * v26.10.17-v3：数据源分两路 ——
+         *   · 腾讯文档普通文档（docs.qq.com/doc/<id>）→ 打 dop-api/opendoc 拿快照 JSON，
+         *     按「一级标题 = 标题、其下文本 = 正文」解析（见 lib/phrasesDoc.ts）；
+         *   · 其它地址 → 仍是远程 YAML（js-yaml 解析）。
+         * 两条路的网络/成功/失败收尾完全一致，故只在这里分流，其余回调共用。
+         */
+        const sourceUrl = runtime.commonPhrasesUrl || DEFAULTS.commonPhrasesUrl;
+        const docMode = isTencentDocUrl(sourceUrl);
+        const requestUrl = docMode ? tencentDocApiUrl(tencentDocId(sourceUrl)) : resolveGithubUrl(sourceUrl);
+        const parseResponse = (text: string): Record<string, string> => {
+            if (docMode) {
+                let payload: unknown;
+                try {
+                    payload = JSON.parse(text);
+                } catch {
+                    throw new Error('腾讯文档返回的不是 JSON（链接是否正确、是否已删除？）');
+                }
+                const data = phrasesFromTencentDoc(sourceUrl, payload);
+                if (!data) throw new Error('腾讯文档解析失败');
+                return data;
+            }
+            const data = jsyaml.load(text);
+            if (typeof data !== 'object' || data === null || Array.isArray(data)) {
+                throw new Error('数据源不是有效的键值对象（可能返回了网页/错误页）');
+            }
+            return data as Record<string, string>;
+        };
         GM_xmlhttpRequest({
             method: 'GET',
-            url: resolveGithubUrl(runtime.commonPhrasesUrl || DEFAULTS.commonPhrasesUrl),
+            url: requestUrl,
             timeout: 15000,
+            /**
+             * ⚠️ 腾讯文档的 `dop-api/opendoc` **会校验 Referer**（实测 2026-10-17：
+             * 不带 Referer 一律 `401`，带上文档页地址才是 `200`）。
+             * 在税务页里发这个请求时，GM_xmlhttpRequest 的默认 Referer 是本页
+             * （`znhd.hunan.chinatax.gov.cn`）或干脆为空 ⇒ 会被判 401。
+             * 故显式把 Referer 设成文档自己的地址（同源），两个数据源都安全：
+             * YAML 源多这个头无副作用。
+             */
+            headers: docMode ? { Referer: sourceUrl } : undefined,
             onload: function (response) {
                 if (seq !== phrasesRequestSeq) return;
                 try {
-                    if (response.status !== 200) throw new Error('数据源返回 HTTP ' + response.status);
-                    const data = jsyaml.load(response.responseText);
-                    if (typeof data !== 'object' || data === null || Array.isArray(data)) {
-                        throw new Error('数据源不是有效的键值对象（可能返回了网页/错误页）');
+                    if (response.status !== 200) {
+                        // 腾讯文档 401 几乎只有一种原因：文档没开「获得链接的人可阅读」
+                        if (docMode && response.status === 401) {
+                            throw new Error('HTTP 401：腾讯文档未开放匿名阅读，请把分享权限设为「获得链接的人可阅读」');
+                        }
+                        throw new Error('数据源返回 HTTP ' + response.status);
                     }
-                    setPhrasesData(data as Record<string, string>);
+                    const data = parseResponse(response.responseText);
+                    setPhrasesData(data);
                     savePhrasesCache(runtime.commonPhrasesUrl, data);
                     addLog('常用语加载成功，共 ' + Object.keys(data).length + ' 条', 'success');
                     notify.success('常用语加载成功');
