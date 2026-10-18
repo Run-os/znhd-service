@@ -80,7 +80,10 @@ jobs:
 
       # ===== 手机上传页（Vue 3 + Tailwind v4，独立子项目 web/；src-vue 复用件依赖根 node_modules，故根 ci 必须先跑）=====
       - name: 安装手机上传页依赖
-        run: npm --prefix web ci
+        run: |
+          # 与根 ci 同款重试：2026-10-06 与 2026-10-19 两次实测 runner 侧 npm ECONNRESET 瞬时抖动，
+          # 与依赖/代码无关；npm ci 失败留下的半成品不影响第二次（会先清空 node_modules 再装）。
+          npm --prefix web ci || npm --prefix web ci
 
       - name: 手机上传页类型检查
         run: npm run typecheck:web
