@@ -442,8 +442,10 @@ const footerHint = computed(() => {
                     <!-- ===== 头部：标题 / 设备信息 / 连接状态（与脚本端同一结构） ===== -->
                     <!-- ⚠️ 分界线不能写 border-b：Tailwind v4 默认边框色是 currentColor ⇒ 一条亮白线；
                             写死 rgb(34,34,34)（v26.10.19-v1，与脚本端 v26.10.18-v9 同色）。原 border-b
-                            触发的 [.border-b]:pb-6 规则随之失效，补回 pb-6 保持原有间距。 -->
-                    <CardHeader class="shrink-0 gap-1 pb-6 [border-bottom:1px_solid_rgb(34,34,34)]">
+                            触发的 [.border-b]:pb-6 规则随之失效，补回 pb-6 保持原有间距。
+                        v26.10.19-v4：cardClass 是 py-0（Card 基类上下 24px 已被去掉），Header 只补
+                            pb-6 会让标题贴死视口顶 ⇒ 改 py-6（分隔线上下各 24px 对称，标题栏居中）。 -->
+                    <CardHeader class="shrink-0 gap-1 py-6 [border-bottom:1px_solid_rgb(34,34,34)]">
                         <CardTitle class="flex items-center gap-2 text-[15px]">
                             传输助手
                             <span
@@ -511,7 +513,9 @@ const footerHint = computed(() => {
                     </CardContent>
 
                     <!-- ===== 输入区（与脚本端同一个 ChatComposer：InputGroup + 附件下拉） ===== -->
-                    <CardFooter class="shrink-0 flex-col gap-2">
+                    <!-- v26.10.19-v4：cardClass 是 py-0，Footer 不补 pb 输入框会贴死窗口底边（用户截图实录）
+                            ⇒ 加 pb-6，与脚本端「Card 底部 24px」的视觉节奏一致 -->
+                    <CardFooter class="shrink-0 flex-col gap-2 pb-6">
                         <ChatComposer
                             v-model="text"
                             :disabled="sendingText || preparing"
