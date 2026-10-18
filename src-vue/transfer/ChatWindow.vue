@@ -358,6 +358,19 @@ const footerHint = computed(() => (sendable.value ? '' : '当前没有在线手�
                                         </Button>
                                     </Tooltip>
 
+                                    <!-- v26.10.19-v9：全部文件从「更多」下拉移出到标题栏（高频入口） -->
+                                    <Tooltip content="全部文件" side="bottom">
+                                        <Button
+                                            variant="outline"
+                                            size="icon-sm"
+                                            class="!size-7 !rounded-full"
+                                            aria-label="全部文件"
+                                            title="全部文件"
+                                            @click="filesOpen = true">
+                                            <Icon name="files" :size="14" />
+                                        </Button>
+                                    </Tooltip>
+
                                     <DropdownMenu>
                                         <DropdownMenuTrigger as-child>
                                             <Button
@@ -370,10 +383,6 @@ const footerHint = computed(() => (sendable.value ? '' : '当前没有在线手�
                                             </Button>
                                         </DropdownMenuTrigger>
                                         <DropdownMenuContent align="end" side="bottom" class="w-44">
-                                            <DropdownMenuItem @select="filesOpen = true">
-                                                <Icon name="files" :size="15" />
-                                                全部文件
-                                            </DropdownMenuItem>
                                             <DropdownMenuItem @select="pairOpen = true">
                                                 <Icon name="qr" :size="15" />
                                                 扫码连接手机

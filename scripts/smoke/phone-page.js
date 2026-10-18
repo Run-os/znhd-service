@@ -356,11 +356,8 @@ async function main() {
 
         // ③b 上传带 phoneId（v26.10.13-v3 起）：App 自己发的每一条（上传图 / 文本）经真中继
         //     投递时都带 from = 本机手机 ID。队列顺序 = ② 上传图 → ③ 文本（表情已下线）。
-        const phoneId = await page.evaluate(() => {
-            const sub = document.querySelector('.znhd-phone-chat [data-slot="card-description"]');
-            const m = /本机 (\S+) ·/.exec(sub ? sub.textContent || '' : '');
-            return m ? m[1] : '';
-        });
+        //     v26.10.19-v9：标题栏「本机 id · 电脑 id」描述行已删，phoneId 改读 localStorage（同源键）。
+        const phoneId = await page.evaluate(() => localStorage.getItem('znhd_phone_id') || '');
         const recvItems = [];
         for (let i = 0; i < 2; i++) {
             recvItems.push(

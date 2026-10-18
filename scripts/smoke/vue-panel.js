@@ -422,8 +422,9 @@ function serve() {
 
     /**
      * 「更多」下拉里点一项：chat 窗口按 shadcn message-scroller 示例收敛为
-     * CardHeader 上的一排 icon 按钮（清空 / 更多 / 关闭），文件、配对、设置、
-     * 关于都收进了这个 dropdown。菜单本身 Portal 到 shadowRoot（补丁同 Dialog）。
+     * CardHeader 上的一排 icon 按钮（清空 / 全部文件 / 更多 / 关闭），配对、设置、
+     * 关于收在「更多」dropdown（v26.10.19-v9 起全部文件是标题栏独立按钮）。
+     * 菜单本身 Portal 到 shadowRoot（补丁同 Dialog）。
      */
     async function pickMore(label) {
         await page.evaluate(() => {
@@ -478,7 +479,7 @@ function serve() {
             hasCard: !!card,
             hasScroller: !!el.querySelector('[data-slot="message-scroller"]'),
             hasComposer: !!(composer && composer.querySelector('textarea')),
-            // 头部只剩三个 icon 按钮（清空 / 更多 / 关闭）——不再有图标栏与多栏导航
+            // 头部四个 icon 按钮（清空 / 全部文件 / 更多 / 关闭）——v26.10.19-v9 起全部文件出下拉
             headButtons: [...el.querySelectorAll('button[aria-label]')].map((b) => b.getAttribute('aria-label')),
             background: card ? getComputedStyle(card).backgroundColor : '',
             mineTextColor: mineBubble ? getComputedStyle(mineBubble).color : '',
@@ -541,13 +542,13 @@ function serve() {
         ['清空聊天记录', '更多', '关闭'].every((l) => (transfer.headButtons || []).includes(l));
     // 分界线 = 1px + rgb(34,34,34)（与窗口外框一致）
     report.checks.transferDividerOk = transfer.headerBorder === '1px rgb(34, 34, 34)';
-    // 标题栏 3 个 + 输入框 2 个 + 滚动到底 1 个：全是 28px 圆形（rounded-full 计算值 ≈ 3.35e7px）
+    // 标题栏 4 个（清空 / 全部文件 / 更多 / 关闭）+ 输入框 2 个 + 滚动到底 1 个：全是 28px 圆形
     const isRound28 = (b) => {
         const m = /(\d+)x(\d+)\s+(\d+)/.exec(String(b));
         return !!m && m[1] === '28' && m[2] === '28' && Number(m[3]) >= 9999;
     };
     report.checks.transferBtnShapeOk =
-        transfer.headBtnBox.length === 3 &&
+        transfer.headBtnBox.length === 4 &&
         transfer.headBtnBox.every(isRound28) &&
         transfer.composerBtnBox.length === 2 &&
         transfer.composerBtnBox.every(isRound28) &&
@@ -604,8 +605,14 @@ function serve() {
         })();
     report.sent = sent;
 
-    // 「全部文件」入口现在在「更多」下拉里
-    const filesPick = await pickMore('全部文件');
+    // 「全部文件」入口 v26.10.19-v9 起在标题栏（独立圆形按钮），不再收进「更多」下拉
+    const filesPick = await page.evaluate(() => {
+        const sr = document.getElementById('__znhd_panel_host__').shadowRoot;
+        const btn = sr.querySelector('button[aria-label="全部文件"]');
+        if (!btn) return { clicked: false, visible: false, labels: [] };
+        btn.click();
+        return { clicked: true, visible: true, labels: ['全部文件'] };
+    });
     await new Promise((r) => setTimeout(r, 400));
     const filesNav = await page.evaluate(() => {
         const sr = document.getElementById('__znhd_panel_host__').shadowRoot;

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         征纳互动人数和在线监控v2
 // @namespace    https://scriptcat.org/
-// @version      26.10.19-v8
+// @version      26.10.19-v9
 // @author       runos
 // @description  实时监控征纳互动等待人数和在线状态，支持语音播报、自定义常用语
 // @license      MIT
@@ -17773,16 +17773,16 @@ entries() {
   const _hoisted_15$1 = ["data-sniff-no-time"];
   const _hoisted_16$1 = { class: "relative" };
   const _hoisted_17$1 = ["src", "alt", "onClick"];
-  const _hoisted_18$1 = ["title"];
-  const _hoisted_19$1 = ["title"];
-  const _hoisted_20$1 = {
+  const _hoisted_18 = ["title"];
+  const _hoisted_19 = ["title"];
+  const _hoisted_20 = {
     key: 2,
     class: "mt-2 grid grid-cols-5 gap-2"
   };
-  const _hoisted_21$1 = ["data-sniff-no-time"];
-  const _hoisted_22$1 = { class: "relative" };
-  const _hoisted_23$1 = ["src", "alt", "onClick"];
-  const _hoisted_24$1 = ["title"];
+  const _hoisted_21 = ["data-sniff-no-time"];
+  const _hoisted_22 = { class: "relative" };
+  const _hoisted_23 = ["src", "alt", "onClick"];
+  const _hoisted_24 = ["title"];
   const _hoisted_25 = ["title"];
   const _hoisted_26 = {
     key: 3,
@@ -18263,15 +18263,15 @@ shouldStop: () => runId !== id
                           "data-sniff-name": "",
                           class: vue.normalizeClass(["mt-1 truncate text-[11px] leading-4", noTimeOf(it) ? "text-destructive" : "text-muted-foreground"]),
                           title: fileNameOf(it)
-                        }, vue.toDisplayString(fileNameOf(it)), 11, _hoisted_18$1),
+                        }, vue.toDisplayString(fileNameOf(it)), 11, _hoisted_18),
                         vue.createElementVNode("span", {
                           class: "truncate text-[11px] leading-4 text-muted-foreground",
                           title: metaOf(it)
-                        }, vue.toDisplayString(sizeText(it)), 9, _hoisted_19$1)
+                        }, vue.toDisplayString(sizeText(it)), 9, _hoisted_19)
                       ], 8, _hoisted_15$1);
                     }), 128))
                   ])) : vue.createCommentVNode("", true),
-                  openUnknown.value.has(s.id) && s.unknown.length ? (vue.openBlock(), vue.createElementBlock("div", _hoisted_20$1, [
+                  openUnknown.value.has(s.id) && s.unknown.length ? (vue.openBlock(), vue.createElementBlock("div", _hoisted_20, [
                     (vue.openBlock(true), vue.createElementBlock(vue.Fragment, null, vue.renderList(s.unknown, (it) => {
                       return vue.openBlock(), vue.createElementBlock("div", {
                         key: it.key,
@@ -18279,7 +18279,7 @@ shouldStop: () => runId !== id
                         "data-sniff-no-time": noTimeOf(it) ? "1" : void 0,
                         class: "flex min-w-0 flex-col rounded-xl p-1.5"
                       }, [
-                        vue.createElementVNode("div", _hoisted_22$1, [
+                        vue.createElementVNode("div", _hoisted_22, [
                           vue.createVNode(_sfc_main$D, {
                             actions: actionsOf(it)
                           }, {
@@ -18290,7 +18290,7 @@ shouldStop: () => runId !== id
                                 draggable: "false",
                                 class: "aspect-square w-full cursor-zoom-in rounded-lg object-cover",
                                 onClick: ($event) => openPreview(it)
-                              }, null, 8, _hoisted_23$1)
+                              }, null, 8, _hoisted_23)
                             ]),
                             _: 2
                           }, 1032, ["actions"]),
@@ -18310,12 +18310,12 @@ shouldStop: () => runId !== id
                           "data-sniff-name": "",
                           class: vue.normalizeClass(["mt-1 truncate text-[11px] leading-4", noTimeOf(it) ? "text-destructive" : "text-muted-foreground"]),
                           title: fileNameOf(it)
-                        }, vue.toDisplayString(fileNameOf(it)), 11, _hoisted_24$1),
+                        }, vue.toDisplayString(fileNameOf(it)), 11, _hoisted_24),
                         vue.createElementVNode("span", {
                           class: "truncate text-[11px] leading-4 text-muted-foreground",
                           title: metaOf(it)
                         }, vue.toDisplayString(sizeText(it)), 9, _hoisted_25)
-                      ], 8, _hoisted_21$1);
+                      ], 8, _hoisted_21);
                     }), 128))
                   ])) : vue.createCommentVNode("", true),
                   s.unknown.length ? (vue.openBlock(), vue.createElementBlock("div", _hoisted_26, [
@@ -20689,13 +20689,6 @@ shouldStop: () => runId !== id
   const _hoisted_15 = { class: "flex shrink-0 items-center gap-1" };
   const _hoisted_16 = ["disabled", "onClick"];
   const _hoisted_17 = ["onClick"];
-  const _hoisted_18 = { class: "mb-1.5 text-[13px] font-semibold text-white/90" };
-  const _hoisted_19 = { class: "min-w-0 flex-1" };
-  const _hoisted_20 = { class: "m-0 whitespace-pre-wrap break-words font-[inherit] text-sm leading-relaxed text-white/85" };
-  const _hoisted_21 = { class: "mt-1 text-[11px] text-white/35" };
-  const _hoisted_22 = { class: "flex shrink-0 items-center gap-1" };
-  const _hoisted_23 = ["onClick"];
-  const _hoisted_24 = ["onClick"];
   const _sfc_main$a = vue.defineComponent({
     __name: "FilesView",
     props: {
@@ -20705,14 +20698,14 @@ shouldStop: () => runId !== id
     },
     setup(__props) {
       const props = __props;
-      const copyState = vue.ref(null);
       const imgCopy = vue.ref(null);
       const previewOpen = vue.ref(false);
       const previewIndex = vue.ref(0);
-      const ordered = vue.computed(() => props.messages.slice().sort((a, b) => b.ts - a.ts));
+      const ordered = vue.computed(
+        () => props.messages.slice().filter((m) => m.type !== "text").sort((a, b) => b.ts - a.ts)
+      );
       const images = vue.computed(() => ordered.value.filter((m) => m.type === "image"));
       const files = vue.computed(() => ordered.value.filter((m) => m.type === "file"));
-      const texts = vue.computed(() => ordered.value.filter((m) => m.type === "text"));
       const imageUrls = vue.computed(() => images.value.map((m) => m.previewUrl));
       const imageNames = vue.computed(() => images.value.map((m, i) => downloadFileName(m.name, m.mime, i)));
       function saveBlob(blob, name) {
@@ -20749,13 +20742,6 @@ shouldStop: () => runId !== id
         saveBlob(msg.blob, fname);
         addLog("文件已下载: " + fname, "success");
       }
-      function doCopyText(msg) {
-        safeCopyText(msg.text || "", (ok) => {
-          copyState.value = { id: msg.id, ok };
-          if (ok) addLog("文本已复制到剪贴板", "success");
-          window.setTimeout(() => copyState.value = null, 1500);
-        });
-      }
       function openPreview(msg) {
         const at = images.value.findIndex((m) => m.id === msg.id);
         previewIndex.value = at >= 0 ? at : 0;
@@ -20785,13 +20771,13 @@ shouldStop: () => runId !== id
         return !ordered.value.length ? (vue.openBlock(), vue.createElementBlock("div", _hoisted_1$6, [
           vue.createVNode(vue.unref(_sfc_main$P), { class: "!p-6" }, {
             default: vue.withCtx(() => [
-              vue.createElementVNode("span", _hoisted_2$5, vue.toDisplayString(_ctx.clearScope ? "该会话暂无图片 / 文件 / 文本" : "暂无文件——手机发来的图片 / 文件 / 文本会汇总在这里"), 1)
+              vue.createElementVNode("span", _hoisted_2$5, vue.toDisplayString(_ctx.clearScope ? "该会话暂无图片 / 文件" : "暂无文件——手机发来的图片 / 文件会汇总在这里"), 1)
             ]),
             _: 1
           })
         ])) : (vue.openBlock(), vue.createElementBlock("div", _hoisted_3$5, [
           vue.createElementVNode("div", _hoisted_4$5, [
-            vue.createElementVNode("span", _hoisted_5$3, vue.toDisplayString(_ctx.scopeLabel) + "（图片 " + vue.toDisplayString(images.value.length) + " · 文件 " + vue.toDisplayString(files.value.length) + " · 文本 " + vue.toDisplayString(texts.value.length) + "） ", 1),
+            vue.createElementVNode("span", _hoisted_5$3, vue.toDisplayString(_ctx.scopeLabel) + "（图片 " + vue.toDisplayString(images.value.length) + " · 文件 " + vue.toDisplayString(files.value.length) + "） ", 1),
             _cache[1] || (_cache[1] = vue.createElementVNode("span", { class: "flex-1" }, null, -1)),
             vue.createElementVNode("button", {
               type: "button",
@@ -20871,41 +20857,6 @@ shouldStop: () => runId !== id
                 ]);
               }), 128))
             ])
-          ], 2)) : vue.createCommentVNode("", true),
-          texts.value.length ? (vue.openBlock(), vue.createElementBlock("div", {
-            key: 2,
-            class: vue.normalizeClass(images.value.length || files.value.length ? "mt-4" : "")
-          }, [
-            vue.createElementVNode("div", _hoisted_18, "文本（" + vue.toDisplayString(texts.value.length) + "）", 1),
-            (vue.openBlock(true), vue.createElementBlock(vue.Fragment, null, vue.renderList(texts.value, (msg) => {
-              return vue.openBlock(), vue.createElementBlock("div", {
-                key: msg.id,
-                class: "flex items-start gap-2 border-b border-white/10 py-2"
-              }, [
-                vue.createElementVNode("div", _hoisted_19, [
-                  vue.createElementVNode("pre", _hoisted_20, vue.toDisplayString(msg.text), 1),
-                  vue.createElementVNode("div", _hoisted_21, vue.toDisplayString(vue.unref(sourceLabel)(msg)) + " · " + vue.toDisplayString(vue.unref(fullTime)(msg.ts)) + " · " + vue.toDisplayString(msg.direction === "in" ? "收到" : "发出"), 1)
-                ]),
-                vue.createElementVNode("div", _hoisted_22, [
-                  vue.createElementVNode("button", {
-                    type: "button",
-                    class: "cursor-pointer rounded border border-white/20 bg-white/5 px-2 py-0.5 text-xs text-white/80 outline-none hover:bg-white/15",
-                    onClick: ($event) => doCopyText(msg)
-                  }, vue.toDisplayString(copyState.value && copyState.value.id === msg.id ? copyState.value.ok ? "已复制" : "复制失败" : "复制"), 9, _hoisted_23),
-                  vue.createElementVNode("button", {
-                    type: "button",
-                    "aria-label": "删除文本",
-                    class: "inline-flex size-[22px] cursor-pointer items-center justify-center rounded border-0 bg-transparent p-0 text-[#ff7875] outline-none hover:bg-[#ff7875]/15",
-                    onClick: ($event) => vue.unref(removeTransferMessage)(msg.sessionKey, msg.id)
-                  }, [
-                    vue.createVNode(vue.unref(Icon$1), {
-                      name: "close",
-                      size: 13
-                    })
-                  ], 8, _hoisted_24)
-                ])
-              ]);
-            }), 128))
           ], 2)) : vue.createCommentVNode("", true),
           vue.createVNode(_sfc_main$C, {
             open: previewOpen.value,
@@ -21976,6 +21927,30 @@ primary: "#07C160"
                                           ]),
                                           _: 1
                                         }),
+                                        vue.createVNode(_sfc_main$1x, {
+                                          content: "全部文件",
+                                          side: "bottom"
+                                        }, {
+                                          default: vue.withCtx(() => [
+                                            vue.createVNode(vue.unref(_sfc_main$1y), {
+                                              variant: "outline",
+                                              size: "icon-sm",
+                                              class: "!size-7 !rounded-full",
+                                              "aria-label": "全部文件",
+                                              title: "全部文件",
+                                              onClick: _cache[0] || (_cache[0] = ($event) => filesOpen.value = true)
+                                            }, {
+                                              default: vue.withCtx(() => [
+                                                vue.createVNode(vue.unref(Icon$1), {
+                                                  name: "files",
+                                                  size: 14
+                                                })
+                                              ]),
+                                              _: 1
+                                            })
+                                          ]),
+                                          _: 1
+                                        }),
                                         vue.createVNode(vue.unref(_sfc_main$A), null, {
                                           default: vue.withCtx(() => [
                                             vue.createVNode(vue.unref(_sfc_main$w), { "as-child": "" }, {
@@ -22005,18 +21980,6 @@ primary: "#07C160"
                                             }, {
                                               default: vue.withCtx(() => [
                                                 vue.createVNode(vue.unref(_sfc_main$y), {
-                                                  onSelect: _cache[0] || (_cache[0] = ($event) => filesOpen.value = true)
-                                                }, {
-                                                  default: vue.withCtx(() => [
-                                                    vue.createVNode(vue.unref(Icon$1), {
-                                                      name: "files",
-                                                      size: 15
-                                                    }),
-                                                    _cache[14] || (_cache[14] = vue.createTextVNode(" 全部文件 "))
-                                                  ]),
-                                                  _: 1
-                                                }),
-                                                vue.createVNode(vue.unref(_sfc_main$y), {
                                                   onSelect: _cache[1] || (_cache[1] = ($event) => pairOpen.value = true)
                                                 }, {
                                                   default: vue.withCtx(() => [
@@ -22024,7 +21987,7 @@ primary: "#07C160"
                                                       name: "qr",
                                                       size: 15
                                                     }),
-                                                    _cache[15] || (_cache[15] = vue.createTextVNode(" 扫码连接手机 "))
+                                                    _cache[14] || (_cache[14] = vue.createTextVNode(" 扫码连接手机 "))
                                                   ]),
                                                   _: 1
                                                 }),
@@ -22037,7 +22000,7 @@ primary: "#07C160"
                                                       name: "settings",
                                                       size: 15
                                                     }),
-                                                    _cache[16] || (_cache[16] = vue.createTextVNode(" 设置 "))
+                                                    _cache[15] || (_cache[15] = vue.createTextVNode(" 设置 "))
                                                   ]),
                                                   _: 1
                                                 }),
@@ -22049,7 +22012,7 @@ primary: "#07C160"
                                                       name: "info",
                                                       size: 15
                                                     }),
-                                                    _cache[17] || (_cache[17] = vue.createTextVNode(" 关于 "))
+                                                    _cache[16] || (_cache[16] = vue.createTextVNode(" 关于 "))
                                                   ]),
                                                   _: 1
                                                 })

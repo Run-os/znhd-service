@@ -1,12 +1,11 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
-import { type IconName } from '@vue/icons';
+import { Icon, type IconName } from '@vue/icons';
 import { Toaster } from '@vue/components/ui/sonner';
 import {
     Card,
     CardAction,
     CardContent,
-    CardDescription,
     CardFooter,
     CardHeader,
     CardTitle,
@@ -209,12 +208,31 @@ function onItem(item: RecvItem) {
 // 心跳 + 长轮询：挂载时启动，卸载时停止
 let stopRelay: (() => void) | null = null;
 
+function startRelay() {
+    if (!deviceId) return;
+    stopRelay = startPhoneRelay({ deviceId, phoneId, onConn: (c) => (conn.value = c), onItem });
+}
+
+/** 手动重连（v26.10.19-v9）：停掉现有轮询再重起（消息列表保留不清） */
+function refreshConn() {
+    if (stopRelay) {
+        try {
+            stopRelay();
+        } catch (e) {
+            /* 已停止 */
+        }
+        stopRelay = null;
+    }
+    conn.value = { state: 'offline' };
+    startRelay();
+}
+
 onMounted(() => {
     if (!deviceId) {
         conn.value = { state: 'error', msg: '链接无效：未识别到设备ID，请重新生成二维码' };
         return;
     }
-    stopRelay = startPhoneRelay({ deviceId, phoneId, onConn: (c) => (conn.value = c), onItem });
+    startRelay();
 });
 
 onBeforeUnmount(() => {
@@ -453,10 +471,17 @@ const footerHint = computed(() => {
                                 v{{ appVersion }}
                             </span>
                         </CardTitle>
-                        <CardDescription class="truncate text-[11px]">
-                            本机 {{ phoneId || '未知' }} · 电脑 {{ deviceId || '未识别，请重新生成二维码' }}
-                        </CardDescription>
-                        <CardAction>
+                        <!-- v26.10.19-v9：删掉「本机 id · 电脑 id」描述行；CardAction 加脚本端同款圆形刷新按钮 -->
+                        <CardAction class="flex items-center gap-1.5">
+                            <button
+                                type="button"
+                                aria-label="重新连接"
+                                title="重新连接"
+                                class="inline-flex size-7 cursor-pointer items-center justify-center rounded-full border border-white/20 bg-transparent p-0 text-white/80 outline-none hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
+                                :disabled="conn.state !== 'offline' && conn.state !== 'error'"
+                                @click="refreshConn">
+                                <Icon name="refresh" :size="14" />
+                            </button>
                             <!-- h-5 与标题行（版本徽章 h-5）同高 ⇒ 顶对齐的 grid 里中心线也在一条线上（v26.10.19-v1） -->
                             <span class="inline-flex h-5 items-center gap-1.5 text-xs text-muted-foreground">
                                 <i class="inline-block size-1.5 rounded-full" :class="connDot" />

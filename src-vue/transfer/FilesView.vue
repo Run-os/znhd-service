@@ -4,7 +4,6 @@ import { Empty } from '@vue/components/ui/empty';
 import { Icon } from '@vue/icons';
 import { addLog } from '@/lib/logger';
 import { copyImageToClipboard } from '@/lib/relay';
-import { safeCopyText } from '@/lib/clipboard';
 import { downloadFileName } from '@/lib/gallery';
 import { clearAllTransferFiles, removeTransferMessage } from '@/lib/transfer/store';
 import { formatBytes } from '@/lib/sniffer';
@@ -17,7 +16,8 @@ import type { ImageAction } from './types';
 /**
  * 文件视图（v26.10.18-v5，React 版 `TransferFilesView` 的等价实现）。
  *
- * 「全部文件」= 全部消息（父组件传进来）：图片九宫格 + 文件卡片 + 文本列表。
+ * 「全部文件」= 父组件传进来的全部消息：图片九宫格 + 文件卡片。
+ * ⚠️ v26.10.19-v9：**不再收录文本**——文本留在聊天时间线里看，这里只管图片和文件。
  */
 const props = defineProps<{
     messages: TransferMessage[];
@@ -27,16 +27,19 @@ const props = defineProps<{
     clearScope?: () => void;
 }>();
 
-const copyState = ref<{ id: string; ok: boolean } | null>(null);
 const imgCopy = ref<{ id: string; state: 'busy' | 'ok' | 'fail' } | null>(null);
 const previewOpen = ref(false);
 const previewIndex = ref(0);
 
 /** 最新在前（刚收到的先看） */
-const ordered = computed(() => props.messages.slice().sort((a, b) => b.ts - a.ts));
+const ordered = computed(() =>
+    props.messages
+        .slice()
+        .filter((m) => m.type !== 'text')
+        .sort((a, b) => b.ts - a.ts)
+);
 const images = computed(() => ordered.value.filter((m) => m.type === 'image'));
 const files = computed(() => ordered.value.filter((m) => m.type === 'file'));
-const texts = computed(() => ordered.value.filter((m) => m.type === 'text'));
 
 const imageUrls = computed(() => images.value.map((m) => m.previewUrl as string));
 const imageNames = computed(() => images.value.map((m, i) => downloadFileName(m.name, m.mime, i)));
@@ -80,14 +83,6 @@ function doDownloadFile(msg: TransferMessage) {
     addLog('文件已下载: ' + fname, 'success');
 }
 
-function doCopyText(msg: TransferMessage) {
-    safeCopyText(msg.text || '', (ok: boolean) => {
-        copyState.value = { id: msg.id, ok };
-        if (ok) addLog('文本已复制到剪贴板', 'success');
-        window.setTimeout(() => (copyState.value = null), 1500);
-    });
-}
-
 function openPreview(msg: TransferMessage) {
     const at = images.value.findIndex((m) => m.id === msg.id);
     previewIndex.value = at >= 0 ? at : 0;
@@ -123,11 +118,7 @@ function onClear() {
     <div v-if="!ordered.length" class="flex flex-1 items-center justify-center">
         <Empty class="!p-6">
             <span class="text-xs text-white/40">
-                {{
-                    clearScope
-                        ? '该会话暂无图片 / 文件 / 文本'
-                        : '暂无文件——手机发来的图片 / 文件 / 文本会汇总在这里'
-                }}
+                {{ clearScope ? '该会话暂无图片 / 文件' : '暂无文件——手机发来的图片 / 文件会汇总在这里' }}
             </span>
         </Empty>
     </div>
@@ -135,7 +126,7 @@ function onClear() {
     <div v-else class="znhd-transfer-files min-h-0 flex-1 overflow-y-auto px-3 py-2.5">
         <div class="mb-2 flex items-baseline gap-2">
             <span class="text-sm font-semibold text-white/90">
-                {{ scopeLabel }}（图片 {{ images.length }} · 文件 {{ files.length }} · 文本 {{ texts.length }}）
+                {{ scopeLabel }}（图片 {{ images.length }} · 文件 {{ files.length }}）
             </span>
             <span class="flex-1" />
             <button
@@ -210,36 +201,7 @@ function onClear() {
             </div>
         </div>
 
-        <!-- 文本列表 -->
-        <div v-if="texts.length" :class="images.length || files.length ? 'mt-4' : ''">
-            <div class="mb-1.5 text-[13px] font-semibold text-white/90">文本（{{ texts.length }}）</div>
-            <div
-                v-for="msg in texts"
-                :key="msg.id"
-                class="flex items-start gap-2 border-b border-white/10 py-2">
-                <div class="min-w-0 flex-1">
-                    <pre class="m-0 whitespace-pre-wrap break-words font-[inherit] text-sm leading-relaxed text-white/85">{{ msg.text }}</pre>
-                    <div class="mt-1 text-[11px] text-white/35">
-                        {{ sourceLabel(msg) }} · {{ fullTime(msg.ts) }} · {{ msg.direction === 'in' ? '收到' : '发出' }}
-                    </div>
-                </div>
-                <div class="flex shrink-0 items-center gap-1">
-                    <button
-                        type="button"
-                        class="cursor-pointer rounded border border-white/20 bg-white/5 px-2 py-0.5 text-xs text-white/80 outline-none hover:bg-white/15"
-                        @click="doCopyText(msg)">
-                        {{ copyState && copyState.id === msg.id ? (copyState.ok ? '已复制' : '复制失败') : '复制' }}
-                    </button>
-                    <button
-                        type="button"
-                        aria-label="删除文本"
-                        class="inline-flex size-[22px] cursor-pointer items-center justify-center rounded border-0 bg-transparent p-0 text-[#ff7875] outline-none hover:bg-[#ff7875]/15"
-                        @click="removeTransferMessage(msg.sessionKey, msg.id)">
-                        <Icon name="close" :size="13" />
-                    </button>
-                </div>
-            </div>
-        </div>
+        <!-- v26.10.19-v9：文本列表整段移除——文本只在聊天时间线看，「全部文件」只收图片和文件 -->
 
         <ImagePreview v-model:open="previewOpen" :items="imageUrls" :index="previewIndex" :names="imageNames" />
     </div>
