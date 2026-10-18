@@ -76,7 +76,12 @@ export default defineConfig({
     ],
     build: {
         target: 'es2019',
-        minify: 'esbuild',
+        // 产物要提交进仓库、靠 git diff 看「这次改了什么」，因此**默认不压缩**：
+        // esbuild minify 会把整包压成几十行，diff 只能看到「一行全变」。
+        // 需要发布压缩版时临时跑 `ZNHD_MINIFY=1 npm run build:vue`。
+        minify: process.env.ZNHD_MINIFY === '1' ? 'esbuild' : false,
+        // CSS 单独压缩：Tailwind 产生的几千条工具类排成多行没有阅读价值，只按字符串注入。
+        cssMinify: true,
         sourcemap: false,
         // ⚠️ 必须 false：dist/ 里同时躺着提交进仓库的 React 版产物 znhd.user.js，
         // 默认的 emptyOutDir 会在每次 Vue 构建时把它删掉（实测踩过）。
