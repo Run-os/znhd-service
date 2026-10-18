@@ -299,9 +299,9 @@ onBeforeUnmount(() => {
                 <Switch :model-value="voiceEnabled" @update:model-value="toggleVoice" />
             </div>
 
-            <!-- 4 个入口：官方 Button（outline）+ 容器查询控制文字显隐 -->
+            <!-- 4 个入口：官方 Button（outline）+ 容器查询控制文字显隐（v26.10.19-v10：hover 提示显示在按钮上方） -->
             <div class="grid grid-cols-4 gap-1.5">
-                <Tooltip v-for="a in PANEL_ACTIONS" :key="a.key" :content="a.label">
+                <Tooltip v-for="a in PANEL_ACTIONS" :key="a.key" :content="a.label" side="top">
                     <Button
                         variant="outline"
                         size="lg"

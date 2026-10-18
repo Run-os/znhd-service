@@ -798,6 +798,39 @@ function serve() {
     report.sniffPreview = sniffPreview;
     await page.screenshot({ path: path.join(os.tmpdir(), 'znhd-vue-sniff-preview.png') });
 
+    // v26.10.19-v10 回归守门：预览开着按一次 Esc 必须只关预览、嗅探窗保持打开
+    // （v3 修过一次「Esc 连坐关掉嗅探窗」——window 捕获段先于 reka 层处理，别回退）
+    await page.keyboard.press('Escape');
+    await new Promise((r) => setTimeout(r, 300));
+    const afterEsc = await page.evaluate(() => {
+        const sr = document.getElementById('__znhd_panel_host__').shadowRoot;
+        return {
+            previewClosed: !sr.querySelector('[data-image-preview]'),
+            sniffStillOpen: !!sr.querySelector('[data-sniff-card]'),
+        };
+    });
+    report.checks.sniffEscOnlyPreviewOk = afterEsc.previewClosed && afterEsc.sniffStillOpen;
+    report.sniffAfterEsc = afterEsc;
+
+    // v26.10.19-v10 回归：点预览层空白区也必须只关预览（pointerdown 不能连坐 dismiss 底层弹窗）
+    await page.evaluate(() => {
+        const sr = document.getElementById('__znhd_panel_host__').shadowRoot;
+        const img = sr.querySelector('[data-sniff-card] img');
+        if (img) img.click();
+    });
+    await new Promise((r) => setTimeout(r, 400));
+    await page.mouse.click(200, 400); // 图片区空白（1x1 夹具图在正中心，200,400 命中图片区容器自身）
+    await new Promise((r) => setTimeout(r, 300));
+    const afterBlankClick = await page.evaluate(() => {
+        const sr = document.getElementById('__znhd_panel_host__').shadowRoot;
+        return {
+            previewClosed: !sr.querySelector('[data-image-preview]'),
+            sniffStillOpen: !!sr.querySelector('[data-sniff-card]'),
+        };
+    });
+    report.checks.sniffBlankClickOnlyPreviewOk = afterBlankClick.previewClosed && afterBlankClick.sniffStillOpen;
+    report.sniffAfterBlankClick = afterBlankClick;
+
     // 关预览 + 关嗅探弹窗
     await page.keyboard.press('Escape');
     await new Promise((r) => setTimeout(r, 250));

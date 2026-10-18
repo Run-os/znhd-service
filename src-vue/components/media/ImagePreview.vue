@@ -71,6 +71,25 @@ function onKey(e: KeyboardEvent) {
     if (e.key === 'ArrowRight') go(1);
 }
 
+/**
+ * ⚠️ 点击拦截（v26.10.19-v10）：Esc 之外还有第二条「连坐关闭」路径——
+ * 预览层是自绘 overlay（非 reka layer），点它的空白区关预览的同时，这次 pointerdown
+ * 会被 reka DismissableLayer 判成「点在 layer 外面」⇒ 底层弹窗（嗅探窗等）一起被
+ * dismiss。同 Esc 思路：预览开着期间在 window 捕获段先拦 pointerdown，目标落在
+ * 预览层内就 stopPropagation，reka 的 document 级监听根本看不到这次按下；
+ * 预览自己的 `@click.self` 关闭走的是 click 事件（另一条事件流），不受影响。
+ *
+ * ⚠️ 目标判定必须用 `composedPath()`：window 级监听器在影子树**外**，event.target
+ * 已被重定向成影子宿主元素（实测 = DIV.dark），`closest('[data-image-preview]')`
+ * 永远匹配不上；composedPath()[0] 才是影子树内的真实落点（open 影子树不裁剪路径）。
+ */
+function onPointerDown(e: PointerEvent) {
+    if (!props.open) return;
+    const path = e.composedPath();
+    const inPreview = path.some((n) => n instanceof Element && n.closest && n.closest('[data-image-preview]'));
+    if (inPreview) e.stopPropagation();
+}
+
 watch(
     () => props.open,
     (open) => {
@@ -78,13 +97,18 @@ watch(
             current.value = Math.min(Math.max(0, props.index || 0), Math.max(0, total.value - 1));
             reset();
             window.addEventListener('keydown', onKey, true);
+            window.addEventListener('pointerdown', onPointerDown, true);
         } else {
             window.removeEventListener('keydown', onKey, true);
+            window.removeEventListener('pointerdown', onPointerDown, true);
         }
     }
 );
 
-onBeforeUnmount(() => window.removeEventListener('keydown', onKey, true));
+onBeforeUnmount(() => {
+    window.removeEventListener('keydown', onKey, true);
+    window.removeEventListener('pointerdown', onPointerDown, true);
+});
 </script>
 
 <template>
@@ -109,8 +133,11 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKey, true));
                 </button>
             </div>
 
-            <!-- 图片区：左右箭头 + 图片本体 -->
-            <div class="relative flex min-h-0 flex-1 items-center justify-center px-12">
+            <!-- 图片区：左右箭头 + 图片本体
+                 v26.10.19-v10：click.self 同时挂在图片区容器上——旧版只有根 overlay 有 self 关闭，
+                 而图片区是满宽子容器，点图片周围空白命中的是它 ⇒ 「点空白关预览」实际从未生效
+                 （用户看到的预览关闭其实是底层弹窗被连坐关掉时的级联）。 -->
+            <div class="relative flex min-h-0 flex-1 items-center justify-center px-12" @click.self="emit('update:open', false)">
                 <button
                     v-if="total > 1"
                     type="button"
@@ -140,8 +167,8 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKey, true));
                 </button>
             </div>
 
-            <!-- 底部工具栏：与 antd 预览的能力对齐（缩放 / 旋转 / 打印） -->
-            <div class="flex shrink-0 items-center justify-center gap-1 py-3">
+            <!-- 底部工具栏：与 antd 预览的能力对齐（缩放 / 旋转 / 打印）；按钮之间的空隙点了也关预览 -->
+            <div class="flex shrink-0 items-center justify-center gap-1 py-3" @click.self="emit('update:open', false)">
                 <button
                     type="button"
                     aria-label="缩小"
