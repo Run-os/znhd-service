@@ -87,5 +87,10 @@
     "webpack": "^5.72.0",
     "webpack-cli": "^4.9.2",
     "webpack-dev-server": "^4.9.0"
+  },
+  "dependencies": {
+    "@lucide/vue": "^1.59.0",
+    "@vueuse/core": "^15.0.0",
+    "cn": "^0.5.0"
   }
 }

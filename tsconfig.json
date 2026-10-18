@@ -21,7 +21,10 @@
     "module": "esnext",
     "moduleResolution": "bundler",
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      // Vue UI 迁移（2026-10-18）：shadcn-vue CLI 解析 components.json 的 aliases 时只读根 tsconfig，
+      // 故这里补一份 @vue/* → src-vue/*（React 侧 include 不含 src-vue，不影响原有编译）。
+      "@vue/*": ["./src-vue/*"]
     },
     "types": ["tampermonkey"],
     "allowUmdGlobalAccess": true,
