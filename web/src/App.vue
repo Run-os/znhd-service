@@ -425,7 +425,9 @@ const attachActions = computed<
 /** 卡片下方那行提示（对应示例里 `Demo is read only…` 的位置） */
 const footerHint = computed(() => {
     if (conn.value.state === 'error') return (conn.value as { msg?: string }).msg || '连接失败，请重新扫码';
-    if (conn.value.state === 'online') return '已连接电脑 · 图片会先压缩再发送';
+    // v26.10.19-v2：在线态去掉「已连接电脑 · 图片会先压缩再发送」—— 连接状态标题栏已有显示，
+    // 「先压缩」也只是实现细节。返回空串后该行只剩 4px 底部内边距，不占视觉空间。
+    if (conn.value.state === 'online') return '';
     return '正在连接电脑…';
 });
 </script>

@@ -331,14 +331,16 @@ const footerHint = computed(() =>
                                 v26.10.19：头部与会话区之间只留 1px 细线，颜色跟窗口外框一致
                                 （Tailwind v4 的 border 默认色是 currentColor ⇒ 不写死就是一条亮白线）。
                             -->
-                            <CardHeader class="shrink-0 gap-1 [border-bottom:1px_solid_rgb(34,34,34)]">
+                            <!-- v26.10.19-v3：items-center + CardAction self-center——标题行（文字 20px）与
+                                 28px 圆形按钮在 grid 默认顶对齐下中心线错开 4px，改为行内垂直居中 -->
+                            <CardHeader class="shrink-0 items-center gap-1 [border-bottom:1px_solid_rgb(34,34,34)]">
                                 <!-- v26.10.19：设备连接数跟标题同一行（原来的 CardDescription 已移除） -->
                                 <div class="flex min-w-0 items-center gap-2">
                                     <CardTitle class="truncate">传输助手</CardTitle>
                                     <span class="shrink-0 text-xs text-muted-foreground">{{ headerText }}</span>
                                 </div>
                                 <!-- v26.10.19：标题栏按钮改圆形，尺寸与输入框按钮一致（28px） -->
-                                <CardAction class="flex items-center gap-1.5">
+                                <CardAction class="flex items-center gap-1.5 self-center">
                                     <Tooltip content="清空聊天记录" side="bottom">
                                         <Button
                                             variant="outline"

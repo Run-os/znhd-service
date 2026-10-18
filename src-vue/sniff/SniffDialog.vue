@@ -510,15 +510,15 @@ const emptyText = computed(() => {
             已排除 {{ droppedCount }} 个响应不是图片的地址（视频 / 网页 / JSON 等）。
         </p>
 
-        <!-- 测量中且一张都还没回来：进度条 -->
-        <div v-if="phase === 'measuring' && !probed.length" class="py-6 text-center">
+        <!-- 测量中且一张都还没回来：进度条（v26.10.19-v3：与列表/空态统一固定 58vh，弹窗高度不随内容抖动） -->
+        <div v-if="phase === 'measuring' && !probed.length" class="flex h-[58vh] flex-col items-center justify-center">
             <Progress :model-value="percent" class="mx-auto max-w-[320px]" />
             <p class="mt-2 text-xs text-muted-foreground">
                 正在测量大小…（{{ probed.length }}/{{ total }}）
             </p>
         </div>
 
-        <Empty v-else-if="!kept.length" class="border-0 py-8">
+        <Empty v-else-if="!kept.length" class="h-[58vh] border-0 py-8">
             <EmptyHeader>
                 <EmptyMedia variant="icon">
                     <Icon name="image" :size="20" />
@@ -528,7 +528,8 @@ const emptyText = computed(() => {
             </EmptyHeader>
         </Empty>
 
-        <div v-else class="max-h-[58vh] overflow-auto pr-1">
+        <!-- v26.10.19-v3：固定 h-[58vh]（原 max-h）——空态/列表/测量中窗口大小一致 -->
+        <div v-else class="h-[58vh] overflow-auto pr-1">
             <div
                 v-for="(s, si) in sections"
                 :key="s.id || '__unnamed__'"
@@ -634,7 +635,8 @@ const emptyText = computed(() => {
             </div>
         </div>
 
-        <p v-if="kept.length" class="mt-2 text-xs leading-5 text-muted-foreground">
+        <!-- v26.10.19-v3：无图时不渲染内容但保留占位（invisible），弹窗总高与有图时一致 -->
+        <p class="mt-2 text-xs leading-5 text-muted-foreground" :class="kept.length ? '' : 'invisible'">
             提示：
             <template v-if="groupedView">图片已按会话（纳税人）分组，组头可直接「全选本组」；</template>
             单击缩略图可放大 / 多图切换，放大后工具栏上的「打印」按 A4 打印原图（横图自动旋转 90 度）；

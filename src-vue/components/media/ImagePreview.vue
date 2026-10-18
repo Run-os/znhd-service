@@ -58,6 +58,12 @@ function go(step: number) {
 function onKey(e: KeyboardEvent) {
     if (!props.open) return;
     if (e.key === 'Escape') {
+        // ⚠️ 必须 preventDefault + stopPropagation（v26.10.19-v3）：本监听挂在 window **捕获段**，
+        // 先于 reka Dialog 的 Esc 监听（window 冒泡段）执行；不拦的话底层弹窗（嗅探窗等）
+        // 会跟着预览一起被 Esc 关掉。reka DismissableLayer 明确「defaultPrevented 则不 dismiss」，
+        // preventDefault 即够，stopPropagation 双保险（独立页面无 Dialog 时也无副作用）。
+        e.preventDefault();
+        e.stopPropagation();
         emit('update:open', false);
         return;
     }
