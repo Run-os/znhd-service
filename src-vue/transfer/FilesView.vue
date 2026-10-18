@@ -9,8 +9,8 @@ import { downloadFileName } from '@/lib/gallery';
 import { clearAllTransferFiles, removeTransferMessage } from '@/lib/transfer/store';
 import { formatBytes } from '@/lib/sniffer';
 import type { TransferMessage } from '@/lib/transfer/types';
-import ImageActions from './ImageActions.vue';
-import ImagePreview from './ImagePreview.vue';
+import ImageActions from '@vue/components/media/ImageActions.vue';
+import ImagePreview from '@vue/components/media/ImagePreview.vue';
 import { fullTime, sourceLabel } from './format';
 import type { ImageAction } from './types';
 

@@ -28,6 +28,14 @@ const SCRIPT_VERSION = (() => {
     return m[1];
 })();
 
+/** 图片嗅探夹具的响应体大小（与 GM 桩的 __imgBytes 保持一致） */
+const IMG_SIZES = {
+    '/img/photo-a.jpg': 61440,
+    '/img/photo-b.jpg': 40960,
+    '/img/tiny.jpg': 2048,
+    '/img/icon-set.svg': 1024,
+};
+
 const PNG_1X1 =
     'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
 
@@ -41,6 +49,13 @@ const PNG_1X1 =
  */
 const GM_STUB = `
 window.PHONE_ID = 'smoke-phone-8f3a21';
+// 图片嗅探夹具：三张大图（> 默认 20KB 阈值）+ 一张小图 + 一张 .svg（应被后缀规则排除）
+window.__imgBytes = {
+  '/img/photo-a.jpg': 61440,
+  '/img/photo-b.jpg': 40960,
+  '/img/tiny.jpg': 2048,
+  '/img/icon-set.svg': 1024,
+};
 window.__recvQueue = [];
 window.__sent = [];
 window.GM_info = { script: { version: '${SCRIPT_VERSION}', updateURL: 'https://example.com/znhd.user.js' } };
@@ -59,6 +74,22 @@ window.GM_xmlhttpRequest = function (o) {
   const respond = function (status, text) {
     setTimeout(function () { o.onload && o.onload({ status: status, responseText: text }); }, 30);
   };
+  // 图片嗅探用：HEAD 要给 content-length（perf 档没命中时的第二阶梯），GET 给 Range 响应
+  if (url.indexOf('/img/') >= 0) {
+    const bytes = window.__imgBytes[url] || 2048;
+    const mime = url.slice(-4) === '.svg' ? 'image/svg+xml' : 'image/jpeg';
+    const headers = 'content-type: ' + mime + String.fromCharCode(10) + 'content-length: ' + bytes;
+    if ((o.method || 'GET').toUpperCase() === 'HEAD') {
+      return setTimeout(function () { o.onload && o.onload({ status: 200, responseHeaders: headers, responseText: '' }); }, 15);
+    }
+    return setTimeout(function () {
+      o.onload && o.onload({
+        status: 200,
+        responseHeaders: headers,
+        response: new Blob([new Uint8Array(1)], { type: mime }),
+      });
+    }, 15);
+  }
   const phones = [{ id: window.PHONE_ID, lastSeen: Date.now() }];
   if (url.indexOf('/recv/') >= 0) {
     if (window.__recvQueue.length) {
@@ -90,13 +121,38 @@ const HTML = `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8">
 </style>
 <script>${GM_STUB}</script>
 <script src="/vue.js"></script>
-</head><body><h1>host page</h1><script src="/znhd.vue.user.js"></script></body></html>`;
+</head><body><h1>host page</h1>
+<!-- 图片嗅探夹具：两张 > 20KB（应出现在结果里）、一张 2KB（应被阈值过滤）、一张 .svg（应被后缀规则排除） -->
+<div id="host-images">
+  <img src="/img/photo-a.jpg" alt="photo-a.jpg" width="240" height="160">
+  <img src="/img/photo-b.jpg" alt="photo-b.jpg" width="240" height="160">
+  <img src="/img/tiny.jpg" alt="tiny.jpg" width="60" height="60">
+  <img src="/img/icon-set.svg" alt="icon-set.svg" width="24" height="24">
+</div><script src="/znhd.vue.user.js"></script></body></html>`;
 
 function serve() {
     const server = http.createServer((req, res) => {
         if (req.url === '/vue.js') {
             res.writeHead(200, { 'content-type': 'application/javascript' });
             res.end(fs.readFileSync(VUE));
+            return;
+        }
+        if (req.url.startsWith('/img/')) {
+            // 返回指定长度的随机字节：浏览器会解码失败（页面上是破图，无所谓），
+            // 但响应体长度真实存在 ⇒ 资源表里 encodedBodySize 可读，嗅探的 perf 档能命中。
+            const size = IMG_SIZES[req.url] || 2048;
+            const buf = Buffer.alloc(size);
+            let seed = 1234567;
+            for (let i = 0; i < size; i++) {
+                seed = (seed * 1664525 + 1013904223) >>> 0;
+                buf[i] = seed & 0xff;
+            }
+            res.writeHead(200, {
+                'content-type': req.url.endsWith('.svg') ? 'image/svg+xml' : 'image/jpeg',
+                'content-length': String(size),
+                'cache-control': 'no-store',
+            });
+            res.end(buf);
             return;
         }
         if (req.url === '/znhd.vue.user.js') {
@@ -441,6 +497,139 @@ function serve() {
         transferSettings.width === 480;
     report.transferSettings = transferSettings;
     await page.screenshot({ path: path.join(os.tmpdir(), 'znhd-vue-transfer-settings.png') });
+
+    // ---------- 图片嗅探（阶段 4） ----------
+    // 先逐层 Esc 关掉传输助手窗口与它的设置弹窗
+    for (let i = 0; i < 3; i++) {
+        await page.keyboard.press('Escape');
+        await new Promise((r) => setTimeout(r, 220));
+    }
+
+    await page.evaluate(() => {
+        const sr = document.getElementById('__znhd_panel_host__').shadowRoot;
+        const btn = [...sr.querySelectorAll('button')].find((b) => b.textContent.includes('图片嗅探'));
+        if (btn) btn.click();
+    });
+    // 扫描是同步收集 + 异步测大小（150ms 合批），给足时间让所有测量落地
+    await new Promise((r) => setTimeout(r, 2200));
+
+    const sniff = await page.evaluate(() => {
+        const sr = document.getElementById('__znhd_panel_host__').shadowRoot;
+        const dialogs = [...sr.querySelectorAll('[role="dialog"]')];
+        const el = dialogs[dialogs.length - 1];
+        if (!el) return { found: false };
+        const card = el.querySelector('[data-slot="card"]');
+        const cards = [...el.querySelectorAll('[data-sniff-card]')];
+        const bar = el.querySelector('[data-sniff-excluded]');
+        const text = el.innerText.replace(/\s+/g, ' ').trim();
+        return {
+            found: true,
+            inShadow: sr.contains(el),
+            width: Math.round(el.getBoundingClientRect().width),
+            background: card ? getComputedStyle(card).backgroundColor : '',
+            text: text.slice(0, 200),
+            cardCount: cards.length,
+            alts: cards.map((c) => (c.querySelector('img') || {}).alt || ''),
+            sizes: cards.map((c) => c.innerText.replace(/\s+/g, ' ').trim()),
+            excluded: bar ? bar.getAttribute('data-sniff-excluded') : null,
+            hasRescan: !!([...el.querySelectorAll('button')].find((b) => b.textContent.includes('重新扫描'))),
+        };
+    });
+    // 夹具：photo-a(60KB) / photo-b(40KB) 应出现；tiny(2KB) 被阈值挡下；icon-set.svg 被后缀规则排除
+    report.checks.sniffDialogOk =
+        !!sniff.found &&
+        !!sniff.inShadow &&
+        sniff.width === 828 &&
+        sniff.hasRescan &&
+        sniff.text.includes('显示 2 张') &&
+        sniff.cardCount === 2 &&
+        sniff.alts.includes('photo-a.jpg') &&
+        sniff.alts.includes('photo-b.jpg') &&
+        !sniff.alts.includes('tiny.jpg') &&
+        sniff.excluded === '1';
+    report.sniff = sniff;
+
+    // 展开「大小未知」档：里面应当只剩测不出字节数的那张（夹具里是 .ico / 非图片资源之类），
+    // 顺便验证折叠交互与「未知也不丢」这条红线
+    await page.evaluate(() => {
+        const sr = document.getElementById('__znhd_panel_host__').shadowRoot;
+        const dialogs = [...sr.querySelectorAll('[role="dialog"]')];
+        const el = dialogs[dialogs.length - 1];
+        const btn = [...el.querySelectorAll('button')].find((b) => b.textContent.includes('大小未知'));
+        if (btn) btn.click();
+    });
+    await new Promise((r) => setTimeout(r, 300));
+    const sniffUnknown = await page.evaluate(() => {
+        const sr = document.getElementById('__znhd_panel_host__').shadowRoot;
+        const dialogs = [...sr.querySelectorAll('[role="dialog"]')];
+        const el = dialogs[dialogs.length - 1];
+        const cards = [...el.querySelectorAll('[data-sniff-card]')];
+        return { cardCount: cards.length, alts: cards.map((c) => (c.querySelector('img') || {}).alt || '') };
+    });
+    report.sniffUnknown = sniffUnknown;
+    report.checks.sniffUnknownExpandOk = sniffUnknown.cardCount === 3;
+    // 收起，恢复默认折叠态
+    await page.evaluate(() => {
+        const sr = document.getElementById('__znhd_panel_host__').shadowRoot;
+        const dialogs = [...sr.querySelectorAll('[role="dialog"]')];
+        const el = dialogs[dialogs.length - 1];
+        const btn = [...el.querySelectorAll('button')].find((b) => b.textContent.includes('大小未知'));
+        if (btn) btn.click();
+    });
+    await new Promise((r) => setTimeout(r, 250));
+
+    await page.screenshot({ path: path.join(os.tmpdir(), 'znhd-vue-sniff.png') });
+
+    // 全选 → 按钮文案应变成「下载所选（2）」
+    await page.evaluate(() => {
+        const sr = document.getElementById('__znhd_panel_host__').shadowRoot;
+        const box = sr.querySelector('[aria-label="全选"]');
+        if (box) box.click();
+    });
+    await new Promise((r) => setTimeout(r, 300));
+    const sniffSelect = await page.evaluate(() => {
+        const sr = document.getElementById('__znhd_panel_host__').shadowRoot;
+        const dialogs = [...sr.querySelectorAll('[role="dialog"]')];
+        const el = dialogs[dialogs.length - 1];
+        const btn = el ? [...el.querySelectorAll('button')].find((b) => b.textContent.includes('下载所选')) : null;
+        return { label: btn ? btn.textContent.trim() : '', disabled: btn ? btn.disabled : null };
+    });
+    const pickableTotal = Number((sniff.text.match(/共 (\d+) 张/) || [])[1] || 0);
+    report.checks.sniffSelectOk =
+        pickableTotal > 0 && sniffSelect.label.includes('（' + pickableTotal + '）') && sniffSelect.disabled === false;
+    report.sniffSelect = sniffSelect;
+
+    // 点缩略图 → 全屏预览（Teleport 进 shadowRoot，层级高于弹窗）
+    await page.evaluate(() => {
+        const sr = document.getElementById('__znhd_panel_host__').shadowRoot;
+        const dialogs = [...sr.querySelectorAll('[role="dialog"]')];
+        const el = dialogs[dialogs.length - 1];
+        const img = el ? el.querySelector('[data-sniff-card] img') : null;
+        if (img) img.click();
+    });
+    await new Promise((r) => setTimeout(r, 400));
+    const sniffPreview = await page.evaluate(() => {
+        const sr = document.getElementById('__znhd_panel_host__').shadowRoot;
+        const close = sr.querySelector('[aria-label="关闭预览"]');
+        return {
+            open: !!close,
+            inShadow: close ? sr.contains(close) : false,
+            hasPrint: !!sr.querySelector('[aria-label="打印"]'),
+            counter: (() => {
+                const n = [...sr.querySelectorAll('span')].find((x) => /^\d+ \/ \d+$/.test(x.textContent.trim()));
+                return n ? n.textContent.trim() : '';
+            })(),
+        };
+    });
+    report.checks.sniffPreviewOk = sniffPreview.open && sniffPreview.inShadow && sniffPreview.hasPrint;
+    report.sniffPreview = sniffPreview;
+    await page.screenshot({ path: path.join(os.tmpdir(), 'znhd-vue-sniff-preview.png') });
+
+    // 关预览 + 关嗅探弹窗
+    await page.keyboard.press('Escape');
+    await new Promise((r) => setTimeout(r, 250));
+    await page.keyboard.press('Escape');
+    await new Promise((r) => setTimeout(r, 300));
 
     // ---------- 主题切换：日间（白底蓝）/ 夜间（黑底绿） ----------
     await page.keyboard.press('Escape');

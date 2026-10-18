@@ -7,7 +7,7 @@ import { formatBytes } from '@/lib/sniffer';
 import type { TransferMessage } from '@/lib/transfer/types';
 import { MD_MINE, MD_PEER, renderMarkdown } from './markdown';
 import { metaOf } from './format';
-import ImageActions from './ImageActions.vue';
+import ImageActions from '@vue/components/media/ImageActions.vue';
 import type { ImageAction } from './types';
 
 /**

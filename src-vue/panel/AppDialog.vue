@@ -38,8 +38,9 @@ const props = withDefaults(defineProps<{ title: string; description?: string; wi
 
             <Card class="max-h-[calc(100vh-96px)] gap-0 overflow-hidden py-0 shadow-2xl">
                 <div class="flex shrink-0 items-center justify-between gap-3 border-b border-border px-5 py-3">
-                    <DialogTitle class="m-0 min-w-0 truncate text-[15px] font-semibold leading-6 text-foreground">
-                        {{ props.title }}
+                    <DialogTitle class="m-0 flex min-w-0 items-center gap-2 text-[15px] font-semibold leading-6 text-foreground">
+                        <!-- #title 供需要「标题 + 动作按钮」的弹窗用（如图片嗅探的「重新扫描」） -->
+                        <slot name="title">{{ props.title }}</slot>
                     </DialogTitle>
                     <DialogClose
                         class="inline-flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-md border-0 bg-transparent text-muted-foreground outline-none hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50"

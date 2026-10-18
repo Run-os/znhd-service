@@ -19,7 +19,7 @@ import { DEVICE_COLORS, hashDeviceId } from '@/lib/ui/transfer/deviceColors';
 import ChatComposer from './ChatComposer.vue';
 import ChatMessage from './ChatMessage.vue';
 import DeviceIdTag from './DeviceIdTag.vue';
-import ImagePreview from './ImagePreview.vue';
+import ImagePreview from '@vue/components/media/ImagePreview.vue';
 import { sepTimeText } from './format';
 import type { PickedEmoji } from './types';
 

@@ -2,11 +2,11 @@
 import { computed, inject, onBeforeUnmount, ref, watch } from 'vue';
 import { Icon } from '@vue/icons';
 import { SHADOW_ROOT_KEY } from '@vue/lib/shadow';
-import { Z } from './theme';
-import { printA4Image } from './print';
+import { printA4Image } from '@vue/lib/print';
 
 /**
- * 图片放大预览（v26.10.18-v5，替代 React 版的 antd `Image.PreviewGroup`）。
+ * 图片放大预览（v26.10.18-v5 随传输助手落地，v26.10.18-v6 上移到共用层给「图片嗅探」复用）。
+ * 替代 React 版的 antd `Image.PreviewGroup`。
  *
  * ── 为什么不直接引 antd ────────────────────────────────────────────────────
  * 迁移目标就是把 antd 从产物里去掉；预览层的交互其实很小：遮罩 / 缩放 / 旋转 /
@@ -26,8 +26,10 @@ const props = withDefaults(
         index?: number;
         /** 打印对话框标题（与 items 同序） */
         names?: string[];
+        /** 层级（默认 1000020：压在传输助手窗口与面板之上，低于暗色子弹窗） */
+        zIndex?: number;
     }>(),
-    { index: 0, names: () => [] }
+    { index: 0, names: () => [], zIndex: 1000020 }
 );
 
 const emit = defineEmits<{ (e: 'update:open', v: boolean): void }>();
@@ -84,7 +86,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKey, true));
         <div
             v-if="open"
             class="fixed inset-0 flex flex-col bg-black/80"
-            :style="{ zIndex: Z.preview }"
+            :style="{ zIndex: props.zIndex }"
             @click.self="emit('update:open', false)">
             <!-- 顶部：序号 + 关闭（不挡图片点击） -->
             <div class="flex shrink-0 items-center px-4 py-3 text-[13px] text-white/80">

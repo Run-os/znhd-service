@@ -21,7 +21,7 @@ import SettingsDialog from './SettingsDialog.vue';
 import PhrasesSheet from './PhrasesSheet.vue';
 import LogDialog from './LogDialog.vue';
 import ChangelogDialog from './ChangelogDialog.vue';
-import PlaceholderDialog from './PlaceholderDialog.vue';
+import SniffDialog from '@vue/sniff/SniffDialog.vue';
 import TransferWindow from '@vue/transfer/TransferWindow.vue';
 
 const props = defineProps<{ host: HTMLElement }>();
@@ -374,6 +374,14 @@ onBeforeUnmount(() => {
         <ChangelogDialog v-model:open="changelogOpen" />
 
         <TransferWindow v-model:open="transferOpen" />
-        <PlaceholderDialog v-model:open="sniffOpen" title="图片嗅探" phase="阶段 4" />
+        <SniffDialog
+            v-model:open="sniffOpen"
+            :min-kb="allvalue.sniffMinKB ?? 20"
+            @update:min-kb="
+                (kb: number) => {
+                    patchAllvalue({ sniffMinKB: kb });
+                    addLog('图片嗅探：只列出 ≥ ' + kb + ' KB 的图片', 'info');
+                }
+            " />
     </div>
 </template>
