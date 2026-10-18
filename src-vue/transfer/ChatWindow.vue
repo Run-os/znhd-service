@@ -303,10 +303,8 @@ const attachActions = computed<
 /** 标题右侧的设备连接状态（v26.10.19：只保留连接数，不再重复说明能传什么） */
 const headerText = computed(() => (onlineCount.value ? '已连接 ' + onlineCount.value + ' 台设备' : '未连接设备'));
 
-/** 卡片下方那行提示（对应示例里 `Demo is read only…` 的位置） */
-const footerHint = computed(() =>
-    sendable.value ? 'Enter 发送 · Shift + Enter 换行' : '当前没有在线手机，连上后才能发送'
-);
+/** 卡片下方那行提示（v26.10.19-v4：在线时不再显示「Enter 发送 · Shift + Enter 换行」，只留离线警示） */
+const footerHint = computed(() => (sendable.value ? '' : '当前没有在线手机，连上后才能发送'));
 </script>
 
 <template>
@@ -491,8 +489,10 @@ const footerHint = computed(() =>
                             </CardFooter>
                         </Card>
 
-                        <!-- 示例里卡片下面那行居中提示 -->
-                        <div class="px-0.5 text-center text-xs text-muted-foreground">{{ footerHint }}</div>
+                        <!-- 示例里卡片下面那行居中提示（v26.10.19-v4：在线时整行不渲染，不留死内边距） -->
+                        <div v-if="footerHint" class="px-0.5 text-center text-xs text-muted-foreground">
+                            {{ footerHint }}
+                        </div>
                     </div>
                 </MessageScrollerProvider>
 

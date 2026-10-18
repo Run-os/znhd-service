@@ -523,8 +523,8 @@ function serve() {
             avatarSrc: avatarImg ? String(avatarImg.getAttribute('src') || '') : '',
             chatImgOk: chatImg ? chatImg.naturalWidth > 0 : false,
             chatImgSize: chatImg ? chatImg.naturalWidth + 'x' + chatImg.naturalHeight : '',
-            // 卡片下方那行居中提示（示例里 `Demo is read only…` 的位置）
-            hint: el.innerText.includes('Enter 发送 · Shift + Enter 换行'),
+            // 卡片下方那行居中提示（v26.10.19-v4：在线=不渲染；夹具无手机在线 ⇒ 应显示离线警示）
+            offlineHint: el.innerText.includes('当前没有在线手机，连上后才能发送'),
         };
     });
     report.checks.transferWindowOk =
