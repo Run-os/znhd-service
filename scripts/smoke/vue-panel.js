@@ -18,6 +18,16 @@ const ROOT = path.resolve(__dirname, '../..');
 const USERSCRIPT = path.join(ROOT, 'dist/znhd.vue.user.js');
 const VUE = path.join(ROOT, 'node_modules/vue/dist/vue.global.prod.js');
 
+/**
+ * 产物头里的 `@version`：冒烟用它当 GM_info 桩，并断言面板上显示的版本号。
+ * 直接读产物而不是写死 —— 否则「改了代码忘了 bump 版本号」时冒烟依旧全绿，等于没守门。
+ */
+const SCRIPT_VERSION = (() => {
+    const m = /^\/\/ @version\s+(\S+)/m.exec(fs.readFileSync(USERSCRIPT, 'utf8'));
+    if (!m) throw new Error('读不到产物 @version：' + USERSCRIPT);
+    return m[1];
+})();
+
 const PNG_1X1 =
     'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
 
@@ -33,7 +43,7 @@ const GM_STUB = `
 window.PHONE_ID = 'smoke-phone-8f3a21';
 window.__recvQueue = [];
 window.__sent = [];
-window.GM_info = { script: { version: '26.10.18-v4', updateURL: 'https://example.com/znhd.user.js' } };
+window.GM_info = { script: { version: '${SCRIPT_VERSION}', updateURL: 'https://example.com/znhd.user.js' } };
 window.GM_addStyle = function (css) {
   const s = document.createElement('style');
   s.textContent = css;
@@ -130,7 +140,7 @@ function serve() {
     });
     report.checks.panelMounted = panel.host && panel.shadow && panel.styleInjected && panel.sonnerMounted;
     report.checks.panelTextOk = panel.text.includes('征纳互动监控') && panel.text.includes('语音播报');
-    report.checks.versionOk = panel.text.includes('v26.10.18-v4');
+    report.checks.versionOk = panel.text.includes('v' + SCRIPT_VERSION);
     report.panel = panel;
 
     await page.screenshot({ path: path.join(os.tmpdir(), 'znhd-vue-panel.png') });
