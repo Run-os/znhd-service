@@ -480,6 +480,8 @@ const footerHint = computed(() => {
                                         :scroll-anchor="turn.mine">
                                         <ChatTurn
                                             :mine="turn.mine"
+                                            :session-key="deviceId"
+                                            :my-seed="phoneId"
                                             :time-label="turn.sepText"
                                             :count="turn.items.length">
                                             <ChatBubble

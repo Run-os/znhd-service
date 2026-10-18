@@ -23,12 +23,26 @@ import { avatarUrl } from './format';
  * 加载失败 / 被 CSP 挡掉时回落成 AvatarFallback 的文字头像。
  */
 const props = withDefaults(
-    defineProps<{ mine: boolean; sessionKey?: string; timeLabel?: string; count?: number }>(),
-    { sessionKey: '', timeLabel: '', count: 1 }
+    defineProps<{
+        mine: boolean;
+        sessionKey?: string;
+        /** 我方头像 seed：两端身份不同（脚本端 = 电脑 deviceId；客户端 = 本机 phoneId），
+         *  由宿主显式传入；不传才回退 getDeviceId()（仅脚本端有意义）。 */
+        mySeed?: string;
+        timeLabel?: string;
+        count?: number;
+    }>(),
+    { sessionKey: '', mySeed: '', timeLabel: '', count: 1 }
 );
 
-/** 头像 seed：一台设备一张脸（我方 = 本机 ID；对方 = 手机会话键，聚合会话用固定键） */
-const avatarSeed = computed(() => (props.mine ? getDeviceId() : props.sessionKey || PHONE_SESSION_KEY));
+/** 头像 seed（v26.10.19-v8 起两端统一「同一设备同一张脸」）：
+ *  · 脚本端：我 = 电脑 deviceId（mySeed 缺省回退 getDeviceId()），对方 = 手机 phoneId（sessionKey 就是 phoneId）；
+ *  · 客户端：我 = 本机 phoneId（宿主传 mySeed），对方 = 电脑 deviceId（宿主传 session-key）。
+ *  此前客户端 mine 分支错用脚本端 getDeviceId()（网页里 GM 不存在 ⇒ localStorage 随机值），
+ *  且对方分支用固定聚合键 ⇒ 同一设备两端两张脸。 */
+const avatarSeed = computed(() =>
+    props.mine ? props.mySeed || getDeviceId() : props.sessionKey || PHONE_SESSION_KEY
+);
 const avatarSrc = computed(() => avatarUrl(avatarSeed.value));
 </script>
 

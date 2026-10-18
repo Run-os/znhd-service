@@ -143,6 +143,7 @@ function metaOf(msg: TransferMessage): { text: string; danger: boolean } {
             danger: false,
         };
     }
+    if (msg.sendState === 'queued') return { text: '已排队 · 等设备上线后发送', danger: false };
     if (msg.sendState === 'failed') return { text: '发送失败' + (msg.sendError ? '：' + msg.sendError : ''), danger: true };
     return { text: '已发送', danger: false };
 }
@@ -170,7 +171,8 @@ function scrollToEnd() {
 
 function doSendText() {
     const t = sendText.value.trim();
-    if (!t || !sendable.value) return;
+    // v26.10.19-v8：去掉 sendable 拦截——离线时 store 会把消息标成「排队」等设备上线补发
+    if (!t) return;
     if (sendTextToSession(PHONE_SESSION_KEY, t)) {
         sendText.value = '';
         scrollToEnd();
@@ -303,8 +305,8 @@ const attachActions = computed<
 /** 标题右侧的设备连接状态（v26.10.19：只保留连接数，不再重复说明能传什么） */
 const headerText = computed(() => (onlineCount.value ? '已连接 ' + onlineCount.value + ' 台设备' : '未连接设备'));
 
-/** 卡片下方那行提示（v26.10.19-v4：在线时不再显示「Enter 发送 · Shift + Enter 换行」，只留离线警示） */
-const footerHint = computed(() => (sendable.value ? '' : '当前没有在线手机，连上后才能发送'));
+/** 卡片下方那行提示（v26.10.19-v8：离线时说明「消息会排队等上线」，不再说「才能发送」） */
+const footerHint = computed(() => (sendable.value ? '' : '当前没有在线手机，发出去的消息会在设备上线后自动送达'));
 </script>
 
 <template>
@@ -484,9 +486,9 @@ const footerHint = computed(() => (sendable.value ? '' : '当前没有在线手�
                             <!-- ===== 输入区：示例同款 InputGroup（文本域 + block-end 附件/发送） ===== -->
                             <CardFooter class="shrink-0 flex-col gap-2">
                                 <form class="w-full" @submit.prevent="doSendText">
+                                    <!-- v26.10.19-v8：离线也可输入发送（消息进队列等设备上线），不再禁用输入框 -->
                                     <ChatComposer
                                         v-model="sendText"
-                                        :disabled="!sendable"
                                         placeholder="输入要发送到手机的文本…"
                                         :attach="attachActions"
                                         @send="doSendText" />

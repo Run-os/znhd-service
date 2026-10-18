@@ -202,6 +202,8 @@ function applyPhones(list: PhoneInfo[]): void {
     if (samePhones(state.phones, list)) return;
     state = { ...state, phones: list };
     emit();
+    // v26.10.19-v8：有设备上线就补发离线排队的文本（无排队时零开销）
+    if (list.length) flushQueuedTexts();
 }
 
 /** 正在飞的按需查询（避免窗口连续开合时并发打同一接口） */
@@ -494,7 +496,7 @@ function sendTargets(sessionKey: string): 'all' | string[] {
     return [sessionKey];
 }
 
-/** 发送文本到某会话；返回是否真正发出了请求 */
+/** 发送文本到某会话；返回是否接受了这次发送（离线时也接受——进队列等设备上线补发） */
 export function sendTextToSession(sessionKey: string, text: string): boolean {
     const t = (text || '').trim();
     const server = validServer();
@@ -506,10 +508,6 @@ export function sendTextToSession(sessionKey: string, text: string): boolean {
         addLog('[传输助手] 尚未配置中继服务器，无法发送', 'error', true);
         return false;
     }
-    if (!sessionSendable(sessionKey)) {
-        addLog('[传输助手] 当前无在线设备，无法发送', 'error', true);
-        return false;
-    }
     const msg: TransferMessage = {
         id: nextId(),
         type: 'text',
@@ -518,18 +516,48 @@ export function sendTextToSession(sessionKey: string, text: string): boolean {
         text: t,
         ts: Date.now(),
     };
+    if (!sessionSendable(sessionKey)) {
+        // v26.10.19-v8：离线不再拒绝——落成「排队」气泡，等设备上线后 flushQueuedTexts 自动补发
+        msg.sendState = 'queued';
+        addMessage(sessionKey, msg);
+        addLog('[传输助手] 当前无在线设备，消息已排队等设备上线', 'warning');
+        return true;
+    }
     addMessage(sessionKey, msg);
+    deliverText(sessionKey, msg.id, t, server);
+    return true;
+}
+
+/** 真正把一条文本投递给中继（成功清状态 / 失败标 failed）。排队补发走同一条路。 */
+function deliverText(sessionKey: string, msgId: string, t: string, server: string): void {
     sendToPhone({
         server,
         uuid: getDeviceId(),
         payload: { text: t, targets: sendTargets(sessionKey) },
         onOk: () => addLog('[传输助手] 文本已发送', 'success'),
         onFail: (e) => {
-            patchMessage(sessionKey, msg.id, { sendState: 'failed', sendError: e });
+            patchMessage(sessionKey, msgId, { sendState: 'failed', sendError: e });
             addLog('[传输助手] 发送失败：' + e, 'error');
         },
     });
-    return true;
+}
+
+/**
+ * 补发所有「离线排队」的文本（v26.10.19-v8）。
+ * 单一事实来源 = 会话里 sendState==='queued' 的消息（不另设内存队列 ⇒ 页面刷新后照样能补发，
+ * 排队消息随会话一起持久化）。挂载点：applyPhones 发现设备从无到有时。
+ */
+function flushQueuedTexts(): void {
+    const server = validServer();
+    if (!server) return;
+    state.sessions.forEach((s) => {
+        s.messages.forEach((m) => {
+            if (m.type === 'text' && m.direction === 'out' && m.sendState === 'queued') {
+                patchMessage(s.key, m.id, { sendState: undefined, sendError: undefined });
+                deliverText(s.key, m.id, m.text || '', server);
+            }
+        });
+    });
 }
 
 /**

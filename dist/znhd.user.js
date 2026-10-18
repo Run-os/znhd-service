@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         征纳互动人数和在线监控v2
 // @namespace    https://scriptcat.org/
-// @version      26.10.19-v7
+// @version      26.10.19-v8
 // @author       runos
 // @description  实时监控征纳互动等待人数和在线状态，支持语音播报、自定义常用语
 // @license      MIT
@@ -2052,6 +2052,7 @@ relayServer: typeof legacyRelayServer === "string" && legacyRelayServer.trim() ?
     if (samePhones(state.phones, list)) return;
     state = { ...state, phones: list };
     emit();
+    if (list.length) flushQueuedTexts();
   }
   let phoneRefreshInFlight = false;
   function refreshPhones() {
@@ -2261,7 +2262,8 @@ onFile: (f) => {
     return state.phones.length > 0;
   }
   function sendTargets(sessionKey) {
-    return "all";
+    if (sessionKey === PHONE_SESSION_KEY) return "all";
+    return [sessionKey];
   }
   function sendTextToSession(sessionKey, text) {
     const t = (text || "").trim();
@@ -2274,10 +2276,6 @@ onFile: (f) => {
       addLog("[传输助手] 尚未配置中继服务器，无法发送", "error", true);
       return false;
     }
-    if (!sessionSendable()) {
-      addLog("[传输助手] 当前无在线设备，无法发送", "error", true);
-      return false;
-    }
     const msg = {
       id: nextId(),
       type: "text",
@@ -2286,18 +2284,39 @@ onFile: (f) => {
       text: t,
       ts: Date.now()
     };
+    if (!sessionSendable()) {
+      msg.sendState = "queued";
+      addMessage(sessionKey, msg);
+      addLog("[传输助手] 当前无在线设备，消息已排队等设备上线", "warning");
+      return true;
+    }
     addMessage(sessionKey, msg);
+    deliverText(sessionKey, msg.id, t, server);
+    return true;
+  }
+  function deliverText(sessionKey, msgId, t, server) {
     sendToPhone({
       server,
       uuid: getDeviceId(),
-      payload: { text: t, targets: sendTargets() },
+      payload: { text: t, targets: sendTargets(sessionKey) },
       onOk: () => addLog("[传输助手] 文本已发送", "success"),
       onFail: (e) => {
-        patchMessage(sessionKey, msg.id, { sendState: "failed", sendError: e });
+        patchMessage(sessionKey, msgId, { sendState: "failed", sendError: e });
         addLog("[传输助手] 发送失败：" + e, "error");
       }
     });
-    return true;
+  }
+  function flushQueuedTexts() {
+    const server = validServer();
+    if (!server) return;
+    state.sessions.forEach((s) => {
+      s.messages.forEach((m) => {
+        if (m.type === "text" && m.direction === "out" && m.sendState === "queued") {
+          patchMessage(s.key, m.id, { sendState: void 0, sendError: void 0 });
+          deliverText(s.key, m.id, m.text || "", server);
+        }
+      });
+    });
   }
   function sendImagesToSession(sessionKey, files, onProgress) {
     const server = validServer();
@@ -2310,7 +2329,7 @@ onFile: (f) => {
       addLog("[传输助手] 当前无在线设备，无法发送", "error", true);
       return false;
     }
-    const targets = sendTargets();
+    const targets = sendTargets(sessionKey);
     const list = files.slice();
     const total = list.length;
     let sent = 0;
@@ -2410,7 +2429,7 @@ onUploadProgress: (pct) => {
       addLog("[传输助手] 当前无在线设备，无法发送", "error", true);
       return false;
     }
-    const targets = sendTargets();
+    const targets = sendTargets(sessionKey);
     const list = files.slice();
     const total = list.length;
     let sent = 0;
@@ -20417,7 +20436,7 @@ shouldStop: () => runId !== id
     return shortPhoneId(msg.sessionKey);
   }
   function avatarUrl(seed) {
-    return "https://api.dicebear.com/10.x/notionists/svg?seed=" + encodeURIComponent(seed) + "&backgroundColor=b6e3f4,c0aede,ffd5dc,d1f4d9,fee4b8";
+    return "https://api.dicebear.com/10.x/notionists/svg?seed=" + encodeURIComponent(seed);
   }
   const _hoisted_1$7 = { class: "min-w-0" };
   const _sfc_main$c = vue.defineComponent({
@@ -20425,12 +20444,15 @@ shouldStop: () => runId !== id
     props: {
       mine: { type: Boolean },
       sessionKey: { default: "" },
+      mySeed: { default: "" },
       timeLabel: { default: "" },
       count: { default: 1 }
     },
     setup(__props) {
       const props = __props;
-      const avatarSeed = vue.computed(() => props.mine ? getDeviceId() : props.sessionKey || PHONE_SESSION_KEY);
+      const avatarSeed = vue.computed(
+        () => props.mine ? props.mySeed || getDeviceId() : props.sessionKey || PHONE_SESSION_KEY
+      );
       const avatarSrc = vue.computed(() => avatarUrl(avatarSeed.value));
       return (_ctx, _cache) => {
         return vue.openBlock(), vue.createElementBlock("div", _hoisted_1$7, [
@@ -21736,6 +21758,7 @@ primary: "#07C160"
             danger: false
           };
         }
+        if (msg.sendState === "queued") return { text: "已排队 · 等设备上线后发送", danger: false };
         if (msg.sendState === "failed") return { text: "发送失败" + (msg.sendError ? "：" + msg.sendError : ""), danger: true };
         return { text: "已发送", danger: false };
       }
@@ -21758,7 +21781,7 @@ primary: "#07C160"
       }
       function doSendText() {
         const t = sendText.value.trim();
-        if (!t || !sendable.value) return;
+        if (!t) return;
         if (sendTextToSession(PHONE_SESSION_KEY, t)) {
           sendText.value = "";
           scrollToEnd();
@@ -21871,7 +21894,7 @@ primary: "#07C160"
         }
       ]);
       const headerText = vue.computed(() => onlineCount.value ? "已连接 " + onlineCount.value + " 台设备" : "未连接设备");
-      const footerHint = vue.computed(() => sendable.value ? "" : "当前没有在线手机，连上后才能发送");
+      const footerHint = vue.computed(() => sendable.value ? "" : "当前没有在线手机，发出去的消息会在设备上线后自动送达");
       return (_ctx, _cache) => {
         return vue.openBlock(), vue.createElementBlock(vue.Fragment, null, [
           vue.createVNode(vue.unref(DialogRoot_default), {
@@ -22157,11 +22180,10 @@ primary: "#07C160"
                                       vue.createVNode(_sfc_main$b, {
                                         modelValue: sendText.value,
                                         "onUpdate:modelValue": _cache[4] || (_cache[4] = ($event) => sendText.value = $event),
-                                        disabled: !sendable.value,
                                         placeholder: "输入要发送到手机的文本…",
                                         attach: attachActions.value,
                                         onSend: doSendText
-                                      }, null, 8, ["modelValue", "disabled", "attach"])
+                                      }, null, 8, ["modelValue", "attach"])
                                     ], 32)
                                   ]),
                                   _: 1

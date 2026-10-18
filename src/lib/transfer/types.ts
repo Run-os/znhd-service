@@ -47,8 +47,13 @@ export interface TransferMessage {
     text?: string;
     /** 发生时间（毫秒） */
     ts: number;
-    /** 发送中的图片：投递状态（发送中 / 失败；成功后移除该字段） */
-    sendState?: 'sending' | 'failed';
+    /**
+     * 投递状态（v26.10.19-v8）：
+     *  · 'sending' = 上传中（图片/文件）；'failed' = 发送失败；
+     *  · 'queued' = **离线排队**——发送时没有任何在线手机，消息挂在气泡上等设备上线后
+     *    自动补发（flushQueuedTexts，applyPhones 里挂了钩）。成功 / 补发成功后移除该字段。
+     */
+    sendState?: 'sending' | 'failed' | 'queued';
     /** 发送失败原因（sendState === 'failed' 时） */
     sendError?: string;
     /**
