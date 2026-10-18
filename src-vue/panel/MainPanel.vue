@@ -10,7 +10,9 @@ import { readPhrasesFromZnhd, type ZnhdPhrases } from '@/lib/phrasesZnhd';
 import { hoursToHHmm } from '@/lib/utils';
 import { PANEL_WIDTH } from '@/lib/ui/panelIds';
 import { toast } from '@vue/lib/toast';
+import { themeMode, toggleTheme } from '@vue/lib/theme';
 import { Icon, type IconName } from '../icons';
+import { Button } from '@vue/components/ui/button';
 import Tooltip from '../components/ui/tooltip/Tooltip.vue';
 import Switch from '../components/ui/switch/Switch.vue';
 import { clampHostIntoView } from './geometry';
@@ -63,6 +65,13 @@ const VERSION = GM_info.script.version;
 
 /** 收到手机内容时自动弹窗的取消订阅（卸载时摘掉） */
 let offAutoOpen: (() => void) | null = null;
+
+/** 主题切换：日间（白底蓝）/ 夜间（黑底绿），持久化在 scriptCat_VueTheme */
+const isDark = computed(() => themeMode.value === 'dark');
+function onToggleTheme() {
+    const next = toggleTheme();
+    addLog('主题已切换为' + (next === 'dark' ? '夜间模式' : '日间模式'), 'info');
+}
 
 function patchAllvalue(kv: Partial<Allvalue>) {
     const next = { ...allvalue.value, ...kv };
@@ -202,7 +211,7 @@ onBeforeUnmount(() => {
         v-if="collapsed"
         type="button"
         title="拖动可移动位置，点击展开面板"
-        class="flex size-9 cursor-move touch-none select-none items-center justify-center overflow-hidden rounded-full border-0 bg-[#1677ff] p-0 shadow-[0_4px_16px_rgba(0,0,0,0.18)] outline-none"
+        class="flex size-9 cursor-move touch-none select-none items-center justify-center overflow-hidden rounded-full border-0 bg-primary p-0 text-primary-foreground shadow-[0_4px_16px_rgba(0,0,0,0.18)] outline-none"
         @pointerdown="drag.onPointerDown"
         @pointermove="drag.onPointerMove"
         @pointerup="drag.onPointerUp"
@@ -213,18 +222,18 @@ onBeforeUnmount(() => {
             :src="BRAND_ICON"
             alt=""
             draggable="false"
-            class="block size-5 rounded-[4px]"
+            class="block size-5 rounded"
             @error="brandFailed = true" />
-        <Icon v-else name="crosshair" :size="20" color="#fff" />
+        <Icon v-else name="crosshair" :size="20" />
     </button>
 
     <div
         v-else
-        class="overflow-hidden rounded-[8px] border border-[#f0f0f0] bg-white shadow-[0_6px_24px_rgba(0,0,0,0.18)]"
+        class="overflow-hidden rounded-panel border border-border bg-card text-card-foreground shadow-[0_6px_24px_rgba(0,0,0,0.18)]"
         :style="{ width: PANEL_WIDTH + 'px' }">
         <!-- 标题栏 = 唯一拖拽手柄 -->
         <div
-            class="flex cursor-move touch-none select-none items-center gap-1.5 border-b border-[#f0f0f0] px-2.5 py-2"
+            class="flex cursor-move touch-none select-none items-center gap-1.5 border-b border-border px-2.5 py-2"
             style="min-height: 46px"
             title="按住拖动面板"
             @pointerdown="drag.onPointerDown"
@@ -236,73 +245,80 @@ onBeforeUnmount(() => {
                 :src="BRAND_ICON"
                 alt=""
                 draggable="false"
-                class="block size-[26px] shrink-0 rounded-[6px]"
+                class="block size-[26px] shrink-0 rounded-md"
                 @error="brandFailed = true" />
-            <span
-                v-else
-                class="flex size-[26px] shrink-0 items-center justify-center rounded-[6px] bg-[#1677ff]">
-                <Icon name="crosshair" :size="16" color="#fff" />
+            <span v-else class="flex size-[26px] shrink-0 items-center justify-center rounded-md bg-primary text-primary-foreground">
+                <Icon name="crosshair" :size="16" />
             </span>
             <span class="min-w-0 truncate text-[15px] font-bold leading-6">征纳互动监控</span>
-            <span
-                class="shrink-0 rounded-[10px] bg-[#e6f4ff] px-[8px] py-[1px] text-[11px] font-normal leading-5 text-[#1677ff]">
+            <span class="shrink-0 rounded-lg bg-accent px-2 py-px text-[11px] font-normal leading-5 text-accent-foreground">
                 v{{ VERSION }}
             </span>
-            <button
-                type="button"
-                class="ml-auto inline-flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-[6px] border-0 bg-transparent text-[#8c8c8c] outline-none hover:bg-black/5 hover:text-[#262626]"
+
+            <!-- 主题切换：日间 ↔ 夜间 -->
+            <Tooltip :content="isDark ? '切换到日间模式（白底 / 蓝色）' : '切换到夜间模式（黑底 / 绿色）'" side="bottom">
+                <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    class="ml-auto text-muted-foreground"
+                    :aria-label="isDark ? '切换到日间模式' : '切换到夜间模式'"
+                    @click="onToggleTheme">
+                    <Icon :name="isDark ? 'sun' : 'moon'" :size="15" />
+                </Button>
+            </Tooltip>
+            <Button
+                variant="ghost"
+                size="icon-sm"
+                class="text-muted-foreground"
                 title="收起面板（点圆形按钮可展开）"
                 aria-label="收起面板"
                 @click="collapsed = true">
                 <Icon name="close" :size="16" />
-            </button>
+            </Button>
         </div>
 
         <div class="p-3">
             <!-- 人数 / 工作时段（单行 + 在线指示灯） -->
             <div
-                class="mb-2.5 flex items-center rounded-[10px] bg-[#f7f8fa] px-3 py-2 text-[13px]"
-                :class="mon.inWorkingHours ? 'text-[#262626]' : 'text-[#8c8c8c]'">
+                class="mb-2.5 flex items-center rounded-[10px] bg-muted px-3 py-2 text-[13px]"
+                :class="mon.inWorkingHours ? 'text-foreground' : 'text-muted-foreground'">
                 <span
                     class="mr-1.5 inline-block size-1.5 rounded-full"
-                    :style="{ background: mon.online ? '#52c41a' : '#ff4d4f' }" />
+                    :class="mon.online ? 'bg-success' : 'bg-destructive'" />
                 {{ statusText }}
             </div>
 
             <!-- 语音播报开关 -->
-            <div class="mb-2.5 flex items-center justify-between rounded-[10px] bg-[#f7f8fa] px-3 py-2">
+            <div class="mb-2.5 flex items-center justify-between rounded-[10px] bg-muted px-3 py-2">
                 <span class="flex items-center gap-1.5 text-[13px]">
-                    <Icon
-                        :name="voiceEnabled ? 'volumeOn' : 'volumeOff'"
-                        :size="15"
-                        :color="voiceEnabled ? '#1677ff' : '#bfbfbf'" />
+                    <span :class="voiceEnabled ? 'text-primary' : 'text-muted-foreground'">
+                        <Icon :name="voiceEnabled ? 'volumeOn' : 'volumeOff'" :size="15" />
+                    </span>
                     语音播报
                 </span>
                 <Switch :model-value="voiceEnabled" @update:model-value="toggleVoice" />
             </div>
 
-            <!-- 4 个入口：宽度足够才显示文字（容器查询），悬停给完整文案 -->
+            <!-- 4 个入口：官方 Button（outline）+ 容器查询控制文字显隐 -->
             <div class="grid grid-cols-4 gap-1.5">
                 <Tooltip v-for="a in PANEL_ACTIONS" :key="a.key" :content="a.label">
-                    <button
-                        type="button"
-                        class="znhd-panel-btn flex h-10 min-w-0 cursor-pointer items-center justify-center gap-0.5 rounded-[8px] border border-[#d9d9d9] bg-white px-1 text-[#262626] outline-none hover:border-[#4096ff] hover:text-[#4096ff]"
+                    <Button
+                        variant="outline"
+                        size="lg"
+                        class="znhd-panel-btn h-10 min-w-0 gap-0.5 px-1"
                         @click="openEntry(a.key)">
-                        <Icon :name="a.icon" :size="15" color="#1677ff" />
+                        <span class="text-primary"><Icon :name="a.icon" :size="15" /></span>
                         <span class="znhd-panel-btn-text ml-0.5 text-[11px]">{{ a.label }}</span>
-                    </button>
+                    </Button>
                 </Tooltip>
             </div>
 
             <!-- 底部：上次播报 + 查看日志 -->
-            <div class="mt-2.5 flex items-center justify-between gap-2 text-xs text-[#8c8c8c]">
+            <div class="mt-2.5 flex items-center justify-between gap-2 text-xs text-muted-foreground">
                 <span class="truncate">{{ lastSpeakText(mon.lastSpeak) }}</span>
-                <button
-                    type="button"
-                    class="shrink-0 cursor-pointer border-0 bg-transparent p-0 text-xs text-[#1677ff] hover:text-[#4096ff]"
-                    @click="logOpen = true">
+                <Button variant="link" size="xs" class="shrink-0 px-0 text-xs" @click="logOpen = true">
                     查看日志 →
-                </button>
+                </Button>
             </div>
         </div>
 

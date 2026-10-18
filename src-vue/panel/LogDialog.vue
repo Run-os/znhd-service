@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue';
 import type { LogEntry, LogType } from '@/lib/logger';
-import Dialog from '../components/ui/dialog/Dialog.vue';
+import AppDialog from './AppDialog.vue';
 import Switch from '../components/ui/switch/Switch.vue';
 import { Button } from '@vue/components/ui/button';
 
@@ -84,7 +84,7 @@ watch([() => props.open, () => props.logEntries, () => props.autoRefresh, filter
 </script>
 
 <template>
-    <Dialog
+    <AppDialog
         :open="props.open"
         title="运行日志"
         :width="560"
@@ -120,9 +120,9 @@ watch([() => props.open, () => props.logEntries, () => props.autoRefresh, filter
                 </button>
             </div>
             <Button
-                variant="default"
-                size="md"
-                class="shrink-0 border-[#ff4d4f] text-[#ff4d4f] hover:border-[#ff7875] hover:text-[#ff7875]"
+                variant="destructive"
+                size="sm"
+                class="shrink-0"
                 :disabled="props.logEntries.length === 0"
                 @click="emit('clear')">
                 清空
@@ -180,7 +180,7 @@ watch([() => props.open, () => props.logEntries, () => props.autoRefresh, filter
         </div>
 
         <template #footer>
-            <Button variant="default" size="md" @click="emit('update:open', false)">关闭</Button>
+            <Button variant="outline" size="sm" @click="emit('update:open', false)">关闭</Button>
         </template>
-    </Dialog>
+    </AppDialog>
 </template>

@@ -1,7 +1,9 @@
 import { createApp, h, type App as VueApp } from 'vue';
 import App from './App.vue';
 import css from './style.css?inline';
+import sonnerCss from 'vue-sonner/style.css?inline';
 import { SHADOW_ROOT_KEY, setShadowRoot } from './lib/shadow';
+import { initTheme } from './lib/theme';
 import { PANEL_HOST_ID } from '@/lib/ui/panelIds';
 import { initialPanelPoint } from './panel/geometry';
 
@@ -37,6 +39,16 @@ export function mountPanel(): HTMLElement {
     const style = document.createElement('style');
     style.textContent = css;
     shadowRoot.appendChild(style);
+
+    // Sonner 的样式表（vue-sonner@2 单独发布，不再运行时注 head）——同样只进影子树。
+    // 它全部规则都限定在 [data-sonner-toaster] 作用域内，不会污染面板其余部分。
+    const sonnerStyle = document.createElement('style');
+    sonnerStyle.setAttribute('data-znhd', 'sonner');
+    sonnerStyle.textContent = sonnerCss;
+    shadowRoot.appendChild(sonnerStyle);
+
+    // 主题：在宿主上切 dark class（首帧前完成，避免日→夜闪一下）
+    initTheme(host);
 
     const appContainer = document.createElement('div');
     appContainer.id = 'app';

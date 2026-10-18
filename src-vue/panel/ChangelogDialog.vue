@@ -7,7 +7,7 @@ import {
     mdToPlain,
     type ChangelogEntry,
 } from '@/lib/changelog';
-import Dialog from '../components/ui/dialog/Dialog.vue';
+import AppDialog from './AppDialog.vue';
 import { Button } from '@vue/components/ui/button';
 import { Empty, EmptyDescription, EmptyHeader } from '@vue/components/ui/empty';
 import { Spinner } from '@vue/components/ui/spinner';
@@ -58,40 +58,40 @@ function openMore() {
 </script>
 
 <template>
-    <Dialog
+    <AppDialog
         :open="props.open"
         :title="title"
         :width="620"
         :footer="true"
         @update:open="(v: boolean) => emit('update:open', v)">
         <div v-if="loading" class="flex items-center justify-center gap-2 py-6">
-            <Spinner class="size-4 text-[#1677ff]" />
-            <span class="text-[13px] text-[#8c8c8c]">读取中…</span>
+            <Spinner class="size-4 text-primary" />
+            <span class="text-[13px] text-muted-foreground">读取中…</span>
         </div>
 
         <template v-else-if="err">
-            <p class="text-[13px] text-[#ff4d4f]">读取失败：{{ err }}</p>
-            <p class="mt-2 text-xs text-[#8c8c8c]">
+            <p class="text-[13px] text-destructive">读取失败：{{ err }}</p>
+            <p class="mt-2 text-xs text-muted-foreground">
                 可点下方「获取更多日志」在浏览器中打开当月日志文件查看。
             </p>
         </template>
 
         <Empty v-else-if="!entries || entries.length === 0" class="border-0 p-6">
             <EmptyHeader>
-                <EmptyDescription class="text-[13px] text-[#8c8c8c]">暂无更新日志</EmptyDescription>
+                <EmptyDescription class="text-[13px] text-muted-foreground">暂无更新日志</EmptyDescription>
             </EmptyHeader>
         </Empty>
 
         <template v-else>
             <div class="max-h-[60vh] overflow-auto pr-1">
                 <div v-for="en in shown" :key="en.title" class="mb-3.5">
-                    <div class="mb-1.5 text-sm font-bold text-[#1890ff]">{{ en.title }}</div>
-                    <div class="whitespace-pre-wrap break-words text-[13px] leading-[1.6] text-[#333]">
+                    <div class="mb-1.5 text-sm font-bold text-primary">{{ en.title }}</div>
+                    <div class="whitespace-pre-wrap break-words text-[13px] leading-[1.6] text-foreground">
                         {{ mdToPlain(en.body) }}
                     </div>
                 </div>
             </div>
-            <p class="mt-2 text-center text-xs text-[#8c8c8c]">
+            <p class="mt-2 text-center text-xs text-muted-foreground">
                 {{
                     entries.length > shown.length
                         ? '共 ' + entries.length + ' 条，已显示最新 ' + shown.length + ' 条'
@@ -101,8 +101,8 @@ function openMore() {
         </template>
 
         <template #footer>
-            <Button variant="default" size="md" @click="openMore">获取更多日志</Button>
-            <Button variant="primary" size="md" @click="emit('update:open', false)">关闭</Button>
+            <Button variant="outline" size="sm" @click="openMore">获取更多日志</Button>
+            <Button size="sm" @click="emit('update:open', false)">关闭</Button>
         </template>
-    </Dialog>
+    </AppDialog>
 </template>

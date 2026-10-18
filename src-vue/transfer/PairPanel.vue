@@ -7,11 +7,21 @@ import { getDeviceId, sendTestImage, TEST_IMAGE_URL } from '@/lib/relay';
 import { genQrDataUrl } from '@/lib/qrcode';
 import { resolveDeviceColors } from '@/lib/ui/transfer/deviceColors';
 import type { PhoneInfo } from '@/lib/transfer/types';
+import { Button } from '@vue/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@vue/components/ui/card';
+import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@vue/components/ui/empty';
+import { Item, ItemContent, ItemDescription, ItemMedia, ItemTitle } from '@vue/components/ui/item';
 import DeviceIdTag from './DeviceIdTag.vue';
 
 /**
- * 配对面板正文（v26.10.18-v5，React 版 `TransferPairPanel` 的等价实现）。
+ * 配对面板正文（React 版 `TransferPairPanel` 的等价实现）。
  * 两处复用：第二栏「＋」的配对弹窗、以及**未选中会话时第三栏的空状态**。
+ *
+ * 组件构成（2026-10-18 组件正规化）：
+ *   · 分区容器 = 官方 **Card**（本机链接 / 已连接手机）；
+ *   · 「没配中继」「没有在线设备」这类空态 = 官方 **Empty**（图标 + 标题 + 说明）；
+ *   · 每台已连接手机 = 官方 **Item**；
+ *   · 按钮 = 官方 **Button**。
  */
 const props = defineProps<{ relayServer: string; phones: PhoneInfo[] }>();
 
@@ -68,95 +78,124 @@ function doSendTestImage() {
         },
     });
 }
-
-const card = 'rounded-[10px] border border-white/10 px-3.5 py-3 mb-3';
 </script>
 
 <template>
     <div class="w-full overflow-auto px-4 py-4" style="max-width: 560px; margin: auto">
         <!-- 标题 + 标签 -->
         <div class="mb-3 flex items-center justify-between gap-2">
-            <span class="inline-flex items-center gap-1.5 text-sm font-semibold text-white/90">
+            <span class="inline-flex items-center gap-1.5 text-sm font-semibold text-foreground">
                 <Icon name="smartphone" :size="16" />
                 配对设备
             </span>
-            <span class="rounded border border-white/15 px-2 py-0.5 text-xs text-white/60">手机扫码即配对</span>
+            <span class="rounded border border-border px-2 py-0.5 text-xs text-muted-foreground">手机扫码即配对</span>
         </div>
 
         <!-- 本机专属链接 -->
-        <div :class="card">
-            <div class="mb-2.5 flex items-center justify-between gap-2">
-                <span class="text-sm font-semibold text-white/90">电脑接收 · 本机专属链接</span>
-                <span class="rounded border border-[#07C160]/40 bg-[#07C160]/15 px-2 py-0.5 text-xs text-[#07C160]">
-                    手机扫码即上传
-                </span>
-            </div>
+        <Card class="mb-3 gap-3 py-3">
+            <CardHeader class="px-3.5">
+                <CardTitle class="flex items-center justify-between gap-2 text-sm">
+                    <span>电脑接收 · 本机专属链接</span>
+                    <span class="rounded border border-primary/40 bg-primary/15 px-2 py-0.5 text-xs font-normal text-primary">
+                        手机扫码即上传
+                    </span>
+                </CardTitle>
+            </CardHeader>
 
-            <div v-if="link" class="flex items-start gap-3">
-                <div class="shrink-0 text-center">
-                    <img
-                        v-if="qrUrl"
-                        :src="qrUrl"
-                        alt="上传链接二维码"
-                        class="block size-[124px] border border-white/15"
-                        style="border-radius: 0" />
-                    <div
-                        v-else
-                        class="flex size-[124px] items-center justify-center border border-white/15 text-xs text-white/25">
-                        二维码生成中…
+            <CardContent class="px-3.5">
+                <div v-if="link" class="flex items-start gap-3">
+                    <div class="shrink-0 text-center">
+                        <img
+                            v-if="qrUrl"
+                            :src="qrUrl"
+                            alt="上传链接二维码"
+                            class="block size-[124px] rounded border border-border" />
+                        <div
+                            v-else
+                            class="flex size-[124px] items-center justify-center rounded border border-border text-xs text-muted-foreground/60">
+                            二维码生成中…
+                        </div>
+                        <div class="mt-1.5 text-xs text-muted-foreground/70">扫一扫上传</div>
                     </div>
-                    <div class="mt-1.5 text-xs text-white/35">扫一扫上传</div>
-                </div>
-                <div class="min-w-0 flex-1">
-                    <div class="mb-1.5 text-xs text-white/35">链接（复制到手机浏览器打开）</div>
-                    <div
-                        class="max-h-14 overflow-auto break-all rounded-[8px] border border-white/20 bg-white/[0.06] px-2.5 py-1.5 text-[13px] text-white/85">
-                        {{ link }}
+                    <div class="min-w-0 flex-1">
+                        <div class="mb-1.5 text-xs text-muted-foreground/70">链接（复制到手机浏览器打开）</div>
+                        <div
+                            class="max-h-14 overflow-auto break-all rounded-md border border-border bg-muted px-2.5 py-1.5 text-[13px] text-foreground">
+                            {{ link }}
+                        </div>
+                        <Button class="mt-2.5 w-full" size="sm" @click="link && safeCopyText(link)">复制链接</Button>
                     </div>
-                    <button
-                        type="button"
-                        class="mt-2.5 w-full cursor-pointer rounded-[6px] border-0 bg-[#07C160] py-1.5 text-sm text-white outline-none hover:bg-[#06AD56]"
-                        @click="link && safeCopyText(link)">
-                        复制链接
-                    </button>
                 </div>
-            </div>
-            <div v-else class="text-sm text-[#ff7875]">尚未配置中继服务器，请到第一栏「设置」填写。</div>
-        </div>
+
+                <!-- 未配置中继：用官方 Empty 说明，而不是一行红字 -->
+                <Empty v-else class="border-0 p-4">
+                    <EmptyHeader>
+                        <EmptyMedia variant="icon"><Icon name="settings" :size="20" /></EmptyMedia>
+                        <EmptyTitle class="text-sm">尚未配置中继服务器</EmptyTitle>
+                        <EmptyDescription class="text-[13px]">
+                            请到第一栏「设置」填写中继地址，保存后这里会自动生成扫码链接。
+                        </EmptyDescription>
+                    </EmptyHeader>
+                </Empty>
+            </CardContent>
+        </Card>
 
         <!-- 在线状态胶囊 -->
         <div class="mb-3 text-center">
             <span
-                class="inline-block rounded-[16px] border px-4 py-1 text-[13px]"
+                class="inline-block rounded-2xl border px-4 py-1 text-[13px]"
                 :class="
                     phoneOnline
-                        ? 'border-[#52c41a]/45 bg-[#52c41a]/15 text-[#73d13d]'
-                        : 'border-[#ff4d4f]/45 bg-[#ff4d4f]/12 text-[#ff7875]'
+                        ? 'border-success/45 bg-success/15 text-success'
+                        : 'border-destructive/45 bg-destructive/10 text-destructive'
                 ">
                 <span
                     class="mr-1.5 inline-block size-1.5 rounded-full align-middle"
-                    :style="{ background: phoneOnline ? '#52c41a' : '#ff4d4f' }" />
+                    :class="phoneOnline ? 'bg-success' : 'bg-destructive'" />
                 {{ phoneOnline ? '已连接手机 ' + phones.length + ' 台，可收发' : '当前无在线设备，暂不可收发' }}
             </span>
         </div>
 
-        <!-- 已连接手机列表 -->
-        <div v-if="phones.length" :class="card">
-            <div class="mb-1.5 text-[13px] font-semibold text-white/90">已连接手机（{{ phones.length }}）</div>
-            <div class="flex flex-wrap gap-1.5">
-                <DeviceIdTag v-for="p in phones" :key="p.id || 'unknown'" :id="p.id" :color-index="deviceColors[p.id]" />
-            </div>
-            <div class="mt-1.5 text-[11px] text-white/45">在左侧「对话」分组点对应手机即可进入会话；发给谁由所在会话决定。</div>
+        <!-- 已连接手机列表：每台一个 Item -->
+        <Card v-if="phones.length" class="mb-3 gap-2 py-3">
+            <CardHeader class="px-3.5">
+                <CardTitle class="text-[13px]">已连接手机（{{ phones.length }}）</CardTitle>
+            </CardHeader>
+            <CardContent class="px-3.5">
+                <Item
+                    v-for="p in phones"
+                    :key="p.id || 'unknown'"
+                    size="xs"
+                    variant="muted"
+                    class="mb-1.5 last:mb-0">
+                    <ItemMedia>
+                        <Icon name="smartphone" :size="16" />
+                    </ItemMedia>
+                    <ItemContent>
+                        <ItemTitle><DeviceIdTag :id="p.id" :color-index="deviceColors[p.id]" /></ItemTitle>
+                        <ItemDescription class="text-[11px]">在线</ItemDescription>
+                    </ItemContent>
+                </Item>
+                <div class="mt-1.5 text-[11px] text-muted-foreground/70">
+                    在左侧「对话」分组点对应手机即可进入会话；发给谁由所在会话决定。
+                </div>
+            </CardContent>
+        </Card>
+
+        <div v-else class="mb-3">
+            <Empty class="border-0 py-3">
+                <EmptyHeader>
+                    <EmptyMedia variant="icon"><Icon name="smartphone" :size="20" /></EmptyMedia>
+                    <EmptyTitle class="text-sm">还没有配对的手机</EmptyTitle>
+                    <EmptyDescription class="text-[13px]">用手机扫上面的二维码，或打开链接即可完成配对。</EmptyDescription>
+                </EmptyHeader>
+            </Empty>
         </div>
 
         <div class="flex justify-start">
-            <button
-                type="button"
-                :disabled="testSending"
-                class="cursor-pointer rounded-[6px] border border-white/20 bg-white/[0.08] px-3 py-1 text-[13px] text-white/85 outline-none hover:bg-white/15 disabled:cursor-wait disabled:opacity-60"
-                @click="doSendTestImage">
+            <Button variant="outline" size="sm" :disabled="testSending" @click="doSendTestImage">
                 {{ testSending ? '发送中…' : '发送测试图片' }}
-            </button>
+            </Button>
         </div>
     </div>
 </template>

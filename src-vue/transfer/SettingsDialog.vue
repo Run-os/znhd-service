@@ -4,6 +4,10 @@ import { addLog } from '@/lib/logger';
 import { DEFAULT_RELAY_SERVER } from '@/lib/transfer/settings';
 import { clearAllTransferFiles, updateTransferSettings } from '@/lib/transfer/store';
 import { useTransferStore } from '@vue/composables/useTransferStore';
+import { Button } from '@vue/components/ui/button';
+import { Field, FieldDescription, FieldGroup, FieldLabel } from '@vue/components/ui/field';
+import { InputGroup, InputGroupInput } from '@vue/components/ui/input-group';
+import Switch from '@vue/components/ui/switch/Switch.vue';
 import DarkDialog from './DarkDialog.vue';
 
 /**
@@ -11,6 +15,9 @@ import DarkDialog from './DarkDialog.vue';
  *
  * 中继地址用**草稿 + 失焦/回车提交**：`updateTransferSettings` 在地址变化时会
  * 重启轮询与长轮询，逐字提交会让输入 "https://…" 的每个合法前缀都触发一次重连。
+ *
+ * 组件构成：DarkDialog（Dialog + Card）、官方 Field（设置项）、
+ * 官方 InputGroup（中继地址）、官方 Switch、官方 Button。
  */
 const open = defineModel<boolean>('open', { default: false });
 
@@ -59,73 +66,53 @@ function doClearAll() {
 
 <template>
     <DarkDialog v-model:open="open" title="传输助手设置" :width="480">
-        <div class="mb-2 font-semibold text-white/90">中继服务器地址</div>
-        <input
-            v-model="relayDraft"
-            placeholder="https://你的服务器:端口"
-            class="h-9 w-full rounded-md border border-white/20 bg-white/[0.06] px-2.5 text-sm text-white/90 outline-none placeholder:text-white/30 focus:border-[#07C160]"
-            @blur="onBlur"
-            @keydown.enter.prevent="commitRelay(relayDraft)" />
-        <div class="mb-4 mt-2 text-xs text-white/45">
-            手机上传的图片 / 文本经此服务器转发到本机。修改后点其他区域或按回车生效；留空失焦恢复默认地址。
-        </div>
+        <FieldGroup class="gap-4">
+            <Field>
+                <FieldLabel class="text-[13px]">中继服务器地址</FieldLabel>
+                <InputGroup>
+                    <InputGroupInput
+                        v-model="relayDraft"
+                        placeholder="https://你的服务器:端口"
+                        class="text-[13px]"
+                        @blur="onBlur"
+                        @keydown.enter.prevent="commitRelay(relayDraft)" />
+                </InputGroup>
+                <FieldDescription class="text-xs leading-5">
+                    手机上传的图片 / 文本经此服务器转发到本机。修改后点其他区域或按回车生效；留空失焦恢复默认地址。
+                </FieldDescription>
+            </Field>
 
-        <div class="mb-1 flex items-center gap-2">
-            <span class="font-semibold text-white/90">收到内容时自动打开传输助手</span>
-            <button
-                type="button"
-                role="switch"
-                :aria-checked="store.settings.autoOpenOnReceive"
-                class="relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full border-0 p-0 outline-none transition-colors"
-                :class="store.settings.autoOpenOnReceive ? 'bg-[#07C160]' : 'bg-white/25'"
-                @click="updateTransferSettings({ autoOpenOnReceive: !store.settings.autoOpenOnReceive })">
-                <span
-                    class="block size-4 rounded-full bg-white shadow-[0_2px_4px_rgba(0,35,11,0.2)] transition-transform"
-                    :class="store.settings.autoOpenOnReceive ? 'translate-x-[18px]' : 'translate-x-0.5'" />
-            </button>
-        </div>
-        <div class="mb-4 text-xs text-white/45">
-            关闭时仅累计未读角标，不打扰；窗口已开着则只累加，不强行切换会话。
-        </div>
-
-        <div class="border-t border-white/10 pt-3">
-            <div v-if="!confirmClear" class="flex">
-                <button
-                    type="button"
-                    class="cursor-pointer rounded-[6px] border border-[#ff4d4f]/50 bg-transparent px-3 py-1 text-[13px] text-[#ff7875] outline-none hover:bg-[#ff4d4f]/15"
-                    @click="confirmClear = true">
-                    清空全部传输记录
-                </button>
-            </div>
-            <div v-else class="rounded-[8px] border border-[#ff4d4f]/35 bg-[#ff4d4f]/10 p-3">
-                <div class="mb-1 text-[13px] text-white/90">清空全部传输记录</div>
-                <div class="mb-2 text-xs text-white/50">
-                    所有会话的图片与文本都会被移除（仅清理本机内存，不影响手机上的文件）
+            <Field orientation="horizontal" class="items-start justify-between">
+                <div class="min-w-0 flex-1">
+                    <FieldLabel class="text-[13px]">收到内容时自动打开传输助手</FieldLabel>
+                    <FieldDescription class="text-xs leading-5">
+                        关闭时仅累计未读角标，不打扰；窗口已开着则只累加，不强行切换会话。
+                    </FieldDescription>
                 </div>
-                <div class="flex justify-end gap-2">
-                    <button
-                        type="button"
-                        class="cursor-pointer rounded border border-white/15 bg-transparent px-2.5 py-0.5 text-xs text-white/70 outline-none hover:bg-white/10"
-                        @click="confirmClear = false">
-                        取消
-                    </button>
-                    <button
-                        type="button"
-                        class="cursor-pointer rounded border-0 bg-[#E81123] px-2.5 py-0.5 text-xs text-white outline-none hover:bg-[#c50f1f]"
-                        @click="doClearAll">
-                        清空
-                    </button>
+                <Switch
+                    :model-value="store.settings.autoOpenOnReceive"
+                    @update:model-value="(v) => updateTransferSettings({ autoOpenOnReceive: v })" />
+            </Field>
+
+            <div class="border-t border-border pt-3">
+                <template v-if="!confirmClear">
+                    <Button variant="destructive" size="sm" @click="confirmClear = true">清空全部传输记录</Button>
+                </template>
+                <div v-else class="rounded-lg border border-destructive/35 bg-destructive/10 p-3">
+                    <div class="mb-1 text-[13px] text-foreground">清空全部传输记录</div>
+                    <div class="mb-2 text-xs text-muted-foreground">
+                        所有会话的图片与文本都会被移除（仅清理本机内存，不影响手机上的文件）
+                    </div>
+                    <div class="flex justify-end gap-2">
+                        <Button variant="outline" size="xs" @click="confirmClear = false">取消</Button>
+                        <Button variant="destructive" size="xs" @click="doClearAll">清空</Button>
+                    </div>
                 </div>
             </div>
-        </div>
+        </FieldGroup>
 
         <template #footer>
-            <button
-                type="button"
-                class="cursor-pointer rounded-[6px] border-0 bg-[#07C160] px-4 py-1 text-sm text-white outline-none hover:bg-[#06AD56]"
-                @click="closeWithCommit">
-                完成
-            </button>
+            <Button size="sm" @click="closeWithCommit">完成</Button>
         </template>
     </DarkDialog>
 </template>

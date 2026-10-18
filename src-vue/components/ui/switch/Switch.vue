@@ -1,18 +1,49 @@
 <script setup lang="ts">
-import { SwitchRoot, SwitchThumb } from 'reka-ui';
-
 /**
- * 开关（底层 Reka UI Switch，无 portal，天然待在影子树里）。
- * 视觉对齐 antd Switch：轨道 36×20、滑块 16、选中蓝 #1677ff。
+ * ⚠️ 相对官方源码的唯一改动：本机 reka-ui(2.11) 给根节点输出的是 `data-state="checked|unchecked"`，
+ * 而 reka-vega 源码的类写的是裸 `data-checked:` / `data-unchecked:` ⇒ 不命中（开关永远「关」）。
+ * 统一改成 `data-[state=checked]:` / `data-[state=unchecked]:`。
  */
-const checked = defineModel<boolean>({ default: false });
+import type { SwitchRootEmits, SwitchRootProps } from 'reka-ui'
+import type { HTMLAttributes } from 'vue'
+import { reactiveOmit } from '@vueuse/core'
+import { cn } from 'cn'
+import {
+  SwitchRoot,
+  SwitchThumb,
+  useForwardPropsEmits,
+} from 'reka-ui'
+
+const props = withDefaults(defineProps<SwitchRootProps & {
+  class?: HTMLAttributes['class']
+  size?: 'sm' | 'default'
+}>(), {
+  size: 'default',
+})
+
+const emits = defineEmits<SwitchRootEmits>()
+
+const delegatedProps = reactiveOmit(props, 'class', 'size')
+
+const forwarded = useForwardPropsEmits(delegatedProps, emits)
 </script>
 
 <template>
-    <SwitchRoot
-        v-model="checked"
-        class="relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full bg-black/25 p-0 outline-none transition-colors data-[state=checked]:bg-[#1677ff] focus-visible:ring-2 focus-visible:ring-[#1677ff]/30">
-        <SwitchThumb
-            class="block size-4 translate-x-0.5 rounded-full bg-white shadow-[0_2px_4px_rgba(0,35,11,0.2)] transition-transform data-[state=checked]:translate-x-[18px]" />
-    </SwitchRoot>
+  <SwitchRoot
+    v-slot="slotProps"
+    data-slot="switch"
+    :data-size="size"
+    v-bind="forwarded"
+    :class="cn(
+      'data-[state=checked]:bg-primary data-[state=unchecked]:bg-input focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive dark:aria-invalid:border-destructive/50 dark:data-[state=unchecked]:bg-input/80 shrink-0 rounded-full border border-transparent shadow-xs focus-visible:ring-3 aria-invalid:ring-3 data-[size=default]:h-[18.4px] data-[size=default]:w-8 data-[size=sm]:h-3.5 data-[size=sm]:w-6 peer group/switch relative inline-flex items-center transition-all outline-none after:absolute after:-inset-x-3 after:-inset-y-2 data-disabled:cursor-not-allowed data-disabled:opacity-50',
+      props.class,
+    )"
+  >
+    <SwitchThumb
+      data-slot="switch-thumb"
+      class="bg-background dark:data-[state=unchecked]:bg-foreground dark:data-[state=checked]:bg-primary-foreground rounded-full group-data-[size=default]/switch:size-4 group-data-[size=sm]/switch:size-3 group-data-[size=default]/switch:data-[state=checked]:translate-x-[calc(100%-2px)] group-data-[size=sm]/switch:data-[state=checked]:translate-x-[calc(100%-2px)] group-data-[size=default]/switch:data-[state=unchecked]:translate-x-0 group-data-[size=sm]/switch:data-[state=unchecked]:translate-x-0 pointer-events-none block ring-0 transition-transform"
+    >
+      <slot name="thumb" v-bind="slotProps" />
+    </SwitchThumb>
+  </SwitchRoot>
 </template>

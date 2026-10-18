@@ -2,68 +2,150 @@
 @import 'tw-animate-css';
 
 /*
- * 设计令牌：对齐现有 antd 面板的观感（v26.10.06-v22 起主色 = antd blue-6 #1677ff）。
+ * 设计令牌 —— 照 shadcn-vue 的 theming 结构组织（https://www.shadcn-vue.com/docs/theming）：
+ *
+ *   :host        ← 日间：白底 + 蓝色强调（antd blue-6）
+ *   :host(.dark) ← 夜间：黑底 + 绿色强调（微信绿）
+ *   @theme       ← 把语义色映射到上面那批**可切换的裸变量**
+ *
+ * 为什么 @theme 里写的是 `var(--background)` 而不是十六进制：
+ *    · 官方 shadcn 组件的类名是语义的（`bg-card` / `text-muted-foreground`），
+ *      编译后取 `--color-*`；`--color-*` 再指向 `--background` 这类裸变量，
+ *      于是「换主题 = 换宿主上的那几个裸变量」，组件源码一个字都不用改。
+ *    · 传输助手是另一套固定色板（微信暗色），它在窗口根节点上直接覆盖 `--color-*`
+ *      （见 transfer/theme.ts 的 TRANSFER_VARS），不受这里日/夜切换影响。
+ *
  * 这份 CSS 由 main.ts 以 ?inline 方式取字符串、注入到 **shadowRoot 内部**，
  * 因此 :host 就是面板宿主；宿主页面的全局样式进不来（这也是迁 ShadowDOM 的目的）。
- *
- * Tailwind v4 的 theme 变量自身就用 `:root, :host` 声明，天然支持 Shadow DOM。
  */
+
+/* 类名驱动暗色（默认的 dark: 变体跟系统走，这里改成跟宿主 class 走）。 */
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
   --font-sans:
     -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'PingFang SC', 'Hiragino Sans GB',
     'Microsoft YaHei', sans-serif;
 
-  --color-primary: #1677ff;
-  --color-primary-hover: #4096ff;
-  --color-success: #52c41a;
-  --color-danger: #ff4d4f;
-  --color-text: #262626;
-  --color-text-secondary: #8c8c8c;
-  --color-text-tertiary: #bfbfbf;
-  --color-border: #d9d9d9;
-  --color-border-split: #f0f0f0;
-  --color-surface: #ffffff;
-  --color-surface-muted: #f7f8fa;
-  --color-primary-soft: #e6f4ff;
+  /* ── shadcn 语义令牌（官方组件依赖这些名字，缺一个就是「无色」） ── */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  /* ── 兼容别名：面板里既有代码写的是这几个名字 ── */
+  --color-text: var(--foreground);
+  --color-text-secondary: var(--muted-foreground);
+  --color-text-tertiary: var(--text-tertiary);
+  --color-surface: var(--card);
+  --color-surface-muted: var(--muted);
+  --color-border-split: var(--border);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-soft: var(--accent);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--destructive);
 
   --radius-panel: 8px;
   --radius-block: 10px;
-
-  /*
-   * shadcn 语义令牌（2026-10-18 接入官方组件后补）。
-   * 官方组件源码里写的是 bg-muted / text-muted-foreground / ring-background 这类语义类，
-   * Tailwind v4 只有在 @theme 里存在 --color-<name> 时才会生成对应工具类 —— 缺一个就是「无色」。
-   * 取值全部映射到上面那套 antd 观感，不另起一套色板：
-   *   background/card/popover = 白；muted = #f7f8fa；border/input = #d9d9d9；
-   *   primary = antd blue-6；accent = #e6f4ff；destructive = antd red-5。
-   */
-  --color-background: #ffffff;
-  --color-foreground: #262626;
-  --color-card: #ffffff;
-  --color-card-foreground: #262626;
-  --color-popover: #ffffff;
-  --color-popover-foreground: #262626;
-  --color-primary-foreground: #ffffff;
-  --color-secondary: #f5f5f5;
-  --color-secondary-foreground: #262626;
-  --color-muted: #f7f8fa;
-  --color-muted-foreground: #8c8c8c;
-  --color-accent: #e6f4ff;
-  --color-accent-foreground: #1677ff;
-  --color-destructive: #ff4d4f;
-  --color-destructive-foreground: #ffffff;
-  --color-input: #d9d9d9;
-  --color-ring: #1677ff;
 }
 
+/* ============================================================ 日间 */
 :host {
+  color-scheme: light;
+
+  --radius: 8px;
+
+  --background: #ffffff;
+  --foreground: #1f2329;
+  --card: #ffffff;
+  --card-foreground: #1f2329;
+  --popover: #ffffff;
+  --popover-foreground: #1f2329;
+
+  /* 强调色：蓝 */
+  --primary: #1677ff;
+  --primary-foreground: #ffffff;
+  --primary-hover: #4096ff;
+
+  --secondary: #f5f5f5;
+  --secondary-foreground: #1f2329;
+  --muted: #f7f8fa;
+  --muted-foreground: #8c8c8c;
+  --accent: #e6f4ff;
+  --accent-foreground: #1677ff;
+  --destructive: #ff4d4f;
+  --destructive-foreground: #ffffff;
+  --border: #e5e6eb;
+  --input: #d9d9d9;
+  --ring: #1677ff;
+
+  --success: #52c41a;
+  --warning: #faad14;
+  --text-tertiary: #bfbfbf;
+
+  --scrollbar-thumb: rgba(0, 0, 0, 0.22);
+  --scrollbar-thumb-hover: rgba(0, 0, 0, 0.38);
+
   /* 宿主页常有 text-align:center / 自定义 line-height，这里给整棵影子树定基线 */
   font-family: var(--font-sans);
   font-size: 14px;
   line-height: 1.5715;
-  color: var(--color-text);
+  color: var(--foreground);
   text-align: left;
   -webkit-font-smoothing: antialiased;
+}
+
+/* ============================================================ 夜间 */
+:host(.dark) {
+  color-scheme: dark;
+
+  --background: #000000;
+  --foreground: #f2f3f5;
+  /* 面板/卡片也用纯黑：靠 popover（弹窗）与 muted（行底色）分层，而不是把表面提亮 */
+  --card: #000000;
+  --card-foreground: #f2f3f5;
+  --popover: #141414;
+  --popover-foreground: #f2f3f5;
+
+  /* 强调色：绿 */
+  --primary: #07c160;
+  --primary-foreground: #04170d;
+  --primary-hover: #06ad56;
+
+  --secondary: #1f1f1f;
+  --secondary-foreground: #f2f3f5;
+  --muted: #171717;
+  --muted-foreground: #9aa0a6;
+  --accent: #10251a;
+  --accent-foreground: #07c160;
+  --destructive: #ff5c5c;
+  --destructive-foreground: #ffffff;
+  --border: #262626;
+  --input: #333333;
+  --ring: #07c160;
+
+  --success: #07c160;
+  --warning: #faad14;
+  --text-tertiary: #6b7280;
+
+  --scrollbar-thumb: rgba(255, 255, 255, 0.24);
+  --scrollbar-thumb-hover: rgba(255, 255, 255, 0.42);
 }
 
 *,
@@ -87,23 +169,23 @@
   }
 }
 
-/* 滚动条：沿用原 uiReset 的细圆角灰条，避免 Windows 默认宽滚动条破坏圆角弹窗 */
+/* 滚动条：细圆角条，颜色随主题（夜间白条 / 日间黑条） */
 * {
   scrollbar-width: thin;
-  scrollbar-color: rgba(0, 0, 0, 0.22) transparent;
+  scrollbar-color: var(--scrollbar-thumb) transparent;
 }
 *::-webkit-scrollbar {
   width: 10px;
   height: 10px;
 }
 *::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.22);
+  background: var(--scrollbar-thumb);
   border: 3px solid transparent;
   background-clip: padding-box;
   border-radius: 8px;
 }
 *::-webkit-scrollbar-thumb:hover {
-  background: rgba(0, 0, 0, 0.38);
+  background: var(--scrollbar-thumb-hover);
   background-clip: padding-box;
 }
 *::-webkit-scrollbar-track,
@@ -115,4 +197,9 @@
    影子树里虽然进不来全局规则，但继承属性仍会传进来，这里显式复位一次。 */
 svg {
   vertical-align: middle;
+}
+
+/* Sonner 的入场位：它自己 fixed + top-center，这里只压层级，避免被传输助手窗口盖住 */
+[data-sonner-toaster] {
+  z-index: 1000040 !important;
 }

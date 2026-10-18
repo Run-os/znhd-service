@@ -1,22 +1,25 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue';
 import { Icon, type IconName } from '@vue/icons';
+import { Button } from '@vue/components/ui/button';
+import { InputGroup, InputGroupAddon, InputGroupTextarea } from '@vue/components/ui/input-group';
 import EmojiPanel from './EmojiPanel.vue';
 import type { PickedEmoji } from './types';
 
 /**
- * 聊天输入区（v26.10.18-v5，对齐 React 版 `ChatComposer` 的微信桌面版结构）：
+ * 聊天输入区（对齐 React 版 `ChatComposer` 的微信桌面版结构）：
  *   ┌────────────────────────────────┐
  *   │ 😀 🖼 📎        ← 工具栏图标行（上）│
- *   │ 多行文本（自动增高，超 6 行框内滚动）│
- *   │                    [发送] ← 右下 │
+ *   │ ┌────────────────────────────┐ │
+ *   │ │ 多行文本（自动增高）   [发送] │ │ ← 官方 InputGroup（Textarea + block-end addon）
+ *   │ └────────────────────────────┘ │
  *   └────────────────────────────────┘
  *
  * ⚠️ 三条从 React 版带过来的结论（都对应过真实 bug）：
- *  ① 文本域**自己禁掉 outline / boxShadow**：聚焦反馈交给光标，避免「框里套框」；
+ *  ① 文本域**自己禁掉 outline / boxShadow**（InputGroup 只管外框聚焦环），避免「框里套框」；
  *  ② 行高必须固定 20px，并按 `scrollHeight` 重算高度 —— 否则「打一个字再删空，
  *     输入框永久变高」；
- *  ③ 面板用 `absolute` 挂在输入卡片上（不再用 antd Popover）：它本来就在影子树里，
+ *  ③ 表情面板用 `absolute` 挂在输入卡片上（不用 Popover）：它本来就在影子树里，
  *     不需要 portal，也就没有「浮层挂到 body 后样式全丢」的风险。
  */
 const props = withDefaults(
@@ -41,14 +44,18 @@ const emit = defineEmits<{
 }>();
 
 const root = ref<HTMLElement | null>(null);
-const ta = ref<HTMLTextAreaElement | null>(null);
 const emojiOpen = ref(false);
 
 const MIN_H = 40;
 const MAX_H = 120;
 
+/** textarea 在 InputGroupTextarea 内部，用 DOM 查询取元素（组件 ref 拿到的是组件实例） */
+function textareaEl(): HTMLTextAreaElement | null {
+    return root.value?.querySelector('textarea') ?? null;
+}
+
 function autoGrow() {
-    const el = ta.value;
+    const el = textareaEl();
     if (!el) return;
     el.style.height = 'auto';
     const h = Math.min(Math.max(el.scrollHeight, MIN_H), MAX_H);
@@ -103,64 +110,67 @@ onBeforeUnmount(() => document.removeEventListener('mousedown', onDocDown, true)
 </script>
 
 <template>
-    <div ref="root" class="znhd-chat-composer relative mx-3 mb-3 flex shrink-0 flex-col rounded-[12px] border border-white/[0.07] bg-[#262626] px-3 pb-2.5 pt-2">
+    <div
+        ref="root"
+        class="znhd-chat-composer relative mx-3 mb-3 flex shrink-0 flex-col rounded-xl border border-border bg-card px-3 pb-2.5 pt-2">
         <!-- 表情面板：贴在输入卡片上方 -->
-        <div v-if="emojiOpen" class="absolute bottom-full left-0 z-30 mb-2 rounded-[10px] border border-white/10 bg-[#2B2B2B] p-2.5 shadow-[0_8px_28px_rgba(0,0,0,0.55)]">
+        <div
+            v-if="emojiOpen"
+            class="absolute bottom-full left-0 z-30 mb-2 rounded-[10px] border border-border bg-popover p-2.5 shadow-[0_8px_28px_rgba(0,0,0,0.55)]">
             <EmojiPanel @pick="pickEmoji" />
         </div>
 
-        <div v-if="notice" class="mb-1.5 text-xs text-[#faad14]">{{ notice }}</div>
+        <div v-if="notice" class="mb-1.5 text-xs text-warning">{{ notice }}</div>
 
-        <!-- 工具栏（微信把这一行放在输入框上面） -->
-        <div class="mb-0.5 flex items-center gap-0.5">
-            <button
-                type="button"
+        <!-- 工具栏（微信把这一行放在输入框上面）：官方 Button 的 ghost 图标态 -->
+        <div class="mb-1 flex items-center gap-0.5">
+            <Button
+                variant="ghost"
+                size="icon-sm"
                 aria-label="表情"
                 :title="emojiEnabled ? '表情包（点一张直接发送到手机，悬停可放大）' : '当前对话不支持发送表情'"
                 :disabled="disabled || !emojiEnabled"
-                class="inline-flex size-7 cursor-pointer items-center justify-center rounded border-0 bg-transparent p-0 text-white/60 outline-none hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+                class="text-muted-foreground hover:text-foreground"
                 @click="emojiOpen = !emojiOpen">
                 <Icon name="smile" :size="16" />
-            </button>
-            <button
+            </Button>
+            <Button
                 v-for="a in actions"
                 :key="a.key"
-                type="button"
+                variant="ghost"
+                size="icon-sm"
                 :aria-label="a.label"
                 :title="a.tooltip || a.label"
                 :disabled="a.disabled || disabled"
-                class="inline-flex size-7 cursor-pointer items-center justify-center rounded border-0 bg-transparent p-0 text-white/60 outline-none hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+                class="text-muted-foreground hover:text-foreground"
                 @click="a.onClick()">
                 <Icon :name="a.icon" :size="15" />
-            </button>
+            </Button>
         </div>
 
-        <textarea
-            ref="ta"
-            :value="modelValue"
-            :placeholder="placeholder"
-            :disabled="disabled"
-            rows="2"
-            class="w-full resize-none border-0 bg-transparent p-0 text-sm leading-5 text-white/90 outline-none placeholder:text-white/30 focus:outline-none focus:ring-0 disabled:cursor-not-allowed"
-            style="min-height: 40px; box-shadow: none"
-            @input="onInput"
-            @keydown="onKeydown" />
-
-        <div class="mt-1 flex items-center justify-end gap-2">
-            <button
-                type="button"
-                aria-label="发送"
-                :disabled="sendDisabled"
-                class="inline-flex min-w-[64px] cursor-pointer items-center justify-center gap-1 rounded-[6px] border-0 px-2.5 py-1 text-xs outline-none disabled:cursor-not-allowed"
-                :class="
-                    sendDisabled
-                        ? 'bg-transparent text-white/30'
-                        : 'bg-white/[0.08] text-white/90 hover:bg-white/15'
-                "
-                @click="emit('send')">
-                <Icon name="send" :size="13" />
-                发送
-            </button>
-        </div>
+        <!-- 输入框 = 官方 InputGroup：Textarea 在左，发送按钮作为 block-end addon -->
+        <InputGroup class="border-input">
+            <InputGroupTextarea
+                :model-value="modelValue"
+                :placeholder="placeholder"
+                :disabled="disabled"
+                rows="2"
+                class="max-h-[120px] min-h-[40px] text-sm leading-5 text-foreground placeholder:text-muted-foreground"
+                style="min-height: 40px; box-shadow: none"
+                @input="onInput"
+                @keydown="onKeydown" />
+            <InputGroupAddon align="block-end" class="justify-end pt-0">
+                <Button
+                    size="xs"
+                    :variant="sendDisabled ? 'ghost' : 'secondary'"
+                    :disabled="sendDisabled"
+                    aria-label="发送"
+                    class="min-w-[64px]"
+                    @click="emit('send')">
+                    <Icon name="send" :size="13" />
+                    发送
+                </Button>
+            </InputGroupAddon>
+        </InputGroup>
     </div>
 </template>

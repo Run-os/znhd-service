@@ -106,6 +106,9 @@ function serve() {
     const browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox'] });
     const page = await browser.newPage();
     await page.setViewport({ width: 1280, height: 800 });
+    // 首启主题跟随系统偏好；headless Chromium 的默认偏好是 dark，会让「日间基线」断言漂移。
+    // 这里显式钉成 light，主题切换用例再手动点按钮验证。
+    await page.emulateMediaFeatures([{ name: 'prefers-color-scheme', value: 'light' }]);
 
     const report = { ok: true, checks: {}, errors: [] };
     page.on('pageerror', (e) => report.errors.push(String(e)));
@@ -121,10 +124,11 @@ function serve() {
             shadow: !!sr,
             text: sr ? sr.querySelector('#app').innerText.replace(/\s+/g, ' ').trim() : '',
             styleInjected: sr ? !!sr.querySelector('style') : false,
+            sonnerMounted: sr ? !!sr.querySelector('[data-sonner-toaster]') : false,
             rect: host ? host.getBoundingClientRect().toJSON() : null,
         };
     });
-    report.checks.panelMounted = panel.host && panel.shadow && panel.styleInjected;
+    report.checks.panelMounted = panel.host && panel.shadow && panel.styleInjected && panel.sonnerMounted;
     report.checks.panelTextOk = panel.text.includes('征纳互动监控') && panel.text.includes('语音播报');
     report.checks.versionOk = panel.text.includes('v26.10.18-v4');
     report.panel = panel;
@@ -145,12 +149,15 @@ function serve() {
         const bodyHasDialog = !!document.querySelector('[role="dialog"]');
         if (!el) return { found: false, bodyHasDialog };
         const cs = getComputedStyle(el);
+        // 2026-10-18 组件正规化后：DialogContent 只做定位（背景透明），视觉表面在 Card 上
+        const card = el.querySelector('[data-slot="card"]');
         return {
             found: true,
             bodyHasDialog,
             inShadow: sr.contains(el),
             text: el.innerText.replace(/\s+/g, ' ').trim().slice(0, 120),
-            background: cs.backgroundColor,
+            background: card ? getComputedStyle(card).backgroundColor : cs.backgroundColor,
+            hasCard: !!card,
             width: el.getBoundingClientRect().width,
             position: cs.position,
             zIndex: cs.zIndex,
@@ -159,7 +166,8 @@ function serve() {
     });
     report.checks.dialogFound = dialog.found;
     report.checks.dialogInShadow = !!dialog.inShadow && !dialog.bodyHasDialog;
-    report.checks.dialogStyled = dialog.background === 'rgb(255, 255, 255)' && Math.round(dialog.width) === 520;
+    report.checks.dialogStyled =
+        !!dialog.hasCard && dialog.background === 'rgb(255, 255, 255)' && Math.round(dialog.width) === 520;
     report.dialog = dialog;
 
     await page.screenshot({ path: path.join(os.tmpdir(), 'znhd-vue-dialog.png') });
@@ -405,12 +413,13 @@ function serve() {
         const el = dialogs[dialogs.length - 1];
         if (!el) return { found: false };
         const cs = getComputedStyle(el);
+        const card = el.querySelector('[data-slot="card"]');
         return {
             found: true,
             count: dialogs.length,
             inShadow: sr.contains(el),
             text: el.innerText.replace(/\s+/g, ' ').trim().slice(0, 80),
-            background: cs.backgroundColor,
+            background: card ? getComputedStyle(card).backgroundColor : cs.backgroundColor,
             width: Math.round(el.getBoundingClientRect().width),
         };
     });
@@ -422,6 +431,51 @@ function serve() {
         transferSettings.width === 480;
     report.transferSettings = transferSettings;
     await page.screenshot({ path: path.join(os.tmpdir(), 'znhd-vue-transfer-settings.png') });
+
+    // ---------- 主题切换：日间（白底蓝）/ 夜间（黑底绿） ----------
+    await page.keyboard.press('Escape');
+    await new Promise((r) => setTimeout(r, 250));
+    await page.keyboard.press('Escape');
+    await new Promise((r) => setTimeout(r, 250));
+
+    const readTheme = () =>
+        page.evaluate(() => {
+            const host = document.getElementById('__znhd_panel_host__');
+            const sr = host.shadowRoot;
+            const shell = sr.querySelector('.rounded-panel') || sr.querySelector('#app > div');
+            const pill = [...sr.querySelectorAll('span')].find((n) => /^v26\./.test(n.textContent.trim()));
+            const cs = shell ? getComputedStyle(shell) : null;
+            return {
+                dark: host.classList.contains('dark'),
+                shellBg: cs ? cs.backgroundColor : '',
+                pillBg: pill ? getComputedStyle(pill).backgroundColor : '',
+                pillFg: pill ? getComputedStyle(pill).color : '',
+            };
+        });
+
+    const lightTheme = await readTheme();
+    await page.evaluate(() => {
+        const sr = document.getElementById('__znhd_panel_host__').shadowRoot;
+        const btn = sr.querySelector('button[aria-label="切换到夜间模式"]');
+        if (btn) btn.click();
+    });
+    await new Promise((r) => setTimeout(r, 300));
+    const darkTheme = await readTheme();
+    await page.screenshot({ path: path.join(os.tmpdir(), 'znhd-vue-dark.png') });
+
+    report.checks.themeLightOk = !lightTheme.dark && lightTheme.shellBg === 'rgb(255, 255, 255)';
+    // 夜间：宿主挂 dark / 面板黑底 #000 / 版本胶囊是绿色强调（#07C160 的 accent 混色）
+    report.checks.themeDarkOk =
+        darkTheme.dark && darkTheme.shellBg === 'rgb(0, 0, 0)' && darkTheme.pillFg === 'rgb(7, 193, 96)';
+    report.theme = { lightTheme, darkTheme };
+
+    // 切回日间（截图基线保持浅色）
+    await page.evaluate(() => {
+        const sr = document.getElementById('__znhd_panel_host__').shadowRoot;
+        const btn = sr.querySelector('button[aria-label="切换到日间模式"]');
+        if (btn) btn.click();
+    });
+    await new Promise((r) => setTimeout(r, 250));
 
     report.checks.noPageError = report.errors.length === 0;
     report.ok = Object.values(report.checks).every(Boolean);
