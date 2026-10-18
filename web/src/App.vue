@@ -437,7 +437,10 @@ const footerHint = computed(() => {
               <div class="relative flex min-h-0 flex-1 flex-col gap-2">
                 <Card :class="cardClass">
                     <!-- ===== 头部：标题 / 设备信息 / 连接状态（与脚本端同一结构） ===== -->
-                    <CardHeader class="shrink-0 gap-1 border-b">
+                    <!-- ⚠️ 分界线不能写 border-b：Tailwind v4 默认边框色是 currentColor ⇒ 一条亮白线；
+                            写死 rgb(34,34,34)（v26.10.19-v1，与脚本端 v26.10.18-v9 同色）。原 border-b
+                            触发的 [.border-b]:pb-6 规则随之失效，补回 pb-6 保持原有间距。 -->
+                    <CardHeader class="shrink-0 gap-1 pb-6 [border-bottom:1px_solid_rgb(34,34,34)]">
                         <CardTitle class="flex items-center gap-2 text-[15px]">
                             传输助手
                             <span
@@ -449,7 +452,8 @@ const footerHint = computed(() => {
                             本机 {{ phoneId || '未知' }} · 电脑 {{ deviceId || '未识别，请重新生成二维码' }}
                         </CardDescription>
                         <CardAction>
-                            <span class="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+                            <!-- h-5 与标题行（版本徽章 h-5）同高 ⇒ 顶对齐的 grid 里中心线也在一条线上（v26.10.19-v1） -->
+                            <span class="inline-flex h-5 items-center gap-1.5 text-xs text-muted-foreground">
                                 <i class="inline-block size-1.5 rounded-full" :class="connDot" />
                                 {{ connText }}
                             </span>
@@ -472,7 +476,9 @@ const footerHint = computed(() => {
 
                         <MessageScroller v-else>
                             <MessageScrollerViewport>
-                                <MessageScrollerContent class="p-6">
+                                <!-- 手机全屏时左右内边距 24px→12px（v26.10.19-v1：窄屏下头像别离边框太远）；
+                                        桌面弹窗保持 p-6 与脚本端一致 -->
+                                <MessageScrollerContent :class="isPhone ? 'px-3 py-6' : 'p-6'">
                                     <MessageScrollerItem
                                         v-for="turn in turns"
                                         :key="turn.key"
