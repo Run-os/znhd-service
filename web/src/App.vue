@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
-import { Icon, type IconName } from '@vue/icons';
+import { type IconName } from '@vue/icons';
 import { Toaster } from '@vue/components/ui/sonner';
 import {
     Card,
@@ -11,7 +11,6 @@ import {
     CardHeader,
     CardTitle,
 } from '@vue/components/ui/card';
-import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@vue/components/ui/empty';
 import {
     MessageScroller,
     MessageScrollerButton,
@@ -142,11 +141,13 @@ const layoutMode = useLayoutMode();
 const isPhone = computed(() => layoutMode.value === 'phone');
 const rootClass = computed(() => (isPhone.value ? '' : 'znhd-window-layer'));
 const shellClass = computed(() => (isPhone.value ? 'znhd-phone-chat' : 'znhd-phone-chat znhd-chat-window'));
-/** 手机全屏时卡片贴边（去掉圆角/描边）；桌面弹窗时用完整 Card 外观 */
+/** 手机全屏时卡片贴边（去掉圆角/描边）；桌面弹窗时用完整 Card 外观。
+ *  v26.10.19-v3：与脚本端 v26.10.18-v9 对齐——窗口底色纯黑，桌面弹窗外圈
+ *  rgb(34,34,34) 细边（Card 自带 ring-1，只换色）。 */
 const cardClass = computed(() =>
     isPhone.value
-        ? 'min-h-0 w-full flex-1 gap-0 rounded-none py-0 ring-0'
-        : 'min-h-0 w-full flex-1 gap-0 rounded-xl py-0'
+        ? 'min-h-0 w-full flex-1 gap-0 rounded-none py-0 ring-0 !bg-black'
+        : 'min-h-0 w-full flex-1 gap-0 rounded-xl py-0 !bg-black !ring-[rgb(34,34,34)]'
 );
 
 // ===== 预览层 =====
@@ -462,21 +463,10 @@ const footerHint = computed(() => {
                         </CardAction>
                     </CardHeader>
 
-                    <!-- ===== 消息区：空态 Empty / 有消息 MessageScroller ===== -->
-                    <CardContent class="min-h-0 flex-1 overflow-hidden bg-background p-0">
-                        <Empty v-if="!msgs.length" class="h-full">
-                            <EmptyHeader>
-                                <EmptyMedia variant="icon">
-                                    <Icon name="transfer" :size="22" />
-                                </EmptyMedia>
-                                <EmptyTitle>还没有消息</EmptyTitle>
-                                <EmptyDescription>
-                                    选图片 / 拍照 / 发文件，或输入文本发送到电脑；电脑发来的内容也会出现在这里。
-                                </EmptyDescription>
-                            </EmptyHeader>
-                        </Empty>
-
-                        <MessageScroller v-else>
+                    <!-- ===== 消息区：单条时间线（v26.10.19-v3 与脚本端 v26.10.19-v1 同步：
+                              去掉「还没有消息」空态，消息区保持空白干净） ===== -->
+                    <CardContent class="min-h-0 flex-1 overflow-hidden !bg-black p-0">
+                        <MessageScroller>
                             <MessageScrollerViewport>
                                 <!-- 手机全屏时左右内边距 24px→12px（v26.10.19-v1：窄屏下头像别离边框太远）；
                                         桌面弹窗保持 p-6 与脚本端一致 -->
@@ -515,7 +505,8 @@ const footerHint = computed(() => {
                                     </MessageScrollerItem>
                                 </MessageScrollerContent>
                             </MessageScrollerViewport>
-                            <MessageScrollerButton />
+                            <!-- 与脚本端一致：向下箭头改圆形 28px（v26.10.19-v3 同步） -->
+                            <MessageScrollerButton class="!size-7 !rounded-full [&_svg]:size-3.5" />
                         </MessageScroller>
                     </CardContent>
 
@@ -554,7 +545,10 @@ const footerHint = computed(() => {
                     </CardFooter>
                 </Card>
 
-                    <div class="znhd-phone-hint shrink-0 px-0.5 pb-1 text-center text-xs text-muted-foreground">
+                    <!-- v26.10.19-v3 与脚本端 v26.10.19-v4 同步：提示为空时整行不渲染，不留死内边距 -->
+                    <div
+                        v-if="footerHint"
+                        class="znhd-phone-hint shrink-0 px-0.5 pb-1 text-center text-xs text-muted-foreground">
                         {{ footerHint }}
                     </div>
               </div>
