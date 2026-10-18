@@ -13,7 +13,7 @@ import { h, type VNode } from 'vue';
  *
  * ⚠️ 与 React 版 `MarkdownBody.tsx` 的等价关系（改这里请同步那边，或至少保持观感一致）：
  *    · `remark-breaks` 的行为 = 单个换行渲染成 `<br>` ⇒ 这里段落内按 `\n` 切 `<br>`；
- *    · 链接一律新窗口打开、`rel="noreferrer"`，颜色在实心气泡里反色（否则绿压绿看不见）；
+ *    · 链接一律新窗口打开、`rel="noreferrer"`，颜色跟随所在气泡的调色板（我方黑 / 对方绿）；
  *    · 代码块只给底色 + 横向滚动，不做语法高亮（React 版实测高亮库要多 429KiB）。
  */
 
@@ -39,15 +39,15 @@ export const MD_PEER: MdPalette = {
     head: 'rgba(255,255,255,0.9)',
 };
 
-/** 我方气泡（微信绿实心）：白色系 + 半透明白底，避免「绿字压绿底」 */
+/** 我方气泡（微信绿实心）：v26.10.18-v9 起按用户要求一律黑字（半透明黑做底纹，避免「绿字压绿底」） */
 export const MD_MINE: MdPalette = {
-    codeBg: 'rgba(255,255,255,0.22)',
-    link: '#ffffff',
-    line: 'rgba(255,255,255,0.35)',
-    quote: 'rgba(255,255,255,0.45)',
-    text: '#ffffff',
-    strong: '#ffffff',
-    head: '#ffffff',
+    codeBg: 'rgba(0,0,0,0.12)',
+    link: '#000000',
+    line: 'rgba(0,0,0,0.25)',
+    quote: 'rgba(0,0,0,0.45)',
+    text: '#000000',
+    strong: '#000000',
+    head: '#000000',
 };
 
 const SAFE_URL = /^(https?:\/\/|mailto:|#|\/)/i;
@@ -107,7 +107,13 @@ function renderInline(text: string, p: MdPalette, keyBase: string): Array<VNode 
                 )
             );
         } else if (token.startsWith('**') || token.startsWith('__')) {
-            push(h('strong', { key, style: { fontWeight: 600, color: p.strong } }, renderInline(token.slice(2, -2), p, key)));
+            push(
+                h(
+                    'strong',
+                    { key, style: { fontWeight: 600, color: p.strong } },
+                    renderInline(token.slice(2, -2), p, key)
+                )
+            );
         } else if (token.startsWith('~~')) {
             push(h('del', { key, style: { opacity: 0.7 } }, renderInline(token.slice(2, -2), p, key)));
         } else if (token.startsWith('*') || token.startsWith('_')) {
@@ -241,7 +247,12 @@ function renderTable(rows: string[][], p: MdPalette, key: string): VNode {
         );
     return h('div', { key, style: { overflowX: 'auto', minWidth: '0' } }, [
         h('table', { style: { borderCollapse: 'collapse', fontSize: '12px' } }, [
-            h('thead', [h('tr', head.map((c, i) => cell(c, 'th', key + '-h' + i)))]),
+            h('thead', [
+                h(
+                    'tr',
+                    head.map((c, i) => cell(c, 'th', key + '-h' + i))
+                ),
+            ]),
             h(
                 'tbody',
                 body.map((row, ri) =>
@@ -378,7 +389,13 @@ export function renderMarkdown(content: string, palette: MdPalette): VNode[] {
                 h(
                     ordered ? 'ol' : 'ul',
                     { key, style: { margin: '0', paddingLeft: '20px' } },
-                    items.map((t, idx) => h('li', { key: key + '-i' + idx, style: { margin: '2px 0' } }, renderInline(t, p, key + '-i' + idx)))
+                    items.map((t, idx) =>
+                        h(
+                            'li',
+                            { key: key + '-i' + idx, style: { margin: '2px 0' } },
+                            renderInline(t, p, key + '-i' + idx)
+                        )
+                    )
                 )
             );
             continue;

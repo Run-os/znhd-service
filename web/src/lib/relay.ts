@@ -298,9 +298,7 @@ export function startPhoneRelay(opts: RelayOptions): () => void {
                 onConn({
                     state: 'error',
                     msg:
-                        err && err.message === 'timeout'
-                            ? '连接超时（请检查网络/代理/防火墙）'
-                            : '连接失败，正在重试…',
+                        err && err.message === 'timeout' ? '连接超时（请检查网络/代理/防火墙）' : '连接失败，正在重试…',
                 });
                 later(tick, retryDelay);
             });

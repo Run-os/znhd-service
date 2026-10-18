@@ -68,6 +68,21 @@ export function sourceLabel(msg: TransferMessage): string {
     return shortPhoneId(msg.sessionKey);
 }
 
+/**
+ * 聊天头像：DiceBear（notionists 风格 SVG）。
+ *
+ * ⚠️ seed 用**设备标识**（本机 ID / 手机会话键）而不是官方示例里的 `Math.random()`：
+ *    随机种子在 Vue 重渲染时会重新求值 ⇒ 同一台手机每刷新一次就换一张脸，聊天里认不出人；
+ *    固定 seed 才是「一台设备 = 一张脸」，且不同设备天然不同。
+ *
+ * 走 <img>（AvatarImage）而不是 GM_xmlhttpRequest：DiceBear 是公开只读资源，无需 @grant；
+ * 宿主页 CSP 若挡掉 api.dicebear.com，reka 的 AvatarImage 会保持未加载态，自动回落到
+ * AvatarFallback 的文字头像（我方「我」/ 对方「手」），不会开天窗。
+ */
+export function avatarUrl(seed: string): string {
+    return 'https://api.dicebear.com/10.x/notionists/svg?seed=' + encodeURIComponent(seed);
+}
+
 /** 发送状态文案（时间在分隔条上，这里只表达「发送中 / 失败」） */
 export function metaOf(msg: TransferMessage): string {
     if (msg.sendState === 'sending') {

@@ -1,52 +1,57 @@
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue';
+import { computed, nextTick, ref, watch } from 'vue';
 import { Icon, type IconName } from '@vue/icons';
-import { Button } from '@vue/components/ui/button';
-import { InputGroup, InputGroupAddon, InputGroupTextarea } from '@vue/components/ui/input-group';
-import EmojiPanel from './EmojiPanel.vue';
-import type { PickedEmoji } from './types';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from '@vue/components/ui/dropdown-menu';
+import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupTextarea } from '@vue/components/ui/input-group';
 
 /**
- * 聊天输入区（对齐 React 版 `ChatComposer` 的微信桌面版结构）：
- *   ┌────────────────────────────────┐
- *   │ 😀 🖼 📎        ← 工具栏图标行（上）│
- *   │ ┌────────────────────────────┐ │
- *   │ │ 多行文本（自动增高）   [发送] │ │ ← 官方 InputGroup（Textarea + block-end addon）
- *   │ └────────────────────────────┘ │
- *   └────────────────────────────────┘
+ * 聊天输入区（v26.10.18-v8）：**照搬 message-scroller 示例的写法** ——
  *
- * ⚠️ 三条从 React 版带过来的结论（都对应过真实 bug）：
+ *   InputGroup
+ *     ├─ InputGroupTextarea                  文本域（整宽、无内边框）
+ *     └─ InputGroupAddon(align="block-end")  底栏：左侧「+」下拉（图片 / 文件），右侧 `ml-auto` 发送
+ *
+ * 示例里「+」用的是 DropdownMenu，这里保持同款：附件入口收进下拉，输入区只剩
+ * 一个加号 + 一个上箭头，不再有横排的工具栏按钮。
+ *
+ * ⚠️ 两条从 React 版带过来的结论（都对应过真实 bug）：
  *  ① 文本域**自己禁掉 outline / boxShadow**（InputGroup 只管外框聚焦环），避免「框里套框」；
  *  ② 行高必须固定 20px，并按 `scrollHeight` 重算高度 —— 否则「打一个字再删空，
- *     输入框永久变高」；
- *  ③ 表情面板用 `absolute` 挂在输入卡片上（不用 Popover）：它本来就在影子树里，
- *     不需要 portal，也就没有「浮层挂到 body 后样式全丢」的风险。
+ *     输入框永久变高」。
+ *
+ * v26.10.19：「+」与发送按钮整体缩小 30%（40px → 28px = `size-7`，图标 20 → 14），
+ * 标题栏按钮与「滚动到底部」按钮都跟这个尺寸对齐。
  */
 const props = withDefaults(
     defineProps<{
         modelValue: string;
         disabled?: boolean;
         placeholder?: string;
-        /** 输入面板上方的提示行（无在线手机等），纯文本 */
-        notice?: string;
-        /** 表情之后的附加功能按钮 */
-        actions?: Array<{ key: string; label: string; tooltip?: string; icon: IconName; onClick: () => void; disabled?: boolean }>;
-        /** 是否支持发表情（没有回调时不显示为可用） */
-        emojiEnabled?: boolean;
+        /** 「+」下拉里的附件入口（图片 / 文件） */
+        attach?: Array<{
+            key: string;
+            label: string;
+            icon: IconName;
+            onClick: () => void;
+            disabled?: boolean;
+        }>;
     }>(),
-    { disabled: false, placeholder: '', notice: '', actions: () => [], emojiEnabled: true }
+    { disabled: false, placeholder: '', attach: () => [] }
 );
 
 const emit = defineEmits<{
     (e: 'update:modelValue', v: string): void;
     (e: 'send'): void;
-    (e: 'pickEmoji', emoji: PickedEmoji): void;
 }>();
 
 const root = ref<HTMLElement | null>(null);
-const emojiOpen = ref(false);
 
-const MIN_H = 40;
+const MIN_H = 56; // 示例同款 h-14：两行高的输入区
 const MAX_H = 120;
 
 /** textarea 在 InputGroupTextarea 内部，用 DOM 查询取元素（组件 ref 拿到的是组件实例） */
@@ -63,16 +68,15 @@ function autoGrow() {
     el.style.overflowY = el.scrollHeight > MAX_H ? 'auto' : 'hidden';
 }
 
+const model = computed({
+    get: () => props.modelValue,
+    set: (v: string) => emit('update:modelValue', v),
+});
+
 watch(
     () => props.modelValue,
     () => nextTick(autoGrow)
 );
-
-function onInput(e: Event) {
-    const el = e.target as HTMLTextAreaElement;
-    emit('update:modelValue', el.value);
-    autoGrow();
-}
 
 function onKeydown(e: KeyboardEvent) {
     if (e.key !== 'Enter' || e.shiftKey) return;
@@ -80,96 +84,60 @@ function onKeydown(e: KeyboardEvent) {
     if (!sendDisabled.value) emit('send');
 }
 
-/** 发送按钮可用性：有非空白内容且输入区整体可用（与原 React 版 canSend 默认值一致） */
+/** 发送按钮可用性：有非空白内容且输入区整体可用 */
 const sendDisabled = computed(() => !!props.disabled || !props.modelValue.trim());
-
-function pickEmoji(emoji: PickedEmoji) {
-    // 点一张就收起面板（点击落在面板内部，外点关闭逻辑不会触发）
-    emojiOpen.value = false;
-    emit('pickEmoji', emoji);
-}
-
-/**
- * 点面板之外收起。
- * ⚠️ 必须用 `composedPath()` 判内外：事件冒泡到 document 时 `event.target` 会被
- * 重定向成影子宿主 `<div id="__znhd_panel_host__">`，用 `contains(target)` 永远为 false。
- */
-function onDocDown(e: MouseEvent) {
-    const path = e.composedPath() as unknown as Array<{ getAttribute?: (n: string) => string | null }>;
-    const inPanel = path.some((el) => el && typeof el.getAttribute === 'function' && el.getAttribute('data-emoji-panel') === '1');
-    const onTrigger = path.some((el) => el && typeof el.getAttribute === 'function' && el.getAttribute('aria-label') === '表情');
-    if (!inPanel && !onTrigger) emojiOpen.value = false;
-}
-
-watch(emojiOpen, (open) => {
-    if (open) document.addEventListener('mousedown', onDocDown, true);
-    else document.removeEventListener('mousedown', onDocDown, true);
-});
-
-onBeforeUnmount(() => document.removeEventListener('mousedown', onDocDown, true));
 </script>
 
 <template>
-    <div
-        ref="root"
-        class="znhd-chat-composer relative mx-3 mb-3 flex shrink-0 flex-col rounded-xl border border-border bg-card px-3 pb-2.5 pt-2">
-        <!-- 表情面板：贴在输入卡片上方 -->
-        <div
-            v-if="emojiOpen"
-            class="absolute bottom-full left-0 z-30 mb-2 rounded-[10px] border border-border bg-popover p-2.5 shadow-[0_8px_28px_rgba(0,0,0,0.55)]">
-            <EmojiPanel @pick="pickEmoji" />
-        </div>
-
-        <div v-if="notice" class="mb-1.5 text-xs text-warning">{{ notice }}</div>
-
-        <!-- 工具栏（微信把这一行放在输入框上面）：官方 Button 的 ghost 图标态 -->
-        <div class="mb-1 flex items-center gap-0.5">
-            <Button
-                variant="ghost"
-                size="icon-sm"
-                aria-label="表情"
-                :title="emojiEnabled ? '表情包（点一张直接发送到手机，悬停可放大）' : '当前对话不支持发送表情'"
-                :disabled="disabled || !emojiEnabled"
-                class="text-muted-foreground hover:text-foreground"
-                @click="emojiOpen = !emojiOpen">
-                <Icon name="smile" :size="16" />
-            </Button>
-            <Button
-                v-for="a in actions"
-                :key="a.key"
-                variant="ghost"
-                size="icon-sm"
-                :aria-label="a.label"
-                :title="a.tooltip || a.label"
-                :disabled="a.disabled || disabled"
-                class="text-muted-foreground hover:text-foreground"
-                @click="a.onClick()">
-                <Icon :name="a.icon" :size="15" />
-            </Button>
-        </div>
-
-        <!-- 输入框 = 官方 InputGroup：Textarea 在左，发送按钮作为 block-end addon -->
-        <InputGroup class="border-input">
+    <div ref="root" class="w-full">
+        <!-- v26.10.18-v9：参考 ChatGPT 式深色输入舱 —— 大圆角容器，文本在上、按钮行在下 -->
+        <InputGroup class="!rounded-3xl !border-[rgb(46,46,46)] !bg-[rgb(32,32,32)] !shadow-none">
             <InputGroupTextarea
-                :model-value="modelValue"
+                v-model="model"
                 :placeholder="placeholder"
                 :disabled="disabled"
-                rows="2"
-                class="max-h-[120px] min-h-[40px] text-sm leading-5 text-foreground placeholder:text-muted-foreground"
-                style="min-height: 40px; box-shadow: none"
-                @input="onInput"
+                rows="1"
+                class="max-h-[120px] text-sm leading-5 text-foreground placeholder:text-muted-foreground !px-4 !pt-3"
+                style="min-height: 56px; box-shadow: none"
+                @input="autoGrow"
                 @keydown="onKeydown" />
-            <InputGroupAddon align="block-end" class="justify-end pt-0">
-                <Button
-                    size="xs"
-                    :variant="sendDisabled ? 'ghost' : 'secondary'"
+
+            <InputGroupAddon align="block-end" class="!px-3 !pb-3 !pt-1">
+                <DropdownMenu v-if="attach.length">
+                    <DropdownMenuTrigger as-child>
+                        <InputGroupButton
+                            size="icon-sm"
+                            variant="outline"
+                            class="!size-7 !rounded-full !border-[rgb(58,58,58)] !bg-transparent !text-foreground"
+                            aria-label="添加图片或文件"
+                            title="添加图片或文件"
+                            :disabled="disabled">
+                            <Icon name="plus" :size="14" />
+                        </InputGroupButton>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start" side="top" class="w-44">
+                        <DropdownMenuItem
+                            v-for="a in attach"
+                            :key="a.key"
+                            :disabled="a.disabled || disabled"
+                            @select="a.onClick()">
+                            <Icon :name="a.icon" :size="15" />
+                            {{ a.label }}
+                        </DropdownMenuItem>
+                    </DropdownMenuContent>
+                </DropdownMenu>
+
+                <InputGroupButton
+                    size="icon-sm"
+                    variant="default"
+                    class="ml-auto !size-7 !rounded-full !text-white"
                     :disabled="sendDisabled"
                     aria-label="发送"
-                    class="min-w-[64px]"
+                    title="发送（Enter）"
                     @click="emit('send')">
-                    <Icon name="send" :size="13" />
-                    发送
-                </Button>
+                    <Icon name="send" :size="14" />
+                    <span class="sr-only">发送</span>
+                </InputGroupButton>
             </InputGroupAddon>
         </InputGroup>
     </div>

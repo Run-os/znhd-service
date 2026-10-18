@@ -1,9 +1,9 @@
-import { defineConfig } from 'vite';
-import vue from '@vitejs/plugin-vue';
 import tailwindcss from '@tailwindcss/vite';
-import monkey from 'vite-plugin-monkey';
+import vue from '@vitejs/plugin-vue';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath, URL } from 'node:url';
+import { defineConfig } from 'vite';
+import monkey from 'vite-plugin-monkey';
 
 /**
  * 脚本端构建（v26.10.18-v7 起为**唯一**构建：React 19 + antd v6 + webpack 已删除）。
@@ -67,7 +67,7 @@ export default defineConfig({
                 // Vue 只在运行时用 CDN 那份：产物里保留 import 形式，由下面 externalGlobals
                 // 映射到全局 `Vue` 并自动把 CDN 地址写进 @require。
                 externalGlobals: {
-                    vue: ['Vue', 'https://cdn.jsdelivr.net/npm/vue@3.5.13/dist/vue.global.prod.js'],
+                    vue: ['Vue', 'https://fastly.jsdelivr.net/npm/vue@3.5.13/dist/vue.global.prod.js'],
                 },
                 // 插件默认的 cssSideEffects 会 GM_addStyle 到 document.head —— 影子树拿不到。
                 // 这里置空，CSS 由 main.ts 以字符串注入 shadowRoot。

@@ -36,8 +36,7 @@ const IMG_SIZES = {
     '/img/icon-set.svg': 1024,
 };
 
-const PNG_1X1 =
-    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
+const PNG_1X1 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
 
 /**
  * GM_xmlhttpRequest 桩：按真实中继协议路由（React 版 znhd-smoke.html 的精简版）。
@@ -247,8 +246,8 @@ function serve() {
     const clickPanelText = async (text) => {
         await page.evaluate((t) => {
             const sr = document.getElementById('__znhd_panel_host__').shadowRoot;
-            const el = [...sr.querySelectorAll('button, a, [role="button"]')].find(
-                (b) => b.textContent.replace(/\s+/g, '').includes(t)
+            const el = [...sr.querySelectorAll('button, a, [role="button"]')].find((b) =>
+                b.textContent.replace(/\s+/g, '').includes(t)
             );
             if (el) el.click();
         }, text);
@@ -366,7 +365,69 @@ function serve() {
             }
         );
     }, PNG_1X1);
-    await new Promise((r) => setTimeout(r, 1000));
+    // 等自动弹窗真正挂出来（大 bundle 冷解析会慢过 1s 固定等待，别用 sleep 赌时序）
+    try {
+        await page.waitForFunction(
+            () => {
+                const sr = document.getElementById('__znhd_panel_host__');
+                if (!sr || !sr.shadowRoot) return false;
+                return [...sr.shadowRoot.querySelectorAll('[role="dialog"]')].some((d) =>
+                    d.textContent.includes('传输助手')
+                );
+            },
+            { timeout: 20000 }
+        );
+    } catch (e) {
+        const dbg = await page.evaluate(() => {
+            const sr = document.getElementById('__znhd_panel_host__');
+            const root = sr && sr.shadowRoot;
+            return {
+                host: !!sr,
+                recvQueued: (window.__recvQueue || []).length,
+                dialogs: root ? root.querySelectorAll('[role="dialog"]').length : -1,
+                bodyDialogs: document.querySelectorAll('[role="dialog"]').length,
+                srHasApp: !!(root && root.querySelector('#app')),
+                appChildren: root && root.querySelector('#app') ? root.querySelector('#app').children.length : -1,
+                pageErr: report.errors.length,
+            };
+        });
+        await page.screenshot({ path: require('os').tmpdir() + '/znhd-dbg-no-transfer.png' });
+        console.log('[dbg-transfer-open] ' + JSON.stringify(dbg));
+        throw e;
+    }
+    await new Promise((r) => setTimeout(r, 300));
+
+    /**
+     * 「更多」下拉里点一项：chat 窗口按 shadcn message-scroller 示例收敛为
+     * CardHeader 上的一排 icon 按钮（清空 / 更多 / 关闭），文件、配对、设置、
+     * 关于都收进了这个 dropdown。菜单本身 Portal 到 shadowRoot（补丁同 Dialog）。
+     */
+    async function pickMore(label) {
+        await page.evaluate(() => {
+            const sr = document.getElementById('__znhd_panel_host__').shadowRoot;
+            const btn = sr.querySelector('button[aria-label="更多"]');
+            if (btn) btn.click();
+        });
+        await new Promise((r) => setTimeout(r, 300));
+        return page.evaluate((text) => {
+            const sr = document.getElementById('__znhd_panel_host__').shadowRoot;
+            const items = [...sr.querySelectorAll('[data-slot="dropdown-menu-item"]')];
+            const it = items.find((n) => n.textContent.includes(text));
+            if (!it) return { clicked: false, visible: false, labels: items.map((n) => n.textContent.trim()) };
+            // 层级回归（v26.10.18-v8 踩过）：菜单 z-index 一旦低于聊天窗本体就会被盖住，
+            // DOM 还在、断言照样绿，但肉眼看到的是「弹窗样式全丢了」。用 elementFromPoint 验真。
+            const menu = sr.querySelector('[data-slot="dropdown-menu-content"]');
+            // 层级回归（v26.10.18-v8 踩过）：菜单 z-index 一旦低于聊天窗本体（1000011）就会被
+            // 整个盖住——DOM 还在、断言照样绿，但肉眼看到的是「弹窗样式全丢了」。直接验 z-index。
+            let visible = false;
+            if (menu) {
+                const r = menu.getBoundingClientRect();
+                visible = parseInt(getComputedStyle(menu).zIndex, 10) >= 1000012 && r.width > 100 && r.height > 50;
+            }
+            it.click();
+            return { clicked: true, visible, labels: items.map((n) => n.textContent.trim()) };
+        }, label);
+    }
 
     // 自动弹窗：收到内容后窗口应已自己打开（不再点「传输助手」按钮）
     const transfer = await page.evaluate(() => {
@@ -374,54 +435,116 @@ function serve() {
         const dialogs = [...sr.querySelectorAll('[role="dialog"]')];
         const el = dialogs[dialogs.length - 1];
         if (!el) return { found: false, count: dialogs.length };
-        const cs = getComputedStyle(el);
-        const rect = el.getBoundingClientRect();
-        const navLabels = [...el.querySelectorAll('button[aria-label]')].map((b) => b.getAttribute('aria-label'));
+        const card = el.querySelector('[data-slot="card"]');
+        const rect = (card || el).getBoundingClientRect();
         const bubbles = [...el.querySelectorAll('[data-slot="bubble"]')];
-        const chatImg = el.querySelector('.znhd-transfer-messages img');
+        // ⚠️ 排除头像（data-slot="avatar-image"）：它也在 scroller 里，且 DOM 顺序在气泡之前，
+        //    不排除会把它当成「收到的图片」，断言 blob: 必然失败。
+        const chatImg = el.querySelector('[data-slot="message-scroller"] img:not([data-slot="avatar-image"])');
+        const avatarImg = el.querySelector('[data-slot="avatar-image"]');
+        const composer = el.querySelector('[data-slot="input-group"]');
+        // 我方气泡（data-align=end）的文字色：v9 起要求黑色
+        const mineBubble = el.querySelector('[data-slot="bubble"][data-align="end"] [data-slot="bubble-content"]');
         return {
             found: true,
             count: dialogs.length,
             inShadow: sr.contains(el),
             bodyHasDialog: !!document.querySelector('[role="dialog"]'),
             text: el.innerText.replace(/\s+/g, ' ').trim().slice(0, 200),
-            background: cs.backgroundColor,
+            // Card 外观：与示例同款的三段式卡片（卡片自带底色/圆角/描边）
+            hasCard: !!card,
+            hasScroller: !!el.querySelector('[data-slot="message-scroller"]'),
+            hasComposer: !!(composer && composer.querySelector('textarea')),
+            // 头部只剩三个 icon 按钮（清空 / 更多 / 关闭）——不再有图标栏与多栏导航
+            headButtons: [...el.querySelectorAll('button[aria-label]')].map((b) => b.getAttribute('aria-label')),
+            background: card ? getComputedStyle(card).backgroundColor : '',
+            mineTextColor: mineBubble ? getComputedStyle(mineBubble).color : '',
             width: Math.round(rect.width),
             height: Math.round(rect.height),
-            navLabels,
-            // 会话列表：注入的发送者应归组成一条会话（短 ID 展示）
-            sessionItems: [...el.querySelectorAll('.znhd-transfer-session-item')].map((n) =>
-                n.textContent.replace(/\s+/g, ' ').trim().slice(0, 40)
+            // v26.10.19：标题栏与会话区的分界线 —— 1px + 与窗口外框同色 rgb(34,34,34)
+            headerBorder: (() => {
+                const h = el.querySelector('[data-slot="card-header"]');
+                if (!h) return '';
+                const s = getComputedStyle(h);
+                return s.borderBottomWidth + ' ' + s.borderBottomColor;
+            })(),
+            // v26.10.19：标题栏按钮 / 输入框按钮 / 滚动到底按钮 —— 统一 28px 圆形
+            // ⚠️ 用 offsetWidth（布局尺寸）：滚动到底按钮 inactive 时带 scale-95，rect 会被缩成 26.6px
+            // ⚠️ 用 button[aria-label] 而不是 [data-slot="button"]：DropdownMenuTrigger(as-child)
+            //    会把 reka 自己的 data-slot="dropdown-menu-trigger" 覆盖上去（「更多」与「+」会漏选）
+            headBtnBox: [...el.querySelectorAll('[data-slot="card-header"] button[aria-label]')].map(
+                (b) =>
+                    b.getAttribute('aria-label') +
+                    '=' +
+                    b.offsetWidth +
+                    'x' +
+                    b.offsetHeight +
+                    ' ' +
+                    Math.round(parseFloat(getComputedStyle(b).borderRadius))
             ),
+            composerBtnBox: composer
+                ? [...composer.querySelectorAll('button[aria-label]')].map(
+                      (b) => b.offsetWidth + 'x' + b.offsetHeight + ' ' + Math.round(parseFloat(getComputedStyle(b).borderRadius))
+                  )
+                : [],
+            scrollerBtnBox: (() => {
+                const b = el.querySelector('[data-slot="message-scroller-button"]');
+                if (!b) return '';
+                return b.offsetWidth + 'x' + b.offsetHeight + ' ' + Math.round(parseFloat(getComputedStyle(b).borderRadius));
+            })(),
             // 气泡：文本（对方=muted）+ 图片（ghost）+ Markdown strong
             bubbleVariants: bubbles.map((b) => b.getAttribute('data-variant')),
-            boldText: !!el.querySelector('.znhd-transfer-messages strong'),
+            boldText: !!el.querySelector('[data-slot="bubble"] strong'),
             chatImgSrc: chatImg ? String(chatImg.src).slice(0, 12) : '',
-            hasComposer: !!el.querySelector('.znhd-chat-composer textarea'),
+            // 头像：DiceBear notionists（seed = 设备标识，不是随机数）
+            avatarSrc: avatarImg ? String(avatarImg.getAttribute('src') || '') : '',
+            chatImgOk: chatImg ? chatImg.naturalWidth > 0 : false,
+            chatImgSize: chatImg ? chatImg.naturalWidth + 'x' + chatImg.naturalHeight : '',
+            // 卡片下方那行居中提示（示例里 `Demo is read only…` 的位置）
+            hint: el.innerText.includes('Enter 发送 · Shift + Enter 换行'),
         };
     });
     report.checks.transferWindowOk =
         !!transfer.found &&
         !!transfer.inShadow &&
         !transfer.bodyHasDialog &&
-        transfer.background === 'rgb(46, 46, 46)' &&
-        transfer.width === 1166 &&
-        transfer.height === 704 &&
-        ['对话', '文件', '设置', '企业信息'].every((l) => (transfer.navLabels || []).includes(l));
+        transfer.hasCard &&
+        transfer.hasScroller &&
+        transfer.hasComposer &&
+        transfer.background === 'rgb(0, 0, 0)' &&
+        // v26.10.19：384 → 768（横向一倍），560 → 672（高度 +20%）
+        transfer.width === 768 &&
+        transfer.height === 672 &&
+        ['清空聊天记录', '更多', '关闭'].every((l) => (transfer.headButtons || []).includes(l));
+    // 分界线 = 1px + rgb(34,34,34)（与窗口外框一致）
+    report.checks.transferDividerOk = transfer.headerBorder === '1px rgb(34, 34, 34)';
+    // 标题栏 3 个 + 输入框 2 个 + 滚动到底 1 个：全是 28px 圆形（rounded-full 计算值 ≈ 3.35e7px）
+    const isRound28 = (b) => {
+        const m = /(\d+)x(\d+)\s+(\d+)/.exec(String(b));
+        return !!m && m[1] === '28' && m[2] === '28' && Number(m[3]) >= 9999;
+    };
+    report.checks.transferBtnShapeOk =
+        transfer.headBtnBox.length === 3 &&
+        transfer.headBtnBox.every(isRound28) &&
+        transfer.composerBtnBox.length === 2 &&
+        transfer.composerBtnBox.every(isRound28) &&
+        isRound28(transfer.scrollerBtnBox);
     report.checks.transferChatOk =
-        transfer.sessionItems.length === 1 &&
+        transfer.text.includes('已连接 1 台设备') &&
         transfer.bubbleVariants.includes('muted') &&
         transfer.bubbleVariants.includes('ghost') &&
         transfer.boldText &&
-        String(transfer.chatImgSrc).startsWith('blob:') &&
-        !!transfer.hasComposer;
+        String(transfer.chatImgSrc).startsWith('blob:');
+    report.checks.transferAvatarOk = String(transfer.avatarSrc).startsWith(
+        'https://api.dicebear.com/10.x/notionists/svg?seed='
+    );
     report.transfer = transfer;
     await page.screenshot({ path: path.join(os.tmpdir(), 'znhd-vue-transfer.png') });
 
     // 发送文本：输入 → 点「发送」→ store 走 POST /phone/send（stub 记录载荷）
     await page.evaluate(() => {
         const sr = document.getElementById('__znhd_panel_host__').shadowRoot;
-        const ta = sr.querySelector('.znhd-chat-composer textarea');
+        const ta = sr.querySelector('[data-slot="input-group"] textarea');
         if (!ta) return;
         const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value').set;
         setter.call(ta, '回给手机的一条消息');
@@ -430,49 +553,53 @@ function serve() {
     await new Promise((r) => setTimeout(r, 150));
     await page.evaluate(() => {
         const sr = document.getElementById('__znhd_panel_host__').shadowRoot;
-        const btn = sr.querySelector('.znhd-chat-composer button[aria-label="发送"]');
+        const btn = sr.querySelector('[data-slot="input-group"] button[aria-label="发送"]');
         if (btn) btn.click();
     });
     await new Promise((r) => setTimeout(r, 400));
     const sent = await page.evaluate(() => window.__sent);
+    // 发出后：我方气泡文字应为黑色（v26.10.18-v9）
+    const mineColor = await page.evaluate(() => {
+        const sr = document.getElementById('__znhd_panel_host__').shadowRoot;
+        const dialogs = [...sr.querySelectorAll('[role="dialog"]')];
+        const el = dialogs[dialogs.length - 1];
+        const b = el && el.querySelector('[data-slot="bubble"][data-align="end"] [data-slot="bubble-content"]');
+        return b ? getComputedStyle(b).color : '';
+    });
     report.checks.transferSendOk =
+        mineColor === 'rgb(0, 0, 0)' &&
         sent.length === 1 &&
         sent[0].url.includes('/phone/send/') &&
         (() => {
             try {
                 const body = JSON.parse(sent[0].body);
-                return body.text === '回给手机的一条消息' && Array.isArray(body.targets);
+                // 聚合会话的发送目标就是「广播给所有在线手机」= targets:'all'
+                return body.text === '回给手机的一条消息' && (body.targets === 'all' || Array.isArray(body.targets));
             } catch (e) {
                 return false;
             }
         })();
     report.sent = sent;
 
-    // 文件分组：常驻「全部文件」入口
-    await page.evaluate(() => {
-        const sr = document.getElementById('__znhd_panel_host__').shadowRoot;
-        const btn = sr.querySelector('button[aria-label="文件"]');
-        if (btn) btn.click();
-    });
-    await new Promise((r) => setTimeout(r, 350));
+    // 「全部文件」入口现在在「更多」下拉里
+    const filesPick = await pickMore('全部文件');
+    await new Promise((r) => setTimeout(r, 400));
     const filesNav = await page.evaluate(() => {
         const sr = document.getElementById('__znhd_panel_host__').shadowRoot;
         const dialogs = [...sr.querySelectorAll('[role="dialog"]')];
         const el = dialogs[dialogs.length - 1];
-        return { text: el ? el.innerText.replace(/\s+/g, ' ').trim().slice(0, 120) : '', allFiles: !!sr.querySelector('[data-all-files="1"]') };
+        return { text: el ? el.innerText.replace(/\s+/g, ' ').trim().slice(0, 120) : '' };
     });
-    // 文件分组：空态显示「暂无文件」（有会话时列表顶部才出现常驻的「全部文件」条目，
-    // 与 React 版一致 —— 那条挂在 `filtered.length` 分支里）
-    report.checks.transferFilesNavOk = filesNav.allFiles || filesNav.text.includes('暂无文件');
+    report.checks.transferFilesNavOk =
+        !!filesPick.clicked && !!filesPick.visible && filesNav.text.includes('全部文件（图片');
     report.filesNav = filesNav;
+    report.filesPick = filesPick;
 
-    // 传输助手设置：暗色子弹窗（体量/底色/文案）
-    await page.evaluate(() => {
-        const sr = document.getElementById('__znhd_panel_host__').shadowRoot;
-        const btn = sr.querySelector('button[aria-label="设置"]');
-        if (btn) btn.click();
-    });
-    await new Promise((r) => setTimeout(r, 400));
+    // 关掉「全部文件」，再从「更多」进设置（暗色子弹窗：体量/底色/文案）
+    await page.keyboard.press('Escape');
+    await new Promise((r) => setTimeout(r, 350));
+    const settingsPick = await pickMore('设置');
+    await new Promise((r) => setTimeout(r, 450));
     const transferSettings = await page.evaluate(() => {
         const sr = document.getElementById('__znhd_panel_host__').shadowRoot;
         const dialogs = [...sr.querySelectorAll('[role="dialog"]')];
@@ -490,6 +617,7 @@ function serve() {
         };
     });
     report.checks.transferSettingsOk =
+        !!settingsPick.clicked &&
         !!transferSettings.found &&
         !!transferSettings.inShadow &&
         transferSettings.text.includes('传输助手设置') &&
@@ -531,8 +659,16 @@ function serve() {
             cardCount: cards.length,
             alts: cards.map((c) => (c.querySelector('img') || {}).alt || ''),
             sizes: cards.map((c) => c.innerText.replace(/\s+/g, ' ').trim()),
+            // 「没拿到消息时间」的标记：v26.10.19 起不再给卡片加红圈，改由文件名文字标红
+            noTimeFlags: cards.map((c) => c.getAttribute('data-sniff-no-time')),
+            nameColors: cards.map((c) => {
+                const n = c.querySelector('[data-sniff-name]');
+                return n ? getComputedStyle(n).color : '';
+            }),
+            // 旧的红圈是 inline style 的 box-shadow，必须确认它彻底消失
+            rings: cards.map((c) => c.style.boxShadow || ''),
             excluded: bar ? bar.getAttribute('data-sniff-excluded') : null,
-            hasRescan: !!([...el.querySelectorAll('button')].find((b) => b.textContent.includes('重新扫描'))),
+            hasRescan: !![...el.querySelectorAll('button')].find((b) => b.textContent.includes('重新扫描')),
         };
     });
     // 夹具：photo-a(60KB) / photo-b(40KB) 应出现；tiny(2KB) 被阈值挡下；icon-set.svg 被后缀规则排除
@@ -547,6 +683,13 @@ function serve() {
         sniff.alts.includes('photo-b.jpg') &&
         !sniff.alts.includes('tiny.jpg') &&
         sniff.excluded === '1';
+    // 冒烟页没有会话上下文 ⇒ 每张图都取不到消息时间 ⇒ 文件名必须全标红、且一个红圈都不许有
+    report.checks.sniffNoTimeNameOk =
+        sniff.cardCount > 0 &&
+        sniff.noTimeFlags.every((f) => f === '1') &&
+        sniff.nameColors.length === sniff.cardCount &&
+        sniff.nameColors.every((c) => c === 'rgb(255, 77, 79)') &&
+        sniff.rings.every((r) => r === '');
     report.sniff = sniff;
 
     // 展开「大小未知」档：里面应当只剩测不出字节数的那张（夹具里是 .ico / 非图片资源之类），

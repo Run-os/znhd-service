@@ -13,12 +13,17 @@
     "isolatedModules": true,
     "esModuleInterop": true,
     "resolveJsonModule": true,
-    "types": ["vite/client"],
-    // 复用的 UI 底层件在仓库根 src-vue/（与脚本端同一份），别名与 vite.config.ts 保持一致
+    "types": ["vite/client", "tampermonkey"],
+    // v26.10.18-v9：共享层拉进了 src/lib/*（ChatTurn/ChatWindow 的 '@/lib/...' 依赖），
+    // 这批文件沿用脚本端「catch (e) 直接读 e.message」的写法，与根 tsconfig 保持一致。
+    "useUnknownInCatchVariables": false,
+    // 复用的 UI 底层件在仓库根 src-vue/、业务层在 src/（与脚本端同一份），别名与 vite.config.ts 保持一致
     "paths": {
-      "@vue/*": ["../src-vue/*"]
+      "@vue/*": ["../src-vue/*"],
+      "@/*": ["../src/*"]
     }
   },
   // ../shared：与脚本端共用的纯逻辑层（v26.10.08-v13）。未设 rootDir、noEmit，故可 include 项目外文件。
-  "include": ["src", "vite.config.ts", "../shared"]
+  // ../src/global.d.ts：GM_* / heic2any 等脚本端全局声明（共享层拉进 src/lib/* 后需要）。
+  "include": ["src", "vite.config.ts", "../shared", "../src/global.d.ts"]
 }

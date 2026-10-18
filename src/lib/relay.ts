@@ -32,8 +32,6 @@ interface ImageSizeLike {
  */
 type SendToPhonePayload = ({ text: string } | { name: string; mime: string; data: string }) & {
     targets?: 'all' | string[];
-    /** v26.10.14-v3：表情包图片标记（发表情时带上；服务端写进条目，电脑端「全部文件」据此过滤） */
-    emoji?: boolean;
 };
 
 /**
@@ -348,14 +346,7 @@ interface PhoneReceiveOptions {
      */
     onPhones?: (list: { id: string; lastSeen: number }[]) => void;
     /** from（v26.10.13-v6）：发送者手机 ID（中继随条目回传；老中继/未知发送者时为空） */
-    onImage?: (img: {
-        blob: Blob;
-        previewUrl: string;
-        name?: string;
-        mime?: string;
-        from?: string;
-        emoji?: boolean;
-    }) => void;
+    onImage?: (img: { blob: Blob; previewUrl: string; name?: string; mime?: string; from?: string }) => void;
     /**
      * 收到任意文件（v26.10.14-v6）：中继按 mime 分流，非 image/* 的一律走这里。
      * 与 onImage 分开，是因为两者的落库/渲染语义不同（图片走缩略图九宫格，文件走文件卡片）。
@@ -468,7 +459,7 @@ export function startPhoneReceive(opt: PhoneReceiveOptions) {
                         }
                         if (data && (data.type === 'image' || data.type === 'file') && data.data) {
                             // v26.10.14-v6：type 'file' 与 'image' 共用同一条二进制解码路径，
-                            // 只是回调不同（文件不回 emoji 标记、不参与表情包过滤）。
+                            // 只是回调不同（图片走缩略图，文件走文件卡片）。
                             const isFile = data.type === 'file';
                             const blob = base64ToBlob(
                                 data.data,
@@ -499,8 +490,6 @@ export function startPhoneReceive(opt: PhoneReceiveOptions) {
                                     name: data.name,
                                     mime: data.mime,
                                     from: data.from,
-                                    // v26.10.14-v3：表情包标记透传（老中继不带 → undefined → 当作普通图片）
-                                    emoji: data.emoji === true,
                                 });
                             }
                             poll(); // 继续接收下一张

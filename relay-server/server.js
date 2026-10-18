@@ -45,8 +45,6 @@ const PORT = process.env.PORT || 5689;
 const VERSION = (() => { try { return require('./package.json').version; } catch (e) { return 'unknown'; } })();
 // 手机上传页（React + antd 构建产物）由独立模块提供，见 upload-page.js
 const { uploadPageHtml, PUBLIC_DIR } = require('./upload-page');
-// 在线表情包的「CDN → 本服务磁盘」缓存（v26.10.14-v1，客户端不再直连公网 CDN）
-const emoji = require('./emoji-store');
 
 // 前端构建产物目录（web/ 由 Vite 构建到 relay-server/public/）：/assets/* 直接静态托管。
 // 文件名带内容 hash，故可长缓存；HTML 本身用 no-cache（见 /u/ 路由）。
@@ -611,10 +609,7 @@ async function parseItemBody(req, res, opts) {
       ts: Date.now(),
       targets,
       deliveredTo: new Set(),
-      from,
-      // v26.10.14-v1：表情包图片标记（手机页/脚本端发表情时带上）。
-      // 电脑端「全部文件」据此过滤掉表情包，不混进正常传输的文件列表。
-      emoji: payload.emoji === true
+      from
     };
   }
   sendJson(res, 400, { error: 'missing data or text' });
@@ -682,9 +677,7 @@ const server = http.createServer(async (req, res) => {
     // ===== 访问日志：确认端口是否真的收到请求 =====
     // 跳过长轮询(/recv、/phone/recv)、心跳(/phone/heartbeat)与在线状态轮询(/phone/status)等
     // 高频路径，避免刷屏；这类请求另有 [连接]/[投递] 等语义日志。想全量记录可去掉下面的过滤条件。
-    // 表情图片同样跳过：开一次面板可能并发几十张，逐条记没信息量（补图/预热另有 [表情包] 日志）。
-    // ⚠️ packs.json / status / refresh 不在噪声内（带点或不带斜杠，匹配不上图片形态），仍会记录。
-    const ACCESS_NOISE = /^\/(recv|phone\/recv|phone\/heartbeat|phone\/status)(\/|$)|^\/emoji\/[a-zA-Z0-9_-]+\/[A-Za-z0-9._-]+$/i;
+    const ACCESS_NOISE = /^\/(recv|phone\/recv|phone\/heartbeat|phone\/status)(\/|$)/i;
     if (method !== 'OPTIONS' && !ACCESS_NOISE.test(path)) {
       const _t0 = Date.now();
       //logEvent(`[访问] ${method} ${req.url}`);
@@ -738,61 +731,6 @@ const server = http.createServer(async (req, res) => {
       });
       return;
     }
-
-    // ===== 在线表情包缓存（v26.10.14-v1）：客户端不再直连公网 CDN，防限流 =====
-    // 协议契约见 emoji-store.js 头部注释。图片路由放在 /assets 之后、/u 之前，
-    // 与静态路由互不干扰（/emoji/ 前缀专属）。
-
-    // /emoji/packs.json ：合并清单（脚本端与手机页的共同数据源；中继优先、CDN 兜底）
-    if (method === 'GET' && path === '/emoji/packs.json') {
-      emoji.loadManifestForServe().then((manifest) => {
-        if (!manifest) { sendJson(res, 503, { error: '表情包清单暂不可用（预热中或 CDN 拉取失败），请稍后重试' }); return; }
-        sendJson(res, 200, manifest);
-      });
-      return;
-    }
-    // /emoji/status ：缓存状态（排障 / 冒烟等待就绪）
-    if (method === 'GET' && path === '/emoji/status') {
-      sendJson(res, 200, emoji.status());
-      return;
-    }
-    // /emoji/refresh ：手动强制刷新（重拉清单 + 补缺失图；60s 内只接受一次）
-    if (method === 'POST' && path === '/emoji/refresh') {
-      const r = emoji.requestRefresh();
-      if (!r.ok) { sendJson(res, 429, { error: r.reason }); return; }
-      sendJson(res, 200, { ok: true, message: '已开始刷新（清单 + 缺失图片）' });
-      return;
-    }
-    // /emoji/<合集id>/<文件名> ：表情图片本体；本地没有 → 按需从 CDN 补一张再回（single-flight）
-    const em = /^\/emoji\/([a-zA-Z0-9_-]{1,40})\/([A-Za-z0-9._-]{1,80})$/i.exec(path);
-    if (em && (method === 'GET' || method === 'HEAD')) {
-      const packId = em[1];
-      const fileName = em[2];
-      // 双重校验：emoji-store 内部也会校验（防御未来改错正则），这里先拦掉明显非法的
-      if (!emoji.validPackId(packId) || !emoji.validFileName(fileName)) {
-        res.writeHead(403); res.end('forbidden');
-        return;
-      }
-      emoji.ensureImage(packId, fileName).then((r) => {
-        if (!r.ok) {
-          // 清单里没有 → 404；CDN 补图失败 → 502（客户端据此回退到 src 直连）
-          sendJson(res, r.reason === '清单中无此图' ? 404 : 502, { error: r.reason });
-          return;
-        }
-        const type = ASSET_MIME[nodePath.extname(fileName).toLowerCase()] || 'application/octet-stream';
-        // 文件名 = 合集id + key（内容不变），可长缓存；CDN 换图会换 key，自然换 URL
-        const headers = { 'Content-Type': type, 'Cache-Control': 'public, max-age=86400' };
-        if (method === 'HEAD') { res.writeHead(200, headers); res.end(); return; }
-        const stream = fs.createReadStream(r.file);
-        stream.on('error', () => {
-          if (!res.writableEnded) { res.writeHead(500); res.end('read error'); }
-        });
-        res.writeHead(200, headers);
-        stream.pipe(res);
-      });
-      return;
-    }
-    if (em) { sendMethodNotAllowed(res, 'GET, HEAD'); return; }
 
     // /u/<deviceId> ：手机上传页 + 接收上传
     const m = /^\/u\/([a-z0-9-]{8,64})$/i.exec(path);
@@ -976,7 +914,4 @@ setInterval(() => {
 
 server.listen(PORT, '0.0.0.0', () => {
   console.log('[中继服务] v' + VERSION + ' 已启动: http://0.0.0.0:' + PORT);
-  // 表情包后台预热（v26.10.14-v1）：拉清单 + 补全量图片到本地磁盘。不阻塞监听；
-  // 失败不致命——客户端会走 CDN 兜底，后续请求也会按需补图。进度见 [表情包] 日志。
-  emoji.ensureAll();
 });

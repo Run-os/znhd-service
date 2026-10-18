@@ -10,10 +10,13 @@
  *      `div.ant-app` 包裹层，`height:100%` 对 auto 父级解析为 auto，整页会退化成
  *      内容高度、输入区悬在视口中间（用户截图实录）。判据 = 整页骨架 `position:fixed`
  *      且高=视口、输入区底边=视口底。
- *   ② **表情按钮与面板**（`emojiBtnOrderOk` / `emojiPanelOk` / `emojiSendOk`）：
- *      工具栏顺序为「表情 → 图片上传」；CDN（cdn.klyang.com）用请求拦截桩掉
- *      （冒烟不能依赖外网），点一张表情 → 右侧图片气泡 +1，且真 POST 过
- *      `mime=image/png` 的载荷（跳过 canvas 压缩、webp/png 原样发的语义）。
+ * v26.10.18-v9：两端聊天窗统一照搬 shadcn-vue `message-scroller` 示例（Card 三段 +
+ * MessageScroller + InputGroup），表情包功能整体下线，本文件随之再裁 ——
+ *   · 组件断言全部改用官方组件的 `data-slot`（card / message-scroller / bubble /
+ *     input-group），不再依赖手写类名；
+ *   · 表情 fixture（假 CDN + /emoji 预热 + 表情直发）整段删除。
+ *
+ * 既有（v26.10.13-v3）：
  *   ③ **键盘弹出时输入区跟随视觉视口**（`composerKeyboardOk`）：伪造 visualViewport
  *      模拟「键盘顶起」，输入区底边应随之上移，收起后还原。
  *
@@ -79,56 +82,11 @@ function freePort() {
     });
 }
 
-/**
- * 造一张 8x8 的纯色 PNG 供上传。
- * 自己拼 PNG（zlib 是内置的），避免在测试里塞一个看不懂的 base64 常量。
- */
+/** 上传/投递用的 1x1 PNG（与 vue-panel.js 同一份 base64：Chromium 实测可解码，别改回手拼的） */
+const PNG_1X1 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
+
 function writeTinyPng(file) {
-    const w = 8;
-    const h = 8;
-    const raw = Buffer.alloc((w * 3 + 1) * h);
-    for (let y = 0; y < h; y++) {
-        raw[y * (w * 3 + 1)] = 0; // filter: None
-        for (let x = 0; x < w; x++) {
-            const o = y * (w * 3 + 1) + 1 + x * 3;
-            raw[o] = 0x33;
-            raw[o + 1] = 0x99;
-            raw[o + 2] = 0xff;
-        }
-    }
-    const crcTable = [];
-    for (let n = 0; n < 256; n++) {
-        let c = n;
-        for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
-        crcTable[n] = c >>> 0;
-    }
-    const crc = (buf) => {
-        let c = 0xffffffff;
-        for (const b of buf) c = crcTable[(c ^ b) & 0xff] >>> 0;
-        return (c ^ 0xffffffff) >>> 0;
-    };
-    const chunk = (type, data) => {
-        const len = Buffer.alloc(4);
-        len.writeUInt32BE(data.length);
-        const td = Buffer.concat([Buffer.from(type, 'ascii'), data]);
-        const c = Buffer.alloc(4);
-        c.writeUInt32BE(crc(td));
-        return Buffer.concat([len, td, c]);
-    };
-    const ihdr = Buffer.alloc(13);
-    ihdr.writeUInt32BE(w, 0);
-    ihdr.writeUInt32BE(h, 4);
-    ihdr[8] = 8; // bit depth
-    ihdr[9] = 2; // truecolor
-    fs.writeFileSync(
-        file,
-        Buffer.concat([
-            Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
-            chunk('IHDR', ihdr),
-            chunk('IDAT', zlib.deflateSync(raw)),
-            chunk('IEND', Buffer.alloc(0)),
-        ])
-    );
+    fs.writeFileSync(file, Buffer.from(PNG_1X1, 'base64'));
 }
 
 const results = [];
@@ -142,65 +100,10 @@ async function main() {
     writeTinyPng(png);
     const port = await freePort();
 
-    // ===== 表情包 fixture（v26.10.14-v3）=====
-    // 手机页表情数据层已改「同源中继优先、CDN 兜底」：中继把整套表情包拉到自己磁盘
-    // （emoji-store，env ZNHD_EMOJI_SOURCES/ZNHD_EMOJI_DIR 指向 fixture），页面只打
-    // 同源 /emoji/*。假 CDN 与 relay.js 同一套做法（回环 http + 临时目录）。
-    const cdnPort = await freePort();
-    const emojiDir = fs.mkdtempSync(path.join(os.tmpdir(), 'znhd-phone-emoji-'));
-    const sourcesFile = path.join(os.tmpdir(), 'znhd-phone-emoji-sources-' + cdnPort + '.json');
-    const FIXTURE_PACKS = [
-        {
-            id: 'stubemoji',
-            items: [
-                { key: '01', file: 'stubemoji-01.png' },
-                { key: '02', file: 'stubemoji-02.png' },
-            ],
-        },
-    ];
-    fs.writeFileSync(
-        sourcesFile,
-        JSON.stringify(
-            FIXTURE_PACKS.map((p) => ({ id: p.id, url: `http://127.0.0.1:${cdnPort}/json/${p.id}.json` }))
-        )
-    );
-    const fixtureCdn = http.createServer((req, res) => {
-        const pm = /^\/json\/([a-z0-9_-]+)\.json$/.exec(req.url || '');
-        if (pm) {
-            const p = FIXTURE_PACKS.find((x) => x.id === pm[1]);
-            if (p) {
-                res.writeHead(200, { 'Content-Type': 'application/json' });
-                res.end(
-                    JSON.stringify({
-                        name: '桩表情合集',
-                        type: 'image',
-                        items: p.items.map((it) => ({
-                            key: it.key,
-                            val: `http://127.0.0.1:${cdnPort}/emo/${it.file}`,
-                        })),
-                    })
-                );
-                return;
-            }
-        }
-        const im = /^\/emo\/([A-Za-z0-9._-]+)$/.exec(req.url || '');
-        if (im) {
-            // 图片就是上传用例那张 8x8 PNG（blob.type=image/png，与既有 mime 断言一致）
-            res.writeHead(200, { 'Content-Type': 'image/png' });
-            res.end(fs.readFileSync(png));
-            return;
-        }
-        res.writeHead(404);
-        res.end('not found');
-    });
-    await new Promise((r) => fixtureCdn.listen(cdnPort, '127.0.0.1', r));
-
     const child = spawn(process.execPath, [path.join(ROOT, 'relay-server', 'server.js')], {
         env: {
             ...process.env,
             PORT: String(port),
-            ZNHD_EMOJI_SOURCES: sourcesFile,
-            ZNHD_EMOJI_DIR: emojiDir,
         },
         stdio: ['ignore', 'pipe', 'pipe'],
     });
@@ -208,7 +111,9 @@ async function main() {
     child.stderr.on('data', (d) => {
         childErr += String(d);
     });
-    child.stdout.on('data', () => {});
+    child.stdout.on('data', () => {
+        /* 吞掉 stdout：中继日志走 stderr 汇总 */
+    });
 
     // 等 /health 就绪
     let ready = false;
@@ -262,17 +167,10 @@ async function main() {
             };
         });
 
-        // ② CDN 桩 + POST 捕获 + 表情请求记账（v26.10.14-v3 起表情走同源中继优先）：
-        //    · /emoji/* 请求放行真中继（ fixture 已预热），记路径供「全走中继」断言；
-        //    · cdn.klyang.com 桩降级为**兜底路径**——正常不该被触发，触发了说明中继优先失效；
-        //    · 任何**非本源**请求都记账：表情包全走中继时该项必须为 0。
+        // ② POST 捕获 + P4 记账：手机页应当只走 /phone/poll（报活+收件合一），不再发 /phone/heartbeat
         const phonePosts = [];
-        const emojiReqs = [];
-        const externalReqs = [];
-        // P4（v26.10.15-v2）：手机页应当只走 /phone/poll（报活+收件合一），不再发 /phone/heartbeat
         let pollPathHits = 0;
         let hbPathHits = 0;
-        const pageOrigin = `http://127.0.0.1:${port}`;
         await page.setRequestInterception(true);
         page.on('request', (req) => {
             const url = req.url();
@@ -280,43 +178,11 @@ async function main() {
             try {
                 u = new URL(url);
             } catch (e) {
-                u = null; // data: 等怪scheme：不当外部请求，直接放行
+                u = null; // data: 等怪 scheme：不当外部请求，直接放行
             }
             if (u && u.pathname.indexOf('/phone/poll/') === 0) pollPathHits++;
             if (u && u.pathname.indexOf('/phone/heartbeat/') === 0) hbPathHits++;
-            if (u && u.origin !== pageOrigin) externalReqs.push(url);
-            if (u && u.pathname.indexOf('/emoji/') === 0) {
-                emojiReqs.push(u.pathname);
-                req.continue();
-                return;
-            }
-            if (url.indexOf('https://cdn.klyang.com/json/') === 0) {
-                req.respond({
-                    status: 200,
-                    contentType: 'application/json',
-                    // ⚠️ 必须带 CORS 头：页面是跨域 fetch，没有 ACAO 浏览器直接拒（等价于 CDN 真行为）
-                    headers: { 'Access-Control-Allow-Origin': '*' },
-                    body: JSON.stringify({
-                        name: '桩表情合集',
-                        type: 'image',
-                        items: [
-                            { key: '01', val: 'https://cdn.klyang.com/emo/stub/stub-01.png' },
-                            { key: '02', val: 'https://cdn.klyang.com/emo/stub/stub-02.png' },
-                        ],
-                    }),
-                });
-                return;
-            }
-            if (url.indexOf('https://cdn.klyang.com/emo/') === 0) {
-                req.respond({
-                    status: 200,
-                    contentType: 'image/png',
-                    headers: { 'Access-Control-Allow-Origin': '*' },
-                    body: fs.readFileSync(png),
-                });
-                return;
-            }
-            if (req.method() === 'POST' && new URL(url).pathname.indexOf('/u/') === 0) {
+            if (req.method() === 'POST' && u && u.pathname.indexOf('/u/') === 0) {
                 phonePosts.push(req.postData() || '');
             }
             req.continue();
@@ -330,29 +196,40 @@ async function main() {
         // 不再发 /phone/heartbeat。⚠️ 两条都要判：「poll>0」防止「压根没连上」也算通过，
         // 「hb===0」才是真正省掉的那 3600 次/8h。
         check(
-            'P4：手机页只走 /phone/poll（已发 ' + pollPathHits + ' 次），不再发 /phone/heartbeat（' + hbPathHits + ' 次）',
+            'P4：手机页只走 /phone/poll（已发 ' +
+                pollPathHits +
+                ' 次），不再发 /phone/heartbeat（' +
+                hbPathHits +
+                ' 次）',
             pollPathHits > 0 && hbPathHits === 0
         );
 
-        // ① 骨架三件套：头部 / 消息滚动区 / 底部输入区（flex 吸底契约的载体）
+        // ① 骨架三件套：官方组件的 Card 三段（header / message-scroller / card-footer 输入区）
         const skeleton = await page.evaluate(() => ({
             chat: !!document.querySelector('.znhd-phone-chat'),
-            header: !!document.querySelector('.znhd-phone-header'),
-            scroll: !!document.querySelector('.znhd-phone-scroll'),
-            composer: !!document.querySelector('.znhd-phone-composer'),
-            textarea: !!document.querySelector('.znhd-phone-composer textarea'),
-            imageBtn: !!document.querySelector('.znhd-phone-composer button[aria-label="图片上传"]'),
-            sendBtn: !!document.querySelector('.znhd-phone-composer button[aria-label="发送"]'),
-            bg: getComputedStyle(document.querySelector('.znhd-phone-chat')).backgroundColor,
+            card: !!document.querySelector('.znhd-phone-chat [data-slot="card"]'),
+            header: !!document.querySelector('.znhd-phone-chat [data-slot="card-header"]'),
+            scroll:
+                !!document.querySelector('.znhd-phone-chat [data-slot="message-scroller"]') ||
+                !!document.querySelector('.znhd-phone-chat [data-slot="empty"]'),
+            composer: !!document.querySelector('.znhd-phone-chat [data-slot="card-footer"]'),
+            textarea: !!document.querySelector('.znhd-phone-chat [data-slot="input-group"] textarea'),
+            attachBtn: !!document.querySelector('.znhd-phone-chat button[aria-label="添加图片或文件"]'),
+            sendBtn: !!document.querySelector('.znhd-phone-chat [data-slot="input-group"] button[aria-label="发送"]'),
+            bg: (function () {
+                const el = document.querySelector('.znhd-phone-chat [data-slot="card-content"]');
+                return el ? getComputedStyle(el).backgroundColor : '';
+            })(),
         }));
         check(
-            '聊天窗骨架齐：头部 + 消息滚动区 + 底部输入区（图片按钮 / 发送按钮 / 输入框）',
+            '聊天窗骨架齐：Card 三段 + 消息滚动区 + 底部输入区（附件下拉 / 发送按钮 / 输入框）',
             skeleton.chat &&
+                skeleton.card &&
                 skeleton.header &&
                 skeleton.scroll &&
                 skeleton.composer &&
                 skeleton.textarea &&
-                skeleton.imageBtn &&
+                skeleton.attachBtn &&
                 skeleton.sendBtn
         );
         check('整页微信暗色底（#1E1E1E，对齐脚本端第三栏）', skeleton.bg === 'rgb(30, 30, 30)');
@@ -361,109 +238,34 @@ async function main() {
         //     没有高度，height:100% 会断链 ⇒ 整页内容高度、输入区悬在视口中间。
         const pin = await page.evaluate(() => {
             const chatEl = document.querySelector('.znhd-phone-chat');
-            const composerEl = document.querySelector('.znhd-phone-composer');
+            const composerEl = document.querySelector('.znhd-phone-chat [data-slot="card-footer"]');
+            const hintEl = document.querySelector('.znhd-phone-chat .znhd-phone-hint');
             const chat = chatEl ? chatEl.getBoundingClientRect() : null;
             const composer = composerEl ? composerEl.getBoundingClientRect() : null;
+            const hint = hintEl ? hintEl.getBoundingClientRect() : null;
             return {
                 vh: window.innerHeight,
                 chatH: chat ? Math.round(chat.height) : -1,
                 chatPos: chatEl ? getComputedStyle(chatEl).position : '',
                 composerBottom: composer ? Math.round(composer.bottom) : -1,
+                hintBottom: hint ? Math.round(hint.bottom) : -1,
             };
         });
         check(
-            '输入区吸底：整页骨架 fixed 且高=视口，输入区底边=视口底（修复 App 包裹层断高度链）',
+            '输入区吸底：整页骨架 fixed 且高=视口，输入区+提示行贴到视口底（修复 App 包裹层断高度链）',
             pin.chatPos === 'fixed' &&
                 Math.abs(pin.chatH - pin.vh) <= 1 &&
-                Math.abs(pin.composerBottom - pin.vh) <= 1
-        );
-
-        // ①-C 工具栏顺序：表情按钮在图片按钮前面（v26.10.13-v3 需求）
-        const order = await page.evaluate(() => {
-            const tools = document.querySelector('.znhd-composer-tools');
-            if (!tools) return null;
-            const btns = Array.from(tools.querySelectorAll('button[aria-label]'));
-            const idx = (label) => btns.findIndex((b) => b.getAttribute('aria-label') === label);
-            return { emoji: idx('表情'), image: idx('图片上传') };
-        });
-        check(
-            '工具栏顺序：表情按钮在图片按钮前面',
-            !!order && order.emoji >= 0 && order.image >= 0 && order.emoji < order.image
-        );
-
-        // ①-D 前置：等中继把表情包 fixture 预热完（/emoji/status.ready）再开面板。
-        // 不wait 的话面板可能在预热完成前就打 /emoji/packs.json（服务端会同步补，也能过），
-        // 但等待让「全走中继」断言面对的是稳定状态，排除时序偶发。
-        let emojiReady = false;
-        for (let i = 0; i < 40 && !emojiReady; i++) {
-            await sleep(250);
-            try {
-                const s = await fetch(`http://127.0.0.1:${port}/emoji/status`).then((r) => r.json());
-                emojiReady = s.ready === true;
-            } catch (e) {
-                /* 还没起来 */
-            }
-        }
-        check('中继表情包预热就绪（/emoji/status.ready=true）', emojiReady);
-
-        // ①-D 表情面板与「点一张直接发到电脑」（v26.10.14-v3 起数据走同源中继）
-        await page.click('button[aria-label="表情"]');
-        await page.waitForSelector('.znhd-emoji-panel', { timeout: 10000 });
-        const panelInfo = await page.evaluate(() => ({
-            chips: document.querySelectorAll('.znhd-emoji-chip').length,
-            items: document.querySelectorAll('.znhd-emoji-item').length,
-        }));
-        check(
-            '表情面板展开：合集 chips（≥1）+ 图片格子（≥2，清单走 CDN 桩）',
-            panelInfo.chips >= 1 && panelInfo.items >= 2
-        );
-        await page.waitForSelector('.znhd-emoji-item img', { timeout: 15000 });
-        await page.click('.znhd-emoji-item');
-        await page.waitForFunction(
-            () => document.querySelectorAll('.znhd-chat-msg[data-side="out"] .znhd-chat-img').length >= 1,
-            { timeout: 15000 }
-        );
-        await sleep(800); // 等 base64 + POST 真发出去（捕获发生在请求时刻）
-        await page.click('button[aria-label="表情"]'); // 再点一次应收起
-        const panelGone = await page.evaluate(() => !document.querySelector('.znhd-emoji-panel'));
-        check('表情面板可再点按钮收起（toggle）', panelGone);
-        const emojiPost = (() => {
-            for (let i = phonePosts.length - 1; i >= 0; i--) {
-                try {
-                    const p = JSON.parse(phonePosts[i]);
-                    if (p && typeof p.data === 'string') return p;
-                } catch (e) {
-                    /* 非 JSON（心跳等）：跳过 */
-                }
-            }
-            return null;
-        })();
-        check(
-            '点表情直接发送：POST 载荷 mime=image/png、name 形如 <合集>-<键>.png、data 非空',
-            !!emojiPost &&
-                emojiPost.mime === 'image/png' &&
-                /^[a-z0-9_-]+-\d+\.png$/.test(String(emojiPost.name || '')) &&
-                String(emojiPost.data || '').length >= 20
-        );
-
-        // ①-D2 表情包全走中继（v26.10.14-v3，需求③的客户端一半）：
-        //   清单与图片都打同源 /emoji/*，且零外部（CDN）请求 —— 兜底没被触发，
-        //   才是「中继优先」真的生效的直接证据（老实现这里会是 8+2 个 cdn.klyang.com 请求）。
-        if (externalReqs.length) {
-            console.log('     外部请求明细（应为空）：' + JSON.stringify(externalReqs.slice(0, 5)));
-        }
-        check(
-            '表情包全走中继：请求过 /emoji/packs.json 与 /emoji/<合集>/<文件>，且零外部（CDN）请求',
-            emojiReqs.some((p) => p === '/emoji/packs.json') &&
-                emojiReqs.some((p) => /^\/emoji\/[a-z0-9_-]+\/[a-z0-9._-]+\.png$/.test(p)) &&
-                externalReqs.length === 0
+                pin.composerBottom < pin.vh &&
+                Math.abs(pin.hintBottom - pin.vh) <= 2
         );
 
         // ①-E 键盘弹出：shell 跟随视觉视口（输入区不被键盘挡住），收起后还原 100dvh
         const kb = await page.evaluate(async () => {
             const wait = (ms) => new Promise((r) => setTimeout(r, ms));
             const bottom = () =>
-                Math.round(document.querySelector('.znhd-phone-composer').getBoundingClientRect().bottom);
+                Math.round(
+                    document.querySelector('.znhd-phone-chat [data-slot="card-footer"]').getBoundingClientRect().bottom
+                );
             const before = bottom();
             window.__vvSet(window.innerHeight - 320, 0);
             window.__vvFire('resize');
@@ -476,81 +278,101 @@ async function main() {
             return { before, during, duringH, after: bottom(), vh: window.innerHeight };
         });
         check(
-            '键盘弹出时输入区随视觉视口上移 320px（高也同步），收起后回到底',
-            Math.abs(kb.before - kb.vh) <= 1 &&
-                Math.abs(kb.during - (kb.vh - 320)) <= 1 &&
+            '键盘弹出时输入区随视觉视口上移 320px（shell 高也同步），收起后还原',
+            Math.abs(kb.during - (kb.before - 320)) <= 2 &&
                 kb.duringH === kb.vh - 320 + 'px' &&
-                Math.abs(kb.after - kb.vh) <= 1
+                Math.abs(kb.after - kb.before) <= 2
         );
 
         // ② 发图片：选图 → 出「发送中」气泡 → 顺序发送 → 气泡下方出「已发送」
+        //    （v26.10.18-v9 起气泡是官方 Message/Bubble：data-align=end = 我方，图片走 ghost 变体）
         const input = await page.$('input[type=file]');
         if (!input) {
             check('页面有选图用的 file input', false);
         } else {
             await input.uploadFile(png);
-            await page.waitForSelector('.znhd-chat-msg[data-side="out"] .znhd-chat-img', { timeout: 15000 });
+            await page.waitForSelector('[data-slot="message"][data-align="end"] [data-slot="bubble"] img', {
+                timeout: 15000,
+            });
             await page.waitForFunction(
                 () =>
-                    Array.from(document.querySelectorAll('.znhd-chat-msg[data-side="out"] .znhd-chat-meta')).some(
-                        (el) => (el.textContent || '').indexOf('已发送') >= 0
-                    ),
+                    Array.from(
+                        document.querySelectorAll(
+                            '[data-slot="message"][data-align="end"] [data-slot="message-footer"]'
+                        )
+                    ).some((el) => (el.textContent || '').indexOf('已发送') >= 0),
                 { timeout: 20000 }
             );
+            // 压缩后的 objectURL 换 src 是异步的：等 <img> 真正解码完成再取值
+            await page.waitForFunction(
+                () =>
+                    Array.from(
+                        document.querySelectorAll('[data-slot="message"][data-align="end"] [data-slot="bubble"] img')
+                    ).some((img) => img.naturalWidth > 0),
+                { timeout: 15000 }
+            );
             const bubble = await page.evaluate(() => {
-                const msg = document.querySelector('.znhd-chat-msg[data-side="out"]');
-                const bub = msg ? msg.querySelector('.znhd-chat-bubble') : null;
-                const dir = msg ? getComputedStyle(msg).flexDirection : '';
-                return { dir, bg: bub ? getComputedStyle(bub).backgroundColor : '' };
+                const msg = document.querySelector('[data-slot="message"][data-align="end"]');
+                const bub = msg ? msg.querySelector('[data-slot="bubble"]') : null;
+                return {
+                    align: msg ? msg.getAttribute('data-align') : '',
+                    variant: bub ? bub.getAttribute('data-variant') : '',
+                    imgLoaded: (function () {
+                        const img = msg && msg.querySelector('[data-slot="bubble"] img');
+                        return !!img && img.naturalWidth > 0;
+                    })(),
+                };
             });
             check(
-                '发出的图片进右侧气泡：row-reverse（头像在右）+ 微信绿 #07C160',
-                bubble.dir === 'row-reverse' && bubble.bg === 'rgb(7, 193, 96)'
+                '发出的图片进右侧气泡（data-align=end，ghost 变体）且真的加载出来',
+                bubble.align === 'end' && bubble.variant === 'ghost' && bubble.imgLoaded
             );
         }
 
-        // ③ 发文本：输入 → Enter（触发 onPressEnter）→ 右侧文本气泡
-        await page.type('.znhd-phone-composer textarea', '冒烟聊天文本：手机到电脑');
+        // ③ 发文本：输入 → Enter → 右侧文本气泡（default 变体 = 微信绿）
+        await page.type('.znhd-phone-chat [data-slot="input-group"] textarea', '冒烟聊天文本：手机到电脑');
         await page.keyboard.press('Enter');
         await page.waitForFunction(
             () =>
-                Array.from(document.querySelectorAll('.znhd-chat-msg[data-side="out"]')).some((el) =>
-                    (el.textContent || '').indexOf('冒烟聊天文本：手机到电脑') >= 0
-                ),
+                Array.from(
+                    document.querySelectorAll('[data-slot="message"][data-align="end"] [data-slot="bubble"]')
+                ).some((el) => (el.textContent || '').indexOf('冒烟聊天文本：手机到电脑') >= 0),
             { timeout: 15000 }
         );
-        check('Enter 发送的文本出现在右侧气泡（输入框同时清空）', true);
+        const textBubble = await page.evaluate(() => {
+            // ⚠️ 底色画在 bubble-content（Bubble 根节点本身透明），要取内层的 computedStyle
+            const contents = [
+                ...document.querySelectorAll('[data-slot="message"][data-align="end"] [data-slot="bubble-content"]'),
+            ];
+            const c = contents.find((el) => (el.textContent || '').indexOf('冒烟聊天文本：手机到电脑') >= 0);
+            const ta = document.querySelector('.znhd-phone-chat [data-slot="input-group"] textarea');
+            return { bg: c ? getComputedStyle(c).backgroundColor : '', left: ta ? ta.value : '?' };
+        });
+        check(
+            'Enter 发送的文本进右侧气泡：微信绿 #07C160，且输入框同时清空',
+            textBubble.bg === 'rgb(7, 193, 96)' && textBubble.left === ''
+        );
 
-        // ③b 上传带 phoneId（v26.10.13-v3 起；覆盖范围 v26.10.13-v5 补齐）：App 自己发的**每一条**
-        //     （表情直发 / 上传图 / 文本）经真中继投递时都带 from = 本机手机 ID —— 电脑端据此把内容
-        //     归到**这台手机**的会话，两台及以上手机在线也不再全挤进聚合会话。
-        //     ⚠️ 必须把队列里**全部 3 条**取出来再判（队列顺序 = ① 的表情直发 → ② 上传图 → ③ 文本）：
-        //       只取前 2 条时，表情那条 from 为空也照样「通过」（前两条都是图），v26.10.13-v5 实测漏判过一次。
+        // ③b 上传带 phoneId（v26.10.13-v3 起）：App 自己发的每一条（上传图 / 文本）经真中继
+        //     投递时都带 from = 本机手机 ID。队列顺序 = ② 上传图 → ③ 文本（表情已下线）。
         const phoneId = await page.evaluate(() => {
-            const sub = document.querySelector('.znhd-phone-sub');
-            const m = /本机（手机）ID：(\S+)/.exec(sub ? sub.textContent || '' : '');
+            const sub = document.querySelector('.znhd-phone-chat [data-slot="card-description"]');
+            const m = /本机 (\S+) ·/.exec(sub ? sub.textContent || '' : '');
             return m ? m[1] : '';
         });
         const recvItems = [];
-        for (let i = 0; i < 3; i++) {
+        for (let i = 0; i < 2; i++) {
             recvItems.push(
                 await fetch(`http://127.0.0.1:${port}/recv/test-device-0001?maxwait=2000`).then((r) => r.json())
             );
         }
         check(
-            '手机上传带 phoneId：中继 /recv 投递的每条（表情图 / 上传图 / 文本）from = 本机手机 ID',
+            '手机上传带 phoneId：中继 /recv 投递的每条（上传图 / 文本）from = 本机手机 ID',
             !!phoneId &&
-                recvItems.length === 3 &&
+                recvItems.length === 2 &&
                 recvItems.every((it) => it && it.from === phoneId && (it.type === 'image' || it.type === 'text')) &&
                 recvItems.some((it) => it.type === 'image') &&
                 recvItems.some((it) => it.type === 'text')
-        );
-
-        // v26.10.14-v3：表情发送带 emoji 标记（需求①的服务端回传）。队列顺序 =
-        // ① 表情直发 → ② 上传图 → ③ 文本；服务端只给图片条目写 emoji 字段。
-        check(
-            '表情发送带 emoji 标记：/recv 首条（表情图）emoji=true、上传图 emoji=false',
-            !!recvItems[0] && recvItems[0].emoji === true && !!recvItems[1] && recvItems[1].emoji === false
         );
 
         // ④ 电脑端 → 手机端：真从中继投递一张图，等长轮询收到 → 左侧灰气泡
@@ -562,23 +384,27 @@ async function main() {
         });
         check('电脑端 → 手机端：中继投递接口可用（/phone/send 返回 ok）', sent.ok);
 
-        await page.waitForSelector('.znhd-chat-msg[data-side="in"] .znhd-chat-img', { timeout: 25000 });
+        await page.waitForSelector('[data-slot="message"][data-align="start"] [data-slot="bubble"] img', {
+            timeout: 25000,
+        });
         const inBubble = await page.evaluate(() => {
-            const msg = document.querySelector('.znhd-chat-msg[data-side="in"]');
-            const bub = msg ? msg.querySelector('.znhd-chat-bubble') : null;
-            const dir = msg ? getComputedStyle(msg).flexDirection : '';
-            return { dir, bg: bub ? getComputedStyle(bub).backgroundColor : '' };
+            const msg = document.querySelector('[data-slot="message"][data-align="start"]');
+            const bub = msg ? msg.querySelector('[data-slot="bubble"]') : null;
+            return {
+                align: msg ? msg.getAttribute('data-align') : '',
+                variant: bub ? bub.getAttribute('data-variant') : '',
+            };
         });
         check(
-            '收到的图片进左侧气泡：row（头像在左）+ 微信灰 #2F2F2F',
-            inBubble.dir === 'row' && inBubble.bg === 'rgb(47, 47, 47)'
+            '收到的图片进左侧气泡（data-align=start，ghost 变体；电脑 → 手机整链真跑通）',
+            inBubble.align === 'start' && inBubble.variant === 'ghost'
         );
         // 留档：一条表情 + 一条上传图 + 一条文本 + 一条收到的图都在屏上
         await page.screenshot({ path: path.join(os.tmpdir(), 'znhd-phone-chat.png') });
 
         // ⑤ 点收到的图 → 共用 ImagePreview（v26.10.18-v7 起取代 antd 预览 + shared/preview 那套注入）
         await page.evaluate(() => {
-            const img = document.querySelector('.znhd-chat-msg[data-side="in"] .znhd-chat-img');
+            const img = document.querySelector('[data-slot="message"][data-align="start"] [data-slot="bubble"] img');
             if (img) img.dispatchEvent(new MouseEvent('click', { bubbles: true }));
         });
         await page.waitForSelector('[data-image-preview]', { timeout: 15000 });
@@ -685,22 +511,13 @@ async function main() {
                 vh: window.innerHeight,
             };
         });
-        check(
-            '桌面版：聊天窗挂弹窗类 + 居中层（不是全屏骨架）',
-            win.isWindow && win.hasLayer
-        );
-        check(
-            '桌面版：弹窗尺寸 420×680（参考微信 PC 文件传输助手独立窗）',
-            win.w === 420 && win.h === 680
-        );
+        check('桌面版：聊天窗挂弹窗类 + 居中层（不是全屏骨架）', win.isWindow && win.hasLayer);
+        check('桌面版：弹窗尺寸 420×680（参考微信 PC 文件传输助手独立窗）', win.w === 420 && win.h === 680);
         check(
             '桌面版：弹窗在屏幕正中心（左右/上下间隙差 ≤2px）',
             Math.abs(win.x - (win.vw - win.w - win.x)) <= 2 && Math.abs(win.y - (win.vh - win.h - win.y)) <= 2
         );
-        check(
-            '桌面版：弹窗不占满视口（宽高均小于视口）',
-            win.w < win.vw && win.h < win.vh
-        );
+        check('桌面版：弹窗不占满视口（宽高均小于视口）', win.w < win.vw && win.h < win.vh);
         await page.screenshot({ path: path.join(os.tmpdir(), 'znhd-phone-desktop.png') });
 
         // ===== P4 降级路径（v26.10.15-v2）=====
@@ -737,10 +554,7 @@ async function main() {
     } finally {
         await browser.close();
         child.kill();
-        fixtureCdn.close();
         try {
-            fs.rmSync(emojiDir, { recursive: true, force: true });
-            fs.unlinkSync(sourcesFile);
             fs.unlinkSync(png);
         } catch (e) {
             /* 忽略 */

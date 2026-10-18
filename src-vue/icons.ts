@@ -79,6 +79,21 @@ const ICONS = {
         ['path', { d: 'M18 6 6 18' }],
         ['path', { d: 'm6 6 12 12' }],
     ],
+    /** 二维码（「连接设备」按钮，Lucide `qr-code`） */
+    qr: [
+        ['rect', { width: 5, height: 5, x: 3, y: 3, rx: 1 }],
+        ['rect', { width: 5, height: 5, x: 16, y: 3, rx: 1 }],
+        ['rect', { width: 5, height: 5, x: 3, y: 16, rx: 1 }],
+        ['path', { d: 'M21 16h-3a2 2 0 0 0-2 2v3' }],
+        ['path', { d: 'M21 21v.01' }],
+        ['path', { d: 'M12 7v3a2 2 0 0 1-2 2H7' }],
+        ['path', { d: 'M3 12h.01' }],
+        ['path', { d: 'M12 3h.01' }],
+        ['path', { d: 'M12 16v.01' }],
+        ['path', { d: 'M16 12h1' }],
+        ['path', { d: 'M21 12v.01' }],
+        ['path', { d: 'M12 21v-1' }],
+    ],
     /** 刷新（常用语标题栏按钮，与 React 版 RefreshIcon 同源） */
     refresh: [
         ['path', { d: 'M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8' }],
@@ -125,12 +140,6 @@ const ICONS = {
     send: [
         ['path', { d: 'm5 12 7-7 7 7' }],
         ['path', { d: 'M12 19V5' }],
-    ],
-    smile: [
-        ['circle', { cx: 12, cy: 12, r: 10 }],
-        ['path', { d: 'M8 14s1.5 2 4 2 4-2 4-2' }],
-        ['line', { x1: 9, x2: 9.01, y1: 9, y2: 9 }],
-        ['line', { x1: 15, x2: 15.01, y1: 9, y2: 9 }],
     ],
     fileText: [
         ['path', { d: 'M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z' }],
@@ -208,6 +217,12 @@ const ICONS = {
         ['path', { d: 'm19.07 4.93-1.41 1.41' }],
     ],
     moon: [['path', { d: 'M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z' }]],
+    /** 更多（Lucide `ellipsis`）：chat 窗口头部把次要动作收进下拉菜单 */
+    more: [
+        ['circle', { cx: 12, cy: 12, r: 1 }],
+        ['circle', { cx: 19, cy: 12, r: 1 }],
+        ['circle', { cx: 5, cy: 12, r: 1 }],
+    ],
 } satisfies Record<string, SvgNode[]>;
 
 export type IconName = keyof typeof ICONS;

@@ -21,7 +21,7 @@ export interface WorkingHours {
  *   · 外壳 = 官方 Dialog + Card（AppDialog）；
  *   · 每个设置项 = 官方 **Field**（标题 + 说明 + 控件），横排用 orientation="horizontal"；
  *   · 时间输入 = 官方 **InputGroup**（带边框与聚焦环的输入容器）；
- *   · 顶部三个快捷入口 = 官方 **Button** 的 link 变体。
+ *   · 顶部三个快捷入口 = 官方 **Button** 的 outline 变体（外链用 as="a" 渲染成 <a target="_blank">）。
  *
  * ⚠️ 时间输入用原生 `<input type="time">`：React 版 v26.10.06-v16 已实测换掉 antd TimePicker，
  *    清空时 hhmmToHours 返回 null —— 此时必须保持原值，不能把 NaN 写进配置。
@@ -56,14 +56,11 @@ const timeFields = [
     { row: '下午', from: 'afternoonStart', to: 'afternoonEnd' },
 ] as const;
 
-// 模板里不能直接写 window（Vue 模板只暴露白名单全局），统一收在脚本里
-function openHomepage() {
-    window.open('https://github.com/Run-os/znhd-service', '_blank');
-}
+/** 脚本主页（外链，交给 <a target="_blank"> 原生开新标签，不写 window.open） */
+const HOMEPAGE_URL = 'https://github.com/Run-os/znhd-service';
 
-function openUpdateUrl() {
-    window.open((GM_info.scriptUpdateURL || GM_info.script.updateURL) as string, '_blank');
-}
+/** 更新脚本地址：优先用脚本管理器给出的更新地址，回退到 @updateURL */
+const UPDATE_URL = (GM_info.scriptUpdateURL || GM_info.script.updateURL) as string;
 </script>
 
 <template>
@@ -73,11 +70,19 @@ function openUpdateUrl() {
         :width="520"
         :footer="false"
         @update:open="emit('update:open', $event)">
-        <!-- 三个快捷入口：官方 Button 的 link 变体（原来是裸 <button> + 蓝色文字） -->
-        <div class="flex flex-wrap items-center gap-0.5">
-            <Button variant="link" size="xs" @click="openHomepage">[脚本主页]</Button>
-            <Button variant="link" size="xs" @click="openUpdateUrl">[更新脚本]</Button>
-            <Button variant="link" size="xs" @click="emit('openChangelog')">[更新日志]</Button>
+        <!--
+            三个快捷入口：官方 Button 的 outline 变体。
+            前两个是外链 ⇒ as="a" + target="_blank"，保留中键新标签 / 右键复制链接等原生行为；
+            「更新日志」是开弹窗 ⇒ 保持 <button>。
+        -->
+        <div class="flex flex-wrap items-center gap-2">
+            <Button as="a" variant="outline" size="sm" :href="HOMEPAGE_URL" target="_blank" rel="noreferrer">
+                脚本主页
+            </Button>
+            <Button as="a" variant="outline" size="sm" :href="UPDATE_URL" target="_blank" rel="noreferrer">
+                更新脚本
+            </Button>
+            <Button variant="outline" size="sm" @click="emit('openChangelog')">更新日志</Button>
         </div>
 
         <FieldSeparator class="my-4">其他设置</FieldSeparator>

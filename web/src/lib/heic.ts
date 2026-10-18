@@ -59,9 +59,13 @@ function loadScriptChain(urls: string[], isReady: () => boolean, onDone: (ok: bo
 export function loadHeic2any(): Promise<any> {
     if (!heicPromise) {
         heicPromise = new Promise((resolve) => {
-            loadScriptChain(HEIC_URLS, () => typeof (window as any).heic2any === 'function', (ok) => {
-                resolve(ok ? (window as any).heic2any : null);
-            });
+            loadScriptChain(
+                HEIC_URLS,
+                () => typeof (window as any).heic2any === 'function',
+                (ok) => {
+                    resolve(ok ? (window as any).heic2any : null);
+                }
+            );
         });
     }
     return heicPromise;

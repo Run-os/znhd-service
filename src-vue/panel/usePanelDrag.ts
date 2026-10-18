@@ -19,6 +19,12 @@ export function usePanelDrag(host: HTMLElement) {
     function onPointerDown(e: PointerEvent) {
         // 只响应主键（触摸 / 鼠标左键）
         if (e.button !== 0 && e.pointerType === 'mouse') return;
+        // ⚠️ 标题栏里的按钮（主题切换 / 收起）要放行：pointerdown 会从按钮冒泡到手柄，
+        // 若此时对手柄 setPointerCapture，后续 click 会被重定向到手柄元素，
+        // 按钮自己的 onClick 永远收不到（表现为「点了没反应」）。悬浮球不受此影响——
+        // 它的拖拽与点击监听在同一个元素上。判据：最近的交互控件不是手柄本身才起拖。
+        const hit = (e.target as HTMLElement | null)?.closest?.('button, a, input, textarea, select, label');
+        if (hit && hit !== e.currentTarget) return;
         const rect = host.getBoundingClientRect();
         drag.value = { dx: e.clientX - rect.left, dy: e.clientY - rect.top };
         start.value = { x: e.clientX, y: e.clientY };

@@ -17,8 +17,7 @@ import type { ImageAction } from './types';
 /**
  * 文件视图（v26.10.18-v5，React 版 `TransferFilesView` 的等价实现）。
  *
- * 「全部文件」= 跨会话汇总（父组件传进来），或某个会话的文件；
- * 表情包图片**不进这里**（`m.emoji` 过滤，用户明确要求），聊天记录里照常显示。
+ * 「全部文件」= 全部消息（父组件传进来）：图片九宫格 + 文件卡片 + 文本列表。
  */
 const props = defineProps<{
     messages: TransferMessage[];
@@ -34,7 +33,7 @@ const previewOpen = ref(false);
 const previewIndex = ref(0);
 
 /** 最新在前（刚收到的先看） */
-const ordered = computed(() => props.messages.slice().filter((m) => !m.emoji).sort((a, b) => b.ts - a.ts));
+const ordered = computed(() => props.messages.slice().sort((a, b) => b.ts - a.ts));
 const images = computed(() => ordered.value.filter((m) => m.type === 'image'));
 const files = computed(() => ordered.value.filter((m) => m.type === 'file'));
 const texts = computed(() => ordered.value.filter((m) => m.type === 'text'));

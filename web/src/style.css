@@ -11,8 +11,8 @@
  *    工具类会被本页全量收进产物。这里显式关掉自动探测，只登记真正会被渲染的目录。
  */
 @source '../src';
-@source '../../src-vue/components/media';
-@source '../../src-vue/components/ui/button';
+@source '../../src-vue/components';
+@source '../../src-vue/transfer';
 
 /**
  * 设计令牌：手机页固定微信暗色（不跟随日/夜主题 —— 它本身就是「微信聊天窗」的复刻）。

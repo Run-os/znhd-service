@@ -3,7 +3,7 @@ import { computed, onMounted, ref, watch } from 'vue';
 import { Icon } from '@vue/icons';
 import { addLog } from '@/lib/logger';
 import { safeCopyText } from '@/lib/clipboard';
-import { getDeviceId, sendTestImage, TEST_IMAGE_URL } from '@/lib/relay';
+import { getDeviceId } from '@/lib/relay';
 import { genQrDataUrl } from '@/lib/qrcode';
 import { resolveDeviceColors } from '@/lib/ui/transfer/deviceColors';
 import type { PhoneInfo } from '@/lib/transfer/types';
@@ -19,16 +19,19 @@ import DeviceIdTag from './DeviceIdTag.vue';
  *
  * 组件构成（2026-10-18 组件正规化）：
  *   · 分区容器 = 官方 **Card**（本机链接 / 已连接手机）；
- *   · 「没配中继」「没有在线设备」这类空态 = 官方 **Empty**（图标 + 标题 + 说明）；
+ *   · 「没配中继」空态 = 官方 **Empty**（图标 + 标题 + 说明）；
  *   · 每台已连接手机 = 官方 **Item**；
- *   · 按钮 = 官方 **Button**。
+ *   · 按钮 = 官方 **Button**（复制链接）。
+ *
+ * v26.10.19 精简：去掉顶部「配对设备 / 手机扫码即配对」标题行、无手机时的
+ * 「还没有配对的手机」空态与「发送测试图片」按钮 —— 在线状态胶囊已经把该说的说完了。
+ * （`sendTestImage` / `TEST_IMAGE_URL` 保留在 `lib/relay.ts`，暂未删除。）
  */
 const props = defineProps<{ relayServer: string; phones: PhoneInfo[] }>();
 
 const deviceId = getDeviceId();
 const qrUrl = ref('');
 const link = ref('');
-const testSending = ref(false);
 
 const deviceColors = computed(() => resolveDeviceColors(props.phones.map((p) => p.id)));
 const phoneOnline = computed(() => props.phones.length > 0);
@@ -50,47 +53,10 @@ function refreshLink() {
 watch(() => props.relayServer, refreshLink);
 onMounted(refreshLink);
 
-/**
- * 「发送测试图片」：从 `TEST_IMAGE_URL` 取一张随机图，**当作手机上传**投递到中继
- * `/u/<本机 deviceId>`，再经正常的「手机 → 电脑」通道回到本脚本、进对应会话。
- */
-function doSendTestImage() {
-    if (testSending.value) return;
-    testSending.value = true;
-    addLog('[测试图片] 正在从 ' + TEST_IMAGE_URL + ' 取图并投递到本机…', 'info');
-    sendTestImage({
-        server: props.relayServer,
-        uuid: deviceId,
-        onOk: (info) => {
-            testSending.value = false;
-            addLog(
-                '[测试图片] 已投递（' +
-                    info.mime +
-                    '，约 ' +
-                    Math.max(1, Math.round(info.bytes / 1024)) +
-                    'KB），片刻后会出现在会话里',
-                'success'
-            );
-        },
-        onFail: (msg) => {
-            testSending.value = false;
-            addLog('[测试图片] 失败：' + msg, 'error', true);
-        },
-    });
-}
 </script>
 
 <template>
     <div class="w-full overflow-auto px-4 py-4" style="max-width: 560px; margin: auto">
-        <!-- 标题 + 标签 -->
-        <div class="mb-3 flex items-center justify-between gap-2">
-            <span class="inline-flex items-center gap-1.5 text-sm font-semibold text-foreground">
-                <Icon name="smartphone" :size="16" />
-                配对设备
-            </span>
-            <span class="rounded border border-border px-2 py-0.5 text-xs text-muted-foreground">手机扫码即配对</span>
-        </div>
-
         <!-- 本机专属链接 -->
         <Card class="mb-3 gap-3 py-3">
             <CardHeader class="px-3.5">
@@ -182,20 +148,5 @@ function doSendTestImage() {
             </CardContent>
         </Card>
 
-        <div v-else class="mb-3">
-            <Empty class="border-0 py-3">
-                <EmptyHeader>
-                    <EmptyMedia variant="icon"><Icon name="smartphone" :size="20" /></EmptyMedia>
-                    <EmptyTitle class="text-sm">还没有配对的手机</EmptyTitle>
-                    <EmptyDescription class="text-[13px]">用手机扫上面的二维码，或打开链接即可完成配对。</EmptyDescription>
-                </EmptyHeader>
-            </Empty>
-        </div>
-
-        <div class="flex justify-start">
-            <Button variant="outline" size="sm" :disabled="testSending" @click="doSendTestImage">
-                {{ testSending ? '发送中…' : '发送测试图片' }}
-            </Button>
-        </div>
     </div>
 </template>

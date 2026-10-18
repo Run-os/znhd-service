@@ -199,6 +199,11 @@ svg {
   vertical-align: middle;
 }
 
+/* message-scroller 的视口用了 `scrollbar-thin`（Tailwind 核心没有这个类，补最小实现） */
+.scrollbar-thin {
+  scrollbar-width: thin;
+}
+
 /* Sonner 的入场位：它自己 fixed + top-center，这里只压层级，避免被传输助手窗口盖住 */
 [data-sonner-toaster] {
   z-index: 1000040 !important;

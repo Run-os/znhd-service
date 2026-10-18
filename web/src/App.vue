@@ -1,9 +1,29 @@
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
-import { Icon } from '@vue/icons';
-import { Button } from '@vue/components/ui/button';
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
+import { Icon, type IconName } from '@vue/icons';
 import { Toaster } from '@vue/components/ui/sonner';
+import {
+    Card,
+    CardAction,
+    CardContent,
+    CardDescription,
+    CardFooter,
+    CardHeader,
+    CardTitle,
+} from '@vue/components/ui/card';
+import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@vue/components/ui/empty';
+import {
+    MessageScroller,
+    MessageScrollerButton,
+    MessageScrollerContent,
+    MessageScrollerItem,
+    MessageScrollerProvider,
+    MessageScrollerViewport,
+} from '@vue/components/ui/message-scroller';
 import ImagePreview from '@vue/components/media/ImagePreview.vue';
+import ChatBubble from '@vue/transfer/ChatBubble.vue';
+import ChatTurn from '@vue/transfer/ChatTurn.vue';
+import ChatComposer from '@vue/transfer/ChatComposer.vue';
 import { toast } from '@vue/lib/toast';
 import {
     blobToBase64,
@@ -17,39 +37,33 @@ import {
 import { prepareImage } from './lib/image';
 import { useShellViewport } from './lib/viewport';
 import { useLayoutMode } from './lib/layoutMode';
-import EmojiPanel from './components/EmojiPanel.vue';
-import type { PickedEmoji } from './lib/emojiPack';
+import { groupTurns } from '@vue/transfer/turns';
 
 /**
- * 手机端聊天窗（v26.10.12-v5 重构；v26.10.13-v3 加表情按钮 + 输入区吸底修复；
- * **v26.10.18-v7 由 React 19 + antd v6 整体重写为 Vue 3**）：整页与脚本端第三栏
- * 同一套聊天样式（微信暗色）。
+ * 手机端聊天窗（v26.10.18-v8）：**与脚本端传输助手同一套 chat 布局** ——
+ * 直接照搬 shadcn-vue `message-scroller` 示例的 Card（Header / Content / Footer 三段），
+ * 气泡复用 `@vue/transfer/ChatBubble.vue`，输入区复用 `@vue/transfer/ChatComposer.vue`
+ * （InputGroup：文本域 + block-end 的「+」下拉与发送键）。
  *
- * 功能与 React 版逐条对齐 —— 选图/拍照（自动压缩）发到电脑、发文本到电脑、
- * **点在线表情直接发到电脑**（v26.10.13-v3）、接收电脑发来的图片（可预览/打印/下载）
- * 与文本、任意文件互传。呈现仍是「消息气泡 + 底部输入区」：
- *   · 手机发出去的 = 右侧绿色气泡（微信「我方」配色 #07C160）；
- *   · 电脑发来的   = 左侧灰色气泡（微信「对方」配色 #2F2F2F）；
- *   · 发送状态（发送中 / 已发送 / 发送失败）显示在气泡下方的小字；
- *   · 间隔超 5 分钟的消息之间插一条居中时间分隔条（与脚本端第三栏同一规则）。
+ * 功能不变：选图/拍照（自动压缩）发到电脑、发文本、任意文件互传，
+ * 接收电脑发来的图片（可预览/打印/下载）、文件（可下载）与文本（可复制）。
+ *   · 手机发出去的 = 右侧气泡（`mine`）；电脑发来的 = 左侧气泡；
+ *   · 发送状态（发送中 / 已发送 / 失败）显示在气泡下方的小字；
+ *   · 间隔超 5 分钟的消息之间插一条居中时间分隔条（ChatBubble 的 `timeLabel`）。
  *
- * ⚠️ 整页骨架是 `position:fixed` 贴视口（见 app.css `.znhd-phone-chat` 的注释），
- * top/height 由 `useShellViewport` 按 visualViewport 动态校正（键盘弹出时输入区跟着上移）。
- *
- * v26.10.13-v4 桌面/手机分流（`useLayoutMode`）：**桌面浏览器**打开本页时聊天窗
- * 不再全屏，而是屏幕居中的弹窗（420×680，参考微信 PC 端「文件传输助手」独立窗），
- * 弹窗外是更深一档的纯色背景；**手机/触屏窄屏**仍用全屏骨架。
+ * ⚠️ 整页骨架仍是 `position:fixed` 贴视口（见 app.css 的注释），top/height 由
+ * `useShellViewport` 按 visualViewport 动态校正（键盘弹出时输入区跟着上移）。
+ * 桌面浏览器打开时（`useLayoutMode`）聊天窗变成屏幕居中的弹窗。
  */
 
 /** 聊天记录内存上限：超出丢最旧（收件项是 base64 大字符串，无上限会持续吃内存） */
 const MAX_MSGS = 100;
 
-/** 时间分隔条阈值：与脚本端第三栏一致，间隔超 5 分钟插一条 */
+/** 时间分隔条阈值：与脚本端一致，间隔超 5 分钟插一条 */
 const TIME_GAP_MS = 5 * 60 * 1000;
 
 interface ChatMsg {
     id: string;
-    /** v26.10.14-v6：'file' = 任意文件（气泡渲染为文件卡片，可下载） */
     type: 'image' | 'file' | 'text';
     /** out = 手机发到电脑；in = 电脑发来 */
     side: 'in' | 'out';
@@ -62,11 +76,7 @@ interface ChatMsg {
     size?: number;
     /** 发送状态（仅 out；发送中 / 已发送 / 发送失败） */
     state?: 'sending' | 'failed' | 'ok';
-    /**
-     * v26.10.18-v1：上传进度（0–100，仅 state==='sending' 时有意义）。
-     * **首个 upload.onprogress 事件到达前是 undefined** —— 此时气泡保持「发送中…」
-     * 不画进度条（大文件在 FileReader base64 / JSON 序列化阶段本就还没有进度可报）。
-     */
+    /** 上传进度（0–100，仅 state==='sending' 时有意义）；首个 progress 事件到达前是 undefined */
     progress?: number;
     err?: string;
     ts: number;
@@ -75,7 +85,7 @@ interface ChatMsg {
 let seq = 0;
 const uid = () => 'z' + ++seq + '-' + Date.now().toString(36);
 
-/** 时间分隔条文案（与脚本端第三栏同一套：今天 HH:mm / 昨天 / MM-DD） */
+/** 时间分隔条文案（与脚本端同一套：今天 HH:mm / 昨天 / MM-DD） */
 function timeLabel(ts: number): string {
     const d = new Date(ts);
     const pad = (n: number) => String(n).padStart(2, '0');
@@ -88,7 +98,7 @@ function timeLabel(ts: number): string {
     return pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + ' ' + hm;
 }
 
-/** 体积显示（v26.10.14-v6，文件气泡用）；档位与脚本端 `formatBytes` 一致（B / KB / MB / GB） */
+/** 体积显示（文件气泡用）；档位与脚本端 `formatBytes` 一致（B / KB / MB / GB） */
 function fmtSize(n: number): string {
     if (!Number.isFinite(n) || n <= 0) return '';
     if (n < 1024) return n + ' B';
@@ -108,7 +118,7 @@ function fileDataSize(b64: string): number {
 }
 
 const deviceId = parseDeviceId(window.location.pathname);
-// 本机（手机）设备 ID：持久化在 localStorage，用于让电脑端区分「哪台手机在线」
+// 本机（手机）设备 ID：持久化在 localStorage
 const phoneId = getPhoneId();
 
 /** 构建期注入的版本号（来自 relay-server/package.json）。模板里读不到全局常量，先落到本地变量 */
@@ -119,30 +129,30 @@ const msgs = ref<ChatMsg[]>([]);
 const text = ref('');
 const sendingText = ref(false);
 const preparing = ref(false);
-/** 表情面板展开态（v26.10.13-v3：内嵌在输入区里、工具栏上方） */
-const emojiOpen = ref(false);
 
 const fileRef = ref<HTMLInputElement | null>(null);
-/** v26.10.14-v6：任意文件的隐藏 input（accept 留空 = 不过滤类型） */
+/** 任意文件的隐藏 input（accept 留空 = 不过滤类型） */
 const fileAnyRef = ref<HTMLInputElement | null>(null);
-const scrollEl = ref<HTMLDivElement | null>(null);
-const textEl = ref<HTMLTextAreaElement | null>(null);
 
 // 整页骨架跟随视觉视口（键盘弹出 / 工具栏收放时输入区仍贴最底）
 useShellViewport();
 // 桌面 → 居中弹窗；手机 → 全屏（见 lib/layoutMode.ts 的判定规则）
 const layoutMode = useLayoutMode();
 
-/** 手机版直接是聊天窗；桌面版外面多套一层用于居中 + 深色背景的层（与 React 版 DOM 一致） */
-const rootClass = computed(() => (layoutMode.value === 'phone' ? '' : 'znhd-window-layer'));
-const shellClass = computed(() =>
-    layoutMode.value === 'phone' ? 'znhd-phone-chat' : 'znhd-phone-chat znhd-chat-window'
+const isPhone = computed(() => layoutMode.value === 'phone');
+const rootClass = computed(() => (isPhone.value ? '' : 'znhd-window-layer'));
+const shellClass = computed(() => (isPhone.value ? 'znhd-phone-chat' : 'znhd-phone-chat znhd-chat-window'));
+/** 手机全屏时卡片贴边（去掉圆角/描边）；桌面弹窗时用完整 Card 外观 */
+const cardClass = computed(() =>
+    isPhone.value
+        ? 'min-h-0 w-full flex-1 gap-0 rounded-none py-0 ring-0'
+        : 'min-h-0 w-full flex-1 gap-0 rounded-xl py-0'
 );
 
-// ===== 预览层（替代 antd `Image` + `shared/preview` 那套 cloneElement 注入）=====
+// ===== 预览层 =====
 const previewOpen = ref(false);
 const previewIndex = ref(0);
-/** 预览只针对「电脑发来的图片」，与 React 版一致（本地发出的不预览，避免和上传态混淆） */
+/** 预览只针对「电脑发来的图片」（本地发出的不预览，避免和上传态混淆） */
 const inImages = computed(() => msgs.value.filter((m) => m.type === 'image' && m.side === 'in' && !!m.url));
 const previewItems = computed(() => inImages.value.map((m) => m.url as string));
 const previewNames = computed(() => inImages.value.map((m) => m.name || 'image.jpg'));
@@ -176,9 +186,8 @@ function onItem(item: RecvItem) {
         });
         toast.success('收到电脑发来的图片');
     } else if (item.type === 'file' && item.data) {
-        // v26.10.14-v6：任意文件。data:URL 不用在 <img> 上，而是挂到 <a download> 交给浏览器下载。
-        // 用 data:URL 而非 objectURL：收件项是事件回调里的瞬时值，没有生命周期管理点来 revoke
-        // （与图片同一取舍：图片也是直接 data:URL 渲染）。
+        // 任意文件：data:URL 不用在 <img> 上，而是挂到 <a download> 交给浏览器下载。
+        // 用 data:URL 而非 objectURL：收件项是事件回调里的瞬时值，没有生命周期管理点来 revoke。
         pushMsg({
             id: uid(),
             type: 'file',
@@ -212,28 +221,7 @@ onBeforeUnmount(() => {
     stopRelay = null;
 });
 
-// 消息变化 → 滚动到底（聊天窗的基本行为）；表情面板开合也重算（面板会挤占滚动区高度）
-watch(
-    [msgs, emojiOpen],
-    () => {
-        const el = scrollEl.value;
-        if (el) el.scrollTop = el.scrollHeight;
-    },
-    { flush: 'post' }
-);
-
-/** 输入框自增高（替代 antd `autoSize={{minRows:1,maxRows:4}}`：40px 起、96px 封顶） */
-function autoGrow() {
-    const el = textEl.value;
-    if (!el) return;
-    el.style.height = 'auto';
-    el.style.height = Math.min(el.scrollHeight, 96) + 'px';
-}
-watch(text, () => void nextTick(autoGrow));
-
 // ===== 选图（多选）→ 先出「发送中」气泡 → 逐张压缩 → 顺序发送 =====
-// v26.10.18-v1：气泡**先于压缩**落进会话（预览先用原图 objectURL），压缩完成后
-// 再把气泡的 url/name/mime 换成压缩产物并回收原图 URL —— 用户选完立刻能看到要传什么。
 async function onPick(files: FileList | null) {
     const list = Array.from(files || []);
     if (!list.length) return;
@@ -256,16 +244,14 @@ async function onPick(files: FileList | null) {
             const prepared = await prepareImage(f);
             const url = URL.createObjectURL(prepared.blob);
             queued.push({ id, blob: prepared.blob, name: prepared.name, mime: prepared.mime, tmpUrl });
-            // 压缩产物回填气泡（名称/类型以压缩结果为准），并回收原图 URL
             patchMsg(id, { url, name: prepared.name, mime: prepared.mime });
             if (tmpUrl !== url) URL.revokeObjectURL(tmpUrl);
         }
-        // 逐张顺序发送（保证到达顺序）；失败即停，剩余保持「发送中」标记为失败
+        // 逐张顺序发送（保证到达顺序）；失败即停，剩余标记为失败
         for (const it of queued) {
             try {
                 const b64 = await blobToBase64(it.blob);
                 let lastPct = -1; // 同值不重发：progress 事件比百分比密，避免无谓重渲染
-                // 带 phoneId：服务端随投递回传 from，电脑端把内容归到本台手机的会话（v26.10.13-v3）
                 const res = await postItem({ name: it.name, mime: it.mime, data: b64 }, phoneId, (pct) => {
                     if (pct !== lastPct) {
                         lastPct = pct;
@@ -289,20 +275,18 @@ async function onPick(files: FileList | null) {
     }
 }
 
-// ===== 选文件（任意类型，多选）→ 不压缩 → 顺序发送（v26.10.14-v6）=====
-// 与选图的关键差异：**不做 canvas 压缩**（PDF/zip/视频解码必然失败），原样 base64 后投递。
-// 中继按 mime 分流：非 image/* 的落到 type 'file'，电脑端显示为文件卡片。
+// ===== 选文件（任意类型，多选）→ 不压缩 → 顺序发送 =====
 async function onPickFiles(files: FileList | null) {
     const list = Array.from(files || []);
     if (!list.length) return;
     preparing.value = true;
     try {
-        const queued: Array<{ id: string; blob: Blob; name: string; mime: string; size: number }> = [];
+        const queued: Array<{ id: string; blob: Blob; name: string; mime: string }> = [];
         for (const f of list) {
             const id = uid();
             const name = f.name || 'file.bin';
             const mime = f.type || 'application/octet-stream';
-            queued.push({ id, blob: f, name, mime, size: f.size });
+            queued.push({ id, blob: f, name, mime });
             pushMsg({
                 id,
                 type: 'file',
@@ -315,11 +299,10 @@ async function onPickFiles(files: FileList | null) {
                 ts: Date.now(),
             });
         }
-        // 逐条顺序发送（保证到达顺序）；失败即停，剩余保持「发送中」标记为失败
         for (const it of queued) {
             try {
                 const b64 = await blobToBase64(it.blob);
-                let lastPct = -1; // 同值不重发：progress 事件比百分比密，避免无谓重渲染
+                let lastPct = -1;
                 const res = await postItem({ name: it.name, mime: it.mime, data: b64 }, phoneId, (pct) => {
                     if (pct !== lastPct) {
                         lastPct = pct;
@@ -351,7 +334,6 @@ async function sendText() {
     sendingText.value = true;
     pushMsg({ id, type: 'text', side: 'out', text: t, state: 'sending', ts: Date.now() });
     text.value = '';
-    // 带 phoneId：让电脑端把这条文本归到本台手机的会话（v26.10.13-v3）
     const res = await postItem({ text: t }, phoneId);
     sendingText.value = false;
     if (res && res.ok) {
@@ -362,39 +344,18 @@ async function sendText() {
     }
 }
 
-// ===== 发送在线表情（v26.10.13-v3）：点一张直接发，与脚本端「点表情即发出」同语义 =====
-// 面板交回的就是下好的 blob，这里 base64 后走与文本/图片同一条 postItem 链路。
-// ⚠️ 不走 prepareImage 的 canvas 压缩：表情本来就是 2–6KB 的 webp，原样发更小也更保真。
-// ⚠️ 必须带 phoneId（与上传图/文本一致）：漏了它服务端写不出 `from`，电脑端只能按旧规则兜底归组。
-async function sendEmoji(emoji: PickedEmoji) {
-    const mime = emoji.blob.type || 'image/webp';
-    const id = uid();
-    pushMsg({
-        id,
-        type: 'image',
-        side: 'out',
-        url: URL.createObjectURL(emoji.blob),
-        name: emoji.name,
-        mime,
-        state: 'sending',
-        ts: Date.now(),
-    });
-    try {
-        const b64 = await blobToBase64(emoji.blob);
-        // emoji:true（v26.10.14-v3）：表情包标记，服务端写进条目，电脑端「全部文件」据此过滤
-        const res = await postItem({ name: emoji.name, mime, data: b64, emoji: true }, phoneId);
-        if (res && res.ok) {
-            patchMsg(id, { state: 'ok' });
-        } else {
-            patchMsg(id, { state: 'failed', err: (res && res.error) || '未知错误' });
-            toast.error('表情 ' + emoji.name + ' 发送失败');
-        }
-    } catch (e: any) {
-        patchMsg(id, { state: 'failed', err: (e && e.message) || '读取图片失败' });
-    }
+/** 收到文件的下载（data:URL 直接交给浏览器的下载器） */
+function downloadMsg(m: ChatMsg) {
+    if (!m.url) return;
+    const a = document.createElement('a');
+    a.href = m.url;
+    a.download = m.name || 'file';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
 }
 
-// ===== 收到的文本：复制 =====
+/** 收到的文本：复制 */
 async function copyInText(t: string) {
     try {
         await navigator.clipboard.writeText(t);
@@ -404,7 +365,7 @@ async function copyInText(t: string) {
     }
 }
 
-/** 头部连接状态（antd Badge → 「圆点 + 文字」，不依赖组件库） */
+/** 头部连接状态（圆点 + 文字） */
 const connText = computed(() => {
     if (conn.value.state === 'online') return '已连接电脑';
     if (conn.value.state === 'error') return (conn.value as { msg?: string }).msg || '连接失败';
@@ -430,220 +391,170 @@ function showTimeAt(i: number): boolean {
     const cur = msgs.value[i];
     return !prev || (cur.ts || 0) - (prev.ts || 0) > TIME_GAP_MS;
 }
+
+/** 轮次：同方向且间隔 ≤ 2 分钟的消息合并进一个 BubbleGroup（与脚本端同一套 groupTurns） */
+const turns = computed(() =>
+    groupTurns(msgs.value.map((m, i) => ({ msg: m, sepText: showTimeAt(i) ? timeLabel(m.ts) : '' })), {
+        keyOf: (row) => row.msg.id,
+        mineOf: (row) => row.msg.side === 'out',
+        tsOf: (row) => row.msg.ts || 0,
+        sepOf: (row) => row.sepText,
+    })
+);
+
+/** 「+」下拉里的附件入口（图片 / 任意文件） */
+const attachActions = computed<
+    Array<{ key: string; label: string; icon: IconName; onClick: () => void; disabled: boolean }>
+>(() => [
+    {
+        key: 'image',
+        label: '图片',
+        icon: 'image',
+        onClick: () => fileRef.value?.click(),
+        disabled: preparing.value,
+    },
+    {
+        key: 'file',
+        label: '文件',
+        icon: 'paperclip',
+        onClick: () => fileAnyRef.value?.click(),
+        disabled: preparing.value,
+    },
+]);
+
+/** 卡片下方那行提示（对应示例里 `Demo is read only…` 的位置） */
+const footerHint = computed(() => {
+    if (conn.value.state === 'error') return (conn.value as { msg?: string }).msg || '连接失败，请重新扫码';
+    if (conn.value.state === 'online') return '已连接电脑 · 图片会先压缩再发送';
+    return '正在连接电脑…';
+});
 </script>
 
 <template>
     <div :class="rootClass">
         <div :class="shellClass">
-            <!-- 头部：标题 + 连接状态（设备 ID 收进小字，不再占半屏） -->
-            <header class="znhd-phone-header">
-                <div class="znhd-phone-header-row">
-                    <span class="znhd-phone-title">传输助手</span>
-                    <span
-                        class="ml-2 inline-flex h-5 items-center rounded-[4px] bg-[#07c160]/18 px-1.5 text-[11px] font-medium text-[#07c160]">
-                        v{{ appVersion }}
-                    </span>
-                    <span class="flex-1" />
-                    <span class="znhd-phone-conn inline-flex items-center gap-1.5">
-                        <i class="inline-block size-1.5 rounded-full" :class="connDot" />
-                        {{ connText }}
-                    </span>
-                </div>
-                <div class="znhd-phone-sub">
-                    本机（手机）ID：{{ phoneId || '未知' }} · 电脑设备：{{ deviceId || '未识别，请重新生成二维码' }}
-                </div>
-            </header>
+            <MessageScrollerProvider auto-scroll default-scroll-position="end">
+              <div class="relative flex min-h-0 flex-1 flex-col gap-2">
+                <Card :class="cardClass">
+                    <!-- ===== 头部：标题 / 设备信息 / 连接状态（与脚本端同一结构） ===== -->
+                    <CardHeader class="shrink-0 gap-1 border-b">
+                        <CardTitle class="flex items-center gap-2 text-[15px]">
+                            传输助手
+                            <span
+                                class="inline-flex h-5 items-center rounded-[4px] bg-primary/15 px-1.5 text-[11px] font-medium text-primary">
+                                v{{ appVersion }}
+                            </span>
+                        </CardTitle>
+                        <CardDescription class="truncate text-[11px]">
+                            本机 {{ phoneId || '未知' }} · 电脑 {{ deviceId || '未识别，请重新生成二维码' }}
+                        </CardDescription>
+                        <CardAction>
+                            <span class="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+                                <i class="inline-block size-1.5 rounded-full" :class="connDot" />
+                                {{ connText }}
+                            </span>
+                        </CardAction>
+                    </CardHeader>
 
-            <!-- 消息滚动区 -->
-            <div ref="scrollEl" class="znhd-phone-scroll">
-                <div v-if="msgs.length === 0" class="znhd-chat-empty">
-                    选择图片 / 拍照 / 发表情，或输入文本发送到电脑；电脑发来的内容也会出现在这里。
-                </div>
-                <div v-for="(m, i) in msgs" :key="m.id">
-                    <div v-if="showTimeAt(i)" class="znhd-chat-time">{{ timeLabel(m.ts) }}</div>
-                    <div class="znhd-chat-msg" :data-side="m.side">
-                        <span
-                            class="znhd-chat-avatar"
-                            :style="{ background: m.side === 'out' ? '#3D8B72' : '#4A4A4A' }">
-                            {{ m.side === 'out' ? '我' : '电' }}
-                        </span>
-                        <div style="min-width: 0; max-width: 78%">
-                            <div
-                                class="znhd-chat-bubble"
-                                :class="{
-                                    'znhd-chat-bubble-img': m.type === 'image',
-                                    'znhd-chat-bubble-file': m.type === 'file',
-                                }">
-                                <template v-if="m.type === 'image'">
-                                    <img
-                                        class="znhd-chat-img"
-                                        :class="{ 'znhd-chat-img-clickable': m.side === 'in' }"
-                                        :src="m.url"
-                                        :alt="m.name || 'image'"
-                                        @click="m.side === 'in' && openPreview(m)" />
-                                    <!-- v26.10.18-v1：上传进度条贴在图片正下方 -->
-                                    <div
-                                        v-if="m.state === 'sending' && typeof m.progress === 'number'"
-                                        :data-chat-progress="String(m.progress)"
-                                        :style="{
-                                            width: '100%',
-                                            height: '4px',
-                                            borderRadius: '2px',
-                                            background: 'rgba(0,0,0,0.28)',
-                                            overflow: 'hidden',
-                                            marginTop: '4px',
-                                        }">
-                                        <div
-                                            :style="{
-                                                width: Math.min(100, Math.max(2, m.progress)) + '%',
-                                                height: '100%',
-                                                borderRadius: '2px',
-                                                background: '#fff',
-                                                transition: 'width 120ms linear',
-                                            }" />
-                                    </div>
-                                </template>
+                    <!-- ===== 消息区：空态 Empty / 有消息 MessageScroller ===== -->
+                    <CardContent class="min-h-0 flex-1 overflow-hidden bg-background p-0">
+                        <Empty v-if="!msgs.length" class="h-full">
+                            <EmptyHeader>
+                                <EmptyMedia variant="icon">
+                                    <Icon name="transfer" :size="22" />
+                                </EmptyMedia>
+                                <EmptyTitle>还没有消息</EmptyTitle>
+                                <EmptyDescription>
+                                    选图片 / 拍照 / 发文件，或输入文本发送到电脑；电脑发来的内容也会出现在这里。
+                                </EmptyDescription>
+                            </EmptyHeader>
+                        </Empty>
 
-                                <!-- v26.10.14-v6：文件卡片（图标 + 文件名 + 大小 + 下载） -->
-                                <template v-else-if="m.type === 'file'">
-                                    <div class="znhd-chat-file">
-                                        <span class="znhd-chat-file-icon" aria-hidden="true">
-                                            <Icon name="fileText" :size="18" />
-                                        </span>
-                                        <span class="znhd-chat-file-main">
-                                            <span class="znhd-chat-file-name" :title="m.name">
-                                                {{ m.name || 'file' }}
-                                            </span>
-                                            <span class="znhd-chat-file-size">
-                                                {{ fmtSize(m.size || 0) }}{{ m.mime ? ' · ' + m.mime : '' }}
-                                            </span>
-                                        </span>
-                                        <a
-                                            class="znhd-chat-file-dl"
-                                            :href="m.url"
-                                            :download="m.name || 'file'"
-                                            aria-label="下载文件">
-                                            下载
-                                        </a>
-                                    </div>
-                                    <div
-                                        v-if="m.state === 'sending' && typeof m.progress === 'number'"
-                                        :data-chat-progress="String(m.progress)"
-                                        :style="{
-                                            width: '100%',
-                                            height: '4px',
-                                            borderRadius: '2px',
-                                            background: 'rgba(0,0,0,0.28)',
-                                            overflow: 'hidden',
-                                            marginTop: '6px',
-                                        }">
-                                        <div
-                                            :style="{
-                                                width: Math.min(100, Math.max(2, m.progress)) + '%',
-                                                height: '100%',
-                                                borderRadius: '2px',
-                                                background: '#fff',
-                                                transition: 'width 120ms linear',
-                                            }" />
-                                    </div>
-                                </template>
+                        <MessageScroller v-else>
+                            <MessageScrollerViewport>
+                                <MessageScrollerContent class="p-6">
+                                    <MessageScrollerItem
+                                        v-for="turn in turns"
+                                        :key="turn.key"
+                                        :message-id="turn.key"
+                                        :scroll-anchor="turn.mine">
+                                        <ChatTurn
+                                            :mine="turn.mine"
+                                            :time-label="turn.sepText"
+                                            :count="turn.items.length">
+                                            <ChatBubble
+                                                v-for="row in turn.items"
+                                                :key="row.msg.id"
+                                                grouped
+                                                :type="row.msg.type"
+                                                :mine="row.msg.side === 'out'"
+                                                :text="row.msg.text || ''"
+                                                :name="row.msg.name || ''"
+                                                :mime="row.msg.mime || ''"
+                                                :size-text="fmtSize(row.msg.size || 0)"
+                                                :image-src="row.msg.url || ''"
+                                                :meta="metaOf(row.msg)"
+                                                :meta-danger="row.msg.state === 'failed'"
+                                                :progress="row.msg.state === 'sending' ? (row.msg.progress ?? null) : null"
+                                                :error="row.msg.state === 'failed' ? row.msg.err || '' : ''"
+                                                :clickable="row.msg.type === 'image' && row.msg.side === 'in'"
+                                                :can-download="row.msg.type === 'file'"
+                                                :copy-label="row.msg.side === 'in' && row.msg.type === 'text' ? '复制' : ''"
+                                                @preview="openPreview(row.msg)"
+                                                @download="downloadMsg(row.msg)"
+                                                @copy="copyInText(row.msg.text || '')" />
+                                        </ChatTurn>
+                                    </MessageScrollerItem>
+                                </MessageScrollerContent>
+                            </MessageScrollerViewport>
+                            <MessageScrollerButton />
+                        </MessageScroller>
+                    </CardContent>
 
-                                <span v-else>{{ m.text }}</span>
-                            </div>
+                    <!-- ===== 输入区（与脚本端同一个 ChatComposer：InputGroup + 附件下拉） ===== -->
+                    <CardFooter class="shrink-0 flex-col gap-2">
+                        <ChatComposer
+                            v-model="text"
+                            :disabled="sendingText || preparing"
+                            placeholder="输入要发送到电脑的文本…"
+                            :attach="attachActions"
+                            @send="sendText" />
 
-                            <button
-                                v-if="m.side === 'in' && m.type === 'text'"
-                                type="button"
-                                class="znhd-chat-copy"
-                                @click="copyInText(m.text || '')">
-                                复制
-                            </button>
+                        <input
+                            ref="fileRef"
+                            type="file"
+                            accept="image/*"
+                            multiple
+                            hidden
+                            @change="
+                                (e) => {
+                                    void onPick((e.target as HTMLInputElement).files);
+                                    (e.target as HTMLInputElement).value = '';
+                                }
+                            " />
+                        <input
+                            ref="fileAnyRef"
+                            type="file"
+                            multiple
+                            hidden
+                            @change="
+                                (e) => {
+                                    void onPickFiles((e.target as HTMLInputElement).files);
+                                    (e.target as HTMLInputElement).value = '';
+                                }
+                            " />
+                    </CardFooter>
+                </Card>
 
-                            <div v-if="metaOf(m)" class="znhd-chat-meta" :style="m.state === 'failed' ? { color: '#e86c6c' } : undefined">
-                                {{ metaOf(m) }}
-                            </div>
-                        </div>
+                    <div class="znhd-phone-hint shrink-0 px-0.5 pb-1 text-center text-xs text-muted-foreground">
+                        {{ footerHint }}
                     </div>
-                </div>
-            </div>
-
-            <!-- 底部输入区：图标行（表情 / 图片 / 文件）+ 输入框 + 发送（与脚本端第三栏同一结构） -->
-            <div class="znhd-phone-composer">
-                <!-- 在线表情面板：展开时内嵌在工具栏上方（微信式），再点表情按钮收起 -->
-                <EmojiPanel v-if="emojiOpen" @pick="sendEmoji" />
-
-                <div class="znhd-composer-tools">
-                    <Button variant="ghost" size="icon-sm" aria-label="表情" @click="emojiOpen = !emojiOpen">
-                        <Icon name="smile" :size="18" />
-                    </Button>
-                    <Button
-                        variant="ghost"
-                        size="icon-sm"
-                        aria-label="图片上传"
-                        :disabled="preparing"
-                        @click="fileRef?.click()">
-                        <Icon v-if="preparing" name="rotateCw" :size="18" class="animate-spin" />
-                        <Icon v-else name="image" :size="18" />
-                    </Button>
-                    <input
-                        ref="fileRef"
-                        type="file"
-                        accept="image/*"
-                        multiple
-                        hidden
-                        @change="
-                            (e) => {
-                                void onPick((e.target as HTMLInputElement).files);
-                                (e.target as HTMLInputElement).value = ''; /* 允许再次选同一批 */
-                            }
-                        " />
-                    <Button
-                        variant="ghost"
-                        size="icon-sm"
-                        aria-label="文件上传"
-                        :disabled="preparing"
-                        @click="fileAnyRef?.click()">
-                        <Icon name="paperclip" :size="18" />
-                    </Button>
-                    <input
-                        ref="fileAnyRef"
-                        type="file"
-                        multiple
-                        hidden
-                        @change="
-                            (e) => {
-                                void onPickFiles((e.target as HTMLInputElement).files);
-                                (e.target as HTMLInputElement).value = '';
-                            }
-                        " />
-                </div>
-
-                <div class="znhd-composer-row">
-                    <textarea
-                        ref="textEl"
-                        v-model="text"
-                        class="znhd-composer-input"
-                        rows="1"
-                        placeholder="输入要发送到电脑的文本…（Enter 发送，Shift+Enter 换行）"
-                        @keydown.enter.exact.prevent="sendText"
-                        @focus="emojiOpen = false" />
-                    <Button
-                        size="icon-sm"
-                        aria-label="发送"
-                        :disabled="sendingText || !text.trim()"
-                        @click="sendText">
-                        <Icon name="send" :size="18" />
-                    </Button>
-                </div>
-            </div>
+              </div>
+            </MessageScrollerProvider>
         </div>
 
         <!-- 图片预览（复用脚本端的 ImagePreview：缩放 / 旋转 / 上下张 / A4 打印 / Esc） -->
-        <ImagePreview
-            v-model:open="previewOpen"
-            :items="previewItems"
-            :index="previewIndex"
-            :names="previewNames" />
+        <ImagePreview v-model:open="previewOpen" :items="previewItems" :index="previewIndex" :names="previewNames" />
 
         <Toaster theme="dark" position="top-center" />
     </div>

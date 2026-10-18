@@ -22,7 +22,7 @@ import PhrasesSheet from './PhrasesSheet.vue';
 import LogDialog from './LogDialog.vue';
 import ChangelogDialog from './ChangelogDialog.vue';
 import SniffDialog from '@vue/sniff/SniffDialog.vue';
-import TransferWindow from '@vue/transfer/TransferWindow.vue';
+import ChatWindow from '@vue/transfer/ChatWindow.vue';
 
 const props = defineProps<{ host: HTMLElement }>();
 const drag = usePanelDrag(props.host);
@@ -373,7 +373,7 @@ onBeforeUnmount(() => {
 
         <ChangelogDialog v-model:open="changelogOpen" />
 
-        <TransferWindow v-model:open="transferOpen" />
+        <ChatWindow v-model:open="transferOpen" />
         <SniffDialog
             v-model:open="sniffOpen"
             :min-kb="allvalue.sniffMinKB ?? 20"

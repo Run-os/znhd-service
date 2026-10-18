@@ -91,12 +91,11 @@ const VIA_LABEL: Record<SizeVia, string> = {
     unknown: '未测到',
 };
 
-/**
- * 「没拿到消息时间」时卡片四周的红圈（对齐 React 版 v26.10.16-v3 的用户要求）。
- * 用阴影而不是 border/outline：不占布局位，5 列网格不会因为多一圈而错位；
- * 且必须铺两层（缩略图 + 卡片容器），否则会被图片自己的圆角裁切。
+/*
+ * 「没拿到消息时间」的标记方式（v26.10.19 改）：**文件名文字标红**，不再给卡片加红圈
+ * （红圈是 v26.10.16-v3 的做法，用 box-shadow 铺两层；用户要求改成文字标红）。
+ * 判据仍是同一个出口 `noTimeOf`（= `timeOfItem` 为 null），与排序里被殿后的那批严格一致。
  */
-const NO_TIME_RING = '0 0 0 2px rgba(255, 77, 79, 0.95), 0 0 10px 3px rgba(255, 77, 79, 0.6)';
 
 /** 本轮扫描到哪一步 */
 const phase = ref<'measuring' | 'done'>('done');
@@ -554,8 +553,8 @@ const emptyText = computed(() => {
                         v-for="it in s.known"
                         :key="it.key"
                         data-sniff-card
-                        class="flex min-w-0 flex-col rounded-xl p-1.5"
-                        :style="noTimeOf(it) ? { boxShadow: NO_TIME_RING } : undefined">
+                        :data-sniff-no-time="noTimeOf(it) ? '1' : undefined"
+                        class="flex min-w-0 flex-col rounded-xl p-1.5">
                         <div class="relative">
                             <ImageActions :actions="actionsOf(it)">
                                 <img
@@ -563,7 +562,6 @@ const emptyText = computed(() => {
                                     :alt="fileNameOf(it)"
                                     draggable="false"
                                     class="aspect-square w-full cursor-zoom-in rounded-lg object-cover"
-                                    :style="noTimeOf(it) ? { boxShadow: NO_TIME_RING } : undefined"
                                     @click="openPreview(it)" />
                             </ImageActions>
                             <!-- 勾选框压在左上角：点它只切换勾选，不会触发放大 -->
@@ -574,7 +572,15 @@ const emptyText = computed(() => {
                                     @update:model-value="toggleOne(it.key)" />
                             </div>
                         </div>
-                        <span class="mt-1 truncate text-[11px] leading-4 text-muted-foreground" :title="metaOf(it)">
+                        <!-- 文件名：没拿到消息时间的标红（原先用卡片四周的红圈表示） -->
+                        <span
+                            data-sniff-name
+                            class="mt-1 truncate text-[11px] leading-4"
+                            :class="noTimeOf(it) ? 'text-destructive' : 'text-muted-foreground'"
+                            :title="fileNameOf(it)">
+                            {{ fileNameOf(it) }}
+                        </span>
+                        <span class="truncate text-[11px] leading-4 text-muted-foreground" :title="metaOf(it)">
                             {{ sizeText(it) }}
                         </span>
                     </div>
@@ -585,8 +591,8 @@ const emptyText = computed(() => {
                         v-for="it in s.unknown"
                         :key="it.key"
                         data-sniff-card
-                        class="flex min-w-0 flex-col rounded-xl p-1.5"
-                        :style="noTimeOf(it) ? { boxShadow: NO_TIME_RING } : undefined">
+                        :data-sniff-no-time="noTimeOf(it) ? '1' : undefined"
+                        class="flex min-w-0 flex-col rounded-xl p-1.5">
                         <div class="relative">
                             <ImageActions :actions="actionsOf(it)">
                                 <img
@@ -594,7 +600,6 @@ const emptyText = computed(() => {
                                     :alt="fileNameOf(it)"
                                     draggable="false"
                                     class="aspect-square w-full cursor-zoom-in rounded-lg object-cover"
-                                    :style="noTimeOf(it) ? { boxShadow: NO_TIME_RING } : undefined"
                                     @click="openPreview(it)" />
                             </ImageActions>
                             <div class="absolute left-1.5 top-1.5 z-[2]" @click.stop>
@@ -604,7 +609,15 @@ const emptyText = computed(() => {
                                     @update:model-value="toggleOne(it.key)" />
                             </div>
                         </div>
-                        <span class="mt-1 truncate text-[11px] leading-4 text-muted-foreground" :title="metaOf(it)">
+                        <!-- 文件名：没拿到消息时间的标红（原先用卡片四周的红圈表示） -->
+                        <span
+                            data-sniff-name
+                            class="mt-1 truncate text-[11px] leading-4"
+                            :class="noTimeOf(it) ? 'text-destructive' : 'text-muted-foreground'"
+                            :title="fileNameOf(it)">
+                            {{ fileNameOf(it) }}
+                        </span>
+                        <span class="truncate text-[11px] leading-4 text-muted-foreground" :title="metaOf(it)">
                             {{ sizeText(it) }}
                         </span>
                     </div>
