@@ -56,10 +56,16 @@ function pick(text: string) {
 
 <template>
     <Sheet :open="props.open" @update:open="(v: boolean) => emit('update:open', v)">
+        <!--
+            ⚠️ border-border 不能省：官方 SheetContent 的 `data-[side=right]:border-l` 只设宽度、
+            **不设颜色** ⇒ 取 currentColor；暗色下 currentColor = popover-foreground（#f2f3f5 近白），
+            左缘会变成一条刺眼的白线（2026-10-19 用户截图实测）。显式改回语义边框色：
+            暗色 #262626 ≈ 传输助手窗口外框 rgb(34,34,34)，日间 #e5e6eb，与传输助手细边保持一致。
+        -->
         <SheetContent
             side="right"
             :show-close-button="true"
-            class="gap-0 p-0"
+            class="gap-0 border-border p-0"
             :style="{ width: '360px', maxWidth: '360px' }">
             <SheetHeader class="flex-row items-center gap-1 border-b border-border px-4 py-3 pr-12">
                 <SheetTitle class="text-[15px] font-semibold text-foreground">常用语</SheetTitle>

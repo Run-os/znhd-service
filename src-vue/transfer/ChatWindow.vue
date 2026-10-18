@@ -8,7 +8,6 @@ import {
     Card,
     CardAction,
     CardContent,
-    CardDescription,
     CardFooter,
     CardHeader,
     CardTitle,
@@ -20,7 +19,6 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from '@vue/components/ui/dropdown-menu';
-import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@vue/components/ui/empty';
 import {
     MessageScroller,
     MessageScrollerButton,
@@ -302,11 +300,8 @@ const attachActions = computed<
     },
 ]);
 
-const headerText = computed(() =>
-    onlineCount.value
-        ? '已连接 ' + onlineCount.value + ' 台设备 · 图片 / 文件 / 文本互传'
-        : '未连接设备 · 打开「更多」扫码配对'
-);
+/** 标题右侧的设备连接状态（v26.10.19：只保留连接数，不再重复说明能传什么） */
+const headerText = computed(() => (onlineCount.value ? '已连接 ' + onlineCount.value + ' 台设备' : '未连接设备'));
 
 /** 卡片下方那行提示（对应示例里 `Demo is read only…` 的位置） */
 const footerHint = computed(() =>
@@ -337,8 +332,11 @@ const footerHint = computed(() =>
                                 （Tailwind v4 的 border 默认色是 currentColor ⇒ 不写死就是一条亮白线）。
                             -->
                             <CardHeader class="shrink-0 gap-1 [border-bottom:1px_solid_rgb(34,34,34)]">
-                                <CardTitle>传输助手</CardTitle>
-                                <CardDescription>{{ headerText }}</CardDescription>
+                                <!-- v26.10.19：设备连接数跟标题同一行（原来的 CardDescription 已移除） -->
+                                <div class="flex min-w-0 items-center gap-2">
+                                    <CardTitle class="truncate">传输助手</CardTitle>
+                                    <span class="shrink-0 text-xs text-muted-foreground">{{ headerText }}</span>
+                                </div>
                                 <!-- v26.10.19：标题栏按钮改圆形，尺寸与输入框按钮一致（28px） -->
                                 <CardAction class="flex items-center gap-1.5">
                                     <Tooltip content="清空聊天记录" side="bottom">
@@ -398,21 +396,9 @@ const footerHint = computed(() =>
                                 </CardAction>
                             </CardHeader>
 
-                            <!-- ===== 消息区：空态 Empty / 有消息 MessageScroller ===== -->
+                            <!-- ===== 消息区：单条时间线（v26.10.19：去掉「还没有消息」空态） ===== -->
                             <CardContent class="min-h-0 flex-1 overflow-hidden !bg-black p-0">
-                                <Empty v-if="!rows.length" class="h-full">
-                                    <EmptyHeader>
-                                        <EmptyMedia variant="icon">
-                                            <Icon name="transfer" :size="22" />
-                                        </EmptyMedia>
-                                        <EmptyTitle>还没有消息</EmptyTitle>
-                                        <EmptyDescription>
-                                            用下面的输入框给手机发点东西，手机发来的图片 / 文件 / 文本也会出现在这里。
-                                        </EmptyDescription>
-                                    </EmptyHeader>
-                                </Empty>
-
-                                <MessageScroller v-else>
+                                <MessageScroller>
                                     <MessageScrollerViewport>
                                         <MessageScrollerContent class="p-6">
                                             <MessageScrollerItem
