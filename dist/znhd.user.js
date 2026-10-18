@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         征纳互动人数和在线监控v2
 // @namespace    https://scriptcat.org/
-// @version      26.10.19-v10
+// @version      26.10.19-v11
 // @author       runos
 // @description  实时监控征纳互动等待人数和在线状态，支持语音播报、自定义常用语
 // @license      MIT
@@ -3528,7 +3528,7 @@ onUploadProgress: (pct) => {
     }, null, -1)]));
   }
   var WarningIcon_default = export_helper_default(_sfc_main$1$1, [["render", _sfc_render$1]]);
-  const _sfc_main$1z = {};
+  const _sfc_main$1y = {};
   const _hoisted_1$1$1 = {
     xmlns: "http://www.w3.org/2000/svg",
     viewBox: "0 0 20 20",
@@ -3543,7 +3543,7 @@ onUploadProgress: (pct) => {
       "clip-rule": "evenodd"
     }, null, -1)]));
   }
-  var ErrorIcon_default = export_helper_default(_sfc_main$1z, [["render", _sfc_render]]);
+  var ErrorIcon_default = export_helper_default(_sfc_main$1y, [["render", _sfc_render]]);
   const _hoisted_1$s = ["aria-label"];
   const _hoisted_2$f = [
     "data-sonner-theme",
@@ -12297,32 +12297,6 @@ root: root.ownerDocument
     }
   });
   var MenuPortal_default = MenuPortal_vue_vue_type_script_setup_true_lang_default;
-  var MenuSeparator_vue_vue_type_script_setup_true_lang_default = vue.defineComponent({
-    __name: "MenuSeparator",
-    props: {
-      asChild: {
-        type: Boolean,
-        required: false
-      },
-      as: {
-        type: null,
-        required: false
-      }
-    },
-    setup(__props) {
-      const props = __props;
-      return (_ctx, _cache) => {
-        return vue.openBlock(), vue.createBlock(vue.unref(Primitive), vue.mergeProps(props, {
-          role: "separator",
-          "aria-orientation": "horizontal"
-        }), {
-          default: vue.withCtx(() => [vue.renderSlot(_ctx.$slots, "default")]),
-          _: 3
-        }, 16);
-      };
-    }
-  });
-  var MenuSeparator_default = MenuSeparator_vue_vue_type_script_setup_true_lang_default;
   const [injectDropdownMenuRootContext, provideDropdownMenuRootContext] = createContext("DropdownMenuRoot");
   var DropdownMenuRoot_vue_vue_type_script_setup_true_lang_default = vue.defineComponent({
     __name: "DropdownMenuRoot",
@@ -12615,30 +12589,6 @@ root: root.ownerDocument
     }
   });
   var DropdownMenuPortal_default = DropdownMenuPortal_vue_vue_type_script_setup_true_lang_default;
-  var DropdownMenuSeparator_vue_vue_type_script_setup_true_lang_default = vue.defineComponent({
-    __name: "DropdownMenuSeparator",
-    props: {
-      asChild: {
-        type: Boolean,
-        required: false
-      },
-      as: {
-        type: null,
-        required: false
-      }
-    },
-    setup(__props) {
-      const props = __props;
-      useForwardExpose();
-      return (_ctx, _cache) => {
-        return vue.openBlock(), vue.createBlock(vue.unref(MenuSeparator_default), vue.normalizeProps(vue.guardReactiveProps(props)), {
-          default: vue.withCtx(() => [vue.renderSlot(_ctx.$slots, "default")]),
-          _: 3
-        }, 16);
-      };
-    }
-  });
-  var DropdownMenuSeparator_default = DropdownMenuSeparator_vue_vue_type_script_setup_true_lang_default;
   var DropdownMenuTrigger_vue_vue_type_script_setup_true_lang_default = vue.defineComponent({
     __name: "DropdownMenuTrigger",
     props: {
@@ -14087,7 +14037,7 @@ Defaulting to \`null\`.`);
     }
   });
   var TooltipTrigger_default = TooltipTrigger_vue_vue_type_script_setup_true_lang_default;
-  const _sfc_main$1y = vue.defineComponent({
+  const _sfc_main$1x = vue.defineComponent({
     __name: "Button",
     props: {
       variant: {},
@@ -14145,7 +14095,7 @@ Defaulting to \`null\`.`);
     }
   );
   const SHADOW_ROOT_KEY = Symbol("znhd-shadow-root");
-  const _sfc_main$1x = vue.defineComponent({
+  const _sfc_main$1w = vue.defineComponent({
     __name: "Tooltip",
     props: {
       content: {},
@@ -14297,7 +14247,7 @@ function useVModel(props, key, emit2, options = {}) {
       }
     });
   }
-  const _sfc_main$1w = vue.defineComponent({
+  const _sfc_main$1v = vue.defineComponent({
     __name: "Switch",
     props: {
       defaultValue: {},
@@ -14461,7 +14411,7 @@ function useVModel(props, key, emit2, options = {}) {
     };
   }
   const _hoisted_1$q = ["data-orientation"];
-  const _sfc_main$1v = vue.defineComponent({
+  const _sfc_main$1u = vue.defineComponent({
     __name: "Field",
     props: {
       class: {},
@@ -14484,7 +14434,7 @@ function useVModel(props, key, emit2, options = {}) {
       };
     }
   });
-  const _sfc_main$1u = vue.defineComponent({
+  const _sfc_main$1t = vue.defineComponent({
     __name: "FieldContent",
     props: {
       class: {}
@@ -14504,7 +14454,7 @@ function useVModel(props, key, emit2, options = {}) {
       };
     }
   });
-  const _sfc_main$1t = vue.defineComponent({
+  const _sfc_main$1s = vue.defineComponent({
     __name: "FieldDescription",
     props: {
       class: {}
@@ -14526,7 +14476,7 @@ function useVModel(props, key, emit2, options = {}) {
       };
     }
   });
-  const _sfc_main$1s = vue.defineComponent({
+  const _sfc_main$1r = vue.defineComponent({
     __name: "FieldGroup",
     props: {
       class: {}
@@ -14546,7 +14496,7 @@ function useVModel(props, key, emit2, options = {}) {
       };
     }
   });
-  const _sfc_main$1r = vue.defineComponent({
+  const _sfc_main$1q = vue.defineComponent({
     __name: "Label",
     props: {
       for: {},
@@ -14572,7 +14522,7 @@ function useVModel(props, key, emit2, options = {}) {
       };
     }
   });
-  const _sfc_main$1q = vue.defineComponent({
+  const _sfc_main$1p = vue.defineComponent({
     __name: "FieldLabel",
     props: {
       class: {}
@@ -14580,7 +14530,7 @@ function useVModel(props, key, emit2, options = {}) {
     setup(__props) {
       const props = __props;
       return (_ctx, _cache) => {
-        return vue.openBlock(), vue.createBlock(vue.unref(_sfc_main$1r), {
+        return vue.openBlock(), vue.createBlock(vue.unref(_sfc_main$1q), {
           "data-slot": "field-label",
           class: vue.normalizeClass(vue.unref(cn)(
             "has-data-checked:bg-primary/5 has-data-checked:border-primary/30 dark:has-data-checked:border-primary/20 dark:has-data-checked:bg-primary/10 gap-2 group-data-[disabled=true]/field:opacity-50 has-[>[data-slot=field]]:rounded-md has-[>[data-slot=field]]:border *:data-[slot=field]:p-3 group/field-label peer/field-label flex w-fit leading-snug",
@@ -14596,7 +14546,7 @@ function useVModel(props, key, emit2, options = {}) {
       };
     }
   });
-  const _sfc_main$1p = vue.defineComponent({
+  const _sfc_main$1o = vue.defineComponent({
     __name: "Separator",
     props: {
       orientation: { default: "horizontal" },
@@ -14624,7 +14574,7 @@ function useVModel(props, key, emit2, options = {}) {
     class: "text-muted-foreground px-2 relative mx-auto block w-fit bg-background",
     "data-slot": "field-separator-content"
   };
-  const _sfc_main$1o = vue.defineComponent({
+  const _sfc_main$1n = vue.defineComponent({
     __name: "FieldSeparator",
     props: {
       class: {}
@@ -14640,7 +14590,7 @@ function useVModel(props, key, emit2, options = {}) {
             props.class
           ))
         }, [
-          vue.createVNode(vue.unref(_sfc_main$1p), { class: "absolute inset-0 top-1/2" }),
+          vue.createVNode(vue.unref(_sfc_main$1o), { class: "absolute inset-0 top-1/2" }),
           _ctx.$slots.default ? (vue.openBlock(), vue.createElementBlock("span", _hoisted_2$e, [
             vue.renderSlot(_ctx.$slots, "default")
           ])) : vue.createCommentVNode("", true)
@@ -14648,7 +14598,7 @@ function useVModel(props, key, emit2, options = {}) {
       };
     }
   });
-  const _sfc_main$1n = vue.defineComponent({
+  const _sfc_main$1m = vue.defineComponent({
     __name: "FieldTitle",
     props: {
       class: {}
@@ -14680,7 +14630,7 @@ function useVModel(props, key, emit2, options = {}) {
       orientation: "vertical"
     }
   });
-  const _sfc_main$1m = vue.defineComponent({
+  const _sfc_main$1l = vue.defineComponent({
     __name: "InputGroup",
     props: {
       class: {}
@@ -14702,7 +14652,7 @@ function useVModel(props, key, emit2, options = {}) {
     }
   });
   const _hoisted_1$o = ["data-align"];
-  const _sfc_main$1l = vue.defineComponent({
+  const _sfc_main$1k = vue.defineComponent({
     __name: "InputGroupAddon",
     props: {
       align: { default: "inline-start" },
@@ -14734,7 +14684,7 @@ function useVModel(props, key, emit2, options = {}) {
       };
     }
   });
-  const _sfc_main$1k = vue.defineComponent({
+  const _sfc_main$1j = vue.defineComponent({
     __name: "InputGroupButton",
     props: {
       variant: { default: "ghost" },
@@ -14744,7 +14694,7 @@ function useVModel(props, key, emit2, options = {}) {
     setup(__props) {
       const props = __props;
       return (_ctx, _cache) => {
-        return vue.openBlock(), vue.createBlock(vue.unref(_sfc_main$1y), {
+        return vue.openBlock(), vue.createBlock(vue.unref(_sfc_main$1x), {
           type: "button",
           "data-size": props.size,
           variant: props.variant,
@@ -14758,7 +14708,7 @@ function useVModel(props, key, emit2, options = {}) {
       };
     }
   });
-  const _sfc_main$1j = vue.defineComponent({
+  const _sfc_main$1i = vue.defineComponent({
     __name: "Input",
     props: {
       defaultValue: {},
@@ -14787,7 +14737,7 @@ function useVModel(props, key, emit2, options = {}) {
       };
     }
   });
-  const _sfc_main$1i = vue.defineComponent({
+  const _sfc_main$1h = vue.defineComponent({
     __name: "InputGroupInput",
     props: {
       class: {}
@@ -14795,7 +14745,7 @@ function useVModel(props, key, emit2, options = {}) {
     setup(__props) {
       const props = __props;
       return (_ctx, _cache) => {
-        return vue.openBlock(), vue.createBlock(vue.unref(_sfc_main$1j), {
+        return vue.openBlock(), vue.createBlock(vue.unref(_sfc_main$1i), {
           "data-slot": "input-group-control",
           class: vue.normalizeClass(vue.unref(cn)(
             "rounded-none border-0 bg-transparent shadow-none ring-0 focus-visible:ring-0 aria-invalid:ring-0 dark:bg-transparent flex-1",
@@ -14805,7 +14755,7 @@ function useVModel(props, key, emit2, options = {}) {
       };
     }
   });
-  const _sfc_main$1h = vue.defineComponent({
+  const _sfc_main$1g = vue.defineComponent({
     __name: "Textarea",
     props: {
       class: {},
@@ -14831,7 +14781,7 @@ function useVModel(props, key, emit2, options = {}) {
       };
     }
   });
-  const _sfc_main$1g = vue.defineComponent({
+  const _sfc_main$1f = vue.defineComponent({
     __name: "InputGroupTextarea",
     props: {
       class: {}
@@ -14839,7 +14789,7 @@ function useVModel(props, key, emit2, options = {}) {
     setup(__props) {
       const props = __props;
       return (_ctx, _cache) => {
-        return vue.openBlock(), vue.createBlock(vue.unref(_sfc_main$1h), {
+        return vue.openBlock(), vue.createBlock(vue.unref(_sfc_main$1g), {
           "data-slot": "input-group-control",
           class: vue.normalizeClass(vue.unref(cn)(
             "rounded-none border-0 bg-transparent py-2 shadow-none ring-0 focus-visible:ring-0 aria-invalid:ring-0 dark:bg-transparent flex-1 resize-none",
@@ -14879,7 +14829,7 @@ function useVModel(props, key, emit2, options = {}) {
     }
   });
   const _hoisted_1$n = ["data-size"];
-  const _sfc_main$1f = vue.defineComponent({
+  const _sfc_main$1e = vue.defineComponent({
     __name: "Card",
     props: {
       class: {},
@@ -14898,7 +14848,7 @@ function useVModel(props, key, emit2, options = {}) {
       };
     }
   });
-  const _sfc_main$1e = vue.defineComponent({
+  const _sfc_main$1d = vue.defineComponent({
     __name: "CardAction",
     props: {
       class: {}
@@ -14915,7 +14865,7 @@ function useVModel(props, key, emit2, options = {}) {
       };
     }
   });
-  const _sfc_main$1d = vue.defineComponent({
+  const _sfc_main$1c = vue.defineComponent({
     __name: "CardContent",
     props: {
       class: {}
@@ -14932,7 +14882,7 @@ function useVModel(props, key, emit2, options = {}) {
       };
     }
   });
-  const _sfc_main$1c = vue.defineComponent({
+  const _sfc_main$1b = vue.defineComponent({
     __name: "CardFooter",
     props: {
       class: {}
@@ -14949,7 +14899,7 @@ function useVModel(props, key, emit2, options = {}) {
       };
     }
   });
-  const _sfc_main$1b = vue.defineComponent({
+  const _sfc_main$1a = vue.defineComponent({
     __name: "CardHeader",
     props: {
       class: {}
@@ -14966,7 +14916,7 @@ function useVModel(props, key, emit2, options = {}) {
       };
     }
   });
-  const _sfc_main$1a = vue.defineComponent({
+  const _sfc_main$19 = vue.defineComponent({
     __name: "CardTitle",
     props: {
       class: {}
@@ -14983,7 +14933,7 @@ function useVModel(props, key, emit2, options = {}) {
       };
     }
   });
-  const _sfc_main$19 = vue.defineComponent({
+  const _sfc_main$18 = vue.defineComponent({
     __name: "Dialog",
     props: {
       open: { type: Boolean },
@@ -15006,7 +14956,7 @@ function useVModel(props, key, emit2, options = {}) {
       };
     }
   });
-  const _sfc_main$18 = vue.defineComponent({
+  const _sfc_main$17 = vue.defineComponent({
     __name: "DialogClose",
     props: {
       asChild: { type: Boolean },
@@ -15257,7 +15207,7 @@ function useVModel(props, key, emit2, options = {}) {
     ]
   };
   const X = createLucideIcon(__iconData);
-  const _sfc_main$17 = vue.defineComponent({
+  const _sfc_main$16 = vue.defineComponent({
     __name: "DialogOverlay",
     props: {
       forceMount: { type: Boolean },
@@ -15280,7 +15230,7 @@ function useVModel(props, key, emit2, options = {}) {
       };
     }
   });
-  const _sfc_main$16 = vue.defineComponent({
+  const _sfc_main$15 = vue.defineComponent({
     ...{
       inheritAttrs: false
     },
@@ -15305,7 +15255,7 @@ function useVModel(props, key, emit2, options = {}) {
           to: vue.unref(shadowRoot)
         }, {
           default: vue.withCtx(() => [
-            vue.createVNode(_sfc_main$17),
+            vue.createVNode(_sfc_main$16),
             vue.createVNode(vue.unref(DialogContent_default), vue.mergeProps({ "data-slot": "dialog-content" }, { ..._ctx.$attrs, ...vue.unref(forwarded) }, {
               class: vue.unref(cn)("bg-popover text-popover-foreground data-open:animate-in data-closed:animate-out data-closed:fade-out-0 data-open:fade-in-0 data-closed:zoom-out-95 data-open:zoom-in-95 ring-foreground/10 grid max-w-[calc(100%-2rem)] gap-6 rounded-xl p-6 text-sm ring-1 duration-100 sm:max-w-md fixed top-1/2 left-1/2 z-[1000001] w-full -translate-x-1/2 -translate-y-1/2 outline-none", props.class)
             }), {
@@ -15317,7 +15267,7 @@ function useVModel(props, key, emit2, options = {}) {
                   "as-child": ""
                 }, {
                   default: vue.withCtx(() => [
-                    vue.createVNode(vue.unref(_sfc_main$1y), {
+                    vue.createVNode(vue.unref(_sfc_main$1x), {
                       variant: "ghost",
                       class: "absolute top-4 right-4",
                       size: "icon-sm"
@@ -15340,7 +15290,7 @@ function useVModel(props, key, emit2, options = {}) {
       };
     }
   });
-  const _sfc_main$15 = vue.defineComponent({
+  const _sfc_main$14 = vue.defineComponent({
     __name: "DialogDescription",
     props: {
       asChild: { type: Boolean },
@@ -15363,7 +15313,7 @@ function useVModel(props, key, emit2, options = {}) {
       };
     }
   });
-  const _sfc_main$14 = vue.defineComponent({
+  const _sfc_main$13 = vue.defineComponent({
     __name: "DialogTitle",
     props: {
       asChild: { type: Boolean },
@@ -15387,7 +15337,7 @@ function useVModel(props, key, emit2, options = {}) {
     }
   });
   const _hoisted_1$m = { class: "flex shrink-0 items-center justify-between gap-3 border-b border-border px-5 py-3" };
-  const _sfc_main$13 = vue.defineComponent({
+  const _sfc_main$12 = vue.defineComponent({
     __name: "AppDialog",
     props: vue.mergeModels({
       title: {},
@@ -15403,27 +15353,27 @@ function useVModel(props, key, emit2, options = {}) {
       const open = vue.useModel(__props, "open");
       const props = __props;
       return (_ctx, _cache) => {
-        return vue.openBlock(), vue.createBlock(vue.unref(_sfc_main$19), {
+        return vue.openBlock(), vue.createBlock(vue.unref(_sfc_main$18), {
           open: open.value,
           "onUpdate:open": _cache[1] || (_cache[1] = ($event) => open.value = $event)
         }, {
           default: vue.withCtx(() => [
-            vue.createVNode(vue.unref(_sfc_main$16), {
+            vue.createVNode(vue.unref(_sfc_main$15), {
               "show-close-button": false,
               class: "gap-0 border-0 bg-transparent p-0 shadow-none ring-0 sm:max-w-none",
               style: vue.normalizeStyle({ width: props.width + "px", maxWidth: "calc(100vw - 32px)" })
             }, {
               default: vue.withCtx(() => [
-                vue.createVNode(vue.unref(_sfc_main$15), { class: "sr-only" }, {
+                vue.createVNode(vue.unref(_sfc_main$14), { class: "sr-only" }, {
                   default: vue.withCtx(() => [
                     vue.createTextVNode(vue.toDisplayString(props.description || props.title), 1)
                   ]),
                   _: 1
                 }),
-                vue.createVNode(vue.unref(_sfc_main$1f), { class: "max-h-[calc(100vh-96px)] gap-0 overflow-hidden py-0 shadow-2xl" }, {
+                vue.createVNode(vue.unref(_sfc_main$1e), { class: "max-h-[calc(100vh-96px)] gap-0 overflow-hidden py-0 shadow-2xl" }, {
                   default: vue.withCtx(() => [
                     vue.createElementVNode("div", _hoisted_1$m, [
-                      vue.createVNode(vue.unref(_sfc_main$14), { class: "m-0 flex min-w-0 items-center gap-2 text-[15px] font-semibold leading-6 text-foreground" }, {
+                      vue.createVNode(vue.unref(_sfc_main$13), { class: "m-0 flex min-w-0 items-center gap-2 text-[15px] font-semibold leading-6 text-foreground" }, {
                         default: vue.withCtx(() => [
                           vue.renderSlot(_ctx.$slots, "title", {}, () => [
                             vue.createTextVNode(vue.toDisplayString(props.title), 1)
@@ -15431,7 +15381,7 @@ function useVModel(props, key, emit2, options = {}) {
                         ]),
                         _: 3
                       }),
-                      vue.createVNode(vue.unref(_sfc_main$18), {
+                      vue.createVNode(vue.unref(_sfc_main$17), {
                         class: "inline-flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-md border-0 bg-transparent text-muted-foreground outline-none hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50",
                         "aria-label": "关闭"
                       }, {
@@ -15444,19 +15394,19 @@ function useVModel(props, key, emit2, options = {}) {
                         _: 1
                       })
                     ]),
-                    vue.createVNode(vue.unref(_sfc_main$1d), { class: "min-h-0 max-h-[calc(100vh-220px)] overflow-auto px-5 py-4 text-sm text-card-foreground" }, {
+                    vue.createVNode(vue.unref(_sfc_main$1c), { class: "min-h-0 max-h-[calc(100vh-220px)] overflow-auto px-5 py-4 text-sm text-card-foreground" }, {
                       default: vue.withCtx(() => [
                         vue.renderSlot(_ctx.$slots, "default")
                       ]),
                       _: 3
                     }),
-                    props.footer || _ctx.$slots.footer ? (vue.openBlock(), vue.createBlock(vue.unref(_sfc_main$1c), {
+                    props.footer || _ctx.$slots.footer ? (vue.openBlock(), vue.createBlock(vue.unref(_sfc_main$1b), {
                       key: 0,
                       class: "shrink-0 justify-end gap-2 border-t border-border px-5 py-3 pt-3"
                     }, {
                       default: vue.withCtx(() => [
                         vue.renderSlot(_ctx.$slots, "footer", {}, () => [
-                          vue.createVNode(vue.unref(_sfc_main$1y), {
+                          vue.createVNode(vue.unref(_sfc_main$1x), {
                             size: "sm",
                             onClick: _cache[0] || (_cache[0] = ($event) => open.value = false)
                           }, {
@@ -15484,7 +15434,7 @@ function useVModel(props, key, emit2, options = {}) {
   const _hoisted_1$l = { class: "flex flex-wrap items-center gap-2" };
   const _hoisted_2$d = { class: "w-8 text-[13px] text-muted-foreground" };
   const HOMEPAGE_URL = "https://github.com/Run-os/znhd-service";
-  const _sfc_main$12 = vue.defineComponent({
+  const _sfc_main$11 = vue.defineComponent({
     __name: "SettingsDialog",
     props: {
       open: { type: Boolean },
@@ -15510,7 +15460,7 @@ function useVModel(props, key, emit2, options = {}) {
       ];
       const UPDATE_URL = GM_info.scriptUpdateURL || GM_info.script.updateURL;
       return (_ctx, _cache) => {
-        return vue.openBlock(), vue.createBlock(_sfc_main$13, {
+        return vue.openBlock(), vue.createBlock(_sfc_main$12, {
           open: props.open,
           title: "设置菜单",
           width: 520,
@@ -15519,7 +15469,7 @@ function useVModel(props, key, emit2, options = {}) {
         }, {
           default: vue.withCtx(() => [
             vue.createElementVNode("div", _hoisted_1$l, [
-              vue.createVNode(vue.unref(_sfc_main$1y), {
+              vue.createVNode(vue.unref(_sfc_main$1x), {
                 as: "a",
                 variant: "outline",
                 size: "sm",
@@ -15532,7 +15482,7 @@ function useVModel(props, key, emit2, options = {}) {
                 ])),
                 _: 1
               }),
-              vue.createVNode(vue.unref(_sfc_main$1y), {
+              vue.createVNode(vue.unref(_sfc_main$1x), {
                 as: "a",
                 variant: "outline",
                 size: "sm",
@@ -15545,7 +15495,7 @@ function useVModel(props, key, emit2, options = {}) {
                 ])),
                 _: 1
               }, 8, ["href"]),
-              vue.createVNode(vue.unref(_sfc_main$1y), {
+              vue.createVNode(vue.unref(_sfc_main$1x), {
                 variant: "outline",
                 size: "sm",
                 onClick: _cache[0] || (_cache[0] = ($event) => emit2("openChangelog"))
@@ -15556,22 +15506,22 @@ function useVModel(props, key, emit2, options = {}) {
                 _: 1
               })
             ]),
-            vue.createVNode(vue.unref(_sfc_main$1o), { class: "my-4" }, {
+            vue.createVNode(vue.unref(_sfc_main$1n), { class: "my-4" }, {
               default: vue.withCtx(() => _cache[7] || (_cache[7] = [
                 vue.createTextVNode("其他设置")
               ])),
               _: 1
             }),
-            vue.createVNode(vue.unref(_sfc_main$1s), { class: "gap-3" }, {
+            vue.createVNode(vue.unref(_sfc_main$1r), { class: "gap-3" }, {
               default: vue.withCtx(() => [
-                vue.createVNode(vue.unref(_sfc_main$1v), {
+                vue.createVNode(vue.unref(_sfc_main$1u), {
                   orientation: "horizontal",
                   class: "items-center justify-between rounded-lg border border-border px-3 py-2.5"
                 }, {
                   default: vue.withCtx(() => [
-                    vue.createVNode(vue.unref(_sfc_main$1u), null, {
+                    vue.createVNode(vue.unref(_sfc_main$1t), null, {
                       default: vue.withCtx(() => [
-                        vue.createVNode(vue.unref(_sfc_main$1n), { class: "text-[13px]" }, {
+                        vue.createVNode(vue.unref(_sfc_main$1m), { class: "text-[13px]" }, {
                           default: vue.withCtx(() => _cache[8] || (_cache[8] = [
                             vue.createTextVNode("使用 CDN 加速（Fastly 镜像）加载资源")
                           ])),
@@ -15580,27 +15530,27 @@ function useVModel(props, key, emit2, options = {}) {
                       ]),
                       _: 1
                     }),
-                    vue.createVNode(_sfc_main$1w, {
+                    vue.createVNode(_sfc_main$1v, {
                       "model-value": props.useCdn,
                       "onUpdate:modelValue": _cache[1] || (_cache[1] = ($event) => emit2("changeUseCdn", $event))
                     }, null, 8, ["model-value"])
                   ]),
                   _: 1
                 }),
-                vue.createVNode(vue.unref(_sfc_main$1v), {
+                vue.createVNode(vue.unref(_sfc_main$1u), {
                   orientation: "horizontal",
                   class: "items-start justify-between rounded-lg border border-border px-3 py-2.5"
                 }, {
                   default: vue.withCtx(() => [
-                    vue.createVNode(vue.unref(_sfc_main$1u), null, {
+                    vue.createVNode(vue.unref(_sfc_main$1t), null, {
                       default: vue.withCtx(() => [
-                        vue.createVNode(vue.unref(_sfc_main$1n), { class: "text-[13px]" }, {
+                        vue.createVNode(vue.unref(_sfc_main$1m), { class: "text-[13px]" }, {
                           default: vue.withCtx(() => _cache[9] || (_cache[9] = [
                             vue.createTextVNode("图片嗅探：先在后台预测量图片大小")
                           ])),
                           _: 1
                         }),
-                        vue.createVNode(vue.unref(_sfc_main$1t), { class: "text-xs leading-5" }, {
+                        vue.createVNode(vue.unref(_sfc_main$1s), { class: "text-xs leading-5" }, {
                           default: vue.withCtx(() => _cache[10] || (_cache[10] = [
                             vue.createTextVNode(" 开启后打开嗅探窗口即刻显示大小（不必当场等测量）。代价：页面上的图若只能靠请求测大小 （跨域且拿不到资源表读数），脚本会在没打开窗口时就去测量 —— 关掉此项可避免这类请求。 ")
                           ])),
@@ -15609,16 +15559,16 @@ function useVModel(props, key, emit2, options = {}) {
                       ]),
                       _: 1
                     }),
-                    vue.createVNode(_sfc_main$1w, {
+                    vue.createVNode(_sfc_main$1v, {
                       "model-value": props.sniffPreMeasure,
                       "onUpdate:modelValue": _cache[2] || (_cache[2] = ($event) => emit2("changeSniffPreMeasure", $event))
                     }, null, 8, ["model-value"])
                   ]),
                   _: 1
                 }),
-                vue.createVNode(vue.unref(_sfc_main$1v), { class: "rounded-lg border border-border px-3 py-3" }, {
+                vue.createVNode(vue.unref(_sfc_main$1u), { class: "rounded-lg border border-border px-3 py-3" }, {
                   default: vue.withCtx(() => [
-                    vue.createVNode(vue.unref(_sfc_main$1q), { class: "text-[13px]" }, {
+                    vue.createVNode(vue.unref(_sfc_main$1p), { class: "text-[13px]" }, {
                       default: vue.withCtx(() => _cache[11] || (_cache[11] = [
                         vue.createTextVNode("监控时间段（点击选择时间）")
                       ])),
@@ -15630,9 +15580,9 @@ function useVModel(props, key, emit2, options = {}) {
                         class: "flex flex-wrap items-center gap-2"
                       }, [
                         vue.createElementVNode("span", _hoisted_2$d, vue.toDisplayString(f.row), 1),
-                        vue.createVNode(vue.unref(_sfc_main$1m), { class: "w-[112px]" }, {
+                        vue.createVNode(vue.unref(_sfc_main$1l), { class: "w-[112px]" }, {
                           default: vue.withCtx(() => [
-                            vue.createVNode(vue.unref(_sfc_main$1i), {
+                            vue.createVNode(vue.unref(_sfc_main$1h), {
                               type: "time",
                               step: "300",
                               "model-value": vue.unref(hoursToHHmm)(wh.value[f.from]),
@@ -15642,9 +15592,9 @@ function useVModel(props, key, emit2, options = {}) {
                           _: 2
                         }, 1024),
                         _cache[12] || (_cache[12] = vue.createElementVNode("span", { class: "text-[13px] text-muted-foreground" }, "至", -1)),
-                        vue.createVNode(vue.unref(_sfc_main$1m), { class: "w-[112px]" }, {
+                        vue.createVNode(vue.unref(_sfc_main$1l), { class: "w-[112px]" }, {
                           default: vue.withCtx(() => [
-                            vue.createVNode(vue.unref(_sfc_main$1i), {
+                            vue.createVNode(vue.unref(_sfc_main$1h), {
                               type: "time",
                               step: "300",
                               "model-value": vue.unref(hoursToHHmm)(wh.value[f.to]),
@@ -15655,7 +15605,7 @@ function useVModel(props, key, emit2, options = {}) {
                         }, 1024)
                       ]);
                     }), 64)),
-                    vue.createVNode(vue.unref(_sfc_main$1t), { class: "text-xs leading-5" }, {
+                    vue.createVNode(vue.unref(_sfc_main$1s), { class: "text-xs leading-5" }, {
                       default: vue.withCtx(() => _cache[13] || (_cache[13] = [
                         vue.createTextVNode(" 提示：将「下午开始」设为与「上午结束」相同（如都设为 12:00），即可午休时段也监控。 ")
                       ])),
@@ -15794,7 +15744,7 @@ function useVModel(props, key, emit2, options = {}) {
     }
     notify2(false);
   }
-  const _sfc_main$11 = vue.defineComponent({
+  const _sfc_main$10 = vue.defineComponent({
     __name: "Item",
     props: {
       asChild: { type: Boolean },
@@ -15822,7 +15772,7 @@ function useVModel(props, key, emit2, options = {}) {
       };
     }
   });
-  const _sfc_main$10 = vue.defineComponent({
+  const _sfc_main$$ = vue.defineComponent({
     __name: "ItemContent",
     props: {
       class: {}
@@ -15839,7 +15789,7 @@ function useVModel(props, key, emit2, options = {}) {
       };
     }
   });
-  const _sfc_main$$ = vue.defineComponent({
+  const _sfc_main$_ = vue.defineComponent({
     __name: "ItemDescription",
     props: {
       class: {}
@@ -15860,7 +15810,7 @@ function useVModel(props, key, emit2, options = {}) {
     }
   });
   const _hoisted_1$k = ["data-variant"];
-  const _sfc_main$_ = vue.defineComponent({
+  const _sfc_main$Z = vue.defineComponent({
     __name: "ItemMedia",
     props: {
       class: {},
@@ -15879,7 +15829,7 @@ function useVModel(props, key, emit2, options = {}) {
       };
     }
   });
-  const _sfc_main$Z = vue.defineComponent({
+  const _sfc_main$Y = vue.defineComponent({
     __name: "ItemTitle",
     props: {
       class: {}
@@ -15932,7 +15882,7 @@ function useVModel(props, key, emit2, options = {}) {
       }
     }
   );
-  const _sfc_main$Y = vue.defineComponent({
+  const _sfc_main$X = vue.defineComponent({
     __name: "Sheet",
     props: {
       open: { type: Boolean },
@@ -15955,7 +15905,7 @@ function useVModel(props, key, emit2, options = {}) {
       };
     }
   });
-  const _sfc_main$X = vue.defineComponent({
+  const _sfc_main$W = vue.defineComponent({
     __name: "SheetOverlay",
     props: {
       forceMount: { type: Boolean },
@@ -15979,7 +15929,7 @@ function useVModel(props, key, emit2, options = {}) {
       };
     }
   });
-  const _sfc_main$W = vue.defineComponent({
+  const _sfc_main$V = vue.defineComponent({
     ...{
       inheritAttrs: false
     },
@@ -16005,7 +15955,7 @@ function useVModel(props, key, emit2, options = {}) {
           to: vue.unref(shadowRoot)
         }, {
           default: vue.withCtx(() => [
-            vue.createVNode(_sfc_main$X),
+            vue.createVNode(_sfc_main$W),
             vue.createVNode(vue.unref(DialogContent_default), vue.mergeProps({
               "data-slot": "sheet-content",
               "data-side": _ctx.side,
@@ -16019,7 +15969,7 @@ function useVModel(props, key, emit2, options = {}) {
                   "as-child": ""
                 }, {
                   default: vue.withCtx(() => [
-                    vue.createVNode(vue.unref(_sfc_main$1y), {
+                    vue.createVNode(vue.unref(_sfc_main$1x), {
                       variant: "ghost",
                       class: "absolute top-4 right-4",
                       size: "icon-sm"
@@ -16042,7 +15992,7 @@ function useVModel(props, key, emit2, options = {}) {
       };
     }
   });
-  const _sfc_main$V = vue.defineComponent({
+  const _sfc_main$U = vue.defineComponent({
     __name: "SheetHeader",
     props: {
       class: {}
@@ -16059,7 +16009,7 @@ function useVModel(props, key, emit2, options = {}) {
       };
     }
   });
-  const _sfc_main$U = vue.defineComponent({
+  const _sfc_main$T = vue.defineComponent({
     __name: "SheetTitle",
     props: {
       asChild: { type: Boolean },
@@ -16082,7 +16032,7 @@ function useVModel(props, key, emit2, options = {}) {
       };
     }
   });
-  const _sfc_main$T = vue.defineComponent({
+  const _sfc_main$S = vue.defineComponent({
     __name: "Tabs",
     props: {
       defaultValue: {},
@@ -16116,7 +16066,7 @@ function useVModel(props, key, emit2, options = {}) {
       };
     }
   });
-  const _sfc_main$S = vue.defineComponent({
+  const _sfc_main$R = vue.defineComponent({
     __name: "TabsContent",
     props: {
       value: {},
@@ -16141,7 +16091,7 @@ function useVModel(props, key, emit2, options = {}) {
       };
     }
   });
-  const _sfc_main$R = vue.defineComponent({
+  const _sfc_main$Q = vue.defineComponent({
     __name: "TabsList",
     props: {
       loop: { type: Boolean },
@@ -16168,7 +16118,7 @@ function useVModel(props, key, emit2, options = {}) {
       };
     }
   });
-  const _sfc_main$Q = vue.defineComponent({
+  const _sfc_main$P = vue.defineComponent({
     __name: "TabsTrigger",
     props: {
       value: {},
@@ -16214,7 +16164,7 @@ function useVModel(props, key, emit2, options = {}) {
       }
     }
   );
-  const _sfc_main$P = vue.defineComponent({
+  const _sfc_main$O = vue.defineComponent({
     __name: "Empty",
     props: {
       class: {}
@@ -16234,7 +16184,7 @@ function useVModel(props, key, emit2, options = {}) {
       };
     }
   });
-  const _sfc_main$O = vue.defineComponent({
+  const _sfc_main$N = vue.defineComponent({
     __name: "EmptyDescription",
     props: {
       class: {}
@@ -16254,7 +16204,7 @@ function useVModel(props, key, emit2, options = {}) {
       };
     }
   });
-  const _sfc_main$N = vue.defineComponent({
+  const _sfc_main$M = vue.defineComponent({
     __name: "EmptyHeader",
     props: {
       class: {}
@@ -16275,7 +16225,7 @@ function useVModel(props, key, emit2, options = {}) {
     }
   });
   const _hoisted_1$j = ["data-variant"];
-  const _sfc_main$M = vue.defineComponent({
+  const _sfc_main$L = vue.defineComponent({
     __name: "EmptyMedia",
     props: {
       class: {},
@@ -16294,7 +16244,7 @@ function useVModel(props, key, emit2, options = {}) {
       };
     }
   });
-  const _sfc_main$L = vue.defineComponent({
+  const _sfc_main$K = vue.defineComponent({
     __name: "EmptyTitle",
     props: {
       class: {}
@@ -16325,7 +16275,7 @@ function useVModel(props, key, emit2, options = {}) {
       }
     }
   );
-  const _sfc_main$K = vue.defineComponent({
+  const _sfc_main$J = vue.defineComponent({
     __name: "Spinner",
     props: {
       class: {}
@@ -16350,7 +16300,7 @@ function useVModel(props, key, emit2, options = {}) {
     key: 2,
     class: "flex flex-col gap-1.5"
   };
-  const _sfc_main$J = vue.defineComponent({
+  const _sfc_main$I = vue.defineComponent({
     __name: "PhrasesSheet",
     props: {
       open: { type: Boolean },
@@ -16374,32 +16324,32 @@ function useVModel(props, key, emit2, options = {}) {
         toast.success("添加文本: " + text);
       }
       return (_ctx, _cache) => {
-        return vue.openBlock(), vue.createBlock(vue.unref(_sfc_main$Y), {
+        return vue.openBlock(), vue.createBlock(vue.unref(_sfc_main$X), {
           open: props.open,
           "onUpdate:open": _cache[2] || (_cache[2] = (v) => emit2("update:open", v))
         }, {
           default: vue.withCtx(() => [
-            vue.createVNode(vue.unref(_sfc_main$W), {
+            vue.createVNode(vue.unref(_sfc_main$V), {
               side: "right",
               "show-close-button": true,
               class: "gap-0 border-border p-0",
               style: { width: "360px", maxWidth: "360px" }
             }, {
               default: vue.withCtx(() => [
-                vue.createVNode(vue.unref(_sfc_main$V), { class: "flex-row items-center gap-1 border-b border-border px-4 py-3 pr-12" }, {
+                vue.createVNode(vue.unref(_sfc_main$U), { class: "flex-row items-center gap-1 border-b border-border px-4 py-3 pr-12" }, {
                   default: vue.withCtx(() => [
-                    vue.createVNode(vue.unref(_sfc_main$U), { class: "text-[15px] font-semibold text-foreground" }, {
+                    vue.createVNode(vue.unref(_sfc_main$T), { class: "text-[15px] font-semibold text-foreground" }, {
                       default: vue.withCtx(() => _cache[3] || (_cache[3] = [
                         vue.createTextVNode("常用语")
                       ])),
                       _: 1
                     }),
-                    vue.createVNode(_sfc_main$1x, {
+                    vue.createVNode(_sfc_main$1w, {
                       content: "重新加载常用语",
                       side: "bottom"
                     }, {
                       default: vue.withCtx(() => [
-                        vue.createVNode(vue.unref(_sfc_main$1y), {
+                        vue.createVNode(vue.unref(_sfc_main$1x), {
                           variant: "ghost",
                           size: "icon-xs",
                           "aria-label": "重新加载常用语",
@@ -16422,9 +16372,9 @@ function useVModel(props, key, emit2, options = {}) {
                   _: 1
                 }),
                 vue.createElementVNode("div", _hoisted_1$i, [
-                  vue.createVNode(vue.unref(_sfc_main$1m), { class: "mb-3" }, {
+                  vue.createVNode(vue.unref(_sfc_main$1l), { class: "mb-3" }, {
                     default: vue.withCtx(() => [
-                      vue.createVNode(vue.unref(_sfc_main$1l), null, {
+                      vue.createVNode(vue.unref(_sfc_main$1k), null, {
                         default: vue.withCtx(() => [
                           vue.createVNode(vue.unref(Icon$1), {
                             name: "search",
@@ -16433,7 +16383,7 @@ function useVModel(props, key, emit2, options = {}) {
                         ]),
                         _: 1
                       }),
-                      vue.createVNode(vue.unref(_sfc_main$1i), {
+                      vue.createVNode(vue.unref(_sfc_main$1h), {
                         "model-value": props.searchKeyword,
                         placeholder: "搜索常用语(按内容)",
                         class: "text-[13px]",
@@ -16442,20 +16392,20 @@ function useVModel(props, key, emit2, options = {}) {
                     ]),
                     _: 1
                   }),
-                  vue.createVNode(vue.unref(_sfc_main$T), {
+                  vue.createVNode(vue.unref(_sfc_main$S), {
                     "default-value": "all",
                     class: "flex min-h-0 flex-1 flex-col gap-2"
                   }, {
                     default: vue.withCtx(() => [
-                      vue.createVNode(vue.unref(_sfc_main$R), { class: "h-9 w-full" }, {
+                      vue.createVNode(vue.unref(_sfc_main$Q), { class: "h-9 w-full" }, {
                         default: vue.withCtx(() => [
-                          vue.createVNode(vue.unref(_sfc_main$Q), { value: "all" }, {
+                          vue.createVNode(vue.unref(_sfc_main$P), { value: "all" }, {
                             default: vue.withCtx(() => _cache[4] || (_cache[4] = [
                               vue.createTextVNode("全部话术")
                             ])),
                             _: 1
                           }),
-                          vue.createVNode(vue.unref(_sfc_main$Q), { value: "mine" }, {
+                          vue.createVNode(vue.unref(_sfc_main$P), { value: "mine" }, {
                             default: vue.withCtx(() => _cache[5] || (_cache[5] = [
                               vue.createTextVNode("我的话术")
                             ])),
@@ -16468,23 +16418,23 @@ function useVModel(props, key, emit2, options = {}) {
                         { key: "all", items: all.value, empty: "暂无全部话术，点右上角刷新抓取" },
                         { key: "mine", items: mine.value, empty: "暂无我的话术，点右上角刷新抓取" }
                       ], (tab) => {
-                        return vue.openBlock(), vue.createBlock(vue.unref(_sfc_main$S), {
+                        return vue.openBlock(), vue.createBlock(vue.unref(_sfc_main$R), {
                           key: tab.key,
                           value: tab.key,
                           class: "min-h-0 flex-1 overflow-y-auto"
                         }, {
                           default: vue.withCtx(() => [
                             props.phrasesLoading ? (vue.openBlock(), vue.createElementBlock("div", _hoisted_2$c, [
-                              vue.createVNode(vue.unref(_sfc_main$K), { class: "size-5 text-primary" }),
+                              vue.createVNode(vue.unref(_sfc_main$J), { class: "size-5 text-primary" }),
                               _cache[6] || (_cache[6] = vue.createElementVNode("span", { class: "text-center text-xs leading-5 text-muted-foreground" }, " 正在抓取常用话术…（右侧栏会自动切 tab，请勿操作） ", -1))
-                            ])) : !tab.items.length ? (vue.openBlock(), vue.createBlock(vue.unref(_sfc_main$P), {
+                            ])) : !tab.items.length ? (vue.openBlock(), vue.createBlock(vue.unref(_sfc_main$O), {
                               key: 1,
                               class: "border-0 p-6"
                             }, {
                               default: vue.withCtx(() => [
-                                vue.createVNode(vue.unref(_sfc_main$N), null, {
+                                vue.createVNode(vue.unref(_sfc_main$M), null, {
                                   default: vue.withCtx(() => [
-                                    vue.createVNode(vue.unref(_sfc_main$O), { class: "text-[13px]" }, {
+                                    vue.createVNode(vue.unref(_sfc_main$N), { class: "text-[13px]" }, {
                                       default: vue.withCtx(() => [
                                         vue.createTextVNode(vue.toDisplayString(tab.empty), 1)
                                       ]),
@@ -16497,13 +16447,13 @@ function useVModel(props, key, emit2, options = {}) {
                               _: 2
                             }, 1024)) : (vue.openBlock(), vue.createElementBlock("div", _hoisted_3$c, [
                               (vue.openBlock(true), vue.createElementBlock(vue.Fragment, null, vue.renderList(tab.items, (t, i) => {
-                                return vue.openBlock(), vue.createBlock(_sfc_main$1x, {
+                                return vue.openBlock(), vue.createBlock(_sfc_main$1w, {
                                   key: tab.key + i,
                                   content: t,
                                   side: "left"
                                 }, {
                                   default: vue.withCtx(() => [
-                                    vue.createVNode(vue.unref(_sfc_main$11), {
+                                    vue.createVNode(vue.unref(_sfc_main$10), {
                                       as: "button",
                                       variant: "outline",
                                       size: "xs",
@@ -16511,9 +16461,9 @@ function useVModel(props, key, emit2, options = {}) {
                                       onClick: ($event) => pick(t)
                                     }, {
                                       default: vue.withCtx(() => [
-                                        vue.createVNode(vue.unref(_sfc_main$10), null, {
+                                        vue.createVNode(vue.unref(_sfc_main$$), null, {
                                           default: vue.withCtx(() => [
-                                            vue.createVNode(vue.unref(_sfc_main$Z), {
+                                            vue.createVNode(vue.unref(_sfc_main$Y), {
                                               class: "whitespace-normal font-normal leading-5 text-[13px]",
                                               style: { "display": "-webkit-box", "-webkit-line-clamp": "2", "-webkit-box-orient": "vertical", "overflow": "hidden", "white-space": "pre-wrap", "word-break": "break-word" }
                                             }, {
@@ -16568,7 +16518,7 @@ function useVModel(props, key, emit2, options = {}) {
     class: "flex items-center gap-1.5",
     title: "开启后新日志持续刷新并自动滚到底部；关闭后列表冻结在当前快照，便于往上翻看历史"
   };
-  const _sfc_main$I = vue.defineComponent({
+  const _sfc_main$H = vue.defineComponent({
     __name: "LogDialog",
     props: {
       open: { type: Boolean },
@@ -16617,7 +16567,7 @@ function useVModel(props, key, emit2, options = {}) {
       }
       vue.watch([() => props.open, () => props.logEntries, () => props.autoRefresh, filter], scrollToBottom);
       return (_ctx, _cache) => {
-        return vue.openBlock(), vue.createBlock(_sfc_main$13, {
+        return vue.openBlock(), vue.createBlock(_sfc_main$12, {
           open: props.open,
           title: "运行日志",
           width: 560,
@@ -16625,7 +16575,7 @@ function useVModel(props, key, emit2, options = {}) {
           "onUpdate:open": _cache[3] || (_cache[3] = (v) => emit2("update:open", v))
         }, {
           footer: vue.withCtx(() => [
-            vue.createVNode(vue.unref(_sfc_main$1y), {
+            vue.createVNode(vue.unref(_sfc_main$1x), {
               variant: "outline",
               size: "sm",
               onClick: _cache[2] || (_cache[2] = ($event) => emit2("update:open", false))
@@ -16665,7 +16615,7 @@ function useVModel(props, key, emit2, options = {}) {
                   }, vue.toDisplayString(m.label) + " " + vue.toDisplayString(counts.value[m.type] || 0), 13, _hoisted_4$a);
                 }), 64))
               ]),
-              vue.createVNode(vue.unref(_sfc_main$1y), {
+              vue.createVNode(vue.unref(_sfc_main$1x), {
                 variant: "destructive",
                 size: "sm",
                 class: "shrink-0",
@@ -16708,7 +16658,7 @@ function useVModel(props, key, emit2, options = {}) {
               ]),
               vue.createElementVNode("span", _hoisted_11$4, [
                 vue.createElementVNode("span", _hoisted_12$3, [
-                  vue.createVNode(_sfc_main$1w, {
+                  vue.createVNode(_sfc_main$1v, {
                     "model-value": props.autoRefresh,
                     "onUpdate:modelValue": _cache[1] || (_cache[1] = (v) => emit2("update:autoRefresh", v))
                   }, null, 8, ["model-value"]),
@@ -16815,7 +16765,7 @@ onload: function(response) {
   const _hoisted_4$9 = { class: "mb-1.5 text-sm font-bold text-primary" };
   const _hoisted_5$6 = { class: "whitespace-pre-wrap break-words text-[13px] leading-[1.6] text-foreground" };
   const _hoisted_6$6 = { class: "mt-2 text-center text-xs text-muted-foreground" };
-  const _sfc_main$H = vue.defineComponent({
+  const _sfc_main$G = vue.defineComponent({
     __name: "ChangelogDialog",
     props: {
       open: { type: Boolean }
@@ -16854,7 +16804,7 @@ onload: function(response) {
         window.open(getChangelogPageUrl(), "_blank");
       }
       return (_ctx, _cache) => {
-        return vue.openBlock(), vue.createBlock(_sfc_main$13, {
+        return vue.openBlock(), vue.createBlock(_sfc_main$12, {
           open: props.open,
           title: title.value,
           width: 620,
@@ -16862,7 +16812,7 @@ onload: function(response) {
           "onUpdate:open": _cache[1] || (_cache[1] = (v) => emit2("update:open", v))
         }, {
           footer: vue.withCtx(() => [
-            vue.createVNode(vue.unref(_sfc_main$1y), {
+            vue.createVNode(vue.unref(_sfc_main$1x), {
               variant: "outline",
               size: "sm",
               onClick: openMore
@@ -16872,7 +16822,7 @@ onload: function(response) {
               ])),
               _: 1
             }),
-            vue.createVNode(vue.unref(_sfc_main$1y), {
+            vue.createVNode(vue.unref(_sfc_main$1x), {
               size: "sm",
               onClick: _cache[0] || (_cache[0] = ($event) => emit2("update:open", false))
             }, {
@@ -16884,19 +16834,19 @@ onload: function(response) {
           ]),
           default: vue.withCtx(() => [
             loading.value ? (vue.openBlock(), vue.createElementBlock("div", _hoisted_1$g, [
-              vue.createVNode(vue.unref(_sfc_main$K), { class: "size-4 text-primary" }),
+              vue.createVNode(vue.unref(_sfc_main$J), { class: "size-4 text-primary" }),
               _cache[2] || (_cache[2] = vue.createElementVNode("span", { class: "text-[13px] text-muted-foreground" }, "读取中…", -1))
             ])) : err.value ? (vue.openBlock(), vue.createElementBlock(vue.Fragment, { key: 1 }, [
               vue.createElementVNode("p", _hoisted_2$a, "读取失败：" + vue.toDisplayString(err.value), 1),
               _cache[3] || (_cache[3] = vue.createElementVNode("p", { class: "mt-2 text-xs text-muted-foreground" }, " 可点下方「获取更多日志」在浏览器中打开当月日志文件查看。 ", -1))
-            ], 64)) : !entries.value || entries.value.length === 0 ? (vue.openBlock(), vue.createBlock(vue.unref(_sfc_main$P), {
+            ], 64)) : !entries.value || entries.value.length === 0 ? (vue.openBlock(), vue.createBlock(vue.unref(_sfc_main$O), {
               key: 2,
               class: "border-0 p-6"
             }, {
               default: vue.withCtx(() => [
-                vue.createVNode(vue.unref(_sfc_main$N), null, {
+                vue.createVNode(vue.unref(_sfc_main$M), null, {
                   default: vue.withCtx(() => [
-                    vue.createVNode(vue.unref(_sfc_main$O), { class: "text-[13px] text-muted-foreground" }, {
+                    vue.createVNode(vue.unref(_sfc_main$N), { class: "text-[13px] text-muted-foreground" }, {
                       default: vue.withCtx(() => _cache[4] || (_cache[4] = [
                         vue.createTextVNode("暂无更新日志")
                       ])),
@@ -17347,7 +17297,7 @@ entries() {
     }));
     return { sections, grouped: sections.some((s) => !!s.name) };
   }
-  const _sfc_main$G = vue.defineComponent({
+  const _sfc_main$F = vue.defineComponent({
     __name: "Checkbox",
     props: {
       defaultValue: {},
@@ -17391,7 +17341,7 @@ entries() {
       };
     }
   });
-  const _sfc_main$F = vue.defineComponent({
+  const _sfc_main$E = vue.defineComponent({
     __name: "Progress",
     props: {
       modelValue: { default: 0 },
@@ -17427,7 +17377,7 @@ entries() {
       };
     }
   });
-  const _sfc_main$E = vue.defineComponent({
+  const _sfc_main$D = vue.defineComponent({
     __name: "Badge",
     props: {
       asChild: { type: Boolean },
@@ -17473,7 +17423,7 @@ entries() {
   const _hoisted_1$f = { class: "group relative w-full min-w-0" };
   const _hoisted_2$9 = { class: "pointer-events-none absolute bottom-1.5 right-1.5 z-[2] flex gap-0.5 rounded-md bg-black/55 p-0.5 opacity-0 transition-opacity group-hover:pointer-events-auto group-hover:opacity-100" };
   const _hoisted_3$9 = ["aria-label", "title", "disabled", "onClick"];
-  const _sfc_main$D = vue.defineComponent({
+  const _sfc_main$C = vue.defineComponent({
     __name: "ImageActions",
     props: {
       actions: {}
@@ -17587,7 +17537,7 @@ entries() {
     class: "shrink-0 px-2 text-white/55"
   };
   const _hoisted_4$8 = ["src", "alt"];
-  const _sfc_main$C = vue.defineComponent({
+  const _sfc_main$B = vue.defineComponent({
     __name: "ImagePreview",
     props: {
       open: { type: Boolean },
@@ -17836,7 +17786,7 @@ entries() {
   const FLUSH_MS = 150;
   const BATCH_GAP_MS = 400;
   const DEFAULT_MIN_KB = 20;
-  const _sfc_main$B = vue.defineComponent({
+  const _sfc_main$A = vue.defineComponent({
     __name: "SniffDialog",
     props: vue.mergeModels({
       minKb: {}
@@ -18105,7 +18055,7 @@ shouldStop: () => runId !== id
         return "未在当前页面发现图片";
       });
       return (_ctx, _cache) => {
-        return vue.openBlock(), vue.createBlock(_sfc_main$13, {
+        return vue.openBlock(), vue.createBlock(_sfc_main$12, {
           open: open.value,
           "onUpdate:open": _cache[7] || (_cache[7] = ($event) => open.value = $event),
           width: 828,
@@ -18113,7 +18063,7 @@ shouldStop: () => runId !== id
         }, {
           title: vue.withCtx(() => [
             vue.createElementVNode("span", _hoisted_1$d, "图片嗅探（共 " + vue.toDisplayString(pickable.value.length) + " 张）", 1),
-            vue.createVNode(vue.unref(_sfc_main$1y), {
+            vue.createVNode(vue.unref(_sfc_main$1x), {
               variant: "outline",
               size: "xs",
               class: "h-6 shrink-0 px-2 text-[11px]",
@@ -18127,7 +18077,7 @@ shouldStop: () => runId !== id
             }, 8, ["disabled"])
           ]),
           footer: vue.withCtx(() => [
-            vue.createVNode(vue.unref(_sfc_main$1y), {
+            vue.createVNode(vue.unref(_sfc_main$1x), {
               size: "sm",
               disabled: !selectedCount.value || !!batch.value,
               onClick: _cache[3] || (_cache[3] = ($event) => void doDownloadSelected())
@@ -18137,7 +18087,7 @@ shouldStop: () => runId !== id
               ]),
               _: 1
             }, 8, ["disabled"]),
-            vue.createVNode(vue.unref(_sfc_main$1y), {
+            vue.createVNode(vue.unref(_sfc_main$1x), {
               variant: "outline",
               size: "sm",
               disabled: !selected.value.size || !!batch.value,
@@ -18148,7 +18098,7 @@ shouldStop: () => runId !== id
               ])),
               _: 1
             }, 8, ["disabled"]),
-            vue.createVNode(vue.unref(_sfc_main$1y), {
+            vue.createVNode(vue.unref(_sfc_main$1x), {
               variant: "secondary",
               size: "sm",
               onClick: _cache[5] || (_cache[5] = ($event) => open.value = false)
@@ -18166,7 +18116,7 @@ shouldStop: () => runId !== id
             }, [
               _cache[10] || (_cache[10] = vue.createElementVNode("span", { class: "text-xs text-muted-foreground" }, "只列出 ≥", -1)),
               vue.createElementVNode("div", _hoisted_3$7, [
-                vue.createVNode(vue.unref(_sfc_main$1j), {
+                vue.createVNode(vue.unref(_sfc_main$1i), {
                   modelValue: minKBText.value,
                   "onUpdate:modelValue": _cache[0] || (_cache[0] = ($event) => minKBText.value = $event),
                   type: "number",
@@ -18182,7 +18132,7 @@ shouldStop: () => runId !== id
               ]),
               vue.createElementVNode("span", _hoisted_4$7, "的图片（显示 " + vue.toDisplayString(known.value.length) + " 张）", 1),
               vue.createElementVNode("label", _hoisted_5$5, [
-                vue.createVNode(vue.unref(_sfc_main$G), {
+                vue.createVNode(vue.unref(_sfc_main$F), {
                   "model-value": allSelected.value,
                   disabled: !kept.value.length,
                   "aria-label": "全选",
@@ -18194,19 +18144,19 @@ shouldStop: () => runId !== id
             truncated.value ? (vue.openBlock(), vue.createElementBlock("p", _hoisted_6$5, " 页面元素太多或图片超过 " + vue.toDisplayString(vue.unref(MAX_SNIFF)) + " 张，本次只扫描了前一部分 —— 结果可能不完整。 ", 1)) : vue.createCommentVNode("", true),
             droppedCount.value > 0 ? (vue.openBlock(), vue.createElementBlock("p", _hoisted_7$5, " 已排除 " + vue.toDisplayString(droppedCount.value) + " 个响应不是图片的地址（视频 / 网页 / JSON 等）。 ", 1)) : vue.createCommentVNode("", true),
             phase.value === "measuring" && !probed.value.length ? (vue.openBlock(), vue.createElementBlock("div", _hoisted_8$5, [
-              vue.createVNode(vue.unref(_sfc_main$F), {
+              vue.createVNode(vue.unref(_sfc_main$E), {
                 "model-value": percent.value,
                 class: "mx-auto max-w-[320px]"
               }, null, 8, ["model-value"]),
               vue.createElementVNode("p", _hoisted_9$4, " 正在测量大小…（" + vue.toDisplayString(probed.value.length) + "/" + vue.toDisplayString(total.value) + "） ", 1)
-            ])) : !kept.value.length ? (vue.openBlock(), vue.createBlock(vue.unref(_sfc_main$P), {
+            ])) : !kept.value.length ? (vue.openBlock(), vue.createBlock(vue.unref(_sfc_main$O), {
               key: 3,
               class: "h-[58vh] border-0 py-8"
             }, {
               default: vue.withCtx(() => [
-                vue.createVNode(vue.unref(_sfc_main$N), null, {
+                vue.createVNode(vue.unref(_sfc_main$M), null, {
                   default: vue.withCtx(() => [
-                    vue.createVNode(vue.unref(_sfc_main$M), { variant: "icon" }, {
+                    vue.createVNode(vue.unref(_sfc_main$L), { variant: "icon" }, {
                       default: vue.withCtx(() => [
                         vue.createVNode(vue.unref(Icon$1), {
                           name: "image",
@@ -18215,13 +18165,13 @@ shouldStop: () => runId !== id
                       ]),
                       _: 1
                     }),
-                    vue.createVNode(vue.unref(_sfc_main$L), { class: "text-sm" }, {
+                    vue.createVNode(vue.unref(_sfc_main$K), { class: "text-sm" }, {
                       default: vue.withCtx(() => _cache[11] || (_cache[11] = [
                         vue.createTextVNode("没有可显示的图片")
                       ])),
                       _: 1
                     }),
-                    vue.createVNode(vue.unref(_sfc_main$O), { class: "text-xs" }, {
+                    vue.createVNode(vue.unref(_sfc_main$N), { class: "text-xs" }, {
                       default: vue.withCtx(() => [
                         vue.createTextVNode(vue.toDisplayString(emptyText.value), 1)
                       ]),
@@ -18243,7 +18193,7 @@ shouldStop: () => runId !== id
                 }, [
                   groupedView.value && (s.known.length || s.unknown.length) ? (vue.openBlock(), vue.createElementBlock("div", _hoisted_12$2, [
                     vue.createElementVNode("span", _hoisted_13$2, vue.toDisplayString(groupTitle(s)), 1),
-                    s.current ? (vue.openBlock(), vue.createBlock(vue.unref(_sfc_main$E), {
+                    s.current ? (vue.openBlock(), vue.createBlock(vue.unref(_sfc_main$D), {
                       key: 0,
                       variant: "secondary",
                       class: "h-4 px-1.5 text-[10px]"
@@ -18253,7 +18203,7 @@ shouldStop: () => runId !== id
                       ])),
                       _: 1
                     })) : vue.createCommentVNode("", true),
-                    vue.createVNode(vue.unref(_sfc_main$1y), {
+                    vue.createVNode(vue.unref(_sfc_main$1x), {
                       variant: "link",
                       size: "xs",
                       class: "h-auto px-0 text-[11px]",
@@ -18274,7 +18224,7 @@ shouldStop: () => runId !== id
                         class: "flex min-w-0 flex-col rounded-xl p-1.5"
                       }, [
                         vue.createElementVNode("div", _hoisted_16$1, [
-                          vue.createVNode(_sfc_main$D, {
+                          vue.createVNode(_sfc_main$C, {
                             actions: actionsOf(it)
                           }, {
                             default: vue.withCtx(() => [
@@ -18293,7 +18243,7 @@ shouldStop: () => runId !== id
                             onClick: _cache[1] || (_cache[1] = vue.withModifiers(() => {
                             }, ["stop"]))
                           }, [
-                            vue.createVNode(vue.unref(_sfc_main$G), {
+                            vue.createVNode(vue.unref(_sfc_main$F), {
                               "model-value": selected.value.has(it.key),
                               "aria-label": "选择 " + fileNameOf(it),
                               "onUpdate:modelValue": ($event) => toggleOne(it.key)
@@ -18321,7 +18271,7 @@ shouldStop: () => runId !== id
                         class: "flex min-w-0 flex-col rounded-xl p-1.5"
                       }, [
                         vue.createElementVNode("div", _hoisted_22, [
-                          vue.createVNode(_sfc_main$D, {
+                          vue.createVNode(_sfc_main$C, {
                             actions: actionsOf(it)
                           }, {
                             default: vue.withCtx(() => [
@@ -18340,7 +18290,7 @@ shouldStop: () => runId !== id
                             onClick: _cache[2] || (_cache[2] = vue.withModifiers(() => {
                             }, ["stop"]))
                           }, [
-                            vue.createVNode(vue.unref(_sfc_main$G), {
+                            vue.createVNode(vue.unref(_sfc_main$F), {
                               "model-value": selected.value.has(it.key),
                               "aria-label": "选择 " + fileNameOf(it),
                               "onUpdate:modelValue": ($event) => toggleOne(it.key)
@@ -18360,7 +18310,7 @@ shouldStop: () => runId !== id
                     }), 128))
                   ])) : vue.createCommentVNode("", true),
                   s.unknown.length ? (vue.openBlock(), vue.createElementBlock("div", _hoisted_26, [
-                    vue.createVNode(vue.unref(_sfc_main$1y), {
+                    vue.createVNode(vue.unref(_sfc_main$1x), {
                       variant: "link",
                       size: "xs",
                       class: "h-auto px-0 text-[11px]",
@@ -18385,7 +18335,7 @@ shouldStop: () => runId !== id
               ], 64)) : vue.createCommentVNode("", true),
               _cache[15] || (_cache[15] = vue.createTextVNode(" 单击缩略图可放大 / 多图切换，放大后工具栏上的「打印」按 A4 打印原图（横图自动旋转 90 度）； 勾选后可批量下载。视频已在扫描阶段排除，动图（gif）按图片保留。 "))
             ], 2),
-            vue.createVNode(_sfc_main$C, {
+            vue.createVNode(_sfc_main$B, {
               open: previewOpen.value,
               "onUpdate:open": _cache[6] || (_cache[6] = ($event) => previewOpen.value = $event),
               items: previewUrls.value,
@@ -18398,7 +18348,7 @@ shouldStop: () => runId !== id
       };
     }
   });
-  const _sfc_main$A = vue.defineComponent({
+  const _sfc_main$z = vue.defineComponent({
     __name: "DropdownMenu",
     props: {
       defaultOpen: { type: Boolean },
@@ -18421,7 +18371,7 @@ shouldStop: () => runId !== id
       };
     }
   });
-  const _sfc_main$z = vue.defineComponent({
+  const _sfc_main$y = vue.defineComponent({
     ...{
       inheritAttrs: false
     },
@@ -18478,7 +18428,7 @@ shouldStop: () => runId !== id
       };
     }
   });
-  const _sfc_main$y = vue.defineComponent({
+  const _sfc_main$x = vue.defineComponent({
     __name: "DropdownMenuItem",
     props: {
       disabled: { type: Boolean },
@@ -18506,23 +18456,6 @@ shouldStop: () => runId !== id
           ]),
           _: 3
         }, 16, ["data-inset", "data-variant", "class"]);
-      };
-    }
-  });
-  const _sfc_main$x = vue.defineComponent({
-    __name: "DropdownMenuSeparator",
-    props: {
-      asChild: { type: Boolean },
-      as: {},
-      class: {}
-    },
-    setup(__props) {
-      const props = __props;
-      const delegatedProps = reactiveOmit(props, "class");
-      return (_ctx, _cache) => {
-        return vue.openBlock(), vue.createBlock(vue.unref(DropdownMenuSeparator_default), vue.mergeProps({ "data-slot": "dropdown-menu-separator" }, vue.unref(delegatedProps), {
-          class: vue.unref(cn)("bg-border -mx-1 my-1 h-px", props.class)
-        }), null, 16, ["class"]);
       };
     }
   });
@@ -19300,7 +19233,7 @@ shouldStop: () => runId !== id
           scrollToEnd({ behavior: props.behavior });
       }
       return (_ctx, _cache) => {
-        return vue.openBlock(), vue.createBlock(vue.unref(_sfc_main$1y), {
+        return vue.openBlock(), vue.createBlock(vue.unref(_sfc_main$1x), {
           "data-slot": "message-scroller-button",
           "data-direction": _ctx.direction,
           "data-active": active.value ? "true" : "false",
@@ -20131,7 +20064,7 @@ shouldStop: () => runId !== id
             default: vue.withCtx(() => [
               vue.createVNode(vue.unref(_sfc_main$o), { class: "!rounded-[8px] !border-0 !p-0" }, {
                 default: vue.withCtx(() => [
-                  _ctx.imageActions.length ? (vue.openBlock(), vue.createBlock(_sfc_main$D, {
+                  _ctx.imageActions.length ? (vue.openBlock(), vue.createBlock(_sfc_main$C, {
                     key: 0,
                     actions: _ctx.imageActions,
                     onClick: _cache[1] || (_cache[1] = vue.withModifiers(() => {
@@ -20603,9 +20536,9 @@ shouldStop: () => runId !== id
           ref: root,
           class: "w-full"
         }, [
-          vue.createVNode(vue.unref(_sfc_main$1m), { class: "!rounded-3xl !border-[rgb(46,46,46)] !bg-[rgb(32,32,32)] !shadow-none" }, {
+          vue.createVNode(vue.unref(_sfc_main$1l), { class: "!rounded-3xl !border-[rgb(46,46,46)] !bg-[rgb(32,32,32)] !shadow-none" }, {
             default: vue.withCtx(() => [
-              vue.createVNode(vue.unref(_sfc_main$1g), {
+              vue.createVNode(vue.unref(_sfc_main$1f), {
                 modelValue: model.value,
                 "onUpdate:modelValue": _cache[0] || (_cache[0] = ($event) => model.value = $event),
                 placeholder: _ctx.placeholder,
@@ -20616,16 +20549,16 @@ shouldStop: () => runId !== id
                 onInput: autoGrow,
                 onKeydown
               }, null, 8, ["modelValue", "placeholder", "disabled"]),
-              vue.createVNode(vue.unref(_sfc_main$1l), {
+              vue.createVNode(vue.unref(_sfc_main$1k), {
                 align: "block-end",
                 class: "!px-3 !pb-3 !pt-1"
               }, {
                 default: vue.withCtx(() => [
-                  _ctx.attach.length ? (vue.openBlock(), vue.createBlock(vue.unref(_sfc_main$A), { key: 0 }, {
+                  _ctx.attach.length ? (vue.openBlock(), vue.createBlock(vue.unref(_sfc_main$z), { key: 0 }, {
                     default: vue.withCtx(() => [
                       vue.createVNode(vue.unref(_sfc_main$w), { "as-child": "" }, {
                         default: vue.withCtx(() => [
-                          vue.createVNode(vue.unref(_sfc_main$1k), {
+                          vue.createVNode(vue.unref(_sfc_main$1j), {
                             size: "icon-sm",
                             variant: "outline",
                             class: "!size-7 !rounded-full !border-[rgb(58,58,58)] !bg-transparent !text-foreground",
@@ -20644,14 +20577,14 @@ shouldStop: () => runId !== id
                         ]),
                         _: 1
                       }),
-                      vue.createVNode(vue.unref(_sfc_main$z), {
+                      vue.createVNode(vue.unref(_sfc_main$y), {
                         align: "start",
                         side: "top",
                         class: "w-44"
                       }, {
                         default: vue.withCtx(() => [
                           (vue.openBlock(true), vue.createElementBlock(vue.Fragment, null, vue.renderList(_ctx.attach, (a) => {
-                            return vue.openBlock(), vue.createBlock(vue.unref(_sfc_main$y), {
+                            return vue.openBlock(), vue.createBlock(vue.unref(_sfc_main$x), {
                               key: a.key,
                               disabled: a.disabled || _ctx.disabled,
                               onSelect: ($event) => a.onClick()
@@ -20672,7 +20605,7 @@ shouldStop: () => runId !== id
                     ]),
                     _: 1
                   })) : vue.createCommentVNode("", true),
-                  vue.createVNode(vue.unref(_sfc_main$1k), {
+                  vue.createVNode(vue.unref(_sfc_main$1j), {
                     size: "icon-sm",
                     variant: "default",
                     class: "ml-auto !size-7 !rounded-full !text-white",
@@ -20810,7 +20743,7 @@ shouldStop: () => runId !== id
       }
       return (_ctx, _cache) => {
         return !ordered.value.length ? (vue.openBlock(), vue.createElementBlock("div", _hoisted_1$6, [
-          vue.createVNode(vue.unref(_sfc_main$P), { class: "!p-6" }, {
+          vue.createVNode(vue.unref(_sfc_main$O), { class: "!p-6" }, {
             default: vue.withCtx(() => [
               vue.createElementVNode("span", _hoisted_2$5, vue.toDisplayString(_ctx.clearScope ? "该会话暂无图片 / 文件" : "暂无文件——手机发来的图片 / 文件会汇总在这里"), 1)
             ]),
@@ -20832,7 +20765,7 @@ shouldStop: () => runId !== id
                 key: msg.id,
                 class: "flex flex-col"
               }, [
-                vue.createVNode(_sfc_main$D, {
+                vue.createVNode(_sfc_main$C, {
                   actions: actionsOf(msg, idx)
                 }, {
                   default: vue.withCtx(() => [
@@ -20899,7 +20832,7 @@ shouldStop: () => runId !== id
               }), 128))
             ])
           ], 2)) : vue.createCommentVNode("", true),
-          vue.createVNode(_sfc_main$C, {
+          vue.createVNode(_sfc_main$B, {
             open: previewOpen.value,
             "onUpdate:open": _cache[0] || (_cache[0] = ($event) => previewOpen.value = $event),
             items: imageUrls.value,
@@ -20988,9 +20921,9 @@ primary: "#07C160"
                       ]),
                       _: 1
                     }),
-                    vue.createVNode(vue.unref(_sfc_main$1f), { class: "max-h-[calc(100vh-140px)] gap-0 overflow-hidden rounded-xl bg-popover py-0 text-popover-foreground shadow-[0_12px_40px_rgba(0,0,0,0.55)] ring-1 ring-border" }, {
+                    vue.createVNode(vue.unref(_sfc_main$1e), { class: "max-h-[calc(100vh-140px)] gap-0 overflow-hidden rounded-xl bg-popover py-0 text-popover-foreground shadow-[0_12px_40px_rgba(0,0,0,0.55)] ring-1 ring-border" }, {
                       default: vue.withCtx(() => [
-                        vue.createVNode(vue.unref(_sfc_main$1b), { class: "flex shrink-0 flex-row items-center gap-2 border-b border-border px-5 py-3" }, {
+                        vue.createVNode(vue.unref(_sfc_main$1a), { class: "flex shrink-0 flex-row items-center gap-2 border-b border-border px-5 py-3" }, {
                           default: vue.withCtx(() => [
                             vue.createVNode(vue.unref(DialogTitle_default), { class: "m-0 min-w-0 flex-1 truncate text-[15px] font-semibold leading-6 text-foreground" }, {
                               default: vue.withCtx(() => [
@@ -21013,13 +20946,13 @@ primary: "#07C160"
                           ]),
                           _: 1
                         }),
-                        vue.createVNode(vue.unref(_sfc_main$1d), { class: "min-h-0 flex-1 overflow-auto px-5 py-4 text-sm" }, {
+                        vue.createVNode(vue.unref(_sfc_main$1c), { class: "min-h-0 flex-1 overflow-auto px-5 py-4 text-sm" }, {
                           default: vue.withCtx(() => [
                             vue.renderSlot(_ctx.$slots, "default")
                           ]),
                           _: 3
                         }),
-                        _ctx.$slots.footer ? (vue.openBlock(), vue.createBlock(vue.unref(_sfc_main$1c), {
+                        _ctx.$slots.footer ? (vue.openBlock(), vue.createBlock(vue.unref(_sfc_main$1b), {
                           key: 0,
                           class: "flex shrink-0 items-center justify-end gap-2 border-t border-border px-5 py-3"
                         }, {
@@ -21154,11 +21087,11 @@ primary: "#07C160"
       vue.onMounted(refreshLink);
       return (_ctx, _cache) => {
         return vue.openBlock(), vue.createElementBlock("div", _hoisted_1$4, [
-          vue.createVNode(vue.unref(_sfc_main$1f), { class: "mb-3 gap-3 py-3" }, {
+          vue.createVNode(vue.unref(_sfc_main$1e), { class: "mb-3 gap-3 py-3" }, {
             default: vue.withCtx(() => [
-              vue.createVNode(vue.unref(_sfc_main$1b), { class: "px-3.5" }, {
+              vue.createVNode(vue.unref(_sfc_main$1a), { class: "px-3.5" }, {
                 default: vue.withCtx(() => [
-                  vue.createVNode(vue.unref(_sfc_main$1a), { class: "flex items-center justify-between gap-2 text-sm" }, {
+                  vue.createVNode(vue.unref(_sfc_main$19), { class: "flex items-center justify-between gap-2 text-sm" }, {
                     default: vue.withCtx(() => _cache[1] || (_cache[1] = [
                       vue.createElementVNode("span", null, "电脑接收 · 本机专属链接", -1),
                       vue.createElementVNode("span", { class: "rounded border border-primary/40 bg-primary/15 px-2 py-0.5 text-xs font-normal text-primary" }, " 手机扫码即上传 ", -1)
@@ -21168,7 +21101,7 @@ primary: "#07C160"
                 ]),
                 _: 1
               }),
-              vue.createVNode(vue.unref(_sfc_main$1d), { class: "px-3.5" }, {
+              vue.createVNode(vue.unref(_sfc_main$1c), { class: "px-3.5" }, {
                 default: vue.withCtx(() => [
                   link.value ? (vue.openBlock(), vue.createElementBlock("div", _hoisted_2$4, [
                     vue.createElementVNode("div", _hoisted_3$4, [
@@ -21183,7 +21116,7 @@ primary: "#07C160"
                     vue.createElementVNode("div", _hoisted_6$2, [
                       _cache[4] || (_cache[4] = vue.createElementVNode("div", { class: "mb-1.5 text-xs text-muted-foreground/70" }, "链接（复制到手机浏览器打开）", -1)),
                       vue.createElementVNode("div", _hoisted_7$2, vue.toDisplayString(link.value), 1),
-                      vue.createVNode(vue.unref(_sfc_main$1y), {
+                      vue.createVNode(vue.unref(_sfc_main$1x), {
                         class: "mt-2.5 w-full",
                         size: "sm",
                         onClick: _cache[0] || (_cache[0] = ($event) => link.value && vue.unref(safeCopyText)(link.value))
@@ -21194,14 +21127,14 @@ primary: "#07C160"
                         _: 1
                       })
                     ])
-                  ])) : (vue.openBlock(), vue.createBlock(vue.unref(_sfc_main$P), {
+                  ])) : (vue.openBlock(), vue.createBlock(vue.unref(_sfc_main$O), {
                     key: 1,
                     class: "border-0 p-4"
                   }, {
                     default: vue.withCtx(() => [
-                      vue.createVNode(vue.unref(_sfc_main$N), null, {
+                      vue.createVNode(vue.unref(_sfc_main$M), null, {
                         default: vue.withCtx(() => [
-                          vue.createVNode(vue.unref(_sfc_main$M), { variant: "icon" }, {
+                          vue.createVNode(vue.unref(_sfc_main$L), { variant: "icon" }, {
                             default: vue.withCtx(() => [
                               vue.createVNode(vue.unref(Icon$1), {
                                 name: "settings",
@@ -21210,13 +21143,13 @@ primary: "#07C160"
                             ]),
                             _: 1
                           }),
-                          vue.createVNode(vue.unref(_sfc_main$L), { class: "text-sm" }, {
+                          vue.createVNode(vue.unref(_sfc_main$K), { class: "text-sm" }, {
                             default: vue.withCtx(() => _cache[5] || (_cache[5] = [
                               vue.createTextVNode("尚未配置中继服务器")
                             ])),
                             _: 1
                           }),
-                          vue.createVNode(vue.unref(_sfc_main$O), { class: "text-[13px]" }, {
+                          vue.createVNode(vue.unref(_sfc_main$N), { class: "text-[13px]" }, {
                             default: vue.withCtx(() => _cache[6] || (_cache[6] = [
                               vue.createTextVNode(" 请到第一栏「设置」填写中继地址，保存后这里会自动生成扫码链接。 ")
                             ])),
@@ -21247,14 +21180,14 @@ primary: "#07C160"
               vue.createTextVNode(" " + vue.toDisplayString(phoneOnline.value ? "已连接手机 " + _ctx.phones.length + " 台，可收发" : "当前无在线设备，暂不可收发"), 1)
             ], 2)
           ]),
-          _ctx.phones.length ? (vue.openBlock(), vue.createBlock(vue.unref(_sfc_main$1f), {
+          _ctx.phones.length ? (vue.openBlock(), vue.createBlock(vue.unref(_sfc_main$1e), {
             key: 0,
             class: "mb-3 gap-2 py-3"
           }, {
             default: vue.withCtx(() => [
-              vue.createVNode(vue.unref(_sfc_main$1b), { class: "px-3.5" }, {
+              vue.createVNode(vue.unref(_sfc_main$1a), { class: "px-3.5" }, {
                 default: vue.withCtx(() => [
-                  vue.createVNode(vue.unref(_sfc_main$1a), { class: "text-[13px]" }, {
+                  vue.createVNode(vue.unref(_sfc_main$19), { class: "text-[13px]" }, {
                     default: vue.withCtx(() => [
                       vue.createTextVNode("已连接手机（" + vue.toDisplayString(_ctx.phones.length) + "）", 1)
                     ]),
@@ -21263,17 +21196,17 @@ primary: "#07C160"
                 ]),
                 _: 1
               }),
-              vue.createVNode(vue.unref(_sfc_main$1d), { class: "px-3.5" }, {
+              vue.createVNode(vue.unref(_sfc_main$1c), { class: "px-3.5" }, {
                 default: vue.withCtx(() => [
                   (vue.openBlock(true), vue.createElementBlock(vue.Fragment, null, vue.renderList(_ctx.phones, (p) => {
-                    return vue.openBlock(), vue.createBlock(vue.unref(_sfc_main$11), {
+                    return vue.openBlock(), vue.createBlock(vue.unref(_sfc_main$10), {
                       key: p.id || "unknown",
                       size: "xs",
                       variant: "muted",
                       class: "mb-1.5 last:mb-0"
                     }, {
                       default: vue.withCtx(() => [
-                        vue.createVNode(vue.unref(_sfc_main$_), null, {
+                        vue.createVNode(vue.unref(_sfc_main$Z), null, {
                           default: vue.withCtx(() => [
                             vue.createVNode(vue.unref(Icon$1), {
                               name: "smartphone",
@@ -21282,9 +21215,9 @@ primary: "#07C160"
                           ]),
                           _: 1
                         }),
-                        vue.createVNode(vue.unref(_sfc_main$10), null, {
+                        vue.createVNode(vue.unref(_sfc_main$$), null, {
                           default: vue.withCtx(() => [
-                            vue.createVNode(vue.unref(_sfc_main$Z), null, {
+                            vue.createVNode(vue.unref(_sfc_main$Y), null, {
                               default: vue.withCtx(() => [
                                 vue.createVNode(_sfc_main$8, {
                                   id: p.id,
@@ -21293,7 +21226,7 @@ primary: "#07C160"
                               ]),
                               _: 2
                             }, 1024),
-                            vue.createVNode(vue.unref(_sfc_main$$), { class: "text-[11px]" }, {
+                            vue.createVNode(vue.unref(_sfc_main$_), { class: "text-[11px]" }, {
                               default: vue.withCtx(() => _cache[7] || (_cache[7] = [
                                 vue.createTextVNode("在线")
                               ])),
@@ -21412,7 +21345,7 @@ primary: "#07C160"
           width: 480
         }, {
           footer: vue.withCtx(() => [
-            vue.createVNode(vue.unref(_sfc_main$1y), {
+            vue.createVNode(vue.unref(_sfc_main$1x), {
               size: "sm",
               onClick: closeWithCommit
             }, {
@@ -21423,19 +21356,19 @@ primary: "#07C160"
             })
           ]),
           default: vue.withCtx(() => [
-            vue.createVNode(vue.unref(_sfc_main$1s), { class: "gap-4" }, {
+            vue.createVNode(vue.unref(_sfc_main$1r), { class: "gap-4" }, {
               default: vue.withCtx(() => [
-                vue.createVNode(vue.unref(_sfc_main$1v), null, {
+                vue.createVNode(vue.unref(_sfc_main$1u), null, {
                   default: vue.withCtx(() => [
-                    vue.createVNode(vue.unref(_sfc_main$1q), { class: "text-[13px]" }, {
+                    vue.createVNode(vue.unref(_sfc_main$1p), { class: "text-[13px]" }, {
                       default: vue.withCtx(() => _cache[6] || (_cache[6] = [
                         vue.createTextVNode("中继服务器地址")
                       ])),
                       _: 1
                     }),
-                    vue.createVNode(vue.unref(_sfc_main$1m), null, {
+                    vue.createVNode(vue.unref(_sfc_main$1l), null, {
                       default: vue.withCtx(() => [
-                        vue.createVNode(vue.unref(_sfc_main$1i), {
+                        vue.createVNode(vue.unref(_sfc_main$1h), {
                           modelValue: relayDraft.value,
                           "onUpdate:modelValue": _cache[0] || (_cache[0] = ($event) => relayDraft.value = $event),
                           placeholder: "https://你的服务器:端口",
@@ -21446,7 +21379,7 @@ primary: "#07C160"
                       ]),
                       _: 1
                     }),
-                    vue.createVNode(vue.unref(_sfc_main$1t), { class: "text-xs leading-5" }, {
+                    vue.createVNode(vue.unref(_sfc_main$1s), { class: "text-xs leading-5" }, {
                       default: vue.withCtx(() => _cache[7] || (_cache[7] = [
                         vue.createTextVNode(" 手机上传的图片 / 文本经此服务器转发到本机。修改后点其他区域或按回车生效；留空失焦恢复默认地址。 ")
                       ])),
@@ -21455,26 +21388,26 @@ primary: "#07C160"
                   ]),
                   _: 1
                 }),
-                vue.createVNode(vue.unref(_sfc_main$1v), {
+                vue.createVNode(vue.unref(_sfc_main$1u), {
                   orientation: "horizontal",
                   class: "items-start justify-between"
                 }, {
                   default: vue.withCtx(() => [
                     vue.createElementVNode("div", _hoisted_1$3, [
-                      vue.createVNode(vue.unref(_sfc_main$1q), { class: "text-[13px]" }, {
+                      vue.createVNode(vue.unref(_sfc_main$1p), { class: "text-[13px]" }, {
                         default: vue.withCtx(() => _cache[8] || (_cache[8] = [
                           vue.createTextVNode("收到内容时自动打开传输助手")
                         ])),
                         _: 1
                       }),
-                      vue.createVNode(vue.unref(_sfc_main$1t), { class: "text-xs leading-5" }, {
+                      vue.createVNode(vue.unref(_sfc_main$1s), { class: "text-xs leading-5" }, {
                         default: vue.withCtx(() => _cache[9] || (_cache[9] = [
                           vue.createTextVNode(" 关闭时仅累计未读角标，不打扰；窗口已开着则只累加，不强行切换会话。 ")
                         ])),
                         _: 1
                       })
                     ]),
-                    vue.createVNode(_sfc_main$1w, {
+                    vue.createVNode(_sfc_main$1v, {
                       "model-value": vue.unref(store).settings.autoOpenOnReceive,
                       "onUpdate:modelValue": _cache[2] || (_cache[2] = (v) => vue.unref(updateTransferSettings)({ autoOpenOnReceive: v }))
                     }, null, 8, ["model-value"])
@@ -21482,7 +21415,7 @@ primary: "#07C160"
                   _: 1
                 }),
                 vue.createElementVNode("div", _hoisted_2$3, [
-                  !confirmClear.value ? (vue.openBlock(), vue.createBlock(vue.unref(_sfc_main$1y), {
+                  !confirmClear.value ? (vue.openBlock(), vue.createBlock(vue.unref(_sfc_main$1x), {
                     key: 0,
                     variant: "destructive",
                     size: "sm",
@@ -21496,7 +21429,7 @@ primary: "#07C160"
                     _cache[13] || (_cache[13] = vue.createElementVNode("div", { class: "mb-1 text-[13px] text-foreground" }, "清空全部传输记录", -1)),
                     _cache[14] || (_cache[14] = vue.createElementVNode("div", { class: "mb-2 text-xs text-muted-foreground" }, " 所有会话的图片与文本都会被移除（仅清理本机内存，不影响手机上的文件） ", -1)),
                     vue.createElementVNode("div", _hoisted_4$3, [
-                      vue.createVNode(vue.unref(_sfc_main$1y), {
+                      vue.createVNode(vue.unref(_sfc_main$1x), {
                         variant: "outline",
                         size: "xs",
                         onClick: _cache[4] || (_cache[4] = ($event) => confirmClear.value = false)
@@ -21506,7 +21439,7 @@ primary: "#07C160"
                         ])),
                         _: 1
                       }),
-                      vue.createVNode(vue.unref(_sfc_main$1y), {
+                      vue.createVNode(vue.unref(_sfc_main$1x), {
                         variant: "destructive",
                         size: "xs",
                         onClick: doClearAll
@@ -21575,7 +21508,7 @@ primary: "#07C160"
           width: 440
         }, {
           footer: vue.withCtx(() => [
-            vue.createVNode(vue.unref(_sfc_main$1y), {
+            vue.createVNode(vue.unref(_sfc_main$1x), {
               size: "sm",
               onClick: _cache[1] || (_cache[1] = ($event) => open.value = false)
             }, {
@@ -21601,7 +21534,7 @@ primary: "#07C160"
               vue.createElementVNode("span", _hoisted_4$2, [
                 vue.createVNode(_sfc_main$8, { id: vue.unref(deviceId) }, null, 8, ["id"]),
                 vue.createElementVNode("span", _hoisted_5$1, vue.toDisplayString(vue.unref(deviceId)), 1),
-                vue.createVNode(vue.unref(_sfc_main$1y), {
+                vue.createVNode(vue.unref(_sfc_main$1x), {
                   variant: "ghost",
                   size: "icon-xs",
                   "aria-label": "复制设备 ID",
@@ -21650,7 +21583,7 @@ primary: "#07C160"
                 style: { "flex": "0 0 92px" }
               }, "项目主页", -1)),
               vue.createElementVNode("span", _hoisted_14, [
-                vue.createVNode(vue.unref(_sfc_main$1y), {
+                vue.createVNode(vue.unref(_sfc_main$1x), {
                   variant: "link",
                   size: "xs",
                   class: "h-auto px-0 text-[13px]",
@@ -21925,16 +21858,16 @@ primary: "#07C160"
                       }, {
                         default: vue.withCtx(() => [
                           vue.createElementVNode("div", _hoisted_1$1, [
-                            vue.createVNode(vue.unref(_sfc_main$1f), {
+                            vue.createVNode(vue.unref(_sfc_main$1e), {
                               ref_key: "cardRef",
                               ref: cardRef,
                               class: "h-168 max-h-[calc(100vh-96px)] w-full gap-0 pt-0 shadow-lg !bg-black !ring-[rgb(34,34,34)]"
                             }, {
                               default: vue.withCtx(() => [
-                                vue.createVNode(vue.unref(_sfc_main$1b), { class: "shrink-0 items-center gap-1 py-3 [border-bottom:1px_solid_rgb(34,34,34)]" }, {
+                                vue.createVNode(vue.unref(_sfc_main$1a), { class: "shrink-0 items-center gap-1 py-3 [border-bottom:1px_solid_rgb(34,34,34)]" }, {
                                   default: vue.withCtx(() => [
                                     vue.createElementVNode("div", _hoisted_2$1, [
-                                      vue.createVNode(vue.unref(_sfc_main$1a), { class: "truncate" }, {
+                                      vue.createVNode(vue.unref(_sfc_main$19), { class: "truncate" }, {
                                         default: vue.withCtx(() => _cache[13] || (_cache[13] = [
                                           vue.createTextVNode("传输助手")
                                         ])),
@@ -21942,14 +21875,14 @@ primary: "#07C160"
                                       }),
                                       vue.createElementVNode("span", _hoisted_3$1, vue.toDisplayString(headerText.value), 1)
                                     ]),
-                                    vue.createVNode(vue.unref(_sfc_main$1e), { class: "flex items-center gap-1.5 self-center" }, {
+                                    vue.createVNode(vue.unref(_sfc_main$1d), { class: "flex items-center gap-1.5 self-center" }, {
                                       default: vue.withCtx(() => [
-                                        vue.createVNode(_sfc_main$1x, {
+                                        vue.createVNode(_sfc_main$1w, {
                                           content: "清空聊天记录",
                                           side: "bottom"
                                         }, {
                                           default: vue.withCtx(() => [
-                                            vue.createVNode(vue.unref(_sfc_main$1y), {
+                                            vue.createVNode(vue.unref(_sfc_main$1x), {
                                               variant: "outline",
                                               size: "icon-sm",
                                               class: "!size-7 !rounded-full",
@@ -21968,12 +21901,12 @@ primary: "#07C160"
                                           ]),
                                           _: 1
                                         }),
-                                        vue.createVNode(_sfc_main$1x, {
+                                        vue.createVNode(_sfc_main$1w, {
                                           content: "全部文件",
                                           side: "bottom"
                                         }, {
                                           default: vue.withCtx(() => [
-                                            vue.createVNode(vue.unref(_sfc_main$1y), {
+                                            vue.createVNode(vue.unref(_sfc_main$1x), {
                                               variant: "outline",
                                               size: "icon-sm",
                                               class: "!size-7 !rounded-full",
@@ -21992,11 +21925,35 @@ primary: "#07C160"
                                           ]),
                                           _: 1
                                         }),
-                                        vue.createVNode(vue.unref(_sfc_main$A), null, {
+                                        vue.createVNode(_sfc_main$1w, {
+                                          content: "扫码连接手机",
+                                          side: "bottom"
+                                        }, {
+                                          default: vue.withCtx(() => [
+                                            vue.createVNode(vue.unref(_sfc_main$1x), {
+                                              variant: "outline",
+                                              size: "icon-sm",
+                                              class: "!size-7 !rounded-full",
+                                              "aria-label": "扫码连接手机",
+                                              title: "扫码连接手机",
+                                              onClick: _cache[1] || (_cache[1] = ($event) => pairOpen.value = true)
+                                            }, {
+                                              default: vue.withCtx(() => [
+                                                vue.createVNode(vue.unref(Icon$1), {
+                                                  name: "qr",
+                                                  size: 14
+                                                })
+                                              ]),
+                                              _: 1
+                                            })
+                                          ]),
+                                          _: 1
+                                        }),
+                                        vue.createVNode(vue.unref(_sfc_main$z), null, {
                                           default: vue.withCtx(() => [
                                             vue.createVNode(vue.unref(_sfc_main$w), { "as-child": "" }, {
                                               default: vue.withCtx(() => [
-                                                vue.createVNode(vue.unref(_sfc_main$1y), {
+                                                vue.createVNode(vue.unref(_sfc_main$1x), {
                                                   variant: "outline",
                                                   size: "icon-sm",
                                                   class: "!size-7 !rounded-full",
@@ -22014,26 +21971,13 @@ primary: "#07C160"
                                               ]),
                                               _: 1
                                             }),
-                                            vue.createVNode(vue.unref(_sfc_main$z), {
+                                            vue.createVNode(vue.unref(_sfc_main$y), {
                                               align: "end",
                                               side: "bottom",
                                               class: "w-44"
                                             }, {
                                               default: vue.withCtx(() => [
-                                                vue.createVNode(vue.unref(_sfc_main$y), {
-                                                  onSelect: _cache[1] || (_cache[1] = ($event) => pairOpen.value = true)
-                                                }, {
-                                                  default: vue.withCtx(() => [
-                                                    vue.createVNode(vue.unref(Icon$1), {
-                                                      name: "qr",
-                                                      size: 15
-                                                    }),
-                                                    _cache[14] || (_cache[14] = vue.createTextVNode(" 扫码连接手机 "))
-                                                  ]),
-                                                  _: 1
-                                                }),
-                                                vue.createVNode(vue.unref(_sfc_main$x)),
-                                                vue.createVNode(vue.unref(_sfc_main$y), {
+                                                vue.createVNode(vue.unref(_sfc_main$x), {
                                                   onSelect: _cache[2] || (_cache[2] = ($event) => settingsOpen.value = true)
                                                 }, {
                                                   default: vue.withCtx(() => [
@@ -22041,11 +21985,11 @@ primary: "#07C160"
                                                       name: "settings",
                                                       size: 15
                                                     }),
-                                                    _cache[15] || (_cache[15] = vue.createTextVNode(" 设置 "))
+                                                    _cache[14] || (_cache[14] = vue.createTextVNode(" 设置 "))
                                                   ]),
                                                   _: 1
                                                 }),
-                                                vue.createVNode(vue.unref(_sfc_main$y), {
+                                                vue.createVNode(vue.unref(_sfc_main$x), {
                                                   onSelect: _cache[3] || (_cache[3] = ($event) => aboutOpen.value = true)
                                                 }, {
                                                   default: vue.withCtx(() => [
@@ -22053,7 +21997,7 @@ primary: "#07C160"
                                                       name: "info",
                                                       size: 15
                                                     }),
-                                                    _cache[16] || (_cache[16] = vue.createTextVNode(" 关于 "))
+                                                    _cache[15] || (_cache[15] = vue.createTextVNode(" 关于 "))
                                                   ]),
                                                   _: 1
                                                 })
@@ -22065,7 +22009,7 @@ primary: "#07C160"
                                         }),
                                         vue.createVNode(vue.unref(DialogClose_default), { "as-child": "" }, {
                                           default: vue.withCtx(() => [
-                                            vue.createVNode(vue.unref(_sfc_main$1y), {
+                                            vue.createVNode(vue.unref(_sfc_main$1x), {
                                               variant: "outline",
                                               size: "icon-sm",
                                               class: "!size-7 !rounded-full",
@@ -22089,7 +22033,7 @@ primary: "#07C160"
                                   ]),
                                   _: 1
                                 }),
-                                vue.createVNode(vue.unref(_sfc_main$1d), { class: "min-h-0 flex-1 overflow-hidden !bg-black p-0" }, {
+                                vue.createVNode(vue.unref(_sfc_main$1c), { class: "min-h-0 flex-1 overflow-hidden !bg-black p-0" }, {
                                   default: vue.withCtx(() => [
                                     vue.createVNode(vue.unref(_sfc_main$v), null, {
                                       default: vue.withCtx(() => [
@@ -22175,7 +22119,7 @@ primary: "#07C160"
                                   ]),
                                   _: 1
                                 }),
-                                vue.createVNode(vue.unref(_sfc_main$1c), { class: "shrink-0 flex-col gap-2" }, {
+                                vue.createVNode(vue.unref(_sfc_main$1b), { class: "shrink-0 flex-col gap-2" }, {
                                   default: vue.withCtx(() => [
                                     vue.createElementVNode("form", {
                                       class: "w-full",
@@ -22239,7 +22183,7 @@ primary: "#07C160"
             ]),
             _: 1
           }, 8, ["open"]),
-          vue.createVNode(_sfc_main$C, {
+          vue.createVNode(_sfc_main$B, {
             open: previewOpen.value,
             "onUpdate:open": _cache[10] || (_cache[10] = ($event) => previewOpen.value = $event),
             items: imageUrls.value,
@@ -22458,12 +22402,12 @@ primary: "#07C160"
             ])),
             _cache[26] || (_cache[26] = vue.createElementVNode("span", { class: "min-w-0 truncate text-[15px] font-bold leading-6" }, "征纳互动监控", -1)),
             vue.createElementVNode("span", _hoisted_2, " v" + vue.toDisplayString(vue.unref(VERSION)), 1),
-            vue.createVNode(_sfc_main$1x, {
+            vue.createVNode(_sfc_main$1w, {
               content: isDark.value ? "切换到日间模式（白底 / 蓝色）" : "切换到夜间模式（黑底 / 绿色）",
               side: "bottom"
             }, {
               default: vue.withCtx(() => [
-                vue.createVNode(vue.unref(_sfc_main$1y), {
+                vue.createVNode(vue.unref(_sfc_main$1x), {
                   variant: "ghost",
                   size: "icon-sm",
                   class: "ml-auto text-muted-foreground",
@@ -22481,7 +22425,7 @@ primary: "#07C160"
               ]),
               _: 1
             }, 8, ["content"]),
-            vue.createVNode(vue.unref(_sfc_main$1y), {
+            vue.createVNode(vue.unref(_sfc_main$1x), {
               variant: "ghost",
               size: "icon-sm",
               class: "text-muted-foreground",
@@ -22519,20 +22463,20 @@ primary: "#07C160"
                 ], 2),
                 _cache[27] || (_cache[27] = vue.createTextVNode(" 语音播报 "))
               ]),
-              vue.createVNode(_sfc_main$1w, {
+              vue.createVNode(_sfc_main$1v, {
                 "model-value": voiceEnabled.value,
                 "onUpdate:modelValue": toggleVoice
               }, null, 8, ["model-value"])
             ]),
             vue.createElementVNode("div", _hoisted_6, [
               (vue.openBlock(), vue.createElementBlock(vue.Fragment, null, vue.renderList(PANEL_ACTIONS, (a) => {
-                return vue.createVNode(_sfc_main$1x, {
+                return vue.createVNode(_sfc_main$1w, {
                   key: a.key,
                   content: a.label,
                   side: "top"
                 }, {
                   default: vue.withCtx(() => [
-                    vue.createVNode(vue.unref(_sfc_main$1y), {
+                    vue.createVNode(vue.unref(_sfc_main$1x), {
                       variant: "outline",
                       size: "lg",
                       class: "znhd-panel-btn h-10 min-w-0 gap-0.5 px-1",
@@ -22556,7 +22500,7 @@ primary: "#07C160"
             ]),
             vue.createElementVNode("div", _hoisted_9, [
               vue.createElementVNode("span", _hoisted_10, vue.toDisplayString(lastSpeakText(mon.value.lastSpeak)), 1),
-              vue.createVNode(vue.unref(_sfc_main$1y), {
+              vue.createVNode(vue.unref(_sfc_main$1x), {
                 variant: "link",
                 size: "xs",
                 class: "shrink-0 px-0 text-xs",
@@ -22569,7 +22513,7 @@ primary: "#07C160"
               })
             ])
           ]),
-          vue.createVNode(_sfc_main$12, {
+          vue.createVNode(_sfc_main$11, {
             open: settingsOpen.value,
             "onUpdate:open": _cache[13] || (_cache[13] = ($event) => settingsOpen.value = $event),
             "working-hours": allvalue.value.workingHours,
@@ -22592,7 +22536,7 @@ primary: "#07C160"
             }),
             onOpenChangelog: _cache[17] || (_cache[17] = ($event) => changelogOpen.value = true)
           }, null, 8, ["open", "working-hours", "use-cdn", "sniff-pre-measure"]),
-          vue.createVNode(_sfc_main$J, {
+          vue.createVNode(_sfc_main$I, {
             open: phrasesOpen.value,
             "onUpdate:open": _cache[18] || (_cache[18] = ($event) => phrasesOpen.value = $event),
             "search-keyword": searchKeyword.value,
@@ -22601,7 +22545,7 @@ primary: "#07C160"
             "phrases-loading": phrasesLoading.value,
             onReload: loadPhrasesData
           }, null, 8, ["open", "search-keyword", "phrases-data", "phrases-loading"]),
-          vue.createVNode(_sfc_main$I, {
+          vue.createVNode(_sfc_main$H, {
             open: logOpen.value,
             "onUpdate:open": _cache[20] || (_cache[20] = ($event) => logOpen.value = $event),
             "log-entries": logEntries.value,
@@ -22609,7 +22553,7 @@ primary: "#07C160"
             onClear: vue.unref(clearLogs),
             "onUpdate:autoRefresh": _cache[21] || (_cache[21] = (v) => patchAllvalue({ logAutoRefresh: v }))
           }, null, 8, ["open", "log-entries", "auto-refresh", "onClear"]),
-          vue.createVNode(_sfc_main$H, {
+          vue.createVNode(_sfc_main$G, {
             open: changelogOpen.value,
             "onUpdate:open": _cache[22] || (_cache[22] = ($event) => changelogOpen.value = $event)
           }, null, 8, ["open"]),
@@ -22617,7 +22561,7 @@ primary: "#07C160"
             open: transferOpen.value,
             "onUpdate:open": _cache[23] || (_cache[23] = ($event) => transferOpen.value = $event)
           }, null, 8, ["open"]),
-          vue.createVNode(_sfc_main$B, {
+          vue.createVNode(_sfc_main$A, {
             open: sniffOpen.value,
             "onUpdate:open": _cache[24] || (_cache[24] = ($event) => sniffOpen.value = $event),
             "min-kb": (_a = allvalue.value.sniffMinKB) != null ? _a : 20,

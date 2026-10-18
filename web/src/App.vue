@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { Icon, type IconName } from '@vue/icons';
 import { Toaster } from '@vue/components/ui/sonner';
 import {
@@ -35,6 +35,7 @@ import {
 import { prepareImage } from './lib/image';
 import { useShellViewport } from './lib/viewport';
 import { useLayoutMode } from './lib/layoutMode';
+import { clearChatMessages, loadChatMessages, saveChatMessages, type ChatMsg } from './lib/chatPersist';
 import { groupTurns } from '@vue/transfer/turns';
 
 /**
@@ -60,25 +61,7 @@ const MAX_MSGS = 100;
 /** 时间分隔条阈值：与脚本端一致，间隔超 5 分钟插一条 */
 const TIME_GAP_MS = 5 * 60 * 1000;
 
-interface ChatMsg {
-    id: string;
-    type: 'image' | 'file' | 'text';
-    /** out = 手机发到电脑；in = 电脑发来 */
-    side: 'in' | 'out';
-    text?: string;
-    /** 图片展示地址（out = objectURL；in = data:URL）；文件消息里它是 Blob 的 objectURL（供下载） */
-    url?: string;
-    name?: string;
-    mime?: string;
-    /** 文件消息的字节数（气泡里显示大小；图片不需要，靠自然尺寸展示） */
-    size?: number;
-    /** 发送状态（仅 out；发送中 / 已发送 / 发送失败） */
-    state?: 'sending' | 'failed' | 'ok';
-    /** 上传进度（0–100，仅 state==='sending' 时有意义）；首个 progress 事件到达前是 undefined */
-    progress?: number;
-    err?: string;
-    ts: number;
-}
+/** 消息形态见 `lib/chatPersist.ts`（v26.10.19-v10 起类型随持久化模块走，脚本端同款 7 天 TTL） */
 
 let seq = 0;
 const uid = () => 'z' + ++seq + '-' + Date.now().toString(36);
@@ -225,6 +208,19 @@ function refreshConn() {
     }
     conn.value = { state: 'offline' };
     startRelay();
+}
+
+// ===== 会话持久化（v26.10.19-v10，与脚本端同款：IndexedDB + 7 天 TTL + 手动清空） =====
+onMounted(async () => {
+    msgs.value = await loadChatMessages();
+});
+watch(msgs, (v) => saveChatMessages(v));
+
+/** 手动清空聊天记录（持久化 + 内存态一起清） */
+function clearAll() {
+    msgs.value = [];
+    clearChatMessages();
+    toast.success('已清空聊天记录');
 }
 
 onMounted(() => {
@@ -471,8 +467,18 @@ const footerHint = computed(() => {
                                 v{{ appVersion }}
                             </span>
                         </CardTitle>
-                        <!-- v26.10.19-v9：删掉「本机 id · 电脑 id」描述行；CardAction 加脚本端同款圆形刷新按钮 -->
+                        <!-- v26.10.19-v9：删掉「本机 id · 电脑 id」描述行；CardAction 加脚本端同款圆形刷新按钮
+                             v26.10.19-v10：加「清空聊天记录」（持久化 + 内存态一起清，对齐脚本端） -->
                         <CardAction class="flex items-center gap-1.5">
+                            <button
+                                type="button"
+                                aria-label="清空聊天记录"
+                                title="清空聊天记录"
+                                class="inline-flex size-7 cursor-pointer items-center justify-center rounded-full border border-white/20 bg-transparent p-0 text-white/80 outline-none hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
+                                :disabled="!msgs.length"
+                                @click="clearAll">
+                                <Icon name="rotateCw" :size="14" />
+                            </button>
                             <button
                                 type="button"
                                 aria-label="重新连接"

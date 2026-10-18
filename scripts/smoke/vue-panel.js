@@ -422,8 +422,8 @@ function serve() {
 
     /**
      * 「更多」下拉里点一项：chat 窗口按 shadcn message-scroller 示例收敛为
-     * CardHeader 上的一排 icon 按钮（清空 / 全部文件 / 更多 / 关闭），配对、设置、
-     * 关于收在「更多」dropdown（v26.10.19-v9 起全部文件是标题栏独立按钮）。
+     * CardHeader 上的一排 icon 按钮（清空 / 全部文件 / 扫码连接手机 / 更多 / 关闭），
+     * 设置、关于收在「更多」dropdown（v26.10.19-v9/v11 起全部文件与扫码都是标题栏独立按钮）。
      * 菜单本身 Portal 到 shadowRoot（补丁同 Dialog）。
      */
     async function pickMore(label) {
@@ -542,13 +542,13 @@ function serve() {
         ['清空聊天记录', '更多', '关闭'].every((l) => (transfer.headButtons || []).includes(l));
     // 分界线 = 1px + rgb(34,34,34)（与窗口外框一致）
     report.checks.transferDividerOk = transfer.headerBorder === '1px rgb(34, 34, 34)';
-    // 标题栏 4 个（清空 / 全部文件 / 更多 / 关闭）+ 输入框 2 个 + 滚动到底 1 个：全是 28px 圆形
+    // 标题栏 5 个（清空 / 全部文件 / 扫码连接手机 / 更多 / 关闭）+ 输入框 2 个 + 滚动到底 1 个：全是 28px 圆形
     const isRound28 = (b) => {
         const m = /(\d+)x(\d+)\s+(\d+)/.exec(String(b));
         return !!m && m[1] === '28' && m[2] === '28' && Number(m[3]) >= 9999;
     };
     report.checks.transferBtnShapeOk =
-        transfer.headBtnBox.length === 4 &&
+        transfer.headBtnBox.length === 5 &&
         transfer.headBtnBox.every(isRound28) &&
         transfer.composerBtnBox.length === 2 &&
         transfer.composerBtnBox.every(isRound28) &&

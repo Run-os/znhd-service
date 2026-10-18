@@ -16,7 +16,6 @@ import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
-    DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from '@vue/components/ui/dropdown-menu';
 import {
@@ -371,6 +370,19 @@ const footerHint = computed(() => (sendable.value ? '' : '当前没有在线手�
                                         </Button>
                                     </Tooltip>
 
+                                    <!-- v26.10.19-v11：扫码连接手机也移出到标题栏（下拉只剩 设置 / 关于） -->
+                                    <Tooltip content="扫码连接手机" side="bottom">
+                                        <Button
+                                            variant="outline"
+                                            size="icon-sm"
+                                            class="!size-7 !rounded-full"
+                                            aria-label="扫码连接手机"
+                                            title="扫码连接手机"
+                                            @click="pairOpen = true">
+                                            <Icon name="qr" :size="14" />
+                                        </Button>
+                                    </Tooltip>
+
                                     <DropdownMenu>
                                         <DropdownMenuTrigger as-child>
                                             <Button
@@ -383,11 +395,6 @@ const footerHint = computed(() => (sendable.value ? '' : '当前没有在线手�
                                             </Button>
                                         </DropdownMenuTrigger>
                                         <DropdownMenuContent align="end" side="bottom" class="w-44">
-                                            <DropdownMenuItem @select="pairOpen = true">
-                                                <Icon name="qr" :size="15" />
-                                                扫码连接手机
-                                            </DropdownMenuItem>
-                                            <DropdownMenuSeparator />
                                             <DropdownMenuItem @select="settingsOpen = true">
                                                 <Icon name="settings" :size="15" />
                                                 设置
