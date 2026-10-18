@@ -19,6 +19,25 @@ const USERSCRIPT = path.join(ROOT, 'dist/znhd.user.js');
 const VUE = path.join(ROOT, 'node_modules/vue/dist/vue.global.prod.js');
 
 /**
+ * 浏览器可执行文件探测：与 `scripts/smoke/phone-page.js` **同一份清单**。
+ * （CI 上 PUPPETEER_SKIP_DOWNLOAD=true 依赖 runner 预装的 Chrome；裸 puppeteer.launch()
+ * 只找 puppeteer 自己的缓存目录 —— ubuntu-latest 迁到 Ubuntu 26.04 新镜像后缓存里
+ * 没有浏览器，端到端冒烟即红（v26.10.19 实测，vue-panel 迁移时漏抄了这段）。）
+ */
+const BROWSERS = [
+    process.env.PUPPETEER_EXECUTABLE_PATH,
+    '/usr/bin/google-chrome',
+    '/usr/bin/google-chrome-stable',
+    '/usr/bin/chromium-browser',
+    '/usr/bin/chromium',
+    '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+    'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
+    'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
+    'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
+    'C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe',
+].filter((p) => p && fs.existsSync(p));
+
+/**
  * 产物头里的 `@version`：冒烟用它当 GM_info 桩，并断言面板上显示的版本号。
  * 直接读产物而不是写死 —— 否则「改了代码忘了 bump 版本号」时冒烟依旧全绿，等于没守门。
  */
@@ -168,7 +187,11 @@ function serve() {
 (async () => {
     const server = await serve();
     const port = server.address().port;
-    const browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox'] });
+    const browser = await puppeteer.launch({
+        headless: true,
+        args: ['--no-sandbox'],
+        ...(BROWSERS[0] ? { executablePath: BROWSERS[0] } : {}),
+    });
     const page = await browser.newPage();
     await page.setViewport({ width: 1280, height: 800 });
     // 首启主题跟随系统偏好；headless Chromium 的默认偏好是 dark，会让「日间基线」断言漂移。
