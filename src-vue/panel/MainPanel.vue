@@ -3,6 +3,7 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { addLog, clearLogs, setLogEntriesSink, type LogEntry } from '@/lib/logger';
 import { getMonitorState, resetWaitCountBaseline, setMonitorStateSink, type MonitorState } from '@/lib/monitor';
 import { clearSpeechQueue } from '@/lib/speech';
+import { initTransfer, onTransferAutoOpen, stopTransfer } from '@/lib/transfer/store';
 import { runtime } from '@/lib/state';
 import { loadPhrasesCache, savePhrasesCache, saveAllvalue, type Allvalue } from '@/lib/storage';
 import { readPhrasesFromZnhd, type ZnhdPhrases } from '@/lib/phrasesZnhd';
@@ -19,6 +20,7 @@ import PhrasesSheet from './PhrasesSheet.vue';
 import LogDialog from './LogDialog.vue';
 import ChangelogDialog from './ChangelogDialog.vue';
 import PlaceholderDialog from './PlaceholderDialog.vue';
+import TransferWindow from '@vue/transfer/TransferWindow.vue';
 
 const props = defineProps<{ host: HTMLElement }>();
 const drag = usePanelDrag(props.host);
@@ -58,6 +60,9 @@ const searchKeyword = ref('');
 let phrasesRequestSeq = 0;
 
 const VERSION = GM_info.script.version;
+
+/** 收到手机内容时自动弹窗的取消订阅（卸载时摘掉） */
+let offAutoOpen: (() => void) | null = null;
 
 function patchAllvalue(kv: Partial<Allvalue>) {
     const next = { ...allvalue.value, ...kv };
@@ -159,6 +164,11 @@ onMounted(() => {
     setMonitorStateSink((s) => (mon.value = s));
     mon.value = getMonitorState();
 
+    // 传输助手：收件 / 在线状态必须在窗口不开时也照常工作（store 是模块级的），
+    // 这里只负责「启动」与「收到内容时自动弹窗」（幂等，与 React 版行为一致）
+    initTransfer();
+    offAutoOpen = onTransferAutoOpen(() => (transferOpen.value = true));
+
     addLog('脚本已启动，版本 v' + (VERSION || '?'), 'success');
     const wh = allvalue.value.workingHours || runtime.workingHours;
     if (wh) {
@@ -180,6 +190,9 @@ onMounted(() => {
 onBeforeUnmount(() => {
     setLogEntriesSink(null);
     setMonitorStateSink(null);
+    offAutoOpen?.();
+    offAutoOpen = null;
+    stopTransfer();
 });
 </script>
 
@@ -344,7 +357,7 @@ onBeforeUnmount(() => {
 
         <ChangelogDialog v-model:open="changelogOpen" />
 
-        <PlaceholderDialog v-model:open="transferOpen" title="传输助手" phase="阶段 3" />
+        <TransferWindow v-model:open="transferOpen" />
         <PlaceholderDialog v-model:open="sniffOpen" title="图片嗅探" phase="阶段 4" />
     </div>
 </template>

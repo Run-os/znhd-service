@@ -1,0 +1,84 @@
+<script setup lang="ts">
+import { computed } from 'vue';
+import { Icon } from '@vue/icons';
+import { getDeviceId } from '@/lib/relay';
+import { safeCopyText } from '@/lib/clipboard';
+import { resolveDeviceColors } from '@/lib/ui/transfer/deviceColors';
+import { useTransferStore } from '@vue/composables/useTransferStore';
+import DarkDialog from './DarkDialog.vue';
+import DeviceIdTag from './DeviceIdTag.vue';
+
+/** 企业信息（第一栏底部入口）：排查「连不上」时先确认这几项。 */
+const open = defineModel<boolean>('open', { default: false });
+
+const store = useTransferStore();
+const deviceId = getDeviceId();
+const colors = computed(() => resolveDeviceColors(store.value.phones.map((p) => p.id)));
+const version = computed(() => GM_info?.script?.version || '未知');
+
+function openHome() {
+    window.open('https://github.com/Run-os/znhd-service', '_blank');
+}
+</script>
+
+<template>
+    <DarkDialog v-model:open="open" title="企业信息" :width="440">
+        <div class="flex gap-3 border-b border-white/10 py-[7px]">
+            <span class="shrink-0 text-[13px] opacity-65" style="flex: 0 0 92px">中继服务器</span>
+            <span class="min-w-0 flex-1 break-all text-[13px]">{{ store.settings.relayServer || '（未配置）' }}</span>
+        </div>
+        <div class="flex gap-3 border-b border-white/10 py-[7px]">
+            <span class="shrink-0 text-[13px] opacity-65" style="flex: 0 0 92px">本机设备</span>
+            <span class="inline-flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
+                <DeviceIdTag :id="deviceId" />
+                <span class="text-[11px] opacity-65">{{ deviceId }}</span>
+                <button
+                    type="button"
+                    aria-label="复制设备 ID"
+                    title="复制设备 ID"
+                    class="inline-flex size-6 cursor-pointer items-center justify-center rounded border-0 bg-transparent p-0 text-white/45 outline-none hover:bg-white/10 hover:text-white"
+                    @click="safeCopyText(deviceId)">
+                    <Icon name="copy" :size="13" />
+                </button>
+            </span>
+        </div>
+        <div class="flex gap-3 border-b border-white/10 py-[7px]">
+            <span class="shrink-0 text-[13px] opacity-65" style="flex: 0 0 92px">在线手机</span>
+            <span class="min-w-0 flex-1">
+                <span v-if="store.phones.length" class="inline-flex flex-wrap items-center gap-1.5">
+                    <DeviceIdTag v-for="p in store.phones" :key="p.id || 'unknown'" :id="p.id" :color-index="colors[p.id]" />
+                    <span class="text-[11px] opacity-65">共 {{ store.phones.length }} 台</span>
+                </span>
+                <span v-else class="text-[13px] text-white/50">暂无（手机端打开本机链接后出现）</span>
+            </span>
+        </div>
+        <div class="flex gap-3 border-b border-white/10 py-[7px]">
+            <span class="shrink-0 text-[13px] opacity-65" style="flex: 0 0 92px">脚本版本</span>
+            <span class="min-w-0 flex-1 break-all text-[13px]">{{ version }}</span>
+        </div>
+        <div class="flex gap-3 border-b border-white/10 py-[7px]">
+            <span class="shrink-0 text-[13px] opacity-65" style="flex: 0 0 92px">项目主页</span>
+            <span class="min-w-0 flex-1">
+                <button
+                    type="button"
+                    class="cursor-pointer border-0 bg-transparent p-0 text-[13px] text-[#07C160] outline-none hover:underline"
+                    @click="openHome">
+                    github.com/Run-os/znhd-service
+                </button>
+            </span>
+        </div>
+        <div class="mt-2.5 text-xs text-white/45">
+            提示：排查「连不上」时先看这里 —— 中继地址是否可达、手机是否出现在在线列表里；
+            会话记录保存在本机（IndexedDB），仅保留最近 7 天，超期自动清理。
+        </div>
+
+        <template #footer>
+            <button
+                type="button"
+                class="cursor-pointer rounded-[6px] border-0 bg-[#07C160] px-4 py-1 text-sm text-white outline-none hover:bg-[#06AD56]"
+                @click="open = false">
+                关闭
+            </button>
+        </template>
+    </DarkDialog>
+</template>

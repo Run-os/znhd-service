@@ -21,8 +21,8 @@ import {
     sessionKeyOf,
     setActiveSession,
     setTransferWindowOpen,
-    useTransferStore,
 } from '@/lib/transfer/store';
+import { useTransferStore } from '@/lib/transfer/reactStore';
 import type { DeviceSession, TransferMessage } from '@/lib/transfer/types';
 
 /**

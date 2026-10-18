@@ -3,7 +3,8 @@ import { Button, Input, Modal, Popconfirm, Switch, Typography } from 'antd';
 import { theme } from 'antd';
 import { addLog } from '@/lib/logger';
 import { DEFAULT_RELAY_SERVER } from '@/lib/transfer/settings';
-import { clearAllTransferFiles, updateTransferSettings, useTransferStore } from '@/lib/transfer/store';
+import { clearAllTransferFiles, updateTransferSettings } from '@/lib/transfer/store';
+import { useTransferStore } from '@/lib/transfer/reactStore';
 import { getOverlayContainer } from '@/lib/ui/panelHost';
 
 const { Text } = Typography;

@@ -86,6 +86,115 @@ const ICONS = {
         ['path', { d: 'M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16' }],
         ['path', { d: 'M3 21v-5h5' }],
     ],
+
+    /* ==================================================== 传输助手（阶段 3 新增） */
+    /** 对话（Lucide `message-circle`） */
+    message: [['path', { d: 'M7.9 20A9 9 0 1 0 4 16.1L2 22Z' }]],
+    /** 文件分组（Lucide `folder`） */
+    files: [
+        [
+            'path',
+            {
+                d: 'M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z',
+            },
+        ],
+    ],
+    info: [
+        ['circle', { cx: 12, cy: 12, r: 10 }],
+        ['path', { d: 'M12 16v-4' }],
+        ['path', { d: 'M12 8h.01' }],
+    ],
+    grid: [
+        ['rect', { width: 7, height: 7, x: 3, y: 3, rx: 1 }],
+        ['rect', { width: 7, height: 7, x: 14, y: 3, rx: 1 }],
+        ['rect', { width: 7, height: 7, x: 14, y: 14, rx: 1 }],
+        ['rect', { width: 7, height: 7, x: 3, y: 14, rx: 1 }],
+    ],
+    plus: [
+        ['path', { d: 'M5 12h14' }],
+        ['path', { d: 'M12 5v14' }],
+    ],
+    search: [
+        ['circle', { cx: 11, cy: 11, r: 8 }],
+        ['path', { d: 'm21 21-4.3-4.3' }],
+    ],
+    smartphone: [
+        ['rect', { width: 14, height: 20, x: 5, y: 2, rx: 2, ry: 2 }],
+        ['path', { d: 'M12 18h.01' }],
+    ],
+    send: [
+        ['path', { d: 'm5 12 7-7 7 7' }],
+        ['path', { d: 'M12 19V5' }],
+    ],
+    smile: [
+        ['circle', { cx: 12, cy: 12, r: 10 }],
+        ['path', { d: 'M8 14s1.5 2 4 2 4-2 4-2' }],
+        ['line', { x1: 9, x2: 9.01, y1: 9, y2: 9 }],
+        ['line', { x1: 15, x2: 15.01, y1: 9, y2: 9 }],
+    ],
+    fileText: [
+        ['path', { d: 'M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z' }],
+        ['path', { d: 'M14 2v4a2 2 0 0 0 2 2h4' }],
+        ['path', { d: 'M10 9H8' }],
+        ['path', { d: 'M16 13H8' }],
+        ['path', { d: 'M16 17H8' }],
+    ],
+    paperclip: [
+        [
+            'path',
+            {
+                d: 'm16 6-8.414 8.586a2 2 0 0 0 2.829 2.829l8.414-8.586a4 4 0 1 0-5.657-5.657l-8.379 8.551a6 6 0 1 0 8.485 8.485l8.379-8.551',
+            },
+        ],
+    ],
+    image: [
+        ['rect', { width: 18, height: 18, x: 3, y: 3, rx: 2, ry: 2 }],
+        ['circle', { cx: 9, cy: 9, r: 2 }],
+        ['path', { d: 'm21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21' }],
+    ],
+    user: [
+        ['path', { d: 'M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2' }],
+        ['circle', { cx: 12, cy: 7, r: 4 }],
+    ],
+    trash: [
+        ['path', { d: 'M3 6h18' }],
+        ['path', { d: 'M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6' }],
+        ['path', { d: 'M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2' }],
+        ['line', { x1: 10, x2: 10, y1: 11, y2: 17 }],
+        ['line', { x1: 14, x2: 14, y1: 11, y2: 17 }],
+    ],
+    copy: [
+        ['rect', { width: 14, height: 14, x: 8, y: 8, rx: 2, ry: 2 }],
+        ['path', { d: 'M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2' }],
+    ],
+    download: [
+        ['path', { d: 'M12 15V3' }],
+        ['path', { d: 'M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4' }],
+        ['path', { d: 'm7 10 5 5 5-5' }],
+    ],
+    check: [['path', { d: 'M20 6 9 17l-5-5' }]],
+    printer: [
+        ['path', { d: 'M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2' }],
+        ['path', { d: 'M6 9V3h12v6' }],
+        ['rect', { width: 12, height: 8, x: 6, y: 14, rx: 1 }],
+    ],
+    chevronLeft: [['path', { d: 'm15 18-6-6 6-6' }]],
+    chevronRight: [['path', { d: 'm9 18 6-6-6-6' }]],
+    rotateCw: [
+        ['path', { d: 'M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8' }],
+        ['path', { d: 'M21 3v5h-5' }],
+    ],
+    zoomIn: [
+        ['circle', { cx: 11, cy: 11, r: 8 }],
+        ['path', { d: 'm21 21-4.3-4.3' }],
+        ['path', { d: 'M11 8v6' }],
+        ['path', { d: 'M8 11h6' }],
+    ],
+    zoomOut: [
+        ['circle', { cx: 11, cy: 11, r: 8 }],
+        ['path', { d: 'm21 21-4.3-4.3' }],
+        ['path', { d: 'M8 11h6' }],
+    ],
 } satisfies Record<string, SvgNode[]>;
 
 export type IconName = keyof typeof ICONS;

@@ -5,7 +5,7 @@ import { safeCopyText } from '@/lib/clipboard';
 import { getOverlayContainer } from '@/lib/ui/panelHost';
 import DeviceIdTag from '@/lib/ui/transfer/DeviceIdTag';
 import { resolveDeviceColors } from '@/lib/ui/transfer/deviceColors';
-import { useTransferStore } from '@/lib/transfer/store';
+import { useTransferStore } from '@/lib/transfer/reactStore';
 import { CopyIcon } from '@/lib/ui/icons';
 
 const { Text } = Typography;

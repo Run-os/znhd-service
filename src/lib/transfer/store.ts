@@ -4,7 +4,7 @@
  * ── 为什么是模块级 store 而不是组件 state ──────────────────────────────
  * 传输助手窗口是「按需打开」的弹窗（关闭即卸载），而收件 / 在线状态必须在
  * **窗口不开的时候也照常工作**（手机发图到电脑，电脑端要自动弹窗）。
- * 因此数据放模块级，UI 通过 `useSyncExternalStore` 订阅；图片是 Blob + objectURL，
+ * 因此数据放模块级，UI 通过订阅函数取快照；图片是 Blob + objectURL，
  * v26.10.12-v5 起通过 IndexedDB 持久化（见 `persist.ts`，含 7 天 TTL 自动清理），
  * 载入时机在 `initTransfer`；存储不可用时静默退回纯内存态。
  *
@@ -16,7 +16,6 @@
  *     只有 1 台在线归那台手机的会话，0 或多台在线归聚合会话 `__phone__`。
  * 发送方向知道目标（用户在哪个会话里发、发给哪台），所以发件记录总是进对应会话。
  */
-import { useSyncExternalStore } from 'react';
 import { addLog } from '@/lib/logger';
 import {
     RELAY_MAX_BODY,
@@ -42,7 +41,14 @@ export function sessionKeyOf(phoneId: string): string {
     return phoneId || PHONE_SESSION_KEY;
 }
 
-interface TransferState {
+/**
+ * 传输助手的只读状态快照（v26.10.18-v5：UI 框架无关）。
+ *
+ * ⚠️ 每次变更都替换整个对象（`state = { ...state, ... }`），所以订阅方可以按
+ * **引用比较**判断是否重渲染 —— React 的 `useSyncExternalStore` 与 Vue 的
+ * `shallowRef` 都依赖这一点，别改成原地改字段。
+ */
+export interface TransferState {
     settings: TransferSettings;
     /**
      * 在线手机列表。来源（v26.10.14-v7 起）：
@@ -93,13 +99,20 @@ function subscribe(cb: () => void): () => void {
     };
 }
 
-function getSnapshot(): TransferState {
-    return state;
+/**
+ * 订阅入口（框架无关，v26.10.18-v5）：
+ *   · React 侧包装见 `@/lib/transfer/reactStore` 的 `useTransferStore`；
+ *   · Vue 侧包装见 `@vue/composables/useTransferStore`。
+ * 之所以把 `useSyncExternalStore` 从本文件挪走：Vue 版产物会把 store 打进去，
+ * 一旦本文件 import react，Vue 侧就必须把 react 一起打包（约 140KB，且违背迁移约束）。
+ */
+export function subscribeTransfer(cb: () => void): () => void {
+    return subscribe(cb);
 }
 
-/** React 订阅入口：组件里 `const s = useTransferStore()` 拿到整份 state */
-export function useTransferStore(): TransferState {
-    return useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
+/** 当前状态快照（与 `subscribeTransfer` 配套；引用在每次变更后必然变化） */
+export function getTransferSnapshot(): TransferState {
+    return state;
 }
 
 /* ============================================================ 设置 */
