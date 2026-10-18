@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+        <meta name="color-scheme" content="dark" />
+        <title>传输助手</title>
+        <!-- 内联首屏占位：React+antd 挂载前也能立刻看到反馈（避免白屏等待） -->
+        <style>
+            html,
+            body {
+                margin: 0;
+                background: #1e1e1e;
+            }
+            #boot {
+                display: flex;
+                min-height: 100vh;
+                align-items: center;
+                justify-content: center;
+                gap: 8px;
+                color: #07c160;
+                font: 14px -apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif;
+            }
+            #boot i {
+                width: 14px;
+                height: 14px;
+                border: 2px solid #2f4a3e;
+                border-top-color: #07c160;
+                border-radius: 50%;
+                animation: bootSpin 0.8s linear infinite;
+            }
+            @keyframes bootSpin {
+                to {
+                    transform: rotate(360deg);
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <div id="boot"><i></i><span>正在加载…</span></div>
+        <div id="root"></div>
+        <script type="module" src="/src/main.tsx"></script>
+    </body>
+</html>

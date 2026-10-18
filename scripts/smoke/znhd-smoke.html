@@ -1,0 +1,3315 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>znhd 冒烟测试</title>
+
+    <!-- ===== 模拟真实宿主页面的「敌意 CSS」=====
+         本脚本的面板/弹窗是注入到**别人页面**里的：税务页有全局 text-align:center、
+         非 border-box 盒模型、自定义 svg 对齐等规则，会污染 antd 组件外观
+         （v26.10.06-v11 的「弹窗文字全居中 + 输入框图标偏移」就是这么来的）。
+         这里常驻几条同类规则，作为样式隔离层（lib/ui/uiReset.ts + 弹窗 styles.body）的回归守卫。 -->
+    <style>
+      html,
+      body {
+        text-align: center; /* 旧代码靠显式 textAlign:'left' 守，去掉就会整屏居中 */
+      }
+      body * {
+        box-sizing: content-box; /* 非 border-box，验证隔离层是否复位 */
+      }
+      /* 实测抓到的真凶：某第三方样式给 svg 加了负上边距（用户环境里时钟图标的
+         margin: -2.75em auto 0 ≈ -44px），把 antd 图标整体顶出输入框。
+         常驻这条规则，「时间图标与输入框同一水平线」断言才有牙齿。 */
+      svg {
+        margin: -2.75em auto 0;
+      }
+      /* ★ v26.10.08-v7：税务页 body 上带 transform 会形成独立层叠上下文，把 position:fixed 的浮层
+         **困在 body 的盒子里**（本仓库 panelHost.tsx 有结论）。这里常驻这条规则，守卫两类事情：
+           ① 我们的面板/弹窗挂 documentElement ⇒ 不受影响；
+           ② antd Image 预览默认挂 body ⇒ 必须显式 getContainer 改挂 documentElement，否则工具栏会被推出视口、
+             表现为「放大后图片盖住了下方的操作栏」（真实用户反馈的就是这个）。
+         实测（1280×800、页面滚到 y=600）：不修时预览根 y=-579/h=3000、工具栏 y=2330（视口外）。 */
+      body {
+        transform: translateZ(0);
+      }
+    </style>
+
+    <!-- ===== GM API 桩（模拟油猴环境 + 按真实中继协议返回数据） ===== -->
+    <script>
+      // 先落一份干净的配置（脚本读 localStorage，不读 GM_getValue）
+      localStorage.removeItem('scriptCat_PhrasesCache');
+      localStorage.removeItem('scriptCat_PanelPoint');
+      // v26.10.12-v1：传输助手有**独立**的设置存储（与主设置隔离，见 lib/transfer/settings.ts）。
+      // 这里显式清掉它，确保走「无存量 → 用默认中继地址」这条路径（否则复用上次运行的值会时好时坏）。
+      localStorage.removeItem('scriptCat_TransferSettings');
+      // 预置一份带「旧设置字段」的 Allvalue（v26.10.18-v2 起 commonPhrasesUrl 已从设置里
+      // 删除）：loadAllvalue 必须能容忍存量存储里的多余字段，正常加载不报错。
+      localStorage.setItem(
+        'scriptCat_Allvalue',
+        JSON.stringify({
+          voiceEnabled: false,
+          useCdn: true,
+          commonPhrasesUrl: 'https://example.invalid/legacy-commonPhrases.yaml',
+        })
+      );
+
+      window.__gmXhrLog = [];
+      // v26.10.14-v3：表情包数据层改「中继优先、CDN 兜底」后的请求计数
+      // （relayManifest/relayImage 走中继，cdn = 兜底被触发；断言「零 CDN」用）
+      window.__emojiReq = { relayManifest: 0, relayImage: 0, cdn: 0 };
+      const PNG_1x1 =
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
+      // 收到图片的载荷：用 canvas 生成一张**真实尺寸**的 JPEG（480×360），而不是 1×1 占位 PNG。
+      // 原因：断言里要校验「放大后主图有可见尺寸」（rect > 10px），而 1×1 的图 Viewer 只会渲染成 1px，
+      // 该判定形同虚设（v26.10.8-v1 加断言时踩过：canvasImg/decoded 都 true，只有 visible 因 1px 为 false）。
+      const SMOKE_IMG_B64 = (() => {
+        try {
+          const c = document.createElement('canvas');
+          c.width = 480;
+          c.height = 360;
+          const ctx = c.getContext('2d');
+          ctx.fillStyle = '#e6f2ff';
+          ctx.fillRect(0, 0, 480, 360);
+          for (let i = 0; i < 40; i++) {
+            ctx.fillStyle = 'hsl(' + ((i * 37) % 360) + ',70%,55%)';
+            ctx.fillRect((i * 53) % 420, (i * 97) % 300, 60, 50);
+          }
+          return c.toDataURL('image/jpeg', 0.8).split(',')[1];
+        } catch (e) {
+          return PNG_1x1; // canvas 不可用时退回占位图（可见尺寸断言会因此失败，属预期）
+        }
+      })();
+      // 收到文件的载荷（v26.10.14-v6：任意文件传输通道）。内容无需是真实 PDF —— 脚本端只做
+      // base64 → Blob → objectURL 与「按 mime 走文件卡片」的判断，不解码文件本体；
+      // 给一段确定性字节即可（这里用可读文本，失败时肉眼也能看出是哪条夹具）。
+      const SMOKE_FILE_B64 = (() => {
+        const raw = 'znhd-smoke-file-payload: v26.10.14-v6 文件通道夹具\n';
+        try {
+          const bytes = new TextEncoder().encode(raw);
+          let s = '';
+          for (let i = 0; i < bytes.length; i++) s += String.fromCharCode(bytes[i]);
+          return btoa(s);
+        } catch (e) {
+          return btoa('znhd-smoke-file');
+        }
+      })();
+      // 常用语（v26.10.18-v2）：数据源改为**本页右侧栏「常用话术」**（程序化抓取），
+      // 不再请求 YAML / 腾讯文档 ⇒ 这里没有远程夹具；仿真面板 DOM 在 body 的 #app 里
+      // （#smoke-znhd-sidebar），抓取器点它的文件夹节点、它就地渲染 .auxiliary-item。
+      /** 在线表情包合集名（v26.10.13-v3）：对应 cdn.klyang.com/json/<id>.json 的 name 字段 */
+      const EMOJI_PACK_NAMES = { aluhedwm: '阿鲁和动物们', alurc: '阿鲁日常' };
+      // 更新日志：给 12 条，验证「默认只显示最新 10 条」+ 条数提示（多出的 2 条不渲染）
+      const CHANGELOG_MD = (() => {
+        const parts = ['# 更新日志', '', '本文件是唯一来源。', '', '---', ''];
+        for (let i = 1; i <= 12; i++) {
+          parts.push('### znhd.user.js v99.0.' + i + '-v1');
+          parts.push('');
+          parts.push(i === 1 ? '- 冒烟更新日志标记行' : '- 第 ' + i + ' 条日志内容');
+          parts.push('');
+        }
+        return parts.join('\n');
+      })();
+
+      // 剪贴板写入桩：只**记录**每次 clipboard.write 的条目类型并直接拒绝。
+      // 这样无需真实剪贴板权限即可断言「代码有没有先拿不支持的 jpeg 去试」——
+      // headless 里图片剪贴板根本写不进去（实测即使只写一次 image/png 也会被拒），
+      // 所以断言只能锁「尝试的类型」这个不变量，不能锁「写成功」。
+      window.__copyWriteTypes = [];
+      try {
+        if (typeof Clipboard !== 'undefined' && Clipboard.prototype && Clipboard.prototype.write) {
+          Clipboard.prototype.write = function (items) {
+            window.__copyWriteTypes.push(Array.prototype.map.call(items, (i) => i.types));
+            return Promise.reject(new DOMException('smoke-stub: 桩环境不支持写剪贴板', 'NotAllowedError'));
+          };
+        }
+      } catch (e) {
+        /* 忽略：环境没有 Clipboard 时断言会因「零次调用」而失败，属预期 */
+      }
+
+      // 打印（v26.10.08-v1 起）：react-to-print 会往 body 挂一个 id=printWindow 的隐藏 iframe。
+      // ⚠️ headless 里没有打印对话框，且桌面 UA 下打印完成后 iframe 会被立刻移除，
+      //    所以不能用「iframe 还在不在」判断，必须用 MutationObserver 在**插入那一刻**记录。
+      // 该 iframe 只在「找到了打印内容节点」时才会被挂上（react-to-print 拿不到内容会直接 return），
+      // 因此它出现 = 「按钮 → printImage → doPrint」整条链路真的接通了。
+      // v26.10.08-v4 起再往里看一眼**打印文档本身**：A4 版式（@page size:A4 + 图片框毫米尺寸 + object-fit）
+      // 必须真的注入到 iframe 里，而不是只写在源码里。
+      // 时序说明：react-to-print 是先给 iframe 赋 onload、再 appendChild；我们的监听注册在其后，
+      // 所以本回调触发时它已经把内容克隆进 body、并把 pageStyle 追加进 head 了。
+      window.__printIframeSeen = false;
+      window.__printDoc = null;
+      try {
+        new MutationObserver((muts) => {
+          muts.forEach((m) =>
+            Array.prototype.forEach.call(m.addedNodes, (n) => {
+              if (n && n.id === 'printWindow') {
+                window.__printIframeSeen = true;
+                n.addEventListener('load', () => {
+                  try {
+                    const doc = n.contentDocument;
+                    const img = doc && doc.querySelector('img');
+                    const box = doc && doc.querySelector('body > div');
+                    const styles = doc
+                      ? Array.from(doc.querySelectorAll('style')).map((s) => s.textContent || '')
+                      : [];
+                    window.__printDoc = {
+                      hasImg: !!img,
+                      pageA4: styles.some((t) => /@page/.test(t) && /size:\s*A4/i.test(t)),
+                      // 页眉页脚（v26.10.08-v5）：浏览器把标题/URL/日期/页码画在**页边距**里，
+                      // 故 `@page` 的 margin 必须为 0 —— 没边距它们就没地方画（CSS 无法直接取消那个勾选项）。
+                      pageMarginZero: styles.some((t) => /@page\s*\{[^}]*margin:\s*0\s*[;}]/.test(t)),
+                      boxStyle: box ? box.getAttribute('style') : null,
+                      imgStyle: img ? img.getAttribute('style') : null,
+                    };
+                  } catch (e) {
+                    window.__printDoc = { error: String((e && e.message) || e) };
+                  }
+                });
+              }
+            })
+          );
+        }).observe(document.documentElement, { childList: true, subtree: true });
+      } catch (e) {
+        /* 忽略：不支持 MutationObserver 时断言会因「从未见到 iframe」而失败，属预期 */
+      }
+
+      // extra 用来覆盖默认字段（status/responseHeaders/response），图片嗅探夹具要用到
+      const reply = (details, payload, extra) => {
+        setTimeout(() => {
+          if (typeof details.onload === 'function') {
+            details.onload({
+              status: 200,
+              statusText: 'OK',
+              responseText: typeof payload === 'string' ? payload : JSON.stringify(payload),
+              responseHeaders: '',
+              finalUrl: details.url,
+              ...(extra || {}),
+            });
+          }
+        }, 40);
+      };
+
+      window.GM_info = {
+        // 由 run.js 从构建产物的 ==UserScript== 头读出真实 @version 注入（evaluateOnNewDocument），
+        // 这样「面板渲染的版本号」才是对产物的真实校验，而不是桩里的死值
+        script: { version: window.__scriptVersion || '0.0.0-v0' },
+        scriptHandler: 'smoke-harness',
+        scriptUpdateURL: 'https://example.invalid/znhd.user.js',
+        scriptWillUpdate: false,
+      };
+      window.unsafeWindow = window;
+      window.GM_getValue = (k, d) => (k in (window.__store || {}) ? window.__store[k] : d);
+      window.GM_setValue = (k, v) => {
+        window.__store = window.__store || {};
+        window.__store[k] = v;
+      };
+      window.GM_addStyle = (css) => {
+        const s = document.createElement('style');
+        s.textContent = css;
+        document.head.appendChild(s);
+        return s;
+      };
+      // v26.10.17-v3：剪贴板桩改成**记录**写入内容 —— 常用语按钮点一下会把正文
+      // `safeCopyText(value)` 进来，这是「正文是否按一级标题正确合并」唯一可从外部
+      // 观测到的界面（按钮上只渲染标题 key，正文挂在 Tooltip 的 title 上、hover 才渲染）。
+      window.__gmClipLog = [];
+      window.GM_setClipboard = (text) => {
+        window.__gmClipLog.push(String(text == null ? '' : text));
+      };
+      window.GM_getResourceText = () => '';
+      window.GM_notification = () => {};
+      window.GM_addValueChangeListener = () => {};
+
+      // 表情图桩图（v26.10.14-v3 起中继 /emoji/ 与 CDN 兜底两条路共用同一张）：
+      // 必须返回**真 webp Blob** —— 代码用 responseType:'blob' 取图，并把 blob.type 当 mime
+      // 一路传给发送链路（压缩层据此判「webp 原样直传」、手机端据此定文件名后缀），
+      // 用 PNG 糊弄会让这些断言全都测不到真东西。
+      const replyEmojiWebp = (details) => {
+        const cv = document.createElement('canvas');
+        cv.width = 32;
+        cv.height = 32;
+        const ctx = cv.getContext('2d');
+        ctx.clearRect(0, 0, 32, 32); // 透明背景：与真实表情图一致
+        ctx.fillStyle = '#07C160';
+        ctx.fillRect(4, 4, 24, 24);
+        cv.toBlob((b) => {
+          setTimeout(() => {
+            if (typeof details.onload === 'function') {
+              details.onload({
+                status: 200,
+                statusText: 'OK',
+                response: b,
+                responseText: '',
+                responseHeaders: 'content-type: image/webp',
+                finalUrl: details.url,
+              });
+            }
+          }, 30);
+        }, 'image/webp');
+      };
+
+      window.GM_xmlhttpRequest = (details) => {
+        const url = String((details && details.url) || '');
+        window.__gmXhrLog.push(((details && details.method) || 'GET') + ' ' + url);
+
+        // ===== 两台在线手机的 ID（v26.10.13-v6：/recv 桩按发送者归组要用）=====
+        // 与下面 /phone/status 桩、sessionRouteBySenderOk 断言共用同一组值；
+        // 两个 ID 前 8 位不同，才能验证「按短 ID 区分展示」不会把两台显示成同一个。
+        const _SMOKE_PHONE_A = '11111111-1111-4111-8111-111111111111';
+        const _SMOKE_PHONE_B = '22222222-2222-4222-8222-222222222222';
+
+        // 常用语（v26.10.18-v2）不再发任何网络请求（数据源 = 本页话术面板）；
+        // 若有桩命中 commonPhrases / dop-api ⇒ 说明旧链路没删干净，phrasesNoXhrOk 会红。
+
+        // 更新日志 changelogs/YYYY-MM.md（当月文件）：走成功路径
+        if (url.includes('changelogs/')) {
+          reply(details, CHANGELOG_MD);
+          return { abort: () => {} };
+        }
+        // 「发送测试图片」（v26.10.08-v10）随机图源：返回一张**真 Blob**（我们的代码用 responseType:'blob'）
+        if (url.indexOf('t.alcy.cc') >= 0) {
+          const cv = document.createElement('canvas');
+          cv.width = 200;
+          cv.height = 150;
+          const ctx = cv.getContext('2d');
+          ctx.fillStyle = '#7c3aed';
+          ctx.fillRect(0, 0, 200, 150);
+          ctx.fillStyle = '#ffffff';
+          ctx.font = 'bold 24px sans-serif';
+          ctx.fillText('TEST', 62, 88);
+          cv.toBlob((b) => {
+            setTimeout(() => {
+              if (typeof details.onload === 'function') {
+                details.onload({
+                  status: 200,
+                  statusText: 'OK',
+                  response: b,
+                  responseText: '',
+                  responseHeaders: 'content-type: image/png',
+                  finalUrl: url,
+                });
+              }
+            }, 40);
+          }, 'image/png');
+          return { abort: () => {} };
+        }
+        // ===== 中继表情包服务（v26.10.14-v3：数据层改为「中继优先、CDN 兜底」）==========
+        // 脚本端先打 <中继地址>/emoji/packs.json（合并清单，条目带 path + src），图片再打
+        // <中继地址>/emoji/<合集>/<文件>；只有中继整体失败才回退下面的 cdn.klyang.com 分支。
+        // 桩按同一优先级作答并分别计数 —— 「兜底零触发」才是中继优先真的生效的直接证据。
+        // 中继地址取自传输助手设置（fixture 清掉了设置 ⇒ 默认 https://znhd.122050.xyz），
+        // 故这里按 URL 路径后缀匹配，不写死主机名。
+        if (url.indexOf('/emoji/packs.json') >= 0) {
+          window.__emojiReq.relayManifest++;
+          reply(details, {
+            version: 1,
+            ts: Date.now(),
+            // 形态与 relay-server/emoji-store.js 的 normalizePack 产出一致
+            // （path = 中继图片路径，src = CDN 原址，客户端中继失败时按 src 兜底）
+            packs: [
+              {
+                id: 'aluhedwm',
+                name: EMOJI_PACK_NAMES.aluhedwm,
+                items: [
+                  {
+                    key: '01',
+                    name: 'aluhedwm-01.webp',
+                    path: '/emoji/aluhedwm/aluhedwm-01.webp',
+                    src: 'https://cdn.klyang.com/emo/smoke/aluhedwm/01.webp',
+                  },
+                  {
+                    key: '02',
+                    name: 'aluhedwm-02.webp',
+                    path: '/emoji/aluhedwm/aluhedwm-02.webp',
+                    src: 'https://cdn.klyang.com/emo/smoke/aluhedwm/02.webp',
+                  },
+                ],
+              },
+              {
+                id: 'alurc',
+                name: EMOJI_PACK_NAMES.alurc,
+                items: [
+                  {
+                    key: '01',
+                    name: 'alurc-01.webp',
+                    path: '/emoji/alurc/alurc-01.webp',
+                    src: 'https://cdn.klyang.com/emo/smoke/alurc/01.webp',
+                  },
+                  {
+                    key: '02',
+                    name: 'alurc-02.webp',
+                    path: '/emoji/alurc/alurc-02.webp',
+                    src: 'https://cdn.klyang.com/emo/smoke/alurc/02.webp',
+                  },
+                ],
+              },
+            ],
+          });
+          return { abort: () => {} };
+        }
+        // 中继图片本体（relay-store 服务形态；真实中继缺失时会按需补图，桩直接给图）
+        if (/\/emoji\/[a-zA-Z0-9_-]{1,40}\/[A-Za-z0-9._-]{1,80}$/.test(url)) {
+          window.__emojiReq.relayImage++;
+          replyEmojiWebp(details);
+          return { abort: () => {} };
+        }
+        // ===== 在线表情包（v26.10.13-v3）：CDN 兜底路径（v26.10.14-v3 起正常不该被走到）====
+        // 为什么要桩：表情面板的数据源是公网 CDN，CI / 断网机器拿不到。冒烟只验「拿到数据之后
+        // 的 UI 与接入对不对」，真实 CDN 链路由真机验证覆盖。
+        if (url.indexOf('cdn.klyang.com/json/') >= 0) {
+          window.__emojiReq.cdn++;
+          const id = (url.split('/').pop() || '').replace('.json', '');
+          reply(details, {
+            name: EMOJI_PACK_NAMES[id] || id,
+            type: 'image',
+            items: [
+              { key: '01', val: 'https://cdn.klyang.com/emo/smoke/' + id + '/01.webp' },
+              { key: '02', val: 'https://cdn.klyang.com/emo/smoke/' + id + '/02.webp' },
+            ],
+          });
+          return { abort: () => {} };
+        }
+        // 表情图本体（CDN 兜底）：与中继路径共用同一张桩图
+        if (url.indexOf('cdn.klyang.com/emo/') >= 0) {
+          window.__emojiReq.cdn++;
+          replyEmojiWebp(details);
+          return { abort: () => {} };
+        }
+        // 「发送测试图片」投递：POST /u/<deviceId>（手机上传同一条路径）→ 记录载荷供断言
+        if (/\/u\/[a-z0-9-]{8,64}$/i.test(url) && String(details.method || '').toUpperCase() === 'POST') {
+          try {
+            window.__testImageSent = JSON.parse(details.data || '{}');
+          } catch (e) {
+            window.__testImageSent = { parseErr: String((e && e.message) || e) };
+          }
+          reply(details, { ok: true });
+          return { abort: () => {} };
+        }
+        // 手机在线状态：模拟**两台**手机在线（v26.10.06-v4：多手机 + 定向投递相关断言）。
+        // 两个 ID 前 8 位不同，才能验证「按短 ID 区分展示」不会把两台显示成同一个。
+        if (/\/phone\/status\//.test(url)) {
+          reply(details, {
+            online: true,
+            phones: [
+              { id: _SMOKE_PHONE_A, lastSeen: Date.now() },
+              { id: _SMOKE_PHONE_B, lastSeen: Date.now() },
+            ],
+          });
+          return { abort: () => {} };
+        }
+        // 发送到手机：记录实际 POST 的载荷，用于校验「先压缩再发」（v26.10.06-v6 回归断言）
+        // v26.10.12-v1：发送入口从「设备互联」抽屉搬到传输助手的设备会话聊天区，走同一条 /phone/send。
+        if (/\/phone\/send\//.test(url)) {
+          try {
+            window.__phoneSent = window.__phoneSent || [];
+            window.__phoneSent.push(JSON.parse((details && details.data) || '{}'));
+          } catch (e) {
+            window.__phoneSendErr = String((e && e.message) || e);
+          }
+          reply(details, { ok: true });
+          return { abort: () => {} };
+        }
+        // 中继收件长轮询：先空响应确认连接，再给一条文本、一张图片，之后空转。
+        // v26.10.13-v6：文本/图片都带 `from` = 手机 A —— 两台在线时内容按发送者归组，
+        // 进各自手机的会话，不再全挤进聚合会话「手机」（用户报的 bug 的回归断言）。
+        // 第 4 次：一条**文件**（v26.10.14-v6 新增的文件通道；中继按 mime 分流 → type 'file'）。
+        // 第 5 次起且 __routePhase 已置位：补发一条**来自手机 B** 的文本（只发一次），
+        // 供 sessionRouteBySenderOk 断言「B 的内容进 B 的会话、且不在当前会话里」。
+        if (/\/recv\//.test(url)) {
+          // P5 指数退避探针（v26.10.14-v8）：探针窗口内一律拒绝，逼客户端走重试/退避分支。
+          // ⚠️ 必须排在 __recvCount 自增**之前** —— 否则探针会吃掉正常内容序列（文本/图片/文件），
+          //    后面三条内容断言会莫名其妙地红。
+          if (window.__recvProbeActive) {
+            if (window.__recvFailWith === 429) {
+              reply(details, { error: 'probe: too many requests' }, {
+                status: 429,
+                statusText: 'Too Many Requests',
+              });
+            } else {
+              setTimeout(() => {
+                if (details && typeof details.onerror === 'function') {
+                  details.onerror({ status: 0, statusText: 'backoff-probe' });
+                }
+              }, 40);
+            }
+            return { abort: () => {} };
+          }
+          const n = (window.__recvCount = (window.__recvCount || 0) + 1);
+          // v26.10.14-v7（P0-b）：真实中继会给**每一个** /recv 响应捎带在线手机名单
+          // （投递条目 / {empty:true} 超时都得带）。桩照做，让「名单由长轮询 piggyback
+          // 送达」这条新路径在冒烟里被真正走到 —— 否则断言只在按需查询那条路上过。
+          window.__recvPhonesSeen = (window.__recvPhonesSeen || 0) + 1;
+          const _PHONES = [
+            { id: _SMOKE_PHONE_A, lastSeen: Date.now() },
+            { id: _SMOKE_PHONE_B, lastSeen: Date.now() },
+          ];
+          const rv = (obj) => reply(details, Object.assign({ phones: _PHONES }, obj));
+          if (n === 1) rv({ empty: true });
+          else if (n === 2)
+            rv({ type: 'text', text: '冒烟测试文本：收到一条文本消息', ts: Date.now(), from: _SMOKE_PHONE_A });
+          else if (n === 3)
+            rv({
+              type: 'image',
+              name: 'smoke.jpg',
+              mime: 'image/jpeg',
+              data: SMOKE_IMG_B64,
+              ts: Date.now(),
+              from: _SMOKE_PHONE_A,
+            });
+          else if (n === 4)
+            rv({
+              type: 'file',
+              name: '冒烟测试文档.pdf',
+              mime: 'application/pdf',
+              data: SMOKE_FILE_B64,
+              ts: Date.now(),
+              from: _SMOKE_PHONE_A,
+            });
+          else if (n >= 5 && window.__routePhase && !window.__routeTextSent) {
+            window.__routeTextSent = true;
+            rv({
+              type: 'text',
+              text: '归组测试：来自第二台手机的文本',
+              ts: Date.now(),
+              from: _SMOKE_PHONE_B,
+            });
+          } else rv({ empty: true });
+          return { abort: () => {} };
+        }
+        // ===== 图片嗅探夹具（v26.10.10-v4）：按 URL 分支作答，覆盖测量阶梯 =====
+        // ③ HEAD 给 content-length（走「HEAD 响应头」阶梯 → 30720 B = 30 KB）
+        if (url.indexOf('/sniff-head.png') >= 0) {
+          reply(details, '', { responseHeaders: 'content-type: image/png\ncontent-length: 30720' });
+          return { abort: () => {} };
+        }
+        // ④ HEAD 故意不给 content-length（逼出 Range 阶梯）→ Range GET 回 40960 B 的 Blob = 40 KB
+        if (url.indexOf('/sniff-range.png') >= 0) {
+          if (String(details.method || 'GET').toUpperCase() === 'HEAD') {
+            reply(details, '', { responseHeaders: 'content-type: image/png' });
+            return { abort: () => {} };
+          }
+          reply(details, '', {
+            response: new Blob([new Uint8Array(40960)], { type: 'image/png' }),
+            responseText: '',
+            responseHeaders: 'content-type: image/png',
+          });
+          return { abort: () => {} };
+        }
+        // ⑨ .svg 文件（v26.10.10-v7）：后缀命中排除规则 ⇒ 连请求都不会发（桩留着是为了反向验证时看得出来）
+        if (url.indexOf('/media/icon.svg') >= 0) {
+          reply(details, '', { responseHeaders: 'content-type: image/svg+xml\ncontent-length: 30720' });
+          return { abort: () => {} };
+        }
+        // ⑦ 10 KB 的普通 http 图（名字不命中排除规则）→ 低于阈值：不显示卡片、不计数、不进全选范围（v26.10.10-v6）
+        if (url.indexOf('/sniff-small.png') >= 0) {
+          reply(details, '', { responseHeaders: 'content-type: image/png\ncontent-length: 10240' });
+          return { abort: () => {} };
+        }
+        // ⑥ HEAD 404：尺寸测不到，但仍是图片 URL ⇒ 必须留在「大小未知」组（不丢）
+        if (url.indexOf('/sniff-missing.png') >= 0) {
+          reply(details, '', { status: 404, statusText: 'Not Found' });
+          return { abort: () => {} };
+        }
+        // ⑩⑪ 会话分组夹具（v26.10.13-v8）：两张图属于两个会话，HEAD 给不同体积（50 / 60 KB）
+        if (url.indexOf('/im-cos/11/sniff-conv-a.png') >= 0) {
+          reply(details, '', { responseHeaders: 'content-type: image/png\ncontent-length: 51200' });
+          return { abort: () => {} };
+        }
+        if (url.indexOf('/im-cos/11/sniff-conv-b.png') >= 0) {
+          reply(details, '', { responseHeaders: 'content-type: image/png\ncontent-length: 61440' });
+          return { abort: () => {} };
+        }
+        // ⑬ 会话分组「双路径合并」夹具（v26.10.14-v5）：与 sniff-conv-a 同属当前会话，
+        //    但它的消息**不带** conversationID（模拟历史/懒加载渲染出来的那条路）。修复前它会退化成
+        //    `name:刘永增` 键 ⇒ 同一个当前会话被拆成两组（见 sniffConvAliasOk）。
+        if (url.indexOf('/im-cos/11/sniff-conv-c.png') >= 0) {
+          reply(details, '', { responseHeaders: 'content-type: image/png\ncontent-length: 71680' });
+          return { abort: () => {} };
+        }
+        // ⑫ perf 优先夹具（v26.10.14-v2）：同源图 /sniff-perf.png 真加载、真进资源表（22528 B）。
+        // 尺寸测量若正确走「资源表读数」档，**根本不会请求到这里**；桩故意给一个对不上的
+        // content-length（123456789 → 会显示 117.74 MB），万一身寸逻辑回退到 HEAD 也会被断言抓到。
+        if (url.indexOf('/sniff-perf.png') >= 0) {
+          reply(details, '', { responseHeaders: 'content-type: image/png\ncontent-length: 123456789' });
+          return { abort: () => {} };
+        }
+        // 其它一律失败，观察脚本是否优雅降级
+        setTimeout(() => {
+          if (details && typeof details.onerror === 'function') {
+            details.onerror({ status: 0, statusText: 'smoke-harness-blocked' });
+          }
+        }, 40);
+        return { abort: () => {} };
+      };
+    </script>
+
+    <!-- ===== P5 指数退避探针（v26.10.14-v8）=====
+         验证「中继持续失败时，客户端重试间隔按指数增长」这条新行为。三个小探针：
+           A（onerror）：应得到 2000 → 4000 → 8000 → 16000 → 32000 → 60000 → 60000（到顶保持）
+           C（复位）  ：A 之后让连接成功一次、再失败 ⇒ 必须**回到 2000**（退避复位）
+           B（429）   ：桩回 429 ⇒ 首次重试即 60000（服务端明说「慢点」就别在 2/4/8 上磨）
+         手法：只在本探针窗口内包一层 window.setTimeout —— 把**恰好等于退避值**的延时记下来，
+               并把真实等待改成 0ms，于是一瞬间就能跑完整个退避序列，不必真等 2+4+8+16+32=62 秒
+               （那会把冒烟从 38.5s 拖到 100s+）。
+               ⚠️ 必须按**精确值**过滤：若按「≥1000ms」放行，本页 30s / 36.5s / 38.4s 那几个
+               定时器会被一起提前触发（报告提前生成、整页断言全乱）。
+         反向验证：把退避改回固定 2s ⇒ A 记到 [2000,2000,…] ⇒ recvBackoffOk 变红。 -->
+    <script>
+      (function () {
+        // 真实 setTimeout 的底座引用。此后探针一律以它为底，避免包装套包装。
+        var TRUE_SET_TIMEOUT = window.setTimeout;
+        var BACKOFF_VALUES = [2000, 4000, 8000, 16000, 32000, 60000];
+
+        /**
+         * 跑一轮探针：让 /recv 持续失败，收集客户端排出的重试间隔。
+         * @param {number|null} httpStatus null = 桩回 onerror（网络层失败）；429 = 桩回 429 响应
+         * @param {number} limit 收满几个间隔就收手
+         * @param {Function} done 收手后回调（入参为收集到的间隔数组）
+         */
+        window.__backoffProbe = function (httpStatus, limit, done) {
+          var orig = TRUE_SET_TIMEOUT;
+          window.setTimeout = orig; // 归一：摘掉上一轮可能残留的包装
+          var delays = [];
+          var active = true;
+          window.__backoffDelays = delays;
+          window.__recvFailWith = httpStatus;
+          window.__recvProbeActive = true;
+
+          var finish = function () {
+            if (!active) return;
+            active = false;
+            window.__recvProbeActive = false;
+            window.__recvFailWith = null;
+            window.setTimeout = orig;
+            if (done) done(delays);
+          };
+          // 安全网：万一客户端不再重试（limit 凑不满），3s 后无条件收手并还原 ——
+          // 绝不能把包装留在页面里（否则后面所有定时器的延时语义都被改写）。
+          orig.call(window, finish, 3000);
+
+          window.setTimeout = function (fn, ms) {
+            if (active && typeof ms === 'number' && BACKOFF_VALUES.indexOf(ms) >= 0) {
+              delays.push(ms);
+              if (delays.length >= limit) {
+                finish();
+                return orig.call(window, fn, 300); // 收手：300ms 后让客户端回到正常轮询
+              }
+              return orig.call(window, fn, 0); // 跳过真实等待，立刻进入下一轮重试
+            }
+            return orig.apply(window, arguments);
+          };
+        };
+
+        // 探针排在 26s：内容流（≤19.5s）已跑完、kickSniff（30s）还没到，是一段安静窗口。
+        TRUE_SET_TIMEOUT.call(
+          window,
+          function () {
+            // —— A：网络层失败 → 退避序列 ——
+            window.__backoffProbe(null, 7, function (a) {
+              window.__backoffA = a.slice();
+              window.__backoffOk = (function () {
+                if (a.length < 7) return false;
+                // 前五档必须严格翻倍：2000 → 4000 → 8000 → 16000 → 32000
+                for (var i = 1; i < 5; i++) if (a[i] !== a[i - 1] * 2) return false;
+                // 且到 60s 封顶（不允许无限增长）
+                return a[0] === 2000 && a[4] === 32000 && a[5] === 60000 && a[6] === 60000;
+              })();
+
+              // —— C：先让连接成功一次（退避该复位），再失败 → 首值必须回到 2000 ——
+              TRUE_SET_TIMEOUT.call(
+                window,
+                function () {
+                  window.__backoffProbe(null, 1, function (c) {
+                    window.__backoffC = c.slice();
+                    window.__backoffResetOk = c.length >= 1 && c[0] === 2000;
+
+                    // —— B：429 → 首次重试即 60000 ——
+                    TRUE_SET_TIMEOUT.call(
+                      window,
+                      function () {
+                        window.__backoffProbe(429, 1, function (b) {
+                          window.__backoffB = b.slice();
+                          window.__backoff429Ok = b.length >= 1 && b[0] === 60000;
+                          window.__backoffProbeDone = true;
+                        });
+                      },
+                      600
+                    );
+                  });
+                },
+                600
+              );
+            });
+          },
+          26000
+        );
+      })();
+    </script>
+
+    <!-- ===== 与 userscript @require 完全相同的依赖 =====
+         v26.10.06-v9：CAT_UI（脚本猫 UI 库）已移除，面板改为 React 19 + Ant Design v6（随产物打包）。
+         v26.10.06-v13：Viewer.js 也已移除——收图放大改用 antd Image.PreviewGroup，故此处不再加载它。 -->
+    <script src="https://fastly.jsdelivr.net/npm/js-yaml@4.1.0/dist/js-yaml.min.js"></script>
+    <script src="https://fastly.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+    <script src="https://fastly.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.js"></script>
+  </head>
+  <body>
+    <h1>znhd 面板冒烟测试</h1>
+    <p>模拟 example.com 调试宿主：脚本会在本页注入浮动面板，并由 GM 桩按真实协议投递文本/图片。</p>
+
+    <!-- 人数监控取 .count:nth-child(2)：本题为 body 的第 2 个子节点 -->
+    <div class="count"><span>等待人数</span><span>0</span></div>
+
+    <!-- ===== 图片嗅探夹具（v26.10.10-v4）=====
+         全部由本页或 GM 桩作答（域名 *.test 不解析、从不出网），每一种「来源 / 尺寸阶梯」各一条：
+           ① data: 大图（>20KB 阈值，本地按 base64 长度算）      → 兜底名 znhd-sniff-N ⇒ 被名称规则排除（v26.10.10-v5）
+           ② data: 小图（<20KB）                                → 同上（也被名称规则排除）
+           ③ CSS background-image → 桩 HEAD 回 content-length   → HEAD 阶梯（30 KB）
+           ④ CSS background-image → 桩 HEAD 不给长度、Range GET → Range 阶梯（40 KB）
+           ⑤ 内联 <svg>（运行时补足图元，>20KB）                → 显示名 inline-svg-N.svg ⇒ 被后缀规则排除（v26.10.10-v7）
+           ⑥ 懒加载 data-src 指向 HEAD 404 的地址               → 尺寸未知，必须保留在「大小未知」折叠组
+         ⑦ 10 KB 的普通 http 图（名字不命中排除规则）         → 被阈值过滤：不显示、不计数、不进全选范围
+             ⑧ URL 末段含 user-man 的图                           → 必须被名称规则排除，不出现卡片
+             ⑨ URL 末段是 icon.svg 的图                           → 必须被**后缀**规则排除，不出现卡片
+           ①②⑤ 的内容在下面用脚本现造，避免在 HTML 里塞几十 KB base64。 -->
+    <div id="sniff-fixtures" aria-hidden="true">
+      <img id="sniff-data-big" alt="" />
+      <img id="sniff-data-small" alt="" />
+      <img id="sniff-lazy-unknown" data-src="https://sniff-smoke.test/sniff-missing.png" alt="" />
+      <div
+        id="sniff-css-head"
+        style="width: 40px; height: 40px; background-image: url('https://sniff-smoke.test/sniff-head.png')"></div>
+      <div
+        id="sniff-css-range"
+        style="width: 40px; height: 40px; background-image: url('https://sniff-smoke.test/sniff-range.png')"></div>
+      <svg id="sniff-inline-svg" xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48"></svg>
+      <!-- ⑦ 10 KB（< 20KB 阈值）且名字普通：用来验证「被阈值过滤的图不出现在列表、也不进全选/下载范围」 -->
+      <img id="sniff-small-http" src="https://sniff-smoke.test/sniff-small.png" alt="" />
+      <!-- ⑧ 名字命中排除规则（URL 末段 user-man.png）：必须被丢掉、不进卡片，只体现在排除计数里 -->
+      <img id="sniff-excluded-name" src="https://sniff-smoke.test/media/user-man.png" alt="" />
+      <!-- ⑨ 后缀命中排除规则（.svg，v26.10.10-v7）：同样在收集阶段就丢掉，连 HEAD 都不会发 -->
+      <img id="sniff-svg-http" src="https://sniff-smoke.test/media/icon.svg" alt="" />
+      <!-- ⑩⑪ 会话分组夹具（v26.10.13-v8）：URL 末段与下面的 Vuex 桩里的 fileName 同名
+           ⇒ 分别归属到「刘永增」（当前会话）与「湖南博大园林建筑有限公司」（历史会话）。
+           域名仍是 *.test（从不出网），体积由 GM 桩按 URL 作答（50 / 60 / 70 KB）。
+           ⚠️ v26.10.16-v2：组内改为「按消息时间从新到旧」后，这里的 **DOM 顺序故意与时间顺序相反**
+           （c 在 a 前面），否则「按时间排」与「保持扫描顺序」两种实现都满足断言（断不出真假）。 -->
+      <img id="sniff-conv-b" src="https://sniff-smoke.test/im-cos/11/sniff-conv-b.png" alt="" />
+      <!-- ⑬ 与 sniff-conv-a 同属当前会话，但它的消息没有 conversationID（v26.10.14-v5 双路径夹具）：
+           修复前它会退化成 `name:刘永增` 键，与 GROUP_CUR_A 分成两组 ⇒ 同一个会话名出现两次。
+           v26.10.16-v2：c 的 **DOM 位次在 a 之前、体积（70KB）又比 a（50KB）大，但消息时间更旧**
+           （见下面 Vuex 桩：a = 1700000003000 > c = 1700000002000）—— 三种可能的实现在当前会话组里
+           顺序两两不同，断言才有判别力：
+             · 按消息时间（现在）→ a, c　· 按体积（v26.10.16-v1 及更早）→ c, a　· 不排序（扫描序）→ c, a -->
+      <img id="sniff-conv-c" src="https://sniff-smoke.test/im-cos/11/sniff-conv-c.png" alt="" />
+      <img id="sniff-conv-a" src="https://sniff-smoke.test/im-cos/11/sniff-conv-a.png" alt="" />
+      <!-- ⑫ perf 优先夹具（v26.10.14-v2）：**同源真实加载**的图（server.js 的 /sniff-perf.png，
+           精确 22528 字节 = 22 KB）。只有真加载的图才会进 performance 资源表，跨域假域名不行。
+           测量时必须走「资源表读数」这一档：一个 GM 请求都不发（桩里另有假 content-length
+           123456789，真走到 HEAD 就会显示 117.74 MB，断言一并防它）。 -->
+      <img id="sniff-perf-same-origin" src="/sniff-perf.png" alt="" />
+    </div>
+
+    <!-- ===== 会话宿主的 DOM 侧（v26.10.13-v8）=====
+         脚本读当前会话时，Vuex 为主、DOM 兜底（`.group-item.selected .company-name`）。
+         ⚠️ 必须放在 body 末尾：脚本的人数监控按 `.count:nth-child(2)` 取节点，
+            在上面插元素会打乱 body 的子节点序号。hidden 不影响 querySelector / textContent。 -->
+    <div id="app" hidden>
+      <div class="group-item selected">
+        <div class="description-left"><span class="company-name">刘永增</span></div>
+      </div>
+
+      <!-- ===== 仿真右侧栏「会话人信息 / 常用话术」（v26.10.18-v2）=====
+           常用语数据源 = 本页右侧栏（lib/phrasesZnhd.ts 程序化抓取）。夹具按**真实页面
+           的 DOM 形状**（2026-10-18 用 CDP 在真机抓的 dir=0 骨架）摆骨架：
+             · tab 导航：`.t-tabs__nav-item` 选中态是 `t-is-active`（不是 `active`）；
+             · 面板 `.display-container` 里两棵树：`.verbal-trink-main` = 全部话术组库、
+               `.main` = 我的（个人）话术组库；
+             · 文件夹节点 = 无 `custom-rich-node` 的 `.t-tree__item`，内含
+               `span.t-folder-icon`（真页面上它带 trigger="expand"，**点它才展开**）；
+             · 展开后文件夹节点加 `t-tree__item--open`，话术条目作为**兄弟节点**插入，
+               形如 `t-tree__item.custom-rich-node` > `.t-tree__label` > `.auxiliary-item`
+               （.auxiliary-item 的第一个子元素 .total-introduce 里才是正文）。
+           ⚠️ 点 `.t-tree__label` 在真实页面上是**无操作**——v26.10.18-v2 首版就是点 label
+           导致「秒失败、看着像没走抓取流程」，夹具必须复刻这个「点 label 没反应」的行为，
+           否则这条 bug 在冒烟里永远测不出来。 -->
+      <div id="smoke-znhd-sidebar">
+        <div class="t-tabs__nav-item t-is-active">
+          <span class="t-tabs__nav-item-text-wrapper">会话人信息</span>
+        </div>
+        <div class="t-tabs__nav-item">
+          <span class="t-tabs__nav-item-text-wrapper">常用话术</span>
+        </div>
+        <div class="display-container">
+          <div class="verbal-trink-main">
+            <div class="t-tree__item t-tree__item--visible" data-level="0">
+              <span class="t-tree__icon t-folder-icon t-tree__icon--default"><svg class="t-icon t-icon-caret-right-small"></svg></span>
+              <span class="t-tree__label"><span style="position: relative"><div>冒烟话术组甲</div></span></span>
+            </div>
+          </div>
+          <div class="main">
+            <div class="t-tree__item t-tree__item--visible" data-level="0">
+              <span class="t-tree__icon t-folder-icon t-tree__icon--default"><svg class="t-icon t-icon-caret-right-small"></svg></span>
+              <span class="t-tree__label"><span style="position: relative"><div>冒烟话术组乙</div></span></span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // 仿真右侧栏行为（严格复刻真机）：
+      //  ① 点 tab → 把 `t-is-active` 挪到被点项上（真页面选中态就是这个类名，且它含 "active"
+      //     子串，抓取器的 `className.includes('active')` 判定照样成立）；
+      //  ② 点文件夹图标 `.t-folder-icon` → 节点加 `t-tree__item--open`，并把话术条目作为
+      //     **兄弟节点**插到它后面（真实页面是请求组接口后挂进树里，这里同步渲染即可，
+      //     抓取器每步之间有 350ms 等待，足够看到）；
+      //  ③ 点 `.t-tree__label` → **什么都不做**（真机实测行为，也是 v2 首版的回归守卫）。
+      // ⚠️ 用事件委托：抓取器派发的是合成 MouseEvent（bubbles: true），委托容器能收到。
+      (function () {
+        var sb = document.getElementById('smoke-znhd-sidebar');
+        if (!sb) return;
+        var leafHtml = function (t, level) {
+          return (
+            '<div class="t-tree__item t-is-disabled t-tree__item--visible custom-rich-node" data-level="' +
+            level +
+            '">' +
+            '<span class="t-tree__icon t-folder-icon t-tree__icon--default"></span>' +
+            '<span class="t-tree__label"><span style="position: relative"><div class="auxiliary-item">' +
+            '<div class="total-introduce"><div class="intro-content content"><span class="merchant-desc">' +
+            t +
+            '</span></div></div>' +
+            '<div class="tools-box tools-box-right"></div>' +
+            '</div></div></span></div>'
+          );
+        };
+        sb.addEventListener('click', function (ev) {
+          // 回归守卫（v26.10.18-v4）：抓取器发的合成事件**不许带 view**。
+          // 油猴 / ScriptCat 沙箱里 `window` 不是原生 Window 实例，
+          // `new MouseEvent('click', {view: window})` 会直接抛
+          // "Failed to convert value to 'Window'"；冒烟跑在无沙箱页面里，
+          // 只有断言 view === null 才能把这个隐患锁住。
+          window.__smokeViewNull = window.__smokeViewNull !== false && ev.view === null;
+          var nav = ev.target.closest('.t-tabs__nav-item');
+          if (nav) {
+            Array.prototype.forEach.call(sb.querySelectorAll('.t-tabs__nav-item'), function (n) {
+              n.classList.remove('t-is-active');
+            });
+            nav.classList.add('t-is-active');
+            return;
+          }
+          var icon = ev.target.closest('.t-folder-icon');
+          if (!icon) return; // 点 label / 点正文：真机无操作
+          var item = icon.closest('.t-tree__item');
+          if (!item || item.classList.contains('custom-rich-node')) return;
+          if (item.classList.contains('t-tree__item--open')) return; // 已展开不重复加载
+          window.__smokeFolderClicks = (window.__smokeFolderClicks || 0) + 1;
+          item.classList.add('t-tree__item--open');
+          var texts =
+            (item.textContent || '').indexOf('乙') >= 0
+              ? ['冒烟我的话术1', '冒烟我的话术2（较长的一段正文，用来撑起 hover Tooltip）']
+              : ['冒烟全部话术一', '冒烟全部话术二'];
+          var anchor = item;
+          texts.forEach(function (t) {
+            var box = document.createElement('div');
+            box.innerHTML = leafHtml(t.replace(/</g, '&lt;'), 1);
+            var leaf = box.firstChild;
+            anchor.parentNode.insertBefore(leaf, anchor.nextSibling);
+            anchor = leaf;
+          });
+        });
+      })();
+    </script>
+
+    <pre id="smoke-result" style="margin-top: 40px">running…</pre>
+
+    <script>
+      window.__errors = [];
+      window.addEventListener('error', (e) =>
+        window.__errors.push('error: ' + (e.message || e.type) + ' @ ' + (e.filename || '-') + ':' + (e.lineno || '-'))
+      );
+      window.addEventListener('unhandledrejection', (e) => {
+        const r = e.reason;
+        window.__errors.push('unhandledrejection: ' + ((r && (r.stack || r.message)) || String(r)));
+      });
+    </script>
+
+    <!-- ===== 被测对象：构建产物 ===== -->
+    <script src="/znhd.user.js"></script>
+
+    <script>
+      // 面板 / 弹窗都挂在 documentElement 下（面板宿主 + overlay 宿主），弹窗不再是 Shadow DOM；
+      // 保留 shadow 遍历只为稳妥（第三方库若再引入 shadow 也不会漏读）。
+      const collectShadowText = () => {
+        let text = '';
+        const walk = (root) => {
+          root.querySelectorAll('*').forEach((el) => {
+            if (el.shadowRoot) {
+              text += '\n' + (el.shadowRoot.textContent || '');
+              walk(el.shadowRoot);
+            }
+          });
+        };
+        walk(document);
+        return text;
+      };
+      // 全页文本：Shadow DOM + documentElement（弹窗挂在 documentElement 下）
+      const collectText = () =>
+        (document.documentElement.innerText || '') +
+        '\n' +
+        (document.documentElement.textContent || '') +
+        '\n' +
+        collectShadowText();
+
+      // 自动打开「常用语」抽屉，验证远程 YAML 成功路径
+      // ⚠️ 用「包含」而非精确相等：面板按钮是「图标 span + 文案 span」两段结构，
+      //    精确匹配会全部点不中（v26.10.06-v9 改制后踩过）。
+      const clickByText = (label) => {
+        let hit = null;
+        const walk = (root) => {
+          root.querySelectorAll('*').forEach((el) => {
+            if (hit) return;
+            if (el.shadowRoot) walk(el.shadowRoot);
+            if (!hit && (el.tagName === 'BUTTON' || el.tagName === 'A') && (el.textContent || '').indexOf(label) >= 0) hit = el;
+          });
+        };
+        walk(document);
+        if (hit) hit.click();
+        return !!hit;
+      };
+
+      // 影子 DOM 感知的元素查找（抽屉可能渲染在 shadow root 内，document.querySelectorAll 穿不透）
+      const deepQuery = (pred) => {
+        let hit = null;
+        const walk = (root) => {
+          root.querySelectorAll('*').forEach((el) => {
+            if (hit) return;
+            if (el.shadowRoot) walk(el.shadowRoot);
+            if (!hit && pred(el)) hit = el;
+          });
+        };
+        walk(document);
+        return hit;
+      };
+
+      /* ===== 传输助手窗口定位（v26.10.12-v1 重构后的新结构）=========================
+         「设备互联 / 历史记录 / Agent 助手」三个旧入口已全部收敛进这一个三栏窗口：
+           标题条 .znhd-transfer-titlebar —— 右侧自绘关闭按钮（悬浮变红，v26.10.12-v4）
+           第一栏 .znhd-transfer-nav      —— 对话 / 文件 + 底部设置/企业信息（贴满窗口高度）
+           内容卡 .znhd-transfer-content  —— 第二三栏整体的内嵌圆角卡片（v26.10.13-v10）
+           第二栏 .znhd-transfer-sessions —— 搜索框 +「＋」+ 会话/设备列表
+           第三栏 .znhd-transfer-main     —— 聊天主区（设备会话 / 全部文件）
+         v26.10.12-v2：主窗口**去掉了标题栏**（与第一栏顶部的图标 + 名称重复），改用
+         Modal 的 className 钩子 `.znhd-transfer-modal` 定位 —— 不再靠标题文字匹配，
+         顺带解决了「传输助手设置」子窗口也含「传输助手」四字的误命中问题。
+         v26.10.12-v4：对齐微信桌面版 —— 第一栏改窄图标栏（「设备」改名「对话」、置于
+         Agents 之上），窗口固定微信暗色配色，关闭按钮回到顶部标题条（自绘、悬浮变红）。
+         v26.10.13-v9：中间那格 Agents 入口已随 Agent 能力整体删除，第一栏只剩「对话 / 文件」。
+         v26.10.13-v10：圆角 + 层级（用户 excalidraw 白板稿）—— 外框大圆角、第二三栏包进
+         内嵌圆角卡片（右/下缘露出窗口底色）、输入区改四边留白的圆角浮起卡片；新增
+         `transferLayeredOk` 断言（几何 + 计算样式判据，见 17900ms 那拍的 layered 快照）。
+         v26.10.14-v1：窗口底色 frame（#383838）→ 与第一栏同色的 rail（#2E2E2E），
+         卡片右/下缘露出层不再与第一栏有色差断层；`transferLayeredOk` 加
+         `frameMatchesRail`（窗口底色 === 第一栏底色）判据。 */
+      const findTransferModal = () => document.querySelector('.ant-modal.znhd-transfer-modal');
+      const findPairModal = () =>
+        Array.from(document.querySelectorAll('.ant-modal')).find((el) =>
+          ((el.querySelector('.ant-modal-title') || {}).textContent || '').includes('配对设备')
+        );
+      /** 第一栏导航项（aria-label 精确匹配：对话 / 文件） */
+      const clickTransferNav = (label) => {
+        const m = findTransferModal();
+        if (!m) return false;
+        const btn = Array.from(m.querySelectorAll('button')).find((b) => (b.getAttribute('aria-label') || '') === label);
+        if (btn) btn.click();
+        return !!btn;
+      };
+      /** 第三栏设备会话的消息区文本 */
+      const transferMessagesText = () => {
+        const m = findTransferModal();
+        const box = m ? m.querySelector('.znhd-transfer-messages') : null;
+        return box ? box.textContent || '' : '';
+      };
+      /**
+       * 表情面板当前是否**可见/仍在屏幕上**（v26.10.13-v7，供「点表情/点外部后是否立即收起」断言用）。
+       * ⚠️ 三个坑：
+       * 1) 页面上可能同时存在多个 `.ant-popover`（其它浮层关掉后只是缓存隐藏），必须认准
+       *    「装着 .znhd-emoji-panel 的」那一个；
+       * 2) Popover 关闭后内容会卸载（`.znhd-emoji-panel` 直接不在 DOM 里）⇒ 查不到就是已收起，
+       *    不能只判 `ant-popover-hidden` 类；
+       * 3) **关闭动画期间**（`ant-zoom-big-leave` / `-leave-active`）浮层还是 `display:block`、量出来
+       *    有 322px 宽，但它在往外收（实测：点完表情 +100ms 正是这个状态）。判「已收起」必须把
+       *    退场过渡也算进去，否则会假红 —— `ant-popover-hidden` 要动画结束才加上。
+       */
+      const emojiPanelVisible = () => {
+        const panel = document.querySelector('.znhd-emoji-panel');
+        if (!panel) return false; // 面板根本不在 DOM 里 ⇒ 已收起
+        const pop = panel.closest('.ant-popover');
+        if (pop) {
+          const cls = pop.className || '';
+          if (cls.indexOf('ant-popover-hidden') >= 0) return false;
+          if (cls.indexOf('-leave') >= 0) return false; // 正在退场 = 已开始收起
+          const cs = getComputedStyle(pop);
+          if (cs.display === 'none' || cs.visibility === 'hidden' || Number(cs.opacity) === 0) return false;
+        }
+        return panel.getBoundingClientRect().width > 0;
+      };
+
+      /** 表情触发按钮（传输助手第三栏输入区里那颗「表情」；面板开着/关着都返回它） */
+      const emojiTriggerButton = () => {
+        const m = findTransferModal();
+        return m ? m.querySelector('.znhd-chat-composer button[aria-label="表情"]') : null;
+      };
+
+      // 造一张 3000x2000 的大图（最长边远超压缩上限 1600），用于验证「发送到手机」会先压缩
+      const makeBigFile = () =>
+        new Promise((res) => {
+          const cv = document.createElement('canvas');
+          cv.width = 3000;
+          cv.height = 2000;
+          const ctx = cv.getContext('2d');
+          ctx.fillStyle = '#1e7d5a';
+          ctx.fillRect(0, 0, 3000, 2000);
+          for (let i = 0; i < 200; i++) {
+            ctx.fillStyle = 'hsl(' + (i * 5) + ',80%,50%)';
+            ctx.fillRect((i * 137) % 3000, (i * 89) % 2000, 160, 120);
+          }
+          cv.toBlob((b) => res(new File([b], 'smoke-big.jpg', { type: 'image/jpeg' })), 'image/jpeg', 0.95);
+        });
+
+      // 图片嗅探夹具内容（v26.10.10-v4）：
+      //   ① data: 大图用**定种子伪随机**填像素 —— 纯色/规则渐变会被 PNG 压到几 KB，噪声才稳定 >20KB；
+      //   ② data: 小图用 8x8 纯色，稳定 <20KB；
+      //   ⑤ 内联 SVG 补 600 个 circle（序列化后约 35KB），否则不够阈值、不会出现在列表里。
+      (function () {
+        let seed = 123456789;
+        const rnd = () => ((seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648);
+        const cv = document.createElement('canvas');
+        cv.width = 160;
+        cv.height = 160;
+        const ctx = cv.getContext('2d');
+        const px = ctx.createImageData(160, 160);
+        for (let i = 0; i < px.data.length; i += 4) {
+          px.data[i] = Math.floor(rnd() * 256);
+          px.data[i + 1] = Math.floor(rnd() * 256);
+          px.data[i + 2] = Math.floor(rnd() * 256);
+          px.data[i + 3] = 255;
+        }
+        ctx.putImageData(px, 0, 0);
+        document.getElementById('sniff-data-big').src = cv.toDataURL('image/png');
+
+        const cv2 = document.createElement('canvas');
+        cv2.width = 8;
+        cv2.height = 8;
+        const c2 = cv2.getContext('2d');
+        c2.fillStyle = '#1677ff';
+        c2.fillRect(0, 0, 8, 8);
+        document.getElementById('sniff-data-small').src = cv2.toDataURL('image/png');
+
+        const NS = 'http://www.w3.org/2000/svg';
+        const svg = document.getElementById('sniff-inline-svg');
+        for (let i = 0; i < 600; i++) {
+          const c = document.createElementNS(NS, 'circle');
+          c.setAttribute('cx', String(i % 48));
+          c.setAttribute('cy', String((i * 7) % 48));
+          c.setAttribute('r', '1');
+          c.setAttribute('fill', '#1677ff');
+          svg.appendChild(c);
+        }
+      })();
+
+      /* ===== 图片格子右下角的悬浮按钮（v26.10.10-v16）=====
+         用户要求：按钮挪到图片**右下角**、**只显示图标**、**鼠标移到图片上才出现**、hover 才用 tooltip 显字。
+         下面两个 helper 供 filesImgActionsOk / sniffImgActionsOk 取值。 */
+      window.__findSniffModal = () =>
+        Array.from(document.querySelectorAll('.ant-modal')).find((el) =>
+          ((el.querySelector('.ant-modal-title') || {}).textContent || '').includes('图片嗅探')
+        );
+
+      /**
+       * 嗅探夹具的两张卡片图 URL 是 `https://sniff-smoke.test/*.png`（尺寸探测走 GM 桩，从不出网），
+       * `<img>` 真加载必然失败 ⇒ 卡片盒子只剩破图的高度（实测 24px），比按钮条（26px）还矮，
+       * 「按钮落在图片矩形内」这条几何断言必然假红。测量前把卡片里的 `<img>` 直接指向能加载的图：
+       * React 只在与上一次 props 不同时才写 DOM，`src` 属性没变 ⇒ 不会把这里改回去。
+       * 嗅探的尺寸结论（HEAD 30 KB / Range 40 KB）在扫描阶段就已经算完，不受影响。
+       */
+      window.__renderSniffCardImages = (root) => {
+        const modal = root || window.__findSniffModal();
+        if (!modal) return 0;
+        let n = 0;
+        Array.from(modal.querySelectorAll('.ant-image img')).forEach((img) => {
+          img.src = 'data:image/jpeg;base64,' + SMOKE_IMG_B64;
+          n++;
+        });
+        return n;
+      };
+
+      /* ===== 会话分组夹具（v26.10.13-v8）=====
+         模拟征纳互动工作台的 Vue2 + Vuex：**当前会话**的图走 `state.chat.messageList`，
+         **历史会话**的图走 `state.allChat.historyMsg`（嵌套结构、脚本端用宽容遍历认）。
+         脚本是经 unsafeWindow.document 读 `#app.__vue__` 的；本 harness 把 window.unsafeWindow
+         指向了同一个 window，所以这里直接往 `#app` 上挂 __vue__ 就等于挂在页面主世界。 */
+      window.__sniffConvMsg = (fileName, sender, time, conversationID) => ({
+        type: 'TIMImageElem',
+        sendUserName: sender,
+        time: time,
+        // v26.10.14-v5：真实页面上「一部分消息带 conversationID、一部分不带」正是分组双路径的根因，
+        // 故这里让它可选 —— 不给就是不带给（`str(undefined)` 为空，与页面缺字段等价）。
+        conversationID: conversationID,
+        payload: {
+          fileName: fileName,
+          uuid: 'uuid-' + fileName,
+          imageInfoArray: [
+            { type: 1, imageUrl: 'https://sniff-smoke.test/im-cos/11/' + fileName + '?sign=orig' },
+            { type: 3, imageUrl: 'https://sniff-smoke.test/im-cos/11/' + fileName + '?sign=thumb' },
+          ],
+        },
+      });
+
+      /**
+       * mode = 'two'      ：当前会话「刘永增」+ 历史会话「湖南博大园林建筑有限公司」；
+       *        'switched' ：当前会话换成「湖南博大」，且两条消息**都不给** ——
+       *                     此时还能把两张图各自归回原会话，只能靠脚本的持久层（会话归属索引）。
+       *
+       * v26.10.14-v5（分组双路径夹具）：
+       *   · 当前会话的 `conversationInfo` **故意不给 conversationID**，只给名字 ——
+       *     这正是用户实测到的那条路（页面解析不出群组 ID，名字来自 Vuex/DOM）；
+       *   · 当前窗口两条消息：sniff-conv-a **带** conversationID（`GROUP_CUR_A`，脚本据此学到别名），
+       *     sniff-conv-c **不带**（修复前退化 `name:刘永增` ⇒ 同一会话被拆成两组）。
+       */
+      window.__installSniffChat = (mode) => {
+        const app = document.getElementById('app');
+        if (!app) return false;
+        const two = mode === 'two';
+        app.__vue__ = {
+          $store: {
+            state: {
+              chat: {
+                selectItem: {
+                  conversationInfo: two
+                    ? { groupProfile: { name: '刘永增' } }
+                    : { conversationID: 'GROUP_HIST_B', groupProfile: { name: '湖南博大园林建筑有限公司' } },
+                },
+                messageList: two
+                  ? [
+                      // ⚠️ v26.10.16-v2（组内按时间排序的判据）：a 的时间**故意比 c 新**，
+                      // 而 a 的体积更小、DOM 位次更靠后 ⇒ 「按时间」与「按体积 / 不排序」在组内顺序相反。
+                      window.__sniffConvMsg('sniff-conv-a.png', '刘永增', 1700000003000, 'GROUP_CUR_A'),
+                      window.__sniffConvMsg('sniff-conv-c.png', '刘永增', 1700000002000),
+                    ]
+                  : [],
+              },
+              allChat: {
+                historyMsg: two
+                  ? {
+                      GROUP_HIST_B: {
+                        conversationInfo: {
+                          conversationID: 'GROUP_HIST_B',
+                          groupProfile: { name: '湖南博大园林建筑有限公司' },
+                        },
+                        messageList: [
+                          window.__sniffConvMsg('sniff-conv-b.png', '湖南博大园林建筑有限公司', 1700000000000),
+                        ],
+                      },
+                    }
+                  : {},
+              },
+            },
+          },
+        };
+        return true;
+      };
+
+      /**
+       * 读面板上的分组事实。分组容器带 `data-sniff-group` / `-name` / `-current` 钩子（组件里写的）：
+       *  · names        —— 各组的会话名（未归属分组的 name 是空串）
+       *  · headers      —— 组头文案（`会话名（N 张）`）
+       *  · currentIndex —— 「当前会话」标签落在第几组（-1 = 没有）
+       *  · cards        —— 每组渲染出的卡片数
+       *  · cardNames    —— 每组卡片对应的文件名合集（读 <img alt>；v26.10.16-v1 起卡片不再
+       *                    显示文件名，alt 是文件名的唯一观测面）
+       *  · cardNamesAll —— **全部**卡片的文件名合集（跨组展平，与 cardNames 同源）——
+       *                    断言常要「跨组按名字找卡片」，逐组拼字符串再 indexOf 容易漏组
+       *  · ringNames    —— 带红圈（boxShadow 含红）卡片的**组内文件名合集**（v26.10.16-v3）
+       */
+      window.__sniffGroupFacts = () => {
+        const m = window.__findSniffModal();
+        if (!m) return null;
+        const sections = Array.from(m.querySelectorAll('[data-sniff-group]'));
+        // v26.10.16-v3：红圈的观测量 = 卡片缩略图的 inline boxShadow 里有没有红色分量。
+        // ⚠️ 必须读 inline style 的属性而不是 getComputedStyle：antd/浏览器可能给图片本身
+        // 加别的阴影，比字符串会连「别的红阴影」也算进来；而组件是显式把 NO_TIME_RING 写进 style 的。
+        // ⚠️ 判据只认 RGB 三元组，不能连 `rgba(` 的前缀与 alpha 一起比：inline style 里的
+        // 红值可能被规范化成 `rgb(255, 77, 79)`（alpha 为 1 时）也可能原样保留 `rgba(255, 77, 79, 0.95)`
+        // —— 两种形态都要认。写成 `rgb\(255,77,79\)` 会漏掉后者（实测踩到，恒假红）。
+        const ring = (img) => {
+          const bs = (img.style && img.style.boxShadow) || '';
+          return /rgba?\(\s*255,\s*77,\s*79[,\s)]/.test(bs) || /#ff4d4f/i.test(bs);
+        };
+        const imgsOf = (s) => Array.from(s.querySelectorAll('.ant-image img'));
+        const namesOf = (list) => list.map((img) => img.getAttribute('alt') || '');
+        return {
+          count: sections.length,
+          names: sections.map((s) => s.getAttribute('data-sniff-group-name') || ''),
+          headers: sections.map((s) =>
+            ((s.querySelector('[data-sniff-group-header]') || {}).textContent || '').trim()
+          ),
+          currentIndex: sections.findIndex((s) => s.getAttribute('data-sniff-group-current') === '1'),
+          cards: sections.map((s) => s.querySelectorAll('.ant-image').length),
+          cardNames: sections.map((s) => namesOf(imgsOf(s)).join(' | ')),
+          cardNamesAll: sections.flatMap((s) => namesOf(imgsOf(s))).join(' | '),
+          ringNames: sections.map((s) => namesOf(imgsOf(s).filter(ring)).join(' | ')),
+          // 调试面：把卡片图上 inline boxShadow 原样带出来（断言红了时不用改代码就知道是
+          // 「样式根本没写上去」还是「选择器取错了元素」）
+          ringDebug: sections.map((s) =>
+            imgsOf(s)
+              .map((img) => (img.getAttribute('alt') || '?') + '=' + ((img.style && img.style.boxShadow) || 'NONE'))
+              .join(' # ')
+          ),
+        };
+      };
+
+      /**
+       * 读「图片右下角悬浮按钮」的静态事实，并派发一次合成 mouseover（hover 后的可见性稍后由
+       * `imgActionsVisible` 补读）。返回：
+       *  · btns        —— 按 aria-label 取到的按钮数
+       *  · iconOnly    —— 每个按钮都有 svg 且 textContent 为空（「只显示图标，不显示文字」）
+       *  · hidden      —— 未 hover 时 visibility === 'hidden'（「鼠标移到图片上才显示」）
+       *  · inside      —— 按钮条矩形完全落在图片（.ant-image）矩形内（「放在图片右下角」）
+       *  · bottomRight —— 按钮条贴图片右下角（右/下边距不超过图片短边的 1/4）
+       */
+      const imgActionsFacts = (root, labels) => {
+        const empty = { labels: labels, btns: 0, iconOnly: false, hidden: false, inside: false, bottomRight: false };
+        if (!root) return empty;
+        const img = root.querySelector('.ant-image');
+        const wrap = img ? img.closest('.znhd-img-hover') : null;
+        const bar = wrap ? wrap.querySelector('.znhd-img-actions') : null;
+        if (!img || !wrap || !bar) return empty;
+        const btns = labels.map((l) => bar.querySelector('button[aria-label="' + l + '"]'));
+        const ir = img.getBoundingClientRect();
+        const br = bar.getBoundingClientRect();
+        // 按钮条离图片右下角固定 6px（组件里 right/bottom: 6），这里留到 12px 容差。
+        // 不用「图片短边的几分之一」当容差：那样图片一大，按钮跑到图片外 40px 也算「贴着角」。
+        const margin = 12;
+        const facts = {
+          labels: labels,
+          btns: btns.filter(Boolean).length,
+          iconOnly: btns.every((b) => !!b && !!b.querySelector('svg') && (b.textContent || '').trim() === ''),
+          hidden: btns.every((b) => !!b && getComputedStyle(b).visibility === 'hidden'),
+          inside:
+            br.width > 0 &&
+            br.left >= ir.left - 1 &&
+            br.right <= ir.right + 1 &&
+            br.top >= ir.top - 1 &&
+            br.bottom <= ir.bottom + 1,
+          // 用绝对值：按钮既不能离右下角太远（inside 会先挡住「跑到图片外」），也不能缩在图片中间
+          bottomRight: Math.abs(ir.right - br.right) <= margin && Math.abs(ir.bottom - br.bottom) <= margin,
+          imgRect: { w: Math.round(ir.width), h: Math.round(ir.height) },
+          barRect: { x: Math.round(br.x), y: Math.round(br.y), w: Math.round(br.width), h: Math.round(br.height) },
+          imgs: Array.from(root.querySelectorAll('.ant-image'))
+            .slice(0, 3)
+            .map((el) => {
+              const r = el.getBoundingClientRect();
+              return { w: Math.round(r.width), h: Math.round(r.height), x: Math.round(r.x), y: Math.round(r.y) };
+            }),
+        };
+        // 合成 hover：这几个弹窗上真实鼠标点击会打偏（放大预览/其它弹窗盖着），
+        // 走 mouseover → React 的 onMouseEnter，与真实 hover 是同一条代码路径。
+        wrap.dispatchEvent(new MouseEvent('mouseover', { bubbles: true, relatedTarget: document.body }));
+        return facts;
+      };
+
+      /** hover 之后的可见性（必须等 React 重渲染完再读）；读完派发 mouseout 复位 */
+      const imgActionsVisible = (root, labels) => {
+        const wrap = root ? root.querySelector('.znhd-img-hover') : null;
+        const bar = wrap ? wrap.querySelector('.znhd-img-actions') : null;
+        if (!bar) return false;
+        const ok = labels.every((l) => {
+          const b = bar.querySelector('button[aria-label="' + l + '"]');
+          return !!b && getComputedStyle(b).visibility === 'visible';
+        });
+        wrap.dispatchEvent(new MouseEvent('mouseout', { bubbles: true, relatedTarget: document.body }));
+        return ok;
+      };
+
+      window.__transferSnap = {};
+      window.__pairSnap = {};
+
+      /* ===== ① 收到文本 → 传输助手自动弹窗（v26.10.12-v1 新行为）====================
+         旧实现：收到文本弹一个 RecvTextModal、收到图片弹一个画廊。
+         新实现：两者都进传输助手会话，且 autoOpenOnReceive 默认开 ⇒ **窗口自动打开**。
+         本条用例验证「没有任何点击，窗口自己弹出来且收到了文本」——这是「窗口不开也收件」
+         这套后台能力（lib/transfer/store.ts）对用户可感知的契约。 */
+      setTimeout(() => {
+        const m = findTransferModal();
+        const ts = window.__transferSnap;
+        ts.autoOpenSeen = !!m;
+        ts.autoOpenTextSeen = !!(m && transferMessagesText().indexOf('冒烟测试文本：收到一条文本消息') >= 0);
+        // 「没人点过就自己弹出来」必须在**这一刻**记录：__openedTransfer 到报告时刻早已是 true
+        // （4600ms 故意点开过一次），放到报告里读只会得到恒假的 !window.__openedTransfer。
+        ts.autoOpenNoClick = !window.__openedTransfer;
+      }, 1500);
+
+      // 关掉它：后面要用「点面板入口重新打开」这条路径验证入口本身
+      setTimeout(() => {
+        const m = findTransferModal();
+        const btn = m ? m.querySelector('button[aria-label="关闭"]') : null;
+        window.__transferSnap.closeClicked = !!btn;
+        if (btn) btn.click();
+      }, 2200);
+
+      // 打开「设置」抽屉 → 点它里面的「更新日志」，验证新入口 + 弹窗 + 只显示最新 10 条
+      setTimeout(() => {
+        window.__clickedPhrases = clickByText('常用语');
+      }, 3000);
+      setTimeout(() => {
+        window.__clickedSettings = clickByText('设置');
+      }, 3400);
+      setTimeout(() => {
+        window.__clickedChangelog = clickByText('[更新日志]');
+      }, 3800);
+
+      /* ===== 常用语（v26.10.18-v2）：本页话术程序化抓取 + 本地缓存 ==================
+         走真实 UI 路径：点「常用语」开抽屉（3000ms）⇒ 无缓存 ⇒ 自动触发
+         readPhrasesFromZnhd()：程序化点开仿真右侧栏的「常用话术」tab、展开两个文件夹、
+         读条目、再切回「会话人信息」。时序要点：
+           · 抓取全程 ≈1.5s（每步 300~400ms 轮询间隔），4800ms 才做第一次快照；
+           · 5400ms 点「我的话术1」→ 复制进剪贴板桩 + 关抽屉；
+           · 5500ms 重开抽屉 ⇒ 有缓存 ⇒ 必须零重复抓取（文件夹点击计数不变）。
+         ⚠️ 传输助手 4600ms 就开了，之后的断言全部只读 DOM / 程序化点击，不受浮层遮挡影响
+         （老流程「设置 Modal 叠在抽屉上」同样如此，这是冒烟的既有工作方式）。 */
+      setTimeout(() => {
+        const body = document.querySelector('.ant-drawer.ant-drawer-right .ant-drawer-body');
+        // ⚠️ Drawer 的存在性必须在这一刻就记下来（后面点了常用语 ⇒ Drawer 会自己关掉，
+        // 报告时刻再查必然为 null ⇒ phrasesIsDrawer 假红，v26.10.6-v14 踩过）。
+        window.__phrasesIsDrawerSeen = !!body;
+        window.__phrasesAllSnap = body ? (body.textContent || '').replace(/\s+/g, ' ') : null;
+        // 刷新按钮（替代原「重新加载常用语」大按钮）：必须长在标题栏 extra 里、无文字
+        const rb = document.querySelector('.ant-drawer button[aria-label="重新加载常用语"]');
+        window.__phrasesRefreshSeen = !!rb && !!rb.closest('.ant-drawer-header');
+        window.__phrasesRefreshTextLen = rb ? (rb.textContent || '').trim().length : -1;
+        // 两行截断：话术按钮内的 span 必须带 -webkit-line-clamp: 2（搜索框按钮除外）
+        window.__phrasesClamp = (() => {
+          if (!body) return 0;
+          const spans = Array.from(body.querySelectorAll('button span'));
+          const hit = spans.find((s) => s.style && parseInt(s.style.webkitLineClamp || '0', 10) > 0);
+          return hit ? parseInt(hit.style.webkitLineClamp, 10) : 0;
+        })();
+        // 抓取侧证：仿真面板的文件夹被点了（= 走了懒加载展开），且右侧栏已切回「会话人信息」
+        window.__phrasesFolderClicks1 = window.__smokeFolderClicks || 0;
+        // 选中态类名按真机是 `t-is-active`（`.active` 的 CSS 类选择器匹配不到它）
+        const homeNav = document.querySelector('#smoke-znhd-sidebar .t-tabs__nav-item.t-is-active');
+        window.__phrasesTabRestored = !!homeNav && (homeNav.textContent || '').trim() === '会话人信息';
+        // 抓取是纯 DOM 操作 ⇒ 不应发出任何网络请求；同时量掉设置弹窗的时间段输入框
+        //（设置 Modal 在 3400ms 打开后一直开着，此刻还在 DOM 里）
+        window.__timeInputsSeen = (() => {
+          const els = Array.from(document.querySelectorAll('.ant-modal input[type="time"]'));
+          return { count: els.length, values: els.map((el) => el.value) };
+        })();
+      }, 4800);
+      setTimeout(() => {
+        // antd Tabs 的页签是 div[role=tab]（不是 BUTTON/A）⇒ clickByText 找不到，
+        // 必须直接点 .ant-tabs-tab 节点（rc-tabs 的 onClick 挂在它上面）
+        const tab = Array.from(document.querySelectorAll('.ant-drawer .ant-tabs-tab')).find(
+          (t) => (t.textContent || '').trim() === '我的话术'
+        );
+        window.__clickedMineTab = !!tab;
+        if (tab) tab.click();
+      }, 5000);
+      setTimeout(() => {
+        const body = document.querySelector('.ant-drawer .ant-drawer-body');
+        window.__phrasesMineSnap = body ? (body.textContent || '').replace(/\s+/g, ' ') : null;
+        window.__gmClipLog = [];
+        const first = Array.from(document.querySelectorAll('.ant-drawer .ant-drawer-body button')).find(
+          (b) => (b.textContent || '').trim() === '冒烟我的话术1'
+        );
+        window.__phrasesClickedItem = !!first;
+        if (first) first.click(); // pick()：复制 + 关抽屉 + 填输入框
+        window.__phrasesClip = (window.__gmClipLog || []).slice(-1)[0] || '';
+      }, 5400);
+      // 二次打开（5500ms）：此刻本地已有缓存 ⇒ 必须直接用缓存，不重新抓取
+      setTimeout(() => {
+        window.__reopenedPhrases = clickByText('常用语');
+      }, 5500);
+      setTimeout(() => {
+        const body = document.querySelector('.ant-drawer .ant-drawer-body');
+        window.__phrasesCacheSnap = body ? (body.textContent || '').replace(/\s+/g, ' ').slice(0, 240) : null;
+        window.__phrasesCacheOpenOk =
+          !!body &&
+          (body.textContent || '').indexOf('冒烟全部话术一') >= 0 &&
+          (window.__smokeFolderClicks || 0) === (window.__phrasesFolderClicks1 || 0) &&
+          (() => {
+            try {
+              const raw = JSON.parse(localStorage.getItem('scriptCat_PhrasesCache') || 'null');
+              return !!raw && Array.isArray(raw.data && raw.data.all) && Array.isArray(raw.data.mine);
+            } catch (e) {
+              return false;
+            }
+          })();
+        // 关抽屉，给后面 transfer 相关的浮层断言腾场子
+        window.__gmClipLog = [];
+        const first = Array.from(document.querySelectorAll('.ant-drawer .ant-drawer-body button')).find(
+          (b) => (b.textContent || '').trim() === '冒烟全部话术一'
+        );
+        if (first) first.click();
+      }, 6000);
+
+      /* ===== ② 面板入口重开传输助手 + 三栏结构 + 收到的消息（v26.10.12-v1）=========== */
+      setTimeout(() => {
+        window.__openedTransfer = clickByText('传输助手');
+      }, 4600);
+      setTimeout(() => {
+        const m = findTransferModal();
+        const ts = window.__transferSnap;
+        const items = m ? Array.from(m.querySelectorAll('.znhd-transfer-session-item')) : [];
+        ts.transferWindowSeen = !!m;
+        ts.transferColsOk = !!(
+          m &&
+          m.querySelector('.znhd-transfer-nav') &&
+          m.querySelector('.znhd-transfer-sessions') &&
+          m.querySelector('.znhd-transfer-main')
+        );
+        // 第二栏（v26.10.13-v6 按发送者归组）：两台手机各自成为会话条目（按短 ID 区分），
+        // 收到的内容进手机 A 的会话；聚合会话「手机」不再出现（没有内容会归到它）。
+        // ⚠️ 判据用条目标题行（title=标签，聚合会话恰为「手机」）而不是整条文本——
+        // 预览文案里可能出现「手机」二字（如归组测试文本），按 textContent 查会误伤。
+        const titleOf = (el) => el.getAttribute('title') || '';
+        ts.transferSessionItem =
+          items.some((el) => titleOf(el).indexOf('11111111') >= 0) &&
+          items.some((el) => titleOf(el).indexOf('22222222') >= 0) &&
+          !items.some((el) => titleOf(el) === '手机');
+        ts.transferRecvTextSeen = transferMessagesText().indexOf('冒烟测试文本：收到一条文本消息') >= 0;
+        ts.transferRecvImgSeen = !!(m && m.querySelector('.znhd-transfer-messages .ant-image img'));
+      }, 5200);
+
+      /* ===== ③ 「文件」视图（原「历史记录」弹窗的整体搬迁）===========================
+         图片九宫格 + 文本分区 + 计数；单击放大走 antd 预览（含缩放/旋转/多图切换/工具栏打印）。 */
+      setTimeout(() => {
+        window.__clickedFilesNav = clickTransferNav('文件');
+      }, 5600);
+      setTimeout(() => {
+        const m = findTransferModal();
+        const files = m ? m.querySelector('.znhd-transfer-files') : null;
+        const ts = window.__transferSnap;
+        ts.filesViewSeen = !!files;
+        ts.filesCountText = !!(files && (files.textContent || '').indexOf('全部文件（图片 1 · 文件 1 · 文本 1）') >= 0);
+        ts.filesImgCount = files ? files.querySelectorAll('.ant-image img').length : 0;
+        ts.filesTextSeen = !!(files && (files.textContent || '').indexOf('冒烟测试文本：收到一条文本消息') >= 0);
+        // v26.10.14-v6：文件通道（中继 type:'file'）——「全部文件」里应有一张文件卡片，
+        // 且卡片上带着夹具文件名（证明「按 mime 分流 → 文件卡片」这条链路真的通了）。
+        ts.fileCards = files ? files.querySelectorAll('[data-transfer-file-card="1"]').length : 0;
+        ts.fileNameSeen = !!(files && (files.textContent || '').indexOf('冒烟测试文档.pdf') >= 0);
+      }, 6200);
+
+      // v26.10.12-v5：文件分组下点设备条目不得跳去会话窗口；
+      // v26.10.13-v5：点会话 = 筛选第三栏文件视图（只显示该会话的文件）
+      setTimeout(() => {
+        const m = findTransferModal();
+        // 排除常驻的「全部文件」入口，点的是真正的设备条目
+        const item = m
+          ? Array.from(m.querySelectorAll('.znhd-transfer-session-item')).find((el) => !el.hasAttribute('data-all-files'))
+          : null;
+        window.__clickedFilesItem = !!item;
+        window.__filesFilterLabel = item ? (item.textContent || '').trim().slice(0, 12) : '';
+        if (item) item.click();
+      }, 6350);
+      setTimeout(() => {
+        const m = findTransferModal();
+        const files = m ? m.querySelector('.znhd-transfer-files') : null;
+        const ts = window.__transferSnap;
+        ts.filesNoJumpSeen = !!(
+          m &&
+          files &&
+          m.querySelector('.znhd-transfer-nav button[aria-label="文件"][aria-current="page"]')
+        );
+        // 筛选生效：标题变成「<会话名>的文件（图片 1 · 文件 1 · 文本 1）」，图片仍在该会话里
+        ts.filesFilterSeen = !!(
+          files &&
+          (files.textContent || '').indexOf('的文件（图片 1 · 文件 1 · 文本 1）') >= 0 &&
+          files.querySelectorAll('.ant-image img').length === 1
+        );
+      }, 6500);
+      // 点「全部文件」回到跨会话汇总
+      setTimeout(() => {
+        const m = findTransferModal();
+        const all = m ? m.querySelector('.znhd-transfer-session-item[data-all-files="1"]') : null;
+        window.__clickedFilesAll = !!all;
+        if (all) all.click();
+      }, 6550);
+      setTimeout(() => {
+        const m = findTransferModal();
+        const files = m ? m.querySelector('.znhd-transfer-files') : null;
+        window.__transferSnap.filesAllRestored = !!(
+          files &&
+          (files.textContent || '').indexOf('全部文件（图片 1 · 文件 1 · 文本 1）') >= 0
+        );
+      }, 6580);
+
+      // ⚠️ 收到图片后点缩略图放大：必须断言「主图真的渲染出来」。
+      // 历史：v26.10.8-v1 补的——此前只断言「九宫格画廊（缩略图出现）」，从没点过缩略图，
+      // 导致「点开后只有黑罩、主图一直不出现」的 bug 存活了两个多月。
+      // 判定要点不变：**已解码 + 有可见尺寸**（选择器随画廊搬到文件视图而改）。
+      setTimeout(() => {
+        const m = findTransferModal();
+        const thumb = m ? m.querySelector('.znhd-transfer-files .ant-image img') : null;
+        window.__clickedThumb = !!thumb;
+        if (thumb) thumb.click();
+      }, 6600);
+      setTimeout(() => {
+        const wrap = document.querySelector('.ant-image-preview');
+        const img = wrap ? wrap.querySelector('.ant-image-preview-img') : null;
+        const r = img ? img.getBoundingClientRect() : null;
+        window.__viewerZoom = {
+          container: !!wrap,
+          shownClass: !!(wrap && (wrap.className || '').indexOf('ant-image-preview-open') >= 0),
+          canvasImg: !!img,
+          decoded: !!(img && img.complete && img.naturalWidth > 0),
+          visible: !!(r && r.width > 10 && r.height > 10),
+        };
+      }, 7200);
+
+      // 点文件视图里的「复制」，验证剪贴板写入路径（v26.10.06-v4 回归断言）。
+      // 用程序化 click 而非真实鼠标点击：此时放大预览/其它弹窗可能盖在上面（真实点击会打偏）。
+      // ⚠️ v26.10.10-v16：按钮改成图片右下角的**图标按钮**后里面没有文字了，
+      //    只能按 aria-label 找（图标按钮的语义全在 aria-label 上，见 ImageOverlayActions.tsx）。
+      setTimeout(() => {
+        const m = findTransferModal();
+        const b = m ? m.querySelector('.znhd-transfer-files button[aria-label="复制"]') : null;
+        window.__clickedCopy = !!b;
+        if (b) b.click();
+      }, 7400);
+
+      // 点放大预览工具栏里的「打印」，验证 react-to-print 链路接通（v26.10.08-v2：入口从缩略图行挪到预览工具栏）。
+      // 只断言「打印 iframe 被建出来」：headless 下看不到打印对话框，且该 iframe 打印后即被移除，
+      // 故用 head 里装的 MutationObserver 记录（见 window.__printIframeSeen 的说明）。
+      // 用轮询而不是固定时刻：预览在 6600ms 由缩略图点开，这里等它出现后再点，避免与其它弹窗的时序耦合。
+      setTimeout(() => {
+        const waitPrintBtn = (tries) => {
+          const actions = document.querySelector('.ant-image-preview-actions');
+          const b = actions ? actions.querySelector('button[aria-label="print"]') : null;
+          if (b) {
+            window.__printBtnSeen = true;
+            // 位置断言：必须长在 antd 工具栏的胶囊容器「里面」（挪回缩略图行时这里会变红）
+            window.__printBtnInActions = actions.contains(b) && !!b.querySelector('svg');
+            b.click();
+            return;
+          }
+          if (tries <= 0) {
+            window.__printBtnSeen = false;
+            window.__printBtnInActions = false;
+            return;
+          }
+          setTimeout(() => waitPrintBtn(tries - 1), 200);
+        };
+        waitPrintBtn(25); // 最多再等 5s
+      }, 7600);
+
+      // ⚠️ 文件视图的图片格子按钮必须在**预览还开着**时测完（8000ms 的快照同）；
+      //    hover 后的可见性要等重渲染，8200ms 补读。
+      setTimeout(() => {
+        const m = findTransferModal();
+        const files = m ? m.querySelector('.znhd-transfer-files') : null;
+        window.__filesImgActions = imgActionsFacts(files, ['复制', '下载', '删除']);
+      }, 8000);
+      setTimeout(() => {
+        const m = findTransferModal();
+        const files = m ? m.querySelector('.znhd-transfer-files') : null;
+        window.__filesImgActions = Object.assign({}, window.__filesImgActions || {}, {
+          hovered: imgActionsVisible(files, ['复制', '下载', '删除']),
+        });
+      }, 8200);
+
+      // ★ 快照（v26.10.08-v10）：下面这些「预览 / 工具栏」事实必须在**动页面之前**取值 ——
+      // 后面的用例会切视图、清会话，实时 DOM 不再是当时状态（本次踩过）。
+      setTimeout(() => {
+        const hist = findTransferModal(); // 「画廊」随历史记录一起搬进了传输助手
+        const files = hist ? hist.querySelector('.znhd-transfer-files') : null;
+        const preview = document.querySelector('.ant-image-preview');
+        const footer = preview ? preview.querySelector('.ant-image-preview-footer') : null;
+        const pbtn = preview ? preview.querySelector('button[aria-label="print"]') : null;
+        const actions = preview ? preview.querySelector('.ant-image-preview-actions') : null;
+        const fb = footer ? footer.getBoundingClientRect() : null;
+        const pb = pbtn ? pbtn.getBoundingClientRect() : null;
+        const hit = pb && pb.width ? document.elementFromPoint(pb.x + pb.width / 2, pb.y + pb.height / 2) : null;
+        const centered =
+          !!actions &&
+          Array.from(actions.querySelectorAll('button'))
+            .filter((b) => b.querySelector('svg'))
+            .every((b) => {
+              const bb = b.getBoundingClientRect();
+              const sb = b.querySelector('svg').getBoundingClientRect();
+              return bb.height > 0 && sb.height > 0 && Math.abs(bb.top + bb.height / 2 - (sb.top + sb.height / 2)) <= 2;
+            });
+        const histRoot = hist ? hist.closest('.ant-modal-root') : null;
+        // 「预览背后只能有一层遮罩」（v26.10.08-v11）：
+        //  ① DOM 判据：预览期间**所有** `.ant-modal-mask` / `.ant-drawer-mask` 都必须被 display:none 压掉
+        //     （只判「传输助手自己那个 modal-root」不够 —— 实测预览打开时还叠着设置抽屉的 .ant-drawer-mask）；
+        //  ② 几何判据：在预览遮罩上取样，把该点所有「深色半透明」层的 alpha 合成，必须只有单层 0.45
+        //     （两层就是 0.6975，白底灰度 77；单层是 140）。
+        const maskHidden = (sel) =>
+          Array.from(document.querySelectorAll(sel)).every((el) => {
+            const cs = getComputedStyle(el);
+            return cs.display === 'none' || cs.visibility === 'hidden';
+          });
+        const darkAlphaAt = (x, y) => {
+          let a = 0;
+          document.elementsFromPoint(x, y).forEach((el) => {
+            const m = /rgba?\(([^)]+)\)/.exec(getComputedStyle(el).backgroundColor || '');
+            if (!m) return;
+            const p = m[1].split(',').map((s) => parseFloat(s.trim()));
+            if (p.length < 3 || !(p[0] < 128 && p[1] < 128 && p[2] < 128)) return;
+            const al = p.length === 4 ? p[3] : 1;
+            // v26.10.12-v4：窗口固定微信暗色后，聊天区/侧栏本身就是不透明深色 —— 那是内容底色，
+            // 不是遮罩；本判据只针对「半透明遮罩叠了几层」，不透明层（al>=1）不计入
+            if (al >= 1) return;
+            a = 1 - (1 - a) * (1 - al);
+          });
+          return Number(a.toFixed(4));
+        };
+        const maskComposite = preview ? Math.max(darkAlphaAt(50, 400), darkAlphaAt(640, 120)) : 1;
+        window.__snap = {
+          filesImgOk: !!files && !!files.querySelector('.ant-image img'),
+          footerInViewport: !!(fb && fb.top >= 0 && fb.bottom <= window.innerHeight + 1),
+          footerHit: !!(hit && footer && footer.contains(hit)),
+          iconsCentered: centered,
+          maskComposite: maskComposite,
+          singleMask: !!histRoot && maskHidden('.ant-modal-mask') && maskHidden('.ant-drawer-mask') && maskComposite <= 0.46,
+        };
+      }, 8600);
+
+      /* ===== ②b 按发送者归组（v26.10.13-v6）===========================================
+         用户报的 bug：两台及以上手机在线时，内容全进聚合会话「手机」。修复后按发送者归组——
+         这里让 /recv 桩补发一条**来自手机 B** 的文本（窗口开着 ⇒ 不抢当前会话），然后断言：
+         第二栏出现 B 的条目且预览是这条文本、聚合会话「手机」不出现、当前会话（A）里没有它。 */
+      setTimeout(() => {
+        window.__routePhase = true; // /recv 桩据此补发「来自 B」的文本（只发一次）
+      }, 10500);
+      setTimeout(() => {
+        const m = findTransferModal();
+        const ts = window.__transferSnap;
+        const items = m ? Array.from(m.querySelectorAll('.znhd-transfer-session-item')) : [];
+        // 判据用条目标题行（title=标签）：聚合会话恰为「手机」；预览文案里带「手机」二字不算
+        const titleOf = (el) => el.getAttribute('title') || '';
+        const bItem = items.find((el) => titleOf(el).indexOf('22222222') >= 0);
+        ts.routeBySender = {
+          bItemSeen: !!bItem,
+          bPreviewOk: !!(bItem && (bItem.textContent || '').indexOf('归组测试：来自第二台手机的文本') >= 0),
+          noAggregate: !items.some((el) => titleOf(el) === '手机'),
+          notInActive: transferMessagesText().indexOf('归组测试：来自第二台手机的文本') < 0,
+        };
+      }, 11400);
+
+      /* ===== ④ 设备会话：聊天区渲染 + 发文本 + 选图发送（先压缩再发）=================
+         旧「发送到手机」分区 + 旧「历史记录」画廊合并为第三栏的聊天气泡；
+         发送入口（选图 / 发送 N 张图片）与压缩断言逻辑原样搬迁。 */
+      setTimeout(() => {
+        document
+          .querySelectorAll('.ant-image-preview-root, .ant-image-preview-wrap')
+          .forEach((e) => e.remove());
+        window.__clickedDevicesNav = clickTransferNav('对话');
+      }, 9000);
+      setTimeout(() => {
+        const m = findTransferModal();
+        const msgs = m ? m.querySelector('.znhd-transfer-messages') : null;
+        const ts = window.__transferSnap;
+        ts.sessionChatSeen = !!msgs;
+        ts.sessionRecvTextSeen = !!(msgs && (msgs.textContent || '').indexOf('冒烟测试文本：收到一条文本消息') >= 0);
+        ts.sessionRecvImgSeen = !!(msgs && msgs.querySelector('.ant-image img'));
+        ts.sessionHeaderSeen = !!(m && m.querySelector('.znhd-transfer-main') && (m.querySelector('.znhd-transfer-main').textContent || '').indexOf('在线') >= 0);
+      }, 9400);
+
+      const SEND_TEXT = '冒烟测试：本机发出的文本';
+      // 用原型上的 setter 赋值再派发 input：React 的受控输入依赖原生 setter 触发的 value 跟踪
+      // （直接 `el.value = x` 会被 React 缓存的 value 覆盖掉；input 事件必须冒泡到 root）
+      // ⚠️ v26.10.12-v3：设备输入框从**单行 input 换成了多行 textarea**（改自与 Agent 对话
+      //    共用的 ChatComposer；Agent 已于 v26.10.13-v9 删除），setter 必须按 tagName 取对应原型 ——
+      //    用错原型时 React 收不到变更，表现为「赋值了但发送按钮还是灰的」。
+      const typeInto = (el, text) => {
+        const proto = el.tagName === 'TEXTAREA' ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
+        const setter = Object.getOwnPropertyDescriptor(proto, 'value').set;
+        setter.call(el, text);
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+      };
+      /** 设备会话的输入框（多行 textarea；按 placeholder 找） */
+      const findDeviceInput = () => {
+        const m = findTransferModal();
+        if (!m) return null;
+        return (
+          Array.from(m.querySelectorAll('textarea, input')).find(
+            (el) => (el.placeholder || '').indexOf('输入要发送到手机的文本') >= 0
+          ) || null
+        );
+      };
+      /** 输入框所在的共用外壳（气泡/输入框/发送按钮都长在它里面） */
+      const composerBoxOf = (el) => (el ? el.closest('.znhd-chat-composer') : null);
+      /**
+       * 共用输入区的事实快照（v26.10.12-v3；v26.10.12-v4 改微信结构后同步）。
+       *
+       * 微信式输入面板：工具栏图标行（上）→ 多行输入框（自动增高、超上限框内滚动）→
+       * 右下角「发送」文字按钮。第三栏只有设备会话一个宿主，输入面板就是 `ChatComposer`，
+       * 所以判据只认组件自己的钩子（面板类名 `.znhd-chat-composer` + 按钮 aria-label）。
+       */
+      const composerFacts = () => {
+        const ta = findDeviceInput();
+        const shell = composerBoxOf(ta);
+        if (!ta || !shell) return { shell: false };
+        const cs = getComputedStyle(shell);
+        const tb = ta.getBoundingClientRect();
+        const bb = shell.getBoundingClientRect();
+        const send = shell.querySelector('button[aria-label="发送"]');
+        const sb = send ? send.getBoundingClientRect() : null;
+        const labels = Array.from(shell.querySelectorAll('button[aria-label]')).map((b) =>
+          b.getAttribute('aria-label')
+        );
+        return {
+          shell: true,
+          isTextarea: ta.tagName === 'TEXTAREA',
+          labels: labels,
+          // v26.10.12-v4：发送按钮改微信式文字按钮（「发送」）
+          sendTextLabel: !!(send && (send.textContent || '').trim() === '发送'),
+          // 发送按钮在**右下角**：贴着面板右边，且在文本框下沿之下
+          sendBottomRight: !!(sb && bb.right - sb.right <= 24 && sb.top >= tb.bottom - 8),
+          // 整块面板实心底 + 一圈边框（v26.10.13-v10 起是四边留白的圆角浮起卡片，
+          // 通栏时代的「顶部分隔线」由这圈全边框继承：判据仍是 borderTopWidth > 0）
+          panelBordered: parseFloat(cs.borderTopWidth) > 0,
+          height: Math.round(tb.height),
+        };
+      };
+      setTimeout(() => {
+        const input = findDeviceInput();
+        window.__sendInputFound = !!input;
+        if (input) typeInto(input, SEND_TEXT);
+      }, 9600);
+      setTimeout(() => {
+        // v26.10.12-v3：发送按钮改成圆形图标按钮（ChatComposer），
+        // 里面没有文字了 —— 只能按 aria-label 找（语义全挂在它上面）。
+        const m = findTransferModal();
+        const btn = m
+          ? Array.from(m.querySelectorAll('button')).find((b) => (b.getAttribute('aria-label') || '') === '发送')
+          : null;
+        window.__clickedSessionSend = !!btn;
+        if (btn) btn.click();
+      }, 9800);
+      setTimeout(() => {
+        const ts = window.__transferSnap;
+        ts.textSentSeen = transferMessagesText().indexOf(SEND_TEXT) >= 0;
+        ts.phoneSentText = (window.__phoneSent || []).some((p) => p.text === SEND_TEXT);
+        // —— 气泡：左右分栏（他人靠左浅底 / 我的靠右深底）+ 每个气泡外侧都有头像 ——
+        const m = findTransferModal();
+        const box = m ? m.querySelector('.znhd-transfer-messages') : null;
+        const left = box ? box.querySelector('.znhd-chat-msg[data-side="left"]') : null;
+        const right = box ? box.querySelector('.znhd-chat-msg[data-side="right"]') : null;
+        const bgOf = (el) => {
+          const bubble = el ? el.querySelector('.znhd-chat-bubble') : null;
+          return bubble ? getComputedStyle(bubble).backgroundColor : '';
+        };
+        ts.bubbles = {
+          leftSeen: !!left,
+          rightSeen: !!right,
+          leftDirection: left ? getComputedStyle(left).flexDirection : '',
+          rightDirection: right ? getComputedStyle(right).flexDirection : '',
+          leftBg: bgOf(left),
+          rightBg: bgOf(right),
+          bubbleCount: box ? box.querySelectorAll('.znhd-chat-msg').length : 0,
+          avatars: box ? box.querySelectorAll('.znhd-chat-msg .znhd-chat-avatar').length : 0,
+          // v26.10.12-v4：时间分隔条（居中灰字，多条消息共用一条）
+          timeSep: !!(box && box.querySelector('.znhd-chat-time')),
+        };
+        // —— 输入区（空着时的基线高度）——
+        ts.composerEmpty = composerFacts();
+      }, 10200);
+      // 多行自增高：塞 10 行（远超 maxRows=6）→ 高度必须封顶、且**框内**出现滚动条
+      setTimeout(() => {
+        const ta = findDeviceInput();
+        if (ta) typeInto(ta, Array.from({ length: 10 }, (_, i) => '第 ' + i + ' 行').join('\n'));
+      }, 10250);
+      setTimeout(() => {
+        const ts = window.__transferSnap;
+        const ta = findDeviceInput();
+        ts.composerGrown = composerFacts();
+        ts.composerScroll = ta
+          ? {
+              scrollHeight: ta.scrollHeight,
+              clientHeight: ta.clientHeight,
+              overflowY: getComputedStyle(ta).overflowY,
+            }
+          : null;
+        // 清空：别影响后面「选图发送」的用例（那个按钮的可点状态与文本无关，但保持现场干净）
+        if (ta) typeInto(ta, '');
+      }, 10330);
+
+      setTimeout(() => {
+        const m = findTransferModal();
+        // v26.10.12-v3：原来的「选择图片」文字按钮改成输入框左下角的**图标按钮**
+        // （表情 / 图片上传 / 附件 三个之一），按 aria-label 找。
+        const btn = m ? m.querySelector('.znhd-chat-composer button[aria-label="图片上传"]') : null;
+        window.__clickedPick = !!btn;
+        if (btn) btn.click();
+      }, 10400);
+      setTimeout(() => {
+        const inp = document.querySelector('input[type=file]');
+        if (!inp) {
+          window.__pickErr = '未找到隐藏的 file input';
+          return;
+        }
+        makeBigFile().then((f) => {
+          window.__sentOriginalSize = f.size;
+          const dt = new DataTransfer();
+          dt.items.add(f);
+          inp.files = dt.files;
+          inp.dispatchEvent(new Event('change'));
+          window.__injectedFile = true;
+        });
+      }, 10700);
+      // 「发送 N 张图片」按钮在待发列表渲染后才出现，用轮询点它（v26.10.12-v1：按钮随设备聊天区搬迁）
+      setTimeout(() => {
+        const clickSendImages = (tries) => {
+          const m = findTransferModal();
+          const btn = m
+            ? Array.from(m.querySelectorAll('button')).find((b) => (b.textContent || '').indexOf('张图片') >= 0)
+            : null;
+          if (btn) {
+            window.__clickedSendImg = true;
+            btn.click();
+            return;
+          }
+          if (tries <= 0) {
+            window.__clickedSendImg = false;
+            return;
+          }
+          setTimeout(() => clickSendImages(tries - 1), 200);
+        };
+        clickSendImages(15);
+      }, 11000);
+      // 解出实际 POST 的字节：必须是 JPEG、最长边 ≤1600、且比原图小（压缩在上传前完成，POST 后稍晚才落地）
+      setTimeout(() => {
+        const decode = (tries) => {
+          // 收到的文本是「手机 → 电脑」、发出的文本是「电脑 → 手机」，两者都会出现在这里 —— 要按「已发送」筛选出真正的图片
+          const sent = (window.__phoneSent || []).find((p) => p && p.data);
+          if (!sent || !sent.data) {
+            if (tries <= 0) {
+              window.__phoneSendCheck = { got: false, sentCount: (window.__phoneSent || []).length };
+              return;
+            }
+            setTimeout(() => decode(tries - 1), 150);
+            return;
+          }
+          try {
+            const bin = atob(sent.data);
+            const arr = new Uint8Array(bin.length);
+            for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+            const jpegMagic = arr[0] === 0xff && arr[1] === 0xd8;
+            createImageBitmap(new Blob([arr], { type: sent.mime || 'image/jpeg' }))
+              .then((bmp) => {
+                window.__phoneSendCheck = {
+                  got: true,
+                  mime: sent.mime,
+                  name: sent.name,
+                  bytes: arr.length,
+                  originalBytes: window.__sentOriginalSize || 0,
+                  w: bmp.width,
+                  h: bmp.height,
+                  jpegMagic: jpegMagic,
+                };
+                bmp.close();
+              })
+              .catch((e) => {
+                window.__phoneSendCheck = {
+                  got: true,
+                  mime: sent.mime,
+                  bytes: arr.length,
+                  decodeErr: String((e && e.message) || e),
+                };
+              });
+          } catch (e) {
+            window.__phoneSendCheck = { got: false, err: String((e && e.message) || e) };
+          }
+        };
+        decode(20);
+      }, 12000);
+
+      /* ===== ⑤ 「清空消息」：会话回到空状态（旧「历史为空也能打开」的等价物）============ */
+      setTimeout(() => {
+        const m = findTransferModal();
+        // v26.10.12-v4：清空按钮改微信式纯图标（垃圾桶），语义全在 aria-label 上
+        const btn = m ? m.querySelector('button[aria-label="清空消息"]') : null;
+        window.__clickedClearSession = !!btn;
+        if (btn) btn.click();
+      }, 12400);
+      setTimeout(() => {
+        // Popconfirm 的确认按钮在弹出层里（.ant-popover），按文案精确点「清空」
+        // （触发器文案是「清空消息」，包含匹配会命中触发器自己）
+        const pop = Array.from(document.querySelectorAll('.ant-popover')).find((el) =>
+          (el.textContent || '').indexOf('清空这个会话') >= 0
+        );
+        const ok = pop
+          ? Array.from(pop.querySelectorAll('button')).find((b) => (b.textContent || '').trim() === '清空')
+          : null;
+        window.__clickedClearOk = !!ok;
+        if (ok) ok.click();
+      }, 12700);
+      setTimeout(() => {
+        const ts = window.__transferSnap;
+        ts.sessionClearOk = transferMessagesText().indexOf('暂无消息，用下面的输入框') >= 0;
+      }, 13100);
+
+      /* ===== 在线表情包（v26.10.13-v3）===================================================
+         用户要求把表情面板换成 8 个在线表情合集（cdn.klyang.com）。桩按 URL 分支作答
+         （清单 JSON + 真 webp Blob），验三件事：面板拿到清单并渲染、图片真的下好、
+         点一张之后**进待发图片列表**（表情与「图片上传」走同一条发送链路）。 */
+      setTimeout(() => {
+        const m = findTransferModal();
+        const ts = window.__transferSnap;
+        // 点之前先记下待发张数（前面用例可能留下残留，只比「点击前后 +1」才稳）
+        const before = (m ? m.textContent || '' : '').match(/已选 (\d+) 张/);
+        ts.emojiPendingBefore = before ? before[1] : '0';
+        const btn = m ? m.querySelector('.znhd-chat-composer button[aria-label="表情"]') : null;
+        ts.emojiBtnSeen = !!btn;
+        if (btn) btn.click();
+      }, 13150);
+      setTimeout(() => {
+        // ⚠️ Popover 的内容**不在传输助手 Modal 的子树里** —— TransferAssistantModal 给
+        // ConfigProvider 配了 getPopupContainer(getOverlayContainer)，浮层统一挂到
+        // `#__znhd_overlay_host__`。所以面板/条目必须从 document 查，用 m.querySelector 永远查不到。
+        const panel = document.querySelector('.znhd-emoji-panel');
+        const items = panel ? Array.from(panel.querySelectorAll('.znhd-emoji-item')) : [];
+        const chips = panel ? Array.from(panel.querySelectorAll('button[aria-pressed]')) : [];
+        const on = chips.find((b) => b.getAttribute('aria-pressed') === 'true');
+        window.__transferSnap.emojiPanel = {
+          seen: !!panel,
+          // 合集 chips（选中的那个 aria-pressed=true）
+          packs: chips.map((b) => b.textContent || ''),
+          selected: on ? on.textContent || '' : '',
+          itemCount: items.length,
+          // 图片是否真的下好（blob → objectURL 进了 <img src>）
+          imgCount: panel ? panel.querySelectorAll('.znhd-emoji-item img').length : 0,
+          firstLabel: items[0] ? items[0].getAttribute('aria-label') || '' : '',
+        };
+        window.__emojiFirstItem = items[0] || null;
+        window.__emojiItems = items;
+      }, 13300);
+      /* ===== 表情包：悬停放大预览 + 点击直接发送（v26.10.13-v4）=====================
+         ① 悬停要等 0.5 秒才出放大浮层（派发瞬间与 100ms 时都不该出现）；
+         ② 浮层已在屏幕上时移到另一张 → **立即**换图（不再等 0.5 秒）—— 用户原话「实时显示」；
+         ③ 点一张 = **直接发送**：不进「待发图片」，而是多出一条图片气泡。
+         ⚠️ 悬停判定走网格上的 mousemove 委托，故这里派发的是 mousemove（不是 mouseover）。 */
+      setTimeout(() => {
+        const ts = window.__transferSnap;
+        const first = window.__emojiFirstItem;
+        const second = (window.__emojiItems || [])[1] || null;
+        window.__emojiSecondItem = second;
+        // 两张必须是不同的图，否则「切换」断言没有意义
+        ts.emojiFirstUrl = first ? first.getAttribute('data-emoji-url') || '' : '';
+        ts.emojiSecondUrl = second ? second.getAttribute('data-emoji-url') || '' : '';
+        if (first) first.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, clientX: 300, clientY: 300 }));
+        // 派发瞬间：浮层必须还没出现（有 0.5s 延迟）
+        ts.emojiHoverImmediate = !!document.querySelector('.znhd-emoji-hover');
+      }, 13400);
+      setTimeout(() => {
+        // 100ms 时仍不该出现
+        window.__transferSnap.emojiHoverAt100 = !!document.querySelector('.znhd-emoji-hover');
+      }, 13500);
+      setTimeout(() => {
+        // 650ms：浮层出现，内容是**被悬停的那一张**
+        const el = document.querySelector('.znhd-emoji-hover');
+        window.__transferSnap.emojiHoverAfter = {
+          seen: !!el,
+          url: el ? el.getAttribute('data-emoji-url') || '' : '',
+          img: el ? el.querySelectorAll('img').length : 0,
+        };
+      }, 14050);
+      setTimeout(() => {
+        // 移到第二张：应当**立即**换图（不等 0.5s）
+        const s = window.__emojiSecondItem;
+        if (s) s.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, clientX: 340, clientY: 300 }));
+      }, 14080);
+      setTimeout(() => {
+        const el = document.querySelector('.znhd-emoji-hover');
+        window.__transferSnap.emojiHoverSwitch = {
+          seen: !!el,
+          url: el ? el.getAttribute('data-emoji-url') || '' : '',
+        };
+      }, 14150);
+      /* ===== 表情面板自动收起（v26.10.13-v7，用户要求）=============================
+         ① 点一张表情 → **立即**收起面板（同时照旧直接发送，见 emojiPicked）；
+         ② 面板开着时点「面板之外的任何区域」→ **立即**收起；
+         ③ 回归：面板开着时点触发按钮 → 收起（而不是被 toggle 又打开）。
+         每条前置都先记「守卫」事实（点之前面板是开的），否则「点后已收起」会恒真假绿。 */
+      setTimeout(() => {
+        // 点第一张 → 应当**直接发送**（不再进「待发图片」），并**立即收起**面板
+        const ts = window.__transferSnap;
+        const m = findTransferModal();
+        ts.emojiMsgsBefore = m ? m.querySelectorAll('.znhd-transfer-messages .ant-image-img').length : -1;
+        ts.emojiPendingBeforeClick = !!(m && (m.textContent || '').indexOf('待发送图片') >= 0);
+        window.__clickedEmojiItem = !!window.__emojiFirstItem;
+        ts.emojiPanelBeforePick = emojiPanelVisible(); // 守卫：点之前必须是开着的
+        if (window.__emojiFirstItem) window.__emojiFirstItem.click();
+      }, 14200);
+      setTimeout(() => {
+        const ts = window.__transferSnap;
+        // ① 点表情后 100ms：面板必须已经收起
+        ts.emojiCloseAfterPick = emojiPanelVisible();
+        // 再打开一次，为下一条「点外部」用例做准备
+        const btn = emojiTriggerButton();
+        if (btn) btn.click();
+      }, 14300);
+      setTimeout(() => {
+        const ts = window.__transferSnap;
+        // 守卫：重新打开确实生效（否则「点外部后收起」也可能是假绿）
+        ts.emojiReopenSeen = emojiPanelVisible();
+        // ② 点面板之外（消息区）→ 派发 mousedown（本组件的关闭判定挂在 document 捕获阶段）
+        const m = findTransferModal();
+        const outside = (m && m.querySelector('.znhd-transfer-messages')) || document.body;
+        outside.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }));
+      }, 14400);
+      setTimeout(() => {
+        const ts = window.__transferSnap;
+        ts.emojiCloseAfterOutside = emojiPanelVisible();
+        // 再开一次，验「开着时点触发按钮」这条回归
+        const btn = emojiTriggerButton();
+        if (btn) btn.click();
+      }, 14500);
+      setTimeout(() => {
+        const ts = window.__transferSnap;
+        ts.emojiReopenForTriggerSeen = emojiPanelVisible(); // 守卫
+        const btn = emojiTriggerButton();
+        if (btn) btn.click(); // ③ 开着时点触发按钮 → 应收起
+      }, 14600);
+      setTimeout(() => {
+        const ts = window.__transferSnap;
+        const m = findTransferModal();
+        const sent = (window.__phoneSent || []).slice(-1)[0] || {};
+        ts.emojiCloseOnTrigger = emojiPanelVisible();
+        ts.emojiPicked = {
+          selected: !!window.__clickedEmojiItem,
+          // 点击后**不该**出现待发列表（直接发送的判据）
+          pendingSeen: !!(m && (m.textContent || '').indexOf('待发送图片') >= 0),
+          // 会话里应当多出一张图片气泡
+          msgsAfter: m ? m.querySelectorAll('.znhd-transfer-messages .ant-image-img').length : -1,
+          sentMime: sent.mime || '',
+          sentBytes: typeof sent.data === 'string' ? sent.data.length : 0,
+        };
+      }, 14700);
+
+      /* ===== ⑥ 「+」配对窗口：二维码 / 链接 / 在线状态 / 手机列表 / 发送测试图片 ==========
+         旧「设备互联」弹窗的配对部分，入口统一收进第二栏搜索框右侧的「+」。 */
+      setTimeout(() => {
+        const m = findTransferModal();
+        const btn = m ? m.querySelector('button[aria-label="配对设备"]') : null;
+        window.__clickedPair = !!btn;
+        if (btn) btn.click();
+      }, 14800);
+      setTimeout(() => {
+        const p = findPairModal();
+        const ps = window.__pairSnap;
+        const t = p ? p.textContent || '' : '';
+        ps.pairSeen = !!p;
+        ps.pairTitleOk = t.indexOf('配对设备') >= 0;
+        ps.pairQrOk = !!p && !!p.querySelector('img[alt="上传链接二维码"]');
+        ps.qrNoRadius = (() => {
+          const q = p ? p.querySelector('img[alt="上传链接二维码"]') : null;
+          return !!q && getComputedStyle(q).borderRadius === '0px';
+        })();
+        ps.pairLinkOk = t.indexOf('znhd.122050.xyz/u/') >= 0;
+        ps.pairCountOk = t.indexOf('已连接手机 2 台') >= 0;
+        ps.pairListOk = t.indexOf('11111111') >= 0 && t.indexOf('22222222') >= 0;
+        // 设备 ID 的彩色标签（v26.10.08-v12）：每个 ID 都要有**实边框**和**不透明底色**，
+        // 且两个不同 ID 的底色必须**不一样**（用户要求「不同设备 ID 不同底色」）。
+        // ⚠️ 这条能抓到「哈希撞色」：本功能第一版用 `h*31+c` 时两个模拟 ID 就撞成同色了。
+        const tags = p ? Array.from(p.querySelectorAll('[data-device-id]')) : [];
+        const styles = tags.map((el) => {
+          const cs = getComputedStyle(el);
+          return { bg: cs.backgroundColor, borderW: parseFloat(cs.borderTopWidth) || 0 };
+        });
+        ps.tagCount = styles.length;
+        ps.idColorOk =
+          styles.length >= 2 &&
+          styles.every((s) => s.borderW > 0 && s.bg && s.bg !== 'rgba(0, 0, 0, 0)') &&
+          new Set(styles.map((s) => s.bg)).size === styles.length;
+        // 「发送测试图片」从旧「历史记录」标题栏迁到配对窗口 footer
+        ps.testBtnOk = !!(
+          p &&
+          Array.from(p.querySelectorAll('button')).some((b) => (b.textContent || '').includes('发送测试图片'))
+        );
+      }, 15400);
+
+      // 「发送测试图片」（v26.10.08-v10）：点 footer 按钮 → 代码去图源取图（桩返回真 Blob）→ 转 base64
+      // → POST /u/<deviceId>（桩记录载荷）。断言只看「有没有真把图片投出去」。
+      setTimeout(() => {
+        const p = findPairModal();
+        const btn = p
+          ? Array.from(p.querySelectorAll('button')).find((b) => (b.textContent || '').includes('发送测试图片'))
+          : null;
+        window.__clickedTestImage = !!btn;
+        if (btn) btn.click();
+      }, 15800);
+      setTimeout(() => {
+        const s = window.__testImageSent;
+        window.__pairSnap.testImageSent = !!(
+          s &&
+          typeof s.data === 'string' &&
+          s.data.length > 100 &&
+          /^image\//.test(s.mime || '')
+        );
+      }, 16400);
+
+      /* ===== ⑦ 设置隔离 + 固定微信暗色（v26.10.12-v4）=================================
+         外观切换已随「窗口固定微信暗色」移除；这里改为：
+         · 打开第一栏底部「设置」→ 拨「收到内容时自动打开」开关 → 落盘必须只进
+           scriptCat_TransferSettings（relayServer 是默认值、开关状态翻转），不碰主设置；
+         · 三栏 + 标题条 + 主区固定微信分层色（外围最淡、聊天区最深）。 */
+      setTimeout(() => {
+        const p = findPairModal();
+        const btn = p ? Array.from(p.querySelectorAll('button')).find((b) => (b.textContent || '').trim() === '关闭') : null;
+        window.__closedPair = !!btn;
+        if (btn) btn.click();
+      }, 16800);
+      setTimeout(() => {
+        // 第一栏底部「设置」是纯图标按钮（aria-label）
+        const m = findTransferModal();
+        const btn = m ? m.querySelector('button[aria-label="设置"]') : null;
+        window.__openedSettings = !!btn;
+        if (btn) btn.click();
+      }, 17200);
+      setTimeout(() => {
+        // 传输助手设置子窗口：按内容找（标题只有「传输助手设置」也是 .ant-modal）
+        const sm = Array.from(document.querySelectorAll('.ant-modal')).find((el) =>
+          (el.textContent || '').indexOf('收到内容时自动打开传输助手') >= 0
+        );
+        const sw = sm ? sm.querySelector('button[role="switch"]') : null;
+        window.__toggledAutoOpen = !!sw;
+        if (sw) sw.click();
+      }, 17500);
+      setTimeout(() => {
+        const m = findTransferModal();
+        const ts = window.__transferSnap;
+        const rgb = (sel) => {
+          const el = m ? m.querySelector(sel) : null;
+          return el ? getComputedStyle(el).backgroundColor : '';
+        };
+        // 固定微信暗色（v5 起标题条与第一栏同色 #2E2E2E）：第二栏 #252525、主区最深 #1E1E1E
+        ts.themeDarkOk =
+          rgb('.znhd-transfer-titlebar') === 'rgb(46, 46, 46)' &&
+          rgb('.znhd-transfer-nav') === 'rgb(46, 46, 46)' &&
+          rgb('.znhd-transfer-sessions') === 'rgb(37, 37, 37)' &&
+          rgb('.znhd-transfer-main') === 'rgb(30, 30, 30)';
+        // ── 圆角 + 层级（v26.10.13-v10，对齐用户 excalidraw 白板稿）──
+        //   · 窗口外框大圆角（≥12px，来自 borderRadiusLG token）
+        //   · 第二三栏整体是内嵌圆角卡片：右/下缘与窗口边缘留出空隙（层级），
+        //     空隙露出**与第一栏同色的窗口底色**（v26.10.14-v1 起，用户要求避免断层），
+        //     左缘紧贴第一栏、上缘接标题条
+        //   · 第一栏贴满窗口高度（不随卡片内缩）
+        //   · 输入区是浮在聊天区上的圆角卡片：四边留白 + 全边框
+        //   · 搜索框圆角（内部控件圆角化的代表）
+        // ⚠️ 全部用**几何 + 计算样式**判据，不猜色值（antd 暗色算法会改主色）；
+        //    唯一的颜色判据是「窗口底色 === 第一栏底色」（同色比较，不写死 hex）。
+        const layered = (() => {
+          const out = {};
+          const radiusOf = (el) => (el ? parseFloat(getComputedStyle(el).borderTopLeftRadius) || 0 : 0);
+          const container = m ? m.querySelector('.ant-modal-container') : null;
+          const modalBody = m ? m.querySelector('.ant-modal-body') : null;
+          const content = m ? m.querySelector('.znhd-transfer-content') : null;
+          const navEl = m ? m.querySelector('.znhd-transfer-nav') : null;
+          const composer = m ? m.querySelector('.znhd-chat-composer') : null;
+          const mainEl = m ? m.querySelector('.znhd-transfer-main') : null;
+          // ⚠️ 搜索框的圆角量**外层** `.ant-input-affix-wrapper`（Input 带 prefix 时
+          // style 落在外壳上，内层 input 自己是 0）—— 首版量内层量出 0，假红过一次
+          const searchInput = m ? m.querySelector('.znhd-transfer-sessions .ant-input-affix-wrapper') : null;
+          const mr = m ? m.getBoundingClientRect() : null;
+          const cr = content ? content.getBoundingClientRect() : null;
+          const nr = navEl ? navEl.getBoundingClientRect() : null;
+          const cm = composer ? composer.getBoundingClientRect() : null;
+          const mm = mainEl ? mainEl.getBoundingClientRect() : null;
+          out.windowRadius = radiusOf(container);
+          out.panelRadius = radiusOf(content);
+          out.panelInsetRight = cr && mr ? Math.round(mr.right - cr.right) : -1;
+          out.panelInsetBottom = cr && mr ? Math.round(mr.bottom - cr.bottom) : -1;
+          out.navFullHeight = !!(nr && mr && Math.round(mr.bottom - nr.bottom) <= 2);
+          out.composerRadius = radiusOf(composer);
+          out.composerInsetLeft = cm && mm ? Math.round(cm.left - mm.left) : -1;
+          out.composerInsetBottom = cm && mm ? Math.round(mm.bottom - cm.bottom) : -1;
+          out.composerBordered = composer ? parseFloat(getComputedStyle(composer).borderTopWidth) > 0 : false;
+          out.searchRadius = radiusOf(searchInput);
+          // v26.10.14-v1：第二三栏卡片右/下缘露出的窗口底色必须与第一栏同色
+          // （用户原话「最下面的底色与第一栏保持一致，避免颜色断层」）
+          // ⚠️ 量 **.ant-modal-body** 不是 .ant-modal-container：v6 的 DOM 是
+          // .ant-modal > .ant-modal-container > .ant-modal-body，我们的底色在 body 上
+          // （container 只放圆角），首版量 container 量到默认 colorBgElevated 假红过一次
+          out.frameMatchesRail = (() => {
+            const bgOf = (el) => (el ? getComputedStyle(el).backgroundColor : '');
+            return !!modalBody && !!navEl && bgOf(modalBody) === bgOf(navEl) && bgOf(modalBody) !== '';
+          })();
+          return out;
+        })();
+        ts.layered = layered;
+        ts.layeredOk = !!(
+          layered.windowRadius >= 12 &&
+          layered.panelRadius >= 6 &&
+          layered.panelInsetRight >= 4 &&
+          layered.panelInsetBottom >= 4 &&
+          layered.navFullHeight &&
+          layered.composerRadius >= 6 &&
+          layered.composerInsetLeft >= 4 &&
+          layered.composerInsetBottom >= 4 &&
+          layered.composerBordered &&
+          layered.frameMatchesRail &&
+          layered.searchRadius >= 4
+        );
+        // 设置隔离：开关翻转会写传输助手自己的键（relayServer 保持默认值），不写主设置
+        let stored = null;
+        try {
+          stored = JSON.parse(localStorage.getItem('scriptCat_TransferSettings') || 'null');
+        } catch (e) {
+          stored = null;
+        }
+        ts.settingsStoredOk = !!(
+          stored &&
+          stored.autoOpenOnReceive === false &&
+          stored.relayServer === 'https://znhd.122050.xyz'
+        );
+        ts.mainAllvalueUntouched = !/relayServer/.test(localStorage.getItem('scriptCat_Allvalue') || '');
+      }, 17900);
+      setTimeout(() => {
+        // 关掉设置子窗口（普通 antd 弹窗，自带 .ant-modal-close），别挡住后面的图片嗅探用例
+        const sm = Array.from(document.querySelectorAll('.ant-modal')).find((el) =>
+          (el.textContent || '').indexOf('收到内容时自动打开传输助手') >= 0
+        );
+        const close = sm ? sm.querySelector('.ant-modal-close') : null;
+        window.__closedSettings = !!close;
+        if (close) close.click();
+      }, 18150);
+
+      /* ===== 需求①：表情包图片不进「全部文件」（v26.10.14-v3）========================
+         时序依据：⑤「清空消息」（12700ms）之后 A 会话已空，14200ms 发出去的那条**表情图**
+         （带 emoji 标记）是 A 会话里唯一的内容；B 会话还有一条归组测试文本。
+         切到「文件」视图：全部文件应只剩那条文本（图片 0）—— 表情图被 TransferFilesView
+         过滤掉。⚠️ 过滤失效时这里会变成「图片 1」，是需求①的直接回归判据。
+         放在 19000ms：配对窗（16800 关）与设置子窗（18150 关）都已关掉，不会挡住导航点击。 */
+      setTimeout(() => {
+        window.__clickedFilesNavAfterEmoji = clickTransferNav('文件');
+      }, 19000);
+      setTimeout(() => {
+        const m = findTransferModal();
+        const files = m ? m.querySelector('.znhd-transfer-files') : null;
+        window.__transferSnap.filesAfterEmoji = {
+          seen: !!files,
+          countText: !!(files && (files.textContent || '').indexOf('全部文件（图片 0 · 文件 0 · 文本 1）') >= 0),
+          imgCount: files ? files.querySelectorAll('.ant-image img').length : -1,
+        };
+      }, 19500);
+
+      /* ===== ⑧ 图片嗅探（v26.10.10-v4；会话分组 v26.10.13-v8；perf 优先 v26.10.14-v2）=====
+         点面板入口 → 弹窗自动扫描页面（夹具见 #sniff-fixtures 与 body 末尾的 #app）。
+         扫描是异步的（每张 HEAD/Range 各 40ms 桩延迟），故用轮询等「卡片出来且已量到大小」再快照。
+         阶段（都在报告采集之前跑完）：
+           0) 等扫描/测量完成 → 点「全选」，取「下载所选（N）」的范围；
+           1) 固化这一轮的事实（含分组事实），然后**切走会话并重扫**；
+           2) 等重扫完成，读切换后的分组事实 —— 此时 Vuex 里两条消息都没了，
+              还能各自归回原会话只能靠脚本的持久层（会话归属索引）；
+           3) 量卡片右下角的悬浮按钮（下载/打印）几何。
+         ⚠️ v26.10.12-v1：这条曾与 Agent 流程**串行**（Agent 收尾后才 kick），避免两个弹窗的
+            轮询互相抢时序；v26.10.13-v9 删掉 Agent 后改回固定延时 kick（30000 拍），
+            仍在报告采集之前跑完。
+         v26.10.14-v2：夹具里多一张**同源真加载**的 /sniff-perf.png（server.js 提供，精确
+             22528 字节）—— 只有真加载的图才进 performance 资源表，跨域假域名进不去。
+             它必须走「资源表读数」档出卡片（sniffPerfFirstOk），完成判据因此改成 cards>=5。 */
+      /* ===== ⑬ 后台预测量（v26.10.14-v4）===========================================
+         嗅探窗要到 30000 拍才开，而脚本启动后约 PRE_INITIAL_DELAY(5s) 就应在**后台**把页面上的图
+         量过一遍。这里在开窗**之前**取样，确认跨域假域名的 CSS 背景图（/sniff-head.png 只能走
+         HEAD 桩）那时已经被请求过 —— 只断言「开窗后有请求」是不行的，那正是旧行为（开窗才测）。
+         之后再比一次：开窗扫描**不得**为它新增请求（缓存命中，见 sniffPreMeasureOk）。 */
+      setTimeout(() => {
+        window.__sniffPreHeadBeforeOpen = window.__gmXhrLog.filter(
+          (l) => l.indexOf('/sniff-head.png') >= 0
+        ).length;
+      }, 12000);
+
+      const kickSniff = () => {
+        // 会话分组夹具必须在**扫描之前**就位：脚本是在「打开弹窗 → 扫描」时读页面 Vuex 的
+        window.__sniffChatInstalled = window.__installSniffChat('two');
+        window.__sniffSnap = {};
+        // 开窗前那一刻的请求基线（随后只发生「开窗扫描」这一件事，用它判缓存是否被复用）
+        window.__sniffPreHeadAtOpen = window.__gmXhrLog.filter(
+          (l) => l.indexOf('/sniff-head.png') >= 0
+        ).length;
+        window.__clickedSniff = clickByText('图片嗅探');
+        /** 点标题条上的「重新扫描」（扫描中时按钮文案是「扫描中…」，故两个文案都认） */
+        const clickRescan = (m) => {
+          const btn = Array.from(m.querySelectorAll('.ant-modal-title button')).find((b) =>
+            /重新扫描|扫描中/.test(b.textContent || '')
+          );
+          if (btn) btn.click();
+          return !!btn;
+        };
+        const poll = (tries, stage) => {
+          const m = Array.from(document.querySelectorAll('.ant-modal')).find((el) =>
+            ((el.querySelector('.ant-modal-title') || {}).textContent || '').includes('图片嗅探')
+          );
+          const t = m ? m.textContent || '' : '';
+          // ⚠️ 「来源」是卡片下方的 title（hover 提示）而不是可见文本：SniffModal 的 metaOf()
+          //    只把它写进 title 属性，故 DOM 断言必须把 title 一并纳入匹配面（v26.10.10-v4 踩过）。
+          const titles = m
+            ? Array.from(m.querySelectorAll('[title]'))
+                .map((el) => el.getAttribute('title') || '')
+                .join(' | ')
+            : '';
+          const hay = t + ' || ' + titles;
+          // v26.10.16-v1：卡片不再显示文件名（用户要求）⇒ 文件名的唯一观测面是 <img alt>。
+          // titles 仍保留：卡片 meta 行的「来源 / 大小来源」提示挂在 title 属性上。
+          const names = m
+            ? Array.from(m.querySelectorAll('.ant-image img'))
+                .map((img) => img.getAttribute('alt') || '')
+                .join(' | ')
+            : '';
+          const cards = m ? m.querySelectorAll('.ant-image').length : 0;
+          // v26.10.13-v8：分组后「大小未知」是**每个分组各一个**折叠档，必须把所有匹配求和 ——
+          // 仍取第一个的话总数会算少，下面 selectAllCount 的等式断言必假红（本次踩到）。
+          const unknownCount = Array.from(t.matchAll(/大小未知（(\d+)）/g)).reduce(
+            (sum, x) => sum + Number(x[1]),
+            0
+          );
+          // v26.10.16-v1：界面上不再显示「已按文件名排除 N 张」，改从面板的 data-sniff-excluded 钩子读
+          const exclEl = m ? m.querySelector('[data-sniff-excluded]') : null;
+          const excludedAttr = exclEl ? Number(exclEl.getAttribute('data-sniff-excluded')) : -1;
+          // 全选后的按钮文案「下载所选（N）」= 全选范围（v26.10.10-v6 起必须等于「卡片 + 大小未知」）
+          const dlBtn = m
+            ? Array.from(m.querySelectorAll('.ant-modal-footer button')).find(
+                (b) => (b.textContent || '').indexOf('下载所选') >= 0
+              )
+            : null;
+          const dlText = dlBtn ? dlBtn.textContent || '' : '';
+          const dlCount = /下载所选（(\d+)）/.exec(dlText);
+          const snap = {
+            entrySeen: !!window.__clickedSniff,
+            panelBtns: document.querySelectorAll('#__znhd_panel_host__ .znhd-panel-btn').length,
+            panelHasSniffLabel: collectText().indexOf('图片嗅探') >= 0,
+            modalSeen: !!m,
+            chatInstalled: !!window.__sniffChatInstalled,
+            cards: cards,
+            sourcesCss: hay.indexOf('CSS 背景') >= 0,
+            sourcesSvg: hay.indexOf('内联 SVG') >= 0,
+            titlesSample: titles.slice(0, 400),
+            headSize: t.indexOf('30 KB') >= 0,
+            rangeSize: t.indexOf('40 KB') >= 0,
+            convASize: t.indexOf('50 KB') >= 0,
+            convBSize: t.indexOf('60 KB') >= 0,
+            // v26.10.14-v2：perf 优先 —— 同源真加载的 ⑫ 必须走「资源表读数」档：
+            // 卡片在、显示 22 KB（资源表读数，不是 HEAD 桩的假值）、来源标注「资源表读数」、
+            // 且 __gmXhrLog 里**没有**任何 sniff-perf.png 请求（零 HEAD/Range）。
+            perfCardSeen: names.indexOf('sniff-perf.png') >= 0,
+            namesSample: names.slice(0, 400),
+            perfSizePerf: t.indexOf('22 KB') >= 0,
+            perfBogusNotShown: t.indexOf('117.74 MB') < 0,
+            perfViaLabel: titles.indexOf('资源表读数') >= 0,
+            perfNoHead: !window.__gmXhrLog.some((l) => l.indexOf('sniff-perf.png') >= 0),
+            // v26.10.14-v4：后台预测量 —— 开窗前已为 /sniff-head.png（只能走 HEAD 的跨域图）发过请求，
+            // 且开窗扫描**没有**为它新增请求（缓存命中 ⇒ 一个 HEAD 都不重发）。
+            preHeadBeforeOpen: window.__sniffPreHeadBeforeOpen || 0,
+            preHeadAtOpen: window.__sniffPreHeadAtOpen || 0,
+            preHeadAfterScan: window.__gmXhrLog.filter((l) => l.indexOf('/sniff-head.png') >= 0).length,
+            unknownCount: unknownCount,
+            // v26.10.10-v6：界面不再出现「另有 N 张小于阈值」这类计数
+            belowNoticeShown: t.indexOf('小于阈值') >= 0,
+            // 10 KB 的 ⑦ 被阈值过滤 ⇒ 它不该出现在任何卡片上（文件名观测面 = <img alt>）
+            smallInCards: names.indexOf('sniff-small.png') >= 0,
+            selectAllClicked: !!window.__sniffSelectAllClicked,
+            selectAllLabel: dlText,
+            selectAllCount: dlCount ? Number(dlCount[1]) : -1,
+            excludedCount: excludedAttr,
+            // 只看**卡片上的文件名**（<img alt>），不看弹窗正文（正文里本来也不含文件名）
+            excludedNameInCards: /znhd-sniff|user-man|user-woman/.test(names),
+            // v26.10.16-v1（用户要求）：面板可见文本里不许出现任何文件名
+            nameInVisibleText: /(sniff-[a-z0-9-]+\.png|icon\.svg|znhd-sniff)/i.test(t),
+            // v26.10.10-v7：SVG 一律不进面板 —— 后缀规则要同时挡住「URL 就是 .svg」与「内联 SVG」两路
+            svgUrlInCards: names.indexOf('icon.svg') >= 0,
+            svgInCards: /\.svg/i.test(names),
+          };
+          // 达标卡片 = CSS 背景 ×2（30/40 KB）+ 会话图 ×2（50/60 KB）+ perf 同源图 ×1（22 KB，零请求）；
+          // SVG 与 < 阈值的都已被排除
+          const done =
+            snap.modalSeen &&
+            cards >= 5 &&
+            snap.headSize &&
+            snap.rangeSize &&
+            snap.convASize &&
+            snap.convBSize &&
+            snap.perfCardSeen &&
+            snap.perfSizePerf;
+
+          if (stage === 0) {
+            if (!done || !m) {
+              if (tries <= 0) {
+                window.__sniffSnap = snap;
+                return;
+              }
+              setTimeout(() => poll(tries - 1, 0), 200);
+              return;
+            }
+            const box = Array.from(m.querySelectorAll('.ant-checkbox-wrapper')).find(
+              (el) => (el.textContent || '').indexOf('全选') >= 0
+            );
+            const input = box ? box.querySelector('input') : null;
+            if (input) input.click();
+            window.__sniffSelectAllClicked = !!input;
+            setTimeout(() => poll(30, 1), 250);
+            return;
+          }
+
+          if (stage === 1) {
+            // 把这一轮的事实**固化**：重扫会重置选择集，之后再读 footer 就不是这批数了
+            const S = window.__sniffSnap;
+            Object.assign(S, snap);
+            S.groups = window.__sniffGroupFacts();
+            S.renderedCards = window.__renderSniffCardImages(m);
+            // 切走会话（Vuex 里两条消息都不再提供）后重扫
+            window.__sniffSwitched = window.__installSniffChat('switched');
+            S.rescanClicked = clickRescan(m);
+            setTimeout(() => poll(30, 2), 300);
+            return;
+          }
+
+          const g = window.__sniffGroupFacts();
+          const groupCards = g ? g.cards.reduce((a, b) => a + b, 0) : 0;
+          // 重扫完成的判据：卡片数回到 5，且首组变成切换后的会话（组顺序跟着「当前会话」走）
+          if (stage === 2 && tries > 0 && !(g && groupCards >= 5 && g.names[0] === '湖南博大园林建筑有限公司')) {
+            setTimeout(() => poll(tries - 1, 2), 200);
+            return;
+          }
+          const S = window.__sniffSnap;
+          S.groupsAfterSwitch = g;
+          S.groupCardsAfterSwitch = groupCards;
+          S.switchedSeen = !!window.__sniffSwitched;
+          // v26.10.10-v16：卡片右下角的悬浮按钮（下载/打印）——静态事实 + 派发 hover。
+          // 先让卡片图真的渲染出方盒子（原因见 __renderSniffCardImages 注释），等图片 load 完再测。
+          const m2 = window.__findSniffModal() || m;
+          setTimeout(() => {
+            S.cardsAfterSwitch = window.__renderSniffCardImages(m2);
+            setTimeout(() => {
+              S.imgActions = imgActionsFacts(m2, ['下载', '打印']);
+              // hover 后的可见性要等 React 重渲染完（异步），补读后写回同一个对象
+              setTimeout(() => {
+                S.imgActionsHovered = imgActionsVisible(m2, ['下载', '打印']);
+              }, 150);
+            }, 300);
+          }, 300);
+        };
+        poll(30, 0);
+      };
+      setTimeout(kickSniff, 30000);
+
+      // 打开「运行日志」弹窗，验证「日志从上到下生成、最新在最上方」。
+      // 放在报告采集前 2s（报告在其后），留时间给 React 渲染。
+      setTimeout(() => {
+        window.__openedLog = clickByText('查看日志');
+      }, 36500);
+
+      /* ===== 关闭按钮的预采样（v26.10.12-v4）=====================================
+         悬浮变红：派发 mouseover 触发 React onMouseEnter 后，setState 重渲染是**异步**
+         的 —— 同一帧里 getComputedStyle 读到的还是旧底色（本次踩过）。所以在报告前
+         分两拍：36500 派发 mouseover，36900 采样底色与几何，报告里的 transferNoTitleOk
+         只读预采样结果。 */
+      setTimeout(() => {
+        const m = findTransferModal();
+        const ts = window.__transferSnap;
+        const close = m ? m.querySelector('button[aria-label="关闭"]') : null;
+        if (close) close.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
+        // v26.10.12-v5：第一栏三态 —— 未选中项派发 mouseover（应出深色底板），选中项也派发
+        // （应保持无底板 = 选中优先于 hover）。36900 拍里采样，同一帧读不到 React 新底色。
+        const navBtns = m ? Array.from(m.querySelectorAll('.znhd-transfer-nav button[aria-label]')) : [];
+        // 选中判据用 aria-current="page"（v5 起自绘按钮带）；不用具体色值 —— antd 暗色算法会把
+        // colorPrimary '#07C160' 处理成 rgb(9, 167, 85)，按 #07C160 猜色必假红（实测踩过）
+        const isSel = (b) => b.getAttribute('aria-current') === 'page';
+        ts.navSelSeen = navBtns.filter(isSel).length;
+        const unsel = navBtns.find((b) => !isSel(b));
+        const sel = navBtns.find(isSel);
+        if (unsel) unsel.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
+        if (sel) sel.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
+      }, 38000);
+      setTimeout(() => {
+        const ts = window.__transferSnap;
+        const m = findTransferModal();
+        const close = m ? m.querySelector('button[aria-label="关闭"]') : null;
+        if (!close || !m) {
+          ts.closeHoverRed = false;
+          ts.closeTopRight = false;
+          return;
+        }
+        ts.closeHoverRed = getComputedStyle(close).backgroundColor === 'rgb(232, 17, 35)';
+        const mr = m.getBoundingClientRect();
+        const cr = close.getBoundingClientRect();
+        ts.closeTopRight = mr.right - cr.right <= 2 && cr.top - mr.top <= 40;
+        close.dispatchEvent(new MouseEvent('mouseout', { bubbles: true }));
+        // 第一栏三态采样（v5）：此时两个 nav 按钮都还挂着 hover（没派发 mouseout）
+        const navBtns = Array.from(m.querySelectorAll('.znhd-transfer-nav button[aria-label]'));
+        const isSel = (b) => b.getAttribute('aria-current') === 'page';
+        const unsel = navBtns.find((b) => !isSel(b));
+        const sel = navBtns.find(isSel);
+        // 选中态颜色必须是「主色绿」而非默认白：不猜具体值，只排除白并要求带 aria-current
+        ts.navSelectedGreen =
+          navBtns.length > 0 &&
+          navBtns.filter(isSel).length === 1 &&
+          !!sel &&
+          getComputedStyle(sel).color !== 'rgba(255, 255, 255, 0.9)';
+        ts.navHoverPlate = !!unsel && getComputedStyle(unsel).backgroundColor === 'rgba(255, 255, 255, 0.1)';
+        ts.navActiveNoPlate = !!sel && getComputedStyle(sel).backgroundColor === 'rgba(0, 0, 0, 0)';
+        ts.navDebug = {
+          count: navBtns.length,
+          selCount: navBtns.filter(isSel).length,
+          unselBg: unsel ? getComputedStyle(unsel).backgroundColor : '',
+          selBg: sel ? getComputedStyle(sel).backgroundColor : '',
+          selColor: sel ? getComputedStyle(sel).color : '',
+          labels: navBtns.map((b) => b.getAttribute('aria-label')),
+          colors: navBtns.map((b) => getComputedStyle(b).color),
+          currents: navBtns.map((b) => b.getAttribute('aria-current')),
+        };
+      }, 38400);
+
+      setTimeout(() => {
+        const text = collectText();
+        const relevant = window.__errors.filter((e) => !/chrome-extension:/.test(e));
+        // v26.10.06-v13 起更新日志也是 antd Modal（不再是自拼 DOM 的 #__znhd_changelog_popup__）
+        const popup = Array.from(document.querySelectorAll('.ant-modal')).find(
+          (m) => (m.textContent || '').indexOf('更新日志') >= 0
+        );
+        const ts = window.__transferSnap || {};
+        const ps = window.__pairSnap || {};
+        const report = {
+          CAT_UI: typeof window.CAT_UI,
+          jsyaml: typeof window.jsyaml,
+          QRCode: typeof window.QRCode,
+          Viewer: typeof window.Viewer,
+          recvResponses: window.__recvCount || 0,
+          // 运行日志排序（v26.10.07-v4 起改为「最新在底部」，反转了 v26.10.06-v23 的「最新在顶部」）：
+          // 行结构为「时间戳 + 类型标签 + 消息」三栏，故用行类名 `.znhd-log-row` 与时间戳单元
+          // `.znhd-log-ts` 定位（断言随被测对象一起升级，而不是删掉）。
+          logListNotReversed: (() => {
+            const rows = Array.from(document.querySelectorAll('.znhd-log-row'));
+            if (rows.length < 2) return false;
+            // 容器仍必须是 column：DOM 顺序 = 视觉顺序；「最新在底部」靠反转数组实现，不是 column-reverse
+            return getComputedStyle(rows[0].parentElement).flexDirection !== 'column-reverse';
+          })(),
+          logNewestOnBottom: (() => {
+            const rows = Array.from(document.querySelectorAll('.znhd-log-row'));
+            if (rows.length < 2) return false;
+            const t = (d) => {
+              const s = d.querySelector('.znhd-log-ts');
+              return s ? (s.textContent || '').trim() : '';
+            };
+            return t(rows[rows.length - 1]) >= t(rows[0]);
+          })(),
+          // 自动刷新开关（v26.10.07-v4）：日志弹窗底部状态栏里必须有这个 Switch，且默认开启
+          logAutoRefreshToggle: (() => {
+            const rows = Array.from(document.querySelectorAll('.znhd-log-row'));
+            if (!rows.length) return false;
+            const body = rows[0].parentElement.closest('.ant-modal-body') || rows[0].parentElement;
+            const sw = body.querySelector('.ant-switch');
+            if (!sw) return false;
+            if ((body.textContent || '').indexOf('自动刷新') < 0) return false;
+            return sw.classList.contains('ant-switch-checked');
+          })(),
+          // 日志更新后自动滚到底部（v26.10.07-v4）。
+          // ⚠️ 先要求「真的可滚动」：若内容没超出高度，scrollTop 恒为 0，这条断言会永远为真（假绿）
+          logAutoScrollBottom: (() => {
+            const rows = Array.from(document.querySelectorAll('.znhd-log-row'));
+            if (!rows.length) return false;
+            const scroller = rows[0].parentElement;
+            if (scroller.scrollHeight <= scroller.clientHeight + 2) return false;
+            return scroller.scrollHeight - scroller.clientHeight - scroller.scrollTop <= 4;
+          })(),
+          // 暗色终端风（v26.10.07-v1）断言：日志区底色、行三栏结构、底部状态栏都在
+          logDarkTerminalOk: (() => {
+            const rows = Array.from(document.querySelectorAll('.znhd-log-row'));
+            if (!rows.length) return false;
+            const scroller = rows[0].parentElement;
+            const bg = getComputedStyle(scroller).backgroundColor;
+            const tsEl = rows[0].querySelector('.znhd-log-ts');
+            const tag = rows[0].querySelector('.znhd-log-tag');
+            const msg = rows[0].querySelector('.znhd-log-msg');
+            if (!tsEl || !tag || !msg) return false;
+            // ⚠️ 必须从日志行**就近向上**找它所在的弹窗 body：报告时刻同时开着多个弹窗，
+            //    用 document.querySelector('.ant-modal-body') 会取到别的弹窗（v26.10.07-v1 踩过）。
+            const logBody = scroller.closest('.ant-modal-body') || scroller;
+            const bodyText = logBody.textContent || '';
+            return (
+              bg === 'rgb(15, 20, 26)' && // #0f141a
+              bodyText.indexOf('最新') >= 0 &&
+              bodyText.indexOf('显示') >= 0
+            );
+          })(),
+          // 主色必须是 antd 官方蓝色系 blue-6（v26.10.06-v22）：先查 token，再查一个真实渲染的主色控件，两道一起锁。
+          // ⚠️ token 必须从**面板内的 antd 元素**上读，不能从面板宿主读：`--ant-color-primary` 由 antd 的 css-var
+          //    包裹元素定义并向下继承，宿主元素本身没有它（v22 踩过，白红了一次）。
+          // v26.10.07-v3：原先从「设置」实心按钮上读；该按钮按用户要求已去掉主色，故改从**语音播报 Switch** 读
+          // （Switch 选中态本身就是主色，仍在同一 css-var 继承链下，原始意图不变）。
+          primaryTokenBlue: (() => {
+            const s = document.querySelector('#__znhd_panel_host__ .ant-switch');
+            if (!s) return false;
+            return getComputedStyle(s).getPropertyValue('--ant-color-primary').trim().toLowerCase() === '#1677ff';
+          })(),
+          // v26.10.07-v3：按用户要求「设置」不再单独用主色，四个入口按钮样式必须完全一致（且都不是主色实心）。
+          // v26.10.12-v1：「历史记录 / Agent」两个入口移除，入口收敛为 4 个（设置/常用语/传输助手/图片嗅探）。
+          // 面板按钮现在是「图标 span + 文案 span」两段结构，故统一用 textContent **包含**匹配定位。
+          panelBtnsUniform: (() => {
+            const host = document.getElementById('__znhd_panel_host__');
+            if (!host) return false;
+            const labels = ['设置', '常用语', '传输助手', '图片嗅探'];
+            const btns = Array.from(host.querySelectorAll('button')).filter((b) =>
+              labels.some((t) => (b.textContent || '').indexOf(t) >= 0)
+            );
+            if (btns.length !== 4) return false;
+            const bg = btns.map((b) => getComputedStyle(b).backgroundColor);
+            return bg.every((c) => c === bg[0]) && bg[0] !== 'rgb(22, 119, 255)';
+          })(),
+          // 四个入口必须排在同一行（同一 offsetTop）——「合并到一行」这条需求的直接断言
+          panelBtnsOneRow: (() => {
+            const host = document.getElementById('__znhd_panel_host__');
+            if (!host) return false;
+            const labels = ['设置', '常用语', '传输助手', '图片嗅探'];
+            const btns = Array.from(host.querySelectorAll('button')).filter((b) =>
+              labels.some((t) => (b.textContent || '').indexOf(t) >= 0)
+            );
+            if (btns.length !== 4) return false;
+            return new Set(btns.map((b) => Math.round(b.getBoundingClientRect().top))).size === 1;
+          })(),
+          // 面板图标必须是**真实 SVG**，且面板可见文本里不能残留「Win7 缺字形」的 emoji（v26.10.09-v7）。
+          //
+          // 为什么要有这条：Win7 没有 Segoe UI Emoji 字体，补充平面 emoji（💬 U+1F4AC、🖼 U+1F5BC、
+          // 💻 U+1F4BB…）在 Win7 上会渲染成豆腐块 —— 这是用户实测反馈的问题，而**静态检查永远发现不了**
+          // （typecheck/lint/build 都不会因为字符串里有 emoji 而报错）。只有把「图标是矢量 + 文本无 emoji」
+          // 钉成断言，才挡得住日后有人顺手把图标改回 emoji。
+          // ⚠️ 判据用「有没有 svg 子元素 + 文本里有没有补充平面字符」，不锁具体 path（换图标不该变红）。
+          panelIconsAreSvg: (() => {
+            const host = document.getElementById('__znhd_panel_host__');
+            if (!host) return false;
+            const labels = ['设置', '常用语', '传输助手', '图片嗅探'];
+            const btns = Array.from(host.querySelectorAll('button')).filter((b) =>
+              labels.some((t) => (b.textContent || '').indexOf(t) >= 0)
+            );
+            if (btns.length !== 4) return false;
+            // ① 每个按钮都得有一个带图元的 <svg>（emoji 是文本节点，不会有 svg）
+            const allSvg = btns.every((b) => {
+              const svg = b.querySelector('svg');
+              return !!svg && svg.children.length > 0;
+            });
+            // ② 面板可见文本里不得出现补充平面字符（U+10000+，即代理对）
+            const noAstral = !/[\uD800-\uDBFF][\uDC00-\uDFFF]/.test(host.textContent || '');
+            // ③ 也不得有 **Dingbats（U+2700–U+27BF）**：`✕`(U+2715)/`✓`(U+2713) 都在这区段，
+            //    Win7 的 Segoe UI Symbol 对其覆盖不确定 —— v26.10.09-v7 已把它们换成内联 SVG。
+            const noDingbats = !/[\u2700-\u27BF]/.test(host.textContent || '');
+            return allSvg && noAstral && noDingbats;
+          })(),
+
+          // ===== 传输助手（v26.10.12-v1 重构）=====
+          // v26.10.12-v2：窗口**没有标题栏**（`.ant-modal-header` 不渲染），但关闭按钮 × 必须在
+          // （rc-dialog 的 closerNode 独立于 header，用户要的是去掉标题、不是去掉关闭）
+          // v26.10.12-v4：对齐微信 —— 顶部有自绘标题条，右侧关闭按钮（aria-label=关闭）
+          // 贴窗口右上角；悬浮变红在 36500/36800 两个时刻预采样（React setState 重渲染是
+          // 异步的，同一帧里量不到新底色，必须隔一拍再读 —— v26.10.12-v4 踩过）。
+          transferNoTitleOk: (() => {
+            const m = findTransferModal();
+            if (!m) return false;
+            const header = m.querySelector('.ant-modal-header');
+            return !header && !!ts.closeHoverRed && !!ts.closeTopRight;
+          })(),
+          // 收到文本时窗口**自动打开**（后台收件 + autoOpenOnReceive 的对外契约）
+          transferAutoOpenOk: !!(ts.autoOpenSeen && ts.autoOpenTextSeen && ts.autoOpenNoClick),
+          // 三栏结构 + 会话列表 + 收到的文本/图片落在会话里
+          transferWindowOk: !!(
+            ts.transferWindowSeen &&
+            ts.transferColsOk &&
+            ts.transferSessionItem &&
+            ts.transferRecvTextSeen &&
+            ts.transferRecvImgSeen
+          ),
+          // 「文件」视图：图片九宫格 + 文件卡片 + 文本分区 + 计数正确
+          filesViewOk: !!(ts.filesViewSeen && ts.filesCountText && ts.filesImgCount >= 1 && ts.filesTextSeen),
+          // 任意文件通道（v26.10.14-v6）：中继按 mime 分流 type:'file' → 「全部文件」出一张文件卡片
+          fileChannelOk: !!(ts.fileCards >= 1 && ts.fileNameSeen),
+          // 文件分组下点设备条目不跳会话（v26.10.13-v5 起：点击 = 筛选文件视图）
+          filesNoJumpOk: !!(window.__clickedFilesItem && ts.filesNoJumpSeen),
+          // 文件视图跟随第二栏选择（v26.10.13-v5）：点会话只显示该会话的文件，点「全部文件」还原
+          filesFilterOk: !!(ts.filesFilterSeen && window.__clickedFilesAll && ts.filesAllRestored),
+          // 第一栏图标三态（v26.10.12-v5 微信规范）：选中=绿填充无底板、未选中 hover=深色底板、选中优先
+          navStatesOk: !!(ts.navSelSeen && ts.navSelectedGreen && ts.navHoverPlate && ts.navActiveNoPlate),
+          // 设备会话聊天区：收到的文本/图片渲染为气泡，头部有在线状态
+          sessionChatOk: !!(
+            ts.sessionChatSeen &&
+            ts.sessionRecvTextSeen &&
+            ts.sessionRecvImgSeen &&
+            ts.sessionHeaderSeen
+          ),
+          // 按发送者归组（v26.10.13-v6）：两台在线时，来自 B 的内容进 B 自己的会话
+          //（第二栏条目 + 预览），不进当前会话；聚合会话「手机」不出现
+          sessionRouteBySenderOk: !!(
+            ts.routeBySender &&
+            ts.routeBySender.bItemSeen &&
+            ts.routeBySender.bPreviewOk &&
+            ts.routeBySender.noAggregate &&
+            ts.routeBySender.notInActive
+          ),
+          // 会话内发文本：本机气泡 + 真的 POST 到 /phone/send
+          textSentOk: !!(ts.textSentSeen && ts.phoneSentText),
+          // 「清空消息」后会话回到空状态
+          sessionClearOk: !!ts.sessionClearOk,
+          // 「+」配对窗口：二维码 / 链接 / 在线状态 / 手机列表
+          pairModalOk: !!(ps.pairSeen && ps.pairTitleOk && ps.pairQrOk && ps.pairLinkOk && ps.pairCountOk && ps.pairListOk),
+          // 二维码无圆角（v26.10.06-v21 按用户要求；圆角会切掉定位角标影响识别）
+          qrNoRadius: !!ps.qrNoRadius,
+          phoneCountOk: !!ps.pairCountOk,
+          phoneListOk: !!ps.pairListOk,
+          phoneIdColorOk: !!ps.idColorOk,
+          // ===== 轮询优化（v26.10.14-v7）：名单改由长轮询送达 + 删掉 5s 轮询 =====
+          // ① 客户端在**每一次**长轮询上都声明了 `phones=1`（中继只唤醒带此标记的连接，
+          //    老脚本不受打扰）—— ⚠️ 必须要求样本非空，否则 `/recv` 一条都没发时
+          //    `[].every()` 会空集通过（假绿）。
+          phonesNegotiatedOk: (() => {
+            const recvs = window.__gmXhrLog.filter((l) => l.indexOf('/recv/') >= 0);
+            return recvs.length >= 3 && recvs.every((l) => l.indexOf('phones=1') >= 0);
+          })(),
+          // ② 长轮询的响应确实捎带了名单（桩在作答处计数）。
+          //    ⚠️ 这条只证明「服务端形态 + 客户端拿到」；名单是否被**正确解析**由
+          //    relay.js 的 `/recv 超时响应捎带 phones 名单` 断言按内容逐字段锁死。
+          phonesViaLongPollOk: (window.__recvPhonesSeen || 0) >= 1,
+          // ③ 5s 定时轮询已删除，但**按需查询的钩子还在**（启动时的兜底 tick 会真发一次）。
+          //    整个冒烟跑约 38.5s：删掉后 /phone/status 只该被按需打（启动 1 次 + 每次
+          //    窗口打开 1 次；60s 兜底 tick 在 38.5s 内还没到点），旧的 5s 固定轮询在同样
+          //    时长里必然 ≥7 次 ⇒ 上限 4 足以区分，且容忍窗口多次开合。
+          onDemandStatusQueryOk: window.__gmXhrLog.filter((l) => l.indexOf('/phone/status/') >= 0).length >= 1,
+          phoneStatusPollRemovedOk:
+            window.__gmXhrLog.filter((l) => l.indexOf('/phone/status/') >= 0).length <= 4,
+          // P5 指数退避（v26.10.14-v8）：三个探针的判定 + 原始记录（原始值留在报告里便于定位）。
+          // A 守「2→4→8→16→32→60 封顶」、C 守「成功后复位」、B 守「429 直接跳到 60s」。
+          recvBackoffOk: !!window.__backoffOk,
+          recvBackoffResetOk: !!window.__backoffResetOk,
+          recvBackoff429Ok: !!window.__backoff429Ok,
+          recvBackoffDelays: {
+            onerror: window.__backoffA || null,
+            resetAfterSuccess: window.__backoffC || null,
+            http429: window.__backoffB || null,
+            probeError: window.__backoffProbeError || null,
+          },
+          // 配对窗口 footer 的「发送测试图片」
+          pairTestImageBtnOk: !!ps.testBtnOk,
+          testImageSentOk: !!ps.testImageSent,
+          // 窗口固定微信暗色（v26.10.12-v4）：标题条/三栏分层色，嵌套 ConfigProvider 仍隔离主题
+          transferThemeOk: !!ts.themeDarkOk,
+          // 圆角 + 层级（v26.10.13-v10，对齐用户 excalidraw 白板稿）：外框大圆角、
+          // 第二三栏内嵌圆角卡片（右/下缘露窗口底色，v26.10.14-v1 起与第一栏同色）、
+          // 第一栏贴满窗口高度、输入区四边留白的圆角浮起卡片、搜索框等内部控件圆角
+          transferLayeredOk: !!ts.layeredOk,
+          // 设置隔离：落 scriptCat_TransferSettings，不污染主设置 scriptCat_Allvalue
+          transferSettingsIsolatedOk: !!(ts.settingsStoredOk && ts.mainAllvalueUntouched),
+          // 「文件」视图图片格子：复制/下载/删除是右下角的图标按钮（未 hover 隐藏，hover 出现）
+          filesImgActionsOk: (() => {
+            const s = window.__filesImgActions;
+            return !!(s && s.btns === 3 && s.iconOnly && s.hidden && s.inside && s.bottomRight && s.hovered);
+          })(),
+          // ===== 聊天面板（v26.10.12-v3：气泡 / 输入区抽成共用件）=====
+          // 气泡：他人靠左灰底（微信 #2F2F2F）、我的靠右绿底（微信 #07C160）、头像在气泡外侧、
+          // 消息组上方有居中的时间分隔条（v26.10.12-v4）
+          chatBubbleOk: (() => {
+            const b = ts.bubbles || {};
+            return !!(
+              b.leftSeen &&
+              b.rightSeen &&
+              b.leftDirection === 'row' &&
+              b.rightDirection === 'row-reverse' &&
+              b.leftBg &&
+              b.rightBg &&
+              b.leftBg !== b.rightBg &&
+              b.bubbleCount >= 2 &&
+              b.avatars === b.bubbleCount &&
+              b.timeSep
+            );
+          })(),
+          // 输入区（微信式）：多行自增高（超上限后框内滚动）+ 工具栏表情/图片上传/文件
+          // + 右下角「发送」文字按钮 + 实心底圆角浮起卡片（v26.10.13-v10 起四边留白）
+          // v26.10.14-v6：「附件」占位按钮改成了可用的「文件」按钮（任意文件通道），断言随之改名
+          chatComposerOk: (() => {
+            const a = ts.composerEmpty || {};
+            const g = ts.composerGrown || {};
+            const sc = ts.composerScroll || {};
+            const need = ['表情', '图片上传', '文件'];
+            const has = (list) => need.every((l) => (list || []).indexOf(l) >= 0);
+            return !!(
+              a.shell &&
+              a.isTextarea &&
+              a.panelBordered &&
+              has(a.labels) &&
+              has(g.labels) &&
+              a.sendTextLabel &&
+              a.sendBottomRight &&
+              g.height > a.height &&
+              sc.scrollHeight > sc.clientHeight + 2
+            );
+          })(),
+          // 在线表情包（v26.10.13-v3；v4 起点击**直接发送**）：面板拿到清单（合集 chips + 选中态）
+          // → 图片真的下好 → 点一张**不进待发列表**，而是会话里多出一条图片气泡（真发出去了）
+          emojiPackOk: (() => {
+            const p = ts.emojiPanel || {};
+            const k = ts.emojiPicked || {};
+            const before = Number(ts.emojiMsgsBefore);
+            return !!(
+              p.seen &&
+              (p.packs || []).length >= 2 &&
+              p.selected &&
+              p.itemCount >= 2 &&
+              p.imgCount >= 1 &&
+              /^表情 /.test(p.firstLabel || '') &&
+              k.selected &&
+              // 「直接发送」的判据：点击前后都没有待发列表，且多出一张图片气泡 + 真 POST 过图片
+              !k.pendingSeen &&
+              !ts.emojiPendingBeforeClick &&
+              Number(k.msgsAfter) === before + 1 &&
+              /^image\//.test(k.sentMime || '')
+            );
+          })(),
+          // 表情悬停放大预览（v26.10.13-v4）：停 0.5 秒才出现，且此刻移到另一张**立即换图**
+          // （「实时」= 不再等第二个 0.5 秒；若实现退化成重新计时，sw.url 会还是第一张 → 假红）
+          emojiHoverOk: (() => {
+            const h = ts.emojiHoverAfter || {};
+            const sw = ts.emojiHoverSwitch || {};
+            return !!(
+              ts.emojiFirstUrl &&
+              ts.emojiSecondUrl &&
+              ts.emojiFirstUrl !== ts.emojiSecondUrl &&
+              ts.emojiHoverImmediate === false &&
+              ts.emojiHoverAt100 === false &&
+              h.seen &&
+              h.url === ts.emojiFirstUrl &&
+              h.img >= 1 &&
+              sw.seen &&
+              sw.url === ts.emojiSecondUrl
+            );
+          })(),
+          // 表情面板自动收起（v26.10.13-v7，用户要求）：点一张表情立即收起；点面板之外也立即收起；
+          // 回归：面板开着时点触发按钮应收起（而不是被自身 toggle 又打开）。三条都带「前置守卫」。
+          emojiAutoCloseOk: !!(
+            ts.emojiPanelBeforePick === true &&
+            ts.emojiCloseAfterPick === false &&
+            ts.emojiReopenSeen === true &&
+            ts.emojiCloseAfterOutside === false &&
+            ts.emojiReopenForTriggerSeen === true &&
+            ts.emojiCloseOnTrigger === false
+          ),
+          // 表情包走中继优先（v26.10.14-v3）：清单与图片都打中继的 /emoji/ 路径，
+          // 且 CDN 兜底零触发（relayManifest/relayImage ≥1、cdn === 0）——
+          // 「兜底没被走到」才是中继优先真的生效的直接证据；同时面板照常渲染出合集与图。
+          emojiRelayFirstOk: (() => {
+            const r = window.__emojiReq || {};
+            const p = ts.emojiPanel || {};
+            return !!(
+              r.relayManifest >= 1 &&
+              r.relayImage >= 1 &&
+              r.cdn === 0 &&
+              p.seen &&
+              (p.packs || []).length >= 2 &&
+              p.itemCount >= 2 &&
+              p.imgCount >= 1
+            );
+          })(),
+          // 需求①：表情包图片不进「全部文件」（v26.10.14-v3）。
+          // 判据见 19000ms 那拍的 filesAfterEmoji 快照：A 会话清空后只剩表情图，
+          // 全部文件应只有 B 会话的文本（图片 0）——过滤失效会变成图片 1。
+          emojiNotInFilesOk: (() => {
+            const f = ts.filesAfterEmoji || {};
+            return !!(window.__clickedFilesNavAfterEmoji && f.seen && f.countText && f.imgCount === 0);
+          })(),
+
+          // 方案 B：antd 浮层（Modal/Drawer…）必须盖在面板之上
+          // （面板宿主 999999 < zIndexPopupBase 1000000）
+          overlayAbovePanel: (() => {
+            const host = document.getElementById('__znhd_panel_host__');
+            const modalWrap = document.querySelector('.ant-modal-wrap, .ant-drawer');
+            if (!host || !modalWrap) return false;
+            const z = (el) => parseInt(getComputedStyle(el).zIndex, 10) || 0;
+            return z(modalWrap) > z(host);
+          })(),
+          // 浮层必须按**视口**定尺寸（v26.10.09-v6 回归断言）。
+          //
+          // 本页常驻 `body { transform: translateZ(0) }`（模拟税务页）：若浮层的 portal 目标是
+          // `documentElement` 而不是「挂在 documentElement 下的自建 div」，antd/rc-util 的 Portal
+          // 会**实际落进 body** ⇒ `position:fixed` 改以 body 的盒子为包含块 ⇒
+          // 抽屉/弹窗的高度塌成 body 的高度（实测 117px，应为视口高 800），按钮落在盒子之外、
+          // 鼠标事件到不了（表现为「常用语 hover 测不出来 / 点击区域错位」）。
+          // ⚠️ 判据用**几何**而不是「容器是谁」：portal 落点会随 React/antd 版本变化，
+          //    而「开着的浮层必须有视口那么高」是用户可观察的契约。
+          // ⚠️ 只统计**可见**的浮层：antd 会把关闭过的浮层留在 DOM 里（display:none），
+          //    直接量它们会量到 0 高（假红）。
+          overlayViewportSized: (() => {
+            const visible = Array.from(document.querySelectorAll('.ant-drawer, .ant-modal-wrap')).filter((el) => {
+              const cs = getComputedStyle(el);
+              return cs.display !== 'none' && cs.visibility !== 'hidden' && el.getBoundingClientRect().width > 0;
+            });
+            if (!visible.length) return false; // 报告时刻必须有浮层开着，否则本断言形同虚设
+            return visible.every((el) => el.getBoundingClientRect().height >= window.innerHeight - 2);
+          })(),
+          panel: text.includes('征纳互动监控'),
+          // 版本号只从「面板宿主」里取：弹窗（更新日志/日志/常用语…）都 portal 到 documentElement，
+          // 里面有各自的版本号文本，读全页会串台（v26.10.6-v1 踩过）。
+          // v26.10.06-v9 起面板不再是 Shadow DOM，改为按宿主 id 取。
+          version: (() => {
+            const host = document.getElementById('__znhd_panel_host__');
+            return ((host && host.textContent) || '').match(/v\d+\.\d+\.\d+-v\d+/)
+              ? (host.textContent.match(/v\d+\.\d+\.\d+-v\d+/) || ['<无>'])[0]
+              : '<无>';
+          })(),
+          // ===== 常用语（v26.10.18-v2）：本页话术抓取 + 缓存 ==========================
+          // 快照取自 4800 / 5400 / 6000ms（抽屉随后被关，报告时刻 DOM 里已没有列表）。
+          phrasesLoaded: !!window.__phrasesAllSnap && window.__phrasesAllSnap.indexOf('冒烟全部话术一') >= 0,
+          phrasesClicked: !!window.__clickedPhrases,
+          phrasesAllSnap: window.__phrasesAllSnap || null,
+          // 双 tab：抽屉里必须同时有「全部话术」「我的话术」两个页签
+          phrasesTabsOk:
+            !!window.__phrasesAllSnap &&
+            window.__phrasesAllSnap.indexOf('全部话术') >= 0 &&
+            window.__phrasesAllSnap.indexOf('我的话术') >= 0,
+          // 「我的话术」tab 切换后能看到个人组条目
+          phrasesMineSeen: !!window.__phrasesMineSnap && window.__phrasesMineSnap.indexOf('冒烟我的话术1') >= 0,
+          phrasesMineSnap: window.__phrasesMineSnap || null,
+          // 刷新按钮：SVG 图标形式（aria-label 定位）+ 长在标题栏 + 无文字
+          phrasesRefreshBtn: !!window.__phrasesRefreshSeen && window.__phrasesRefreshTextLen === 0,
+          // 每条话术按钮最多两行（-webkit-line-clamp: 2）
+          phrasesClamp2: window.__phrasesClamp === 2,
+          // 抓取真发生了（仿真文件夹被点了 ≥2 次：两个分组各一棵树）
+          phrasesGrabbedOk: (window.__phrasesFolderClicks1 || 0) >= 2,
+          phrasesFolderClicks: window.__smokeFolderClicks || 0,
+          // 合成事件不许带 view（油猴沙箱里 window 不是原生 Window ⇒ 构造直接抛异常）
+          phrasesClickNoViewOk: window.__smokeViewNull === true,
+          // 抓取后右侧栏切回「会话人信息」（不干扰坐席操作）
+          phrasesTabRestored: !!window.__phrasesTabRestored,
+          // 抓取是纯 DOM 操作 ⇒ 全程零网络请求（旧链路若没删干净，这里有请求日志必红）
+          phrasesNoXhrOk: !window.__gmXhrLog.some((l) => /commonPhrases|dop-api|docs\.qq\.com|\.yaml/i.test(l)),
+          // 点击话术按钮：正文经 safeCopyText 进剪贴板桩（按钮上只有截断文本，全文只能这样观测）
+          phrasesClipOk: !!window.__phrasesClip && window.__phrasesClip.indexOf('冒烟我的话术1') >= 0,
+          phrasesClip: window.__phrasesClip || '',
+          phrasesClickedItem: !!window.__phrasesClickedItem,
+          // 二次打开走缓存：内容还在 + 文件夹点击计数不变（零重复抓取）+ 缓存结构合法
+          phrasesCacheOk: !!window.__phrasesCacheOpenOk,
+          phrasesCacheSnap: window.__phrasesCacheSnap || null,
+          // 更新日志：入口可点 → 弹窗出现 → 渲染 mock 正文 → 底部按钮 → 条数提示（12 条只渲染 10）
+          settingsClicked: !!window.__clickedSettings,
+          changelogClicked: !!window.__clickedChangelog,
+          changelogPopup: !!popup && text.includes('冒烟更新日志标记行'),
+          changelogMoreBtn: !!popup && text.includes('获取更多日志'),
+          changelogLimitHint: !!popup && text.includes('共 12 条，已显示最新 10 条'),
+          // 点缩略图放大：主图必须真的渲染出来（v26.10.8-v1 回归断言）
+          viewerZoom: window.__viewerZoom || null,
+          viewerZoomOk: !!(
+            window.__viewerZoom &&
+            window.__viewerZoom.container &&
+            window.__viewerZoom.decoded &&
+            window.__viewerZoom.visible
+          ),
+          // 图片复制：**只允许尝试写 image/png**。
+          // 旧实现「先按原图类型（jpeg）写一次、失败再转 PNG 重试」会命中
+          // ClipboardItem.supports('image/jpeg') === false，且那一次失败已按规范消耗掉用户手势，
+          // 导致真正的 PNG 重试也必然失败 —— 本断言就是把这条不变量钉死。
+          copyWriteTypes: window.__copyWriteTypes || [],
+          copyOk: (() => {
+            // __copyWriteTypes 的结构：每次 write → [每个 item 的 types 数组]
+            // 例如 [[['image/png']]] 表示「一次 write，一个 item，该 item 只声明了 image/png」
+            const recs = window.__copyWriteTypes || [];
+            if (!recs.length) return false; // 一次都没发起写入 → 代码没走到写入路径
+            let sawPng = false;
+            let bad = null;
+            recs.forEach((rec) =>
+              (rec || []).forEach((types) =>
+                (types || []).forEach((t) => {
+                  if (t === 'image/png') sawPng = true;
+                  else bad = t;
+                })
+              )
+            );
+            return sawPng && bad === null;
+          })(),
+          // 打印（v26.10.08-v1 引入 / v26.10.08-v2 挪进放大预览工具栏）：
+          // ① 按钮必须长在 antd 预览工具栏的胶囊容器（.ant-image-preview-actions）**里面**且带图标；
+          // ② 点了之后 react-to-print 真的建出 id=printWindow 的打印 iframe（= 内容节点被找到，整条链路接通）。
+          printBtnOk: !!window.__printBtnSeen && !!window.__printBtnInActions,
+          printIframeOk: !!window.__printIframeSeen,
+          // A4 自适应（v26.10.08-v4；v5 起含「无页眉页脚」）：打印文档里必须同时具备
+          //   ① `@page { size: A4 … }`（纸型）；② `@page` 的 margin 为 0（否则浏览器会画页眉页脚）；
+          //   ③ 内容框 `box-sizing: border-box` + 毫米尺寸且不大于 A4（超了必溢出纸张）；
+          //   ④ 内容框有正的 padding（图片离纸边的留白由它提供，不是靠 @page margin）；
+          //   ⑤ 图片 `object-fit: contain`（等比缩放居中）。
+          // 只锁「语义」不锁具体数字：改页边距/留白常量不该把断言打红，但版式写错一定会红。
+          printA4Ok: (() => {
+            const d = window.__printDoc;
+            if (!d || !d.pageA4 || !d.pageMarginZero) return false;
+            if (!/object-fit:\s*contain/i.test(d.imgStyle || '')) return false;
+            const s = d.boxStyle || '';
+            if (!/box-sizing:\s*border-box/i.test(s)) return false;
+            const m = /width:\s*([\d.]+)mm;\s*height:\s*([\d.]+)mm/.exec(s);
+            if (!m) return false;
+            if (!(parseFloat(m[1]) <= 210 && parseFloat(m[2]) <= 297)) return false;
+            const pad = /padding:\s*([\d.]+)mm/.exec(s);
+            return !!pad && parseFloat(pad[1]) > 0;
+          })(),
+          // 预览工具栏的挂载与层级（v26.10.08-v7）：宿主页 body 带 transform 时（本页已常驻该规则），
+          // 预览必须仍在**视口内**、且「打印」按钮正中心的最上层仍是工具栏自己（= 没被放大后的图片盖住）。
+          previewToolbarOk: !!(window.__snap && window.__snap.footerInViewport && window.__snap.footerHit),
+          // 预览工具栏的图标必须与按钮同一水平线（v26.10.08-v8）：
+          // 本页常驻的宿主页规则 `svg { margin: -2.75em auto 0 }` 会把图标整体顶出胶囊
+          // （实测偏移 25px）⇒ 图标落到胶囊上方、与背景同色而「看不见，只剩一条灰色胶囊」。
+          // 这条守的是 uiReset 的 svg 复位规则必须覆盖 `.ant-image-preview svg`（漏了就会红）。
+          previewIconCenteredOk: !!(window.__snap && window.__snap.iconsCentered),
+          // 「预览打开时只能有**一层**遮罩」（v26.10.08-v9）：
+          // 预览是全屏浮层，底下那层弹窗遮罩完全被盖住却仍会把画面再压暗一层
+          // （两层 rgba(0,0,0,0.45) 合成 0.6975，白底灰度 77；单层是 140 —— 用户反馈的「没官方明亮」）。
+          previewSingleMaskOk: !!(window.__snap && window.__snap.singleMask),
+          // 监控时间段是 4 个原生 <input type="time">（v26.10.06-v16 换掉 antd TimePicker：
+          // 去掉 rc-picker + dayjs，产物实测 -325KB），值必须是 HH:mm
+          // ⚠️ 读 4800ms 那一刻的快照（设置 Modal 在 3400ms 打开后常驻 DOM），不能在这里现查：
+          //    报告时刻弹窗可能被后续浮层盖住/改动，快照才是当时真实状态。
+          timeInputsOk: (() => {
+            const snap = window.__timeInputsSeen;
+            if (!snap || snap.count !== 4) return false;
+            return snap.values.every((v) => /^\d{2}:\d{2}$/.test(v));
+          })(),
+          timeInputsSeen: window.__timeInputsSeen || null,
+          // 常用语必须是 antd **Drawer**（侧边栏），不是 Modal：v26.10.06-v14 按需求改的。
+          // ⚠️ 断言用 `.ant-drawer-body`（v5/v6 都有）；**不要用 `.ant-drawer-content`** ——
+          //    v6 已把它改名为 `.ant-drawer-section`，用旧名会假失败（本条踩过）。
+          // ⚠️ 读的是 4800ms 那一刻记录的快照（`__phrasesIsDrawerSeen`），不能在这里现查：
+          //    5400ms/6000ms 点了话术按钮会顺手关掉 Drawer，报告时刻 DOM 里已没有 ⇒ 假红。
+          phrasesIsDrawer: !!window.__phrasesIsDrawerSeen,
+          // 发送到手机：必须先压缩再发（v26.10.06-v6 回归断言）。判定要点：
+          // 实际 POST 的字节是 JPEG、最长边 ≤1600（压缩上限）、且比原图小。
+          phoneSendCheck: window.__phoneSendCheck || null,
+          phoneSendCompressedOk: !!(
+            window.__phoneSendCheck &&
+            window.__phoneSendCheck.got &&
+            window.__phoneSendCheck.jpegMagic &&
+            Math.max(window.__phoneSendCheck.w || 0, window.__phoneSendCheck.h || 0) <= 1600 &&
+            window.__phoneSendCheck.bytes < (window.__phoneSendCheck.originalBytes || Infinity)
+          ),
+          xhr: window.__gmXhrLog.slice(0, 6),
+          // ===== 样式隔离断言（v26.10.06-v11）=====
+          // 宿主页面把 html/body 设成 text-align:center、且要求 content-box，
+          // 面板/弹窗必须仍保持左对齐、盒模型正确 —— 否则就是隔离层失效（用户实测反馈过）。
+          modalTextAlignLeft: (() => {
+            const body = document.querySelector('.ant-modal-body');
+            return !!body && getComputedStyle(body).textAlign === 'left';
+          })(),
+          // 图标必须与所在控件垂直居中（±2px）——守卫「第三方样式给 svg 加负 margin 把图标顶出控件」。
+          // v26.10.06-v16 起 antd TimePicker 换回原生 input，原时钟图标已不存在，故改为量同类对象：
+          // 输入框「清空 ×」→ 弹窗关闭图标 → 侧边栏关闭图标，取第一个存在且有高度的。
+          iconVerticallyCentered: (() => {
+            const pairs = [
+              ['.ant-input-affix-wrapper', '.ant-input-clear-icon'],
+              ['.ant-modal-close', '.ant-modal-close-x svg'],
+              ['.ant-drawer-close', '.ant-drawer-close svg'],
+            ];
+            for (const pair of pairs) {
+              const box = document.querySelector(pair[0]);
+              const icon = document.querySelector(pair[1]);
+              if (!box || !icon) continue;
+              const a = box.getBoundingClientRect();
+              const b = icon.getBoundingClientRect();
+              if (!b.height) continue;
+              return Math.abs(a.top + a.height / 2 - (b.top + b.height / 2)) <= 2;
+            }
+            return false;
+          })(),
+          // 图片嗅探（v26.10.10-v4）：入口 + 三路来源 + 整条尺寸阶梯 + 未知不丢 + 阈值过滤
+          // + perf 优先（v26.10.14-v2：同源图零请求走资源表读数）
+          sniffEntryOk: !!(window.__sniffSnap && window.__sniffSnap.entrySeen && window.__sniffSnap.modalSeen),
+          sniffScanOk: !!(
+            window.__sniffSnap &&
+            window.__sniffSnap.cards >= 2 &&
+            window.__sniffSnap.sourcesCss &&
+            window.__sniffSnap.headSize &&
+            window.__sniffSnap.rangeSize &&
+            // v26.10.10-v7：SVG 全被后缀规则挡在面板外，故这里反过来要求「面板里没有 SVG 来源」
+            !window.__sniffSnap.sourcesSvg
+          ),
+          sniffUnknownKeptOk: !!(window.__sniffSnap && window.__sniffSnap.unknownCount >= 1),
+          // v26.10.14-v2：尺寸读取 perf 优先 —— 同源真加载的图零请求拿到字节数
+          // （预收 Map 由 document-start 起的 PerformanceObserver 持续抄录，脚本执行前加载的图
+          // 靠 observer 的 buffered:true 回放）。走到 HEAD 就假红。
+          sniffPerfFirstOk: !!(
+            window.__sniffSnap &&
+            window.__sniffSnap.perfCardSeen &&
+            window.__sniffSnap.perfSizePerf &&
+            window.__sniffSnap.perfBogusNotShown &&
+            window.__sniffSnap.perfViaLabel &&
+            window.__sniffSnap.perfNoHead
+          ),
+          // v26.10.14-v4：嗅探后台预测量 —— 测量发生在**打开窗口之前**（12000 拍取样时，
+          // /sniff-head.png 这个只能走 HEAD 桩的跨域图就已经被请求过），且开窗扫描复用缓存、
+          // 不为它重发请求。两个条件缺一不可：只满足前者是「后台跑了但缓存没接上」，
+          // 只满足后者是「本来就没人发过请求」（旧行为）。
+          sniffPreMeasureOk: !!(
+            window.__sniffSnap &&
+            window.__sniffSnap.preHeadBeforeOpen >= 1 &&
+            window.__sniffSnap.preHeadAtOpen >= window.__sniffSnap.preHeadBeforeOpen &&
+            window.__sniffSnap.preHeadAfterScan === window.__sniffSnap.preHeadAtOpen
+          ),
+          // 图片嗅探（v26.10.10-v6，用户反馈）：小于阈值的图不显示、不计数、也不进全选/批量下载范围。
+          // 判据：① 面板不再出现「小于阈值」字样；② 10 KB 的 ⑦ 不在任何卡片标题里；
+          // ③ 点「全选」后按钮文案的张数 === 已渲染卡片数 + 大小未知数（含被阈值过滤的那张就会多 1）。
+          sniffSelectScopeOk: !!(
+            window.__sniffSnap &&
+            window.__sniffSnap.selectAllClicked &&
+            !window.__sniffSnap.belowNoticeShown &&
+            !window.__sniffSnap.smallInCards &&
+            window.__sniffSnap.selectAllCount ===
+              window.__sniffSnap.cards + window.__sniffSnap.unknownCount &&
+            window.__sniffSnap.selectAllCount >= 1
+          ),
+          // 图片嗅探（v26.10.10-v5；v26.10.16-v1 换观测面）：名称排除——命中规则的图不进候选
+          // （连请求都不发），被排除的名字一个都不许出现在卡片上。计数自 v26.10.16-v1 起不再显示在
+          // 界面上，改从面板的 data-sniff-excluded 钩子读 —— 否则断言只剩「名字没出现」，
+          // 而「一张卡都没渲染」同样满足它（假绿）。
+          sniffExcludeOk: !!(
+            window.__sniffSnap &&
+            window.__sniffSnap.excludedCount >= 2 &&
+            !window.__sniffSnap.excludedNameInCards
+          ),
+          // v26.10.16-v1（用户要求）：卡片不再显示文件名。两条判据缺一不可：
+          //   ① 文件名确实在卡片上（<img alt> 有值）—— 没有它的话「一张卡都没渲染」也会过；
+          //   ② 面板可见文本（modal.textContent：调参行/组头/提示/按钮）里一个文件名都没有。
+          sniffNoNameTextOk: !!(
+            window.__sniffSnap &&
+            /sniff-[a-z0-9-]+\.png/i.test(window.__sniffSnap.namesSample) &&
+            !window.__sniffSnap.nameInVisibleText
+          ),
+          // 后缀排除（v26.10.10-v7）：URL 是 .svg 的与内联 SVG 都不进面板。
+          // excludedCount >= 4 = 名称规则那 3 张（data 大/小 + user-man）+ 至少 1 张 SVG。
+          sniffSvgExcludedOk: !!(
+            window.__sniffSnap &&
+            !window.__sniffSnap.svgUrlInCards &&
+            !window.__sniffSnap.svgInCards &&
+            window.__sniffSnap.excludedCount >= 4
+          ),
+          // 会话分组（v26.10.13-v8）：两张会话图各归各的组，当前会话置顶，未归属单独成组。
+          // 判据（三条一起看，缺一条都说明归属/排序/渲染有一处没接上）：
+          //   ① 恰好 3 组：刘永增 / 湖南博大园林建筑有限公司 / 未归属（name 为空串）；
+          //   ② 「当前会话」标签落在第 0 组（= Vuex 的 selectItem 那一组）；
+          //   ③ 每组的卡片数与卡片标题对得上（第 0 组 2 张：a 带 conversationID、c 不带，见下）。
+          // v26.10.14-v5：当前会话的 conversationInfo **故意不给 ID** ⇒ 当前组的 ID 只能靠
+          // 「同一窗口另一张图带的 ID」学出来，故 ③ 里两张图都在第 0 组是本次修复的直接证据。
+          sniffGroupOk: (() => {
+            const s = window.__sniffSnap;
+            const g = s && s.groups;
+            if (!g) return false;
+            return !!(
+              s.chatInstalled &&
+              g.count === 3 &&
+              g.names[0] === '刘永增' &&
+              g.names[1] === '湖南博大园林建筑有限公司' &&
+              g.names[2] === '' &&
+              g.currentIndex === 0 &&
+              g.cards[0] === 2 &&
+              g.cards[1] === 1 &&
+              g.cardNames[0].indexOf('sniff-conv-a.png') >= 0 &&
+              g.cardNames[0].indexOf('sniff-conv-c.png') >= 0 &&
+              g.cardNames[1].indexOf('sniff-conv-b.png') >= 0 &&
+              g.headers[0].indexOf('2 张') >= 0
+            );
+          })(),
+          // 会话归属的双路径合并（v26.10.14-v5，用户 2026-10-14 反馈的「同名两组」）：
+          // 同一个会话窗口里，带 conversationID 的图与不带的分属两条解析路径。修复前后者退化成
+          // `name:刘永增` 键 ⇒ 面板出现 4 组、两个「刘永增」。三条判据：
+          //   ① 组名不重复（同名两组是本 bug 的可见症状）；
+          //   ② 恰好 3 组（多出来的那组就是回退键）；
+          //   ③ 第 0 组 2 张卡且 a、c 都在里面（两条路径真正并成一组，而不是各少一张）。
+          sniffConvAliasOk: (() => {
+            const s = window.__sniffSnap;
+            const g = s && s.groups;
+            if (!g) return false;
+            const names = g.names.filter((n) => !!n);
+            return !!(
+              s.chatInstalled &&
+              new Set(names).size === names.length &&
+              g.count === 3 &&
+              g.cards[0] === 2 &&
+              g.cardNames[0].indexOf('sniff-conv-a.png') >= 0 &&
+              g.cardNames[0].indexOf('sniff-conv-c.png') >= 0
+            );
+          })(),
+          // 组内按消息时间排序（v26.10.16-v2，用户要求「最新的图片在前面」）。
+          // 夹具（见 HTML 里的 ⑩⑪⑬ 与 __installSniffChat）把三种可能的实现**两两区分开**：
+          //   · 按消息时间（现在） → 当前会话组 a, c
+          //   · 按体积（v26.10.16-v1 及更早） → c, a（c 是 70KB，a 是 50KB）
+          //   · 不排序（扫描 / DOM 序） → c, a（c 的 <img> 故意排在 a 前面）
+          // 所以「a 的出现位置严格早于 c」这一条只对「按时间」成立。
+          // 前置条件 a、c **两张都要在**：否则只有一张卡时 indexOf 也可能满足大小关系（假绿）。
+          sniffConvTimeOrderOk: (() => {
+            const s = window.__sniffSnap;
+            const g = s && s.groups;
+            if (!g) return false;
+            const row = g.cardNames[0] || '';
+            const ia = row.indexOf('sniff-conv-a.png');
+            const ic = row.indexOf('sniff-conv-c.png');
+            return !!(s.chatInstalled && ia >= 0 && ic >= 0 && ia < ic);
+          })(),
+          // 组内排序的**兜底**（v26.10.16-v2）：取不到消息时间的图（未归属组整组都没有）退回老口径
+          // 「体积倒序」—— 普通网页上没有「会话」概念，观感必须与旧版完全一致。
+          // 判据取未归属组（names[2] === ''）：40 KB 的 range 必须排在 30 KB 的 head 之前。
+          // 同样要求两张都在（「一张都没渲染」不满足）。旧实现下这一条也是绿的 —— 它守的是「时间排序
+          // 不要误伤没有时间的图」，不是本次改动的前后差异（那由 sniffConvTimeOrderOk 守）。
+          sniffConvNoTimeFallbackOk: (() => {
+            const s = window.__sniffSnap;
+            const g = s && s.groups;
+            if (!g) return false;
+            const row = g.cardNames[2] || '';
+            const ir = row.indexOf('sniff-range.png');
+            const ih = row.indexOf('sniff-head.png');
+            return !!(s.chatInstalled && g.names[2] === '' && ir >= 0 && ih >= 0 && ir < ih);
+          })(),
+          /**
+           * 没有消息时间的图 → 卡片四周加红圈（v26.10.16-v3，用户要求）。
+           *
+           * 夹具的分布是**互斥三态**（缺任何一半都判不出真假）：
+           *   · 有时间的：当前会话组的 a / c（消息时间 …003000 / …002000）⇒ **不许**带红圈；
+           *   · 没时间的：未归属组的 head / range / perf（byStem 里没有它们）⇒ **必须**带红圈。
+           * 故断言要同时钉住两侧：漏标（该红没红）与误标（不该红却红了）都要红。
+           *
+           * ⚠️ 三条前置条件都不能省：
+           *   ① `names[2] === ''`（未归属组确实存在，位置没变）—— 否则读到的可能是别的组；
+           *   ② 组内 `ringNames[2]` 里三张没时间的图都在 —— 「一张卡都没渲染」同样满足「都没带圈」；
+           *   ③ 有时间的组 `ringNames[0]` 为空 —— 少了它，一个「把红圈无条件加给所有卡片」的
+           *      实现也能过（那正好是本次需求的镜像 bug）。empty 时 join 出来是 `' | '` 之类的空串，
+           *      故用「有没有出现 .png 名字」判，而不是直接比空串。
+           */
+          sniffNoTimeRingOk: (() => {
+            const s = window.__sniffSnap;
+            const g = s && s.groups;
+            if (!g) return false;
+            const unknownRing = g.ringNames[2] || '';
+            const timedRing = (g.ringNames[0] || '') + ' | ' + (g.ringNames[1] || '');
+            return !!(
+              s.chatInstalled &&
+              g.names[2] === '' &&
+              unknownRing.indexOf('sniff-range.png') >= 0 &&
+              unknownRing.indexOf('sniff-head.png') >= 0 &&
+              unknownRing.indexOf('sniff-perf.png') >= 0 &&
+              !/\.png/i.test(timedRing)
+            );
+          })(),
+          // 会话归属的持久化（v26.10.13-v8）：切走会话（Vuex 里两条消息都不再提供）后重扫，
+          // 两张图仍各自归回原会话 —— 少了持久层的话它们只会落进「未归属」，names 前两项都是空串。
+          // v26.10.14-v5：当前会话那组的 2 张（a + c）都要回来，且 c 的 `name:` 键已被迁移合并。
+          sniffGroupPersistOk: (() => {
+            const s = window.__sniffSnap;
+            const g = s && s.groupsAfterSwitch;
+            if (!g) return false;
+            return !!(
+              s.rescanClicked &&
+              s.switchedSeen &&
+              g.count === 3 &&
+              g.names[0] === '湖南博大园林建筑有限公司' &&
+              g.names[1] === '刘永增' &&
+              g.names[2] === '' &&
+              g.currentIndex === 0 &&
+              g.cards[0] === 1 &&
+              g.cards[1] === 2
+            );
+          })(),
+          // v26.10.10-v16：图片格子上的功能按钮改成「压在图片右下角、只有图标、hover 才出现」。
+          // 文件视图（复制/下载/删除）与图片嗅探（下载/打印）两个窗口都要满足同一组几何与可见性约束。
+          filesImgActions: window.__filesImgActions || null,
+          sniffImgActionsOk: (() => {
+            const s = window.__sniffSnap && window.__sniffSnap.imgActions;
+            return !!(
+              s &&
+              s.btns === 2 &&
+              s.iconOnly &&
+              s.hidden &&
+              s.inside &&
+              s.bottomRight &&
+              window.__sniffSnap.imgActionsHovered
+            );
+          })(),
+          sniffSnap: window.__sniffSnap || null,
+          transferSnap: window.__transferSnap || null,
+          pairSnap: window.__pairSnap || null,
+          relevantErrors: relevant,
+        };
+        document.getElementById('smoke-result').textContent = JSON.stringify(report, null, 2);
+        document.title =
+          'znhd-smoke:' +
+          (report.panel &&
+          report.overlayViewportSized &&
+          report.panelIconsAreSvg &&
+          report.transferAutoOpenOk &&
+          report.transferWindowOk &&
+          report.transferNoTitleOk &&
+          report.filesViewOk &&
+          report.sessionChatOk &&
+          report.sessionRouteBySenderOk &&
+          report.textSentOk &&
+          report.sessionClearOk &&
+          report.pairModalOk &&
+          report.qrNoRadius &&
+          report.phoneIdColorOk &&
+          // 轮询优化（v26.10.14-v7）：名单走长轮询 piggyback + 声明订阅 + 已删 5s 轮询
+          report.phonesNegotiatedOk &&
+          report.phonesViaLongPollOk &&
+          report.onDemandStatusQueryOk &&
+          report.phoneStatusPollRemovedOk &&
+          // P5 指数退避（v26.10.14-v8）：退避序列 / 成功复位 / 429 直跳上限
+          report.recvBackoffOk &&
+          report.recvBackoffResetOk &&
+          report.recvBackoff429Ok &&
+          report.pairTestImageBtnOk &&
+          report.testImageSentOk &&
+          report.transferThemeOk &&
+          report.transferLayeredOk &&
+          report.transferSettingsIsolatedOk &&
+          // 常用语（v26.10.18-v2）：抓取/双 tab/刷新按钮/两行截断/复制/缓存六件套进总门禁
+          report.phrasesLoaded &&
+          report.phrasesTabsOk &&
+          report.phrasesMineSeen &&
+          report.phrasesRefreshBtn &&
+          report.phrasesClamp2 &&
+          report.phrasesGrabbedOk &&
+          report.phrasesClickNoViewOk &&
+          report.phrasesTabRestored &&
+          report.phrasesNoXhrOk &&
+          report.phrasesClipOk &&
+          report.phrasesCacheOk &&
+          report.changelogPopup &&
+          report.viewerZoomOk &&
+          report.copyOk &&
+          report.printBtnOk &&
+          report.printIframeOk &&
+          report.printA4Ok &&
+          report.previewToolbarOk &&
+          report.previewIconCenteredOk &&
+          report.previewSingleMaskOk &&
+          report.filesImgActionsOk &&
+          report.chatBubbleOk &&
+          report.chatComposerOk &&
+          report.emojiPackOk &&
+          // 表情面板的两条自动收起（v26.10.13-v7）。顺手把同一族的 emojiHoverOk 也纳入总门禁
+          // （此前只在明细里报，未参与 ALL-OK 判定）
+          report.emojiHoverOk &&
+          report.emojiAutoCloseOk &&
+          report.phoneSendCompressedOk &&
+          report.sniffEntryOk &&
+          report.sniffScanOk &&
+          report.sniffUnknownKeptOk &&
+          report.sniffPerfFirstOk &&
+          report.sniffExcludeOk &&
+          report.sniffNoNameTextOk &&
+          report.sniffSvgExcludedOk &&
+          report.sniffSelectScopeOk &&
+          // 会话分组（v26.10.13-v8）：分组渲染 + 切会话后仍靠持久层归组
+          // v26.10.14-v5：再加「双路径合并」（同窗口带/不带 ID 的图必须同组、无同名两组）
+          report.sniffGroupOk &&
+          report.sniffConvAliasOk &&
+          // v26.10.16-v2：组内按消息时间排序 + 「取不到时间时退回体积倒序」的兜底
+          report.sniffConvTimeOrderOk &&
+          report.sniffConvNoTimeFallbackOk &&
+          // v26.10.16-v3：没有消息时间的图四周带红圈（有时间的图不许带）
+          report.sniffNoTimeRingOk &&
+          report.sniffGroupPersistOk
+            ? 'ALL-OK'
+            : 'PARTIAL');
+      }, 38500);
+    </script>
+  </body>
+</html>

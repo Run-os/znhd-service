@@ -1,0 +1,613 @@
+import { useEffect, useRef, useState, type ReactElement } from 'react';
+import { Button, Card, Space, Switch, Tooltip, theme } from 'antd';
+import {
+    CloseIcon,
+    CrosshairIcon,
+    PhrasesIcon,
+    SettingsIcon,
+    SniffIcon,
+    TransferIcon,
+    VolumeOffIcon,
+    VolumeOnIcon,
+    type IconProps,
+} from '@/lib/ui/icons';
+import { addLog, setLogEntriesSink, clearLogs, type LogEntry } from '@/lib/logger';
+import { loadPhrasesCache, savePhrasesCache, saveAllvalue, type Allvalue } from '@/lib/storage';
+import { runtime } from '@/lib/state';
+import { hoursToHHmm } from '@/lib/utils';
+import { clearSpeechQueue } from '@/lib/speech';
+import { getMonitorState, resetWaitCountBaseline, setMonitorStateSink, type MonitorState } from '@/lib/monitor';
+// v26.10.18-v2：常用语数据源改为程序化读取本页右侧栏「常用话术」（见 lib/phrasesZnhd.ts）
+import { readPhrasesFromZnhd, type ZnhdPhrases } from '@/lib/phrasesZnhd';
+import { notify } from '@/lib/ui/notify';
+import { clampHostIntoView, usePanelDrag } from '@/lib/ui/panelHost';
+import { PANEL_WIDTH } from '@/lib/ui/panelIds';
+import SettingsModal from '@/lib/ui/SettingsModal';
+import PhrasesDrawer from '@/lib/ui/PhrasesDrawer';
+import LogModal from '@/lib/ui/LogModal';
+import ChangelogModal from '@/lib/ui/ChangelogModal';
+import SniffModal from '@/lib/ui/SniffModal';
+// v26.10.14-v4：嗅探后台预测量的开关即时生效（设置项变化时调它，见 SettingsModal 的那个 Switch）
+import { setPreMeasureEnabled } from '@/lib/snifferPre';
+import TransferAssistantModal from '@/lib/ui/transfer/TransferAssistantModal';
+import { initTransfer, onTransferAutoOpen, stopTransfer } from '@/lib/transfer/store';
+
+// 常用语请求序号（loadPhrasesData 用）：仅最新一次请求可落地结果，防慢的旧响应后到覆盖新数据
+let phrasesRequestSeq = 0;
+
+/** 面板品牌图标：税务站点自身的 favicon（与脚本 @icon 一致） */
+const BRAND_ICON = 'https://znhd.hunan.chinatax.gov.cn:8443/favicon.ico';
+
+/**
+ * 品牌图标：优先用 favicon（与油猴脚本 @icon 同源），加载失败（离线/被拦）时回退到 SVG 图标，
+ * 避免面板头部出现空白块。
+ */
+function BrandIcon({ size = 26 }: { size?: number }) {
+    const [failed, setFailed] = useState(false);
+    const { token } = theme.useToken();
+    const box = { width: size, height: size, borderRadius: 6, flex: '0 0 auto' } as const;
+    if (failed) {
+        // ⚠️ v26.10.09-v7：原为 emoji '🎯'（U+1F3AF，补充平面）——Win7 无 Segoe UI Emoji ⇒ 豆腐块。
+        //    改用内联 SVG 准星 + 主色底/白字（见 lib/ui/icons.tsx 的说明）。
+        return (
+            <span
+                style={{
+                    ...box,
+                    background: token.colorPrimary,
+                    color: '#fff',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                }}>
+                <CrosshairIcon size={Math.round(size * 0.62)} color="#fff" />
+            </span>
+        );
+    }
+    return (
+        <img
+            src={BRAND_ICON}
+            alt=""
+            draggable={false}
+            style={{ ...box, display: 'block' }}
+            onError={() => setFailed(true)}
+        />
+    );
+}
+
+/**
+ * 底部入口按钮的自适应样式（v26.10.07-v3；v26.10.12-v1 起由 5 个减为 4 个）。
+ *
+ * 需求：4 个入口合并到一行，并随宽度自适应——
+ *   · 宽度足够 → 图标 + 文字同排；
+ *   · 宽度不足 → **只留图标**（当前面板就落在这一档，文案靠 hover Tooltip 给出）；
+ *   · 两种状态下悬停都有 Tooltip（见下方 JSX）。
+ *
+ * 阈值为什么取 65px（实测：Chrome 154）：
+ *   容器查询的尺寸按**内容盒**算 —— 按钮宽度减去内边距 4×2 与边框 1×2 才是被查询的尺寸。
+ *   横排所需宽度 = 图标 15px + 间距 2px + 4 字 × 11px = **61px**
+ *   （最长标签「传输助手」4 字，与旧版「历史记录」「图片嗅探」同长，故阈值不变），
+ *   留 4px 余量故阈值取 65px；正好卡在边界会折成两行。
+ *   ⚠️ v26.10.09-v7：图标由 emoji（约 18px 宽）换成内联 SVG（`size={15}` ⇒ 15px 宽）后，
+ *      阈值由 **68px 复算为 65px**（窄 3px）。换图标尺寸/标签字数后必须回来重算。
+ *   ⚠️ 该阈值与面板宽度无关，只取决于按钮自身宽度：
+ *      · 当前面板 238px 时四列各约 49px（内容盒约 39px）→ 在阈值下，只显示图标；
+ *      · 面板加宽到约 75px/按钮以上，文字会自动出现，**无需改代码**。
+ *
+ * ⚠️ 若日后改 PANEL_ACTIONS 的标签字数或图标字号，**必须回来重算这个阈值**，
+ *    否则文字会在按钮刚好放不下时才折行（表现为「图标和字挤成两行」）。
+ *
+ * ⚠️ 文字用 `display: none` 隐藏，**不是条件渲染**：文字必须留在 DOM 里 ——
+ *    冒烟测试是按 textContent 找面板按钮的（`clickByText('设置')`），
+ *    若改成 `{show && <span>…}` 会把断言直接打挂；同时它也是纯图标态的可访问名。
+ *
+ * ⚠️ 用 CSS 容器查询而非 JS 测量：按钮在 grid 里宽度由栅格决定（与自身内容无关），
+ *    因此不存在「隐藏文字 → 按钮变窄 → 反过来触发隐藏」的抖动回路。
+ */
+const PANEL_CSS = `
+.znhd-panel-btn {
+  container-type: inline-size;
+}
+.znhd-panel-btn-text {
+  display: none;
+}
+@container (min-width: 65px) {
+  .znhd-panel-btn-text {
+    display: inline;
+  }
+}
+`;
+
+/**
+ * 底部入口（v26.10.12-v1 起 4 个）：key + 图标组件 + 文案（文案同时用于 hover Tooltip；点击行为见组件内 actionHandlers）
+ *
+ * ⚠️ v26.10.09-v7：图标由 emoji 字符（'⚙️' '💬' '🖼️' '💻'）改为**内联 SVG 组件**。
+ * **原因**：Win7 没有 Segoe UI Emoji 字体（Win8.1 才引入），`💬 U+1F4AC` / `🖼 U+1F5BC` /
+ * `💻 U+1F4BB` 这些补充平面码位在 Win7 任何系统字体里都没有字形 ⇒ 按钮全是豆腐块/乱码。
+ * **为什么是内联 SVG 而不是图标库**：路径不经字体系统、全平台一致；且不引入任何运行时依赖
+ * （`@ant-design/icons` 只是 antd 的传递依赖，在 src/ 里 import 它属于「运行时 import devDependency」）。
+ * 图形来源与许可见 `lib/ui/icons.tsx` 头部注释（Lucide / ISC）。
+ *
+ * `icon` 存组件类型而非实例，便于统一控制尺寸与颜色。
+ *
+ * v26.10.12-v1「设备互联 → 传输助手」重构后的入口变化：
+ *   · 删「历史记录」：收件历史已并入传输助手第三栏的「文件」分组；
+ *   · 「设备互联」改名「传输助手」：点它打开三栏传输助手窗口（收发、配对全在里面）。
+ *
+ * ⚠️ v26.10.13-v9：主面板第二行的「Agent 助手」按钮与 Agent 独立窗口早在 v26.10.12-v1
+ * 就并入了传输助手第一栏的 Agents 入口，该入口现已随 Agent 能力整体删除 —— 主面板只剩
+ * 下方这一行入口，不再有任何 Agent 相关按钮。
+ */
+const PANEL_ACTIONS = [
+    { key: 'settings', icon: SettingsIcon, label: '设置' },
+    { key: 'phrases', icon: PhrasesIcon, label: '常用语' },
+    { key: 'transfer', icon: TransferIcon, label: '传输助手' },
+    { key: 'sniff', icon: SniffIcon, label: '图片嗅探' },
+] as const;
+
+/**
+ * 主面板入口按钮（图标 + 文案）。只允许传「图标 / 文案 / 主题色 / 点击」，
+ * 不接收任意属性透传 —— 样式完全由 .znhd-panel-btn 决定。
+ */
+function PanelEntryButton({
+    icon: Icon,
+    label,
+    onClick,
+    color,
+}: {
+    icon: (p: IconProps) => ReactElement;
+    label: string;
+    onClick?: () => void;
+    color?: string;
+}) {
+    return (
+        <Tooltip title={label} placement="bottom">
+            <Button className="znhd-panel-btn" size="large" style={{ padding: '0 4px' }} onClick={onClick}>
+                <Icon size={15} color={color} />
+                <span className="znhd-panel-btn-text" style={{ fontSize: 11, marginLeft: 2 }}>
+                    {label}
+                </span>
+            </Button>
+        </Tooltip>
+    );
+}
+
+/** 状态点（行首在线指示灯：绿=在线 / 红=掉线） */
+function Dot({ color }: { color: string }) {
+    return (
+        <span
+            style={{
+                display: 'inline-block',
+                width: 6,
+                height: 6,
+                borderRadius: '50%',
+                background: color,
+                marginRight: 6,
+                verticalAlign: 'middle',
+            }}
+        />
+    );
+}
+
+/** 「上次播报」的展示文案（面板每 3s 随监控状态重渲染，所以相对时间会自动更新） */
+function lastSpeakText(last: MonitorState['lastSpeak']): string {
+    if (!last) return '暂无播报记录';
+    const mins = Math.floor((Date.now() - last.at) / 60000);
+    const when = mins <= 0 ? '刚刚' : mins + ' 分钟前';
+    return '上次播报：' + when + ' · ' + last.reason;
+}
+
+interface MainPanelProps {
+    /** 面板宿主元素：拖拽时改写它的 left/top */
+    host: HTMLElement;
+}
+
+/**
+ * 主面板（v26.10.06-v9：CAT_UI → React + Ant Design）。
+ * 版式对齐参考图：头部（图标+标题+版本+收起）、人数/状态卡、语音开关行、一行四入口按钮、底部「查看日志」。
+ */
+export default function MainPanel({ host }: MainPanelProps) {
+    // dragHandlers 给「展开态标题栏」和「收起态悬浮球」共用；consumeDrag 供悬浮球区分点击与拖拽
+    const { consumeDrag, ...dragHandlers } = usePanelDrag(host);
+
+    // 主色/次要色取自 antd 主题 token，而不是写死 #1677ff / #bfbfbf：
+    // 主题色在 PanelApp 的 ConfigProvider 里统一配置，图标跟随它才能和 antd 组件保持一致。
+    const { token } = theme.useToken();
+
+    // 惰性初始化：useState(loadAllvalue()) 的实参每次渲染都会求值，而本组件因 logEntries 频繁重渲染，
+    // 等于反复白读 localStorage。顶层 runtime.init 已是启动时读好的同一份数据。
+    const [Allvalue, setAllvalue] = useState<Allvalue>(() => runtime.init);
+    const [settingsOpen, setSettingsOpen] = useState(false);
+    const [phrasesOpen, setPhrasesOpen] = useState(false);
+    /** 传输助手三栏窗口（v26.10.12-v1：原「设备互联」+「历史记录」+「Agent 助手」三者的收敛；Agents 部分已删） */
+    const [transferOpen, setTransferOpen] = useState(false);
+    const [logOpen, setLogOpen] = useState(false);
+    const [changelogOpen, setChangelogOpen] = useState(false);
+    /** 图片嗅探（v26.10.10-v4）：扫描当前页面上的图片，筛选/预览/下载/打印 */
+    const [sniffOpen, setSniffOpen] = useState(false);
+    const [logEntries, setLogEntries] = useState<LogEntry[]>([]);
+    // v26.10.18-v2：常用语 = {全部话术, 我的话术} 两组字符串数组（来自本页「常用话术」）
+    const [phrasesData, setPhrasesData] = useState<ZnhdPhrases>({ all: [], mine: [] });
+    const [phrasesLoading, setPhrasesLoading] = useState(false);
+    const [searchKeyword, setSearchKeyword] = useState('');
+    const [collapsed, setCollapsed] = useState(false);
+    const [mon, setMon] = useState<MonitorState>(() => getMonitorState());
+
+    const updateAllvalue = (newValue: Allvalue) => {
+        setAllvalue(newValue);
+        saveAllvalue(newValue);
+        runtime.voiceEnabled = newValue.voiceEnabled;
+        runtime.workingHours = newValue.workingHours;
+        runtime.useCdn = !!newValue.useCdn;
+        runtime.logAutoRefresh = !!newValue.logAutoRefresh;
+    };
+    const patchAllvalue = (kv: Partial<Allvalue>) => updateAllvalue({ ...Allvalue, ...kv });
+
+    const { voiceEnabled } = Allvalue;
+
+    // 日志写入回调
+    useEffect(() => {
+        setLogEntriesSink(setLogEntries);
+        return () => setLogEntriesSink(null);
+    }, []);
+
+    // 监控状态订阅（人数/在线/工作时段/上次播报）
+    useEffect(() => {
+        setMonitorStateSink(setMon);
+        setMon(getMonitorState());
+        return () => setMonitorStateSink(null);
+    }, []);
+
+    // 启动日志（只跑一次）
+    useEffect(() => {
+        addLog('脚本已启动，版本 v' + (GM_info.script.version || '?'), 'success');
+        const wh = Allvalue.workingHours || runtime.workingHours;
+        if (wh) {
+            addLog(
+                '监控时间段：上午 ' +
+                    hoursToHHmm(wh.morningStart) +
+                    '-' +
+                    hoursToHHmm(wh.morningEnd) +
+                    '，下午 ' +
+                    hoursToHHmm(wh.afternoonStart) +
+                    '-' +
+                    hoursToHHmm(wh.afternoonEnd),
+                'info'
+            );
+        }
+        addLog('语音播报：' + (runtime.voiceEnabled ? '已开启' : '已静音'), 'info');
+    }, []);
+
+    // 悬浮球可以被拖到贴边；展开回面板时按**面板真实宽度**重新裁回视口，
+    // 否则「从屏幕右下角展开」会出现面板大半在屏幕外、抓不回来。
+    // ⚠️ 只在「收起 → 展开」这一跳时裁：挂载时 usePanelDrag 已按真实尺寸裁过一次，这里再裁会多写一遍存档。
+    const prevCollapsedRef = useRef(collapsed);
+    useEffect(() => {
+        const wasCollapsed = prevCollapsedRef.current;
+        prevCollapsedRef.current = collapsed;
+        if (wasCollapsed && !collapsed) clampHostIntoView(host);
+    }, [collapsed, host]);
+
+    const loadPhrasesData = (force = false) => {
+        // v26.10.18-v2：数据源 = 本页右侧栏「常用话术」（程序化读取，见 lib/phrasesZnhd.ts）。
+        // 缓存策略：**无 TTL** —— 本地有缓存就直接用（话术由坐席在页面里维护，改动频率低，
+        // 且页面会话随时可重试）；只有「无缓存」或「手动点刷新按钮（force）」才走程序化抓取。
+        if (!force) {
+            const cache = loadPhrasesCache();
+            if (cache && cache.data) {
+                setPhrasesData(cache.data);
+                const mins = Math.round((Date.now() - cache.time) / 60000);
+                addLog('常用语使用本地缓存（' + mins + ' 分钟前抓取），如需更新请点侧边栏刷新按钮', 'info');
+                return;
+            }
+        }
+        const seq = ++phrasesRequestSeq;
+        setPhrasesLoading(true);
+        readPhrasesFromZnhd()
+            .then((data) => {
+                if (seq !== phrasesRequestSeq) return;
+                setPhrasesData(data);
+                savePhrasesCache(data);
+                const total = data.all.length + data.mine.length;
+                addLog(
+                    '常用语抓取成功：全部话术 ' + data.all.length + ' 条、我的话术 ' + data.mine.length + ' 条',
+                    'success'
+                );
+                notify.success('常用语抓取成功（共 ' + total + ' 条）');
+            })
+            .catch((error: { message?: string }) => {
+                if (seq !== phrasesRequestSeq) return;
+                const hasOld = phrasesData.all.length + phrasesData.mine.length > 0;
+                const reason = error?.message || '未知错误';
+                addLog('常用语抓取失败: ' + reason + (hasOld ? '，仍显示上次内容' : ''), 'error', true);
+                // 失败原因直接进 toast：v26.10.18-v2 首版只提示「抓取失败」，看不出卡在哪一步
+                notify.error('常用语抓取失败：' + reason + (hasOld ? '，仍显示上次内容' : ''));
+            })
+            .finally(() => {
+                if (seq === phrasesRequestSeq) setPhrasesLoading(false);
+            });
+    };
+
+    // 常用语弹窗打开时自动加载
+    useEffect(() => {
+        if (phrasesOpen) loadPhrasesData();
+    }, [phrasesOpen]);
+
+    /**
+     * 传输助手后台能力（v26.10.12-v1）：手机在线轮询 + 长轮询接收，全部收进
+     * `lib/transfer/store.ts`（模块级 store，窗口不开也照常收件）。
+     *
+     * 主面板只做两件事：
+     *   ① 挂载时 `initTransfer()`（幂等；中继地址来自传输助手自有设置）；
+     *   ② 注册「收到新内容且需要自动打开窗口」的回调 —— 把传输助手带到眼前。
+     * 卸载时 `stopTransfer()` 停掉全部定时器 / 长轮询（页面卸载链路由 beforeunload 兜底）。
+     */
+    useEffect(() => {
+        initTransfer();
+        const offAutoOpen = onTransferAutoOpen(() => setTransferOpen(true));
+        return () => {
+            offAutoOpen();
+            stopTransfer();
+        };
+    }, []);
+
+    const toggleVoice = (next: boolean) => {
+        patchAllvalue({ voiceEnabled: next });
+        addLog('语音播报已' + (next ? '开启' : '静音'), 'info');
+        if (next && 'speechSynthesis' in window) {
+            // 播放一个静默语音激活语音合成（绕过浏览器 not-allowed 限制）
+            window.speechSynthesis.speak(new SpeechSynthesisUtterance(''));
+            // 关闭期间人数上升沿被 speak() 的静音判断吃掉，复位基线让下一次轮询补播当前人数（v26.10.10-v9）
+            resetWaitCountBaseline();
+            notify.success('语音功能已启用');
+        } else if (!next) {
+            clearSpeechQueue();
+        }
+    };
+
+    // 收起：只留一个圆形悬浮球，避免「关掉就再也找不回来」。
+    // 悬浮球与标题栏一样可拖动（v26.10.07-v3）：拖动过就不要再展开面板。
+    if (collapsed) {
+        return (
+            <Button
+                {...dragHandlers}
+                shape="circle"
+                color="primary"
+                variant="solid"
+                title="拖动可移动位置，点击展开面板"
+                onClick={() => {
+                    // ⚠️ pointerdown 里的 preventDefault 并不能阻止 click（实测序列：拖拽为 pd|pm×N|pu|click），
+                    //    故必须靠 consumeDrag() 把「拖拽尾巴」的那次 click 吃掉，否则拖完一松手就会展开。
+                    if (consumeDrag()) return;
+                    setCollapsed(false);
+                }}
+                style={{
+                    width: 36,
+                    height: 36,
+                    boxShadow: '0 4px 16px rgba(0,0,0,0.18)',
+                    cursor: 'move',
+                    userSelect: 'none',
+                    touchAction: 'none',
+                }}>
+                <BrandIcon size={20} />
+            </Button>
+        );
+    }
+
+    // 入口的点击行为（key 与 PANEL_ACTIONS 对齐）
+    const actionHandlers: Record<string, () => void> = {
+        settings: () => setSettingsOpen(true),
+        phrases: () => setPhrasesOpen(true),
+        transfer: () => setTransferOpen(true),
+        sniff: () => setSniffOpen(true),
+    };
+
+    return (
+        <Card
+            size="small"
+            style={{ width: PANEL_WIDTH, boxShadow: '0 6px 24px rgba(0,0,0,0.18)' }}
+            styles={{ body: { padding: 12 }, header: { padding: '8px 10px', minHeight: 46 } }}
+            title={
+                // 标题栏 = 拖拽手柄（唯一可抓取区）
+                <div
+                    {...dragHandlers}
+                    style={{
+                        cursor: 'move',
+                        userSelect: 'none',
+                        touchAction: 'none',
+                        display: 'flex',
+                        alignItems: 'center',
+                        // v26.10.07-v3 面板缩到 238px 后，标题栏内容实测 191px 而可用只有 189px（溢出 2px）。
+                        // 间隙 8→6 收回 4px；标题再给 minWidth:0 + 省略号兜底 —— 字体渲染略有差异时
+                        // 让标题自己省略，而不是把右侧的 ✕ 挤出去。
+                        gap: 6,
+                    }}
+                    title="按住拖动面板">
+                    <BrandIcon />
+                    <span
+                        style={{
+                            fontWeight: 700,
+                            fontSize: 15,
+                            minWidth: 0,
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                        }}>
+                        征纳互动监控
+                    </span>
+                    <span
+                        style={{
+                            background: '#e6f4ff',
+                            color: '#1677ff',
+                            borderRadius: 10,
+                            padding: '1px 8px',
+                            fontSize: 11,
+                            fontWeight: 400,
+                            flex: '0 0 auto',
+                        }}>
+                        v{GM_info.script.version}
+                    </span>
+                </div>
+            }
+            extra={
+                <Button
+                    type="text"
+                    size="small"
+                    title="收起面板（点圆形按钮可展开）"
+                    aria-label="收起面板"
+                    onClick={() => setCollapsed(true)}>
+                    {/* ⚠️ v26.10.09-v7：原为字符 '✕'（U+2715，Dingbats）——Win7 字形覆盖不确定。
+                        改用内联 SVG；颜色跟随按钮前景色（不写死颜色，避免与 antd 主题脱节）。 */}
+                    <CloseIcon size={16} color="currentColor" />
+                </Button>
+            }>
+            <style>{PANEL_CSS}</style>
+
+            {/* 人数 / 工作时段（单行 + 行首在线指示灯）
+                v26.10.15-v3：由「30px 大字人数 + 在线/工作时段两个状态点」的双栏卡片压缩成一行文本：
+                工作时段 →「当前等待人数：N 人」；非工作时段 →「当前非工作时段」。
+                v26.10.15-v4：行首恢复**一个**在线指示灯（绿=在线 / 红=掉线，只表在线状态，
+                不再有「工作时段」那颗蓝点 —— 时段信息已由文案本身表达）；掉线/在线的明细走日志。
+                ⚠️ 指示灯只给视觉提示，详细状态以「日志」为准。 */}
+            <div
+                style={{
+                    background: '#f7f8fa',
+                    borderRadius: 10,
+                    padding: '8px 12px',
+                    marginBottom: 10,
+                    fontSize: 13,
+                    color: mon.inWorkingHours ? '#262626' : '#8c8c8c',
+                }}>
+                <Dot color={mon.online ? '#52c41a' : '#ff4d4f'} />
+                {mon.inWorkingHours
+                    ? '当前等待人数：' + (mon.waiting === null ? '—' : mon.waiting) + ' 人'
+                    : '当前非工作时段'}
+            </div>
+
+            {/* 语音播报开关 */}
+            <div
+                style={{
+                    background: '#f7f8fa',
+                    borderRadius: 10,
+                    padding: '8px 12px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    marginBottom: 10,
+                }}>
+                <Space size={6}>
+                    {/* ⚠️ v26.10.09-v7：原为 emoji '🔊'/'🔇'（补充平面，Win7 无字形 ⇒ 豆腐块）。
+                        改为两个内联 SVG：**开/关用不同图形**（喇叭+声波 / 喇叭+叉），
+                        再叠加颜色区分（开=主色，静音=次要灰），语义比「同一个图标改颜色」更清楚。 */}
+                    {voiceEnabled ? (
+                        <VolumeOnIcon size={15} color={token.colorPrimary} />
+                    ) : (
+                        <VolumeOffIcon size={15} color={token.colorTextQuaternary} />
+                    )}
+                    <span style={{ fontSize: 13 }}>语音播报</span>
+                </Space>
+                <Switch checked={!!voiceEnabled} onChange={toggleVoice} />
+            </div>
+
+            {/* 第一行：4 个入口（v26.10.12-v1 起）。宽度自适应（不够时只留图标），悬停给出完整文案 */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 6 }}>
+                {PANEL_ACTIONS.map((a) => (
+                    <PanelEntryButton
+                        key={a.key}
+                        icon={a.icon}
+                        label={a.label}
+                        color={token.colorPrimary}
+                        onClick={actionHandlers[a.key]}
+                    />
+                ))}
+            </div>
+
+            {/* 底部：上次播报 + 查看日志 */}
+            <div
+                style={{
+                    marginTop: 10,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: 8,
+                    fontSize: 12,
+                    color: '#8c8c8c',
+                }}>
+                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {lastSpeakText(mon.lastSpeak)}
+                </span>
+                <Button type="link" size="small" style={{ padding: 0 }} onClick={() => setLogOpen(true)}>
+                    查看日志 →
+                </Button>
+            </div>
+
+            <SettingsModal
+                open={settingsOpen}
+                onClose={() => setSettingsOpen(false)}
+                onOpenChangelog={() => setChangelogOpen(true)}
+                workingHours={Allvalue.workingHours}
+                onChangeWorkingHours={(wh: Allvalue['workingHours']) => {
+                    patchAllvalue({ workingHours: wh });
+                    addLog(
+                        '监控时间段已更新：上午 ' +
+                            hoursToHHmm(wh.morningStart) +
+                            '-' +
+                            hoursToHHmm(wh.morningEnd) +
+                            '，下午 ' +
+                            hoursToHHmm(wh.afternoonStart) +
+                            '-' +
+                            hoursToHHmm(wh.afternoonEnd),
+                        'info'
+                    );
+                }}
+                useCdn={Allvalue.useCdn}
+                onChangeUseCdn={(v: boolean) => {
+                    patchAllvalue({ useCdn: !!v });
+                    addLog('CDN 加速已' + (v ? '开启' : '关闭'), 'info');
+                }}
+                sniffPreMeasure={Allvalue.sniffPreMeasure !== false}
+                onChangeSniffPreMeasure={(v: boolean) => {
+                    patchAllvalue({ sniffPreMeasure: !!v });
+                    // 开关即时生效（不必重开页面）：开 ⇒ 5 秒后跑第一轮，关 ⇒ 停掉待跑的轮次
+                    setPreMeasureEnabled(!!v);
+                    addLog('图片嗅探：后台预测量已' + (v ? '开启' : '关闭'), 'info');
+                }}
+            />
+
+            <PhrasesDrawer
+                open={phrasesOpen}
+                onClose={() => setPhrasesOpen(false)}
+                phrasesData={phrasesData}
+                phrasesLoading={phrasesLoading}
+                searchKeyword={searchKeyword}
+                setSearchKeyword={setSearchKeyword}
+                loadPhrasesData={loadPhrasesData}
+            />
+
+            <LogModal
+                open={logOpen}
+                onClose={() => setLogOpen(false)}
+                logEntries={logEntries}
+                onClear={clearLogs}
+                autoRefresh={!!Allvalue.logAutoRefresh}
+                onAutoRefreshChange={(v) => {
+                    // 只改设置、不写日志：这是「看日志的方式」，不是被监控的业务动作，
+                    // 记一条日志反而会在冻结列表时制造困惑。
+                    patchAllvalue({ logAutoRefresh: !!v });
+                }}
+            />
+
+            <ChangelogModal open={changelogOpen} onClose={() => setChangelogOpen(false)} />
+
+            {/* 图片嗅探（v26.10.10-v4）：阈值持久化在 Allvalue，故改设置即写 localStorage */}
+            <SniffModal
+                open={sniffOpen}
+                onClose={() => setSniffOpen(false)}
+                minKB={Allvalue.sniffMinKB}
+                onMinKBChange={(kb) => patchAllvalue({ sniffMinKB: kb })}
+            />
+
+            {/* 传输助手（v26.10.12-v1）：三栏窗口，内含设备收发 / 配对 / 文件 */}
+            <TransferAssistantModal open={transferOpen} onClose={() => setTransferOpen(false)} />
+        </Card>
+    );
+}

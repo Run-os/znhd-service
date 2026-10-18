@@ -1,0 +1,155 @@
+import { Modal, Button, Divider, Input, Space, Switch, Typography } from 'antd';
+import { hoursToHHmm, hhmmToHours } from '@/lib/utils';
+import { getOverlayContainer } from '@/lib/ui/panelHost';
+
+const { Text } = Typography;
+
+/** 监控时间段（十进制小时，13.5 表示 13:30） */
+export interface WorkingHours {
+    morningStart: number;
+    morningEnd: number;
+    afternoonStart: number;
+    afternoonEnd: number;
+}
+
+export interface SettingsModalProps {
+    open: boolean;
+    onClose: () => void;
+    /** 打开「更新日志」弹窗（v26.10.06-v13 起由 antd Modal 承载，不再是自拼 DOM） */
+    onOpenChangelog: () => void;
+    workingHours: WorkingHours | null;
+    onChangeWorkingHours: (wh: WorkingHours) => void;
+    useCdn: boolean;
+    onChangeUseCdn: (v: boolean) => void;
+    /** 「图片嗅探」后台预测量开关（v26.10.14-v4，见 lib/snifferPre.ts） */
+    sniffPreMeasure: boolean;
+    onChangeSniffPreMeasure: (v: boolean) => void;
+}
+
+/**
+ * 设置弹窗（v26.10.06-v9：由 CAT_UI.Drawer 侧边抽屉改为 antd Modal 弹窗）。
+ * ⚠️ 时间输入与地址草稿的处理是真实页面实测结论（见块内注释），禁止顺手重构。
+ *
+ * v26.10.12-v1：「中继服务器地址」已移到传输助手的独立设置面板（`ui/transfer/TransferSettingsModal`），
+ * 与主面板设置完全分开；本弹窗不再有任何中继相关字段。
+ */
+export default function SettingsModal({
+    open,
+    onClose,
+    onOpenChangelog,
+    workingHours,
+    onChangeWorkingHours,
+    useCdn,
+    onChangeUseCdn,
+    sniffPreMeasure,
+    onChangeSniffPreMeasure,
+}: SettingsModalProps) {
+    const wh = workingHours || { morningStart: 9, morningEnd: 12, afternoonStart: 13.5, afternoonEnd: 18 };
+
+    // 原生 <input type="time"> 被清空时 hhmmToHours 返回 null（v26.10.06-v16 换掉 antd TimePicker 后
+    // 才有这个形态）：此时保持原值不动，避免把 undefined/NaN 写进配置。
+    const updateWh = (field: keyof WorkingHours, dec: number | null) => {
+        if (dec === null || typeof dec !== 'number' || isNaN(dec)) return;
+        onChangeWorkingHours({ ...wh, [field]: dec });
+    };
+
+    return (
+        <Modal
+            open={open}
+            title="设置菜单"
+            onCancel={onClose}
+            getContainer={getOverlayContainer}
+            width={520}
+            // 显式左对齐：宿主页面常有全局 text-align:center（税务页就是），不设会整屏居中
+            styles={{ body: { textAlign: 'left' } }}
+            destroyOnHidden
+            footer={
+                <Space>
+                    <Button onClick={onClose}>取消</Button>
+                    <Button color="primary" variant="solid" onClick={onClose}>
+                        确定
+                    </Button>
+                </Space>
+            }>
+            <Space size={4} wrap>
+                <Button type="link" onClick={() => window.open('https://github.com/Run-os/znhd-service', '_blank')}>
+                    [脚本主页]
+                </Button>
+                <Button
+                    type="link"
+                    onClick={() =>
+                        window.open((GM_info.scriptUpdateURL || GM_info.script.updateURL) as string, '_blank')
+                    }>
+                    [更新脚本]
+                </Button>
+                <Button type="link" onClick={() => onOpenChangelog()}>
+                    [更新日志]
+                </Button>
+            </Space>
+
+            <Divider style={{ margin: '8px 0' }}>其他设置</Divider>
+
+            {/* CDN 加速开关：控制项目内 GitHub 资源（常用语 YAML、提示音）是否经 CDN 镜像加速 */}
+            <Space size={8} style={{ marginBottom: 12 }}>
+                <Text strong>使用 CDN 加速（Fastly 镜像）加载资源</Text>
+                <Switch checked={!!useCdn} onChange={(v) => onChangeUseCdn(v)} />
+            </Space>
+
+            {/* 图片嗅探：后台预测量（v26.10.14-v4）。默认开 —— 打开嗅探窗口即刻出大小；
+                关掉则只在开窗时测量（更省对页面图片服务器的请求）。 */}
+            <Space size={8} style={{ marginBottom: 4 }}>
+                <Text strong>图片嗅探：先在后台预测量图片大小</Text>
+                <Switch checked={!!sniffPreMeasure} onChange={(v) => onChangeSniffPreMeasure(v)} />
+            </Space>
+            <Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 12 }}>
+                开启后打开嗅探窗口即刻显示大小（不必当场等测量）。代价：页面上的图若只能靠请求测大小
+                （跨域且拿不到资源表读数），脚本会在**没打开窗口时**就去测量 —— 关掉此项可避免这类请求。
+            </Text>
+
+            <Text strong style={{ display: 'block', marginBottom: 8 }}>
+                监控时间段（点击选择时间）
+            </Text>
+            <Space size={8} wrap style={{ marginBottom: 8 }}>
+                <Text>上午</Text>
+                <Input
+                    type="time"
+                    step={300}
+                    value={hoursToHHmm(wh.morningStart)}
+                    onChange={(e) => updateWh('morningStart', hhmmToHours(e.target.value))}
+                    style={{ width: 110 }}
+                />
+                <Text>至</Text>
+                <Input
+                    type="time"
+                    step={300}
+                    value={hoursToHHmm(wh.morningEnd)}
+                    onChange={(e) => updateWh('morningEnd', hhmmToHours(e.target.value))}
+                    style={{ width: 110 }}
+                />
+            </Space>
+            <Space size={8} wrap style={{ marginBottom: 8 }}>
+                <Text>下午</Text>
+                <Input
+                    type="time"
+                    step={300}
+                    value={hoursToHHmm(wh.afternoonStart)}
+                    onChange={(e) => updateWh('afternoonStart', hhmmToHours(e.target.value))}
+                    style={{ width: 110 }}
+                />
+                <Text>至</Text>
+                <Input
+                    type="time"
+                    step={300}
+                    value={hoursToHHmm(wh.afternoonEnd)}
+                    onChange={(e) => updateWh('afternoonEnd', hhmmToHours(e.target.value))}
+                    style={{ width: 110 }}
+                />
+            </Space>
+            <Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 12 }}>
+                提示：将「下午开始」设为与「上午结束」相同（如都设为 12:00），即可午休时段也监控。
+            </Text>
+            {/* v26.10.18-v2：「常用语数据地址」设置已随数据源退役删除——
+                常用语现在程序化读取本页右侧栏「常用话术」（lib/phrasesZnhd.ts），无远程地址可配。 */}
+        </Modal>
+    );
+}

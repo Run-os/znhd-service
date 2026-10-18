@@ -1,0 +1,689 @@
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { App as AntApp, Badge, Button, Image, Input, Tag } from 'antd';
+import { PaperClipOutlined, PictureOutlined, PrinterOutlined, SendOutlined, SmileOutlined } from '@ant-design/icons';
+import { useReactToPrint } from 'react-to-print';
+import {
+    blobToBase64,
+    getPhoneId,
+    parseDeviceId,
+    postItem,
+    startPhoneRelay,
+    type ConnState,
+    type RecvItem,
+} from './lib/relay';
+import { prepareImage } from './lib/image';
+import { useShellViewport } from './lib/viewport';
+import { useLayoutMode } from './lib/layoutMode';
+import EmojiPanel from './EmojiPanel';
+import type { PickedEmoji } from './lib/emojiPack';
+// 预览相关的通用件与脚本端**共用同一份**（v26.10.08-v13 起，见仓库根 shared/preview/）
+import { appendPreviewActions } from '../../shared/preview/actions';
+import { getPreviewHost } from '../../shared/preview/host';
+import { syncPreviewMask } from '../../shared/preview/mask';
+import { buildA4ImageNode, PRINT_PAGE_STYLE } from '../../shared/preview/print';
+
+/**
+ * 手机端聊天窗（v26.10.12-v5 重构；v26.10.13-v3 加表情按钮 + 输入区吸底修复）：整页改为
+ * **与脚本端第三栏同一套聊天样式**（微信暗色）。
+ *
+ * 与旧「上传到电脑」双卡片页的关系：功能全部保留 —— 选图/拍照（自动压缩）发到电脑、
+ * 发文本到电脑、**点在线表情直接发到电脑**（v26.10.13-v3）、接收电脑发来的图片
+ * （可预览/打印/复制/下载）与文本 —— 只是呈现方式从「两张卡片 + 画廊弹窗」变成
+ * 「消息气泡 + 底部输入区」：
+ *   · 手机发出去的 = 右侧绿色气泡（微信「我方」配色 #07C160）；
+ *   · 电脑发来的   = 左侧灰色气泡（微信「对方」配色 #2F2F2F）；
+ *   · 发送状态（发送中 / 已发送 / 发送失败）显示在气泡下方的小字；
+ *   · 间隔超 5 分钟的消息之间插一条居中时间分隔条（与脚本端第三栏同一规则）。
+ *
+ * ⚠️ 整页骨架是 `position:fixed` 贴视口（见 app.css `.znhd-phone-chat` 的注释：
+ * antd `<AntApp>` 的包裹层没有高度，`height:100%` 会断链），top/height 由
+ * `useShellViewport` 按 visualViewport 动态校正（键盘弹出时输入区跟着上移）。
+ *
+ * v26.10.13-v4 桌面/手机分流（`useLayoutMode`）：**桌面浏览器**打开本页时聊天窗
+ * 不再全屏，而是屏幕居中的弹窗（420×680，参考微信 PC 端「文件传输助手」独立窗），
+ * 弹窗外是更深一档的纯色背景；**手机/触屏窄屏**仍用全屏骨架。
+ */
+
+/** 聊天记录内存上限：超出丢最旧（收件项是 base64 大字符串，无上限会持续吃内存；旧画廊是 27，聊天窗放宽到 100） */
+const MAX_MSGS = 100;
+
+/** 时间分隔条阈值：与脚本端第三栏一致，间隔超 5 分钟插一条 */
+const TIME_GAP_MS = 5 * 60 * 1000;
+
+interface ChatMsg {
+    id: string;
+    /** v26.10.14-v6：'file' = 任意文件（气泡渲染为文件卡片，可下载） */
+    type: 'image' | 'file' | 'text';
+    /** out = 手机发到电脑；in = 电脑发来 */
+    side: 'in' | 'out';
+    text?: string;
+    /** 图片展示地址（out = objectURL；in = data:URL）；文件消息里它是 Blob 的 objectURL（供下载） */
+    url?: string;
+    name?: string;
+    mime?: string;
+    /** 文件消息的字节数（气泡里显示大小；图片不需要，靠自然尺寸展示） */
+    size?: number;
+    /** 发送状态（仅 out；发送中 / 已发送 / 发送失败） */
+    state?: 'sending' | 'failed' | 'ok';
+    /**
+     * v26.10.18-v1：上传进度（0–100，仅 state==='sending' 时有意义）。
+     * **首个 upload.onprogress 事件到达前是 undefined** —— 此时气泡保持「发送中…」
+     * 不画进度条（大文件在 FileReader base64 / JSON 序列化阶段本就还没有进度可报）。
+     */
+    progress?: number;
+    err?: string;
+    ts: number;
+}
+
+let seq = 0;
+const uid = () => 'z' + ++seq + '-' + Date.now().toString(36);
+
+/** 时间分隔条文案（与脚本端第三栏同一套：今天 HH:mm / 昨天 / MM-DD） */
+function timeLabel(ts: number): string {
+    const d = new Date(ts);
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const now = new Date();
+    const dayOf = (x: Date) => x.getFullYear() + '-' + x.getMonth() + '-' + x.getDate();
+    const hm = pad(d.getHours()) + ':' + pad(d.getMinutes());
+    if (dayOf(d) === dayOf(now)) return '今天 ' + hm;
+    const yesterday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
+    if (dayOf(d) === dayOf(yesterday)) return '昨天 ' + hm;
+    return pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + ' ' + hm;
+}
+
+/**
+ * 体积显示（v26.10.14-v6，文件气泡用）。
+ * 手机页原本没有任何体积格式化（图片靠自然尺寸展示、不显示字节数），这里为文件新增一份。
+ * 与脚本端 `formatBytes` 的档位一致（B / KB / MB / GB）。
+ */
+function fmtSize(n: number): string {
+    if (!Number.isFinite(n) || n <= 0) return '';
+    if (n < 1024) return n + ' B';
+    if (n < 1024 * 1024) return (n / 1024).toFixed(n < 10 * 1024 ? 1 : 0) + ' KB';
+    if (n < 1024 * 1024 * 1024) return (n / 1024 / 1024).toFixed(2) + ' MB';
+    return (n / 1024 / 1024 / 1024).toFixed(2) + ' GB';
+}
+
+/**
+ * 由 base64 字符串估算原始字节数（仅用于显示大小；文件消息本机不解码）。
+ * base64 长度 × 3/4 再扣掉结尾 padding，误差 ≤2 字节。
+ */
+function fileDataSize(b64: string): number {
+    const s = String(b64 || '');
+    const pad = s.endsWith('==') ? 2 : s.endsWith('=') ? 1 : 0;
+    return Math.max(0, Math.floor((s.length * 3) / 4) - pad);
+}
+
+export default function App() {
+    const { message } = AntApp.useApp();
+    const deviceId = useMemo(() => parseDeviceId(window.location.pathname), []);
+    // 本机（手机）设备 ID：持久化在 localStorage，用于让电脑端区分「哪台手机在线」
+    const phoneId = useMemo(() => getPhoneId(), []);
+
+    const [conn, setConn] = useState<ConnState>({ state: 'offline' });
+    const [msgs, setMsgs] = useState<ChatMsg[]>([]);
+    const [text, setText] = useState('');
+    const [sendingText, setSendingText] = useState(false);
+    const [preparing, setPreparing] = useState(false);
+    /** 表情面板展开态（v26.10.13-v3：内嵌在输入区里、工具栏上方） */
+    const [emojiOpen, setEmojiOpen] = useState(false);
+    const fileRef = useRef<HTMLInputElement>(null);
+    /** v26.10.14-v6：任意文件的隐藏 input（accept 留空 = 不过滤类型） */
+    const fileAnyRef = useRef<HTMLInputElement>(null);
+    const scrollRef = useRef<HTMLDivElement>(null);
+
+    // 整页骨架跟随视觉视口（键盘弹出 / 工具栏收放时输入区仍贴最底）
+    useShellViewport();
+    // 桌面 → 居中弹窗；手机 → 全屏（见 lib/layoutMode.ts 的判定规则）
+    const layoutMode = useLayoutMode();
+
+    const pushMsg = useCallback((m: ChatMsg) => {
+        setMsgs((prev) => {
+            const next = prev.concat(m);
+            return next.length > MAX_MSGS ? next.slice(next.length - MAX_MSGS) : next;
+        });
+    }, []);
+
+    const patchMsg = useCallback((id: string, patch: Partial<ChatMsg>) => {
+        setMsgs((prev) => prev.map((m) => (m.id === id ? { ...m, ...patch } : m)));
+    }, []);
+
+    // ===== 收到的内容（电脑 → 手机）=====
+    const onItem = useCallback(
+        (item: RecvItem) => {
+            if (item.type === 'image' && item.data) {
+                pushMsg({
+                    id: uid(),
+                    type: 'image',
+                    side: 'in',
+                    url: 'data:' + (item.mime || 'image/jpeg') + ';base64,' + item.data,
+                    mime: item.mime || 'image/jpeg',
+                    name: item.name,
+                    ts: item.ts || Date.now(),
+                });
+                message.success('收到电脑发来的图片');
+            } else if (item.type === 'file' && item.data) {
+                // v26.10.14-v6：任意文件。data:URL 不用在 <img> 上，而是挂到 <a download> 交给浏览器下载。
+                // 用 data:URL 而非 objectURL：收件项是事件回调里的瞬时值，没有生命周期管理点来 revoke
+                // （与图片同一取舍：图片也是直接 data:URL 渲染）。
+                pushMsg({
+                    id: uid(),
+                    type: 'file',
+                    side: 'in',
+                    url: 'data:' + (item.mime || 'application/octet-stream') + ';base64,' + item.data,
+                    mime: item.mime || 'application/octet-stream',
+                    name: item.name || 'file',
+                    size: fileDataSize(item.data),
+                    ts: item.ts || Date.now(),
+                });
+                message.success('收到电脑发来的文件');
+            } else if (item.type === 'text') {
+                pushMsg({ id: uid(), type: 'text', side: 'in', text: item.text || '', ts: item.ts || Date.now() });
+                message.success('收到电脑发来的文本');
+            }
+        },
+        [message, pushMsg]
+    );
+
+    // 心跳 + 长轮询：挂载时启动，卸载时停止（StrictMode 下会 mount→unmount→mount，靠 cleanup 保证不重复）
+    useEffect(() => {
+        if (!deviceId) {
+            setConn({ state: 'error', msg: '链接无效：未识别到设备ID，请重新生成二维码' });
+            return;
+        }
+        return startPhoneRelay({ deviceId, phoneId, onConn: setConn, onItem });
+    }, [deviceId, phoneId, onItem]);
+
+    // 消息变化 → 滚动到底（聊天窗的基本行为）；表情面板开合也重算（面板会挤占滚动区高度）
+    useEffect(() => {
+        const el = scrollRef.current;
+        if (el) el.scrollTop = el.scrollHeight;
+    }, [msgs, emojiOpen]);
+
+    // ===== 选图（多选）→ 先出「发送中」气泡 → 逐张压缩 → 顺序发送 =====
+    // v26.10.18-v1：气泡**先于压缩**落进会话（预览先用原图 objectURL），压缩完成后
+    // 再把气泡的 url/name/mime 换成压缩产物并回收原图 URL —— 用户选完立刻能看到要传什么。
+    const onPick = async (files: FileList | null) => {
+        const list = Array.from(files || []);
+        if (!list.length) return;
+        setPreparing(true);
+        try {
+            const queued: Array<{ id: string; blob: Blob; name: string; mime: string; tmpUrl?: string }> = [];
+            for (const f of list) {
+                const id = uid();
+                const tmpUrl = URL.createObjectURL(f);
+                pushMsg({
+                    id,
+                    type: 'image',
+                    side: 'out',
+                    url: tmpUrl,
+                    name: f.name || 'image.jpg',
+                    mime: f.type || 'image/jpeg',
+                    state: 'sending',
+                    ts: Date.now(),
+                });
+                const prepared = await prepareImage(f);
+                const url = URL.createObjectURL(prepared.blob);
+                queued.push({ id, blob: prepared.blob, name: prepared.name, mime: prepared.mime, tmpUrl });
+                // 压缩产物回填气泡（名称/类型以压缩结果为准），并回收原图 URL
+                patchMsg(id, { url, name: prepared.name, mime: prepared.mime });
+                if (tmpUrl !== url) URL.revokeObjectURL(tmpUrl);
+            }
+            // 逐张顺序发送（保证到达顺序）；失败即停，剩余保持「发送中」标记为失败
+            for (const it of queued) {
+                try {
+                    const b64 = await blobToBase64(it.blob);
+                    let lastPct = -1; // 同值不重发：progress 事件比百分比密，避免无谓重渲染
+                    // 带 phoneId：服务端随投递回传 from，电脑端把内容归到本台手机的会话（v26.10.13-v3）
+                    const res = await postItem(
+                        { name: it.name, mime: it.mime, data: b64 },
+                        phoneId,
+                        (pct) => {
+                            if (pct !== lastPct) {
+                                lastPct = pct;
+                                patchMsg(it.id, { progress: pct });
+                            }
+                        }
+                    );
+                    if (res && res.ok) {
+                        patchMsg(it.id, { state: 'ok', progress: undefined });
+                    } else {
+                        patchMsg(it.id, { state: 'failed', err: (res && res.error) || '未知错误', progress: undefined });
+                        message.error('第 ' + it.name + ' 发送失败，可重新选图重试');
+                        break;
+                    }
+                } catch (e: any) {
+                    patchMsg(it.id, { state: 'failed', err: (e && e.message) || '读取图片失败', progress: undefined });
+                    break;
+                }
+            }
+        } finally {
+            setPreparing(false);
+        }
+    };
+
+    // ===== 选文件（任意类型，多选）→ 不压缩 → 顺序发送（v26.10.14-v6）=====
+    // 与选图的关键差异：**不做 canvas 压缩**（PDF/zip/视频解码必然失败），原样 base64 后投递。
+    // 中继按 mime 分流：非 image/* 的落到 type 'file'，电脑端显示为文件卡片。
+    const onPickFiles = async (files: FileList | null) => {
+        const list = Array.from(files || []);
+        if (!list.length) return;
+        setPreparing(true);
+        try {
+            const queued: Array<{ id: string; blob: Blob; name: string; mime: string; size: number }> = [];
+            for (const f of list) {
+                const id = uid();
+                const name = f.name || 'file.bin';
+                const mime = f.type || 'application/octet-stream';
+                queued.push({ id, blob: f, name, mime, size: f.size });
+                pushMsg({
+                    id,
+                    type: 'file',
+                    side: 'out',
+                    url: URL.createObjectURL(f),
+                    name,
+                    mime,
+                    size: f.size,
+                    state: 'sending',
+                    ts: Date.now(),
+                });
+            }
+            // 逐条顺序发送（保证到达顺序）；失败即停，剩余保持「发送中」标记为失败
+            for (const it of queued) {
+                try {
+                    const b64 = await blobToBase64(it.blob);
+                    let lastPct = -1; // 同值不重发：progress 事件比百分比密，避免无谓重渲染
+                    const res = await postItem(
+                        { name: it.name, mime: it.mime, data: b64 },
+                        phoneId,
+                        (pct) => {
+                            if (pct !== lastPct) {
+                                lastPct = pct;
+                                patchMsg(it.id, { progress: pct });
+                            }
+                        }
+                    );
+                    if (res && res.ok) {
+                        patchMsg(it.id, { state: 'ok', progress: undefined });
+                    } else {
+                        patchMsg(it.id, { state: 'failed', err: (res && res.error) || '未知错误', progress: undefined });
+                        message.error(it.name + ' 发送失败，可重新选择重试');
+                        break;
+                    }
+                } catch (e: any) {
+                    patchMsg(it.id, { state: 'failed', err: (e && e.message) || '读取文件失败', progress: undefined });
+                    break;
+                }
+            }
+        } finally {
+            setPreparing(false);
+        }
+    };
+
+    // ===== 发送文本 =====
+    const sendText = async () => {
+        const t = (text || '').replace(/\s+$/, '');
+        if (!t || sendingText) return;
+        const id = uid();
+        setSendingText(true);
+        pushMsg({ id, type: 'text', side: 'out', text: t, state: 'sending', ts: Date.now() });
+        setText('');
+        // 带 phoneId：让电脑端把这条文本归到本台手机的会话（v26.10.13-v3）
+        const res = await postItem({ text: t }, phoneId);
+        setSendingText(false);
+        if (res && res.ok) {
+            patchMsg(id, { state: 'ok' });
+        } else {
+            patchMsg(id, { state: 'failed', err: (res && res.error) || '未知错误' });
+            setText(t); // 发送失败把内容还回输入框，方便改完重发
+        }
+    };
+
+    // ===== 发送在线表情（v26.10.13-v3）：点一张直接发，与脚本端「点表情即发出」同语义 =====
+    // 面板交回的就是下好的 blob，这里 base64 后走与文本/图片同一条 postItem 链路。
+    // ⚠️ 不走 prepareImage 的 canvas 压缩：表情本来就是 2–6KB 的 webp，原样发更小也更保真
+    //   （PC 端会话气泡与「图片上传」收到的图一样直接渲染，webp 现代浏览器都认）。
+    // ⚠️ 必须带 phoneId（与上传图/文本一致）：表情也是「正向通道」的一条，漏了它服务端写不出
+    //   `from`，电脑端只能按旧规则兜底归组（多台手机在线时会串到聚合会话）。v26.10.13-v5 修。
+    const sendEmoji = async (emoji: PickedEmoji) => {
+        const mime = emoji.blob.type || 'image/webp';
+        const id = uid();
+        pushMsg({
+            id,
+            type: 'image',
+            side: 'out',
+            url: URL.createObjectURL(emoji.blob),
+            name: emoji.name,
+            mime,
+            state: 'sending',
+            ts: Date.now(),
+        });
+        try {
+            const b64 = await blobToBase64(emoji.blob);
+            // emoji:true（v26.10.14-v3）：表情包标记，服务端写进条目，电脑端「全部文件」据此过滤
+            const res = await postItem({ name: emoji.name, mime, data: b64, emoji: true }, phoneId);
+            if (res && res.ok) {
+                patchMsg(id, { state: 'ok' });
+            } else {
+                patchMsg(id, { state: 'failed', err: (res && res.error) || '未知错误' });
+                message.error('表情 ' + emoji.name + ' 发送失败');
+            }
+        } catch (e: any) {
+            patchMsg(id, { state: 'failed', err: (e && e.message) || '读取图片失败' });
+        }
+    };
+
+    // ===== 收到的文本：复制 =====
+    const copyInText = async (t: string) => {
+        try {
+            await navigator.clipboard.writeText(t);
+            message.success('已复制文本');
+        } catch {
+            message.warning('复制失败，请长按文本手动复制');
+        }
+    };
+
+    /**
+     * 打印能力来自 react-to-print（与脚本端同一个库、同一套 A4 版式，v26.10.08-v13 起）。
+     * ⚠️ `ignoreGlobalStyles: true`：没必要把整页样式抄进打印 iframe。
+     */
+    const printTitleRef = useRef('image');
+    const doPrint = useReactToPrint({
+        ignoreGlobalStyles: true,
+        documentTitle: () => printTitleRef.current,
+        pageStyle: PRINT_PAGE_STYLE,
+    });
+
+    /** 打印「当前预览的那张图」的原图，自适应 A4（横图自动旋转 90° 铺满；不裁切、不跨页） */
+    const printRecvImage = (url: string, fname: string) => {
+        printTitleRef.current = fname;
+        // 先探测图片自然尺寸（横图旋转 90° 铺满纵向 A4 的判断需要），失败按未知尺寸兜底
+        const probe = document.createElement('img');
+        probe.onload = () => doPrint(() => buildA4ImageNode(url, fname, { width: probe.naturalWidth, height: probe.naturalHeight }));
+        probe.onerror = () => doPrint(() => buildA4ImageNode(url, fname));
+        probe.src = url;
+    };
+
+    /** 头部连接状态 */
+    const connBadge = () => {
+        if (conn.state === 'online') return <Badge status="success" text="已连接电脑" />;
+        if (conn.state === 'error') return <Badge status="error" text={conn.msg || '连接失败'} />;
+        return <Badge status="default" text="连接中…" />;
+    };
+
+    /**
+     * v26.10.18-v1：气泡内上传进度条。只在「发送中**且已收到进度事件**」时画 ——
+     * FileReader base64 / JSON 序列化阶段本就无进度可报，不画一根永远停在 0% 的假进度条。
+     * 我方气泡是实心微信绿 ⇒ 填充用白色（绿压绿看不见）、轨道用半透明黑。
+     */
+    const progressBar = (m: ChatMsg) => {
+        if (m.state !== 'sending' || typeof m.progress !== 'number') return null;
+        const pct = Math.min(100, Math.max(2, m.progress));
+        return (
+            <div
+                data-chat-progress={String(m.progress)}
+                style={{
+                    width: '100%',
+                    height: 4,
+                    borderRadius: 2,
+                    background: 'rgba(0,0,0,0.28)',
+                    overflow: 'hidden',
+                    marginTop: m.type === 'image' ? 4 : 6,
+                }}>
+                <div
+                    style={{
+                        width: pct + '%',
+                        height: '100%',
+                        borderRadius: 2,
+                        background: '#fff',
+                        transition: 'width 120ms linear',
+                    }}
+                />
+            </div>
+        );
+    };
+
+    /** 收到的图片（可预览 + 打印）：与脚本端共用 shared/preview 的整套集成。
+     *  ⚠️ 预览配置必须长在**每张 Image 自己的 preview prop** 上：PreviewGroup 的 React context
+     *  只对它的**子树**生效，气泡里的 Image 不在 Group 子树内时点击会走 antd 默认预览
+     *  （portal 到 body、没有打印按钮）——v5 首版冒烟抓到的真 bug。 */
+    const renderInImage = (m: ChatMsg) => (
+        <Image
+            src={m.url}
+            alt={m.name || 'image'}
+            width={220}
+            style={{ borderRadius: 8, display: 'block', height: 'auto' }}
+            preview={{
+                getContainer: getPreviewHost,
+                onOpenChange: (o: boolean) => syncPreviewMask(o),
+                actionsRender: (originalNode) => {
+                    const printBtn = (
+                        <button
+                            key="znhd-print"
+                            type="button"
+                            className="ant-image-preview-actions-action"
+                            aria-label="print"
+                            title="打印原图"
+                            onClick={() => {
+                                if (m.url) printRecvImage(m.url, m.name || 'image.jpg');
+                            }}>
+                            <PrinterOutlined />
+                        </button>
+                    );
+                    return appendPreviewActions(originalNode, printBtn);
+                },
+            }}
+        />
+    );
+
+    // 手机版 = 全屏骨架（fixed 贴视口）；桌面版 = 屏幕居中的弹窗（外包居中层 + 弹窗样式）
+    const shell = (
+        <div className={'znhd-phone-chat' + (layoutMode === 'phone' ? '' : ' znhd-chat-window')}>
+            {/* 头部：标题 + 连接状态（设备 ID 收进小字，不再占半屏） */}
+            <header className="znhd-phone-header">
+                <div className="znhd-phone-header-row">
+                    <span className="znhd-phone-title">传输助手</span>
+                    <Tag color="green" variant="filled" style={{ marginLeft: 8 }}>
+                        v{__APP_VERSION__}
+                    </Tag>
+                    <span style={{ flex: 1 }} />
+                    <span className="znhd-phone-conn">{connBadge()}</span>
+                </div>
+                <div className="znhd-phone-sub">
+                    本机（手机）ID：{phoneId || '未知'} · 电脑设备：{deviceId || '未识别，请重新生成二维码'}
+                </div>
+            </header>
+
+            {/* 消息滚动区 */}
+            <div className="znhd-phone-scroll" ref={scrollRef}>
+                {msgs.length === 0 ? (
+                    <div className="znhd-chat-empty">
+                        选择图片 / 拍照 / 发表情，或输入文本发送到电脑；电脑发来的内容也会出现在这里。
+                    </div>
+                ) : null}
+                {msgs.map((m, i) => {
+                    const prev = i > 0 ? msgs[i - 1] : undefined;
+                    const showTime = !prev || (m.ts || 0) - (prev.ts || 0) > TIME_GAP_MS;
+                    const meta =
+                        m.side === 'out'
+                            ? m.state === 'sending'
+                                ? typeof m.progress === 'number'
+                                    ? '发送中 ' + m.progress + '%'
+                                    : '发送中…'
+                                : m.state === 'failed'
+                                ? '发送失败' + (m.err ? '：' + m.err : '')
+                                : '已发送'
+                            : '';
+                    return (
+                        <div key={m.id}>
+                            {showTime ? <div className="znhd-chat-time">{timeLabel(m.ts)}</div> : null}
+                            <div className="znhd-chat-msg" data-side={m.side}>
+                                <span
+                                    className="znhd-chat-avatar"
+                                    style={{ background: m.side === 'out' ? '#3D8B72' : '#4A4A4A' }}>
+                                    {m.side === 'out' ? '我' : '电'}
+                                </span>
+                                <div style={{ minWidth: 0, maxWidth: '78%' }}>
+                                    <div
+                                        className={
+                                            'znhd-chat-bubble' +
+                                            (m.type === 'image' ? ' znhd-chat-bubble-img' : '') +
+                                            (m.type === 'file' ? ' znhd-chat-bubble-file' : '')
+                                        }>
+                                        {m.type === 'image' ? (
+                                            m.side === 'in' ? (
+                                                renderInImage(m)
+                                            ) : (
+                                                <>
+                                                    <img className="znhd-chat-img" src={m.url} alt={m.name || 'image'} />
+                                                    {/* v26.10.18-v1：上传进度条贴在图片正下方 */}
+                                                    {progressBar(m)}
+                                                </>
+                                            )
+                                        ) : m.type === 'file' ? (
+                                            /* v26.10.14-v6：文件卡片（图标 + 文件名 + 大小 + 下载） */
+                                            <div className="znhd-chat-file">
+                                                <span className="znhd-chat-file-icon" aria-hidden="true">
+                                                    {/* 内联 SVG（Win7 无 emoji 字体，绝不用 📄 之类的码位） */}
+                                                    <svg
+                                                        width="18"
+                                                        height="18"
+                                                        viewBox="0 0 24 24"
+                                                        fill="none"
+                                                        stroke="currentColor"
+                                                        strokeWidth="2"
+                                                        strokeLinecap="round"
+                                                        strokeLinejoin="round">
+                                                        <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" />
+                                                        <path d="M14 2v4a2 2 0 0 0 2 2h4" />
+                                                        <path d="M10 9H8" />
+                                                        <path d="M16 13H8" />
+                                                        <path d="M16 17H8" />
+                                                    </svg>
+                                                </span>
+                                                <span className="znhd-chat-file-main">
+                                                    <span className="znhd-chat-file-name" title={m.name}>
+                                                        {m.name || 'file'}
+                                                    </span>
+                                                    <span className="znhd-chat-file-size">
+                                                        {fmtSize(m.size || 0)}
+                                                        {m.mime ? ' · ' + m.mime : ''}
+                                                    </span>
+                                                </span>
+                                                <a
+                                                    className="znhd-chat-file-dl"
+                                                    href={m.url}
+                                                    download={m.name || 'file'}
+                                                    /* 电脑发来的文件才能落盘（手机自己发出去的那条 url 也是本地 blob，同样可下） */
+                                                    aria-label="下载文件">
+                                                    下载
+                                                </a>
+                                            </div>
+                                        ) : (
+                                            <span>{m.text}</span>
+                                        )}
+                                        {/* v26.10.18-v1：文件卡片内的上传进度条（图片在上方分支已插） */}
+                                        {m.type === 'file' ? progressBar(m) : null}
+                                    </div>
+                                    {m.side === 'in' && m.type === 'text' ? (
+                                        <button type="button" className="znhd-chat-copy" onClick={() => void copyInText(m.text || '')}>
+                                            复制
+                                        </button>
+                                    ) : null}
+                                    {meta ? (
+                                        <div
+                                            className="znhd-chat-meta"
+                                            style={m.state === 'failed' ? { color: '#e86c6c' } : undefined}>
+                                            {meta}
+                                        </div>
+                                    ) : null}
+                                </div>
+                            </div>
+                        </div>
+                    );
+                })}
+            </div>
+
+            {/* 底部输入区：图标行（表情 / 图片）+ 输入框 + 发送（与脚本端第三栏同一结构） */}
+            <div className="znhd-phone-composer">
+                {/* 在线表情面板：展开时内嵌在工具栏上方（微信式），再点表情按钮收起 */}
+                {emojiOpen ? <EmojiPanel onPick={(e) => void sendEmoji(e)} /> : null}
+                <div className="znhd-composer-tools">
+                    <Button
+                        type="text"
+                        aria-label="表情"
+                        onClick={() => setEmojiOpen((v) => !v)}
+                        icon={<SmileOutlined />}
+                    />
+                    <Button
+                        type="text"
+                        aria-label="图片上传"
+                        loading={preparing}
+                        onClick={() => fileRef.current?.click()}
+                        icon={<PictureOutlined />}
+                    />
+                    <input
+                        ref={fileRef}
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        hidden
+                        onChange={(e) => {
+                            void onPick(e.target.files);
+                            e.target.value = ''; // 允许再次选同一批
+                        }}
+                    />
+                    <Button
+                        type="text"
+                        aria-label="文件上传"
+                        loading={preparing}
+                        onClick={() => fileAnyRef.current?.click()}
+                        icon={<PaperClipOutlined />}
+                    />
+                    <input
+                        ref={fileAnyRef}
+                        type="file"
+                        /* accept 留空 = 任意类型（v26.10.14-v6「任意文件传输」） */
+                        multiple
+                        hidden
+                        onChange={(e) => {
+                            void onPickFiles(e.target.files);
+                            e.target.value = '';
+                        }}
+                    />
+                </div>
+                <div className="znhd-composer-row">
+                    <Input.TextArea
+                        value={text}
+                        onChange={(e) => setText(e.target.value)}
+                        onPressEnter={(e) => {
+                            if (!(e as unknown as KeyboardEvent).shiftKey) {
+                                e.preventDefault();
+                                void sendText();
+                            }
+                        }}
+                        // 聚焦 = 用户要打字：收起表情面板，否则键盘 + 面板双双顶起
+                        onFocus={() => setEmojiOpen(false)}
+                        placeholder="输入要发送到电脑的文本…（Enter 发送，Shift+Enter 换行）"
+                        autoSize={{ minRows: 1, maxRows: 4 }}
+                        style={{ background: '#1E1E1E', color: 'rgba(255,255,255,0.9)' }}
+                    />
+                    <Button
+                        type="primary"
+                        aria-label="发送"
+                        disabled={sendingText || !text.trim()}
+                        loading={sendingText}
+                        onClick={() => void sendText()}
+                        icon={<SendOutlined />}
+                    />
+                </div>
+            </div>
+
+            {/* 「收到的图片」的预览配置直接挂在每张 Image 上（见 renderInImage 的说明） */}
+        </div>
+    );
+
+    // 桌面版：聊天窗做成屏幕居中的弹窗（420×680，参考微信 PC 端「文件传输助手」独立窗）；
+    // 弹窗外那圈纯色背景由 .znhd-window-layer 提供，弹窗自身靠边框/投影从背景里浮出来
+    return layoutMode === 'phone' ? shell : <div className="znhd-window-layer">{shell}</div>;
+}

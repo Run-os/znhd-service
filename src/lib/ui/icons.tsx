@@ -1,0 +1,481 @@
+/**
+ * 内联 SVG 图标集（v26.10.09-v7 新增）。
+ *
+ * ── 为什么不用 emoji（本次要解决的问题）────────────────────────────────────
+ * Win7 **没有 Segoe UI Emoji 字体**（Win8.1 才随系统引入），而原图标用的是补充平面 emoji：
+ * `💬 U+1F4AC`、`🖼 U+1F5BC`、`💻 U+1F4BB`、`🎯 U+1F3AF`、`📱 U+1F4F1`、`🔊/🔇`。
+ * 这些码位在 Win7 的任何系统字体里都没有字形，浏览器沿回退链退到底就是豆腐块/乱码。
+ * 关键点：**「有没有字形」取决于目标机器装了什么字体**，我们无法控制 ——
+ * 所以凡是「靠字体渲染」的方案（emoji、BMP 符号字符、图标字体）在 Win7 上都有残余风险。
+ * 这里改用**矢量路径**：不经字体系统，全平台一致，任意缩放都清晰。
+ *
+ * ── 为什么不引图标库 ───────────────────────────────────────────────────────
+ * `@ant-design/icons` 虽已在依赖里（antd 的传递依赖），但那是**在 src/ 里运行时 import 一个
+ * devDependency**（分类不规范），且图标外观会随库版本升级而变化。这里把 path 直接内联：
+ * 零运行时依赖、产物只多这几条 path、不受任何库升级影响。
+ *
+ * ── 来源与许可（必须保留）──────────────────────────────────────────────────
+ * 图形取自 **Lucide**（https://lucide.dev）的官方 SVG，**ISC 许可**（lucide-static v1.53.0）。
+ * 按原样内联其几何数据（24×24 viewBox、stroke-width 2、round cap/join），仅去掉 class 与注释头。
+ * ISC 许可要求保留版权与许可声明 —— 就是本段注释。
+ *
+ * ⚠️ 新增图标时：保持同一规格（24×24、stroke 2、round），否则并排会粗细/大小不一。
+ */
+
+import type { CSSProperties, ReactNode } from 'react';
+
+export interface IconProps {
+    /** 边长（px），默认 16 */
+    size?: number;
+    /** 描边色，默认 `currentColor`（跟随所在元素的 color） */
+    color?: string;
+    style?: CSSProperties;
+    className?: string;
+}
+
+/**
+ * 统一的 SVG 外壳（Lucide 规格）。
+ *
+ * `display: block` + `flex: 0 0 auto` 不是随手写的：宿主税务页给 `svg` 加过
+ * `margin: -2.75em auto 0` 与自己的 `vertical-align`，会把图标顶出控件
+ * （见 `uiReset.ts` 里专门压 svg margin 的那段及其踩坑记录）。固定成块级、
+ * 且在 flex 容器（antd Button）里不参与压缩后，图标位置在任何宿主页面下都一致。
+ */
+function SvgIcon({ size = 16, color, style, className, children }: IconProps & { children: ReactNode }) {
+    return (
+        <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width={size}
+            height={size}
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke={color || 'currentColor'}
+            strokeWidth={2}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            // 纯装饰性图标：对读屏隐藏，语义由按钮的 aria-label / 文案承担
+            aria-hidden="true"
+            focusable="false"
+            className={className}
+            style={{ display: 'block', flex: '0 0 auto', ...style }}>
+            {children}
+        </svg>
+    );
+}
+
+/* ============================================================ 主面板入口（v26.10.10-v4 起 5 个） */
+
+/** 设置（Lucide `settings`：齿轮 + 圆心） */
+export function SettingsIcon(p: IconProps) {
+    return (
+        <SvgIcon {...p}>
+            <path d="M9.671 4.136a2.34 2.34 0 0 1 4.659 0 2.34 2.34 0 0 0 3.319 1.915 2.34 2.34 0 0 1 2.33 4.033 2.34 2.34 0 0 0 0 3.831 2.34 2.34 0 0 1-2.33 4.033 2.34 2.34 0 0 0-3.319 1.915 2.34 2.34 0 0 1-4.659 0 2.34 2.34 0 0 0-3.32-1.915 2.34 2.34 0 0 1-2.33-4.033 2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915" />
+            <circle cx="12" cy="12" r="3" />
+        </SvgIcon>
+    );
+}
+
+/**
+ * 传输助手（Lucide `arrow-left-right`：双向箭头，v26.10.12-v1）。
+ *
+ * 「设备互联」重构为「传输助手」后的主面板入口图标：左右互传的语义比原来的
+ * 「显示器」（monitor）更贴合手机 ↔ 电脑双向收发的新定位。
+ */
+export function TransferIcon(p: IconProps) {
+    return (
+        <SvgIcon {...p}>
+            <path d="M8 3 4 7l4 4" />
+            <path d="M4 7h16" />
+            <path d="m16 21 4-4-4-4" />
+            <path d="M20 17H4" />
+        </SvgIcon>
+    );
+}
+
+/** 常用语（Lucide `message-square`：对话气泡） */
+export function PhrasesIcon(p: IconProps) {
+    return (
+        <SvgIcon {...p}>
+            <path d="M22 17a2 2 0 0 1-2 2H6.828a2 2 0 0 0-1.414.586l-2.202 2.202A.71.71 0 0 1 2 21.286V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2z" />
+        </SvgIcon>
+    );
+}
+
+/** 历史记录（Lucide `image`：相框 + 太阳 + 山） */
+export function HistoryIcon(p: IconProps) {
+    return (
+        <SvgIcon {...p}>
+            <rect width="18" height="18" x="3" y="3" rx="2" ry="2" />
+            <circle cx="9" cy="9" r="2" />
+            <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" />
+        </SvgIcon>
+    );
+}
+
+/**
+ * 图片嗅探（Lucide `image-down`：相框 + 太阳 + 山 + 向下箭头）。
+ *
+ * 与 `HistoryIcon`（Lucide `image`）同源、只多一支向下箭头，故面板里两个入口图标**长得很像**；
+ * 这里刻意不改形状：换别的图形就得脱离 Lucide 规格自己画，反而更容易画歪。
+ * 区分靠的是按钮下方文案（「历史记录」/「图片嗅探」）与 Tooltip。
+ */
+export function SniffIcon(p: IconProps) {
+    return (
+        <SvgIcon {...p}>
+            <path d="M10.3 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v10l-3.1-3.1a2 2 0 0 0-2.814.014L6 21" />
+            <path d="m14 19 3 3v-5.5" />
+            <path d="m17 22 3-3" />
+            <circle cx="9" cy="9" r="2" />
+        </SvgIcon>
+    );
+}
+
+/** 设备互联（Lucide `monitor`：显示器 + 底座） */
+export function DeviceIcon(p: IconProps) {
+    return (
+        <SvgIcon {...p}>
+            <rect width="20" height="14" x="2" y="3" rx="2" />
+            <line x1="8" x2="16" y1="21" y2="21" />
+            <line x1="12" x2="12" y1="17" y2="21" />
+        </SvgIcon>
+    );
+}
+
+/* ============================================================ 面板其它位置 */
+
+/** 语音开（Lucide `volume-2`） */
+export function VolumeOnIcon(p: IconProps) {
+    return (
+        <SvgIcon {...p}>
+            <path d="M11 4.702a.705.705 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.705.705 0 0 0 11 19.298z" />
+            <path d="M16 9a5 5 0 0 1 0 6" />
+            <path d="M19.364 18.364a9 9 0 0 0 0-12.728" />
+        </SvgIcon>
+    );
+}
+
+/** 语音关（Lucide `volume-x`） */
+export function VolumeOffIcon(p: IconProps) {
+    return (
+        <SvgIcon {...p}>
+            <path d="M11 4.702a.7.7 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.7.7 0 0 0 11 19.298z" />
+            <path d="m16.5 14.5 5-5" />
+            <path d="m16.5 9.5 5 5" />
+        </SvgIcon>
+    );
+}
+
+/** 品牌图标加载失败时的回退（Lucide `crosshair`：准星） */
+export function CrosshairIcon(p: IconProps) {
+    return (
+        <SvgIcon {...p}>
+            <circle cx="12" cy="12" r="10" />
+            <line x1="22" x2="18" y1="12" y2="12" />
+            <line x1="6" x2="2" y1="12" y2="12" />
+            <line x1="12" x2="12" y1="6" y2="2" />
+            <line x1="12" x2="12" y1="22" y2="18" />
+        </SvgIcon>
+    );
+}
+
+/** 手机（Lucide `smartphone`：设备互联弹窗标题用） */
+export function SmartphoneIcon(p: IconProps) {
+    return (
+        <SvgIcon {...p}>
+            <rect width="14" height="20" x="5" y="2" rx="2" ry="2" />
+            <path d="M12 18h.01" />
+        </SvgIcon>
+    );
+}
+
+/* ============================================================ 通用符号（替代 ✕ / ✓ 这类 Dingbats 字符） */
+
+/**
+ * 关闭/叉（Lucide `x`）。
+ *
+ * ⚠️ 为什么连 `✕`(U+2715) 也要换掉：它属 **Dingbats（U+2700–U+27BF）**，
+ * Win7 的 Segoe UI Symbol 对该区段的覆盖**不确定**（我们无法在目标机器上验证），
+ * 而「面板收起按钮」是高频入口，一旦是豆腐块就非常显眼。改用矢量后与字体彻底无关。
+ */
+export function CloseIcon(p: IconProps) {
+    return (
+        <SvgIcon {...p}>
+            <path d="M18 6 6 18" />
+            <path d="m6 6 12 12" />
+        </SvgIcon>
+    );
+}
+
+/** 对勾（Lucide `check`）：替代 `✓`(U+2713，同属 Dingbats) */
+export function CheckIcon(p: IconProps) {
+    return (
+        <SvgIcon {...p}>
+            <path d="M20 6 9 17l-5-5" />
+        </SvgIcon>
+    );
+}
+
+/* ============================================================ 聊天界面（v26.10.10-v13） */
+
+/**
+ * 发送（Lucide `arrow-up`：向上的箭头）。
+ *
+ * 按用户要求把发送按钮做成输入框内的向上箭头（参考 ChatGPT / Chatbox 的输入框样式），
+ * 于是这个按钮**没有文字**，只剩图形 —— 语义由 `aria-label="发送"` 承担：
+ * 读屏靠它，冒烟测试也按它找按钮（`znhd-smoke.html` 里按文案找按钮的 helper 已扩到 aria-label）。
+ */
+export function SendIcon(p: IconProps) {
+    return (
+        <SvgIcon {...p}>
+            <path d="m5 12 7-7 7 7" />
+            <path d="M12 19V5" />
+        </SvgIcon>
+    );
+}
+
+/** 中止（Lucide `square`：圆角方块）：流式生成中占据发送按钮的同一个位置 */
+export function StopIcon(p: IconProps) {
+    return (
+        <SvgIcon {...p}>
+            <rect width="18" height="18" x="3" y="3" rx="2" />
+        </SvgIcon>
+    );
+}
+
+/** 新建（Lucide `plus`）：侧栏「新的聊天」按钮 */
+export function PlusIcon(p: IconProps) {
+    return (
+        <SvgIcon {...p}>
+            <path d="M5 12h14" />
+            <path d="M12 5v14" />
+        </SvgIcon>
+    );
+}
+
+/** 删除会话（Lucide `trash-2`）：侧栏每条会话 hover 时出现的图标按钮 */
+export function TrashIcon(p: IconProps) {
+    return (
+        <SvgIcon {...p}>
+            <path d="M3 6h18" />
+            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
+            <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+            <line x1="10" x2="10" y1="11" y2="17" />
+            <line x1="14" x2="14" y1="11" y2="17" />
+        </SvgIcon>
+    );
+}
+
+/* ============================================================ 图片格子上的悬浮按钮（v26.10.10-v16） */
+
+/**
+ * 复制（Lucide `copy`）：历史记录图片格子右下角的复制按钮。
+ *
+ * 这些按钮**没有文字**（用户要求「只显示图标」），语义只由 `aria-label` 承担：
+ * 读屏靠它，冒烟夹具也按 `button[aria-label="复制"]` 找按钮（不能再按文案找）。
+ */
+export function CopyIcon(p: IconProps) {
+    return (
+        <SvgIcon {...p}>
+            <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
+            <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
+        </SvgIcon>
+    );
+}
+
+/** 下载（Lucide `download`）：图片格子右下角的下载按钮 */
+export function DownloadIcon(p: IconProps) {
+    return (
+        <SvgIcon {...p}>
+            <path d="M12 15V3" />
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+            <path d="m7 10 5 5 5-5" />
+        </SvgIcon>
+    );
+}
+
+/**
+ * 刷新（Lucide `refresh-cw`）：常用语侧边栏标题旁的「重新抓取」按钮（v26.10.18-v2）。
+ * 按钮无文字，语义只由 `aria-label` 承担（冒烟夹具按 `button[aria-label=...]` 找它）。
+ */
+export function RefreshIcon(p: IconProps) {
+    return (
+        <SvgIcon {...p}>
+            <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
+            <path d="M21 3v5h-5" />
+            <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" />
+            <path d="M8 16H3v5" />
+        </SvgIcon>
+    );
+}
+
+/* ============================================================ 传输助手三栏界面（v26.10.12-v1） */
+
+/** 搜索（Lucide `search`）：会话列表栏顶部的搜索框图标 */
+export function SearchIcon(p: IconProps) {
+    return (
+        <SvgIcon {...p}>
+            <circle cx="11" cy="11" r="8" />
+            <path d="m21 21-4.3-4.3" />
+        </SvgIcon>
+    );
+}
+
+/** 文件（Lucide `folder`）：第一栏「文件」分组入口 */
+export function FilesIcon(p: IconProps) {
+    return (
+        <SvgIcon {...p}>
+            <path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z" />
+        </SvgIcon>
+    );
+}
+
+/** 浅色外观（Lucide `sun`）：底部「外观设置」入口（深色模式下换成 MoonIcon） */
+export function SunIcon(p: IconProps) {
+    return (
+        <SvgIcon {...p}>
+            <circle cx="12" cy="12" r="4" />
+            <path d="M12 2v2" />
+            <path d="M12 20v2" />
+            <path d="m4.93 4.93 1.41 1.41" />
+            <path d="m17.66 17.66 1.41 1.41" />
+            <path d="M2 12h2" />
+            <path d="M20 12h2" />
+            <path d="m6.34 17.66-1.41 1.41" />
+            <path d="m19.07 4.93-1.41 1.41" />
+        </SvgIcon>
+    );
+}
+
+/** 深色外观（Lucide `moon`）：底部「外观设置」在深色模式下的图标 */
+export function MoonIcon(p: IconProps) {
+    return (
+        <SvgIcon {...p}>
+            <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" />
+        </SvgIcon>
+    );
+}
+
+/** 企业信息（Lucide `info`）：第一栏底部入口 */
+export function InfoIcon(p: IconProps) {
+    return (
+        <SvgIcon {...p}>
+            <circle cx="12" cy="12" r="10" />
+            <path d="M12 16v-4" />
+            <path d="M12 8h.01" />
+        </SvgIcon>
+    );
+}
+
+/** 折叠 / 展开第一栏（Lucide `panel-left`：左竖线面板） */
+export function PanelLeftIcon(p: IconProps) {
+    return (
+        <SvgIcon {...p}>
+            <rect width="18" height="18" x="3" y="3" rx="2" />
+            <path d="M9 3v18" />
+        </SvgIcon>
+    );
+}
+
+/* ============================================================ 聊天面板（v26.10.12-v3） */
+
+/**
+ * 用户头像（Lucide `user`：头 + 肩）。
+ *
+ * 聊天气泡右侧「我」的头像。传输助手第三栏的收发消息气泡都用它。
+ */
+export function UserIcon(p: IconProps) {
+    return (
+        <SvgIcon {...p}>
+            <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
+            <circle cx="12" cy="7" r="4" />
+        </SvgIcon>
+    );
+}
+
+/**
+ * 表情（Lucide `smile`）：输入框左下角的附加功能按钮之一。
+ *
+ * ⚠️ 这里说的是**按钮图标**（矢量，Win7 安全）。点开后的表情面板 v26.10.13-v3 起换成
+ * **在线图片表情包**（`EmojiPackPanel` + `lib/transfer/emojiPack.ts`）——图片不依赖字体，
+ * 所以彻底跳出了「Win7 没有彩色 emoji 字体」的限制（旧版那张 BMP 字符表现在已删）。
+ */
+export function SmileIcon(p: IconProps) {
+    return (
+        <SvgIcon {...p}>
+            <circle cx="12" cy="12" r="10" />
+            <path d="M8 14s1.5 2 4 2 4-2 4-2" />
+            <line x1="9" x2="9.01" y1="9" y2="9" />
+            <line x1="15" x2="15.01" y1="9" y2="9" />
+        </SvgIcon>
+    );
+}
+
+/**
+ * 图片上传（Lucide `image`）：输入框左下角「上传图片」按钮。
+ *
+ * 与 `HistoryIcon` 同源（都是 Lucide `image`）—— 语义不同（一个是面板入口、一个是发送动作），
+ * 刻意不合并：合并后改其中一个形状会连带影响另一个入口的外观。
+ */
+export function ImageIcon(p: IconProps) {
+    return (
+        <SvgIcon {...p}>
+            <rect width="18" height="18" x="3" y="3" rx="2" ry="2" />
+            <circle cx="9" cy="9" r="2" />
+            <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" />
+        </SvgIcon>
+    );
+}
+
+/** 附件（Lucide `paperclip`）：输入框左下角的回形针（当前两端都不支持，按钮置灰） */
+export function PaperclipIcon(p: IconProps) {
+    return (
+        <SvgIcon {...p}>
+            <path d="m16 6-8.414 8.586a2 2 0 0 0 2.829 2.829l8.414-8.586a4 4 0 1 0-5.657-5.657l-8.379 8.551a6 6 0 1 0 8.485 8.485l8.379-8.551" />
+        </SvgIcon>
+    );
+}
+
+/**
+ * 技能（Lucide `layout-grid`：2×2 圆角方块）。
+ *
+ * v26.10.13-v9 起只用于第二栏文件分组的「全部文件」条目头像；
+ * 原来是 Agents 分组顶部的「技能」控件图标（已随 Agent 能力删除）。
+ *
+ * 没用 Lucide 的 `puzzle` ——那个 path 更长、且随 Lucide 版本改过，
+ * 这里的四宫格是自己写得出来的确定几何，不会因为库升级而变样。
+ */
+export function GridIcon(p: IconProps) {
+    return (
+        <SvgIcon {...p}>
+            <rect width="7" height="7" x="3" y="3" rx="1" />
+            <rect width="7" height="7" x="14" y="3" rx="1" />
+            <rect width="7" height="7" x="14" y="14" rx="1" />
+            <rect width="7" height="7" x="3" y="14" rx="1" />
+        </SvgIcon>
+    );
+}
+
+/** 对话（Lucide `message-circle`：圆角气泡）：第一栏的「对话」导航图标（原「设备」，v26.10.12-v4） */
+export function MessageIcon(p: IconProps) {
+    return (
+        <SvgIcon {...p}>
+            <path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z" />
+        </SvgIcon>
+    );
+}
+
+/**
+ * 单个文件（Lucide `file-text`）：v26.10.14-v6 新增，用于「任意文件传输」的文件卡片图标。
+ * 与 `FilesIcon`（folder，第一栏「文件」分组入口）区分：那个是分组入口，这个是单条文件本体。
+ */
+export function FileTextIcon(p: IconProps) {
+    return (
+        <SvgIcon {...p}>
+            <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" />
+            <path d="M14 2v4a2 2 0 0 0 2 2h4" />
+            <path d="M10 9H8" />
+            <path d="M16 13H8" />
+            <path d="M16 17H8" />
+        </SvgIcon>
+    );
+}

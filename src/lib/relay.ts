@@ -1,0 +1,747 @@
+import { addLog } from '@/lib/logger';
+// 图片压缩：与手机上传页共用同一份实现（v26.10.08-v13 起），路径见仓库根 shared/
+import { DEFAULT_MAX_DIM, DEFAULT_QUALITY, makeHeicConverter } from '../../shared/image/compress';
+import { prepareForTransfer } from '../../shared/image/prepare';
+// 重试退避：与客户端（web/）共用同一份算法（v26.10.14-v8），避免两端各写一份后漂移
+import { nextRetryDelay } from '../../shared/kit/backoff';
+
+/**
+ * 设备互联中继客户端（手机 → 电脑）与图片剪贴板工具。
+ * 模块化 P4：逐字迁移，仅加 export（内部使用的不导出）。
+ * 说明：长轮询而非 WebSocket 是为了绕过税务页 CSP 对 connect-src 的限制。
+ */
+
+// ========== 手机图片 → 电脑剪贴板 ==========
+// 每台电脑/每个脚本安装实例一个稳定 deviceId（持久化，刷新不变），
+// 拼出上传链接 <relayServer>/u/<deviceId>；手机打开该链接上传，电脑端长轮询取走。
+const DEVICE_ID_KEY = 'znhd_device_id';
+// 单请求体上限，须与 relay-server 的 MAX_BODY 保持一致（服务端按「整段 JSON 体积」掐断）。
+// 发图前据此预检体积，避免 base64 膨胀后超过上限，被服务端拒绝时只见笼统的网络/服务器错误。
+// v26.10.14-v6：12MB → 100MB（用户指定；同时支持任意文件传输）。
+export const RELAY_MAX_BODY = 100 * 1024 * 1024;
+/** 待发图片：File（带 name）或裸 Blob（无 name）。用交叉类型收窄，避免断言与 any */
+type ImageFile = Blob & { name?: string };
+/** 体积预检只看 size（name/mime 由入参单独传），故用结构类型兼容 File/Blob 与空值 */
+interface ImageSizeLike {
+    size?: number;
+}
+/**
+ * 一条发往中继的载荷：文本，或图片（data 为不带前缀的 base64）。
+ * `targets`（v26.10.06-v4）：发给哪些手机 —— 'all' 或不传 = 全部在线手机；
+ * 数组 = 只发给这些手机 ID（服务端按长轮询 URL 上的 phoneId 过滤）。
+ */
+type SendToPhonePayload = ({ text: string } | { name: string; mime: string; data: string }) & {
+    targets?: 'all' | string[];
+    /** v26.10.14-v3：表情包图片标记（发表情时带上；服务端写进条目，电脑端「全部文件」据此过滤） */
+    emoji?: boolean;
+};
+
+/**
+ * 估算把该文件作为一条 POST body（含 name+mime+base64(data) 与 JSON 结构开销）的体积。
+ * 仅用于「发送到手机」发前预检，与服务端 MAX_BODY 对齐（约 100MB）。
+ * @param {File|Blob} file - 待发图片文件
+ * @param {string} [name] - 文件名
+ * @param {string} [mime] - MIME 类型
+ * @returns {number} 估算的 body 字节数
+ */
+export function imagePayloadBytes(file: ImageSizeLike | null | undefined, name?: string | null, mime?: string | null) {
+    const b64Len = Math.ceil(((file && file.size) || 0) / 3) * 4; // base64 膨胀 ≈ 4/3
+    // name/mime 按 UTF-8 字节数计（服务端 readBody 按字节累加；String.length 是 UTF-16 码元，
+    // 中文文件名会低估约 3 倍，接近上限时预检可能误放行）
+    const enc = typeof TextEncoder === 'function' ? new TextEncoder() : null;
+    const byteLen = enc
+        ? enc.encode(String(name || '') + String(mime || '')).length
+        : (String(name || '') + String(mime || '')).length;
+    return b64Len + byteLen + 120;
+}
+
+/** 「发送到手机」压缩参数：与手机上传页共用同一份实现与默认值（见 shared/image/compress.ts） */
+export const PHONE_MAX_DIM = DEFAULT_MAX_DIM;
+export const PHONE_JPEG_QUALITY = DEFAULT_QUALITY;
+
+/** 发送到手机的实际载荷：blob/name/mime 为最终要 POST 的内容；compressed 表示是否发生过压缩。 */
+export interface PhoneImagePayload {
+    blob: Blob;
+    name: string;
+    mime: string;
+    compressed: boolean;
+}
+
+/**
+ * 「电脑端 → 手机端」发送前的图片压缩。
+ *
+ * v26.10.08-v13 起**实现搬进共享层** `shared/image/prepare.ts`（与手机上传页同一份）。
+ * 规则（SVG/GIF 原样直传、HEIC 先转码、压不小就不压、任何失败都回退原图）全部在那边，
+ * 这里只剩脚本端**特有的一步**：把「HEIC 取库方式」注入进去 ——
+ * 脚本端用的是 `@require` 进来的全局 `heic2any`，手机页是运行期按需注入 `<script>`。
+ *
+ * @param {File|Blob} file - 用户选择的原始图片文件
+ * @returns {Promise<PhoneImagePayload>} 实际要发送的内容
+ */
+export function compressImageForPhone(file: ImageFile): Promise<PhoneImagePayload> {
+    return prepareForTransfer(file, {
+        maxDim: PHONE_MAX_DIM,
+        quality: PHONE_JPEG_QUALITY,
+        loadHeic: (blob) => makeHeicConverter(typeof heic2any === 'function' ? heic2any : null)(blob),
+    });
+}
+
+/**
+ * 取得本机稳定设备 ID：首次运行用 crypto.randomUUID() 生成并持久化（GM_setValue），
+ * 之后刷新/重开都读同一值。用于区分不同电脑（A、B 各自不同链接）。
+ * @returns {string} 设备 UUID 字符串
+ */
+export function getDeviceId() {
+    let id = '';
+    try {
+        id = typeof GM_getValue === 'function' ? GM_getValue(DEVICE_ID_KEY, '') || '' : '';
+    } catch (e) {
+        id = '';
+    }
+    if (!id) {
+        try {
+            id =
+                window.crypto && crypto.randomUUID
+                    ? crypto.randomUUID()
+                    : 'd' + Date.now().toString(16) + Math.random().toString(16).slice(2);
+        } catch (e) {
+            id = 'd' + Date.now().toString(16) + Math.random().toString(16).slice(2);
+        }
+        try {
+            if (typeof GM_setValue === 'function') GM_setValue(DEVICE_ID_KEY, id);
+        } catch (e) {
+            /* 忽略 */
+        }
+    }
+    return id;
+}
+
+/**
+ * 将 base64 字符串还原为 Blob（用于把中继返回的图片字节写剪贴板）。
+ * @param {string} b64 - base64 文本
+ * @param {string} mime - MIME 类型
+ * @returns {Blob} 图片 Blob
+ */
+function base64ToBlob(b64: string, mime?: string | null) {
+    const bin = atob(b64);
+    const len = bin.length;
+    const arr = new Uint8Array(len);
+    for (let i = 0; i < len; i++) arr[i] = bin.charCodeAt(i);
+    return new Blob([arr], { type: mime || 'image/jpeg' });
+}
+
+/**
+ * 将图片 Blob 转成 PNG Blob（best-effort）。
+ * 原因：异步 Clipboard API（navigator.clipboard.write + ClipboardItem）在部分
+ * Chromium 内核里只可靠支持 image/png；手机传来的图多为 image/jpeg，
+ * 直接以 image/jpeg 写入可能失败。统一转 PNG 可规避该限制。
+ * 若环境不支持位图解码 / Canvas，则返回原 blob。
+ * @param {Blob} blob
+ * @returns {Promise<Blob>}
+ */
+function blobToPng(blob: Blob): Promise<Blob> {
+    return new Promise<Blob>((resolve) => {
+        if (typeof createImageBitmap !== 'function' || typeof document === 'undefined') {
+            resolve(blob);
+            return;
+        }
+        try {
+            createImageBitmap(blob)
+                .then((bmp) => {
+                    const cv = document.createElement('canvas');
+                    cv.width = bmp.width;
+                    cv.height = bmp.height;
+                    const ctx = cv.getContext('2d');
+                    if (!ctx) {
+                        if (bmp.close) bmp.close();
+                        resolve(blob);
+                        return;
+                    }
+                    ctx.drawImage(bmp, 0, 0);
+                    if (bmp.close) bmp.close();
+                    cv.toBlob((b) => {
+                        resolve(b || blob);
+                    }, 'image/png');
+                })
+                .catch(() => resolve(blob));
+        } catch (e) {
+            resolve(blob);
+        }
+    });
+}
+
+/** 剪贴板写入目标：一个 realm 的 navigator.clipboard + ClipboardItem + Blob 构造器 */
+interface ClipboardRealm {
+    name: string;
+    nav: Navigator;
+    CI: typeof ClipboardItem;
+    BlobCtor: typeof Blob;
+    isPageRealm: boolean;
+}
+
+/** 统一取可读的异常文本 */
+function errTextOf(e: unknown) {
+    const err = e as { name?: string; message?: string } | null | undefined;
+    return err && err.name ? err.name + ': ' + err.message : String((err && err.message) || e);
+}
+
+/**
+ * 用目标 realm 的原生 Blob 构造器重新包一层。
+ * 跨 realm 直接把「隔离世界的 Blob」交给「页面主世界的 ClipboardItem」可能被拒绝；
+ * 参考实现 qsniyg/maxurl 同样是用页面原生 `native_blob` 构造后再传入 ClipboardItem。
+ */
+function toRealmBlob(blob: Blob, BlobCtor: typeof Blob | undefined) {
+    const type = blob && blob.type ? blob.type : 'image/png';
+    try {
+        return BlobCtor ? new BlobCtor([blob], { type: type }) : blob;
+    } catch (e) {
+        return blob;
+    }
+}
+
+/**
+ * 在指定 realm 里写**一次**剪贴板（只写 image/png）。
+ *
+ * ⚠️ 为什么只写一次：`clipboard.write()` 通过用户手势校验后就会**消耗**这次手势，失败也不退还。
+ * 所以任何「先拿原图试一下、失败再重试」的兜底都会把手势烧掉，让后面的重试必然 NotAllowedError。
+ * preferPromiseForm=true 时使用 ClipboardItem 的 Promise 形式：write() 在本次点击手势内**同步发起**，
+ * 由浏览器去等异步转换结果 —— 转换耗时（实测约 1s）不再影响手势有效性。
+ * @param {ClipboardRealm} realm - 写入目标
+ * @param {Promise<any>} pngPromise - 解析为 PNG Blob 的 Promise
+ * @param {boolean} preferPromiseForm - 是否优先用 Promise 形式的 ClipboardItem
+ * @returns {Promise<boolean>} 写入是否成功
+ */
+function writeClipboardOnce(realm: ClipboardRealm, pngPromise: Promise<Blob>, preferPromiseForm: boolean) {
+    return new Promise<boolean>((resolve) => {
+        const doWrite = (item: ClipboardItem) => {
+            try {
+                realm.nav.clipboard.write([item]).then(
+                    () => resolve(true),
+                    (e) => {
+                        addLog('[复制] 写入剪贴板被拒（' + realm.name + '）: ' + errTextOf(e), 'warning', true);
+                        resolve(false);
+                    }
+                );
+            } catch (e) {
+                addLog('[复制] 调用 clipboard.write 异常（' + realm.name + '）: ' + errTextOf(e), 'error', true);
+                resolve(false);
+            }
+        };
+        if (preferPromiseForm) {
+            try {
+                doWrite(new realm.CI({ 'image/png': pngPromise }));
+                return;
+            } catch (e) {
+                addLog('[复制] ClipboardItem 不支持 Promise 形式，改为先转换再写入: ' + errTextOf(e), 'warning', true);
+            }
+        }
+        pngPromise.then((png) => {
+            try {
+                doWrite(new realm.CI({ 'image/png': toRealmBlob(png, realm.BlobCtor) }));
+            } catch (e) {
+                addLog('[复制] 构造 ClipboardItem 失败（' + realm.name + '）: ' + errTextOf(e), 'error', true);
+                resolve(false);
+            }
+        });
+    });
+}
+
+/** 页面主世界的 window：用它自己的 ClipboardItem / Blob（隔离世界里这两个常不可用） */
+type PageRealmWindow = Window & { ClipboardItem?: typeof ClipboardItem; Blob: typeof Blob };
+
+/**
+ * 将图片 Blob 写入系统剪贴板（必须由一次「用户点击」触发）。
+ *
+ * ⚠️ 2026-10-06 重写。旧实现「先按原图类型写一次 → 失败后再转 PNG 重试」是**注定失败**的写法：
+ *   1) Chromium 的异步剪贴板**只支持写 `image/png`**（实测 `ClipboardItem.supports('image/jpeg') === false`），
+ *      而手机传来的图多为 jpeg ⇒ 第一次写入必然失败；
+ *   2) 按规范，`clipboard.write()` 通过手势校验后即**消耗**该手势（失败也不退还）
+ *      ⇒ 转 PNG 后的第二次重试必然 `NotAllowedError: Write permission denied`，用户只看到「复制失败」；
+ *   3) 正确顺序：**先转好 PNG，再只写一次**。
+ *
+ * 参考实现：qsniyg/maxurl（只调用一次 write + 用页面原生 Blob 构造 ClipboardItem + 显式异常分支）。
+ * 本脚本不需要它们「跨域图片经 GM_xmlhttpRequest 取二进制」那一段 —— 图片本来就是中继传进来的 Blob。
+ * @param {Blob} blob - 图片 Blob
+ * @returns {Promise<boolean>} 成功返回 true，失败返回 false（失败原因写入日志）
+ */
+export function copyImageToClipboard(blob: Blob | null | undefined) {
+    return new Promise<boolean>((resolve) => {
+        if (!blob) {
+            addLog('[复制] 图片数据为空', 'error', true);
+            resolve(false);
+            return;
+        }
+        const pageWin: PageRealmWindow | null = typeof unsafeWindow !== 'undefined' ? unsafeWindow : null;
+        const realms: ClipboardRealm[] = [];
+        // 页面主世界优先：ScriptCat 隔离世界里的 ClipboardItem / 写入常不可用
+        if (
+            pageWin &&
+            pageWin.navigator &&
+            pageWin.navigator.clipboard &&
+            // 用 typeof 判断而非直接取真值：写方法在类型上恒有定义，真值判断会被 TS 判为恒真
+            typeof pageWin.navigator.clipboard.write === 'function' &&
+            pageWin.ClipboardItem
+        ) {
+            realms.push({
+                name: '页面主世界',
+                nav: pageWin.navigator,
+                CI: pageWin.ClipboardItem,
+                BlobCtor: pageWin.Blob,
+                isPageRealm: true,
+            });
+        }
+        if (
+            navigator.clipboard &&
+            typeof navigator.clipboard.write === 'function' &&
+            typeof ClipboardItem !== 'undefined'
+        ) {
+            realms.push({ name: '隔离世界', nav: navigator, CI: ClipboardItem, BlobCtor: Blob, isPageRealm: false });
+        }
+        if (!realms.length) {
+            addLog('[复制] 当前环境不支持图片剪贴板（缺 clipboard.write 或 ClipboardItem）', 'error', true);
+            resolve(false);
+            return;
+        }
+
+        // 先启动 PNG 转换（不阻塞手势）：Chromium 只认 image/png
+        const pngPromise: Promise<Blob> = (blob.type === 'image/png' ? Promise.resolve(blob) : blobToPng(blob)).then(
+            (b) => {
+                if (b && b.type !== 'image/png') {
+                    // blobToPng 转换失败时会原样返回原图；此处只提示，成败仍交给写入阶段判定
+                    addLog('[复制] 图片转 PNG 失败（内核不支持位图解码/Canvas），可能无法写入剪贴板', 'warning', true);
+                }
+                return b;
+            }
+        );
+
+        (async () => {
+            for (const realm of realms) {
+                // 主世界优先用 Promise 形式（write 落在手势内）；隔离世界退化为「先转换、后写入」
+                const ok = await writeClipboardOnce(realm, pngPromise, realm.isPageRealm);
+                if (ok) {
+                    addLog('[复制] 图片已复制到剪贴板（' + realm.name + '）', 'success', true);
+                    resolve(true);
+                    return;
+                }
+            }
+            addLog(
+                '[复制] 图片写入剪贴板失败：常见原因是浏览器/油猴未授予剪贴板权限、页面未获得焦点，或该内核不支持图片剪贴板；可长按图片手动保存',
+                'error',
+                true
+            );
+            resolve(false);
+        })();
+    });
+}
+
+/** startPhoneReceive 的入参：回调按需传（只用到 onStatus/onImage/onText/onConnected 中的一部分） */
+interface PhoneReceiveOptions {
+    server?: string | null;
+    uuid: string;
+    onStatus?: (text: string) => void;
+    /**
+     * 在线手机名单（v26.10.14-v7，P0-b/P0-c）：
+     * 中继会在**每个**长轮询响应里捎带 `phones`（piggyback），并在手机上下线时主动结束
+     * 当前挂起的长轮询回一条 `{type:'phones', phones}`（唤醒）。两路都走这个回调。
+     * 电脑端据此免去 5s 一次的 `/phone/status` 轮询 —— 那是 8h 里 5760 次请求的最大头。
+     * ⚠️ 老中继不返回该字段 → 回调不会被调用，由 store 的 60s 兜底轮询接管。
+     */
+    onPhones?: (list: { id: string; lastSeen: number }[]) => void;
+    /** from（v26.10.13-v6）：发送者手机 ID（中继随条目回传；老中继/未知发送者时为空） */
+    onImage?: (img: {
+        blob: Blob;
+        previewUrl: string;
+        name?: string;
+        mime?: string;
+        from?: string;
+        emoji?: boolean;
+    }) => void;
+    /**
+     * 收到任意文件（v26.10.14-v6）：中继按 mime 分流，非 image/* 的一律走这里。
+     * 与 onImage 分开，是因为两者的落库/渲染语义不同（图片走缩略图九宫格，文件走文件卡片）。
+     */
+    onFile?: (file: { blob: Blob; previewUrl: string; name?: string; mime?: string; from?: string }) => void;
+    onText?: (item: { text: string; ts?: number; from?: string }) => void;
+    onConnected?: () => void;
+}
+
+/**
+ * 启动「设备互联」长轮询接收循环（直到 stop() 调用）。
+ * 通过 GM_xmlhttpRequest 轮询中继服务器 /recv/<uuid>（绕过税务页面 CSP 对 connect-src 的限制）。
+ * 收到图片时回调 onImage；状态变化回调 onStatus；网络异常自动重连。
+ * @param {PhoneReceiveOptions} opt - { server, uuid, onStatus, onImage, onText, onConnected }
+ * @returns {Function} stop() 停止接收
+ */
+export function startPhoneReceive(opt: PhoneReceiveOptions) {
+    const server = (opt.server || '').trim().replace(/\/+$/, '');
+    const uuid = opt.uuid;
+    let stopped = false;
+    let lastXhr: { abort: () => void } | null = null;
+    let connected = false;
+    let loggedConnFail = false;
+    let firstPoll = true;
+    // P5（v26.10.14-v8）：当前退避值。0 = 上一轮成功；失败时由 nextRetryDelay 递增到 60s 封顶。
+    // 放在闭包里（而非模块级）—— 多台中继地址各自独立退避，互不影响。
+    let retryDelay = 0;
+    function markConnected() {
+        if (connected) return;
+        connected = true;
+        loggedConnFail = false; // 恢复连接后复位失败标记，后续再次断线仍会记日志（旧实现不复位，之后断连静默）
+        if (opt.onConnected) {
+            try {
+                opt.onConnected();
+            } catch (e) {
+                /* 忽略 */
+            }
+        }
+    }
+    // 说明：不单独探测 /health。旧版中继可能没有该端点，会导致请求挂起并误报
+    // 「连接服务器超时」，而真正的 /recv 接收始终正常（与用户报告的现象一致）。
+    // 改用「首次 /recv 轮询用极短 maxwait」来快速确认已连上：服务器会很快返回空响应，
+    // 从而 markConnected → onConnected 触发「已自动开始接收」日志（约 1 秒内）。
+    function poll() {
+        if (stopped) return;
+        if (opt.onStatus) opt.onStatus('正在等待手机上传…');
+        // 首次轮询用极短 maxwait 仅用于快速确认「已连上服务器」（服务器会很快返回空），
+        // 让「已自动开始接收」日志尽快出现；后续轮询用长 maxwait 实时等待图片。
+        // P3（v26.10.15-v1）：稳态 maxwait 25000 → 45000。长轮询是闭环（一次请求 = 等到消息
+        // 早返回 或 等满 maxwait，返回即重连）⇒ 请求数 ≈ 时长/maxwait，放宽挂起时长**线性**
+        // 减少请求数。取 45s 而非服务端上限 60s：给 `timeout`（下方 maxwait+5000）与反代留余量。
+        const maxwait = firstPoll ? 1000 : 45000;
+        firstPoll = false;
+        // `phones=1`（v26.10.14-v7）= 协商标记：告诉中继「本客户端认识 `type:'phones'` 主动唤醒」。
+        // 中继只唤醒带该标记的连接 —— 老脚本不带，就不会被上下线事件无谓打断（它收到不认识的
+        // 载荷只会 1s 后重连，白打请求）。参数对老中继是无害的未知 query，向后兼容。
+        const url = server + '/recv/' + encodeURIComponent(uuid) + '?maxwait=' + maxwait + '&phones=1';
+        try {
+            lastXhr = GM_xmlhttpRequest({
+                method: 'GET',
+                url: url,
+                timeout: maxwait + 5000,
+                onload: function (resp) {
+                    if (stopped) return;
+                    // P5（v26.10.14-v8）：HTTP 层失败也走退避 —— 429 = 服务端明确要求放缓；
+                    // 5xx = 服务端故障/重启（最容易雪崩的时刻）。旧实现会固定 2s 打回来。
+                    // ⚠️ 必须在 markConnected 之前判：这些响应**不算连上**，也不能把退避复位。
+                    if (resp.status === 429 || resp.status >= 500) {
+                        if (opt.onStatus) opt.onStatus('服务器繁忙，稍后重试…');
+                        retryDelay = nextRetryDelay(retryDelay, resp.status);
+                        setTimeout(poll, retryDelay);
+                        return;
+                    }
+                    markConnected(); // 首次成功收到服务器响应即视为已连上
+                    retryDelay = 0; // 拿到正常响应 ⇒ 退避复位（下次失败重新从 2s 起）
+                    try {
+                        let data = null;
+                        try {
+                            data = JSON.parse(resp.responseText);
+                        } catch (e) {
+                            data = null;
+                        }
+                        // v26.10.14-v7（P0-b/P0-c）：先消化随响应捎带的在线手机名单 ——
+                        // 长轮询的**每个**响应（含 {empty:true} 超时与主动唤醒）都会带它。
+                        // 必须在分支判断之前处理，否则 {empty:true} 会提前 return 把名单丢掉。
+                        if (data && Array.isArray(data.phones)) {
+                            if (opt.onPhones) {
+                                try {
+                                    opt.onPhones(
+                                        data.phones
+                                            .filter((p: unknown) => !!p)
+                                            .map((p: { id?: unknown; lastSeen?: unknown }) => ({
+                                                id: String(p.id || ''),
+                                                lastSeen: Number(p.lastSeen) || 0,
+                                            }))
+                                    );
+                                } catch (e) {
+                                    /* 单次名单异常不影响接收循环 */
+                                }
+                            }
+                        }
+                        // 上下线唤醒：只有名单、没有业务条目 → 更新完继续等待
+                        if (data && data.type === 'phones') {
+                            poll();
+                            return;
+                        }
+                        if (data && data.empty) {
+                            poll();
+                            return;
+                        }
+                        if (data && (data.type === 'image' || data.type === 'file') && data.data) {
+                            // v26.10.14-v6：type 'file' 与 'image' 共用同一条二进制解码路径，
+                            // 只是回调不同（文件不回 emoji 标记、不参与表情包过滤）。
+                            const isFile = data.type === 'file';
+                            const blob = base64ToBlob(
+                                data.data,
+                                data.mime || (isFile ? 'application/octet-stream' : 'image/jpeg')
+                            );
+                            // 预览统一用 objectURL（与「发送到手机」待发列表一致）：
+                            // ① 画廊上限淘汰/单张移除/清空全部时的 URL.revokeObjectURL 真正生效
+                            //   （data:URL 字符串无法 revoke，旧写法实为无效空操作）；
+                            // ② 避免最多 27 张图的 base64 dataURL 长字符串常驻 JS 堆（可达几十 MB）。
+                            const previewUrl = URL.createObjectURL(blob);
+                            if (opt.onStatus)
+                                opt.onStatus(
+                                    (isFile ? '收到文件：' : '收到图片：') + (data.name || (isFile ? 'file' : 'image'))
+                                );
+                            if (isFile) {
+                                if (opt.onFile)
+                                    opt.onFile({
+                                        blob: blob,
+                                        previewUrl: previewUrl,
+                                        name: data.name,
+                                        mime: data.mime,
+                                        from: data.from,
+                                    });
+                            } else if (opt.onImage) {
+                                opt.onImage({
+                                    blob: blob,
+                                    previewUrl: previewUrl,
+                                    name: data.name,
+                                    mime: data.mime,
+                                    from: data.from,
+                                    // v26.10.14-v3：表情包标记透传（老中继不带 → undefined → 当作普通图片）
+                                    emoji: data.emoji === true,
+                                });
+                            }
+                            poll(); // 继续接收下一张
+                            return;
+                        }
+                        if (data && data.type === 'text' && typeof data.text === 'string') {
+                            if (opt.onStatus) opt.onStatus('收到文本');
+                            if (opt.onText) opt.onText({ text: data.text, ts: data.ts, from: data.from });
+                            poll(); // 继续接收下一条
+                            return;
+                        }
+                        // ⚠️ 这一条**故意不并入 P5 退避**：它表示「服务器通了，但某个字段不认识」
+                        // （老中继 / 代理回 HTML / 载荷残缺），属单条数据异常而非连接故障。
+                        // 若在这里退避到 60s，一张坏图就会让接收停摆一分钟。
+                        setTimeout(poll, 1000); // 解析失败稍后重试
+                    } catch (e) {
+                        // 单条数据异常（base64 损坏 atob 抛错、回调抛错等）不得杀死接收循环：
+                        // 记录一次后继续下一次轮询（旧实现无兜底，异常会让 poll 链永久中断、收图静默失效）
+                        addLog('[设备互联] 处理收到数据失败: ' + (e && e.message ? e.message : e), 'error', true);
+                        // 同上：单条数据损坏（atob 抛错等）不退避，1s 后继续下一条
+                        setTimeout(poll, 1000);
+                    }
+                },
+                onerror: function () {
+                    if (stopped) return;
+                    if (!loggedConnFail) {
+                        loggedConnFail = true;
+                        addLog('[设备互联] 连接服务器失败，请检查中继地址/网络（' + server + '）', 'error');
+                    }
+                    if (opt.onStatus) opt.onStatus('连接中断，正在重连…');
+                    // P5（v26.10.14-v8）：网络层失败按指数退避重连（旧实现固定 2s —— 中继重启时
+                    // 所有脚本同节奏敲门）。成功后 onload 会把 retryDelay 复位。
+                    retryDelay = nextRetryDelay(retryDelay);
+                    setTimeout(poll, retryDelay);
+                },
+                ontimeout: function () {
+                    if (stopped) return;
+                    poll(); // 超时继续轮询
+                },
+            });
+        } catch (e) {
+            if (stopped) return;
+            if (opt.onStatus) opt.onStatus('请求异常，正在重连…');
+            retryDelay = nextRetryDelay(retryDelay);
+            setTimeout(poll, retryDelay);
+        }
+    }
+    poll();
+    return function stop() {
+        stopped = true;
+        try {
+            if (lastXhr && typeof lastXhr.abort === 'function') lastXhr.abort();
+        } catch (e) {
+            /* 忽略 */
+        }
+    };
+}
+
+/** sendToPhone 的入参：仅负责投递（手机是否在线由调用方先判断） */
+interface SendToPhoneOptions {
+    server?: string | null;
+    uuid: string;
+    payload: SendToPhonePayload;
+    onOk?: () => void;
+    onFail?: (msg: string) => void;
+    /**
+     * v26.10.18-v1：上传进度回调（0–100，仅大载荷有观测意义）。
+     * 走 `GM_xmlhttpRequest` 的 `upload.onprogress` —— Tampermonkey / ScriptCat 都支持；
+     * 宿主不支持时该回调**一个都不会被调**（调用方据此保持「发送中…」的静默降级态）。
+     */
+    onUploadProgress?: (percent: number) => void;
+}
+
+/**
+ * 「发送测试图片」用的随机图源（v26.10.08-v10）。
+ * 直接返回一张图片（会 302 到具体图片），故用 GM_xmlhttpRequest 取二进制。
+ */
+export const TEST_IMAGE_URL = 'https://t.alcy.cc/fj';
+
+/** Blob → 不带前缀的 base64（FileReader；与手机上传页同一套做法） */
+function blobToBase64(blob: Blob): Promise<string> {
+    return new Promise<string>((resolve, reject) => {
+        const fr = new FileReader();
+        fr.onload = () => resolve(String(fr.result || '').split(',')[1] || '');
+        fr.onerror = () => reject(new Error('读取图片失败'));
+        fr.readAsDataURL(blob);
+    });
+}
+
+/** 按 MIME 给测试图起个文件名（仅用于日志与下载命名） */
+function testImageName(mime: string): string {
+    const ext =
+        { 'image/jpeg': '.jpg', 'image/png': '.png', 'image/webp': '.webp', 'image/gif': '.gif' }[mime] || '.jpg';
+    return 'test-image-' + Date.now() + ext;
+}
+
+/** sendTestImage 的入参 */
+interface SendTestImageOptions {
+    /** 中继地址（未配置时无法投递，调用方应先拦） */
+    server?: string | null;
+    /** 本机 deviceId：测试图**当作手机上传**投到 /u/<deviceId>，再经正常通道回到本脚本 */
+    uuid: string;
+    url?: string;
+    onOk?: (info: { bytes: number; mime: string }) => void;
+    onFail?: (msg: string) => void;
+}
+
+/**
+ * 「发送测试图片」（v26.10.08-v10）：从随机图源取一张图，**当作手机上传**投递到本机中继
+ * （`POST /u/<本机 deviceId>`），于是它经**正常的「手机 → 电脑」通道**回到本脚本、进历史记录。
+ *
+ * 为什么走中继而不是本地直接塞进数组：这样这条路径与真实收图**完全一致**
+ * （中继入队 → 长轮询取走 → onImage → 历史），可用它验证整条链路，也能同步到同一台电脑的其它标签页。
+ * 代价是必须配置好中继地址（未配置时调用方直接给出提示，不发请求）。
+ *
+ * ⚠️ 用 GM_xmlhttpRequest 而不是 fetch：税务页 CSP 限制 connect-src，跨域取图也需绕过 CORS。
+ */
+export function sendTestImage(opt: SendTestImageOptions) {
+    const server = (opt.server || '').trim().replace(/\/+$/, '');
+    const url = opt.url || TEST_IMAGE_URL;
+    const fail = (msg: string) => {
+        if (opt.onFail) opt.onFail(msg);
+    };
+    if (!/^https?:\/\//i.test(server)) {
+        fail('未配置中继服务器，无法投递测试图片');
+        return;
+    }
+    try {
+        GM_xmlhttpRequest({
+            method: 'GET',
+            url: url,
+            responseType: 'blob',
+            timeout: 20000,
+            onload: (resp) => {
+                const blob: Blob | undefined = resp && resp.response;
+                if (!blob || typeof blob.size !== 'number' || !blob.size) {
+                    fail('取图失败：响应不是有效的二进制图片');
+                    return;
+                }
+                const mime = blob.type || 'image/jpeg';
+                const name = testImageName(mime);
+                // 体积预检：与手机上传同一套判据，避免 base64 膨胀后撞 100MB 上限
+                if (imagePayloadBytes(blob, name, mime) > RELAY_MAX_BODY) {
+                    fail('测试图片过大（超过中继单次上限约 100MB）');
+                    return;
+                }
+                blobToBase64(blob)
+                    .then((b64) => {
+                        if (!b64) {
+                            fail('取图失败：图片内容为空');
+                            return;
+                        }
+                        GM_xmlhttpRequest({
+                            method: 'POST',
+                            url: server + '/u/' + encodeURIComponent(opt.uuid),
+                            headers: { 'Content-Type': 'application/json' },
+                            data: JSON.stringify({ name: name, mime: mime, data: b64 }),
+                            timeout: 20000 + Math.round(b64.length / 200),
+                            onload: (r2) => {
+                                let j: { ok?: boolean; error?: string } | null = null;
+                                try {
+                                    j = JSON.parse(r2.responseText);
+                                } catch (e) {
+                                    j = null;
+                                }
+                                if (j && j.ok) {
+                                    if (opt.onOk) opt.onOk({ bytes: blob.size, mime: mime });
+                                } else {
+                                    fail((j && j.error) || '投递失败（HTTP ' + r2.status + '）');
+                                }
+                            },
+                            onerror: () => fail('网络错误，无法投递到中继'),
+                            ontimeout: () => fail('投递超时'),
+                        });
+                    })
+                    .catch((e) => fail('取图失败：' + ((e && e.message) || '读取错误')));
+            },
+            onerror: () => fail('网络错误，无法获取测试图片'),
+            ontimeout: () => fail('获取测试图片超时'),
+        });
+    } catch (e) {
+        fail('发送测试图片失败：' + ((e && e.message) || '未知错误'));
+    }
+}
+
+/**
+ * 电脑端 → 手机端 发送（图片或文本）。POST 到中继 /phone/send/<deviceId>。
+ * 仅负责投递；手机是否在线由调用方先查 /phone/status 决定（离线时调用方直接拦截）。
+ * @param {SendToPhoneOptions} opt - { server, uuid, payload, onOk, onFail }
+ *   payload: { text } 或 { name, mime, data(base64) }
+ */
+export function sendToPhone(opt: SendToPhoneOptions) {
+    const server = (opt.server || '').trim().replace(/\/+$/, '');
+    const uuid = opt.uuid;
+    const url = server + '/phone/send/' + encodeURIComponent(uuid);
+    try {
+        const body = JSON.stringify(opt.payload);
+        GM_xmlhttpRequest({
+            method: 'POST',
+            url: url,
+            headers: { 'Content-Type': 'application/json' },
+            data: body,
+            // v26.10.18-v1：上传进度。只在调用方真的要进度时才挂 upload 字段
+            //（部分宿主对空对象也会走特殊路径，没必要冒这个险）。
+            ...(opt.onUploadProgress
+                ? {
+                      upload: {
+                          onprogress: function (ev: { lengthComputable?: boolean; loaded: number; total: number }) {
+                              if (!ev || !ev.total) return;
+                              if (opt.onUploadProgress) opt.onUploadProgress(Math.round((ev.loaded / ev.total) * 100));
+                          },
+                      },
+                  }
+                : {}),
+            // 超时随载荷缩放：放行的最大单请求约 16MB（base64 膨胀后），固定 20s 在慢上行时会把合法大图误杀
+            timeout: 20000 + Math.round(body.length / 200), // ≈ 20s + 每 200B 1ms；16MB 体 ≈ 100s
+            onload: function (resp) {
+                let j = null;
+                try {
+                    j = JSON.parse(resp.responseText);
+                } catch (e) {
+                    j = null;
+                }
+                if (j && j.ok) {
+                    if (opt.onOk) opt.onOk();
+                } else {
+                    // 优先用服务端 JSON 里的中文错误（如 413「内容过大」）；否则按状态码给可读提示，避免笼统报错。
+                    let msg = j && j.error ? String(j.error) : '';
+                    if (!msg && resp.status === 413) msg = '内容过大，请压缩后再发送';
+                    else if (!msg && resp.status >= 400) msg = '服务器错误（HTTP ' + resp.status + '）';
+                    if (opt.onFail) opt.onFail(msg || 'HTTP ' + resp.status);
+                }
+            },
+            onerror: function () {
+                if (opt.onFail) opt.onFail('网络错误，请检查中继地址');
+            },
+            ontimeout: function () {
+                if (opt.onFail) opt.onFail('发送超时');
+            },
+        });
+    } catch (e) {
+        if (opt.onFail) opt.onFail(e.message);
+    }
+}

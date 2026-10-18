@@ -1,0 +1,434 @@
+/* 手机端聊天窗（v26.10.12-v5）：整页对齐脚本端传输助手第三栏（微信暗色）。
+   色板与 src/lib/ui/transfer/wechatTheme.ts 同源：chat #1E1E1E / header·rail #2E2E2E /
+   composer #262626 / 他人气泡 #2F2F2F / 我方气泡 #07C160。 */
+:root {
+    color-scheme: dark;
+}
+
+html,
+body {
+    margin: 0;
+    padding: 0;
+    background: #1e1e1e;
+}
+
+#root {
+    height: 100vh;
+    height: 100dvh; /* 移动端地址栏收放时以动态视口为准 */
+}
+
+/* ===== 整体骨架：头部 / 消息滚动区 / 底部输入区（flex 吸底，与脚本端第三栏同一契约）=====
+   ⚠️ v26.10.13-v3：shell 必须 **fixed 贴视口**，不能再 `height:100%`——
+   实测根因：`main.tsx` 里 antd `<AntApp>` 会渲染一个 `div.ant-app` 包裹层
+   （cssinjs 类名如 `css-oc1rc0`），它自身**没有高度**；`height:100%` 对
+   auto 高度的父级按 CSS 规范解析为 auto ⇒ 整页退化成**内容高度**，
+   输入区悬在视口中间、下面一大条黑洞（800px 视口下 shell 只有 497px，
+   即用户截图里「输入框不在页面最下方」）。
+   `position:fixed` + left/right/top/height 不依赖任何祖先的高度链，
+   天然钉在视口上；`--znhd-shell-top` / `--znhd-shell-h` 由 App.tsx 的
+   visualViewport 同步写入（虚拟键盘弹出、地址栏收放时改按**视觉视口**，
+   输入区始终贴最底；未写入时回退 100dvh，老 WebView 无 visualViewport 也正常）。 */
+.znhd-phone-chat {
+    position: fixed;
+    left: 0;
+    right: 0;
+    top: var(--znhd-shell-top, 0px);
+    height: var(--znhd-shell-h, 100dvh);
+    display: flex;
+    flex-direction: column;
+    background: #1e1e1e;
+    color: rgba(255, 255, 255, 0.9);
+    font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Segoe UI', sans-serif;
+}
+
+/* ===== 桌面版：聊天窗弹窗化（v26.10.13-v4）====================================
+   需求：桌面浏览器打开「传输助手」网页时不要全屏，参考微信 PC 端「文件传输助手」
+   独立聊天窗的位置与大小 —— 屏幕正中的居中弹窗（约 420×680）。
+   判定在 lib/layoutMode.ts（UA / 粗指针 + 屏幕短边）；手机版不加这两个类，
+   保持上面的 fixed 全屏骨架。
+   ⚠️ `.znhd-phone-chat.znhd-chat-window`（双类，特异性 0-2-0）覆盖 fixed 全屏
+   那段（单类 0-1-0）：position 改 relative、top/left 等改 auto，于是
+   `--znhd-shell-h/--znhd-shell-top`（visualViewport 同步写的）在弹窗模式下被
+   完全绕开——桌面触屏键盘弹起的场景极少，不为它把弹窗定位搞复杂。 */
+.znhd-window-layer {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    box-sizing: border-box;
+    background: #141414; /* 比聊天区（#1e1e1e）更深一档，让弹窗的边框/投影有对比 */
+}
+
+.znhd-phone-chat.znhd-chat-window {
+    position: relative;
+    left: auto;
+    right: auto;
+    top: auto;
+    height: min(680px, 100%); /* 100% = 居中层减去 24px 四边 padding 后的净高 */
+    width: min(420px, 100%); /* 桌面窄窗时等比缩到 100%，弹窗形态不变 */
+    box-sizing: border-box; /* 420/680 是含 1px 边框的外尺寸（不加会是 422/682） */
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 18px 60px rgba(0, 0, 0, 0.6);
+    overflow: hidden;
+}
+
+/* 空状态的 30vh 是按全屏视口写的：弹窗 680px 高时会顶爆滚动区，桌面弹窗下改小 */
+.znhd-chat-window .znhd-chat-empty {
+    margin-top: 120px;
+}
+
+.znhd-phone-header {
+    flex: 0 0 auto;
+    background: #2e2e2e;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    padding: 10px 14px 8px;
+}
+
+.znhd-phone-header-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.znhd-phone-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #fff;
+}
+
+.znhd-phone-conn {
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.55);
+}
+
+.znhd-phone-sub {
+    margin-top: 4px;
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.35);
+    word-break: break-all;
+}
+
+/* ===== 消息滚动区 ===== */
+.znhd-phone-scroll {
+    flex: 1 1 auto;
+    min-height: 0; /* 硬性：缺了它滚动区被内容撑高、overflowY 永不触发（脚本端同坑） */
+    overflow-y: auto;
+    scrollbar-gutter: stable;
+    padding: 12px 12px 8px;
+    box-sizing: border-box;
+}
+
+.znhd-chat-empty {
+    margin-top: 30vh;
+    text-align: center;
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.35);
+    padding: 0 24px;
+    line-height: 1.7;
+}
+
+/* 细美化滚动条（微信风格） */
+.znhd-phone-scroll::-webkit-scrollbar {
+    width: 6px;
+}
+
+.znhd-phone-scroll::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.14);
+    border-radius: 3px;
+}
+
+.znhd-phone-scroll::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+/* 时间分隔条（间隔 >5 分钟一组共用一条，与脚本端第三栏同一规则） */
+.znhd-chat-time {
+    text-align: center;
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.35);
+    margin: 10px 0 6px;
+}
+
+/* ===== 气泡 ===== */
+.znhd-chat-msg {
+    display: flex;
+    gap: 8px;
+    margin: 6px 0;
+    align-items: flex-start;
+}
+
+/* 方向用 flex 方向表达（与脚本端 ChatBubble 同一设计：头像位置与贴边共用一份代码） */
+.znhd-chat-msg[data-side='out'] {
+    flex-direction: row-reverse;
+}
+
+.znhd-chat-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 600;
+    color: #fff;
+}
+
+.znhd-chat-bubble {
+    max-width: 100%;
+    padding: 8px 12px;
+    border-radius: 10px;
+    font-size: 15px;
+    line-height: 1.55;
+    word-break: break-word;
+    white-space: pre-wrap;
+}
+
+/* 他人消息：灰底靠左；我方消息：微信绿靠右（圆角切角与微信一致） */
+.znhd-chat-msg[data-side='in'] .znhd-chat-bubble {
+    background: #2f2f2f;
+    color: rgba(255, 255, 255, 0.92);
+    border-top-left-radius: 4px;
+}
+
+.znhd-chat-msg[data-side='out'] .znhd-chat-bubble {
+    background: #07c160;
+    color: #fff;
+    border-top-right-radius: 4px;
+}
+
+/* 图片气泡：去内边距（脚本端 bare 同款），图按自身尺寸完整显示 */
+.znhd-chat-bubble-img {
+    padding: 4px;
+}
+
+.znhd-chat-img {
+    display: block;
+    max-width: min(260px, 62vw);
+    max-height: 360px;
+    width: auto;
+    height: auto;
+    border-radius: 8px;
+}
+
+/* 文件气泡（v26.10.14-v6）：图标 + 文件名 + 大小 + 下载；比图片气泡略窄，不留白 */
+.znhd-chat-bubble-file {
+    padding: 8px 10px;
+}
+
+.znhd-chat-file {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    max-width: min(260px, 62vw);
+}
+
+.znhd-chat-file-icon {
+    flex: 0 0 auto;
+    display: inline-flex;
+    width: 32px;
+    height: 32px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    background: rgba(0, 0, 0, 0.18);
+    color: inherit;
+}
+
+.znhd-chat-file-main {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.znhd-chat-file-name {
+    font-size: 13px;
+    font-weight: 500;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.znhd-chat-file-size {
+    font-size: 11px;
+    opacity: 0.75;
+    margin-top: 1px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.znhd-chat-file-dl {
+    flex: 0 0 auto;
+    font-size: 12px;
+    color: inherit;
+    text-decoration: underline;
+    opacity: 0.9;
+}
+
+/* 收到文本的「复制」小按钮 */
+.znhd-chat-copy {
+    display: block;
+    margin-top: 2px;
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: rgba(255, 255, 255, 0.4);
+    font-size: 11px;
+    cursor: pointer;
+}
+
+.znhd-chat-meta {
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.35);
+    margin-top: 2px;
+}
+
+/* ===== 底部输入区 ===== */
+.znhd-phone-composer {
+    flex: 0 0 auto;
+    background: #262626;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 8px 10px calc(8px + env(safe-area-inset-bottom, 0px));
+}
+
+/* ===== 在线表情面板（v26.10.13-v3）：内嵌在输入区里、工具栏上方，微信式「点按钮展开、再点收起」=====
+   数据层 web/src/lib/emojiPack.ts（8 个合集清单直连 cdn.klyang.com，CORS 实测可用）；
+   点一张表情 = 直接把这张图发到电脑（与脚本端 TransferDeviceChat.sendEmojiNow 同语义，
+   跳过 canvas 压缩——表情本来就是 2–6KB 的 webp，原样发更小也更保真）。 */
+.znhd-emoji-panel {
+    margin-bottom: 6px;
+}
+
+.znhd-emoji-chips {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-bottom: 6px;
+}
+
+.znhd-emoji-chips-scroll {
+    flex: 1 1 auto;
+    display: flex;
+    gap: 4px;
+    overflow-x: auto;
+    padding-bottom: 2px;
+    scrollbar-width: none;
+}
+
+.znhd-emoji-chips-scroll::-webkit-scrollbar {
+    display: none;
+}
+
+.znhd-emoji-chip {
+    flex: 0 0 auto;
+    height: 22px;
+    padding: 0 8px;
+    border: none;
+    border-radius: 11px;
+    font-size: 12px;
+    cursor: pointer;
+    background: rgba(255, 255, 255, 0.06);
+    color: rgba(255, 255, 255, 0.75);
+}
+
+.znhd-emoji-chip[aria-pressed='true'] {
+    background: rgba(7, 193, 96, 0.18);
+    color: #07c160;
+}
+
+.znhd-emoji-refresh {
+    flex: 0 0 auto;
+    height: 22px;
+    padding: 0 4px;
+    border: none;
+    background: transparent;
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.45);
+    cursor: pointer;
+}
+
+.znhd-emoji-refresh:disabled {
+    cursor: default;
+    opacity: 0.5;
+}
+
+/* 8 列流体网格：格子用 aspect-ratio 1 自适应屏宽（390px 手机上每格约 42px） */
+.znhd-emoji-grid {
+    display: grid;
+    grid-template-columns: repeat(8, minmax(0, 1fr));
+    gap: 2px;
+    max-height: 200px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+}
+
+.znhd-emoji-item {
+    aspect-ratio: 1;
+    width: 100%;
+    padding: 0;
+    border: none;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.05);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+.znhd-emoji-item img {
+    max-width: 86%;
+    max-height: 86%;
+    display: block;
+}
+
+.znhd-emoji-item[aria-busy='true'] {
+    opacity: 0.45;
+}
+
+.znhd-emoji-tip {
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.35);
+    margin-top: 6px;
+}
+
+.znhd-emoji-state {
+    padding: 22px 0;
+    text-align: center;
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.45);
+}
+
+.znhd-emoji-retry {
+    margin-top: 8px;
+    height: 24px;
+    padding: 0 12px;
+    border: none;
+    border-radius: 4px;
+    font-size: 12px;
+    cursor: pointer;
+    background: rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.85);
+}
+
+.znhd-composer-tools {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 4px;
+}
+
+.znhd-composer-row {
+    display: flex;
+    gap: 8px;
+    align-items: flex-end;
+}
+
+.znhd-composer-row .ant-input {
+    font-size: 15px;
+}

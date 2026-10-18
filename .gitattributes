@@ -1,0 +1,17 @@
+# 换行策略（v26.10.09 起）
+#
+# 背景：本仓库提交的构建产物（dist/znhd.user.js、relay-server/public/**）一律是 LF。
+# Windows 版 Git 默认 core.autocrlf=true（本机两处配置都是 true：
+# C:/Program Files/Git/etc/gitconfig 与 C:/Users/liuyz/.gitconfig），而仓库原先没有本文件去覆盖它，
+# 于是 web/index.html 会被检成 CRLF。Vite 构建**沿用源模板的换行**，并在注入 script/link 的位置
+# 留下一个多余的 CR，产物因此变成「混合换行且含一个孤立 CR」——而 git 的 autocrlf 自动模式
+# 一旦遇到孤立 CR 就**整体放弃规范化**，把文件原样入库，和 HEAD 的 LF blob 差一个字节。
+# 后果：本机每次 build:web 都会误报「产物漂移」，若顺手提交则 CI 的产物漂移检查必红。
+#
+# 实测（2026-10-09，本机 Windows）：
+#   源 CRLF → 产物 1105B / 16 个 CR → 入库 blob bceced12… ≠ HEAD
+#   源 LF   → 产物 1089B /  0 个 CR → 入库 blob 88da5610… = HEAD（与 CI 完全一致）
+#
+# 故只需把这个源模板钉成 LF，即可根治（不改构建流程、不依赖各机器的 autocrlf 设置）。
+# 若日后 web/ 下新增 HTML 入口，请照此补一行。
+web/index.html text eol=lf

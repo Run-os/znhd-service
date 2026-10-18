@@ -1,0 +1,42 @@
+{
+  // See https://go.microsoft.com/fwlink/?LinkId=733558
+  // for the documentation about the tasks.json format
+  // 模板用 yarn；本机/CI 环境只有 npm，故命令统一改为 npm run，脚本名与模板一致。
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "type": "shell",
+      "command": "npm run start",
+      "group": "build",
+      "problemMatcher": [],
+      "label": "npm:start"
+    },
+    {
+      "type": "shell",
+      "command": "npm run dev",
+      "group": "build",
+      "problemMatcher": [],
+      "label": "npm:dev"
+    },
+    {
+      "type": "shell",
+      "label": "start & dev",
+      "group": "build",
+      "dependsOn": ["npm:start", "npm:dev"]
+    },
+    {
+      "type": "shell",
+      "command": "npm run build",
+      "group": "build",
+      "problemMatcher": [],
+      "label": "npm:build"
+    },
+    {
+      "type": "shell",
+      "command": "npm run typecheck",
+      "group": "build",
+      "problemMatcher": [],
+      "label": "npm:typecheck"
+    }
+  ]
+}
