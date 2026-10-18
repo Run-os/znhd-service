@@ -85,6 +85,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKey, true));
     <Teleport :to="overlayTarget">
         <div
             v-if="open"
+            data-image-preview="1"
             class="fixed inset-0 flex flex-col bg-black/80"
             :style="{ zIndex: props.zIndex }"
             @click.self="emit('update:open', false)">

@@ -15,6 +15,8 @@ export function printA4Image(src: string, title: string): void {
     const run = (natural?: { width: number; height: number }) => {
         const node = buildA4ImageNode(src, title, natural);
         const frame = document.createElement('iframe');
+        // id 与 React 版 react-to-print 保持一致：`scripts/smoke/phone-page.js` 靠它观察打印文档
+        frame.id = 'printWindow';
         frame.setAttribute('aria-hidden', 'true');
         // 宽高为 0 但**不能 display:none**（部分浏览器会跳过不可见 iframe 的打印任务）
         frame.style.cssText =

@@ -18,14 +18,14 @@ body {
 }
 
 /* ===== 整体骨架：头部 / 消息滚动区 / 底部输入区（flex 吸底，与脚本端第三栏同一契约）=====
-   ⚠️ v26.10.13-v3：shell 必须 **fixed 贴视口**，不能再 `height:100%`——
-   实测根因：`main.tsx` 里 antd `<AntApp>` 会渲染一个 `div.ant-app` 包裹层
-   （cssinjs 类名如 `css-oc1rc0`），它自身**没有高度**；`height:100%` 对
-   auto 高度的父级按 CSS 规范解析为 auto ⇒ 整页退化成**内容高度**，
-   输入区悬在视口中间、下面一大条黑洞（800px 视口下 shell 只有 497px，
-   即用户截图里「输入框不在页面最下方」）。
+   ⚠️ v26.10.13-v3 的结论（v26.10.18-v7 换框架后仍成立，**别改回 height:100%**）：
+   shell 必须 **fixed 贴视口**。当年的实测根因是 antd `<AntApp>` 会渲染一个
+   `div.ant-app` 包裹层且自身没有高度，`height:100%` 对 auto 高度的父级按规范
+   解析为 auto ⇒ 整页退化成内容高度，输入区悬在视口中间（800px 视口下 shell 只有
+   497px）。Vue 版虽然已经没有那层包裹，但「不依赖祖先高度链」这条更稳，也顺便
+   兼容工具把页面塞进任意容器的情况，所以保留 fixed 方案。
    `position:fixed` + left/right/top/height 不依赖任何祖先的高度链，
-   天然钉在视口上；`--znhd-shell-top` / `--znhd-shell-h` 由 App.tsx 的
+   天然钉在视口上；`--znhd-shell-top` / `--znhd-shell-h` 由 `lib/viewport.ts` 的
    visualViewport 同步写入（虚拟键盘弹出、地址栏收放时改按**视觉视口**，
    输入区始终贴最底；未写入时回退 100dvh，老 WebView 无 visualViewport 也正常）。 */
 .znhd-phone-chat {
@@ -213,6 +213,11 @@ body {
     width: auto;
     height: auto;
     border-radius: 8px;
+}
+
+/* 电脑发来的图可点开预览（v26.10.18-v7 起走共用 ImagePreview，不再是 antd 的 Image） */
+.znhd-chat-img-clickable {
+    cursor: zoom-in;
 }
 
 /* 文件气泡（v26.10.14-v6）：图标 + 文件名 + 大小 + 下载；比图片气泡略窄，不留白 */
@@ -429,6 +434,29 @@ body {
     align-items: flex-end;
 }
 
-.znhd-composer-row .ant-input {
+/* 输入框（v26.10.18-v7）：由 antd `Input.TextArea`（`.ant-input`）换成原生 textarea，
+   自增高（40px 起、96px 封顶）由 App.vue 的 autoGrow 写 style.height 完成。 */
+.znhd-composer-input {
+    flex: 1 1 auto;
+    min-height: 40px;
+    max-height: 96px;
+    box-sizing: border-box;
+    padding: 8px 12px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 8px;
+    background: #1e1e1e;
+    color: rgba(255, 255, 255, 0.9);
+    font-family: inherit;
     font-size: 15px;
+    line-height: 22px;
+    resize: none;
+    outline: none;
+}
+
+.znhd-composer-input::placeholder {
+    color: rgba(255, 255, 255, 0.32);
+}
+
+.znhd-composer-input:focus {
+    border-color: #07c160;
 }

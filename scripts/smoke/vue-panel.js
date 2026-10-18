@@ -1,5 +1,5 @@
 /**
- * Vue 版面板的端到端冒烟（迁移期专用，产物 = dist/znhd.vue.user.js）。
+ * 脚本端（Vue 版）的端到端冒烟，产物 = dist/znhd.user.js（v26.10.18-v7 起这是唯一产物，React 版已删）。
  *
  * 与 React 版冒烟（scripts/smoke/run.js）分开的原因：这一套只验证迁移期的三件事——
  *  ① 影子树挂载成功、面板文本可读；
@@ -15,7 +15,7 @@ const os = require('node:os');
 const puppeteer = require('puppeteer');
 
 const ROOT = path.resolve(__dirname, '../..');
-const USERSCRIPT = path.join(ROOT, 'dist/znhd.vue.user.js');
+const USERSCRIPT = path.join(ROOT, 'dist/znhd.user.js');
 const VUE = path.join(ROOT, 'node_modules/vue/dist/vue.global.prod.js');
 
 /**
@@ -128,7 +128,7 @@ const HTML = `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8">
   <img src="/img/photo-b.jpg" alt="photo-b.jpg" width="240" height="160">
   <img src="/img/tiny.jpg" alt="tiny.jpg" width="60" height="60">
   <img src="/img/icon-set.svg" alt="icon-set.svg" width="24" height="24">
-</div><script src="/znhd.vue.user.js"></script></body></html>`;
+</div><script src="/znhd.user.js"></script></body></html>`;
 
 function serve() {
     const server = http.createServer((req, res) => {
@@ -155,7 +155,7 @@ function serve() {
             res.end(buf);
             return;
         }
-        if (req.url === '/znhd.vue.user.js') {
+        if (req.url === '/znhd.user.js') {
             res.writeHead(200, { 'content-type': 'application/javascript' });
             res.end(fs.readFileSync(USERSCRIPT));
             return;

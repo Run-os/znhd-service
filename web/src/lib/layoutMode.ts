@@ -1,6 +1,6 @@
 /**
- * 布局模式检测（v26.10.13-v4）：决定「传输助手」网页是**全屏聊天窗**（手机）
- * 还是**屏幕居中的弹窗**（桌面）。
+ * 布局模式检测（v26.10.13-v4；v26.10.18-v7 由 React hook 改为 Vue composable）：
+ * 决定「传输助手」网页是**全屏聊天窗**（手机）还是**屏幕居中的弹窗**（桌面）。
  *
  * ── 需求 ───────────────────────────────────────────────────────────────────
  * 检测传输助手网页为**桌面版**时，不用全屏聊天窗口，改为类似弹窗的形式放在屏幕
@@ -18,7 +18,7 @@
  *    一拖窄就整页从弹窗跳成全屏反而惊吓；反之手机横屏（UA 仍含 Mobile）保持全屏。
  */
 
-import { useEffect, useState } from 'react';
+import { onBeforeUnmount, onMounted, ref, type Ref } from 'vue';
 
 export type LayoutMode = 'phone' | 'desktop';
 
@@ -43,19 +43,22 @@ export function detectLayoutMode(): LayoutMode {
 
 /**
  * 带响应式的 layout mode：窗口尺寸变化 / 横竖屏切换 / 指针能力变化时重算，
- * **只有 mode 真变了才 setState**（resize 每秒可触发几十次，无脑 setState 会抖）。
+ * **只有 mode 真变了才赋值**（resize 每秒可触发几十次，无脑赋值会抖）。
  */
-export function useLayoutMode(): LayoutMode {
-    // useState 的惰性初始化：只在首次渲染跑一次 detect，不随每次 render 重跑
-    const [mode, setMode] = useState<LayoutMode>(detectLayoutMode);
-    useEffect(() => {
-        const recalc = () => {
-            const next = detectLayoutMode();
-            setMode((prev) => (prev === next ? prev : next));
-        };
+export function useLayoutMode(): Ref<LayoutMode> {
+    // ref 的初始值用惰性求值语义：只在 setup 时跑一次 detect
+    const mode = ref<LayoutMode>(detectLayoutMode());
+    /** 媒体查询对象要在 unmount 时摘监听，放 setup 作用域（不要在 onMounted 里再注册 onBeforeUnmount） */
+    let mq: MediaQueryList | null = null;
+
+    const recalc = () => {
+        const next = detectLayoutMode();
+        if (mode.value !== next) mode.value = next;
+    };
+
+    onMounted(() => {
         window.addEventListener('resize', recalc);
         window.addEventListener('orientationchange', recalc);
-        let mq: MediaQueryList | null = null;
         try {
             mq = window.matchMedia ? window.matchMedia('(pointer: coarse)') : null;
         } catch {
@@ -63,11 +66,14 @@ export function useLayoutMode(): LayoutMode {
         }
         // addEventListener 的 change 事件老 WebView 没有，退化成不管它（检测仍会在下次 resize 时重算）
         if (mq && mq.addEventListener) mq.addEventListener('change', recalc);
-        return () => {
-            window.removeEventListener('resize', recalc);
-            window.removeEventListener('orientationchange', recalc);
-            if (mq && mq.removeEventListener) mq.removeEventListener('change', recalc);
-        };
-    }, [setMode]);
+    });
+
+    onBeforeUnmount(() => {
+        window.removeEventListener('resize', recalc);
+        window.removeEventListener('orientationchange', recalc);
+        if (mq && mq.removeEventListener) mq.removeEventListener('change', recalc);
+        mq = null;
+    });
+
     return mode;
 }

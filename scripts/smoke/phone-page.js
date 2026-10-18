@@ -357,7 +357,7 @@ async function main() {
         );
         check('整页微信暗色底（#1E1E1E，对齐脚本端第三栏）', skeleton.bg === 'rgb(30, 30, 30)');
 
-        // ①-B 输入区吸底（v26.10.13-v3 回归判据）：antd <AntApp> 的 div.ant-app 包裹层
+        // ①-B 输入区吸底（v26.10.13-v3 回归判据；v26.10.18-v7 换 Vue 后那层包裹已不存在，判据仍有效）：当年 antd <AntApp> 的 div.ant-app 包裹层
         //     没有高度，height:100% 会断链 ⇒ 整页内容高度、输入区悬在视口中间。
         const pin = await page.evaluate(() => {
             const chatEl = document.querySelector('.znhd-phone-chat');
@@ -562,7 +562,7 @@ async function main() {
         });
         check('电脑端 → 手机端：中继投递接口可用（/phone/send 返回 ok）', sent.ok);
 
-        await page.waitForSelector('.znhd-chat-msg[data-side="in"] .ant-image img', { timeout: 25000 });
+        await page.waitForSelector('.znhd-chat-msg[data-side="in"] .znhd-chat-img', { timeout: 25000 });
         const inBubble = await page.evaluate(() => {
             const msg = document.querySelector('.znhd-chat-msg[data-side="in"]');
             const bub = msg ? msg.querySelector('.znhd-chat-bubble') : null;
@@ -573,37 +573,43 @@ async function main() {
             '收到的图片进左侧气泡：row（头像在左）+ 微信灰 #2F2F2F',
             inBubble.dir === 'row' && inBubble.bg === 'rgb(47, 47, 47)'
         );
+        // 留档：一条表情 + 一条上传图 + 一条文本 + 一条收到的图都在屏上
+        await page.screenshot({ path: path.join(os.tmpdir(), 'znhd-phone-chat.png') });
 
-        // ⑤ 点收到的图 → antd 预览（shared/preview 集成链路：宿主 / 打印按钮 / 遮罩压制）
+        // ⑤ 点收到的图 → 共用 ImagePreview（v26.10.18-v7 起取代 antd 预览 + shared/preview 那套注入）
         await page.evaluate(() => {
-            const img = document.querySelector('.znhd-chat-msg[data-side="in"] .ant-image img');
+            const img = document.querySelector('.znhd-chat-msg[data-side="in"] .znhd-chat-img');
             if (img) img.dispatchEvent(new MouseEvent('click', { bubbles: true }));
         });
-        await page.waitForSelector('.ant-image-preview', { timeout: 15000 });
+        await page.waitForSelector('[data-image-preview]', { timeout: 15000 });
         await sleep(500);
 
         const previewInfo = await page.evaluate(() => {
-            const root = document.querySelector('.ant-image-preview');
-            const host = document.getElementById('__znhd_preview_host__');
-            const actions = root ? root.querySelector('.ant-image-preview-actions') : null;
-            const printBtn = root ? root.querySelector('button[aria-label="print"]') : null;
-            const hidden = (sel) =>
-                Array.from(document.querySelectorAll(sel)).every((el) => {
-                    const cs = getComputedStyle(el);
-                    return cs.display === 'none' || cs.visibility === 'hidden';
-                });
+            const root = document.querySelector('[data-image-preview]');
+            const printBtn = root ? root.querySelector('button[aria-label="打印"]') : null;
+            const cs = root ? getComputedStyle(root) : null;
+            const r = root ? root.getBoundingClientRect() : null;
             return {
-                mountedInSharedHost: !!(root && host && host.contains(root)),
-                toolbarHasPrint: !!(actions && printBtn && actions.contains(printBtn)),
-                masksHidden: hidden('.ant-modal-mask') && hidden('.ant-drawer-mask'),
+                // v26.10.18-v7：不再是 antd 预览（当年必须挂到共享宿主 #__znhd_preview_host__，
+                // 否则会被 antd 的 portal 规则挪到 body 丢掉集成），而是共用组件 ImagePreview ——
+                // 独立页面没有影子树，直接 Teleport 到 body 就是正确位置。
+                inBody: !!(root && root.parentElement === document.body),
+                toolbarHasPrint: !!printBtn,
+                coversViewport: !!(
+                    cs &&
+                    cs.position === 'fixed' &&
+                    r &&
+                    r.width >= window.innerWidth - 1 &&
+                    r.height >= window.innerHeight - 1
+                ),
             };
         });
-        check('预览浮层挂在共享宿主 div #__znhd_preview_host__ 里（不是 body）', previewInfo.mountedInSharedHost);
-        check('预览工具栏里有共享方式追加的「打印」按钮', previewInfo.toolbarHasPrint);
-        check('预览期间下层遮罩被压掉（与脚本端同一份规则）', previewInfo.masksHidden);
+        check('预览层直接挂在 body 上（共用 ImagePreview，独立页面无需共享宿主）', previewInfo.inBody);
+        check('预览工具栏里有「打印」按钮（A4 自适应）', previewInfo.toolbarHasPrint);
+        check('预览层铺满视口（position:fixed 且宽高=视口）', previewInfo.coversViewport);
 
-        // ⑥ 点打印 → react-to-print 建出 id=printWindow 的 iframe，且版式来自共享的 PRINT_PAGE_STYLE
-        // ⚠️ 时序：react-to-print 是「先插 iframe、load 时才写入内容」，必须监听 iframe 自己的 load 事件。
+        // ⑥ 点打印 → 共用的 printA4Image 建出 id=printWindow 的 iframe，版式来自共享的 PRINT_PAGE_STYLE
+        // ⚠️ 时序：实现是「先插 iframe、再写文档」，必须监听 iframe 自己的 load 事件。
         await page.evaluate(() => {
             window.__printDoc = null;
             const obs = new MutationObserver((muts) => {
@@ -636,7 +642,7 @@ async function main() {
             obs.observe(document.documentElement, { childList: true, subtree: true });
         });
         await page.evaluate(() => {
-            const b = document.querySelector('.ant-image-preview button[aria-label="print"]');
+            const b = document.querySelector('[data-image-preview] button[aria-label="打印"]');
             if (b) b.click();
         });
         try {
@@ -695,6 +701,7 @@ async function main() {
             '桌面版：弹窗不占满视口（宽高均小于视口）',
             win.w < win.vw && win.h < win.vh
         );
+        await page.screenshot({ path: path.join(os.tmpdir(), 'znhd-phone-desktop.png') });
 
         // ===== P4 降级路径（v26.10.15-v2）=====
         // 新手机页先试 POST /phone/poll；**老中继没有该端点 ⇒ 404 ⇒ 必须自动降级**回

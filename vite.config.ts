@@ -6,9 +6,9 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath, URL } from 'node:url';
 
 /**
- * Vue 版构建（迁移中，产物名 `znhd.vue.user.js`，暂不覆盖线上 React 产物）。
+ * 脚本端构建（v26.10.18-v7 起为**唯一**构建：React 19 + antd v6 + webpack 已删除）。
  *
- * 与 webpack 版的关键差异：
+ * 与旧 webpack 版的关键差异：
  *  · Vue3 走 CDN + UMD 全局 `Vue`，**不打包进产物**（externalGlobals 自动补 `@require`）；
  *  · 依赖清单里明确禁止 external 的包（reka-ui / tailwind-merge / cva / floating-ui）全部打进 bundle；
  *  · Tailwind CSS 以 `?inline` 字符串注入 shadowRoot（见 src-vue/main.ts），不走插件默认的
@@ -62,7 +62,8 @@ export default defineConfig({
                 'run-at': 'document-end',
             },
             build: {
-                fileName: 'znhd.vue.user.js',
+                // 阶段 5 切换完成：产物名回到正式名（油猴 updateURL/downloadURL 指向的就是它）
+                fileName: 'znhd.user.js',
                 // Vue 只在运行时用 CDN 那份：产物里保留 import 形式，由下面 externalGlobals
                 // 映射到全局 `Vue` 并自动把 CDN 地址写进 @require。
                 externalGlobals: {
@@ -83,8 +84,7 @@ export default defineConfig({
         // CSS 单独压缩：Tailwind 产生的几千条工具类排成多行没有阅读价值，只按字符串注入。
         cssMinify: true,
         sourcemap: false,
-        // ⚠️ 必须 false：dist/ 里同时躺着提交进仓库的 React 版产物 znhd.user.js，
-        // 默认的 emptyOutDir 会在每次 Vue 构建时把它删掉（实测踩过）。
-        emptyOutDir: false,
+        // dist/ 现在只有这一个产物（构建会把整个目录清掉再写）。
+        emptyOutDir: true,
     },
 });

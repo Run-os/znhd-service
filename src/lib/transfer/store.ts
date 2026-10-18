@@ -101,7 +101,7 @@ function subscribe(cb: () => void): () => void {
 
 /**
  * 订阅入口（框架无关，v26.10.18-v5）：
- *   · React 侧包装见 `@/lib/transfer/reactStore` 的 `useTransferStore`；
+ *   · React 侧包装（useTransferStore / reactStore.ts）已随 React+antd 迁移删除（v26.10.18-v7）；
  *   · Vue 侧包装见 `@vue/composables/useTransferStore`。
  * 之所以把 `useSyncExternalStore` 从本文件挪走：Vue 版产物会把 store 打进去，
  * 一旦本文件 import react，Vue 侧就必须把 react 一起打包（约 140KB，且违背迁移约束）。

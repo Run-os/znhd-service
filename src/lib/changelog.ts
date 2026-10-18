@@ -5,7 +5,7 @@
  *
  * 变化：原实现自己拼 DOM 弹窗（fixed 全屏 overlay + 白盒 + × + ESC + z-index 拉满，为对抗
  * 税务页的 CSS/transform 污染）。现在统一用 antd（见 `ui/ChangelogModal.tsx`）：
- * 弹窗挂在 `documentElement` 下、主题与其余弹窗一致，隔离问题由 `ui/uiReset.ts` 统一兜。
+ * v26.10.18-v7 起 React+antd 已删，此桥接说明仅存档；现由 Vue 版 `panel/changelog` 弹窗（ShadowDOM 隔离）替代。
  * 本文件只保留**纯逻辑**（解析 / 拉取 / 会话缓存），无任何 DOM 操作。
  */
 

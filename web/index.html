@@ -5,7 +5,8 @@
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
         <meta name="color-scheme" content="dark" />
         <title>传输助手</title>
-        <!-- 内联首屏占位：React+antd 挂载前也能立刻看到反馈（避免白屏等待） -->
+        <!-- 内联首屏占位：Vue 挂载前也能立刻看到反馈（避免白屏等待）。
+             v26.10.18-v7：框架从 React+antd 换成 Vue 3，占位逻辑不变（仍是挂载后由 main.ts 摘掉 #boot）。 -->
         <style>
             html,
             body {
@@ -39,6 +40,6 @@
     <body>
         <div id="boot"><i></i><span>正在加载…</span></div>
         <div id="root"></div>
-        <script type="module" src="/src/main.tsx"></script>
+        <script type="module" src="/src/main.ts"></script>
     </body>
 </html>

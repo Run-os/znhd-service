@@ -1,28 +1,21 @@
 /**
- * 全局消息提示桥。
+ * 全局消息提示桥（v26.10.18-v7 重写）。
  *
- * 背景：v26.10.06-v9 起 UI 从 CAT_UI 换成 React + Ant Design，`CAT_UI.Message` 不复存在。
- * 但 `storage.ts` 这类**非组件**模块也要能弹提示，而 antd 的静态 `message.error()`：
- *   · 不继承 ConfigProvider 的主题；
- *   · v6 官方推荐改用 `App.useApp()`（能拿到 context 内的实例）。
- * 故这里保存一份由根组件注入的 message 实例，模块级代码统一走 `notify.*`。
+ * 历史：v26.10.06-v9 起这里保存一份由 React 根组件注入的 antd `message` 实例，
+ * 供 `storage.ts` 这类**非组件**模块弹提示（antd 静态方法不继承 ConfigProvider 主题，
+ * v6 官方推荐改用 `App.useApp()` 拿 context 内的实例）。
+ *
+ * React + antd 已随 Vue 迁移删除 ⇒ 改为直接委托 Vue 侧的 Sonner 封装
+ * （`src-vue/lib/toast.ts`）。调用时机早于 App 挂载也没关系：vue-sonner 的
+ * toast 状态是模块级的，`<Toaster>` 挂上后会补渲染。动态 import 是为了
+ * 不让业务层在模块加载期就拉起 UI 依赖（保持 src/lib 的装载顺序干净）。
  */
-
-import type { MessageInstance } from 'antd/es/message/interface';
-
-let messageApi: MessageInstance | null = null;
-
-/** 由根组件注入/清除 antd message 实例 */
-export function setMessageApi(api: MessageInstance | null): void {
-    messageApi = api;
-}
 
 type Level = 'success' | 'error' | 'warning' | 'info';
 
-/** 统一提示入口；根组件尚未挂载时静默丢弃（启动早期信息走 addLog，不阻塞流程） */
+/** 统一提示入口；与 Vue 侧 `lib/toast.ts` 同一套底层（vue-sonner） */
 function toast(level: Level, content: string): void {
-    if (!messageApi) return;
-    messageApi[level](content);
+    void import('@vue/lib/toast').then(({ toast: t }) => t[level](content));
 }
 
 export const notify = {

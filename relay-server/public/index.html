@@ -5,10 +5,39 @@
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
         <meta name="color-scheme" content="dark" />
         <title>传输助手</title>
-        <!-- 内联首屏占位：React+antd 挂载前也能立刻看到反馈（避免白屏等待） -->
-        <style>html,body{background:#1e1e1e;margin:0}#boot{color:#07c160;justify-content:center;align-items:center;gap:8px;min-height:100vh;font:14px -apple-system,BlinkMacSystemFont,PingFang SC,sans-serif;display:flex}#boot i{border:2px solid #2f4a3e;border-top-color:#07c160;border-radius:50%;width:14px;height:14px;animation:.8s linear infinite bootSpin}@keyframes bootSpin{to{transform:rotate(360deg)}}</style>
-      <script type="module" crossorigin src="/assets/index-D3pfDGtW.js"></script>
-      <link rel="stylesheet" crossorigin href="/assets/index-mF4vb7bC.css">
+        <!-- 内联首屏占位：Vue 挂载前也能立刻看到反馈（避免白屏等待）。
+             v26.10.18-v7：框架从 React+antd 换成 Vue 3，占位逻辑不变（仍是挂载后由 main.ts 摘掉 #boot）。 -->
+        <style>
+            html,
+            body {
+                margin: 0;
+                background: #1e1e1e;
+            }
+            #boot {
+                display: flex;
+                min-height: 100vh;
+                align-items: center;
+                justify-content: center;
+                gap: 8px;
+                color: #07c160;
+                font: 14px -apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif;
+            }
+            #boot i {
+                width: 14px;
+                height: 14px;
+                border: 2px solid #2f4a3e;
+                border-top-color: #07c160;
+                border-radius: 50%;
+                animation: bootSpin 0.8s linear infinite;
+            }
+            @keyframes bootSpin {
+                to {
+                    transform: rotate(360deg);
+                }
+            }
+        </style>
+      <script type="module" crossorigin src="/assets/index-CT6fDNe2.js"></script>
+      <link rel="stylesheet" crossorigin href="/assets/index-CgIMby4N.css">
     </head>
     <body>
         <div id="boot"><i></i><span>正在加载…</span></div>

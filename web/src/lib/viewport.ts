@@ -1,5 +1,6 @@
 /**
- * 视口同步（v26.10.13-v3）：让「fixed 贴视口」的整页骨架跟随**视觉视口**。
+ * 视口同步（v26.10.13-v3；v26.10.18-v7 由 React hook 改为 Vue composable）：
+ * 让「fixed 贴视口」的整页骨架跟随**视觉视口**。
  *
  * 为什么需要它：`.znhd-phone-chat` 是 `position:fixed` + `height:100dvh`。
  * 桌面/无键盘时 100dvh 就够；但移动端有两种「布局视口没缩、视觉视口缩了」的场景：
@@ -15,14 +16,16 @@
  *    直接删变量回到 100dvh（捏合时 fixed 壳盖住布局视口即可，不影响缩放查看）。
  * 2. **只在数值变化时写样式**：`scroll` 事件在惯性滑动中每秒几十次，
  *    每次都 setProperty 会引发无谓重排。
- * 3. 老 WebView 没有 `visualViewport`：整个 hook 空转，CSS 回退 100dvh。
+ * 3. 老 WebView 没有 `visualViewport`：整个 composable 空转，CSS 回退 100dvh。
  */
 
-import { useEffect } from 'react';
+import { onBeforeUnmount, onMounted } from 'vue';
 
 /** 把 shell 的 top/height 同步到视觉视口（变化才写；见文件头约束 2） */
 export function useShellViewport(): void {
-    useEffect(() => {
+    let cleanup: (() => void) | null = null;
+
+    onMounted(() => {
         const vv = window.visualViewport;
         if (!vv) return;
         const root = document.documentElement;
@@ -58,12 +61,18 @@ export function useShellViewport(): void {
         vv.addEventListener('resize', sync);
         vv.addEventListener('scroll', sync);
         window.addEventListener('resize', sync);
-        return () => {
+
+        cleanup = () => {
             vv.removeEventListener('resize', sync);
             vv.removeEventListener('scroll', sync);
             window.removeEventListener('resize', sync);
             root.style.removeProperty('--znhd-shell-h');
             root.style.removeProperty('--znhd-shell-top');
         };
-    }, []);
+    });
+
+    onBeforeUnmount(() => {
+        cleanup?.();
+        cleanup = null;
+    });
 }
