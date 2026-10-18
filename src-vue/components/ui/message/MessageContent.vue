@@ -18,7 +18,7 @@ const props = withDefaults(defineProps<Props>(), {
     :as="as"
     :as-child="asChild"
     :class="cn(
-      'gap-2.5 group-data-[align=end]/message:*:data-slot:self-end flex w-full min-w-0 flex-col wrap-break-word',
+      'gap-2.5 group-data-[align=end]/message:*:data-slot:self-end flex w-full min-w-0 flex-col wrap-anywhere',
       props.class,
     )"
   >
