@@ -58,11 +58,13 @@ function znhdUiAlias(): Plugin {
                 return null;
             }
             if (source.startsWith('@vue/')) {
-                return this.resolve(UI_ROOT + '\\' + source.slice('@vue/'.length), importer, { skipSelf: true });
+                // ⚠️ 拼接必须用 '/'（c0749c9 曾写成 '\\' ⇒ Linux CI 上拼出含反斜杠的路径，
+                // Rollup 报 "Failed to resolve import @vue/lib/shadow"；'/' 在 Windows 一样有效）
+                return this.resolve(UI_ROOT + '/' + source.slice('@vue/'.length), importer, { skipSelf: true });
             }
             // v26.10.18-v9：共享组件里的 '@/lib/...' 也要能解析（v8 漏了这条，build:web 一直起不来）
             if (source.startsWith('@/')) {
-                return this.resolve(SRC_ROOT + '\\' + source.slice(2), importer, { skipSelf: true });
+                return this.resolve(SRC_ROOT + '/' + source.slice(2), importer, { skipSelf: true });
             }
             return null;
         },
