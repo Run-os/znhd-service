@@ -127,6 +127,111 @@ function serve() {
 
     await page.screenshot({ path: path.join(os.tmpdir(), 'znhd-vue-dialog.png') });
 
+    // ---------- 阶段 2：日志 / 常用语 / 更新日志 ----------
+    const closeTopLayer = async () => {
+        await page.keyboard.press('Escape');
+        await new Promise((r) => setTimeout(r, 250));
+    };
+
+    const clickPanelText = async (text) => {
+        await page.evaluate((t) => {
+            const sr = document.getElementById('__znhd_panel_host__').shadowRoot;
+            const el = [...sr.querySelectorAll('button, a, [role="button"]')].find(
+                (b) => b.textContent.replace(/\s+/g, '').includes(t)
+            );
+            if (el) el.click();
+        }, text);
+        await new Promise((r) => setTimeout(r, 500));
+    };
+
+    await closeTopLayer(); // 关掉设置弹窗
+
+    // 日志弹窗：标题 + 暗色终端区 + 至少一行日志（启动时写了 3 条）
+    await clickPanelText('查看日志');
+    const logDialog = await page.evaluate(() => {
+        const sr = document.getElementById('__znhd_panel_host__').shadowRoot;
+        const el = sr.querySelector('[role="dialog"]');
+        if (!el) return { found: false };
+        const terminal = el.querySelector('.bg-\\[\\#0f141a\\]') || el.querySelector('[class*="0f141a"]');
+        return {
+            found: true,
+            inShadow: sr.contains(el),
+            text: el.innerText.replace(/\s+/g, ' ').trim().slice(0, 80),
+            rows: el.querySelectorAll('[class*="border-l-"]').length,
+            terminalBg: terminal ? getComputedStyle(terminal).backgroundColor : '',
+            hasSwitch: !!el.querySelector('[role="switch"]'),
+        };
+    });
+    report.checks.logDialogOk =
+        !!logDialog.found &&
+        !!logDialog.inShadow &&
+        logDialog.text.includes('运行日志') &&
+        logDialog.rows >= 3 &&
+        logDialog.terminalBg === 'rgb(15, 20, 26)' &&
+        logDialog.hasSwitch;
+    report.logDialog = logDialog;
+    await page.screenshot({ path: path.join(os.tmpdir(), 'znhd-vue-log.png') });
+
+    await closeTopLayer();
+
+    // 常用语侧边抽屉：Sheet 也在 shadowRoot 内、宽度 360、有搜索框，且没有漏到 body
+    await clickPanelText('常用语');
+    const phrasesSheet = await page.evaluate(() => {
+        const sr = document.getElementById('__znhd_panel_host__').shadowRoot;
+        const el = sr.querySelector('[role="dialog"]');
+        if (!el) return { found: false };
+        const input = el.querySelector('input');
+        const cs = getComputedStyle(el);
+        return {
+            found: true,
+            inShadow: sr.contains(el),
+            bodyHasDialog: !!document.querySelector('[role="dialog"]'),
+            text: el.innerText.replace(/\s+/g, ' ').trim().slice(0, 60),
+            width: Math.round(el.getBoundingClientRect().width),
+            background: cs.backgroundColor,
+            right: Math.round(window.innerWidth - el.getBoundingClientRect().right),
+            placeholder: input ? input.placeholder : '',
+        };
+    });
+    report.checks.phrasesSheetOk =
+        !!phrasesSheet.found &&
+        !!phrasesSheet.inShadow &&
+        !phrasesSheet.bodyHasDialog &&
+        phrasesSheet.text.includes('常用语') &&
+        phrasesSheet.width === 360 &&
+        phrasesSheet.placeholder.includes('搜索常用语');
+    report.phrasesSheet = phrasesSheet;
+    // toast（抓取失败的提示）恰好盖在 sheet 顶栏上，等它 3 秒自动消失后再截图
+    await new Promise((r) => setTimeout(r, 3400));
+    await page.screenshot({ path: path.join(os.tmpdir(), 'znhd-vue-phrases.png') });
+
+    await closeTopLayer();
+
+    // 更新日志：断言弹窗能打开且内容在影子树内（网络在冒烟环境必然失败，只验降级文案）。
+    // 点「更新日志」不关闭设置弹窗（与 React 版一致，两个 Modal 叠加），故取最后一个 dialog。
+    await clickPanelText('设置');
+    await clickPanelText('更新日志');
+    const changelog = await page.evaluate(() => {
+        const sr = document.getElementById('__znhd_panel_host__').shadowRoot;
+        const dialogs = [...sr.querySelectorAll('[role="dialog"]')];
+        const el = dialogs[dialogs.length - 1];
+        if (!el) return { found: false, count: 0 };
+        return {
+            found: true,
+            count: dialogs.length,
+            inShadow: sr.contains(el),
+            text: el.innerText.replace(/\s+/g, ' ').trim().slice(0, 100),
+        };
+    });
+    report.checks.changelogDialogOk =
+        !!changelog.found &&
+        !!changelog.inShadow &&
+        (changelog.text.includes('更新日志') ||
+            changelog.text.includes('读取失败') ||
+            changelog.text.includes('暂无更新日志'));
+    report.changelog = changelog;
+    await page.screenshot({ path: path.join(os.tmpdir(), 'znhd-vue-changelog.png') });
+
     report.checks.noPageError = report.errors.length === 0;
     report.ok = Object.values(report.checks).every(Boolean);
     console.log(JSON.stringify(report, null, 2));

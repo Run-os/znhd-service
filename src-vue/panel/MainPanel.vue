@@ -1,18 +1,23 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
-import { addLog, setLogEntriesSink, type LogEntry } from '@/lib/logger';
+import { addLog, clearLogs, setLogEntriesSink, type LogEntry } from '@/lib/logger';
 import { getMonitorState, resetWaitCountBaseline, setMonitorStateSink, type MonitorState } from '@/lib/monitor';
 import { clearSpeechQueue } from '@/lib/speech';
 import { runtime } from '@/lib/state';
-import { saveAllvalue, type Allvalue } from '@/lib/storage';
+import { loadPhrasesCache, savePhrasesCache, saveAllvalue, type Allvalue } from '@/lib/storage';
+import { readPhrasesFromZnhd, type ZnhdPhrases } from '@/lib/phrasesZnhd';
 import { hoursToHHmm } from '@/lib/utils';
 import { PANEL_WIDTH } from '@/lib/ui/panelIds';
+import { toast } from '@vue/lib/toast';
 import { Icon, type IconName } from '../icons';
 import Tooltip from '../components/ui/tooltip/Tooltip.vue';
 import Switch from '../components/ui/switch/Switch.vue';
 import { clampHostIntoView } from './geometry';
 import { usePanelDrag } from './usePanelDrag';
 import SettingsDialog from './SettingsDialog.vue';
+import PhrasesSheet from './PhrasesSheet.vue';
+import LogDialog from './LogDialog.vue';
+import ChangelogDialog from './ChangelogDialog.vue';
 import PlaceholderDialog from './PlaceholderDialog.vue';
 
 const props = defineProps<{ host: HTMLElement }>();
@@ -42,8 +47,15 @@ const changelogOpen = ref(false);
 
 const collapsed = ref(false);
 const mon = ref<MonitorState>(getMonitorState());
-/** 日志条目：阶段 2 的日志弹窗直接消费它（sink 是 React setState 风格，这里转成 ref） */
+/** 日志条目：logger 通过 sink 推进来（sink 是 React setState 风格的 updater） */
 const logEntries = ref<LogEntry[]>([]);
+
+/** 常用语（v26.10.18-v2：数据源 = 本页右侧栏「常用话术」的程序化抓取） */
+const phrasesData = ref<ZnhdPhrases>({ all: [], mine: [] });
+const phrasesLoading = ref(false);
+const searchKeyword = ref('');
+/** 请求序号：只有最新一次请求能落地，防慢的旧响应后到覆盖新数据 */
+let phrasesRequestSeq = 0;
 
 const VERSION = GM_info.script.version;
 
@@ -90,6 +102,53 @@ function openEntry(key: string) {
     else if (key === 'sniff') sniffOpen.value = true;
 }
 
+/**
+ * 常用语加载（移植自 React 版 `MainPanel.loadPhrasesData`，逻辑逐行对齐）：
+ *  · 缓存**无 TTL**：有缓存就直接用（话术由坐席在页面里维护，改动频率低）；
+ *  · 无缓存 / 手动刷新（force）才走程序化抓取；
+ *  · 失败时保留上次内容，并把失败原因直接进 toast（否则看不出卡在哪一步）。
+ */
+function loadPhrasesData(force = false) {
+    if (!force) {
+        const cache = loadPhrasesCache();
+        if (cache && cache.data) {
+            phrasesData.value = cache.data;
+            const mins = Math.round((Date.now() - cache.time) / 60000);
+            addLog('常用语使用本地缓存（' + mins + ' 分钟前抓取），如需更新请点侧边栏刷新按钮', 'info');
+            return;
+        }
+    }
+    const seq = ++phrasesRequestSeq;
+    phrasesLoading.value = true;
+    readPhrasesFromZnhd()
+        .then((data) => {
+            if (seq !== phrasesRequestSeq) return;
+            phrasesData.value = data;
+            savePhrasesCache(data);
+            const total = data.all.length + data.mine.length;
+            addLog(
+                '常用语抓取成功：全部话术 ' + data.all.length + ' 条、我的话术 ' + data.mine.length + ' 条',
+                'success'
+            );
+            toast.success('常用语抓取成功（共 ' + total + ' 条）');
+        })
+        .catch((error: { message?: string }) => {
+            if (seq !== phrasesRequestSeq) return;
+            const hasOld = phrasesData.value.all.length + phrasesData.value.mine.length > 0;
+            const reason = error?.message || '未知错误';
+            addLog('常用语抓取失败: ' + reason + (hasOld ? '，仍显示上次内容' : ''), 'error', true);
+            toast.error('常用语抓取失败：' + reason + (hasOld ? '，仍显示上次内容' : ''));
+        })
+        .finally(() => {
+            if (seq === phrasesRequestSeq) phrasesLoading.value = false;
+        });
+}
+
+// 打开常用语侧边栏即自动加载（与 React 版的 useEffect([phrasesOpen]) 等价）
+watch(phrasesOpen, (open) => {
+    if (open) loadPhrasesData();
+});
+
 // 悬浮球贴边后展开：按面板真实宽度裁回视口（只在「收起 → 展开」这一跳做）
 watch(collapsed, (now, prev) => {
     if (prev && !now) clampHostIntoView(props.host);
@@ -122,9 +181,6 @@ onBeforeUnmount(() => {
     setLogEntriesSink(null);
     setMonitorStateSink(null);
 });
-
-// logEntries 在阶段 2 的日志弹窗里消费；先显式引用，避免 noUnusedLocals 误报
-void logEntries;
 </script>
 
 <template>
@@ -272,10 +328,23 @@ void logEntries;
             "
             @open-changelog="changelogOpen = true" />
 
-        <PlaceholderDialog v-model:open="phrasesOpen" title="常用语" phase="阶段 2" />
+        <PhrasesSheet
+            v-model:open="phrasesOpen"
+            v-model:search-keyword="searchKeyword"
+            :phrases-data="phrasesData"
+            :phrases-loading="phrasesLoading"
+            @reload="loadPhrasesData" />
+
+        <LogDialog
+            v-model:open="logOpen"
+            :log-entries="logEntries"
+            :auto-refresh="!!allvalue.logAutoRefresh"
+            @clear="clearLogs"
+            @update:auto-refresh="(v) => patchAllvalue({ logAutoRefresh: v })" />
+
+        <ChangelogDialog v-model:open="changelogOpen" />
+
         <PlaceholderDialog v-model:open="transferOpen" title="传输助手" phase="阶段 3" />
         <PlaceholderDialog v-model:open="sniffOpen" title="图片嗅探" phase="阶段 4" />
-        <PlaceholderDialog v-model:open="logOpen" title="查看日志" phase="阶段 2" />
-        <PlaceholderDialog v-model:open="changelogOpen" title="更新日志" phase="阶段 2" />
     </div>
 </template>

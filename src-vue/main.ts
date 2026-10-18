@@ -1,7 +1,7 @@
 import { createApp, h, type App as VueApp } from 'vue';
 import App from './App.vue';
 import css from './style.css?inline';
-import { SHADOW_ROOT_KEY } from './lib/shadow';
+import { SHADOW_ROOT_KEY, setShadowRoot } from './lib/shadow';
 import { PANEL_HOST_ID } from '@/lib/ui/panelIds';
 import { initialPanelPoint } from './panel/geometry';
 
@@ -30,6 +30,7 @@ export function mountPanel(): HTMLElement {
     document.documentElement.appendChild(host);
 
     const shadowRoot = host.attachShadow({ mode: 'open' });
+    setShadowRoot(shadowRoot);
 
     // 样式必须在首帧前进影子树：Vite 把 Tailwind 编译后的 CSS 以字符串交给我们，
     // 不能依赖插件往 document.head 注入（那样 :host 与工具类在影子树里都不可见）。
@@ -55,6 +56,7 @@ export function unmountPanel(): void {
         /* 重复卸载忽略 */
     }
     app = null;
+    setShadowRoot(null);
     document.getElementById(PANEL_HOST_ID)?.remove();
 }
 

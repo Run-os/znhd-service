@@ -10,6 +10,7 @@
     "build:vue": "vite build",
     "dev:vue": "vite",
     "typecheck:vue": "vue-tsc -p tsconfig.vue.json --noEmit",
+    "vendor:ui": "node scripts/vendor-shadcn-vue.mjs",
     "build:web": "npm --prefix web run build",
     "dev:web": "npm --prefix web run dev",
     "typecheck:web": "npm --prefix web run typecheck",
