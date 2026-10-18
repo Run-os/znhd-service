@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         征纳互动人数和在线监控v2
 // @namespace    https://scriptcat.org/
-// @version      26.10.19-v5
+// @version      26.10.19-v6
 // @author       runos
 // @description  实时监控征纳互动等待人数和在线状态，支持语音播报、自定义常用语
 // @license      MIT
@@ -20417,7 +20417,7 @@ shouldStop: () => runId !== id
     return shortPhoneId(msg.sessionKey);
   }
   function avatarUrl(seed) {
-    return "https://api.dicebear.com/10.x/notionists/svg?seed=" + encodeURIComponent(seed);
+    return "https://api.dicebear.com/10.x/notionists/svg?seed=" + encodeURIComponent(seed) + "&backgroundColor=b6e3f4,c0aede,ffd5dc,d1f4d9,fee4b8";
   }
   const _hoisted_1$7 = { class: "min-w-0" };
   const _sfc_main$c = vue.defineComponent({

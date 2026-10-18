@@ -75,12 +75,21 @@ export function sourceLabel(msg: TransferMessage): string {
  *    随机种子在 Vue 重渲染时会重新求值 ⇒ 同一台手机每刷新一次就换一张脸，聊天里认不出人；
  *    固定 seed 才是「一台设备 = 一张脸」，且不同设备天然不同。
  *
+ * ⚠️ backgroundColor 必须给（v26.10.19-v6）：notionists 的头发/衣服是纯黑 #000 且 SVG
+ *    背景透明，而聊天窗底是纯黑（v26.10.18-v9）、头像容器 bg-muted 在暗色主题下也只有
+ *    #171717 —— 黑色笔画直接融进背景，用户看到「头像三分之一全黑」。给官方 pastel
+ *    底色列表（seed 决定选哪色）后黑笔画有底可衬，同时也是「一台设备 = 一张脸 + 一个色」。
+ *
  * 走 <img>（AvatarImage）而不是 GM_xmlhttpRequest：DiceBear 是公开只读资源，无需 @grant；
  * 宿主页 CSP 若挡掉 api.dicebear.com，reka 的 AvatarImage 会保持未加载态，自动回落到
  * AvatarFallback 的文字头像（我方「我」/ 对方「手」），不会开天窗。
  */
 export function avatarUrl(seed: string): string {
-    return 'https://api.dicebear.com/10.x/notionists/svg?seed=' + encodeURIComponent(seed);
+    return (
+        'https://api.dicebear.com/10.x/notionists/svg?seed=' +
+        encodeURIComponent(seed) +
+        '&backgroundColor=b6e3f4,c0aede,ffd5dc,d1f4d9,fee4b8'
+    );
 }
 
 /** 发送状态文案（时间在分隔条上，这里只表达「发送中 / 失败」） */
