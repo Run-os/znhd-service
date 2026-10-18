@@ -320,18 +320,23 @@ const footerHint = computed(() => (sendable.value ? '' : '当前没有在线手�
                 <MessageScrollerProvider auto-scroll default-scroll-position="end">
                     <!-- v26.10.19：横向放大一倍（384 → 768），高度 +20%（560 → 672） -->
                     <div class="relative flex w-[768px] max-w-[94vw] flex-col gap-4">
-                        <!-- v26.10.18-v9：窗口底色纯黑 + 外圈 rgb(34,34,34) 细边（Card 自带 ring-1，只换色） -->
+                        <!-- v26.10.18-v9：窗口底色纯黑 + 外圈 rgb(34,34,34) 细边（Card 自带 ring-1，只换色）
+                             v26.10.19-v5：pt-0 去掉 Card 基类 py-6 的顶部 24px，标题栏内边距改由 CardHeader py-3 自管 -->
                         <Card
                             ref="cardRef"
-                            class="h-168 max-h-[calc(100vh-96px)] w-full gap-0 shadow-lg !bg-black !ring-[rgb(34,34,34)]">
+                            class="h-168 max-h-[calc(100vh-96px)] w-full gap-0 pt-0 shadow-lg !bg-black !ring-[rgb(34,34,34)]">
                             <!--
                                 ===== 头部：标题 / 状态 / 动作（示例同款三段） =====
                                 v26.10.19：头部与会话区之间只留 1px 细线，颜色跟窗口外框一致
                                 （Tailwind v4 的 border 默认色是 currentColor ⇒ 不写死就是一条亮白线）。
+                                v26.10.19-v3：items-center + CardAction self-center——标题行（文字 20px）与
+                                 28px 圆形按钮行内对齐。
+                                v26.10.19-v5：items-center 只解决「文字 vs 按钮」互相对中，标题行整体仍偏下——
+                                 Card 基类自带 py-6（顶部 24px 内边距）把 CardHeader 压下去，而分隔线紧贴 Header
+                                 底部 ⇒ 视觉标题栏 = 24px 死空 + 内容，内容整体偏下。改为 Card pt-0 + Header
+                                 自带 py-3（分隔线上下各 12px，对称），内容行在标题栏里真正垂直居中。
                             -->
-                            <!-- v26.10.19-v3：items-center + CardAction self-center——标题行（文字 20px）与
-                                 28px 圆形按钮在 grid 默认顶对齐下中心线错开 4px，改为行内垂直居中 -->
-                            <CardHeader class="shrink-0 items-center gap-1 [border-bottom:1px_solid_rgb(34,34,34)]">
+                            <CardHeader class="shrink-0 items-center gap-1 py-3 [border-bottom:1px_solid_rgb(34,34,34)]">
                                 <!-- v26.10.19：设备连接数跟标题同一行（原来的 CardDescription 已移除） -->
                                 <div class="flex min-w-0 items-center gap-2">
                                     <CardTitle class="truncate">传输助手</CardTitle>

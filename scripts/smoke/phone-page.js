@@ -232,7 +232,8 @@ async function main() {
                 skeleton.attachBtn &&
                 skeleton.sendBtn
         );
-        check('整页微信暗色底（#1E1E1E，对齐脚本端第三栏）', skeleton.bg === 'rgb(30, 30, 30)');
+        // v26.10.19-v3 起手机页窗口底色改纯黑（对齐脚本端 v26.10.18-v9），旧判据 #1E1E1E 已过时
+        check('整页纯黑底（rgb(0,0,0)，对齐脚本端传输助手窗口）', skeleton.bg === 'rgb(0, 0, 0)');
 
         // ①-B 输入区吸底（v26.10.13-v3 回归判据；v26.10.18-v7 换 Vue 后那层包裹已不存在，判据仍有效）：当年 antd <AntApp> 的 div.ant-app 包裹层
         //     没有高度，height:100% 会断链 ⇒ 整页内容高度、输入区悬在视口中间。

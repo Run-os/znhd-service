@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         征纳互动人数和在线监控v2
 // @namespace    https://scriptcat.org/
-// @version      26.10.19-v4
+// @version      26.10.19-v5
 // @author       runos
 // @description  实时监控征纳互动等待人数和在线状态，支持语音播报、自定义常用语
 // @license      MIT
@@ -21913,10 +21913,10 @@ primary: "#07C160"
                             vue.createVNode(vue.unref(_sfc_main$1f), {
                               ref_key: "cardRef",
                               ref: cardRef,
-                              class: "h-168 max-h-[calc(100vh-96px)] w-full gap-0 shadow-lg !bg-black !ring-[rgb(34,34,34)]"
+                              class: "h-168 max-h-[calc(100vh-96px)] w-full gap-0 pt-0 shadow-lg !bg-black !ring-[rgb(34,34,34)]"
                             }, {
                               default: vue.withCtx(() => [
-                                vue.createVNode(vue.unref(_sfc_main$1b), { class: "shrink-0 items-center gap-1 [border-bottom:1px_solid_rgb(34,34,34)]" }, {
+                                vue.createVNode(vue.unref(_sfc_main$1b), { class: "shrink-0 items-center gap-1 py-3 [border-bottom:1px_solid_rgb(34,34,34)]" }, {
                                   default: vue.withCtx(() => [
                                     vue.createElementVNode("div", _hoisted_2$1, [
                                       vue.createVNode(vue.unref(_sfc_main$1a), { class: "truncate" }, {
