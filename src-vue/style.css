@@ -1,0 +1,92 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+
+/*
+ * 设计令牌：对齐现有 antd 面板的观感（v26.10.06-v22 起主色 = antd blue-6 #1677ff）。
+ * 这份 CSS 由 main.ts 以 ?inline 方式取字符串、注入到 **shadowRoot 内部**，
+ * 因此 :host 就是面板宿主；宿主页面的全局样式进不来（这也是迁 ShadowDOM 的目的）。
+ *
+ * Tailwind v4 的 theme 变量自身就用 `:root, :host` 声明，天然支持 Shadow DOM。
+ */
+@theme {
+  --font-sans:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'PingFang SC', 'Hiragino Sans GB',
+    'Microsoft YaHei', sans-serif;
+
+  --color-primary: #1677ff;
+  --color-primary-hover: #4096ff;
+  --color-success: #52c41a;
+  --color-danger: #ff4d4f;
+  --color-text: #262626;
+  --color-text-secondary: #8c8c8c;
+  --color-text-tertiary: #bfbfbf;
+  --color-border: #d9d9d9;
+  --color-border-split: #f0f0f0;
+  --color-surface: #ffffff;
+  --color-surface-muted: #f7f8fa;
+  --color-primary-soft: #e6f4ff;
+
+  --radius-panel: 8px;
+  --radius-block: 10px;
+}
+
+:host {
+  /* 宿主页常有 text-align:center / 自定义 line-height，这里给整棵影子树定基线 */
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.5715;
+  color: var(--color-text);
+  text-align: left;
+  -webkit-font-smoothing: antialiased;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+/* 面板入口按钮：宽度足够才显示文字（原 MainPanel.tsx 的 PANEL_CSS 等价实现）。
+   ⚠️ 文字用 display:none 隐藏而非条件渲染 —— 冒烟按 textContent 找按钮，
+   同时它也是纯图标态的可访问名。阈值 65px 的推导见原 MainPanel 注释。 */
+.znhd-panel-btn {
+  container-type: inline-size;
+}
+.znhd-panel-btn-text {
+  display: none;
+}
+@container (min-width: 65px) {
+  .znhd-panel-btn-text {
+    display: inline;
+  }
+}
+
+/* 滚动条：沿用原 uiReset 的细圆角灰条，避免 Windows 默认宽滚动条破坏圆角弹窗 */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.22) transparent;
+}
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+*::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.22);
+  border: 3px solid transparent;
+  background-clip: padding-box;
+  border-radius: 8px;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.38);
+  background-clip: padding-box;
+}
+*::-webkit-scrollbar-track,
+*::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* 宿主页可能给 svg 加 margin / vertical-align（税务页实测有 margin: -2.75em auto 0），
+   影子树里虽然进不来全局规则，但继承属性仍会传进来，这里显式复位一次。 */
+svg {
+  vertical-align: middle;
+}

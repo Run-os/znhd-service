@@ -1,0 +1,16 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    // .vue 由 vue-tsc 处理；jsx 保留给 SFC 编译器
+    "jsx": "preserve",
+    "noEmit": true,
+    "isolatedModules": true,
+    "types": ["tampermonkey", "vite/client"],
+    "paths": {
+      "@/*": ["./src/*"],
+      "@vue/*": ["./src-vue/*"]
+    }
+  },
+  // 只检查 Vue 侧新增代码 + 它复用的业务层（src/lib/**/*.ts，不含 React 的 .tsx）
+  "include": ["src-vue/**/*.ts", "src-vue/**/*.vue", "src/**/*.ts", "shared/**/*.ts"]
+}
