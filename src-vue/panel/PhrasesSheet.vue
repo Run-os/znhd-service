@@ -11,7 +11,7 @@ import { toast } from '@vue/lib/toast';
  * 常用语侧边栏（Vue 版，对应 React 的 `PhrasesDrawer`）。
  *
  * 迁移到 daisyUI 后的组件构成（全部官方原生）：
- *   `modal modal-end`（右侧弹层）+ `tabs/tab`（全部/我的）+ `input`（带图标，label 包裹）
+ *   `modal modal-end`（右侧弹层）+ `tabs tabs-box`（radio input 式，全部/我的）+ `input`（带图标，label 包裹）
  *   + `list/list-row`（每条话术）+ `hero`（空态）+ `loading`（加载中）+ `btn` + `tooltip`。
  *
  * ⚠️ 为什么用 `modal-end` 而不是 `drawer`：
@@ -39,7 +39,7 @@ const hit = (t: string) => !keyword.value || t.toLowerCase().includes(keyword.va
 const all = computed(() => (props.phrasesData.all || []).filter(hit));
 const mine = computed(() => (props.phrasesData.mine || []).filter(hit));
 
-/** 当前 tab（官方 button + tab-active 的受控写法） */
+/** 当前 tab（官方 radio input 式 tabs，状态由 Vue 受控） */
 const tab = ref<'all' | 'mine'>('all');
 
 const rows = computed(() => (tab.value === 'all' ? all.value : mine.value));
@@ -101,13 +101,24 @@ function pick(text: string) {
                     @input="emit('update:searchKeyword', ($event.target as HTMLInputElement).value)" />
             </label>
 
+            <!-- 官方 radio 式 tabs（tabs-box using radio inputs）：受控由 Vue 驱动 -->
             <div role="tablist" class="tabs tabs-box w-full">
-                <button role="tab" class="tab" :class="tab === 'all' ? 'tab-active' : ''" @click="tab = 'all'">
-                    全部话术
-                </button>
-                <button role="tab" class="tab" :class="tab === 'mine' ? 'tab-active' : ''" @click="tab = 'mine'">
-                    我的话术
-                </button>
+                <input
+                    type="radio"
+                    name="phrases_tab"
+                    role="tab"
+                    class="tab"
+                    aria-label="全部话术"
+                    :checked="tab === 'all'"
+                    @change="tab = 'all'" />
+                <input
+                    type="radio"
+                    name="phrases_tab"
+                    role="tab"
+                    class="tab"
+                    aria-label="我的话术"
+                    :checked="tab === 'mine'"
+                    @change="tab = 'mine'" />
             </div>
 
             <div v-if="props.phrasesLoading" class="flex flex-col items-center gap-2 py-6">
@@ -124,7 +135,12 @@ function pick(text: string) {
             </div>
 
             <ul v-else class="list">
-                <li v-for="(t, i) in rows" :key="tab + i" class="list-row py-0">
+                <!-- list-row 官方第一列是 minmax(0,auto)（max=max-content），长话术不换行撑破 360px 容器
+                     → 覆写为 minmax(0,1fr)，让它随容器宽度换行（消灭横向滚动条） -->
+                <li
+                    v-for="(t, i) in rows"
+                    :key="tab + i"
+                    class="list-row py-0 [grid-template-columns:minmax(0,1fr)]">
                     <div class="tooltip tooltip-left w-full" :data-tip="t">
                         <button class="min-h-10 w-full text-left text-[13px] leading-5" @click="pick(t)">
                             {{ t }}

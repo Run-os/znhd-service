@@ -214,7 +214,7 @@ onBeforeUnmount(() => {
         v-if="collapsed"
         type="button"
         title="拖动可移动位置，点击展开面板"
-        class="btn btn-primary btn-circle size-9 cursor-move touch-none select-none overflow-hidden p-0"
+        class="btn btn-ghost btn-circle size-9 cursor-move touch-none select-none overflow-hidden p-0"
         @pointerdown="drag.onPointerDown"
         @pointermove="drag.onPointerMove"
         @pointerup="drag.onPointerUp"
@@ -230,7 +230,7 @@ onBeforeUnmount(() => {
         <Icon v-else name="crosshair" :size="20" />
     </button>
 
-    <div v-else class="rounded-box border border-base-300 bg-base-100 text-base-content" :style="{ width: PANEL_WIDTH + 'px' }">
+    <div v-else class="rounded-2xl border border-base-300 bg-base-100 text-base-content" :style="{ width: PANEL_WIDTH + 'px' }">
         <!-- 标题栏 = 唯一拖拽手柄 -->
         <div
             class="flex cursor-move touch-none select-none items-center gap-1.5 border-b border-base-300 px-2.5 py-2"
@@ -287,7 +287,7 @@ onBeforeUnmount(() => {
                 </label>
             </div>
             <button
-                class="btn btn-ghost btn-sm btn-square text-base-content/60"
+                class="btn btn-ghost btn-sm btn-circle text-base-content/60"
                 title="收起面板（点圆形按钮可展开）"
                 aria-label="收起面板"
                 @click="collapsed = true">
@@ -322,7 +322,8 @@ onBeforeUnmount(() => {
             <!-- 4 个入口：btn + 容器查询控制文字显隐 -->
             <div class="grid grid-cols-4 gap-1.5">
                 <div v-for="a in PANEL_ACTIONS" :key="a.key" class="tooltip tooltip-top" :data-tip="a.label">
-                    <button class="btn btn-outline btn-sm w-full znhd-panel-btn min-w-0 gap-0.5 px-1" @click="openEntry(a.key)">
+                    <!-- ghost：无描边无底色，hover 出现圆形底（btn-circle 决定遮罩形状） -->
+                    <button class="btn btn-ghost btn-sm w-full znhd-panel-btn min-w-0 gap-0.5 px-1" @click="openEntry(a.key)">
                         <span class="text-primary"><Icon :name="a.icon" :size="15" /></span>
                         <span class="znhd-panel-btn-text ml-0.5 text-[11px]">{{ a.label }}</span>
                     </button>

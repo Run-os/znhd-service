@@ -76,21 +76,26 @@ const UPDATE_URL = (GM_info.scriptUpdateURL || GM_info.script.updateURL) as stri
         <div class="divider">其他设置</div>
 
         <fieldset class="fieldset">
-            <legend class="fieldset-legend">使用 CDN 加速（Fastly 镜像）加载资源</legend>
-            <input
-                type="checkbox"
-                class="toggle"
-                :checked="props.useCdn"
-                @change="emit('changeUseCdn', ($event.target as HTMLInputElement).checked)" />
+            <!-- 开关与描述文本同一行：legend 拉成 flex 行，toggle 靠右 -->
+            <legend class="fieldset-legend flex w-full items-center justify-between gap-3">
+                <span>使用 CDN 加速（Fastly 镜像）加载资源</span>
+                <input
+                    type="checkbox"
+                    class="toggle"
+                    :checked="props.useCdn"
+                    @change="emit('changeUseCdn', ($event.target as HTMLInputElement).checked)" />
+            </legend>
         </fieldset>
 
         <fieldset class="fieldset">
-            <legend class="fieldset-legend">图片嗅探：先在后台预测量图片大小</legend>
-            <input
-                type="checkbox"
-                class="toggle"
-                :checked="props.sniffPreMeasure"
-                @change="emit('changeSniffPreMeasure', ($event.target as HTMLInputElement).checked)" />
+            <legend class="fieldset-legend flex w-full items-center justify-between gap-3">
+                <span>图片嗅探：先在后台预测量图片大小</span>
+                <input
+                    type="checkbox"
+                    class="toggle"
+                    :checked="props.sniffPreMeasure"
+                    @change="emit('changeSniffPreMeasure', ($event.target as HTMLInputElement).checked)" />
+            </legend>
             <p class="label whitespace-normal">
                 开启后打开嗅探窗口即刻显示大小（不必当场等测量）。代价：页面上的图若只能靠请求测大小
                 （跨域且拿不到资源表读数），脚本会在没打开窗口时就去测量 —— 关掉此项可避免这类请求。

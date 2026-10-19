@@ -311,7 +311,7 @@ const footerHint = computed(() => (sendable.value ? '' : '当前没有在线手�
                 <div class="ml-auto flex items-center gap-1.5">
                     <div class="tooltip tooltip-bottom" data-tip="清空聊天记录">
                         <button
-                            class="btn btn-outline btn-sm btn-circle"
+                            class="btn btn-ghost btn-sm btn-circle"
                             aria-label="清空聊天记录"
                             :disabled="!rows.length"
                             @click="clearAll">
@@ -321,7 +321,7 @@ const footerHint = computed(() => (sendable.value ? '' : '当前没有在线手�
 
                     <div class="tooltip tooltip-bottom" data-tip="全部文件">
                         <button
-                            class="btn btn-outline btn-sm btn-circle"
+                            class="btn btn-ghost btn-sm btn-circle"
                             aria-label="全部文件"
                             title="全部文件"
                             @click="filesOpen = true">
@@ -331,7 +331,7 @@ const footerHint = computed(() => (sendable.value ? '' : '当前没有在线手�
 
                     <div class="tooltip tooltip-bottom" data-tip="扫码连接手机">
                         <button
-                            class="btn btn-outline btn-sm btn-circle"
+                            class="btn btn-ghost btn-sm btn-circle"
                             aria-label="扫码连接手机"
                             title="扫码连接手机"
                             @click="pairOpen = true">
@@ -341,7 +341,7 @@ const footerHint = computed(() => (sendable.value ? '' : '当前没有在线手�
 
                     <!-- 更多：daisyUI 官方 focus 式 dropdown（tabindex 触发，点外部 / Esc 失焦收起） -->
                     <div class="dropdown dropdown-end">
-                        <div tabindex="0" role="button" class="btn btn-outline btn-sm btn-circle" aria-label="更多" title="更多">
+                        <div tabindex="0" role="button" class="btn btn-ghost btn-sm btn-circle" aria-label="更多" title="更多">
                             <Icon name="more" :size="14" />
                         </div>
                         <ul tabindex="-1" class="menu dropdown-content z-1 w-52 rounded-box bg-base-100 p-2 shadow-sm">
@@ -362,7 +362,7 @@ const footerHint = computed(() => (sendable.value ? '' : '当前没有在线手�
 
                     <div class="tooltip tooltip-bottom" data-tip="关闭">
                         <form method="dialog">
-                            <button class="btn btn-outline btn-sm btn-circle" aria-label="关闭" title="关闭">
+                            <button class="btn btn-ghost btn-sm btn-circle" aria-label="关闭" title="关闭">
                                 <Icon name="close" :size="14" />
                             </button>
                         </form>

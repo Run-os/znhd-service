@@ -102,7 +102,7 @@ function pickAttach(e: MouseEvent, fn: () => void) {
                 <div
                     tabindex="0"
                     role="button"
-                    class="btn btn-outline btn-sm btn-circle"
+                    class="btn btn-ghost btn-sm btn-circle"
                     aria-label="添加图片或文件"
                     title="添加图片或文件">
                     <Icon name="plus" :size="14" />

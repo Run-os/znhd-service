@@ -17,8 +17,9 @@ import AppDialog from './AppDialog.vue';
  *    · 关：列表冻结在关闭那一刻的快照，往上翻历史不会被打断；
  *    · 开关持久化在 Allvalue.logAutoRefresh，由父组件负责存取。
  *
- * 迁移到 daisyUI：筛选 → 官方 `filter` 组件（HTML form + checkbox + reset「全部」按钮，
- * 选中态按类型着色 `checked:btn-*`，圆角统一 1rem），
+ * 迁移到 daisyUI：筛选 → 官方 `filter` 组件布局（form.filter + 类型 checkbox，选中态按类型着色
+ * `checked:btn-*`，圆角统一 1rem）；「全部」改普通 button（官方 reset 会被 CSS 自动隐藏），
+ * 选中态 `btn-neutral` 着色，
  * 日志区底色 → `bg-neutral text-neutral-content`，类型色 → `text-info/success/warning/error`，
  * 「自动刷新」→ `toggle`。
  */
@@ -44,7 +45,9 @@ const TYPES: Array<{ type: LogType; label: string; text: string; bar: string; bt
 
 const metaOf = (t: LogType) => TYPES.find((m) => m.type === t) || TYPES[0];
 
-const filter = ref<Record<LogType, boolean>>({ info: true, success: true, warning: true, error: true });
+const filter = ref<Record<LogType, boolean>>({ info: false, success: false, warning: false, error: false });
+/** 「全部」选中态：true = 不按类型过滤。点类型勾选后自动切走；四个全勾上时自动回到「全部」 */
+const allMode = ref(true);
 /** 关闭自动刷新时冻结下来的列表快照 */
 const snapshot = ref<LogEntry[]>([]);
 const scroller = ref<HTMLDivElement | null>(null);
@@ -65,17 +68,23 @@ const counts = computed(() => {
     return c;
 });
 const shown = computed(() => {
-    // 官方 filter 语义：一个都没勾 = 不过滤（显示全部）；reset「全部」按钮即恢复此态
-    const noneOn = TYPES.every((m) => !filter.value[m.type]);
-    return noneOn ? source.value : source.value.filter((e) => filter.value[e.type]);
+    // 「全部」选中 = 不过滤；否则按勾选的类型过滤
+    return allMode.value ? source.value : source.value.filter((e) => filter.value[e.type]);
 });
 /** 反转成「最旧在上、最新在下」——不污染原数组 */
 const rows = computed(() => shown.value.slice().reverse());
 const latest = computed(() => source.value[0]);
 
-/** filter 的 type=reset 触发：清掉全部勾选 = 回到「显示全部」 */
-function resetFilter() {
+/** 点「全部」：进入全选态（不按类型过滤），同时清空类型勾选 */
+function selectAll() {
+    allMode.value = true;
     filter.value = { info: false, success: false, warning: false, error: false };
+}
+
+/** 点类型勾选：退出「全部」态；四个类型全勾上时视为「全部」 */
+function toggleType(type: LogType, checked: boolean) {
+    filter.value = { ...filter.value, [type]: checked };
+    allMode.value = !TYPES.every((m) => filter.value[m.type]);
 }
 
 // 打开 / 新日志 / 重新开启自动刷新 / 切换筛选 → 滚到底部看最新内容。
@@ -95,13 +104,22 @@ watch([() => props.open, () => props.logEntries, () => props.autoRefresh, filter
         :open="props.open"
         title="运行日志"
         :width="560"
-        :footer="true"
+        :footer="false"
         @update:open="(v: boolean) => emit('update:open', v)">
         <div class="flex items-start justify-between gap-2">
-            <!-- 官方 filter 组件（HTML form + checkbox + reset）：reset = 「全部」，
-                 一个都没勾时 filter 的 CSS 会自动把它藏起来；勾选项按类型着色 -->
-            <form class="filter" @reset="resetFilter">
-                <input class="btn btn-sm" type="reset" value="全部" aria-label="全部" />
+            <!-- 官方 filter 组件布局（form.filter + checkbox）：「全部」是普通 button（不再用 type=reset，
+                 官方 reset 在无勾选项时会被 CSS 自动隐藏 —— 那正是「点了就消失」的原因）；
+                 选中态 = btn-neutral 着色，类型勾选项按类型着色 -->
+            <form class="filter" @submit.prevent>
+                <button
+                    type="button"
+                    class="btn btn-sm"
+                    :class="allMode ? 'btn-neutral' : 'btn-ghost'"
+                    :aria-pressed="allMode"
+                    title="显示全部类型的日志"
+                    @click="selectAll">
+                    全部
+                </button>
                 <input
                     v-for="m in TYPES"
                     :key="m.type"
@@ -111,7 +129,7 @@ watch([() => props.open, () => props.logEntries, () => props.autoRefresh, filter
                     :checked="filter[m.type]"
                     :aria-label="m.label + ' ' + (counts[m.type] || 0)"
                     :title="filter[m.type] ? '点击隐藏该类日志' : '点击显示该类日志'"
-                    @change="filter[m.type] = ($event.target as HTMLInputElement).checked" />
+                    @change="toggleType(m.type, ($event.target as HTMLInputElement).checked)" />
             </form>
             <button
                 class="btn btn-error btn-sm shrink-0"
@@ -172,9 +190,5 @@ watch([() => props.open, () => props.logEntries, () => props.autoRefresh, filter
                 </span>
             </span>
         </div>
-
-        <template #footer>
-            <button class="btn btn-outline btn-sm" @click="emit('update:open', false)">关闭</button>
-        </template>
     </AppDialog>
 </template>

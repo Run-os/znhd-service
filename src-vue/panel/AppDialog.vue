@@ -53,7 +53,7 @@ onMounted(() => {
                     <slot name="title">{{ props.title }}</slot>
                 </h3>
                 <form method="dialog">
-                    <button class="btn btn-ghost btn-sm btn-square" aria-label="关闭">
+                    <button class="btn btn-ghost btn-sm btn-circle" aria-label="关闭">
                         <Icon name="close" :size="15" />
                     </button>
                 </form>

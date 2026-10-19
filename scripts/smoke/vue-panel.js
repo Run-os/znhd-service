@@ -230,7 +230,7 @@ function serve() {
     // 否则 shadow DOM 里所有 border-* 工具类会静默退化成 0px（v26.10.19 实测踩过）。
     report.checks.twPropsRegistered = await page.evaluate(() => {
         const sr = document.getElementById('__znhd_panel_host__').shadowRoot;
-        const shell = sr.querySelector('.rounded-box.border-base-300');
+        const shell = sr.querySelector('.rounded-2xl.border-base-300');
         return !!shell && getComputedStyle(shell).getPropertyValue('--tw-border-style') === 'solid';
     });
 
@@ -323,9 +323,15 @@ function serve() {
             rows: el.querySelectorAll('[class*="border-l-"]').length,
             terminalBg: terminal ? getComputedStyle(terminal).backgroundColor : '',
             hasSwitch: !!el.querySelector('input.toggle'),
-            // 官方 filter 组件：form.filter + 4 个类型 checkbox（reset 是 type=reset 的「全部」）
+            // 官方 filter 组件：form.filter + 4 个类型 checkbox；「全部」是普通 button（v6：不再 type=reset）
             filterForm: !!el.querySelector('form.filter'),
             filterBoxes: el.querySelectorAll('form.filter input[type="checkbox"]').length,
+            allBtnVisible: (() => {
+                const b = el.querySelector('form.filter button[type="button"]');
+                return !!b && b.textContent.includes('全部') && b.offsetParent !== null;
+            })(),
+            // v6：底部 footer 关闭按钮已删（modal-action 不再渲染）
+            footerGone: el.querySelectorAll('.modal-action').length === 0,
         };
     });
     const neutralLight = await probeOf('--color-neutral');
@@ -337,7 +343,9 @@ function serve() {
         logDialog.terminalBg === neutralLight &&
         logDialog.hasSwitch &&
         logDialog.filterForm &&
-        logDialog.filterBoxes === 4;
+        logDialog.filterBoxes === 4 &&
+        logDialog.allBtnVisible &&
+        logDialog.footerGone;
     report.logDialog = logDialog;
     await page.screenshot({ path: path.join(os.tmpdir(), 'znhd-vue-log.png') });
 
@@ -931,7 +939,7 @@ function serve() {
             const host = document.getElementById('__znhd_panel_host__');
             const sr = host.shadowRoot;
             const app = sr.querySelector('#app');
-            const shell = sr.querySelector('.rounded-box.border-base-300');
+            const shell = sr.querySelector('.rounded-2xl.border-base-300');
             const pill = [...sr.querySelectorAll('span')].find((n) => /^v26\./.test(n.textContent.trim()));
             const cs = shell ? getComputedStyle(shell) : null;
             return {
