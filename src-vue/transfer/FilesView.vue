@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import { Empty } from '@vue/components/ui/empty';
 import { Icon } from '@vue/icons';
 import { addLog } from '@/lib/logger';
 import { copyImageToClipboard } from '@/lib/relay';
@@ -115,17 +114,17 @@ function onClear() {
 
 <template>
     <!-- 空状态 -->
-    <div v-if="!ordered.length" class="flex flex-1 items-center justify-center">
-        <Empty class="!p-6">
-            <span class="text-xs text-white/40">
+    <div v-if="!ordered.length" class="hero flex-1">
+        <div class="hero-content">
+            <p class="text-xs text-base-content/40">
                 {{ clearScope ? '该会话暂无图片 / 文件' : '暂无文件——手机发来的图片 / 文件会汇总在这里' }}
-            </span>
-        </Empty>
+            </p>
+        </div>
     </div>
 
     <div v-else class="znhd-transfer-files min-h-0 flex-1 overflow-y-auto px-3 py-2.5">
         <div class="mb-2 flex items-baseline gap-2">
-            <span class="text-sm font-semibold text-white/90">
+            <span class="text-sm font-semibold text-base-content">
                 {{ scopeLabel }}（图片 {{ images.length }} · 文件 {{ files.length }}）
             </span>
             <span class="flex-1" />
@@ -151,7 +150,7 @@ function onClear() {
                         style="aspect-ratio: 1 / 1"
                         @click="openPreview(msg)" />
                 </ImageActions>
-                <div class="mt-0.5 truncate text-[11px] text-white/35">
+                <div class="mt-0.5 truncate text-[11px] text-base-content/40">
                     {{ sourceLabel(msg) }} · {{ fullTime(msg.ts) }} · {{ msg.direction === 'in' ? '收到' : '发出' }}
                 </div>
             </div>
@@ -159,7 +158,7 @@ function onClear() {
 
         <!-- 文件卡片 -->
         <div v-if="files.length" :class="images.length ? 'mt-4' : ''">
-            <div class="mb-1.5 text-[13px] font-semibold text-white/90">文件（{{ files.length }}）</div>
+            <div class="mb-1.5 text-[13px] font-semibold text-base-content">文件（{{ files.length }}）</div>
             <div
                 class="grid gap-2"
                 style="grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); align-content: start">
@@ -167,15 +166,15 @@ function onClear() {
                     v-for="msg in files"
                     :key="msg.id"
                     data-transfer-file-card="1"
-                    class="flex min-w-0 items-center gap-2.5 rounded-[8px] border border-white/10 bg-white/[0.04] px-2.5 py-2">
-                    <span class="inline-flex size-8 shrink-0 items-center justify-center rounded-[6px] bg-white/[0.08] text-white/60">
+                    class="flex min-w-0 items-center gap-2.5 rounded-[8px] border border-base-300 bg-white/[0.04] px-2.5 py-2">
+                    <span class="inline-flex size-8 shrink-0 items-center justify-center rounded-[6px] bg-white/[0.08] text-base-content/60">
                         <Icon name="fileText" :size="18" />
                     </span>
                     <div class="min-w-0 flex-1">
-                        <div class="truncate text-[13px] text-white/90" :title="msg.name || 'file'">
+                        <div class="truncate text-[13px] text-base-content" :title="msg.name || 'file'">
                             {{ msg.name || 'file' }}
                         </div>
-                        <div class="mt-px truncate text-[11px] text-white/35">
+                        <div class="mt-px truncate text-[11px] text-base-content/40">
                             {{ formatBytes(msg.blob ? msg.blob.size : 0) }} · {{ sourceLabel(msg) }} ·
                             {{ fullTime(msg.ts) }} · {{ msg.direction === 'in' ? '收到' : '发出' }}
                         </div>
@@ -185,7 +184,7 @@ function onClear() {
                             type="button"
                             aria-label="下载文件"
                             :disabled="!msg.blob"
-                            class="cursor-pointer rounded border border-white/20 bg-white/5 px-2 py-0.5 text-xs text-white/80 outline-none hover:bg-white/15 disabled:cursor-not-allowed disabled:opacity-40"
+                            class="cursor-pointer rounded border border-base-content/20 bg-base-content/5 px-2 py-0.5 text-xs text-base-content/80 outline-none hover:bg-base-content/15 disabled:cursor-not-allowed disabled:opacity-40"
                             @click="doDownloadFile(msg)">
                             下载
                         </button>

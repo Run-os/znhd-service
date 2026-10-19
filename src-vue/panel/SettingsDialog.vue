@@ -1,10 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { hoursToHHmm, hhmmToHours } from '@/lib/utils';
-import { Button } from '@vue/components/ui/button';
-import { Field, FieldContent, FieldDescription, FieldGroup, FieldLabel, FieldSeparator, FieldTitle } from '@vue/components/ui/field';
-import { InputGroup, InputGroupInput } from '@vue/components/ui/input-group';
-import Switch from '../components/ui/switch/Switch.vue';
 import AppDialog from './AppDialog.vue';
 
 export interface WorkingHours {
@@ -17,11 +13,12 @@ export interface WorkingHours {
 /**
  * 设置弹窗（Vue 版，字段与 React 版 SettingsModal 一一对应）。
  *
- * 组件构成（2026-10-18 组件正规化）：
- *   · 外壳 = 官方 Dialog + Card（AppDialog）；
- *   · 每个设置项 = 官方 **Field**（标题 + 说明 + 控件），横排用 orientation="horizontal"；
- *   · 时间输入 = 官方 **InputGroup**（带边框与聚焦环的输入容器）；
- *   · 顶部三个快捷入口 = 官方 **Button** 的 outline 变体（外链用 as="a" 渲染成 <a target="_blank">）。
+ * 迁移到 daisyUI 后的组件构成（全部官方原生）：
+ *   · 外壳 = `AppDialog`（`<dialog class="modal">`）
+ *   · 每个设置项 = `fieldset` + `fieldset-legend` + `label`（skill/components/fieldset.md）
+ *   · 开关 = `toggle`
+ *   · 时间输入 = `input`（原生 `<input type="time">`）
+ *   · 快捷入口 = `btn btn-outline btn-sm`
  *
  * ⚠️ 时间输入用原生 `<input type="time">`：React 版 v26.10.06-v16 已实测换掉 antd TimePicker，
  *    清空时 hhmmToHours 返回 null —— 此时必须保持原值，不能把 NaN 写进配置。
@@ -70,72 +67,55 @@ const UPDATE_URL = (GM_info.scriptUpdateURL || GM_info.script.updateURL) as stri
         :width="520"
         :footer="false"
         @update:open="emit('update:open', $event)">
-        <!--
-            三个快捷入口：官方 Button 的 outline 变体。
-            前两个是外链 ⇒ as="a" + target="_blank"，保留中键新标签 / 右键复制链接等原生行为；
-            「更新日志」是开弹窗 ⇒ 保持 <button>。
-        -->
         <div class="flex flex-wrap items-center gap-2">
-            <Button as="a" variant="outline" size="sm" :href="HOMEPAGE_URL" target="_blank" rel="noreferrer">
-                脚本主页
-            </Button>
-            <Button as="a" variant="outline" size="sm" :href="UPDATE_URL" target="_blank" rel="noreferrer">
-                更新脚本
-            </Button>
-            <Button variant="outline" size="sm" @click="emit('openChangelog')">更新日志</Button>
+            <a class="btn btn-outline btn-sm" :href="HOMEPAGE_URL" target="_blank" rel="noreferrer">脚本主页</a>
+            <a class="btn btn-outline btn-sm" :href="UPDATE_URL" target="_blank" rel="noreferrer">更新脚本</a>
+            <button class="btn btn-outline btn-sm" @click="emit('openChangelog')">更新日志</button>
         </div>
 
-        <FieldSeparator class="my-4">其他设置</FieldSeparator>
+        <div class="divider">其他设置</div>
 
-        <FieldGroup class="gap-3">
-            <Field
-                orientation="horizontal"
-                class="items-center justify-between rounded-lg border border-border px-3 py-2.5">
-                <FieldContent>
-                    <FieldTitle class="text-[13px]">使用 CDN 加速（Fastly 镜像）加载资源</FieldTitle>
-                </FieldContent>
-                <Switch :model-value="props.useCdn" @update:model-value="emit('changeUseCdn', $event)" />
-            </Field>
+        <fieldset class="fieldset">
+            <legend class="fieldset-legend">使用 CDN 加速（Fastly 镜像）加载资源</legend>
+            <input
+                type="checkbox"
+                class="toggle"
+                :checked="props.useCdn"
+                @change="emit('changeUseCdn', ($event.target as HTMLInputElement).checked)" />
+        </fieldset>
 
-            <Field
-                orientation="horizontal"
-                class="items-start justify-between rounded-lg border border-border px-3 py-2.5">
-                <FieldContent>
-                    <FieldTitle class="text-[13px]">图片嗅探：先在后台预测量图片大小</FieldTitle>
-                    <FieldDescription class="text-xs leading-5">
-                        开启后打开嗅探窗口即刻显示大小（不必当场等测量）。代价：页面上的图若只能靠请求测大小
-                        （跨域且拿不到资源表读数），脚本会在没打开窗口时就去测量 —— 关掉此项可避免这类请求。
-                    </FieldDescription>
-                </FieldContent>
-                <Switch
-                    :model-value="props.sniffPreMeasure"
-                    @update:model-value="emit('changeSniffPreMeasure', $event)" />
-            </Field>
+        <fieldset class="fieldset">
+            <legend class="fieldset-legend">图片嗅探：先在后台预测量图片大小</legend>
+            <input
+                type="checkbox"
+                class="toggle"
+                :checked="props.sniffPreMeasure"
+                @change="emit('changeSniffPreMeasure', ($event.target as HTMLInputElement).checked)" />
+            <p class="label">
+                开启后打开嗅探窗口即刻显示大小（不必当场等测量）。代价：页面上的图若只能靠请求测大小
+                （跨域且拿不到资源表读数），脚本会在没打开窗口时就去测量 —— 关掉此项可避免这类请求。
+            </p>
+        </fieldset>
 
-            <Field class="rounded-lg border border-border px-3 py-3">
-                <FieldLabel class="text-[13px]">监控时间段（点击选择时间）</FieldLabel>
-                <div v-for="f in timeFields" :key="f.row" class="flex flex-wrap items-center gap-2">
-                    <span class="w-8 text-[13px] text-muted-foreground">{{ f.row }}</span>
-                    <InputGroup class="w-[112px]">
-                        <InputGroupInput
-                            type="time"
-                            step="300"
-                            :model-value="hoursToHHmm(wh[f.from])"
-                            @update:model-value="updateWh(f.from, $event)" />
-                    </InputGroup>
-                    <span class="text-[13px] text-muted-foreground">至</span>
-                    <InputGroup class="w-[112px]">
-                        <InputGroupInput
-                            type="time"
-                            step="300"
-                            :model-value="hoursToHHmm(wh[f.to])"
-                            @update:model-value="updateWh(f.to, $event)" />
-                    </InputGroup>
-                </div>
-                <FieldDescription class="text-xs leading-5">
-                    提示：将「下午开始」设为与「上午结束」相同（如都设为 12:00），即可午休时段也监控。
-                </FieldDescription>
-            </Field>
-        </FieldGroup>
+        <fieldset class="fieldset">
+            <legend class="fieldset-legend">监控时间段（点击选择时间）</legend>
+            <div v-for="f in timeFields" :key="f.row" class="flex flex-wrap items-center gap-2">
+                <span class="w-8 text-[13px] text-base-content/60">{{ f.row }}</span>
+                <input
+                    type="time"
+                    step="300"
+                    class="input w-[112px]"
+                    :value="hoursToHHmm(wh[f.from])"
+                    @input="updateWh(f.from, ($event.target as HTMLInputElement).value)" />
+                <span class="text-[13px] text-base-content/60">至</span>
+                <input
+                    type="time"
+                    step="300"
+                    class="input w-[112px]"
+                    :value="hoursToHHmm(wh[f.to])"
+                    @input="updateWh(f.to, ($event.target as HTMLInputElement).value)" />
+            </div>
+            <p class="label">提示：将「下午开始」设为与「上午结束」相同（如都设为 12:00），即可午休时段也监控。</p>
+        </fieldset>
     </AppDialog>
 </template>

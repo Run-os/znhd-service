@@ -1,29 +1,24 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { addLog } from '@/lib/logger';
 import { appendToTinyMCE } from '@/lib/tinymce';
 import { safeCopyText } from '@/lib/clipboard';
 import type { ZnhdPhrases } from '@/lib/phrasesZnhd';
 import { Icon } from '@vue/icons';
 import { toast } from '@vue/lib/toast';
-import { Button } from '@vue/components/ui/button';
-import { InputGroup, InputGroupAddon, InputGroupInput } from '@vue/components/ui/input-group';
-import { Item, ItemContent, ItemTitle } from '@vue/components/ui/item';
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@vue/components/ui/sheet';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@vue/components/ui/tabs';
-import { Empty, EmptyDescription, EmptyHeader } from '@vue/components/ui/empty';
-import { Spinner } from '@vue/components/ui/spinner';
-import Tooltip from '../components/ui/tooltip/Tooltip.vue';
 
 /**
  * 常用语侧边栏（Vue 版，对应 React 的 `PhrasesDrawer`）。
  *
- * 为什么是 Sheet 而不是 Dialog：常用语是长列表，弹窗要反复滚动、高度受限；
- * 右侧抽屉能用满整屏高度（与 antd Drawer 的行为一致）。
+ * 迁移到 daisyUI 后的组件构成（全部官方原生）：
+ *   `modal modal-end`（右侧弹层）+ `tabs/tab`（全部/我的）+ `input`（带图标，label 包裹）
+ *   + `list/list-row`（每条话术）+ `hero`（空态）+ `loading`（加载中）+ `btn` + `tooltip`。
  *
- * 组件构成（2026-10-18 组件正规化，全部来自官方 registry）：
- *   Sheet（右侧抽屉）+ Tabs（全部/我的）+ **InputGroup**（搜索框，带图标 addon）
- *   + **Item**（每条话术一行）+ Empty（空态）+ Spinner（加载中）+ Button / Tooltip。
+ * ⚠️ 为什么用 `modal-end` 而不是 `drawer`：
+ *    daisyUI 的 `drawer` 是**整页 grid 布局**（drawer-toggle + drawer-content + drawer-side 三件套，
+ *    要求父容器有确定高度），套在面板里的一个局部面板上会把主面板布局撑开、并多出一层空的
+ *    drawer-content 占位。`modal-end` 是 modal 组件的官方 placement，同样实现"右侧贴边"，
+ *    且由 `<dialog>` 的 top layer 负责层级，对现有布局零副作用。如需改用 drawer 请告知。
  */
 const props = defineProps<{
     open: boolean;
@@ -44,6 +39,31 @@ const hit = (t: string) => !keyword.value || t.toLowerCase().includes(keyword.va
 const all = computed(() => (props.phrasesData.all || []).filter(hit));
 const mine = computed(() => (props.phrasesData.mine || []).filter(hit));
 
+/** 当前 tab（官方 button + tab-active 的受控写法） */
+const tab = ref<'all' | 'mine'>('all');
+
+const rows = computed(() => (tab.value === 'all' ? all.value : mine.value));
+const emptyText = computed(() =>
+    tab.value === 'all' ? '暂无全部话术，点右上角刷新抓取' : '暂无我的话术，点右上角刷新抓取'
+);
+
+const dlg = ref<HTMLDialogElement | null>(null);
+
+function sync(v: boolean): void {
+    const el = dlg.value;
+    if (!el) return;
+    if (v && !el.open) el.showModal();
+    else if (!v && el.open) el.close();
+}
+
+watch(
+    () => props.open,
+    (v) => sync(v)
+);
+onMounted(() => {
+    if (props.open) sync(true);
+});
+
 /** 点一条：复制 + 关抽屉 + 追加到 TinyMCE（与 React 版顺序一致） */
 function pick(text: string) {
     safeCopyText(text);
@@ -55,113 +75,66 @@ function pick(text: string) {
 </script>
 
 <template>
-    <Sheet :open="props.open" @update:open="(v: boolean) => emit('update:open', v)">
-        <!--
-            ⚠️ border-border 不能省：官方 SheetContent 的 `data-[side=right]:border-l` 只设宽度、
-            **不设颜色** ⇒ 取 currentColor；暗色下 currentColor = popover-foreground（#f2f3f5 近白），
-            左缘会变成一条刺眼的白线（2026-10-19 用户截图实测）。显式改回语义边框色：
-            暗色 #262626 ≈ 传输助手窗口外框 rgb(34,34,34)，日间 #e5e6eb，与传输助手细边保持一致。
-        -->
-        <SheetContent
-            side="right"
-            :show-close-button="true"
-            class="gap-0 border-border p-0"
-            :style="{ width: '360px', maxWidth: '360px' }">
-            <SheetHeader class="flex-row items-center gap-1 border-b border-border px-4 py-3 pr-12">
-                <SheetTitle class="text-[15px] font-semibold text-foreground">常用语</SheetTitle>
+    <dialog ref="dlg" class="modal modal-end" @close="emit('update:open', false)">
+        <div class="modal-box w-[360px] max-w-[360px]">
+            <div class="flex items-center gap-1">
+                <h3 class="flex-1 text-[15px] font-semibold">常用语</h3>
                 <!-- 标题旁刷新：无文字图标 + aria-label（读屏/冒烟都靠它定位） -->
-                <Tooltip content="重新加载常用语" side="bottom">
-                    <Button
-                        variant="ghost"
-                        size="icon-xs"
+                <div class="tooltip tooltip-bottom" data-tip="重新加载常用语">
+                    <button
+                        class="btn btn-ghost btn-xs btn-square"
                         aria-label="重新加载常用语"
                         :disabled="props.phrasesLoading"
-                        class="text-muted-foreground"
                         @click="emit('reload', true)">
                         <Icon name="refresh" :size="15" />
-                    </Button>
-                </Tooltip>
-            </SheetHeader>
-
-            <div class="flex min-h-0 flex-1 flex-col px-4 py-3">
-                <InputGroup class="mb-3">
-                    <InputGroupAddon>
-                        <Icon name="search" :size="14" />
-                    </InputGroupAddon>
-                    <InputGroupInput
-                        :model-value="props.searchKeyword"
-                        placeholder="搜索常用语(按内容)"
-                        class="text-[13px]"
-                        @update:model-value="(v: string | number) => emit('update:searchKeyword', String(v))" />
-                </InputGroup>
-
-                <!-- ⚠️ Tabs/TabsList 必须显式给 flex-col / h-9：
-                     官方类里的布局写在 data-horizontal:* 变体下，而本机 reka-ui 输出的是
-                     data-orientation="horizontal"（没有裸 data-horizontal 属性），那些类不会命中。 -->
-                <Tabs default-value="all" class="flex min-h-0 flex-1 flex-col gap-2">
-                    <TabsList class="h-9 w-full">
-                        <TabsTrigger value="all">全部话术</TabsTrigger>
-                        <TabsTrigger value="mine">我的话术</TabsTrigger>
-                    </TabsList>
-
-                    <!-- 两个 tab 共用一套「加载中 / 空 / 列表」渲染 -->
-                    <template v-for="tab in [
-                        { key: 'all', items: all, empty: '暂无全部话术，点右上角刷新抓取' },
-                        { key: 'mine', items: mine, empty: '暂无我的话术，点右上角刷新抓取' },
-                    ]" :key="tab.key">
-                        <TabsContent :value="tab.key" class="min-h-0 flex-1 overflow-y-auto">
-                            <div v-if="props.phrasesLoading" class="flex flex-col items-center gap-2 py-6">
-                                <Spinner class="size-5 text-primary" />
-                                <span class="text-center text-xs leading-5 text-muted-foreground">
-                                    正在抓取常用话术…（右侧栏会自动切 tab，请勿操作）
-                                </span>
-                            </div>
-
-                            <Empty v-else-if="!tab.items.length" class="border-0 p-6">
-                                <EmptyHeader>
-                                    <EmptyDescription class="text-[13px]">
-                                        {{ tab.empty }}
-                                    </EmptyDescription>
-                                </EmptyHeader>
-                            </Empty>
-
-                            <div v-else class="flex flex-col gap-1.5">
-                                <Tooltip v-for="(t, i) in tab.items" :key="tab.key + i" :content="t" side="left">
-                                    <!-- 每条话术 = 官方 Item（as="button"，整行可点） -->
-                                    <Item
-                                        as="button"
-                                        variant="outline"
-                                        size="xs"
-                                        class="items-start text-left hover:bg-muted"
-                                        @click="pick(t)">
-                                        <!--
-                                            统一行高（v26.10.19-v14）：话术长短不一，1 行 20px / 2 行 40px
-                                            ⇒ 卡片高度在列表里跳变。给内容区钉死两行高度（min-h-10 = 40px）
-                                            再 justify-center：单行的上下各留 10px、两行的正好填满，
-                                            卡片一律 py-2 + 40px + py-2 = 56px，扫描时基线整齐。
-                                            ⚠️ 不要改成给 Item 写 h-14：字号/行高一变就会挤，min-h 才是内容驱动。
-                                        -->
-                                        <ItemContent class="min-h-10 justify-center">
-                                            <ItemTitle
-                                                class="whitespace-normal font-normal leading-5 text-[13px]"
-                                                style="
-                                                    display: -webkit-box;
-                                                    -webkit-line-clamp: 2;
-                                                    -webkit-box-orient: vertical;
-                                                    overflow: hidden;
-                                                    white-space: pre-wrap;
-                                                    word-break: break-word;
-                                                ">
-                                                {{ t }}
-                                            </ItemTitle>
-                                        </ItemContent>
-                                    </Item>
-                                </Tooltip>
-                            </div>
-                        </TabsContent>
-                    </template>
-                </Tabs>
+                    </button>
+                </div>
             </div>
-        </SheetContent>
-    </Sheet>
+
+            <!-- 带图标的输入框：skill/components/input.md —— 输入框内有多个元素时，class 放在父元素 -->
+            <label class="input input-sm my-3 w-full">
+                <Icon name="search" :size="14" />
+                <input
+                    type="text"
+                    placeholder="搜索常用语(按内容)"
+                    :value="props.searchKeyword"
+                    @input="emit('update:searchKeyword', ($event.target as HTMLInputElement).value)" />
+            </label>
+
+            <div role="tablist" class="tabs tabs-box w-full">
+                <button role="tab" class="tab" :class="tab === 'all' ? 'tab-active' : ''" @click="tab = 'all'">
+                    全部话术
+                </button>
+                <button role="tab" class="tab" :class="tab === 'mine' ? 'tab-active' : ''" @click="tab = 'mine'">
+                    我的话术
+                </button>
+            </div>
+
+            <div v-if="props.phrasesLoading" class="flex flex-col items-center gap-2 py-6">
+                <span class="loading loading-spinner loading-md text-primary"></span>
+                <span class="text-center text-xs leading-5 text-base-content/60">
+                    正在抓取常用话术…（右侧栏会自动切 tab，请勿操作）
+                </span>
+            </div>
+
+            <div v-else-if="!rows.length" class="hero">
+                <div class="hero-content">
+                    <p class="text-[13px] text-base-content/60">{{ emptyText }}</p>
+                </div>
+            </div>
+
+            <ul v-else class="list">
+                <li v-for="(t, i) in rows" :key="tab + i" class="list-row py-0">
+                    <div class="tooltip tooltip-left w-full" :data-tip="t">
+                        <button class="min-h-10 w-full text-left text-[13px] leading-5" @click="pick(t)">
+                            {{ t }}
+                        </button>
+                    </div>
+                </li>
+            </ul>
+        </div>
+        <form method="dialog" class="modal-backdrop">
+            <button>close</button>
+        </form>
+    </dialog>
 </template>

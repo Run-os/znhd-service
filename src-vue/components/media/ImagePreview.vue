@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, inject, onBeforeUnmount, ref, watch } from 'vue';
+import { computed, inject, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { Icon } from '@vue/icons';
 import { SHADOW_ROOT_KEY } from '@vue/lib/shadow';
 import { printA4Image } from '@vue/lib/print';
@@ -13,9 +13,16 @@ import { printA4Image } from '@vue/lib/print';
  * 左右切换 / 打印 / Esc 关闭。自己实现约 150 行，换来的是「样式完全在影子树内」，
  * 不必再为 antd 的 `getContainer`、遮罩叠加、`.ant-image-preview-*` 类名做适配。
  *
+ * ── v26.10.19：外壳改用 daisyUI `modal`（原生 <dialog>）─────────────────
+ * daisyUI 迁移后宿主弹窗全部走 `showModal()`（浏览器 top layer），
+ * top layer 永远画在普通元素之上 ⇒ 原先的 `position:fixed` 遮罩会被底层弹窗盖住。
+ * 预览层自身也改成 `<dialog class="modal">`，后 show 的 dialog 在 top layer 里
+ * 排在前面的弹窗之上，层级问题随之消失（不再需要 zIndex prop）。
+ *
  * ⚠️ 必须 Teleport 到 shadowRoot，**不能留在传输助手窗口里**：窗口内容有
- * `translate(-50%,-50%)` 的 transform，会成为 `position:fixed` 的包含块，
- * 预览会缩在窗口内而不是铺满视口（这正是 React 版必须传 `getPreviewHost()` 的同源问题）。
+ * `translate(-50%,-50%)` 的 transform，会成为 `position:fixed` 的包含块。
+ * `.modal` 内容不用 `modal-box`（预览要满屏出血，modal-box 的底色/圆角/内边距
+ * 全要反向覆盖，不如直接放内容），点击空白关闭沿用各区块的 `@click.self`。
  */
 const props = withDefaults(
     defineProps<{
@@ -26,15 +33,27 @@ const props = withDefaults(
         index?: number;
         /** 打印对话框标题（与 items 同序） */
         names?: string[];
-        /** 层级（默认 1000020：压在传输助手窗口与面板之上，低于暗色子弹窗） */
-        zIndex?: number;
     }>(),
-    { index: 0, names: () => [], zIndex: 1000020 }
+    { index: 0, names: () => [] }
 );
 
 const emit = defineEmits<{ (e: 'update:open', v: boolean): void }>();
 
 const overlayTarget = inject(SHADOW_ROOT_KEY) as unknown as string;
+
+const dlg = ref<HTMLDialogElement | null>(null);
+
+function sync(v: boolean): void {
+    const el = dlg.value;
+    if (!el) return;
+    if (v && !el.open) el.showModal();
+    else if (!v && el.open) el.close();
+}
+
+watch(() => props.open, sync);
+onMounted(() => {
+    if (props.open) sync(true);
+});
 
 const current = ref(0);
 const scale = ref(1);
@@ -80,13 +99,13 @@ function onKey(e: KeyboardEvent) {
  * 预览自己的 `@click.self` 关闭走的是 click 事件（另一条事件流），不受影响。
  *
  * ⚠️ 目标判定必须用 `composedPath()`：window 级监听器在影子树**外**，event.target
- * 已被重定向成影子宿主元素（实测 = DIV.dark），`closest('[data-image-preview]')`
+ * 已被重定向成影子宿主元素（实测 = DIV.dark），`closest('[data-znhd="image-preview"]')`
  * 永远匹配不上；composedPath()[0] 才是影子树内的真实落点（open 影子树不裁剪路径）。
  */
 function onPointerDown(e: PointerEvent) {
     if (!props.open) return;
     const path = e.composedPath();
-    const inPreview = path.some((n) => n instanceof Element && n.closest && n.closest('[data-image-preview]'));
+    const inPreview = path.some((n) => n instanceof Element && n.closest && n.closest('[data-znhd="image-preview"]'));
     if (inPreview) e.stopPropagation();
 }
 
@@ -113,12 +132,8 @@ onBeforeUnmount(() => {
 
 <template>
     <Teleport :to="overlayTarget">
-        <div
-            v-if="open"
-            data-image-preview="1"
-            class="fixed inset-0 flex flex-col bg-black/80"
-            :style="{ zIndex: props.zIndex }"
-            @click.self="emit('update:open', false)">
+        <dialog ref="dlg" data-znhd="image-preview" class="modal" @close="emit('update:open', false)">
+            <div class="flex h-screen w-screen flex-col bg-black/80">
             <!-- 顶部：序号 + 关闭（不挡图片点击） -->
             <div class="flex shrink-0 items-center px-4 py-3 text-[13px] text-white/80">
                 <span class="min-w-0 flex-1 truncate">{{ title }}</span>
@@ -202,6 +217,7 @@ onBeforeUnmount(() => {
                     <Icon name="printer" :size="16" />
                 </button>
             </div>
-        </div>
+            </div>
+        </dialog>
     </Teleport>
 </template>

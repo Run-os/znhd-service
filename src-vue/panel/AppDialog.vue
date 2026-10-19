@@ -1,67 +1,74 @@
 <script setup lang="ts">
+import { onMounted, ref, watch } from 'vue';
 import { Icon } from '@vue/icons';
-import { Button } from '@vue/components/ui/button';
-import { Card, CardContent, CardFooter } from '@vue/components/ui/card';
-import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle } from '@vue/components/ui/dialog';
 
 /**
- * 面板侧弹窗外壳：**官方 Dialog + 官方 Card**（不再手写弹窗骨架）。
+ * 面板侧弹窗外壳：**daisyUI 原生 `modal`**（`<dialog class="modal">`）。
  *
- * 结构：
- *   Dialog（reka 根）
- *     └ DialogContent（只负责定位/进出场，视觉表面交给 Card）
- *         └ Card → 标题栏 + CardContent + CardFooter
+ * 结构严格照 skill/components/modal.md：
+ *   <dialog class="modal">
+ *     <div class="modal-box">{CONTENT}</div>
+ *     <form method="dialog" class="modal-backdrop"><button>close</button></form>
+ *   </dialog>
  *
- * 为什么表面交给 Card：DialogContent 官方默认自带 `bg-popover p-6 gap-6`，
- * 想要「顶栏通栏、内容区自己滚」就得一路改它的 padding；换成 Card 之后，
- * 圆角/描边/底色由 Card 统一提供，内容区滚动也不会把标题栏带跑。
+ * 开关由原生 `showModal()` / `close()` 驱动（skill 推荐方式），
+ * 因此焦点陷阱、Esc 关闭、背景锁定全部由浏览器提供，不再需要 reka-ui。
  *
- * ⚠️ DialogContent 已在 vendored 源码里被改成 portal 到 shadowRoot（见其文件头注释）；
- *    宽度用内联 style 传，`sm:max-w-none` 用来压掉官方的 `sm:max-w-md`。
+ * 宽度用官方允许的方式覆盖（modal 文档：可用任意 w-/max-w- 工具类），
+ * 其余视觉一律交给 `modal-box` 默认值。
  */
 const open = defineModel<boolean>('open', { default: false });
 
-const props = withDefaults(defineProps<{ title: string; description?: string; width?: number; footer?: boolean }>(), {
-    description: '',
-    width: 520,
-    footer: true,
+const props = withDefaults(
+    defineProps<{ title: string; description?: string; width?: number; footer?: boolean }>(),
+    {
+        description: '',
+        width: 520,
+        footer: true,
+    }
+);
+
+const dlg = ref<HTMLDialogElement | null>(null);
+
+function sync(v: boolean): void {
+    const el = dlg.value;
+    if (!el) return;
+    if (v && !el.open) el.showModal();
+    else if (!v && el.open) el.close();
+}
+
+watch(open, (v) => sync(v));
+onMounted(() => {
+    if (open.value) sync(true);
 });
 </script>
 
 <template>
-    <Dialog v-model:open="open">
-        <DialogContent
-            :show-close-button="false"
-            class="gap-0 border-0 bg-transparent p-0 shadow-none ring-0 sm:max-w-none"
-            :style="{ width: props.width + 'px', maxWidth: 'calc(100vw - 32px)' }">
-            <DialogDescription class="sr-only">{{ props.description || props.title }}</DialogDescription>
-
-            <Card class="max-h-[calc(100vh-96px)] gap-0 overflow-hidden py-0 shadow-2xl">
-                <div class="flex shrink-0 items-center justify-between gap-3 border-b border-border px-5 py-3">
-                    <DialogTitle class="m-0 flex min-w-0 items-center gap-2 text-[15px] font-semibold leading-6 text-foreground">
-                        <!-- #title 供需要「标题 + 动作按钮」的弹窗用（如图片嗅探的「重新扫描」） -->
-                        <slot name="title">{{ props.title }}</slot>
-                    </DialogTitle>
-                    <DialogClose
-                        class="inline-flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-md border-0 bg-transparent text-muted-foreground outline-none hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50"
-                        aria-label="关闭">
+    <dialog ref="dlg" class="modal" @close="open = false">
+        <div class="modal-box" :style="{ width: props.width + 'px', maxWidth: 'calc(100vw - 32px)' }">
+            <div class="flex items-center justify-between gap-3">
+                <h3 class="min-w-0 text-[15px] font-semibold leading-6">
+                    <!-- #title 供需要「标题 + 动作按钮」的弹窗用（如图片嗅探的「重新扫描」） -->
+                    <slot name="title">{{ props.title }}</slot>
+                </h3>
+                <form method="dialog">
+                    <button class="btn btn-ghost btn-sm btn-square" aria-label="关闭">
                         <Icon name="close" :size="15" />
-                    </DialogClose>
-                </div>
+                    </button>
+                </form>
+            </div>
 
-                <CardContent class="min-h-0 max-h-[calc(100vh-220px)] overflow-auto px-5 py-4 text-sm text-card-foreground">
-                    <slot />
-                </CardContent>
+            <slot />
 
-                <!-- footer=false 表示不要默认按钮；调用方给了 #footer 插槽时仍要渲染 -->
-                <CardFooter
-                    v-if="props.footer || $slots.footer"
-                    class="shrink-0 justify-end gap-2 border-t border-border px-5 py-3 pt-3">
-                    <slot name="footer">
-                        <Button size="sm" @click="open = false">确定</Button>
-                    </slot>
-                </CardFooter>
-            </Card>
-        </DialogContent>
-    </Dialog>
+            <!-- footer=false 表示不要默认按钮；调用方给了 #footer 插槽时仍要渲染 -->
+            <div v-if="props.footer || $slots.footer" class="modal-action">
+                <slot name="footer">
+                    <button class="btn btn-sm" @click="open = false">确定</button>
+                </slot>
+            </div>
+        </div>
+        <form method="dialog" class="modal-backdrop">
+            <button>close</button>
+        </form>
+    </dialog>
 </template>

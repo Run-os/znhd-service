@@ -1,19 +1,15 @@
 <script setup lang="ts">
 import MainPanel from './panel/MainPanel.vue';
-import { Toaster } from './components/ui/sonner';
-import { themeMode } from './lib/theme';
 
 /**
- * 根组件：主面板 + 全局提示容器。
+ * 根组件：主面板。
  *
- * `<Sonner>` 是官方 sonner 组件（原地渲染 `<section data-sonner-toaster>`，不 portal），
- * 它的样式表已在 main.ts 注入影子树 —— 所以面板任意位置 `toast.success(...)` 都有样式。
- * `:theme` 跟着宿主 class 走，日间是浅色提示条、夜间是深色提示条。
+ * 迁移到 daisyUI 后不再需要 `<Toaster>` 挂载点：提示由 lib/toast.ts 直接在
+ * 影子树的 #app 下拼 `toast` + `alert`（daisyUI 原生结构），不再引入 vue-sonner。
  */
 defineProps<{ host: HTMLElement }>();
 </script>
 
 <template>
     <MainPanel :host="host" />
-    <Toaster position="top-center" :theme="themeMode" :duration="3200" :visible-toasts="3" />
 </template>

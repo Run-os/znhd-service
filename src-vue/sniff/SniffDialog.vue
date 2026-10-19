@@ -23,12 +23,6 @@ import {
     type ConvSection,
 } from '@/lib/sniffConv';
 import { Icon } from '@vue/icons';
-import { Button } from '@vue/components/ui/button';
-import { Checkbox } from '@vue/components/ui/checkbox';
-import { Progress } from '@vue/components/ui/progress';
-import { Input } from '@vue/components/ui/input';
-import { Badge } from '@vue/components/ui/badge';
-import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@vue/components/ui/empty';
 import ImageActions from '@vue/components/media/ImageActions.vue';
 import ImagePreview from '@vue/components/media/ImagePreview.vue';
 import type { ImageAction } from '@vue/components/media/types';
@@ -460,14 +454,12 @@ const emptyText = computed(() => {
     <AppDialog v-model:open="open" :width="828" title="图片嗅探">
         <template #title>
             <span class="shrink-0">图片嗅探（共 {{ pickable.length }} 张）</span>
-            <Button
-                variant="outline"
-                size="xs"
-                class="h-6 shrink-0 px-2 text-[11px]"
+            <button
+                class="btn btn-outline btn-xs h-6 shrink-0 px-2 text-[11px]"
                 :disabled="phase === 'measuring'"
                 @click="startScan">
                 {{ phase === 'measuring' ? '扫描中…' : '重新扫描' }}
-            </Button>
+            </button>
         </template>
 
         <!-- data-sniff-excluded：被名称/后缀规则排除的张数。界面上不显示这句提示，
@@ -476,57 +468,55 @@ const emptyText = computed(() => {
         <div
             class="mb-2 flex flex-wrap items-center gap-2"
             :data-sniff-excluded="excluded">
-            <span class="text-xs text-muted-foreground">只列出 ≥</span>
-            <div class="relative w-[132px] shrink-0">
-                <Input
+            <span class="text-xs text-base-content/60">只列出 ≥</span>
+            <label class="input input-sm w-[132px] shrink-0">
+                <input
                     v-model="minKBText"
                     type="number"
                     min="1"
                     max="10240"
                     step="10"
-                    class="h-7 pr-9 text-xs"
+                    class="text-xs"
                     aria-label="最小体积 KB"
                     @change="commitMinKB"
                     @blur="commitMinKB" />
-                <span class="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[11px] text-muted-foreground">
-                    KB
-                </span>
-            </div>
-            <span class="text-xs text-muted-foreground">的图片（显示 {{ known.length }} 张）</span>
+                <span class="text-[11px] opacity-60">KB</span>
+            </label>
+            <span class="text-xs text-base-content/60">的图片（显示 {{ known.length }} 张）</span>
             <label class="ml-1 flex cursor-pointer items-center gap-1.5 text-xs">
-                <Checkbox
-                    :model-value="allSelected"
+                <input
+                    type="checkbox"
+                    class="checkbox checkbox-sm"
+                    :checked="allSelected"
                     :disabled="!kept.length"
                     aria-label="全选"
-                    @update:model-value="toggleAll" />
+                    @change="toggleAll" />
                 全选
             </label>
         </div>
 
-        <p v-if="truncated" class="mb-2 text-xs text-destructive">
+        <p v-if="truncated" class="mb-2 text-xs text-error">
             页面元素太多或图片超过 {{ MAX_SNIFF }} 张，本次只扫描了前一部分 —— 结果可能不完整。
         </p>
-        <p v-if="droppedCount > 0" class="mb-2 text-xs text-muted-foreground">
+        <p v-if="droppedCount > 0" class="mb-2 text-xs text-base-content/60">
             已排除 {{ droppedCount }} 个响应不是图片的地址（视频 / 网页 / JSON 等）。
         </p>
 
         <!-- 测量中且一张都还没回来：进度条（v26.10.19-v3：与列表/空态统一固定 58vh，弹窗高度不随内容抖动） -->
         <div v-if="phase === 'measuring' && !probed.length" class="flex h-[58vh] flex-col items-center justify-center">
-            <Progress :model-value="percent" class="mx-auto max-w-[320px]" />
-            <p class="mt-2 text-xs text-muted-foreground">
+            <progress class="progress progress-primary mx-auto w-full max-w-[320px]" :value="percent" max="100"></progress>
+            <p class="mt-2 text-xs text-base-content/60">
                 正在测量大小…（{{ probed.length }}/{{ total }}）
             </p>
         </div>
 
-        <Empty v-else-if="!kept.length" class="h-[58vh] border-0 py-8">
-            <EmptyHeader>
-                <EmptyMedia variant="icon">
-                    <Icon name="image" :size="20" />
-                </EmptyMedia>
-                <EmptyTitle class="text-sm">没有可显示的图片</EmptyTitle>
-                <EmptyDescription class="text-xs">{{ emptyText }}</EmptyDescription>
-            </EmptyHeader>
-        </Empty>
+        <div v-else-if="!kept.length" class="hero h-[58vh]">
+            <div class="hero-content flex-col text-center">
+                <Icon name="image" :size="20" />
+                <p class="text-sm">没有可显示的图片</p>
+                <p class="text-xs text-base-content/60">{{ emptyText }}</p>
+            </div>
+        </div>
 
         <!-- v26.10.19-v3：固定 h-[58vh]（原 max-h）——空态/列表/测量中窗口大小一致 -->
         <div v-else class="h-[58vh] overflow-auto pr-1">
@@ -542,11 +532,11 @@ const emptyText = computed(() => {
                     v-if="groupedView && (s.known.length || s.unknown.length)"
                     data-sniff-group-header
                     class="mb-1.5 flex flex-wrap items-center gap-2">
-                    <span class="text-xs font-semibold text-foreground">{{ groupTitle(s) }}</span>
-                    <Badge v-if="s.current" variant="secondary" class="h-4 px-1.5 text-[10px]">当前会话</Badge>
-                    <Button variant="link" size="xs" class="h-auto px-0 text-[11px]" @click="toggleGroup(s)">
+                    <span class="text-xs font-semibold text-base-content">{{ groupTitle(s) }}</span>
+                    <span v-if="s.current" class="badge badge-secondary badge-sm">当前会话</span>
+                    <button class="btn btn-link btn-xs h-auto px-0 text-[11px]" @click="toggleGroup(s)">
                         全选本组
-                    </Button>
+                    </button>
                 </div>
 
                 <div v-if="s.known.length" class="grid grid-cols-5 gap-2">
@@ -555,7 +545,7 @@ const emptyText = computed(() => {
                         :key="it.key"
                         data-sniff-card
                         :data-sniff-no-time="noTimeOf(it) ? '1' : undefined"
-                        class="flex min-w-0 flex-col rounded-xl border border-border bg-card p-1.5 transition-colors hover:border-input">
+                        class="flex min-w-0 flex-col rounded-xl border border-base-300 bg-base-100 p-1.5 transition-colors hover:border-base-content/30">
                         <div class="relative">
                             <ImageActions :actions="actionsOf(it)">
                                 <img
@@ -567,21 +557,23 @@ const emptyText = computed(() => {
                             </ImageActions>
                             <!-- 勾选框压在左上角：点它只切换勾选，不会触发放大 -->
                             <div class="absolute left-1.5 top-1.5 z-[2]" @click.stop>
-                                <Checkbox
-                                    :model-value="selected.has(it.key)"
+                                <input
+                                    type="checkbox"
+                                    class="checkbox checkbox-sm"
+                                    :checked="selected.has(it.key)"
                                     :aria-label="'选择 ' + fileNameOf(it)"
-                                    @update:model-value="toggleOne(it.key)" />
+                                    @change="toggleOne(it.key)" />
                             </div>
                         </div>
                         <!-- 文件名：没拿到消息时间的标红（原先用卡片四周的红圈表示） -->
                         <span
                             data-sniff-name
                             class="mt-1 truncate text-[11.5px] font-medium leading-4"
-                            :class="noTimeOf(it) ? 'text-destructive' : 'text-foreground'"
+                            :class="noTimeOf(it) ? 'text-error' : 'text-base-content'"
                             :title="fileNameOf(it)">
                             {{ fileNameOf(it) }}
                         </span>
-                        <span class="truncate text-[11px] leading-4 text-muted-foreground" :title="metaOf(it)">
+                        <span class="truncate text-[11px] leading-4 text-base-content/60" :title="metaOf(it)">
                             {{ sizeText(it) }}
                         </span>
                     </div>
@@ -593,7 +585,7 @@ const emptyText = computed(() => {
                         :key="it.key"
                         data-sniff-card
                         :data-sniff-no-time="noTimeOf(it) ? '1' : undefined"
-                        class="flex min-w-0 flex-col rounded-xl border border-border bg-card p-1.5 transition-colors hover:border-input">
+                        class="flex min-w-0 flex-col rounded-xl border border-base-300 bg-base-100 p-1.5 transition-colors hover:border-base-content/30">
                         <div class="relative">
                             <ImageActions :actions="actionsOf(it)">
                                 <img
@@ -604,31 +596,33 @@ const emptyText = computed(() => {
                                     @click="openPreview(it)" />
                             </ImageActions>
                             <div class="absolute left-1.5 top-1.5 z-[2]" @click.stop>
-                                <Checkbox
-                                    :model-value="selected.has(it.key)"
+                                <input
+                                    type="checkbox"
+                                    class="checkbox checkbox-sm"
+                                    :checked="selected.has(it.key)"
                                     :aria-label="'选择 ' + fileNameOf(it)"
-                                    @update:model-value="toggleOne(it.key)" />
+                                    @change="toggleOne(it.key)" />
                             </div>
                         </div>
                         <!-- 文件名：没拿到消息时间的标红（原先用卡片四周的红圈表示） -->
                         <span
                             data-sniff-name
                             class="mt-1 truncate text-[11.5px] font-medium leading-4"
-                            :class="noTimeOf(it) ? 'text-destructive' : 'text-foreground'"
+                            :class="noTimeOf(it) ? 'text-error' : 'text-base-content'"
                             :title="fileNameOf(it)">
                             {{ fileNameOf(it) }}
                         </span>
-                        <span class="truncate text-[11px] leading-4 text-muted-foreground" :title="metaOf(it)">
+                        <span class="truncate text-[11px] leading-4 text-base-content/60" :title="metaOf(it)">
                             {{ sizeText(it) }}
                         </span>
                     </div>
                 </div>
 
                 <div v-if="s.unknown.length" class="mt-1.5 flex flex-wrap items-center gap-1.5">
-                    <Button variant="link" size="xs" class="h-auto px-0 text-[11px]" @click="toggleUnknown(s.id)">
+                    <button class="btn btn-link btn-xs h-auto px-0 text-[11px]" @click="toggleUnknown(s.id)">
                         {{ openUnknown.has(s.id) ? '▾' : '▸' }} 大小未知（{{ s.unknown.length }}）
-                    </Button>
-                    <span v-if="explainUnknownId === s.id" class="text-[11px] text-muted-foreground">
+                    </button>
+                    <span v-if="explainUnknownId === s.id" class="text-[11px] text-base-content/60">
                         量不出字节数（跨域响应头被拒等），可能有大图，已保留
                     </span>
                 </div>
@@ -636,7 +630,7 @@ const emptyText = computed(() => {
         </div>
 
         <!-- v26.10.19-v3：无图时不渲染内容但保留占位（invisible），弹窗总高与有图时一致 -->
-        <p class="mt-2 text-xs leading-5 text-muted-foreground" :class="kept.length ? '' : 'invisible'">
+        <p class="mt-2 text-xs leading-5 text-base-content/60" :class="kept.length ? '' : 'invisible'">
             提示：
             <template v-if="groupedView">图片已按会话（纳税人）分组，组头可直接「全选本组」；</template>
             单击缩略图可放大 / 多图切换，放大后工具栏上的「打印」按 A4 打印原图（横图自动旋转 90 度）；
@@ -644,20 +638,13 @@ const emptyText = computed(() => {
         </p>
 
         <template #footer>
-            <Button
-                size="sm"
-                :disabled="!selectedCount || !!batch"
-                @click="void doDownloadSelected()">
+            <button class="btn btn-sm" :disabled="!selectedCount || !!batch" @click="void doDownloadSelected()">
                 {{ batch ? '下载中 ' + batch.done + '/' + batch.total : '下载所选（' + selectedCount + '）' }}
-            </Button>
-            <Button
-                variant="outline"
-                size="sm"
-                :disabled="!selected.size || !!batch"
-                @click="selected = new Set()">
+            </button>
+            <button class="btn btn-outline btn-sm" :disabled="!selected.size || !!batch" @click="selected = new Set()">
                 清空选择
-            </Button>
-            <Button variant="secondary" size="sm" @click="open = false">关闭</Button>
+            </button>
+            <button class="btn btn-secondary btn-sm" @click="open = false">关闭</button>
         </template>
 
         <!-- 放大预览：Teleport 进 shadowRoot，层级高于本弹窗 -->

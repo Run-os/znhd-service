@@ -1,7 +1,6 @@
 import { createApp, h, type App as VueApp } from 'vue';
 import App from './App.vue';
 import css from './style.css?inline';
-import sonnerCss from 'vue-sonner/style.css?inline';
 import { SHADOW_ROOT_KEY, setShadowRoot } from './lib/shadow';
 import { initTheme } from './lib/theme';
 import { PANEL_HOST_ID } from '@/lib/ui/panelIds';
@@ -17,6 +16,37 @@ import { initialPanelPoint } from './panel/geometry';
  * 为什么挂 documentElement 而不是 body：税务页 body 常带 transform/filter，
  * 会形成独立层叠上下文，把 position:fixed 的浮层困在里面（沿用 panelHost.tsx 的结论）。
  */
+/**
+ * Tailwind v4 用 `@property` 给 --tw-* 工具类变量提供初值（如 --tw-border-style: solid）。
+ * ⚠️ Chromium 只在**文档级**样式表处理 @property，影子树 <style> 里的声明会被忽略 ——
+ * 后果是 shadow DOM 里 border / shadow / ring / transform 等依赖初值的工具类全部退化
+ * （实测：border-b 算出 0px 宽）。CSS.registerProperty 是文档级 JS API，可以绕过该限制：
+ * 在注入样式前把构建产物里声明的 @property 逐个重新注册。
+ * 页面若已注册同名属性则抛错，忽略即可（同名注册语义一致，页面版本优先生效）。
+ */
+function registerTailwindProperties(styleEl: HTMLStyleElement): void {
+    const re = /@property\s+(--[\w-]+)\s*\{([^}]*)\}/g;
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(styleEl.textContent ?? '')) !== null) {
+        const [, name, body] = m;
+        const pick = (key: string): string | undefined => {
+            const hit = new RegExp(key + '\\s*:\\s*([^;}]+)').exec(body);
+            return hit ? hit[1].trim() : undefined;
+        };
+        try {
+            CSS.registerProperty({
+                name,
+                // CSS 文本里 syntax 是带引号的字符串（syntax:"*"），JS API 要去掉引号
+                syntax: (pick('syntax') ?? '*').replace(/^["']+|["']+$/g, ''),
+                inherits: pick('inherits') === 'true',
+                initialValue: pick('initial-value'),
+            });
+        } catch {
+            /* 页面已注册同名属性或重复注册 —— 忽略 */
+        }
+    }
+}
+
 let app: VueApp | null = null;
 
 export function mountPanel(): HTMLElement {
@@ -38,21 +68,17 @@ export function mountPanel(): HTMLElement {
     // 不能依赖插件往 document.head 注入（那样 :host 与工具类在影子树里都不可见）。
     const style = document.createElement('style');
     style.textContent = css;
+    registerTailwindProperties(style);
     shadowRoot.appendChild(style);
-
-    // Sonner 的样式表（vue-sonner@2 单独发布，不再运行时注 head）——同样只进影子树。
-    // 它全部规则都限定在 [data-sonner-toaster] 作用域内，不会污染面板其余部分。
-    const sonnerStyle = document.createElement('style');
-    sonnerStyle.setAttribute('data-znhd', 'sonner');
-    sonnerStyle.textContent = sonnerCss;
-    shadowRoot.appendChild(sonnerStyle);
-
-    // 主题：在宿主上切 dark class（首帧前完成，避免日→夜闪一下）
-    initTheme(host);
 
     const appContainer = document.createElement('div');
     appContainer.id = 'app';
     shadowRoot.appendChild(appContainer);
+
+    // 主题：daisyUI 的 `[data-theme=...]` 选择器只在**影子树内部**生效
+    //（`:host` 是跨边界的伪类，普通属性选择器选不到宿主），因此挂载点是 #app 而不是 host。
+    // 首帧前完成，避免日→夜闪一下。
+    initTheme(appContainer);
 
     app = createApp({ render: () => h(App, { host }) });
     app.provide(SHADOW_ROOT_KEY, shadowRoot);

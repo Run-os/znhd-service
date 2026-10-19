@@ -2,151 +2,37 @@
 @import 'tw-animate-css';
 
 /*
- * 设计令牌 —— 照 shadcn-vue 的 theming 结构组织（https://www.shadcn-vue.com/docs/theming）：
+ * daisyUI 官方主题（2026-10-19 迁移）。
  *
- *   :host        ← 日间：白底 + 蓝色强调（antd blue-6）
- *   :host(.dark) ← 夜间：黑底 + 绿色强调（微信绿）
- *   @theme       ← 把语义色映射到上面那批**可切换的裸变量**
+ *   wireframe ← 日间（默认；线框风，无品牌主色）
+ *   business  ← 夜间（深灰底 + 暗蓝主色）
  *
- * 为什么 @theme 里写的是 `var(--background)` 而不是十六进制：
- *    · 官方 shadcn 组件的类名是语义的（`bg-card` / `text-muted-foreground`），
- *      编译后取 `--color-*`；`--color-*` 再指向 `--background` 这类裸变量，
- *      于是「换主题 = 换宿主上的那几个裸变量」，组件源码一个字都不用改。
- *    · 传输助手是另一套品牌色板（微信配色），它在窗口根节点上直接覆盖 `--color-*`
- *      （见 transfer/theme.ts 的 TRANSFER_VARS / TRANSFER_VARS_LIGHT）——**跟随这里切日/夜**，
- *      但取的是微信亮色/暗色两套值，而不是面板的白底蓝/黑底绿。
+ * `root: ':host'` 是硬要求：这份 CSS 由 main.ts 以 ?inline 取字符串、注入 shadowRoot，
+ * daisyUI 默认把主题变量挂在 `:root`，而影子树里没有 :root，只有宿主 → 必须显式改挂 :host，
+ * 否则所有 --color-* 都是空值，整站无色。
  *
- * 这份 CSS 由 main.ts 以 ?inline 方式取字符串、注入到 **shadowRoot 内部**，
- * 因此 :host 就是面板宿主；宿主页面的全局样式进不来（这也是迁 ShadowDOM 的目的）。
+ * `exclude: rootscrollgutter` —— daisyUI 默认会给根元素预留滚动条占位；
+ * 宿主是第三方税务页，加了会让页面横向抖动，必须排除。
  */
+@plugin 'daisyui' {
+  themes: wireframe --default, business --prefersdark;
+  root: ':host';
+  exclude: rootscrollgutter;
+}
 
-/* 类名驱动暗色（默认的 dark: 变体跟系统走，这里改成跟宿主 class 走）。 */
-@custom-variant dark (&:where(.dark, .dark *));
+/* `dark:` 变体跟随 business 主题（daisyUI 的颜色本身不要用 dark:，见 skill/colors 规则 4） */
+@custom-variant dark (&:where([data-theme='business'], [data-theme='business'] *));
 
-@theme {
-  --font-sans:
+/* 宿主页常有 text-align:center / 自定义 line-height，这里给整棵影子树定基线 */
+:host {
+  font-family:
     -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'PingFang SC', 'Hiragino Sans GB',
     'Microsoft YaHei', sans-serif;
-
-  /* ── shadcn 语义令牌（官方组件依赖这些名字，缺一个就是「无色」） ── */
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-card: var(--card);
-  --color-card-foreground: var(--card-foreground);
-  --color-popover: var(--popover);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-primary: var(--primary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-secondary: var(--secondary);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-muted: var(--muted);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-accent: var(--accent);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-destructive: var(--destructive);
-  --color-destructive-foreground: var(--destructive-foreground);
-  --color-border: var(--border);
-  --color-input: var(--input);
-  --color-ring: var(--ring);
-
-  /* ── 兼容别名：面板里既有代码写的是这几个名字 ── */
-  --color-text: var(--foreground);
-  --color-text-secondary: var(--muted-foreground);
-  --color-text-tertiary: var(--text-tertiary);
-  --color-surface: var(--card);
-  --color-surface-muted: var(--muted);
-  --color-border-split: var(--border);
-  --color-primary-hover: var(--primary-hover);
-  --color-primary-soft: var(--accent);
-  --color-success: var(--success);
-  --color-warning: var(--warning);
-  --color-danger: var(--destructive);
-
-  --radius-panel: 8px;
-  --radius-block: 10px;
-}
-
-/* ============================================================ 日间 */
-:host {
-  color-scheme: light;
-
-  --radius: 8px;
-
-  --background: #ffffff;
-  --foreground: #1f2329;
-  --card: #ffffff;
-  --card-foreground: #1f2329;
-  --popover: #ffffff;
-  --popover-foreground: #1f2329;
-
-  /* 强调色：蓝 */
-  --primary: #1677ff;
-  --primary-foreground: #ffffff;
-  --primary-hover: #4096ff;
-
-  --secondary: #f5f5f5;
-  --secondary-foreground: #1f2329;
-  --muted: #f7f8fa;
-  --muted-foreground: #8c8c8c;
-  --accent: #e6f4ff;
-  --accent-foreground: #1677ff;
-  --destructive: #ff4d4f;
-  --destructive-foreground: #ffffff;
-  --border: #e5e6eb;
-  --input: #d9d9d9;
-  --ring: #1677ff;
-
-  --success: #52c41a;
-  --warning: #faad14;
-  --text-tertiary: #bfbfbf;
-
-  --scrollbar-thumb: rgba(0, 0, 0, 0.22);
-  --scrollbar-thumb-hover: rgba(0, 0, 0, 0.38);
-
-  /* 宿主页常有 text-align:center / 自定义 line-height，这里给整棵影子树定基线 */
-  font-family: var(--font-sans);
   font-size: 14px;
   line-height: 1.5715;
-  color: var(--foreground);
+  color: var(--color-base-content);
   text-align: left;
   -webkit-font-smoothing: antialiased;
-}
-
-/* ============================================================ 夜间 */
-:host(.dark) {
-  color-scheme: dark;
-
-  --background: #000000;
-  --foreground: #f2f3f5;
-  /* 面板/卡片也用纯黑：靠 popover（弹窗）与 muted（行底色）分层，而不是把表面提亮 */
-  --card: #000000;
-  --card-foreground: #f2f3f5;
-  --popover: #141414;
-  --popover-foreground: #f2f3f5;
-
-  /* 强调色：绿 */
-  --primary: #07c160;
-  --primary-foreground: #04170d;
-  --primary-hover: #06ad56;
-
-  --secondary: #1f1f1f;
-  --secondary-foreground: #f2f3f5;
-  --muted: #171717;
-  --muted-foreground: #9aa0a6;
-  --accent: #10251a;
-  --accent-foreground: #07c160;
-  --destructive: #ff5c5c;
-  --destructive-foreground: #ffffff;
-  --border: #262626;
-  --input: #333333;
-  --ring: #07c160;
-
-  --success: #07c160;
-  --warning: #faad14;
-  --text-tertiary: #6b7280;
-
-  --scrollbar-thumb: rgba(255, 255, 255, 0.24);
-  --scrollbar-thumb-hover: rgba(255, 255, 255, 0.42);
 }
 
 *,
@@ -171,22 +57,27 @@
 }
 
 /* 滚动条：细圆角条，颜色随主题（夜间白条 / 日间黑条） */
+:host {
+  --znhd-scrollbar-thumb: color-mix(in oklab, var(--color-base-content) 24%, transparent);
+  --znhd-scrollbar-thumb-hover: color-mix(in oklab, var(--color-base-content) 40%, transparent);
+}
+
 * {
   scrollbar-width: thin;
-  scrollbar-color: var(--scrollbar-thumb) transparent;
+  scrollbar-color: var(--znhd-scrollbar-thumb) transparent;
 }
 *::-webkit-scrollbar {
   width: 10px;
   height: 10px;
 }
 *::-webkit-scrollbar-thumb {
-  background: var(--scrollbar-thumb);
+  background: var(--znhd-scrollbar-thumb);
   border: 3px solid transparent;
   background-clip: padding-box;
   border-radius: 8px;
 }
 *::-webkit-scrollbar-thumb:hover {
-  background: var(--scrollbar-thumb-hover);
+  background: var(--znhd-scrollbar-thumb-hover);
   background-clip: padding-box;
 }
 *::-webkit-scrollbar-track,
@@ -198,14 +89,4 @@
    影子树里虽然进不来全局规则，但继承属性仍会传进来，这里显式复位一次。 */
 svg {
   vertical-align: middle;
-}
-
-/* message-scroller 的视口用了 `scrollbar-thin`（Tailwind 核心没有这个类，补最小实现） */
-.scrollbar-thin {
-  scrollbar-width: thin;
-}
-
-/* Sonner 的入场位：它自己 fixed + top-center，这里只压层级，避免被传输助手窗口盖住 */
-[data-sonner-toaster] {
-  z-index: 1000040 !important;
 }

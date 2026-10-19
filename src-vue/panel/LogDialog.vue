@@ -2,8 +2,6 @@
 import { computed, nextTick, ref, watch } from 'vue';
 import type { LogEntry, LogType } from '@/lib/logger';
 import AppDialog from './AppDialog.vue';
-import Switch from '../components/ui/switch/Switch.vue';
-import { Button } from '@vue/components/ui/button';
 
 /**
  * 运行日志弹窗（Vue 版，对应 React 的 `LogModal`）。
@@ -18,6 +16,10 @@ import { Button } from '@vue/components/ui/button';
  *    · 开（默认）：新日志持续进来并滚到底部；
  *    · 关：列表冻结在关闭那一刻的快照，往上翻历史不会被打断；
  *    · 开关持久化在 Allvalue.logAutoRefresh，由父组件负责存取。
+ *
+ * 迁移到 daisyUI：筛选按钮 → `btn btn-xs`（选中态 `btn-active`），
+ * 日志区底色 → `bg-neutral text-neutral-content`，类型色 → `text-info/success/warning/error`，
+ * 「自动刷新」→ `toggle`。
  */
 const props = defineProps<{
     open: boolean;
@@ -31,11 +33,12 @@ const emit = defineEmits<{
     'update:autoRefresh': [boolean];
 }>();
 
-const TYPES: Array<{ type: LogType; label: string; color: string; fg: string; bg: string; bar: string }> = [
-    { type: 'info', label: '信息', color: '#1677ff', fg: '#ffffff', bg: 'transparent', bar: 'transparent' },
-    { type: 'success', label: '成功', color: '#52c41a', fg: '#08130c', bg: 'rgba(82,196,26,.06)', bar: '#52c41a' },
-    { type: 'warning', label: '警告', color: '#faad14', fg: '#332a0a', bg: 'rgba(250,173,20,.07)', bar: '#faad14' },
-    { type: 'error', label: '错误', color: '#ff4d4f', fg: '#ffffff', bg: 'rgba(255,77,79,.08)', bar: '#ff4d4f' },
+/** 类型 → daisyUI 语义色类（颜色全部来自主题，不再写死 hex） */
+const TYPES: Array<{ type: LogType; label: string; text: string; bar: string; btn: string }> = [
+    { type: 'info', label: '信息', text: 'text-info', bar: 'border-l-info', btn: 'btn-info' },
+    { type: 'success', label: '成功', text: 'text-success', bar: 'border-l-success', btn: 'btn-success' },
+    { type: 'warning', label: '警告', text: 'text-warning', bar: 'border-l-warning', btn: 'btn-warning' },
+    { type: 'error', label: '错误', text: 'text-error', bar: 'border-l-error', btn: 'btn-error' },
 ];
 
 const metaOf = (t: LogType) => TYPES.find((m) => m.type === t) || TYPES[0];
@@ -94,12 +97,8 @@ watch([() => props.open, () => props.logEntries, () => props.autoRefresh, filter
             <div class="flex flex-wrap gap-1.5">
                 <button
                     type="button"
-                    class="cursor-pointer select-none rounded-[11px] border px-2.5 py-0 text-xs font-medium leading-5"
-                    :style="{
-                        borderColor: allOn ? '#6b7b8d' : '#3a4655',
-                        background: allOn ? '#6b7b8d' : 'transparent',
-                        color: allOn ? '#ffffff' : '#8b9aab',
-                    }"
+                    class="btn btn-xs"
+                    :class="allOn ? 'btn-active' : ''"
                     :title="allOn ? '点击隐藏该类日志' : '点击显示该类日志'"
                     @click="toggleAll">
                     {{ allOn ? '全部（点此全隐）' : '全部' }}
@@ -108,71 +107,67 @@ watch([() => props.open, () => props.logEntries, () => props.autoRefresh, filter
                     v-for="m in TYPES"
                     :key="m.type"
                     type="button"
-                    class="cursor-pointer select-none rounded-[11px] border px-2.5 py-0 text-xs font-medium leading-5"
-                    :style="{
-                        borderColor: filter[m.type] ? m.color : '#3a4655',
-                        background: filter[m.type] ? m.color : 'transparent',
-                        color: filter[m.type] ? m.fg : '#8b9aab',
-                    }"
+                    class="btn btn-xs"
+                    :class="filter[m.type] ? m.btn : ''"
                     :title="filter[m.type] ? '点击隐藏该类日志' : '点击显示该类日志'"
                     @click="filter[m.type] = !filter[m.type]">
                     {{ m.label }} {{ counts[m.type] || 0 }}
                 </button>
             </div>
-            <Button
-                variant="destructive"
-                size="sm"
-                class="shrink-0"
+            <button
+                class="btn btn-error btn-sm shrink-0"
                 :disabled="props.logEntries.length === 0"
                 @click="emit('clear')">
                 清空
-            </Button>
+            </button>
         </div>
 
-        <!-- 暗色终端日志区 -->
+        <!-- 终端风日志区：颜色全部取自当前主题的 neutral -->
         <div
             ref="scroller"
-            class="mt-2.5 flex h-[360px] flex-col overflow-y-auto rounded-[4px] border border-[#1f2733] bg-[#0f141a] py-2 font-mono text-[12.5px] leading-[1.9]">
+            class="mt-2.5 flex h-[360px] flex-col overflow-y-auto rounded-box border border-neutral-content/10 bg-neutral py-2 font-mono text-[12.5px] leading-[1.9] text-neutral-content">
             <template v-if="rows.length">
                 <div
                     v-for="(entry, i) in rows"
                     :key="i"
-                    class="flex items-start gap-2 border-l-[3px] px-[10px] py-[2px] pl-[9px] hover:bg-white/10"
-                    :style="{ background: metaOf(entry.type).bg, borderLeftColor: metaOf(entry.type).bar }">
-                    <span class="flex-none basis-[86px] text-[#52667a]">{{ entry.timestamp }}</span>
-                    <span class="flex-none basis-[52px] font-semibold" :style="{ color: metaOf(entry.type).color }">
+                    class="flex items-start gap-2 border-l-[3px] px-[10px] py-[2px] pl-[9px] hover:bg-neutral-content/10"
+                    :class="metaOf(entry.type).bar">
+                    <span class="flex-none basis-[86px] opacity-55">{{ entry.timestamp }}</span>
+                    <span class="flex-none basis-[52px] font-semibold" :class="metaOf(entry.type).text">
                         {{ metaOf(entry.type).label }}
                     </span>
-                    <span class="min-w-0 flex-1 whitespace-pre-wrap break-words text-[#c3d1df]">
+                    <span class="min-w-0 flex-1 whitespace-pre-wrap break-words">
                         {{ entry.message }}
                     </span>
                 </div>
             </template>
-            <div v-else class="py-6 text-center text-[#6b7b8d]">
+            <div v-else class="py-6 text-center opacity-55">
                 {{ source.length ? '没有符合当前筛选条件的日志' : '暂无日志' }}
             </div>
         </div>
 
         <!-- 状态栏：总数 · 显示数 · 最新时间 -->
         <div
-            class="mt-2 flex items-center justify-between gap-2 border-t border-[#1f2733] pt-1.5 text-[11.5px] text-[#6b7b8d]">
+            class="mt-2 flex items-center justify-between gap-2 border-t border-base-300 pt-1.5 text-[11.5px] text-base-content/60">
             <span>
-                共 <b class="text-[#c3d1df]">{{ source.length }}</b> 条 · 显示
-                <b class="text-[#c3d1df]">{{ shown.length }}</b> 条（{{ allOn ? '全类型' : '已选' }}）
+                共 <b class="text-base-content">{{ source.length }}</b> 条 · 显示
+                <b class="text-base-content">{{ shown.length }}</b> 条（{{ allOn ? '全类型' : '已选' }}）
                 {{ props.autoRefresh ? '' : ' · 已冻结' }}
             </span>
             <span class="flex items-center gap-2.5">
-                <span
+                <label
                     class="flex items-center gap-1.5"
                     title="开启后新日志持续刷新并自动滚到底部；关闭后列表冻结在当前快照，便于往上翻看历史">
-                    <Switch
-                        :model-value="props.autoRefresh"
-                        @update:model-value="(v: boolean) => emit('update:autoRefresh', v)" />
+                    <input
+                        type="checkbox"
+                        class="toggle toggle-sm"
+                        :checked="props.autoRefresh"
+                        @change="emit('update:autoRefresh', ($event.target as HTMLInputElement).checked)" />
                     自动刷新
-                </span>
+                </label>
                 <span>
                     最新
-                    <span class="font-mono" :style="{ color: latest ? metaOf(latest.type).color : '#6b7b8d' }">
+                    <span class="font-mono" :class="latest ? metaOf(latest.type).text : 'opacity-55'">
                         {{ latest ? latest.timestamp : '--:--:--' }}
                     </span>
                 </span>
@@ -180,7 +175,7 @@ watch([() => props.open, () => props.logEntries, () => props.autoRefresh, filter
         </div>
 
         <template #footer>
-            <Button variant="outline" size="sm" @click="emit('update:open', false)">关闭</Button>
+            <button class="btn btn-outline btn-sm" @click="emit('update:open', false)">关闭</button>
         </template>
     </AppDialog>
 </template>

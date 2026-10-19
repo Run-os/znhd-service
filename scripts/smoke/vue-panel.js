@@ -201,8 +201,38 @@ function serve() {
     const report = { ok: true, checks: {}, errors: [] };
     page.on('pageerror', (e) => report.errors.push(String(e)));
 
+    /**
+     * 影子树内 CSS 变量探针：把 daisyUI 语义变量（--color-base-100 等）解析成
+     * 计算后的颜色字符串，与 getComputedStyle().backgroundColor 输出同构。
+     * daisyUI 迁移后颜色全部是 oklch()（随主题），断言不再写死 rgb()，
+     * 而是「元素实色 === 对应语义变量」——主题换色断言自动跟随。
+     * 探针必须挂在 #app（data-theme 载体）里，挂在 shadowRoot 上只会拿到日间默认值。
+     */
+    const probeOf = (v) =>
+        page.evaluate((name) => {
+            const sr = document.getElementById('__znhd_panel_host__').shadowRoot;
+            const app = sr.querySelector('#app');
+            const p = document.createElement('span');
+            p.style.color = 'var(' + name + ')';
+            app.appendChild(p);
+            const c = getComputedStyle(p).color;
+            p.remove();
+            return c;
+        }, v);
+
     await page.goto(`http://127.0.0.1:${port}/`, { waitUntil: 'load' });
     await new Promise((r) => setTimeout(r, 1200));
+
+    const base100Light = await probeOf('--color-base-100');
+    const accentLight = await probeOf('--color-accent');
+    // 守门：Tailwind v4 的 @property 在 shadowRoot 内不生效（Chromium 只处理文档级），
+    // main.ts 用 CSS.registerProperty 重新注册 —— 这里验证 --tw-border-style 真有初值，
+    // 否则 shadow DOM 里所有 border-* 工具类会静默退化成 0px（v26.10.19 实测踩过）。
+    report.checks.twPropsRegistered = await page.evaluate(() => {
+        const sr = document.getElementById('__znhd_panel_host__').shadowRoot;
+        const shell = sr.querySelector('.rounded-box.border-base-300');
+        return !!shell && getComputedStyle(shell).getPropertyValue('--tw-border-style') === 'solid';
+    });
 
     const panel = await page.evaluate(() => {
         const host = document.getElementById('__znhd_panel_host__');
@@ -212,11 +242,11 @@ function serve() {
             shadow: !!sr,
             text: sr ? sr.querySelector('#app').innerText.replace(/\s+/g, ' ').trim() : '',
             styleInjected: sr ? !!sr.querySelector('style') : false,
-            sonnerMounted: sr ? !!sr.querySelector('[data-sonner-toaster]') : false,
             rect: host ? host.getBoundingClientRect().toJSON() : null,
         };
     });
-    report.checks.panelMounted = panel.host && panel.shadow && panel.styleInjected && panel.sonnerMounted;
+    // toast 容器（[data-znhd="toast"]）由 lib/toast.ts 首次弹出时才挂载，不属于挂载判定
+    report.checks.panelMounted = panel.host && panel.shadow && panel.styleInjected;
     report.checks.panelTextOk = panel.text.includes('征纳互动监控') && panel.text.includes('语音播报');
     report.checks.versionOk = panel.text.includes('v' + SCRIPT_VERSION);
     report.panel = panel;
@@ -233,12 +263,12 @@ function serve() {
 
     const dialog = await page.evaluate(() => {
         const sr = document.getElementById('__znhd_panel_host__').shadowRoot;
-        const el = sr && sr.querySelector('[role="dialog"]');
-        const bodyHasDialog = !!document.querySelector('[role="dialog"]');
+        const el = sr && sr.querySelector('dialog[open]');
+        const bodyHasDialog = !!document.querySelector('dialog[open]');
         if (!el) return { found: false, bodyHasDialog };
         const cs = getComputedStyle(el);
-        // 2026-10-18 组件正规化后：DialogContent 只做定位（背景透明），视觉表面在 Card 上
-        const card = el.querySelector('[data-slot="card"]');
+        // daisyUI modal：视觉表面在 .modal-box（bg-base-100），dialog 本体透明
+        const card = el.querySelector('.modal-box');
         return {
             found: true,
             bodyHasDialog,
@@ -246,16 +276,16 @@ function serve() {
             text: el.innerText.replace(/\s+/g, ' ').trim().slice(0, 120),
             background: card ? getComputedStyle(card).backgroundColor : cs.backgroundColor,
             hasCard: !!card,
-            width: el.getBoundingClientRect().width,
+            boxWidth: card ? Math.round(card.getBoundingClientRect().width) : 0,
             position: cs.position,
             zIndex: cs.zIndex,
-            overlay: !!sr.querySelector('[data-reka-popper-content-wrapper], [role="presentation"]'),
+            overlay: !!sr.querySelector('.dropdown-content'),
         };
     });
     report.checks.dialogFound = dialog.found;
     report.checks.dialogInShadow = !!dialog.inShadow && !dialog.bodyHasDialog;
     report.checks.dialogStyled =
-        !!dialog.hasCard && dialog.background === 'rgb(255, 255, 255)' && Math.round(dialog.width) === 520;
+        !!dialog.hasCard && dialog.background === base100Light && dialog.boxWidth === 520;
     report.dialog = dialog;
 
     await page.screenshot({ path: path.join(os.tmpdir(), 'znhd-vue-dialog.png') });
@@ -279,50 +309,52 @@ function serve() {
 
     await closeTopLayer(); // 关掉设置弹窗
 
-    // 日志弹窗：标题 + 暗色终端区 + 至少一行日志（启动时写了 3 条）
+    // 日志弹窗：标题 + 中性色终端区 + 至少一行日志（启动时写了 3 条）
     await clickPanelText('查看日志');
     const logDialog = await page.evaluate(() => {
         const sr = document.getElementById('__znhd_panel_host__').shadowRoot;
-        const el = sr.querySelector('[role="dialog"]');
+        const el = sr.querySelector('dialog[open]');
         if (!el) return { found: false };
-        const terminal = el.querySelector('.bg-\\[\\#0f141a\\]') || el.querySelector('[class*="0f141a"]');
+        const terminal = el.querySelector('.bg-neutral');
         return {
             found: true,
             inShadow: sr.contains(el),
             text: el.innerText.replace(/\s+/g, ' ').trim().slice(0, 80),
             rows: el.querySelectorAll('[class*="border-l-"]').length,
             terminalBg: terminal ? getComputedStyle(terminal).backgroundColor : '',
-            hasSwitch: !!el.querySelector('[role="switch"]'),
+            hasSwitch: !!el.querySelector('input.toggle'),
         };
     });
+    const neutralLight = await probeOf('--color-neutral');
     report.checks.logDialogOk =
         !!logDialog.found &&
         !!logDialog.inShadow &&
         logDialog.text.includes('运行日志') &&
         logDialog.rows >= 3 &&
-        logDialog.terminalBg === 'rgb(15, 20, 26)' &&
+        logDialog.terminalBg === neutralLight &&
         logDialog.hasSwitch;
     report.logDialog = logDialog;
     await page.screenshot({ path: path.join(os.tmpdir(), 'znhd-vue-log.png') });
 
     await closeTopLayer();
 
-    // 常用语侧边抽屉：Sheet 也在 shadowRoot 内、宽度 360、有搜索框，且没有漏到 body
+    // 常用语右侧弹层（modal modal-end）：modal-box 360 宽贴右边、有搜索框，且没有漏到 body
     await clickPanelText('常用语');
     const phrasesSheet = await page.evaluate(() => {
         const sr = document.getElementById('__znhd_panel_host__').shadowRoot;
-        const el = sr.querySelector('[role="dialog"]');
+        const el = sr.querySelector('dialog[open]');
         if (!el) return { found: false };
         const input = el.querySelector('input');
-        const cs = getComputedStyle(el);
+        const box = el.querySelector('.modal-box');
+        const rect = box ? box.getBoundingClientRect() : el.getBoundingClientRect();
         return {
             found: true,
             inShadow: sr.contains(el),
-            bodyHasDialog: !!document.querySelector('[role="dialog"]'),
+            bodyHasDialog: !!document.querySelector('dialog[open]'),
             text: el.innerText.replace(/\s+/g, ' ').trim().slice(0, 60),
-            width: Math.round(el.getBoundingClientRect().width),
-            background: cs.backgroundColor,
-            right: Math.round(window.innerWidth - el.getBoundingClientRect().right),
+            width: Math.round(rect.width),
+            background: box ? getComputedStyle(box).backgroundColor : '',
+            right: Math.round(window.innerWidth - rect.right),
             placeholder: input ? input.placeholder : '',
         };
     });
@@ -332,6 +364,7 @@ function serve() {
         !phrasesSheet.bodyHasDialog &&
         phrasesSheet.text.includes('常用语') &&
         phrasesSheet.width === 360 &&
+        phrasesSheet.background === base100Light &&
         phrasesSheet.placeholder.includes('搜索常用语');
     report.phrasesSheet = phrasesSheet;
     // toast（抓取失败的提示）恰好盖在 sheet 顶栏上，等它 3 秒自动消失后再截图
@@ -346,7 +379,7 @@ function serve() {
     await clickPanelText('更新日志');
     const changelog = await page.evaluate(() => {
         const sr = document.getElementById('__znhd_panel_host__').shadowRoot;
-        const dialogs = [...sr.querySelectorAll('[role="dialog"]')];
+        const dialogs = [...sr.querySelectorAll('dialog[open]')];
         const el = dialogs[dialogs.length - 1];
         if (!el) return { found: false, count: 0 };
         return {
@@ -394,7 +427,7 @@ function serve() {
             () => {
                 const sr = document.getElementById('__znhd_panel_host__');
                 if (!sr || !sr.shadowRoot) return false;
-                return [...sr.shadowRoot.querySelectorAll('[role="dialog"]')].some((d) =>
+                return [...sr.shadowRoot.querySelectorAll('dialog[open]')].some((d) =>
                     d.textContent.includes('传输助手')
                 );
             },
@@ -407,11 +440,11 @@ function serve() {
             return {
                 host: !!sr,
                 recvQueued: (window.__recvQueue || []).length,
-                dialogs: root ? root.querySelectorAll('[role="dialog"]').length : -1,
-                bodyDialogs: document.querySelectorAll('[role="dialog"]').length,
+                dialogs: root ? root.querySelectorAll('dialog[open]').length : -1,
+                bodyDialogs: document.querySelectorAll('dialog[open]').length,
                 srHasApp: !!(root && root.querySelector('#app')),
                 appChildren: root && root.querySelector('#app') ? root.querySelector('#app').children.length : -1,
-                pageErr: report.errors.length,
+                pageErr: -1,
             };
         });
         await page.screenshot({ path: require('os').tmpdir() + '/znhd-dbg-no-transfer.png' });
@@ -421,32 +454,28 @@ function serve() {
     await new Promise((r) => setTimeout(r, 300));
 
     /**
-     * 「更多」下拉里点一项：chat 窗口按 shadcn message-scroller 示例收敛为
-     * CardHeader 上的一排 icon 按钮（清空 / 全部文件 / 扫码连接手机 / 更多 / 关闭），
-     * 设置、关于收在「更多」dropdown（v26.10.19-v9/v11 起全部文件与扫码都是标题栏独立按钮）。
-     * 菜单本身 Portal 到 shadowRoot（补丁同 Dialog）。
+     * 「更多」下拉里点一项：chat 窗口标题栏 icon 按钮（清空 / 全部文件 / 扫码 / 更多 / 关闭），
+     * 设置、关于收在「更多」dropdown —— daisyUI details/summary 方式（skill components/dropdown.md）。
+     * 层级由 daisyUI dropdown 自身（z-10 + 弹窗内层叠上下文）保证；这里验菜单真的展开了。
      */
     async function pickMore(label) {
         await page.evaluate(() => {
             const sr = document.getElementById('__znhd_panel_host__').shadowRoot;
-            const btn = sr.querySelector('button[aria-label="更多"]');
+            const btn = sr.querySelector('summary[aria-label="更多"]');
             if (btn) btn.click();
         });
         await new Promise((r) => setTimeout(r, 300));
         return page.evaluate((text) => {
             const sr = document.getElementById('__znhd_panel_host__').shadowRoot;
-            const items = [...sr.querySelectorAll('[data-slot="dropdown-menu-item"]')];
+            const items = [...sr.querySelectorAll('.dropdown-content li button')];
             const it = items.find((n) => n.textContent.includes(text));
             if (!it) return { clicked: false, visible: false, labels: items.map((n) => n.textContent.trim()) };
-            // 层级回归（v26.10.18-v8 踩过）：菜单 z-index 一旦低于聊天窗本体就会被盖住，
-            // DOM 还在、断言照样绿，但肉眼看到的是「弹窗样式全丢了」。用 elementFromPoint 验真。
-            const menu = sr.querySelector('[data-slot="dropdown-menu-content"]');
-            // 层级回归（v26.10.18-v8 踩过）：菜单 z-index 一旦低于聊天窗本体（1000011）就会被
-            // 整个盖住——DOM 还在、断言照样绿，但肉眼看到的是「弹窗样式全丢了」。直接验 z-index。
+            // details 展开后菜单必须真的可见（宽高在、无 visibility 裁剪）
+            const menu = sr.querySelector('.dropdown-content');
             let visible = false;
             if (menu) {
                 const r = menu.getBoundingClientRect();
-                visible = parseInt(getComputedStyle(menu).zIndex, 10) >= 1000012 && r.width > 100 && r.height > 50;
+                visible = r.width > 100 && r.height > 50 && getComputedStyle(menu).visibility === 'visible';
             }
             it.click();
             return { clicked: true, visible, labels: items.map((n) => n.textContent.trim()) };
@@ -456,47 +485,47 @@ function serve() {
     // 自动弹窗：收到内容后窗口应已自己打开（不再点「传输助手」按钮）
     const transfer = await page.evaluate(() => {
         const sr = document.getElementById('__znhd_panel_host__').shadowRoot;
-        const dialogs = [...sr.querySelectorAll('[role="dialog"]')];
+        const dialogs = [...sr.querySelectorAll('dialog[open]')];
         const el = dialogs[dialogs.length - 1];
         if (!el) return { found: false, count: dialogs.length };
-        const card = el.querySelector('[data-slot="card"]');
+        const card = el.querySelector('.modal-box');
         const rect = (card || el).getBoundingClientRect();
-        const bubbles = [...el.querySelectorAll('[data-slot="bubble"]')];
-        // ⚠️ 排除头像（data-slot="avatar-image"）：它也在 scroller 里，且 DOM 顺序在气泡之前，
+        // ⚠️ 排除头像（.chat-image img）：它也在 scroller 里，且 DOM 顺序在气泡之前，
         //    不排除会把它当成「收到的图片」，断言 blob: 必然失败。
-        const chatImg = el.querySelector('[data-slot="message-scroller"] img:not([data-slot="avatar-image"])');
-        const avatarImg = el.querySelector('[data-slot="avatar-image"]');
-        const composer = el.querySelector('[data-slot="input-group"]');
-        // 我方气泡（data-align=end）的文字色：v9 起要求黑色
-        const mineBubble = el.querySelector('[data-slot="bubble"][data-align="end"] [data-slot="bubble-content"]');
+        const chatImg = el.querySelector('[data-znhd="chat-scroller"] img:not(.chat-image img)');
+        const avatarImg = el.querySelector('.chat-image img');
+        const composer = el.querySelector('textarea.textarea');
+        // 我方气泡（chat-end）的文字色：来自官方 chat-bubble-primary（primary-content）
+        const mineBubble = el.querySelector('.chat-end .chat-bubble');
         return {
             found: true,
             count: dialogs.length,
             inShadow: sr.contains(el),
-            bodyHasDialog: !!document.querySelector('[role="dialog"]'),
+            bodyHasDialog: !!document.querySelector('dialog[open]'),
             text: el.innerText.replace(/\s+/g, ' ').trim().slice(0, 200),
-            // Card 外观：与示例同款的三段式卡片（卡片自带底色/圆角/描边）
+            // modal-box 外观：官方默认底色 base-100 + 自带圆角
             hasCard: !!card,
-            hasScroller: !!el.querySelector('[data-slot="message-scroller"]'),
-            hasComposer: !!(composer && composer.querySelector('textarea')),
-            // 头部四个 icon 按钮（清空 / 全部文件 / 更多 / 关闭）——v26.10.19-v9 起全部文件出下拉
-            headButtons: [...el.querySelectorAll('button[aria-label]')].map((b) => b.getAttribute('aria-label')),
+            hasScroller: !!el.querySelector('[data-znhd="chat-scroller"]'),
+            hasComposer: !!composer,
+            // 头部动作按钮 + 「更多」（details/summary 方式，不是 button）
+            headButtons: [...el.querySelectorAll('button[aria-label], summary[aria-label]')].map((b) =>
+                b.getAttribute('aria-label')
+            ),
             background: card ? getComputedStyle(card).backgroundColor : '',
             mineTextColor: mineBubble ? getComputedStyle(mineBubble).color : '',
             width: Math.round(rect.width),
             height: Math.round(rect.height),
             // v26.10.19-v12：分界线 —— 1px + 与窗口外框同色（走 var(--tw-hairline)，随主题）
             headerBorder: (() => {
-                const h = el.querySelector('[data-slot="card-header"]');
+                const h = el.querySelector('.modal-box > div:first-child');
                 if (!h) return '';
                 const s = getComputedStyle(h);
                 return s.borderBottomWidth + ' ' + s.borderBottomColor;
             })(),
-            // v26.10.19：标题栏按钮 / 输入框按钮 / 滚动到底按钮 —— 统一 28px 圆形
-            // ⚠️ 用 offsetWidth（布局尺寸）：滚动到底按钮 inactive 时带 scale-95，rect 会被缩成 26.6px
-            // ⚠️ 用 button[aria-label] 而不是 [data-slot="button"]：DropdownMenuTrigger(as-child)
-            //    会把 reka 自己的 data-slot="dropdown-menu-trigger" 覆盖上去（「更多」与「+」会漏选）
-            headBtnBox: [...el.querySelectorAll('[data-slot="card-header"] button[aria-label]')].map(
+            // v26.10.19：标题栏按钮 / 输入框按钮 —— 统一圆形（btn-circle，尺寸随 btn-sm）
+            // ⚠️ 用 offsetWidth（布局尺寸）而不是 rect：避免 transition 中的 scale 干扰
+            // ⚠️ 「更多」与「+」是 details/summary，不是 button，必须一并抓
+            headBtnBox: [...el.querySelectorAll('.modal-box > div:first-child button[aria-label], .modal-box > div:first-child summary[aria-label]')].map(
                 (b) =>
                     b.getAttribute('aria-label') +
                     '=' +
@@ -507,18 +536,17 @@ function serve() {
                     Math.round(parseFloat(getComputedStyle(b).borderRadius))
             ),
             composerBtnBox: composer
-                ? [...composer.querySelectorAll('button[aria-label]')].map(
+                ? [...composer.parentElement.querySelectorAll('button[aria-label], summary[aria-label]')].map(
                       (b) => b.offsetWidth + 'x' + b.offsetHeight + ' ' + Math.round(parseFloat(getComputedStyle(b).borderRadius))
                   )
                 : [],
-            scrollerBtnBox: (() => {
-                const b = el.querySelector('[data-slot="message-scroller-button"]');
-                if (!b) return '';
-                return b.offsetWidth + 'x' + b.offsetHeight + ' ' + Math.round(parseFloat(getComputedStyle(b).borderRadius));
+            // 气泡：对方文本（chat-start）+ Markdown strong；图片走 blob:
+            theirBubbles: el.querySelectorAll('.chat-start .chat-bubble').length,
+            theirTextColor: (() => {
+                const b = el.querySelector('.chat-start .chat-bubble');
+                return b ? getComputedStyle(b).color : '';
             })(),
-            // 气泡：文本（对方=muted）+ 图片（ghost）+ Markdown strong
-            bubbleVariants: bubbles.map((b) => b.getAttribute('data-variant')),
-            boldText: !!el.querySelector('[data-slot="bubble"] strong'),
+            boldText: !!el.querySelector('.chat-bubble strong'),
             chatImgSrc: chatImg ? String(chatImg.src).slice(0, 12) : '',
             // 头像：DiceBear notionists（seed = 设备标识，不是随机数）
             avatarSrc: avatarImg ? String(avatarImg.getAttribute('src') || '') : '',
@@ -535,30 +563,32 @@ function serve() {
         transfer.hasCard &&
         transfer.hasScroller &&
         transfer.hasComposer &&
-        // v26.10.19-v12：窗口底色随主题 —— 冒烟钉的是日间（prefers-color-scheme=light），
-        // 取微信亮色的浅灰聊天区 #f2f2f2；夜间那套（纯黑）由末尾 transferThemeFollowOk 反向守
-        transfer.background === 'rgb(242, 242, 242)' &&
+        // v26.10.19（daisyUI）：窗口底色随主题 —— modal-box 官方默认 base-100；
+        // 冒烟钉的是日间（prefers-color-scheme=light），夜间由末尾 transferThemeFollowOk 反向守
+        transfer.background === base100Light &&
         // v26.10.19：384 → 768（横向一倍），560 → 672（高度 +20%）
         transfer.width === 768 &&
         transfer.height === 672 &&
-        ['清空聊天记录', '更多', '关闭'].every((l) => (transfer.headButtons || []).includes(l));
-    // 分界线 = 1px + 与窗口外框同色（日间 #e0e0e0 ⇒ rgb(224,224,224)）
-    report.checks.transferDividerOk = transfer.headerBorder === '1px rgb(224, 224, 224)';
-    // 标题栏 5 个（清空 / 全部文件 / 扫码连接手机 / 更多 / 关闭）+ 输入框 2 个 + 滚动到底 1 个：全是 28px 圆形
-    const isRound28 = (b) => {
+        ['清空聊天记录', '全部文件', '扫码连接手机', '更多', '关闭'].every((l) =>
+            (transfer.headButtons || []).includes(l)
+        );
+    // 分界线 = 1px + 主题 base-300
+    const base300Light = await probeOf('--color-base-300');
+    report.checks.transferDividerOk = transfer.headerBorder === '1px ' + base300Light;
+    // 标题栏 5 个（清空 / 全部文件 / 扫码连接手机 / 更多 / 关闭）+ 输入框 2 个（附件 / 发送）：全是圆形
+    // 滚动到底浮钮已随 message-scroller 一起移除（用户决策 #2）
+    const isRoundBtn = (b) => {
         const m = /(\d+)x(\d+)\s+(\d+)/.exec(String(b));
-        return !!m && m[1] === '28' && m[2] === '28' && Number(m[3]) >= 9999;
+        return !!m && m[1] === m[2] && Number(m[3]) >= 9999;
     };
     report.checks.transferBtnShapeOk =
         transfer.headBtnBox.length === 5 &&
-        transfer.headBtnBox.every(isRound28) &&
+        transfer.headBtnBox.every(isRoundBtn) &&
         transfer.composerBtnBox.length === 2 &&
-        transfer.composerBtnBox.every(isRound28) &&
-        isRound28(transfer.scrollerBtnBox);
+        transfer.composerBtnBox.every(isRoundBtn);
     report.checks.transferChatOk =
         transfer.text.includes('已连接 1 台设备') &&
-        transfer.bubbleVariants.includes('muted') &&
-        transfer.bubbleVariants.includes('ghost') &&
+        transfer.theirBubbles >= 2 &&
         transfer.boldText &&
         String(transfer.chatImgSrc).startsWith('blob:');
     report.checks.transferAvatarOk = String(transfer.avatarSrc).startsWith(
@@ -570,7 +600,7 @@ function serve() {
     // 发送文本：输入 → 点「发送」→ store 走 POST /phone/send（stub 记录载荷）
     await page.evaluate(() => {
         const sr = document.getElementById('__znhd_panel_host__').shadowRoot;
-        const ta = sr.querySelector('[data-slot="input-group"] textarea');
+        const ta = sr.querySelector('textarea.textarea');
         if (!ta) return;
         const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value').set;
         setter.call(ta, '回给手机的一条消息');
@@ -579,21 +609,22 @@ function serve() {
     await new Promise((r) => setTimeout(r, 150));
     await page.evaluate(() => {
         const sr = document.getElementById('__znhd_panel_host__').shadowRoot;
-        const btn = sr.querySelector('[data-slot="input-group"] button[aria-label="发送"]');
+        const btn = sr.querySelector('button[aria-label="发送"]');
         if (btn) btn.click();
     });
     await new Promise((r) => setTimeout(r, 400));
     const sent = await page.evaluate(() => window.__sent);
-    // 发出后：我方气泡文字应为黑色（v26.10.18-v9）
+    // 发出后：我方气泡（chat-bubble-primary）文字 = 主题 primary-content
     const mineColor = await page.evaluate(() => {
         const sr = document.getElementById('__znhd_panel_host__').shadowRoot;
-        const dialogs = [...sr.querySelectorAll('[role="dialog"]')];
+        const dialogs = [...sr.querySelectorAll('dialog[open]')];
         const el = dialogs[dialogs.length - 1];
-        const b = el && el.querySelector('[data-slot="bubble"][data-align="end"] [data-slot="bubble-content"]');
+        const b = el && el.querySelector('.chat-end .chat-bubble');
         return b ? getComputedStyle(b).color : '';
     });
+    const primaryContentLight = await probeOf('--color-primary-content');
     report.checks.transferSendOk =
-        mineColor === 'rgb(0, 0, 0)' &&
+        mineColor === primaryContentLight &&
         sent.length === 1 &&
         sent[0].url.includes('/phone/send/') &&
         (() => {
@@ -618,7 +649,7 @@ function serve() {
     await new Promise((r) => setTimeout(r, 400));
     const filesNav = await page.evaluate(() => {
         const sr = document.getElementById('__znhd_panel_host__').shadowRoot;
-        const dialogs = [...sr.querySelectorAll('[role="dialog"]')];
+        const dialogs = [...sr.querySelectorAll('dialog[open]')];
         const el = dialogs[dialogs.length - 1];
         return { text: el ? el.innerText.replace(/\s+/g, ' ').trim().slice(0, 120) : '' };
     });
@@ -628,25 +659,24 @@ function serve() {
     report.filesPick = filesPick;
 
     // 关掉「全部文件」，再从「更多」进设置（子弹窗：体量/底色/文案）
-    // v26.10.19-v12：弹窗底色随主题 —— 日间 = 白色 popover
+    // v26.10.19（daisyUI）：弹窗底色 = modal-box 官方 base-100，随主题
     await page.keyboard.press('Escape');
     await new Promise((r) => setTimeout(r, 350));
     const settingsPick = await pickMore('设置');
     await new Promise((r) => setTimeout(r, 450));
     const transferSettings = await page.evaluate(() => {
         const sr = document.getElementById('__znhd_panel_host__').shadowRoot;
-        const dialogs = [...sr.querySelectorAll('[role="dialog"]')];
+        const dialogs = [...sr.querySelectorAll('dialog[open]')];
         const el = dialogs[dialogs.length - 1];
         if (!el) return { found: false };
-        const cs = getComputedStyle(el);
-        const card = el.querySelector('[data-slot="card"]');
+        const card = el.querySelector('.modal-box');
         return {
             found: true,
             count: dialogs.length,
             inShadow: sr.contains(el),
             text: el.innerText.replace(/\s+/g, ' ').trim().slice(0, 80),
-            background: card ? getComputedStyle(card).backgroundColor : cs.backgroundColor,
-            width: Math.round(el.getBoundingClientRect().width),
+            background: card ? getComputedStyle(card).backgroundColor : '',
+            width: card ? Math.round(card.getBoundingClientRect().width) : 0,
         };
     });
     report.checks.transferSettingsOk =
@@ -654,7 +684,7 @@ function serve() {
         !!transferSettings.found &&
         !!transferSettings.inShadow &&
         transferSettings.text.includes('传输助手设置') &&
-        transferSettings.background === 'rgb(255, 255, 255)' &&
+        transferSettings.background === base100Light &&
         transferSettings.width === 480;
     report.transferSettings = transferSettings;
     await page.screenshot({ path: path.join(os.tmpdir(), 'znhd-vue-transfer-settings.png') });
@@ -676,17 +706,17 @@ function serve() {
 
     const sniff = await page.evaluate(() => {
         const sr = document.getElementById('__znhd_panel_host__').shadowRoot;
-        const dialogs = [...sr.querySelectorAll('[role="dialog"]')];
+        const dialogs = [...sr.querySelectorAll('dialog[open]')];
         const el = dialogs[dialogs.length - 1];
         if (!el) return { found: false };
-        const card = el.querySelector('[data-slot="card"]');
+        const card = el.querySelector('.modal-box');
         const cards = [...el.querySelectorAll('[data-sniff-card]')];
         const bar = el.querySelector('[data-sniff-excluded]');
         const text = el.innerText.replace(/\s+/g, ' ').trim();
         return {
             found: true,
             inShadow: sr.contains(el),
-            width: Math.round(el.getBoundingClientRect().width),
+            width: card ? Math.round(card.getBoundingClientRect().width) : 0,
             background: card ? getComputedStyle(card).backgroundColor : '',
             text: text.slice(0, 200),
             cardCount: cards.length,
@@ -716,12 +746,13 @@ function serve() {
         sniff.alts.includes('photo-b.jpg') &&
         !sniff.alts.includes('tiny.jpg') &&
         sniff.excluded === '1';
-    // 冒烟页没有会话上下文 ⇒ 每张图都取不到消息时间 ⇒ 文件名必须全标红、且一个红圈都不许有
+    // 冒烟页没有会话上下文 ⇒ 每张图都取不到消息时间 ⇒ 文件名必须全标红（text-error）、且一个红圈都不许有
+    const errorLight = await probeOf('--color-error');
     report.checks.sniffNoTimeNameOk =
         sniff.cardCount > 0 &&
         sniff.noTimeFlags.every((f) => f === '1') &&
         sniff.nameColors.length === sniff.cardCount &&
-        sniff.nameColors.every((c) => c === 'rgb(255, 77, 79)') &&
+        sniff.nameColors.every((c) => c === errorLight) &&
         sniff.rings.every((r) => r === '');
     report.sniff = sniff;
 
@@ -729,7 +760,7 @@ function serve() {
     // 顺便验证折叠交互与「未知也不丢」这条红线
     await page.evaluate(() => {
         const sr = document.getElementById('__znhd_panel_host__').shadowRoot;
-        const dialogs = [...sr.querySelectorAll('[role="dialog"]')];
+        const dialogs = [...sr.querySelectorAll('dialog[open]')];
         const el = dialogs[dialogs.length - 1];
         const btn = [...el.querySelectorAll('button')].find((b) => b.textContent.includes('大小未知'));
         if (btn) btn.click();
@@ -737,7 +768,7 @@ function serve() {
     await new Promise((r) => setTimeout(r, 300));
     const sniffUnknown = await page.evaluate(() => {
         const sr = document.getElementById('__znhd_panel_host__').shadowRoot;
-        const dialogs = [...sr.querySelectorAll('[role="dialog"]')];
+        const dialogs = [...sr.querySelectorAll('dialog[open]')];
         const el = dialogs[dialogs.length - 1];
         const cards = [...el.querySelectorAll('[data-sniff-card]')];
         return { cardCount: cards.length, alts: cards.map((c) => (c.querySelector('img') || {}).alt || '') };
@@ -747,7 +778,7 @@ function serve() {
     // 收起，恢复默认折叠态
     await page.evaluate(() => {
         const sr = document.getElementById('__znhd_panel_host__').shadowRoot;
-        const dialogs = [...sr.querySelectorAll('[role="dialog"]')];
+        const dialogs = [...sr.querySelectorAll('dialog[open]')];
         const el = dialogs[dialogs.length - 1];
         const btn = [...el.querySelectorAll('button')].find((b) => b.textContent.includes('大小未知'));
         if (btn) btn.click();
@@ -765,7 +796,7 @@ function serve() {
     await new Promise((r) => setTimeout(r, 300));
     const sniffSelect = await page.evaluate(() => {
         const sr = document.getElementById('__znhd_panel_host__').shadowRoot;
-        const dialogs = [...sr.querySelectorAll('[role="dialog"]')];
+        const dialogs = [...sr.querySelectorAll('dialog[open]')];
         const el = dialogs[dialogs.length - 1];
         const btn = el ? [...el.querySelectorAll('button')].find((b) => b.textContent.includes('下载所选')) : null;
         return { label: btn ? btn.textContent.trim() : '', disabled: btn ? btn.disabled : null };
@@ -775,10 +806,11 @@ function serve() {
         pickableTotal > 0 && sniffSelect.label.includes('（' + pickableTotal + '）') && sniffSelect.disabled === false;
     report.sniffSelect = sniffSelect;
 
-    // 点缩略图 → 全屏预览（Teleport 进 shadowRoot，层级高于弹窗）
+    // 点缩略图 → 全屏预览（v26.10.19 起外壳 = 原生 dialog.modal，showModal 进 top layer，
+    // 层级高于已打开的嗅探弹窗；「[open]」是唯一可靠的开合判据——内容常驻 DOM，只是 visibility:hidden）
     await page.evaluate(() => {
         const sr = document.getElementById('__znhd_panel_host__').shadowRoot;
-        const dialogs = [...sr.querySelectorAll('[role="dialog"]')];
+        const dialogs = [...sr.querySelectorAll('dialog[open]')];
         const el = dialogs[dialogs.length - 1];
         const img = el ? el.querySelector('[data-sniff-card] img') : null;
         if (img) img.click();
@@ -786,13 +818,15 @@ function serve() {
     await new Promise((r) => setTimeout(r, 400));
     const sniffPreview = await page.evaluate(() => {
         const sr = document.getElementById('__znhd_panel_host__').shadowRoot;
-        const close = sr.querySelector('[aria-label="关闭预览"]');
+        const dlg = sr.querySelector('dialog[data-znhd="image-preview"][open]');
+        if (!dlg) return { open: false };
+        const close = dlg.querySelector('[aria-label="关闭预览"]');
         return {
             open: !!close,
-            inShadow: close ? sr.contains(close) : false,
-            hasPrint: !!sr.querySelector('[aria-label="打印"]'),
+            inShadow: sr.contains(dlg),
+            hasPrint: !!dlg.querySelector('[aria-label="打印"]'),
             counter: (() => {
-                const n = [...sr.querySelectorAll('span')].find((x) => /^\d+ \/ \d+$/.test(x.textContent.trim()));
+                const n = [...dlg.querySelectorAll('span')].find((x) => /^\d+ \/ \d+$/.test(x.textContent.trim()));
                 return n ? n.textContent.trim() : '';
             })(),
         };
@@ -802,20 +836,21 @@ function serve() {
     await page.screenshot({ path: path.join(os.tmpdir(), 'znhd-vue-sniff-preview.png') });
 
     // v26.10.19-v10 回归守门：预览开着按一次 Esc 必须只关预览、嗅探窗保持打开
-    // （v3 修过一次「Esc 连坐关掉嗅探窗」——window 捕获段先于 reka 层处理，别回退）
+    // （v3 修过一次「Esc 连坐关掉嗅探窗」——window 捕获段先于 dialog 层处理，别回退）
     await page.keyboard.press('Escape');
     await new Promise((r) => setTimeout(r, 300));
     const afterEsc = await page.evaluate(() => {
         const sr = document.getElementById('__znhd_panel_host__').shadowRoot;
         return {
-            previewClosed: !sr.querySelector('[data-image-preview]'),
+            previewClosed: !sr.querySelector('dialog[data-znhd="image-preview"][open]'),
             sniffStillOpen: !!sr.querySelector('[data-sniff-card]'),
         };
     });
     report.checks.sniffEscOnlyPreviewOk = afterEsc.previewClosed && afterEsc.sniffStillOpen;
     report.sniffAfterEsc = afterEsc;
 
-    // v26.10.19-v10 回归：点预览层空白区也必须只关预览（pointerdown 不能连坐 dismiss 底层弹窗）
+    // v26.10.19-v10 回归：点预览层空白区也必须只关预览（原生 dialog 不做 outside-click dismiss，
+    // pointerdown 拦截保留用于隔离事件，不能连坐关掉底层弹窗）
     await page.evaluate(() => {
         const sr = document.getElementById('__znhd_panel_host__').shadowRoot;
         const img = sr.querySelector('[data-sniff-card] img');
@@ -827,7 +862,7 @@ function serve() {
     const afterBlankClick = await page.evaluate(() => {
         const sr = document.getElementById('__znhd_panel_host__').shadowRoot;
         return {
-            previewClosed: !sr.querySelector('[data-image-preview]'),
+            previewClosed: !sr.querySelector('dialog[data-znhd="image-preview"][open]'),
             sniffStillOpen: !!sr.querySelector('[data-sniff-card]'),
         };
     });
@@ -840,7 +875,7 @@ function serve() {
     await page.keyboard.press('Escape');
     await new Promise((r) => setTimeout(r, 300));
 
-    // ---------- 主题切换：日间（白底蓝）/ 夜间（黑底绿） ----------
+    // ---------- 主题切换：日间 wireframe / 夜间 business ----------
     await page.keyboard.press('Escape');
     await new Promise((r) => setTimeout(r, 250));
     await page.keyboard.press('Escape');
@@ -850,11 +885,15 @@ function serve() {
         page.evaluate(() => {
             const host = document.getElementById('__znhd_panel_host__');
             const sr = host.shadowRoot;
-            const shell = sr.querySelector('.rounded-panel') || sr.querySelector('#app > div');
+            const app = sr.querySelector('#app');
+            const shell = sr.querySelector('.rounded-box.border-base-300');
             const pill = [...sr.querySelectorAll('span')].find((n) => /^v26\./.test(n.textContent.trim()));
             const cs = shell ? getComputedStyle(shell) : null;
             return {
-                dark: host.classList.contains('dark'),
+                // daisyUI 迁移后 data-theme / .dark 都挂在影子树内的 #app 上
+                //（属性选择器穿不透 shadow 边界，不能挂宿主元素）
+                appTheme: app ? app.dataset.theme || '' : '',
+                dark: app ? app.classList.contains('dark') : false,
                 shellBg: cs ? cs.backgroundColor : '',
                 pillBg: pill ? getComputedStyle(pill).backgroundColor : '',
                 pillFg: pill ? getComputedStyle(pill).color : '',
@@ -871,15 +910,21 @@ function serve() {
     const darkTheme = await readTheme();
     await page.screenshot({ path: path.join(os.tmpdir(), 'znhd-vue-dark.png') });
 
-    report.checks.themeLightOk = !lightTheme.dark && lightTheme.shellBg === 'rgb(255, 255, 255)';
-    // 夜间：宿主挂 dark / 面板黑底 #000 / 版本胶囊是绿色强调（#07C160 的 accent 混色）
+    // 夜间基线探针必须在切到 business 之后再取（同一变量名，两个主题值不同）
+    const base100Dark = await probeOf('--color-base-100');
+    report.checks.themeLightOk =
+        lightTheme.appTheme === 'wireframe' &&
+        !lightTheme.dark &&
+        lightTheme.shellBg === base100Light &&
+        lightTheme.pillBg === accentLight;
+    // 夜间：#app 挂 business/.dark、面板底色 = business 的 base-100（oklch 24.35%）
     report.checks.themeDarkOk =
-        darkTheme.dark && darkTheme.shellBg === 'rgb(0, 0, 0)' && darkTheme.pillFg === 'rgb(7, 193, 96)';
+        darkTheme.appTheme === 'business' && darkTheme.dark && darkTheme.shellBg === base100Dark;
     report.theme = { lightTheme, darkTheme };
 
-    // v26.10.19-v12 反向守门：窗口色板必须**跟随主题**。
-    // 夜间（宿主已挂 .dark）重新打开传输助手窗口，必须是纯黑窗口 + rgb(34,34,34) 细边 + 深色输入舱；
-    // 若哪天又有人把 hex 写死回组件里，这条会红（日间基线断言则永远绿）。
+    // v26.10.19（daisyUI）反向守门：窗口色板必须**跟随主题**。
+    // 夜间重新打开传输助手窗口，modal-box 底色/描边/输入舱必须全部等于 business 的语义变量；
+    // 若哪天有人把 hex 写死回组件里，这条会红（日间基线断言则永远绿）。
     await page.evaluate(() => {
         const sr = document.getElementById('__znhd_panel_host__').shadowRoot;
         const btn = [...sr.querySelectorAll('button')].find((b) => b.textContent.includes('传输助手'));
@@ -888,12 +933,12 @@ function serve() {
     await new Promise((r) => setTimeout(r, 450));
     const darkTransfer = await page.evaluate(() => {
         const sr = document.getElementById('__znhd_panel_host__').shadowRoot;
-        const dialogs = [...sr.querySelectorAll('[role="dialog"]')];
+        const dialogs = [...sr.querySelectorAll('dialog[open]')];
         const el = dialogs[dialogs.length - 1];
         if (!el) return { found: false };
-        const card = el.querySelector('[data-slot="card"]');
-        const head = el.querySelector('[data-slot="card-header"]');
-        const composer = el.querySelector('[data-slot="input-group"]');
+        const card = el.querySelector('.modal-box');
+        const head = el.querySelector('.modal-box > div:first-child');
+        const composer = el.querySelector('textarea.textarea');
         const hs = head ? getComputedStyle(head) : null;
         return {
             found: true,
@@ -902,11 +947,12 @@ function serve() {
             composerBg: composer ? getComputedStyle(composer).backgroundColor : '',
         };
     });
+    const base300Dark = await probeOf('--color-base-300');
     report.checks.transferThemeFollowOk =
         darkTransfer.found &&
-        darkTransfer.background === 'rgb(0, 0, 0)' &&
-        darkTransfer.headerBorder === '1px rgb(34, 34, 34)' &&
-        darkTransfer.composerBg === 'rgb(32, 32, 32)';
+        darkTransfer.background === base100Dark &&
+        darkTransfer.headerBorder === '1px ' + base300Dark &&
+        darkTransfer.composerBg === base100Dark;
     report.darkTransfer = darkTransfer;
     await page.keyboard.press('Escape');
     await new Promise((r) => setTimeout(r, 300));

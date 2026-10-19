@@ -1,26 +1,22 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { Avatar, AvatarFallback, AvatarImage } from '@vue/components/ui/avatar';
-import { BubbleGroup } from '@vue/components/ui/bubble';
-import { Message, MessageAvatar, MessageContent } from '@vue/components/ui/message';
-import { Marker, MarkerContent } from '@vue/components/ui/marker';
 import { getDeviceId } from '@/lib/relay';
 import { PHONE_SESSION_KEY } from '@/lib/transfer/store';
 import { avatarUrl } from './format';
 
 /**
- * 一「轮」对话（v26.10.18-v8）：照搬官方示例 Conversation 的三段结构 ——
+ * 一「轮」对话（v26.10.18-v8）：迁移到 daisyUI 的 `chat` 组件。
  *
- *   Marker（时间分隔条，可选）
- *   Message + MessageAvatar（Avatar / AvatarFallback 字母头像）
- *   MessageContent
- *     └─ BubbleGroup（同方向连续消息 > 1 条时） / 直接 slot（单条）
+ *   <div class="chat chat-start|chat-end">
+ *     <div class="chat-image avatar">…</div>
+ *     <div class="chat-bubble">…</div>   ← 由 ChatBubble 渲染（可多条）
+ *     <div class="chat-footer">…</div>   ← 发送状态小字
+ *   </div>
  *
- * 轮次内的每条消息由父组件用 `<ChatBubble grouped>` 渲染进默认插槽；
- * 单条时 slot 直出（不带 BubbleGroup 包裹，与示例同款）。
+ * 时间分隔条用 `divider` 的等价写法（居中一行小字），不再需要 Marker 组件。
+ * 头像用 `avatar` + 圆形容器；加载失败由浏览器显示 alt 文字。
  *
- * 头像 = DiceBear（见 format.ts 的 avatarUrl）：我方 seed 用本机设备 ID、对方用会话键，
- * 加载失败 / 被 CSP 挡掉时回落成 AvatarFallback 的文字头像。
+ * 头像 = DiceBear（见 format.ts 的 avatarUrl）：我方 seed 用本机设备 ID、对方用会话键。
  */
 const props = withDefaults(
     defineProps<{
@@ -48,27 +44,15 @@ const avatarSrc = computed(() => avatarUrl(avatarSeed.value));
 
 <template>
     <div class="min-w-0">
-        <Marker v-if="timeLabel" class="mb-3 justify-center">
-            <MarkerContent class="text-[11px] text-muted-foreground">{{ timeLabel }}</MarkerContent>
-        </Marker>
+        <div v-if="timeLabel" class="my-2 text-center text-[11px] text-base-content/60">{{ timeLabel }}</div>
 
-        <Message :align="mine ? 'end' : 'start'" class="min-w-0">
-            <!-- 头像：DiceBear SVG（失败时回落成文字头像） -->
-            <MessageAvatar>
-                <Avatar>
-                    <AvatarImage :src="avatarSrc" :alt="mine ? '我' : '手机'" />
-                    <AvatarFallback :class="mine ? 'bg-secondary text-secondary-foreground' : ''">
-                        {{ mine ? '我' : '手' }}
-                    </AvatarFallback>
-                </Avatar>
-            </MessageAvatar>
-
-            <MessageContent>
-                <BubbleGroup v-if="count > 1">
-                    <slot />
-                </BubbleGroup>
-                <slot v-else />
-            </MessageContent>
-        </Message>
+        <div class="chat" :class="mine ? 'chat-end' : 'chat-start'">
+            <div class="chat-image avatar">
+                <div class="w-8 rounded-full">
+                    <img :src="avatarSrc" :alt="mine ? '我' : '手机'" />
+                </div>
+            </div>
+            <slot />
+        </div>
     </div>
 </template>

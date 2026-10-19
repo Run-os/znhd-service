@@ -8,9 +8,6 @@ import {
     type ChangelogEntry,
 } from '@/lib/changelog';
 import AppDialog from './AppDialog.vue';
-import { Button } from '@vue/components/ui/button';
-import { Empty, EmptyDescription, EmptyHeader } from '@vue/components/ui/empty';
-import { Spinner } from '@vue/components/ui/spinner';
 
 /**
  * 更新日志弹窗（Vue 版，对应 React 的 `ChangelogModal`）。
@@ -18,6 +15,8 @@ import { Spinner } from '@vue/components/ui/spinner';
  * 拉取/解析依旧是 `lib/changelog.ts` 的纯函数，这里只负责渲染。
  * 正文用 `mdToPlain`（纯文本 + pre-wrap），与 React 版一致 —— 刻意不上 markdown 渲染器，
  * 省掉 react-markdown 那一整条依赖链。
+ *
+ * 迁移到 daisyUI：Button → `btn`，Spinner → `loading loading-spinner`，空态用 `hero`。
  */
 const props = defineProps<{ open: boolean }>();
 const emit = defineEmits<{ 'update:open': [boolean] }>();
@@ -65,33 +64,33 @@ function openMore() {
         :footer="true"
         @update:open="(v: boolean) => emit('update:open', v)">
         <div v-if="loading" class="flex items-center justify-center gap-2 py-6">
-            <Spinner class="size-4 text-primary" />
-            <span class="text-[13px] text-muted-foreground">读取中…</span>
+            <span class="loading loading-spinner loading-sm text-primary"></span>
+            <span class="text-[13px] text-base-content/60">读取中…</span>
         </div>
 
         <template v-else-if="err">
-            <p class="text-[13px] text-destructive">读取失败：{{ err }}</p>
-            <p class="mt-2 text-xs text-muted-foreground">
+            <p class="text-[13px] text-error">读取失败：{{ err }}</p>
+            <p class="mt-2 text-xs text-base-content/60">
                 可点下方「获取更多日志」在浏览器中打开当月日志文件查看。
             </p>
         </template>
 
-        <Empty v-else-if="!entries || entries.length === 0" class="border-0 p-6">
-            <EmptyHeader>
-                <EmptyDescription class="text-[13px] text-muted-foreground">暂无更新日志</EmptyDescription>
-            </EmptyHeader>
-        </Empty>
+        <div v-else-if="!entries || entries.length === 0" class="hero">
+            <div class="hero-content">
+                <p class="text-[13px] text-base-content/60">暂无更新日志</p>
+            </div>
+        </div>
 
         <template v-else>
             <div class="max-h-[60vh] overflow-auto pr-1">
                 <div v-for="en in shown" :key="en.title" class="mb-3.5">
                     <div class="mb-1.5 text-sm font-bold text-primary">{{ en.title }}</div>
-                    <div class="whitespace-pre-wrap break-words text-[13px] leading-[1.6] text-foreground">
+                    <div class="whitespace-pre-wrap break-words text-[13px] leading-[1.6]">
                         {{ mdToPlain(en.body) }}
                     </div>
                 </div>
             </div>
-            <p class="mt-2 text-center text-xs text-muted-foreground">
+            <p class="mt-2 text-center text-xs text-base-content/60">
                 {{
                     entries.length > shown.length
                         ? '共 ' + entries.length + ' 条，已显示最新 ' + shown.length + ' 条'
@@ -101,8 +100,8 @@ function openMore() {
         </template>
 
         <template #footer>
-            <Button variant="outline" size="sm" @click="openMore">获取更多日志</Button>
-            <Button size="sm" @click="emit('update:open', false)">关闭</Button>
+            <button class="btn btn-outline btn-sm" @click="openMore">获取更多日志</button>
+            <button class="btn btn-sm" @click="emit('update:open', false)">关闭</button>
         </template>
     </AppDialog>
 </template>

@@ -1,32 +1,6 @@
 <script setup lang="ts">
-import { computed, inject, onBeforeUnmount, ref, watch, type ComponentPublicInstance } from 'vue';
-import { DialogClose, DialogContent, DialogDescription, DialogOverlay, DialogPortal, DialogRoot, DialogTitle } from 'reka-ui';
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { Icon, type IconName } from '@vue/icons';
-import { SHADOW_ROOT_KEY } from '@vue/lib/shadow';
-import { Button } from '@vue/components/ui/button';
-import {
-    Card,
-    CardAction,
-    CardContent,
-    CardFooter,
-    CardHeader,
-    CardTitle,
-} from '@vue/components/ui/card';
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from '@vue/components/ui/dropdown-menu';
-import {
-    MessageScroller,
-    MessageScrollerButton,
-    MessageScrollerContent,
-    MessageScrollerItem,
-    MessageScrollerProvider,
-    MessageScrollerViewport,
-} from '@vue/components/ui/message-scroller';
-import Tooltip from '@vue/components/ui/tooltip/Tooltip.vue';
 import { addLog } from '@/lib/logger';
 import { downloadFileName } from '@/lib/gallery';
 import { copyImageToClipboard } from '@/lib/relay';
@@ -55,7 +29,6 @@ import SettingsDialog from './SettingsDialog.vue';
 import AboutDialog from './AboutDialog.vue';
 import { sepTimeText } from './format';
 import { groupTurns } from './turns';
-import { Z, transferVars } from './theme';
 
 /**
  * 传输助手 —— chat 窗口（v26.10.18-v8）。
@@ -76,7 +49,6 @@ import { Z, transferVars } from './theme';
  * 进度画在气泡下方，失败也显示在气泡上，和示例「发出去就是一条消息」的心智一致。
  */
 const open = defineModel<boolean>('open', { default: false });
-const shadowRoot = inject(SHADOW_ROOT_KEY);
 
 const store = useTransferStore();
 
@@ -90,8 +62,10 @@ const imgCopy = ref<{ id: string; state: 'busy' | 'ok' | 'fail' } | null>(null);
 
 const previewOpen = ref(false);
 const previewIndex = ref(0);
-/** Card 是组件，ref 拿到的是实例；滚动要用它内部的 DOM（`$el`） */
-const cardRef = ref<ComponentPublicInstance | null>(null);
+/** 消息滚动容器（message-scroller 已按用户要求移除，改成普通 overflow 容器） */
+const scroller = ref<HTMLElement | null>(null);
+/** 原生 dialog（daisyUI modal） */
+const dlg = ref<HTMLDialogElement | null>(null);
 
 /** 两条消息间隔超过 5 分钟就插一条时间分隔条（微信同款，不逐条显示时间） */
 const TIME_GAP = 5 * 60 * 1000;
@@ -161,10 +135,25 @@ watch(
     { immediate: true }
 );
 
+function syncDialog(v: boolean): void {
+    const el = dlg.value;
+    if (!el) return;
+    if (v && !el.open) el.showModal();
+    else if (!v && el.open) el.close();
+}
+watch(open, (v) => syncDialog(v));
+onMounted(() => {
+    if (open.value) syncDialog(true);
+});
+
+/** 点下拉项后收起 details（details 不会自己关） */
+function closeMenu(e: MouseEvent) {
+    (e.currentTarget as HTMLElement).closest('details')?.removeAttribute('open');
+}
+
 /** 我们自己发出的消息要立刻见底（用户可能先往上翻了历史） */
 function scrollToEnd() {
-    const root = cardRef.value?.$el as HTMLElement | undefined;
-    const el = root?.querySelector('[data-slot=message-scroller-viewport]') as HTMLElement | null;
+    const el = scroller.value;
     if (el) el.scrollTop = el.scrollHeight;
 }
 
@@ -307,229 +296,163 @@ const headerText = computed(() => (onlineCount.value ? '已连接 ' + onlineCoun
 /** 卡片下方那行提示（v26.10.19-v8：离线时说明「消息会排队等上线」，不再说「才能发送」） */
 const footerHint = computed(() => (sendable.value ? '' : '当前没有在线手机，发出去的消息会在设备上线后自动送达'));
 </script>
-
 <template>
-    <DialogRoot v-model:open="open">
-        <DialogPortal :to="shadowRoot as unknown as HTMLElement">
-            <DialogOverlay class="fixed inset-0 bg-black/45" :style="{ zIndex: Z.windowMask }" />
-            <DialogContent
-                class="fixed left-1/2 top-1/2 w-auto max-w-none -translate-x-1/2 -translate-y-1/2 border-0 bg-transparent p-0 shadow-none outline-none"
-                :style="[transferVars, { zIndex: Z.window }]">
-                <DialogTitle class="sr-only">传输助手</DialogTitle>
-                <DialogDescription class="sr-only">电脑与手机之间的图片、文件与文本传输</DialogDescription>
-
-                <MessageScrollerProvider auto-scroll default-scroll-position="end">
-                    <!-- v26.10.19：横向放大一倍（384 → 768），高度 +20%（560 → 672） -->
-                    <div class="relative flex w-[768px] max-w-[94vw] flex-col gap-4">
-                        <!-- v26.10.18-v9：窗口底色 + 外圈细边（Card 自带 ring-1，只换色）
-                             v26.10.19-v5：pt-0 去掉 Card 基类 py-6 的顶部 24px，标题栏内边距改由 CardHeader py-3 自管
-                             v26.10.19-v12：底色/细边走 var(--tw-*) ⇒ 跟随日/夜模式（暗色仍是纯黑 + rgb(34,34,34)） -->
-                        <Card
-                            ref="cardRef"
-                            class="h-168 max-h-[calc(100vh-96px)] w-full gap-0 pt-0 shadow-lg !bg-[var(--tw-window)] !ring-[var(--tw-hairline)]">
-                            <!--
-                                ===== 头部：标题 / 状态 / 动作（示例同款三段） =====
-                                v26.10.19：头部与会话区之间只留 1px 细线，颜色跟窗口外框一致
-                                （Tailwind v4 的 border 默认色是 currentColor ⇒ 不写死就是一条亮白线）。
-                                v26.10.19-v3：items-center + CardAction self-center——标题行（文字 20px）与
-                                 28px 圆形按钮行内对齐。
-                                v26.10.19-v5：items-center 只解决「文字 vs 按钮」互相对中，标题行整体仍偏下——
-                                 Card 基类自带 py-6（顶部 24px 内边距）把 CardHeader 压下去，而分隔线紧贴 Header
-                                 底部 ⇒ 视觉标题栏 = 24px 死空 + 内容，内容整体偏下。改为 Card pt-0 + Header
-                                 自带 py-3（分隔线上下各 12px，对称），内容行在标题栏里真正垂直居中。
-                            -->
-                            <CardHeader class="shrink-0 items-center gap-1 py-3 [border-bottom:1px_solid_var(--tw-hairline)]">
-                                <!-- v26.10.19：设备连接数跟标题同一行（原来的 CardDescription 已移除） -->
-                                <div class="flex min-w-0 items-center gap-2">
-                                    <CardTitle class="truncate">传输助手</CardTitle>
-                                    <span class="shrink-0 text-xs text-muted-foreground">{{ headerText }}</span>
-                                </div>
-                                <!-- v26.10.19：标题栏按钮改圆形，尺寸与输入框按钮一致（28px） -->
-                                <CardAction class="flex items-center gap-1.5 self-center">
-                                    <Tooltip content="清空聊天记录" side="bottom">
-                                        <Button
-                                            variant="outline"
-                                            size="icon-sm"
-                                            class="!size-7 !rounded-full"
-                                            aria-label="清空聊天记录"
-                                            :disabled="!rows.length"
-                                            @click="clearAll">
-                                            <Icon name="rotateCw" :size="14" />
-                                        </Button>
-                                    </Tooltip>
-
-                                    <!-- v26.10.19-v9：全部文件从「更多」下拉移出到标题栏（高频入口） -->
-                                    <Tooltip content="全部文件" side="bottom">
-                                        <Button
-                                            variant="outline"
-                                            size="icon-sm"
-                                            class="!size-7 !rounded-full"
-                                            aria-label="全部文件"
-                                            title="全部文件"
-                                            @click="filesOpen = true">
-                                            <Icon name="files" :size="14" />
-                                        </Button>
-                                    </Tooltip>
-
-                                    <!-- v26.10.19-v11：扫码连接手机也移出到标题栏（下拉只剩 设置 / 关于） -->
-                                    <Tooltip content="扫码连接手机" side="bottom">
-                                        <Button
-                                            variant="outline"
-                                            size="icon-sm"
-                                            class="!size-7 !rounded-full"
-                                            aria-label="扫码连接手机"
-                                            title="扫码连接手机"
-                                            @click="pairOpen = true">
-                                            <Icon name="qr" :size="14" />
-                                        </Button>
-                                    </Tooltip>
-
-                                    <DropdownMenu>
-                                        <DropdownMenuTrigger as-child>
-                                            <Button
-                                                variant="outline"
-                                                size="icon-sm"
-                                                class="!size-7 !rounded-full"
-                                                aria-label="更多"
-                                                title="更多">
-                                                <Icon name="more" :size="14" />
-                                            </Button>
-                                        </DropdownMenuTrigger>
-                                        <DropdownMenuContent align="end" side="bottom" class="w-44">
-                                            <DropdownMenuItem @select="settingsOpen = true">
-                                                <Icon name="settings" :size="15" />
-                                                设置
-                                            </DropdownMenuItem>
-                                            <DropdownMenuItem @select="aboutOpen = true">
-                                                <Icon name="info" :size="15" />
-                                                关于
-                                            </DropdownMenuItem>
-                                        </DropdownMenuContent>
-                                    </DropdownMenu>
-
-                                    <DialogClose as-child>
-                                        <Button
-                                            variant="outline"
-                                            size="icon-sm"
-                                            class="!size-7 !rounded-full"
-                                            aria-label="关闭"
-                                            title="关闭">
-                                            <Icon name="close" :size="14" />
-                                        </Button>
-                                    </DialogClose>
-                                </CardAction>
-                            </CardHeader>
-
-                            <!-- ===== 消息区：单条时间线（v26.10.19：去掉「还没有消息」空态） ===== -->
-                            <CardContent class="min-h-0 flex-1 overflow-hidden !bg-[var(--tw-window)] p-0">
-                                <MessageScroller>
-                                    <MessageScrollerViewport>
-                                        <MessageScrollerContent class="p-6">
-                                            <MessageScrollerItem
-                                                v-for="turn in turns"
-                                                :key="turn.key"
-                                                :message-id="turn.key"
-                                                :scroll-anchor="turn.mine">
-                                                <ChatTurn
-                                                    :mine="turn.mine"
-                                                    :session-key="turn.items[0]?.msg.sessionKey || ''"
-                                                    :time-label="turn.sepText"
-                                                    :count="turn.items.length">
-                                                    <ChatBubble
-                                                        v-for="row in turn.items"
-                                                        :key="row.msg.id"
-                                                        grouped
-                                                        :type="row.msg.type"
-                                                        :mine="row.msg.direction === 'out'"
-                                                        :text="row.msg.text || ''"
-                                                        :name="row.msg.name || ''"
-                                                        :mime="row.msg.mime || ''"
-                                                        :size-text="
-                                                            row.msg.blob
-                                                                ? Math.max(1, Math.round(row.msg.blob.size / 1024)) + ' KB'
-                                                                : ''
-                                                        "
-                                                        :image-src="row.msg.previewUrl || ''"
-                                                        :meta="metaOf(row.msg).text"
-                                                        :meta-danger="metaOf(row.msg).danger"
-                                                        :progress="
-                                                            row.msg.sendState === 'sending' ? (row.msg.sendProgress ?? null) : null
-                                                        "
-                                                        :error="row.msg.sendState === 'failed' ? row.msg.sendError || '' : ''"
-                                                        :clickable="row.msg.type === 'image'"
-                                                        :can-download="!!row.msg.blob"
-                                                        :image-actions="
-                                                            row.msg.type === 'image'
-                                                                ? [
-                                                                      {
-                                                                          label: '复制',
-                                                                          tooltip: '复制',
-                                                                          icon:
-                                                                              imgCopy && imgCopy.id === row.msg.id && imgCopy.state === 'ok'
-                                                                                  ? 'check'
-                                                                                  : 'copy',
-                                                                          onClick: () => doCopy(row.msg),
-                                                                      },
-                                                                      {
-                                                                          label: '下载',
-                                                                          icon: 'download',
-                                                                          onClick: () => doDownload(row.msg, row.imageIndex),
-                                                                      },
-                                                                      {
-                                                                          label: '删除',
-                                                                          icon: 'trash',
-                                                                          danger: true,
-                                                                          onClick: () =>
-                                                                              removeTransferMessage(row.msg.sessionKey, row.msg.id),
-                                                                      },
-                                                                  ]
-                                                                : []
-                                                        "
-                                                        @preview="openPreview(row.msg)"
-                                                        @download="
-                                                            row.msg.type === 'file'
-                                                                ? doDownloadFile(row.msg)
-                                                                : doDownload(row.msg, row.imageIndex)
-                                                        " />
-                                                </ChatTurn>
-                                            </MessageScrollerItem>
-                                        </MessageScrollerContent>
-                                    </MessageScrollerViewport>
-                                    <!-- 向下箭头：同样改圆形 + 28px，与标题栏 / 输入框按钮一致 -->
-                                    <MessageScrollerButton class="!size-7 !rounded-full [&_svg]:size-3.5" />
-                                </MessageScroller>
-                            </CardContent>
-
-                            <!-- ===== 输入区：示例同款 InputGroup（文本域 + block-end 附件/发送） ===== -->
-                            <CardFooter class="shrink-0 flex-col gap-2">
-                                <form class="w-full" @submit.prevent="doSendText">
-                                    <!-- v26.10.19-v8：离线也可输入发送（消息进队列等设备上线），不再禁用输入框 -->
-                                    <ChatComposer
-                                        v-model="sendText"
-                                        placeholder="输入要发送到手机的文本…"
-                                        :attach="attachActions"
-                                        @send="doSendText" />
-                                </form>
-                            </CardFooter>
-                        </Card>
-
-                        <!-- 示例里卡片下面那行居中提示（v26.10.19-v4：在线时整行不渲染，不留死内边距） -->
-                        <div v-if="footerHint" class="px-0.5 text-center text-xs text-muted-foreground">
-                            {{ footerHint }}
-                        </div>
+    <dialog ref="dlg" class="modal" @close="open = false">
+        <div class="modal-box flex h-[672px] max-h-[calc(100vh-96px)] w-[768px] max-w-[94vw] flex-col gap-0 p-0">
+            <!-- ===== 头部：标题 / 状态 / 动作 ===== -->
+            <div class="flex shrink-0 items-center gap-1 border-b border-base-300 px-6 py-3">
+                <div class="flex min-w-0 items-center gap-2">
+                    <h3 class="truncate text-lg font-bold">传输助手</h3>
+                    <span class="shrink-0 text-xs text-base-content/60">{{ headerText }}</span>
+                </div>
+                <div class="ml-auto flex items-center gap-1.5">
+                    <div class="tooltip tooltip-bottom" data-tip="清空聊天记录">
+                        <button
+                            class="btn btn-outline btn-sm btn-circle"
+                            aria-label="清空聊天记录"
+                            :disabled="!rows.length"
+                            @click="clearAll">
+                            <Icon name="rotateCw" :size="14" />
+                        </button>
                     </div>
-                </MessageScrollerProvider>
 
-                <!-- 子窗口 -->
-                <DarkDialog v-model:open="filesOpen" title="文件" :width="780" description="本次会话的全部图片 / 文件 / 文本">
-                    <FilesView :messages="messages" scope-label="全部文件" :clear-scope="clearAll" />
-                </DarkDialog>
-                <PairDialog v-model:open="pairOpen" :relay-server="store.settings.relayServer" :phones="store.phones" />
-                <SettingsDialog v-model:open="settingsOpen" />
-                <AboutDialog v-model:open="aboutOpen" />
-            </DialogContent>
-        </DialogPortal>
-    </DialogRoot>
+                    <div class="tooltip tooltip-bottom" data-tip="全部文件">
+                        <button
+                            class="btn btn-outline btn-sm btn-circle"
+                            aria-label="全部文件"
+                            title="全部文件"
+                            @click="filesOpen = true">
+                            <Icon name="files" :size="14" />
+                        </button>
+                    </div>
+
+                    <div class="tooltip tooltip-bottom" data-tip="扫码连接手机">
+                        <button
+                            class="btn btn-outline btn-sm btn-circle"
+                            aria-label="扫码连接手机"
+                            title="扫码连接手机"
+                            @click="pairOpen = true">
+                            <Icon name="qr" :size="14" />
+                        </button>
+                    </div>
+
+                    <details class="dropdown dropdown-end">
+                        <summary class="btn btn-outline btn-sm btn-circle" aria-label="更多" title="更多">
+                            <Icon name="more" :size="14" />
+                        </summary>
+                        <ul class="menu dropdown-content z-10 w-44 rounded-box bg-base-100 p-2 shadow">
+                            <li>
+                                <button @click="settingsOpen = true; closeMenu($event)">
+                                    <Icon name="settings" :size="15" />
+                                    设置
+                                </button>
+                            </li>
+                            <li>
+                                <button @click="aboutOpen = true; closeMenu($event)">
+                                    <Icon name="info" :size="15" />
+                                    关于
+                                </button>
+                            </li>
+                        </ul>
+                    </details>
+
+                    <form method="dialog">
+                        <button class="btn btn-outline btn-sm btn-circle" aria-label="关闭" title="关闭">
+                            <Icon name="close" :size="14" />
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- ===== 消息区：单条时间线（message-scroller 已移除，普通滚动容器） ===== -->
+            <div ref="scroller" data-znhd="chat-scroller" class="min-h-0 flex-1 overflow-y-auto p-6">
+                <ChatTurn
+                    v-for="turn in turns"
+                    :key="turn.key"
+                    :mine="turn.mine"
+                    :session-key="turn.items[0]?.msg.sessionKey || ''"
+                    :time-label="turn.sepText"
+                    :count="turn.items.length">
+                    <ChatBubble
+                        v-for="row in turn.items"
+                        :key="row.msg.id"
+                        grouped
+                        :type="row.msg.type"
+                        :mine="row.msg.direction === 'out'"
+                        :text="row.msg.text || ''"
+                        :name="row.msg.name || ''"
+                        :mime="row.msg.mime || ''"
+                        :size-text="
+                            row.msg.blob ? Math.max(1, Math.round(row.msg.blob.size / 1024)) + ' KB' : ''
+                        "
+                        :image-src="row.msg.previewUrl || ''"
+                        :meta="metaOf(row.msg).text"
+                        :meta-danger="metaOf(row.msg).danger"
+                        :progress="row.msg.sendState === 'sending' ? (row.msg.sendProgress ?? null) : null"
+                        :error="row.msg.sendState === 'failed' ? row.msg.sendError || '' : ''"
+                        :clickable="row.msg.type === 'image'"
+                        :can-download="!!row.msg.blob"
+                        :image-actions="
+                            row.msg.type === 'image'
+                                ? [
+                                      {
+                                          label: '复制',
+                                          tooltip: '复制',
+                                          icon:
+                                              imgCopy && imgCopy.id === row.msg.id && imgCopy.state === 'ok'
+                                                  ? 'check'
+                                                  : 'copy',
+                                          onClick: () => doCopy(row.msg),
+                                      },
+                                      {
+                                          label: '下载',
+                                          icon: 'download',
+                                          onClick: () => doDownload(row.msg, row.imageIndex),
+                                      },
+                                      {
+                                          label: '删除',
+                                          icon: 'trash',
+                                          danger: true,
+                                          onClick: () => removeTransferMessage(row.msg.sessionKey, row.msg.id),
+                                      },
+                                  ]
+                                : []
+                        "
+                        @preview="openPreview(row.msg)"
+                        @download="
+                            row.msg.type === 'file' ? doDownloadFile(row.msg) : doDownload(row.msg, row.imageIndex)
+                        " />
+                </ChatTurn>
+            </div>
+
+            <!-- ===== 输入区 ===== -->
+            <div class="shrink-0 border-t border-base-300 px-6 py-3">
+                <form @submit.prevent="doSendText">
+                    <!-- v26.10.19-v8：离线也可输入发送（消息进队列等设备上线），不再禁用输入框 -->
+                    <ChatComposer
+                        v-model="sendText"
+                        placeholder="输入要发送到手机的文本…"
+                        :attach="attachActions"
+                        @send="doSendText" />
+                </form>
+                <div v-if="footerHint" class="mt-2 text-center text-xs text-base-content/60">
+                    {{ footerHint }}
+                </div>
+            </div>
+        </div>
+
+        <form method="dialog" class="modal-backdrop">
+            <button>close</button>
+        </form>
+    </dialog>
+
+    <!-- 子窗口 -->
+    <DarkDialog v-model:open="filesOpen" title="文件" :width="780" description="本次会话的全部图片 / 文件 / 文本">
+        <FilesView :messages="messages" scope-label="全部文件" :clear-scope="clearAll" />
+    </DarkDialog>
+    <PairDialog v-model:open="pairOpen" :relay-server="store.settings.relayServer" :phones="store.phones" />
+    <SettingsDialog v-model:open="settingsOpen" />
+    <AboutDialog v-model:open="aboutOpen" />
 
     <ImagePreview v-model:open="previewOpen" :items="imageUrls" :index="previewIndex" :names="imageNames" />
 </template>

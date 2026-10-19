@@ -38,8 +38,8 @@
 | `src/lib/*.ts` | `constants`(CONFIG/DEFAULTS/存储键) `logger` `storage` `state`(模块间共享可变状态一律走 `runtime` 对象) `utils` `speech` `monitor` `tinymce` `clipboard` `relay`(中继客户端，长轮询/退避) `gallery`(只剩下载命名) `changelog` `phrasesZnhd`(常用语抓取) |
 | `src/lib/sniffer*.ts` | `sniffer`(三路采集+四级测体积+阈值分组) `snifferPerf`(PerformanceObserver 预收，零请求) `snifferCache`(进程内已测缓存，唯一写点 `resolveSizes`) `snifferPre`(后台预测量) `sniffConv`(会话归属) |
 | `src/lib/transfer/` | `store.ts` **模块级单例**（窗口不开也收件；已拆纯订阅 API，React 包装在 `reactStore.ts`——全仓唯一 import react 的 transfer 文件；Vue 包装在 `src-vue/transfer/composables/`）。`persist.ts` IndexedDB 持久化 7 天 TTL（`persistReady` 闸门防覆盖旧数据）。`emojiPack.ts` `settings.ts` `types.ts` |
-| `src/lib/ui/` | 只剩框架无关叶子：`panelIds.ts`(宿主/overlay id 常量) `sniffSelector.ts` `notify.ts` `transfer/deviceColors.ts` `transfer/wechatTheme.ts`（`RADIUS`/`WECHAT` 唯一入口，仍被 src-vue 引用）。**防 TDZ：被循环 import 引用的常量必须放叶子模块** |
-| `src-vue/` | UI 本体（Vue3 + reka-ui/shadcn-vue + Tailwind v4，脚本端与 web 页共用底层件）。`transfer/` 三栏传输助手 + `theme.ts`(TRANSFER_VARS 暗色 / TRANSFER_VARS_LIGHT 亮色 + `transferVars` computed，**跟随日/夜**) + `markdown.ts`(手写渲染器，**行内正则必须工厂函数**——模块级 /g 正则递归会死循环) |
+| `src/lib/ui/` | 只剩框架无关叶子：`panelIds.ts`(宿主/overlay id 常量) `sniffSelector.ts` `notify.ts` `transfer/deviceColors.ts`。**防 TDZ：被循环 import 引用的常量必须放叶子模块** |
+| `src-vue/` | UI 本体（Vue3 + **daisyUI 5 / Tailwind v4**，脚本端与 web 页共用底层件）。`transfer/` 三栏传输助手 + `markdown.ts`(手写渲染器，**行内正则必须工厂函数**——模块级 /g 正则递归会死循环)。弹窗壳统一原生 `<dialog class="modal">`（AppDialog/DarkDialog/ImagePreview），浮层靠 top layer 分层 |
 | `shared/` | 两端共用纯逻辑层。**硬约束**：零宿主依赖（禁 GM_*/单端模块）、按最严 tsconfig 写、依赖单向（只能被 import）、两端 typecheck + 三段 verify 全绿 |
 | `scripts/smoke/` | `vue-panel.js`(脚本产物冒烟) + `znhd-smoke.html`(夹具页) / `relay.js`(真实起 relay) / `phone-page.js`(手机页端到端)。`npm run verify` 三段串跑，已接入 CI |
 | `relay-server/` | `server.js`(本体，纯 Node 零依赖，PORT=5689) / `upload-page.js` / `public/`(**web/ 的构建产物，提交进仓库**) / `emoji-store.js` / `emoji-sources.json`(表情清单单一来源，两端 import) |
@@ -49,10 +49,14 @@
 
 ## 4. 构建与 Vue 栈要点
 
-- 命令：`npm run build`（vite）/ `dev` / `typecheck`(strict) / `lint` / `check` / `verify` / `build:web` / `typecheck:web` / `verify:web` / `vendor:ui -- <组件名>`（shadcn-vue vendoring，走原生 fetch；CLI add 前要清 `HTTPS_PROXY` 环境变量）。
-- Vue 产物约束：① Vue3 走 CDN UMD（`externalGlobals` 自动补 `@require`），reka-ui 等无 UMD 的打进 bundle；② 浮层一律 Reka Portal 显式进影子树（`:to`/`:container` = `inject(SHADOW_ROOT_KEY)`），漏了挂 body 样式失效；③ Tailwind 由 `main.ts` `?inline` 注入 shadowRoot；④ **产物默认不压缩**（便于 diff 审阅，发压缩版 `ZNHD_MINIFY=1`），CSS 仍压缩；⑤ `build.emptyOutDir:true`，dist 只有一个产物。
-- vendored 组件两个固定补丁（re-vendor 后重打）：Dialog 的 portal 容器/z-index；Switch 的 `data-checked:`→`data-[state=checked]:`。
-- web 页（无影子树）别名走 `web/vite.config.ts` 的 `znhdUiAlias()` 插件（字符串前缀 alias 会误伤 `@vue/runtime-dom`）；`resolve.dedupe:['vue','reka-ui']` 不可删（防双 Vue 实例断 provide/inject）；`server.fs.allow` 须含 `../shared`、`../relay-server`。
+- 命令：`npm run build`（vite）/ `dev` / `typecheck`(strict) / `lint` / `check` / `verify` / `build:web` / `typecheck:web` / `verify:web`。
+- Vue 产物约束：① Vue3 走 CDN UMD（`externalGlobals` 自动补 `@require`），daisyUI 纯 CSS 零运行时打进 bundle 的只有样式；② 弹窗统一原生 `<dialog>` 的 `showModal()`（top layer），**不要再写 z-index 分层**；③ Tailwind 由 `main.ts` `?inline` 注入 shadowRoot；④ **产物默认不压缩**（便于 diff 审阅，发压缩版 `ZNHD_MINIFY=1`），CSS 仍压缩；⑤ `build.emptyOutDir:true`，dist 只有一个产物。
+- daisyUI + shadow DOM 三个硬约束（v26.10.19 迁移实测）：
+  ① `@plugin 'daisyui' { root: ':host'; exclude: rootscrollgutter }`——否则主题变量挂不上影子树 / 根滚动 gutter 会顶动宿主页布局；
+  ② `data-theme` 必须挂在影子树**内部**的 `#app` 上（属性选择器穿不透 shadow 边界），`lib/theme.ts` 已封装；
+  ③ Tailwind v4 的 `@property` 在 shadowRoot 内不生效（Chromium 只处理文档级）⇒ shadow DOM 里 border/shadow/ring 等工具类会静默退化，`main.ts` 的 `registerTailwindProperties()` 会在注入样式前把产物里的 `@property` 用 `CSS.registerProperty` 重注册一遍（注意 syntax 要去掉 CSS 文本里的引号）。冒烟有 `twPropsRegistered` 守门。
+- 主题：日间 `wireframe` / 夜间 `business`（全官方主题，无品牌色定制），组件一律官方类名（btn/toggle/alert/chat/...），toast 用官方 `toast`+`alert` 原生 DOM（`lib/toast.ts`）。
+- web 页（无影子树）别名走 `web/vite.config.ts` 的 `znhdUiAlias()` 插件（字符串前缀 alias 会误伤 `@vue/runtime-dom`）；`resolve.dedupe:['vue']` 不可删（防双 Vue 实例断 provide/inject）；`server.fs.allow` 须含 `../shared`、`../relay-server`。
 - 发布：`@updateURL/@downloadURL` 指向 raw.githubusercontent.com main 分支 `dist/znhd.user.js`（不经 `resolveGithubUrl()`，「使用 CDN 加速」对脚本自动更新无效）。发版后拉 raw 核对 `@version`。
 - `.gitattributes` 只有一行钉 `web/index.html` eol=lf；勿加 `* text=auto`（仓库级约定变更）。
 - `web/node_modules` 被掏空的症状是几十条无关类型洪水错（TS2488 等），判据：根 typecheck 全绿而 web 报错。处置 `npm --prefix web ci`，别改源码。
