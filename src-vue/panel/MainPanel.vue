@@ -322,7 +322,7 @@ onBeforeUnmount(() => {
             <!-- 4 个入口：btn + 容器查询控制文字显隐 -->
             <div class="grid grid-cols-4 gap-1.5">
                 <div v-for="a in PANEL_ACTIONS" :key="a.key" class="tooltip tooltip-top" :data-tip="a.label">
-                    <button class="btn btn-outline btn-sm znhd-panel-btn min-w-0 gap-0.5 px-1" @click="openEntry(a.key)">
+                    <button class="btn btn-outline btn-sm w-full znhd-panel-btn min-w-0 gap-0.5 px-1" @click="openEntry(a.key)">
                         <span class="text-primary"><Icon :name="a.icon" :size="15" /></span>
                         <span class="znhd-panel-btn-text ml-0.5 text-[11px]">{{ a.label }}</span>
                     </button>

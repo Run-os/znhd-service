@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed, nextTick, ref, watch } from 'vue';
 import type { LogEntry, LogType } from '@/lib/logger';
+import { computed, nextTick, ref, watch } from 'vue';
 import AppDialog from './AppDialog.vue';
 
 /**
@@ -101,7 +101,7 @@ watch([() => props.open, () => props.logEntries, () => props.autoRefresh, filter
                     :class="allOn ? 'btn-active' : ''"
                     :title="allOn ? '点击隐藏该类日志' : '点击显示该类日志'"
                     @click="toggleAll">
-                    {{ allOn ? '全部（点此全隐）' : '全部' }}
+                    {{ allOn ? '全部' : '全部' }}
                 </button>
                 <button
                     v-for="m in TYPES"

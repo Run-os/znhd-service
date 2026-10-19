@@ -48,7 +48,7 @@ const avatarSrc = computed(() => avatarUrl(avatarSeed.value));
 
         <div class="chat" :class="mine ? 'chat-end' : 'chat-start'">
             <div class="chat-image avatar">
-                <div class="w-8 rounded-full">
+                <div class="w-10 rounded-full">
                     <img :src="avatarSrc" :alt="mine ? '我' : '手机'" />
                 </div>
             </div>

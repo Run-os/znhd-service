@@ -4,6 +4,7 @@ import { Icon } from '@vue/icons';
 import ImageActions from '@vue/components/media/ImageActions.vue';
 import type { ImageAction } from './types';
 import { MD_MINE, MD_PEER, renderMarkdown } from './markdown';
+import { fmtTime } from './format';
 
 /**
  * 一条聊天消息（v26.10.18-v8）—— 迁移到 daisyUI 的 `chat-bubble`。
@@ -52,6 +53,10 @@ const props = withDefaults(
         downloadLabel?: string;
         /** 给了就渲染「复制」小按钮（对方文本消息用） */
         copyLabel?: string;
+        /** 发送者名（官方 chat-header：作者名；不传则不渲染 header） */
+        senderName?: string;
+        /** 消息时间戳（chat-header 里的 <time>，HH:mm） */
+        ts?: number;
     }>(),
     {
         text: '',
@@ -69,6 +74,8 @@ const props = withDefaults(
         canDownload: true,
         downloadLabel: '下载',
         copyLabel: '',
+        senderName: '',
+        ts: 0,
     }
 );
 
@@ -82,9 +89,18 @@ const emit = defineEmits<{
 const sending = computed(() => props.progress !== null);
 
 const mdNodes = computed(() => renderMarkdown(props.text || '', props.mine ? MD_MINE : MD_PEER));
+
+/** chat-header 里的时间（官方示例 = HH:mm 的 <time class="text-xs opacity-50">） */
+const timeText = computed(() => (props.ts ? fmtTime(props.ts) : ''));
 </script>
 
 <template>
+    <!-- chat-header：官方结构 = 发送者名 + <time class="text-xs opacity-50">，位于气泡上方 -->
+    <div v-if="senderName" class="chat-header">
+        {{ senderName }}
+        <time v-if="timeText" class="text-xs opacity-50">{{ timeText }}</time>
+    </div>
+
     <!-- ---------- 图片 ---------- -->
     <div v-if="type === 'image'" class="chat-bubble max-w-[62%]">
         <ImageActions v-if="imageActions.length" :actions="imageActions" @click.stop>
@@ -160,7 +176,11 @@ const mdNodes = computed(() => renderMarkdown(props.text || '', props.mine ? MD_
 
     <!-- ---------- 文本（Markdown → VNode，无 v-html） ---------- -->
     <template v-else>
-        <div class="chat-bubble max-w-[74%] text-[13px] leading-relaxed" :class="mine ? 'chat-bubble-primary' : ''">
+        <!-- break-words：官方 chat-bubble 是 width:fit-content，纯长 token（长英文词/base64）
+             不会断行会溢出气泡，这里补 overflow-wrap:break-word -->
+        <div
+            class="chat-bubble max-w-[74%] break-words text-[13px] leading-relaxed"
+            :class="mine ? 'chat-bubble-primary' : ''">
             <component :is="() => mdNodes" />
             <div v-if="error" class="mt-1 text-[11px]">{{ error }}</div>
         </div>
@@ -173,5 +193,5 @@ const mdNodes = computed(() => renderMarkdown(props.text || '', props.mine ? MD_
         </button>
     </template>
 
-    <div v-if="meta" class="chat-footer text-[11px]" :class="metaDanger ? 'text-error' : ''">{{ meta }}</div>
+    <div v-if="meta" class="chat-footer text-[11px]" :class="metaDanger ? 'text-error' : 'opacity-50'">{{ meta }}</div>
 </template>

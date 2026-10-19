@@ -27,7 +27,7 @@ import DarkDialog from './DarkDialog.vue';
 import PairDialog from './PairDialog.vue';
 import SettingsDialog from './SettingsDialog.vue';
 import AboutDialog from './AboutDialog.vue';
-import { sepTimeText } from './format';
+import { sepTimeText, sourceLabel } from './format';
 import { groupTurns } from './turns';
 
 /**
@@ -385,6 +385,8 @@ const footerHint = computed(() => (sendable.value ? '' : '当前没有在线手�
                         :mine="row.msg.direction === 'out'"
                         :text="row.msg.text || ''"
                         :name="row.msg.name || ''"
+                        :sender-name="row.msg.direction === 'out' ? '我' : sourceLabel(row.msg)"
+                        :ts="row.msg.ts"
                         :mime="row.msg.mime || ''"
                         :size-text="
                             row.msg.blob ? Math.max(1, Math.round(row.msg.blob.size / 1024)) + ' KB' : ''

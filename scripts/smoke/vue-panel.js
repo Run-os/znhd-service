@@ -542,6 +542,9 @@ function serve() {
                 : [],
             // 气泡：对方文本（chat-start）+ Markdown strong；图片走 blob:
             theirBubbles: el.querySelectorAll('.chat-start .chat-bubble').length,
+            // 官方 chat-header（发送者 + <time>）：每条消息一条
+            headerCount: el.querySelectorAll('.chat-header').length,
+            headerHasTime: !!el.querySelector('.chat-header time'),
             theirTextColor: (() => {
                 const b = el.querySelector('.chat-start .chat-bubble');
                 return b ? getComputedStyle(b).color : '';
@@ -589,6 +592,8 @@ function serve() {
     report.checks.transferChatOk =
         transfer.text.includes('已连接 1 台设备') &&
         transfer.theirBubbles >= 2 &&
+        transfer.headerCount >= 2 &&
+        transfer.headerHasTime &&
         transfer.boldText &&
         String(transfer.chatImgSrc).startsWith('blob:');
     report.checks.transferAvatarOk = String(transfer.avatarSrc).startsWith(
@@ -637,6 +642,40 @@ function serve() {
             }
         })();
     report.sent = sent;
+
+    // v26.10.20-v4 回归守门：长文本气泡必须换行（不横向溢出、宽度受 74% 约束）
+    await page.evaluate(() => {
+        const sr = document.getElementById('__znhd_panel_host__').shadowRoot;
+        const ta = sr.querySelector('textarea.textarea');
+        if (!ta) return;
+        const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value').set;
+        setter.call(ta, 'X'.repeat(220));
+        ta.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    await new Promise((r) => setTimeout(r, 150));
+    await page.evaluate(() => {
+        const sr = document.getElementById('__znhd_panel_host__').shadowRoot;
+        const btn = sr.querySelector('button[aria-label="发送"]');
+        if (btn) btn.click();
+    });
+    await new Promise((r) => setTimeout(r, 400));
+    const wrapProbe = await page.evaluate(() => {
+        const sr = document.getElementById('__znhd_panel_host__').shadowRoot;
+        const dialogs = [...sr.querySelectorAll('dialog[open]')];
+        const el = dialogs[dialogs.length - 1];
+        const scroller = el && el.querySelector('[data-znhd="chat-scroller"]');
+        const bubbles = el ? [...el.querySelectorAll('.chat-end .chat-bubble')] : [];
+        const last = bubbles[bubbles.length - 1];
+        return {
+            bubbleW: last ? last.offsetWidth : 0,
+            bubbleH: last ? last.offsetHeight : 0,
+            scrollerW: scroller ? scroller.clientWidth : 0,
+            hOverflow: scroller ? scroller.scrollWidth > scroller.clientWidth : null,
+        };
+    });
+    report.wrapProbe = wrapProbe;
+    // 纯长 token（不可断词最坏场景）也必须被关进气泡里
+    report.checks.bubbleWrapOk = wrapProbe.bubbleW > 100 && wrapProbe.hOverflow === false;
 
     // 「全部文件」入口 v26.10.19-v9 起在标题栏（独立圆形按钮），不再收进「更多」下拉
     const filesPick = await page.evaluate(() => {
