@@ -134,7 +134,14 @@ function pick(text: string) {
                                         size="xs"
                                         class="items-start text-left hover:bg-muted"
                                         @click="pick(t)">
-                                        <ItemContent>
+                                        <!--
+                                            统一行高（v26.10.19-v14）：话术长短不一，1 行 20px / 2 行 40px
+                                            ⇒ 卡片高度在列表里跳变。给内容区钉死两行高度（min-h-10 = 40px）
+                                            再 justify-center：单行的上下各留 10px、两行的正好填满，
+                                            卡片一律 py-2 + 40px + py-2 = 56px，扫描时基线整齐。
+                                            ⚠️ 不要改成给 Item 写 h-14：字号/行高一变就会挤，min-h 才是内容驱动。
+                                        -->
+                                        <ItemContent class="min-h-10 justify-center">
                                             <ItemTitle
                                                 class="whitespace-normal font-normal leading-5 text-[13px]"
                                                 style="

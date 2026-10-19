@@ -92,6 +92,7 @@
 - ⚠️ **展开热点 = 文件夹图标 `span.t-folder-icon`（`trigger="expand"`），点 `.t-tree__label` 无效**；叶子 = `.t-tree__item.custom-rich-node`；展开态 = `.t-tree__item--open`（svg class 不可当判据）；**叶子也有空占位图标，不能拿它判文件夹**。
 - ⚠️ **合成事件绝不能传 `view: window`**（沙箱里 window 非原生 ⇒ 构造即抛；冒烟无沙箱 ⇒ 这类异常永假绿，靠 `phrasesClickNoViewOk` 断言 `ev.view === null` 兜）。
 - 低配实机：每步 300~500ms 轮询等待，**绝不做组件树递归扫描**（曾压崩页面）；探 Vue 组件用 `el.__vue__` 向上回溯。远程调试该页走 browser-use + `BU_CDP_URL=http://100.100.60.60:9222`（curl 探测加 `--noproxy '*'`）。
+- **列表行高统一**（v26.10.19-v14）：`PhrasesSheet.vue` 每条的 `ItemContent` 带 `min-h-10 justify-center`（= 2 行 × `leading-5`），单行话术上下各留 10px 居中 ⇒ 卡片一律 56px，扫列表不跳。⚠️ 别改成给 `Item` 写死 `h-14`：字号/行高一动就挤，`min-h` 才是内容驱动。两行截断靠 `ItemTitle` 的 inline `-webkit-line-clamp: 2`（`vue-panel.js` 的 `phrasesSheetOk` 不看这个，但别把 inline style 挪进 class，`line-clamp-1` 默认类会抢）。
 
 ## 9. 传输助手 UI / 交互
 
