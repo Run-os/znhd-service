@@ -6,6 +6,12 @@
       "sourceType": "github",
       "skillPath": "skills/antd/SKILL.md",
       "computedHash": "768fdf6d639de736784bb97c24f37cde2607824916583337f2c10f05ba0e5d35"
+    },
+    "daisyui": {
+      "source": "saadeghi/daisyui",
+      "sourceType": "github",
+      "skillPath": "skills/daisyui/SKILL.md",
+      "computedHash": "51be9420b195cc8935591595c315d5bca38f889f3750942d816134bd70f72a6b"
     }
   }
 }
