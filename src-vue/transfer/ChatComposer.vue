@@ -90,8 +90,10 @@ const sendDisabled = computed(() => !!props.disabled || !props.modelValue.trim()
 
 <template>
     <div ref="root" class="w-full">
-        <!-- v26.10.18-v9：参考 ChatGPT 式深色输入舱 —— 大圆角容器，文本在上、按钮行在下 -->
-        <InputGroup class="!rounded-3xl !border-[rgb(46,46,46)] !bg-[rgb(32,32,32)] !shadow-none">
+        <!-- v26.10.18-v9：参考 ChatGPT 式深色输入舱 —— 大圆角容器，文本在上、按钮行在下
+             v26.10.19-v12：底色/描边走 var(--tw-*)，跟随日/夜模式（脚本端由 transfer/theme.ts 给，
+             手机页由 web/src/style.css 的 :root 给同值暗色，两端仍是同一个输入舱） -->
+        <InputGroup class="!rounded-3xl !border-[var(--tw-composer-border)] !bg-[var(--tw-composer-bg)] !shadow-none">
             <InputGroupTextarea
                 v-model="model"
                 :placeholder="placeholder"
@@ -108,7 +110,7 @@ const sendDisabled = computed(() => !!props.disabled || !props.modelValue.trim()
                         <InputGroupButton
                             size="icon-sm"
                             variant="outline"
-                            class="!size-7 !rounded-full !border-[rgb(58,58,58)] !bg-transparent !text-foreground"
+                            class="!size-7 !rounded-full !border-[var(--tw-btn-border)] !bg-transparent !text-foreground"
                             aria-label="添加图片或文件"
                             title="添加图片或文件"
                             :disabled="disabled">

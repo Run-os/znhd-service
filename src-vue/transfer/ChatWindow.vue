@@ -55,7 +55,7 @@ import SettingsDialog from './SettingsDialog.vue';
 import AboutDialog from './AboutDialog.vue';
 import { sepTimeText } from './format';
 import { groupTurns } from './turns';
-import { TRANSFER_VARS, Z } from './theme';
+import { Z, transferVars } from './theme';
 
 /**
  * 传输助手 —— chat 窗口（v26.10.18-v8）。
@@ -314,18 +314,19 @@ const footerHint = computed(() => (sendable.value ? '' : '当前没有在线手�
             <DialogOverlay class="fixed inset-0 bg-black/45" :style="{ zIndex: Z.windowMask }" />
             <DialogContent
                 class="fixed left-1/2 top-1/2 w-auto max-w-none -translate-x-1/2 -translate-y-1/2 border-0 bg-transparent p-0 shadow-none outline-none"
-                :style="[TRANSFER_VARS, { zIndex: Z.window }]">
+                :style="[transferVars, { zIndex: Z.window }]">
                 <DialogTitle class="sr-only">传输助手</DialogTitle>
                 <DialogDescription class="sr-only">电脑与手机之间的图片、文件与文本传输</DialogDescription>
 
                 <MessageScrollerProvider auto-scroll default-scroll-position="end">
                     <!-- v26.10.19：横向放大一倍（384 → 768），高度 +20%（560 → 672） -->
                     <div class="relative flex w-[768px] max-w-[94vw] flex-col gap-4">
-                        <!-- v26.10.18-v9：窗口底色纯黑 + 外圈 rgb(34,34,34) 细边（Card 自带 ring-1，只换色）
-                             v26.10.19-v5：pt-0 去掉 Card 基类 py-6 的顶部 24px，标题栏内边距改由 CardHeader py-3 自管 -->
+                        <!-- v26.10.18-v9：窗口底色 + 外圈细边（Card 自带 ring-1，只换色）
+                             v26.10.19-v5：pt-0 去掉 Card 基类 py-6 的顶部 24px，标题栏内边距改由 CardHeader py-3 自管
+                             v26.10.19-v12：底色/细边走 var(--tw-*) ⇒ 跟随日/夜模式（暗色仍是纯黑 + rgb(34,34,34)） -->
                         <Card
                             ref="cardRef"
-                            class="h-168 max-h-[calc(100vh-96px)] w-full gap-0 pt-0 shadow-lg !bg-black !ring-[rgb(34,34,34)]">
+                            class="h-168 max-h-[calc(100vh-96px)] w-full gap-0 pt-0 shadow-lg !bg-[var(--tw-window)] !ring-[var(--tw-hairline)]">
                             <!--
                                 ===== 头部：标题 / 状态 / 动作（示例同款三段） =====
                                 v26.10.19：头部与会话区之间只留 1px 细线，颜色跟窗口外框一致
@@ -337,7 +338,7 @@ const footerHint = computed(() => (sendable.value ? '' : '当前没有在线手�
                                  底部 ⇒ 视觉标题栏 = 24px 死空 + 内容，内容整体偏下。改为 Card pt-0 + Header
                                  自带 py-3（分隔线上下各 12px，对称），内容行在标题栏里真正垂直居中。
                             -->
-                            <CardHeader class="shrink-0 items-center gap-1 py-3 [border-bottom:1px_solid_rgb(34,34,34)]">
+                            <CardHeader class="shrink-0 items-center gap-1 py-3 [border-bottom:1px_solid_var(--tw-hairline)]">
                                 <!-- v26.10.19：设备连接数跟标题同一行（原来的 CardDescription 已移除） -->
                                 <div class="flex min-w-0 items-center gap-2">
                                     <CardTitle class="truncate">传输助手</CardTitle>
@@ -420,7 +421,7 @@ const footerHint = computed(() => (sendable.value ? '' : '当前没有在线手�
                             </CardHeader>
 
                             <!-- ===== 消息区：单条时间线（v26.10.19：去掉「还没有消息」空态） ===== -->
-                            <CardContent class="min-h-0 flex-1 overflow-hidden !bg-black p-0">
+                            <CardContent class="min-h-0 flex-1 overflow-hidden !bg-[var(--tw-window)] p-0">
                                 <MessageScroller>
                                     <MessageScrollerViewport>
                                         <MessageScrollerContent class="p-6">

@@ -4,10 +4,12 @@ import { DialogClose, DialogContent, DialogDescription, DialogOverlay, DialogPor
 import { Icon } from '@vue/icons';
 import { SHADOW_ROOT_KEY } from '@vue/lib/shadow';
 import { Card, CardContent, CardFooter, CardHeader } from '@vue/components/ui/card';
-import { TRANSFER_VARS, Z } from './theme';
+import { Z, transferVars } from './theme';
 
 /**
- * 传输助手的暗色弹窗壳（配对 / 设置 / 企业信息共用）：**Dialog + Card**。
+ * 传输助手窗口的弹窗壳（配对 / 设置 / 企业信息 / 文件共用）：**Dialog + Card**。
+ * 名字里的 Dark 是历史包袱（v26.10.12 起整窗固定微信暗色）；v26.10.19-v12 起色板跟随
+ * 日/夜模式，这里绑的是 `transferVars`（暗色 / 亮色两套之一），不再是固定暗色。
  *
  * 用的是官方 Dialog 的底层 primitive（reka-ui），但没走 vendored 的 `DialogContent.vue`
  * 包装 —— 因为那一层的遮罩层级写死成 1000000（主面板量级），而传输助手的窗口本身在
@@ -15,7 +17,7 @@ import { TRANSFER_VARS, Z } from './theme';
  *
  * ⚠️ P0：`DialogPortal :to="shadowRoot"` —— 不指定就挂到 document.body，脱离影子树后
  * Tailwind 样式全部失效。这也意味着弹窗**不在窗口子树里**，拿不到窗口上的 CSS 变量覆盖，
- * 所以这里要再绑一次 `TRANSFER_VARS`，否则 Card / Button 会按主面板的主题渲染。
+ * 所以这里要再绑一次 `transferVars`，否则 Card / Button 会按主面板的主题渲染。
  */
 const open = defineModel<boolean>('open', { default: false });
 const props = withDefaults(defineProps<{ title: string; description?: string; width?: number }>(), {
@@ -32,7 +34,7 @@ const shadowRoot = inject(SHADOW_ROOT_KEY);
             <DialogOverlay class="fixed inset-0 bg-black/55" :style="{ zIndex: Z.dialogMask }" />
             <DialogContent
                 class="fixed left-1/2 top-1/2 max-h-[calc(100vh-140px)] -translate-x-1/2 -translate-y-1/2 border-0 bg-transparent p-0 shadow-none outline-none"
-                :style="[TRANSFER_VARS, { zIndex: Z.dialog, width: props.width + 'px' }]">
+                :style="[transferVars, { zIndex: Z.dialog, width: props.width + 'px' }]">
                 <DialogDescription class="sr-only">{{ props.description || props.title }}</DialogDescription>
 
                 <Card

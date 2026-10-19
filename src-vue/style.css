@@ -12,8 +12,9 @@
  *    · 官方 shadcn 组件的类名是语义的（`bg-card` / `text-muted-foreground`），
  *      编译后取 `--color-*`；`--color-*` 再指向 `--background` 这类裸变量，
  *      于是「换主题 = 换宿主上的那几个裸变量」，组件源码一个字都不用改。
- *    · 传输助手是另一套固定色板（微信暗色），它在窗口根节点上直接覆盖 `--color-*`
- *      （见 transfer/theme.ts 的 TRANSFER_VARS），不受这里日/夜切换影响。
+ *    · 传输助手是另一套品牌色板（微信配色），它在窗口根节点上直接覆盖 `--color-*`
+ *      （见 transfer/theme.ts 的 TRANSFER_VARS / TRANSFER_VARS_LIGHT）——**跟随这里切日/夜**，
+ *      但取的是微信亮色/暗色两套值，而不是面板的白底蓝/黑底绿。
  *
  * 这份 CSS 由 main.ts 以 ?inline 方式取字符串、注入到 **shadowRoot 内部**，
  * 因此 :host 就是面板宿主；宿主页面的全局样式进不来（这也是迁 ShadowDOM 的目的）。

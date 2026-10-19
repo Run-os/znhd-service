@@ -39,7 +39,7 @@
 | `src/lib/sniffer*.ts` | `sniffer`(三路采集+四级测体积+阈值分组) `snifferPerf`(PerformanceObserver 预收，零请求) `snifferCache`(进程内已测缓存，唯一写点 `resolveSizes`) `snifferPre`(后台预测量) `sniffConv`(会话归属) |
 | `src/lib/transfer/` | `store.ts` **模块级单例**（窗口不开也收件；已拆纯订阅 API，React 包装在 `reactStore.ts`——全仓唯一 import react 的 transfer 文件；Vue 包装在 `src-vue/transfer/composables/`）。`persist.ts` IndexedDB 持久化 7 天 TTL（`persistReady` 闸门防覆盖旧数据）。`emojiPack.ts` `settings.ts` `types.ts` |
 | `src/lib/ui/` | 只剩框架无关叶子：`panelIds.ts`(宿主/overlay id 常量) `sniffSelector.ts` `notify.ts` `transfer/deviceColors.ts` `transfer/wechatTheme.ts`（`RADIUS`/`WECHAT` 唯一入口，仍被 src-vue 引用）。**防 TDZ：被循环 import 引用的常量必须放叶子模块** |
-| `src-vue/` | UI 本体（Vue3 + reka-ui/shadcn-vue + Tailwind v4，脚本端与 web 页共用底层件）。`transfer/` 三栏传输助手 + `theme.ts`(TRANSFER_VARS 微信暗色) + `markdown.ts`(手写渲染器，**行内正则必须工厂函数**——模块级 /g 正则递归会死循环) |
+| `src-vue/` | UI 本体（Vue3 + reka-ui/shadcn-vue + Tailwind v4，脚本端与 web 页共用底层件）。`transfer/` 三栏传输助手 + `theme.ts`(TRANSFER_VARS 暗色 / TRANSFER_VARS_LIGHT 亮色 + `transferVars` computed，**跟随日/夜**) + `markdown.ts`(手写渲染器，**行内正则必须工厂函数**——模块级 /g 正则递归会死循环) |
 | `shared/` | 两端共用纯逻辑层。**硬约束**：零宿主依赖（禁 GM_*/单端模块）、按最严 tsconfig 写、依赖单向（只能被 import）、两端 typecheck + 三段 verify 全绿 |
 | `scripts/smoke/` | `vue-panel.js`(脚本产物冒烟) + `znhd-smoke.html`(夹具页) / `relay.js`(真实起 relay) / `phone-page.js`(手机页端到端)。`npm run verify` 三段串跑，已接入 CI |
 | `relay-server/` | `server.js`(本体，纯 Node 零依赖，PORT=5689) / `upload-page.js` / `public/`(**web/ 的构建产物，提交进仓库**) / `emoji-store.js` / `emoji-sources.json`(表情清单单一来源，两端 import) |
@@ -95,6 +95,8 @@
 
 - 三栏：`NavRail`(宽 58 图标栏) → `SessionList` → `DeviceChat`/`FilesView`。第一栏选中判据 = **`aria-current="page"`**（⚠️ antd 暗色算法把 #07C160 算成 rgb(9,167,85)，按 hex 猜必假红；不过比色断言现在已改走属性判据）。
 - 配色唯一入口 `WECHAT`、圆角唯一入口 `wechatTheme.ts` `RADIUS`；Modal 容器类名 `.ant-modal-container`、`styles` 无 content 键（若再用 antd）。
+- **窗口色板 v26.10.19-v12 起跟随日/夜**：`theme.ts` 出两套（`TRANSFER_VARS` 暗 / `TRANSFER_VARS_LIGHT` 亮），窗口与 `DarkDialog` 都绑 `transferVars`（computed，随 `themeMode` 重算）。⚠️ **组件里禁止再写死窗口底色 hex** —— 聊天区 / 分隔线 / 输入舱走 `var(--tw-window|--tw-hairline|--tw-composer-bg|--tw-composer-border|--tw-btn-border)`；`ChatComposer` 是两端共用件，手机页在 `web/src/style.css` 的 `:root` 里补同一批 `--tw-*`（固定暗色值），漏一个输入舱就透明。
+- 冒烟里传输助手底色断言**绑的是日间基线**（harness 钉 `prefers-color-scheme=light`）：亮色窗口 `rgb(242,242,242)`、细线 `1px rgb(224,224,224)`、设置弹窗 `rgb(255,255,255)`；夜间由末尾 `transferThemeFollowOk` 反向守（纯黑 + `rgb(34,34,34)` + 输入舱 `rgb(32,32,32)`）。改色板要同时改这两处。
 - 发送：v26.10.18-v1 起**先落全部「发送中」气泡再逐个上传**，进度条画在气泡内（`sendProgress`/`ChatMsg.progress`；`GM_xhr upload.onprogress` / 客户端 XHR）；**首个进度事件前不画条**（宿主不支持静默降级）。
 - 收件归组按 `from`（`sessionKeyForIncoming`）；无 `from` 才走旧规则（1 台在线归该机/否则聚合 `__phone__`）。**聚合会话判在线必须用 `sessionSendable()`**，不能 `!!phone`。
 - 表情：必须走 `GM_xmlhttpRequest`（宿主 CSP 拦外域 img）；**objectURL 不 revoke**；4 处取图入口都要传 `it.path`（漏传静默直连 CDN）；点一张直发（`emoji:true` 载荷）；悬停 0.5s 浮层换图即时。ShadowDOM 里 outside-click 判定用 `e.composedPath()`（target 被重定向到宿主）。

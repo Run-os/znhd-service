@@ -485,7 +485,7 @@ function serve() {
             mineTextColor: mineBubble ? getComputedStyle(mineBubble).color : '',
             width: Math.round(rect.width),
             height: Math.round(rect.height),
-            // v26.10.19：标题栏与会话区的分界线 —— 1px + 与窗口外框同色 rgb(34,34,34)
+            // v26.10.19-v12：分界线 —— 1px + 与窗口外框同色（走 var(--tw-hairline)，随主题）
             headerBorder: (() => {
                 const h = el.querySelector('[data-slot="card-header"]');
                 if (!h) return '';
@@ -535,13 +535,15 @@ function serve() {
         transfer.hasCard &&
         transfer.hasScroller &&
         transfer.hasComposer &&
-        transfer.background === 'rgb(0, 0, 0)' &&
+        // v26.10.19-v12：窗口底色随主题 —— 冒烟钉的是日间（prefers-color-scheme=light），
+        // 取微信亮色的浅灰聊天区 #f2f2f2；夜间那套（纯黑）由末尾 transferThemeFollowOk 反向守
+        transfer.background === 'rgb(242, 242, 242)' &&
         // v26.10.19：384 → 768（横向一倍），560 → 672（高度 +20%）
         transfer.width === 768 &&
         transfer.height === 672 &&
         ['清空聊天记录', '更多', '关闭'].every((l) => (transfer.headButtons || []).includes(l));
-    // 分界线 = 1px + rgb(34,34,34)（与窗口外框一致）
-    report.checks.transferDividerOk = transfer.headerBorder === '1px rgb(34, 34, 34)';
+    // 分界线 = 1px + 与窗口外框同色（日间 #e0e0e0 ⇒ rgb(224,224,224)）
+    report.checks.transferDividerOk = transfer.headerBorder === '1px rgb(224, 224, 224)';
     // 标题栏 5 个（清空 / 全部文件 / 扫码连接手机 / 更多 / 关闭）+ 输入框 2 个 + 滚动到底 1 个：全是 28px 圆形
     const isRound28 = (b) => {
         const m = /(\d+)x(\d+)\s+(\d+)/.exec(String(b));
@@ -625,7 +627,8 @@ function serve() {
     report.filesNav = filesNav;
     report.filesPick = filesPick;
 
-    // 关掉「全部文件」，再从「更多」进设置（暗色子弹窗：体量/底色/文案）
+    // 关掉「全部文件」，再从「更多」进设置（子弹窗：体量/底色/文案）
+    // v26.10.19-v12：弹窗底色随主题 —— 日间 = 白色 popover
     await page.keyboard.press('Escape');
     await new Promise((r) => setTimeout(r, 350));
     const settingsPick = await pickMore('设置');
@@ -651,7 +654,7 @@ function serve() {
         !!transferSettings.found &&
         !!transferSettings.inShadow &&
         transferSettings.text.includes('传输助手设置') &&
-        transferSettings.background === 'rgb(43, 43, 43)' &&
+        transferSettings.background === 'rgb(255, 255, 255)' &&
         transferSettings.width === 480;
     report.transferSettings = transferSettings;
     await page.screenshot({ path: path.join(os.tmpdir(), 'znhd-vue-transfer-settings.png') });
@@ -873,6 +876,40 @@ function serve() {
     report.checks.themeDarkOk =
         darkTheme.dark && darkTheme.shellBg === 'rgb(0, 0, 0)' && darkTheme.pillFg === 'rgb(7, 193, 96)';
     report.theme = { lightTheme, darkTheme };
+
+    // v26.10.19-v12 反向守门：窗口色板必须**跟随主题**。
+    // 夜间（宿主已挂 .dark）重新打开传输助手窗口，必须是纯黑窗口 + rgb(34,34,34) 细边 + 深色输入舱；
+    // 若哪天又有人把 hex 写死回组件里，这条会红（日间基线断言则永远绿）。
+    await page.evaluate(() => {
+        const sr = document.getElementById('__znhd_panel_host__').shadowRoot;
+        const btn = [...sr.querySelectorAll('button')].find((b) => b.textContent.includes('传输助手'));
+        if (btn) btn.click();
+    });
+    await new Promise((r) => setTimeout(r, 450));
+    const darkTransfer = await page.evaluate(() => {
+        const sr = document.getElementById('__znhd_panel_host__').shadowRoot;
+        const dialogs = [...sr.querySelectorAll('[role="dialog"]')];
+        const el = dialogs[dialogs.length - 1];
+        if (!el) return { found: false };
+        const card = el.querySelector('[data-slot="card"]');
+        const head = el.querySelector('[data-slot="card-header"]');
+        const composer = el.querySelector('[data-slot="input-group"]');
+        const hs = head ? getComputedStyle(head) : null;
+        return {
+            found: true,
+            background: card ? getComputedStyle(card).backgroundColor : '',
+            headerBorder: hs ? hs.borderBottomWidth + ' ' + hs.borderBottomColor : '',
+            composerBg: composer ? getComputedStyle(composer).backgroundColor : '',
+        };
+    });
+    report.checks.transferThemeFollowOk =
+        darkTransfer.found &&
+        darkTransfer.background === 'rgb(0, 0, 0)' &&
+        darkTransfer.headerBorder === '1px rgb(34, 34, 34)' &&
+        darkTransfer.composerBg === 'rgb(32, 32, 32)';
+    report.darkTransfer = darkTransfer;
+    await page.keyboard.press('Escape');
+    await new Promise((r) => setTimeout(r, 300));
 
     // 切回日间（截图基线保持浅色）
     await page.evaluate(() => {

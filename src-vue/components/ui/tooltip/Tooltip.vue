@@ -54,10 +54,17 @@ function leave() {
                 <slot />
             </TooltipTrigger>
             <TooltipPortal :to="shadowRoot as unknown as HTMLElement">
+                <!--
+                    v26.10.19-v12：加宽度上限 + 允许换行。
+                    之前没有 max-width，长文本（常用语原文常常是一整段话术）会撑成一条通屏长条
+                    —— 既看不全也挡住列表。短文本（设置 / 常用语…）宽度本来就小于 280px，观感不变。
+                    `wrap-anywhere` 而不是 `wrap-break-word`：话术里常有长串数字/工单号，后者
+                    不改变 min-content，遇到无空格长串仍然会溢出（与气泡换行同一个坑）。
+                -->
                 <TooltipContent
                     :side="props.side"
                     :side-offset="6"
-                    class="z-[1000002] rounded-[6px] bg-[rgba(0,0,0,0.85)] px-2 py-1 text-xs leading-5 text-white shadow-lg">
+                    class="z-[1000002] max-w-[280px] rounded-[6px] bg-[rgba(0,0,0,0.85)] px-2 py-1 text-left text-xs leading-5 text-white shadow-lg wrap-anywhere">
                     {{ content }}
                 </TooltipContent>
             </TooltipPortal>
