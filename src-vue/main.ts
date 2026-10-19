@@ -55,7 +55,13 @@ export function mountPanel(): HTMLElement {
 
     const host = document.createElement('div');
     host.id = PANEL_HOST_ID;
-    host.style.cssText = 'position:fixed;z-index:999999;left:0;top:0;';
+    // 防御性盒样式重置：shadow DOM 只保护影子树内部，宿主 div 本身会被页面 CSS 命中
+    //（如通配 div 选择器的 box-shadow/background）——表现为面板/悬浮球四周出现「直角阴影」。
+    // 内联样式优先级高于页面样式（非 !important 情况），把盒外观全部钉死成透明。
+    host.style.cssText =
+        'position:fixed;z-index:999999;left:0;top:0;' +
+        'background:none;border:0;box-shadow:none;outline:none;' +
+        'margin:0;padding:0;border-radius:0;filter:none;backdrop-filter:none;text-shadow:none;';
     const pt = initialPanelPoint();
     host.style.left = Math.round(pt.x) + 'px';
     host.style.top = Math.round(pt.y) + 'px';

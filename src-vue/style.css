@@ -129,3 +129,10 @@ svg {
   background-color: rgb(67, 116, 186);
   border-color: rgb(67, 116, 186);
 }
+/* 日间模式：选中态滑块（圆形）填充白色（官方 = --input-color: base-content，偏黑）。
+   daisyUI 5 的滑块画法 = ::before 的 background-color: currentColor，
+   color 又取自 --input-color → 覆写该变量即可，边框仍是上面的品牌蓝。 */
+[data-theme='wireframe'] .toggle:checked,
+[data-theme='wireframe'] .toggle[aria-checked='true'] {
+  --input-color: #fff;
+}
