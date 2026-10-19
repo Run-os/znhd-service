@@ -143,7 +143,7 @@ const mdNodes = computed(() => renderMarkdown(props.text || '', props.mine ? MD_
                 type="button"
                 aria-label="下载文件"
                 :disabled="!canDownload"
-                class="btn btn-xs shrink-0"
+                class="btn btn-xs sm:btn-sm md:btn-md lg:btn-lg xl:btn-xl shrink-0"
                 :class="mine ? 'btn-neutral' : 'btn-outline'"
                 @click="emit('download')">
                 {{ downloadLabel }}

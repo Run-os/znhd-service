@@ -455,7 +455,7 @@ const emptyText = computed(() => {
         <template #title>
             <span class="shrink-0">图片嗅探（共 {{ pickable.length }} 张）</span>
             <button
-                class="btn btn-outline btn-xs h-6 shrink-0 px-2 text-[11px]"
+                class="btn btn-outline btn-xs sm:btn-sm md:btn-md lg:btn-lg xl:btn-xl shrink-0 text-[11px]"
                 :disabled="phase === 'measuring'"
                 @click="startScan">
                 {{ phase === 'measuring' ? '扫描中…' : '重新扫描' }}
@@ -534,7 +534,7 @@ const emptyText = computed(() => {
                     class="mb-1.5 flex flex-wrap items-center gap-2">
                     <span class="text-xs font-semibold text-base-content">{{ groupTitle(s) }}</span>
                     <span v-if="s.current" class="badge badge-secondary badge-sm">当前会话</span>
-                    <button class="btn btn-link btn-xs h-auto px-0 text-[11px]" @click="toggleGroup(s)">
+                    <button class="btn btn-link btn-xs sm:btn-sm md:btn-md lg:btn-lg xl:btn-xl h-auto px-0 text-[11px]" @click="toggleGroup(s)">
                         全选本组
                     </button>
                 </div>
@@ -619,7 +619,7 @@ const emptyText = computed(() => {
                 </div>
 
                 <div v-if="s.unknown.length" class="mt-1.5 flex flex-wrap items-center gap-1.5">
-                    <button class="btn btn-link btn-xs h-auto px-0 text-[11px]" @click="toggleUnknown(s.id)">
+                    <button class="btn btn-link btn-xs sm:btn-sm md:btn-md lg:btn-lg xl:btn-xl h-auto px-0 text-[11px]" @click="toggleUnknown(s.id)">
                         {{ openUnknown.has(s.id) ? '▾' : '▸' }} 大小未知（{{ s.unknown.length }}）
                     </button>
                     <span v-if="explainUnknownId === s.id" class="text-[11px] text-base-content/60">
@@ -638,13 +638,13 @@ const emptyText = computed(() => {
         </p>
 
         <template #footer>
-            <button class="btn btn-sm" :disabled="!selectedCount || !!batch" @click="void doDownloadSelected()">
+            <button class="btn btn-xs sm:btn-sm md:btn-md lg:btn-lg xl:btn-xl" :disabled="!selectedCount || !!batch" @click="void doDownloadSelected()">
                 {{ batch ? '下载中 ' + batch.done + '/' + batch.total : '下载所选（' + selectedCount + '）' }}
             </button>
-            <button class="btn btn-outline btn-sm" :disabled="!selected.size || !!batch" @click="selected = new Set()">
+            <button class="btn btn-outline btn-xs sm:btn-sm md:btn-md lg:btn-lg xl:btn-xl" :disabled="!selected.size || !!batch" @click="selected = new Set()">
                 清空选择
             </button>
-            <button class="btn btn-secondary btn-sm" @click="open = false">关闭</button>
+            <button class="btn btn-secondary btn-xs sm:btn-sm md:btn-md lg:btn-lg xl:btn-xl" @click="open = false">关闭</button>
         </template>
 
         <!-- 放大预览：Teleport 进 shadowRoot，层级高于本弹窗 -->

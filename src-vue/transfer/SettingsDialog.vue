@@ -71,7 +71,7 @@ function doClearAll() {
                 placeholder="https://你的服务器:端口"
                 @blur="onBlur"
                 @keydown.enter.prevent="commitRelay(relayDraft)" />
-            <p class="label">
+            <p class="label whitespace-normal">
                 手机上传的图片 / 文本经此服务器转发到本机。修改后点其他区域或按回车生效；留空失焦恢复默认地址。
             </p>
         </fieldset>
@@ -83,12 +83,12 @@ function doClearAll() {
                 class="toggle"
                 :checked="store.settings.autoOpenOnReceive"
                 @change="updateTransferSettings({ autoOpenOnReceive: ($event.target as HTMLInputElement).checked })" />
-            <p class="label">关闭时仅累计未读角标，不打扰；窗口已开着则只累加，不强行切换会话。</p>
+            <p class="label whitespace-normal">关闭时仅累计未读角标，不打扰；窗口已开着则只累加，不强行切换会话。</p>
         </fieldset>
 
         <div class="mt-2 border-t border-base-300 pt-3">
             <template v-if="!confirmClear">
-                <button class="btn btn-error btn-sm" @click="confirmClear = true">清空全部传输记录</button>
+                <button class="btn btn-error btn-xs sm:btn-sm md:btn-md lg:btn-lg xl:btn-xl" @click="confirmClear = true">清空全部传输记录</button>
             </template>
             <div v-else class="alert alert-error alert-soft alert-vertical">
                 <div>
@@ -98,14 +98,14 @@ function doClearAll() {
                     </div>
                 </div>
                 <div class="flex justify-end gap-2">
-                    <button class="btn btn-outline btn-xs" @click="confirmClear = false">取消</button>
-                    <button class="btn btn-error btn-xs" @click="doClearAll">清空</button>
+                    <button class="btn btn-outline btn-xs sm:btn-sm md:btn-md lg:btn-lg xl:btn-xl" @click="confirmClear = false">取消</button>
+                    <button class="btn btn-error btn-xs sm:btn-sm md:btn-md lg:btn-lg xl:btn-xl" @click="doClearAll">清空</button>
                 </div>
             </div>
         </div>
 
         <template #footer>
-            <button class="btn btn-sm" @click="closeWithCommit">完成</button>
+            <button class="btn btn-xs sm:btn-sm md:btn-md lg:btn-lg xl:btn-xl" @click="closeWithCommit">完成</button>
         </template>
     </DarkDialog>
 </template>

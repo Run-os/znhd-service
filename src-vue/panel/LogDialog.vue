@@ -17,7 +17,7 @@ import AppDialog from './AppDialog.vue';
  *    · 关：列表冻结在关闭那一刻的快照，往上翻历史不会被打断；
  *    · 开关持久化在 Allvalue.logAutoRefresh，由父组件负责存取。
  *
- * 迁移到 daisyUI：筛选按钮 → `btn btn-xs`（选中态 `btn-active`），
+ * 迁移到 daisyUI：筛选按钮 → `btn btn-xs sm:btn-sm md:btn-md lg:btn-lg xl:btn-xl`（选中态 `btn-active`），
  * 日志区底色 → `bg-neutral text-neutral-content`，类型色 → `text-info/success/warning/error`，
  * 「自动刷新」→ `toggle`。
  */
@@ -97,7 +97,7 @@ watch([() => props.open, () => props.logEntries, () => props.autoRefresh, filter
             <div class="flex flex-wrap gap-1.5">
                 <button
                     type="button"
-                    class="btn btn-xs"
+                    class="btn btn-xs sm:btn-sm md:btn-md lg:btn-lg xl:btn-xl"
                     :class="allOn ? 'btn-active' : ''"
                     :title="allOn ? '点击隐藏该类日志' : '点击显示该类日志'"
                     @click="toggleAll">
@@ -107,7 +107,7 @@ watch([() => props.open, () => props.logEntries, () => props.autoRefresh, filter
                     v-for="m in TYPES"
                     :key="m.type"
                     type="button"
-                    class="btn btn-xs"
+                    class="btn btn-xs sm:btn-sm md:btn-md lg:btn-lg xl:btn-xl"
                     :class="filter[m.type] ? m.btn : ''"
                     :title="filter[m.type] ? '点击隐藏该类日志' : '点击显示该类日志'"
                     @click="filter[m.type] = !filter[m.type]">
@@ -115,7 +115,7 @@ watch([() => props.open, () => props.logEntries, () => props.autoRefresh, filter
                 </button>
             </div>
             <button
-                class="btn btn-error btn-sm shrink-0"
+                class="btn btn-error btn-xs sm:btn-sm md:btn-md lg:btn-lg xl:btn-xl shrink-0"
                 :disabled="props.logEntries.length === 0"
                 @click="emit('clear')">
                 清空
@@ -175,7 +175,7 @@ watch([() => props.open, () => props.logEntries, () => props.autoRefresh, filter
         </div>
 
         <template #footer>
-            <button class="btn btn-outline btn-sm" @click="emit('update:open', false)">关闭</button>
+            <button class="btn btn-outline btn-xs sm:btn-sm md:btn-md lg:btn-lg xl:btn-xl" @click="emit('update:open', false)">关闭</button>
         </template>
     </AppDialog>
 </template>

@@ -76,7 +76,7 @@ onMounted(refreshLink);
                             class="max-h-14 overflow-auto break-all rounded-box border border-base-300 bg-base-200 px-2.5 py-1.5 text-[13px] text-base-content">
                             {{ link }}
                         </div>
-                        <button class="btn btn-sm mt-2.5 w-full" @click="link && safeCopyText(link)">复制链接</button>
+                        <button class="btn btn-xs sm:btn-sm md:btn-md lg:btn-lg xl:btn-xl mt-2.5 w-full" @click="link && safeCopyText(link)">复制链接</button>
                     </div>
                 </div>
 

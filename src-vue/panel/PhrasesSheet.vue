@@ -82,7 +82,7 @@ function pick(text: string) {
                 <!-- 标题旁刷新：无文字图标 + aria-label（读屏/冒烟都靠它定位） -->
                 <div class="tooltip tooltip-bottom" data-tip="重新加载常用语">
                     <button
-                        class="btn btn-ghost btn-xs btn-square"
+                        class="btn btn-ghost btn-xs sm:btn-sm md:btn-md lg:btn-lg xl:btn-xl btn-square"
                         aria-label="重新加载常用语"
                         :disabled="props.phrasesLoading"
                         @click="emit('reload', true)">

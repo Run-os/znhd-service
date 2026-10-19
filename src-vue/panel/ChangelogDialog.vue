@@ -100,8 +100,8 @@ function openMore() {
         </template>
 
         <template #footer>
-            <button class="btn btn-outline btn-sm" @click="openMore">获取更多日志</button>
-            <button class="btn btn-sm" @click="emit('update:open', false)">关闭</button>
+            <button class="btn btn-outline btn-xs sm:btn-sm md:btn-md lg:btn-lg xl:btn-xl" @click="openMore">获取更多日志</button>
+            <button class="btn btn-xs sm:btn-sm md:btn-md lg:btn-lg xl:btn-xl" @click="emit('update:open', false)">关闭</button>
         </template>
     </AppDialog>
 </template>

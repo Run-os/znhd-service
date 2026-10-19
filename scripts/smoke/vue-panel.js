@@ -455,13 +455,13 @@ function serve() {
 
     /**
      * 「更多」下拉里点一项：chat 窗口标题栏 icon 按钮（清空 / 全部文件 / 扫码 / 更多 / 关闭），
-     * 设置、关于收在「更多」dropdown —— daisyUI details/summary 方式（skill components/dropdown.md）。
-     * 层级由 daisyUI dropdown 自身（z-10 + 弹窗内层叠上下文）保证；这里验菜单真的展开了。
+     * 设置、关于收在「更多」dropdown —— daisyUI 官方 focus 式（tabindex 触发，点项后 blur 收起）。
+     * 层级由 daisyUI dropdown 自身（z-1 + 弹窗内层叠上下文）保证；这里验菜单真的展开了。
      */
     async function pickMore(label) {
         await page.evaluate(() => {
             const sr = document.getElementById('__znhd_panel_host__').shadowRoot;
-            const btn = sr.querySelector('summary[aria-label="更多"]');
+            const btn = sr.querySelector('[role="button"][aria-label="更多"]');
             if (btn) btn.click();
         });
         await new Promise((r) => setTimeout(r, 300));
@@ -470,7 +470,7 @@ function serve() {
             const items = [...sr.querySelectorAll('.dropdown-content li button')];
             const it = items.find((n) => n.textContent.includes(text));
             if (!it) return { clicked: false, visible: false, labels: items.map((n) => n.textContent.trim()) };
-            // details 展开后菜单必须真的可见（宽高在、无 visibility 裁剪）
+            // focus 式下拉展开后菜单必须真的可见（宽高在、无 visibility 裁剪）
             const menu = sr.querySelector('.dropdown-content');
             let visible = false;
             if (menu) {
@@ -507,8 +507,8 @@ function serve() {
             hasCard: !!card,
             hasScroller: !!el.querySelector('[data-znhd="chat-scroller"]'),
             hasComposer: !!composer,
-            // 头部动作按钮 + 「更多」（details/summary 方式，不是 button）
-            headButtons: [...el.querySelectorAll('button[aria-label], summary[aria-label]')].map((b) =>
+            // 头部动作按钮 + 「更多」（focus 式 dropdown 的 div[role=button]，不是 button）
+            headButtons: [...el.querySelectorAll('button[aria-label], [role="button"][aria-label]')].map((b) =>
                 b.getAttribute('aria-label')
             ),
             background: card ? getComputedStyle(card).backgroundColor : '',
@@ -522,10 +522,10 @@ function serve() {
                 const s = getComputedStyle(h);
                 return s.borderBottomWidth + ' ' + s.borderBottomColor;
             })(),
-            // v26.10.19：标题栏按钮 / 输入框按钮 —— 统一圆形（btn-circle，尺寸随 btn-sm）
+            // v26.10.20-v2：标题栏按钮 / 输入框按钮 —— 圆形（btn-circle）+ 响应式尺寸链
             // ⚠️ 用 offsetWidth（布局尺寸）而不是 rect：避免 transition 中的 scale 干扰
-            // ⚠️ 「更多」与「+」是 details/summary，不是 button，必须一并抓
-            headBtnBox: [...el.querySelectorAll('.modal-box > div:first-child button[aria-label], .modal-box > div:first-child summary[aria-label]')].map(
+            // ⚠️ 「更多」是 div[role=button]（focus 式 dropdown）、「+」是 button，都要抓
+            headBtnBox: [...el.querySelectorAll('.modal-box > div:first-child button[aria-label], .modal-box > div:first-child [role="button"][aria-label]')].map(
                 (b) =>
                     b.getAttribute('aria-label') +
                     '=' +
@@ -894,6 +894,11 @@ function serve() {
                 //（属性选择器穿不透 shadow 边界，不能挂宿主元素）
                 appTheme: app ? app.dataset.theme || '' : '',
                 dark: app ? app.classList.contains('dark') : false,
+                // swap 主题切换的勾选态（checked = 夜间 business）
+                swapChecked: (() => {
+                    const t = sr.querySelector('input.theme-controller');
+                    return t ? t.checked : null;
+                })(),
                 shellBg: cs ? cs.backgroundColor : '',
                 pillBg: pill ? getComputedStyle(pill).backgroundColor : '',
                 pillFg: pill ? getComputedStyle(pill).color : '',
@@ -903,8 +908,9 @@ function serve() {
     const lightTheme = await readTheme();
     await page.evaluate(() => {
         const sr = document.getElementById('__znhd_panel_host__').shadowRoot;
-        const btn = sr.querySelector('button[aria-label="切换到夜间模式"]');
-        if (btn) btn.click();
+        // 主题切换 = daisyUI swap 官方组件（checkbox 驱动，checked=夜间 business）
+        const input = sr.querySelector('input.theme-controller[aria-label="切换到夜间模式"]');
+        if (input) input.click();
     });
     await new Promise((r) => setTimeout(r, 300));
     const darkTheme = await readTheme();
@@ -915,11 +921,15 @@ function serve() {
     report.checks.themeLightOk =
         lightTheme.appTheme === 'wireframe' &&
         !lightTheme.dark &&
+        lightTheme.swapChecked === false &&
         lightTheme.shellBg === base100Light &&
         lightTheme.pillBg === accentLight;
-    // 夜间：#app 挂 business/.dark、面板底色 = business 的 base-100（oklch 24.35%）
+    // 夜间：#app 挂 business/.dark、swap 勾选、面板底色 = business 的 base-100（oklch 24.35%）
     report.checks.themeDarkOk =
-        darkTheme.appTheme === 'business' && darkTheme.dark && darkTheme.shellBg === base100Dark;
+        darkTheme.appTheme === 'business' &&
+        darkTheme.dark &&
+        darkTheme.swapChecked === true &&
+        darkTheme.shellBg === base100Dark;
     report.theme = { lightTheme, darkTheme };
 
     // v26.10.19（daisyUI）反向守门：窗口色板必须**跟随主题**。
@@ -960,8 +970,8 @@ function serve() {
     // 切回日间（截图基线保持浅色）
     await page.evaluate(() => {
         const sr = document.getElementById('__znhd_panel_host__').shadowRoot;
-        const btn = sr.querySelector('button[aria-label="切换到日间模式"]');
-        if (btn) btn.click();
+        const input = sr.querySelector('input.theme-controller[aria-label="切换到日间模式"]');
+        if (input) input.click();
     });
     await new Promise((r) => setTimeout(r, 250));
 

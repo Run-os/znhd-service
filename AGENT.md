@@ -56,6 +56,7 @@
   ② `data-theme` 必须挂在影子树**内部**的 `#app` 上（属性选择器穿不透 shadow 边界），`lib/theme.ts` 已封装；
   ③ Tailwind v4 的 `@property` 在 shadowRoot 内不生效（Chromium 只处理文档级）⇒ shadow DOM 里 border/shadow/ring 等工具类会静默退化，`main.ts` 的 `registerTailwindProperties()` 会在注入样式前把产物里的 `@property` 用 `CSS.registerProperty` 重注册一遍（注意 syntax 要去掉 CSS 文本里的引号）。冒烟有 `twPropsRegistered` 守门。
 - 主题：日间 `wireframe` / 夜间 `business`（全官方主题，无品牌色定制），组件一律官方类名（btn/toggle/alert/chat/...），toast 用官方 `toast`+`alert` 原生 DOM（`lib/toast.ts`）。
+- 官方组件固定用法（v26.10.20-v2 用户定版）：① 按钮尺寸一律响应式链 `btn-xs sm:btn-sm md:btn-md lg:btn-lg xl:btn-xl`（不写死 btn-sm/btn-xs，形状类 btn-circle/btn-square 照常叠加）；② 开关 = `<input type="checkbox" class="toggle">`；③ 主题切换 = `swap swap-rotate` + sun/moon 官方 SVG，checkbox 勾选态由 `theme.ts` 驱动（theme-controller 的 `:root:has()` 穿不透 shadow 边界，仅当视觉壳用）；④ 弹窗内下拉 = focus 式 dropdown（触发器 `div[tabindex=0][role=button]`，点项后手动 blur 收起）；⑤ `.label` 自带 `white-space:nowrap`，长说明文字必须补 `whitespace-normal`。
 - web 页（无影子树）别名走 `web/vite.config.ts` 的 `znhdUiAlias()` 插件（字符串前缀 alias 会误伤 `@vue/runtime-dom`）；`resolve.dedupe:['vue']` 不可删（防双 Vue 实例断 provide/inject）；`server.fs.allow` 须含 `../shared`、`../relay-server`。
 - 发布：`@updateURL/@downloadURL` 指向 raw.githubusercontent.com main 分支 `dist/znhd.user.js`（不经 `resolveGithubUrl()`，「使用 CDN 加速」对脚本自动更新无效）。发版后拉 raw 核对 `@version`。
 - `.gitattributes` 只有一行钉 `web/index.html` eol=lf；勿加 `* text=auto`（仓库级约定变更）。

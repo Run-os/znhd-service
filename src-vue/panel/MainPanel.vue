@@ -23,7 +23,7 @@ import ChatWindow from '@vue/transfer/ChatWindow.vue';
 
 /**
  * 主面板。迁移到 daisyUI 后：
- *   Button → `btn`；Switch → `toggle`；Tooltip → `tooltip` + `data-tip`；
+ *   Button → `btn`（尺寸用响应式链 `btn-xs sm:btn-sm md:btn-md lg:btn-lg xl:btn-xl`）；Switch → `toggle`；Tooltip → `tooltip` + `data-tip`；
  *   语义色一律换成 daisyUI 的 `base-*` / `primary` / `accent` / `error` / `success`。
  * 自定义阴影与圆角已移除（daisyUI 主题 depth=0、radius 由主题给）。
  */
@@ -255,17 +255,39 @@ onBeforeUnmount(() => {
                 v{{ VERSION }}
             </span>
 
-            <!-- 主题切换：wireframe ↔ business -->
+            <!-- 主题切换：wireframe ↔ business（daisyUI 官方 swap 组件，sun/moon 图标） -->
             <div class="tooltip tooltip-bottom ml-auto" :data-tip="isDark ? '切换到日间模式（wireframe）' : '切换到夜间模式（business）'">
-                <button
-                    class="btn btn-ghost btn-sm btn-square text-base-content/60"
-                    :aria-label="isDark ? '切换到日间模式' : '切换到夜间模式'"
-                    @click="onToggleTheme">
-                    <Icon :name="isDark ? 'sun' : 'moon'" :size="15" />
-                </button>
+                <label class="swap swap-rotate">
+                    <!-- this hidden checkbox controls the state -->
+                    <!-- ⚠️ daisyUI theme-controller 的 :root:has() 选择器无法穿透 shadow DOM 边界，
+                         主题状态必须由 theme.ts 驱动（checked 只负责 swap 的视觉翻转） -->
+                    <input
+                        type="checkbox"
+                        class="theme-controller"
+                        value="business"
+                        :checked="isDark"
+                        :aria-label="isDark ? '切换到日间模式' : '切换到夜间模式'"
+                        @change="onToggleTheme" />
+                    <!-- sun icon -->
+                    <svg
+                        class="swap-off h-10 w-10 fill-current"
+                        xmlns="http://www.w3.org/2000/svg"
+                        viewBox="0 0 24 24">
+                        <path
+                            d="M5.64,17l-.71.71a1,1,0,0,0,0,1.41,1,1,0,0,0,1.41,0l.71-.71A1,1,0,0,0,5.64,17ZM5,12a1,1,0,0,0-1-1H3a1,1,0,0,0,0,2H4A1,1,0,0,0,5,12Zm7-7a1,1,0,0,0,1-1V3a1,1,0,0,0-2,0V4A1,1,0,0,0,12,5ZM5.64,7.05a1,1,0,0,0,.7.29,1,1,0,0,0,.71-.29,1,1,0,0,0,0-1.41l-.71-.71A1,1,0,0,0,4.93,6.34Zm12,.29a1,1,0,0,0,.7-.29l.71-.71a1,1,0,1,0-1.41-1.41L17,5.64a1,1,0,0,0,0,1.41A1,1,0,0,0,17.66,7.34ZM21,11H20a1,1,0,0,0,0,2h1a1,1,0,0,0,0-2Zm-9,8a1,1,0,0,0-1,1v1a1,1,0,0,0,2,0V20A1,1,0,0,0,12,19ZM18.36,17A1,1,0,0,0,17,18.36l.71.71a1,1,0,0,0,1.41,0,1,1,0,0,0,0-1.41ZM12,6.5A5.5,5.5,0,1,0,17.5,12,5.51,5.51,0,0,0,12,6.5Zm0,9A3.5,3.5,0,1,1,15.5,12,3.5,3.5,0,0,1,12,15.5Z" />
+                    </svg>
+                    <!-- moon icon -->
+                    <svg
+                        class="swap-on h-10 w-10 fill-current"
+                        xmlns="http://www.w3.org/2000/svg"
+                        viewBox="0 0 24 24">
+                        <path
+                            d="M21.64,13a1,1,0,0,0-1.05-.14,8.05,8.05,0,0,1-3.37.73A8.15,8.15,0,0,1,9.08,5.49a8.59,8.59,0,0,1,.25-2A1,1,0,0,0,8,2.36,10.14,10.14,0,1,0,22,14.05,1,1,0,0,0,21.64,13Zm-9.5,6.69A8.14,8.14,0,0,1,7.08,5.22v.27A10.15,10.15,0,0,0,17.22,15.63a9.79,9.79,0,0,0,2.1-.22A8.11,8.11,0,0,1,12.14,19.73Z" />
+                    </svg>
+                </label>
             </div>
             <button
-                class="btn btn-ghost btn-sm btn-square text-base-content/60"
+                class="btn btn-ghost btn-xs sm:btn-sm md:btn-md lg:btn-lg xl:btn-xl btn-square text-base-content/60"
                 title="收起面板（点圆形按钮可展开）"
                 aria-label="收起面板"
                 @click="collapsed = true">
@@ -310,7 +332,7 @@ onBeforeUnmount(() => {
             <!-- 底部：上次播报 + 查看日志 -->
             <div class="mt-2.5 flex items-center justify-between gap-2 text-xs text-base-content/60">
                 <span class="truncate">{{ lastSpeakText(mon.lastSpeak) }}</span>
-                <button class="btn btn-link btn-xs shrink-0 px-0 text-xs" @click="logOpen = true">查看日志 →</button>
+                <button class="btn btn-link btn-xs sm:btn-sm md:btn-md lg:btn-lg xl:btn-xl shrink-0 px-0 text-xs" @click="logOpen = true">查看日志 →</button>
             </div>
         </div>
 

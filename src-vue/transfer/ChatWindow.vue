@@ -146,9 +146,12 @@ onMounted(() => {
     if (open.value) syncDialog(true);
 });
 
-/** 点下拉项后收起 details（details 不会自己关） */
+/**
+ * 点下拉项后收起 focus 式 dropdown（官方 tabindex 方案不会自关，须让触发器失焦）。
+ * 菜单项聚焦在 ul[tabindex="-1"] 上，blur 的是触发器 div[tabindex="0"]。
+ */
 function closeMenu(e: MouseEvent) {
-    (e.currentTarget as HTMLElement).closest('details')?.removeAttribute('open');
+    (e.currentTarget as HTMLElement).closest('.dropdown')?.querySelector<HTMLElement>('[role="button"]')?.blur();
 }
 
 /** 我们自己发出的消息要立刻见底（用户可能先往上翻了历史） */
@@ -308,7 +311,7 @@ const footerHint = computed(() => (sendable.value ? '' : '当前没有在线手�
                 <div class="ml-auto flex items-center gap-1.5">
                     <div class="tooltip tooltip-bottom" data-tip="清空聊天记录">
                         <button
-                            class="btn btn-outline btn-sm btn-circle"
+                            class="btn btn-outline btn-xs sm:btn-sm md:btn-md lg:btn-lg xl:btn-xl btn-circle"
                             aria-label="清空聊天记录"
                             :disabled="!rows.length"
                             @click="clearAll">
@@ -318,7 +321,7 @@ const footerHint = computed(() => (sendable.value ? '' : '当前没有在线手�
 
                     <div class="tooltip tooltip-bottom" data-tip="全部文件">
                         <button
-                            class="btn btn-outline btn-sm btn-circle"
+                            class="btn btn-outline btn-xs sm:btn-sm md:btn-md lg:btn-lg xl:btn-xl btn-circle"
                             aria-label="全部文件"
                             title="全部文件"
                             @click="filesOpen = true">
@@ -328,7 +331,7 @@ const footerHint = computed(() => (sendable.value ? '' : '当前没有在线手�
 
                     <div class="tooltip tooltip-bottom" data-tip="扫码连接手机">
                         <button
-                            class="btn btn-outline btn-sm btn-circle"
+                            class="btn btn-outline btn-xs sm:btn-sm md:btn-md lg:btn-lg xl:btn-xl btn-circle"
                             aria-label="扫码连接手机"
                             title="扫码连接手机"
                             @click="pairOpen = true">
@@ -336,11 +339,12 @@ const footerHint = computed(() => (sendable.value ? '' : '当前没有在线手�
                         </button>
                     </div>
 
-                    <details class="dropdown dropdown-end">
-                        <summary class="btn btn-outline btn-sm btn-circle" aria-label="更多" title="更多">
+                    <!-- 更多：daisyUI 官方 focus 式 dropdown（tabindex 触发，点外部 / Esc 失焦收起） -->
+                    <div class="dropdown dropdown-end">
+                        <div tabindex="0" role="button" class="btn btn-outline btn-xs sm:btn-sm md:btn-md lg:btn-lg xl:btn-xl btn-circle" aria-label="更多" title="更多">
                             <Icon name="more" :size="14" />
-                        </summary>
-                        <ul class="menu dropdown-content z-10 w-44 rounded-box bg-base-100 p-2 shadow">
+                        </div>
+                        <ul tabindex="-1" class="menu dropdown-content z-1 w-52 rounded-box bg-base-100 p-2 shadow-sm">
                             <li>
                                 <button @click="settingsOpen = true; closeMenu($event)">
                                     <Icon name="settings" :size="15" />
@@ -354,10 +358,10 @@ const footerHint = computed(() => (sendable.value ? '' : '当前没有在线手�
                                 </button>
                             </li>
                         </ul>
-                    </details>
+                    </div>
 
                     <form method="dialog">
-                        <button class="btn btn-outline btn-sm btn-circle" aria-label="关闭" title="关闭">
+                        <button class="btn btn-outline btn-xs sm:btn-sm md:btn-md lg:btn-lg xl:btn-xl btn-circle" aria-label="关闭" title="关闭">
                             <Icon name="close" :size="14" />
                         </button>
                     </form>
