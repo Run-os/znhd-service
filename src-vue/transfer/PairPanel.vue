@@ -51,11 +51,6 @@ onMounted(refreshLink);
         <!-- 本机专属链接 -->
         <div class="card mb-3">
             <div class="card-body gap-3 p-3.5">
-                <div class="card-title flex items-center justify-between gap-2 text-sm">
-                    <span>电脑接收 · 本机专属链接</span>
-                    <span class="badge badge-primary badge-sm">手机扫码即上传</span>
-                </div>
-
                 <div v-if="link" class="flex items-start gap-3">
                     <div class="shrink-0 text-center">
                         <img
@@ -65,7 +60,8 @@ onMounted(refreshLink);
                             class="block size-[124px] rounded border border-base-300" />
                         <div
                             v-else
-                            class="flex size-[124px] items-center justify-center rounded border border-base-300 text-xs text-base-content/40">
+                            class="flex size-[124px] flex-col items-center justify-center gap-1.5 rounded border border-base-300 text-xs text-base-content/40">
+                            <span class="loading loading-spinner loading-sm"></span>
                             二维码生成中…
                         </div>
                         <div class="mt-1.5 text-xs text-base-content/60">扫一扫上传</div>

@@ -360,11 +360,13 @@ const footerHint = computed(() => (sendable.value ? '' : '当前没有在线手�
                         </ul>
                     </div>
 
-                    <form method="dialog">
-                        <button class="btn btn-outline btn-sm btn-circle" aria-label="关闭" title="关闭">
-                            <Icon name="close" :size="14" />
-                        </button>
-                    </form>
+                    <div class="tooltip tooltip-bottom" data-tip="关闭">
+                        <form method="dialog">
+                            <button class="btn btn-outline btn-sm btn-circle" aria-label="关闭" title="关闭">
+                                <Icon name="close" :size="14" />
+                            </button>
+                        </form>
+                    </div>
                 </div>
             </div>
 
@@ -454,7 +456,10 @@ const footerHint = computed(() => (sendable.value ? '' : '当前没有在线手�
 
     <!-- 子窗口 -->
     <DarkDialog v-model:open="filesOpen" title="文件" :width="780" description="本次会话的全部图片 / 文件 / 文本">
-        <FilesView :messages="messages" scope-label="全部文件" :clear-scope="clearAll" />
+        <!-- 固定窗口高度：文件多少不撑高弹窗，内容区自己滚 -->
+        <div class="flex h-[520px] flex-col overflow-hidden">
+            <FilesView :messages="messages" scope-label="全部文件" :clear-scope="clearAll" />
+        </div>
     </DarkDialog>
     <PairDialog v-model:open="pairOpen" :relay-server="store.settings.relayServer" :phones="store.phones" />
     <SettingsDialog v-model:open="settingsOpen" />

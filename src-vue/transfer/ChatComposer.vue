@@ -6,7 +6,7 @@ import { Icon, type IconName } from '@vue/icons';
  * 聊天输入区（v26.10.18-v8）—— 迁移到 daisyUI 原生组件。
  *
  *   textarea（官方 `textarea`）
- *   └─ 下方按钮行：`dropdown`（附件菜单，details/summary 方式）+ `btn-primary`（发送）
+ *   └─ 下方按钮行：`dropdown`（附件菜单，官方 focus 式，点外部失焦收起）+ `btn-primary`（发送）
  *
  * 之前是 shadcn 的 InputGroup 复合容器；daisyUI 没有等价复合件，
  * 因此按 skill 的做法拆成「textarea + 一行按钮」，全部使用官方类名。
@@ -75,11 +75,12 @@ function onKeydown(e: KeyboardEvent) {
 /** 发送按钮可用性：有非空白内容且输入区整体可用 */
 const sendDisabled = computed(() => !!props.disabled || !props.modelValue.trim());
 
-/** 点附件项后收起 details（details 方式不会自己关，需要手动摘 open） */
+/** 点附件项后收起下拉：focus 式 dropdown 靠焦点显隐，把触发器和被点的菜单项都失焦 */
 function pickAttach(e: MouseEvent, fn: () => void) {
     fn();
-    const d = (e.currentTarget as HTMLElement).closest('details');
-    d?.removeAttribute('open');
+    const dd = (e.currentTarget as HTMLElement).closest('.dropdown');
+    dd?.querySelector<HTMLElement>('[role="button"]')?.blur();
+    (e.currentTarget as HTMLElement).blur();
 }
 </script>
 
@@ -96,14 +97,17 @@ function pickAttach(e: MouseEvent, fn: () => void) {
             @keydown="onKeydown"></textarea>
 
         <div class="mt-1 flex items-center gap-1">
-            <details v-if="attach.length" class="dropdown dropdown-top">
-                <summary
+            <!-- 官方 focus 式 dropdown（tabindex 触发）：点外部区域失焦自动收起 -->
+            <div v-if="attach.length" class="dropdown dropdown-top">
+                <div
+                    tabindex="0"
+                    role="button"
                     class="btn btn-outline btn-sm btn-circle"
                     aria-label="添加图片或文件"
                     title="添加图片或文件">
                     <Icon name="plus" :size="14" />
-                </summary>
-                <ul class="menu dropdown-content z-10 w-44 rounded-box bg-base-100 p-2 shadow">
+                </div>
+                <ul tabindex="-1" class="menu dropdown-content z-1 w-44 rounded-box bg-base-100 p-2 shadow-sm">
                     <li v-for="a in attach" :key="a.key">
                         <button :disabled="a.disabled || disabled" @click="pickAttach($event, a.onClick)">
                             <Icon :name="a.icon" :size="15" />
@@ -111,7 +115,7 @@ function pickAttach(e: MouseEvent, fn: () => void) {
                         </button>
                     </li>
                 </ul>
-            </details>
+            </div>
 
             <button
                 class="btn btn-primary btn-sm btn-circle ml-auto"

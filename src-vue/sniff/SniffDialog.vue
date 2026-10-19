@@ -458,30 +458,27 @@ const emptyText = computed(() => {
                 class="btn btn-outline btn-sm shrink-0 text-[11px]"
                 :disabled="phase === 'measuring'"
                 @click="startScan">
+                <span v-if="phase === 'measuring'" class="loading loading-spinner loading-xs"></span>
                 {{ phase === 'measuring' ? '扫描中…' : '重新扫描' }}
             </button>
         </template>
 
-        <!-- data-sniff-excluded：被名称/后缀规则排除的张数。界面上不显示这句提示，
-             但必须留这个钩子 —— 否则「按文件名排除生效」的断言只能靠「名字没出现」判定，
-             而「什么都没渲染」同样满足它（假绿）。 -->
+        <!-- 阈值行：官方 input 直用（不再用 label.input 包裹，避免嵌套输入框叠边） -->
         <div
-            class="mb-2 flex flex-wrap items-center gap-2"
+            class="mb-2 flex flex-wrap items-center gap-x-2 gap-y-1.5"
             :data-sniff-excluded="excluded">
             <span class="text-xs text-base-content/60">只列出 ≥</span>
-            <label class="input input-sm w-[132px] shrink-0">
-                <input
-                    v-model="minKBText"
-                    type="number"
-                    min="1"
-                    max="10240"
-                    step="10"
-                    class="text-xs"
-                    aria-label="最小体积 KB"
-                    @change="commitMinKB"
-                    @blur="commitMinKB" />
-                <span class="text-[11px] opacity-60">KB</span>
-            </label>
+            <input
+                v-model="minKBText"
+                type="number"
+                min="1"
+                max="10240"
+                step="10"
+                class="input input-sm w-20 text-xs"
+                aria-label="最小体积 KB"
+                @change="commitMinKB"
+                @blur="commitMinKB" />
+            <span class="text-[11px] opacity-60">KB</span>
             <span class="text-xs text-base-content/60">的图片（显示 {{ known.length }} 张）</span>
             <label class="ml-1 flex cursor-pointer items-center gap-1.5 text-xs">
                 <input
@@ -502,9 +499,9 @@ const emptyText = computed(() => {
             已排除 {{ droppedCount }} 个响应不是图片的地址（视频 / 网页 / JSON 等）。
         </p>
 
-        <!-- 测量中且一张都还没回来：进度条（v26.10.19-v3：与列表/空态统一固定 58vh，弹窗高度不随内容抖动） -->
+        <!-- 测量中且一张都还没回来：官方 loading spinner（与列表/空态统一固定 58vh，弹窗高度不随内容抖动） -->
         <div v-if="phase === 'measuring' && !probed.length" class="flex h-[58vh] flex-col items-center justify-center">
-            <progress class="progress progress-primary mx-auto w-full max-w-[320px]" :value="percent" max="100"></progress>
+            <span class="loading loading-spinner text-primary"></span>
             <p class="mt-2 text-xs text-base-content/60">
                 正在测量大小…（{{ probed.length }}/{{ total }}）
             </p>

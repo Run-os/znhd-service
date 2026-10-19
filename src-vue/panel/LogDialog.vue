@@ -17,7 +17,8 @@ import AppDialog from './AppDialog.vue';
  *    · 关：列表冻结在关闭那一刻的快照，往上翻历史不会被打断；
  *    · 开关持久化在 Allvalue.logAutoRefresh，由父组件负责存取。
  *
- * 迁移到 daisyUI：筛选按钮 → `btn btn-sm`（选中态 `btn-active`），
+ * 迁移到 daisyUI：筛选 → 官方 `filter` 组件（HTML form + checkbox + reset「全部」按钮，
+ * 选中态按类型着色 `checked:btn-*`，圆角统一 1rem），
  * 日志区底色 → `bg-neutral text-neutral-content`，类型色 → `text-info/success/warning/error`，
  * 「自动刷新」→ `toggle`。
  */
@@ -33,12 +34,12 @@ const emit = defineEmits<{
     'update:autoRefresh': [boolean];
 }>();
 
-/** 类型 → daisyUI 语义色类（颜色全部来自主题，不再写死 hex） */
+/** 类型 → daisyUI 语义色类（颜色全部来自主题，不再写死 hex）；filter 按钮选中态色用 checked: 变体 */
 const TYPES: Array<{ type: LogType; label: string; text: string; bar: string; btn: string }> = [
-    { type: 'info', label: '信息', text: 'text-info', bar: 'border-l-info', btn: 'btn-info' },
-    { type: 'success', label: '成功', text: 'text-success', bar: 'border-l-success', btn: 'btn-success' },
-    { type: 'warning', label: '警告', text: 'text-warning', bar: 'border-l-warning', btn: 'btn-warning' },
-    { type: 'error', label: '错误', text: 'text-error', bar: 'border-l-error', btn: 'btn-error' },
+    { type: 'info', label: '信息', text: 'text-info', bar: 'border-l-info', btn: 'checked:btn-info' },
+    { type: 'success', label: '成功', text: 'text-success', bar: 'border-l-success', btn: 'checked:btn-success' },
+    { type: 'warning', label: '警告', text: 'text-warning', bar: 'border-l-warning', btn: 'checked:btn-warning' },
+    { type: 'error', label: '错误', text: 'text-error', bar: 'border-l-error', btn: 'checked:btn-error' },
 ];
 
 const metaOf = (t: LogType) => TYPES.find((m) => m.type === t) || TYPES[0];
@@ -63,15 +64,18 @@ const counts = computed(() => {
     source.value.forEach((e) => (c[e.type] = (c[e.type] || 0) + 1));
     return c;
 });
-const shown = computed(() => source.value.filter((e) => filter.value[e.type]));
+const shown = computed(() => {
+    // 官方 filter 语义：一个都没勾 = 不过滤（显示全部）；reset「全部」按钮即恢复此态
+    const noneOn = TYPES.every((m) => !filter.value[m.type]);
+    return noneOn ? source.value : source.value.filter((e) => filter.value[e.type]);
+});
 /** 反转成「最旧在上、最新在下」——不污染原数组 */
 const rows = computed(() => shown.value.slice().reverse());
-const allOn = computed(() => TYPES.every((m) => filter.value[m.type]));
 const latest = computed(() => source.value[0]);
 
-function toggleAll() {
-    const next = !allOn.value;
-    filter.value = { info: next, success: next, warning: next, error: next };
+/** filter 的 type=reset 触发：清掉全部勾选 = 回到「显示全部」 */
+function resetFilter() {
+    filter.value = { info: false, success: false, warning: false, error: false };
 }
 
 // 打开 / 新日志 / 重新开启自动刷新 / 切换筛选 → 滚到底部看最新内容。
@@ -94,26 +98,21 @@ watch([() => props.open, () => props.logEntries, () => props.autoRefresh, filter
         :footer="true"
         @update:open="(v: boolean) => emit('update:open', v)">
         <div class="flex items-start justify-between gap-2">
-            <div class="flex flex-wrap gap-1.5">
-                <button
-                    type="button"
-                    class="btn btn-sm"
-                    :class="allOn ? 'btn-active' : ''"
-                    :title="allOn ? '点击隐藏该类日志' : '点击显示该类日志'"
-                    @click="toggleAll">
-                    {{ allOn ? '全部' : '全部' }}
-                </button>
-                <button
+            <!-- 官方 filter 组件（HTML form + checkbox + reset）：reset = 「全部」，
+                 一个都没勾时 filter 的 CSS 会自动把它藏起来；勾选项按类型着色 -->
+            <form class="filter" @reset="resetFilter">
+                <input class="btn btn-sm" type="reset" value="全部" aria-label="全部" />
+                <input
                     v-for="m in TYPES"
                     :key="m.type"
-                    type="button"
                     class="btn btn-sm"
-                    :class="filter[m.type] ? m.btn : ''"
+                    :class="m.btn"
+                    type="checkbox"
+                    :checked="filter[m.type]"
+                    :aria-label="m.label + ' ' + (counts[m.type] || 0)"
                     :title="filter[m.type] ? '点击隐藏该类日志' : '点击显示该类日志'"
-                    @click="filter[m.type] = !filter[m.type]">
-                    {{ m.label }} {{ counts[m.type] || 0 }}
-                </button>
-            </div>
+                    @change="filter[m.type] = ($event.target as HTMLInputElement).checked" />
+            </form>
             <button
                 class="btn btn-error btn-sm shrink-0"
                 :disabled="props.logEntries.length === 0"
@@ -151,7 +150,7 @@ watch([() => props.open, () => props.logEntries, () => props.autoRefresh, filter
             class="mt-2 flex items-center justify-between gap-2 border-t border-base-300 pt-1.5 text-[11.5px] text-base-content/60">
             <span>
                 共 <b class="text-base-content">{{ source.length }}</b> 条 · 显示
-                <b class="text-base-content">{{ shown.length }}</b> 条（{{ allOn ? '全类型' : '已选' }}）
+                <b class="text-base-content">{{ shown.length }}</b> 条
                 {{ props.autoRefresh ? '' : ' · 已冻结' }}
             </span>
             <span class="flex items-center gap-2.5">

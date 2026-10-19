@@ -98,3 +98,13 @@ svg {
 .toggle {
   --radius-selector: 1rem;
 }
+
+/* ── 圆角定版（官方主题 wireframe/business 把 --radius-* 全部压成 0/0.25rem） ──
+   用户定版：toggle 胶囊 1rem、checkbox 圆形、filter 按钮 1rem。
+   只覆写对应组件的作用域变量，不动其他直角组件。 */
+.checkbox {
+  --radius-selector: 9999px;
+}
+.filter .btn {
+  --radius-field: 1rem;
+}

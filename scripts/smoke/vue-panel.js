@@ -323,6 +323,9 @@ function serve() {
             rows: el.querySelectorAll('[class*="border-l-"]').length,
             terminalBg: terminal ? getComputedStyle(terminal).backgroundColor : '',
             hasSwitch: !!el.querySelector('input.toggle'),
+            // 官方 filter 组件：form.filter + 4 个类型 checkbox（reset 是 type=reset 的「全部」）
+            filterForm: !!el.querySelector('form.filter'),
+            filterBoxes: el.querySelectorAll('form.filter input[type="checkbox"]').length,
         };
     });
     const neutralLight = await probeOf('--color-neutral');
@@ -332,7 +335,9 @@ function serve() {
         logDialog.text.includes('运行日志') &&
         logDialog.rows >= 3 &&
         logDialog.terminalBg === neutralLight &&
-        logDialog.hasSwitch;
+        logDialog.hasSwitch &&
+        logDialog.filterForm &&
+        logDialog.filterBoxes === 4;
     report.logDialog = logDialog;
     await page.screenshot({ path: path.join(os.tmpdir(), 'znhd-vue-log.png') });
 
@@ -587,7 +592,8 @@ function serve() {
     report.checks.transferBtnShapeOk =
         transfer.headBtnBox.length === 5 &&
         transfer.headBtnBox.every(isRoundBtn) &&
-        transfer.composerBtnBox.length === 2 &&
+        // 输入舱只有「发送」是 button；「+」附件触发器是 div[role=button]（官方 focus 式 dropdown）
+        transfer.composerBtnBox.length === 1 &&
         transfer.composerBtnBox.every(isRoundBtn);
     report.checks.transferChatOk =
         transfer.text.includes('已连接 1 台设备') &&

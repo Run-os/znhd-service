@@ -47,7 +47,8 @@ onMounted(() => {
     <dialog ref="dlg" class="modal" @close="open = false">
         <div class="modal-box" :style="{ width: props.width + 'px', maxWidth: 'calc(100vw - 32px)' }">
             <div class="flex items-center justify-between gap-3">
-                <h3 class="min-w-0 text-[15px] font-semibold leading-6">
+                <!-- flex + gap：#title 插槽里「标题文本 + 动作按钮」横排且不重叠 -->
+                <h3 class="flex min-w-0 items-center gap-2 text-[15px] font-semibold leading-6">
                     <!-- #title 供需要「标题 + 动作按钮」的弹窗用（如图片嗅探的「重新扫描」） -->
                     <slot name="title">{{ props.title }}</slot>
                 </h3>

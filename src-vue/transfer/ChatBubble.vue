@@ -128,12 +128,11 @@ const timeText = computed(() => (props.ts ? fmtTime(props.ts) : ''));
                 border: error ? '1px solid var(--color-error)' : 'none',
             }"
             @click="emit('preview')" />
-        <progress
-            v-if="progress !== null"
-            :data-chat-progress="progress"
-            class="progress progress-primary mt-1 w-full"
-            :value="progress"
-            max="100"></progress>
+        <!-- 传输等待/进行中：官方 loading spinner + 进度条 -->
+        <div v-if="progress !== null" class="mt-1 flex items-center gap-1.5" :data-chat-progress="progress">
+            <span class="loading loading-spinner loading-sm shrink-0"></span>
+            <progress class="progress progress-primary min-w-0 flex-1" :value="progress" max="100"></progress>
+        </div>
     </div>
 
     <!-- ---------- 文件 ---------- -->
@@ -165,12 +164,14 @@ const timeText = computed(() => (props.ts ? fmtTime(props.ts) : ''));
                 {{ downloadLabel }}
             </button>
         </div>
-        <progress
-            v-if="progress !== null"
-            class="progress mt-1 w-full"
-            :class="mine ? 'progress-neutral' : 'progress-primary'"
-            :value="progress"
-            max="100"></progress>
+        <div v-if="progress !== null" class="mt-1 flex items-center gap-1.5">
+            <span class="loading loading-spinner loading-sm shrink-0"></span>
+            <progress
+                class="progress min-w-0 flex-1"
+                :class="mine ? 'progress-neutral' : 'progress-primary'"
+                :value="progress"
+                max="100"></progress>
+        </div>
         <div v-if="error" class="mt-1 text-[11px]">{{ error }}</div>
     </div>
 
