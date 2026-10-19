@@ -91,6 +91,11 @@ export function mountPanel(): HTMLElement {
 
     const appContainer = document.createElement('div');
     appContainer.id = 'app';
+    // daisyUI 5 的 [data-theme] 规则会给主题挂载点刷 --root-bg（日间=白底）。
+    // 展开态下面板自身有 bg-base-100 看不出来；收起态只剩 36×36 悬浮球时，
+    // #app 的白底就裸露成「白色直角方块」。这里用内联 !important 钉死透明
+    //（与上方 host 防御同一档位：内联 !important 高于影子树样式表规则）。
+    appContainer.style.setProperty('background-color', 'transparent', 'important');
     shadowRoot.appendChild(appContainer);
 
     // 主题：daisyUI 的 `[data-theme=...]` 选择器只在**影子树内部**生效

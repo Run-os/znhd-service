@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         征纳互动人数和在线监控v2
 // @namespace    https://scriptcat.org/
-// @version      26.10.20-v11
+// @version      26.10.20-v12
 // @author       runos
 // @description  实时监控征纳互动等待人数和在线状态，支持语音播报、自定义常用语
 // @license      MIT
@@ -7717,6 +7717,7 @@ syntax: ((_b = pick("syntax")) != null ? _b : "*").replace(/^["']+|["']+$/g, "")
     shadowRoot.appendChild(style);
     const appContainer = document.createElement("div");
     appContainer.id = "app";
+    appContainer.style.setProperty("background-color", "transparent", "important");
     shadowRoot.appendChild(appContainer);
     initTheme(appContainer);
     app$1 = vue.createApp({ render: () => vue.h(_sfc_main, { host }) });
