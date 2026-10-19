@@ -23,7 +23,7 @@ import ChatWindow from '@vue/transfer/ChatWindow.vue';
 
 /**
  * 主面板。迁移到 daisyUI 后：
- *   Button → `btn`（尺寸用响应式链 `btn-xs sm:btn-sm md:btn-md lg:btn-lg xl:btn-xl`）；Switch → `toggle`；Tooltip → `tooltip` + `data-tip`；
+ *   Button → `btn`（尺寸用响应式链 `btn-sm`）；Switch → `toggle`；Tooltip → `tooltip` + `data-tip`；
  *   语义色一律换成 daisyUI 的 `base-*` / `primary` / `accent` / `error` / `success`。
  * 自定义阴影与圆角已移除（daisyUI 主题 depth=0、radius 由主题给）。
  */
@@ -270,7 +270,7 @@ onBeforeUnmount(() => {
                         @change="onToggleTheme" />
                     <!-- sun icon -->
                     <svg
-                        class="swap-off h-10 w-10 fill-current"
+                        class="swap-off h-6 w-6 fill-current"
                         xmlns="http://www.w3.org/2000/svg"
                         viewBox="0 0 24 24">
                         <path
@@ -278,7 +278,7 @@ onBeforeUnmount(() => {
                     </svg>
                     <!-- moon icon -->
                     <svg
-                        class="swap-on h-10 w-10 fill-current"
+                        class="swap-on h-6 w-6 fill-current"
                         xmlns="http://www.w3.org/2000/svg"
                         viewBox="0 0 24 24">
                         <path
@@ -287,7 +287,7 @@ onBeforeUnmount(() => {
                 </label>
             </div>
             <button
-                class="btn btn-ghost btn-xs sm:btn-sm md:btn-md lg:btn-lg xl:btn-xl btn-square text-base-content/60"
+                class="btn btn-ghost btn-sm btn-square text-base-content/60"
                 title="收起面板（点圆形按钮可展开）"
                 aria-label="收起面板"
                 @click="collapsed = true">
@@ -322,7 +322,7 @@ onBeforeUnmount(() => {
             <!-- 4 个入口：btn + 容器查询控制文字显隐 -->
             <div class="grid grid-cols-4 gap-1.5">
                 <div v-for="a in PANEL_ACTIONS" :key="a.key" class="tooltip tooltip-top" :data-tip="a.label">
-                    <button class="btn btn-outline znhd-panel-btn h-10 min-w-0 gap-0.5 px-1" @click="openEntry(a.key)">
+                    <button class="btn btn-outline btn-sm znhd-panel-btn min-w-0 gap-0.5 px-1" @click="openEntry(a.key)">
                         <span class="text-primary"><Icon :name="a.icon" :size="15" /></span>
                         <span class="znhd-panel-btn-text ml-0.5 text-[11px]">{{ a.label }}</span>
                     </button>
@@ -332,7 +332,7 @@ onBeforeUnmount(() => {
             <!-- 底部：上次播报 + 查看日志 -->
             <div class="mt-2.5 flex items-center justify-between gap-2 text-xs text-base-content/60">
                 <span class="truncate">{{ lastSpeakText(mon.lastSpeak) }}</span>
-                <button class="btn btn-link btn-xs sm:btn-sm md:btn-md lg:btn-lg xl:btn-xl shrink-0 px-0 text-xs" @click="logOpen = true">查看日志 →</button>
+                <button class="btn btn-link btn-sm shrink-0 px-0 text-xs" @click="logOpen = true">查看日志 →</button>
             </div>
         </div>
 

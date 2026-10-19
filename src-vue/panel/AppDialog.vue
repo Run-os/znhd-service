@@ -52,7 +52,7 @@ onMounted(() => {
                     <slot name="title">{{ props.title }}</slot>
                 </h3>
                 <form method="dialog">
-                    <button class="btn btn-ghost btn-xs sm:btn-sm md:btn-md lg:btn-lg xl:btn-xl btn-square" aria-label="关闭">
+                    <button class="btn btn-ghost btn-sm btn-square" aria-label="关闭">
                         <Icon name="close" :size="15" />
                     </button>
                 </form>
@@ -63,7 +63,7 @@ onMounted(() => {
             <!-- footer=false 表示不要默认按钮；调用方给了 #footer 插槽时仍要渲染 -->
             <div v-if="props.footer || $slots.footer" class="modal-action">
                 <slot name="footer">
-                    <button class="btn btn-xs sm:btn-sm md:btn-md lg:btn-lg xl:btn-xl" @click="open = false">确定</button>
+                    <button class="btn btn-sm" @click="open = false">确定</button>
                 </slot>
             </div>
         </div>

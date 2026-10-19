@@ -90,3 +90,11 @@
 svg {
   vertical-align: middle;
 }
+
+/* ── toggle 胶囊形修正 ─────────────────────────────────────────────────────
+   wireframe / business 两个官方主题都把 --radius-selector 设为 0rem（直角美学），
+   官网演示用的是默认主题的 1rem（圆角胶囊 pill）。用户定版要求 toggle 呈官方
+   网站同款胶囊形，这里只对 .toggle 恢复官方默认值，不动其他直角组件。 */
+.toggle {
+  --radius-selector: 1rem;
+}

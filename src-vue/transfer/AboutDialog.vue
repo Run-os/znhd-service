@@ -32,7 +32,7 @@ function openHome() {
             <span class="inline-flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
                 <DeviceIdTag :id="deviceId" />
                 <span class="text-[11px] opacity-65">{{ deviceId }}</span>
-                <button class="btn btn-ghost btn-xs sm:btn-sm md:btn-md lg:btn-lg xl:btn-xl btn-square text-base-content/60 hover:text-base-content"
+                <button class="btn btn-ghost btn-sm btn-square text-base-content/60 hover:text-base-content"
                    
                    
                     aria-label="复制设备 ID"
@@ -60,7 +60,7 @@ function openHome() {
         <div class="flex gap-3 border-b border-base-300 py-[7px]">
             <span class="shrink-0 text-[13px] opacity-65" style="flex: 0 0 92px">项目主页</span>
             <span class="min-w-0 flex-1">
-                <button class="btn btn-link btn-xs sm:btn-sm md:btn-md lg:btn-lg xl:btn-xl h-auto px-0 text-[13px]" @click="openHome">
+                <button class="btn btn-link btn-sm h-auto px-0 text-[13px]" @click="openHome">
                     github.com/Run-os/znhd-service
                 </button>
             </span>
@@ -71,7 +71,7 @@ function openHome() {
         </div>
 
         <template #footer>
-            <button class="btn btn-xs sm:btn-sm md:btn-md lg:btn-lg xl:btn-xl" @click="open = false">关闭</button>
+            <button class="btn btn-sm" @click="open = false">关闭</button>
         </template>
     </DarkDialog>
 </template>

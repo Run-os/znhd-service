@@ -88,7 +88,7 @@ function doClearAll() {
 
         <div class="mt-2 border-t border-base-300 pt-3">
             <template v-if="!confirmClear">
-                <button class="btn btn-error btn-xs sm:btn-sm md:btn-md lg:btn-lg xl:btn-xl" @click="confirmClear = true">清空全部传输记录</button>
+                <button class="btn btn-error btn-sm" @click="confirmClear = true">清空全部传输记录</button>
             </template>
             <div v-else class="alert alert-error alert-soft alert-vertical">
                 <div>
@@ -98,14 +98,14 @@ function doClearAll() {
                     </div>
                 </div>
                 <div class="flex justify-end gap-2">
-                    <button class="btn btn-outline btn-xs sm:btn-sm md:btn-md lg:btn-lg xl:btn-xl" @click="confirmClear = false">取消</button>
-                    <button class="btn btn-error btn-xs sm:btn-sm md:btn-md lg:btn-lg xl:btn-xl" @click="doClearAll">清空</button>
+                    <button class="btn btn-outline btn-sm" @click="confirmClear = false">取消</button>
+                    <button class="btn btn-error btn-sm" @click="doClearAll">清空</button>
                 </div>
             </div>
         </div>
 
         <template #footer>
-            <button class="btn btn-xs sm:btn-sm md:btn-md lg:btn-lg xl:btn-xl" @click="closeWithCommit">完成</button>
+            <button class="btn btn-sm" @click="closeWithCommit">完成</button>
         </template>
     </DarkDialog>
 </template>

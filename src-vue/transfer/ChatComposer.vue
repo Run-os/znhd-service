@@ -98,7 +98,7 @@ function pickAttach(e: MouseEvent, fn: () => void) {
         <div class="mt-1 flex items-center gap-1">
             <details v-if="attach.length" class="dropdown dropdown-top">
                 <summary
-                    class="btn btn-outline btn-xs sm:btn-sm md:btn-md lg:btn-lg xl:btn-xl btn-circle"
+                    class="btn btn-outline btn-sm btn-circle"
                     aria-label="添加图片或文件"
                     title="添加图片或文件">
                     <Icon name="plus" :size="14" />
@@ -114,7 +114,7 @@ function pickAttach(e: MouseEvent, fn: () => void) {
             </details>
 
             <button
-                class="btn btn-primary btn-xs sm:btn-sm md:btn-md lg:btn-lg xl:btn-xl btn-circle ml-auto"
+                class="btn btn-primary btn-sm btn-circle ml-auto"
                 :disabled="sendDisabled"
                 aria-label="发送"
                 title="发送（Enter）"

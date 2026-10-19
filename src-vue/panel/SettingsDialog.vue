@@ -18,7 +18,7 @@ export interface WorkingHours {
  *   · 每个设置项 = `fieldset` + `fieldset-legend` + `label`（skill/components/fieldset.md）
  *   · 开关 = `toggle`
  *   · 时间输入 = `input`（原生 `<input type="time">`）
- *   · 快捷入口 = `btn btn-outline btn-xs sm:btn-sm md:btn-md lg:btn-lg xl:btn-xl`
+ *   · 快捷入口 = `btn btn-outline btn-sm`
  *
  * ⚠️ 时间输入用原生 `<input type="time">`：React 版 v26.10.06-v16 已实测换掉 antd TimePicker，
  *    清空时 hhmmToHours 返回 null —— 此时必须保持原值，不能把 NaN 写进配置。
@@ -68,9 +68,9 @@ const UPDATE_URL = (GM_info.scriptUpdateURL || GM_info.script.updateURL) as stri
         :footer="false"
         @update:open="emit('update:open', $event)">
         <div class="flex flex-wrap items-center gap-2">
-            <a class="btn btn-outline btn-xs sm:btn-sm md:btn-md lg:btn-lg xl:btn-xl" :href="HOMEPAGE_URL" target="_blank" rel="noreferrer">脚本主页</a>
-            <a class="btn btn-outline btn-xs sm:btn-sm md:btn-md lg:btn-lg xl:btn-xl" :href="UPDATE_URL" target="_blank" rel="noreferrer">更新脚本</a>
-            <button class="btn btn-outline btn-xs sm:btn-sm md:btn-md lg:btn-lg xl:btn-xl" @click="emit('openChangelog')">更新日志</button>
+            <a class="btn btn-outline btn-sm" :href="HOMEPAGE_URL" target="_blank" rel="noreferrer">脚本主页</a>
+            <a class="btn btn-outline btn-sm" :href="UPDATE_URL" target="_blank" rel="noreferrer">更新脚本</a>
+            <button class="btn btn-outline btn-sm" @click="emit('openChangelog')">更新日志</button>
         </div>
 
         <div class="divider">其他设置</div>
