@@ -307,7 +307,7 @@ onBeforeUnmount(() => {
             <!-- 语音播报开关 -->
             <div class="mb-2.5 flex items-center justify-between rounded-box bg-base-200 px-3 py-2">
                 <span class="flex items-center gap-1.5 text-[13px]">
-                    <span :class="voiceEnabled ? 'text-primary' : 'text-base-content/60'">
+                    <span :class="voiceEnabled ? 'text-primary znhd-brand-fg' : 'text-base-content/60'">
                         <Icon :name="voiceEnabled ? 'volumeOn' : 'volumeOff'" :size="15" />
                     </span>
                     语音播报
@@ -324,7 +324,8 @@ onBeforeUnmount(() => {
                 <div v-for="a in PANEL_ACTIONS" :key="a.key" class="tooltip tooltip-top" :data-tip="a.label">
                     <!-- ghost：无描边无底色，hover 出现圆形底（btn-circle 决定遮罩形状） -->
                     <button class="btn btn-ghost btn-sm w-full znhd-panel-btn min-w-0 gap-0.5 px-1" @click="openEntry(a.key)">
-                        <span class="text-primary"><Icon :name="a.icon" :size="15" /></span>
+                        <!-- znhd-brand-fg：日间模式图标 = 品牌蓝（style.css 按 data-theme 作用域），夜间回落官方 primary -->
+                        <span class="text-primary znhd-brand-fg"><Icon :name="a.icon" :size="15" /></span>
                         <span class="znhd-panel-btn-text ml-0.5 text-[11px]">{{ a.label }}</span>
                     </button>
                 </div>

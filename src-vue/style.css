@@ -108,3 +108,17 @@ svg {
 .filter .btn {
   --radius-field: 1rem;
 }
+
+/* ── 品牌蓝定版（v26.10.20-v7，用户指定 rgb(67, 116, 186)）──────────────────
+   1) 日间模式（wireframe）官方 primary 是灰阶 —— 按钮上的图标改用品牌蓝；
+      夜间 business 不套用（保持官方配色）。只按主题作用域，不写死在模板里。
+   2) toggle 选中态：官方把胶囊背景画成 --color-base-100（灰白），用户要求
+      选中胶囊 = 品牌蓝；中间圆形滑块（官方 = base-content）保持不动。 */
+[data-theme='wireframe'] .znhd-brand-fg {
+  color: rgb(67, 116, 186);
+}
+.toggle:checked,
+.toggle[aria-checked='true'] {
+  background-color: rgb(67, 116, 186);
+  border-color: rgb(67, 116, 186);
+}
