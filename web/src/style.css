@@ -1,10 +1,12 @@
 @import 'tailwindcss' source(none);
 /**
- * 手机上传页样式入口（v26.10.18-v7）。
+ * 手机上传页样式入口（v26.10.20-v12 客户端 daisyUI 化）。
  *
  * 为什么手机页也要 Tailwind：它复用了仓库根 `src-vue/` 的 UI 底层件
- * （`ImagePreview.vue` 预览层、官方 `Button`），那些组件的排版全部是工具类。
- * 没有 Tailwind，复用就退化成「复制一份改写」。
+ * （`ImagePreview.vue` 预览层、`ChatBubble` / `ChatTurn` / `ChatComposer`），
+ * 那些组件自 2026-10-19 起全部是 **daisyUI 官方组件类**（chat / btn / menu / textarea），
+ * 没有 daisyUI 插件这些类一个都不会生成（这也是此前 web 构建坏掉、
+ * relay-server/public 一直停留在 shadcn 旧构建的根因）。
  *
  * ⚠️ `source(none)` 必须保留：Tailwind v4 的自动内容探测会从 CSS 文件位置向上找到
  *    git 根并扫描**整个仓库**（含脚本端 src/ 与 src-vue/ 的几百个文件），生成的
@@ -15,36 +17,25 @@
 @source '../../src-vue/transfer';
 
 /**
- * 设计令牌：手机页固定微信暗色（不跟随日/夜主题 —— 它本身就是「微信聊天窗」的复刻）。
- * 值取自脚本端 `src-vue/transfer/theme.ts` 的 TRANSFER_VARS，改一处要同步另一处。
+ * daisyUI 主题：客户端是「微信暗色聊天窗」的复刻，固定暗色 business，
+ * 不像脚本端那样带日/夜切换。主色覆盖为微信绿（#07C160）：
+ * ChatBubble 的 `chat-bubble-primary` / ChatComposer 的 `btn-primary` / 进度条
+ * `progress-primary` 都取 --color-primary，冒烟断言文本气泡底色 rgb(7,193,96)。
+ * `exclude: rootscrollgutter`：整页骨架 position:fixed，不需要滚动条占位。
  */
-@theme {
-    --color-background: #1e1e1e;
-    --color-foreground: rgba(255, 255, 255, 0.9);
-    --color-card: #2e2e2e;
-    --color-card-foreground: #ffffff;
-    --color-popover: #262626;
-    --color-popover-foreground: #ffffff;
-    --color-primary: #07c160;
-    --color-primary-foreground: #ffffff;
-    --color-secondary: #2f2f2f;
-    --color-secondary-foreground: rgba(255, 255, 255, 0.9);
-    --color-muted: #2f2f2f;
-    --color-muted-foreground: rgba(255, 255, 255, 0.45);
-    --color-accent: #3a3a3a;
-    --color-accent-foreground: #ffffff;
-    --color-destructive: #e86c6c;
-    --color-destructive-foreground: #ffffff;
-    --color-border: rgba(255, 255, 255, 0.1);
-    --color-input: rgba(255, 255, 255, 0.14);
-    --color-ring: #07c160;
+@plugin 'daisyui' {
+    themes: business --default;
+    exclude: rootscrollgutter;
+}
 
-    --radius-md: 8px;
+@plugin 'daisyui/theme' {
+    name: 'business';
+    default: true;
+    --color-primary: #07c160;
+    --color-primary-content: #ffffff;
 }
 
 /**
- * Sonner 组件内部用 `var(--radius)`（不是 Tailwind 的 `--radius-*` 命名空间），单独声明一个。
- *
  * `--tw-*` 是**传输助手窗口分层专用 token**（聊天区底色 / 分隔细线 / 输入舱），
  * 与脚本端 `src-vue/transfer/theme.ts` 的 `--tw-*` 同源：那边随日/夜切换，这里固定暗色值
  * —— 手机页本身就是「微信暗色聊天窗」的复刻，没有日间模式可切。
@@ -52,8 +43,6 @@
  * 漏一个输入舱就会变成透明底。
  */
 :root {
-    --radius: 8px;
-
     --tw-window: #000000;
     --tw-hairline: rgb(34, 34, 34);
     --tw-composer-bg: rgb(32, 32, 32);
@@ -62,7 +51,7 @@
 }
 
 /**
- * 原有页面样式（骨架 / 气泡 / 表情面板，逐条与脚本端第三栏对齐）在 `app.css`，
+ * 原有页面样式（骨架 / 滚动条补丁）在 `app.css`，
  * 由 `main.ts` 在本文件之后 import —— 不写成 CSS `@import`，因为 CSS 规范要求
- * `@import` 必须排在其他规则之前，而这里 `@theme` 已经占位。
+ * `@import` 必须排在其他规则之前，而这里 `@plugin` / `@theme` 已经占位。
  */

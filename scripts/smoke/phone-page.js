@@ -204,7 +204,9 @@ async function main() {
             pollPathHits > 0 && hbPathHits === 0
         );
 
-        // ① 骨架三件套：官方组件的 Card 三段（header / message-scroller / card-footer 输入区）
+        // ① 骨架三件套：card 三段（header / 滚动容器 / card-footer 输入区）
+        //    v26.10.20-v14 客户端 daisyUI 化：composer 不再是 shadcn InputGroup 复合件
+        //    （textarea + 一行按钮），选择器相应改为 .znhd-phone-chat 下的原生元素。
         const skeleton = await page.evaluate(() => ({
             chat: !!document.querySelector('.znhd-phone-chat'),
             card: !!document.querySelector('.znhd-phone-chat [data-slot="card"]'),
@@ -213,9 +215,9 @@ async function main() {
                 !!document.querySelector('.znhd-phone-chat [data-slot="message-scroller"]') ||
                 !!document.querySelector('.znhd-phone-chat [data-slot="empty"]'),
             composer: !!document.querySelector('.znhd-phone-chat [data-slot="card-footer"]'),
-            textarea: !!document.querySelector('.znhd-phone-chat [data-slot="input-group"] textarea'),
-            attachBtn: !!document.querySelector('.znhd-phone-chat button[aria-label="添加图片或文件"]'),
-            sendBtn: !!document.querySelector('.znhd-phone-chat [data-slot="input-group"] button[aria-label="发送"]'),
+            textarea: !!document.querySelector('.znhd-phone-chat textarea'),
+            attachBtn: !!document.querySelector('.znhd-phone-chat [role="button"][aria-label="添加图片或文件"]'),
+            sendBtn: !!document.querySelector('.znhd-phone-chat button[aria-label="发送"]'),
             bg: (function () {
                 const el = document.querySelector('.znhd-phone-chat [data-slot="card-content"]');
                 return el ? getComputedStyle(el).backgroundColor : '';
@@ -286,67 +288,60 @@ async function main() {
         );
 
         // ② 发图片：选图 → 出「发送中」气泡 → 顺序发送 → 气泡下方出「已发送」
-        //    （v26.10.18-v9 起气泡是官方 Message/Bubble：data-align=end = 我方，图片走 ghost 变体）
+        //    （v26.10.20-v14 客户端 daisyUI 化：气泡 = chat 组件，我方 = .chat-end，绿 = .chat-bubble-primary）
         const input = await page.$('input[type=file]');
         if (!input) {
             check('页面有选图用的 file input', false);
         } else {
             await input.uploadFile(png);
-            await page.waitForSelector('[data-slot="message"][data-align="end"] [data-slot="bubble"] img', {
+            await page.waitForSelector('.chat-end .chat-bubble img', {
                 timeout: 15000,
             });
             await page.waitForFunction(
                 () =>
-                    Array.from(
-                        document.querySelectorAll(
-                            '[data-slot="message"][data-align="end"] [data-slot="message-footer"]'
-                        )
-                    ).some((el) => (el.textContent || '').indexOf('已发送') >= 0),
+                    Array.from(document.querySelectorAll('.chat-end .chat-footer')).some(
+                        (el) => (el.textContent || '').indexOf('已发送') >= 0
+                    ),
                 { timeout: 20000 }
             );
             // 压缩后的 objectURL 换 src 是异步的：等 <img> 真正解码完成再取值
             await page.waitForFunction(
-                () =>
-                    Array.from(
-                        document.querySelectorAll('[data-slot="message"][data-align="end"] [data-slot="bubble"] img')
-                    ).some((img) => img.naturalWidth > 0),
+                () => Array.from(document.querySelectorAll('.chat-end .chat-bubble img')).some((img) => img.naturalWidth > 0),
                 { timeout: 15000 }
             );
             const bubble = await page.evaluate(() => {
-                const msg = document.querySelector('[data-slot="message"][data-align="end"]');
-                const bub = msg ? msg.querySelector('[data-slot="bubble"]') : null;
+                const msg = document.querySelector('.chat.chat-end');
+                const bub = msg ? msg.querySelector('.chat-bubble') : null;
                 return {
-                    align: msg ? msg.getAttribute('data-align') : '',
-                    variant: bub ? bub.getAttribute('data-variant') : '',
+                    align: msg ? (msg.classList.contains('chat-end') ? 'end' : 'start') : '',
+                    bubbleOk: !!bub,
                     imgLoaded: (function () {
-                        const img = msg && msg.querySelector('[data-slot="bubble"] img');
+                        const img = msg && msg.querySelector('.chat-bubble img');
                         return !!img && img.naturalWidth > 0;
                     })(),
                 };
             });
             check(
-                '发出的图片进右侧气泡（data-align=end，ghost 变体）且真的加载出来',
-                bubble.align === 'end' && bubble.variant === 'ghost' && bubble.imgLoaded
+                '发出的图片进右侧气泡（chat-end）且真的加载出来',
+                bubble.align === 'end' && bubble.bubbleOk && bubble.imgLoaded
             );
         }
 
-        // ③ 发文本：输入 → Enter → 右侧文本气泡（default 变体 = 微信绿）
-        await page.type('.znhd-phone-chat [data-slot="input-group"] textarea', '冒烟聊天文本：手机到电脑');
+        // ③ 发文本：输入 → Enter → 右侧文本气泡（chat-bubble-primary = 微信绿）
+        await page.type('.znhd-phone-chat textarea', '冒烟聊天文本：手机到电脑');
         await page.keyboard.press('Enter');
         await page.waitForFunction(
             () =>
-                Array.from(
-                    document.querySelectorAll('[data-slot="message"][data-align="end"] [data-slot="bubble"]')
-                ).some((el) => (el.textContent || '').indexOf('冒烟聊天文本：手机到电脑') >= 0),
+                Array.from(document.querySelectorAll('.chat-end .chat-bubble')).some(
+                    (el) => (el.textContent || '').indexOf('冒烟聊天文本：手机到电脑') >= 0
+                ),
             { timeout: 15000 }
         );
         const textBubble = await page.evaluate(() => {
-            // ⚠️ 底色画在 bubble-content（Bubble 根节点本身透明），要取内层的 computedStyle
-            const contents = [
-                ...document.querySelectorAll('[data-slot="message"][data-align="end"] [data-slot="bubble-content"]'),
-            ];
-            const c = contents.find((el) => (el.textContent || '').indexOf('冒烟聊天文本：手机到电脑') >= 0);
-            const ta = document.querySelector('.znhd-phone-chat [data-slot="input-group"] textarea');
+            // daisyUI chat：底色直接画在 .chat-bubble-primary 根节点上
+            const bubbles = [...document.querySelectorAll('.chat-end .chat-bubble-primary')];
+            const c = bubbles.find((el) => (el.textContent || '').indexOf('冒烟聊天文本：手机到电脑') >= 0);
+            const ta = document.querySelector('.znhd-phone-chat textarea');
             return { bg: c ? getComputedStyle(c).backgroundColor : '', left: ta ? ta.value : '?' };
         });
         check(
@@ -382,34 +377,33 @@ async function main() {
         });
         check('电脑端 → 手机端：中继投递接口可用（/phone/send 返回 ok）', sent.ok);
 
-        await page.waitForSelector('[data-slot="message"][data-align="start"] [data-slot="bubble"] img', {
+        await page.waitForSelector('.chat-start .chat-bubble img', {
             timeout: 25000,
         });
         const inBubble = await page.evaluate(() => {
-            const msg = document.querySelector('[data-slot="message"][data-align="start"]');
-            const bub = msg ? msg.querySelector('[data-slot="bubble"]') : null;
+            const msg = document.querySelector('.chat.chat-start');
             return {
-                align: msg ? msg.getAttribute('data-align') : '',
-                variant: bub ? bub.getAttribute('data-variant') : '',
+                align: msg ? (msg.classList.contains('chat-start') ? 'start' : 'end') : '',
+                bubbleOk: !!msg && !!msg.querySelector('.chat-bubble'),
             };
         });
         check(
-            '收到的图片进左侧气泡（data-align=start，ghost 变体；电脑 → 手机整链真跑通）',
-            inBubble.align === 'start' && inBubble.variant === 'ghost'
+            '收到的图片进左侧气泡（chat-start；电脑 → 手机整链真跑通）',
+            inBubble.align === 'start' && inBubble.bubbleOk
         );
         // 留档：一条表情 + 一条上传图 + 一条文本 + 一条收到的图都在屏上
         await page.screenshot({ path: path.join(os.tmpdir(), 'znhd-phone-chat.png') });
 
         // ⑤ 点收到的图 → 共用 ImagePreview（v26.10.18-v7 起取代 antd 预览 + shared/preview 那套注入）
         await page.evaluate(() => {
-            const img = document.querySelector('[data-slot="message"][data-align="start"] [data-slot="bubble"] img');
+            const img = document.querySelector('.chat-start .chat-bubble img');
             if (img) img.dispatchEvent(new MouseEvent('click', { bubbles: true }));
         });
-        await page.waitForSelector('[data-image-preview]', { timeout: 15000 });
+        await page.waitForSelector('[data-znhd="image-preview"]', { timeout: 15000 });
         await sleep(500);
 
         const previewInfo = await page.evaluate(() => {
-            const root = document.querySelector('[data-image-preview]');
+            const root = document.querySelector('[data-znhd="image-preview"]');
             const printBtn = root ? root.querySelector('button[aria-label="打印"]') : null;
             const cs = root ? getComputedStyle(root) : null;
             const r = root ? root.getBoundingClientRect() : null;
@@ -466,7 +460,7 @@ async function main() {
             obs.observe(document.documentElement, { childList: true, subtree: true });
         });
         await page.evaluate(() => {
-            const b = document.querySelector('[data-image-preview] button[aria-label="打印"]');
+            const b = document.querySelector('[data-znhd="image-preview"] button[aria-label="打印"]');
             if (b) b.click();
         });
         try {

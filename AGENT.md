@@ -43,7 +43,7 @@
 | `shared/` | 两端共用纯逻辑层。**硬约束**：零宿主依赖（禁 GM_*/单端模块）、按最严 tsconfig 写、依赖单向（只能被 import）、两端 typecheck + 三段 verify 全绿 |
 | `scripts/smoke/` | `vue-panel.js`(脚本产物冒烟) + `znhd-smoke.html`(夹具页) / `relay.js`(真实起 relay) / `phone-page.js`(手机页端到端)。`npm run verify` 三段串跑，已接入 CI |
 | `relay-server/` | `server.js`(本体，纯 Node 零依赖，PORT=5689) / `upload-page.js` / `public/`(**web/ 的构建产物，提交进仓库**) / `emoji-store.js` / `emoji-sources.json`(表情清单单一来源，两端 import) |
-| `web/` | 手机页源码（Vue3+Tailwind v4 独立子项目）。⚠️ 别搬进 relay-server/（部署 tar 会带上 node_modules） |
+| `web/` | 手机页源码（Vue3 + Tailwind v4 + **daisyUI 5**，v26.10.20-v1 起 business 暗色主题 + 微信绿 primary；独立子项目）。⚠️ 别搬进 relay-server/（部署 tar 会带上 node_modules） |
 | `config/common.meta.json` | 脚本元信息唯一来源（版本号改这里） |
 | `.github/workflows/deploy.yml` | 部署真源（appleboy/ssh-action 不注入顶层 env，脚本内变量硬编码） |
 

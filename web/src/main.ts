@@ -1,7 +1,6 @@
 import { createApp } from 'vue';
 import App from './App.vue';
 import { SHADOW_ROOT_KEY } from '@vue/lib/shadow';
-import 'vue-sonner/style.css';
 import './style.css';
 import './app.css';
 
