@@ -100,13 +100,10 @@ svg {
 }
 
 /* ── 圆角定版（官方主题 wireframe/business 把 --radius-* 全部压成 0/0.25rem） ──
-   用户定版：toggle 胶囊 1rem、checkbox 圆形、filter 按钮 1rem。
-   只覆写对应组件的作用域变量，不动其他直角组件。 */
+   用户定版：toggle 胶囊 1rem、checkbox 圆形。只覆写对应组件的作用域变量。
+   （filter 按钮的 1rem 覆写已删：v8 起 .btn 全局胶囊化已覆盖它，视觉相同。） */
 .checkbox {
   --radius-selector: 9999px;
-}
-.filter .btn {
-  --radius-field: 1rem;
 }
 
 /* ── 按钮胶囊化定版（v26.10.20-v8，用户要求）───────────────────────────────

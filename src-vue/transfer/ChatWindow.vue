@@ -341,8 +341,15 @@ const footerHint = computed(() => (sendable.value ? '' : '当前没有在线手�
 
                     <!-- 更多：daisyUI 官方 focus 式 dropdown（tabindex 触发，点外部 / Esc 失焦收起） -->
                     <div class="dropdown dropdown-end">
-                        <div tabindex="0" role="button" class="btn btn-ghost btn-sm btn-circle" aria-label="更多" title="更多">
-                            <Icon name="more" :size="14" />
+                        <div class="tooltip tooltip-bottom" data-tip="更多">
+                            <div
+                                tabindex="0"
+                                role="button"
+                                class="btn btn-ghost btn-sm btn-circle"
+                                aria-label="更多"
+                                title="更多">
+                                <Icon name="more" :size="14" />
+                            </div>
                         </div>
                         <ul tabindex="-1" class="menu dropdown-content z-1 w-52 rounded-box bg-base-100 p-2 shadow-sm">
                             <li>
