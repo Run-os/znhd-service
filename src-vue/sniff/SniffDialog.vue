@@ -555,7 +555,7 @@ const emptyText = computed(() => {
                         :key="it.key"
                         data-sniff-card
                         :data-sniff-no-time="noTimeOf(it) ? '1' : undefined"
-                        class="flex min-w-0 flex-col rounded-xl p-1.5">
+                        class="flex min-w-0 flex-col rounded-xl border border-border bg-card p-1.5 transition-colors hover:border-input">
                         <div class="relative">
                             <ImageActions :actions="actionsOf(it)">
                                 <img
@@ -576,8 +576,8 @@ const emptyText = computed(() => {
                         <!-- 文件名：没拿到消息时间的标红（原先用卡片四周的红圈表示） -->
                         <span
                             data-sniff-name
-                            class="mt-1 truncate text-[11px] leading-4"
-                            :class="noTimeOf(it) ? 'text-destructive' : 'text-muted-foreground'"
+                            class="mt-1 truncate text-[11.5px] font-medium leading-4"
+                            :class="noTimeOf(it) ? 'text-destructive' : 'text-foreground'"
                             :title="fileNameOf(it)">
                             {{ fileNameOf(it) }}
                         </span>
@@ -593,7 +593,7 @@ const emptyText = computed(() => {
                         :key="it.key"
                         data-sniff-card
                         :data-sniff-no-time="noTimeOf(it) ? '1' : undefined"
-                        class="flex min-w-0 flex-col rounded-xl p-1.5">
+                        class="flex min-w-0 flex-col rounded-xl border border-border bg-card p-1.5 transition-colors hover:border-input">
                         <div class="relative">
                             <ImageActions :actions="actionsOf(it)">
                                 <img
@@ -613,8 +613,8 @@ const emptyText = computed(() => {
                         <!-- 文件名：没拿到消息时间的标红（原先用卡片四周的红圈表示） -->
                         <span
                             data-sniff-name
-                            class="mt-1 truncate text-[11px] leading-4"
-                            :class="noTimeOf(it) ? 'text-destructive' : 'text-muted-foreground'"
+                            class="mt-1 truncate text-[11.5px] font-medium leading-4"
+                            :class="noTimeOf(it) ? 'text-destructive' : 'text-foreground'"
                             :title="fileNameOf(it)">
                             {{ fileNameOf(it) }}
                         </span>

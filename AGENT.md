@@ -82,7 +82,9 @@
 - `sniffConv` 三层防分裂：AliasTable（显示名→真实 ID，指向不唯一一律放弃）+ `buildConvContext` 走两遍 + 回退键后置合并（写时迁移/读时纠正/convKey 兜底）——**缺一处就「重扫又分裂」**。
 - `snifferPerf`：`setResourceTimingBufferSize(20000)` + buffered PerformanceObserver，纯读零请求，perf 档命中零 HEAD。
 - `snifferPre` 后台预测量：**脚本里唯一没开窗也发请求的地方**。四条安全阀不可删（零成本项先测 / 单轮网络测量 ≤60 张 / 并发 2 / 后台 CSS 遍历 ≤1200）；开关 `Allvalue.sniffPreMeasure`；失败也进缓存。缓存读点只接 `resolveSizes` 单处。
-- 卡片**不显示文件名**——文件名只写进 `<Image alt>`（冒烟 6 条断言读 alt，改卡片别弄丢 alt）。组内按消息时间倒序、无时间殿后 + 红圈（`boxShadow` 双层铺：图 + 卡片，border/outline 会挤布局或被裁；观测量 inline style）。
+- 卡片**显示文件名**（`[data-sniff-name]`，拿不到消息时间的标红）+ 体积/尺寸；`<img :alt>` 里也仍是文件名（冒烟多条断言读 alt，改卡片别弄丢）。
+- **v26.10.19-v13 起卡片是「描边卡片」**：`rounded-xl border border-border bg-card p-1.5` + `hover:border-input`，文件名 `text-[11.5px] font-medium text-foreground`、第二行 `text-[11px] text-muted-foreground`；仍是 `grid-cols-5`。配色**只准走 token**（`border-border` / `bg-card` / `border-input`），别写死 hex —— 日 / 夜自动跟随，写死就只剩一套。`data-sniff-card` / `data-sniff-name` / `data-sniff-no-time` 三个钩子不能动（`scripts/smoke/vue-panel.js` 靠它们断言）。
+- 组内按消息时间倒序、无时间殿后（判据单一来源 `timeOfItem`）；旧版用 `boxShadow` 双层铺红圈的做法**已废弃**，现在只标红文件名。
 
 ## 8. 常用语（本页话术抓取）
 
