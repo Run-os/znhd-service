@@ -136,3 +136,18 @@ svg {
 [data-theme='wireframe'] .toggle[aria-checked='true'] {
   --input-color: #fff;
 }
+
+/* ── 输入框胶囊化（v11，用户定版）────────────────────────────────────────
+   .input 与 .btn 共用 --radius-field；v8 只胶囊化了 .btn，输入框（嗅探阈值、
+   设置菜单时间选择）仍是官方直角 → 一并胶囊化。textarea 多行不适用，不动。 */
+.input {
+  --radius-field: 9999px;
+}
+
+/* ── 日间模式我方气泡品牌绿（v11，用户指定 rgb(53, 210, 141)）──────────────
+   .chat-bubble-primary 用 --color-primary，wireframe 的 primary 是灰阶，
+   与对方气泡（base-300）几乎同色；夜间 business 两色可辨保持官方。
+   primary-content 在 wireframe 是深色，绿底深字可读。 */
+[data-theme='wireframe'] .chat-bubble-primary {
+  background-color: rgb(53, 210, 141);
+}

@@ -55,13 +55,25 @@ export function mountPanel(): HTMLElement {
 
     const host = document.createElement('div');
     host.id = PANEL_HOST_ID;
+    host.style.cssText = 'position:fixed;z-index:999999;left:0;top:0;margin:0;padding:0;';
     // 防御性盒样式重置：shadow DOM 只保护影子树内部，宿主 div 本身会被页面 CSS 命中
-    //（如通配 div 选择器的 box-shadow/background）——表现为面板/悬浮球四周出现「直角阴影」。
-    // 内联样式优先级高于页面样式（非 !important 情况），把盒外观全部钉死成透明。
-    host.style.cssText =
-        'position:fixed;z-index:999999;left:0;top:0;' +
-        'background:none;border:0;box-shadow:none;outline:none;' +
-        'margin:0;padding:0;border-radius:0;filter:none;backdrop-filter:none;text-shadow:none;';
+    //（如暗色插件/通配 div 规则的背景强涂）——表现为面板/悬浮球圆角外露出「黑色直角」。
+    // 视觉外观属性必须用内联 !important 钉死：v10 用普通内联仍被带 !important 的页面
+    // 规则盖过（实测右下角黑角还在）。级联规则：同元素上，内联 !important 优先级
+    // 高于页面样式表的 !important，是样式表无法突破的最终档位。
+    for (const [k, v] of [
+        ['background', 'none'],
+        ['background-color', 'transparent'],
+        ['border', '0'],
+        ['box-shadow', 'none'],
+        ['outline', 'none'],
+        ['border-radius', '0'],
+        ['filter', 'none'],
+        ['backdrop-filter', 'none'],
+        ['text-shadow', 'none'],
+    ] as const) {
+        host.style.setProperty(k, v, 'important');
+    }
     const pt = initialPanelPoint();
     host.style.left = Math.round(pt.x) + 'px';
     host.style.top = Math.round(pt.y) + 'px';
