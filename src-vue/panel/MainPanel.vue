@@ -233,8 +233,7 @@ onBeforeUnmount(() => {
     <div v-else class="rounded-2xl border border-base-300 bg-base-100 text-base-content" :style="{ width: PANEL_WIDTH + 'px' }">
         <!-- 标题栏 = 唯一拖拽手柄 -->
         <div
-            class="flex cursor-move touch-none select-none items-center gap-1.5 border-b border-base-300 px-2.5 py-2"
-            style="min-height: 46px"
+            class="flex min-h-[46px] cursor-move touch-none select-none items-center gap-1.5 border-b border-base-300 px-2.5 py-2"
             title="按住拖动面板"
             @pointerdown="drag.onPointerDown"
             @pointermove="drag.onPointerMove"

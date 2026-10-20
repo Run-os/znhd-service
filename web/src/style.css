@@ -36,21 +36,6 @@
 }
 
 /**
- * `--tw-*` 是**传输助手窗口分层专用 token**（聊天区底色 / 分隔细线 / 输入舱），
- * 与脚本端 `src-vue/transfer/theme.ts` 的 `--tw-*` 同源：那边随日/夜切换，这里固定暗色值
- * —— 手机页本身就是「微信暗色聊天窗」的复刻，没有日间模式可切。
- * ⚠️ `ChatComposer.vue` 是两端共用组件，它引用 `var(--tw-*)`，所以这几个值必须在这里声明，
- * 漏一个输入舱就会变成透明底。
- */
-:root {
-    --tw-window: #000000;
-    --tw-hairline: rgb(34, 34, 34);
-    --tw-composer-bg: rgb(32, 32, 32);
-    --tw-composer-border: rgb(46, 46, 46);
-    --tw-btn-border: rgb(58, 58, 58);
-}
-
-/**
  * 原有页面样式（骨架 / 滚动条补丁）在 `app.css`，
  * 由 `main.ts` 在本文件之后 import —— 不写成 CSS `@import`，因为 CSS 规范要求
  * `@import` 必须排在其他规则之前，而这里 `@plugin` / `@theme` 已经占位。

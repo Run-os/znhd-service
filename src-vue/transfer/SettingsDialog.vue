@@ -90,7 +90,7 @@ function doClearAll() {
             <template v-if="!confirmClear">
                 <button class="btn btn-error btn-sm" @click="confirmClear = true">清空全部传输记录</button>
             </template>
-            <div v-else class="alert alert-error alert-soft alert-vertical">
+            <div v-else role="alert" class="alert alert-error alert-soft alert-vertical">
                 <div>
                     <div class="text-[13px]">清空全部传输记录</div>
                     <div class="text-xs">

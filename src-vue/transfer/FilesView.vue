@@ -139,15 +139,13 @@ function onClear() {
         <!-- 图片九宫格：格子下限 96px（要宽过右下角 3 个悬浮按钮，窄栏才不会把按钮挤出图片） -->
         <div
             v-if="images.length"
-            class="grid gap-2"
-            style="grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); align-content: start">
+            class="grid grid-cols-[repeat(auto-fill,minmax(96px,1fr))] content-start gap-2">
             <div v-for="(msg, idx) in images" :key="msg.id" class="flex flex-col">
                 <ImageActions :actions="actionsOf(msg, idx)">
                     <img
                         :src="msg.previewUrl"
                         :alt="msg.name || 'image'"
-                        class="block w-full cursor-zoom-in rounded-[8px] object-cover"
-                        style="aspect-ratio: 1 / 1"
+                        class="block aspect-square w-full cursor-zoom-in rounded-[8px] object-cover"
                         @click="openPreview(msg)" />
                 </ImageActions>
                 <div class="mt-0.5 truncate text-[11px] text-base-content/40">
@@ -159,9 +157,7 @@ function onClear() {
         <!-- 文件卡片 -->
         <div v-if="files.length" :class="images.length ? 'mt-4' : ''">
             <div class="mb-1.5 text-[13px] font-semibold text-base-content">文件（{{ files.length }}）</div>
-            <div
-                class="grid gap-2"
-                style="grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); align-content: start">
+            <div class="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] content-start gap-2">
                 <div
                     v-for="msg in files"
                     :key="msg.id"

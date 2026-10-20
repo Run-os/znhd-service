@@ -44,7 +44,7 @@ onMounted(refreshLink);
 </script>
 
 <template>
-    <div class="w-full overflow-auto px-4 py-4" style="max-width: 560px; margin: auto">
+    <div class="mx-auto w-full max-w-[560px] overflow-auto px-4 py-4">
         <!-- 本机专属链接 -->
         <div class="card mb-3">
             <div class="card-body gap-3 p-3.5">

@@ -25,11 +25,11 @@ function openHome() {
 <template>
     <DarkDialog v-model:open="open" title="企业信息" :width="440">
         <div class="flex gap-3 border-b border-base-300 py-[7px]">
-            <span class="shrink-0 text-[13px] opacity-65" style="flex: 0 0 92px">中继服务器</span>
+            <span class="shrink-0 basis-[92px] text-[13px] opacity-65">中继服务器</span>
             <span class="min-w-0 flex-1 break-all text-[13px]">{{ store.settings.relayServer || '（未配置）' }}</span>
         </div>
         <div class="flex gap-3 border-b border-base-300 py-[7px]">
-            <span class="shrink-0 text-[13px] opacity-65" style="flex: 0 0 92px">本机设备</span>
+            <span class="shrink-0 basis-[92px] text-[13px] opacity-65">本机设备</span>
             <span class="inline-flex min-w-0 flex-1 items-center gap-1.5">
                 <span class="min-w-0 break-all text-[13px]">{{ deviceId }}</span>
                 <button
@@ -42,7 +42,7 @@ function openHome() {
             </span>
         </div>
         <div class="flex gap-3 border-b border-base-300 py-[7px]">
-            <span class="shrink-0 text-[13px] opacity-65" style="flex: 0 0 92px">在线手机</span>
+            <span class="shrink-0 basis-[92px] text-[13px] opacity-65">在线手机</span>
             <span class="min-w-0 flex-1 break-all text-[13px]">
                 <template v-if="store.phones.length">
                     {{ phoneIds }}
@@ -52,11 +52,11 @@ function openHome() {
             </span>
         </div>
         <div class="flex gap-3 border-b border-base-300 py-[7px]">
-            <span class="shrink-0 text-[13px] opacity-65" style="flex: 0 0 92px">脚本版本</span>
+            <span class="shrink-0 basis-[92px] text-[13px] opacity-65">脚本版本</span>
             <span class="min-w-0 flex-1 break-all text-[13px]">{{ version }}</span>
         </div>
         <div class="flex gap-3 border-b border-base-300 py-[7px]">
-            <span class="shrink-0 text-[13px] opacity-65" style="flex: 0 0 92px">项目主页</span>
+            <span class="shrink-0 basis-[92px] text-[13px] opacity-65">项目主页</span>
             <span class="min-w-0 flex-1">
                 <button class="btn btn-link btn-sm h-auto px-0 text-[13px]" @click="openHome">
                     github.com/Run-os/znhd-service

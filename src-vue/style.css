@@ -1,5 +1,4 @@
 @import 'tailwindcss';
-@import 'tw-animate-css';
 
 /*
  * daisyUI 官方主题（2026-10-19 迁移）。
@@ -19,9 +18,6 @@
   root: ':host';
   exclude: rootscrollgutter;
 }
-
-/* `dark:` 变体跟随 business 主题（daisyUI 的颜色本身不要用 dark:，见 skill/colors 规则 4） */
-@custom-variant dark (&:where([data-theme='business'], [data-theme='business'] *));
 
 /* 宿主页常有 text-align:center / 自定义 line-height，这里给整棵影子树定基线 */
 :host {

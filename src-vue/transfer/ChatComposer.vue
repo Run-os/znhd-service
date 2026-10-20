@@ -88,11 +88,10 @@ function pickAttach(e: MouseEvent, fn: () => void) {
     <div ref="root" class="w-full">
         <textarea
             v-model="model"
-            class="textarea w-full text-sm leading-5"
+            class="textarea min-h-14 w-full text-sm leading-5 shadow-none"
             :placeholder="placeholder"
             :disabled="disabled"
             rows="1"
-            style="min-height: 56px; box-shadow: none"
             @input="autoGrow"
             @keydown="onKeydown"></textarea>
 
