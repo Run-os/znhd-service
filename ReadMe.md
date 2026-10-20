@@ -73,7 +73,7 @@ znhd-service/
 │                                 #     共用的聊天面板件：头部 + 滚动消息区 + 左右气泡 + 底部输入框 + 在线表情包）
 │                                 #   wechatTheme.ts（微信暗色分层色板 + 微信绿主色常量）
 │                                 #   TransferPairModal（配对）/ TransferSettingsModal / TransferAboutModal
-│                                 #   DeviceIdTag / deviceColors
+│                                 #   DeviceIdTag 已删（v26.10.20-v16 设备 ID 改纯文本）/ deviceColors（仅剩 shortPhoneId）
 ├── shared/                       # 脚本端与手机上传页共用的纯逻辑/纯 DOM 层（零宿主依赖，约束见 AGENT.md）
 │   ├── image/                    # 图片压缩：resizeToJpeg / prepareForTransfer
 │   └── preview/                  # 预览宿主 / A4 打印 / 遮罩压制 / 预览动作按钮

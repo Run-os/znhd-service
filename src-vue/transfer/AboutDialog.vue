@@ -3,18 +3,19 @@ import { computed } from 'vue';
 import { Icon } from '@vue/icons';
 import { getDeviceId } from '@/lib/relay';
 import { safeCopyText } from '@/lib/clipboard';
-import { resolveDeviceColors } from '@/lib/ui/transfer/deviceColors';
+import { shortPhoneId } from '@/lib/ui/transfer/deviceColors';
 import { useTransferStore } from '@vue/composables/useTransferStore';
 import DarkDialog from './DarkDialog.vue';
-import DeviceIdTag from './DeviceIdTag.vue';
 
 /** 企业信息（第一栏底部入口）：排查「连不上」时先确认这几项。 */
 const open = defineModel<boolean>('open', { default: false });
 
 const store = useTransferStore();
 const deviceId = getDeviceId();
-const colors = computed(() => resolveDeviceColors(store.value.phones.map((p) => p.id)));
 const version = computed(() => GM_info?.script?.version || '未知');
+
+/** v26.10.20-v16：设备 ID 不再用彩色标签，直接纯文本（短串，多台用「、」分隔） */
+const phoneIds = computed(() => store.value.phones.map((p) => shortPhoneId(p.id)).join('、'));
 
 function openHome() {
     window.open('https://github.com/Run-os/znhd-service', '_blank');
@@ -29,15 +30,12 @@ function openHome() {
         </div>
         <div class="flex gap-3 border-b border-base-300 py-[7px]">
             <span class="shrink-0 text-[13px] opacity-65" style="flex: 0 0 92px">本机设备</span>
-            <span class="inline-flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
-                <DeviceIdTag :id="deviceId" />
-                <span class="text-[11px] opacity-65">{{ deviceId }}</span>
-                <button class="btn btn-ghost btn-sm btn-square text-base-content/60 hover:text-base-content"
-                   
-                   
+            <span class="inline-flex min-w-0 flex-1 items-center gap-1.5">
+                <span class="min-w-0 break-all text-[13px]">{{ deviceId }}</span>
+                <button
+                    class="btn btn-ghost btn-sm btn-square shrink-0 text-base-content/60 hover:text-base-content"
                     aria-label="复制设备 ID"
                     title="复制设备 ID"
-                   
                     @click="safeCopyText(deviceId)">
                     <Icon name="copy" :size="13" />
                 </button>
@@ -45,11 +43,11 @@ function openHome() {
         </div>
         <div class="flex gap-3 border-b border-base-300 py-[7px]">
             <span class="shrink-0 text-[13px] opacity-65" style="flex: 0 0 92px">在线手机</span>
-            <span class="min-w-0 flex-1">
-                <span v-if="store.phones.length" class="inline-flex flex-wrap items-center gap-1.5">
-                    <DeviceIdTag v-for="p in store.phones" :key="p.id || 'unknown'" :id="p.id" :color-index="colors[p.id]" />
-                    <span class="text-[11px] opacity-65">共 {{ store.phones.length }} 台</span>
-                </span>
+            <span class="min-w-0 flex-1 break-all text-[13px]">
+                <template v-if="store.phones.length">
+                    {{ phoneIds }}
+                    <span class="ml-1.5 text-[11px] opacity-65">共 {{ store.phones.length }} 台</span>
+                </template>
                 <span v-else class="text-[13px] text-base-content/60">暂无（手机端打开本机链接后出现）</span>
             </span>
         </div>
