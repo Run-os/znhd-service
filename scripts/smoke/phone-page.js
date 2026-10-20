@@ -216,7 +216,8 @@ async function main() {
                 !!document.querySelector('.znhd-phone-chat [data-slot="empty"]'),
             composer: !!document.querySelector('.znhd-phone-chat [data-slot="card-footer"]'),
             textarea: !!document.querySelector('.znhd-phone-chat textarea'),
-            attachBtn: !!document.querySelector('.znhd-phone-chat [role="button"][aria-label="添加图片或文件"]'),
+            // v21：附件触发器从 div[role=button] 改成 details 的 <summary>（官方 details 式 dropdown）
+            attachBtn: !!document.querySelector('.znhd-phone-chat summary[aria-label="添加图片或文件"]'),
             sendBtn: !!document.querySelector('.znhd-phone-chat button[aria-label="发送"]'),
             bg: (function () {
                 const el = document.querySelector('.znhd-phone-chat [data-slot="card-content"]');

@@ -115,8 +115,8 @@
 | # | 位置 | 现状 | 建议 |
 |---|---|---|---|
 | 1 | `src-vue/transfer/SettingsDialog.vue:93` | `alert` 缺 `role="alert"` | 补 `role="alert"`（与 `lib/toast.ts` 一致） **— ✅ 已在 v26.10.20-v20 修复** |
-| 2 | `src-vue/panel/LogDialog.vue:112-133` | `form.filter` + checkbox + 普通 button | 二选一：① 改回官方语义（radio + `filter-reset`，但会变成单选，丢失「多类型同时看」）② 保留多选但去掉 `filter` 组件类，用 `join`/`btn` 组自拼（推荐 ②，行为不变且不再冒用组件语义） |
-| 3 | `ChatComposer.vue:101`、`ChatWindow.vue:343` | focus + tabindex 式 dropdown，JS `blur()` 收起 | 改 `<details class="dropdown">` + `<summary class="btn">`（官方语法，零 JS 收起逻辑）；或 popover API（需 Chrome 114+，**超出 Chrome 88 基线**，不推荐） |
+| 2 | `src-vue/panel/LogDialog.vue:112-133` | `form.filter` + checkbox + 普通 button | 二选一：① 改回官方语义（radio + `filter-reset`，但会变成单选，丢失「多类型同时看」）② 保留多选但去掉 `filter` 组件类，用 `join`/`btn` 组自拼（推荐 ②，行为不变且不再冒用组件语义） **— ✅ 已在 v26.10.20-v22 修复（取 ②）**：`form.filter` → `div[data-log-filter].flex.flex-wrap.gap-1`（等价官方 .filter 的间距视觉），checkbox 多选与「全部」button 原样保留 |
+| 3 | `ChatComposer.vue:101`、`ChatWindow.vue:343` | focus + tabindex 式 dropdown，JS `blur()` 收起 | 改 `<details class="dropdown">` + `<summary class="btn">`（官方语法，零 JS 收起逻辑）；或 popover API（需 Chrome 114+，**超出 Chrome 88 基线**，不推荐） **— ✅ 已在 v26.10.20-v22 修复（details 方案）**：两处 dropdown（ChatComposer 附件、ChatWindow「更多」）改 `<details>/<summary>`；「零 JS 收起」不成立 —— details 点外部不自动关，补了 document pointerdown 监听（影子树里须用 `composedPath()` 判内外，`target` 已重定向） |
 | 4 | `transfer/markdown.ts:249` | Markdown 表格用内联样式 | 表格加 `table table-xs`，边框/表头色改用 `border-base-300` / `bg-base-200`（气泡内需对比度的场景保留 palette 变量即可） **— ✅ 已在 v26.10.20-v21 修复，但没走 `table table-xs`**：官方 table 的 padding（12/16px）与 thead 字号（14px）在 12px 气泡里过大，改走「`.md-table` 结构类 + 三个气泡调色板 CSS 变量（`--md-line/--md-code-bg/--md-head`）」，单元格零内联样式 |
 
 ### P3 — 清理（6 项）

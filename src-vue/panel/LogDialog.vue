@@ -107,10 +107,12 @@ watch([() => props.open, () => props.logEntries, () => props.autoRefresh, filter
         :footer="false"
         @update:open="(v: boolean) => emit('update:open', v)">
         <div class="flex items-start justify-between gap-2">
-            <!-- 官方 filter 组件布局（form.filter + checkbox）：「全部」是普通 button（不再用 type=reset，
-                 官方 reset 在无勾选项时会被 CSS 自动隐藏 —— 那正是「点了就消失」的原因）；
-                 选中态 = btn-neutral 着色，类型勾选项按类型着色 -->
-            <form class="filter" @submit.prevent>
+            <!-- 类型筛选：**不用** daisyUI 的 `filter` 组件 —— 官方 filter 的语义是
+                 「radio 组 + filter-reset（单值互斥）」，而这里是多选（可同时看多类日志）。
+                 冒用组件类会误导读屏器与后续维护者，故按官方 filter 的排布自己拼：
+                 flex + wrap + gap-1（= 官方 .filter 的 margin-inline-end: .25rem 视觉），
+                 选中态仍是 btn-neutral / 类型色，input 仍是带 aria-label 的 checkbox。 -->
+            <div data-log-filter="1" role="group" aria-label="日志类型筛选" class="flex flex-wrap gap-1">
                 <button
                     type="button"
                     class="btn btn-sm"
@@ -130,7 +132,7 @@ watch([() => props.open, () => props.logEntries, () => props.autoRefresh, filter
                     :aria-label="m.label + ' ' + (counts[m.type] || 0)"
                     :title="filter[m.type] ? '点击隐藏该类日志' : '点击显示该类日志'"
                     @change="toggleType(m.type, ($event.target as HTMLInputElement).checked)" />
-            </form>
+            </div>
             <button
                 class="btn btn-error btn-sm shrink-0"
                 :disabled="props.logEntries.length === 0"

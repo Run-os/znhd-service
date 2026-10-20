@@ -122,7 +122,10 @@ function metaOf(msg: TransferMessage): { text: string; danger: boolean } {
 }
 
 watch(open, (v) => setTransferWindowOpen(v), { immediate: true });
-onBeforeUnmount(() => setTransferWindowOpen(false));
+onBeforeUnmount(() => {
+    setTransferWindowOpen(false);
+    document.removeEventListener('pointerdown', onDocPointerDown, true);
+});
 
 /** 窗口打开即把全部会话标为已读（单时间线视图，没有「哪条未读」的概念了） */
 watch(
@@ -144,14 +147,26 @@ function syncDialog(v: boolean): void {
 watch(open, (v) => syncDialog(v));
 onMounted(() => {
     if (open.value) syncDialog(true);
+    document.addEventListener('pointerdown', onDocPointerDown, true);
 });
 
 /**
- * 点下拉项后收起 focus 式 dropdown（官方 tabindex 方案不会自关，须让触发器失焦）。
- * 菜单项聚焦在 ul[tabindex="-1"] 上，blur 的是触发器 div[tabindex="0"]。
+ * 「更多」下拉：官方 `<details class="dropdown">` 结构（skill/components/dropdown）。
+ * details 只在点 summary 时开合，**点外部不自动收** —— 补一个 document pointerdown
+ * 监听兜底；影子树里 `target` 会被重定向成宿主元素，故用 `composedPath()` 判内外。
  */
-function closeMenu(e: MouseEvent) {
-    (e.currentTarget as HTMLElement).closest('.dropdown')?.querySelector<HTMLElement>('[role="button"]')?.blur();
+const moreDd = ref<HTMLDetailsElement | null>(null);
+
+function onDocPointerDown(e: PointerEvent) {
+    const dd = moreDd.value;
+    if (!dd?.open) return;
+    if (e.composedPath().includes(dd)) return;
+    dd.open = false;
+}
+
+/** 点下拉项后收起 */
+function closeMenu() {
+    if (moreDd.value) moreDd.value.open = false;
 }
 
 /** 我们自己发出的消息要立刻见底（用户可能先往上翻了历史） */
@@ -339,32 +354,30 @@ const footerHint = computed(() => (sendable.value ? '' : '当前没有在线手�
                         </button>
                     </div>
 
-                    <!-- 更多：daisyUI 官方 focus 式 dropdown（tabindex 触发，点外部 / Esc 失焦收起） -->
-                    <div class="dropdown dropdown-end">
-                        <div class="tooltip tooltip-bottom" data-tip="更多">
-                            <div
-                                tabindex="0"
-                                role="button"
-                                class="btn btn-ghost btn-sm btn-circle"
+                    <!-- 更多：官方 details 式 dropdown（summary 开合，点外部由 pointerdown 监听收起） -->
+                    <div class="tooltip tooltip-bottom" data-tip="更多">
+                        <details ref="moreDd" class="dropdown dropdown-end">
+                            <summary
+                                class="btn btn-ghost btn-sm btn-circle list-none"
                                 aria-label="更多"
                                 title="更多">
                                 <Icon name="more" :size="14" />
-                            </div>
-                        </div>
-                        <ul tabindex="-1" class="menu dropdown-content z-1 w-52 rounded-box bg-base-100 p-2 shadow-sm">
-                            <li>
-                                <button @click="settingsOpen = true; closeMenu($event)">
-                                    <Icon name="settings" :size="15" />
-                                    设置
-                                </button>
-                            </li>
-                            <li>
-                                <button @click="aboutOpen = true; closeMenu($event)">
-                                    <Icon name="info" :size="15" />
-                                    关于
-                                </button>
-                            </li>
-                        </ul>
+                            </summary>
+                            <ul class="menu dropdown-content z-1 w-52 rounded-box bg-base-100 p-2 shadow-sm">
+                                <li>
+                                    <button @click="settingsOpen = true; closeMenu()">
+                                        <Icon name="settings" :size="15" />
+                                        设置
+                                    </button>
+                                </li>
+                                <li>
+                                    <button @click="aboutOpen = true; closeMenu()">
+                                        <Icon name="info" :size="15" />
+                                        关于
+                                    </button>
+                                </li>
+                            </ul>
+                        </details>
                     </div>
 
                     <div class="tooltip tooltip-bottom" data-tip="关闭">

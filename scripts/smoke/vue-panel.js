@@ -337,11 +337,12 @@ function serve() {
             rows: el.querySelectorAll('[class*="border-l-"]').length,
             terminalBg: terminal ? getComputedStyle(terminal).backgroundColor : '',
             hasSwitch: !!el.querySelector('input.toggle'),
-            // 官方 filter 组件：form.filter + 4 个类型 checkbox；「全部」是普通 button（v6：不再 type=reset）
-            filterForm: !!el.querySelector('form.filter'),
-            filterBoxes: el.querySelectorAll('form.filter input[type="checkbox"]').length,
+            // 类型筛选（v21 起不再冒用 daisyUI `filter` 组件）：自带 data-log-filter 容器
+            // + 4 个类型 checkbox + 普通 button「全部」（多选语义，非官方 radio 组）
+            filterForm: !!el.querySelector('[data-log-filter]'),
+            filterBoxes: el.querySelectorAll('[data-log-filter] input[type="checkbox"]').length,
             allBtnVisible: (() => {
-                const b = el.querySelector('form.filter button[type="button"]');
+                const b = el.querySelector('[data-log-filter] button[type="button"]');
                 return !!b && b.textContent.includes('全部') && b.offsetParent !== null;
             })(),
             // v6：底部 footer 关闭按钮已删（modal-action 不再渲染）
@@ -562,13 +563,14 @@ function serve() {
 
     /**
      * 「更多」下拉里点一项：chat 窗口标题栏 icon 按钮（清空 / 全部文件 / 扫码 / 更多 / 关闭），
-     * 设置、关于收在「更多」dropdown —— daisyUI 官方 focus 式（tabindex 触发，点项后 blur 收起）。
+     * 设置、关于收在「更多」dropdown —— v21 起改官方 details 式（summary 开合），
+     * 所以触发器是 `summary[aria-label="更多"]`（老版是 div[role=button]）。
      * 层级由 daisyUI dropdown 自身（z-1 + 弹窗内层叠上下文）保证；这里验菜单真的展开了。
      */
     async function pickMore(label) {
         await page.evaluate(() => {
             const sr = document.getElementById('__znhd_panel_host__').shadowRoot;
-            const btn = sr.querySelector('[role="button"][aria-label="更多"]');
+            const btn = sr.querySelector('summary[aria-label="更多"], [role="button"][aria-label="更多"]');
             if (btn) btn.click();
         });
         await new Promise((r) => setTimeout(r, 300));
@@ -614,10 +616,10 @@ function serve() {
             hasCard: !!card,
             hasScroller: !!el.querySelector('[data-znhd="chat-scroller"]'),
             hasComposer: !!composer,
-            // 头部动作按钮 + 「更多」（focus 式 dropdown 的 div[role=button]，不是 button）
-            headButtons: [...el.querySelectorAll('button[aria-label], [role="button"][aria-label]')].map((b) =>
-                b.getAttribute('aria-label')
-            ),
+            // 头部动作按钮 + 「更多」（details 式 dropdown 的 summary，v21 起；老版是 div[role=button]）
+            headButtons: [
+                ...el.querySelectorAll('button[aria-label], summary[aria-label], [role="button"][aria-label]'),
+            ].map((b) => b.getAttribute('aria-label')),
             background: card ? getComputedStyle(card).backgroundColor : '',
             mineTextColor: mineBubble ? getComputedStyle(mineBubble).color : '',
             width: Math.round(rect.width),
@@ -631,8 +633,8 @@ function serve() {
             })(),
             // v26.10.20-v2：标题栏按钮 / 输入框按钮 —— 圆形（btn-circle）+ 响应式尺寸链
             // ⚠️ 用 offsetWidth（布局尺寸）而不是 rect：避免 transition 中的 scale 干扰
-            // ⚠️ 「更多」是 div[role=button]（focus 式 dropdown）、「+」是 button，都要抓
-            headBtnBox: [...el.querySelectorAll('.modal-box > div:first-child button[aria-label], .modal-box > div:first-child [role="button"][aria-label]')].map(
+            // ⚠️ 「更多」是 <summary>（details 式 dropdown）、「+」是 button，都要抓
+            headBtnBox: [...el.querySelectorAll('.modal-box > div:first-child button[aria-label], .modal-box > div:first-child summary[aria-label]')].map(
                 (b) =>
                     b.getAttribute('aria-label') +
                     '=' +
@@ -694,8 +696,8 @@ function serve() {
     report.checks.transferBtnShapeOk =
         transfer.headBtnBox.length === 5 &&
         transfer.headBtnBox.every(isRoundBtn) &&
-        // 输入舱只有「发送」是 button；「+」附件触发器是 div[role=button]（官方 focus 式 dropdown）
-        transfer.composerBtnBox.length === 1 &&
+        // 输入舱两个圆形按钮：「+」附件触发器（v21 起是 details 的 <summary>）+「发送」
+        transfer.composerBtnBox.length === 2 &&
         transfer.composerBtnBox.every(isRoundBtn);
     report.checks.transferChatOk =
         transfer.text.includes('已连接 1 台设备') &&
