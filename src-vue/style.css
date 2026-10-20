@@ -149,13 +149,11 @@ svg {
   --btn-border: var(--znhd-btn-border);
   --btn-fg: var(--znhd-btn-fg);
 }
-/* 选中态：无变体色的胶囊（如运行日志筛选条的「全部」）→ 底 rgb(45,47,56)，
-   边框维持未选中的 75,75,80（参考图选中/未选中边框同色）。
-   带语义变体的选中项（按类型着色的筛选项等）不在此列，保持各自语义色。 */
-/* 选中态：无彩色变体的胶囊（含 btn-neutral —— 它在本项目就是「激活」语义，
-   如日志筛选「全部」）→ 底精确 rgb(45,47,56)、边框维持 75,75,80（参考图选中/未选中
-   边框同色）。btn-error 等彩色语义变体的选中态不在此列，保持各自语义色
-   （它们走 daisyUI 的 color-mix 派生，混 5% 黑，视觉差异不可辨）。 */
+/* 选中态：所有勾选/按下的胶囊（含 btn-neutral 与 `checked:btn-*` 类型筛选钮）→
+   底精确 rgb(45,47,56)、边框维持 75,75,80（参考图选中/未选中边框同色）。
+   ⚠️ 类型筛选钮的类名是 Tailwind 变体写法 `checked:btn-info`（不是 .btn-info），
+   :not(.btn-info) 拦不住它 —— 实测即统一选中底色，符合四色定版，勿再"修"。
+   btn-primary / btn-error 等**实体语义变体**仍排除（发送键/清空键保语义色）。 */
 [data-theme='business']
   .btn:is([aria-pressed='true'], [aria-checked='true'], :checked):not(.btn-primary):not(
     .btn-info

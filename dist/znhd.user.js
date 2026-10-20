@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         征纳互动人数和在线监控v2
 // @namespace    https://scriptcat.org/
-// @version      26.10.20-v23
+// @version      26.10.20-v24
 // @author       runos
 // @description  实时监控征纳互动等待人数和在线状态，支持语音播报、自定义常用语
 // @license      MIT
@@ -3675,7 +3675,7 @@ more: [
     "aria-label": "日志类型筛选",
     class: "flex flex-wrap gap-1"
   };
-  const _hoisted_3$e = ["aria-pressed"];
+  const _hoisted_3$e = ["aria-pressed", "title"];
   const _hoisted_4$d = ["checked", "aria-label", "title", "onChange"];
   const _hoisted_5$d = ["disabled"];
   const _hoisted_6$a = { class: "flex-none basis-[86px] opacity-55" };
@@ -3711,8 +3711,9 @@ more: [
         { type: "error", label: "错误", text: "text-error", bar: "border-l-error", btn: "checked:btn-error" }
       ];
       const metaOf = (t) => TYPES.find((m) => m.type === t) || TYPES[0];
-      const filter = vue.ref({ info: false, success: false, warning: false, error: false });
-      const allMode = vue.ref(true);
+      const filter = vue.ref({ info: true, success: true, warning: true, error: true });
+      const allMode = vue.computed(() => TYPES.every((m) => filter.value[m.type]));
+      const anyFilter = vue.computed(() => TYPES.some((m) => filter.value[m.type]));
       const snapshot = vue.ref([]);
       const scroller = vue.ref(null);
       vue.watch(
@@ -3727,18 +3728,15 @@ more: [
         source.value.forEach((e) => c[e.type] = (c[e.type] || 0) + 1);
         return c;
       });
-      const shown = vue.computed(() => {
-        return allMode.value ? source.value : source.value.filter((e) => filter.value[e.type]);
-      });
+      const shown = vue.computed(() => source.value.filter((e) => filter.value[e.type]));
       const rows = vue.computed(() => shown.value.slice().reverse());
       const latest = vue.computed(() => source.value[0]);
       function selectAll() {
-        allMode.value = true;
-        filter.value = { info: false, success: false, warning: false, error: false };
+        const next = !allMode.value;
+        filter.value = { info: next, success: next, warning: next, error: next };
       }
       function toggleType(type, checked) {
         filter.value = { ...filter.value, [type]: checked };
-        allMode.value = !TYPES.every((m) => filter.value[m.type]);
       }
       async function scrollToBottom() {
         if (!props.open || !props.autoRefresh) return;
@@ -3762,7 +3760,7 @@ more: [
                   type: "button",
                   class: vue.normalizeClass(["btn btn-sm", allMode.value ? "btn-neutral" : "btn-ghost"]),
                   "aria-pressed": allMode.value,
-                  title: "显示全部类型的日志",
+                  title: allMode.value ? "取消全部（四个类型一并取消）" : "选中全部类型",
                   onClick: selectAll
                 }, " 全部 ", 10, _hoisted_3$e),
                 (vue.openBlock(), vue.createElementBlock(vue.Fragment, null, vue.renderList(TYPES, (m) => {
@@ -3799,7 +3797,7 @@ more: [
                   }, vue.toDisplayString(metaOf(entry.type).label), 3),
                   vue.createElementVNode("span", _hoisted_7$8, vue.toDisplayString(entry.message), 1)
                 ], 2);
-              }), 128)) : (vue.openBlock(), vue.createElementBlock("div", _hoisted_8$7, vue.toDisplayString(source.value.length ? "没有符合当前筛选条件的日志" : "暂无日志"), 1))
+              }), 128)) : (vue.openBlock(), vue.createElementBlock("div", _hoisted_8$7, vue.toDisplayString(source.value.length ? anyFilter.value ? "没有符合当前筛选条件的日志" : "未选择任何类型" : "暂无日志"), 1))
             ], 512),
             vue.createElementVNode("div", _hoisted_9$7, [
               vue.createElementVNode("span", null, [

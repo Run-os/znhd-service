@@ -364,6 +364,57 @@ function serve() {
     report.logDialog = logDialog;
     await page.screenshot({ path: path.join(os.tmpdir(), 'znhd-vue-log.png') });
 
+    /**
+     * 筛选行为（v26.10.20-v24 修 bug 后补）—— 此前 `allMode = !every(...)` 取反，
+     * 勾类型后仍判定「全部」→ 列表不过滤，且「全部」与四类不联动。四步全链验证：
+     *  ① 初始四类全选、「全部」选中；
+     *  ② 取消「信息」→ 显示条数变少、「全部」自动取消；
+     *  ③ 非全选点「全部」→ 四类补齐；
+     *  ④ 全选态再点「全部」→ 四类全取消、显示 0 条。
+     */
+    const filterState = () =>
+        page.evaluate(() => {
+            const sr = document.getElementById('__znhd_panel_host__').shadowRoot;
+            const el = sr.querySelector('dialog[open]');
+            const bar = el.querySelector('[data-log-filter]');
+            const status = [...el.querySelectorAll('span')]
+                .map((s) => s.textContent || '')
+                .find((t) => t.includes('共'));
+            return {
+                all: bar.querySelector('button[aria-pressed]').getAttribute('aria-pressed'),
+                boxes: [...bar.querySelectorAll('input[type="checkbox"]')].map((b) => b.checked),
+                shown: Number((status || '').match(/显示\s*(\d+)/)?.[1] ?? -1),
+            };
+        });
+    const clickFilter = async (sel) => {
+        await page.evaluate((s) => {
+            const sr = document.getElementById('__znhd_panel_host__').shadowRoot;
+            sr.querySelector('dialog[open] [data-log-filter] ' + s).click();
+        }, sel);
+        await new Promise((r) => setTimeout(r, 300));
+    };
+    const f0 = await filterState();
+    await clickFilter('input[type="checkbox"]');
+    const f1 = await filterState();
+    await clickFilter('button[aria-pressed]');
+    const f2 = await filterState();
+    await clickFilter('button[aria-pressed]');
+    const f3 = await filterState();
+
+    report.checks.logFilterOk =
+        f0.all === 'true' &&
+        f0.boxes.every(Boolean) &&
+        f1.all === 'false' &&
+        f1.boxes[0] === false &&
+        f1.shown < f0.shown &&
+        f2.all === 'true' &&
+        f2.boxes.every(Boolean) &&
+        f2.shown === f0.shown &&
+        f3.all === 'false' &&
+        f3.boxes.every((b) => !b) &&
+        f3.shown === 0;
+    report.logFilter = { f0, f1, f2, f3 };
+
     await closeTopLayer();
 
     // 常用语右侧弹层（modal modal-end）：modal-box 360 宽贴右边、有搜索框，且没有漏到 body

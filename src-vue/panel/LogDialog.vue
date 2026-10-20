@@ -45,9 +45,21 @@ const TYPES: Array<{ type: LogType; label: string; text: string; bar: string; bt
 
 const metaOf = (t: LogType) => TYPES.find((m) => m.type === t) || TYPES[0];
 
-const filter = ref<Record<LogType, boolean>>({ info: false, success: false, warning: false, error: false });
-/** 「全部」选中态：true = 不按类型过滤。点类型勾选后自动切走；四个全勾上时自动回到「全部」 */
-const allMode = ref(true);
+/**
+ * 四个类型的勾选状态 —— **唯一事实源**。默认全选（= 「全部」）。
+ *
+ * v26.10.20-v24 修正：此前是「filter 四个布尔 + allMode 独立布尔」两套状态，
+ * 且 `toggleType` 里写成 `allMode = !TYPES.every(...)`（取反）——勾上任一类型后
+ * allMode 反而被置 true，`shown` 直接返回全量，筛选完全不生效。
+ * 现改为「全部」= 四个全选中的派生状态（computed），不可能两套状态打架：
+ *   · 点「全部」：未全选 → 四个全勾上；已全选 → 四个全部取消；
+ *   · 点某个类型：只翻转它自己，四类齐了「全部」自动亮、缺一个自动灭。
+ */
+const filter = ref<Record<LogType, boolean>>({ info: true, success: true, warning: true, error: true });
+/** 「全部」选中态 = 四个类型全勾上（派生，不单独存状态） */
+const allMode = computed(() => TYPES.every((m) => filter.value[m.type]));
+/** 是否至少选了一个类型（全不选时给空态一句更准确的提示） */
+const anyFilter = computed(() => TYPES.some((m) => filter.value[m.type]));
 /** 关闭自动刷新时冻结下来的列表快照 */
 const snapshot = ref<LogEntry[]>([]);
 const scroller = ref<HTMLDivElement | null>(null);
@@ -67,24 +79,20 @@ const counts = computed(() => {
     source.value.forEach((e) => (c[e.type] = (c[e.type] || 0) + 1));
     return c;
 });
-const shown = computed(() => {
-    // 「全部」选中 = 不过滤；否则按勾选的类型过滤
-    return allMode.value ? source.value : source.value.filter((e) => filter.value[e.type]);
-});
+const shown = computed(() => source.value.filter((e) => filter.value[e.type]));
 /** 反转成「最旧在上、最新在下」——不污染原数组 */
 const rows = computed(() => shown.value.slice().reverse());
 const latest = computed(() => source.value[0]);
 
-/** 点「全部」：进入全选态（不按类型过滤），同时清空类型勾选 */
+/** 点「全部」：未全选 → 四个类型全勾上；已全选 → 全部取消。 */
 function selectAll() {
-    allMode.value = true;
-    filter.value = { info: false, success: false, warning: false, error: false };
+    const next = !allMode.value;
+    filter.value = { info: next, success: next, warning: next, error: next };
 }
 
-/** 点类型勾选：退出「全部」态；四个类型全勾上时视为「全部」 */
+/** 点某个类型：只翻转它自己（「全部」由 allMode 派生，无需手工同步） */
 function toggleType(type: LogType, checked: boolean) {
     filter.value = { ...filter.value, [type]: checked };
-    allMode.value = !TYPES.every((m) => filter.value[m.type]);
 }
 
 // 打开 / 新日志 / 重新开启自动刷新 / 切换筛选 → 滚到底部看最新内容。
@@ -118,7 +126,7 @@ watch([() => props.open, () => props.logEntries, () => props.autoRefresh, filter
                     class="btn btn-sm"
                     :class="allMode ? 'btn-neutral' : 'btn-ghost'"
                     :aria-pressed="allMode"
-                    title="显示全部类型的日志"
+                    :title="allMode ? '取消全部（四个类型一并取消）' : '选中全部类型'"
                     @click="selectAll">
                     全部
                 </button>
@@ -161,7 +169,7 @@ watch([() => props.open, () => props.logEntries, () => props.autoRefresh, filter
                 </div>
             </template>
             <div v-else class="py-6 text-center opacity-55">
-                {{ source.length ? '没有符合当前筛选条件的日志' : '暂无日志' }}
+                {{ source.length ? (anyFilter ? '没有符合当前筛选条件的日志' : '未选择任何类型') : '暂无日志' }}
             </div>
         </div>
 
