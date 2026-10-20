@@ -191,20 +191,6 @@ function startRelay() {
     stopRelay = startPhoneRelay({ deviceId, phoneId, onConn: (c) => (conn.value = c), onItem });
 }
 
-/** 手动重连（v26.10.19-v9）：停掉现有轮询再重起（消息列表保留不清） */
-function refreshConn() {
-    if (stopRelay) {
-        try {
-            stopRelay();
-        } catch (e) {
-            /* 已停止 */
-        }
-        stopRelay = null;
-    }
-    conn.value = { state: 'offline' };
-    startRelay();
-}
-
 // ===== 会话持久化（v26.10.19-v10，与脚本端同款：IndexedDB + 7 天 TTL + 手动清空） =====
 onMounted(async () => {
     msgs.value = await loadChatMessages();
@@ -450,7 +436,7 @@ const footerHint = computed(() => {
                 <div data-slot="card-header" class="flex shrink-0 items-center gap-1.5 border-b border-base-300 px-4 py-2.5">
                     <div class="flex min-w-0 items-center gap-2">
                         <h3 class="truncate text-[15px] font-bold">传输助手</h3>
-                        <span class="badge badge-sm shrink-0 badge-outline">v{{ appVersion }}</span>
+                        <span class="badge badge-sm shrink-0 rounded-full badge-outline">v{{ appVersion }}</span>
                     </div>
                     <div class="ml-auto flex items-center gap-1">
                         <div class="tooltip tooltip-bottom" data-tip="清空聊天记录">
@@ -461,16 +447,6 @@ const footerHint = computed(() => {
                                 :disabled="!msgs.length"
                                 @click="clearAll">
                                 <Icon name="rotateCw" :size="14" />
-                            </button>
-                        </div>
-                        <div class="tooltip tooltip-bottom" data-tip="重新连接">
-                            <button
-                                type="button"
-                                class="btn btn-ghost btn-sm btn-circle"
-                                aria-label="重新连接"
-                                :disabled="conn.state !== 'offline' && conn.state !== 'error'"
-                                @click="refreshConn">
-                                <Icon name="refresh" :size="14" />
                             </button>
                         </div>
                         <span class="inline-flex h-5 items-center gap-1.5 text-xs text-base-content/60">
