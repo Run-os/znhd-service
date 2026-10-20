@@ -172,13 +172,23 @@ function pick(text: string) {
                     @input="emit('update:searchKeyword', ($event.target as HTMLInputElement).value)" />
             </label>
 
-            <!-- 官方 radio 式 tabs（tabs-box using radio inputs）：受控由 Vue 驱动 -->
-            <div role="tablist" class="tabs tabs-box w-full">
+            <!-- 官方 radio 式 tabs（tabs-box using radio inputs）：受控由 Vue 驱动。
+                 ① `gap-1` + `rounded-full`：外框与每个 tab 都做成胶囊（daisyUI 默认只给
+                    `--radius-field` 的小方角，容器圆角也偏方）；
+                 ② 每个 tab 必须 `flex-1`：radio tab 天然 `min-width: fit-content` 且不 grow，
+                    容器又写了 `w-full` ⇒ 两个 tab 挤在左边、右边留一大条空白（用户实机反馈）。
+                    `flex-1` 让「全部话术 / 我的话术」等分整宽；
+                 ③ `checked:[--tab-bg:--color-neutral]`：daisyUI 默认选中底 = base-100，
+                    但 business 主题里 base-100(oklch .244) ≈ 容器 base-200(oklch .226)，
+                    夜间选中的胶囊几乎看不出来（实测截图）；提到 neutral 一档肉眼可辨，
+                    日间 wireframe 同样成立（浅灰选中块）。Tailwind 工具类优先级高于
+                    daisyUI 组件层（daisyUI 5 全部样式在 utilities 的嵌套子层里），直接覆盖即可。 -->
+            <div role="tablist" class="tabs tabs-box w-full gap-1 rounded-full">
                 <input
                     type="radio"
                     name="phrases_tab"
                     role="tab"
-                    class="tab"
+                    class="tab flex-1 rounded-full checked:[--tab-bg:var(--color-neutral)]"
                     aria-label="全部话术"
                     :checked="tab === 'all'"
                     @change="tab = 'all'" />
@@ -186,7 +196,7 @@ function pick(text: string) {
                     type="radio"
                     name="phrases_tab"
                     role="tab"
-                    class="tab"
+                    class="tab flex-1 rounded-full checked:[--tab-bg:var(--color-neutral)]"
                     aria-label="我的话术"
                     :checked="tab === 'mine'"
                     @change="tab = 'mine'" />
