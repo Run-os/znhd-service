@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         征纳互动人数和在线监控v2
 // @namespace    https://scriptcat.org/
-// @version      26.10.20-v14
+// @version      26.10.20-v15
 // @author       runos
 // @description  实时监控征纳互动等待人数和在线状态，支持语音播报、自定义常用语
 // @license      MIT
@@ -3222,7 +3222,7 @@ more: [
   const _hoisted_9$9 = { class: "fieldset" };
   const _hoisted_10$9 = { class: "w-8 text-[13px] text-base-content/60" };
   const _hoisted_11$9 = ["value", "onInput"];
-  const _hoisted_12$9 = ["value", "onInput"];
+  const _hoisted_12$8 = ["value", "onInput"];
   const HOMEPAGE_URL = "https://github.com/Run-os/znhd-service";
   const _sfc_main$j = vue.defineComponent({
     __name: "SettingsDialog",
@@ -3322,7 +3322,7 @@ more: [
                     class: "input w-[112px]",
                     value: vue.unref(hoursToHHmm)(wh.value[f.to]),
                     onInput: ($event) => updateWh(f.to, $event.target.value)
-                  }, null, 40, _hoisted_12$9)
+                  }, null, 40, _hoisted_12$8)
                 ]);
               }), 64)),
               _cache[9] || (_cache[9] = vue.createElementVNode("p", { class: "label whitespace-normal" }, "提示：将「下午开始」设为与「上午结束」相同（如都设为 12:00），即可午休时段也监控。", -1))
@@ -3477,7 +3477,7 @@ more: [
     key: 1,
     class: "hero"
   };
-  const _hoisted_12$8 = { class: "hero-content" };
+  const _hoisted_12$7 = { class: "hero-content" };
   const _hoisted_13$6 = { class: "text-[13px] text-base-content/60" };
   const _hoisted_14$5 = {
     key: 2,
@@ -3587,7 +3587,7 @@ more: [
               vue.createElementVNode("span", { class: "loading loading-spinner loading-md text-primary" }, null, -1),
               vue.createElementVNode("span", { class: "text-center text-xs leading-5 text-base-content/60" }, " 正在抓取常用话术…（右侧栏会自动切 tab，请勿操作） ", -1)
             ]))) : !rows.value.length ? (vue.openBlock(), vue.createElementBlock("div", _hoisted_11$8, [
-              vue.createElementVNode("div", _hoisted_12$8, [
+              vue.createElementVNode("div", _hoisted_12$7, [
                 vue.createElementVNode("p", _hoisted_13$6, vue.toDisplayString(emptyText.value), 1)
               ])
             ])) : (vue.openBlock(), vue.createElementBlock("ul", _hoisted_14$5, [
@@ -3633,7 +3633,7 @@ more: [
   const _hoisted_9$7 = { class: "text-base-content" };
   const _hoisted_10$7 = { class: "text-base-content" };
   const _hoisted_11$7 = { class: "flex items-center gap-2.5" };
-  const _hoisted_12$7 = {
+  const _hoisted_12$6 = {
     class: "flex items-center gap-1.5",
     title: "开启后新日志持续刷新并自动滚到底部；关闭后列表冻结在当前快照，便于往上翻看历史"
   };
@@ -3759,7 +3759,7 @@ more: [
                 vue.createTextVNode(" 条 " + vue.toDisplayString(props.autoRefresh ? "" : " · 已冻结"), 1)
               ]),
               vue.createElementVNode("span", _hoisted_11$7, [
-                vue.createElementVNode("label", _hoisted_12$7, [
+                vue.createElementVNode("label", _hoisted_12$6, [
                   vue.createElementVNode("input", {
                     type: "checkbox",
                     class: "toggle toggle-sm",
@@ -4723,7 +4723,7 @@ entries() {
     class: "flex h-[58vh] flex-col items-center justify-center"
   };
   const _hoisted_11$6 = { class: "mt-2 text-xs text-base-content/60" };
-  const _hoisted_12$6 = {
+  const _hoisted_12$5 = {
     key: 3,
     class: "hero h-[58vh]"
   };
@@ -5119,7 +5119,7 @@ shouldStop: () => runId !== id
             phase.value === "measuring" && !probed.value.length ? (vue.openBlock(), vue.createElementBlock("div", _hoisted_10$6, [
               _cache[11] || (_cache[11] = vue.createElementVNode("span", { class: "loading loading-spinner text-primary" }, null, -1)),
               vue.createElementVNode("p", _hoisted_11$6, " 正在测量大小…（" + vue.toDisplayString(probed.value.length) + "/" + vue.toDisplayString(total.value) + "） ", 1)
-            ])) : !kept.value.length ? (vue.openBlock(), vue.createElementBlock("div", _hoisted_12$6, [
+            ])) : !kept.value.length ? (vue.openBlock(), vue.createElementBlock("div", _hoisted_12$5, [
               vue.createElementVNode("div", _hoisted_13$4, [
                 vue.createVNode(vue.unref(Icon), {
                   name: "image",
@@ -5695,7 +5695,7 @@ shouldStop: () => runId !== id
   const _hoisted_9$5 = ["title"];
   const _hoisted_10$5 = { class: "mt-px text-[11px] opacity-75" };
   const _hoisted_11$5 = ["disabled"];
-  const _hoisted_12$5 = {
+  const _hoisted_12$4 = {
     key: 0,
     class: "mt-1 flex items-center gap-1.5"
   };
@@ -5826,7 +5826,7 @@ shouldStop: () => runId !== id
                 onClick: _cache[3] || (_cache[3] = ($event) => emit2("download"))
               }, vue.toDisplayString(_ctx.downloadLabel), 11, _hoisted_11$5)
             ], 4),
-            _ctx.progress !== null ? (vue.openBlock(), vue.createElementBlock("div", _hoisted_12$5, [
+            _ctx.progress !== null ? (vue.openBlock(), vue.createElementBlock("div", _hoisted_12$4, [
               _cache[6] || (_cache[6] = vue.createElementVNode("span", { class: "loading loading-spinner loading-sm shrink-0" }, null, -1)),
               vue.createElementVNode("progress", {
                 class: vue.normalizeClass(["progress min-w-0 flex-1", _ctx.mine ? "progress-neutral" : "progress-primary"]),
@@ -6054,7 +6054,7 @@ shouldStop: () => runId !== id
     class: "grid gap-2",
     style: { "grid-template-columns": "repeat(auto-fill, minmax(220px, 1fr))", "align-content": "start" }
   };
-  const _hoisted_12$4 = { class: "inline-flex size-8 shrink-0 items-center justify-center rounded-[6px] bg-white/[0.08] text-base-content/60" };
+  const _hoisted_12$3 = { class: "inline-flex size-8 shrink-0 items-center justify-center rounded-[6px] bg-white/[0.08] text-base-content/60" };
   const _hoisted_13$2 = { class: "min-w-0 flex-1" };
   const _hoisted_14$2 = ["title"];
   const _hoisted_15$2 = { class: "mt-px truncate text-[11px] text-base-content/40" };
@@ -6190,7 +6190,7 @@ shouldStop: () => runId !== id
                   "data-transfer-file-card": "1",
                   class: "flex min-w-0 items-center gap-2.5 rounded-[8px] border border-base-300 bg-white/[0.04] px-2.5 py-2"
                 }, [
-                  vue.createElementVNode("span", _hoisted_12$4, [
+                  vue.createElementVNode("span", _hoisted_12$3, [
                     vue.createVNode(vue.unref(Icon), {
                       name: "fileText",
                       size: 18
@@ -6377,10 +6377,6 @@ shouldStop: () => runId !== id
     class: "hero"
   };
   const _hoisted_11$3 = { class: "hero-content flex-col text-center" };
-  const _hoisted_12$3 = {
-    key: 0,
-    class: "mb-3 text-center"
-  };
   const _sfc_main$7 = vue.defineComponent({
     __name: "PairPanel",
     props: {
@@ -6392,7 +6388,6 @@ shouldStop: () => runId !== id
       const deviceId = getDeviceId();
       const qrUrl = vue.ref("");
       const link = vue.ref("");
-      const phoneOnline = vue.computed(() => props.phones.length > 0);
       function refreshLink() {
         const s = (props.relayServer || "").trim().replace(/\/+$/, "");
         if (!/^https?:\/\//i.test(s)) {
@@ -6442,13 +6437,7 @@ shouldStop: () => runId !== id
                 ])
               ]))
             ])
-          ]),
-          !phoneOnline.value ? (vue.openBlock(), vue.createElementBlock("div", _hoisted_12$3, _cache[6] || (_cache[6] = [
-            vue.createElementVNode("span", { class: "badge badge-lg badge-error" }, [
-              vue.createElementVNode("span", { class: "mr-1.5 inline-block size-1.5 rounded-full bg-error" }),
-              vue.createTextVNode(" 当前无在线设备，暂不可收发 ")
-            ], -1)
-          ]))) : vue.createCommentVNode("", true)
+          ])
         ]);
       };
     }
