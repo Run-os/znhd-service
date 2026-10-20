@@ -138,6 +138,20 @@ const HTML = `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8">
   svg { margin: -2.75em auto 0; }
 </style>
 <script>${GM_STUB}</script>
+<script>
+// 常用语缓存夹具：有缓存 ⇒ 打开侧边栏不触发抓取（不会 toast），列表直接渲染两行。
+// 第一条是超长话术，用来验「只显示前两行」与「悬浮提示不被弹层裁掉」（v26.10.20-v18）。
+localStorage.setItem('scriptCat_PhrasesCache', JSON.stringify({
+  time: Date.now(),
+  data: {
+    all: [
+      '您好，这里是征纳互动服务，请问有什么可以帮您？为便于快速定位您的问题，请提供纳税人识别号或企业名称，并简要描述您遇到的业务场景与报错提示，我们会尽快为您核实处理。',
+      '请稍等，我核实一下。'
+    ],
+    mine: ['我的话术一']
+  }
+}));
+</script>
 <script src="/vue.js"></script>
 </head><body><h1>host page</h1>
 <!-- 图片嗅探夹具：两张 > 20KB（应出现在结果里）、一张 2KB（应被阈值过滤）、一张 .svg（应被后缀规则排除） -->
@@ -380,6 +394,86 @@ function serve() {
         phrasesSheet.background === base100Light &&
         phrasesSheet.placeholder.includes('搜索常用语');
     report.phrasesSheet = phrasesSheet;
+
+    // 每条话术只显示前两行 + 悬浮提示不被弹层裁掉（v26.10.20-v18）
+    //  · 截断：button 固定 h-10（leading-5 × 2 = 40px），内层 span line-clamp-2
+    //  · 提示：浮层必须是 dialog 直接子节点（在 .modal-box 外面）。曾经用 daisyUI 的
+    //    tooltip+data-tip，伪元素落在 modal-box 里被 overflow-y:auto 裁掉大半。
+    const rowPoint = await page.evaluate(() => {
+        const sr = document.getElementById('__znhd_panel_host__').shadowRoot;
+        const btn = sr.querySelector('dialog[open] .modal-box .list button');
+        if (!btn) return null;
+        const r = btn.getBoundingClientRect();
+        return { x: Math.round(r.left + r.width / 2), y: Math.round(r.top + r.height / 2) };
+    });
+    if (rowPoint) {
+        await page.mouse.move(rowPoint.x, rowPoint.y);
+        await new Promise((r) => setTimeout(r, 150));
+    }
+    const phraseLayout = await page.evaluate(() => {
+        const sr = document.getElementById('__znhd_panel_host__').shadowRoot;
+        const el = sr.querySelector('dialog[open]');
+        const box = el && el.querySelector('.modal-box');
+        if (!box) return { found: false };
+        const btns = [...box.querySelectorAll('.list button')];
+        const tip = el.querySelector('[data-znhd="phrase-tip"]');
+        const boxRect = box.getBoundingClientRect();
+        const tr = tip ? tip.getBoundingClientRect() : null;
+        return {
+            found: true,
+            rows: btns.length,
+            heights: btns.map((b) => Math.round(b.getBoundingClientRect().height)),
+            clamps: btns.map((b) => {
+                const s = b.querySelector('span');
+                return s ? getComputedStyle(s).webkitLineClamp : '';
+            }),
+            tipInBox: tip ? box.contains(tip) : null,
+            tipVisibility: tip ? getComputedStyle(tip).visibility : null,
+            tipText: tip ? (tip.textContent || '').trim() : null,
+            tipRect: tr
+                ? {
+                      left: Math.round(tr.left),
+                      right: Math.round(tr.right),
+                      top: Math.round(tr.top),
+                      bottom: Math.round(tr.bottom),
+                      width: Math.round(tr.width),
+                      height: Math.round(tr.height),
+                  }
+                : null,
+            tipLeftOfBox: tr ? tr.right <= boxRect.left : false,
+            vw: window.innerWidth,
+            vh: window.innerHeight,
+        };
+    });
+    report.checks.phrasesClampOk =
+        !!phraseLayout.found &&
+        phraseLayout.rows >= 2 &&
+        phraseLayout.heights.every((h) => h === 40) &&
+        phraseLayout.clamps.every((c) => c === '2');
+    report.checks.phrasesTipOk =
+        !!phraseLayout.tipRect &&
+        phraseLayout.tipInBox === false &&
+        phraseLayout.tipVisibility === 'visible' &&
+        phraseLayout.tipLeftOfBox &&
+        !!phraseLayout.tipText &&
+        phraseLayout.tipText.startsWith('您好，这里是征纳互动服务') &&
+        phraseLayout.tipRect.width >= 100 &&
+        phraseLayout.tipRect.height >= 20 &&
+        phraseLayout.tipRect.left >= 0 &&
+        phraseLayout.tipRect.top >= 0 &&
+        phraseLayout.tipRect.right <= phraseLayout.vw &&
+        phraseLayout.tipRect.bottom <= phraseLayout.vh;
+    report.phraseLayout = phraseLayout;
+    await page.screenshot({ path: path.join(os.tmpdir(), 'znhd-vue-phrase-tip.png') });
+    // 移开鼠标：提示必须消失（否则悬停后一直挂着）
+    await page.mouse.move(4, 400);
+    await new Promise((r) => setTimeout(r, 120));
+    report.checks.phrasesTipHideOk = await page.evaluate(
+        () =>
+            !document
+                .getElementById('__znhd_panel_host__')
+                .shadowRoot.querySelector('[data-znhd="phrase-tip"]')
+    );
     // toast（抓取失败的提示）恰好盖在 sheet 顶栏上，等它 3 秒自动消失后再截图
     await new Promise((r) => setTimeout(r, 3400));
     await page.screenshot({ path: path.join(os.tmpdir(), 'znhd-vue-phrases.png') });
