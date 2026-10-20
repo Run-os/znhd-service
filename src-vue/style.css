@@ -52,8 +52,15 @@
   }
 }
 
-/* 滚动条：细圆角条，颜色随主题（夜间白条 / 日间黑条） */
+/* 滚动条：细圆角条，颜色随主题（夜间白条 / 日间黑条）
+   （daisyUI 的 scrollbar 基础模块只给 `scrollbar-color`，不给 `scrollbar-width: thin`，
+   也不给 ::-webkit-scrollbar 的圆角/内缩 —— 想要「细圆角条」只能自己写，保留。） */
 :host {
+  /* 品牌色（用户定版）：收敛成变量，组件覆写与模板类都引用这里，避免同一串
+     rgb() 散落在多处。改配色只动这两行。 */
+  --znhd-brand: rgb(67, 116, 186); /* 品牌蓝：日间图标 / toggle 选中底（v7） */
+  --znhd-bubble-mine: rgb(53, 210, 141); /* 我方气泡绿（日间，v11） */
+
   --znhd-scrollbar-thumb: color-mix(in oklab, var(--color-base-content) 24%, transparent);
   --znhd-scrollbar-thumb-hover: color-mix(in oklab, var(--color-base-content) 40%, transparent);
 }
@@ -87,43 +94,45 @@ svg {
   vertical-align: middle;
 }
 
-/* ── toggle 胶囊形修正 ─────────────────────────────────────────────────────
-   wireframe / business 两个官方主题都把 --radius-selector 设为 0rem（直角美学），
-   官网演示用的是默认主题的 1rem（圆角胶囊 pill）。用户定版要求 toggle 呈官方
-   网站同款胶囊形，这里只对 .toggle 恢复官方默认值，不动其他直角组件。 */
-.toggle {
+/* ── 圆角定版（官方主题 wireframe/business 把 --radius-* 全部压成 0/0.25rem） ──
+   官方推荐的组件级改法：`@utility <组件名>`（skill/usage「Change a component in CSS」），
+   v20 之前是裸 `.toggle { … }` 规则 —— 效果相同但绕过 daisyUI 的分层约定，
+   定义落在 utilities 层后与 @apply 覆写行为一致、也不会被组件层意外反超。
+   · toggle 胶囊形 1rem（官网演示同款，官方主题把它压成了 0）
+   · checkbox 圆形
+   用户定版；其余直角组件不动。
+   （filter 按钮的 1rem 覆写已删：v8 起 .btn 全局胶囊化已覆盖它，视觉相同。） */
+@utility toggle {
   --radius-selector: 1rem;
 }
-
-/* ── 圆角定版（官方主题 wireframe/business 把 --radius-* 全部压成 0/0.25rem） ──
-   用户定版：toggle 胶囊 1rem、checkbox 圆形。只覆写对应组件的作用域变量。
-   （filter 按钮的 1rem 覆写已删：v8 起 .btn 全局胶囊化已覆盖它，视觉相同。） */
-.checkbox {
+@utility checkbox {
   --radius-selector: 9999px;
 }
 
-/* ── 按钮胶囊化定版（v26.10.20-v8，用户要求）───────────────────────────────
-   wireframe / business 官方主题把 --radius-field（daisyUI 的「field 圆角」全局
-   变量，btn/input/select/textarea/tabs 共用）压成 0.25rem → 按钮呈长方形微圆角。
-   这里在 .btn 上覆写为 9999px：任意高度都呈椭圆胶囊（浏览器自动钳到半高）。
-   只作用按钮 —— 输入框/下拉等仍保持官方直角；若也要胶囊化，把此覆写挪到 :host
-   （一行改动，全站所有 --radius-field 消费者一起变）。 */
-.btn {
+/* ── 按钮 / 输入框胶囊化定版（v26.10.20-v8、v11，用户要求）────────────────
+   --radius-field 是 daisyUI 的「field 圆角」全局变量（btn/input/select/textarea/tabs
+   共用），官方主题压成 0.25rem → 呈长方形微圆角。这里在 .btn / .input 上覆写为
+   9999px：任意高度都呈椭圆胶囊（浏览器自动钳到半高）。
+   textarea 多行不适用，不动；下拉等仍保持官方直角。 */
+@utility btn {
+  --radius-field: 9999px;
+}
+@utility input {
   --radius-field: 9999px;
 }
 
-/* ── 品牌蓝定版（v26.10.20-v7，用户指定 rgb(67, 116, 186)）──────────────────
+/* ── 品牌蓝定版（v26.10.20-v7，用户指定 --znhd-brand）──────────────────────
    1) 日间模式（wireframe）官方 primary 是灰阶 —— 按钮上的图标改用品牌蓝；
       夜间 business 不套用（保持官方配色）。只按主题作用域，不写死在模板里。
    2) toggle 选中态：官方把胶囊背景画成 --color-base-100（灰白），用户要求
       选中胶囊 = 品牌蓝；中间圆形滑块（官方 = base-content）保持不动。 */
 [data-theme='wireframe'] .znhd-brand-fg {
-  color: rgb(67, 116, 186);
+  color: var(--znhd-brand);
 }
 .toggle:checked,
 .toggle[aria-checked='true'] {
-  background-color: rgb(67, 116, 186);
-  border-color: rgb(67, 116, 186);
+  background-color: var(--znhd-brand);
+  border-color: var(--znhd-brand);
 }
 /* 日间模式：选中态滑块（圆形）填充白色（官方 = --input-color: base-content，偏黑）。
    daisyUI 5 的滑块画法 = ::before 的 background-color: currentColor，
@@ -133,17 +142,32 @@ svg {
   --input-color: #fff;
 }
 
-/* ── 输入框胶囊化（v11，用户定版）────────────────────────────────────────
-   .input 与 .btn 共用 --radius-field；v8 只胶囊化了 .btn，输入框（嗅探阈值、
-   设置菜单时间选择）仍是官方直角 → 一并胶囊化。textarea 多行不适用，不动。 */
-.input {
-  --radius-field: 9999px;
-}
-
-/* ── 日间模式我方气泡品牌绿（v11，用户指定 rgb(53, 210, 141)）──────────────
+/* ── 日间模式我方气泡品牌绿（v11，用户指定 --znhd-bubble-mine）──────────────
    .chat-bubble-primary 用 --color-primary，wireframe 的 primary 是灰阶，
    与对方气泡（base-300）几乎同色；夜间 business 两色可辨保持官方。
    primary-content 在 wireframe 是深色，绿底深字可读。 */
 [data-theme='wireframe'] .chat-bubble-primary {
-  background-color: rgb(53, 210, 141);
+  background-color: var(--znhd-bubble-mine);
+}
+
+/* ── Markdown 表格（聊天气泡内，v26.10.20-v21）─────────────────────────────
+   不是 daisyUI 的 table 组件：官方 table 的 padding（12/16px）与 thead 字号（14px）
+   放进 12px 的聊天气泡里明显过大，而且它只画横向分隔线；聊天表格要的是紧凑网格。
+   颜色一律来自气泡调色板 —— markdown.ts 在 <table> 上写三个 CSS 变量：
+     --md-line（边框） / --md-code-bg（表头底） / --md-head（表头字色）。
+   ⚠️ 客户端（web/src/style.css）有一份等价拷贝：那份页面不加载本文件。 */
+.md-table {
+  border-collapse: collapse;
+  font-size: 12px;
+}
+.md-table :is(th, td) {
+  padding: 3px 8px;
+  border: 1px solid var(--md-line);
+  text-align: left;
+}
+.md-table th {
+  background: var(--md-code-bg);
+  color: var(--md-head);
+  font-weight: 600;
+  white-space: nowrap;
 }

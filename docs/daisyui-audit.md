@@ -117,18 +117,18 @@
 | 1 | `src-vue/transfer/SettingsDialog.vue:93` | `alert` 缺 `role="alert"` | 补 `role="alert"`（与 `lib/toast.ts` 一致） **— ✅ 已在 v26.10.20-v20 修复** |
 | 2 | `src-vue/panel/LogDialog.vue:112-133` | `form.filter` + checkbox + 普通 button | 二选一：① 改回官方语义（radio + `filter-reset`，但会变成单选，丢失「多类型同时看」）② 保留多选但去掉 `filter` 组件类，用 `join`/`btn` 组自拼（推荐 ②，行为不变且不再冒用组件语义） |
 | 3 | `ChatComposer.vue:101`、`ChatWindow.vue:343` | focus + tabindex 式 dropdown，JS `blur()` 收起 | 改 `<details class="dropdown">` + `<summary class="btn">`（官方语法，零 JS 收起逻辑）；或 popover API（需 Chrome 114+，**超出 Chrome 88 基线**，不推荐） |
-| 4 | `transfer/markdown.ts:249` | Markdown 表格用内联样式 | 表格加 `table table-xs`，边框/表头色改用 `border-base-300` / `bg-base-200`（气泡内需对比度的场景保留 palette 变量即可） |
+| 4 | `transfer/markdown.ts:249` | Markdown 表格用内联样式 | 表格加 `table table-xs`，边框/表头色改用 `border-base-300` / `bg-base-200`（气泡内需对比度的场景保留 palette 变量即可） **— ✅ 已在 v26.10.20-v21 修复，但没走 `table table-xs`**：官方 table 的 padding（12/16px）与 thead 字号（14px）在 12px 气泡里过大，改走「`.md-table` 结构类 + 三个气泡调色板 CSS 变量（`--md-line/--md-code-bg/--md-head`）」，单元格零内联样式 |
 
 ### P3 — 清理（6 项）
 
 | # | 位置 | 现状 | 建议 |
 |---|---|---|---|
-| 5 | `src-vue/style.css:98-153` | `.toggle/.checkbox/.btn/.input` 覆写 `--radius-*` + 硬编码品牌蓝/绿（`rgb(67,116,186)`、`rgb(53,210,141)`） | 改用 `@utility btn { --radius-field: 9999px }` 等官方写法；品牌色收敛成主题变量（`@plugin 'daisyui/theme'` 覆写 `--color-primary`） |
+| 5 | `src-vue/style.css:98-153` | `.toggle/.checkbox/.btn/.input` 覆写 `--radius-*` + 硬编码品牌蓝/绿（`rgb(67,116,186)`、`rgb(53,210,141)`） | 改用 `@utility btn { --radius-field: 9999px }` 等官方写法；品牌色收敛成主题变量（`@plugin 'daisyui/theme'` 覆写 `--color-primary`） **— ✅ 已在 v26.10.20-v21 修复**：radius 四项改用 `@utility toggle/checkbox/btn/input`；品牌色收敛为 `:host` 上的 `--znhd-brand` / `--znhd-bubble-mine`。**没有**覆写 `--color-primary` —— 那会把日间所有 primary 消费者（按钮/链接/页签）一起染色，超出「只改图标与选中胶囊」的定版范围 |
 | 6 | `web/src/style.css:45-51` | `--tw-*` 五个变量**已无任何消费方**（`ChatComposer` 已改 daisyUI 组件），注释还引用已删除的 `src-vue/transfer/theme.ts` | 整块删除 + 修注释 **— ✅ 已在 v26.10.20-v20 修复** |
 | 7 | `src-vue/style.css:24`、`package.json:56` | `@custom-variant dark` 与 `tw-animate-css` 均为死配置/死依赖 | 删除（依赖面收窄符合项目「新增 npm 依赖默认不批」的取向） **— ✅ 已在 v26.10.20-v20 修复** |
-| 8 | `web/src/app.css`（`html,body` 与 `.znhd-phone-chat`、`.znhd-window-layer`） | 骨架定位（fixed + visualViewport 变量）**必要且合理**；但底色/文字色写死 `#1e1e1e` / `#141414` / `rgba(255,255,255,.9)`，绕过主题令牌 | 改用 `bg-base-100` / `bg-base-200` / `text-base-content`（或落到 `--color-*` 变量）。自定义细滚动条本身可保留 —— daisyUI 的 `scrollbar` 基础模块只给 `scrollbar-color`，不给 `scrollbar-width: thin` |
+| 8 | `web/src/app.css`（`html,body` 与 `.znhd-phone-chat`、`.znhd-window-layer`） | 骨架定位（fixed + visualViewport 变量）**必要且合理**；但底色/文字色写死 `#1e1e1e` / `#141414` / `rgba(255,255,255,.9)`，绕过主题令牌 | 改用 `bg-base-100` / `bg-base-200` / `text-base-content`（或落到 `--color-*` 变量）。自定义细滚动条本身可保留 —— daisyUI 的 `scrollbar` 基础模块只给 `scrollbar-color`，不给 `scrollbar-width: thin` **— ✅ 已在 v26.10.20-v21 修复**：business 的 base-100 是深灰不是纯黑，直接换语义色会毁掉微信纯黑风，故新增 `@theme` 里的 `--color-znhd-shell/-layer/-hairline/-chat` 分层 token；`color` 改 `--color-base-content` |
 | 9 | 10 处静态内联样式 | 见第四节第 7 条清单 | 改 Tailwind 任意值类（`basis-[92px]` / `min-h-14` / `aspect-square` / `grid-cols-[repeat(auto-fill,minmax(96px,1fr))]`） **— ✅ 已在 v26.10.20-v20 修复（10 处静态内联样式已清零，仅余动态 `:style`）** |
-| 10 | `web/src/App.vue:109-114` | 窗口壳自拼 flex 容器 + `bg-black` + `ring-[rgb(34,34,34)]`，未用 `card` | 若保留纯黑微信风，至少把描边/底色换成主题变量（`--color-base-300`）；或改用 `card` + `card-body`（需重排三段结构） |
+| 10 | `web/src/App.vue:109-114` | 窗口壳自拼 flex 容器 + `bg-black` + `ring-[rgb(34,34,34)]`，未用 `card` | 若保留纯黑微信风，至少把描边/底色换成主题变量（`--color-base-300`）；或改用 `card` + `card-body`（需重排三段结构） **— ✅ 已在 v26.10.20-v21 修复（取前半句）**：`bg-black` → `bg-znhd-chat`、`ring-[rgb(34,34,34)]` → `ring-znhd-hairline`；不改 `card` 结构（三段骨架由冒烟 `data-slot` 断言钉住） |
 
 ---
 

@@ -226,27 +226,25 @@ function renderCode(code: string[], lang: string, p: MdPalette, key: string): VN
     );
 }
 
+/**
+ * 表格：结构走 `.md-table`（见 style.css 与 web/src/style.css 的同名段落），
+ * 颜色走**气泡调色板** —— 表格要落在「我方绿气泡」或「对方灰气泡」里，
+ * 边框/表头底色必须跟着所在气泡走，daisyUI 的 `table` 组件只认
+ * `--color-base-*`（绿底上会糊成一片），所以调色板值以 CSS 变量
+ * `--md-line / --md-code-bg / --md-head` 写在 <table> 上，单元格只留类名。
+ * （v26.10.20-v21：#4 审计项 —— 去掉逐单元格内联样式。）
+ */
 function renderTable(rows: string[][], p: MdPalette, key: string): VNode {
     const [head, ...body] = rows;
     const cell = (text: string, tag: 'th' | 'td', k: string) =>
-        h(
-            tag,
-            {
-                key: k,
-                style: {
-                    padding: '3px 8px',
-                    border: '1px solid ' + p.line,
-                    textAlign: 'left',
-                    whiteSpace: tag === 'th' ? 'nowrap' : undefined,
-                    background: tag === 'th' ? p.codeBg : undefined,
-                    color: tag === 'th' ? p.head : undefined,
-                    fontWeight: tag === 'th' ? 600 : undefined,
-                },
-            },
-            renderInline(text, p, k)
-        );
-    return h('div', { key, style: { overflowX: 'auto', minWidth: '0' } }, [
-        h('table', { style: { borderCollapse: 'collapse', fontSize: '12px' } }, [
+        h(tag, { key: k }, renderInline(text, p, k));
+    const vars = {
+        '--md-line': p.line,
+        '--md-code-bg': p.codeBg,
+        '--md-head': p.head,
+    } as Record<string, string>;
+    return h('div', { key, class: 'min-w-0 overflow-x-auto' }, [
+        h('table', { class: 'md-table', style: vars }, [
             h('thead', [
                 h(
                     'tr',

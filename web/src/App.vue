@@ -105,12 +105,15 @@ const layoutMode = useLayoutMode();
 const isPhone = computed(() => layoutMode.value === 'phone');
 const rootClass = computed(() => (isPhone.value ? '' : 'znhd-window-layer'));
 const shellClass = computed(() => (isPhone.value ? 'znhd-phone-chat' : 'znhd-phone-chat znhd-chat-window'));
-/** 手机全屏时窗口贴边（无圆角无描边）；桌面弹窗时圆角 + rgb(34,34,34) 细边
- *  （v26.10.19-v3 与脚本端 v26.10.18-v9 对齐：窗口底色纯黑）。 */
+/** 手机全屏时窗口贴边（无圆角无描边）；桌面弹窗时圆角 + 细描边
+ *  （v26.10.19-v3 与脚本端 v26.10.18-v9 对齐：窗口底色纯黑）。
+ *  底色/描边取 `@theme` 的 `--color-znhd-*` token（v21）：`bg-znhd-chat` = #000
+ *  —— 冒烟「整页纯黑底 rgb(0,0,0)」断言的就是它，别换成 `bg-base-100`
+ *  （business 的 base-100 是深灰 oklch(24%)，会把纯黑风改成灰窗）。 */
 const cardClass = computed(() =>
     isPhone.value
-        ? 'flex min-h-0 w-full flex-1 flex-col gap-0 overflow-hidden rounded-none bg-black'
-        : 'flex min-h-0 w-full flex-1 flex-col gap-0 overflow-hidden rounded-xl bg-black ring-1 ring-[rgb(34,34,34)]'
+        ? 'flex min-h-0 w-full flex-1 flex-col gap-0 overflow-hidden rounded-none bg-znhd-chat'
+        : 'flex min-h-0 w-full flex-1 flex-col gap-0 overflow-hidden rounded-xl bg-znhd-chat ring-1 ring-znhd-hairline'
 );
 
 // ===== 消息滚动容器（普通 overflow 容器，脚本端 v26.10.19-v4 同款）=====

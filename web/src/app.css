@@ -1,8 +1,9 @@
 /* 手机端聊天窗（v26.10.18-v8）：整页与脚本端传输助手同一套 chat 布局。
-   色板与 src-vue/transfer/theme.ts 的 TRANSFER_VARS 同源（微信暗色：
-   卡片 #2E2E2E、他人气泡 #2F2F2F、我方气泡 #07C160）。
-   本文件只保留**骨架与弹窗定位**，气泡 / 输入区等全部交给官方组件
-   （Card / MessageScroller / ChatBubble / ChatComposer）。 */
+   配色分两层：
+   · **窗口分层色**（纯黑聊天窗 / 骨架底 / 居中层 / 细描边）来自 `style.css` 里
+     `@theme` 的 --color-znhd-* token（v26.10.20-v21 收敛，此前 hex 散落在本文件与 App.vue）；
+   · 卡片 / 气泡 / 输入区全部交给官方组件（Card / ChatBubble / ChatComposer），取 daisyUI 语义色。
+   本文件只保留**骨架与弹窗定位**。 */
 :root {
     color-scheme: dark;
 }
@@ -11,7 +12,7 @@ html,
 body {
     margin: 0;
     padding: 0;
-    background: #1e1e1e;
+    background: var(--color-znhd-shell);
 }
 
 #root {
@@ -38,8 +39,8 @@ body {
     height: var(--znhd-shell-h, 100dvh);
     display: flex;
     flex-direction: column;
-    background: #1e1e1e;
-    color: rgba(255, 255, 255, 0.9);
+    background: var(--color-znhd-shell);
+    color: var(--color-base-content);
     font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Segoe UI', sans-serif;
 }
 
@@ -60,7 +61,7 @@ body {
     justify-content: center;
     padding: 24px;
     box-sizing: border-box;
-    background: #141414; /* 比聊天窗（#2e2e2e）更深一档，让弹窗的描边/投影有对比 */
+    background: var(--color-znhd-layer); /* 比聊天窗更深一档，让弹窗的描边/投影有对比 */
 }
 
 .znhd-phone-chat.znhd-chat-window {

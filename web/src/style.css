@@ -36,7 +36,45 @@
 }
 
 /**
+ * 微信暗色窗口的**分层色板**（客户端专用 token，v26.10.20-v21 收敛）。
+ *
+ * 微信 PC 的文件传输助手是「纯黑聊天窗 + 深一档的桌面层 + 极细描边」三层，
+ * daisyUI 的 base-100/200/300 给不出这组值（business 的 base-100 是深灰不是纯黑），
+ * 所以这里补一组 `--color-znhd-*`：`@theme` 里的 `--color-*` 会同时生成
+ * `bg-znhd-*` / `ring-znhd-*` / `border-znhd-*` 等工具类，模板与 app.css 都引它。
+ * 改配色只动这几行（此前 hex 散落在 App.vue 与 app.css 里）。
+ */
+@theme {
+    --color-znhd-chat: #000000; /* 聊天窗底色（微信纯黑；冒烟断言 rgb(0,0,0)） */
+    --color-znhd-shell: #1e1e1e; /* 全屏骨架底色（手机端可见） */
+    --color-znhd-layer: #141414; /* 桌面版居中层底色（比聊天窗深一档，让描边有对比） */
+    --color-znhd-hairline: #222222; /* 窗口细描边（rgb(34,34,34)） */
+}
+
+/**
  * 原有页面样式（骨架 / 滚动条补丁）在 `app.css`，
  * 由 `main.ts` 在本文件之后 import —— 不写成 CSS `@import`，因为 CSS 规范要求
  * `@import` 必须排在其他规则之前，而这里 `@plugin` / `@theme` 已经占位。
  */
+
+/**
+ * Markdown 表格（聊天气泡内）—— 与脚本端 `src-vue/style.css` 的同名段落等价。
+ * 两份必须一起改：客户端是独立页面，不加载脚本端那份 CSS，而 ChatBubble
+ * （共享组件）两端都在用，漏一份表格就退回无边框无内边距的裸 table。
+ * 颜色由 `markdown.ts` 写到 <table> 上的 --md-line / --md-code-bg / --md-head 提供。
+ */
+.md-table {
+    border-collapse: collapse;
+    font-size: 12px;
+}
+.md-table :is(th, td) {
+    padding: 3px 8px;
+    border: 1px solid var(--md-line);
+    text-align: left;
+}
+.md-table th {
+    background: var(--md-code-bg);
+    color: var(--md-head);
+    font-weight: 600;
+    white-space: nowrap;
+}
