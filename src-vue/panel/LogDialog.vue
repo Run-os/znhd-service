@@ -35,12 +35,21 @@ const emit = defineEmits<{
     'update:autoRefresh': [boolean];
 }>();
 
-/** 类型 → daisyUI 语义色类（颜色全部来自主题，不再写死 hex）；filter 按钮选中态色用 checked: 变体 */
-const TYPES: Array<{ type: LogType; label: string; text: string; bar: string; btn: string }> = [
-    { type: 'info', label: '信息', text: 'text-info', bar: 'border-l-info', btn: 'checked:btn-info' },
-    { type: 'success', label: '成功', text: 'text-success', bar: 'border-l-success', btn: 'checked:btn-success' },
-    { type: 'warning', label: '警告', text: 'text-warning', bar: 'border-l-warning', btn: 'checked:btn-warning' },
-    { type: 'error', label: '错误', text: 'text-error', bar: 'border-l-error', btn: 'checked:btn-error' },
+/**
+ * 类型 → daisyUI 语义色类（颜色全部来自主题，不再写死 hex）。
+ *   text / bar：日志行与「最新时间」的着色；
+ *   chip：语义样式类（style.css 里按它上色：未选中 = 透明底 + 语义色字/边框，
+ *        选中 = 语义实底 + 同色系 content 前景）；
+ *   btn：保留 checked:btn-info 变体写法（daisyUI 的 --btn-color 来源）；
+ *     颜色最终由 style.css 的 [data-log-filter] 规则拍板。
+ * v26.10.20-v25：补 chip —— 此前未选中按钮吃全局灰胶囊（v23），四类按钮
+ * 未选时一片灰、无法从颜色辨认类别；现在任意状态下都带本类型语义色。
+ */
+const TYPES: Array<{ type: LogType; label: string; text: string; bar: string; chip: string; btn: string }> = [
+    { type: 'info', label: '信息', text: 'text-info', bar: 'border-l-info', chip: 'btn-log-info', btn: 'checked:btn-info' },
+    { type: 'success', label: '成功', text: 'text-success', bar: 'border-l-success', chip: 'btn-log-success', btn: 'checked:btn-success' },
+    { type: 'warning', label: '警告', text: 'text-warning', bar: 'border-l-warning', chip: 'btn-log-warning', btn: 'checked:btn-warning' },
+    { type: 'error', label: '错误', text: 'text-error', bar: 'border-l-error', chip: 'btn-log-error', btn: 'checked:btn-error' },
 ];
 
 const metaOf = (t: LogType) => TYPES.find((m) => m.type === t) || TYPES[0];
@@ -134,7 +143,7 @@ watch([() => props.open, () => props.logEntries, () => props.autoRefresh, filter
                     v-for="m in TYPES"
                     :key="m.type"
                     class="btn btn-sm"
-                    :class="m.btn"
+                    :class="[m.btn, m.chip]"
                     type="checkbox"
                     :checked="filter[m.type]"
                     :aria-label="m.label + ' ' + (counts[m.type] || 0)"

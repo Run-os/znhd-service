@@ -122,9 +122,10 @@ svg {
 }
 
 /* ── 深色模式胶囊按钮配色（v26.10.20-v23，用户参考稿定版）────────────────
-   四色收敛为 :host 变量，改配色只动这四行：
+   五色收敛为 :host 变量，改配色只动这几行：
      边框 rgb(75,75,80) / 字色 rgb(207,207,208)
      未选中底 rgb(24,24,24) / 选中底 rgb(45,47,56)
+     悬停遮罩 rgb(50,50,50)（v25 追加，见下方 .btn:hover 规则）
    机制：daisyUI .btn 常态 bg = var(--btn-color, base-200)、border 走 --btn-border
    变量；选中态（aria-pressed / aria-checked / :checked）bg、border 都从
    --btn-color/--btn-bg 推导 → 覆写这几个内部变量即可，无需动模板。
@@ -136,6 +137,7 @@ svg {
   --znhd-btn-fg: rgb(207, 207, 208);
   --znhd-btn-bg: rgb(24, 24, 24);
   --znhd-btn-active: rgb(45, 47, 56);
+  --znhd-btn-hover-bg: rgb(50, 50, 50);
 }
 [data-theme='business']
   :where(
@@ -149,15 +151,19 @@ svg {
   --btn-border: var(--znhd-btn-border);
   --btn-fg: var(--znhd-btn-fg);
 }
-/* 选中态：所有勾选/按下的胶囊（含 btn-neutral 与 `checked:btn-*` 类型筛选钮）→
-   底精确 rgb(45,47,56)、边框维持 75,75,80（参考图选中/未选中边框同色）。
-   ⚠️ 类型筛选钮的类名是 Tailwind 变体写法 `checked:btn-info`（不是 .btn-info），
-   :not(.btn-info) 拦不住它 —— 实测即统一选中底色，符合四色定版，勿再"修"。
+/* 选中态：所有勾选/按下的胶囊（含 btn-neutral）→ 底精确 rgb(45,47,56)、边框
+   维持 75,75,80（参考图选中/未选中边框同色）。
+   ⚠️ 类型筛选钮必须排除：它们的语义色由 v25 的 [data-log-filter] 规则负责
+   （四色定版时期的「统一选中底色」已被 v25 要求取代 —— 按钮要按日志类型
+   上色）。排除用 .btn-log-* 而不是 :not(.btn-info)：模板上 checked:btn-info
+   是 Tailwind 变体写法，class 列表里没有字面 .btn-info，拦不住。
    btn-primary / btn-error 等**实体语义变体**仍排除（发送键/清空键保语义色）。 */
 [data-theme='business']
   .btn:is([aria-pressed='true'], [aria-checked='true'], :checked):not(.btn-primary):not(
     .btn-info
-  ):not(.btn-success):not(.btn-warning):not(.btn-error) {
+  ):not(.btn-success):not(.btn-warning):not(.btn-error):not(.btn-log-info):not(.btn-log-success):not(
+    .btn-log-warning
+  ):not(.btn-log-error) {
   --btn-color: var(--znhd-btn-active);
   --btn-bg: var(--znhd-btn-active);
   --btn-border: var(--znhd-btn-border);
@@ -165,6 +171,100 @@ svg {
 /* 未按下的 btn-neutral（聊天气泡图片操作钮）同样跟随选中色。 */
 [data-theme='business'] .btn-neutral {
   --btn-color: var(--znhd-btn-active);
+}
+
+/* ── 深色模式悬停遮罩（v26.10.20-v25，用户定版 rgb(50,50,50)）─────────────
+   现象：业务主题 business 的 base-200 ≈ rgb(28,28,28)，daisyUI 的 .btn:hover
+   只按 --btn-color 混 7% 黑 → ghost 圆形 hover 底、灰胶囊 hover 底都沉成近黑，
+   深底上看不出「悬停了」。要整片换成 rgb(50,50,50) 的亮一档遮罩。
+   一键改：只动 :host 的 --znhd-btn-hover-bg（上面第 5 行），本规则不用改。
+   机制：hover 直接钉 --btn-bg，压过 daisyUI 的 color-mix 公式（本规则 unlayered，
+   与 .btn:hover 同为 (0,2,0) 也赢 layer 内的 daisyUI）。
+   · 只作用 business —— 浅色 wireframe 的 hover 保持官方；
+   · 覆盖三类：① v23 灰胶囊家族（:not 排除名单**必须与 v23 逐字一致**，漏一个
+     就把发送键/清空键 hover 染灰）② ghost/outline/soft/dash/link/text 透明底
+     变体（用户看到的 28 就是 ghost 圆形底）③ 无彩的 btn-neutral；
+   · 彩色语义实底钮（primary/info/success/warning/error、选中态筛选 chip）
+     不套用 —— 色相即身份，hover 仍走 daisyUI 同色加深；
+   · 只写 :hover，不碰 --btn-fg / *-content（文字图标色不动 → 50 底上可读性
+     不受影响），移开鼠标常态底立即恢复，无残留。 */
+[data-theme='business']
+  :where(
+    .btn:not(.btn-primary):not(.btn-neutral):not(.btn-info):not(.btn-success):not(.btn-warning):not(
+        .btn-error
+      ):not(.btn-secondary):not(.btn-ghost):not(.btn-outline):not(.btn-soft):not(.btn-dash):not(
+        .btn-link
+      ):not(.btn-text)
+  ):hover,
+[data-theme='business']
+  :where(.btn-ghost, .btn-outline, .btn-soft, .btn-dash, .btn-link, .btn-text):hover,
+[data-theme='business'] .btn-neutral:hover {
+  --btn-bg: var(--znhd-btn-hover-bg);
+}
+
+/* ── 浅色模式 link 按钮文字定黑（v26.10.20-v25，用户反馈）─────────────────
+   daisyUI .btn-link 的 color 回落 `var(--btn-color, var(--color-primary))`，
+   而 wireframe 的 primary = oklch(87%) 浅灰 → 白底上「查看日志 →」「项目主页」
+   「嗅探展开/收起」等纯链接钮文字几乎不可读（实测 ≈ rgb(216,212,212)）。
+   日间一律把 --btn-color 回落成 base-content（oklch(20%)，黑）；
+   夜间 business 的 primary 是暗蓝、可读，**不套用**，保持官方链接色。 */
+[data-theme='wireframe'] .btn-link {
+  --btn-color: var(--color-base-content);
+}
+
+/* ── 运行日志筛选按钮：按日志类型语义着色（v26.10.20-v25，用户定版）───────
+   v23 全局灰胶囊只保证「非语义按钮一片灰」；日志筛选条的四类按钮要**任何
+   状态下都可从颜色辨认类别**：
+     未选中 = 透明底 + 语义色文字与边框（ghost 感，hover 给 15% 同色浅底）
+     选中   = 语义实底 + *-content 前景（hover 加深 7%）
+   ⚠️ 选中态不能指望模板的 checked:btn-info：那是 Tailwind 变体，产物里
+   落在 @layer utilities，被 v23 的 unlayered 灰字规则压着 —— 实测选中态
+   曾呈「灰底灰字」，故 --btn-bg/--btn-fg 都在这里自己写死（见下方 :checked）。
+   · 颜色全部取自主题变量（--color-info/…），日夜两套主题自动跟随；
+   · 走 --btn-* 内部变量（.btn 的 bg/border/color 都由它们推导），不改模板结构；
+   · [data-log-filter] 前缀 → 特异性压过 v23 的 :where() 全局规则与 v26 悬停遮罩；
+   · :not(:checked) 必须带 —— 否则会连选中态的实底一起透明掉；
+   · hover 必须自写 —— daisyUI .btn:hover 只重算 --btn-bg（依据 --btn-color），
+     特异性 (0,2,0) 低于本规则，(0,3,0) 下透明底按钮 hover 毫无反馈。 */
+[data-theme] [data-log-filter] .btn-log-info {
+  --btn-color: var(--color-info);
+  --znhd-chip-fg: var(--color-info-content);
+}
+[data-theme] [data-log-filter] .btn-log-success {
+  --btn-color: var(--color-success);
+  --znhd-chip-fg: var(--color-success-content);
+}
+[data-theme] [data-log-filter] .btn-log-warning {
+  --btn-color: var(--color-warning);
+  --znhd-chip-fg: var(--color-warning-content);
+}
+[data-theme] [data-log-filter] .btn-log-error {
+  --btn-color: var(--color-error);
+  --znhd-chip-fg: var(--color-error-content);
+}
+/* 选中态：语义实底。v23 的统一选中色 rgb(45,47,56) 对筛选钮不适用——
+   用户 v25 要求「任何状态下都可从颜色辨认类别」。⚠️ --btn-fg 必须自取
+   *-content：模板的 checked:btn-info 是 Tailwind 变体（产物里是
+   .checked\:btn-info:checked，且落在 @layer utilities），被上面 v23 的
+   unlayered 规则（--btn-fg: 207,207,208）压着，不自己写就是灰字灰底。 */
+[data-theme] [data-log-filter] :is(.btn-log-info, .btn-log-success, .btn-log-warning, .btn-log-error):checked {
+  --btn-bg: var(--btn-color);
+  --btn-border: color-mix(in oklab, var(--btn-color) 45%, transparent);
+  --btn-fg: var(--znhd-chip-fg);
+  color: var(--znhd-chip-fg);
+}
+/* 选中态 hover：按 daisyUI 语义钮同款加深 7%（不能落进全局 50 灰遮罩）。 */
+[data-theme] [data-log-filter] :is(.btn-log-info, .btn-log-success, .btn-log-warning, .btn-log-error):checked:hover {
+  --btn-bg: color-mix(in oklab, var(--btn-color), #000 7%);
+}
+[data-theme] [data-log-filter] :is(.btn-log-info, .btn-log-success, .btn-log-warning, .btn-log-error):not(:checked) {
+  --btn-bg: transparent;
+  --btn-border: color-mix(in oklab, var(--btn-color) 45%, transparent);
+  --btn-fg: var(--btn-color);
+  color: var(--btn-color);
+}
+[data-theme] [data-log-filter] :is(.btn-log-info, .btn-log-success, .btn-log-warning, .btn-log-error):not(:checked):hover {
+  --btn-bg: color-mix(in oklab, var(--btn-color) 15%, transparent);
 }
 
 /* ── 品牌蓝定版（v26.10.20-v7，用户指定 --znhd-brand）──────────────────────
