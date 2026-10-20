@@ -121,6 +121,54 @@ svg {
   --radius-field: 9999px;
 }
 
+/* ── 深色模式胶囊按钮配色（v26.10.20-v23，用户参考稿定版）────────────────
+   四色收敛为 :host 变量，改配色只动这四行：
+     边框 rgb(75,75,80) / 字色 rgb(207,207,208)
+     未选中底 rgb(24,24,24) / 选中底 rgb(45,47,56)
+   机制：daisyUI .btn 常态 bg = var(--btn-color, base-200)、border 走 --btn-border
+   变量；选中态（aria-pressed / aria-checked / :checked）bg、border 都从
+   --btn-color/--btn-bg 推导 → 覆写这几个内部变量即可，无需动模板。
+   只作用 business（夜间）；**必须排除语义变体**（btn-primary/error/… 自己声明
+   --btn-color，且选择器特异性不高于这里，不排除会把发送键/错误键染成灰色）；
+   ghost/outline/soft/dash 透明底变体保持透明底，不套用。 */
+:host {
+  --znhd-btn-border: rgb(75, 75, 80);
+  --znhd-btn-fg: rgb(207, 207, 208);
+  --znhd-btn-bg: rgb(24, 24, 24);
+  --znhd-btn-active: rgb(45, 47, 56);
+}
+[data-theme='business']
+  :where(
+    .btn:not(.btn-primary):not(.btn-neutral):not(.btn-info):not(.btn-success):not(.btn-warning):not(
+        .btn-error
+      ):not(.btn-secondary):not(.btn-ghost):not(.btn-outline):not(.btn-soft):not(.btn-dash):not(
+        .btn-link
+      ):not(.btn-text)
+  ) {
+  --btn-color: var(--znhd-btn-bg); /* 未选中底（bg 公式的兜底源） */
+  --btn-border: var(--znhd-btn-border);
+  --btn-fg: var(--znhd-btn-fg);
+}
+/* 选中态：无变体色的胶囊（如运行日志筛选条的「全部」）→ 底 rgb(45,47,56)，
+   边框维持未选中的 75,75,80（参考图选中/未选中边框同色）。
+   带语义变体的选中项（按类型着色的筛选项等）不在此列，保持各自语义色。 */
+/* 选中态：无彩色变体的胶囊（含 btn-neutral —— 它在本项目就是「激活」语义，
+   如日志筛选「全部」）→ 底精确 rgb(45,47,56)、边框维持 75,75,80（参考图选中/未选中
+   边框同色）。btn-error 等彩色语义变体的选中态不在此列，保持各自语义色
+   （它们走 daisyUI 的 color-mix 派生，混 5% 黑，视觉差异不可辨）。 */
+[data-theme='business']
+  .btn:is([aria-pressed='true'], [aria-checked='true'], :checked):not(.btn-primary):not(
+    .btn-info
+  ):not(.btn-success):not(.btn-warning):not(.btn-error) {
+  --btn-color: var(--znhd-btn-active);
+  --btn-bg: var(--znhd-btn-active);
+  --btn-border: var(--znhd-btn-border);
+}
+/* 未按下的 btn-neutral（聊天气泡图片操作钮）同样跟随选中色。 */
+[data-theme='business'] .btn-neutral {
+  --btn-color: var(--znhd-btn-active);
+}
+
 /* ── 品牌蓝定版（v26.10.20-v7，用户指定 --znhd-brand）──────────────────────
    1) 日间模式（wireframe）官方 primary 是灰阶 —— 按钮上的图标改用品牌蓝；
       夜间 business 不套用（保持官方配色）。只按主题作用域，不写死在模板里。
