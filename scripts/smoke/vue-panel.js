@@ -249,6 +249,12 @@ function serve() {
     await new Promise((r) => setTimeout(r, 1200));
 
     const base100Light = await probeOf('--color-base-100');
+    // v26.10.21-v9 回归守门：主题 primary 必须等于品牌蓝 --znhd-brand。
+    // v8 只覆写 :host 时，daisyUI 主题块的 [data-theme=cupcake] 分支直接命中 #app
+    // 声明官方薄荷绿（自身声明 > host 继承），探针读到薄荷绿而断言全绿 —— 探针恰好
+    // 也挂在 #app 里，两边同源自洽。此断言钉死实色，再覆写失效立刻红。
+    const brandPrimary = await probeOf('--color-primary');
+    report.checks.primaryIsBrand = brandPrimary === 'rgb(66, 133, 244)';
     // 守门：Tailwind v4 的 @property 在 shadowRoot 内不生效（Chromium 只处理文档级），
     // main.ts 用 CSS.registerProperty 重新注册 —— 这里验证 --tw-border-style 真有初值，
     // 否则 shadow DOM 里所有 border-* 工具类会静默退化成 0px（v26.10.19 实测踩过）。

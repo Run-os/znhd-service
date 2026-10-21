@@ -19,13 +19,19 @@
   exclude: rootscrollgutter;
 }
 
-/* ── cupcake 主题 primary 定制（v26.10.21-v8，用户定版）────────────────────
+/* ── cupcake 主题 primary 定制（v26.10.21-v8；v9 修复不生效）────────────────
    cupcake 官方 primary ≈ rgb(68,235,211) 薄荷绿，换成品牌蓝 --znhd-brand。
-   daisyUI 把主题变量挂在 :host（root: ':host'）且落在 cascade layer 内；
-   本条 unlayered 规则同名属性后来者居上（unlayered 也不输 layer），直接生效。
+   ⚠️ 选择器必须三路齐全：
+   · :host —— daisyUI 主题块的 :where(:host) 分支命中影子树宿主（导航条树无 data-theme，全靠它）；
+   · [data-theme='cupcake'] —— initTheme 把 data-theme 写在影子树内部的 #app 上，
+     daisyUI 主题块的 [data-theme=cupcake] 分支会**直接命中 #app** 声明官方薄荷绿；
+     元素自身声明永远压过从 host 继承的值（与 layer 无关），v8 只覆写 :host
+     导致面板内容仍是薄荷绿 —— 必须同位覆写（unlayered (0,1,0) 胜 layer (0,1,0)）；
+   · :root —— 兜底常规文档场景。
    primary-content 同步改白：官方配薄荷绿用的是深色前景，压在蓝底上对比度不够。 */
 :root,
-:host {
+:host,
+[data-theme='cupcake'] {
   --color-primary: var(--znhd-brand);
   --color-primary-content: #ffffff;
 }
