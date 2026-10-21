@@ -2,8 +2,10 @@
  * 手机端聊天窗（web/ → relay-server/public）的端到端测试。
  *
  * v26.10.12-v5：手机页从「上传到电脑」双卡片页重构为**聊天窗**（对齐脚本端第三栏，
- * 微信暗色气泡 + 底部输入区）。本文件随之重写：不再断言卡片排版，改为断言
+ * 气泡 + 底部输入区）。本文件随之重写：不再断言卡片排版，改为断言
  * 「发出去的进右侧绿气泡、电脑发来的进左侧灰气泡、预览/打印共享链路不回退」。
+ * v26.10.21-v1：客户端样式同步脚本端（business 暗色 + 微信绿 → cupcake 浅色 + 品牌蓝
+ * primary + 我方气泡绿），窗口底色断言从纯黑改为 base-100、气泡绿断言改为 rgb(53,210,141)。
  *
  * v26.10.13-v3：新增三组断言（对应本次需求）——
  *   ① **输入区吸底**（`composerPinnedOk`）：antd `<AntApp>` 会渲染一个没有高度的
@@ -220,8 +222,17 @@ async function main() {
             attachBtn: !!document.querySelector('.znhd-phone-chat summary[aria-label="添加图片或文件"]'),
             sendBtn: !!document.querySelector('.znhd-phone-chat button[aria-label="发送"]'),
             bg: (function () {
-                const el = document.querySelector('.znhd-phone-chat [data-slot="card-content"]');
-                return el ? getComputedStyle(el).backgroundColor : '';
+                // v26.10.21-v1 起底色画在 card 根节点（card-content 透明）
+                const el = document.querySelector('.znhd-phone-chat [data-slot="card"]');
+                // 判据 = 与主题 base-100 同色（对齐脚本端传输助手 modal-box），
+                // 不硬编码 rgb：cupcake 的 base-100 是 oklch，浏览器换算值随实现微调
+                const probe = document.createElement('div');
+                probe.className = 'bg-base-100';
+                probe.style.display = 'none';
+                document.body.appendChild(probe);
+                const expected = getComputedStyle(probe).backgroundColor;
+                probe.remove();
+                return el ? getComputedStyle(el).backgroundColor + '|' + expected : '';
             })(),
         }));
         check(
@@ -235,8 +246,11 @@ async function main() {
                 skeleton.attachBtn &&
                 skeleton.sendBtn
         );
-        // v26.10.19-v3 起手机页窗口底色改纯黑（对齐脚本端 v26.10.18-v9），旧判据 #1E1E1E 已过时
-        check('整页纯黑底（rgb(0,0,0)，对齐脚本端传输助手窗口）', skeleton.bg === 'rgb(0, 0, 0)');
+        // v26.10.21-v1 样式同步脚本端：窗口底色 = base-100（此前 v26.10.19-v3~v26.10.20-v21 是纯黑窗体）
+        check('窗口底色 = 主题 base-100（对齐脚本端传输助手窗口）', (function (v) {
+            const parts = v.split('|');
+            return parts.length === 2 && parts[0] === parts[1] && parts[0] !== '';
+        })(skeleton.bg));
 
         // ①-B 输入区吸底（v26.10.13-v3 回归判据；v26.10.18-v7 换 Vue 后那层包裹已不存在，判据仍有效）：当年 antd <AntApp> 的 div.ant-app 包裹层
         //     没有高度，height:100% 会断链 ⇒ 整页内容高度、输入区悬在视口中间。
@@ -328,7 +342,7 @@ async function main() {
             );
         }
 
-        // ③ 发文本：输入 → Enter → 右侧文本气泡（chat-bubble-primary = 微信绿）
+        // ③ 发文本：输入 → Enter → 右侧文本气泡（chat-bubble-primary = 我方气泡绿）
         await page.type('.znhd-phone-chat textarea', '冒烟聊天文本：手机到电脑');
         await page.keyboard.press('Enter');
         await page.waitForFunction(
@@ -346,8 +360,8 @@ async function main() {
             return { bg: c ? getComputedStyle(c).backgroundColor : '', left: ta ? ta.value : '?' };
         });
         check(
-            'Enter 发送的文本进右侧气泡：微信绿 #07C160，且输入框同时清空',
-            textBubble.bg === 'rgb(7, 193, 96)' && textBubble.left === ''
+            'Enter 发送的文本进右侧气泡：我方气泡绿 rgb(53,210,141)，且输入框同时清空',
+            textBubble.bg === 'rgb(53, 210, 141)' && textBubble.left === ''
         );
 
         // ③b 上传带 phoneId（v26.10.13-v3 起）：App 自己发的每一条（上传图 / 文本）经真中继

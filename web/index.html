@@ -3,15 +3,16 @@
     <head>
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-        <meta name="color-scheme" content="dark" />
+        <meta name="color-scheme" content="light" />
         <title>传输助手</title>
         <!-- 内联首屏占位：Vue 挂载前也能立刻看到反馈（避免白屏等待）。
-             v26.10.18-v7：框架从 React+antd 换成 Vue 3，占位逻辑不变（仍是挂载后由 main.ts 摘掉 #boot）。 -->
+             v26.10.18-v7：框架从 React+antd 换成 Vue 3，占位逻辑不变（仍是挂载后由 main.ts 摘掉 #boot）。
+             v26.10.21-v1：样式同步脚本端（cupcake 浅色 + 品牌蓝），占位配色随之换。 -->
         <style>
             html,
             body {
                 margin: 0;
-                background: #1e1e1e;
+                background: #faf7f5;
             }
             #boot {
                 display: flex;
@@ -19,14 +20,14 @@
                 align-items: center;
                 justify-content: center;
                 gap: 8px;
-                color: #07c160;
+                color: rgb(66, 133, 244);
                 font: 14px -apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif;
             }
             #boot i {
                 width: 14px;
                 height: 14px;
-                border: 2px solid #2f4a3e;
-                border-top-color: #07c160;
+                border: 2px solid #d4d0cf;
+                border-top-color: rgb(66, 133, 244);
                 border-radius: 50%;
                 animation: bootSpin 0.8s linear infinite;
             }

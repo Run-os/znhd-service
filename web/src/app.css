@@ -1,18 +1,18 @@
 /* 手机端聊天窗（v26.10.18-v8）：整页与脚本端传输助手同一套 chat 布局。
-   配色分两层：
-   · **窗口分层色**（纯黑聊天窗 / 骨架底 / 居中层 / 细描边）来自 `style.css` 里
-     `@theme` 的 --color-znhd-* token（v26.10.20-v21 收敛，此前 hex 散落在本文件与 App.vue）；
-   · 卡片 / 气泡 / 输入区全部交给官方组件（Card / ChatBubble / ChatComposer），取 daisyUI 语义色。
+   配色（v26.10.21-v1 客户端样式同步脚本端）：不再有客户端专用的暗色分层 token
+   （--color-znhd-* 已删），窗口/骨架/居中层全部取 daisyUI 语义色（base-100/300），
+   与脚本端传输助手窗口（modal-box = base-100 + base-300 描边）同源。
+   卡片 / 气泡 / 输入区全部交给官方组件（Card / ChatBubble / ChatComposer）。
    本文件只保留**骨架与弹窗定位**。 */
 :root {
-    color-scheme: dark;
+    color-scheme: light;
 }
 
 html,
 body {
     margin: 0;
     padding: 0;
-    background: var(--color-znhd-shell);
+    background: var(--color-base-100);
 }
 
 #root {
@@ -39,7 +39,7 @@ body {
     height: var(--znhd-shell-h, 100dvh);
     display: flex;
     flex-direction: column;
-    background: var(--color-znhd-shell);
+    background: var(--color-base-100); /* 手机全屏：整页与窗口同色（脚本端窗口 = base-100） */
     color: var(--color-base-content);
     font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Segoe UI', sans-serif;
 }
@@ -61,7 +61,7 @@ body {
     justify-content: center;
     padding: 24px;
     box-sizing: border-box;
-    background: var(--color-znhd-layer); /* 比聊天窗更深一档，让弹窗的描边/投影有对比 */
+    background: var(--color-base-300); /* 比窗口深一档的主题灰，让弹窗的圆角/投影有对比 */
 }
 
 .znhd-phone-chat.znhd-chat-window {

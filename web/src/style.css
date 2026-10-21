@@ -17,38 +17,32 @@
 @source '../../src-vue/transfer';
 
 /**
- * daisyUI 主题：客户端是「微信暗色聊天窗」的复刻，固定暗色 business，
- * 不像脚本端那样带日/夜切换。主色覆盖为微信绿（#07C160）：
+ * daisyUI 主题（v26.10.21-v1 客户端样式同步脚本端）：与脚本端 `src-vue/style.css`
+ * 同为 cupcake（浅色），primary 同步覆写为品牌蓝 --znhd-brand。
+ * 为什么不能只 import 脚本端那份：脚本端样式挂在 shadow DOM（`root: ':host'`），
+ * 客户端是独立页面走 :root，两份主题声明必须各自维护、保持同值 —— 改配色两边一起动。
  * ChatBubble 的 `chat-bubble-primary` / ChatComposer 的 `btn-primary` / 进度条
- * `progress-primary` 都取 --color-primary，冒烟断言文本气泡底色 rgb(7,193,96)。
+ * `progress-primary` 都取 --color-primary。
  * `exclude: rootscrollgutter`：整页骨架 position:fixed，不需要滚动条占位。
  */
 @plugin 'daisyui' {
-    themes: business --default;
+    themes: cupcake --default;
     exclude: rootscrollgutter;
 }
 
-@plugin 'daisyui/theme' {
-    name: 'business';
-    default: true;
-    --color-primary: #07c160;
+/* primary 覆写（与脚本端 v26.10.21-v8/v9 同款，选择器含 [data-theme] 防「元素自身
+   声明压过 :root 继承」的坑）：cupcake 官方 primary 是薄荷绿，统一换成品牌蓝。 */
+:root {
+    --znhd-brand: rgb(66, 133, 244); /* 品牌蓝（脚本端 --znhd-brand 同值，v8 定版） */
+    --znhd-bubble-mine: rgb(53, 210, 141); /* 我方气泡绿（脚本端 --znhd-bubble-mine 同值，v11 定版） */
+    --color-primary: var(--znhd-brand);
     --color-primary-content: #ffffff;
 }
 
-/**
- * 微信暗色窗口的**分层色板**（客户端专用 token，v26.10.20-v21 收敛）。
- *
- * 微信 PC 的文件传输助手是「纯黑聊天窗 + 深一档的桌面层 + 极细描边」三层，
- * daisyUI 的 base-100/200/300 给不出这组值（business 的 base-100 是深灰不是纯黑），
- * 所以这里补一组 `--color-znhd-*`：`@theme` 里的 `--color-*` 会同时生成
- * `bg-znhd-*` / `ring-znhd-*` / `border-znhd-*` 等工具类，模板与 app.css 都引它。
- * 改配色只动这几行（此前 hex 散落在 App.vue 与 app.css 里）。
- */
-@theme {
-    --color-znhd-chat: #000000; /* 聊天窗底色（微信纯黑；冒烟断言 rgb(0,0,0)） */
-    --color-znhd-shell: #1e1e1e; /* 全屏骨架底色（手机端可见） */
-    --color-znhd-layer: #141414; /* 桌面版居中层底色（比聊天窗深一档，让描边有对比） */
-    --color-znhd-hairline: #222222; /* 窗口细描边（rgb(34,34,34)） */
+/* 我方气泡绿（与脚本端 style.css 同名规则同值）：chat-bubble-primary 官方取
+   --color-primary（现在是品牌蓝），两端用户定版都是绿底黑字，覆写保持一致。 */
+.chat-bubble-primary {
+    background-color: var(--znhd-bubble-mine);
 }
 
 /**

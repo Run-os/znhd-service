@@ -24,7 +24,7 @@ import { groupTurns } from '@vue/transfer/turns';
 /**
  * 手机端聊天窗（v26.10.20-v14 客户端 daisyUI 化）—— **与脚本端传输助手同一套结构**：
  *
- *   div[data-slot=card]（纯黑窗体，桌面弹窗加圆角 + rgb(34,34,34) 描边）
+ *   div[data-slot=card]（base-100 窗体，桌面弹窗加圆角 + 投影；v26.10.21-v1 样式同步脚本端）
  *     ├─ div[data-slot=card-header]   标题 + 版本徽标 + 圆形动作钮（daisyUI btn-ghost + tooltip）
  *     ├─ div[data-slot=card-content]  普通滚动容器（脚本端 v26.10.19-v4 同款，message-scroller 已移除，
  *     │                               仅保留 data-slot 钩子供冒烟定位）
@@ -105,15 +105,13 @@ const layoutMode = useLayoutMode();
 const isPhone = computed(() => layoutMode.value === 'phone');
 const rootClass = computed(() => (isPhone.value ? '' : 'znhd-window-layer'));
 const shellClass = computed(() => (isPhone.value ? 'znhd-phone-chat' : 'znhd-phone-chat znhd-chat-window'));
-/** 手机全屏时窗口贴边（无圆角无描边）；桌面弹窗时圆角 + 细描边
- *  （v26.10.19-v3 与脚本端 v26.10.18-v9 对齐：窗口底色纯黑）。
- *  底色/描边取 `@theme` 的 `--color-znhd-*` token（v21）：`bg-znhd-chat` = #000
- *  —— 冒烟「整页纯黑底 rgb(0,0,0)」断言的就是它，别换成 `bg-base-100`
- *  （business 的 base-100 是深灰 oklch(24%)，会把纯黑风改成灰窗）。 */
+/** 手机全屏时窗口贴边（无圆角无描边）；桌面弹窗时圆角 + 投影
+ *  （v26.10.21-v1 样式同步脚本端：窗口底色 = 主题 base-100，与脚本端传输助手
+ *  modal-box 同源；此前的纯黑窗体 --color-znhd-* token 已随暗色主题一起删除）。 */
 const cardClass = computed(() =>
     isPhone.value
-        ? 'flex min-h-0 w-full flex-1 flex-col gap-0 overflow-hidden rounded-none bg-znhd-chat'
-        : 'flex min-h-0 w-full flex-1 flex-col gap-0 overflow-hidden rounded-xl bg-znhd-chat ring-1 ring-znhd-hairline'
+        ? 'flex min-h-0 w-full flex-1 flex-col gap-0 overflow-hidden rounded-none bg-base-100'
+        : 'flex min-h-0 w-full flex-1 flex-col gap-0 overflow-hidden rounded-xl bg-base-100 shadow-2xl'
 );
 
 // ===== 消息滚动容器（普通 overflow 容器，脚本端 v26.10.19-v4 同款）=====
@@ -460,7 +458,7 @@ const footerHint = computed(() => {
                 </div>
 
                 <!-- ===== 消息区：普通滚动容器（脚本端 v26.10.19-v4 同款） ===== -->
-                <div data-slot="card-content" class="min-h-0 flex-1 overflow-hidden bg-black p-0">
+                <div data-slot="card-content" class="min-h-0 flex-1 overflow-hidden p-0">
                     <div
                         ref="scroller"
                         data-slot="message-scroller"

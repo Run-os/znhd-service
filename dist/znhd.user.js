@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         征纳互动人数和在线监控v2
 // @namespace    https://scriptcat.org/
-// @version      26.10.21-v9
+// @version      26.10.21-v10
 // @author       runos
 // @description  实时监控征纳互动等待人数和在线状态，支持语音播报、自定义常用语
 // @license      MIT
@@ -5162,13 +5162,13 @@ shouldStop: () => runId !== id
     return state2;
   }
   const MD_PEER = {
-    codeBg: "rgba(255,255,255,0.08)",
-    link: "#5FD08A",
-    line: "rgba(255,255,255,0.16)",
-    quote: "rgba(255,255,255,0.3)",
-    text: "rgba(255,255,255,0.9)",
-    strong: "#ffffff",
-    head: "rgba(255,255,255,0.9)"
+    codeBg: "rgba(0,0,0,0.06)",
+    link: "var(--color-primary)",
+    line: "rgba(0,0,0,0.15)",
+    quote: "rgba(0,0,0,0.4)",
+    text: "rgba(0,0,0,0.85)",
+    strong: "#000000",
+    head: "#000000"
   };
   const MD_MINE = {
     codeBg: "rgba(0,0,0,0.12)",

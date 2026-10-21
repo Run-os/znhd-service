@@ -28,18 +28,22 @@ interface MdPalette {
     head: string;
 }
 
-/** 对方气泡（#2F2F2F 实心灰）：浅灰底 + 微信绿链接 */
+/**
+ * 对方气泡调色板（v26.10.21-v1 改浅色）：两端主题已统一 cupcake 浅色，
+ * 对方气泡 = base-200 浅灰，文字必须深色（此前暗色时代的白字在浅底上不可读）。
+ * 链接走 --color-primary（两端都已覆写为品牌蓝），跟随主题不写死。
+ */
 export const MD_PEER: MdPalette = {
-    codeBg: 'rgba(255,255,255,0.08)',
-    link: '#5FD08A',
-    line: 'rgba(255,255,255,0.16)',
-    quote: 'rgba(255,255,255,0.3)',
-    text: 'rgba(255,255,255,0.9)',
-    strong: '#ffffff',
-    head: 'rgba(255,255,255,0.9)',
+    codeBg: 'rgba(0,0,0,0.06)',
+    link: 'var(--color-primary)',
+    line: 'rgba(0,0,0,0.15)',
+    quote: 'rgba(0,0,0,0.4)',
+    text: 'rgba(0,0,0,0.85)',
+    strong: '#000000',
+    head: '#000000',
 };
 
-/** 我方气泡（微信绿实心）：v26.10.18-v9 起按用户要求一律黑字（半透明黑做底纹，避免「绿字压绿底」） */
+/** 我方气泡（绿实心 --znhd-bubble-mine，两端同值）：黑字（绿底深字可读） */
 export const MD_MINE: MdPalette = {
     codeBg: 'rgba(0,0,0,0.12)',
     link: '#000000',
