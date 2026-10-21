@@ -36,6 +36,8 @@ const emit = defineEmits<{
     changeUseCdn: [boolean];
     changeSniffPreMeasure: [boolean];
     openChangelog: [];
+    /** v26.10.21-v5：主面板已删，「查看日志」迁到这里（打开运行日志弹窗，叠加显示） */
+    openLog: [];
 }>();
 
 const wh = computed<WorkingHours>(
@@ -70,6 +72,7 @@ const UPDATE_URL = (GM_info.scriptUpdateURL || GM_info.script.updateURL) as stri
         <div class="flex flex-wrap items-center gap-2">
             <a class="btn btn-outline btn-sm" :href="HOMEPAGE_URL" target="_blank" rel="noreferrer">脚本主页</a>
             <a class="btn btn-outline btn-sm" :href="UPDATE_URL" target="_blank" rel="noreferrer">更新脚本</a>
+            <button class="btn btn-outline btn-sm" @click="emit('openLog')">运行日志</button>
             <button class="btn btn-outline btn-sm" @click="emit('openChangelog')">更新日志</button>
         </div>
 

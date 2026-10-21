@@ -1,10 +1,9 @@
 @import 'tailwindcss';
 
 /*
- * daisyUI 官方主题（2026-10-19 迁移）。
+ * daisyUI 官方主题（2026-10-19 迁移；v26.10.21-v5 起只保留日间 wireframe，夜间已删）。
  *
  *   wireframe ← 日间（默认；线框风，无品牌主色）
- *   business  ← 夜间（深灰底 + 暗蓝主色）
  *
  * `root: ':host'` 是硬要求：这份 CSS 由 main.ts 以 ?inline 取字符串、注入 shadowRoot，
  * daisyUI 默认把主题变量挂在 `:root`，而影子树里没有 :root，只有宿主 → 必须显式改挂 :host，
@@ -14,7 +13,7 @@
  * 宿主是第三方税务页，加了会让页面横向抖动，必须排除。
  */
 @plugin 'daisyui' {
-  themes: wireframe --default, business --prefersdark;
+  themes: wireframe --default;
   root: ':host';
   exclude: rootscrollgutter;
 }
@@ -35,21 +34,6 @@
 *::before,
 *::after {
   box-sizing: border-box;
-}
-
-/* 面板入口按钮：宽度足够才显示文字（原 MainPanel.tsx 的 PANEL_CSS 等价实现）。
-   ⚠️ 文字用 display:none 隐藏而非条件渲染 —— 冒烟按 textContent 找按钮，
-   同时它也是纯图标态的可访问名。阈值 65px 的推导见原 MainPanel 注释。 */
-.znhd-panel-btn {
-  container-type: inline-size;
-}
-.znhd-panel-btn-text {
-  display: none;
-}
-@container (min-width: 65px) {
-  .znhd-panel-btn-text {
-    display: inline;
-  }
 }
 
 /* 滚动条：细圆角条，颜色随主题（夜间白条 / 日间黑条）
@@ -121,93 +105,12 @@ svg {
   --radius-field: 9999px;
 }
 
-/* ── 深色模式胶囊按钮配色（v26.10.20-v23，用户参考稿定版）────────────────
-   五色收敛为 :host 变量，改配色只动这几行：
-     边框 rgb(75,75,80) / 字色 rgb(207,207,208)
-     未选中底 rgb(24,24,24) / 选中底 rgb(45,47,56)
-     悬停遮罩 rgb(50,50,50)（v25 追加，见下方 .btn:hover 规则）
-   机制：daisyUI .btn 常态 bg = var(--btn-color, base-200)、border 走 --btn-border
-   变量；选中态（aria-pressed / aria-checked / :checked）bg、border 都从
-   --btn-color/--btn-bg 推导 → 覆写这几个内部变量即可，无需动模板。
-   只作用 business（夜间）；**必须排除语义变体**（btn-primary/error/… 自己声明
-   --btn-color，且选择器特异性不高于这里，不排除会把发送键/错误键染成灰色）；
-   ghost/outline/soft/dash 透明底变体保持透明底，不套用。 */
-:host {
-  --znhd-btn-border: rgb(75, 75, 80);
-  --znhd-btn-fg: rgb(207, 207, 208);
-  --znhd-btn-bg: rgb(24, 24, 24);
-  --znhd-btn-active: rgb(45, 47, 56);
-  --znhd-btn-hover-bg: rgb(50, 50, 50);
-}
-[data-theme='business']
-  :where(
-    .btn:not(.btn-primary):not(.btn-neutral):not(.btn-info):not(.btn-success):not(.btn-warning):not(
-        .btn-error
-      ):not(.btn-secondary):not(.btn-ghost):not(.btn-outline):not(.btn-soft):not(.btn-dash):not(
-        .btn-link
-      ):not(.btn-text)
-  ) {
-  --btn-color: var(--znhd-btn-bg); /* 未选中底（bg 公式的兜底源） */
-  --btn-border: var(--znhd-btn-border);
-  --btn-fg: var(--znhd-btn-fg);
-}
-/* 选中态：所有勾选/按下的胶囊（含 btn-neutral）→ 底精确 rgb(45,47,56)、边框
-   维持 75,75,80（参考图选中/未选中边框同色）。
-   ⚠️ 类型筛选钮必须排除：它们的语义色由 v25 的 [data-log-filter] 规则负责
-   （四色定版时期的「统一选中底色」已被 v25 要求取代 —— 按钮要按日志类型
-   上色）。排除用 .btn-log-* 而不是 :not(.btn-info)：模板上 checked:btn-info
-   是 Tailwind 变体写法，class 列表里没有字面 .btn-info，拦不住。
-   btn-primary / btn-error 等**实体语义变体**仍排除（发送键/清空键保语义色）。 */
-[data-theme='business']
-  .btn:is([aria-pressed='true'], [aria-checked='true'], :checked):not(.btn-primary):not(
-    .btn-info
-  ):not(.btn-success):not(.btn-warning):not(.btn-error):not(.btn-log-info):not(.btn-log-success):not(
-    .btn-log-warning
-  ):not(.btn-log-error) {
-  --btn-color: var(--znhd-btn-active);
-  --btn-bg: var(--znhd-btn-active);
-  --btn-border: var(--znhd-btn-border);
-}
-/* 未按下的 btn-neutral（聊天气泡图片操作钮）同样跟随选中色。 */
-[data-theme='business'] .btn-neutral {
-  --btn-color: var(--znhd-btn-active);
-}
-
-/* ── 深色模式悬停遮罩（v26.10.20-v25，用户定版 rgb(50,50,50)）─────────────
-   现象：业务主题 business 的 base-200 ≈ rgb(28,28,28)，daisyUI 的 .btn:hover
-   只按 --btn-color 混 7% 黑 → ghost 圆形 hover 底、灰胶囊 hover 底都沉成近黑，
-   深底上看不出「悬停了」。要整片换成 rgb(50,50,50) 的亮一档遮罩。
-   一键改：只动 :host 的 --znhd-btn-hover-bg（上面第 5 行），本规则不用改。
-   机制：hover 直接钉 --btn-bg，压过 daisyUI 的 color-mix 公式（本规则 unlayered，
-   与 .btn:hover 同为 (0,2,0) 也赢 layer 内的 daisyUI）。
-   · 只作用 business —— 浅色 wireframe 的 hover 保持官方；
-   · 覆盖三类：① v23 灰胶囊家族（:not 排除名单**必须与 v23 逐字一致**，漏一个
-     就把发送键/清空键 hover 染灰）② ghost/outline/soft/dash/link/text 透明底
-     变体（用户看到的 28 就是 ghost 圆形底）③ 无彩的 btn-neutral；
-   · 彩色语义实底钮（primary/info/success/warning/error、选中态筛选 chip）
-     不套用 —— 色相即身份，hover 仍走 daisyUI 同色加深；
-   · 只写 :hover，不碰 --btn-fg / *-content（文字图标色不动 → 50 底上可读性
-     不受影响），移开鼠标常态底立即恢复，无残留。 */
-[data-theme='business']
-  :where(
-    .btn:not(.btn-primary):not(.btn-neutral):not(.btn-info):not(.btn-success):not(.btn-warning):not(
-        .btn-error
-      ):not(.btn-secondary):not(.btn-ghost):not(.btn-outline):not(.btn-soft):not(.btn-dash):not(
-        .btn-link
-      ):not(.btn-text)
-  ):hover,
-[data-theme='business']
-  :where(.btn-ghost, .btn-outline, .btn-soft, .btn-dash, .btn-link, .btn-text):hover,
-[data-theme='business'] .btn-neutral:hover {
-  --btn-bg: var(--znhd-btn-hover-bg);
-}
-
 /* ── 浅色模式 link 按钮文字定黑（v26.10.20-v25，用户反馈）─────────────────
    daisyUI .btn-link 的 color 回落 `var(--btn-color, var(--color-primary))`，
-   而 wireframe 的 primary = oklch(87%) 浅灰 → 白底上「查看日志 →」「项目主页」
-   「嗅探展开/收起」等纯链接钮文字几乎不可读（实测 ≈ rgb(216,212,212)）。
-   日间一律把 --btn-color 回落成 base-content（oklch(20%)，黑）；
-   夜间 business 的 primary 是暗蓝、可读，**不套用**，保持官方链接色。 */
+   而 wireframe 的 primary = oklch(87%) 浅灰 → 白底上「项目主页」「嗅探展开/收起」
+   等纯链接钮文字几乎不可读（实测 ≈ rgb(216,212,212)）。
+   一律把 --btn-color 回落成 base-content（oklch(20%)，黑）。
+   （v26.10.21-v5 起恒为 wireframe，夜间 business 分支已随夜间模式删除。） */
 [data-theme='wireframe'] .btn-link {
   --btn-color: var(--color-base-content);
 }

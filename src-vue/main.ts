@@ -4,10 +4,9 @@ import css from './style.css?inline';
 import { SHADOW_ROOT_KEY, setShadowRoot } from './lib/shadow';
 import { initTheme } from './lib/theme';
 import { PANEL_HOST_ID } from '@/lib/ui/panelIds';
-import { initialPanelPoint } from './panel/geometry';
 
 /**
- * 面板宿主 + ShadowDOM 挂载（约束文档「入口固定范式」）：
+ * 弹窗宿主 + ShadowDOM 挂载（约束文档「入口固定范式」）：
  *   host（fixed，z-index 999999，挂 documentElement）
  *     └─ #shadow-root (mode: open)
  *          ├─ <style>  ← Tailwind 产物（?inline 字符串）
@@ -15,6 +14,8 @@ import { initialPanelPoint } from './panel/geometry';
  *
  * 为什么挂 documentElement 而不是 body：税务页 body 常带 transform/filter，
  * 会形成独立层叠上下文，把 position:fixed 的浮层困在里面（沿用 panelHost.tsx 的结论）。
+ * v26.10.21-v5 起主面板已删，可见 UI 在站点导航条（navBarMount.ts）——这里只剩
+ * 弹窗宿主（AppDialog = 原生 dialog top layer），不再需要拖拽坐标/定位逻辑。
  */
 /**
  * Tailwind v4 用 `@property` 给 --tw-* 工具类变量提供初值（如 --tw-border-style: solid）。
@@ -75,9 +76,6 @@ export function mountPanel(): HTMLElement {
     ] as const) {
         host.style.setProperty(k, v, 'important');
     }
-    const pt = initialPanelPoint();
-    host.style.left = Math.round(pt.x) + 'px';
-    host.style.top = Math.round(pt.y) + 'px';
     document.documentElement.appendChild(host);
 
     const shadowRoot = host.attachShadow({ mode: 'open' });
@@ -101,10 +99,10 @@ export function mountPanel(): HTMLElement {
 
     // 主题：daisyUI 的 `[data-theme=...]` 选择器只在**影子树内部**生效
     //（`:host` 是跨边界的伪类，普通属性选择器选不到宿主），因此挂载点是 #app 而不是 host。
-    // 首帧前完成，避免日→夜闪一下。
+    // v26.10.21-v5 起恒为日间 wireframe（夜间模式已删）。
     initTheme(appContainer);
 
-    app = createApp({ render: () => h(App, { host }) });
+    app = createApp({ render: () => h(App) });
     app.provide(SHADOW_ROOT_KEY, shadowRoot);
     app.mount(appContainer);
 

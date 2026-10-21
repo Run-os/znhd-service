@@ -162,12 +162,15 @@ localStorage.setItem('scriptCat_PhrasesCache', JSON.stringify({
     <a style="color:#fff;padding:0 12px;">业务管理</a>
   </div>
 </div>
-<!-- 图片嗅探夹具：两张 > 20KB（应出现在结果里）、一张 2KB（应被阈值过滤）、一张 .svg（应被后缀规则排除） -->
+<!-- 图片嗅探夹具：两张 > 20KB（应出现在结果里）、一张 2KB（应被阈值过滤）、一张 .svg（应被后缀规则排除）
+     + 一张跨域图（perf 档拿不到跨域字节数 + GM 桩 HEAD 失败 ⇒ 落「大小未知」档；
+     v26.10.21-v5 前这个角色由主面板标题栏的品牌图 favicon.ico 扮演，面板删除后改为夹具直供） -->
 <div id="host-images">
   <img src="/img/photo-a.jpg" alt="photo-a.jpg" width="240" height="160">
   <img src="/img/photo-b.jpg" alt="photo-b.jpg" width="240" height="160">
   <img src="/img/tiny.jpg" alt="tiny.jpg" width="60" height="60">
   <img src="/img/icon-set.svg" alt="icon-set.svg" width="24" height="24">
+  <img src="https://znhd.hunan.chinatax.gov.cn:8443/favicon.ico" alt="favicon.ico" width="16" height="16">
 </div><script src="/znhd.user.js"></script></body></html>`;
 
 function serve() {
@@ -246,14 +249,19 @@ function serve() {
     await new Promise((r) => setTimeout(r, 1200));
 
     const base100Light = await probeOf('--color-base-100');
-    const accentLight = await probeOf('--color-accent');
     // 守门：Tailwind v4 的 @property 在 shadowRoot 内不生效（Chromium 只处理文档级），
     // main.ts 用 CSS.registerProperty 重新注册 —— 这里验证 --tw-border-style 真有初值，
     // 否则 shadow DOM 里所有 border-* 工具类会静默退化成 0px（v26.10.19 实测踩过）。
+    // v26.10.21-v5 面板壳已删：临时塞一个带 border 类的探针元素来量。
     report.checks.twPropsRegistered = await page.evaluate(() => {
         const sr = document.getElementById('__znhd_panel_host__').shadowRoot;
-        const shell = sr.querySelector('.rounded-2xl.border-base-300');
-        return !!shell && getComputedStyle(shell).getPropertyValue('--tw-border-style') === 'solid';
+        const app = sr.querySelector('#app');
+        const probe = document.createElement('div');
+        probe.className = 'border border-base-300';
+        app.appendChild(probe);
+        const ok = getComputedStyle(probe).getPropertyValue('--tw-border-style') === 'solid';
+        probe.remove();
+        return ok;
     });
 
     const panel = await page.evaluate(() => {
@@ -269,17 +277,14 @@ function serve() {
     });
     // toast 容器（[data-znhd="toast"]）由 lib/toast.ts 首次弹出时才挂载，不属于挂载判定
     report.checks.panelMounted = panel.host && panel.shadow && panel.styleInjected;
-    // v26.10.21-v4：语音开关 + 4 入口迁到导航条 ⇒ 面板正文不应再出现「语音播报」
-    report.checks.panelTextOk =
-        panel.text.includes('征纳互动监控') &&
-        panel.text.includes('查看日志') &&
-        !panel.text.includes('语音播报');
-    report.checks.versionOk = panel.text.includes('v' + SCRIPT_VERSION);
+    // v26.10.21-v5：主面板已删 —— 面板宿主常态无可见文本（只剩关闭态弹窗）；
+    // 版本徽标迁到导航条（见下方 nav.versionText）。
+    report.checks.panelTextOk = panel.text.trim() === '';
     report.panel = panel;
 
     await page.screenshot({ path: path.join(os.tmpdir(), 'znhd-vue-panel.png') });
 
-    // ---------- 标题栏注入控件（v26.10.21-v4）：挂载 / 按钮清单 / 语音开关接力 ----------
+    // ---------- 标题栏注入控件（v26.10.21-v4/v5）：挂载 / 按钮清单 / 语音开关接力 / 版本 ----------
     const nav = await page.evaluate(() => {
         const host = document.getElementById('__znhd_nav_host__');
         const sr = host && host.shadowRoot;
@@ -297,6 +302,12 @@ function serve() {
             btnTitles: [...sr.querySelectorAll('button[title]')].map((b) => b.title),
             hasVoiceBox: !!box,
             voiceChecked: !!(box && box.checked),
+            // v26.10.21-v5：版本徽标迁到导航条（原主面板标题栏已删）
+            versionText: (sr.querySelector('#app') || sr).innerText.replace(/\s+/g, ' ').trim(),
+            // 分割线：业务管理右侧、语音|按钮、按钮|版本号（共 3 条，w=1px）
+            dividers: [...sr.querySelectorAll('#app span')].filter(
+                (n) => Math.round(n.getBoundingClientRect().width) === 1
+            ).length,
         };
     });
     report.nav = nav;
@@ -304,6 +315,8 @@ function serve() {
     report.checks.navButtonsOk =
         JSON.stringify(nav.btnTitles) === JSON.stringify(['设置', '常用语', '传输助手', '图片嗅探']) &&
         nav.hasVoiceBox;
+    report.checks.versionOk = nav.versionText.includes('v' + SCRIPT_VERSION);
+    report.checks.navDividersOk = nav.dividers === 3;
 
     // 语音开关接力：标题栏点开关 → 总线回调 toggleVoice → allvalue → 状态回流勾选框。
     // 默认 voiceEnabled=true ⇒ 首次点击 = 关；断言「勾选态翻转后能点回原态」。
@@ -368,7 +381,7 @@ function serve() {
     const clickPanelText = async (text) => {
         await page.evaluate((t) => {
             // v26.10.21-v4：功能入口已迁导航条 —— 先按 title 在导航条 host 里找；
-            // 找不到再退回面板 shadow 按可见文本找（「查看日志」等仍留在面板里）
+            // 找不到再退回面板 shadow 按可见文本找（弹窗内的「运行日志/更新日志」等仍在面板里）
             const navSr = document.getElementById('__znhd_nav_host__')?.shadowRoot;
             let el = navSr
                 ? [...navSr.querySelectorAll('button[title]')].find((b) => b.title === t)
@@ -386,11 +399,21 @@ function serve() {
 
     await closeTopLayer(); // 关掉设置弹窗
 
-    // 日志弹窗：标题 + 中性色终端区 + 至少一行日志（启动时写了 3 条）
-    await clickPanelText('查看日志');
+    // 日志弹窗：入口在设置弹窗里（v26.10.21-v5 主面板已删，原「查看日志」面板按钮删除）。
+    // 打开设置 → 点「运行日志」→ 日志弹窗叠加在设置之上（取最后一个 dialog）。
+    await clickPanelText('设置');
+    await page.evaluate(() => {
+        const sr = document.getElementById('__znhd_panel_host__').shadowRoot;
+        const dialogs = [...sr.querySelectorAll('dialog[open]')];
+        const el = dialogs[dialogs.length - 1];
+        const btn = [...(el ? el.querySelectorAll('button') : [])].find((b) => b.textContent.includes('运行日志'));
+        if (btn) btn.click();
+    });
+    await new Promise((r) => setTimeout(r, 400));
     const logDialog = await page.evaluate(() => {
         const sr = document.getElementById('__znhd_panel_host__').shadowRoot;
-        const el = sr.querySelector('dialog[open]');
+        const dialogs = [...sr.querySelectorAll('dialog[open]')];
+        const el = dialogs[dialogs.length - 1];
         if (!el) return { found: false };
         const terminal = el.querySelector('.bg-neutral');
         return {
@@ -438,8 +461,10 @@ function serve() {
     const filterState = () =>
         page.evaluate(() => {
             const sr = document.getElementById('__znhd_panel_host__').shadowRoot;
-            const el = sr.querySelector('dialog[open]');
-            const bar = el.querySelector('[data-log-filter]');
+            // v26.10.21-v5：日志弹窗叠在设置弹窗之上，不能取第一个 dialog —— 直接按筛选条定位
+            const bar = sr.querySelector('dialog[open] [data-log-filter]');
+            if (!bar) return null;
+            const el = bar.closest('dialog');
             const status = [...el.querySelectorAll('span')]
                 .map((s) => s.textContent || '')
                 .find((t) => t.includes('共'));
@@ -478,6 +503,8 @@ function serve() {
         f3.shown === 0;
     report.logFilter = { f0, f1, f2, f3 };
 
+    // 日志与设置两层弹窗都关掉（v26.10.21-v5：日志从设置里打开，多了一层）
+    await closeTopLayer();
     await closeTopLayer();
 
     // 常用语右侧弹层（modal modal-end）：modal-box 360 宽贴右边、有搜索框，且没有漏到 body
@@ -838,7 +865,7 @@ function serve() {
         transfer.hasScroller &&
         transfer.hasComposer &&
         // v26.10.19（daisyUI）：窗口底色随主题 —— modal-box 官方默认 base-100；
-        // 冒烟钉的是日间（prefers-color-scheme=light），夜间由末尾 transferThemeFollowOk 反向守
+        // 冒烟钉的是日间（prefers-color-scheme=light）；v26.10.21-v5 起夜间模式已删，恒为日间
         transfer.background === base100Light &&
         // v26.10.19：384 → 768（横向一倍），560 → 672（高度 +20%）
         transfer.width === 768 &&
@@ -1186,105 +1213,27 @@ function serve() {
     await page.keyboard.press('Escape');
     await new Promise((r) => setTimeout(r, 300));
 
-    // ---------- 主题切换：日间 wireframe / 夜间 business ----------
+    // ---------- 主题：v26.10.21-v5 起夜间模式已删，恒为日间 wireframe ----------
     await page.keyboard.press('Escape');
     await new Promise((r) => setTimeout(r, 250));
     await page.keyboard.press('Escape');
     await new Promise((r) => setTimeout(r, 250));
 
-    const readTheme = () =>
-        page.evaluate(() => {
-            const host = document.getElementById('__znhd_panel_host__');
-            const sr = host.shadowRoot;
-            const app = sr.querySelector('#app');
-            const shell = sr.querySelector('.rounded-2xl.border-base-300');
-            const pill = [...sr.querySelectorAll('span')].find((n) => /^v26\./.test(n.textContent.trim()));
-            const cs = shell ? getComputedStyle(shell) : null;
-            return {
-                // daisyUI 迁移后 data-theme / .dark 都挂在影子树内的 #app 上
-                //（属性选择器穿不透 shadow 边界，不能挂宿主元素）
-                appTheme: app ? app.dataset.theme || '' : '',
-                dark: app ? app.classList.contains('dark') : false,
-                // swap 主题切换的勾选态（checked = 夜间 business）
-                swapChecked: (() => {
-                    const t = sr.querySelector('input.theme-controller');
-                    return t ? t.checked : null;
-                })(),
-                shellBg: cs ? cs.backgroundColor : '',
-                pillBg: pill ? getComputedStyle(pill).backgroundColor : '',
-                pillFg: pill ? getComputedStyle(pill).color : '',
-            };
-        });
-
-    const lightTheme = await readTheme();
-    await page.evaluate(() => {
+    const themeFixed = await page.evaluate(() => {
         const sr = document.getElementById('__znhd_panel_host__').shadowRoot;
-        // 主题切换 = daisyUI swap 官方组件（checkbox 驱动，checked=夜间 business）
-        const input = sr.querySelector('input.theme-controller[aria-label="切换到夜间模式"]');
-        if (input) input.click();
-    });
-    await new Promise((r) => setTimeout(r, 300));
-    const darkTheme = await readTheme();
-    await page.screenshot({ path: path.join(os.tmpdir(), 'znhd-vue-dark.png') });
-
-    // 夜间基线探针必须在切到 business 之后再取（同一变量名，两个主题值不同）
-    const base100Dark = await probeOf('--color-base-100');
-    report.checks.themeLightOk =
-        lightTheme.appTheme === 'wireframe' &&
-        !lightTheme.dark &&
-        lightTheme.swapChecked === false &&
-        lightTheme.shellBg === base100Light &&
-        lightTheme.pillBg === accentLight;
-    // 夜间：#app 挂 business/.dark、swap 勾选、面板底色 = business 的 base-100（oklch 24.35%）
-    report.checks.themeDarkOk =
-        darkTheme.appTheme === 'business' &&
-        darkTheme.dark &&
-        darkTheme.swapChecked === true &&
-        darkTheme.shellBg === base100Dark;
-    report.theme = { lightTheme, darkTheme };
-
-    // v26.10.19（daisyUI）反向守门：窗口色板必须**跟随主题**。
-    // 夜间重新打开传输助手窗口，modal-box 底色/描边/输入舱必须全部等于 business 的语义变量；
-    // 若哪天有人把 hex 写死回组件里，这条会红（日间基线断言则永远绿）。
-    await page.evaluate(() => {
-        const sr = document.getElementById('__znhd_nav_host__')?.shadowRoot;
-        const btn = [...(sr?.querySelectorAll('button[title]') || [])].find((b) => b.title === '传输助手');
-        if (btn) btn.click();
-    });
-    await new Promise((r) => setTimeout(r, 450));
-    const darkTransfer = await page.evaluate(() => {
-        const sr = document.getElementById('__znhd_panel_host__').shadowRoot;
-        const dialogs = [...sr.querySelectorAll('dialog[open]')];
-        const el = dialogs[dialogs.length - 1];
-        if (!el) return { found: false };
-        const card = el.querySelector('.modal-box');
-        const head = el.querySelector('.modal-box > div:first-child');
-        const composer = el.querySelector('textarea.textarea');
-        const hs = head ? getComputedStyle(head) : null;
+        const app = sr.querySelector('#app');
         return {
-            found: true,
-            background: card ? getComputedStyle(card).backgroundColor : '',
-            headerBorder: hs ? hs.borderBottomWidth + ' ' + hs.borderBottomColor : '',
-            composerBg: composer ? getComputedStyle(composer).backgroundColor : '',
+            // daisyUI 迁移后 data-theme 挂在影子树内的 #app 上
+            //（属性选择器穿不透 shadow 边界，不能挂宿主元素）
+            appTheme: app ? app.dataset.theme || '' : '',
+            dark: app ? app.classList.contains('dark') : false,
+            // 主题切换 swap 已随夜间模式删除，影子树里不允许再出现 theme-controller
+            swapGone: !sr.querySelector('input.theme-controller'),
         };
     });
-    const base300Dark = await probeOf('--color-base-300');
-    report.checks.transferThemeFollowOk =
-        darkTransfer.found &&
-        darkTransfer.background === base100Dark &&
-        darkTransfer.headerBorder === '1px ' + base300Dark &&
-        darkTransfer.composerBg === base100Dark;
-    report.darkTransfer = darkTransfer;
-    await page.keyboard.press('Escape');
-    await new Promise((r) => setTimeout(r, 300));
-
-    // 切回日间（截图基线保持浅色）
-    await page.evaluate(() => {
-        const sr = document.getElementById('__znhd_panel_host__').shadowRoot;
-        const input = sr.querySelector('input.theme-controller[aria-label="切换到日间模式"]');
-        if (input) input.click();
-    });
-    await new Promise((r) => setTimeout(r, 250));
+    report.theme = themeFixed;
+    report.checks.themeFixedLightOk =
+        themeFixed.appTheme === 'wireframe' && !themeFixed.dark && themeFixed.swapGone;
 
     report.checks.noPageError = report.errors.length === 0;
     report.ok = Object.values(report.checks).every(Boolean);
