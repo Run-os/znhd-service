@@ -426,6 +426,10 @@ function serve() {
         const input = el.querySelector('input');
         const box = el.querySelector('.modal-box');
         const rect = box ? box.getBoundingClientRect() : el.getBoundingClientRect();
+        // 切换栏几何（v26.10.21-v3）：tab 高被压到 32（容器 40），且与下方卡片留 12px
+        const tablist = el.querySelector('[role="tablist"]');
+        const tabsEls = tablist ? [...tablist.querySelectorAll('input')] : [];
+        const card = el.querySelector('[data-znhd="phrase-card"]');
         return {
             found: true,
             inShadow: sr.contains(el),
@@ -435,6 +439,14 @@ function serve() {
             background: box ? getComputedStyle(box).backgroundColor : '',
             right: Math.round(window.innerWidth - rect.right),
             placeholder: input ? input.placeholder : '',
+            tablistH: tablist ? Math.round(tablist.getBoundingClientRect().height) : -1,
+            tabH: tabsEls.length ? Math.round(tabsEls[0].getBoundingClientRect().height) : -1,
+            gapTabsToCard:
+                tablist && card
+                    ? Math.round(
+                          card.getBoundingClientRect().top - tablist.getBoundingClientRect().bottom
+                      )
+                    : -1,
         };
     });
     report.checks.phrasesSheetOk =
@@ -445,6 +457,14 @@ function serve() {
         phrasesSheet.width === 360 &&
         phrasesSheet.background === base100Light &&
         phrasesSheet.placeholder.includes('搜索常用语');
+    // 切换栏：高度压到 32（整条 ≤ 42，别又回到默认 48）+ 与卡片至少 8px 间隙（原本紧贴 0）
+    report.checks.phrasesTabsGeomOk =
+        phrasesSheet.tabH >= 30 &&
+        phrasesSheet.tabH <= 34 &&
+        phrasesSheet.tablistH >= 36 &&
+        phrasesSheet.tablistH <= 42 &&
+        phrasesSheet.gapTabsToCard >= 8 &&
+        phrasesSheet.gapTabsToCard <= 20;
     report.phrasesSheet = phrasesSheet;
 
     // 话术改成卡片（v26.10.21-v2，方案 C1）：三行截断 + 悬浮提示不被弹层裁掉

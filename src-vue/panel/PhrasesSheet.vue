@@ -190,8 +190,13 @@ function pick(text: string) {
                     但 business 主题里 base-100(oklch .244) ≈ 容器 base-200(oklch .226)，
                     夜间选中的胶囊几乎看不出来（实测截图）；提到 neutral 一档肉眼可辨，
                     日间 wireframe 同样成立（浅灰选中块）。Tailwind 工具类优先级高于
-                    daisyUI 组件层（daisyUI 5 全部样式在 utilities 的嵌套子层里），直接覆盖即可。 -->
-            <div role="tablist" class="tabs tabs-box w-full gap-1 rounded-full">
+                    daisyUI 组件层（daisyUI 5 全部样式在 utilities 的嵌套子层里），直接覆盖即可。
+                 ④ `[--tab-height:2rem]`：daisyUI 默认 tab 高 = `--size-field` × 10 = 40px，
+                    加上 tabs-box 自身 padding 4px×2 ⇒ 整条 48px，比上面的搜索框(32px)还高，
+                    用户实机觉得「切换栏太高」。压到 32px ⇒ 整条 40px，与输入框同档。
+                 ⑤ `mb-3`：卡片列表与 tabs 之间原本紧贴（实测间隙 0px），补 12px，
+                    与「输入框 → tabs」的 12px 节奏一致。 -->
+            <div role="tablist" class="tabs tabs-box mb-3 w-full gap-1 rounded-full [--tab-height:2rem]">
                 <input
                     type="radio"
                     name="phrases_tab"
