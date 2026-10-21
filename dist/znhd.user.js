@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         征纳互动人数和在线监控v2
 // @namespace    https://scriptcat.org/
-// @version      26.10.21-v10
+// @version      26.10.22-v1
 // @author       runos
 // @description  实时监控征纳互动等待人数和在线状态，支持语音播报、自定义常用语
 // @license      MIT
@@ -2720,10 +2720,12 @@ onUploadProgress: (pct) => {
       ["circle", { cx: 12, cy: 12, r: 3 }]
     ],
     transfer: [
-      ["path", { d: "M8 3 4 7l4 4" }],
-      ["path", { d: "M4 7h16" }],
-      ["path", { d: "m16 21 4-4-4-4" }],
-      ["path", { d: "M20 17H4" }]
+      [
+        "path",
+        {
+d: "M6 12 3.269 3.125A59.769 59.769 0 0 1 21.485 12 59.768 59.768 0 0 1 3.27 20.875L5.999 12Zm0 0h7.5"
+        }
+      ]
     ],
     phrases: [
       [
@@ -3302,7 +3304,7 @@ more: [
   const _hoisted_12$5 = { class: "text-[13px] text-base-content/60" };
   const _hoisted_13$5 = ["onClick"];
   const _hoisted_14$5 = { class: "flex items-start gap-2" };
-  const _hoisted_15$4 = { class: "line-clamp-3 flex-1 text-[13px] leading-5" };
+  const _hoisted_15$4 = { class: "line-clamp-3 min-w-0 flex-1 break-words text-[13px] leading-5" };
   const _hoisted_16$3 = { class: "mt-0.5 shrink-0 opacity-40 transition-opacity group-hover:text-primary group-hover:opacity-100" };
   const TIP_W = 300;
   const TIP_GAP = 10;
@@ -3393,7 +3395,7 @@ more: [
           vue.createElementVNode("div", {
             ref_key: "boxEl",
             ref: boxEl,
-            class: "modal-box w-[360px] max-w-[360px]"
+            class: "modal-box w-[360px] max-w-[360px] overflow-x-hidden"
           }, [
             vue.createElementVNode("div", _hoisted_1$f, [
               _cache[5] || (_cache[5] = vue.createElementVNode("h3", { class: "flex-1 text-[15px] font-semibold" }, "常用语", -1)),

@@ -155,7 +155,12 @@ function pick(text: string) {
 
 <template>
     <dialog ref="dlg" class="modal modal-end" @close="emit('update:open', false)">
-        <div ref="boxEl" class="modal-box w-[360px] max-w-[360px]">
+        <div ref="boxEl" class="modal-box w-[360px] max-w-[360px] overflow-x-hidden">
+            <!-- ⚠️ overflow-x-hidden（v26.10.22）：modal-box 只有 overflow-y:auto，未声明的
+                 overflow-x 按 CSS 规范会算成 auto ⇒ 卡片里的长英文串 / URL 等不可断行 token
+                 会把内容撑出盒子，整个面板出现横向滑动（用户实机反馈，要求禁掉）。
+                 横向溢出一律裁掉，纵向滚动不受影响；长话术悬浮提示在 modal-box 外面（见下），
+                 不受这次裁剪影响。长 token 本身另由卡片的 break-words 换行兜底。 -->
             <div class="flex items-center gap-1">
                 <h3 class="flex-1 text-[15px] font-semibold">常用语</h3>
                 <!-- 标题旁刷新：无文字图标 + aria-label（读屏/冒烟都靠它定位） -->
@@ -244,8 +249,11 @@ function pick(text: string) {
                     @blur="hideTip"
                     @click="pick(t)">
                     <span class="flex items-start gap-2">
-                        <!-- 三行截断（leading-5 × 3 = 60px），完整内容靠悬浮提示看 -->
-                        <span class="line-clamp-3 flex-1 text-[13px] leading-5">{{ t }}</span>
+                        <!-- 三行截断（leading-5 × 3 = 60px），完整内容靠悬浮提示看。
+                             min-w-0：flex-1 的子项默认 min-width:auto，长 token 顶不回去；
+                             break-words：让长英文串/URL 在卡内换行（配合 modal-box 的
+                             overflow-x-hidden，双保险禁掉横向滑动，v26.10.22）。 -->
+                        <span class="line-clamp-3 min-w-0 flex-1 break-words text-[13px] leading-5">{{ t }}</span>
                         <span
                             class="mt-0.5 shrink-0 opacity-40 transition-opacity group-hover:text-primary group-hover:opacity-100">
                             <Icon name="chevronRight" :size="14" />
