@@ -12,7 +12,15 @@ import { toast } from '@vue/lib/toast';
  *
  * 迁移到 daisyUI 后的组件构成（全部官方原生）：
  *   `modal modal-end`（右侧弹层）+ `tabs tabs-box`（radio input 式，全部/我的）+ `input`（带图标，label 包裹）
- *   + `list/list-row`（每条话术，两行截断）+ `hero`（空态）+ `loading`（加载中）+ `btn`。
+ *   + 卡片列表（每条话术一张卡，三行截断）+ `hero`（空态）+ `loading`（加载中）+ `btn`。
+ *
+ * ⚠️ 话术列表为什么是「提亮卡 + 左侧竖条」而不是 daisyUI 的 `list/list-row`（v26.10.21-v1）：
+ *   紧凑列表在夜间 business 主题下几乎读不出条目边界，改卡片后**不能用 base-300 描边分层** ——
+ *   business 的 base-300 与 base-200 明度只差一点点，描边整条融进深底（实测截图）。
+ *   所以卡面抬到 `base-200`（比 modal-box 的 base-100 亮一档，靠明度差分层）、描边压到
+ *   `base-content/10` 只做收边，再加 3px 左竖条做视觉锚点（常态 `base-content/25`、悬浮转
+ *   `primary`）。日间 wireframe 同样成立（浅灰卡在浅底上仍有明度差）。
+ *   ⚠️ 改卡面配色前先在**两个主题**下各看一眼，别只验日间。
  *
  * ⚠️ 话术的长文本提示**没有用 daisyUI 的 `tooltip` + `data-tip`**：那套是靠伪元素绝对定位，
  *    挂在按钮里必然处于 `modal-box` 内部，而 `.modal-box` 带 `overflow-y: auto`（未声明 overflow-x
@@ -215,25 +223,33 @@ function pick(text: string) {
                 </div>
             </div>
 
-            <ul v-else class="list" @scroll="hideTip">
-                <!-- list-row 官方第一列是 minmax(0,auto)（max=max-content），长话术不换行撑破 360px 容器
-                     → 覆写为 minmax(0,1fr)，让它随容器宽度换行（消灭横向滚动条） -->
-                <li
+            <div v-else class="flex flex-col gap-2" @scroll="hideTip">
+                <!-- 卡片：底 base-200（比弹层 base-100 亮一档）+ 10% 描边收边 + 左侧 3px 竖条。
+                     `group` 挂在 button 上，竖条与箭头用 group-hover 跟着变色 ⇒ 悬浮时整卡一起响应。
+                     `overflow-hidden` 让竖条贴住圆角（否则直角会顶出 rounded-xl 的弧）。 -->
+                <button
                     v-for="(t, i) in rows"
                     :key="tab + i"
-                    class="list-row py-0 [grid-template-columns:minmax(0,1fr)]">
-                    <!-- 每条只显示前两行（leading-5 × 2 = h-10 固定高度），完整内容靠悬浮提示看 -->
-                    <button
-                        class="h-10 w-full text-left"
-                        @mouseenter="showTip"
-                        @mouseleave="hideTip"
-                        @focus="showTip"
-                        @blur="hideTip"
-                        @click="pick(t)">
-                        <span class="line-clamp-2 text-[13px] leading-5">{{ t }}</span>
-                    </button>
-                </li>
-            </ul>
+                    data-znhd="phrase-card"
+                    class="group relative min-h-[64px] w-full overflow-hidden rounded-xl border border-base-content/10 bg-base-200 py-3 pr-3 pl-4 text-left transition-colors hover:border-primary hover:bg-base-300 focus-visible:border-primary focus-visible:outline-none"
+                    @mouseenter="showTip"
+                    @mouseleave="hideTip"
+                    @focus="showTip"
+                    @blur="hideTip"
+                    @click="pick(t)">
+                    <span
+                        data-znhd="phrase-card-bar"
+                        class="absolute top-0 left-0 h-full w-[3px] bg-base-content/25 transition-colors group-hover:bg-primary"></span>
+                    <span class="flex items-start gap-2">
+                        <!-- 三行截断（leading-5 × 3 = 60px），完整内容靠悬浮提示看 -->
+                        <span class="line-clamp-3 flex-1 text-[13px] leading-5">{{ t }}</span>
+                        <span
+                            class="mt-0.5 shrink-0 opacity-40 transition-opacity group-hover:text-primary group-hover:opacity-100">
+                            <Icon name="chevronRight" :size="14" />
+                        </span>
+                    </span>
+                </button>
+            </div>
         </div>
 
         <!-- 长话术悬浮提示：见上方 tip* 注释（必须是 dialog 直接子节点，不能进 modal-box） -->

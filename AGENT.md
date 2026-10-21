@@ -98,7 +98,7 @@
 - ⚠️ **合成事件绝不能传 `view: window`**（沙箱里 window 非原生 ⇒ 构造即抛；冒烟无沙箱 ⇒ 这类异常永假绿，靠 `phrasesClickNoViewOk` 断言 `ev.view === null` 兜）。
 - 低配实机：每步 300~500ms 轮询等待，**绝不做组件树递归扫描**（曾压崩页面）；探 Vue 组件用 `el.__vue__` 向上回溯。远程调试该页走 browser-use + `BU_CDP_URL=http://100.100.60.60:9222`（curl 探测加 `--noproxy '*'`）。
 - **tabs 是胶囊分段样式**（v26.10.20-v19）：`tabs tabs-box w-full gap-1 rounded-full`，每个 radio tab 带 `flex-1 rounded-full checked:[--tab-bg:var(--color-neutral)]`。三条缺一不可：`flex-1`（radio tab 天然 `min-width:fit-content` 不 grow，容器 `w-full` 时右侧会留大条空白）；`rounded-full`（Tailwind 工具类能覆盖 daisyUI——它全部样式在 utilities 的嵌套子层里，层内顺序保证 utility 胜出）；`--tab-bg` 提到 neutral（默认选中底 base-100 在 business 下 ≈ 容器 base-200，oklch .244 vs .226，选中态看不见；⚠️ arbitrary property 里必须写 `var(--color-neutral)`，裸 `--color-neutral` 是字面量无效）。验证截图脚本：`outputs/shot-phrases-tabs.js`（本地 http 起产物 + 切 data-theme 日/夜各截一张 + 量圆角/宽度）。
-- **列表行高统一**（v26.10.20-v18）：每条 `list-row` 内按钮固定 `h-10`，文本 `line-clamp-2`（2 × `leading-5` = 40px）。别把 `line-clamp` 挪进 class 之外的容器；两行截断断言 = `phrasesClampOk`。
+- **列表 = 卡片（v26.10.21-v1）**：每条一张 `rounded-xl` 卡，卡面 `bg-base-200`（比 modal-box 的 base-100 亮一档）+ `border-base-content/10` 收边 + 左侧 3px 竖条（`bg-base-content/25`，`group-hover:bg-primary`），文字 `line-clamp-3`（3 × `leading-5` = 60px），`min-h-[64px]` 保底两行。⚠️ **夜间不要用 `border-base-300` 分层**：business 的 base-300 与 base-200 明度几乎一致，描边整条融进深底（v26.10.21 用户在真机截图里发现），必须靠**明度差（卡面提亮）**或色相差。断言 = `phrasesClampOk`（clamp 3 + 高度 ≥ 44）+ `phrasesCardOk`（圆角 ≥ 8、竖条 3px、卡面底色 ≠ 弹层底色）。卡片定位钩子：`[data-znhd="phrase-card"]` / `[data-znhd="phrase-card-bar"]`。
 
 ## 9. 传输助手 UI / 交互
 

@@ -447,13 +447,15 @@ function serve() {
         phrasesSheet.placeholder.includes('搜索常用语');
     report.phrasesSheet = phrasesSheet;
 
-    // 每条话术只显示前两行 + 悬浮提示不被弹层裁掉（v26.10.20-v18）
-    //  · 截断：button 固定 h-10（leading-5 × 2 = 40px），内层 span line-clamp-2
+    // 话术改成卡片（v26.10.21-v1）：三行截断 + 悬浮提示不被弹层裁掉
+    //  · 截断：内层 span line-clamp-3（不再钉死 h-10 —— 卡片高度随行数变化）
+    //  · 卡片身份：卡面底色必须 ≠ 弹层底色（base-200 vs base-100，夜间靠这个明度差分层次），
+    //    圆角 ≥ 8px，左侧竖条宽度 3px
     //  · 提示：浮层必须是 dialog 直接子节点（在 .modal-box 外面）。曾经用 daisyUI 的
     //    tooltip+data-tip，伪元素落在 modal-box 里被 overflow-y:auto 裁掉大半。
     const rowPoint = await page.evaluate(() => {
         const sr = document.getElementById('__znhd_panel_host__').shadowRoot;
-        const btn = sr.querySelector('dialog[open] .modal-box .list button');
+        const btn = sr.querySelector('dialog[open] .modal-box [data-znhd="phrase-card"]');
         if (!btn) return null;
         const r = btn.getBoundingClientRect();
         return { x: Math.round(r.left + r.width / 2), y: Math.round(r.top + r.height / 2) };
@@ -467,18 +469,29 @@ function serve() {
         const el = sr.querySelector('dialog[open]');
         const box = el && el.querySelector('.modal-box');
         if (!box) return { found: false };
-        const btns = [...box.querySelectorAll('.list button')];
+        const btns = [...box.querySelectorAll('[data-znhd="phrase-card"]')];
         const tip = el.querySelector('[data-znhd="phrase-tip"]');
         const boxRect = box.getBoundingClientRect();
         const tr = tip ? tip.getBoundingClientRect() : null;
+        const barOf = (b) => b.querySelector('[data-znhd="phrase-card-bar"]');
         return {
             found: true,
             rows: btns.length,
             heights: btns.map((b) => Math.round(b.getBoundingClientRect().height)),
             clamps: btns.map((b) => {
-                const s = b.querySelector('span');
+                const s = b.querySelector('span.line-clamp-3');
                 return s ? getComputedStyle(s).webkitLineClamp : '';
             }),
+            radii: btns.map((b) => Math.round(parseFloat(getComputedStyle(b).borderRadius) || 0)),
+            barWidths: btns.map((b) => {
+                const bar = barOf(b);
+                return bar ? Math.round(bar.getBoundingClientRect().width) : -1;
+            }),
+            // ⚠️ 底色必须量**没被悬停**的那张卡：第 1 张此刻正被鼠标压着（为了触发提示），
+            //    读到的是 hover:bg-base-300 的颜色 ⇒ 曾让「卡面=弹层底色」的坏样式假绿。
+            cardBg: btns.length ? getComputedStyle(btns[btns.length - 1]).backgroundColor : '',
+            hoverBg: btns[0] ? getComputedStyle(btns[0]).backgroundColor : '',
+            boxBg: getComputedStyle(box).backgroundColor,
             tipInBox: tip ? box.contains(tip) : null,
             tipVisibility: tip ? getComputedStyle(tip).visibility : null,
             tipText: tip ? (tip.textContent || '').trim() : null,
@@ -500,8 +513,18 @@ function serve() {
     report.checks.phrasesClampOk =
         !!phraseLayout.found &&
         phraseLayout.rows >= 2 &&
-        phraseLayout.heights.every((h) => h === 40) &&
-        phraseLayout.clamps.every((c) => c === '2');
+        phraseLayout.heights.every((h) => h >= 44) &&
+        phraseLayout.clamps.every((c) => c === '3');
+    // 卡片身份（夜间能不能看出条目边界，全靠这三点）
+    //  · 常态卡面底色 ≠ 弹层底色 ⇒ base-200 vs base-100 的明度差真的生效
+    //  · 悬停底色再抬一档（hover:bg-base-300）
+    report.checks.phrasesCardOk =
+        !!phraseLayout.found &&
+        phraseLayout.radii.every((r) => r >= 8) &&
+        phraseLayout.barWidths.every((w) => w === 3) &&
+        !!phraseLayout.cardBg &&
+        phraseLayout.cardBg !== phraseLayout.boxBg &&
+        phraseLayout.hoverBg !== phraseLayout.cardBg;
     report.checks.phrasesTipOk =
         !!phraseLayout.tipRect &&
         phraseLayout.tipInBox === false &&
