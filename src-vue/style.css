@@ -19,6 +19,17 @@
   exclude: rootscrollgutter;
 }
 
+/* ── cupcake 主题 primary 定制（v26.10.21-v8，用户定版）────────────────────
+   cupcake 官方 primary ≈ rgb(68,235,211) 薄荷绿，换成品牌蓝 --znhd-brand。
+   daisyUI 把主题变量挂在 :host（root: ':host'）且落在 cascade layer 内；
+   本条 unlayered 规则同名属性后来者居上（unlayered 也不输 layer），直接生效。
+   primary-content 同步改白：官方配薄荷绿用的是深色前景，压在蓝底上对比度不够。 */
+:root,
+:host {
+  --color-primary: var(--znhd-brand);
+  --color-primary-content: #ffffff;
+}
+
 /* 宿主页常有 text-align:center / 自定义 line-height，这里给整棵影子树定基线 */
 :host {
   font-family:
@@ -43,7 +54,7 @@
 :host {
   /* 品牌色（用户定版）：收敛成变量，组件覆写与模板类都引用这里，避免同一串
      rgb() 散落在多处。改配色只动这两行。 */
-  --znhd-brand: rgb(67, 116, 186); /* 品牌蓝：日间图标 / toggle 选中底（v7） */
+  --znhd-brand: rgb(66, 133, 244); /* 品牌蓝（v8 用户定版）：主题 primary / toggle 选中底 */
   --znhd-bubble-mine: rgb(53, 210, 141); /* 我方气泡绿（日间，v11） */
 
   --znhd-scrollbar-thumb: color-mix(in oklab, var(--color-base-content) 24%, transparent);

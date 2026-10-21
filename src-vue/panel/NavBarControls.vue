@@ -39,7 +39,8 @@ function onVoiceToggle(event: Event) {
         <!-- 与「业务管理」的分割线 -->
         <span class="mr-1.5 block h-5 w-px bg-white/25"></span>
 
-        <!-- 语音播报：图标 + 自绘开关（track 32px / knob 12px，开=白底蓝点，关=半透明白底白点） -->
+        <!-- 语音播报：图标 + 自绘开关（track 32px / knob 12px，开=白底品牌蓝点，关=半透明白底白点）。
+             v26.10.21-v8：选中点从写死的 #185FA5 统一到全局 --znhd-brand（blue 蓝，白底上可读）。 -->
         <label class="relative flex cursor-pointer items-center gap-1" title="语音播报开关">
             <span :class="voiceEnabled ? 'text-white' : 'text-white/50'">
                 <Icon :name="voiceEnabled ? 'volumeOn' : 'volumeOff'" :size="16" />
@@ -50,7 +51,7 @@ function onVoiceToggle(event: Event) {
                 :class="voiceEnabled ? 'bg-white/90' : 'bg-white/30'">
                 <span
                     class="absolute left-0.5 top-1/2 mt-[-6px] block size-3 rounded-full transition-transform"
-                    :class="voiceEnabled ? 'translate-x-4 bg-[#185FA5]' : 'bg-white'"></span>
+                    :class="voiceEnabled ? 'translate-x-4 bg-(--znhd-brand)' : 'bg-white'"></span>
             </span>
         </label>
 
