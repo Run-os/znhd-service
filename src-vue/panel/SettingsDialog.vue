@@ -72,8 +72,8 @@ const UPDATE_URL = (GM_info.scriptUpdateURL || GM_info.script.updateURL) as stri
         <div class="flex flex-wrap items-center gap-2">
             <a class="btn btn-outline btn-sm" :href="HOMEPAGE_URL" target="_blank" rel="noreferrer">脚本主页</a>
             <a class="btn btn-outline btn-sm" :href="UPDATE_URL" target="_blank" rel="noreferrer">更新脚本</a>
-            <button class="btn btn-outline btn-sm" @click="emit('openLog')">运行日志</button>
             <button class="btn btn-outline btn-sm" @click="emit('openChangelog')">更新日志</button>
+            <button class="btn btn-outline btn-sm" @click="emit('openLog')">运行日志</button>
         </div>
 
         <div class="divider">其他设置</div>
@@ -99,31 +99,40 @@ const UPDATE_URL = (GM_info.scriptUpdateURL || GM_info.script.updateURL) as stri
                     :checked="props.sniffPreMeasure"
                     @change="emit('changeSniffPreMeasure', ($event.target as HTMLInputElement).checked)" />
             </legend>
-            <p class="label whitespace-normal">
-                开启后打开嗅探窗口即刻显示大小（不必当场等测量）。代价：页面上的图若只能靠请求测大小
-                （跨域且拿不到资源表读数），脚本会在没打开窗口时就去测量 —— 关掉此项可避免这类请求。
-            </p>
         </fieldset>
 
         <fieldset class="fieldset">
             <legend class="fieldset-legend">监控时间段（点击选择时间）</legend>
-            <div v-for="f in timeFields" :key="f.row" class="flex flex-wrap items-center gap-2">
-                <span class="w-8 text-[13px] text-base-content/60">{{ f.row }}</span>
-                <input
-                    type="time"
-                    step="300"
-                    class="input w-[112px]"
-                    :value="hoursToHHmm(wh[f.from])"
-                    @input="updateWh(f.from, ($event.target as HTMLInputElement).value)" />
-                <span class="text-[13px] text-base-content/60">至</span>
-                <input
-                    type="time"
-                    step="300"
-                    class="input w-[112px]"
-                    :value="hoursToHHmm(wh[f.to])"
-                    @input="updateWh(f.to, ($event.target as HTMLInputElement).value)" />
+            <!-- v26.10.21-v6：上午/下午并排一行，时间控件收窄（w-[92px]） -->
+            <div class="flex flex-wrap items-center gap-x-4 gap-y-2">
+                <div v-for="f in timeFields" :key="f.row" class="flex items-center gap-1.5">
+                    <span class="text-[13px] text-base-content/60">{{ f.row }}</span>
+                    <input
+                        type="time"
+                        step="300"
+                        class="input w-[92px] px-2"
+                        :value="hoursToHHmm(wh[f.from])"
+                        @input="updateWh(f.from, ($event.target as HTMLInputElement).value)" />
+                    <span class="text-[13px] text-base-content/60">至</span>
+                    <input
+                        type="time"
+                        step="300"
+                        class="input w-[92px] px-2"
+                        :value="hoursToHHmm(wh[f.to])"
+                        @input="updateWh(f.to, ($event.target as HTMLInputElement).value)" />
+                </div>
             </div>
-            <p class="label whitespace-normal">提示：将「下午开始」设为与「上午结束」相同（如都设为 12:00），即可午休时段也监控。</p>
         </fieldset>
+
+        <!-- 技术栈脚注：daisyUI 带官方组件库链接 -->
+        <p class="label whitespace-normal">
+            技术栈：Vue 3 + Tailwind CSS 4 +
+            <a
+                class="link link-hover text-primary"
+                href="https://daisyui.com/components/"
+                target="_blank"
+                rel="noreferrer">daisyUI 5</a>
+            + vite-plugin-monkey
+        </p>
     </AppDialog>
 </template>
