@@ -579,6 +579,26 @@ function serve() {
     if (rowPoint) {
         await page.mouse.move(rowPoint.x, rowPoint.y);
         await new Promise((r) => setTimeout(r, 150));
+        // ⚠️ 等 hover 过渡真正走完再读底色（v26.10.22-v2）：
+        //    卡片带 `transition-colors`（150ms），下面 evaluate 会读 btns[0] 的
+        //    backgroundColor 来验「hover 抬到 base-300」。CI 无头机慢，死等 150ms
+        //    读到的还是过渡中的 base-200 ⇒ hoverBg === cardBg 假红
+        //    （v26.10.20-v25 起连红，恰逢 GitHub runner 迁 Ubuntu 26 变慢翻红；本地一直绿）。
+        //    改成「连续两次采样（间隔 100ms）底色一致」才算稳定；等不到就 5s 超时红，
+        //    而不是带着过渡中的值假绿/假红。
+        await page.waitForFunction(
+            () =>
+                new Promise((resolve) => {
+                    const sr = document.getElementById('__znhd_panel_host__').shadowRoot;
+                    const readBg = () => {
+                        const b = sr.querySelector('[data-znhd="phrase-card"]');
+                        return b ? getComputedStyle(b).backgroundColor : '';
+                    };
+                    const v1 = readBg();
+                    setTimeout(() => resolve(readBg() === v1), 100);
+                }),
+            { timeout: 5000 }
+        );
     }
     const phraseLayout = await page.evaluate(() => {
         const sr = document.getElementById('__znhd_panel_host__').shadowRoot;
