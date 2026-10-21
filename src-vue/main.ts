@@ -99,7 +99,7 @@ export function mountPanel(): HTMLElement {
 
     // 主题：daisyUI 的 `[data-theme=...]` 选择器只在**影子树内部**生效
     //（`:host` 是跨边界的伪类，普通属性选择器选不到宿主），因此挂载点是 #app 而不是 host。
-    // v26.10.21-v5 起恒为日间 wireframe（夜间模式已删）。
+    // v26.10.21-v7 起恒为日间 cupcake（夜间模式已删，wireframe 补丁已移除）。
     initTheme(appContainer);
 
     app = createApp({ render: () => h(App) });

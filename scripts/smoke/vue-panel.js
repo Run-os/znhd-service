@@ -1213,7 +1213,7 @@ function serve() {
     await page.keyboard.press('Escape');
     await new Promise((r) => setTimeout(r, 300));
 
-    // ---------- 主题：v26.10.21-v5 起夜间模式已删，恒为日间 wireframe ----------
+    // ---------- 主题：v26.10.21-v7 起恒为日间 cupcake ----------
     await page.keyboard.press('Escape');
     await new Promise((r) => setTimeout(r, 250));
     await page.keyboard.press('Escape');
@@ -1233,7 +1233,7 @@ function serve() {
     });
     report.theme = themeFixed;
     report.checks.themeFixedLightOk =
-        themeFixed.appTheme === 'wireframe' && !themeFixed.dark && themeFixed.swapGone;
+        themeFixed.appTheme === 'cupcake' && !themeFixed.dark && themeFixed.swapGone;
 
     report.checks.noPageError = report.errors.length === 0;
     report.ok = Object.values(report.checks).every(Boolean);

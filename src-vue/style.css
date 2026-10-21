@@ -1,9 +1,10 @@
 @import 'tailwindcss';
 
 /*
- * daisyUI 官方主题（2026-10-19 迁移；v26.10.21-v5 起只保留日间 wireframe，夜间已删）。
+ * daisyUI 官方主题（2026-10-19 迁移；v26.10.21-v5 起只保留日间，夜间已删；
+ * v26.10.21-v7 起主题换 cupcake，此前针对 wireframe 灰阶/直角打的补丁已全部移除）。
  *
- *   wireframe ← 日间（默认；线框风，无品牌主色）
+ *   cupcake ← 日间（默认；自带粉调 primary 与圆角 --radius-*）
  *
  * `root: ':host'` 是硬要求：这份 CSS 由 main.ts 以 ?inline 取字符串、注入 shadowRoot，
  * daisyUI 默认把主题变量挂在 `:root`，而影子树里没有 :root，只有宿主 → 必须显式改挂 :host，
@@ -13,7 +14,7 @@
  * 宿主是第三方税务页，加了会让页面横向抖动，必须排除。
  */
 @plugin 'daisyui' {
-  themes: wireframe --default;
+  themes: cupcake --default;
   root: ':host';
   exclude: rootscrollgutter;
 }
@@ -78,42 +79,12 @@ svg {
   vertical-align: middle;
 }
 
-/* ── 圆角定版（官方主题 wireframe/business 把 --radius-* 全部压成 0/0.25rem） ──
-   官方推荐的组件级改法：`@utility <组件名>`（skill/usage「Change a component in CSS」），
-   v20 之前是裸 `.toggle { … }` 规则 —— 效果相同但绕过 daisyUI 的分层约定，
-   定义落在 utilities 层后与 @apply 覆写行为一致、也不会被组件层意外反超。
-   · toggle 胶囊形 1rem（官网演示同款，官方主题把它压成了 0）
-   · checkbox 圆形
-   用户定版；其余直角组件不动。
-   （filter 按钮的 1rem 覆写已删：v8 起 .btn 全局胶囊化已覆盖它，视觉相同。） */
-@utility toggle {
-  --radius-selector: 1rem;
-}
-@utility checkbox {
-  --radius-selector: 9999px;
-}
-
-/* ── 按钮 / 输入框胶囊化定版（v26.10.20-v8、v11，用户要求）────────────────
-   --radius-field 是 daisyUI 的「field 圆角」全局变量（btn/input/select/textarea/tabs
-   共用），官方主题压成 0.25rem → 呈长方形微圆角。这里在 .btn / .input 上覆写为
-   9999px：任意高度都呈椭圆胶囊（浏览器自动钳到半高）。
-   textarea 多行不适用，不动；下拉等仍保持官方直角。 */
-@utility btn {
-  --radius-field: 9999px;
-}
-@utility input {
-  --radius-field: 9999px;
-}
-
-/* ── 浅色模式 link 按钮文字定黑（v26.10.20-v25，用户反馈）─────────────────
-   daisyUI .btn-link 的 color 回落 `var(--btn-color, var(--color-primary))`，
-   而 wireframe 的 primary = oklch(87%) 浅灰 → 白底上「项目主页」「嗅探展开/收起」
-   等纯链接钮文字几乎不可读（实测 ≈ rgb(216,212,212)）。
-   一律把 --btn-color 回落成 base-content（oklch(20%)，黑）。
-   （v26.10.21-v5 起恒为 wireframe，夜间 business 分支已随夜间模式删除。） */
-[data-theme='wireframe'] .btn-link {
-  --btn-color: var(--color-base-content);
-}
+/* v26.10.21-v7：主题换 cupcake 后，此前为 wireframe 打的补丁全部移除 ——
+   · 圆角补丁（@utility 覆写 --radius-selector/--radius-field 为胶囊）：
+     cupcake 自带圆角，恢复官方默认（btn/input = 1rem 圆角、toggle 胶囊、checkbox 圆形）；
+   · 字体补丁（.btn-link 文字定黑）：cupcake 的 primary 是实色（粉），链接文字可读；
+   · 图标品牌蓝补丁（.znhd-brand-fg）：wireframe 灰阶时代遗留，模板中已无使用点；
+   保留的只剩用户明确定版的配色：toggle 选中品牌蓝、我方气泡品牌绿、日志筛选四色。 */
 
 /* ── 运行日志筛选按钮：按日志类型语义着色（v26.10.20-v25，用户定版）───────
    v23 全局灰胶囊只保证「非语义按钮一片灰」；日志筛选条的四类按钮要**任何
@@ -170,32 +141,20 @@ svg {
   --btn-bg: color-mix(in oklab, var(--btn-color) 15%, transparent);
 }
 
-/* ── 品牌蓝定版（v26.10.20-v7，用户指定 --znhd-brand）──────────────────────
-   1) 日间模式（wireframe）官方 primary 是灰阶 —— 按钮上的图标改用品牌蓝；
-      夜间 business 不套用（保持官方配色）。只按主题作用域，不写死在模板里。
-   2) toggle 选中态：官方把胶囊背景画成 --color-base-100（灰白），用户要求
-      选中胶囊 = 品牌蓝；中间圆形滑块（官方 = base-content）保持不动。 */
-[data-theme='wireframe'] .znhd-brand-fg {
-  color: var(--znhd-brand);
-}
+/* ── toggle 选中态品牌蓝（v26.10.20-v7，用户指定 --znhd-brand；v7 起不分主题）──
+   官方把选中胶囊背景画成 --color-primary（cupcake 下是粉），用户定版选中 = 品牌蓝；
+   中间圆形滑块（官方 = --input-color，偏深）覆写为白色。 */
 .toggle:checked,
 .toggle[aria-checked='true'] {
   background-color: var(--znhd-brand);
   border-color: var(--znhd-brand);
-}
-/* 日间模式：选中态滑块（圆形）填充白色（官方 = --input-color: base-content，偏黑）。
-   daisyUI 5 的滑块画法 = ::before 的 background-color: currentColor，
-   color 又取自 --input-color → 覆写该变量即可，边框仍是上面的品牌蓝。 */
-[data-theme='wireframe'] .toggle:checked,
-[data-theme='wireframe'] .toggle[aria-checked='true'] {
   --input-color: #fff;
 }
 
-/* ── 日间模式我方气泡品牌绿（v11，用户指定 --znhd-bubble-mine）──────────────
-   .chat-bubble-primary 用 --color-primary，wireframe 的 primary 是灰阶，
-   与对方气泡（base-300）几乎同色；夜间 business 两色可辨保持官方。
-   primary-content 在 wireframe 是深色，绿底深字可读。 */
-[data-theme='wireframe'] .chat-bubble-primary {
+/* ── 我方气泡品牌绿（v11，用户指定 --znhd-bubble-mine；v7 起不分主题）────────
+   .chat-bubble-primary 官方用 --color-primary（wireframe 灰阶时代为可辨性而覆写；
+   换 cupcake 后保留用户定版的绿色）。 */
+.chat-bubble-primary {
   background-color: var(--znhd-bubble-mine);
 }
 
