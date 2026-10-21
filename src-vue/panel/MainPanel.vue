@@ -11,7 +11,8 @@ import { hoursToHHmm } from '@/lib/utils';
 import { PANEL_WIDTH } from '@/lib/ui/panelIds';
 import { toast } from '@vue/lib/toast';
 import { themeMode, toggleTheme } from '@vue/lib/theme';
-import { Icon, type IconName } from '../icons';
+import { dialogOpen, voiceEnabled as busVoiceEnabled, voiceToggler as busVoiceToggler } from '@vue/lib/uiBus';
+import { Icon } from '../icons';
 import { clampHostIntoView } from './geometry';
 import { usePanelDrag } from './usePanelDrag';
 import SettingsDialog from './SettingsDialog.vue';
@@ -34,21 +35,16 @@ const drag = usePanelDrag(props.host);
 const BRAND_ICON = 'https://znhd.hunan.chinatax.gov.cn:8443/favicon.ico';
 const brandFailed = ref(false);
 
-/** 面板入口（与 React 版 PANEL_ACTIONS 一致；「传输助手」4 字是最长标签） */
-const PANEL_ACTIONS: Array<{ key: string; icon: IconName; label: string }> = [
-    { key: 'settings', icon: 'settings', label: '设置' },
-    { key: 'phrases', icon: 'phrases', label: '常用语' },
-    { key: 'transfer', icon: 'transfer', label: '传输助手' },
-    { key: 'sniff', icon: 'sniff', label: '图片嗅探' },
-];
+/**
+ * v26.10.21-v4 起「设置/常用语/传输助手/图片嗅探」4 个入口与语音播报开关
+ * 迁到站点导航条（panel/NavBarControls），本面板只留状态与播报记录：
+ * 弹窗开关直接绑总线（dialogOpen），语音开关经总线接力（见 toggleVoice 下方）。
+ */
+const busDialogOpen = dialogOpen;
 
 const allvalue = ref<Allvalue>(runtime.init);
 const voiceEnabled = computed(() => !!allvalue.value.voiceEnabled);
 
-const settingsOpen = ref(false);
-const phrasesOpen = ref(false);
-const transferOpen = ref(false);
-const sniffOpen = ref(false);
 const logOpen = ref(false);
 const changelogOpen = ref(false);
 
@@ -99,6 +95,12 @@ function toggleVoice(next: boolean) {
     }
 }
 
+// 标题栏注入控件（NavBarControls，独立 Vue 实例）与本面板的双向接力：
+//   状态：allvalue → voiceEnabled(computed) → 总线（单向投影，主面板是唯一事实源）；
+//   事件：标题栏点开关 → 总线回调 → toggleVoice 落库（持久化逻辑只有这一份）。
+watch(voiceEnabled, (v) => (busVoiceEnabled.value = v), { immediate: true });
+busVoiceToggler.value = toggleVoice;
+
 function lastSpeakText(last: MonitorState['lastSpeak']): string {
     if (!last) return '暂无播报记录';
     const mins = Math.floor((Date.now() - last.at) / 60000);
@@ -111,13 +113,6 @@ const statusText = computed(() =>
         ? '当前等待人数：' + (mon.value.waiting === null ? '—' : mon.value.waiting) + ' 人'
         : '当前非工作时段'
 );
-
-function openEntry(key: string) {
-    if (key === 'settings') settingsOpen.value = true;
-    else if (key === 'phrases') phrasesOpen.value = true;
-    else if (key === 'transfer') transferOpen.value = true;
-    else if (key === 'sniff') sniffOpen.value = true;
-}
 
 /**
  * 常用语加载（移植自 React 版 `MainPanel.loadPhrasesData`，逻辑逐行对齐）：
@@ -162,9 +157,12 @@ function loadPhrasesData(force = false) {
 }
 
 // 打开常用语侧边栏即自动加载（与 React 版的 useEffect([phrasesOpen]) 等价）
-watch(phrasesOpen, (open) => {
-    if (open) loadPhrasesData();
-});
+watch(
+    () => busDialogOpen.phrases,
+    (open) => {
+        if (open) loadPhrasesData();
+    }
+);
 
 // 悬浮球贴边后展开：按面板真实宽度裁回视口（只在「收起 → 展开」这一跳做）
 watch(collapsed, (now, prev) => {
@@ -179,7 +177,7 @@ onMounted(() => {
     // 传输助手：收件 / 在线状态必须在窗口不开时也照常工作（store 是模块级的），
     // 这里只负责「启动」与「收到内容时自动弹窗」（幂等，与 React 版行为一致）
     initTransfer();
-    offAutoOpen = onTransferAutoOpen(() => (transferOpen.value = true));
+    offAutoOpen = onTransferAutoOpen(() => (busDialogOpen.transfer = true));
 
     addLog('脚本已启动，版本 v' + (VERSION || '?'), 'success');
     const wh = allvalue.value.workingHours || runtime.workingHours;
@@ -313,32 +311,7 @@ onBeforeUnmount(() => {
                 {{ statusText }}
             </div>
 
-            <!-- 语音播报开关 -->
-            <div class="mb-2.5 flex items-center justify-between rounded-box bg-base-200 px-3 py-2">
-                <span class="flex items-center gap-1.5 text-[13px]">
-                    <span :class="voiceEnabled ? 'text-primary znhd-brand-fg' : 'text-base-content/60'">
-                        <Icon :name="voiceEnabled ? 'volumeOn' : 'volumeOff'" :size="15" />
-                    </span>
-                    语音播报
-                </span>
-                <input
-                    type="checkbox"
-                    class="toggle"
-                    :checked="voiceEnabled"
-                    @change="toggleVoice(($event.target as HTMLInputElement).checked)" />
-            </div>
-
-            <!-- 4 个入口：btn + 容器查询控制文字显隐 -->
-            <div class="grid grid-cols-4 gap-1.5">
-                <div v-for="a in PANEL_ACTIONS" :key="a.key" class="tooltip tooltip-top" :data-tip="a.label">
-                    <!-- ghost：无描边无底色，hover 出现圆形底（btn-circle 决定遮罩形状） -->
-                    <button class="btn btn-ghost btn-sm w-full znhd-panel-btn min-w-0 gap-0.5 px-1" @click="openEntry(a.key)">
-                        <!-- znhd-brand-fg：日间模式图标 = 品牌蓝（style.css 按 data-theme 作用域），夜间回落官方 primary -->
-                        <span class="text-primary znhd-brand-fg"><Icon :name="a.icon" :size="15" /></span>
-                        <span class="znhd-panel-btn-text ml-0.5 text-[11px]">{{ a.label }}</span>
-                    </button>
-                </div>
-            </div>
+            <!-- v26.10.21-v4：语音播报开关与 4 个功能入口已迁站点导航条（NavBarControls） -->
 
             <!-- 底部：上次播报 + 查看日志 -->
             <div class="mt-2.5 flex items-center justify-between gap-2 text-xs text-base-content/60">
@@ -348,7 +321,7 @@ onBeforeUnmount(() => {
         </div>
 
         <SettingsDialog
-            v-model:open="settingsOpen"
+            v-model:open="busDialogOpen.settings"
             :working-hours="allvalue.workingHours"
             :use-cdn="!!allvalue.useCdn"
             :sniff-pre-measure="allvalue.sniffPreMeasure !== false"
@@ -383,7 +356,7 @@ onBeforeUnmount(() => {
             @open-changelog="changelogOpen = true" />
 
         <PhrasesSheet
-            v-model:open="phrasesOpen"
+            v-model:open="busDialogOpen.phrases"
             v-model:search-keyword="searchKeyword"
             :phrases-data="phrasesData"
             :phrases-loading="phrasesLoading"
@@ -398,9 +371,9 @@ onBeforeUnmount(() => {
 
         <ChangelogDialog v-model:open="changelogOpen" />
 
-        <ChatWindow v-model:open="transferOpen" />
+        <ChatWindow v-model:open="busDialogOpen.transfer" />
         <SniffDialog
-            v-model:open="sniffOpen"
+            v-model:open="busDialogOpen.sniff"
             :min-kb="allvalue.sniffMinKB ?? 20"
             @update:min-kb="
                 (kb: number) => {

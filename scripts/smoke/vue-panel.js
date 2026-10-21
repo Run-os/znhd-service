@@ -154,6 +154,14 @@ localStorage.setItem('scriptCat_PhrasesCache', JSON.stringify({
 </script>
 <script src="/vue.js"></script>
 </head><body><h1>host page</h1>
+<!-- 站点导航条夹具（v26.10.21-v4）：标题栏注入控件的挂载锚点（.nav-bar-main） -->
+<div id="host-navbar" style="background:#185FA5;height:56px;display:flex;align-items:center;padding:0 16px;">
+  <span style="color:#fff;font-size:16px;">征纳互动</span>
+  <div class="nav-bar-main" style="display:flex;align-items:center;margin-left:24px;">
+    <a style="color:#fff;padding:0 12px;">工作台</a>
+    <a style="color:#fff;padding:0 12px;">业务管理</a>
+  </div>
+</div>
 <!-- 图片嗅探夹具：两张 > 20KB（应出现在结果里）、一张 2KB（应被阈值过滤）、一张 .svg（应被后缀规则排除） -->
 <div id="host-images">
   <img src="/img/photo-a.jpg" alt="photo-a.jpg" width="240" height="160">
@@ -261,16 +269,63 @@ function serve() {
     });
     // toast 容器（[data-znhd="toast"]）由 lib/toast.ts 首次弹出时才挂载，不属于挂载判定
     report.checks.panelMounted = panel.host && panel.shadow && panel.styleInjected;
-    report.checks.panelTextOk = panel.text.includes('征纳互动监控') && panel.text.includes('语音播报');
+    // v26.10.21-v4：语音开关 + 4 入口迁到导航条 ⇒ 面板正文不应再出现「语音播报」
+    report.checks.panelTextOk =
+        panel.text.includes('征纳互动监控') &&
+        panel.text.includes('查看日志') &&
+        !panel.text.includes('语音播报');
     report.checks.versionOk = panel.text.includes('v' + SCRIPT_VERSION);
     report.panel = panel;
 
     await page.screenshot({ path: path.join(os.tmpdir(), 'znhd-vue-panel.png') });
 
-    // 点「设置」→ 验证 Dialog 是否留在 shadowRoot 内、样式是否生效
+    // ---------- 标题栏注入控件（v26.10.21-v4）：挂载 / 按钮清单 / 语音开关接力 ----------
+    const nav = await page.evaluate(() => {
+        const host = document.getElementById('__znhd_nav_host__');
+        const sr = host && host.shadowRoot;
+        if (!host || !sr) return { mounted: false };
+        const r = host.getBoundingClientRect();
+        const box = sr.querySelector('input[type="checkbox"]');
+        return {
+            mounted: host.isConnected,
+            // 首选锚点 = 菜单父级（host 与菜单互为兄弟）；回退锚点 = 菜单内部。
+            // 两种都算「挂对了位置」：父级里能查到 .nav-bar-main 即可。
+            inNavBar:
+                !!host.closest('.nav-bar-main') ||
+                !!(host.parentElement && host.parentElement.querySelector('.nav-bar-main')),
+            visible: r.width > 0 && r.height > 0 && r.right <= window.innerWidth,
+            btnTitles: [...sr.querySelectorAll('button[title]')].map((b) => b.title),
+            hasVoiceBox: !!box,
+            voiceChecked: !!(box && box.checked),
+        };
+    });
+    report.nav = nav;
+    report.checks.navMountedOk = nav.mounted && nav.inNavBar && nav.visible;
+    report.checks.navButtonsOk =
+        JSON.stringify(nav.btnTitles) === JSON.stringify(['设置', '常用语', '传输助手', '图片嗅探']) &&
+        nav.hasVoiceBox;
+
+    // 语音开关接力：标题栏点开关 → 总线回调 toggleVoice → allvalue → 状态回流勾选框。
+    // 默认 voiceEnabled=true ⇒ 首次点击 = 关；断言「勾选态翻转后能点回原态」。
+    report.checks.navVoiceOk = await page.evaluate(() => {
+        const sr = document.getElementById('__znhd_nav_host__').shadowRoot;
+        const box = sr && sr.querySelector('input[type="checkbox"]');
+        if (!box) return false;
+        const before = box.checked;
+        box.click();
+        return new Promise((resolve) => {
+            setTimeout(() => {
+                const flipped = box.checked !== before;
+                box.click(); // 点回去，结束态与初始一致
+                setTimeout(() => resolve(flipped && box.checked === before), 200);
+            }, 300);
+        });
+    });
+
+    // 点导航条上的「设置」→ 弹窗仍应出现在**主面板**的 shadowRoot 里（跨实例总线）
     await page.evaluate(() => {
-        const sr = document.getElementById('__znhd_panel_host__').shadowRoot;
-        const btn = [...sr.querySelectorAll('button')].find((b) => b.textContent.includes('设置'));
+        const sr = document.getElementById('__znhd_nav_host__').shadowRoot;
+        const btn = [...sr.querySelectorAll('button[title]')].find((b) => b.title === '设置');
         if (btn) btn.click();
     });
     await new Promise((r) => setTimeout(r, 400));
@@ -312,10 +367,18 @@ function serve() {
 
     const clickPanelText = async (text) => {
         await page.evaluate((t) => {
-            const sr = document.getElementById('__znhd_panel_host__').shadowRoot;
-            const el = [...sr.querySelectorAll('button, a, [role="button"]')].find((b) =>
-                b.textContent.replace(/\s+/g, '').includes(t)
-            );
+            // v26.10.21-v4：功能入口已迁导航条 —— 先按 title 在导航条 host 里找；
+            // 找不到再退回面板 shadow 按可见文本找（「查看日志」等仍留在面板里）
+            const navSr = document.getElementById('__znhd_nav_host__')?.shadowRoot;
+            let el = navSr
+                ? [...navSr.querySelectorAll('button[title]')].find((b) => b.title === t)
+                : null;
+            if (!el) {
+                const sr = document.getElementById('__znhd_panel_host__').shadowRoot;
+                el = [...sr.querySelectorAll('button, a, [role="button"]')].find((b) =>
+                    b.textContent.replace(/\s+/g, '').includes(t)
+                );
+            }
             if (el) el.click();
         }, text);
         await new Promise((r) => setTimeout(r, 500));
@@ -945,8 +1008,8 @@ function serve() {
     }
 
     await page.evaluate(() => {
-        const sr = document.getElementById('__znhd_panel_host__').shadowRoot;
-        const btn = [...sr.querySelectorAll('button')].find((b) => b.textContent.includes('图片嗅探'));
+        const sr = document.getElementById('__znhd_nav_host__')?.shadowRoot;
+        const btn = [...(sr?.querySelectorAll('button[title]') || [])].find((b) => b.title === '图片嗅探');
         if (btn) btn.click();
     });
     // 扫描是同步收集 + 异步测大小（150ms 合批），给足时间让所有测量落地
@@ -1184,8 +1247,8 @@ function serve() {
     // 夜间重新打开传输助手窗口，modal-box 底色/描边/输入舱必须全部等于 business 的语义变量；
     // 若哪天有人把 hex 写死回组件里，这条会红（日间基线断言则永远绿）。
     await page.evaluate(() => {
-        const sr = document.getElementById('__znhd_panel_host__').shadowRoot;
-        const btn = [...sr.querySelectorAll('button')].find((b) => b.textContent.includes('传输助手'));
+        const sr = document.getElementById('__znhd_nav_host__')?.shadowRoot;
+        const btn = [...(sr?.querySelectorAll('button[title]') || [])].find((b) => b.title === '传输助手');
         if (btn) btn.click();
     });
     await new Promise((r) => setTimeout(r, 450));

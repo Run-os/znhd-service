@@ -23,8 +23,9 @@ import { initialPanelPoint } from './panel/geometry';
  * （实测：border-b 算出 0px 宽）。CSS.registerProperty 是文档级 JS API，可以绕过该限制：
  * 在注入样式前把构建产物里声明的 @property 逐个重新注册。
  * 页面若已注册同名属性则抛错，忽略即可（同名注册语义一致，页面版本优先生效）。
+ * （v26.10.21-v4 起 navBarMount.ts 注入标题栏控件时也要走这一步，故导出。）
  */
-function registerTailwindProperties(styleEl: HTMLStyleElement): void {
+export function registerTailwindProperties(styleEl: HTMLStyleElement): void {
     const re = /@property\s+(--[\w-]+)\s*\{([^}]*)\}/g;
     let m: RegExpExecArray | null;
     while ((m = re.exec(styleEl.textContent ?? '')) !== null) {
