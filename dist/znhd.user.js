@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         征纳互动人数和在线监控v2
 // @namespace    https://scriptcat.org/
-// @version      26.10.21-v1
+// @version      26.10.21-v2
 // @author       runos
 // @description  实时监控征纳互动等待人数和在线状态，支持语音播报、自定义常用语
 // @license      MIT
@@ -3637,17 +3637,13 @@ more: [
                 return vue.openBlock(), vue.createElementBlock("button", {
                   key: tab.value + i,
                   "data-znhd": "phrase-card",
-                  class: "group relative min-h-[64px] w-full overflow-hidden rounded-xl border border-base-content/10 bg-base-200 py-3 pr-3 pl-4 text-left transition-colors hover:border-primary hover:bg-base-300 focus-visible:border-primary focus-visible:outline-none",
+                  class: "group relative min-h-[64px] w-full rounded-xl border border-base-content/10 bg-base-200 p-3 text-left transition-colors hover:border-primary hover:bg-base-300 focus-visible:border-primary focus-visible:outline-none",
                   onMouseenter: showTip,
                   onMouseleave: hideTip,
                   onFocus: showTip,
                   onBlur: hideTip,
                   onClick: ($event) => pick(t)
                 }, [
-                  _cache[7] || (_cache[7] = vue.createElementVNode("span", {
-                    "data-znhd": "phrase-card-bar",
-                    class: "absolute top-0 left-0 h-full w-[3px] bg-base-content/25 transition-colors group-hover:bg-primary"
-                  }, null, -1)),
                   vue.createElementVNode("span", _hoisted_14$6, [
                     vue.createElementVNode("span", _hoisted_15$5, vue.toDisplayString(t), 1),
                     vue.createElementVNode("span", _hoisted_16$4, [
@@ -3669,7 +3665,7 @@ more: [
             class: vue.normalizeClass(["pointer-events-none fixed z-10 max-h-[50vh] max-w-[300px] overflow-hidden rounded-box bg-neutral p-2 text-xs leading-5 break-words whitespace-pre-wrap text-neutral-content shadow-lg", tipPos.value ? "visible" : "invisible"]),
             style: vue.normalizeStyle(tipPos.value ? { left: tipPos.value.x + "px", top: tipPos.value.y + "px" } : void 0)
           }, vue.toDisplayString(tipText.value), 7)) : vue.createCommentVNode("", true),
-          _cache[8] || (_cache[8] = vue.createElementVNode("form", {
+          _cache[7] || (_cache[7] = vue.createElementVNode("form", {
             method: "dialog",
             class: "modal-backdrop"
           }, [

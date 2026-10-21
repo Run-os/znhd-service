@@ -14,12 +14,12 @@ import { toast } from '@vue/lib/toast';
  *   `modal modal-end`（右侧弹层）+ `tabs tabs-box`（radio input 式，全部/我的）+ `input`（带图标，label 包裹）
  *   + 卡片列表（每条话术一张卡，三行截断）+ `hero`（空态）+ `loading`（加载中）+ `btn`。
  *
- * ⚠️ 话术列表为什么是「提亮卡 + 左侧竖条」而不是 daisyUI 的 `list/list-row`（v26.10.21-v1）：
+ * ⚠️ 话术列表为什么是「提亮卡」而不是 daisyUI 的 `list/list-row`（v26.10.21-v2 定版 = 方案 C1）：
  *   紧凑列表在夜间 business 主题下几乎读不出条目边界，改卡片后**不能用 base-300 描边分层** ——
  *   business 的 base-300 与 base-200 明度只差一点点，描边整条融进深底（实测截图）。
  *   所以卡面抬到 `base-200`（比 modal-box 的 base-100 亮一档，靠明度差分层）、描边压到
- *   `base-content/10` 只做收边，再加 3px 左竖条做视觉锚点（常态 `base-content/25`、悬浮转
- *   `primary`）。日间 wireframe 同样成立（浅灰卡在浅底上仍有明度差）。
+ *   `base-content/10` 只做收边；悬浮时描边转 primary、底抬到 base-300。
+ *   日间 wireframe 同样成立（浅灰卡在浅底上仍有明度差）。
  *   ⚠️ 改卡面配色前先在**两个主题**下各看一眼，别只验日间。
  *
  * ⚠️ 话术的长文本提示**没有用 daisyUI 的 `tooltip` + `data-tip`**：那套是靠伪元素绝对定位，
@@ -224,22 +224,20 @@ function pick(text: string) {
             </div>
 
             <div v-else class="flex flex-col gap-2" @scroll="hideTip">
-                <!-- 卡片：底 base-200（比弹层 base-100 亮一档）+ 10% 描边收边 + 左侧 3px 竖条。
-                     `group` 挂在 button 上，竖条与箭头用 group-hover 跟着变色 ⇒ 悬浮时整卡一起响应。
-                     `overflow-hidden` 让竖条贴住圆角（否则直角会顶出 rounded-xl 的弧）。 -->
+                <!-- 卡片（方案 C1）：底 base-200（比弹层 base-100 亮一档）+ 10% 描边只做收边，
+                     靠**明度差**分层；悬浮时描边转主色、底再抬一档（base-300）。
+                     `group` 挂在 button 上，箭头用 group-hover 跟着变色。
+                     （曾加过 3px 左竖条，用户看实机后否掉了 —— 别再加回来。） -->
                 <button
                     v-for="(t, i) in rows"
                     :key="tab + i"
                     data-znhd="phrase-card"
-                    class="group relative min-h-[64px] w-full overflow-hidden rounded-xl border border-base-content/10 bg-base-200 py-3 pr-3 pl-4 text-left transition-colors hover:border-primary hover:bg-base-300 focus-visible:border-primary focus-visible:outline-none"
+                    class="group relative min-h-[64px] w-full rounded-xl border border-base-content/10 bg-base-200 p-3 text-left transition-colors hover:border-primary hover:bg-base-300 focus-visible:border-primary focus-visible:outline-none"
                     @mouseenter="showTip"
                     @mouseleave="hideTip"
                     @focus="showTip"
                     @blur="hideTip"
                     @click="pick(t)">
-                    <span
-                        data-znhd="phrase-card-bar"
-                        class="absolute top-0 left-0 h-full w-[3px] bg-base-content/25 transition-colors group-hover:bg-primary"></span>
                     <span class="flex items-start gap-2">
                         <!-- 三行截断（leading-5 × 3 = 60px），完整内容靠悬浮提示看 -->
                         <span class="line-clamp-3 flex-1 text-[13px] leading-5">{{ t }}</span>

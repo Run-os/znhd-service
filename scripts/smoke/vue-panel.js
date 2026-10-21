@@ -447,10 +447,10 @@ function serve() {
         phrasesSheet.placeholder.includes('搜索常用语');
     report.phrasesSheet = phrasesSheet;
 
-    // 话术改成卡片（v26.10.21-v1）：三行截断 + 悬浮提示不被弹层裁掉
+    // 话术改成卡片（v26.10.21-v2，方案 C1）：三行截断 + 悬浮提示不被弹层裁掉
     //  · 截断：内层 span line-clamp-3（不再钉死 h-10 —— 卡片高度随行数变化）
     //  · 卡片身份：卡面底色必须 ≠ 弹层底色（base-200 vs base-100，夜间靠这个明度差分层次），
-    //    圆角 ≥ 8px，左侧竖条宽度 3px
+    //    圆角 ≥ 8px，四边内边距对称（竖条方案已否掉，别再出现左内边距偏大的卡片）
     //  · 提示：浮层必须是 dialog 直接子节点（在 .modal-box 外面）。曾经用 daisyUI 的
     //    tooltip+data-tip，伪元素落在 modal-box 里被 overflow-y:auto 裁掉大半。
     const rowPoint = await page.evaluate(() => {
@@ -473,7 +473,6 @@ function serve() {
         const tip = el.querySelector('[data-znhd="phrase-tip"]');
         const boxRect = box.getBoundingClientRect();
         const tr = tip ? tip.getBoundingClientRect() : null;
-        const barOf = (b) => b.querySelector('[data-znhd="phrase-card-bar"]');
         return {
             found: true,
             rows: btns.length,
@@ -483,10 +482,14 @@ function serve() {
                 return s ? getComputedStyle(s).webkitLineClamp : '';
             }),
             radii: btns.map((b) => Math.round(parseFloat(getComputedStyle(b).borderRadius) || 0)),
-            barWidths: btns.map((b) => {
-                const bar = barOf(b);
-                return bar ? Math.round(bar.getBoundingClientRect().width) : -1;
+            // 四边内边距：竖条方案会写成 pl-4/pr-3（左右不等）⇒ 这里必须对称
+            pads: btns.map((b) => {
+                const cs = getComputedStyle(b);
+                return [cs.paddingTop, cs.paddingRight, cs.paddingBottom, cs.paddingLeft].map((v) =>
+                    Math.round(parseFloat(v) || 0)
+                );
             }),
+            hasBar: btns.some((b) => !!b.querySelector('[data-znhd="phrase-card-bar"]')),
             // ⚠️ 底色必须量**没被悬停**的那张卡：第 1 张此刻正被鼠标压着（为了触发提示），
             //    读到的是 hover:bg-base-300 的颜色 ⇒ 曾让「卡面=弹层底色」的坏样式假绿。
             cardBg: btns.length ? getComputedStyle(btns[btns.length - 1]).backgroundColor : '',
@@ -518,10 +521,12 @@ function serve() {
     // 卡片身份（夜间能不能看出条目边界，全靠这三点）
     //  · 常态卡面底色 ≠ 弹层底色 ⇒ base-200 vs base-100 的明度差真的生效
     //  · 悬停底色再抬一档（hover:bg-base-300）
+    //  · 内边距四边相等（竖条方案曾用 pl-4/pr-3）+ 不再有竖条元素
     report.checks.phrasesCardOk =
         !!phraseLayout.found &&
         phraseLayout.radii.every((r) => r >= 8) &&
-        phraseLayout.barWidths.every((w) => w === 3) &&
+        phraseLayout.pads.every(([t, r, b, l]) => t === r && r === b && b === l && t >= 10) &&
+        phraseLayout.hasBar === false &&
         !!phraseLayout.cardBg &&
         phraseLayout.cardBg !== phraseLayout.boxBg &&
         phraseLayout.hoverBg !== phraseLayout.cardBg;
