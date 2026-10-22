@@ -13,7 +13,9 @@
 3. 每条话术一张卡片（3 行截断，悬停看全文），点击后：
    - 自动复制到剪贴板（`GM_setClipboard` 优先，降级 `navigator.clipboard`）；
    - 播放提示音（`dida.mp3`）；
-   - 填入页面 TinyMCE 聊天编辑器（自动处理换行与空输入框）。
+   - 填入页面 TinyMCE 聊天编辑器（自动处理换行与空输入框）。实现为**纯 JS API**
+     （`tinymce.activeEditor` + `insertContent` + 同步 Vue 的 `msg`，无 DOM 兜底），
+     细则与实测结论见 [tinymce-send-doc.md](tinymce-send-doc.md)。
 4. 标题栏右侧的**刷新图标**可无视缓存强制重抓。
 
 ## 缓存

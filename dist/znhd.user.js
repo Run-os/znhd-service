@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         征纳互动人数和在线监控v2
 // @namespace    https://scriptcat.org/
-// @version      26.10.22-v4
+// @version      26.10.22-v5
 // @author       runos
 // @description  实时监控征纳互动等待人数和在线状态，支持语音播报、自定义常用语
 // @license      MIT
@@ -1524,15 +1524,15 @@ logAutoRefresh: !!_initAllvalue.logAutoRefresh
         resolve(false);
         return;
       }
-      const pageWin = typeof unsafeWindow !== "undefined" ? unsafeWindow : null;
+      const pageWin2 = typeof unsafeWindow !== "undefined" ? unsafeWindow : null;
       const realms = [];
-      if (pageWin && pageWin.navigator && pageWin.navigator.clipboard &&
-typeof pageWin.navigator.clipboard.write === "function" && pageWin.ClipboardItem) {
+      if (pageWin2 && pageWin2.navigator && pageWin2.navigator.clipboard &&
+typeof pageWin2.navigator.clipboard.write === "function" && pageWin2.ClipboardItem) {
         realms.push({
           name: "页面主世界",
-          nav: pageWin.navigator,
-          CI: pageWin.ClipboardItem,
-          BlobCtor: pageWin.Blob,
+          nav: pageWin2.navigator,
+          CI: pageWin2.ClipboardItem,
+          BlobCtor: pageWin2.Blob,
           isPageRealm: true
         });
       }
@@ -3157,71 +3157,50 @@ more: [
       };
     }
   });
+  function pageWin() {
+    try {
+      if (typeof unsafeWindow !== "undefined" && unsafeWindow) return unsafeWindow;
+    } catch (e) {
+    }
+    return window;
+  }
+  function getEditor() {
+    var _a, _b;
+    const ed = (_b = (_a = pageWin()) == null ? void 0 : _a.tinymce) == null ? void 0 : _b.activeEditor;
+    return ed && typeof ed.insertContent === "function" ? ed : null;
+  }
+  function syncInputbox(html) {
+    var _a, _b;
+    const el = (_b = (_a = pageWin()) == null ? void 0 : _a.document) == null ? void 0 : _b.querySelector(".input-tinymce");
+    let vm = el == null ? void 0 : el.__vue__;
+    for (let i = 0; i < 6 && vm; i++) {
+      if (typeof vm.updateText === "function") {
+        vm.updateText(html);
+        return true;
+      }
+      vm = vm.$parent;
+    }
+    return false;
+  }
   function appendToTinyMCE(text2append = "") {
-    var _a, _b, _c, _d, _e;
-    const editors = (_b = (_a = window.tinymce) == null ? void 0 : _a.editors) != null ? _b : [];
-    const ed = editors.find((e) => e.inline === false);
-    const editor = ed || editors[0];
-    let isInputEmpty = true;
-    if (editor) {
-      const body = editor.getBody();
-      isInputEmpty = !body.textContent.trim();
-    } else {
-      const iframe = document.querySelector(".input-box iframe.tox-edit-area__iframe") || document.querySelector("iframe.tox-edit-area__iframe") || document.querySelector('iframe[class*="tox"]');
-      if (iframe) {
-        try {
-          const doc = iframe.contentDocument;
-          if (!doc) throw new Error("contentDocument 不可访问");
-          const body = doc.querySelector("body#tinymce") || doc.body;
-          if (!body) throw new Error("找不到 iframe body");
-          isInputEmpty = !(body.textContent || "").trim();
-        } catch (e) {
-          addLog("无法访问iframe内容: " + e.message, "warning", true);
-        }
-      }
+    const editor = getEditor();
+    if (!editor) {
+      addLog("找不到 TinyMCE 编辑器（页面未就绪？）", "error", true);
+      return "";
     }
-    const escapedText = escapeHtml(text2append);
-    let processedContent = escapedText.replace(/\n/g, "<br>");
-    if (!isInputEmpty) {
-      processedContent = "<br>" + processedContent;
+    const body = editor.getBody();
+    const isEmpty = !((body == null ? void 0 : body.textContent) || "").trim();
+    const html = escapeHtml(text2append).replace(/\n/g, "<br>");
+    const payload = isEmpty ? html : "<br>" + html;
+    editor.focus();
+    editor.selection.select(body, true);
+    editor.selection.collapse(false);
+    editor.insertContent(payload);
+    const content = editor.getContent();
+    if (!syncInputbox(content)) {
+      addLog("未能同步输入框状态（未找到 Inputbox 组件）", "warning", true);
     }
-    if (editor) {
-      const body = editor.getBody();
-      if (isInputEmpty) {
-        editor.setContent(processedContent);
-      } else {
-        editor.execCommand("mceInsertContent", false, processedContent);
-      }
-      editor.save();
-      editor.setDirty(true);
-      editor.selection.select(body, true);
-      editor.selection.collapse(false);
-    } else {
-      const iframe = document.querySelector("iframe.tox-edit-area__iframe") || document.querySelector('iframe[class*="tox"]');
-      if (!iframe) {
-        addLog("找不到 TinyMCE iframe", "error", true);
-        return "";
-      }
-      try {
-        const doc = iframe.contentDocument;
-        const body = doc ? doc.body : null;
-        if (!body) {
-          addLog("找不到 body", "error", true);
-          return "";
-        }
-        if (isInputEmpty) {
-          body.innerHTML = processedContent;
-        } else {
-          body.insertAdjacentHTML("beforeend", processedContent);
-        }
-        body.dispatchEvent(new Event("input", { bubbles: true }));
-      } catch (e) {
-        addLog("无法访问 iframe 内容: " + e.message, "error", true);
-        return "";
-      }
-    }
-    const fallbackIframe = document.querySelector("iframe.tox-edit-area__iframe") || document.querySelector('iframe[class*="tox"]');
-    const finalText = editor ? editor.getContent({ format: "text" }) : (_e = (_d = (_c = fallbackIframe == null ? void 0 : fallbackIframe.contentDocument) == null ? void 0 : _c.body) == null ? void 0 : _d.textContent) != null ? _e : "";
+    const finalText = editor.getContent({ format: "text" });
     addLog("已追加文本并同步: " + finalText, "success", true);
     return finalText;
   }
