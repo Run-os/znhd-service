@@ -108,6 +108,10 @@
 - 冒烟里传输助手底色断言**绑的是日间基线**（harness 钉 `prefers-color-scheme=light`）：亮色窗口 `rgb(242,242,242)`、细线 `1px rgb(224,224,224)`、设置弹窗 `rgb(255,255,255)`；夜间由末尾 `transferThemeFollowOk` 反向守（纯黑 + `rgb(34,34,34)` + 输入舱 `rgb(32,32,32)`）。改色板要同时改这两处。
 - 发送：v26.10.18-v1 起**先落全部「发送中」气泡再逐个上传**，进度条画在气泡内（`sendProgress`/`ChatMsg.progress`；`GM_xhr upload.onprogress` / 客户端 XHR）；**首个进度事件前不画条**（宿主不支持静默降级）。
 - 收件归组按 `from`（`sessionKeyForIncoming`）；无 `from` 才走旧规则（1 台在线归该机/否则聚合 `__phone__`）。**聚合会话判在线必须用 `sessionSendable()`**，不能 `!!phone`。
+- ⚠️ **气泡结构别直接并列**（v26.10.22-v4）：daisyUI 5 的 `.chat-bubble{grid-row-end:3}` 只支持「一轮一条气泡」，同一 `.chat` 里并列多条会全部落在**同一格重叠**（后画的盖住前面的，表现为「连发两张图只剩最后一张」）。`ChatTurn.vue` 已用 `flex flex-col gap-1` 包一层 + `items-start|end` 对齐；新增气泡组件时照此结构。
+- 图片气泡尺寸链：气泡 `max-w-[78%] p-1` + 图 `max-w-full`（相对气泡内容盒）。⚠️ 不要再写死 `img max-w-[240px]` + 气泡 `max-w-[62%]`：脚本端 768px 窗口看不出来，客户端手机页 ~360px 时 62% − 内边距只有 ~144px ⇒ 图溢出气泡（用户实机截图报的）。
+- **客户端持久化（`web/src/lib/chatPersist.ts`）两个致命点**：① 落盘的必须是**纯对象** —— 把 Vue 响应式 Proxy 交给 IndexedDB 会抛 `DataCloneError`，put 失败只留一条 `console.warn`，表现为「一条都没存、刷新全丢」；② 自己发出的图/文件显示用 objectURL（刷新失效），必须把 `blob` 一起存（IndexedDB 原生存 Blob），载入时 `URL.createObjectURL` 重建 —— 旧实现按 `url` 是否 `blob:` 整条丢弃。
+- 装载顺序：**先 `loadChatMessages()` 再启动接收**，且载入完成前置 `hydrated` 闸门不落盘（否则启动期空列表覆盖历史）；`pagehide` / `visibilitychange→hidden` 时 `flushChatMessages()` 兜住 800ms 防抖窗口。
 - 表情：必须走 `GM_xmlhttpRequest`（宿主 CSP 拦外域 img）；**objectURL 不 revoke**；4 处取图入口都要传 `it.path`（漏传静默直连 CDN）；点一张直发（`emoji:true` 载荷）；悬停 0.5s 浮层换图即时。ShadowDOM 里 outside-click 判定用 `e.composedPath()`（target 被重定向到宿主）。
 
 ## 10. 历史踩坑速查（仍有效的通用规则）

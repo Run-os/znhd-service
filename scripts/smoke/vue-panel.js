@@ -1052,16 +1052,32 @@ function serve() {
         const scroller = el && el.querySelector('[data-znhd="chat-scroller"]');
         const bubbles = el ? [...el.querySelectorAll('.chat-end .chat-bubble')] : [];
         const last = bubbles[bubbles.length - 1];
+        // v26.10.22-v4：同轮多条气泡必须各占一行。daisyUI 的 .chat-bubble 是 grid-row-end:3，
+        // 直接并列会全部落在同一格 → 后画的盖住前面的（用户看到「连发两张图只剩最后一张」）。
+        const rects = bubbles
+            .map((b) => {
+                const r = b.getBoundingClientRect();
+                return { top: r.top, bottom: r.bottom };
+            })
+            .sort((a, b) => a.top - b.top);
+        let stacked = rects.length >= 2;
+        for (let i = 1; i < rects.length; i++) {
+            if (rects[i].top < rects[i - 1].bottom - 0.5) stacked = false;
+        }
         return {
             bubbleW: last ? last.offsetWidth : 0,
             bubbleH: last ? last.offsetHeight : 0,
             scrollerW: scroller ? scroller.clientWidth : 0,
             hOverflow: scroller ? scroller.scrollWidth > scroller.clientWidth : null,
+            bubbleCount: bubbles.length,
+            stacked: stacked,
         };
     });
     report.wrapProbe = wrapProbe;
     // 纯长 token（不可断词最坏场景）也必须被关进气泡里
     report.checks.bubbleWrapOk = wrapProbe.bubbleW > 100 && wrapProbe.hOverflow === false;
+    // 连发两条 → 两条气泡不重叠
+    report.checks.bubblesStackOk = wrapProbe.bubbleCount >= 2 && wrapProbe.stacked;
 
     // 「全部文件」入口 v26.10.19-v9 起在标题栏（独立圆形按钮），不再收进「更多」下拉
     const filesPick = await page.evaluate(() => {

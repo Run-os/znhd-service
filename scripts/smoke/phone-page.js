@@ -308,38 +308,75 @@ async function main() {
         if (!input) {
             check('页面有选图用的 file input', false);
         } else {
-            await input.uploadFile(png);
-            await page.waitForSelector('.chat-end .chat-bubble img', {
-                timeout: 15000,
-            });
+            // v26.10.22-v4：一次选**两张**。连发是「气泡叠在一起只看得到最后一张」的复现条件
+            //（daisyUI .chat-bubble 固定 grid-row-end:3，同轮多条会落在同一格）
+            await input.uploadFile(png, png);
+            await page.waitForFunction(
+                () => document.querySelectorAll('.chat-end .chat-bubble img').length >= 2,
+                { timeout: 15000 }
+            );
             await page.waitForFunction(
                 () =>
-                    Array.from(document.querySelectorAll('.chat-end .chat-footer')).some(
+                    Array.from(document.querySelectorAll('.chat-end .chat-footer')).filter(
                         (el) => (el.textContent || '').indexOf('已发送') >= 0
-                    ),
+                    ).length >= 2,
                 { timeout: 20000 }
             );
             // 压缩后的 objectURL 换 src 是异步的：等 <img> 真正解码完成再取值
             await page.waitForFunction(
-                () => Array.from(document.querySelectorAll('.chat-end .chat-bubble img')).some((img) => img.naturalWidth > 0),
+                () =>
+                    Array.from(document.querySelectorAll('.chat-end .chat-bubble img')).filter(
+                        (img) => img.naturalWidth > 0
+                    ).length >= 2,
                 { timeout: 15000 }
             );
             const bubble = await page.evaluate(() => {
                 const msg = document.querySelector('.chat.chat-end');
-                const bub = msg ? msg.querySelector('.chat-bubble') : null;
+                const bubs = msg ? [...msg.querySelectorAll('.chat-bubble')] : [];
+                const bub = bubs[0] || null;
+                // 图片必须被关在气泡内容盒里（旧写法图写死 max-w-240px、气泡 max-w-62%，
+                // 窄屏上 62% − 内边距 < 240 ⇒ 图直接溢出到气泡外）
+                let imgFits = bubs.length >= 2;
+                for (const b of bubs) {
+                    const img = b.querySelector('img');
+                    if (!img) {
+                        imgFits = false;
+                        continue;
+                    }
+                    const br = b.getBoundingClientRect();
+                    const ir = img.getBoundingClientRect();
+                    const cs = getComputedStyle(b);
+                    const right = br.right - parseFloat(cs.paddingRight);
+                    const bottom = br.bottom - parseFloat(cs.paddingBottom);
+                    if (ir.right > right + 0.5 || ir.bottom > bottom + 0.5) imgFits = false;
+                }
+                // 同轮多条气泡必须各占一行（叠在一起 = 用户只能看到最新那张）
+                const rs = bubs.map((b) => b.getBoundingClientRect()).sort((a, b2) => a.top - b2.top);
+                let stacked = rs.length >= 2;
+                for (let i = 1; i < rs.length; i++) {
+                    if (rs[i].top < rs[i - 1].bottom - 0.5) stacked = false;
+                }
                 return {
                     align: msg ? (msg.classList.contains('chat-end') ? 'end' : 'start') : '',
                     bubbleOk: !!bub,
-                    imgLoaded: (function () {
-                        const img = msg && msg.querySelector('.chat-bubble img');
+                    count: bubs.length,
+                    imgLoaded: bubs.every((b) => {
+                        const img = b.querySelector('img');
                         return !!img && img.naturalWidth > 0;
-                    })(),
+                    }),
+                    imgFits,
+                    stacked,
                 };
             });
             check(
                 '发出的图片进右侧气泡（chat-end）且真的加载出来',
                 bubble.align === 'end' && bubble.bubbleOk && bubble.imgLoaded
             );
+            check(
+                '连发两张图：每条气泡各占一行（不重叠）',
+                bubble.count >= 2 && bubble.stacked
+            );
+            check('图片不超出气泡（含窄屏 max-w 链）', bubble.imgFits);
         }
 
         // ③ 发文本：输入 → Enter → 右侧文本气泡（chat-bubble-primary = 我方气泡绿）
@@ -365,23 +402,46 @@ async function main() {
         );
 
         // ③b 上传带 phoneId（v26.10.13-v3 起）：App 自己发的每一条（上传图 / 文本）经真中继
-        //     投递时都带 from = 本机手机 ID。队列顺序 = ② 上传图 → ③ 文本（表情已下线）。
+        //     投递时都带 from = 本机手机 ID。队列顺序 = ② 两张上传图 → ③ 文本（表情已下线）。
         //     v26.10.19-v9：标题栏「本机 id · 电脑 id」描述行已删，phoneId 改读 localStorage（同源键）。
         const phoneId = await page.evaluate(() => localStorage.getItem('znhd_phone_id') || '');
         const recvItems = [];
-        for (let i = 0; i < 2; i++) {
+        for (let i = 0; i < 3; i++) {
             recvItems.push(
                 await fetch(`http://127.0.0.1:${port}/recv/test-device-0001?maxwait=2000`).then((r) => r.json())
             );
         }
         check(
-            '手机上传带 phoneId：中继 /recv 投递的每条（上传图 / 文本）from = 本机手机 ID',
+            '手机上传带 phoneId：中继 /recv 投递的每条（两张上传图 / 文本）from = 本机手机 ID',
             !!phoneId &&
-                recvItems.length === 2 &&
+                recvItems.length === 3 &&
                 recvItems.every((it) => it && it.from === phoneId && (it.type === 'image' || it.type === 'text')) &&
-                recvItems.some((it) => it.type === 'image') &&
+                recvItems.filter((it) => it.type === 'image').length === 2 &&
                 recvItems.some((it) => it.type === 'text')
         );
+
+        // ③c 持久化（v26.10.22-v4）：刷新页面后历史必须还在。
+        //     自己发出的图 / 文件显示用 objectURL（刷新即失效），所以必须靠 IndexedDB 里的 Blob 重建；
+        //     旧实现把「url 是 blob:」的消息整条丢掉 ⇒ 一刷新自己发的内容全没了。
+        await sleep(1200); // 给持久化防抖留出落盘时间（正常路径；pagehide 还有一次 flush 兜底）
+        await page.reload({ waitUntil: 'load' });
+        let persisted = false;
+        try {
+            await page.waitForFunction(
+                () => {
+                    const imgs = [...document.querySelectorAll('.chat-end .chat-bubble img')];
+                    const textBack = [...document.querySelectorAll('.chat-end .chat-bubble')].some(
+                        (el) => (el.textContent || '').indexOf('冒烟聊天文本：手机到电脑') >= 0
+                    );
+                    return imgs.length >= 2 && imgs.every((i) => i.naturalWidth > 0) && textBack;
+                },
+                { timeout: 20000 }
+            );
+            persisted = true;
+        } catch (e) {
+            persisted = false;
+        }
+        check('刷新后聊天记录仍在：自己发的两张图（Blob 重建）与文本都回来了', persisted);
 
         // ④ 电脑端 → 手机端：真从中继投递一张图，等长轮询收到 → 左侧灰气泡
         const b64 = fs.readFileSync(png).toString('base64');

@@ -18,7 +18,13 @@ import {
 import { prepareImage } from './lib/image';
 import { useShellViewport } from './lib/viewport';
 import { useLayoutMode } from './lib/layoutMode';
-import { clearChatMessages, loadChatMessages, saveChatMessages, type ChatMsg } from './lib/chatPersist';
+import {
+    clearChatMessages,
+    flushChatMessages,
+    loadChatMessages,
+    saveChatMessages,
+    type ChatMsg,
+} from './lib/chatPersist';
 import { groupTurns } from '@vue/transfer/turns';
 
 /**
@@ -193,19 +199,16 @@ function startRelay() {
 }
 
 // ===== 会话持久化（v26.10.19-v10，与脚本端同款：IndexedDB + 7 天 TTL + 手动清空） =====
+// ⚠️ 顺序有讲究（v26.10.22-v4）：
+//   ① 先载入历史，**载入完成后**才启动「变动即落盘」与接收 —— 否则刚收到的消息可能被
+//      「载入结果整体赋值」覆盖，或空列表先把历史冲掉；
+//   ② 页面隐藏 / 卸载时立刻 flush，别让 800ms 防抖窗口里的最后一条丢掉。
+/** 历史是否已就位（false 时一律不落盘，防「空状态覆盖旧数据」） */
+let hydrated = false;
+
 onMounted(async () => {
     msgs.value = await loadChatMessages();
-});
-watch(msgs, (v) => saveChatMessages(v));
-
-/** 手动清空聊天记录（持久化 + 内存态一起清） */
-function clearAll() {
-    msgs.value = [];
-    clearChatMessages();
-    toast.success('已清空聊天记录');
-}
-
-onMounted(() => {
+    hydrated = true;
     if (!deviceId) {
         conn.value = { state: 'error', msg: '链接无效：未识别到设备ID，请重新生成二维码' };
         return;
@@ -213,10 +216,33 @@ onMounted(() => {
     startRelay();
 });
 
+watch(msgs, (v) => {
+    if (hydrated) saveChatMessages(v);
+});
+
+// 兜底落盘：手机浏览器切后台/锁屏常常直接丢弃页面，光靠防抖会丢最后一条
+function hiddenFlush() {
+    if (document.visibilityState === 'hidden') flushChatMessages();
+}
+
+onMounted(() => {
+    window.addEventListener('pagehide', flushChatMessages);
+    document.addEventListener('visibilitychange', hiddenFlush);
+});
+
 onBeforeUnmount(() => {
+    window.removeEventListener('pagehide', flushChatMessages);
+    document.removeEventListener('visibilitychange', hiddenFlush);
     stopRelay?.();
     stopRelay = null;
 });
+
+/** 手动清空聊天记录（持久化 + 内存态一起清） */
+function clearAll() {
+    msgs.value = [];
+    clearChatMessages();
+    toast.success('已清空聊天记录');
+}
 
 // ===== 选图（多选）→ 先出「发送中」气泡 → 逐张压缩 → 顺序发送 =====
 async function onPick(files: FileList | null) {
@@ -241,7 +267,8 @@ async function onPick(files: FileList | null) {
             const prepared = await prepareImage(f);
             const url = URL.createObjectURL(prepared.blob);
             queued.push({ id, blob: prepared.blob, name: prepared.name, mime: prepared.mime, tmpUrl });
-            patchMsg(id, { url, name: prepared.name, mime: prepared.mime });
+            // blob 一并挂到消息上：它是**唯一能跨刷新留存**的载体（url 是 objectURL，刷新即失效）
+            patchMsg(id, { url, blob: prepared.blob, name: prepared.name, mime: prepared.mime });
             if (tmpUrl !== url) URL.revokeObjectURL(tmpUrl);
         }
         // 逐张顺序发送（保证到达顺序）；失败即停，剩余标记为失败
@@ -289,6 +316,8 @@ async function onPickFiles(files: FileList | null) {
                 type: 'file',
                 side: 'out',
                 url: URL.createObjectURL(f),
+                // blob 落盘用（objectURL 跨刷新失效）；任意类型文件原样存，不压缩不转码
+                blob: f,
                 name,
                 mime,
                 size: f.size,

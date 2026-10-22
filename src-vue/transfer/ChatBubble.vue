@@ -102,12 +102,18 @@ const timeText = computed(() => (props.ts ? fmtTime(props.ts) : ''));
     </div>
 
     <!-- ---------- 图片 ---------- -->
-    <div v-if="type === 'image'" class="chat-bubble max-w-[62%]">
+    <!-- ⚠️ 图片气泡的尺寸链（v26.10.22-v4 修「图片撑出气泡」）：
+         · 气泡 `p-1` + `max-w-[78%]`：微信风格图片气泡只有 4px 边距，图能占满；
+         · 图 `max-w-full`：**相对的正是气泡内容盒**，永远不可能比气泡宽。
+           旧写法图写死 `max-w-[240px]`、气泡 `max-w-[62%]`，在窄屏（客户端手机页 ~360px，
+           62% ≈ 176px − 32px 内边距 = 144px）就比图窄 ⇒ 图直接溢出气泡外；
+           脚本端窗口 768px 时 62% ≈ 414px > 240px，所以只在客户端暴露。 -->
+    <div v-if="type === 'image'" class="chat-bubble max-w-[78%] p-1">
         <ImageActions v-if="imageActions.length" :actions="imageActions" @click.stop>
             <img
                 :src="imageSrc"
                 :alt="name || 'image'"
-                class="block h-auto w-auto max-w-[240px] rounded-box"
+                class="block h-auto w-auto max-w-full rounded-box"
                 :class="clickable ? 'cursor-zoom-in' : ''"
                 :style="{
                     maxHeight: '360px',
@@ -120,7 +126,7 @@ const timeText = computed(() => (props.ts ? fmtTime(props.ts) : ''));
             v-else
             :src="imageSrc"
             :alt="name || 'image'"
-            class="block h-auto w-auto max-w-[240px] rounded-box"
+            class="block h-auto w-auto max-w-full rounded-box"
             :class="clickable ? 'cursor-zoom-in' : ''"
             :style="{
                 maxHeight: '360px',

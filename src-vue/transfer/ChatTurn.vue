@@ -52,7 +52,14 @@ const avatarSrc = computed(() => avatarUrl(avatarSeed.value));
                     <img :src="avatarSrc" :alt="mine ? '我' : '手机'" />
                 </div>
             </div>
-            <slot />
+            <!-- ⚠️ 同一轮的多条气泡必须**包一层纵向 flex**，不能让它们直接当 .chat 的网格项：
+                 daisyUI 5 的 `.chat-bubble{grid-row-end:3}` 是给「一轮一条气泡」设计的，
+                 多条并列时每个都固定占同一行 ⇒ 全部叠在同一个格子里，后画的盖住前面的
+                 （v26.10.22-v4 修的「连发两张图只看得到最后一张」）。
+                 气泡的 max-w 百分比也随之相对这层包裹（宽度 = 原来的 1fr 列），对齐靠 items-*。 -->
+            <div class="flex min-w-0 flex-col gap-1" :class="mine ? 'items-end' : 'items-start'">
+                <slot />
+            </div>
         </div>
     </div>
 </template>
