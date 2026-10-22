@@ -37,7 +37,7 @@
 | `src-vue/app.ts` | 脚本端入口（预收 → 嗅探预测量开关 → mountPanel → 清理注册 → 监控）。webpack/React 入口已删，构建唯一入口 `vite.config.ts`。 |
 | `src/lib/*.ts` | `constants`(CONFIG/DEFAULTS/存储键) `logger` `storage` `state`(模块间共享可变状态一律走 `runtime` 对象) `utils` `speech` `monitor` `tinymce` `clipboard` `relay`(中继客户端，长轮询/退避) `gallery`(只剩下载命名) `changelog` `phrasesZnhd`(常用语抓取) |
 | `src/lib/sniffer*.ts` | `sniffer`(三路采集+四级测体积+阈值分组) `snifferPerf`(PerformanceObserver 预收，零请求) `snifferCache`(进程内已测缓存，唯一写点 `resolveSizes`) `snifferPre`(后台预测量) `sniffConv`(会话归属) |
-| `src/lib/transfer/` | `store.ts` **模块级单例**（窗口不开也收件；已拆纯订阅 API，React 包装在 `reactStore.ts`——全仓唯一 import react 的 transfer 文件；Vue 包装在 `src-vue/transfer/composables/`）。`persist.ts` IndexedDB 持久化 7 天 TTL（`persistReady` 闸门防覆盖旧数据）。`emojiPack.ts` `settings.ts` `types.ts` |
+| `src/lib/transfer/` | `store.ts` **模块级单例**（窗口不开也收件；已拆纯订阅 API，**不 import react/vue**——Vue 包装在 `src-vue/composables/useTransferStore.ts`）。`persist.ts` IndexedDB 持久化 7 天 TTL（`persistReady` 闸门防覆盖旧数据）。`settings.ts` `types.ts` |
 | `src/lib/ui/` | 只剩框架无关叶子：`panelIds.ts`(宿主/overlay id 常量) `sniffSelector.ts` `notify.ts` `transfer/deviceColors.ts`。**防 TDZ：被循环 import 引用的常量必须放叶子模块** |
 | `src-vue/` | UI 本体（Vue3 + **daisyUI 5 / Tailwind v4**，脚本端与 web 页共用底层件）。`transfer/` 三栏传输助手 + `markdown.ts`(手写渲染器，**行内正则必须工厂函数**——模块级 /g 正则递归会死循环)。弹窗壳统一原生 `<dialog class="modal">`（AppDialog/DarkDialog/ImagePreview），浮层靠 top layer 分层 |
 | `shared/` | 两端共用纯逻辑层。**硬约束**：零宿主依赖（禁 GM_*/单端模块）、按最严 tsconfig 写、依赖单向（只能被 import）、两端 typecheck + 三段 verify 全绿 |
@@ -108,10 +108,10 @@
 
 ## 9. 传输助手 UI / 交互
 
-- 三栏：`NavRail`(宽 58 图标栏) → `SessionList` → `DeviceChat`/`FilesView`。第一栏选中判据 = **`aria-current="page"`**（⚠️ antd 暗色算法把 #07C160 算成 rgb(9,167,85)，按 hex 猜必假红；不过比色断言现在已改走属性判据）。
-- 配色唯一入口 `WECHAT`、圆角唯一入口 `wechatTheme.ts` `RADIUS`；Modal 容器类名 `.ant-modal-container`、`styles` 无 content 键（若再用 antd）。
-- **窗口色板 v26.10.19-v12 起跟随日/夜**：`theme.ts` 出两套（`TRANSFER_VARS` 暗 / `TRANSFER_VARS_LIGHT` 亮），窗口与 `DarkDialog` 都绑 `transferVars`（computed，随 `themeMode` 重算）。⚠️ **组件里禁止再写死窗口底色 hex** —— 聊天区 / 分隔线 / 输入舱走 `var(--tw-window|--tw-hairline|--tw-composer-bg|--tw-composer-border|--tw-btn-border)`；`ChatComposer` 是两端共用件，手机页在 `web/src/style.css` 的 `:root` 里补同一批 `--tw-*`（固定暗色值），漏一个输入舱就透明。
-- 冒烟里传输助手底色断言**绑的是日间基线**（harness 钉 `prefers-color-scheme=light`）：亮色窗口 `rgb(242,242,242)`、细线 `1px rgb(224,224,224)`、设置弹窗 `rgb(255,255,255)`；夜间由末尾 `transferThemeFollowOk` 反向守（纯黑 + `rgb(34,34,34)` + 输入舱 `rgb(32,32,32)`）。改色板要同时改这两处。
+- 传输窗口 = **`ChatWindow.vue` 单个 daisyUI modal**（v26.10.20 daisyUI 5 迁移后没有三栏 NavRail 了——那是 React 时代结构）；「全部文件」= `FilesView.vue` 挂在 `DarkDialog` 子弹窗；配对 / 设置 / 关于 = `PairDialog` / `SettingsDialog` / `AboutDialog`。
+- 配色走 **daisyUI 5 主题 token**：脚本端 cupcake、客户端 business + `--color-primary:#07c160` 覆写（`web/src/style.css`）；弹窗容器是 daisyUI `.modal-box`（**不再是 antd Modal**，`.ant-modal-container` 那套判据已随迁移作废）。
+- **主题恒为日间 cupcake**（v26.10.21-v7 删掉夜间模式）：daisyUI `[data-theme]` 挂影子树内的 `#app`（属性选择器穿不透 shadow 边界，不能挂 host）；客户端 `web/` 固定 business 主题 + `--color-primary:#07c160` 覆写。⚠️ 组件配色**只走 token**（`bg-base-100` / `--color-base-300` 等），别写死 hex；`transferVars` / `TRANSFER_VARS` / `--tw-*` 那套色板已随迁移删除。
+- 冒烟里传输助手底色断言绑**日间基线**（harness 钉 `prefers-color-scheme=light`，恒定不变）；分界线断言走 `probeOf('--color-base-300')` 实时取 token 值（v26.10.22 起夜间反向守 `transferThemeFollowOk` 已随夜间模式删除）。
 - 发送：v26.10.18-v1 起**先落全部「发送中」气泡再逐个上传**，进度条画在气泡内（`sendProgress`/`ChatMsg.progress`；`GM_xhr upload.onprogress` / 客户端 XHR）；**首个进度事件前不画条**（宿主不支持静默降级）。
 - 收件归组按 `from`（`sessionKeyForIncoming`）；无 `from` 才走旧规则（1 台在线归该机/否则聚合 `__phone__`）。**聚合会话判在线必须用 `sessionSendable()`**，不能 `!!phone`。
 - ⚠️ **气泡结构别直接并列**（v26.10.22-v4）：daisyUI 5 的 `.chat-bubble{grid-row-end:3}` 只支持「一轮一条气泡」，同一 `.chat` 里并列多条会全部落在**同一格重叠**（后画的盖住前面的，表现为「连发两张图只剩最后一张」）。`ChatTurn.vue` 已用 `flex flex-col gap-1` 包一层 + `items-start|end` 对齐；新增气泡组件时照此结构。

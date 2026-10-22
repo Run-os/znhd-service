@@ -30,7 +30,7 @@
 znhd-service/
 ├── src/                  # 业务逻辑层：monitor / speech / storage / relay / sniffer / transfer / phrasesZnhd 等
 ├── src-vue/              # UI 层（Vue 3）：NavBarControls（标题栏注入）+ DialogHost（弹窗群）+ transfer / sniff
-├── web/                  # 手机上传页（React 19 + Ant Design v6 + Vite，独立子项目）→ 构建产出到 relay-server/public
+├── web/                  # 手机上传页（Vue 3 + Tailwind 4 + daisyUI 5 + Vite，独立子项目）→ 构建产出到 relay-server/public
 ├── relay-server/         # 中继服务器（纯 Node 内置模块，零依赖）：长轮询转发 / 表情包缓存 / 静态托管手机页
 ├── shared/               # 脚本端与手机页共用的纯逻辑（图片压缩 / 打印）
 ├── config/               # 构建配置：common.meta.json 为脚本元信息（含版本号）唯一来源
@@ -44,11 +44,11 @@ znhd-service/
 
 | 技术 | 用途 |
 |---|---|
-| [Vue 3](https://vuejs.org/) + [Tailwind CSS 4](https://tailwindcss.com/) + [daisyUI 5](https://daisyui.com/components/) | 全部 UI；经 [vite-plugin-monkey](https://github.com/vite-plugin/vite-plugin-monkey) 打包为单文件用户脚本，注入部分使用 shadow DOM 与宿主页样式隔离 |
+| [Vue 3](https://vuejs.org/) + [Tailwind CSS 4](https://tailwindcss.com/) + [daisyUI 5](https://daisyui.com/components/) | 脚本端面板（shadow DOM 隔离）；经 [vite-plugin-monkey](https://github.com/vite-plugin/vite-plugin-monkey) 打包为单文件用户脚本 |
 | TypeScript + Vite 7 | 脚本主体与构建 |
 | Web Speech API | 语音合成播报 |
 | GM API | `GM_xmlhttpRequest` / `GM_setClipboard` / `GM_setValue` 等油猴能力 |
-| [React 19](https://react.dev/) + [Ant Design v6](https://ant.design/) | 手机上传页（`web/`） |
+| [Vue 3](https://vuejs.org/) + [Tailwind CSS 4](https://tailwindcss.com/) + [daisyUI 5](https://daisyui.com/components/)（business 主题） | 手机上传页（`web/`，独立 Vite 子项目，与脚本端共享 `src-vue/components|transfer` 组件层） |
 | Node.js（零依赖） | 中继服务器（`relay-server/`） |
 | [Puppeteer](https://pptr.dev/) | 端到端冒烟测试（开发依赖） |
 
