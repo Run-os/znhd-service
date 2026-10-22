@@ -579,13 +579,12 @@ function serve() {
     if (rowPoint) {
         await page.mouse.move(rowPoint.x, rowPoint.y);
         await new Promise((r) => setTimeout(r, 150));
-        // ⚠️ 等 hover 过渡真正走完再读底色（v26.10.22-v2）：
-        //    卡片带 `transition-colors`（150ms），下面 evaluate 会读 btns[0] 的
-        //    backgroundColor 来验「hover 抬到 base-300」。CI 无头机慢，死等 150ms
-        //    读到的还是过渡中的 base-200 ⇒ hoverBg === cardBg 假红
-        //    （v26.10.20-v25 起连红，恰逢 GitHub runner 迁 Ubuntu 26 变慢翻红；本地一直绿）。
-        //    改成「连续两次采样（间隔 100ms）底色一致」才算稳定；等不到就 5s 超时红，
-        //    而不是带着过渡中的值假绿/假红。
+        // ⚠️ 等底色稳定再读（v26.10.22-v2）：卡片带 `transition-colors`（150ms），
+        //    慢环境死等固定毫秒会读到过渡中的值。
+        //    （v26.10.22-v3 修正注释：v2 曾以为 CI 假红是过渡没走完，实测 CI 里
+        //    hoverBg 稳定等于 cardBg —— 是 Linux 无头 Chrome 154 的 `:hover`
+        //    伪类不跟随 CDP 鼠标事件（mouseenter 等 JS 层事件正常触发，见
+        //    phrasesTipOk: true），与过渡无关。等稳定这段保留，无害。）
         await page.waitForFunction(
             () =>
                 new Promise((resolve) => {
@@ -609,8 +608,32 @@ function serve() {
         const tip = el.querySelector('[data-znhd="phrase-tip"]');
         const boxRect = box.getBoundingClientRect();
         const tr = tip ? tip.getBoundingClientRect() : null;
+        // 诊断（v26.10.22-v3）：CI Linux 无头 Chrome 上 `:hover` 伪类疑似不跟随
+        // CDP 鼠标事件，这里记录现场 —— hover/pointer 媒体查询结果 + 指针落点的
+        // 命中测试（sr.elementFromPoint）+ 卡片实时矩形，不参与判定。
+        const b0 = btns[0];
+        const r0 = b0 ? b0.getBoundingClientRect() : null;
+        const px = r0 ? Math.round(r0.left + r0.width / 2) : 0;
+        const py = r0 ? Math.round(r0.top + r0.height / 2) : 0;
+        const hit = sr.elementFromPoint ? sr.elementFromPoint(px, py) : null;
+        const hoverDiag = {
+            hoverMedia: matchMedia('(hover: hover)').matches,
+            pointerFine: matchMedia('(pointer: fine)').matches,
+            hitAtCardCenter: hit
+                ? (hit.getAttribute && hit.getAttribute('data-znhd')) || hit.tagName
+                : null,
+            cardRectAtRead: r0
+                ? {
+                      x: px,
+                      y: py,
+                      top: Math.round(r0.top),
+                      bottom: Math.round(r0.bottom),
+                  }
+                : null,
+        };
         return {
             found: true,
+            hoverDiag,
             rows: btns.length,
             heights: btns.map((b) => Math.round(b.getBoundingClientRect().height)),
             clamps: btns.map((b) => {
@@ -656,16 +679,54 @@ function serve() {
         phraseLayout.clamps.every((c) => c === '3');
     // 卡片身份（夜间能不能看出条目边界，全靠这三点）
     //  · 常态卡面底色 ≠ 弹层底色 ⇒ base-200 vs base-100 的明度差真的生效
-    //  · 悬停底色再抬一档（hover:bg-base-300）
     //  · 内边距四边相等（竖条方案曾用 pl-4/pr-3）+ 不再有竖条元素
+    //  ⚠️ 「悬停底色抬一档」从本断言里拆出去了（v26.10.22-v3）：CI Linux 无头
+    //     Chrome 的 `:hover` 伪类不跟随 CDP 鼠标事件（JS 层 mouseenter 正常、
+    //     提示浮层能弹出，但 hoverBg 永远停在 base-200），环境差异导致假红。
     report.checks.phrasesCardOk =
         !!phraseLayout.found &&
         phraseLayout.radii.every((r) => r >= 8) &&
         phraseLayout.pads.every(([t, r, b, l]) => t === r && r === b && b === l && t >= 10) &&
         phraseLayout.hasBar === false &&
         !!phraseLayout.cardBg &&
-        phraseLayout.cardBg !== phraseLayout.boxBg &&
-        phraseLayout.hoverBg !== phraseLayout.cardBg;
+        phraseLayout.cardBg !== phraseLayout.boxBg;
+    // 悬停抬色（v26.10.22-v3，环境无关）：真实环境里 hover 后 btns[0] 底色应抬到
+    // base-300；CI 无头里 `:hover` 不生效（见 phrasesCardOk 注释），退而验证
+    // 「`.hover\:bg-base-300:hover` 规则真的在样式表里 + 卡片类名没丢」——
+    // 这两样丢了，任何环境都该红；规则在但伪类不生效只是无头环境限制，不红。
+    const hoverApplied = phraseLayout.hoverBg !== phraseLayout.cardBg;
+    const hoverRuleOk = await page.evaluate(() => {
+        const sr = document.getElementById('__znhd_panel_host__').shadowRoot;
+        const btn = sr.querySelector('[data-znhd="phrase-card"]');
+        if (!btn) return false;
+        const hasClass = [...btn.classList].some((c) => c.replace(/[^a-z0-9-]/gi, '') === 'hoverbg-base-300');
+        const found = (rules) => {
+            for (const r of rules) {
+                // CSSOM 对转义符的序列化可能带反斜杠（.hover\:bg-…）也可能换写法，
+                // 统一剥掉反斜杠再比，宽松匹配
+                const sel = r.selectorText ? r.selectorText.replace(/\\/g, '') : '';
+                if (sel.includes('hover:bg-base-300:hover')) return true;
+                if (r.cssRules && found(r.cssRules)) return true;
+            }
+            return false;
+        };
+        const sheets = [
+            ...(sr.adoptedStyleSheets || []),
+            ...document.styleSheets,
+            // ⚠️ 脚本 CSS 是 GM_addStyle 注进 shadow root 内部的 <style>，
+            //    不在 adoptedStyleSheets / document.styleSheets 里，要从元素拿 sheet
+            ...[...sr.querySelectorAll('style')].map((s) => s.sheet).filter(Boolean),
+        ];
+        return hasClass && sheets.some((s) => {
+            try {
+                return found(s.cssRules);
+            } catch {
+                return false;
+            }
+        });
+    });
+    report.checks.phrasesHoverOk = hoverApplied || hoverRuleOk;
+    report.hover = { applied: hoverApplied, ruleOk: hoverRuleOk };
     report.checks.phrasesTipOk =
         !!phraseLayout.tipRect &&
         phraseLayout.tipInBox === false &&
