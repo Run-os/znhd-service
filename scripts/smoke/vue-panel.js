@@ -171,7 +171,17 @@ localStorage.setItem('scriptCat_PhrasesCache', JSON.stringify({
   <img src="/img/tiny.jpg" alt="tiny.jpg" width="60" height="60">
   <img src="/img/icon-set.svg" alt="icon-set.svg" width="24" height="24">
   <img src="https://znhd.hunan.chinatax.gov.cn:8443/favicon.ico" alt="favicon.ico" width="16" height="16">
-</div><script src="/znhd.user.js"></script></body></html>`;
+</div>
+<!-- 图片右键菜单夹具（v26.10.22-v6）：模拟站点 ImageItem 的 v-contextmenu
+     （直挂 body、4 项、含「转存到内网」识别锚点、首项带 data-v-* 作用域属性）。
+     断言看脚本是否在尾部注入了同款样式的「打印」项 —— 识别按文本，不依赖 Vue。 -->
+<ul class="content-menu v-contextmenu v-contextmenu--default" id="fake-img-menu" style="display:none">
+  <li data-v-smoke0="" class="v-contextmenu-item"><span class="menu-text">复制</span></li>
+  <li class="v-contextmenu-item"><span class="menu-text">下载到本地</span></li>
+  <li class="v-contextmenu-item"><span class="menu-text">转存到内网</span></li>
+  <li class="v-contextmenu-item"><span class="menu-text">多选转存内网</span></li>
+</ul>
+<script src="/znhd.user.js"></script></body></html>`;
 
 function serve() {
     const server = http.createServer((req, res) => {
@@ -1337,6 +1347,31 @@ function serve() {
     report.theme = themeFixed;
     report.checks.themeFixedLightOk =
         themeFixed.appTheme === 'cupcake' && !themeFixed.dark && themeFixed.swapGone;
+
+    // ---------- 图片右键菜单注入「打印」（v26.10.22-v6） ----------
+    // 夹具 = HTML 里的 #fake-img-menu（模拟站点 ImageItem 的 v-contextmenu）。
+    // 脚本启动时扫描 body 下的 ul.v-contextmenu，按文本识别图片菜单后在尾部注入
+    // 与原生项同款样式的「打印」项。这里只验「注入 + 结构同构」，不点击
+    // （点击会真调 printA4Image 弹打印对话框，冒烟环境不碰）。
+    const printMenu = await page.evaluate(() => {
+        const ul = document.getElementById('fake-img-menu');
+        const li = ul ? ul.querySelector('li[data-znhd-print]') : null;
+        const first = ul ? ul.querySelector('li') : null;
+        const scopes = (el) =>
+            el ? [...el.attributes].filter((a) => a.name.indexOf('data-v-') === 0).map((a) => a.name) : [];
+        return {
+            injected: !!li,
+            text: li ? (li.textContent || '').trim() : '',
+            // 作用域属性必须从原生项继承（样式全靠它命中站点 scoped CSS）
+            scopeOk: !!li && scopes(li).length > 0 && scopes(li).every((n) => scopes(first).includes(n)),
+            // 必须在尾部（排在原生四项之后，观感即「菜单最后多一项」）
+            atTail: !!li && ul.lastElementChild === li,
+            clsOk: !!li && li.className.indexOf('v-contextmenu-item') >= 0,
+        };
+    });
+    report.printMenu = printMenu;
+    report.checks.printMenuOk =
+        printMenu.injected && printMenu.text === '打印' && printMenu.scopeOk && printMenu.atTail && printMenu.clsOk;
 
     report.checks.noPageError = report.errors.length === 0;
     report.ok = Object.values(report.checks).every(Boolean);

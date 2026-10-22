@@ -10,6 +10,7 @@ import { clearSpeechTimer } from '@/lib/speech';
 import { flushSaveAllvalue, loadAllvalue } from '@/lib/storage';
 import { startPerfCollect } from '@/lib/snifferPerf';
 import { setPreMeasureEnabled } from '@/lib/snifferPre';
+import { startImageContextMenu, stopImageContextMenu } from './lib/imageContextMenu';
 import { startNavBarAutoMount, stopNavBarAutoMount } from './panel/navBarMount';
 import { mountPanel, unwatchPanelHost, watchPanelHost } from './main';
 
@@ -30,6 +31,9 @@ const app = () => {
         // 标题栏注入控件（v26.10.21-v4）：语音开关 + 4 入口挂站点导航条，
         // 失败不连累主面板（内部每秒自愈重试，导航条没渲染就等下一轮）
         startNavBarAutoMount();
+        // 站点图片右键菜单注入【打印】（v26.10.22-v6）：调脚本自身的 A4 打印，
+        // 失败不连累主面板（站点没有菜单项 API，靠 DOM 注入，见模块头注）
+        startImageContextMenu();
     } catch (error) {
         console.error('[监控] 面板挂载失败:', error);
         addLog('面板挂载失败: ' + (error as Error)?.message, 'error', true);
@@ -41,6 +45,7 @@ const app = () => {
         clearSpeechTimer();
         unwatchPanelHost();
         stopNavBarAutoMount();
+        stopImageContextMenu();
     });
 
     if (document.readyState === 'loading') {

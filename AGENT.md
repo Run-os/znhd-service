@@ -90,6 +90,7 @@
 - 卡片**显示文件名**（`[data-sniff-name]`，拿不到消息时间的标红）+ 体积/尺寸；`<img :alt>` 里也仍是文件名（冒烟多条断言读 alt，改卡片别弄丢）。
 - **v26.10.19-v13 起卡片是「描边卡片」**：`rounded-xl border border-border bg-card p-1.5` + `hover:border-input`，文件名 `text-[11.5px] font-medium text-foreground`、第二行 `text-[11px] text-muted-foreground`；仍是 `grid-cols-5`。配色**只准走 token**（`border-border` / `bg-card` / `border-input`），别写死 hex —— 日 / 夜自动跟随，写死就只剩一套。`data-sniff-card` / `data-sniff-name` / `data-sniff-no-time` 三个钩子不能动（`scripts/smoke/vue-panel.js` 靠它们断言）。
 - 组内按消息时间倒序、无时间殿后（判据单一来源 `timeOfItem`）；旧版用 `boxShadow` 双层铺红圈的做法**已废弃**，现在只标红文件名。
+- **站点图片右键菜单注入【打印】**（`src-vue/lib/imageContextMenu.ts`，v26.10.22-v6）：菜单是站点自有 Vue 组件（`ImageItem` + v-contextmenu，**无注册 API**），靠 DOM 注入 —— 按文本识别图片菜单（`li > .menu-text` 含「转存到内网」且 ≥3 项；**识别锚点别依赖 Vue**，沙箱里 `__vue__` 得走 unsafeWindow）、克隆首个原生 `li` 的 `data-v-*` 作用域属性（**别写死 hash**，站点换版会变）、MutationObserver 防抖兜新消息的新菜单实例。点击后**必须自己收菜单**：走 unsafeWindow 侧 `hideAll()`（`visible` 标记才同步；注入项不是 VContextmenuItem，库不会自动收；无 Vue 时降级直接置 display:none，仅冒烟夹具路径）。打印地址用点击瞬间的 `img.currentSrc`（站点图是带 sign 的签名 URL，**别缓存**）。冒烟：`#fake-img-menu` 夹具 + `printMenuOk`（注入/同构/作用域继承/在尾部）；点击路径真机验过（`vue-hideAll`）。
 
 ## 8. 常用语（本页话术抓取）
 
