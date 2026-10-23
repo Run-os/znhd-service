@@ -37,7 +37,7 @@
 | `src-vue/app.ts` | 脚本端入口（预收 → 嗅探预测量开关 → mountPanel → 清理注册 → 监控）。webpack/React 入口已删，构建唯一入口 `vite.config.ts`。 |
 | `src/lib/*.ts` | `constants`(CONFIG/DEFAULTS/存储键) `logger` `storage` `state`(模块间共享可变状态一律走 `runtime` 对象) `utils` `speech` `monitor` `tinymce` `clipboard` `relay`(中继客户端，长轮询/退避) `gallery`(只剩下载命名) `changelog` `phrasesZnhd`(常用语抓取) |
 | `src/lib/sniffer*.ts` | `sniffer`(三路采集+四级测体积+阈值分组) `snifferPerf`(PerformanceObserver 预收，零请求) `snifferCache`(进程内已测缓存，唯一写点 `resolveSizes`) `snifferPre`(后台预测量) `sniffConv`(会话归属) |
-| `src/lib/feishu/` | 常用语快捷按钮（v26.10.23）：`oauth.ts`(应用动态注册+设备授权+换/刷新 token，HTTP 注入) `http.ts`(`GM_xmlhttpRequest` 适配，唯一碰宿主处) `credentials.ts`(GM 存储) `rules.ts`(读多维表 v1) `match.ts`(匹配引擎) `convText.ts`(读会话文本) `service.ts`(编排+token 自动刷新+规则 TTL) |
+| `src/lib/feishu/` | 常用语快捷按钮（v26.10.23）：`oauth.ts`(应用动态注册+设备授权+换/刷新 token，HTTP 注入) `http.ts`(`GM_xmlhttpRequest` 适配，唯一碰宿主处) `credentials.ts`(GM 存储) `tableLink.ts`(表格链接解析：wiki 节点换 obj_token) `rules.ts`(读多维表 v1) `match.ts`(匹配引擎) `convText.ts`(读会话文本，最新 6 条) `service.ts`(编排+token 自动刷新+规则 TTL+表链接读写) |
 | `src/lib/transfer/` | `store.ts` **模块级单例**（窗口不开也收件；已拆纯订阅 API，**不 import react/vue**——Vue 包装在 `src-vue/composables/useTransferStore.ts`）。`persist.ts` IndexedDB 持久化 7 天 TTL（`persistReady` 闸门防覆盖旧数据）。`settings.ts` `types.ts` |
 | `src/lib/ui/` | 只剩框架无关叶子：`panelIds.ts`(宿主/overlay id 常量) `sniffSelector.ts` `notify.ts` `transfer/deviceColors.ts`。**防 TDZ：被循环 import 引用的常量必须放叶子模块** |
 | `src-vue/` | UI 本体（Vue3 + **daisyUI 5 / Tailwind v4**，脚本端与 web 页共用底层件）。`transfer/` 三栏传输助手 + `markdown.ts`(手写渲染器，**行内正则必须工厂函数**——模块级 /g 正则递归会死循环)。弹窗壳统一原生 `<dialog class="modal">`（AppDialog/DarkDialog/ImagePreview），浮层靠 top layer 分层 |
@@ -109,12 +109,13 @@
 
 ### 常用语快捷按钮（飞书规则表，v26.10.23）
 
-- 链路：`src-vue/phrases/mountQuickBar.ts`（host 插在 `.input-tinymce` **之前**；1s 自愈 / 3s 读对话，按指纹去重）→ `lib/feishu/convText.ts`（Vuex `state.chat.messageList` 取最近 200 条；设置项 `quickReplyConversationSelector` 走 DOM 兜底）→ `match.ts`（标签任一命中 + 排除词优先；全角/空格/大小写归一化）→ `QuickBar.vue` → `tinymce.ts` 新增的 `replaceToTinyMCE`（**替换**不是追加：setContent + updateText）。
+- 链路：`src-vue/phrases/mountQuickBar.ts`（host 插在 **Inputbox 根元素** `.input-tinymce.__vue__.$parent.$el` **之前** = 输入区含工具栏的外面上方；v1 曾直接插在 `.input-tinymce` 前、卡在工具栏和编辑器中间，像长在输入框里；找不到组件树时回退旧锚点；1s 自愈 / 3s 读对话，按指纹去重）→ `lib/feishu/convText.ts`（Vuex `state.chat.messageList` **从最新往回只取 6 条有文本的消息**，图片/无文本不占槽；设置项 `quickReplyConversationSelector` 走 DOM 兜底）→ `match.ts`（标签任一命中 + 排除词优先；全角/空格/大小写归一化）→ `QuickBar.vue` → `tinymce.ts` 新增的 `replaceToTinyMCE`（**替换**不是追加：setContent + updateText）。
 - 鉴权（`lib/feishu/oauth.ts`）：应用动态注册（`archetype=PersonalAgent`，**无凭证可发起**，飞书给这台机器动态签发 client_id/secret）+ 设备授权。实测：注册会话 3600s、**设备授权只有 600s**；token = `accounts.feishu.cn/oauth/v3/token`；**refresh 必须带 client_id+client_secret**（只传 refresh_token → 400）；`refresh_expires_in=604800` 每次刷新重算（7 天滑动）；**不强制 DPoP**（`token_type: Bearer`）。
 - ⚠️ **走 bitable v1，别用 CLI 的 base 域**：v3 要 `base:field:read`/`base:record:read` 这种一列一个的细粒度 scope（报 99991672），v1 一个 `bitable:app:readonly` 全覆盖。
 - 凭证存 GM 存储（`credentials.ts`）且值必须是 **JSON 字符串**（read 走 JSON.parse）；规则缓存 5min TTL —— 冒烟正是靠预置这份未过期缓存做到**全程不联网**。
 - 规则副本同步 = **比对磁盘缓存的 `fetchedAt` 戳**（v26.10.23 定稿），不要在 mountQuickBar 里再算一份 TTL：面板点「立即刷新规则」/ 授权完写的都是同一份缓存 ⇒ 下一个 3s tick 自动生效。⚠️ 别为了「立即生效」改成 `panel → phrases` 的事件回调/import —— 会把 `main.ts` 拉进循环 import（TDZ 坑，见 §10）。回源失败：先用磁盘旧规则兜底（过期也用）+ 60s 冷却（`rulesRetryAt`），且**失败时不锁文本指纹**，否则文本不变就永远不会重试。
-- 冒烟：`scripts/smoke/qr-fixtures.js`（独立文件，见 §10 反引号坑；自建 `#app.__vue__` + TinyMCE/Inputbox 桩）+ `vue-panel.js` 的 `quickReplyBarOk`（挂载位置在输入框前 + **只**剩命中且未被排除的 1 条）/ `quickReplyReplaceOk`（点击后整体替换 + 同步进 Inputbox）。反引号坑的连带教训：夹具文本要与排除词**逐字对齐**（「已经申报」匹配不上「已申报」）。
+- 表链接**不写死**（v26.10.23-v2）：设置面板「规则表链接」输入框，存 Allvalue `quickReplyTableUrl`（默认值也在 `constants.ts` 的 `DEFAULTS.quickReplyTableUrl`）。`tableLink.ts` 解析 `/wiki/<节点>?table=&view=`（wiki 节点要调 `wiki/v2/spaces/get_node` 换 `obj_token`）与 `/base/<appToken>`；缺 `table` 参数列第一个数据表，缺 `view` 读全表。链接无法识别时**抛错不静默回落**（改坏链接还在读旧表更难排查）。授权成功 ≠ 表能读：读表报权限类错误时面板给黄色提示（加协作者 / 重新授权勾全 scope / 检查链接）。
+- 冒烟：`scripts/smoke/qr-fixtures.js`（独立文件，见 §10 反引号坑；**同步部分**在 znhd.user.js 加载前造好输入区 DOM + `.input-tinymce.__vue__.$parent.$el` 桩 —— 挂载发生在脚本加载后的 1s 轮询里，桩晚了就按兜底锚点挂错位置；`#app.__vue__` 会话夹具在 33500ms 装）+ `vue-panel.js` 的 `quickReplyBarOk`（挂在 `#smoke-inputbox` 之前 + 窗外「注销」不显示/窗口内「解非」显示/排除词拦截 → **只**剩 1 条）/ `quickReplyReplaceOk`（点击后整体替换 + 同步进 Inputbox）。反引号坑的连带教训：夹具文本要与排除词**逐字对齐**（「已经申报」匹配不上「已申报」）。
 
 ## 9. 传输助手 UI / 交互
 

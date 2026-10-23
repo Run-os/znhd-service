@@ -196,13 +196,15 @@ localStorage.setItem('scriptCat_PhrasesCache', JSON.stringify({
   <li class="v-contextmenu-item"><span class="menu-text">多选转存内网</span></li>
 </ul>
 <!-- ===== 常用语快捷按钮夹具（v26.10.23）=====
-     快捷回复按钮条挂在「.input-tinymce」**之前**（同一父节点内）。真实页面里它是 TinyMCE
-     的挂载点、全页仅一个（见 docs/tinymce-send-doc.md），这里用同名类的空 div 复刻
-     「输入框在容器里」的位置关系，验证脚本能正确找到锚点并插在前面。
+     快捷回复按钮条挂在 **Inputbox 组件根元素之前**（v26.10.23-v2：= 输入区含工具栏的
+     外面上方）。真实结构是 Inputbox 根元素里包含工具栏 + TinyMCE 挂载点（.input-tinymce），
+     这里只放一个空壳 #smoke-composer，具体的输入区 DOM 与 .input-tinymce.__vue__.$parent
+     桩由 /qr-fixtures.js 在脚本加载前同步造好（挂载发生在 znhd.user.js 加载后的 1s 轮询里，
+     __vue__ 桩必须先就位）。
      ⚠️ 本段在内联 HTML 的模板字符串里：注释与属性值中**一律不许出现反引号**，
         否则会提前结束模板字符串（本次踩过，报 tinymce is not defined）。
      夹具逻辑在 /qr-fixtures.js（独立文件，避免正则被模板字符串二次转义）。 -->
-<div id="smoke-composer"><div class="input-tinymce"></div></div>
+<div id="smoke-composer"></div>
 <script src="/qr-fixtures.js"></script>
 <script src="/znhd.user.js"></script></body></html>`;
 

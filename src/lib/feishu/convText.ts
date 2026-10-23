@@ -17,8 +17,14 @@
  *    单次取最近 MAX_MESSAGES 条；DOM 兜底由调用方按间隔重试而非每次输入都读。
  */
 
-/** 参与匹配的最大消息条数（从最新往前取；再早的对话几乎不会触发话术） */
-const MAX_MESSAGES = 200;
+/**
+ * 参与匹配的消息条数上限（使用者 2026-10-23 定版：**只看最新 6 条**）。
+ *
+ * 为什么是 6 而不是更多：坐席的回复只跟最近几句话有关，把整场对话都拼进来反而
+ * 会命中过时的关键词（半小时前聊过「注销」，现在聊「解非」，不该同时出两个按钮）。
+ * 从最新往回数，**只数有文本的消息**（图片/文件/撤回提示等不占槽，见 fromStore）。
+ */
+const MAX_MESSAGES = 6;
 
 export interface ConvSnapshot {
     /** 拼好的对话文本（只用于本地子串匹配） */
@@ -72,7 +78,7 @@ function textOfMessage(msg: unknown): string {
     return '';
 }
 
-/** 从 Vuex 读当前会话消息 */
+/** 从 Vuex 读当前会话消息：从最新往回收集有文本的，最多 MAX_MESSAGES 条 */
 function fromStore(): ConvSnapshot {
     const vm = readVueInstance();
     const st = vm?.$store?.state;
@@ -81,11 +87,12 @@ function fromStore(): ConvSnapshot {
     const list = chat ? chat['messageList'] : undefined;
     if (!Array.isArray(list) || !list.length) return EMPTY;
 
-    const recent = list.length > MAX_MESSAGES ? list.slice(list.length - MAX_MESSAGES) : list;
+    // ⚠️ 从尾部往回数（最新在前），**无文本的消息直接跳过不占槽** ——
+    //    使用者定版「图片不计算」：连发 5 张图 + 1 句话，参与匹配的仍是那 1 句话
     const parts: string[] = [];
-    for (const msg of recent) {
-        const t = textOfMessage(msg);
-        if (t) parts.push(t);
+    for (let i = list.length - 1; i >= 0 && parts.length < MAX_MESSAGES; i--) {
+        const t = textOfMessage(list[i]);
+        if (t) parts.unshift(t);
     }
     if (!parts.length) return EMPTY;
     return { text: parts.join('\n'), source: 'vuex', count: parts.length };

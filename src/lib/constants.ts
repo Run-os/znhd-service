@@ -76,4 +76,9 @@ export const DEFAULTS = {
     // 关：只在打开嗅探窗口时测量（= v26.10.14-v2 及以前的行为）。
     // 改开关不需要重扫：MainPanel 里即时调 setPreMeasureEnabled 生效。
     sniffPreMeasure: true,
+    // 「快捷回复」规则表链接（v26.10.23-v2 起可配置，设置面板「快捷回复」区块）。
+    // 支持 wiki 分享链接（/wiki/<节点>?table=&view=）与 base 直链（/base/<appToken>?table=&view=）。
+    // 默认值 = 使用者自己的「快捷发送常用语」表；留空时回落到它。
+    quickReplyTableUrl:
+        'https://mi0cdkcaj1o.feishu.cn/wiki/HImpwjCTeiPTIbkzIB0cHOKcnDd?table=tblDmddRH7lDaNrr&view=vewE5llSJY',
 };

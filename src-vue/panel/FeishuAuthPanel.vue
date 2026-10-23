@@ -1,6 +1,14 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue';
-import { authorize, getRules, getStatus, revoke, type AuthPhase } from '@/lib/feishu/service';
+import {
+    authorize,
+    getRules,
+    getTableUrl,
+    getStatus,
+    revoke,
+    setTableUrl,
+    type AuthPhase,
+} from '@/lib/feishu/service';
 import type { DeviceCodeChallenge } from '@/lib/feishu/types';
 import { Icon } from '@vue/icons';
 import { toast } from '@vue/lib/toast';
@@ -25,7 +33,30 @@ const busy = ref(false);
 const phase = ref<AuthPhase | null>(null);
 const challenge = ref<DeviceCodeChallenge | null>(null);
 const errorText = ref('');
+const tableUrl = ref(getTableUrl());
+const urlBusy = ref(false);
 let cancelled = false;
+
+/**
+ * 错误是不是「没权限」类（v26.10.23-v2）。
+ * 授权成功 ≠ 表能读：表不在当前账号名下 / 是别人分享但没加协作者 / scope 没勾全，
+ * 都会走到读表这一步才炸 —— 这类错误要给专门提示，不能只丢一句 raw msg。
+ */
+const permissionError = computed(() =>
+    /forbidden|permission|denied|无权|权限|scope|99991672|91403|1254/i.test(errorText.value)
+);
+
+async function saveTable(): Promise<void> {
+    if (urlBusy.value) return;
+    urlBusy.value = true;
+    try {
+        setTableUrl(tableUrl.value);
+        tableUrl.value = getTableUrl();
+        await reloadRules();
+    } finally {
+        urlBusy.value = false;
+    }
+}
 
 const phaseText = computed(() =>
     phase.value === 'register' ? '第 1 步 / 共 2 步：注册应用' : '第 2 步 / 共 2 步：授权读取表格'
@@ -154,6 +185,32 @@ onUnmounted(() => {
         </p>
 
         <p v-if="errorText" class="mb-2 text-[12px] break-words text-error">{{ errorText }}</p>
+
+        <!-- 没权限的专门提示（v26.10.23-v2）：授权成功只代表登录了账号，不代表能读那张表 -->
+        <div v-if="errorText && permissionError" class="mb-2 rounded-box border border-warning/40 bg-warning/10 p-3 text-[12px] leading-5">
+            <p class="mb-1 font-semibold">没有读取这张多维表格的权限，依次检查：</p>
+            <p>① 表是不是当前授权账号的？别人分享的表，请让所有者把你的飞书账号加为协作者（「可阅读」即可）；</p>
+            <p>② 授权时 scope 是否勾全 —— 点上方「重新授权」，弹出的授权页里**全部勾选**后再确认；</p>
+            <p>③ 链接是否贴对 —— 在飞书里打开那张表，点右上角「分享」复制链接，粘贴到下方输入框。</p>
+        </div>
+
+        <!-- 规则表链接（v26.10.23-v2）：不再写死，谁用谁配自己的表 -->
+        <div class="mb-2">
+            <p class="mb-1 text-[12px] text-base-content/60">规则表链接（粘贴多维表格的分享链接）</p>
+            <input
+                v-model="tableUrl"
+                type="text"
+                class="input input-bordered input-sm w-full font-mono text-[12px]"
+                placeholder="https://xxx.feishu.cn/wiki/…?table=tbl…&view=vew…"
+                spellcheck="false"
+                data-znhd="quick-reply-table-url" />
+            <p class="mt-1 text-[11px] text-base-content/50">
+                支持 /wiki/ 分享链接与 /base/ 直链；链接里不带 table 参数时自动用第一个数据表。改完点「保存并刷新规则」。
+            </p>
+            <button class="btn btn-outline btn-sm mt-1" :disabled="urlBusy" @click="saveTable">
+                {{ urlBusy ? '保存中…' : '保存并刷新规则' }}
+            </button>
+        </div>
 
         <div class="flex flex-wrap items-center gap-2">
             <button v-if="!status.authorized" class="btn btn-primary btn-sm" :disabled="busy" @click="startAuth">

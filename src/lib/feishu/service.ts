@@ -17,7 +17,10 @@ import {
     saveRulesCache,
     saveToken,
 } from './credentials';
-import { DEFAULT_RULES_TABLE, fetchRules, type RulesTableConfig } from './rules';
+import { loadAllvalue, saveAllvalue, flushSaveAllvalue } from '@/lib/storage';
+import { DEFAULTS } from '@/lib/constants';
+import { parseTableLink, resolveTableLink } from './tableLink';
+import { fetchRules, type RulesTableConfig } from './rules';
 import type { DeviceCodeChallenge, FeishuAppCredential, FeishuToken, QuickReplyRule } from './types';
 
 /**
@@ -161,19 +164,49 @@ export async function getRules(force = false, http: HttpFn = gmHttp): Promise<Qu
     if (!force && cache && Date.now() - cache.fetchedAt < RULES_TTL_MS) return cache.rules;
 
     const token = await getValidToken(http);
-    const rules = await fetchRules(http, token, rulesTableConfig());
+    const cfg = await rulesTableConfig(http, token);
+    const rules = await fetchRules(http, token, cfg);
     saveRulesCache({ fetchedAt: Date.now(), rules });
     addLog('飞书快捷回复规则已更新：' + rules.length + ' 条', 'success');
     return rules;
 }
 
-/** 规则表定位（目前写死为使用者那张表；将来要放开就在这里接设置项） */
-function rulesTableConfig(): RulesTableConfig {
-    return DEFAULT_RULES_TABLE;
+/**
+ * 链接 → 可读表的定位信息（v26.10.23-v2 起表链接可在设置面板配置）。
+ * 链接无法识别时抛错（设置面板会把错误显示出来），**不静默回落**：
+ * 使用者改坏了链接却还在读旧表，比直接报错更难排查。
+ */
+async function rulesTableConfig(http: HttpFn, token: string): Promise<RulesTableConfig> {
+    const url = getTableUrl();
+    const link = parseTableLink(url);
+    if (!link) throw new Error('规则表链接无法识别：' + url);
+    return resolveTableLink(http, token, link);
 }
 
 /** 解除授权 */
 export function revoke(): void {
     clearAuth();
     addLog('已解除飞书授权', 'success');
+}
+
+/**
+ * 当前设置的「规则表链接」。存在 localStorage 的 Allvalue（`quickReplyTableUrl`），
+ * 没配/清空时回落到默认表（`constants.ts` 的 `DEFAULTS.quickReplyTableUrl`）。
+ */
+export function getTableUrl(): string {
+    try {
+        const v = (loadAllvalue() as Record<string, unknown>)['quickReplyTableUrl'];
+        if (typeof v === 'string' && v.trim()) return v.trim();
+    } catch {
+        /* 读设置失败按未配置处理 */
+    }
+    return DEFAULTS.quickReplyTableUrl;
+}
+
+/** 保存规则表链接（同步落盘不走防抖 —— 保存后马上要回源拉规则） */
+export function setTableUrl(url: string): void {
+    const merged = { ...(loadAllvalue() as Record<string, unknown>), quickReplyTableUrl: (url || '').trim() };
+    saveAllvalue(merged);
+    flushSaveAllvalue();
+    addLog('快捷回复规则表链接已更新', 'success');
 }

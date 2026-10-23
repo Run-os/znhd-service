@@ -21,10 +21,11 @@ import { toast } from '../lib/toast';
  * 同时直接复用自家 Tailwind 产物，样式零额外维护。
  *
  * ── 锚点 ──────────────────────────────────────────────────────────────────────
- * `.input-tinymce` 是 TinyMCE 的挂载点，全页仅一个（见 docs/tinymce-send-doc.md）。
- * 把 host 插到它**前面**（同一父节点内），视觉上就落在输入框正上方。
- * 不插到 TinyMCE 内部、也不插到页面底部再 fixed 定位：输入区常带滚动/贴底布局，
- * fixed 会飘到不相关的位置。
+ * 锚点 = **Inputbox 组件的根元素**（`.input-tinymce.__vue__.$parent.$el`，v26.10.23-v2 起）。
+ * znhd 的输入区 = 工具栏（表情/截图那一排）+ TinyMCE 编辑器，同属 Inputbox 组件；
+ * v1 曾直接插在 `.input-tinymce` 之前，按钮条卡在工具栏和编辑器中间、像长在输入框里。
+ * 现在插在 Inputbox 根元素之前 = 整个输入区（含工具栏）的外面上方。
+ * 不插到 TinyMCE 内部、也不用 fixed 定位：输入区常带滚动/贴底布局，fixed 会飘走。
  *
  * ── 自愈 ──────────────────────────────────────────────────────────────────────
  * 宿主是 SPA：切会话 / 路由切换会整块替换输入区 DOM，我们的 host 会跟着消失。
@@ -133,14 +134,14 @@ function unmountHost(): void {
     document.getElementById(HOST_ID)?.remove();
 }
 
-function mountInto(inputEl: Element): HTMLElement {
+function mountInto(anchorEl: HTMLElement): HTMLElement {
     const host = document.createElement('div');
     host.id = HOST_ID;
     // 防御性盒样式：host 暴露在页面 CSS 下（通配规则会命中它），宽度撑满以便按钮条横滑
     host.style.cssText =
         'display:block;width:100%;box-sizing:border-box;margin:0;padding:0;' +
         'background:none;border:0;box-shadow:none;outline:none;border-radius:0;';
-    inputEl.parentElement?.insertBefore(host, inputEl);
+    anchorEl.parentElement!.insertBefore(host, anchorEl);
 
     const shadowRoot = host.attachShadow({ mode: 'open' });
     const style = document.createElement('style');
@@ -164,10 +165,28 @@ function mountInto(inputEl: Element): HTMLElement {
 function tryMount(): boolean {
     if (document.getElementById(HOST_ID)?.isConnected) return true;
     unmountHost();
-    const inputEl = document.querySelector(INPUT_SEL);
-    if (!inputEl || !inputEl.parentElement) return false;
-    mountInto(inputEl);
+    const anchor = findAnchor();
+    if (!anchor) return false;
+    mountInto(anchor);
     return true;
+}
+
+/**
+ * 找挂载锚点：**输入组件（Inputbox）根元素**，按钮条插在它外面、正上方。
+ *
+ * v26.10.23-v1 直接插在 `.input-tinymce` 之前，视觉上卡在工具栏和编辑器之间，
+ * 看着像长在输入框里面；v2 改成走 Vue 组件树：`.input-tinymce.__vue__.$parent`
+ * 就是 Inputbox 组件（docs/tinymce-send-doc.md §1 实测），它的 `$el` 把工具栏 +
+ * 编辑器整块包住 —— 插在 `$el` 之前 = 整个输入区（含工具栏）的上方。
+ * 找不到组件树时回退旧行为（插在 `.input-tinymce` 之前），至少保证功能可用。
+ */
+function findAnchor(): HTMLElement | null {
+    const inputEl = document.querySelector(INPUT_SEL);
+    if (!inputEl) return null;
+    const vm = (inputEl as Element & { __vue__?: { $parent?: { $el?: unknown } } }).__vue__;
+    const root = vm?.$parent?.$el;
+    if (root instanceof HTMLElement && root.parentElement) return root;
+    return inputEl.parentElement ? (inputEl as HTMLElement) : null;
 }
 
 /** 读对话文本 → 匹配 → 更新按钮条 */

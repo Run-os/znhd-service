@@ -1,6 +1,6 @@
 # 常用语快捷按钮（飞书规则表）
 
-> v26.10.23-v1 起提供。会话输入框**上方**浮出常用语按钮，按当前对话内容自动匹配。
+> v26.10.23-v1 起提供。会话输入区**上方**浮出常用语按钮（工具栏外面，不是输框里面），按当前对话内容自动匹配。
 
 ## 1. 它解决什么问题
 
@@ -10,8 +10,12 @@
 
 ## 2. 规则表长什么样
 
-使用者在自己的飞书账号下建一张多维表格（当前的默认表：
-`wiki/HImpwjCTeiPTIbkzIB0cHOKcnDd` → 标题「快捷发送常用语」）。
+使用者在自己的飞书账号下建一张多维表格，把**分享链接**粘进设置面板即可（v26.10.23-v2 起，不再写死；默认值 = 当前的「快捷发送常用语」表）。支持两种链接：
+
+- wiki 分享链接：`https://xxx.feishu.cn/wiki/<节点>?table=tbl…&view=vew…`（点表格右上角「分享」复制出来的就是这种，脚本会自动把 wiki 节点换成真实表格 token）
+- base 直链：`https://xxx.feishu.cn/base/<appToken>?table=…&view=…`
+
+链接里不带 `table` 参数时自动用第一个数据表；不带 `view` 时读全表。
 
 | 列名 | 类型 | 作用 |
 |---|---|---|
@@ -93,23 +97,26 @@
 | `src/lib/feishu/oauth.ts` | 应用注册 / 设备授权 / 换 token / 刷新（纯逻辑，HTTP 注入） |
 | `src/lib/feishu/http.ts` | `GM_xmlhttpRequest` 适配（唯一碰宿主 API 的地方之一） |
 | `src/lib/feishu/credentials.ts` | 凭证与规则缓存的 GM 存储读写 |
+| `src/lib/feishu/tableLink.ts` | 解析使用者粘贴的表格链接（wiki 节点换 obj_token、缺 table 时列第一个表） |
 | `src/lib/feishu/rules.ts` | 读多维表记录并归一化成规则（v1 API，单 scope） |
 | `src/lib/feishu/match.ts` | 匹配引擎（标签任一命中 + 排除优先） |
-| `src/lib/feishu/convText.ts` | 读当前会话文本（Vuex 主、DOM 兜底） |
-| `src/lib/feishu/service.ts` | 编排：授权流程 / token 自动刷新 / 规则 TTL 缓存 |
+| `src/lib/feishu/convText.ts` | 读当前会话文本（Vuex 主、DOM 兜底；最新 6 条有文本的消息） |
+| `src/lib/feishu/service.ts` | 编排：授权流程 / token 自动刷新 / 规则 TTL 缓存 / 表链接读写 |
 | `src/lib/tinymce.ts` | `replaceToTinyMCE()`：setContent + updateText 同步 |
 | `src-vue/phrases/QuickBar.vue` | 按钮条 UI |
-| `src-vue/phrases/mountQuickBar.ts` | 挂到 `.input-tinymce` 之前 + 轮询自愈 |
-| `src-vue/panel/FeishuAuthPanel.vue` | 设置里的授权区块 |
+| `src-vue/phrases/mountQuickBar.ts` | 挂到 Inputbox 根元素之前（工具栏外面上方）+ 轮询自愈 |
+| `src-vue/panel/FeishuAuthPanel.vue` | 设置里的授权区块 + 规则表链接配置 + 无权限提示 |
 
 ## 8. 排障
 
 | 现象 | 可能原因 |
 |---|---|
-| 输入框上方一直没有按钮 | 未授权（设置里看状态）；或当前对话没命中任何标签；或规则缓存为空（点「立即刷新规则」） |
+| 输入框上方一直没有按钮 | 未授权（设置里看状态）；或最近 6 条对话没命中任何标签；或规则缓存为空（点「立即刷新规则」） |
+| 面板报「没有读取这张多维表格的权限」 | 看错误下方的黄色提示框：表不在当前授权账号名下（别人分享的要加协作者）/ scope 没勾全（重新授权全部勾选）/ 链接贴错 |
 | 提示 `app_scope_not_applied` | 授权时 scope 没勾全，重新授权 |
 | 改了表、点「立即刷新规则」后按钮很快变了，但内容还是旧的 | 飞书侧可能命中了 view 缓存；确认改的是 `viewId` 对应的视图（当前默认视图之外的记录不会被读到） |
 | 按钮出现了但点击无反应 | 页面还没有 TinyMCE 实例（`window.tinymce.activeEditor`），等页面进入会话再点 |
 | 点按钮只弹「该规则没有填写「内容」列」 | 表里那一行的 `内容` 是空的 —— 按钮是靠 `标签` 命中显示的，但没内容可填 |
-| 换了飞书表不生效 | 规则表定位写在 `src/lib/feishu/rules.ts` 的 `DEFAULT_RULES_TABLE`（当前未开放设置项） |
+| 换了飞书表不生效 | 到设置里更新「规则表链接」并点「保存并刷新规则」；确认链接是那张表的分享链接（`/wiki/…` 或 `/base/…`） |
+| 保存链接后报「规则表链接无法识别」 | 链接形态不认识：必须是 `/wiki/<token>` 或 `/base/<token>` 开头，可直接从飞书表格右上角「分享」复制 |
 | 排除词不生效 | 排除词是子串匹配，检查是否写成了更长的句子 |

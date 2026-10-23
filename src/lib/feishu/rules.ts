@@ -23,17 +23,15 @@ import type { QuickReplyRule } from './types';
 
 const RECORDS_API = 'https://open.feishu.cn/open-apis/bitable/v1/apps';
 
-/** 默认规则表：使用者自己的「快捷发送常用语」（wiki → obj_token） */
-export const DEFAULT_RULES_TABLE = {
-    appToken: 'Lmo0btInnaHNTHsQzAwcxAxNnEf',
-    tableId: 'tblDmddRH7lDaNrr',
-    viewId: 'vewE5llSJY',
-};
-
+/**
+ * 规则表定位。
+ * v26.10.23-v2 起不再写死：由设置面板的「规则表链接」解析而来（见 tableLink.ts），
+ * `viewId` 可缺省（链接里没带 `?view=` 时读全表）。
+ */
 export interface RulesTableConfig {
     appToken: string;
     tableId: string;
-    viewId: string;
+    viewId?: string;
 }
 
 const F_TITLE = '标题';
@@ -105,8 +103,7 @@ export async function fetchRules(http: HttpFn, token: string, cfg: RulesTableCon
     for (let page = 0; page < 20; page++) {
         const query =
             '?page_size=500' +
-            '&view_id=' +
-            encodeURIComponent(cfg.viewId) +
+            (cfg.viewId ? '&view_id=' + encodeURIComponent(cfg.viewId) : '') +
             (pageToken ? '&page_token=' + encodeURIComponent(pageToken) : '');
         const res = await http({
             method: 'GET',
