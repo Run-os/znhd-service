@@ -58,6 +58,38 @@ function syncInputbox(html: string): boolean {
 }
 
 /**
+ * 用一段文本**整体替换**会话输入框内容（快捷回复按钮点击用，v26.10.23）。
+ *
+ * 与 `appendToTinyMCE` 的差别只有写入方式：`setContent` 覆盖而非 `insertContent` 追加，
+ * 因此不需要先折叠选区（折叠是为了控制插入位置，覆盖写入没有位置概念）。
+ *
+ * ⚠️ `setContent()` **不会**触发包装层监听的输入事件 ⇒ 必须显式 `syncInputbox()`，
+ *    否则输入框里有字但发送按钮是灰的（`docs/tinymce-send-doc.md` 第 2 节实测）。
+ *
+ * @param {string} text - 要写入的纯文本（内部转义后换行转 <br>）
+ * @returns {string} 成功返回写入后的输入框纯文本；找不到编辑器返回空字符串
+ */
+export function replaceToTinyMCE(text = ''): string {
+    const editor = getEditor();
+    if (!editor) {
+        addLog('找不到 TinyMCE 编辑器（页面未就绪？）', 'error', true);
+        return '';
+    }
+
+    const html = escapeHtml(text).replace(/\n/g, '<br>');
+    editor.setContent(html);
+
+    const content = editor.getContent();
+    if (!syncInputbox(content)) {
+        addLog('未能同步输入框状态（未找到 Inputbox 组件）', 'warning', true);
+    }
+
+    const finalText = editor.getContent({ format: 'text' });
+    addLog('已替换输入框文本: ' + finalText, 'success', true);
+    return finalText;
+}
+
+/**
  * 向会话输入框追加一段文本（常用语点击用）。
  *
  * @param {string} [text2append=''] - 要追加的纯文本（默认空串，避免掩盖漏传参数的 bug）

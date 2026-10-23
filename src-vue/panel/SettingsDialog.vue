@@ -2,6 +2,7 @@
 import { computed } from 'vue';
 import { hoursToHHmm, hhmmToHours } from '@/lib/utils';
 import AppDialog from './AppDialog.vue';
+import FeishuAuthPanel from './FeishuAuthPanel.vue';
 
 export interface WorkingHours {
     morningStart: number;
@@ -75,6 +76,11 @@ const UPDATE_URL = (GM_info.scriptUpdateURL || GM_info.script.updateURL) as stri
             <button class="btn btn-outline btn-sm" @click="emit('openChangelog')">更新日志</button>
             <button class="btn btn-outline btn-sm" @click="emit('openLog')">运行日志</button>
         </div>
+
+        <div class="divider">快捷回复</div>
+
+        <!-- 飞书授权区块（v26.10.23）：自带状态、授权轮询与刷新，不经过本组件的 props -->
+        <FeishuAuthPanel />
 
         <div class="divider">其他设置</div>
 

@@ -37,6 +37,7 @@
 | `src-vue/app.ts` | 脚本端入口（预收 → 嗅探预测量开关 → mountPanel → 清理注册 → 监控）。webpack/React 入口已删，构建唯一入口 `vite.config.ts`。 |
 | `src/lib/*.ts` | `constants`(CONFIG/DEFAULTS/存储键) `logger` `storage` `state`(模块间共享可变状态一律走 `runtime` 对象) `utils` `speech` `monitor` `tinymce` `clipboard` `relay`(中继客户端，长轮询/退避) `gallery`(只剩下载命名) `changelog` `phrasesZnhd`(常用语抓取) |
 | `src/lib/sniffer*.ts` | `sniffer`(三路采集+四级测体积+阈值分组) `snifferPerf`(PerformanceObserver 预收，零请求) `snifferCache`(进程内已测缓存，唯一写点 `resolveSizes`) `snifferPre`(后台预测量) `sniffConv`(会话归属) |
+| `src/lib/feishu/` | 常用语快捷按钮（v26.10.23）：`oauth.ts`(应用动态注册+设备授权+换/刷新 token，HTTP 注入) `http.ts`(`GM_xmlhttpRequest` 适配，唯一碰宿主处) `credentials.ts`(GM 存储) `rules.ts`(读多维表 v1) `match.ts`(匹配引擎) `convText.ts`(读会话文本) `service.ts`(编排+token 自动刷新+规则 TTL) |
 | `src/lib/transfer/` | `store.ts` **模块级单例**（窗口不开也收件；已拆纯订阅 API，**不 import react/vue**——Vue 包装在 `src-vue/composables/useTransferStore.ts`）。`persist.ts` IndexedDB 持久化 7 天 TTL（`persistReady` 闸门防覆盖旧数据）。`settings.ts` `types.ts` |
 | `src/lib/ui/` | 只剩框架无关叶子：`panelIds.ts`(宿主/overlay id 常量) `sniffSelector.ts` `notify.ts` `transfer/deviceColors.ts`。**防 TDZ：被循环 import 引用的常量必须放叶子模块** |
 | `src-vue/` | UI 本体（Vue3 + **daisyUI 5 / Tailwind v4**，脚本端与 web 页共用底层件）。`transfer/` 三栏传输助手 + `markdown.ts`(手写渲染器，**行内正则必须工厂函数**——模块级 /g 正则递归会死循环)。弹窗壳统一原生 `<dialog class="modal">`（AppDialog/DarkDialog/ImagePreview），浮层靠 top layer 分层 |
@@ -106,6 +107,15 @@
 - **tabs 是胶囊分段样式**（v26.10.20-v19）：`tabs tabs-box w-full gap-1 rounded-full [--tab-height:2rem] mb-3`，每个 radio tab 带 `flex-1 rounded-full checked:[--tab-bg:var(--color-neutral)]`。要点：`flex-1`（radio tab 天然 `min-width:fit-content` 不 grow，容器 `w-full` 时右侧会留大条空白）；`rounded-full`（Tailwind 工具类能覆盖 daisyUI——它全部样式在 utilities 的嵌套子层里，层内顺序保证 utility 胜出）；`--tab-bg` 提到 neutral（默认选中底 base-100 在 business 下 ≈ 容器 base-200，oklch .244 vs .226，选中态看不见；⚠️ arbitrary property 里必须写 `var(--color-neutral)`，裸 `--color-neutral` 是字面量无效）；`--tab-height:2rem`（默认 tab 40px + tabs-box padding ⇒ 整条 48px，太高；压到 32/40 与搜索框同档，v26.10.21-v3）；`mb-3`（到下方卡片原本 0 间隙，补 12px，v26.10.21-v3）。断言 `phrasesTabsGeomOk`（tab 30~34 / 整条 36~42 / 间隙 8~20）。验证截图脚本：`outputs/shot-phrases-tabs.js`（本地 http 起产物 + 切 data-theme 日/夜各截一张 + 量圆角/宽度）。
 - **列表 = 卡片（方案 C1，v26.10.21-v2 定版）**：每条一张 `rounded-xl` 卡，卡面 `bg-base-200`（比 modal-box 的 base-100 亮一档）+ `border-base-content/10` 收边，文字 `line-clamp-3`（3 × `leading-5` = 60px），`min-h-[64px]` 保底两行，悬浮时 `hover:border-primary` + `hover:bg-base-300`。⚠️ **夜间不要用 `border-base-300` 分层**：business 的 base-300 与 base-200 明度几乎一致，描边整条融进深底（v26.10.21 用户在真机截图里发现），必须靠**明度差（卡面提亮）**或色相差。⚠️ v1 曾在卡左侧加 3px 竖条（方案 C2），用户看实机后否掉 ⇒ 不要再加回来（内容区必须是四边等距 `p-3`）。断言 = `phrasesClampOk`（clamp 3 + 高度 ≥ 44）+ `phrasesCardOk`（圆角 ≥ 8、四边内边距相等、无竖条元素、卡面底色 ≠ 弹层底色、hover 再抬一档）。卡片钩子：`[data-znhd="phrase-card"]`。
 
+### 常用语快捷按钮（飞书规则表，v26.10.23）
+
+- 链路：`src-vue/phrases/mountQuickBar.ts`（host 插在 `.input-tinymce` **之前**；1s 自愈 / 3s 读对话，按指纹去重）→ `lib/feishu/convText.ts`（Vuex `state.chat.messageList` 取最近 200 条；设置项 `quickReplyConversationSelector` 走 DOM 兜底）→ `match.ts`（标签任一命中 + 排除词优先；全角/空格/大小写归一化）→ `QuickBar.vue` → `tinymce.ts` 新增的 `replaceToTinyMCE`（**替换**不是追加：setContent + updateText）。
+- 鉴权（`lib/feishu/oauth.ts`）：应用动态注册（`archetype=PersonalAgent`，**无凭证可发起**，飞书给这台机器动态签发 client_id/secret）+ 设备授权。实测：注册会话 3600s、**设备授权只有 600s**；token = `accounts.feishu.cn/oauth/v3/token`；**refresh 必须带 client_id+client_secret**（只传 refresh_token → 400）；`refresh_expires_in=604800` 每次刷新重算（7 天滑动）；**不强制 DPoP**（`token_type: Bearer`）。
+- ⚠️ **走 bitable v1，别用 CLI 的 base 域**：v3 要 `base:field:read`/`base:record:read` 这种一列一个的细粒度 scope（报 99991672），v1 一个 `bitable:app:readonly` 全覆盖。
+- 凭证存 GM 存储（`credentials.ts`）且值必须是 **JSON 字符串**（read 走 JSON.parse）；规则缓存 5min TTL —— 冒烟正是靠预置这份未过期缓存做到**全程不联网**。
+- 规则副本同步 = **比对磁盘缓存的 `fetchedAt` 戳**（v26.10.23 定稿），不要在 mountQuickBar 里再算一份 TTL：面板点「立即刷新规则」/ 授权完写的都是同一份缓存 ⇒ 下一个 3s tick 自动生效。⚠️ 别为了「立即生效」改成 `panel → phrases` 的事件回调/import —— 会把 `main.ts` 拉进循环 import（TDZ 坑，见 §10）。回源失败：先用磁盘旧规则兜底（过期也用）+ 60s 冷却（`rulesRetryAt`），且**失败时不锁文本指纹**，否则文本不变就永远不会重试。
+- 冒烟：`scripts/smoke/qr-fixtures.js`（独立文件，见 §10 反引号坑；自建 `#app.__vue__` + TinyMCE/Inputbox 桩）+ `vue-panel.js` 的 `quickReplyBarOk`（挂载位置在输入框前 + **只**剩命中且未被排除的 1 条）/ `quickReplyReplaceOk`（点击后整体替换 + 同步进 Inputbox）。反引号坑的连带教训：夹具文本要与排除词**逐字对齐**（「已经申报」匹配不上「已申报」）。
+
 ## 9. 传输助手 UI / 交互
 
 - 传输窗口 = **`ChatWindow.vue` 单个 daisyUI modal**（v26.10.20 daisyUI 5 迁移后没有三栏 NavRail 了——那是 React 时代结构）；「全部文件」= `FilesView.vue` 挂在 `DarkDialog` 子弹窗；配对 / 设置 / 关于 = `PairDialog` / `SettingsDialog` / `AboutDialog`。
@@ -132,6 +142,8 @@
 | 循环 import TDZ | 模块级常量引宿主 id 会启动即崩（ReferenceError），typecheck/build 全绿也崩，**只有 verify:smoke 能抓**；常量放叶子模块 |
 | 流式回调 TDZ | `await f(cb)` 的 cb 早于返回值可用，增量累加用调用前建好的独立对象 |
 | 渲染崩溃爆炸半径 | 宿主读回的数据形状先归一（对象进 JSX = 整棵面板树卸载且不自愈，无错误边界） |
+| 模板字符串里的反引号 | `scripts/smoke/vue-panel.js` 的内联 HTML 是**模板字符串**：注释/属性值里写 `` ` `` 会提前截断字符串（报成 `xxx is not defined`，指向的行号完全无关）。夹具逻辑一律放独立 `.js` 文件 |
+| 冒烟夹具页归属 | `verify:vue` 跑的是 `vue-panel.js` **内联的 HTML 模板**；`scripts/smoke/znhd-smoke.html` 已无任何脚本引用，改它不生效（v26.10.23 踩过，白跑两轮） |
 | 构建失败留旧产物 | 构建失败 dist 不更新，verify 静默测旧 bundle；判据 `dist/.build-stamp`（内容哈希，勿用 mtime） |
 | 模板串反引号 | `uiReset.ts`/`getBanner` 注释里**不能出现反引号**（截断模板，报错行还指错位置） |
 | CRLF | 关压缩后本机 CRLF 会进产物（CSS 模板串内，无功能影响、git add 会归一）；漂移判据比 blob 哈希 |

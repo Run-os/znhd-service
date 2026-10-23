@@ -10,6 +10,7 @@
 |---|---|---|
 | **监控与语音播报** | 每 3 秒检测等待人数，有人等待 / 掉线自动语音提醒；仅监控时间段内运行 | [docs/monitor.md](docs/monitor.md) |
 | **常用语** | 读取页面右侧栏「常用话术」（双 tab + 搜索），点卡片一键复制并填入聊天编辑器（TinyMCE 走 JS API，详见 [docs/tinymce-send-doc.md](docs/tinymce-send-doc.md)） | [docs/phrases.md](docs/phrases.md) |
+| **常用语快捷按钮** | 按当前会话的对话文本匹配你飞书多维表格里的规则，输入框**上方**浮出对应按钮，点一下即把输入框内容整体替换为预设回复。授权一次（设备授权流，无需自建应用/后端），对话文本只在本机匹配 | [docs/quick-reply.md](docs/quick-reply.md) |
 | **图片嗅探** | 一键扫描当前网页图片，按会话分组，预览 / 下载 / A4 打印 | [docs/sniffer.md](docs/sniffer.md) |
 | **传输助手** | 手机 ↔ 电脑互传图片 / 文件 / 文本，收到自动弹窗，图片一键复制进剪贴板 | [docs/transfer.md](docs/transfer.md) |
 | **运行日志 / 更新日志** | 弹窗查看运行日志（四色分级）；设置内查看更新日志 | — |

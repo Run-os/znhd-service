@@ -1,0 +1,80 @@
+import type { FeishuAppCredential, FeishuToken, RulesCache } from './types';
+
+/**
+ * 飞书凭证 / token / 规则缓存的本地持久化。
+ *
+ * 为什么用 GM_setValue 而不是 localStorage（项目其余配置都走 localStorage）：
+ *   ① 凭证属于「脚本级」数据，清站点缓存 / 换域名时不应被连带清掉；
+ *   ② ScriptCat / Tampermonkey 的 GM 存储按脚本隔离，不会被页面脚本读到
+ *      —— 页面里跑的第三方代码（含税务页的埋点）拿不到 client_secret。
+ *
+ * ⚠️ 这些值都是**明文**落盘（GM 存储本身不加密）。本项目接受该风险：client_secret 是
+ *    飞书为「这一台机器上的这一次注册」动态签发的、且只能读使用者自己有权看的多维表格；
+ *    真正的资产（对话文本）永远不出本机。要更强隔离需自行接入系统凭据管理器。
+ */
+
+const APP_KEY = 'scriptCat_FeishuApp';
+const TOKEN_KEY = 'scriptCat_FeishuToken';
+const RULES_KEY = 'scriptCat_QuickReplyRules';
+
+/** 通用读取：兼容「存的是 JSON 字符串」和「存的是对象」两种历史形态 */
+function read<T>(key: string): T | null {
+    try {
+        const raw = GM_getValue(key, '');
+        if (!raw) return null;
+        if (typeof raw === 'string') return JSON.parse(raw) as T;
+        return raw as T;
+    } catch {
+        return null;
+    }
+}
+
+/** 通用写入：序列化成 JSON 字符串，避免不同脚本管理器对对象存储的差异 */
+function write(key: string, value: unknown): void {
+    try {
+        GM_setValue(key, JSON.stringify(value));
+    } catch {
+        /* 存储不可用（隐私模式/配额满）不阻断主流程，下次启动会重新走授权 */
+    }
+}
+
+function remove(key: string): void {
+    try {
+        GM_setValue(key, '');
+    } catch {
+        /* 同上 */
+    }
+}
+
+export function loadAppCred(): FeishuAppCredential | null {
+    const v = read<FeishuAppCredential>(APP_KEY);
+    return v && v.clientId && v.clientSecret ? v : null;
+}
+
+export function saveAppCred(cred: FeishuAppCredential): void {
+    write(APP_KEY, cred);
+}
+
+export function loadToken(): FeishuToken | null {
+    const v = read<FeishuToken>(TOKEN_KEY);
+    return v && v.accessToken ? v : null;
+}
+
+export function saveToken(token: FeishuToken): void {
+    write(TOKEN_KEY, token);
+}
+
+export function loadRulesCache(): RulesCache | null {
+    const v = read<RulesCache>(RULES_KEY);
+    return v && Array.isArray(v.rules) ? v : null;
+}
+
+export function saveRulesCache(cache: RulesCache): void {
+    write(RULES_KEY, cache);
+}
+
+/** 解除授权：三份数据一起清（只清 token 会造成「有凭证但永远换不到 token」的半残状态） */
+export function clearAuth(): void {
+    remove(TOKEN_KEY);
+    remove(RULES_KEY);
+}

@@ -1,0 +1,68 @@
+import type { QuickReplyRule } from './types';
+
+/**
+ * 规则匹配引擎（纯函数，零依赖）。
+ *
+ * 规则（使用者 2026-10-23 定版）：
+ *   · 标签列的值**命中任意一个**就显示该按钮 —— 不做打分、不设阈值；
+ *   · 排除词列的值**命中任意一个**就整条不显示（排除优先于命中）；
+ *   · 没有标签的规则永远不显示（否则每个空行都会在输入框上方挂一个按钮）。
+ *
+ * ── 为什么要归一化 ────────────────────────────────────────────────────────────
+ * 坐席看到的对话里混着全角标点、不同大小写、「解 非」这种中间夹空格的写法。
+ * 直接用 indexOf 会漏掉大量本该命中的情况（这是方案文档第 3 节 L2 轻量容错要解决的问题）。
+ * 归一化只在**比较时**做，展示与写入输入框的始终是原文。
+ *
+ * 归一化三步：
+ *   ① 全角 ASCII（U+FF01–U+FF5E）折成半角，全角空格 U+3000 折成普通空格；
+ *   ② 去掉所有空白字符 —— 中文语境下「解 非」与「解非」应视为同一关键词；
+ *   ③ 转小写 —— 关键词里混英文时避免大小写漏配。
+ *
+ * 已知取舍：去空白会让英文短语「a b」与「ab」互相命中。关键词都是短词（2–6 字），
+ * 这个误判概率极低，而它换来的容错收益明显更大。
+ */
+
+/** 归一化：全角折半角 + 去空白 + 转小写 */
+export function normalize(input: string): string {
+    if (!input) return '';
+    let out = '';
+    for (let i = 0; i < input.length; i++) {
+        const code = input.charCodeAt(i);
+        if (code >= 0xff01 && code <= 0xff5e) {
+            out += String.fromCharCode(code - 0xfee0);
+        } else if (code === 0x3000) {
+            out += ' ';
+        } else {
+            out += input.charAt(i);
+        }
+    }
+    return out.replace(/\s+/g, '').toLowerCase();
+}
+
+/** 关键词数组里是否有一个出现在已归一化的文本里 */
+function anyHit(normalizedText: string, words: string[]): boolean {
+    for (const w of words) {
+        const k = normalize(w);
+        if (k && normalizedText.indexOf(k) >= 0) return true;
+    }
+    return false;
+}
+
+/**
+ * 在对话文本里匹配规则。
+ *
+ * @param conversationText 当前会话的双方对话文本（本机拼好的长字符串，绝不上传）
+ * @param rules            规则表
+ * @returns 命中的规则，**保持规则表原顺序**（坐席习惯了固定位置）
+ */
+export function matchRules(conversationText: string, rules: QuickReplyRule[]): QuickReplyRule[] {
+    const text = normalize(conversationText);
+    if (!text) return [];
+    const hits: QuickReplyRule[] = [];
+    for (const rule of rules) {
+        if (!rule.keywords.length) continue;
+        if (rule.excludes.length && anyHit(text, rule.excludes)) continue;
+        if (anyHit(text, rule.keywords)) hits.push(rule);
+    }
+    return hits;
+}

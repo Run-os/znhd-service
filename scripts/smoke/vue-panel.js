@@ -83,8 +83,22 @@ window.GM_addStyle = function (css) {
   document.head.appendChild(s);
   return s;
 };
-window.GM_getValue = function (_k, d) { return d; };
-window.GM_setValue = function () {};
+// 常用语快捷按钮（v26.10.23）要把规则缓存在 GM 存储里，所以桩必须真的能存能取
+window.__store = {};
+window.GM_getValue = function (k, d) { return Object.prototype.hasOwnProperty.call(window.__store, k) ? window.__store[k] : d; };
+window.GM_setValue = function (k, v) { window.__store[k] = v; };
+// 预置一份**未过期**的规则缓存：lib/feishu/service.ts 的 getRules 见缓存新鲜就直接返回，
+// 于是匹配链路可以完全不联网地跑通（冒烟环境既没有授权也没有真实接口）。
+// 三条规则的用意：A 命中、B 被排除词拦掉、C 压根没命中 —— 一次点击同时验证「命中」与「排除优先」。
+// 值必须是 JSON 字符串（credentials.ts 用 JSON.parse 读），否则测不到真实存储形态。
+window.__store['scriptCat_QuickReplyRules'] = JSON.stringify({
+  fetchedAt: Date.now(),
+  rules: [
+    { id: 'rec-qr-A', title: '非正常户解除', keywords: ['解非', '非正常户'], excludes: [], reply: '教程链接：https://example.invalid/tutorial' },
+    { id: 'rec-qr-B', title: '申报期提醒', keywords: ['申报'], excludes: ['已申报'], reply: '申报期提醒文案' },
+    { id: 'rec-qr-C', title: '注销流程', keywords: ['注销'], excludes: [], reply: '注销流程文案' }
+  ]
+});
 window.GM_setClipboard = function () {};
 window.unsafeWindow = window;
 window.GM_xmlhttpRequest = function (o) {
@@ -181,10 +195,24 @@ localStorage.setItem('scriptCat_PhrasesCache', JSON.stringify({
   <li class="v-contextmenu-item"><span class="menu-text">转存到内网</span></li>
   <li class="v-contextmenu-item"><span class="menu-text">多选转存内网</span></li>
 </ul>
+<!-- ===== 常用语快捷按钮夹具（v26.10.23）=====
+     快捷回复按钮条挂在「.input-tinymce」**之前**（同一父节点内）。真实页面里它是 TinyMCE
+     的挂载点、全页仅一个（见 docs/tinymce-send-doc.md），这里用同名类的空 div 复刻
+     「输入框在容器里」的位置关系，验证脚本能正确找到锚点并插在前面。
+     ⚠️ 本段在内联 HTML 的模板字符串里：注释与属性值中**一律不许出现反引号**，
+        否则会提前结束模板字符串（本次踩过，报 tinymce is not defined）。
+     夹具逻辑在 /qr-fixtures.js（独立文件，避免正则被模板字符串二次转义）。 -->
+<div id="smoke-composer"><div class="input-tinymce"></div></div>
+<script src="/qr-fixtures.js"></script>
 <script src="/znhd.user.js"></script></body></html>`;
 
 function serve() {
     const server = http.createServer((req, res) => {
+        if (req.url === '/qr-fixtures.js') {
+            res.writeHead(200, { 'content-type': 'application/javascript' });
+            res.end(fs.readFileSync(path.join(__dirname, 'qr-fixtures.js')));
+            return;
+        }
         if (req.url === '/vue.js') {
             res.writeHead(200, { 'content-type': 'application/javascript' });
             res.end(fs.readFileSync(VUE));
@@ -1372,6 +1400,27 @@ function serve() {
     report.printMenu = printMenu;
     report.checks.printMenuOk =
         printMenu.injected && printMenu.text === '打印' && printMenu.scopeOk && printMenu.atTail && printMenu.clsOk;
+
+    // ---------- 常用语快捷按钮（v26.10.23） ----------
+    // 页面内夹具在 33500ms 装、37500ms 采样（见 HTML 末尾的 __installQuickReplyFixtures）。
+    // 这里等到采样完成再读：整个用例跑得快时 __qrSnap 可能还没生成。
+    await page.waitForFunction('window.__qrSnap != null', { timeout: 90000 }).catch(() => {});
+    const qr = await page.evaluate(() => window.__qrSnap || null);
+    report.quickReply = qr;
+    // 「只在命中时显示、且排除词优先」+「挂载位置在输入框之前」+「不越出容器」
+    report.checks.quickReplyBarOk = !!(
+        qr &&
+        qr.mounted &&
+        qr.inComposer &&
+        qr.beforeInput &&
+        qr.barPresent &&
+        qr.labels.length === 1 &&
+        qr.labels[0] === '非正常户解除'
+    );
+    // 点按钮后：输入框文本被**整体替换**（不是追加），且 setContent 之后同步进了 Inputbox
+    report.checks.quickReplyReplaceOk = !!(
+        qr && qr.afterClickText === '教程链接：https://example.invalid/tutorial' && qr.synced
+    );
 
     report.checks.noPageError = report.errors.length === 0;
     report.ok = Object.values(report.checks).every(Boolean);
