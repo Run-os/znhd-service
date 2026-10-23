@@ -189,6 +189,18 @@ export async function pollDeviceToken(
     const body = bodyOf(res);
     const err = str(body, 'error');
     if (err === 'authorization_pending' || err === 'slow_down') return { status: 'pending' };
+    if (err === 'access_denied') {
+        // v26.10.23-v3：飞书把「账号类型不允许授权云文档」也归到 access_denied（实测文案
+        // "These permissions are restricted by your organization's security policy"）。
+        // 个人版 / 豆包等第三方登录的账号没有企业租户，云文档权限一律给不了 —— 必须翻译成人话。
+        return {
+            status: 'error',
+            message:
+                '飞书拒绝了这次授权（access_denied）：当前登录的账号类型不允许把云文档权限授予应用' +
+                '（个人版 / 豆包等第三方登录的账号不支持）。请在浏览器里切换到有企业身份的飞书账号后，' +
+                '重新点「授权飞书账号」再试；若确认用的是企业账号仍被拒，则是该企业管理员禁用了第三方应用授权。',
+        };
+    }
     if (err) return { status: 'error', message: errorText(body, '换取用户 token 失败') };
 
     const token = toToken(body);

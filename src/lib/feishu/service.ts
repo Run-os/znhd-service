@@ -10,6 +10,7 @@ import {
 } from './oauth';
 import {
     clearAuth,
+    forgetApp,
     loadAppCred,
     loadRulesCache,
     loadToken,
@@ -43,6 +44,8 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 export interface QuickReplyStatus {
     /** 是否已完成授权（本机有可用 token） */
     authorized: boolean;
+    /** 本机是否存有应用凭证（v26.10.23-v3）：有凭证时点授权会跳过第 1 步直接进第 2 步 */
+    hasCredential: boolean;
     /** 已授权账号的 open_id（飞书只给这个，不给我们昵称） */
     openId: string;
     /** token 到期时间戳（ms），0 = 没有 */
@@ -60,6 +63,7 @@ export function getStatus(): QuickReplyStatus {
     const cache = loadRulesCache();
     return {
         authorized: !!(cred && token),
+        hasCredential: !!cred,
         openId: cred?.openId || '',
         expiresAt: token?.expiresAt || 0,
         ruleCount: cache?.rules.length || 0,
@@ -183,10 +187,19 @@ async function rulesTableConfig(http: HttpFn, token: string): Promise<RulesTable
     return resolveTableLink(http, token, link);
 }
 
-/** 解除授权 */
+/** 解除授权（保留应用凭证：token 过期重授权时不必重新注册） */
 export function revoke(): void {
     clearAuth();
     addLog('已解除飞书授权', 'success');
+}
+
+/**
+ * 作废本机应用凭证（v26.10.23-v3）：连第 1 步注册的 client_id/secret 一起忘掉。
+ * 用于「第 1 步用错账号确认了」的场景 —— 凭证不清掉，永远跳过第 1 步回不去。
+ */
+export function forgetCredential(): void {
+    forgetApp();
+    addLog('已作废本机飞书应用凭证，下次授权将重新注册', 'success');
 }
 
 /**

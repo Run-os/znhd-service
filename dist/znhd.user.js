@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         征纳互动人数和在线监控v2
 // @namespace    https://scriptcat.org/
-// @version      26.10.23-v2
+// @version      26.10.23-v3
 // @author       runos
 // @description  实时监控征纳互动等待人数和在线状态，支持语音播报、自定义常用语
 // @license      MIT
@@ -3358,6 +3358,12 @@ expiresIn: num$1(body, "expire_in") || num$1(body, "expires_in") || 600,
     const body = bodyOf(res);
     const err = str$1(body, "error");
     if (err === "authorization_pending" || err === "slow_down") return { status: "pending" };
+    if (err === "access_denied") {
+      return {
+        status: "error",
+        message: "飞书拒绝了这次授权（access_denied）：当前登录的账号类型不允许把云文档权限授予应用（个人版 / 豆包等第三方登录的账号不支持）。请在浏览器里切换到有企业身份的飞书账号后，重新点「授权飞书账号」再试；若确认用的是企业账号仍被拒，则是该企业管理员禁用了第三方应用授权。"
+      };
+    }
     if (err) return { status: "error", message: errorText(body, "换取用户 token 失败") };
     const token = toToken(body);
     if (!token) return { status: "error", message: "token 响应里没有 access_token（HTTP " + res.status + "）" };
@@ -3430,6 +3436,11 @@ expiresIn: num$1(body, "expire_in") || num$1(body, "expires_in") || 600,
     write(RULES_KEY, cache);
   }
   function clearAuth() {
+    remove(TOKEN_KEY);
+    remove(RULES_KEY);
+  }
+  function forgetApp() {
+    remove(APP_KEY);
     remove(TOKEN_KEY);
     remove(RULES_KEY);
   }
@@ -3580,6 +3591,7 @@ expiresIn: num$1(body, "expire_in") || num$1(body, "expires_in") || 600,
     const cache = loadRulesCache();
     return {
       authorized: !!(cred && token),
+      hasCredential: !!cred,
       openId: (cred == null ? void 0 : cred.openId) || "",
       expiresAt: (token == null ? void 0 : token.expiresAt) || 0,
       ruleCount: (cache == null ? void 0 : cache.rules.length) || 0,
@@ -3656,6 +3668,10 @@ expiresIn: num$1(body, "expire_in") || num$1(body, "expires_in") || 600,
     clearAuth();
     addLog("已解除飞书授权", "success");
   }
+  function forgetCredential() {
+    forgetApp();
+    addLog("已作废本机飞书应用凭证，下次授权将重新注册", "success");
+  }
   function getTableUrl() {
     try {
       const v = loadAllvalue()["quickReplyTableUrl"];
@@ -3706,19 +3722,24 @@ expiresIn: num$1(body, "expire_in") || num$1(body, "expires_in") || 600,
   };
   const _hoisted_14$6 = {
     key: 4,
-    class: "mb-2 text-[12px] break-words text-error"
+    class: "mb-2 text-[12px] leading-5 text-base-content/60"
   };
   const _hoisted_15$5 = {
     key: 5,
+    class: "mb-2 text-[12px] break-words text-error"
+  };
+  const _hoisted_16$4 = {
+    key: 6,
     class: "mb-2 rounded-box border border-warning/40 bg-warning/10 p-3 text-[12px] leading-5"
   };
-  const _hoisted_16$4 = { class: "mb-2" };
-  const _hoisted_17$3 = ["disabled"];
-  const _hoisted_18$3 = { class: "flex flex-wrap items-center gap-2" };
-  const _hoisted_19$1 = ["disabled"];
+  const _hoisted_17$3 = { class: "mb-2" };
+  const _hoisted_18$3 = ["disabled"];
+  const _hoisted_19$1 = { class: "flex flex-wrap items-center gap-2" };
   const _hoisted_20$1 = ["disabled"];
   const _hoisted_21$1 = ["disabled"];
   const _hoisted_22$1 = ["disabled"];
+  const _hoisted_23$1 = ["disabled"];
+  const _hoisted_24$1 = ["disabled"];
   const _sfc_main$l = vue.defineComponent({
     __name: "FeishuAuthPanel",
     setup(__props) {
@@ -3812,6 +3833,11 @@ expiresIn: num$1(body, "expire_in") || num$1(body, "expires_in") || 600,
         refreshStatus();
         toast.success("已解除飞书授权");
       }
+      function doForget() {
+        forgetCredential();
+        refreshStatus();
+        toast.success("已作废本机凭证，下次授权将重新注册应用");
+      }
       vue.onMounted(refreshStatus);
       vue.onUnmounted(() => {
         cancelled = true;
@@ -3845,20 +3871,21 @@ expiresIn: num$1(body, "expire_in") || num$1(body, "expires_in") || 600,
               target: "_blank",
               rel: "noreferrer"
             }, vue.toDisplayString(challenge.value.verificationUriComplete), 9, _hoisted_11$9),
-            vue.createElementVNode("p", _hoisted_12$7, " 链接 " + vue.toDisplayString(Math.round(challenge.value.expiresIn / 60)) + " 分钟内有效；确认后这里会自动完成。 ", 1)
+            vue.createElementVNode("p", _hoisted_12$7, " 链接 " + vue.toDisplayString(Math.round(challenge.value.expiresIn / 60)) + " 分钟内有效；确认后这里会自动完成。 授权页里要登录注册应用时的那个账号（第 1 步确认创建时用的账号）。 ", 1)
           ])) : vue.createCommentVNode("", true),
           busy.value && !challenge.value ? (vue.openBlock(), vue.createElementBlock("p", _hoisted_13$7, _cache[5] || (_cache[5] = [
             vue.createElementVNode("span", { class: "loading loading-spinner loading-xs mr-1" }, null, -1),
             vue.createTextVNode("正在与飞书通信… ")
           ]))) : vue.createCommentVNode("", true),
-          errorText2.value ? (vue.openBlock(), vue.createElementBlock("p", _hoisted_14$6, vue.toDisplayString(errorText2.value), 1)) : vue.createCommentVNode("", true),
-          errorText2.value && permissionError.value ? (vue.openBlock(), vue.createElementBlock("div", _hoisted_15$5, _cache[6] || (_cache[6] = [
+          !status.value.authorized && status.value.hasCredential ? (vue.openBlock(), vue.createElementBlock("p", _hoisted_14$6, " 本机已注册过应用（第 1 步已完成），点「授权飞书账号」会直接进入第 2 步。 如果第 1 步当时用错了账号（例如豆包账号），点「作废并重新注册」可回到第 1 步。 ")) : vue.createCommentVNode("", true),
+          errorText2.value ? (vue.openBlock(), vue.createElementBlock("p", _hoisted_15$5, vue.toDisplayString(errorText2.value), 1)) : vue.createCommentVNode("", true),
+          errorText2.value && permissionError.value ? (vue.openBlock(), vue.createElementBlock("div", _hoisted_16$4, _cache[6] || (_cache[6] = [
             vue.createElementVNode("p", { class: "mb-1 font-semibold" }, "没有读取这张多维表格的权限，依次检查：", -1),
             vue.createElementVNode("p", null, "① 表是不是当前授权账号的？别人分享的表，请让所有者把你的飞书账号加为协作者（「可阅读」即可）；", -1),
             vue.createElementVNode("p", null, "② 授权时 scope 是否勾全 —— 点上方「重新授权」，弹出的授权页里**全部勾选**后再确认；", -1),
             vue.createElementVNode("p", null, "③ 链接是否贴对 —— 在飞书里打开那张表，点右上角「分享」复制链接，粘贴到下方输入框。", -1)
           ]))) : vue.createCommentVNode("", true),
-          vue.createElementVNode("div", _hoisted_16$4, [
+          vue.createElementVNode("div", _hoisted_17$3, [
             _cache[7] || (_cache[7] = vue.createElementVNode("p", { class: "mb-1 text-[12px] text-base-content/60" }, "规则表链接（粘贴多维表格的分享链接）", -1)),
             vue.withDirectives(vue.createElementVNode("input", {
               "onUpdate:modelValue": _cache[0] || (_cache[0] = ($event) => tableUrl.value = $event),
@@ -3875,36 +3902,42 @@ expiresIn: num$1(body, "expire_in") || num$1(body, "expires_in") || 600,
               class: "btn btn-outline btn-sm mt-1",
               disabled: urlBusy.value,
               onClick: saveTable
-            }, vue.toDisplayString(urlBusy.value ? "保存中…" : "保存并刷新规则"), 9, _hoisted_17$3)
+            }, vue.toDisplayString(urlBusy.value ? "保存中…" : "保存并刷新规则"), 9, _hoisted_18$3)
           ]),
-          vue.createElementVNode("div", _hoisted_18$3, [
+          vue.createElementVNode("div", _hoisted_19$1, [
             !status.value.authorized ? (vue.openBlock(), vue.createElementBlock("button", {
               key: 0,
               class: "btn btn-primary btn-sm",
               disabled: busy.value,
               onClick: startAuth
-            }, vue.toDisplayString(busy.value ? "等待确认…" : "授权飞书账号"), 9, _hoisted_19$1)) : (vue.openBlock(), vue.createElementBlock(vue.Fragment, { key: 1 }, [
+            }, vue.toDisplayString(busy.value ? "等待确认…" : "授权飞书账号"), 9, _hoisted_20$1)) : (vue.openBlock(), vue.createElementBlock(vue.Fragment, { key: 1 }, [
               vue.createElementVNode("button", {
                 class: "btn btn-outline btn-sm",
                 disabled: busy.value,
                 onClick: reloadRules
-              }, "立即刷新规则", 8, _hoisted_20$1),
+              }, "立即刷新规则", 8, _hoisted_21$1),
               vue.createElementVNode("button", {
                 class: "btn btn-outline btn-sm",
                 disabled: busy.value,
                 onClick: startAuth
-              }, "重新授权", 8, _hoisted_21$1),
+              }, "重新授权", 8, _hoisted_22$1),
               vue.createElementVNode("button", {
                 class: "btn btn-ghost btn-sm",
                 disabled: busy.value,
                 onClick: doRevoke
-              }, "解除授权", 8, _hoisted_22$1)
+              }, "解除授权", 8, _hoisted_23$1)
             ], 64)),
-            busy.value ? (vue.openBlock(), vue.createElementBlock("button", {
+            status.value.hasCredential ? (vue.openBlock(), vue.createElementBlock("button", {
               key: 2,
+              class: "btn btn-outline btn-warning btn-sm",
+              disabled: busy.value,
+              onClick: doForget
+            }, " 作废并重新注册 ", 8, _hoisted_24$1)) : vue.createCommentVNode("", true),
+            busy.value ? (vue.openBlock(), vue.createElementBlock("button", {
+              key: 3,
               class: "btn btn-ghost btn-sm",
               onClick: cancel
-            }, "取消")) : vue.createCommentVNode("", true)
+            }, "取消并返回")) : vue.createCommentVNode("", true)
           ])
         ]);
       };

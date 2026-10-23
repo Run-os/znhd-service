@@ -2,6 +2,7 @@
 import { computed, onMounted, onUnmounted, ref } from 'vue';
 import {
     authorize,
+    forgetCredential,
     getRules,
     getTableUrl,
     getStatus,
@@ -135,6 +136,17 @@ function doRevoke(): void {
     toast.success('已解除飞书授权');
 }
 
+/**
+ * 作废本机应用凭证（v26.10.23-v3）：连第 1 步注册的 client_id/secret 一起忘掉，
+ * 下次授权重新走「动态注册」。用于第 1 步用错账号确认的场景（比如豆包账号）——
+ * 凭证不清掉，每次点授权都会跳过第 1 步带着错账号的上下文，永远回不去。
+ */
+function doForget(): void {
+    forgetCredential();
+    refreshStatus();
+    toast.success('已作废本机凭证，下次授权将重新注册应用');
+}
+
 onMounted(refreshStatus);
 onUnmounted(() => {
     cancelled = true;
@@ -177,11 +189,18 @@ onUnmounted(() => {
             </a>
             <p class="mt-1 text-[11px] text-base-content/50">
                 链接 {{ Math.round(challenge.expiresIn / 60) }} 分钟内有效；确认后这里会自动完成。
+                授权页里要登录注册应用时的那个账号（第 1 步确认创建时用的账号）。
             </p>
         </div>
 
         <p v-if="busy && !challenge" class="mb-2 text-[12px] text-base-content/60">
             <span class="loading loading-spinner loading-xs mr-1"></span>正在与飞书通信…
+        </p>
+
+        <!-- 有凭证但未授权：说明第 1 步已过、第 2 步还没完成；给一条「回退」出路（v26.10.23-v3） -->
+        <p v-if="!status.authorized && status.hasCredential" class="mb-2 text-[12px] leading-5 text-base-content/60">
+            本机已注册过应用（第 1 步已完成），点「授权飞书账号」会直接进入第 2 步。
+            如果第 1 步当时用错了账号（例如豆包账号），点「作废并重新注册」可回到第 1 步。
         </p>
 
         <p v-if="errorText" class="mb-2 text-[12px] break-words text-error">{{ errorText }}</p>
@@ -221,7 +240,15 @@ onUnmounted(() => {
                 <button class="btn btn-outline btn-sm" :disabled="busy" @click="startAuth">重新授权</button>
                 <button class="btn btn-ghost btn-sm" :disabled="busy" @click="doRevoke">解除授权</button>
             </template>
-            <button v-if="busy" class="btn btn-ghost btn-sm" @click="cancel">取消</button>
+            <!-- v26.10.23-v3：第 1 步用错账号时的回退出路（清凭证后重新授权 = 重新注册） -->
+            <button
+                v-if="status.hasCredential"
+                class="btn btn-outline btn-warning btn-sm"
+                :disabled="busy"
+                @click="doForget">
+                作废并重新注册
+            </button>
+            <button v-if="busy" class="btn btn-ghost btn-sm" @click="cancel">取消并返回</button>
         </div>
     </fieldset>
 </template>

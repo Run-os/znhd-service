@@ -78,3 +78,17 @@ export function clearAuth(): void {
     remove(TOKEN_KEY);
     remove(RULES_KEY);
 }
+
+/**
+ * 作废本机应用凭证：连 client_id/secret 一起忘掉（v26.10.23-v3）。
+ *
+ * 场景：第 1 步「注册应用」在飞书网页里用**错账号**确认了（比如豆包账号），
+ * 凭证已落盘 ⇒ 之后每次授权都跳过第 1 步、还带着错账号的上下文，回不去。
+ * 只有把凭证一并忘掉，下一次授权才会重新走「动态注册」。
+ * 注意：飞书侧那个动态注册的应用不会被删除（没有对应接口），只是本机不再使用它，无副作用。
+ */
+export function forgetApp(): void {
+    remove(APP_KEY);
+    remove(TOKEN_KEY);
+    remove(RULES_KEY);
+}
