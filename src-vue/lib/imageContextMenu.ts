@@ -114,6 +114,12 @@ function injectInto(ul: HTMLUListElement): void {
     span.textContent = '打印';
     li.appendChild(span);
     li.addEventListener('click', onPrintClick);
+    // hover 底色不是 CSS :hover 伪类：v-contextmenu 库靠 mouseenter/mouseleave
+    // 给 li 切换 `v-contextmenu-item--hover` class（实测 unpkg dist 源码），站点
+    // scoped CSS 的蓝色底也挂在这个 class 上。createElement 出来的 li 没有库的
+    // 事件绑定，必须自己补一份，否则悬浮时和原生项不一致（v26.10.23-v6 修复）。
+    li.addEventListener('mouseenter', () => li.classList.add('v-contextmenu-item--hover'));
+    li.addEventListener('mouseleave', () => li.classList.remove('v-contextmenu-item--hover'));
     ul.appendChild(li);
 }
 

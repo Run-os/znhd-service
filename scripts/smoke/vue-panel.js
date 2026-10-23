@@ -1383,12 +1383,22 @@ function serve() {
     // 脚本启动时扫描 body 下的 ul.v-contextmenu，按文本识别图片菜单后在尾部注入
     // 与原生项同款样式的「打印」项。这里只验「注入 + 结构同构」，不点击
     // （点击会真调 printA4Image 弹打印对话框，冒烟环境不碰）。
+    // v26.10.23-v6 加 hover 断言：库的悬浮底色是 JS 切 `v-contextmenu-item--hover`
+    // class（不是 CSS :hover），注入项必须自己也切换 —— 站点蓝色底就挂在这个 class。
     const printMenu = await page.evaluate(() => {
         const ul = document.getElementById('fake-img-menu');
         const li = ul ? ul.querySelector('li[data-znhd-print]') : null;
         const first = ul ? ul.querySelector('li') : null;
         const scopes = (el) =>
             el ? [...el.attributes].filter((a) => a.name.indexOf('data-v-') === 0).map((a) => a.name) : [];
+        let hoverOn = false;
+        let hoverOff = false;
+        if (li) {
+            li.dispatchEvent(new MouseEvent('mouseenter'));
+            hoverOn = li.className.indexOf('v-contextmenu-item--hover') >= 0;
+            li.dispatchEvent(new MouseEvent('mouseleave'));
+            hoverOff = li.className.indexOf('v-contextmenu-item--hover') < 0;
+        }
         return {
             injected: !!li,
             text: li ? (li.textContent || '').trim() : '',
@@ -1397,11 +1407,17 @@ function serve() {
             // 必须在尾部（排在原生四项之后，观感即「菜单最后多一项」）
             atTail: !!li && ul.lastElementChild === li,
             clsOk: !!li && li.className.indexOf('v-contextmenu-item') >= 0,
+            hoverOk: hoverOn && hoverOff,
         };
     });
     report.printMenu = printMenu;
     report.checks.printMenuOk =
-        printMenu.injected && printMenu.text === '打印' && printMenu.scopeOk && printMenu.atTail && printMenu.clsOk;
+        printMenu.injected &&
+        printMenu.text === '打印' &&
+        printMenu.scopeOk &&
+        printMenu.atTail &&
+        printMenu.clsOk &&
+        printMenu.hoverOk;
 
     // ---------- 常用语快捷按钮（v26.10.23） ----------
     // 页面内夹具在 33500ms 装、37500ms 采样（见 HTML 末尾的 __installQuickReplyFixtures）。

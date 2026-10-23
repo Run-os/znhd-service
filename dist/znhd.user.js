@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         征纳互动人数和在线监控v2
 // @namespace    https://scriptcat.org/
-// @version      26.10.23-v5
+// @version      26.10.23-v6
 // @author       runos
 // @description  实时监控征纳互动等待人数和在线状态，支持语音播报、自定义常用语
 // @license      MIT
@@ -1422,6 +1422,8 @@ logAutoRefresh: !!_initAllvalue.logAutoRefresh
     span.textContent = "打印";
     li.appendChild(span);
     li.addEventListener("click", onPrintClick);
+    li.addEventListener("mouseenter", () => li.classList.add("v-contextmenu-item--hover"));
+    li.addEventListener("mouseleave", () => li.classList.remove("v-contextmenu-item--hover"));
     ul.appendChild(li);
   }
   function scan() {
