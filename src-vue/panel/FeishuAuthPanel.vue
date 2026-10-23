@@ -213,23 +213,42 @@ onUnmounted(() => {
             <p>③ 链接是否贴对 —— 在飞书里打开那张表，点右上角「分享」复制链接，粘贴到下方输入框。</p>
         </div>
 
-        <!-- 规则表链接（v26.10.23-v2）：不再写死，谁用谁配自己的表 -->
+        <!-- 规则表链接（v26.10.23-v2）：不再写死，谁用谁配自己的表。
+             v26.10.23-v5 起用 daisyUI join：链接图标 + 输入框 + 右侧「保存链接」按钮拼成一体。 -->
         <div class="mb-2">
             <p class="mb-1 text-[12px] text-base-content/60">规则表链接（粘贴多维表格的分享链接）</p>
-            <input
-                v-model="tableUrl"
-                type="text"
-                class="input input-bordered input-sm w-full font-mono text-[12px]"
-                placeholder="https://xxx.feishu.cn/wiki/…?table=tbl…&view=vew…"
-                spellcheck="false"
-                data-znhd="quick-reply-table-url" />
+            <div class="join w-full">
+                <label class="input input-sm join-item min-w-0 flex-1 flex items-center gap-1.5">
+                    <svg
+                        class="h-[1em] shrink-0 opacity-50"
+                        xmlns="http://www.w3.org/2000/svg"
+                        viewBox="0 0 24 24">
+                        <g
+                            stroke-linejoin="round"
+                            stroke-linecap="round"
+                            stroke-width="2"
+                            fill="none"
+                            stroke="currentColor">
+                            <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+                            <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+                        </g>
+                    </svg>
+                    <input
+                        v-model="tableUrl"
+                        type="text"
+                        class="min-w-0 flex-1 font-mono text-[12px]"
+                        placeholder="https://xxx.feishu.cn/wiki/…?table=tbl…&view=vew…"
+                        spellcheck="false"
+                        data-znhd="quick-reply-table-url" />
+                </label>
+                <button class="btn btn-neutral btn-sm join-item shrink-0" :disabled="urlBusy" @click="saveTable">
+                    {{ urlBusy ? '保存中…' : '保存链接' }}
+                </button>
+            </div>
             <p class="mt-1 text-[11px] text-base-content/50">
                 支持 /wiki/ 分享链接与 /base/ 直链；链接里不带 table 参数时自动用第一个数据表。
                 链接有改动时点「保存链接」，保存后会自动刷新一次规则。
             </p>
-            <button class="btn btn-outline btn-sm mt-1" :disabled="urlBusy" @click="saveTable">
-                {{ urlBusy ? '保存中…' : '保存链接' }}
-            </button>
         </div>
 
         <div class="flex flex-wrap items-center gap-2">
