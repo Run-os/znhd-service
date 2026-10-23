@@ -156,7 +156,7 @@ onUnmounted(() => {
 <template>
     <fieldset class="fieldset" data-znhd="feishu-auth">
         <legend class="fieldset-legend flex w-full items-center justify-between gap-3">
-            <span>飞书快捷回复（输入框上方常用语按钮）</span>
+            <span>飞书快捷回复（输出框上方的快捷短语）</span>
             <span v-if="status.authorized" class="flex items-center gap-1 text-[12px] text-success">
                 <Icon name="check" :size="13" />
                 已授权
@@ -170,7 +170,7 @@ onUnmounted(() => {
             token 到期：{{ expiresText }}（到期前会自动续期）
         </p>
         <p v-else class="mb-2 text-[12px] leading-5 text-base-content/60">
-            授权后脚本会读取你飞书多维表格里的「快捷发送常用语」，按当前对话内容在输入框上方显示按钮。
+            授权后脚本会读取你飞书多维表格里的规则表，按当前对话内容在输出框上方显示快捷短语按钮。
             对话文本只在本机匹配，不会上传到任何地方。
         </p>
 
@@ -224,10 +224,11 @@ onUnmounted(() => {
                 spellcheck="false"
                 data-znhd="quick-reply-table-url" />
             <p class="mt-1 text-[11px] text-base-content/50">
-                支持 /wiki/ 分享链接与 /base/ 直链；链接里不带 table 参数时自动用第一个数据表。改完点「保存并刷新规则」。
+                支持 /wiki/ 分享链接与 /base/ 直链；链接里不带 table 参数时自动用第一个数据表。
+                链接有改动时点「保存链接」，保存后会自动刷新一次规则。
             </p>
             <button class="btn btn-outline btn-sm mt-1" :disabled="urlBusy" @click="saveTable">
-                {{ urlBusy ? '保存中…' : '保存并刷新规则' }}
+                {{ urlBusy ? '保存中…' : '保存链接' }}
             </button>
         </div>
 
@@ -237,8 +238,8 @@ onUnmounted(() => {
             </button>
             <template v-else>
                 <button class="btn btn-outline btn-sm" :disabled="busy" @click="reloadRules">立即刷新规则</button>
-                <button class="btn btn-outline btn-sm" :disabled="busy" @click="startAuth">重新授权</button>
-                <button class="btn btn-ghost btn-sm" :disabled="busy" @click="doRevoke">解除授权</button>
+                <button class="btn btn-primary btn-sm" :disabled="busy" @click="startAuth">重新授权</button>
+                <button class="btn btn-error btn-sm" :disabled="busy" @click="doRevoke">解除授权</button>
             </template>
             <!-- v26.10.23-v3：第 1 步用错账号时的回退出路（清凭证后重新授权 = 重新注册） -->
             <button

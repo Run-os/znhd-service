@@ -109,21 +109,22 @@ const UPDATE_URL = (GM_info.scriptUpdateURL || GM_info.script.updateURL) as stri
 
         <fieldset class="fieldset">
             <legend class="fieldset-legend">监控时间段（点击选择时间）</legend>
-            <!-- v26.10.21-v6：上午/下午并排一行，时间控件收窄（w-[92px]） -->
-            <div class="flex flex-wrap items-center gap-x-4 gap-y-2">
-                <div v-for="f in timeFields" :key="f.row" class="flex items-center gap-1.5">
-                    <span class="text-[13px] text-base-content/60">{{ f.row }}</span>
+            <!-- v26.10.23-v4：上午/下午**强制同一行**（v6 的 flex-wrap 在窄面板下会折成两行）。
+                 用两列等分 + 内部 input `min-w-0 w-full` 自适应：容器再窄也只会挤压，不会换行。 -->
+            <div class="grid grid-cols-2 gap-x-3">
+                <div v-for="f in timeFields" :key="f.row" class="flex min-w-0 items-center gap-1">
+                    <span class="shrink-0 text-[12px] text-base-content/60">{{ f.row }}</span>
                     <input
                         type="time"
                         step="300"
-                        class="input w-[92px] px-2"
+                        class="input w-full min-w-0 px-1.5 text-[13px]"
                         :value="hoursToHHmm(wh[f.from])"
                         @input="updateWh(f.from, ($event.target as HTMLInputElement).value)" />
-                    <span class="text-[13px] text-base-content/60">至</span>
+                    <span class="shrink-0 text-[12px] text-base-content/60">至</span>
                     <input
                         type="time"
                         step="300"
-                        class="input w-[92px] px-2"
+                        class="input w-full min-w-0 px-1.5 text-[13px]"
                         :value="hoursToHHmm(wh[f.to])"
                         @input="updateWh(f.to, ($event.target as HTMLInputElement).value)" />
                 </div>

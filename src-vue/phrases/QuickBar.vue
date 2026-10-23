@@ -37,7 +37,7 @@ function onClick(rule: QuickReplyRule): void {
     <div v-if="props.rules.length" data-znhd="quick-reply-bar" class="flex items-center gap-2 py-1">
         <span class="flex shrink-0 items-center gap-1 text-[12px] text-base-content/50">
             <Icon name="phrases" :size="13" />
-            常用语
+            快捷短语
         </span>
         <!-- 横向滚动区：min-w-0 必不可少，否则 flex 子项默认 min-width:auto 会把整条撑出容器 -->
         <div class="flex min-w-0 flex-1 gap-1.5 overflow-x-auto pb-0.5" style="scrollbar-width: thin">

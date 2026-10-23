@@ -229,7 +229,7 @@ async function refreshMatches(): Promise<void> {
     const after = matched.map((r) => r.id).join(',');
     if (before !== after) {
         hits.value = matched;
-        if (matched.length) addLog('常用语快捷按钮命中：' + matched.map((r) => r.title).join('、'), 'info');
+        if (matched.length) addLog('快捷短语命中：' + matched.map((r) => r.title).join('、'), 'info');
     }
 }
 
