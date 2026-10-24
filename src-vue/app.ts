@@ -11,6 +11,7 @@ import { flushSaveAllvalue, loadAllvalue } from '@/lib/storage';
 import { startPerfCollect } from '@/lib/snifferPerf';
 import { setPreMeasureEnabled } from '@/lib/snifferPre';
 import { startImageContextMenu, stopImageContextMenu } from './lib/imageContextMenu';
+import { startTodoBadge, stopTodoBadge } from './lib/todoBadge';
 import { startNavBarAutoMount, stopNavBarAutoMount } from './panel/navBarMount';
 import { startQuickReplyBar, stopQuickReplyBar } from './phrases/mountQuickBar';
 import { mountPanel, unwatchPanelHost, watchPanelHost } from './main';
@@ -35,6 +36,9 @@ const app = () => {
         // 站点图片右键菜单注入【打印】（v26.10.22-v6）：调脚本自身的 A4 打印，
         // 失败不连累主面板（站点没有菜单项 API，靠 DOM 注入，见模块头注）
         startImageContextMenu();
+        // 「待处理留言/待处理预约」红色提醒角标（v26.10.24-v1）：源文字旁红底白字
+        // badge + 呼吸动画，首现加 ping 扩散；失败不连累主面板（见模块头注）
+        startTodoBadge();
         // 会话输出框上方的快捷短语按钮（v26.10.23）：按当前对话匹配飞书规则表。
         // 未授权 / 接口不可用时内部静默降级为不显示按钮，不连累主面板。
         startQuickReplyBar();
@@ -50,6 +54,7 @@ const app = () => {
         unwatchPanelHost();
         stopNavBarAutoMount();
         stopImageContextMenu();
+        stopTodoBadge();
         stopQuickReplyBar();
     });
 

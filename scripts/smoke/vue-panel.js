@@ -195,6 +195,15 @@ localStorage.setItem('scriptCat_PhrasesCache', JSON.stringify({
   <li class="v-contextmenu-item"><span class="menu-text">转存到内网</span></li>
   <li class="v-contextmenu-item"><span class="menu-text">多选转存内网</span></li>
 </ul>
+<!-- 待处理提醒夹具（v26.10.24-v1）：结构照真机实测复刻
+     （工作台待办卡片 = .message-item > .count(数字) + .title(文字)）。
+     三张卡：留言=3（该提醒）、预约=0（不该提醒）、我的消息=1（关键词不匹配）。
+     注意：本段在内联 HTML 的模板字符串里，注释与属性一律不许出现反引号。 -->
+<div id="fake-sidebar">
+  <div class="message-item"><div class="count">3</div><div class="title">待处理留言</div></div>
+  <div class="message-item"><div class="count">0</div><div class="title">待处理预约</div></div>
+  <div class="message-item"><div class="count">1</div><div class="title">我的消息</div></div>
+</div>
 <!-- ===== 常用语快捷按钮夹具（v26.10.23）=====
      快捷回复按钮条挂在 **Inputbox 组件根元素之前**（v26.10.23-v2：= 输入区含工具栏的
      外面上方）。真实结构是 Inputbox 根元素里包含工具栏 + TinyMCE 挂载点（.input-tinymce），
@@ -1418,6 +1427,49 @@ function serve() {
         printMenu.atTail &&
         printMenu.clsOk &&
         printMenu.hoverOk;
+
+    // ---------- 待处理提醒（v26.10.24-v1） ----------
+    // 夹具 = #fake-sidebar，结构照真机复刻：留言=3 该提醒、预约=0 不该提醒、
+    // 我的消息=1 关键词不匹配。断言：只有留言那张卡的 .count 变胶囊、
+    // 红底白字 + 呼吸动画 + ping 层；归零后要能自动撤掉（坐席处理完就安静）。
+    const todoBadges = await page.evaluate(async () => {
+        const cards = [...document.querySelectorAll('#fake-sidebar .message-item')];
+        const cardOf = (kw) => cards.find((c) => (c.querySelector('.title')?.textContent || '').indexOf(kw) >= 0);
+        const hitOf = (kw) => {
+            const c = cardOf(kw);
+            const n = c ? c.querySelector('.count') : null;
+            return n ? n.classList.contains('znhd-todo-hit') : false;
+        };
+        const countEl = cardOf('待处理留言')?.querySelector('.count');
+        const cs = countEl ? getComputedStyle(countEl) : null;
+        const snap = {
+            msgHit: hitOf('待处理留言'),
+            orderHit: hitOf('待处理预约'),
+            plainHit: hitOf('我的消息'),
+            redBg: !!cs && cs.backgroundColor === 'rgb(229, 72, 77)',
+            whiteText: !!cs && cs.color === 'rgb(255, 255, 255)',
+            pulse: !!cs && cs.animationName.indexOf('znhdTodoPulse') >= 0,
+            ping: !!cardOf('待处理留言')?.querySelector('.znhd-todo-ping'),
+            // 归零回收：把数字改成 0，等一个防抖周期后应自动撤掉
+            clearedAfterZero: false,
+        };
+        if (countEl) {
+            countEl.firstChild.nodeValue = '0';
+            await new Promise((r) => setTimeout(r, 900));
+            snap.clearedAfterZero = !countEl.classList.contains('znhd-todo-hit');
+        }
+        return snap;
+    });
+    report.todoBadges = todoBadges;
+    report.checks.todoBadgesOk =
+        todoBadges.msgHit &&
+        !todoBadges.orderHit &&
+        !todoBadges.plainHit &&
+        todoBadges.redBg &&
+        todoBadges.whiteText &&
+        todoBadges.pulse &&
+        todoBadges.ping &&
+        todoBadges.clearedAfterZero;
 
     // ---------- 常用语快捷按钮（v26.10.23） ----------
     // 页面内夹具在 33500ms 装、37500ms 采样（见 HTML 末尾的 __installQuickReplyFixtures）。

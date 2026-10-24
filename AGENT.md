@@ -93,12 +93,19 @@
 - 组内按消息时间倒序、无时间殿后（判据单一来源 `timeOfItem`）；旧版用 `boxShadow` 双层铺红圈的做法**已废弃**，现在只标红文件名。
 - **站点图片右键菜单注入【打印】**（`src-vue/lib/imageContextMenu.ts`，v26.10.22-v6）：菜单是站点自有 Vue 组件（`ImageItem` + v-contextmenu，**无注册 API**），靠 DOM 注入 —— 按文本识别图片菜单（`li > .menu-text` 含「转存到内网」且 ≥3 项；**识别锚点别依赖 Vue**，沙箱里 `__vue__` 得走 unsafeWindow）、克隆首个原生 `li` 的 `data-v-*` 作用域属性（**别写死 hash**，站点换版会变）、MutationObserver 防抖兜新消息的新菜单实例。点击后**必须自己收菜单**：走 unsafeWindow 侧 `hideAll()`（`visible` 标记才同步；注入项不是 VContextmenuItem，库不会自动收；无 Vue 时降级直接置 display:none，仅冒烟夹具路径）。打印地址用点击瞬间的 `img.currentSrc`（站点图是带 sign 的签名 URL，**别缓存**）。**hover 底色是 JS 切 class 不是 CSS `:hover`**（v26.10.23-v6 修复：v-contextmenu 库靠 mouseenter/mouseleave 给 li 挂 `v-contextmenu-item--hover`，站点蓝色底挂在这个 class 上；注入的 li 必须**自己绑 mouseenter/mouseleave 补切换**，否则悬浮不变色）。冒烟：`#fake-img-menu` 夹具 + `printMenuOk`（注入/同构/作用域继承/在尾部/hover class 切换）；点击路径真机验过（`vue-hideAll`）。
 
+### 待处理留言 / 待处理预约 红色提醒（v26.10.24-v1）
+
+- `src-vue/lib/todoBadge.ts`（`app.ts` 里 `startTodoBadge()`）。**真机 DOM（2026-10-24 本地 Edge 实测）**：工作台左侧待办卡片 = `.message-item > .count`（数字，零也占位）+ `.title`（「待处理留言」/「待处理预约」）。
+- **最终形态 = 把 `.count` 那个数字胶囊化**（`#e5484d` 底 + 白字 + `znhdTodoPulse` 1s 呼吸），首次出现叠一圈 `znhdTodoPing` 扩散；**只在 `count > 0` 时加，归零自动撤**。⚠️ 第一版「标题旁加『待』字 badge」被真机否掉：与卡片原有红数字重复，且 0 也在闪（天天误报）—— 别再改回去。
+- 注入的是**站点 light DOM**：站点没加载 Tailwind ⇒ `animate-pulse`/`animate-ping` 类**不生效**，必须自带 `<style>` 定义 keyframes（前缀 `znhdTodo` 防冲突）；站点 scoped 样式（`.count[data-v-xxx]`）特异性高，胶囊样式要 `!important` 才压得住。
+- 扫描：`document.evaluate` XPath 找 `div.title` 含关键词（原生实现，比 JS 全页遍历便宜）+ MutationObserver 300ms 防抖，**`characterData` 必须听**（站点 Vue 就地改数字文本，不重建节点）。冒烟 `todoBadgesOk`：3 命中 / 0 不命中 / 关键词外不命中 / 红底白字 / 呼吸 / ping / 改 0 后 900ms 内撤掉。
+
 ## 8. 常用语（本页话术抓取）
 
 - 数据源 = 右侧栏「常用话术」（`lib/phrasesZnhd.ts`，纯程序化触发：合成 MouseEvent 点 TDesign tab → 循环展开文件夹 → 读 `.auxiliary-item`，零请求）；抓完切回「会话人信息」。`phrasesDoc.ts`（腾讯文档源）已整体删除，设置里无数据地址输入框。
 - ⚠️ **展开热点 = 文件夹图标 `span.t-folder-icon`（`trigger="expand"`），点 `.t-tree__label` 无效**；叶子 = `.t-tree__item.custom-rich-node`；展开态 = `.t-tree__item--open`（svg class 不可当判据）；**叶子也有空占位图标，不能拿它判文件夹**。
 - ⚠️ **合成事件绝不能传 `view: window`**（沙箱里 window 非原生 ⇒ 构造即抛；冒烟无沙箱 ⇒ 这类异常永假绿，靠 `phrasesClickNoViewOk` 断言 `ev.view === null` 兜）。
-- 低配实机：每步 300~500ms 轮询等待，**绝不做组件树递归扫描**（曾压崩页面）；探 Vue 组件用 `el.__vue__` 向上回溯。远程调试该页走 browser-use + `BU_CDP_URL=http://100.100.60.60:9222`（curl 探测加 `--noproxy '*'`）。
+- 低配实机：每步 300~500ms 轮询等待，**绝不做组件树递归扫描**（曾压崩页面）；探 Vue 组件用 `el.__vue__` 向上回溯。远程调试该页走 browser-use + **本地浏览器**（`bsk browsers` 看实例 = 日常使用；`bsk tab borrow <tab_id>` 借用户标签页；远程 Tailscale 那台才是 `BU_CDP_URL=http://100.100.60.60:9222`，curl 探测加 `--noproxy '*'`）。
 - **写输入框（`lib/tinymce.ts`，v26.10.22-v5 重写为纯 JS API，无任何 DOM 兜底）**：`tinymce.activeEditor` → 选区 `select(body,true)+collapse(false)` 折到末尾 → `insertContent()` → 再显式 `updateText()` 同步 Vue。三条实测铁律（详见 `docs/tinymce-send-doc.md`）：
   ① **`setContent()` 不触发 Vue 同步**（`insertContent`/`execCommand` 会）⇒ 只 setContent 时按钮是灰的、或发出的是旧 `msg`；
   ② **`insertContent()` 插在光标处不是末尾** —— 不折叠选区时追加会跑到最前面；
@@ -108,7 +115,6 @@
 - **列表 = 卡片（方案 C1，v26.10.21-v2 定版）**：每条一张 `rounded-xl` 卡，卡面 `bg-base-200`（比 modal-box 的 base-100 亮一档）+ `border-base-content/10` 收边，文字 `line-clamp-3`（3 × `leading-5` = 60px），`min-h-[64px]` 保底两行，悬浮时 `hover:border-primary` + `hover:bg-base-300`。⚠️ **夜间不要用 `border-base-300` 分层**：business 的 base-300 与 base-200 明度几乎一致，描边整条融进深底（v26.10.21 用户在真机截图里发现），必须靠**明度差（卡面提亮）**或色相差。⚠️ v1 曾在卡左侧加 3px 竖条（方案 C2），用户看实机后否掉 ⇒ 不要再加回来（内容区必须是四边等距 `p-3`）。断言 = `phrasesClampOk`（clamp 3 + 高度 ≥ 44）+ `phrasesCardOk`（圆角 ≥ 8、四边内边距相等、无竖条元素、卡面底色 ≠ 弹层底色、hover 再抬一档）。卡片钩子：`[data-znhd="phrase-card"]`。
 
 ### 常用语快捷按钮（飞书规则表，v26.10.23）
-
 - 链路：`src-vue/phrases/mountQuickBar.ts`（host 插在 **Inputbox 根元素** `.input-tinymce.__vue__.$parent.$el` **之前** = 输入区含工具栏的外面上方；v1 曾直接插在 `.input-tinymce` 前、卡在工具栏和编辑器中间，像长在输入框里；找不到组件树时回退旧锚点；1s 自愈 / 3s 读对话，按指纹去重）→ `lib/feishu/convText.ts`（Vuex `state.chat.messageList` **从最新往回只取 6 条有文本的消息**，图片/无文本不占槽；设置项 `quickReplyConversationSelector` 走 DOM 兜底）→ `match.ts`（标签任一命中 + 排除词优先；全角/空格/大小写归一化）→ `QuickBar.vue` → `tinymce.ts` 新增的 `replaceToTinyMCE`（**替换**不是追加：setContent + updateText）。
 - 鉴权（`lib/feishu/oauth.ts`）：应用动态注册（`archetype=PersonalAgent`，**无凭证可发起**，飞书给这台机器动态签发 client_id/secret）+ 设备授权。实测：注册会话 3600s、**设备授权只有 600s**；token = `accounts.feishu.cn/oauth/v3/token`；**refresh 必须带 client_id+client_secret**（只传 refresh_token → 400）；`refresh_expires_in=604800` 每次刷新重算（7 天滑动）；**不强制 DPoP**（`token_type: Bearer`）。
 - ⚠️ **动态注册出的应用 = 「<注册人>的智能助手」，可用范围只有注册时那个账号**（v26.10.23-v3 实测）：换别的账号登录授权页 → 「你没有 XX 的智能助手的使用权限」；**个人版 / 豆包等第三方登录的账号无法给应用授云文档权限**（飞书统一报 `access_denied: restricted by your organization's security policy`，不是公司策略）。 ⇒ 授权页必须用第 1 步确认创建时的账号；账号选错只能面板「作废并重新注册」（`credentials.ts` 的 `forgetApp()` 清三键，`getStatus().hasCredential` 驱动按钮显隐）——只清 token 没用，凭证在就永远跳过第 1 步。飞书侧注册错的应用删不掉，无副作用。`access_denied` 已在 `pollDeviceToken` 里翻译成人话。
