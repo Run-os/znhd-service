@@ -16,6 +16,11 @@ import { startNavBarAutoMount, stopNavBarAutoMount } from './panel/navBarMount';
 import { startQuickReplyBar, stopQuickReplyBar } from './phrases/mountQuickBar';
 import { mountPanel, unwatchPanelHost, watchPanelHost } from './main';
 
+/** 本次页面加载真正跑起来的模块名（进面板日志，见文件末尾的汇总行） */
+const booted: string[] = [];
+/** 本次尝试启动的模块数（分母，别写死数字） */
+let bootTried = 0;
+
 /**
  * 单点启动：一个模块抛错只记日志，不连累同批的其它模块。
  *
@@ -26,8 +31,10 @@ import { mountPanel, unwatchPanelHost, watchPanelHost } from './main';
  * 日志只进面板日志、不弹 toast：这些都不是核心功能，失败别打扰使用者。
  */
 function boot(name: string, fn: () => void): void {
+    bootTried += 1;
     try {
         fn();
+        booted.push(name);
     } catch (error) {
         console.error('[监控] ' + name + ' 启动失败:', error);
         addLog(name + ' 启动失败: ' + ((error as Error)?.message || String(error)), 'error');
@@ -60,6 +67,12 @@ const app = () => {
     // 会话输出框上方的快捷短语按钮（v26.10.23）：按当前对话匹配飞书规则表。
     // 未授权 / 接口不可用时内部静默降级为不显示按钮，不连累主面板。
     boot('快捷短语', startQuickReplyBar);
+
+    // 启动结果一行汇总（v26.10.24-v4）：面板里点开日志就能看出哪些模块真的跑起来了。
+    // 「待办提醒没出现」这类问题不用再连真机翻 DOM —— 看这行缺谁即可：
+    //   · 有「待办提醒」但页面没红卡  ⇒ 站点结构变了（真问题）
+    //   · 整行都没有 / 只有更早的启动时间 ⇒ 这份页面实例没跑到（刷新即可）
+    addLog('模块启动 ' + booted.length + '/' + bootTried + ': ' + (booted.join(' / ') || '无'));
 
     window.addEventListener('beforeunload', () => {
         flushSaveAllvalue();

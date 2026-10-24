@@ -12,12 +12,14 @@
 
 1. **版本号 `YY.MM.DD-vN`**（零填充；N = 当天第 N 次，跨午夜跟提交时刻）。⚠️ 同一天只递增 `-vN`，**日期部分绝不动**（误改日期会让油猴版本比较把新版判旧）。改脚本 → `config/common.meta.json` 的 `version` + 根 `package.json`/`package-lock.json`（**三写**）；改 relay → `relay-server/package.json`（web 页面显示版本由构建期 `__APP_VERSION__` 注入自它）。每次改动在 changelogs 当月文件顶部补条目。
 2. **未经用户明确许可绝不 `git push`**（push 即部署：deploy.yml SSH 重启容器 + CI 门禁）。本地提交即可跨会话保留。git push 需 `GIT_CONFIG_NOSYSTEM=1 GIT_TERMINAL_PROMPT=0` 并绕沙箱。
-3. **门禁**：`npm run build` → `typecheck` → `check` → `verify`（三段：脚本冒烟 + 中继 HTTP + 手机页端到端；**verify 约 2m10s，必须后台跑**）。改 `web/` 另跑 `typecheck:web` + `build:web` + `verify:web`，并提交 `relay-server/public` 产物（CI 有漂移检查）。
+3. **门禁**：`typecheck` + `lint` + `build` + `verify`（verify = 脚本冒烟 `vue-panel` + 中继 `relay` + 手机页 `phone-page`；各约 1~2 分钟，**必须后台跑**）。改 `web/` 另跑 `typecheck:web` + `build:web` + `verify:web`，并提交 `relay-server/public` 产物（CI 有漂移检查）。
+   ⚠️ **本机每个外部进程启动约 8 秒**（实测 `cmd /c echo hi` 7.8s、`node --version` 7.7s，与 node 版本、WorkBuddy shim 都无关）⇒ 总耗时几乎只取决于**进程数**。因此：直接调 `./node_modules/.bin/*`（别用 `npm run`，多一层 spawn，且本机会偶发 SIGTERM 空输出）；**输出重定向到文件，不要 `| tail`**（管道再加约 3.5s，还会把判据截掉导致重跑）；一次工具调用里串行做完多件事；**同一批改动改完再 build，一轮任务只 build 一次**。
+   ⚠️ `vite build` 清空 `dist/` 时撞 `[safe-delete] genie-trash ETIMEDOUT`（WorkBuddy 把 shim 注进了 `NODE_OPTIONS`）⇒ 先 `mv dist dist.bak` 再 build，最后用 PowerShell `Remove-Item -Recurse -Force` 清 bak。重跑常常仍不过。
 4. **禁止手改 `dist/znhd.user.js`**（构建产物，提交进仓库）。产物头部：`==UserScript==` 第一行、元数据块之后 `// @ts-nocheck`（VS Code 对大产物误报 TS2451，勿关全局校验、勿改业务代码）。
 5. **relay-server 禁止加 npm 依赖/构建步骤**（部署无 npm install）。全仓依赖面极窄，**新增依赖默认不批**；新依赖必须同步 ReadMe 技术栈/项目结构。
 6. **不得无理由重构可运行逻辑**（弹窗布局、长轮询/广播、shared 层、`uiReset` 隔离）；「诡异写法」多是真实实测结论，先查 changelogs 对应条目。
 7. **文档三处同步**：ReadMe / AGENT.md / changelogs 当月文件；改代码后回查 ReadMe。
-8. **加冒烟断言两处都改**（页面报告字段 + 接进 title 的 `&&` 链；`scripts/smoke/run.js` 的 `CHECKS`）+ **必须做一次反向验证**（故意破坏 → 变红 → 恢复，别绕过 `npm run build`，判据看 `dist/.build-stamp`）。⚠️ **分层兜底的代码，反向验证要把所有兜底层一起关**——只关一层必假绿（sniffConv 三层、pollAlive 两层都实测踩过）。
+8. **加冒烟断言只改一处**（`scripts/smoke/vue-panel.js` 里 `report.checks.<name> = …`，`checks` 全 true + 进程 exit 0 即通过；`znhd-smoke.html` 是 React 版遗留，别动）+ **必须做一次反向验证**（故意破坏 → 变红 → 恢复）。⚠️ **分层兜底的代码，反向验证要把所有兜底层一起关**——只关一层必假绿（sniffConv 三层、pollAlive 两层都实测踩过）。
 9. **任务收尾必写记忆**：`.workbuddy/memory/YYYY-MM-DD.md`（追加式）；30 天以上蒸馏进 `MEMORY.md`。先写记忆再一次性 git add 提交（用户约定）。
 10. 加文件前先 `git status`，别裸 `git add -A`。
 11. 浏览器基线 **Chrome/Edge 88+ / Firefox 85+ / Safari 14+** + Win7 实机（无 emoji 字体 ⇒ 禁 U+1F300+；图标走 `src/lib/ui/icons.tsx` 内联 SVG；`color-mix()`/`:has()`/text-wrap:balance 超基线必须降级）。
@@ -109,6 +111,9 @@
 - 启动链（v26.10.24-v3）：`app.ts` 的 6 项启动拆成 `boot(name, fn)` 各自独立 try。
   以前一个大 try 包住全部，前一项抛错会**静默**关掉后面的待办提醒和快捷短语，
   现象是「面板好好的，新功能就是不出现」——所以新加模块也必须走 `boot()`。
+- **启动自检行**（v26.10.24-v4）：`boot()` 成功项会被汇总成面板日志里的一行
+  `模块启动 N/M: …`。诊断任何「某功能没出现」先看这行：**有该模块名 = 跑起来了**
+  （问题在业务/样式）；**整行缺失或时间戳更早 = 这份页面实例没跑到脚本，刷新即可**。
 
 ## 8. 常用语（本页话术抓取）
 

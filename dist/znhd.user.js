@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         征纳互动人数和在线监控v2
 // @namespace    https://scriptcat.org/
-// @version      26.10.24-v3
+// @version      26.10.24-v4
 // @author       runos
 // @description  实时监控征纳互动等待人数和在线状态，支持语音播报、自定义常用语
 // @license      MIT
@@ -8703,9 +8703,13 @@ syntax: ((_b = pick("syntax")) != null ? _b : "*").replace(/^["']+|["']+$/g, "")
     hits.value = [];
     unmountHost();
   }
+  const booted = [];
+  let bootTried = 0;
   function boot(name, fn) {
+    bootTried += 1;
     try {
       fn();
+      booted.push(name);
     } catch (error) {
       console.error("[监控] " + name + " 启动失败:", error);
       addLog(name + " 启动失败: " + ((error == null ? void 0 : error.message) || String(error)), "error");
@@ -8725,6 +8729,7 @@ syntax: ((_b = pick("syntax")) != null ? _b : "*").replace(/^["']+|["']+$/g, "")
     boot("右键打印", startImageContextMenu);
     boot("待办提醒", startTodoBadge);
     boot("快捷短语", startQuickReplyBar);
+    addLog("模块启动 " + booted.length + "/" + bootTried + ": " + (booted.join(" / ") || "无"));
     window.addEventListener("beforeunload", () => {
       flushSaveAllvalue();
       stopMonitoring();
