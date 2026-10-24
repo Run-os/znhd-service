@@ -25,7 +25,6 @@ import ChatComposer from './ChatComposer.vue';
 import FilesView from './FilesView.vue';
 import DarkDialog from './DarkDialog.vue';
 import PairDialog from './PairDialog.vue';
-import SettingsDialog from './SettingsDialog.vue';
 import AboutDialog from './AboutDialog.vue';
 import { sepTimeText, sourceLabel } from './format';
 import { groupTurns } from './turns';
@@ -54,7 +53,6 @@ const store = useTransferStore();
 
 const filesOpen = ref(false);
 const pairOpen = ref(false);
-const settingsOpen = ref(false);
 const aboutOpen = ref(false);
 
 const sendText = ref('');
@@ -365,12 +363,6 @@ const footerHint = computed(() => (sendable.value ? '' : '当前没有在线手�
                             </summary>
                             <ul class="menu dropdown-content z-1 w-52 rounded-box bg-base-100 p-2 shadow-sm">
                                 <li>
-                                    <button @click="settingsOpen = true; closeMenu()">
-                                        <Icon name="settings" :size="15" />
-                                        设置
-                                    </button>
-                                </li>
-                                <li>
                                     <button @click="aboutOpen = true; closeMenu()">
                                         <Icon name="info" :size="15" />
                                         关于
@@ -482,7 +474,6 @@ const footerHint = computed(() => (sendable.value ? '' : '当前没有在线手�
         </div>
     </DarkDialog>
     <PairDialog v-model:open="pairOpen" :relay-server="store.settings.relayServer" :phones="store.phones" />
-    <SettingsDialog v-model:open="settingsOpen" />
     <AboutDialog v-model:open="aboutOpen" />
 
     <ImagePreview v-model:open="previewOpen" :items="imageUrls" :index="previewIndex" :names="imageNames" />

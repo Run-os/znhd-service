@@ -1,5 +1,9 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { addLog } from '@/lib/logger';
+import { DEFAULT_RELAY_SERVER } from '@/lib/transfer/settings';
+import { clearAllTransferFiles, updateTransferSettings } from '@/lib/transfer/store';
+import { useTransferStore } from '@vue/composables/useTransferStore';
+import { computed, ref, watch } from 'vue';
 import { hoursToHHmm, hhmmToHours } from '@/lib/utils';
 import AppDialog from './AppDialog.vue';
 import FeishuAuthPanel from './FeishuAuthPanel.vue';
@@ -18,6 +22,7 @@ export interface WorkingHours {
  * 左侧固定侧边栏（daisyUI 5 `menu`，选中类 `menu-active`），
  * 右侧内容区随选择切换，**默认选中「飞书快捷短语」**：
  *   · 飞书快捷短语 = `<FeishuAuthPanel />`（含隐私信息表格区块）；
+ *   · 传输助手 = 中继地址 / 自动打开开关 / 清空记录（v26.10.25-v2 自传输窗口迁入）；
  *   · 其他设置 = CDN 开关 / 嗅探预测量开关 / 监控时间段选择器；
  *   · 关于 = 技术栈脚注 + 脚本版本 + 作者/主页链接。
  *
@@ -45,14 +50,56 @@ const emit = defineEmits<{
     openLog: [];
 }>();
 
-/** 侧边栏页签（v26.10.25-v1） */
-type SettingsPage = 'feishu' | 'general' | 'about';
+/** 侧边栏页签（v26.10.25-v1；v26.10.25-v2 起并入「传输助手」—— 原传输窗口的设置弹窗已删） */
+type SettingsPage = 'feishu' | 'transfer' | 'general' | 'about';
 const page = ref<SettingsPage>('feishu');
 const pages: Array<{ id: SettingsPage; label: string }> = [
     { id: 'feishu', label: '飞书快捷短语' },
+    { id: 'transfer', label: '传输助手' },
     { id: 'general', label: '其他设置' },
     { id: 'about', label: '关于' },
 ];
+
+/* ── 传输助手（v26.10.25-v2 自 transfer/SettingsDialog.vue 迁入）─────────────
+ * 中继地址用**草稿 + 失焦/回车提交**：updateTransferSettings 在地址变化时会
+ * 重启轮询与长轮询，逐字提交会让输入 "https://…" 的每个合法前缀都触发一次重连。 */
+const transferStore = useTransferStore();
+const relayDraft = ref(transferStore.value.settings.relayServer);
+const confirmClear = ref(false);
+
+watch(
+    () => props.open,
+    (v) => {
+        if (v) {
+            relayDraft.value = transferStore.value.settings.relayServer;
+            confirmClear.value = false;
+        } else {
+            commitRelay(relayDraft.value);
+        }
+    }
+);
+
+function commitRelay(val: string) {
+    const url = (val || '').trim().replace(/\/+$/, '');
+    if (url && url !== transferStore.value.settings.relayServer) updateTransferSettings({ relayServer: url });
+}
+
+function onBlur() {
+    const url = (relayDraft.value || '').trim();
+    if (!url) {
+        // 清空并失焦 → 回填默认地址（与主面板常用语地址同一交互）
+        relayDraft.value = DEFAULT_RELAY_SERVER;
+        commitRelay(DEFAULT_RELAY_SERVER);
+    } else {
+        commitRelay(url);
+    }
+}
+
+function doClearAll() {
+    clearAllTransferFiles();
+    addLog('[传输助手] 已清空全部传输记录', 'success');
+    confirmClear.value = false;
+}
 
 const wh = computed<WorkingHours>(
     () => props.workingHours || { morningStart: 9, morningEnd: 12, afternoonStart: 13.5, afternoonEnd: 18 }
@@ -115,6 +162,53 @@ const VERSION = (GM_info.script.version || '?') as string;
             <div class="min-w-0 flex-1">
                 <!-- 飞书快捷短语（默认页）：授权 + 规则表链接 + 隐私信息表格，自成一体 -->
                 <FeishuAuthPanel v-if="page === 'feishu'" />
+
+                <!-- 传输助手（v26.10.25-v2 自传输窗口的设置弹窗迁入） -->
+                <template v-else-if="page === 'transfer'">
+                    <fieldset class="fieldset" data-znhd="transfer-settings">
+                        <legend class="fieldset-legend">中继服务器地址</legend>
+                        <input
+                            v-model="relayDraft"
+                            type="text"
+                            class="input w-full"
+                            placeholder="https://你的服务器:端口"
+                            @blur="onBlur"
+                            @keydown.enter.prevent="commitRelay(relayDraft)" />
+                        <p class="label whitespace-normal">
+                            手机上传的图片 / 文本经此服务器转发到本机。修改后点其他区域或按回车生效；留空失焦恢复默认地址。
+                        </p>
+                    </fieldset>
+
+                    <fieldset class="fieldset">
+                        <legend class="fieldset-legend flex w-full items-center justify-between gap-3">
+                            <span>收到内容时自动打开传输助手</span>
+                            <input
+                                type="checkbox"
+                                class="toggle"
+                                :checked="transferStore.settings.autoOpenOnReceive"
+                                @change="updateTransferSettings({ autoOpenOnReceive: ($event.target as HTMLInputElement).checked })" />
+                        </legend>
+                        <p class="label whitespace-normal">关闭时仅累计未读角标，不打扰；窗口已开着则只累加，不强行切换会话。</p>
+                    </fieldset>
+
+                    <div class="mt-2 border-t border-base-300 pt-3">
+                        <template v-if="!confirmClear">
+                            <button class="btn btn-error btn-sm" @click="confirmClear = true">清空全部传输记录</button>
+                        </template>
+                        <div v-else role="alert" class="alert alert-error alert-soft alert-vertical">
+                            <div>
+                                <div class="text-[13px]">清空全部传输记录</div>
+                                <div class="text-xs">
+                                    所有会话的图片与文本都会被移除（仅清理本机内存，不影响手机上的文件）
+                                </div>
+                            </div>
+                            <div class="flex justify-end gap-2">
+                                <button class="btn btn-outline btn-sm" @click="confirmClear = false">取消</button>
+                                <button class="btn btn-error btn-sm" @click="doClearAll">清空</button>
+                            </div>
+                        </div>
+                    </div>
+                </template>
 
                 <!-- 其他设置：开关与时间段原样搬入 -->
                 <template v-else-if="page === 'general'">

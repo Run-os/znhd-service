@@ -3,7 +3,7 @@ import { onMounted, ref, watch } from 'vue';
 import { Icon } from '@vue/icons';
 
 /**
- * 传输助手窗口的弹窗壳（配对 / 设置 / 企业信息 / 文件共用）—— **daisyUI 原生 `modal`**。
+ * 传输助手窗口的弹窗壳（配对 / 企业信息 / 文件共用）—— **daisyUI 原生 `modal`**。
  *
  * 与 `panel/AppDialog.vue` 同一套官方结构（skill/components/modal.md）。
  * 之前这里靠 reka-ui 的 Portal + 手写 z-index 盖住传输窗口；

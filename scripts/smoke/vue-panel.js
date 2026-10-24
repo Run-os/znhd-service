@@ -832,12 +832,36 @@ function serve() {
     });
     report.checks.settingsNavOk =
         !!settingsNav.found &&
-        JSON.stringify(settingsNav.labels) === JSON.stringify(['飞书快捷短语', '其他设置', '关于']) &&
+        JSON.stringify(settingsNav.labels) === JSON.stringify(['飞书快捷短语', '传输助手', '其他设置', '关于']) &&
         settingsNav.activeLabel === '飞书快捷短语' &&
         settingsNav.hasFeishu &&
         settingsNav.titleButtons.some((t) => t.includes('运行日志')) &&
         settingsNav.titleButtons.every((t) => !t.includes('更新日志'));
     report.settingsNav = settingsNav;
+
+    // 点「传输助手」→ 中继地址输入框 + 自动打开开关（v26.10.25-v2 自传输窗口迁入）。
+    // ⚠️ 不能用 clickPanelText：导航条上有个同名「传输助手」按钮（title 精确命中优先），
+    //    会把传输窗口打开而不是切设置页 —— 直接点侧边栏的 data-znhd 锚点。
+    await page.evaluate(() => {
+        const sr = document.getElementById('__znhd_panel_host__').shadowRoot;
+        const btn = sr.querySelector('[data-znhd="settings-nav-transfer"]');
+        if (btn) btn.click();
+    });
+    await new Promise((r) => setTimeout(r, 400));
+    const transferPage = await page.evaluate(() => {
+        const sr = document.getElementById('__znhd_panel_host__').shadowRoot;
+        const dlg = sr.querySelector('dialog[open] .modal-box');
+        if (!dlg) return { found: false };
+        return {
+            found: true,
+            hasRelayField: !!dlg.querySelector('[data-znhd="transfer-settings"] input[type="text"]'),
+            hasAutoOpen: dlg.innerText.includes('收到内容时自动打开传输助手'),
+            hasClear: dlg.innerText.includes('清空全部传输记录'),
+        };
+    });
+    report.checks.settingsTransferOk =
+        transferPage.found && transferPage.hasRelayField && transferPage.hasAutoOpen && transferPage.hasClear;
+    report.transferPage = transferPage;
 
     // 点「其他设置」→ 监控时间段选择器可见（两个开关 + 时间输入都在这一页）
     await clickPanelText('其他设置');
@@ -1189,36 +1213,31 @@ function serve() {
     report.filesNav = filesNav;
     report.filesPick = filesPick;
 
-    // 关掉「全部文件」，再从「更多」进设置（子弹窗：体量/底色/文案）
-    // v26.10.19（daisyUI）：弹窗底色 = modal-box 官方 base-100，随主题
+    // 关掉「全部文件」，打开「更多」菜单 —— v26.10.25-v2 起设置已迁到主设置弹窗，
+    // 菜单里不应再有「设置」项（只剩「关于」）
     await page.keyboard.press('Escape');
     await new Promise((r) => setTimeout(r, 350));
-    const settingsPick = await pickMore('设置');
-    await new Promise((r) => setTimeout(r, 450));
-    const transferSettings = await page.evaluate(() => {
+    const moreMenu = await page.evaluate(() => {
         const sr = document.getElementById('__znhd_panel_host__').shadowRoot;
-        const dialogs = [...sr.querySelectorAll('dialog[open]')];
-        const el = dialogs[dialogs.length - 1];
-        if (!el) return { found: false };
-        const card = el.querySelector('.modal-box');
-        return {
-            found: true,
-            count: dialogs.length,
-            inShadow: sr.contains(el),
-            text: el.innerText.replace(/\s+/g, ' ').trim().slice(0, 80),
-            background: card ? getComputedStyle(card).backgroundColor : '',
-            width: card ? Math.round(card.getBoundingClientRect().width) : 0,
-        };
+        const summary = [...(sr?.querySelectorAll('summary[title="更多"]') || [])][0];
+        if (!summary) return { found: false };
+        summary.click();
+        return { found: true };
+    });
+    await new Promise((r) => setTimeout(r, 300));
+    const transferMore = await page.evaluate(() => {
+        const sr = document.getElementById('__znhd_panel_host__').shadowRoot;
+        const menus = [...(sr?.querySelectorAll('.dropdown-content') || [])];
+        const items = menus.flatMap((m) => [...m.querySelectorAll('li button')]).map((b) =>
+            (b.textContent || '').replace(/\s+/g, '')
+        );
+        return { items, hasSettings: items.includes('设置'), hasAbout: items.includes('关于') };
     });
     report.checks.transferSettingsOk =
-        !!settingsPick.clicked &&
-        !!transferSettings.found &&
-        !!transferSettings.inShadow &&
-        transferSettings.text.includes('传输助手设置') &&
-        transferSettings.background === base100Light &&
-        transferSettings.width === 480;
-    report.transferSettings = transferSettings;
-    await page.screenshot({ path: path.join(os.tmpdir(), 'znhd-vue-transfer-settings.png') });
+        !!moreMenu.found && !transferMore.hasSettings && transferMore.hasAbout;
+    report.transferMore = transferMore;
+    await page.keyboard.press('Escape');
+    await page.screenshot({ path: path.join(os.tmpdir(), 'znhd-vue-transfer-more.png') });
 
     // ---------- 图片嗅探（阶段 4） ----------
     // 先逐层 Esc 关掉传输助手窗口与它的设置弹窗

@@ -79,7 +79,7 @@ onMounted(refreshLink);
                         <Icon name="settings" :size="20" />
                         <p class="text-sm">尚未配置中继服务器</p>
                         <p class="text-[13px] text-base-content/60">
-                            请到第一栏「设置」填写中继地址，保存后这里会自动生成扫码链接。
+                            请到主面板「设置菜单 → 传输助手」填写中继地址，保存后这里会自动生成扫码链接。
                         </p>
                     </div>
                 </div>
