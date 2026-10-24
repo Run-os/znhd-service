@@ -35,6 +35,4 @@
 2. 查看控制台是否有 iframe 跨域错误；
 3. 脚本会自动降级：优先 TinyMCE API，失败后直接操作 DOM。
 
-## 更新日志拉取失败
-
-脚本通过 `GM_xmlhttpRequest` 拉取 `changelogs/` 当月文件（遵循设置里的 CDN 开关：开 = jsDelivr，关 = raw.githubusercontent）。断网 / CDN 不可达时弹窗内会提示原因，「获取更多日志」仍可直接在浏览器打开网页版。
+> v26.10.25-v1 起「更新日志」弹窗已删除，要看更新记录请到仓库 [`changelogs/`](../changelogs) 目录。

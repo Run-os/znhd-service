@@ -16,6 +16,8 @@ import type { FeishuAppCredential, FeishuToken, RulesCache } from './types';
 const APP_KEY = 'scriptCat_FeishuApp';
 const TOKEN_KEY = 'scriptCat_FeishuToken';
 const RULES_KEY = 'scriptCat_QuickReplyRules';
+/** 隐私信息表格的规则缓存（v26.10.25-v1，独立于主规则表） */
+export const PRIVACY_RULES_KEY = 'scriptCat_PrivacyRules';
 
 /** 通用读取：兼容「存的是 JSON 字符串」和「存的是对象」两种历史形态 */
 function read<T>(key: string): T | null {
@@ -73,10 +75,22 @@ export function saveRulesCache(cache: RulesCache): void {
     write(RULES_KEY, cache);
 }
 
-/** 解除授权：三份数据一起清（只清 token 会造成「有凭证但永远换不到 token」的半残状态） */
+/** 隐私信息表格的规则缓存（v26.10.25-v1）：结构与主规则缓存一致，键独立 */
+export function loadPrivacyRulesCache(): RulesCache | null {
+    const v = read<RulesCache>(PRIVACY_RULES_KEY);
+    return v && Array.isArray(v.rules) ? v : null;
+}
+
+export function savePrivacyRulesCache(cache: RulesCache): void {
+    write(PRIVACY_RULES_KEY, cache);
+}
+
+/** 解除授权：四份数据一起清（只清 token 会造成「有凭证但永远换不到 token」的半残状态；
+ *  隐私缓存也一并清 —— token 没了它也读不了，留着只会显示过期内容） */
 export function clearAuth(): void {
     remove(TOKEN_KEY);
     remove(RULES_KEY);
+    remove(PRIVACY_RULES_KEY);
 }
 
 /**
@@ -91,4 +105,5 @@ export function forgetApp(): void {
     remove(APP_KEY);
     remove(TOKEN_KEY);
     remove(RULES_KEY);
+    remove(PRIVACY_RULES_KEY);
 }

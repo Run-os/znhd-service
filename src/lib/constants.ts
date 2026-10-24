@@ -50,7 +50,7 @@ export const DEFAULTS = {
         afternoonEnd: 18,
     },
     // 是否使用 CDN 加速（jsDelivr）加载项目内的 GitHub 资源。
-    // 目前实际受它影响的只有「更新日志」changelogs/*.md（changelog.ts）与提示音 mp3。
+    // v26.10.25-v1 起「更新日志」弹窗已删除，目前实际受它影响的只剩提示音 mp3。
     // true=经 jsDelivr 加速；false=直接走 GitHub 原始链接（raw.githubusercontent.com）。
     useCdn: true,
     // ⚠️ v26.10.18-v2：常用语数据源不再走远程地址（腾讯文档 / YAML），
@@ -81,4 +81,9 @@ export const DEFAULTS = {
     // 默认值 = 使用者自己的「快捷发送常用语」表；留空时回落到它。
     quickReplyTableUrl:
         'https://mi0cdkcaj1o.feishu.cn/wiki/HImpwjCTeiPTIbkzIB0cHOKcnDd?table=tblDmddRH7lDaNrr&view=vewE5llSJY',
+    // 「隐私信息」表格链接（v26.10.25-v1，独立于主规则表的第二张多维表格）：
+    // 办公地点 / 办公电话等敏感速查条目。列约定与主表相同（标题/内容），
+    // 但**不参与标签匹配**，全部条目始终显示在快捷短语栏上方的独立「隐私信息」栏。
+    // ⚠️ 无默认表：内容因人而异，必须由使用者在设置面板自己配自己的表；留空 = 功能关闭。
+    privacyTableUrl: '',
 };

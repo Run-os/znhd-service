@@ -138,7 +138,7 @@ window.GM_xmlhttpRequest = function (o) {
   if (url.indexOf('/phone/status') >= 0) {
     return respond(200, JSON.stringify({ online: true, phones: phones }));
   }
-  // 表情包清单 / 更新日志等：冒烟环境一律失败（面板自己有降级文案）
+  // 表情包清单等：冒烟环境一律失败（面板自己有降级文案）
   setTimeout(function () { o.onerror && o.onerror(new Error('stub: ' + url)); }, 20);
 };
 `;
@@ -421,13 +421,14 @@ function serve() {
     });
     report.checks.dialogFound = dialog.found;
     report.checks.dialogInShadow = !!dialog.inShadow && !dialog.bodyHasDialog;
+    // v26.10.25-v1：设置弹窗加宽到 680（左右两栏布局）
     report.checks.dialogStyled =
-        !!dialog.hasCard && dialog.background === base100Light && dialog.boxWidth === 520;
+        !!dialog.hasCard && dialog.background === base100Light && dialog.boxWidth === 680;
     report.dialog = dialog;
 
     await page.screenshot({ path: path.join(os.tmpdir(), 'znhd-vue-dialog.png') });
 
-    // ---------- 阶段 2：日志 / 常用语 / 更新日志 ----------
+    // ---------- 阶段 2：日志 / 常用语 / 设置改版 ----------
     const closeTopLayer = async () => {
         await page.keyboard.press('Escape');
         await new Promise((r) => setTimeout(r, 250));
@@ -436,7 +437,8 @@ function serve() {
     const clickPanelText = async (text) => {
         await page.evaluate((t) => {
             // v26.10.21-v4：功能入口已迁导航条 —— 先按 title 在导航条 host 里找；
-            // 找不到再退回面板 shadow 按可见文本找（弹窗内的「运行日志/更新日志」等仍在面板里）
+            // 找不到再退回面板 shadow 按可见文本找（设置弹窗内的「运行日志」、
+            // 侧边栏菜单项等仍在面板 shadow 里）
             const navSr = document.getElementById('__znhd_nav_host__')?.shadowRoot;
             let el = navSr
                 ? [...navSr.querySelectorAll('button[title]')].find((b) => b.title === t)
@@ -806,32 +808,71 @@ function serve() {
 
     await closeTopLayer();
 
-    // 更新日志：断言弹窗能打开且内容在影子树内（网络在冒烟环境必然失败，只验降级文案）。
-    // 点「更新日志」不关闭设置弹窗（与 React 版一致，两个 Modal 叠加），故取最后一个 dialog。
+    // 设置改版（v26.10.25-v1）：左右两栏 —— 侧边栏三项 + 默认高亮「飞书快捷短语」。
+    // ⚠️ 断言在弹窗开着时读快照（读取时机不能晚于元素消失）；菜单文本取按钮自身
+    //    （模板里的 {{ p.label }} 就挂在 button 的文本节点上，够深）。
     await clickPanelText('设置');
-    await clickPanelText('更新日志');
-    const changelog = await page.evaluate(() => {
+    const settingsNav = await page.evaluate(() => {
         const sr = document.getElementById('__znhd_panel_host__').shadowRoot;
-        const dialogs = [...sr.querySelectorAll('dialog[open]')];
-        const el = dialogs[dialogs.length - 1];
-        if (!el) return { found: false, count: 0 };
+        const dlg = sr.querySelector('dialog[open] .modal-box');
+        if (!dlg) return { found: false };
+        const navBtns = [...dlg.querySelectorAll('[data-znhd^="settings-nav-"]')];
+        const active = navBtns.find((b) => b.classList.contains('menu-active'));
         return {
             found: true,
-            count: dialogs.length,
-            inShadow: sr.contains(el),
-            text: el.innerText.replace(/\s+/g, ' ').trim().slice(0, 100),
+            labels: navBtns.map((b) => (b.textContent || '').replace(/\s+/g, '')),
+            activeLabel: active ? (active.textContent || '').replace(/\s+/g, '') : '',
+            // 默认页 = 飞书快捷短语（授权区块直接可见）
+            hasFeishu: !!dlg.querySelector('[data-znhd="feishu-auth"]'),
+            // 标题栏快捷入口（「更新日志」已删，不得再出现）
+            titleButtons: [...dlg.querySelectorAll('button, a')].map((b) =>
+                (b.textContent || '').replace(/\s+/g, '')
+            ),
         };
     });
-    report.checks.changelogDialogOk =
-        !!changelog.found &&
-        !!changelog.inShadow &&
-        (changelog.text.includes('更新日志') ||
-            changelog.text.includes('读取失败') ||
-            changelog.text.includes('暂无更新日志'));
-    report.changelog = changelog;
-    await page.screenshot({ path: path.join(os.tmpdir(), 'znhd-vue-changelog.png') });
+    report.checks.settingsNavOk =
+        !!settingsNav.found &&
+        JSON.stringify(settingsNav.labels) === JSON.stringify(['飞书快捷短语', '其他设置', '关于']) &&
+        settingsNav.activeLabel === '飞书快捷短语' &&
+        settingsNav.hasFeishu &&
+        settingsNav.titleButtons.some((t) => t.includes('运行日志')) &&
+        settingsNav.titleButtons.every((t) => !t.includes('更新日志'));
+    report.settingsNav = settingsNav;
 
-    await closeTopLayer();
+    // 点「其他设置」→ 监控时间段选择器可见（两个开关 + 时间输入都在这一页）
+    await clickPanelText('其他设置');
+    const generalPage = await page.evaluate(() => {
+        const sr = document.getElementById('__znhd_panel_host__').shadowRoot;
+        const dlg = sr.querySelector('dialog[open] .modal-box');
+        if (!dlg) return { found: false };
+        return {
+            found: true,
+            hasMonitorHours: [...dlg.querySelectorAll('legend')].some((n) =>
+                (n.textContent || '').includes('监控时间段')
+            ),
+            toggles: dlg.querySelectorAll('input.toggle').length,
+            timeInputs: dlg.querySelectorAll('input[type="time"]').length,
+        };
+    });
+    report.checks.settingsGeneralOk =
+        generalPage.found && generalPage.hasMonitorHours && generalPage.toggles === 2 && generalPage.timeInputs === 4;
+    report.generalPage = generalPage;
+
+    // 点「关于」→ 技术栈 + 版本号（版本取产物 @version，防「忘了 bump」假绿）
+    await clickPanelText('关于');
+    const aboutPage = await page.evaluate(() => {
+        const sr = document.getElementById('__znhd_panel_host__').shadowRoot;
+        const dlg = sr.querySelector('dialog[open] .modal-box');
+        if (!dlg) return { found: false, text: '' };
+        return { found: true, text: dlg.innerText.replace(/\s+/g, ' ') };
+    });
+    report.checks.settingsAboutOk =
+        !!aboutPage.found &&
+        aboutPage.text.includes('技术栈') &&
+        aboutPage.text.includes('v' + SCRIPT_VERSION);
+    report.aboutPage = aboutPage;
+    await page.screenshot({ path: path.join(os.tmpdir(), 'znhd-vue-settings-about.png') });
+
     await closeTopLayer();
 
     // ---------- 阶段 3：传输助手 ----------

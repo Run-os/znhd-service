@@ -2,10 +2,14 @@
 import {
     authorize,
     forgetCredential,
+    getPrivacyRules,
+    getPrivacyStatus,
+    getPrivacyTableUrl,
     getRules,
     getStatus,
     getTableUrl,
     revoke,
+    setPrivacyTableUrl,
     setTableUrl,
     type AuthPhase,
 } from '@/lib/feishu/service';
@@ -18,14 +22,15 @@ import TablePickerDialog from './TablePickerDialog.vue';
 /**
  * 设置面板里的「飞书快捷回复」区块（v26.10.23）。
  *
- * 它承担三件事：
+ * 它承担四件事：
  *   ① 展示授权状态（已授权账号 / token 到期 / 已缓存规则条数）；
  *   ② 走完设备授权：把飞书返回的 user_code 与**原样链接**摆给使用者，自己在后台轮询；
- *   ③ 解除授权、手动刷新规则。
+ *   ③ 解除授权、手动刷新规则；
+ *   ④ 配置并刷新「隐私信息」表格（v26.10.25-v1）：独立第二张表，全部条目常显、不参与匹配。
  *
- * ⚠️ 授权链接必须原样给出（飞书响应体里有明确警告：不得改写、拼接、重新编码）。
- *    这里直接 `{{ challenge.verificationUriComplete }}` 渲染 + `<a :href>`，
- *    不做任何 URL 处理。
+ * ⚠️ 授权链接**不再原文展示**（v26.10.25-v1，使用者定版：长链接没有阅读价值）：
+ *    只给一个「打开授权页」按钮，`href` 仍是飞书返回的 `verificationUriComplete` 原样值
+ *    （不做任何改写/拼接 —— 飞书响应体明确要求），只是不把 URL 打印出来。
  *
  * ⚠️ 授权是长任务（要等使用者去飞书确认），所以 `authorize()` 用 `isCancelled` 回调
  *    支持中途取消 —— 组件卸载 / 点「取消」都会把它置 true，避免关掉面板后还在后台轮询。
@@ -39,6 +44,12 @@ const tableUrl = ref(getTableUrl());
 const urlBusy = ref(false);
 /** 「从飞书选择表格」弹窗开关（v26.10.24-v6） */
 const pickerOpen = ref(false);
+/** 弹窗回填目标（v26.10.25-v1）：main = 规则表链接，privacy = 隐私信息表格链接 */
+const pickerTarget = ref<'main' | 'privacy'>('main');
+/** 隐私信息表格（v26.10.25-v1）：独立链接 + 独立状态展示 */
+const privacyUrl = ref(getPrivacyTableUrl());
+const privacyUrlBusy = ref(false);
+const privacyStatus = ref(getPrivacyStatus());
 let cancelled = false;
 
 /**
@@ -62,6 +73,27 @@ async function saveTable(): Promise<void> {
     }
 }
 
+/** 保存隐私表格链接并立刻回源拉一次（失败只 toast，不影响主表状态） */
+async function savePrivacyTable(): Promise<void> {
+    if (privacyUrlBusy.value) return;
+    privacyUrlBusy.value = true;
+    try {
+        setPrivacyTableUrl(privacyUrl.value);
+        privacyUrl.value = getPrivacyTableUrl();
+        refreshPrivacyStatus();
+        if (privacyUrl.value) {
+            try {
+                await getPrivacyRules(true);
+                refreshPrivacyStatus();
+            } catch (e) {
+                toast.error('隐私信息拉取失败：' + ((e as Error)?.message || '未知错误'));
+            }
+        }
+    } finally {
+        privacyUrlBusy.value = false;
+    }
+}
+
 const phaseText = computed(() =>
     phase.value === 'register' ? '第 1 步 / 共 2 步：注册应用' : '第 2 步 / 共 2 步：授权读取表格'
 );
@@ -76,8 +108,17 @@ const fetchedText = computed(() => {
     return new Date(status.value.rulesFetchedAt).toLocaleString('zh-CN', { hour12: false });
 });
 
+const privacyFetchedText = computed(() => {
+    if (!privacyStatus.value.fetchedAt) return '从未拉取';
+    return new Date(privacyStatus.value.fetchedAt).toLocaleString('zh-CN', { hour12: false });
+});
+
 function refreshStatus(): void {
     status.value = getStatus();
+}
+
+function refreshPrivacyStatus(): void {
+    privacyStatus.value = getPrivacyStatus();
 }
 
 function cancel(): void {
@@ -118,9 +159,14 @@ async function startAuth(): Promise<void> {
     }
 }
 
+/**
+ * 「立即刷新规则」（v26.10.25-v1 起**同时**刷新主表与隐私表）：
+ *   · 隐私未配置链接时静默跳过，不报错；
+ *   · 主表成功而隐私失败只 toast 提示隐私失败（主表的成功结果不能被隐私失败掩盖）。
+ */
 async function reloadRules(): Promise<void> {
+    busy.value = true;
     try {
-        busy.value = true;
         await getRules(true);
         refreshStatus();
         toast.success('已更新 ' + status.value.ruleCount + ' 条规则');
@@ -128,14 +174,22 @@ async function reloadRules(): Promise<void> {
         const msg = (e as Error)?.message || '刷新失败';
         errorText.value = msg;
         toast.error(msg);
-    } finally {
-        busy.value = false;
     }
+    if (privacyStatus.value.configured || getPrivacyTableUrl()) {
+        try {
+            await getPrivacyRules(true);
+            refreshPrivacyStatus();
+        } catch (e) {
+            toast.error('隐私信息刷新失败：' + ((e as Error)?.message || '未知错误'));
+        }
+    }
+    busy.value = false;
 }
 
 function doRevoke(): void {
     revoke();
     refreshStatus();
+    refreshPrivacyStatus();
     toast.success('已解除飞书授权');
 }
 
@@ -147,21 +201,39 @@ function doRevoke(): void {
 function doForget(): void {
     forgetCredential();
     refreshStatus();
+    refreshPrivacyStatus();
     toast.success('已作废本机凭证，下次授权将重新注册应用');
 }
 
 /**
- * 弹窗里选中一条表（v26.10.24-v6）：回填链接后**立刻保存并刷新规则**。
+ * 打开选表弹窗（v26.10.25-v1 起复用同一个实例，用 target 区分回填目标）：
+ * 实现「最简单者」—— 一个弹窗 + mode 标记，比第二个实例少挂一份状态。
+ */
+function openPicker(target: 'main' | 'privacy'): void {
+    pickerTarget.value = target;
+    pickerOpen.value = true;
+}
+
+/**
+ * 弹窗里选中一条表（v26.10.24-v6）：回填链接后**立刻保存并刷新**。
  * 不要求使用者再点一次「保存链接」—— 他刚刚是在列表里"选表"，不是"编辑文本"，
  * 多一步确认只会让人以为没生效。
  */
 function onPick(url: string): void {
     if (!url) return;
-    tableUrl.value = url;
-    void saveTable();
+    if (pickerTarget.value === 'privacy') {
+        privacyUrl.value = url;
+        void savePrivacyTable();
+    } else {
+        tableUrl.value = url;
+        void saveTable();
+    }
 }
 
-onMounted(refreshStatus);
+onMounted(() => {
+    refreshStatus();
+    refreshPrivacyStatus();
+});
 onUnmounted(() => {
     cancelled = true;
 });
@@ -179,32 +251,34 @@ onUnmounted(() => {
         </legend>
 
         <!-- 状态摘要：只显示与使用者有关的三个数，不暴露 token/凭证 -->
-        <p v-if="status.authorized" class="mb-2 text-[12px] leading-5 text-base-content/60">
+        <p v-if="status.authorized" class="mb-3 text-[12px] leading-5 text-base-content/60">
             规则 {{ status.ruleCount }} 条，上次更新：{{ fetchedText }}<br />
             token 到期：{{ expiresText }}（到期前会自动续期）
         </p>
-        <p v-else class="mb-2 text-[12px] leading-5 text-base-content/60">
+        <p v-else class="mb-3 text-[12px] leading-5 text-base-content/60">
             授权后脚本会读取你飞书多维表格里的规则表，按当前对话内容在输出框上方显示快捷短语按钮。
             对话文本只在本机匹配，不会上传到任何地方。
         </p>
 
-        <!-- 授权进行中：把飞书返回的 user_code 与链接原样给出 -->
-        <div v-if="busy && challenge" class="mb-2 rounded-box bg-base-200 p-3">
-            <p class="mb-1 text-[12px] text-base-content/70">{{ phaseText }}</p>
-            <p class="mb-1 text-[13px]">
+        <!-- 授权进行中：授权码大字展示 + 「打开授权页」按钮（不再打印长链接原文） -->
+        <div v-if="busy && challenge" class="mb-3 rounded-box bg-base-200 p-3">
+            <p class="mb-2 text-[12px] text-base-content/70">{{ phaseText }}</p>
+            <p class="mb-2 text-[13px]">
                 在飞书里确认授权码：<span class="font-mono text-[15px] font-semibold">{{ challenge.userCode }}</span>
             </p>
-            <a
-                class="link link-primary inline-block text-[12px] break-all"
-                :href="challenge.verificationUriComplete"
-                target="_blank"
-                rel="noreferrer">
-                {{ challenge.verificationUriComplete }}
-            </a>
-            <p class="mt-1 text-[11px] text-base-content/50">
-                链接 {{ Math.round(challenge.expiresIn / 60) }} 分钟内有效；确认后这里会自动完成。
-                授权页里要登录注册应用时的那个账号（第 1 步确认创建时用的账号）。
-            </p>
+            <div class="flex items-center gap-3">
+                <a
+                    class="btn btn-primary btn-sm"
+                    :href="challenge.verificationUriComplete"
+                    target="_blank"
+                    rel="noreferrer">
+                    打开授权页
+                </a>
+                <p class="text-[11px] leading-4 text-base-content/50">
+                    授权页 {{ Math.round(challenge.expiresIn / 60) }} 分钟内有效；确认后这里会自动完成。<br />
+                    授权页里要登录注册应用时的那个账号（第 1 步确认创建时用的账号）。
+                </p>
+            </div>
         </div>
 
         <p v-if="busy && !challenge" class="mb-2 text-[12px] text-base-content/60">
@@ -229,7 +303,7 @@ onUnmounted(() => {
 
         <!-- 规则表链接（v26.10.23-v2）：不再写死，谁用谁配自己的表。
              v26.10.23-v5 起用 daisyUI join：链接图标 + 输入框 + 右侧「保存链接」按钮拼成一体。 -->
-        <div class="mb-2">
+        <div class="mb-3">
             <p class="mb-1 text-[12px] text-base-content/60">规则表链接（粘贴多维表格的分享链接）</p>
             <div class="join w-full">
                 <label class="input input-sm join-item min-w-0 flex-1 flex items-center gap-1.5">
@@ -263,19 +337,68 @@ onUnmounted(() => {
 
         <!-- 从飞书直接选表（v26.10.24-v6）：不想手粘链接就走这条。
              需要 search:docs:read —— 加权限之前授权的 token 没有它，提示重新授权。 -->
-        <div v-if="status.authorized" class="mb-2 flex flex-wrap items-center gap-2">
+        <div v-if="status.authorized" class="mb-3 flex flex-wrap items-center gap-2">
             <button
                 v-if="status.searchScopeOk"
                 class="btn btn-outline btn-sm"
                 :disabled="urlBusy"
                 data-znhd="quick-reply-table-pick"
-                @click="pickerOpen = true">
+                @click="openPicker('main')">
                 <Icon name="search" :size="13" />
                 从飞书选择表格
             </button>
             <p v-else class="text-[11px] leading-4 text-warning">
                 当前授权不含「搜索云文档」权限，点「重新授权」后就能直接在这里选表（也可以继续手动粘贴链接）。
             </p>
+        </div>
+
+        <!-- 隐私信息表格（v26.10.25-v1）：独立第二张表，列约定同主表（标题/内容），
+             但不参与标签匹配 —— 全部条目常显在快捷短语栏上方的「隐私信息」栏，当速查表用。 -->
+        <div class="mb-3 border-t border-base-300 pt-3" data-znhd="privacy-table-block">
+            <p class="mb-1 text-[12px] text-base-content/60">
+                隐私信息表格链接（可选；办公地点 / 办公电话等速查条目，全部常显不参与匹配）
+            </p>
+            <div class="join w-full">
+                <label class="input input-sm join-item min-w-0 flex-1 flex items-center gap-1.5">
+                    <svg
+                        class="h-[1em] shrink-0 opacity-50"
+                        xmlns="http://www.w3.org/2000/svg"
+                        viewBox="0 0 24 24">
+                        <g
+                            stroke-linejoin="round"
+                            stroke-linecap="round"
+                            stroke-width="2"
+                            fill="none"
+                            stroke="currentColor">
+                            <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+                            <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+                        </g>
+                    </svg>
+                    <input
+                        v-model="privacyUrl"
+                        type="text"
+                        class="min-w-0 flex-1 font-mono text-[12px]"
+                        placeholder="https://xxx.feishu.cn/wiki/…?table=tbl…&view=vew…"
+                        spellcheck="false"
+                        data-znhd="privacy-table-url" />
+                </label>
+                <button class="btn btn-neutral btn-sm join-item shrink-0" :disabled="privacyUrlBusy" @click="savePrivacyTable">
+                    {{ privacyUrlBusy ? '保存中…' : '保存链接' }}
+                </button>
+            </div>
+            <p v-if="privacyStatus.configured" class="mt-1 text-[11px] leading-4 text-base-content/50">
+                已缓存 {{ privacyStatus.ruleCount }} 条，上次拉取：{{ privacyFetchedText }}
+            </p>
+            <div v-if="status.authorized && status.searchScopeOk" class="mt-2">
+                <button
+                    class="btn btn-outline btn-sm"
+                    :disabled="privacyUrlBusy"
+                    data-znhd="privacy-table-pick"
+                    @click="openPicker('privacy')">
+                    <Icon name="search" :size="13" />
+                    从飞书选择表格
+                </button>
+            </div>
         </div>
 
         <div class="flex flex-wrap items-center gap-2">
@@ -298,7 +421,8 @@ onUnmounted(() => {
             <button v-if="busy" class="btn btn-ghost btn-sm" @click="cancel">取消并返回</button>
         </div>
 
-        <!-- 选表弹窗：原生 showModal() 进 top layer，天然盖在本设置弹窗之上 -->
+        <!-- 选表弹窗：原生 showModal() 进 top layer，天然盖在本设置弹窗之上。
+             主表 / 隐私表共用一个实例，回填目标由 pickerTarget 区分。 -->
         <TablePickerDialog v-model:open="pickerOpen" @picked="onPick" />
     </fieldset>
 </template>

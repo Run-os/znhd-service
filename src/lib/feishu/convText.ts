@@ -37,8 +37,9 @@ export interface ConvSnapshot {
 
 const EMPTY: ConvSnapshot = { text: '', source: 'none', count: 0 };
 
-/** 页面主世界的 document（沙箱里 document 可能被代理拦截，用 unsafeWindow 的兜底） */
-function hostDoc(): Document | null {
+/** 页面主世界的 document（沙箱里 document 可能被代理拦截，用 unsafeWindow 的兜底）。
+ *  导出供 `magicVars.ts` 等同链路模块复用，别复制第二份。 */
+export function hostDoc(): Document | null {
     try {
         if (typeof unsafeWindow !== 'undefined' && unsafeWindow?.document) return unsafeWindow.document;
     } catch {
@@ -51,8 +52,8 @@ interface VueInstance {
     $store?: { state?: Record<string, unknown> };
 }
 
-/** 页面 Vue2 根实例 */
-function readVueInstance(): VueInstance | null {
+/** 页面 Vue2 根实例。导出供 `magicVars.ts` 复用（正在对话人数也走这条取值链）。 */
+export function readVueInstance(): VueInstance | null {
     const docs: Array<Document | null> = [hostDoc(), typeof document !== 'undefined' ? document : null];
     for (const d of docs) {
         if (!d) continue;

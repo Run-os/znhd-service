@@ -29,10 +29,39 @@
 | `标签` | 多选 | 命中关键词。对话文本**包含其中任意一个**即显示该按钮 |
 | `内容` | 文本 | 点按钮后**整体替换**进输入框的文本 |
 | `排除词` | 多选/文本（可选） | 对话文本包含其中任意一个 ⇒ 该规则不显示（排除优先于命中） |
+| `是否常显` | 复选框（可选） | true = **忽略标签/排除词规则，始终显示**，排在快捷短语栏最前方（v26.10.25-v1） |
 
 - **不需要**阈值、权重、必含词 —— 标签命中即显示（使用者 2026-10-23 定版）。
 - `排除词` 列不存在时自动降级为「不排除」，不会导致整表读不出来。
+- `是否常显` 列不存在或为空时按普通规则处理；值为 true 的规则：
+  - 不吃标签/排除词匹配，**对话文本为空也显示**；
+  - 排在快捷短语栏最前方（保持表内相对顺序），与普通命中之间用一条竖向分割线隔开；
+  - 普通命中列表会按 id 去掉这些规则，避免同一按钮出现两次。
 - 空行（标题与内容都为空）会被丢弃，不会产生空按钮。
+
+### 魔法变量（v26.10.25-v1）
+
+`内容` 列里可以写 `${变量名}`，点按钮写入输入框前在**点击时刻**展开（保证数值新鲜）：
+
+| 变量 | 含义 | 取值链（宿主 Vuex store） |
+|---|---|---|
+| `${Active_Cnt}` | 正在对话人数 | ① `state.chat.groupInfoList` 是数组 → length；② 否则 `state.allChat.historyMsg` 是对象 → `Object.keys().length`；③ 都拿不到 → 0 |
+
+- **未知变量名原样保留**（写错名不会吞字，输入框里能看到没展开的占位符）。
+- 每次解析成功记一条日志 `正在对话人数（来源）：N 人`（只记来源与人数，不记对话文本）。
+- 实现见 `src/lib/feishu/magicVars.ts`；宿主读取复用 `convText.ts` 的 `readVueInstance()`。
+
+### 隐私信息表格（v26.10.25-v1，独立第二张表）
+
+使用者另建一张多维表格（办公地点 / 办公电话等敏感速查条目），在设置面板单独配链接：
+
+- **列约定与主表相同**（标题/内容），但**不参与标签匹配** —— 它就是个速查表，全部条目始终显示；
+- 显示位置 = 快捷短语主栏**上方**的独立一行（左侧「隐私信息」标签，warning 色相 + 锁图标）；
+- 链接配置独立（Allvalue `privacyTableUrl`，默认空 = 功能关闭），缓存独立
+  （GM 存储 `scriptCat_PrivacyRules`），TTL 与主规则共用同一常量（5 分钟）；
+- 「立即刷新规则」按钮**同时**刷新主表与隐私表：隐私未配置时静默跳过；主表成功而隐私失败只 toast 提示隐私失败；
+- 「解除授权 / 作废并重新注册」会把隐私缓存一并清掉（token 没了它也读不了）；
+- 点隐私按钮同样走「整体替换输入框」，魔法变量照常展开。
 
 ### 匹配的归一化
 
@@ -72,14 +101,18 @@ POST https://open.feishu.cn/open-apis/search/v2/doc_wiki/search
 {
   "query": "",                    // 可留空 = 按类型浏览全部
   "page_size": 15,
-  "doc_filter":  { "doc_types": ["bitable"] },
-  "wiki_filter": { "doc_types": ["bitable"] }
+  "doc_filter":  { "doc_types": ["BITABLE"] },
+  "wiki_filter": { "doc_types": ["BITABLE"] }
 }
 ```
 
 - **为什么不用 `drive/v1/files`**：那个只能列某个文件夹里自己空间下的文件，还得逐层翻；
   `search/v2/doc_wiki/search` 能搜到「别人分享给我、但不在我云空间里」的表，覆盖才完整。
 - `doc_filter` 与 `wiki_filter` **各一份**：前者管云空间文档、后者管知识库节点，只给一边会漏。
+- ⚠️ `doc_types` 枚举是**大写** `BITABLE`（v26.10.25-v1 修正）：曾发小写 `'bitable'`，
+  服务端对所有请求一律回 99992402（field validation failed，泛化参数错误，与关键词长度无关），
+  而且错误被误映射成「关键词太长」。现在 99992402 的文案改为
+  「搜索请求被飞书拒绝（99992402 参数不合法）：请重试或重新授权后重试」。
 - `query` 按 **Unicode 码点**限 30 字（服务端 99992402），代码用 `Array.from().slice()` 截断
   —— 普通 `slice()` 会把 emoji 的代理对切坏。
 - 标题优先取 `title_highlighted`，用 `/<\/?hb?>/g` 清掉 `<hb>` 高亮标签。
@@ -141,12 +174,13 @@ POST https://open.feishu.cn/open-apis/search/v2/doc_wiki/search
 | `src/lib/feishu/search.ts` | 搜索可访问的多维表格（`search/v2/doc_wiki/search`，只列 bitable） |
 | `src/lib/feishu/rules.ts` | 读多维表记录并归一化成规则（v1 API，单 scope） |
 | `src/lib/feishu/match.ts` | 匹配引擎（标签任一命中 + 排除优先） |
-| `src/lib/feishu/convText.ts` | 读当前会话文本（Vuex 主、DOM 兜底；最新 6 条有文本的消息） |
-| `src/lib/feishu/service.ts` | 编排：授权流程 / token 自动刷新 / 规则 TTL 缓存 / 表链接读写 |
+| `src/lib/feishu/magicVars.ts` | 魔法变量展开（`${Active_Cnt}` = 正在对话人数，点击时刻展开，未知变量原样保留） |
+| `src/lib/feishu/convText.ts` | 读当前会话文本（Vuex 主、DOM 兜底；最新 6 条有文本的消息；`readVueInstance()` 也供 magicVars 复用） |
+| `src/lib/feishu/service.ts` | 编排：授权流程 / token 自动刷新 / 规则 TTL 缓存 / 表链接读写 / 隐私表格（`getPrivacyTableUrl` / `getPrivacyRules` / `getPrivacyStatus`） |
 | `src/lib/tinymce.ts` | `replaceToTinyMCE()`：setContent + updateText 同步 |
-| `src-vue/phrases/QuickBar.vue` | 按钮条 UI |
-| `src-vue/phrases/mountQuickBar.ts` | 挂到 Inputbox 根元素之前（工具栏外面上方）+ 轮询自愈 |
-| `src-vue/panel/FeishuAuthPanel.vue` | 设置里的授权区块 + 规则表链接配置 + 无权限提示 + 作废凭证回退 |
+| `src-vue/phrases/QuickBar.vue` | 按钮条 UI（隐私栏 + 常显 + 竖线 + 普通命中，三段 props：`privacy` / `pinned` / `rules`） |
+| `src-vue/phrases/mountQuickBar.ts` | 挂到 Inputbox 根元素之前（工具栏外面上方）+ 轮询自愈 + pinned/隐私副本同步 |
+| `src-vue/panel/FeishuAuthPanel.vue` | 设置里的授权区块 + 规则表链接配置 + 隐私信息表格区块（独立链接/选表/缓存条数）+ 无权限提示 + 作废凭证回退 |
 | `src-vue/panel/TablePickerDialog.vue` | 「从飞书选择多维表格」弹窗（搜索 / 分页 / 点选回填） |
 
 ## 8. 排障
@@ -164,4 +198,8 @@ POST https://open.feishu.cn/open-apis/search/v2/doc_wiki/search
 | 点按钮只弹「该规则没有填写「内容」列」 | 表里那一行的 `内容` 是空的 —— 按钮是靠 `标签` 命中显示的，但没内容可填 |
 | 换了飞书表不生效 | 到设置里更新「规则表链接」并点「保存链接」；确认链接是那张表的分享链接（`/wiki/…` 或 `/base/…`） |
 | 保存链接后报「规则表链接无法识别」 | 链接形态不认识：必须是 `/wiki/<token>` 或 `/base/<token>` 开头，可直接从飞书表格右上角「分享」复制 |
+| 报「搜索请求被飞书拒绝（99992402 参数不合法）」 | 泛化参数错误（v26.10.24-v6 曾因 `doc_types` 小写全量触发，已修）：先重试；仍报就点「重新授权」换新 token；关键词别超过 30 字 |
 | 排除词不生效 | 排除词是子串匹配，检查是否写成了更长的句子 |
+| 常显按钮没出现 | 检查「是否常显」列：复选框要真的勾上（true）；文本列写 `true` / `是` / `1` / `√` 也认。常显随「立即刷新规则」同步（≤3 秒） |
+| 隐私信息栏没出现 | 设置里「隐私信息表格链接」为空 = 功能关闭；配好链接后点「立即刷新规则」，或点隐私区块自己的「从飞书选择表格」 |
+| `${Active_Cnt}` 填进输入框还是原文 | 变量名拼写必须是 `${Active_Cnt}`（大小写敏感、未知变量原样保留）；宿主 Vuex 字段取不到时展开为 0，真机取值正确性见 changelogs 的风险项 |

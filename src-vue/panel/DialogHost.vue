@@ -13,7 +13,6 @@ import { dialogOpen, voiceEnabled as busVoiceEnabled, voiceToggler as busVoiceTo
 import SettingsDialog from './SettingsDialog.vue';
 import PhrasesSheet from './PhrasesSheet.vue';
 import LogDialog from './LogDialog.vue';
-import ChangelogDialog from './ChangelogDialog.vue';
 import SniffDialog from '@vue/sniff/SniffDialog.vue';
 import ChatWindow from '@vue/transfer/ChatWindow.vue';
 
@@ -21,11 +20,12 @@ import ChatWindow from '@vue/transfer/ChatWindow.vue';
  * 弹窗宿主（v26.10.21-v5：主面板已整体删除）。
  *
  * 可见 UI 全部在站点导航条（panel/NavBarControls）上；本组件不可见，只负责：
- *   · 挂全部弹窗（设置/常用语/日志/更新日志/传输助手/图片嗅探），开关绑 uiBus.dialogOpen；
+ *   · 挂全部弹窗（设置/常用语/日志/传输助手/图片嗅探），开关绑 uiBus.dialogOpen；
+ *     （v26.10.25-v1：「更新日志」弹窗已随设置改版整体删除）
  *   · allvalue 配置的唯一读写点（语音开关经总线与导航条接力，见 toggleVoice 下方）；
  *   · 常用语数据抓取与缓存；
  *   · 传输助手后台收件的启动与「收到内容自动弹窗」。
- * 「查看日志」入口在设置弹窗里（@open-log）。
+ * 「查看日志」入口在设置弹窗标题栏（@open-log）。
  */
 const busDialogOpen = dialogOpen;
 
@@ -33,7 +33,6 @@ const allvalue = ref<Allvalue>(runtime.init);
 const voiceEnabled = computed(() => !!allvalue.value.voiceEnabled);
 
 const logOpen = ref(false);
-const changelogOpen = ref(false);
 
 /** 日志条目：logger 通过 sink 推进来（sink 是 React setState 风格的 updater） */
 const logEntries = ref<LogEntry[]>([]);
@@ -198,8 +197,7 @@ onBeforeUnmount(() => {
                 addLog('图片嗅探：后台预测量已' + (v ? '开启' : '关闭'), 'info');
             }
         "
-        @open-log="logOpen = true"
-        @open-changelog="changelogOpen = true" />
+        @open-log="logOpen = true" />
 
     <PhrasesSheet
         v-model:open="busDialogOpen.phrases"
@@ -214,8 +212,6 @@ onBeforeUnmount(() => {
         :auto-refresh="!!allvalue.logAutoRefresh"
         @clear="clearLogs"
         @update:auto-refresh="(v) => patchAllvalue({ logAutoRefresh: v })" />
-
-    <ChangelogDialog v-model:open="changelogOpen" />
 
     <ChatWindow v-model:open="busDialogOpen.transfer" />
     <SniffDialog

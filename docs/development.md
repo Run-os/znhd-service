@@ -30,7 +30,7 @@ npm run build:web      # 构建手机上传页 → relay-server/public
 | 目录 | 内容 |
 |---|---|
 | `src/` | 业务逻辑层（零 UI）：`monitor` 监控 / `speech` 语音队列 / `storage` 配置 / `relay` 通信 / `sniffer*` 图片嗅探 / `transfer` 传输助手业务 / `phrasesZnhd` 常用语抓取 |
-| `src-vue/` | UI 层（Vue 3 + Tailwind 4 + daisyUI 5）：`NavBarControls` 标题栏注入控件、`DialogHost` 弹窗群（设置/常用语/传输助手/嗅探/日志/更新日志）、`transfer/` 聊天窗组件、`lib/` 主题与总线 |
+| `src-vue/` | UI 层（Vue 3 + Tailwind 4 + daisyUI 5）：`NavBarControls` 标题栏注入控件、`DialogHost` 弹窗群（设置/常用语/传输助手/嗅探/日志）、`transfer/` 聊天窗组件、`lib/` 主题与总线 |
 | `web/` | 手机上传页（React 19 + antd v6 独立子项目） |
 | `relay-server/` | 中继服务器（纯 Node 内置模块，零运行时依赖） |
 | `shared/` | 脚本端与手机页共用纯逻辑（图片压缩 / A4 打印） |

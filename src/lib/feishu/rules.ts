@@ -16,6 +16,8 @@ import type { QuickReplyRule } from './types';
  *   `内容`  → 点按钮后填进输入框的文本
  *   `排除词` → 可选；对话文本包含任意一个则这条不显示。**表里没有这一列时自动降级为不排除**
  *             （使用者可能还没加上，不能因此整表读不出来）。
+ *   `是否常显` → 可选（v26.10.25-v1）；复选框列，true = 忽略标签/排除词、始终显示且排最前。
+ *             列不存在或值为空时按普通规则处理，不影响整表读取。
  *
  * 单元格值的形态随列类型变化：文本列是字符串，多选列是字符串数组，富文本/公式列可能是
  * `[{type:'text', text:'…'}]` 的分段数组 —— 统一在 `cellText` / `cellList` 里消化。
@@ -38,6 +40,8 @@ const F_TITLE = '标题';
 const F_TAGS = '标签';
 const F_REPLY = '内容';
 const F_EXCLUDE = '排除词';
+/** 「是否常显」列（v26.10.25-v1）：复选框列，true = 永远显示、排最前、不参与匹配 */
+const F_PINNED = '是否常显';
 
 /** 把一个单元格值压成纯文本（兼容富文本分段数组） */
 function cellText(v: unknown): string {
@@ -75,6 +79,16 @@ function splitLoose(t: string): string[] {
         .filter(Boolean);
 }
 
+/**
+ * 「是否常显」单元格解析：布尔直接用；字符串按 'true'/'是'/'1'/'√' 判 true；
+ * 列不存在（undefined）时为 false。
+ */
+function cellBool(v: unknown): boolean {
+    if (typeof v === 'boolean') return v;
+    const t = cellText(v).trim().toLowerCase();
+    return t === 'true' || t === '是' || t === '1' || t === '√';
+}
+
 /** 把一行记录映射成规则；标题与内容都空的空行直接丢弃 */
 function toRule(rec: Record<string, unknown>): QuickReplyRule | null {
     const fields = (rec['fields'] || {}) as Record<string, unknown>;
@@ -87,6 +101,7 @@ function toRule(rec: Record<string, unknown>): QuickReplyRule | null {
         keywords: cellList(fields[F_TAGS]),
         excludes: cellList(fields[F_EXCLUDE]),
         reply,
+        pinned: cellBool(fields[F_PINNED]),
     };
 }
 

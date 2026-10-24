@@ -21,6 +21,12 @@ export interface QuickReplyRule {
     excludes: string[];
     /** 点按钮后替换进输入框的文本 */
     reply: string;
+    /**
+     * 是否常显（v26.10.25-v1，规则表「是否常显」复选框列）。
+     * true = 忽略标签/排除词规则、始终显示，且排在快捷短语栏最前方；
+     * false / undefined = 普通规则（走标签匹配）。
+     */
+    pinned?: boolean;
 }
 
 /** 飞书为该使用者动态签发的应用凭证（archetype=PersonalAgent） */

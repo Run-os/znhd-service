@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref, watch } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { Icon } from '@vue/icons';
 
 /**
@@ -20,15 +20,24 @@ import { Icon } from '@vue/icons';
 const open = defineModel<boolean>('open', { default: false });
 
 const props = withDefaults(
-    defineProps<{ title: string; description?: string; width?: number; footer?: boolean }>(),
+    defineProps<{ title: string; description?: string; width?: number; height?: number; footer?: boolean }>(),
     {
         description: '',
         width: 520,
+        /** 固定高度（px）。给值 = 弹窗高度钉死、内容区内部滚动（切页不改变窗口大小）；不传 = 高度随内容 */
+        height: 0,
         footer: true,
     }
 );
 
 const dlg = ref<HTMLDialogElement | null>(null);
+
+/** modal-box 内联样式：width 恒有；height > 0 时再钉死高度（配合 flex 列布局让内容区吃满剩余空间） */
+const boxStyle = computed(() => {
+    const s: Record<string, string> = { width: props.width + 'px', maxWidth: 'calc(100vw - 32px)' };
+    if (props.height > 0) s.height = props.height + 'px';
+    return s;
+});
 
 function sync(v: boolean): void {
     const el = dlg.value;
@@ -45,10 +54,11 @@ onMounted(() => {
 
 <template>
     <dialog ref="dlg" class="modal" @close="open = false">
-        <div class="modal-box" :style="{ width: props.width + 'px', maxWidth: 'calc(100vw - 32px)' }">
-            <div class="flex items-center justify-between gap-3">
-                <!-- flex + gap：#title 插槽里「标题文本 + 动作按钮」横排且不重叠 -->
-                <h3 class="flex min-w-0 items-center gap-2 text-[15px] font-semibold leading-6">
+        <div class="modal-box" :class="{ 'flex flex-col': props.height > 0 }" :style="boxStyle">
+            <div class="flex shrink-0 items-center justify-between gap-3">
+                <!-- flex + gap：#title 插槽里「标题文本 + 动作按钮」横排且不重叠。
+                     h3 flex-1：占满除关闭 × 以外的整行宽度，插槽里的 ml-auto 才能真正把按钮推到右侧 -->
+                <h3 class="flex min-w-0 flex-1 items-center gap-2 text-[15px] font-semibold leading-6">
                     <!-- #title 供需要「标题 + 动作按钮」的弹窗用（如图片嗅探的「重新扫描」） -->
                     <slot name="title">{{ props.title }}</slot>
                 </h3>
@@ -59,7 +69,14 @@ onMounted(() => {
                 </form>
             </div>
 
-            <slot />
+            <!-- height > 0 = 固定高度弹窗：内容区包一层吃满剩余高度、内部滚动（切页不撑大窗口）；
+                 不传 height 时保持原结构（slot 直接渲染，高度随内容），不影响其他弹窗 -->
+            <div v-if="props.height > 0" class="min-h-0 flex-1 overflow-y-auto">
+                <slot />
+            </div>
+            <template v-else>
+                <slot />
+            </template>
 
             <!-- footer=false 表示不要默认按钮；调用方给了 #footer 插槽时仍要渲染 -->
             <div v-if="props.footer || $slots.footer" class="modal-action">

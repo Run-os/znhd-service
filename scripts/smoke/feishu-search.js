@@ -1,9 +1,11 @@
 /**
- * 飞书「搜索多维表格」纯逻辑冒烟（v26.10.24-v6）。
+ * 飞书「搜索多维表格」纯逻辑冒烟（v26.10.24-v6，v26.10.25-v1 起断言大写 BITABLE）。
  *
  * 为什么单独一套：`src/lib/feishu/search.ts` 是**零宿主依赖的纯逻辑**（网络通过注入的
  * `http` 函数），不需要启动 Puppeteer、不需要真机、不碰飞书线上环境。用假 http 打真实
  * 代码，几秒内就能覆盖「请求体形态 / 关键词截断 / 高亮清理 / 分页 / 错误码文案」。
+ * ⚠️ mock 响应里的 `doc_types: ['bitable']` 是**响应解析**侧：飞书实际返回什么就吃什么，
+ *    与请求体里的大写 `BITABLE`（枚举硬约束）无关，两处不一致是刻意的。
  *
  * 用 esbuild 现场把 TS 打成 CJS（esbuild 是 vite 的依赖，不额外引入）——
  * 不写临时文件，避免 outputs/ 里多一堆垃圾。
@@ -98,8 +100,8 @@ function okPage(units, extra) {
     // 断言必须写成容错形式：实现把 wiki_filter 整个漏掉时，要记 false 而不是抛 TypeError
     const df = body.doc_filter || {};
     const wf = body.wiki_filter || {};
-    checks.docFilterOk = Array.isArray(df.doc_types) && df.doc_types.length === 1 && df.doc_types[0] === 'bitable';
-    checks.wikiFilterOk = Array.isArray(wf.doc_types) && wf.doc_types[0] === 'bitable';
+    checks.docFilterOk = Array.isArray(df.doc_types) && df.doc_types.length === 1 && df.doc_types[0] === 'BITABLE';
+    checks.wikiFilterOk = Array.isArray(wf.doc_types) && wf.doc_types[0] === 'BITABLE';
     checks.pageSizeOk = body.page_size === 15;
     checks.emptyQueryOk = body.query === '';
     checks.firstPageNoToken = !('page_token' in body);
@@ -134,10 +136,19 @@ function okPage(units, extra) {
     );
     checks.scopeErrorOk = !!scopeMsg && scopeMsg.indexOf('重新授权') >= 0;
 
-    const longMsg = await catchMessage(() =>
+    const paramMsg = await catchMessage(() =>
         searchBitableDocs(mockHttp({ status: 400, text: JSON.stringify({ code: 99992402, msg: 'field validation failed' }) }), 'T', '')
     );
-    checks.tooLongErrorOk = !!longMsg && longMsg.indexOf('30') >= 0;
+    // v26.10.25-v1：99992402 是泛化「参数不合法」（doc_types 大小写错、query 超长都触发），
+    // 文案不得再断言「关键词太长」；必须保留码值与「参数不合法」提示
+    checks.paramErrorOk =
+        !!paramMsg &&
+        paramMsg.indexOf('99992402') >= 0 &&
+        paramMsg.indexOf('参数不合法') >= 0 &&
+        paramMsg.indexOf('关键词太长') < 0;
+    checks.paramTextOk =
+        searchErrorText(99992402, '').indexOf('99992402') >= 0 &&
+        searchErrorText(99992402, 'field validation failed').indexOf('field validation failed') >= 0;
 
     // 非 JSON / 缺 code：都必须抛错，不能当「空列表」静默吞掉
     const htmlMsg = await catchMessage(() =>

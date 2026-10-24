@@ -12,13 +12,17 @@ import { num, parseJson, str, type HttpFn } from './http';
  *
  * ── 请求体形态（对齐 CLI 的 default 分支）────────────────────────────────────
  *   { query, page_size, page_token?,
- *     doc_filter: { doc_types: ['bitable'] },
- *     wiki_filter: { doc_types: ['bitable'] } }
+ *     doc_filter: { doc_types: ['BITABLE'] },
+ *     wiki_filter: { doc_types: ['BITABLE'] } }
  * `doc_filter` 管云空间文档、`wiki_filter` 管知识库节点，**两边各自独立**，
  * 只给一边会漏掉另一半（知识库里的多维表格只出现在 wiki_filter 里）。
  *
+ * ⚠️ `doc_types` 枚举是**大写** `BITABLE`（v26.10.25-v1 修正）：曾发小写
+ *    `'bitable'`，服务端对所有请求一律 99992402（field validation failed，
+ *    泛化参数错误，与关键词长度无关），导致搜索永远失败。
+ *
  * ── 实测/源码确认的约束 ──────────────────────────────────────────────────────
- *   · query 按 **Unicode 码点**算上限 30，超了服务端直接 99992402 —— 所以用
+ *   · query 按 **Unicode 码点**算上限 30，超了服务端也会报 99992402 —— 所以用
  *     `Array.from()` 截断（`slice()` 会把 surrogate pair 切坏）。
  *   · query 允许留空，等价于「按 filter 浏览全部多维表格」。
  *   · 返回 `data.res_units[]`，标题有两种形态：`title` 与 `title_highlighted`
@@ -107,7 +111,9 @@ const SCOPE_CODES = [99991672, 99991679, 99991663];
 export function searchErrorText(code: number, msg: string): string {
     const tail = msg ? '（' + msg + '）' : '';
     if (code === 99992402) {
-        return '搜索关键词太长：飞书限制 ' + QUERY_MAX + ' 个字符以内' + tail;
+        // 99992402 是泛化的「参数不合法」（doc_types 大小写、query 超长都会触发），
+        // 不能断言成「关键词太长」误导使用者 —— 保留码值与原始 msg 便于排查
+        return '搜索请求被飞书拒绝（99992402 参数不合法）：请重试或重新授权后重试' + tail;
     }
     if (SCOPE_CODES.indexOf(code) >= 0) {
         return '当前授权不含「搜索云文档」权限' + tail + '：点「重新授权」，在飞书授权页把权限全部勾选后确认。';
@@ -131,8 +137,8 @@ export async function searchBitableDocs(
             .slice(0, QUERY_MAX)
             .join(''),
         page_size: PAGE_SIZE,
-        doc_filter: { doc_types: ['bitable'] },
-        wiki_filter: { doc_types: ['bitable'] },
+        doc_filter: { doc_types: ['BITABLE'] },
+        wiki_filter: { doc_types: ['BITABLE'] },
     };
     if (pageToken) body['page_token'] = pageToken;
 

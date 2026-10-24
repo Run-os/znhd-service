@@ -226,6 +226,11 @@ const ICONS = {
         ['circle', { cx: 19, cy: 12, r: 1 }],
         ['circle', { cx: 5, cy: 12, r: 1 }],
     ],
+    /** 锁（Lucide `lock`）：快捷短语栏「隐私信息」独立栏的左侧标签 */
+    lock: [
+        ['rect', { width: 18, height: 11, x: 3, y: 11, rx: 2, ry: 2 }],
+        ['path', { d: 'M7 11V7a5 5 0 0 1 10 0v4' }],
+    ],
 } satisfies Record<string, SvgNode[]>;
 
 export type IconName = keyof typeof ICONS;

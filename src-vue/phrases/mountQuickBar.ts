@@ -4,9 +4,10 @@ import { registerTailwindProperties } from '../main';
 import QuickBar from './QuickBar.vue';
 import { addLog } from '@/lib/logger';
 import { replaceToTinyMCE } from '@/lib/tinymce';
-import { getRules } from '@/lib/feishu/service';
-import { loadRulesCache } from '@/lib/feishu/credentials';
+import { getPrivacyRules, getPrivacyTableUrl, getRules } from '@/lib/feishu/service';
+import { loadPrivacyRulesCache, loadRulesCache } from '@/lib/feishu/credentials';
 import { matchRules } from '@/lib/feishu/match';
+import { expandMagicVars } from '@/lib/feishu/magicVars';
 import { readConversation } from '@/lib/feishu/convText';
 import type { QuickReplyRule } from '@/lib/feishu/types';
 import { loadAllvalue } from '@/lib/storage';
@@ -43,6 +44,12 @@ import { toast } from '../lib/toast';
  *   · 设置面板点「立即刷新规则」/ 刚授权完，写的就是同一份缓存 ⇒ 下一个 tick（≤3s）自动生效，
  *     不会出现「点了刷新但按钮条还是老规则，得等 5 分钟」；
  *   · 也不需要 `panel → phrases` 的 import（那会把 `main.ts` 拉进循环 import，见 AGENT.md 的 TDZ 坑）。
+ *
+ * ── 三段内容（v26.10.25-v1） ─────────────────────────────────────────────────
+ *   · `pinned`：规则表「是否常显」= true 的条目 —— 不参与标签/排除词匹配、
+ *     **对话文本为空也显示**，随规则副本（fetchedAt 戳）同步，指纹逻辑只服务普通匹配；
+ *   · `rules`：普通命中（matchRules 结果里按 id 去掉 pinned，避免与常显段重复显示）；
+ *   · `privacy`：独立「隐私信息」表格的全量条目（速查表，不匹配、常显），未配置链接时为空。
  */
 
 const HOST_ID = '__znhd_quick_reply_host__';
@@ -52,8 +59,12 @@ const MOUNT_POLL_MS = 1000;
 /** 匹配轮询间隔 */
 const MATCH_POLL_MS = 3000;
 
-/** 命中规则（响应式，供 Vue 渲染） */
+/** 普通命中规则（响应式，供 Vue 渲染） */
 const hits = ref<QuickReplyRule[]>([]);
+/** 常显规则（pinned，不参与匹配） */
+const pinnedHits = ref<QuickReplyRule[]>([]);
+/** 隐私信息条目（全量常显） */
+const privacyHits = ref<QuickReplyRule[]>([]);
 
 let app: VueApp | null = null;
 let mountTimer: ReturnType<typeof setInterval> | null = null;
@@ -61,6 +72,10 @@ let matchTimer: ReturnType<typeof setInterval> | null = null;
 
 /** 上次参与匹配的文本指纹，用于跳过无变化的重算 */
 let lastFingerprint = '';
+/** 上次渲染的 pinned id 序列（pinned 不吃文本指纹，只随规则副本同步） */
+let pinnedFingerprint = '';
+/** 上次渲染的隐私条目 id 序列 */
+let privacyFingerprint = '';
 /** 规则的内存副本 + 它来自哪一份磁盘缓存（`RulesCache.fetchedAt`，0 = 从没读到过） */
 let rulesCopy: QuickReplyRule[] = [];
 let rulesStamp = 0;
@@ -68,6 +83,10 @@ let rulesStamp = 0;
 let rulesRetryAt = 0;
 /** 回源失败冷却时长：60s（1 次/分钟，避免掉线时每 3s 打一次接口） */
 const RULES_RETRY_MS = 60 * 1000;
+/** 隐私表格的内存副本 + 磁盘缓存戳 + 回源冷却（与主规则同一套节奏） */
+let privacyRulesCopy: QuickReplyRule[] = [];
+let privacyStamp = 0;
+let privacyRetryAt = 0;
 
 /** 文本指纹：长度 + 首尾字符。对话变了几乎必然改变其中之一，比整串比较便宜 */
 function fingerprint(text: string): string {
@@ -80,6 +99,7 @@ function fingerprint(text: string): string {
  * 判据是 `fetchedAt` 戳（不是 mtime、也不是「距上次读多久」）：
  * 设置面板的「立即刷新规则」「授权完成自动拉一次」写的都是这份缓存，
  * 所以只要戳变了就说明规则确实更新过 —— 此时必须把指纹清空，否则文本没变会跳过重算。
+ * pinned 随同一份副本走（syncRulesFromCache 清指纹即可让下个 tick 重算 pinned 序列）。
  */
 function syncRulesFromCache(): void {
     const cache = loadRulesCache();
@@ -88,6 +108,17 @@ function syncRulesFromCache(): void {
     rulesStamp = stamp;
     rulesCopy = cache?.rules ?? [];
     lastFingerprint = '';
+    pinnedFingerprint = '';
+}
+
+/** 隐私缓存戳变了就换隐私内存副本（未配置链接时磁盘缓存恒为空，天然 no-op） */
+function syncPrivacyFromCache(): void {
+    const cache = loadPrivacyRulesCache();
+    const stamp = cache?.fetchedAt || 0;
+    if (stamp === privacyStamp) return;
+    privacyStamp = stamp;
+    privacyRulesCopy = cache?.rules ?? [];
+    privacyFingerprint = '';
 }
 
 /**
@@ -111,6 +142,27 @@ async function ensureRules(): Promise<void> {
     rulesStamp = loadRulesCache()?.fetchedAt || 0;
 }
 
+/**
+ * 需要回源时把隐私条目补上；**永不抛错**。
+ * 未配置链接时是静默 no-op（不设冷却 —— 配置后下个 tick 立即拉）；
+ * 回源失败 60s 冷却同 ensureRules。
+ */
+async function ensurePrivacyRules(): Promise<void> {
+    syncPrivacyFromCache();
+    if (privacyRulesCopy.length) return;
+    if (Date.now() < privacyRetryAt) return;
+    if (!getPrivacyTableUrl()) return;
+    try {
+        privacyRulesCopy = await getPrivacyRules(false);
+        privacyRetryAt = 0;
+    } catch (e) {
+        privacyRulesCopy = loadPrivacyRulesCache()?.rules ?? [];
+        privacyRetryAt = Date.now() + RULES_RETRY_MS;
+        if (!privacyRulesCopy.length) addLog('隐私信息读取失败：' + (e as Error)?.message, 'warning');
+    }
+    privacyStamp = loadPrivacyRulesCache()?.fetchedAt || 0;
+}
+
 /** 点按钮：整体替换输入框内容 */
 function onPick(rule: QuickReplyRule): void {
     // 表里只填了「标题」没填「内容」时，replaceToTinyMCE 会返回空串 —— 那种情况下
@@ -119,7 +171,8 @@ function onPick(rule: QuickReplyRule): void {
         toast.error('该规则没有填写「内容」列：' + rule.title);
         return;
     }
-    const finalText = replaceToTinyMCE(rule.reply);
+    // 魔法变量（v26.10.25-v1）在**点击时刻**展开：人数等取值必须新鲜，不能提前算好缓存
+    const finalText = replaceToTinyMCE(expandMagicVars(rule.reply));
     if (finalText) toast.success('已填入：' + rule.title);
     else toast.error('输入框未就绪，请稍后重试');
 }
@@ -156,7 +209,13 @@ function mountInto(anchorEl: HTMLElement): HTMLElement {
     shadowRoot.appendChild(container);
 
     app = createApp({
-        render: () => h(QuickBar, { rules: hits.value, onPick }),
+        render: () =>
+            h(QuickBar, {
+                pinned: pinnedHits.value,
+                rules: hits.value,
+                privacy: privacyHits.value,
+                onPick,
+            }),
     });
     app.mount(container);
     return host;
@@ -194,6 +253,26 @@ async function refreshMatches(): Promise<void> {
     // 先对齐规则（磁盘缓存可能刚被设置面板刷新过），再做文本指纹判断
     syncRulesFromCache();
 
+    // 规则与隐私条目的回源不依赖对话内容：对话为空时 pinned / 隐私栏仍要能显示，
+    // 所以 ensure* 放在指纹判断之前（内部都有「已有副本直接返回」的早退，稳态零开销）
+    await ensureRules();
+    await ensurePrivacyRules();
+
+    // pinned 只随规则副本同步：副本变了（syncRulesFromCache 已清指纹）就重算序列
+    const pinnedNow = rulesCopy.filter((r) => r.pinned);
+    const pinnedIds = pinnedNow.map((r) => r.id).join(',');
+    if (pinnedIds !== pinnedFingerprint) {
+        pinnedFingerprint = pinnedIds;
+        pinnedHits.value = pinnedNow;
+    }
+
+    // 隐私条目全量常显：随隐私缓存副本同步即可，与对话文本无关
+    const privacyIds = privacyRulesCopy.map((r) => r.id).join(',');
+    if (privacyIds !== privacyFingerprint) {
+        privacyFingerprint = privacyIds;
+        privacyHits.value = privacyRulesCopy;
+    }
+
     let selector = '';
     try {
         selector = (loadAllvalue() as Record<string, unknown>)['quickReplyConversationSelector'] as string;
@@ -203,27 +282,25 @@ async function refreshMatches(): Promise<void> {
 
     const snap = readConversation(typeof selector === 'string' ? selector : '');
     if (!snap.text) {
-        if (lastFingerprint) {
-            lastFingerprint = '';
-            hits.value = [];
-        }
+        // 对话文本为空：只清普通命中 —— pinned / 隐私栏照常显示（v26.10.25-v1）
+        if (lastFingerprint) lastFingerprint = '';
+        if (hits.value.length) hits.value = [];
         return;
     }
 
     const fp = fingerprint(snap.text);
     if (fp === lastFingerprint) return;
+    lastFingerprint = fp;
 
-    await ensureRules();
     if (!rulesCopy.length) {
-        // 规则一条都没拿到（未授权 / 掉线且无缓存）：清空按钮，且**不锁指纹**，
+        // 规则一条都没拿到（未授权 / 掉线且无缓存）：清空普通命中，且**不锁指纹**，
         // 冷却期一过还能自动重试（锁住指纹的话文本不变就永远不会再试）
-        lastFingerprint = '';
         if (hits.value.length) hits.value = [];
         return;
     }
-    lastFingerprint = fp;
 
-    const matched = matchRules(snap.text, rulesCopy);
+    // 普通命中里按 id 去掉 pinned：pinned 已单独显示，不能在这里再出现一遍
+    const matched = matchRules(snap.text, rulesCopy).filter((r) => !r.pinned);
     // 只有真正变化才写 ref，避免每 3 秒触发一次无意义的重渲染
     const before = hits.value.map((r) => r.id).join(',');
     const after = matched.map((r) => r.id).join(',');
@@ -248,9 +325,16 @@ export function stopQuickReplyBar(): void {
     mountTimer = null;
     matchTimer = null;
     lastFingerprint = '';
+    pinnedFingerprint = '';
+    privacyFingerprint = '';
     rulesCopy = [];
     rulesStamp = 0;
     rulesRetryAt = 0;
+    privacyRulesCopy = [];
+    privacyStamp = 0;
+    privacyRetryAt = 0;
     hits.value = [];
+    pinnedHits.value = [];
+    privacyHits.value = [];
     unmountHost();
 }

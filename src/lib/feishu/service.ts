@@ -12,9 +12,11 @@ import {
     clearAuth,
     forgetApp,
     loadAppCred,
+    loadPrivacyRulesCache,
     loadRulesCache,
     loadToken,
     saveAppCred,
+    savePrivacyRulesCache,
     saveRulesCache,
     saveToken,
 } from './credentials';
@@ -182,6 +184,77 @@ export async function getRules(force = false, http: HttpFn = gmHttp): Promise<Qu
     const rules = await fetchRules(http, token, cfg);
     saveRulesCache({ fetchedAt: Date.now(), rules });
     addLog('飞书快捷回复规则已更新：' + rules.length + ' 条', 'success');
+    return rules;
+}
+
+/* ════════════════ 隐私信息表格（v26.10.25-v1）════════════════
+ * 第二张独立的多维表格（办公地点/办公电话等敏感速查条目）：
+ *   · 列约定与主表相同（标题/内容），但**不参与标签匹配**，全部条目常显；
+ *   · 链接配置独立（Allvalue `privacyTableUrl`），缓存独立（scriptCat_PrivacyRules），
+ *     TTL 复用同一常量（RULES_TTL_MS）；fetchRules 走同一实现；
+ *   · 未配置链接时 getPrivacyRules 抛错（面板静默处理），缓存读取不受影响。 */
+
+/** 隐私信息表格当前的配置/缓存状态（纯本地读，无网络） */
+export interface PrivacyStatus {
+    /** 是否已配置隐私表格链接 */
+    configured: boolean;
+    /** 缓存里的条数 */
+    ruleCount: number;
+    /** 上次拉取时间戳（ms），0 = 从未拉过 */
+    fetchedAt: number;
+}
+
+/** 当前隐私表格的配置/缓存状态 */
+export function getPrivacyStatus(): PrivacyStatus {
+    const cache = loadPrivacyRulesCache();
+    return {
+        configured: !!getPrivacyTableUrl(),
+        ruleCount: cache?.rules.length || 0,
+        fetchedAt: cache?.fetchedAt || 0,
+    };
+}
+
+/**
+ * 当前设置的「隐私信息表格链接」。存在 localStorage 的 Allvalue（`privacyTableUrl`），
+ * 没配/清空时回落到 `DEFAULTS.privacyTableUrl`（默认空串 = 功能关闭）。
+ */
+export function getPrivacyTableUrl(): string {
+    try {
+        const v = (loadAllvalue() as Record<string, unknown>)['privacyTableUrl'];
+        if (typeof v === 'string' && v.trim()) return v.trim();
+    } catch {
+        /* 读设置失败按未配置处理 */
+    }
+    return DEFAULTS.privacyTableUrl;
+}
+
+/** 保存隐私信息表格链接（同步落盘不走防抖 —— 保存后马上要回源拉条目） */
+export function setPrivacyTableUrl(url: string): void {
+    const merged = { ...(loadAllvalue() as Record<string, unknown>), privacyTableUrl: (url || '').trim() };
+    saveAllvalue(merged);
+    flushSaveAllvalue();
+    addLog('隐私信息表格链接已更新', 'success');
+}
+
+/**
+ * 取隐私信息条目：命中缓存且未过期就直接返回，否则回源。
+ *
+ * @param force true = 无视缓存（设置面板的「立即刷新规则」会顺带强制刷这张表）
+ * @throws 链接为空时抛「尚未配置隐私信息表格链接」；链接无法识别 / 无权限时抛对应错误
+ */
+export async function getPrivacyRules(force = false, http: HttpFn = gmHttp): Promise<QuickReplyRule[]> {
+    const cache = loadPrivacyRulesCache();
+    if (!force && cache && Date.now() - cache.fetchedAt < RULES_TTL_MS) return cache.rules;
+
+    const url = getPrivacyTableUrl();
+    if (!url) throw new Error('尚未配置隐私信息表格链接');
+    const token = await getValidToken(http);
+    const link = parseTableLink(url);
+    if (!link) throw new Error('隐私信息表格链接无法识别：' + url);
+    const cfg = await resolveTableLink(http, token, link);
+    const rules = await fetchRules(http, token, cfg);
+    savePrivacyRulesCache({ fetchedAt: Date.now(), rules });
+    addLog('隐私信息已更新：' + rules.length + ' 条', 'success');
     return rules;
 }
 
