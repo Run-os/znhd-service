@@ -146,12 +146,12 @@ const VERSION = (GM_info.script.version || '?') as string;
             </span>
         </template>
 
-        <!-- v26.10.25-v4 参考图定版：侧边栏 = 浮动面板（四边 m-2 外边距 + 20px 圆角 + 低透明度柔和投影）；
-             选中项 = 黑色胶囊（menu-active + bg-neutral 覆写，utilities 层优先级高于组件层）。
-             右侧内容区同样 my-2，让上下沿与侧边栏外边距对齐 -->
-        <div class="flex items-stretch gap-4" data-znhd="settings-body">
+        <!-- v26.10.25-v6：行高钉死 = 弹窗可视高度（h-full），侧边栏**永远**全高（不随右内容自适应），
+             滚动下沉到右栏内部；侧边栏浮动面板 = 四边 8px 外边距 + 20px 圆角 + 低透明度柔和投影，
+             菜单项之间 gap-2 分隔。选中项 = 黑色胶囊（menu-active + bg-neutral 覆写） -->
+        <div class="flex h-full items-stretch gap-4" data-znhd="settings-body">
             <!-- 左侧固定侧边栏：daisyUI 5 menu -->
-            <ul class="menu m-2 w-36 shrink-0 rounded-[20px] bg-base-200 p-2 shadow-[0_2px_16px_rgba(0,0,0,0.08)]">
+            <ul class="menu m-2 w-36 shrink-0 gap-2 rounded-[20px] bg-base-200 p-2 shadow-[0_2px_16px_rgba(0,0,0,0.08)]">
                 <li v-for="p in pages" :key="p.id">
                     <button
                         class="rounded-xl"
@@ -163,8 +163,8 @@ const VERSION = (GM_info.script.version || '?') as string;
                 </li>
             </ul>
 
-            <!-- 右侧内容区（弹窗高度已固定，超出部分由 AppDialog 的内容层滚动） -->
-            <div class="my-2 min-w-0 flex-1">
+            <!-- 右侧内容区：行高已钉死，本栏自身滚动（侧边栏不动） -->
+            <div class="min-h-0 min-w-0 flex-1 overflow-y-auto">
                 <!-- 飞书快捷短语（默认页）：授权 + 规则表链接 + 隐私信息表格，自成一体 -->
                 <FeishuAuthPanel v-if="page === 'feishu'" />
 

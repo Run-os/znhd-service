@@ -158,6 +158,16 @@ svg {
   --btn-bg: color-mix(in oklab, var(--btn-color) 15%, transparent);
 }
 
+/* ── 分割线行距对称化（v26.10.25-v6）────────────────────────────────────────
+   daisyUI 的 .fieldset-legend 自带 padding-block .5rem + margin-bottom -.25rem，
+   只有「文字上方」有额外空隙、下方没有 ⇒ 夹在两条分割线之间的行
+   上距 ≠ 下距。归零后行距统一由模板的 py-* 控制（上下各 12px 对称）。
+   unlayered 规则特异性同位但胜 @layer components，无需 !important。 */
+.fieldset-legend {
+  padding-block: 0;
+  margin-bottom: 0;
+}
+
 /* ── 按压缩放反馈（make-interfaces-feel-better：scale on press，定值 0.96）──
    给触感反馈；daisyUI .btn 自带 transition-property: …transform（0.2s，
    可中断），所以必须写 transform: scale() 而不是独立 scale 属性——
