@@ -19,9 +19,9 @@ export interface WorkingHours {
  * 设置弹窗（v26.10.25-v1 改版：左右两栏）。
  *
  * 布局：弹窗**固定 680×560**（AppDialog 的 height 参数：内容区内部滚动，切页不改变窗口大小），
- * 左侧固定侧边栏（daisyUI 5 `menu`，v26.10.25-v3 参考图定版：卡片拉通全高、
- * 选中项黑色胶囊 = `menu-active bg-neutral text-neutral-content`），
- * 右侧内容区随选择切换，**默认选中「飞书快捷短语」**：
+ * 左侧固定侧边栏（daisyUI 5 `menu`，v26.10.25-v4 参考图定版：**浮动面板** = 四边 8px 外边距 +
+ * 20px 圆角 + 低透明度柔和投影；选中项黑色胶囊 = `menu-active bg-neutral text-neutral-content`），
+ * 右侧内容区随选择切换，**默认选中「飞书快捷短语」**；各页功能区之间统一 hairline 分割（divide-y）：
  *   · 飞书快捷短语 = `<FeishuAuthPanel />`（含隐私信息表格区块）；
  *   · 传输助手 = 中继地址 / 自动打开开关 / 清空记录（v26.10.25-v2 自传输窗口迁入）；
  *   · 其他设置 = CDN 开关 / 嗅探预测量开关 / 监控时间段选择器；
@@ -146,11 +146,12 @@ const VERSION = (GM_info.script.version || '?') as string;
             </span>
         </template>
 
-        <!-- v26.10.25-v3 参考图定版：items-stretch 让侧边栏卡片拉通全高；
-             选中项 = 黑色胶囊（menu-active + bg-neutral 覆写，utilities 层优先级高于组件层） -->
-        <div class="flex items-stretch gap-5 py-1" data-znhd="settings-body">
+        <!-- v26.10.25-v4 参考图定版：侧边栏 = 浮动面板（四边 m-2 外边距 + 20px 圆角 + 低透明度柔和投影）；
+             选中项 = 黑色胶囊（menu-active + bg-neutral 覆写，utilities 层优先级高于组件层）。
+             右侧内容区同样 my-2，让上下沿与侧边栏外边距对齐 -->
+        <div class="flex items-stretch gap-4" data-znhd="settings-body">
             <!-- 左侧固定侧边栏：daisyUI 5 menu -->
-            <ul class="menu w-36 shrink-0 rounded-box bg-base-200 p-2">
+            <ul class="menu m-2 w-36 shrink-0 rounded-[20px] bg-base-200 p-2 shadow-[0_2px_16px_rgba(0,0,0,0.08)]">
                 <li v-for="p in pages" :key="p.id">
                     <button
                         :class="{ 'menu-active bg-neutral text-neutral-content': page === p.id }"
@@ -162,13 +163,13 @@ const VERSION = (GM_info.script.version || '?') as string;
             </ul>
 
             <!-- 右侧内容区（弹窗高度已固定，超出部分由 AppDialog 的内容层滚动） -->
-            <div class="min-w-0 flex-1">
+            <div class="my-2 min-w-0 flex-1">
                 <!-- 飞书快捷短语（默认页）：授权 + 规则表链接 + 隐私信息表格，自成一体 -->
                 <FeishuAuthPanel v-if="page === 'feishu'" />
 
-                <!-- 传输助手（v26.10.25-v2 自传输窗口的设置弹窗迁入） -->
-                <template v-else-if="page === 'transfer'">
-                    <fieldset class="fieldset" data-znhd="transfer-settings">
+                <!-- 传输助手（v26.10.25-v2 自传输窗口的设置弹窗迁入；v4 起功能区之间用 hairline 分割） -->
+                <div v-else-if="page === 'transfer'" class="divide-y divide-base-300" data-znhd="transfer-settings">
+                    <fieldset class="fieldset py-3 first:pt-0">
                         <legend class="fieldset-legend">中继服务器地址</legend>
                         <input
                             v-model="relayDraft"
@@ -182,7 +183,7 @@ const VERSION = (GM_info.script.version || '?') as string;
                         </p>
                     </fieldset>
 
-                    <fieldset class="fieldset">
+                    <fieldset class="fieldset py-3">
                         <legend class="fieldset-legend flex w-full items-center justify-between gap-3">
                             <span>收到内容时自动打开传输助手</span>
                             <input
@@ -194,7 +195,7 @@ const VERSION = (GM_info.script.version || '?') as string;
                         <p class="label whitespace-normal">关闭时仅累计未读角标，不打扰；窗口已开着则只累加，不强行切换会话。</p>
                     </fieldset>
 
-                    <div class="mt-2 border-t border-base-300 pt-3">
+                    <div class="py-3">
                         <template v-if="!confirmClear">
                             <button class="btn btn-error btn-sm rounded-full" @click="confirmClear = true">清空全部传输记录</button>
                         </template>
@@ -211,11 +212,11 @@ const VERSION = (GM_info.script.version || '?') as string;
                             </div>
                         </div>
                     </div>
-                </template>
+                </div>
 
-                <!-- 其他设置：开关与时间段原样搬入 -->
-                <template v-else-if="page === 'general'">
-                    <fieldset class="fieldset">
+                <!-- 其他设置：开关与时间段（v4 起功能区之间用 hairline 分割） -->
+                <div v-else-if="page === 'general'" class="divide-y divide-base-300">
+                    <fieldset class="fieldset py-3 first:pt-0">
                         <!-- 开关与描述文本同一行：legend 拉成 flex 行，toggle 靠右 -->
                         <legend class="fieldset-legend flex w-full items-center justify-between gap-3">
                             <span>使用 CDN 加速（Fastly 镜像）加载资源</span>
@@ -227,7 +228,7 @@ const VERSION = (GM_info.script.version || '?') as string;
                         </legend>
                     </fieldset>
 
-                    <fieldset class="fieldset">
+                    <fieldset class="fieldset py-3">
                         <legend class="fieldset-legend flex w-full items-center justify-between gap-3">
                             <span>图片嗅探：先在后台预测量图片大小</span>
                             <input
@@ -238,7 +239,7 @@ const VERSION = (GM_info.script.version || '?') as string;
                         </legend>
                     </fieldset>
 
-                    <fieldset class="fieldset">
+                    <fieldset class="fieldset py-3">
                         <legend class="fieldset-legend">监控时间段（点击选择时间）</legend>
                         <!-- v26.10.23-v4：上午/下午**强制同一行**（v6 的 flex-wrap 在窄面板下会折成两行）。
                              用两列等分 + 内部 input `min-w-0 w-full` 自适应：容器再窄也只会挤压，不会换行。 -->
@@ -261,11 +262,11 @@ const VERSION = (GM_info.script.version || '?') as string;
                             </div>
                         </div>
                     </fieldset>
-                </template>
+                </div>
 
-                <!-- 关于：技术栈 + 版本 + 主页 -->
-                <div v-else class="flex flex-col gap-3 py-1" data-znhd="settings-about">
-                    <p class="label whitespace-normal">
+                <!-- 关于：技术栈 + 版本 + 主页（v4 起行间用 hairline 分割） -->
+                <div v-else class="divide-y divide-base-300" data-znhd="settings-about">
+                    <p class="label whitespace-normal py-3 first:pt-0">
                         技术栈：Vue 3 + Tailwind CSS 4 +
                         <a
                             class="link link-hover text-primary"
@@ -274,8 +275,8 @@ const VERSION = (GM_info.script.version || '?') as string;
                             rel="noreferrer">daisyUI 5</a>
                         + vite-plugin-monkey
                     </p>
-                    <p class="text-[13px]">脚本版本：<span class="font-mono">v{{ VERSION }}</span></p>
-                    <p class="text-[13px]">
+                    <p class="py-3 text-[13px]">脚本版本：<span class="font-mono">v{{ VERSION }}</span></p>
+                    <p class="py-3 text-[13px]">
                         作者 / 主页：<a class="link link-hover text-primary" :href="HOMEPAGE_URL" target="_blank" rel="noreferrer">Run-os/znhd-service</a>
                     </p>
                 </div>

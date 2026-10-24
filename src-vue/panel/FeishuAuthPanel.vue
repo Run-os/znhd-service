@@ -258,58 +258,64 @@ onUnmounted(() => {
         </legend>
 
         <!-- 状态摘要：授权后只留 token 一行（条数进卡片徽章），不暴露 token/凭证 -->
-        <p v-if="status.authorized" class="mb-4 text-[12px] leading-5 text-base-content/60">
+        <p v-if="status.authorized" class="pb-3 text-[12px] leading-5 text-base-content/60">
             token 到期：{{ expiresText }}（到期前会自动续期）
         </p>
-        <p v-else class="mb-4 text-[12px] leading-5 text-base-content/60">
+        <p v-else class="pb-3 text-[12px] leading-5 text-base-content/60">
             授权后脚本会读取你飞书多维表格里的规则表，按当前对话内容在输出框上方显示快捷短语按钮。
             对话文本只在本机匹配，不会上传到任何地方。
         </p>
 
-        <!-- 授权进行中：授权码大字展示 + 「打开授权页」按钮（不再打印长链接原文） -->
-        <div v-if="busy && challenge" class="mb-4 rounded-box bg-base-200 p-3">
-            <p class="mb-2 text-[12px] text-base-content/70">{{ phaseText }}</p>
-            <p class="mb-2 text-[13px]">
-                在飞书里确认授权码：<span class="font-mono text-[15px] font-semibold">{{ challenge.userCode }}</span>
-            </p>
-            <div class="flex items-center gap-3">
-                <a
-                    class="btn btn-primary btn-sm rounded-full"
-                    :href="challenge.verificationUriComplete"
-                    target="_blank"
-                    rel="noreferrer">
-                    打开授权页
-                </a>
-                <p class="text-[11px] leading-4 text-base-content/50">
-                    授权页 {{ Math.round(challenge.expiresIn / 60) }} 分钟内有效；确认后这里会自动完成。<br />
-                    授权页里要登录注册应用时的那个账号（第 1 步确认创建时用的账号）。
-                </p>
+        <!-- v26.10.25-v4：功能区之间统一 hairline 分割（divide-y），间距统一 py-3 —— 对齐参考图行距 -->
+        <div class="divide-y divide-base-300">
+            <!-- 授权进行中：授权码大字展示 + 「打开授权页」按钮（不再打印长链接原文） -->
+            <div v-if="busy && challenge" class="py-3">
+                <div class="rounded-box bg-base-200 p-3">
+                    <p class="mb-2 text-[12px] text-base-content/70">{{ phaseText }}</p>
+                    <p class="mb-2 text-[13px]">
+                        在飞书里确认授权码：<span class="font-mono text-[15px] font-semibold">{{ challenge.userCode }}</span>
+                    </p>
+                    <div class="flex items-center gap-3">
+                        <a
+                            class="btn btn-primary btn-sm rounded-full"
+                            :href="challenge.verificationUriComplete"
+                            target="_blank"
+                            rel="noreferrer">
+                            打开授权页
+                        </a>
+                        <p class="text-[11px] leading-4 text-base-content/50">
+                            授权页 {{ Math.round(challenge.expiresIn / 60) }} 分钟内有效；确认后这里会自动完成。<br />
+                            授权页里要登录注册应用时的那个账号（第 1 步确认创建时用的账号）。
+                        </p>
+                    </div>
+                </div>
             </div>
-        </div>
 
-        <p v-if="busy && !challenge" class="mb-2 text-[12px] text-base-content/60">
-            <span class="loading loading-spinner loading-xs mr-1"></span>正在与飞书通信…
-        </p>
+            <p v-if="busy && !challenge" class="py-3 text-[12px] text-base-content/60">
+                <span class="loading loading-spinner loading-xs mr-1"></span>正在与飞书通信…
+            </p>
 
-        <!-- 有凭证但未授权：说明第 1 步已过、第 2 步还没完成；给一条「回退」出路（v26.10.23-v3） -->
-        <p v-if="!status.authorized && status.hasCredential" class="mb-2 text-[12px] leading-5 text-base-content/60">
-            本机已注册过应用（第 1 步已完成），点「授权飞书账号」会直接进入第 2 步。
-            如果第 1 步当时用错了账号（例如豆包账号），点「作废并重新注册」可回到第 1 步。
-        </p>
+            <!-- 有凭证但未授权：说明第 1 步已过、第 2 步还没完成；给一条「回退」出路（v26.10.23-v3） -->
+            <p v-if="!status.authorized && status.hasCredential" class="py-3 text-[12px] leading-5 text-base-content/60">
+                本机已注册过应用（第 1 步已完成），点「授权飞书账号」会直接进入第 2 步。
+                如果第 1 步当时用错了账号（例如豆包账号），点「作废并重新注册」可回到第 1 步。
+            </p>
 
-        <p v-if="errorText" class="mb-2 text-[12px] break-words text-error">{{ errorText }}</p>
+            <p v-if="errorText" class="py-3 text-[12px] break-words text-error">{{ errorText }}</p>
 
-        <!-- 没权限的专门提示（v26.10.23-v2）：授权成功只代表登录了账号，不代表能读那张表 -->
-        <div v-if="errorText && permissionError" class="mb-2 rounded-box border border-warning/40 bg-warning/10 p-3 text-[12px] leading-5">
-            <p class="mb-1 font-semibold">没有读取这张多维表格的权限，依次检查：</p>
-            <p>① 表是不是当前授权账号的？别人分享的表，请让所有者把你的飞书账号加为协作者（「可阅读」即可）；</p>
-            <p>② 授权时 scope 是否勾全 —— 点上方「重新授权」，弹出的授权页里**全部勾选**后再确认；</p>
-            <p>③ 表选对没有 —— 点「从飞书选择表格」重新选一张（确认选的是要用的那张表）。</p>
-        </div>
+            <!-- 没权限的专门提示（v26.10.23-v2）：授权成功只代表登录了账号，不代表能读那张表 -->
+            <div v-if="errorText && permissionError" class="py-3">
+                <div class="rounded-box border border-warning/40 bg-warning/10 p-3 text-[12px] leading-5">
+                    <p class="mb-1 font-semibold">没有读取这张多维表格的权限，依次检查：</p>
+                    <p>① 表是不是当前授权账号的？别人分享的表，请让所有者把你的飞书账号加为协作者（「可阅读」即可）；</p>
+                    <p>② 授权时 scope 是否勾全 —— 点上方「重新授权」，弹出的授权页里**全部勾选**后再确认；</p>
+                    <p>③ 表选对没有 —— 点「从飞书选择表格」重新选一张（确认选的是要用的那张表）。</p>
+                </div>
+            </div>
 
         <!-- 双卡片（v26.10.25-v3 参考图定版）：规则表 / 隐私信息表并排，徽章显条数、
              全宽描边按钮选表。链接输入框 v26.10.25-v2 已删，配置唯一入口 = 选表。 -->
-        <div class="mb-4 grid grid-cols-2 gap-4">
+        <div class="grid grid-cols-2 gap-4 py-3">
             <div class="rounded-2xl border border-base-300 bg-base-100 p-4 shadow-sm">
                 <div class="mb-3 flex items-center gap-2">
                     <span class="text-[14px] font-semibold">规则表</span>
@@ -359,24 +365,25 @@ onUnmounted(() => {
             </div>
         </div>
 
-        <div class="flex flex-wrap items-center gap-2">
-            <button v-if="!status.authorized" class="btn btn-primary btn-sm rounded-full" :disabled="busy" @click="startAuth">
-                {{ busy ? '等待确认…' : '授权飞书账号' }}
-            </button>
-            <template v-else>
-                <button class="btn btn-outline btn-sm rounded-full" :disabled="busy" @click="reloadRules">立即刷新规则</button>
-                <button class="btn btn-primary btn-sm rounded-full" :disabled="busy" @click="startAuth">重新授权</button>
-                <button class="btn btn-error btn-sm rounded-full" :disabled="busy" @click="doRevoke">解除授权</button>
-            </template>
-            <!-- v26.10.23-v3：第 1 步用错账号时的回退出路（清凭证后重新授权 = 重新注册） -->
-            <button
-                v-if="status.hasCredential"
-                class="btn btn-outline btn-warning btn-sm rounded-full"
-                :disabled="busy"
-                @click="doForget">
-                作废并重新注册
-            </button>
-            <button v-if="busy" class="btn btn-ghost btn-sm rounded-full" @click="cancel">取消并返回</button>
+            <div class="flex flex-wrap items-center gap-2 py-3">
+                <button v-if="!status.authorized" class="btn btn-primary btn-sm rounded-full" :disabled="busy" @click="startAuth">
+                    {{ busy ? '等待确认…' : '授权飞书账号' }}
+                </button>
+                <template v-else>
+                    <button class="btn btn-outline btn-sm rounded-full" :disabled="busy" @click="reloadRules">立即刷新规则</button>
+                    <button class="btn btn-primary btn-sm rounded-full" :disabled="busy" @click="startAuth">重新授权</button>
+                    <button class="btn btn-error btn-sm rounded-full" :disabled="busy" @click="doRevoke">解除授权</button>
+                </template>
+                <!-- v26.10.23-v3：第 1 步用错账号时的回退出路（清凭证后重新授权 = 重新注册） -->
+                <button
+                    v-if="status.hasCredential"
+                    class="btn btn-outline btn-warning btn-sm rounded-full"
+                    :disabled="busy"
+                    @click="doForget">
+                    作废并重新注册
+                </button>
+                <button v-if="busy" class="btn btn-ghost btn-sm rounded-full" @click="cancel">取消并返回</button>
+            </div>
         </div>
 
         <!-- 选表弹窗：原生 showModal() 进 top layer，天然盖在本设置弹窗之上。
