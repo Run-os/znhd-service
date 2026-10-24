@@ -36,8 +36,14 @@ const TOKEN_URL = 'https://accounts.feishu.cn/oauth/v3/token';
  * 注意：这里用的是 **bitable v1** 的粗粒度 scope。CLI 的 `base` 域走新版 v3 API，
  * 需要 `base:record:read` / `base:field:read` 这样一列一个的细粒度 scope（实测会报
  * 99991672 app_scope_not_applied），故本项目统一走 v1 接口，一个 scope 覆盖全部。
+ *
+ * `search:docs:read`（v26.10.24-v6 新增）：搜索云文档，供设置面板「从飞书选择表格」
+ * 列出使用者有权访问的多维表格（含别人分享、不在自己云空间里的）。与
+ * `search.ts` 的 `SEARCH_SCOPE` 必须逐字一致 —— 那边用它在本地判断有没有该权限。
+ * ⚠️ 已授权的老 token 不含它 ⇒ 需要重新授权一次（UI 会主动提示）。
  */
-export const FEISHU_SCOPE = 'bitable:app:readonly wiki:wiki:readonly drive:drive:readonly offline_access';
+export const FEISHU_SCOPE =
+    'bitable:app:readonly wiki:wiki:readonly drive:drive:readonly search:docs:read offline_access';
 
 /** 轮询结果：pending = 用户还没确认，继续；ok = 拿到值；error = 终止（含取消/过期） */
 export type PollOutcome<T> = { status: 'pending' } | { status: 'ok'; value: T } | { status: 'error'; message: string };

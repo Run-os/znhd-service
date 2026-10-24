@@ -1,11 +1,10 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue';
 import {
     authorize,
     forgetCredential,
     getRules,
-    getTableUrl,
     getStatus,
+    getTableUrl,
     revoke,
     setTableUrl,
     type AuthPhase,
@@ -13,6 +12,8 @@ import {
 import type { DeviceCodeChallenge } from '@/lib/feishu/types';
 import { Icon } from '@vue/icons';
 import { toast } from '@vue/lib/toast';
+import { computed, onMounted, onUnmounted, ref } from 'vue';
+import TablePickerDialog from './TablePickerDialog.vue';
 
 /**
  * 设置面板里的「飞书快捷回复」区块（v26.10.23）。
@@ -36,6 +37,8 @@ const challenge = ref<DeviceCodeChallenge | null>(null);
 const errorText = ref('');
 const tableUrl = ref(getTableUrl());
 const urlBusy = ref(false);
+/** 「从飞书选择表格」弹窗开关（v26.10.24-v6） */
+const pickerOpen = ref(false);
 let cancelled = false;
 
 /**
@@ -147,6 +150,17 @@ function doForget(): void {
     toast.success('已作废本机凭证，下次授权将重新注册应用');
 }
 
+/**
+ * 弹窗里选中一条表（v26.10.24-v6）：回填链接后**立刻保存并刷新规则**。
+ * 不要求使用者再点一次「保存链接」—— 他刚刚是在列表里"选表"，不是"编辑文本"，
+ * 多一步确认只会让人以为没生效。
+ */
+function onPick(url: string): void {
+    if (!url) return;
+    tableUrl.value = url;
+    void saveTable();
+}
+
 onMounted(refreshStatus);
 onUnmounted(() => {
     cancelled = true;
@@ -245,9 +259,22 @@ onUnmounted(() => {
                     {{ urlBusy ? '保存中…' : '保存链接' }}
                 </button>
             </div>
-            <p class="mt-1 text-[11px] text-base-content/50">
-                支持 /wiki/ 分享链接与 /base/ 直链；链接里不带 table 参数时自动用第一个数据表。
-                链接有改动时点「保存链接」，保存后会自动刷新一次规则。
+        </div>
+
+        <!-- 从飞书直接选表（v26.10.24-v6）：不想手粘链接就走这条。
+             需要 search:docs:read —— 加权限之前授权的 token 没有它，提示重新授权。 -->
+        <div v-if="status.authorized" class="mb-2 flex flex-wrap items-center gap-2">
+            <button
+                v-if="status.searchScopeOk"
+                class="btn btn-outline btn-sm"
+                :disabled="urlBusy"
+                data-znhd="quick-reply-table-pick"
+                @click="pickerOpen = true">
+                <Icon name="search" :size="13" />
+                从飞书选择表格
+            </button>
+            <p v-else class="text-[11px] leading-4 text-warning">
+                当前授权不含「搜索云文档」权限，点「重新授权」后就能直接在这里选表（也可以继续手动粘贴链接）。
             </p>
         </div>
 
@@ -270,5 +297,8 @@ onUnmounted(() => {
             </button>
             <button v-if="busy" class="btn btn-ghost btn-sm" @click="cancel">取消并返回</button>
         </div>
+
+        <!-- 选表弹窗：原生 showModal() 进 top layer，天然盖在本设置弹窗之上 -->
+        <TablePickerDialog v-model:open="pickerOpen" @picked="onPick" />
     </fieldset>
 </template>

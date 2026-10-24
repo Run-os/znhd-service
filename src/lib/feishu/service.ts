@@ -22,6 +22,7 @@ import { loadAllvalue, saveAllvalue, flushSaveAllvalue } from '@/lib/storage';
 import { DEFAULTS } from '@/lib/constants';
 import { parseTableLink, resolveTableLink } from './tableLink';
 import { fetchRules, type RulesTableConfig } from './rules';
+import { SEARCH_SCOPE, searchBitableDocs, type DocSearchPage } from './search';
 import type { DeviceCodeChallenge, FeishuAppCredential, FeishuToken, QuickReplyRule } from './types';
 
 /**
@@ -54,6 +55,13 @@ export interface QuickReplyStatus {
     ruleCount: number;
     /** 规则上次拉取时间戳（ms），0 = 从未拉过 */
     rulesFetchedAt: number;
+    /**
+     * 当前 token 是否带「搜索云文档」权限（v26.10.24-v6）。
+     * false = 是加权限之前授权的老 token，「从飞书选择表格」会失败，UI 要引导重新授权。
+     * token 没记 scope 字段时按「未知但可用」处理：真不可用由接口错误兜底，
+     * 免得因为一个缺失字段就把功能挡死。
+     */
+    searchScopeOk: boolean;
 }
 
 /** 当前授权 / 缓存状态（纯本地读，无网络） */
@@ -61,6 +69,7 @@ export function getStatus(): QuickReplyStatus {
     const cred = loadAppCred();
     const token = loadToken();
     const cache = loadRulesCache();
+    const scopes = (token?.scope || '').split(/\s+/).filter(Boolean);
     return {
         authorized: !!(cred && token),
         hasCredential: !!cred,
@@ -68,6 +77,7 @@ export function getStatus(): QuickReplyStatus {
         expiresAt: token?.expiresAt || 0,
         ruleCount: cache?.rules.length || 0,
         rulesFetchedAt: cache?.fetchedAt || 0,
+        searchScopeOk: !scopes.length || scopes.indexOf(SEARCH_SCOPE) >= 0,
     };
 }
 
@@ -185,6 +195,21 @@ async function rulesTableConfig(http: HttpFn, token: string): Promise<RulesTable
     const link = parseTableLink(url);
     if (!link) throw new Error('规则表链接无法识别：' + url);
     return resolveTableLink(http, token, link);
+}
+
+/**
+ * 搜索使用者可访问的多维表格（v26.10.24-v6）。
+ *
+ * 给设置面板的「从飞书选择表格」用：列出**所有**有权限的表，含别人分享给我、
+ * 但不在我自己云空间里的（`drive/v1/files` 那种列文件夹的接口做不到这点）。
+ * 具体接口细节见 `search.ts` 头注（照抄飞书官方 CLI 的 `drive +search`）。
+ *
+ * @param query     关键词，可留空 = 按类型浏览全部多维表格
+ * @param pageToken 上一页的游标，空 = 第一页
+ */
+export async function searchDocs(query: string, pageToken = '', http: HttpFn = gmHttp): Promise<DocSearchPage> {
+    const token = await getValidToken(http);
+    return searchBitableDocs(http, token, query, pageToken);
 }
 
 /** 解除授权（保留应用凭证：token 过期重授权时不必重新注册） */

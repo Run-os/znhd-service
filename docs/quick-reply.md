@@ -52,7 +52,7 @@
 2. 在浏览器/手机飞书里确认 → 脚本轮询拿到飞书为**这台机器**签发的 `client_id/client_secret`
    （存 GM 存储，不进脚本源码，不发给别人）。
 3. 用这对凭证发起**设备授权**（`/oauth/v1/device_authorization`），申请
-   `bitable:app:readonly wiki:wiki:readonly drive:drive:readonly offline_access`，
+   `bitable:app:readonly wiki:wiki:readonly drive:drive:readonly search:docs:read offline_access`，
    使用者再确认一次 → 换到 `user_access_token`。
 
 之后 access_token 2 小时、refresh_token **7 天滑动续期**（每次刷新重新计 7 天），
@@ -62,6 +62,32 @@
 > 设备流把回调换成「用户在浏览器确认 + 客户端轮询」，天然无服务器。
 >
 > 已授权的机器只需重走第 3 步（凭证长期复用），不必重复注册应用。
+
+### 从飞书直接选表（v26.10.24-v6）
+
+设置面板的「从飞书选择表格」不再要求手粘链接，接口照抄飞书官方 CLI 的 `drive +search`：
+
+```
+POST https://open.feishu.cn/open-apis/search/v2/doc_wiki/search
+{
+  "query": "",                    // 可留空 = 按类型浏览全部
+  "page_size": 15,
+  "doc_filter":  { "doc_types": ["bitable"] },
+  "wiki_filter": { "doc_types": ["bitable"] }
+}
+```
+
+- **为什么不用 `drive/v1/files`**：那个只能列某个文件夹里自己空间下的文件，还得逐层翻；
+  `search/v2/doc_wiki/search` 能搜到「别人分享给我、但不在我云空间里」的表，覆盖才完整。
+- `doc_filter` 与 `wiki_filter` **各一份**：前者管云空间文档、后者管知识库节点，只给一边会漏。
+- `query` 按 **Unicode 码点**限 30 字（服务端 99992402），代码用 `Array.from().slice()` 截断
+  —— 普通 `slice()` 会把 emoji 的代理对切坏。
+- 标题优先取 `title_highlighted`，用 `/<\/?hb?>/g` 清掉 `<hb>` 高亮标签。
+- 返回的 `result_meta.url` **直接复用 `tableLink.ts`**：wiki 节点会被识别成 `/wiki/<token>` 再换
+  `obj_token`，因此不需要为搜索单独写一套链接解析。
+- scope 增加 `search:docs:read`。**加权限之前授权的 token 没有它** ⇒
+  `getStatus().searchScopeOk` 读本地 `token.scope` 判断，false 时面板藏起选表按钮并提示重新授权
+  （走「有凭证」分支，只多一次确认）。token 未记 `scope` 字段时按可用处理，避免因缺字段挡死功能。
 
 ## 4. 隐私
 
@@ -112,6 +138,7 @@
 | `src/lib/feishu/http.ts` | `GM_xmlhttpRequest` 适配（唯一碰宿主 API 的地方之一） |
 | `src/lib/feishu/credentials.ts` | 凭证与规则缓存的 GM 存储读写 |
 | `src/lib/feishu/tableLink.ts` | 解析使用者粘贴的表格链接（wiki 节点换 obj_token、缺 table 时列第一个表） |
+| `src/lib/feishu/search.ts` | 搜索可访问的多维表格（`search/v2/doc_wiki/search`，只列 bitable） |
 | `src/lib/feishu/rules.ts` | 读多维表记录并归一化成规则（v1 API，单 scope） |
 | `src/lib/feishu/match.ts` | 匹配引擎（标签任一命中 + 排除优先） |
 | `src/lib/feishu/convText.ts` | 读当前会话文本（Vuex 主、DOM 兜底；最新 6 条有文本的消息） |
@@ -120,6 +147,7 @@
 | `src-vue/phrases/QuickBar.vue` | 按钮条 UI |
 | `src-vue/phrases/mountQuickBar.ts` | 挂到 Inputbox 根元素之前（工具栏外面上方）+ 轮询自愈 |
 | `src-vue/panel/FeishuAuthPanel.vue` | 设置里的授权区块 + 规则表链接配置 + 无权限提示 + 作废凭证回退 |
+| `src-vue/panel/TablePickerDialog.vue` | 「从飞书选择多维表格」弹窗（搜索 / 分页 / 点选回填） |
 
 ## 8. 排障
 
