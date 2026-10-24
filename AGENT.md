@@ -96,7 +96,8 @@
 ### 待处理留言 / 待处理预约 红色提醒（v26.10.24-v1）
 
 - `src-vue/lib/todoBadge.ts`（`app.ts` 里 `startTodoBadge()`）。**真机 DOM（2026-10-24 本地 Edge 实测）**：工作台左侧待办卡片 = `.message-item > .count`（数字，零也占位）+ `.title`（「待处理留言」/「待处理预约」）。
-- **最终形态 = 把 `.count` 那个数字胶囊化**（`#e5484d` 底 + 白字 + `znhdTodoPulse` 1s 呼吸），首次出现叠一圈 `znhdTodoPing` 扩散；**只在 `count > 0` 时加，归零自动撤**。⚠️ 第一版「标题旁加『待』字 badge」被真机否掉：与卡片原有红数字重复，且 0 也在闪（天天误报）—— 别再改回去。
+- **最终形态（v26.10.24-v2）= 整张 `.message-item` 卡片**：浅红底 `#fff1f1` + 1px 红边（`#e5484d`）+ 圆角 + 外圈光晕呼吸（`box-shadow` 扩散 1.4s），首现叠 `::after` 扩散描边（一次即消失）。**只在 `count > 0` 时加，归零自动撤**。
+- ⚠️ 形态被真机否过两次，别再走回头路：**v1 标题旁加「待」字 badge**（与卡片原有红数字重复、且 0 也在闪）；**v2 只把 `.count` 数字胶囊化**（只改一个小点，整卡还是灰的，不够显眼）。
 - 注入的是**站点 light DOM**：站点没加载 Tailwind ⇒ `animate-pulse`/`animate-ping` 类**不生效**，必须自带 `<style>` 定义 keyframes（前缀 `znhdTodo` 防冲突）；站点 scoped 样式（`.count[data-v-xxx]`）特异性高，胶囊样式要 `!important` 才压得住。
 - 扫描：`document.evaluate` XPath 找 `div.title` 含关键词（原生实现，比 JS 全页遍历便宜）+ MutationObserver 300ms 防抖，**`characterData` 必须听**（站点 Vue 就地改数字文本，不重建节点）。冒烟 `todoBadgesOk`：3 命中 / 0 不命中 / 关键词外不命中 / 红底白字 / 呼吸 / ping / 改 0 后 900ms 内撤掉。
 

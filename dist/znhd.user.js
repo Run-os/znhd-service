@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         征纳互动人数和在线监控v2
 // @namespace    https://scriptcat.org/
-// @version      26.10.24-v1
+// @version      26.10.24-v2
 // @author       runos
 // @description  实时监控征纳互动等待人数和在线状态，支持语音播报、自定义常用语
 // @license      MIT
@@ -1463,16 +1463,14 @@ logAutoRefresh: !!_initAllvalue.logAutoRefresh
   }
   const STYLE_ID = "__znhd_todo_badge_style__";
   const MARK = "data-znhd-todo";
-  const HIT_CLASS = "znhd-todo-hit";
-  const PING_CLASS = "znhd-todo-ping";
-  const COUNT_MARK = "data-znhd-todo-count";
+  const CARD_CLASS = "znhd-todo-card";
   const KEYWORDS = ["待处理留言", "待处理预约"];
   const CSS$1 = [
-    "@keyframes znhdTodoPulse{0%,100%{opacity:1}50%{opacity:.5}}",
-    "@keyframes znhdTodoPing{0%{transform:scale(1);opacity:.5}75%,100%{transform:scale(2.4);opacity:0}}",
+    "@keyframes znhdTodoGlow{0%,100%{box-shadow:0 0 0 0 rgba(229,72,77,.55)}50%{box-shadow:0 0 0 5px rgba(229,72,77,0)}}",
+    "@keyframes znhdTodoPing{0%{opacity:.85;transform:scale(1)}100%{opacity:0;transform:scale(1.12)}}",
+    "." + CARD_CLASS + "{position:relative;background-color:#fff1f1!important;border:1px solid #e5484d!important;border-radius:8px!important;animation:znhdTodoGlow 1.4s ease-in-out infinite!important;}",
 
-"." + HIT_CLASS + "{position:relative;display:inline-block!important;padding:0 7px!important;min-width:18px;height:18px!important;line-height:18px!important;border-radius:9px!important;background-color:#e5484d!important;color:#fff!important;font-size:12px!important;font-weight:700!important;text-align:center;animation:znhdTodoPulse 1s ease-in-out infinite!important;}",
-    "." + PING_CLASS + "{position:absolute;inset:0;border-radius:9px;background-color:#e5484d;pointer-events:none;animation:znhdTodoPing 1.2s cubic-bezier(0,0,.2,1) 1 both;}"
+"." + CARD_CLASS + '::after{content:"";position:absolute;inset:-2px;border-radius:10px;border:2px solid #e5484d;pointer-events:none;animation:znhdTodoPing 1.2s cubic-bezier(0,0,.2,1) 1 both;}'
   ].join("\n");
   let started = false;
   let observer = null;
@@ -1489,28 +1487,12 @@ logAutoRefresh: !!_initAllvalue.logAutoRefresh
     if (!el) return 0;
     return parseInt((el.textContent || "0").trim(), 10) || 0;
   }
-  function decorate(card) {
-    const count = card.querySelector(".count");
-    if (!count || count.classList.contains(HIT_CLASS)) return;
-    count.classList.add(HIT_CLASS);
-    count.setAttribute(COUNT_MARK, "");
-    const ping = document.createElement("span");
-    ping.className = PING_CLASS;
-    count.appendChild(ping);
-  }
-  function undecorate(count) {
-    if (!count) return;
-    count.classList.remove(HIT_CLASS);
-    count.removeAttribute(COUNT_MARK);
-    count.querySelectorAll("." + PING_CLASS).forEach((p) => p.remove());
-  }
   function scan() {
     ensureStyle();
     document.querySelectorAll("[" + MARK + "]").forEach((title) => {
-      var _a, _b;
       const card = title.closest(".message-item");
       if (card && countOf(card) > 0) return;
-      undecorate(card ? card.querySelector(".count") : (_b = (_a = title.parentElement) == null ? void 0 : _a.querySelector(".count")) != null ? _b : null);
+      card == null ? void 0 : card.classList.remove(CARD_CLASS);
       title.removeAttribute(MARK);
     });
     for (const keyword of KEYWORDS) {
@@ -1521,7 +1503,7 @@ logAutoRefresh: !!_initAllvalue.logAutoRefresh
         if (!title || title.hasAttribute(MARK)) continue;
         const card = title.closest(".message-item");
         if (!card || countOf(card) <= 0) continue;
-        decorate(card);
+        card.classList.add(CARD_CLASS);
         title.setAttribute(MARK, "");
       }
     }

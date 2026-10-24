@@ -1430,33 +1430,30 @@ function serve() {
 
     // ---------- 待处理提醒（v26.10.24-v1） ----------
     // 夹具 = #fake-sidebar，结构照真机复刻：留言=3 该提醒、预约=0 不该提醒、
-    // 我的消息=1 关键词不匹配。断言：只有留言那张卡的 .count 变胶囊、
-    // 红底白字 + 呼吸动画 + ping 层；归零后要能自动撤掉（坐席处理完就安静）。
+    // 我的消息=1 关键词不匹配。断言：只有留言那张**整卡**变浅红底 + 红边 +
+    // 呼吸动画（含首现 ::after 扩散描边）；归零后要能自动撤掉。
     const todoBadges = await page.evaluate(async () => {
         const cards = [...document.querySelectorAll('#fake-sidebar .message-item')];
         const cardOf = (kw) => cards.find((c) => (c.querySelector('.title')?.textContent || '').indexOf(kw) >= 0);
-        const hitOf = (kw) => {
-            const c = cardOf(kw);
-            const n = c ? c.querySelector('.count') : null;
-            return n ? n.classList.contains('znhd-todo-hit') : false;
-        };
-        const countEl = cardOf('待处理留言')?.querySelector('.count');
-        const cs = countEl ? getComputedStyle(countEl) : null;
+        const target = cardOf('待处理留言');
+        const cs = target ? getComputedStyle(target) : null;
+        const after = target ? getComputedStyle(target, '::after') : null;
         const snap = {
-            msgHit: hitOf('待处理留言'),
-            orderHit: hitOf('待处理预约'),
-            plainHit: hitOf('我的消息'),
-            redBg: !!cs && cs.backgroundColor === 'rgb(229, 72, 77)',
-            whiteText: !!cs && cs.color === 'rgb(255, 255, 255)',
-            pulse: !!cs && cs.animationName.indexOf('znhdTodoPulse') >= 0,
-            ping: !!cardOf('待处理留言')?.querySelector('.znhd-todo-ping'),
+            msgHit: !!target && target.classList.contains('znhd-todo-card'),
+            orderHit: cardOf('待处理预约')?.classList.contains('znhd-todo-card') || false,
+            plainHit: cardOf('我的消息')?.classList.contains('znhd-todo-card') || false,
+            redBg: !!cs && cs.backgroundColor === 'rgb(255, 241, 241)',
+            redBorder: !!cs && cs.borderTopColor === 'rgb(229, 72, 77)' && cs.borderTopWidth === '1px',
+            glow: !!cs && cs.animationName.indexOf('znhdTodoGlow') >= 0,
+            ping: !!after && after.animationName.indexOf('znhdTodoPing') >= 0,
             // 归零回收：把数字改成 0，等一个防抖周期后应自动撤掉
             clearedAfterZero: false,
         };
-        if (countEl) {
+        const countEl = cardOf('待处理留言')?.querySelector('.count');
+        if (countEl && target) {
             countEl.firstChild.nodeValue = '0';
             await new Promise((r) => setTimeout(r, 900));
-            snap.clearedAfterZero = !countEl.classList.contains('znhd-todo-hit');
+            snap.clearedAfterZero = !target.classList.contains('znhd-todo-card');
         }
         return snap;
     });
@@ -1466,8 +1463,8 @@ function serve() {
         !todoBadges.orderHit &&
         !todoBadges.plainHit &&
         todoBadges.redBg &&
-        todoBadges.whiteText &&
-        todoBadges.pulse &&
+        todoBadges.redBorder &&
+        todoBadges.glow &&
         todoBadges.ping &&
         todoBadges.clearedAfterZero;
 
