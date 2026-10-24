@@ -154,6 +154,7 @@ const VERSION = (GM_info.script.version || '?') as string;
             <ul class="menu m-2 w-36 shrink-0 rounded-[20px] bg-base-200 p-2 shadow-[0_2px_16px_rgba(0,0,0,0.08)]">
                 <li v-for="p in pages" :key="p.id">
                     <button
+                        class="rounded-xl"
                         :class="{ 'menu-active bg-neutral text-neutral-content': page === p.id }"
                         :data-znhd="'settings-nav-' + p.id"
                         @click="page = p.id">

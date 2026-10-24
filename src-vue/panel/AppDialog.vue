@@ -63,7 +63,8 @@ onMounted(() => {
                     <slot name="title">{{ props.title }}</slot>
                 </h3>
                 <form method="dialog">
-                    <button class="btn btn-ghost btn-sm btn-circle" aria-label="关闭">
+                    <!-- 不用 btn-sm：btn-circle 默认 40px 才够密集桌面 UI 的最小命中区（skill: hit area） -->
+                    <button class="btn btn-ghost btn-circle" aria-label="关闭">
                         <Icon name="close" :size="15" />
                     </button>
                 </form>

@@ -158,6 +158,14 @@ svg {
   --btn-bg: color-mix(in oklab, var(--btn-color) 15%, transparent);
 }
 
+/* ── 按压缩放反馈（make-interfaces-feel-better：scale on press，定值 0.96）──
+   给触感反馈；daisyUI .btn 自带 transition-property: …transform（0.2s，
+   可中断），所以必须写 transform: scale() 而不是独立 scale 属性——
+   后者不在过渡列表里，会变成无过渡的硬切。disabled 无 :active，天然免疫。 */
+.btn:active {
+  transform: scale(0.96);
+}
+
 /* ── toggle 选中态品牌蓝（v26.10.20-v7，用户指定 --znhd-brand；v7 起不分主题）──
    官方把选中胶囊背景画成 --color-primary（cupcake 下是粉），用户定版选中 = 品牌蓝；
    中间圆形滑块（官方 = --input-color，偏深）覆写为白色。 */

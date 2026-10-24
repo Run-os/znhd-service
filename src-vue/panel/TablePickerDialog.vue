@@ -123,14 +123,14 @@ function timeText(ms: number): string {
                 v-for="it in items"
                 :key="it.url"
                 type="button"
-                class="flex w-full items-start gap-2 rounded-lg px-2 py-1.5 text-left hover:bg-base-200"
+                class="flex w-full items-start gap-2 rounded-lg px-2 py-2 text-left hover:bg-base-200"
                 @click="pick(it)">
                 <Icon name="grid" :size="15" class="mt-0.5 shrink-0 opacity-60" />
                 <span class="min-w-0 flex-1">
                     <span class="block truncate text-[13px]">{{ it.title }}</span>
                     <span class="mt-0.5 flex items-center gap-2 text-[11px] text-base-content/50">
                         <span class="badge badge-ghost badge-xs">{{ typeText(it.type) }}</span>
-                        <span v-if="it.editedAt">{{ timeText(it.editedAt) }}</span>
+                        <span v-if="it.editedAt" class="tabular-nums">{{ timeText(it.editedAt) }}</span>
                     </span>
                 </span>
             </button>

@@ -258,7 +258,7 @@ onUnmounted(() => {
         </legend>
 
         <!-- 状态摘要：授权后只留 token 一行（条数进卡片徽章），不暴露 token/凭证 -->
-        <p v-if="status.authorized" class="pb-3 text-[12px] leading-5 text-base-content/60">
+        <p v-if="status.authorized" class="pb-3 text-[12px] leading-5 text-base-content/60 tabular-nums">
             token 到期：{{ expiresText }}（到期前会自动续期）
         </p>
         <p v-else class="pb-3 text-[12px] leading-5 text-base-content/60">
@@ -321,7 +321,7 @@ onUnmounted(() => {
                     <span class="text-[14px] font-semibold">规则表</span>
                     <span
                         v-if="status.authorized"
-                        class="badge badge-ghost badge-sm"
+                        class="badge badge-ghost badge-sm tabular-nums"
                         :title="'上次更新：' + fetchedText">已缓存 {{ status.ruleCount }} 条</span>
                     <span v-else class="badge badge-outline badge-sm">未授权</span>
                 </div>
@@ -345,7 +345,7 @@ onUnmounted(() => {
                     <span class="text-[14px] font-semibold">隐私信息表</span>
                     <span
                         v-if="privacyStatus.configured"
-                        class="badge badge-ghost badge-sm"
+                        class="badge badge-ghost badge-sm tabular-nums"
                         :title="'上次拉取：' + privacyFetchedText">已缓存 {{ privacyStatus.ruleCount }} 条</span>
                     <span v-else class="badge badge-outline badge-sm">未配置</span>
                 </div>
