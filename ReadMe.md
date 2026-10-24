@@ -2,7 +2,7 @@
 
 [![zread](https://img.shields.io/badge/Ask_Zread-_.svg?style=flat-square&color=00b0aa&labelColor=000000&logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB3aWR0aD0iMTYiIGhlaWdodD0iMTYiIHZpZXdCb3g9IjAgMCAxNiAxNiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTQuOTYxNTYgMS42MDAxSDIuMjQxNTZDMS44ODgxIDEuNjAwMSAxLjYwMTU2IDEuODg2NjQgMS42MDE1NiAyLjI0MDFWNC45NjAxQzEuNjAxNTYgNS4zMTM1NiAxLjg4ODEgNS42MDAxIDIuMjQxNTYgNS42MDAxSDQuOTYxNTZDNS4zMTUwMiA1LjYwMDEgNS42MDE1NiA1LjMxMzU2IDUuNjAxNTYgNC45NjAxVjIuMjQwMUM1LjYwMTU2IDEuODg2NjQgNS4zMTUwMiAxLjYwMDEgNC45NjE1NiAxLjYwMDFaIiBmaWxsPSIjZmZmIi8%2BCjxwYXRoIGQ9Ik00Ljk2MTU2IDEwLjM5OTlIMi4yNDE1NkMxLjg4ODEgMTAuMzk5OSAxLjYwMTU2IDEwLjY4NjQgMS42MDE1NiAxMS4wMzk5VjEzLjc1OTlDMS42MDE1NiAxNC4xMTM0IDEuODg4MSAxNC4zOTk5IDIuMjQxNTYgMTQuMzk5OUg0Ljk2MTU2QzUuMzE1MDIgMTQuMzk5OSA1LjYwMTU2IDE0LjExMzQgNS42MDE1NiAxMy43NTk5VjExLjAzOTlDNS42MDE1NiAxMC42ODY0IDUuMzE1MDIgMTAuMzk5OSA0Ljk2MTU2IDEwLjM5OTlaIiBmaWxsPSIjZmZmIi8%2BCjxwYXRoIGQ9Ik0xMy43NTg0IDEuNjAwMUgxMS4wMzg0QzEwLjY4NSAxLjYwMDEgMTAuMzk4NCAxLjg4NjY0IDEwLjM5ODQgMi4yNDAxVjQuOTYwMUMxMC4zOTg0IDUuMzEzNTYgMTAuNjg1IDUuNjAwMSAxMS4wMzg0IDUuNjAwMUgxMy43NTg0QzE0LjExMTkgNS42MDAxIDE0LjM5ODQgNS4zMTM1NiAxNC4zOTg0IDQuOTYwMVYyLjI0MDFDMTQuMzk4NCAxLjg4NjY0IDE0LjExMTkgMS42MDAxIDEzLjc1ODQgMS42MDAxWiIgZmlsbD0iI2ZmZiIvPgo8cGF0aCBkPSJNNCAxMkwxMiA0TDQgMTJaIiBmaWxsPSIjZmZmIi8%2BCjxwYXRoIGQ9Ik00IDEyTDEyIDQiIHN0cm9rZT0iI2ZmZiIgc3Ryb2tlLXdpZHRoPSIxLjUiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPgo8L3N2Zz4K&logoColor=ffffff)](https://zread.ai/Run-os/znhd-service)
 
-一个油猴用户脚本（UserScript），用于实时监控[征纳互动平台](https://znhd.hunan.chinatax.gov.cn:8443/)的等待人数与在线状态：有人等待或掉线时自动语音播报，配套常用语快填、网页图片嗅探、手机 ↔ 电脑互传（传输助手），帮助坐席及时响应。
+一个油猴用户脚本（UserScript），用于实时监控[征纳互动平台](https://znhd.hunan.chinatax.gov.cn:8443/)的等待人数与在线状态：有人等待或掉线时自动语音播报，配套常用语快填、飞书快捷短语、待办提醒、网页图片嗅探、手机 ↔ 电脑互传（传输助手），帮助坐席及时响应。
 
 ## 功能一览
 
@@ -10,7 +10,8 @@
 |---|---|---|
 | **监控与语音播报** | 每 3 秒检测等待人数，有人等待 / 掉线自动语音提醒；仅监控时间段内运行 | [docs/monitor.md](docs/monitor.md) |
 | **常用语** | 读取页面右侧栏「常用话术」（双 tab + 搜索），点卡片一键复制并填入聊天编辑器（TinyMCE 走 JS API，详见 [docs/tinymce-send-doc.md](docs/tinymce-send-doc.md)） | [docs/phrases.md](docs/phrases.md) |
-| **常用语快捷按钮** | 按当前会话的对话文本匹配你飞书多维表格里的规则，输入框**上方**浮出对应按钮，点一下即把输入框内容整体替换为预设回复。授权一次（设备授权流，无需自建应用/后端），对话文本只在本机匹配 | [docs/quick-reply.md](docs/quick-reply.md) |
+| **飞书快捷短语** | 按当前会话的对话内容匹配你飞书多维表格里的规则，输入区**上方**浮出对应按钮，点一下即把输入框内容整体替换为预设回复。授权一次（设备授权流，无需自建应用/后端），对话文本只在本机匹配 | [使用手册](docs/quick-reply-guide.md) · [技术说明](docs/quick-reply.md) |
+| **待办提醒** | 存在「待处理留言」或「待处理预约」时，对应卡片变红色呼吸提醒（仅数量 > 0 时），归零自动撤 | — |
 | **图片嗅探** | 一键扫描当前网页图片，按会话分组，预览 / 下载 / A4 打印 | [docs/sniffer.md](docs/sniffer.md) |
 | **传输助手** | 手机 ↔ 电脑互传图片 / 文件 / 文本，收到自动弹窗，图片一键复制进剪贴板 | [docs/transfer.md](docs/transfer.md) |
 | **运行日志 / 更新日志** | 弹窗查看运行日志（四色分级）；设置内查看更新日志 | — |
