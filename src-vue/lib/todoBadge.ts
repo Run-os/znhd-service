@@ -36,9 +36,12 @@ const CARD_CLASS = 'znhd-todo-card';
 const KEYWORDS = ['待处理留言', '待处理预约'];
 
 /**
- * 卡片呼吸：1.4s 一轮光晕扩散。
+ * 卡片呼吸：一轮光晕扩散 3.2s（≈19 次/分，贴近静息呼吸节奏）。
  * 用 box-shadow 而不是整卡 opacity/明暗：卡片里有文字和数字，整体闪会晃眼；
  * 光晕只在卡片外围起伏，读起来像「这有个红灯」。
+ * ⚠️ 呼吸周期别再加快（v26.10.24-v5）：1.4s 被使用者判为「太快」——一天几十次
+ *   高频起伏反而成为干扰源，慢到接近呼吸才叫「安静地提醒」。要调整只在
+ *   2.6~4s 之间挑，别再回到 1.x s。
  * ⚠️ 站点 scoped 样式（`.message-item[data-v-xxx]`）特异性高，覆盖必须 !important。
  * ⚠️ 底色/描边强度不要再调淡（v26.10.24-v3）：v2 的 #fff1f1 + 1px 边在实机
  *   175% 缩放下几乎与素白卡片同色，使用者「没看出来」。现定版 #ffe6e6 + 2px
@@ -50,7 +53,7 @@ const CSS = [
     '@keyframes znhdTodoPing{0%{opacity:.85;transform:scale(1)}100%{opacity:0;transform:scale(1.12)}}',
     '.' + CARD_CLASS + '{position:relative;background-color:#ffe6e6!important;' +
         'border:2px solid #e5484d!important;border-radius:8px!important;' +
-        'animation:znhdTodoGlow 1.4s ease-in-out infinite!important;}',
+        'animation:znhdTodoGlow 3.2s ease-in-out infinite!important;}',
     // 首次出现的扩散描边：伪元素跑一次就消失（fill both 停在 opacity:0），
     // 不额外加 DOM，也不与卡片的呼吸动画抢 box-shadow 属性。
     '.' + CARD_CLASS + '::after{content:"";position:absolute;inset:-3px;border-radius:11px;' +

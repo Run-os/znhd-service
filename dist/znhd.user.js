@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         征纳互动人数和在线监控v2
 // @namespace    https://scriptcat.org/
-// @version      26.10.24-v4
+// @version      26.10.24-v5
 // @author       runos
 // @description  实时监控征纳互动等待人数和在线状态，支持语音播报、自定义常用语
 // @license      MIT
@@ -1468,7 +1468,7 @@ logAutoRefresh: !!_initAllvalue.logAutoRefresh
   const CSS$1 = [
     "@keyframes znhdTodoGlow{0%,100%{box-shadow:0 0 0 0 rgba(229,72,77,.65)}50%{box-shadow:0 0 0 7px rgba(229,72,77,0)}}",
     "@keyframes znhdTodoPing{0%{opacity:.85;transform:scale(1)}100%{opacity:0;transform:scale(1.12)}}",
-    "." + CARD_CLASS + "{position:relative;background-color:#ffe6e6!important;border:2px solid #e5484d!important;border-radius:8px!important;animation:znhdTodoGlow 1.4s ease-in-out infinite!important;}",
+    "." + CARD_CLASS + "{position:relative;background-color:#ffe6e6!important;border:2px solid #e5484d!important;border-radius:8px!important;animation:znhdTodoGlow 3.2s ease-in-out infinite!important;}",
 
 "." + CARD_CLASS + '::after{content:"";position:absolute;inset:-3px;border-radius:11px;border:2px solid #e5484d;pointer-events:none;animation:znhdTodoPing 1.2s cubic-bezier(0,0,.2,1) 1 both;}'
   ].join("\n");
