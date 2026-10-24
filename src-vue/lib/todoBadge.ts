@@ -40,17 +40,20 @@ const KEYWORDS = ['待处理留言', '待处理预约'];
  * 用 box-shadow 而不是整卡 opacity/明暗：卡片里有文字和数字，整体闪会晃眼；
  * 光晕只在卡片外围起伏，读起来像「这有个红灯」。
  * ⚠️ 站点 scoped 样式（`.message-item[data-v-xxx]`）特异性高，覆盖必须 !important。
+ * ⚠️ 底色/描边强度不要再调淡（v26.10.24-v3）：v2 的 #fff1f1 + 1px 边在实机
+ *   175% 缩放下几乎与素白卡片同色，使用者「没看出来」。现定版 #ffe6e6 + 2px
+ *   边 + 7px 光晕——旁边未命中的卡片保持素白，一眼能分开。
  */
 const CSS = [
-    '@keyframes znhdTodoGlow{0%,100%{box-shadow:0 0 0 0 rgba(229,72,77,.55)}' +
-        '50%{box-shadow:0 0 0 5px rgba(229,72,77,0)}}',
+    '@keyframes znhdTodoGlow{0%,100%{box-shadow:0 0 0 0 rgba(229,72,77,.65)}' +
+        '50%{box-shadow:0 0 0 7px rgba(229,72,77,0)}}',
     '@keyframes znhdTodoPing{0%{opacity:.85;transform:scale(1)}100%{opacity:0;transform:scale(1.12)}}',
-    '.' + CARD_CLASS + '{position:relative;background-color:#fff1f1!important;' +
-        'border:1px solid #e5484d!important;border-radius:8px!important;' +
+    '.' + CARD_CLASS + '{position:relative;background-color:#ffe6e6!important;' +
+        'border:2px solid #e5484d!important;border-radius:8px!important;' +
         'animation:znhdTodoGlow 1.4s ease-in-out infinite!important;}',
     // 首次出现的扩散描边：伪元素跑一次就消失（fill both 停在 opacity:0），
     // 不额外加 DOM，也不与卡片的呼吸动画抢 box-shadow 属性。
-    '.' + CARD_CLASS + '::after{content:"";position:absolute;inset:-2px;border-radius:10px;' +
+    '.' + CARD_CLASS + '::after{content:"";position:absolute;inset:-3px;border-radius:11px;' +
         'border:2px solid #e5484d;pointer-events:none;' +
         'animation:znhdTodoPing 1.2s cubic-bezier(0,0,.2,1) 1 both;}',
 ].join('\n');
@@ -61,10 +64,14 @@ let scanTimer: number | null = null;
 
 function ensureStyle(): void {
     if (document.getElementById(STYLE_ID)) return;
+    // ⚠️ head 兜底到 documentElement：脚本是 @run-at document-end，正常有 head，
+    // 但站点若在某个时刻重建 head（SPA 换壳），这里不至于抛错把整条启动链带下去。
+    const host = document.head || document.documentElement;
+    if (!host) return;
     const style = document.createElement('style');
     style.id = STYLE_ID;
     style.textContent = CSS;
-    document.head.appendChild(style);
+    host.appendChild(style);
 }
 
 function countOf(card: Element | null): number {
@@ -91,9 +98,11 @@ function scan(): void {
     });
 
     // ② 再补新命中
+    const root = document.body || document.documentElement;
+    if (!root) return;
     for (const keyword of KEYWORDS) {
         const xpath = '//div[contains(@class,"title")][contains(., "' + keyword + '")]';
-        const result = document.evaluate(xpath, document.body, null, XPathResult.UNORDERED_NODE_SNAPSHOT_TYPE, null);
+        const result = document.evaluate(xpath, root, null, XPathResult.UNORDERED_NODE_SNAPSHOT_TYPE, null);
         for (let i = 0; i < result.snapshotLength; i++) {
             const title = result.snapshotItem(i) as Element | null;
             if (!title || title.hasAttribute(MARK)) continue;
@@ -120,10 +129,19 @@ function scheduleScan(): void {
 
 export function startTodoBadge(): void {
     if (started) return;
+    // 没 root 就先不置 started，留给调用方下轮重试（置了位就再也起不来了）
+    const root = document.body || document.documentElement;
+    if (!root) return;
     started = true;
-    scan();
+    // 首扫自己吞异常：观察器装不上/首扫抛错也只影响本模块，不能连累同批启动的
+    // 快捷短语等（v26.10.24-v3 加固，见 app.ts 的 boot()）。
+    try {
+        scan();
+    } catch (e) {
+        console.warn('[待办提醒] 首扫失败:', e);
+    }
     observer = new MutationObserver(scheduleScan);
-    observer.observe(document.body, { childList: true, subtree: true, characterData: true });
+    observer.observe(root, { childList: true, subtree: true, characterData: true });
 }
 
 export function stopTodoBadge(): void {

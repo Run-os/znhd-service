@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         征纳互动人数和在线监控v2
 // @namespace    https://scriptcat.org/
-// @version      26.10.24-v2
+// @version      26.10.24-v3
 // @author       runos
 // @description  实时监控征纳互动等待人数和在线状态，支持语音播报、自定义常用语
 // @license      MIT
@@ -1466,21 +1466,23 @@ logAutoRefresh: !!_initAllvalue.logAutoRefresh
   const CARD_CLASS = "znhd-todo-card";
   const KEYWORDS = ["待处理留言", "待处理预约"];
   const CSS$1 = [
-    "@keyframes znhdTodoGlow{0%,100%{box-shadow:0 0 0 0 rgba(229,72,77,.55)}50%{box-shadow:0 0 0 5px rgba(229,72,77,0)}}",
+    "@keyframes znhdTodoGlow{0%,100%{box-shadow:0 0 0 0 rgba(229,72,77,.65)}50%{box-shadow:0 0 0 7px rgba(229,72,77,0)}}",
     "@keyframes znhdTodoPing{0%{opacity:.85;transform:scale(1)}100%{opacity:0;transform:scale(1.12)}}",
-    "." + CARD_CLASS + "{position:relative;background-color:#fff1f1!important;border:1px solid #e5484d!important;border-radius:8px!important;animation:znhdTodoGlow 1.4s ease-in-out infinite!important;}",
+    "." + CARD_CLASS + "{position:relative;background-color:#ffe6e6!important;border:2px solid #e5484d!important;border-radius:8px!important;animation:znhdTodoGlow 1.4s ease-in-out infinite!important;}",
 
-"." + CARD_CLASS + '::after{content:"";position:absolute;inset:-2px;border-radius:10px;border:2px solid #e5484d;pointer-events:none;animation:znhdTodoPing 1.2s cubic-bezier(0,0,.2,1) 1 both;}'
+"." + CARD_CLASS + '::after{content:"";position:absolute;inset:-3px;border-radius:11px;border:2px solid #e5484d;pointer-events:none;animation:znhdTodoPing 1.2s cubic-bezier(0,0,.2,1) 1 both;}'
   ].join("\n");
   let started = false;
   let observer = null;
   let scanTimer = null;
   function ensureStyle() {
     if (document.getElementById(STYLE_ID)) return;
+    const host = document.head || document.documentElement;
+    if (!host) return;
     const style = document.createElement("style");
     style.id = STYLE_ID;
     style.textContent = CSS$1;
-    document.head.appendChild(style);
+    host.appendChild(style);
   }
   function countOf(card) {
     const el = card == null ? void 0 : card.querySelector(".count");
@@ -1495,9 +1497,11 @@ logAutoRefresh: !!_initAllvalue.logAutoRefresh
       card == null ? void 0 : card.classList.remove(CARD_CLASS);
       title.removeAttribute(MARK);
     });
+    const root = document.body || document.documentElement;
+    if (!root) return;
     for (const keyword of KEYWORDS) {
       const xpath = '//div[contains(@class,"title")][contains(., "' + keyword + '")]';
-      const result = document.evaluate(xpath, document.body, null, XPathResult.UNORDERED_NODE_SNAPSHOT_TYPE, null);
+      const result = document.evaluate(xpath, root, null, XPathResult.UNORDERED_NODE_SNAPSHOT_TYPE, null);
       for (let i = 0; i < result.snapshotLength; i++) {
         const title = result.snapshotItem(i);
         if (!title || title.hasAttribute(MARK)) continue;
@@ -1521,10 +1525,16 @@ logAutoRefresh: !!_initAllvalue.logAutoRefresh
   }
   function startTodoBadge() {
     if (started) return;
+    const root = document.body || document.documentElement;
+    if (!root) return;
     started = true;
-    scan();
+    try {
+      scan();
+    } catch (e) {
+      console.warn("[待办提醒] 首扫失败:", e);
+    }
     observer = new MutationObserver(scheduleScan);
-    observer.observe(document.body, { childList: true, subtree: true, characterData: true });
+    observer.observe(root, { childList: true, subtree: true, characterData: true });
   }
   function stopTodoBadge() {
     if (!started) return;
@@ -8693,23 +8703,28 @@ syntax: ((_b = pick("syntax")) != null ? _b : "*").replace(/^["']+|["']+$/g, "")
     hits.value = [];
     unmountHost();
   }
+  function boot(name, fn) {
+    try {
+      fn();
+    } catch (error) {
+      console.error("[监控] " + name + " 启动失败:", error);
+      addLog(name + " 启动失败: " + ((error == null ? void 0 : error.message) || String(error)), "error");
+    }
+  }
   const app = () => {
     startPerfCollect();
     try {
       setPreMeasureEnabled(loadAllvalue().sniffPreMeasure !== false);
     } catch {
     }
-    try {
+    boot("面板挂载", () => {
       mountPanel();
       watchPanelHost();
-      startNavBarAutoMount();
-      startImageContextMenu();
-      startTodoBadge();
-      startQuickReplyBar();
-    } catch (error) {
-      console.error("[监控] 面板挂载失败:", error);
-      addLog("面板挂载失败: " + (error == null ? void 0 : error.message), "error", true);
-    }
+    });
+    boot("导航栏注入", startNavBarAutoMount);
+    boot("右键打印", startImageContextMenu);
+    boot("待办提醒", startTodoBadge);
+    boot("快捷短语", startQuickReplyBar);
     window.addEventListener("beforeunload", () => {
       flushSaveAllvalue();
       stopMonitoring();

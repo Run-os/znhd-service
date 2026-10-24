@@ -93,13 +93,22 @@
 - 组内按消息时间倒序、无时间殿后（判据单一来源 `timeOfItem`）；旧版用 `boxShadow` 双层铺红圈的做法**已废弃**，现在只标红文件名。
 - **站点图片右键菜单注入【打印】**（`src-vue/lib/imageContextMenu.ts`，v26.10.22-v6）：菜单是站点自有 Vue 组件（`ImageItem` + v-contextmenu，**无注册 API**），靠 DOM 注入 —— 按文本识别图片菜单（`li > .menu-text` 含「转存到内网」且 ≥3 项；**识别锚点别依赖 Vue**，沙箱里 `__vue__` 得走 unsafeWindow）、克隆首个原生 `li` 的 `data-v-*` 作用域属性（**别写死 hash**，站点换版会变）、MutationObserver 防抖兜新消息的新菜单实例。点击后**必须自己收菜单**：走 unsafeWindow 侧 `hideAll()`（`visible` 标记才同步；注入项不是 VContextmenuItem，库不会自动收；无 Vue 时降级直接置 display:none，仅冒烟夹具路径）。打印地址用点击瞬间的 `img.currentSrc`（站点图是带 sign 的签名 URL，**别缓存**）。**hover 底色是 JS 切 class 不是 CSS `:hover`**（v26.10.23-v6 修复：v-contextmenu 库靠 mouseenter/mouseleave 给 li 挂 `v-contextmenu-item--hover`，站点蓝色底挂在这个 class 上；注入的 li 必须**自己绑 mouseenter/mouseleave 补切换**，否则悬浮不变色）。冒烟：`#fake-img-menu` 夹具 + `printMenuOk`（注入/同构/作用域继承/在尾部/hover class 切换）；点击路径真机验过（`vue-hideAll`）。
 
-### 待处理留言 / 待处理预约 红色提醒（v26.10.24-v1）
+### 待处理留言 / 待处理预约 红色提醒（v26.10.24-v1，v3 定版）
 
 - `src-vue/lib/todoBadge.ts`（`app.ts` 里 `startTodoBadge()`）。**真机 DOM（2026-10-24 本地 Edge 实测）**：工作台左侧待办卡片 = `.message-item > .count`（数字，零也占位）+ `.title`（「待处理留言」/「待处理预约」）。
-- **最终形态（v26.10.24-v2）= 整张 `.message-item` 卡片**：浅红底 `#fff1f1` + 1px 红边（`#e5484d`）+ 圆角 + 外圈光晕呼吸（`box-shadow` 扩散 1.4s），首现叠 `::after` 扩散描边（一次即消失）。**只在 `count > 0` 时加，归零自动撤**。
+- **最终形态（v26.10.24-v2 起，v3 加强）= 整张 `.message-item` 卡片**：底色 `#ffe6e6` + 2px 红边（`#e5484d`）+ 圆角 + 外圈光晕呼吸（`box-shadow` 0→7px / 1.4s），首现叠 `::after` 扩散描边（`inset:-3px`，一次即消失）。**只在 `count > 0` 时加，归零自动撤**。
+- ⚠️ **对比度不要再调淡**：v2 是 `#fff1f1` + 1px 边，实机 175% 缩放下与素白卡片几乎同色，使用者直接说「没看到」。同屏未命中的卡片（如「待处理预约 0」）必须保持素白，靠这个反差让人一眼分开。
 - ⚠️ 形态被真机否过两次，别再走回头路：**v1 标题旁加「待」字 badge**（与卡片原有红数字重复、且 0 也在闪）；**v2 只把 `.count` 数字胶囊化**（只改一个小点，整卡还是灰的，不够显眼）。
 - 注入的是**站点 light DOM**：站点没加载 Tailwind ⇒ `animate-pulse`/`animate-ping` 类**不生效**，必须自带 `<style>` 定义 keyframes（前缀 `znhdTodo` 防冲突）；站点 scoped 样式（`.count[data-v-xxx]`）特异性高，胶囊样式要 `!important` 才压得住。
-- 扫描：`document.evaluate` XPath 找 `div.title` 含关键词（原生实现，比 JS 全页遍历便宜）+ MutationObserver 300ms 防抖，**`characterData` 必须听**（站点 Vue 就地改数字文本，不重建节点）。冒烟 `todoBadgesOk`：3 命中 / 0 不命中 / 关键词外不命中 / 红底白字 / 呼吸 / ping / 改 0 后 900ms 内撤掉。
+- 扫描：`document.evaluate` XPath 找 `div.title` 含关键词（原生实现，比 JS 全页遍历便宜）+ MutationObserver 300ms 防抖，**`characterData` 必须听**（站点 Vue 就地改数字文本，不重建节点）。冒烟 `todoBadgesOk`：3 命中 / 0 不命中 / 关键词外不命中 / 红底 / 红边 / 呼吸 / ping / 改 0 后 900ms 内撤掉。
+- ⚠️ **「真机看不到红卡」的第一诊断动作**（v26.10.24-v3 踩过，别再绕）：在页面里查两个东西 ——
+  `document.getElementById('__znhd_todo_badge_style__')` 与 `[data-znhd-todo]`。
+  **两者都不存在 = 这份页面实例根本没跑到该模块**（脚本更新后未刷新 / 启动被截断），
+  刷新页面即恢复，**不要再去查 XPath 或颜色**。只有「标记在、颜色不对」才是样式问题。
+  当时为此白跑了一轮选择器排查，实际手动执行同一套逻辑在真机上立刻生效。
+- 启动链（v26.10.24-v3）：`app.ts` 的 6 项启动拆成 `boot(name, fn)` 各自独立 try。
+  以前一个大 try 包住全部，前一项抛错会**静默**关掉后面的待办提醒和快捷短语，
+  现象是「面板好好的，新功能就是不出现」——所以新加模块也必须走 `boot()`。
 
 ## 8. 常用语（本页话术抓取）
 

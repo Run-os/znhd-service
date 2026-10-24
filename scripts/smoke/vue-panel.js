@@ -1442,8 +1442,8 @@ function serve() {
             msgHit: !!target && target.classList.contains('znhd-todo-card'),
             orderHit: cardOf('待处理预约')?.classList.contains('znhd-todo-card') || false,
             plainHit: cardOf('我的消息')?.classList.contains('znhd-todo-card') || false,
-            redBg: !!cs && cs.backgroundColor === 'rgb(255, 241, 241)',
-            redBorder: !!cs && cs.borderTopColor === 'rgb(229, 72, 77)' && cs.borderTopWidth === '1px',
+            redBg: !!cs && cs.backgroundColor === 'rgb(255, 230, 230)',
+            redBorder: !!cs && cs.borderTopColor === 'rgb(229, 72, 77)' && cs.borderTopWidth === '2px',
             glow: !!cs && cs.animationName.indexOf('znhdTodoGlow') >= 0,
             ping: !!after && after.animationName.indexOf('znhdTodoPing') >= 0,
             // 归零回收：把数字改成 0，等一个防抖周期后应自动撤掉
