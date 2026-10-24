@@ -242,40 +242,39 @@ onUnmounted(() => {
 
 <template>
     <fieldset class="fieldset" data-znhd="feishu-auth">
-        <legend class="fieldset-legend flex w-full items-center justify-between gap-3">
+        <legend class="fieldset-legend flex w-full items-center justify-between gap-3 text-[15px] font-semibold">
             <span>
                 飞书快捷回复（输出框上方的快捷短语，<a
-                    class="link link-hover text-primary"
+                    class="link link-primary underline underline-offset-2"
                     :href="EXAMPLE_URL"
                     target="_blank"
                     rel="noreferrer">查看案例</a>）
             </span>
-            <span v-if="status.authorized" class="flex items-center gap-1 text-[12px] text-success">
+            <span v-if="status.authorized" class="flex items-center gap-1 text-[12px] font-normal text-success">
                 <Icon name="check" :size="13" />
                 已授权
             </span>
-            <span v-else class="text-[12px] text-base-content/50">未授权</span>
+            <span v-else class="text-[12px] font-normal text-base-content/50">未授权</span>
         </legend>
 
-        <!-- 状态摘要：只显示与使用者有关的三个数，不暴露 token/凭证 -->
-        <p v-if="status.authorized" class="mb-3 text-[12px] leading-5 text-base-content/60">
-            规则 {{ status.ruleCount }} 条，上次更新：{{ fetchedText }}<br />
+        <!-- 状态摘要：授权后只留 token 一行（条数进卡片徽章），不暴露 token/凭证 -->
+        <p v-if="status.authorized" class="mb-4 text-[12px] leading-5 text-base-content/60">
             token 到期：{{ expiresText }}（到期前会自动续期）
         </p>
-        <p v-else class="mb-3 text-[12px] leading-5 text-base-content/60">
+        <p v-else class="mb-4 text-[12px] leading-5 text-base-content/60">
             授权后脚本会读取你飞书多维表格里的规则表，按当前对话内容在输出框上方显示快捷短语按钮。
             对话文本只在本机匹配，不会上传到任何地方。
         </p>
 
         <!-- 授权进行中：授权码大字展示 + 「打开授权页」按钮（不再打印长链接原文） -->
-        <div v-if="busy && challenge" class="mb-3 rounded-box bg-base-200 p-3">
+        <div v-if="busy && challenge" class="mb-4 rounded-box bg-base-200 p-3">
             <p class="mb-2 text-[12px] text-base-content/70">{{ phaseText }}</p>
             <p class="mb-2 text-[13px]">
                 在飞书里确认授权码：<span class="font-mono text-[15px] font-semibold">{{ challenge.userCode }}</span>
             </p>
             <div class="flex items-center gap-3">
                 <a
-                    class="btn btn-primary btn-sm"
+                    class="btn btn-primary btn-sm rounded-full"
                     :href="challenge.verificationUriComplete"
                     target="_blank"
                     rel="noreferrer">
@@ -308,71 +307,76 @@ onUnmounted(() => {
             <p>③ 表选对没有 —— 点「从飞书选择表格」重新选一张（确认选的是要用的那张表）。</p>
         </div>
 
-        <!-- 规则表（v26.10.23-v2 不再写死；v26.10.25-v2 链接输入框整个删除 ——
-             长链接没有阅读价值，配置统一走「从飞书选择表格」，选完即保存）。 -->
-        <div class="mb-3">
-            <p class="mb-1 text-[12px] text-base-content/60">
-                规则表：授权后点「从飞书选择表格」选取多维表格（列约定见案例表）
-            </p>
-            <p v-if="status.authorized" class="text-[12px] leading-5 text-base-content/60">
-                已缓存 {{ status.ruleCount }} 条，上次更新：{{ fetchedText }}
-            </p>
-            <div v-if="status.authorized" class="mt-2 flex flex-wrap items-center gap-2">
+        <!-- 双卡片（v26.10.25-v3 参考图定版）：规则表 / 隐私信息表并排，徽章显条数、
+             全宽描边按钮选表。链接输入框 v26.10.25-v2 已删，配置唯一入口 = 选表。 -->
+        <div class="mb-4 grid grid-cols-2 gap-4">
+            <div class="rounded-2xl border border-base-300 bg-base-100 p-4 shadow-sm">
+                <div class="mb-3 flex items-center gap-2">
+                    <span class="text-[14px] font-semibold">规则表</span>
+                    <span
+                        v-if="status.authorized"
+                        class="badge badge-ghost badge-sm"
+                        :title="'上次更新：' + fetchedText">已缓存 {{ status.ruleCount }} 条</span>
+                    <span v-else class="badge badge-outline badge-sm">未授权</span>
+                </div>
                 <button
-                    v-if="status.searchScopeOk"
-                    class="btn btn-outline btn-sm"
+                    v-if="status.authorized && status.searchScopeOk"
+                    class="btn btn-outline btn-sm w-full rounded-full"
                     :disabled="urlBusy"
                     data-znhd="quick-reply-table-pick"
                     @click="openPicker('main')">
                     <Icon name="search" :size="13" />
                     从飞书选择表格
                 </button>
-                <p v-else class="text-[11px] leading-4 text-warning">
-                    当前授权不含「搜索云文档」权限，点下方「重新授权」后就能直接选表。
+                <p v-else-if="status.authorized" class="text-[11px] leading-4 text-warning">
+                    当前授权不含「搜索云文档」权限，点下方「重新授权」后就能选表。
                 </p>
+                <p v-else class="text-[11px] leading-4 text-base-content/50">授权后可从飞书直接选表。</p>
             </div>
-        </div>
 
-        <!-- 隐私信息表格（v26.10.25-v1）：独立第二张表，列约定同主表（标题/内容），
-             但不参与标签匹配 —— 全部条目常显在快捷短语栏上方的「隐私信息」栏，当速查表用。
-             v26.10.25-v2：链接输入框删除，配置同样只走「从飞书选择表格」。 -->
-        <div class="mb-3 border-t border-base-300 pt-3" data-znhd="privacy-table-block">
-            <p class="mb-1 text-[12px] text-base-content/60">
-                隐私信息表格（可选；办公地点 / 办公电话等速查条目，全部常显不参与匹配）
-            </p>
-            <p v-if="privacyStatus.configured" class="text-[12px] leading-5 text-base-content/60">
-                已缓存 {{ privacyStatus.ruleCount }} 条，上次拉取：{{ privacyFetchedText }}
-            </p>
-            <div v-if="status.authorized && status.searchScopeOk" class="mt-2">
+            <div class="rounded-2xl border border-base-300 bg-base-100 p-4 shadow-sm" data-znhd="privacy-table-block">
+                <div class="mb-3 flex items-center gap-2">
+                    <span class="text-[14px] font-semibold">隐私信息表</span>
+                    <span
+                        v-if="privacyStatus.configured"
+                        class="badge badge-ghost badge-sm"
+                        :title="'上次拉取：' + privacyFetchedText">已缓存 {{ privacyStatus.ruleCount }} 条</span>
+                    <span v-else class="badge badge-outline badge-sm">未配置</span>
+                </div>
                 <button
-                    class="btn btn-outline btn-sm"
+                    v-if="status.authorized && status.searchScopeOk"
+                    class="btn btn-outline btn-sm w-full rounded-full"
                     :disabled="privacyUrlBusy"
                     data-znhd="privacy-table-pick"
                     @click="openPicker('privacy')">
                     <Icon name="search" :size="13" />
                     从飞书选择表格
                 </button>
+                <p v-else-if="status.authorized" class="text-[11px] leading-4 text-warning">
+                    授权不含搜索权限，重新授权后可配这张可选的速查表。
+                </p>
+                <p v-else class="text-[11px] leading-4 text-base-content/50">可选；授权后从飞书选表。</p>
             </div>
         </div>
 
         <div class="flex flex-wrap items-center gap-2">
-            <button v-if="!status.authorized" class="btn btn-primary btn-sm" :disabled="busy" @click="startAuth">
+            <button v-if="!status.authorized" class="btn btn-primary btn-sm rounded-full" :disabled="busy" @click="startAuth">
                 {{ busy ? '等待确认…' : '授权飞书账号' }}
             </button>
             <template v-else>
-                <button class="btn btn-outline btn-sm" :disabled="busy" @click="reloadRules">立即刷新规则</button>
-                <button class="btn btn-primary btn-sm" :disabled="busy" @click="startAuth">重新授权</button>
-                <button class="btn btn-error btn-sm" :disabled="busy" @click="doRevoke">解除授权</button>
+                <button class="btn btn-outline btn-sm rounded-full" :disabled="busy" @click="reloadRules">立即刷新规则</button>
+                <button class="btn btn-primary btn-sm rounded-full" :disabled="busy" @click="startAuth">重新授权</button>
+                <button class="btn btn-error btn-sm rounded-full" :disabled="busy" @click="doRevoke">解除授权</button>
             </template>
             <!-- v26.10.23-v3：第 1 步用错账号时的回退出路（清凭证后重新授权 = 重新注册） -->
             <button
                 v-if="status.hasCredential"
-                class="btn btn-outline btn-warning btn-sm"
+                class="btn btn-outline btn-warning btn-sm rounded-full"
                 :disabled="busy"
                 @click="doForget">
                 作废并重新注册
             </button>
-            <button v-if="busy" class="btn btn-ghost btn-sm" @click="cancel">取消并返回</button>
+            <button v-if="busy" class="btn btn-ghost btn-sm rounded-full" @click="cancel">取消并返回</button>
         </div>
 
         <!-- 选表弹窗：原生 showModal() 进 top layer，天然盖在本设置弹窗之上。

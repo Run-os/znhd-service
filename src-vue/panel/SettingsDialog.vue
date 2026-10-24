@@ -19,7 +19,8 @@ export interface WorkingHours {
  * 设置弹窗（v26.10.25-v1 改版：左右两栏）。
  *
  * 布局：弹窗**固定 680×560**（AppDialog 的 height 参数：内容区内部滚动，切页不改变窗口大小），
- * 左侧固定侧边栏（daisyUI 5 `menu`，选中类 `menu-active`），
+ * 左侧固定侧边栏（daisyUI 5 `menu`，v26.10.25-v3 参考图定版：卡片拉通全高、
+ * 选中项黑色胶囊 = `menu-active bg-neutral text-neutral-content`），
  * 右侧内容区随选择切换，**默认选中「飞书快捷短语」**：
  *   · 飞书快捷短语 = `<FeishuAuthPanel />`（含隐私信息表格区块）；
  *   · 传输助手 = 中继地址 / 自动打开开关 / 清空记录（v26.10.25-v2 自传输窗口迁入）；
@@ -139,18 +140,20 @@ const VERSION = (GM_info.script.version || '?') as string;
         <template #title>
             <span>设置菜单</span>
             <span class="ml-auto flex items-center gap-1.5">
-                <a class="btn btn-outline btn-sm" :href="HOMEPAGE_URL" target="_blank" rel="noreferrer">脚本主页</a>
-                <a class="btn btn-outline btn-sm" :href="UPDATE_URL" target="_blank" rel="noreferrer">更新脚本</a>
-                <button class="btn btn-outline btn-sm" data-znhd="open-log-btn" @click="emit('openLog')">运行日志</button>
+                <a class="btn btn-outline btn-sm rounded-full" :href="HOMEPAGE_URL" target="_blank" rel="noreferrer">脚本主页</a>
+                <a class="btn btn-outline btn-sm rounded-full" :href="UPDATE_URL" target="_blank" rel="noreferrer">更新脚本</a>
+                <button class="btn btn-outline btn-sm rounded-full" data-znhd="open-log-btn" @click="emit('openLog')">运行日志</button>
             </span>
         </template>
 
-        <div class="flex items-start gap-4 py-1" data-znhd="settings-body">
-            <!-- 左侧固定侧边栏：daisyUI 5 menu，选中项 menu-active -->
-            <ul class="menu w-36 shrink-0 rounded-box bg-base-200 p-1.5">
+        <!-- v26.10.25-v3 参考图定版：items-stretch 让侧边栏卡片拉通全高；
+             选中项 = 黑色胶囊（menu-active + bg-neutral 覆写，utilities 层优先级高于组件层） -->
+        <div class="flex items-stretch gap-5 py-1" data-znhd="settings-body">
+            <!-- 左侧固定侧边栏：daisyUI 5 menu -->
+            <ul class="menu w-36 shrink-0 rounded-box bg-base-200 p-2">
                 <li v-for="p in pages" :key="p.id">
                     <button
-                        :class="{ 'menu-active': page === p.id }"
+                        :class="{ 'menu-active bg-neutral text-neutral-content': page === p.id }"
                         :data-znhd="'settings-nav-' + p.id"
                         @click="page = p.id">
                         {{ p.label }}
@@ -193,7 +196,7 @@ const VERSION = (GM_info.script.version || '?') as string;
 
                     <div class="mt-2 border-t border-base-300 pt-3">
                         <template v-if="!confirmClear">
-                            <button class="btn btn-error btn-sm" @click="confirmClear = true">清空全部传输记录</button>
+                            <button class="btn btn-error btn-sm rounded-full" @click="confirmClear = true">清空全部传输记录</button>
                         </template>
                         <div v-else role="alert" class="alert alert-error alert-soft alert-vertical">
                             <div>
@@ -203,8 +206,8 @@ const VERSION = (GM_info.script.version || '?') as string;
                                 </div>
                             </div>
                             <div class="flex justify-end gap-2">
-                                <button class="btn btn-outline btn-sm" @click="confirmClear = false">取消</button>
-                                <button class="btn btn-error btn-sm" @click="doClearAll">清空</button>
+                                <button class="btn btn-outline btn-sm rounded-full" @click="confirmClear = false">取消</button>
+                                <button class="btn btn-error btn-sm rounded-full" @click="doClearAll">清空</button>
                             </div>
                         </div>
                     </div>
