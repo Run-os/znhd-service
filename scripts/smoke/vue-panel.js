@@ -871,7 +871,7 @@ function serve() {
         if (!dlg) return { found: false };
         return {
             found: true,
-            hasMonitorHours: [...dlg.querySelectorAll('legend')].some((n) =>
+            hasMonitorHours: [...dlg.querySelectorAll('.fieldset-legend')].some((n) =>
                 (n.textContent || '').includes('监控时间段')
             ),
             toggles: dlg.querySelectorAll('input.toggle').length,

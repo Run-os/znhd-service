@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         征纳互动人数和在线监控v2
 // @namespace    https://scriptcat.org/
-// @version      26.10.25-v6
+// @version      26.10.25-v7
 // @author       runos
 // @description  实时监控征纳互动等待人数和在线状态，支持语音播报、自定义常用语
 // @license      MIT
@@ -4367,8 +4367,8 @@ expiresIn: num$1(body, "expire_in") || num$1(body, "expires_in") || 600,
         cancelled = true;
       });
       return (_ctx, _cache) => {
-        return vue.openBlock(), vue.createElementBlock("fieldset", _hoisted_1$g, [
-          vue.createElementVNode("legend", _hoisted_2$g, [
+        return vue.openBlock(), vue.createElementBlock("div", _hoisted_1$g, [
+          vue.createElementVNode("div", _hoisted_2$g, [
             vue.createElementVNode("span", null, [
               _cache[3] || (_cache[3] = vue.createTextVNode(" 飞书快捷回复（输出框上方的快捷短语，")),
               vue.createElementVNode("a", {
@@ -4679,8 +4679,8 @@ expiresIn: num$1(body, "expire_in") || num$1(body, "expires_in") || 600,
               ]),
               vue.createElementVNode("div", _hoisted_6$a, [
                 page.value === "feishu" ? (vue.openBlock(), vue.createBlock(_sfc_main$j, { key: 0 })) : page.value === "transfer" ? (vue.openBlock(), vue.createElementBlock("div", _hoisted_7$9, [
-                  vue.createElementVNode("fieldset", _hoisted_8$9, [
-                    _cache[10] || (_cache[10] = vue.createElementVNode("legend", { class: "fieldset-legend" }, "中继服务器地址", -1)),
+                  vue.createElementVNode("div", _hoisted_8$9, [
+                    _cache[10] || (_cache[10] = vue.createElementVNode("div", { class: "fieldset-legend" }, "中继服务器地址", -1)),
                     vue.withDirectives(vue.createElementVNode("input", {
                       "onUpdate:modelValue": _cache[1] || (_cache[1] = ($event) => relayDraft.value = $event),
                       type: "text",
@@ -4693,8 +4693,8 @@ expiresIn: num$1(body, "expire_in") || num$1(body, "expires_in") || 600,
                     ]),
                     _cache[11] || (_cache[11] = vue.createElementVNode("p", { class: "label whitespace-normal" }, " 手机上传的图片 / 文本经此服务器转发到本机。修改后点其他区域或按回车生效；留空失焦恢复默认地址。 ", -1))
                   ]),
-                  vue.createElementVNode("fieldset", _hoisted_9$9, [
-                    vue.createElementVNode("legend", _hoisted_10$9, [
+                  vue.createElementVNode("div", _hoisted_9$9, [
+                    vue.createElementVNode("div", _hoisted_10$9, [
                       _cache[12] || (_cache[12] = vue.createElementVNode("span", null, "收到内容时自动打开传输助手", -1)),
                       vue.createElementVNode("input", {
                         type: "checkbox",
@@ -4728,8 +4728,8 @@ expiresIn: num$1(body, "expire_in") || num$1(body, "expires_in") || 600,
                     ]))
                   ])
                 ])) : page.value === "general" ? (vue.openBlock(), vue.createElementBlock("div", _hoisted_15$5, [
-                  vue.createElementVNode("fieldset", _hoisted_16$4, [
-                    vue.createElementVNode("legend", _hoisted_17$3, [
+                  vue.createElementVNode("div", _hoisted_16$4, [
+                    vue.createElementVNode("div", _hoisted_17$3, [
                       _cache[15] || (_cache[15] = vue.createElementVNode("span", null, "使用 CDN 加速（Fastly 镜像）加载资源", -1)),
                       vue.createElementVNode("input", {
                         type: "checkbox",
@@ -4739,8 +4739,8 @@ expiresIn: num$1(body, "expire_in") || num$1(body, "expires_in") || 600,
                       }, null, 40, _hoisted_18$3)
                     ])
                   ]),
-                  vue.createElementVNode("fieldset", _hoisted_19$1, [
-                    vue.createElementVNode("legend", _hoisted_20$1, [
+                  vue.createElementVNode("div", _hoisted_19$1, [
+                    vue.createElementVNode("div", _hoisted_20$1, [
                       _cache[16] || (_cache[16] = vue.createElementVNode("span", null, "图片嗅探：先在后台预测量图片大小", -1)),
                       vue.createElementVNode("input", {
                         type: "checkbox",
@@ -4750,8 +4750,8 @@ expiresIn: num$1(body, "expire_in") || num$1(body, "expires_in") || 600,
                       }, null, 40, _hoisted_21$1)
                     ])
                   ]),
-                  vue.createElementVNode("fieldset", _hoisted_22$1, [
-                    _cache[18] || (_cache[18] = vue.createElementVNode("legend", { class: "fieldset-legend" }, "监控时间段（点击选择时间）", -1)),
+                  vue.createElementVNode("div", _hoisted_22$1, [
+                    _cache[18] || (_cache[18] = vue.createElementVNode("div", { class: "fieldset-legend" }, "监控时间段（点击选择时间）", -1)),
                     vue.createElementVNode("div", _hoisted_23$1, [
                       (vue.openBlock(), vue.createElementBlock(vue.Fragment, null, vue.renderList(timeFields, (f) => {
                         return vue.createElementVNode("div", {

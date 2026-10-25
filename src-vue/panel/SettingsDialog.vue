@@ -170,8 +170,8 @@ const VERSION = (GM_info.script.version || '?') as string;
 
                 <!-- 传输助手（v26.10.25-v2 自传输窗口的设置弹窗迁入；v4 起功能区之间用 hairline 分割） -->
                 <div v-else-if="page === 'transfer'" class="divide-y divide-base-300" data-znhd="transfer-settings">
-                    <fieldset class="fieldset py-3 first:pt-0">
-                        <legend class="fieldset-legend">中继服务器地址</legend>
+                    <div class="fieldset py-3 first:pt-0">
+                        <div class="fieldset-legend">中继服务器地址</div>
                         <input
                             v-model="relayDraft"
                             type="text"
@@ -182,19 +182,19 @@ const VERSION = (GM_info.script.version || '?') as string;
                         <p class="label whitespace-normal">
                             手机上传的图片 / 文本经此服务器转发到本机。修改后点其他区域或按回车生效；留空失焦恢复默认地址。
                         </p>
-                    </fieldset>
+                    </div>
 
-                    <fieldset class="fieldset py-3">
-                        <legend class="fieldset-legend flex w-full items-center justify-between gap-3">
+                    <div class="fieldset py-3">
+                        <div class="fieldset-legend flex w-full items-center justify-between gap-3">
                             <span>收到内容时自动打开传输助手</span>
                             <input
                                 type="checkbox"
                                 class="toggle"
                                 :checked="transferStore.settings.autoOpenOnReceive"
                                 @change="updateTransferSettings({ autoOpenOnReceive: ($event.target as HTMLInputElement).checked })" />
-                        </legend>
+                        </div>
                         <p class="label whitespace-normal">关闭时仅累计未读角标，不打扰；窗口已开着则只累加，不强行切换会话。</p>
-                    </fieldset>
+                    </div>
 
                     <div class="py-3">
                         <template v-if="!confirmClear">
@@ -217,31 +217,31 @@ const VERSION = (GM_info.script.version || '?') as string;
 
                 <!-- 其他设置：开关与时间段（v4 起功能区之间用 hairline 分割） -->
                 <div v-else-if="page === 'general'" class="divide-y divide-base-300">
-                    <fieldset class="fieldset py-3 first:pt-0">
+                    <div class="fieldset py-3 first:pt-0">
                         <!-- 开关与描述文本同一行：legend 拉成 flex 行，toggle 靠右 -->
-                        <legend class="fieldset-legend flex w-full items-center justify-between gap-3">
+                        <div class="fieldset-legend flex w-full items-center justify-between gap-3">
                             <span>使用 CDN 加速（Fastly 镜像）加载资源</span>
                             <input
                                 type="checkbox"
                                 class="toggle"
                                 :checked="props.useCdn"
                                 @change="emit('changeUseCdn', ($event.target as HTMLInputElement).checked)" />
-                        </legend>
-                    </fieldset>
+                        </div>
+                    </div>
 
-                    <fieldset class="fieldset py-3">
-                        <legend class="fieldset-legend flex w-full items-center justify-between gap-3">
+                    <div class="fieldset py-3">
+                        <div class="fieldset-legend flex w-full items-center justify-between gap-3">
                             <span>图片嗅探：先在后台预测量图片大小</span>
                             <input
                                 type="checkbox"
                                 class="toggle"
                                 :checked="props.sniffPreMeasure"
                                 @change="emit('changeSniffPreMeasure', ($event.target as HTMLInputElement).checked)" />
-                        </legend>
-                    </fieldset>
+                        </div>
+                    </div>
 
-                    <fieldset class="fieldset py-3">
-                        <legend class="fieldset-legend">监控时间段（点击选择时间）</legend>
+                    <div class="fieldset py-3">
+                        <div class="fieldset-legend">监控时间段（点击选择时间）</div>
                         <!-- v26.10.23-v4：上午/下午**强制同一行**（v6 的 flex-wrap 在窄面板下会折成两行）。
                              用两列等分 + 内部 input `min-w-0 w-full` 自适应：容器再窄也只会挤压，不会换行。 -->
                         <div class="grid grid-cols-2 gap-x-3">
@@ -262,7 +262,7 @@ const VERSION = (GM_info.script.version || '?') as string;
                                     @input="updateWh(f.to, ($event.target as HTMLInputElement).value)" />
                             </div>
                         </div>
-                    </fieldset>
+                    </div>
                 </div>
 
                 <!-- 关于：技术栈 + 版本 + 主页（v4 起行间用 hairline 分割） -->

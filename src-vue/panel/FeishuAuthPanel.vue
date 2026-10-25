@@ -241,8 +241,8 @@ onUnmounted(() => {
 </script>
 
 <template>
-    <fieldset class="fieldset" data-znhd="feishu-auth">
-        <legend class="fieldset-legend flex w-full items-center justify-between gap-3 text-[15px] font-semibold">
+    <div class="fieldset" data-znhd="feishu-auth">
+        <div class="fieldset-legend flex w-full items-center justify-between gap-3 text-[15px] font-semibold">
             <span>
                 飞书快捷回复（输出框上方的快捷短语，<a
                     class="link link-primary underline underline-offset-2"
@@ -255,7 +255,7 @@ onUnmounted(() => {
                 已授权
             </span>
             <span v-else class="text-[12px] font-normal text-base-content/50">未授权</span>
-        </legend>
+        </div>
 
         <!-- 状态摘要：授权后只留 token 一行（条数进卡片徽章），不暴露 token/凭证 -->
         <p v-if="status.authorized" class="pb-3 text-[12px] leading-5 text-base-content/60 tabular-nums">
@@ -389,5 +389,5 @@ onUnmounted(() => {
         <!-- 选表弹窗：原生 showModal() 进 top layer，天然盖在本设置弹窗之上。
              主表 / 隐私表共用一个实例，回填目标由 pickerTarget 区分。 -->
         <TablePickerDialog v-model:open="pickerOpen" @picked="onPick" />
-    </fieldset>
+    </div>
 </template>
