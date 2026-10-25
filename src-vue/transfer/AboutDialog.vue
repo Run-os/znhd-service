@@ -5,7 +5,7 @@ import { getDeviceId } from '@/lib/relay';
 import { safeCopyText } from '@/lib/clipboard';
 import { shortPhoneId } from '@/lib/ui/transfer/deviceColors';
 import { useTransferStore } from '@vue/composables/useTransferStore';
-import DarkDialog from './DarkDialog.vue';
+import AppDialog from '@vue/panel/AppDialog.vue';
 
 /** 企业信息（第一栏底部入口）：排查「连不上」时先确认这几项。 */
 const open = defineModel<boolean>('open', { default: false });
@@ -23,7 +23,8 @@ function openHome() {
 </script>
 
 <template>
-    <DarkDialog v-model:open="open" title="企业信息" :width="440">
+    <!-- variant="plain"：原 DarkDialog 壳（v26.10.25-v8 并入 AppDialog），无默认确定钮 -->
+    <AppDialog v-model:open="open" variant="plain" title="企业信息" :width="440">
         <div class="flex gap-3 border-b border-base-300 py-[7px]">
             <span class="shrink-0 basis-[92px] text-[13px] opacity-65">中继服务器</span>
             <span class="min-w-0 flex-1 break-all text-[13px]">{{ store.settings.relayServer || '（未配置）' }}</span>
@@ -71,5 +72,5 @@ function openHome() {
         <template #footer>
             <button class="btn btn-sm" @click="open = false">关闭</button>
         </template>
-    </DarkDialog>
+    </AppDialog>
 </template>

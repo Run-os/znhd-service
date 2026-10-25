@@ -130,7 +130,7 @@ function onClear() {
             <span class="flex-1" />
             <button
                 type="button"
-                class="cursor-pointer rounded border border-[#ff7875]/50 bg-transparent px-2 py-0.5 text-xs text-[#ff7875] outline-none hover:bg-[#ff7875]/15"
+                class="cursor-pointer rounded border border-(--znhd-danger-line) bg-transparent px-2 py-0.5 text-xs text-(--znhd-danger) outline-none hover:bg-(--znhd-danger-soft)"
                 @click="onClear">
                 {{ clearScope ? '清空本会话' : '清空全部' }}
             </button>
@@ -187,7 +187,7 @@ function onClear() {
                         <button
                             type="button"
                             aria-label="删除文件"
-                            class="inline-flex size-[22px] cursor-pointer items-center justify-center rounded border-0 bg-transparent p-0 text-[#ff7875] outline-none hover:bg-[#ff7875]/15"
+                            class="inline-flex size-[22px] cursor-pointer items-center justify-center rounded border-0 bg-transparent p-0 text-(--znhd-danger) outline-none hover:bg-(--znhd-danger-soft)"
                             @click="removeTransferMessage(msg.sessionKey, msg.id)">
                             <Icon name="close" :size="13" />
                         </button>

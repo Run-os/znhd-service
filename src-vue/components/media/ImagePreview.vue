@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { computed, inject, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { computed, inject, onBeforeUnmount, ref, watch } from 'vue';
 import { Icon } from '@vue/icons';
 import { SHADOW_ROOT_KEY } from '@vue/lib/shadow';
 import { printA4Image } from '@vue/lib/print';
+import { useNativeDialog } from '@vue/composables/useNativeDialog';
 
 /**
  * 图片放大预览（v26.10.18-v5 随传输助手落地，v26.10.18-v6 上移到共用层给「图片嗅探」复用）。
@@ -43,17 +44,9 @@ const overlayTarget = inject(SHADOW_ROOT_KEY) as unknown as string;
 
 const dlg = ref<HTMLDialogElement | null>(null);
 
-function sync(v: boolean): void {
-    const el = dlg.value;
-    if (!el) return;
-    if (v && !el.open) el.showModal();
-    else if (!v && el.open) el.close();
-}
-
-watch(() => props.open, sync);
-onMounted(() => {
-    if (props.open) sync(true);
-});
+// 开/关同步（showModal / close / 挂载即开）收敛在 useNativeDialog（v26.10.25-v8）；
+// Esc / 左右键 / 背板拦截的差异逻辑留在本壳（下方 watch + onKey）。
+useNativeDialog(computed(() => props.open), dlg);
 
 const current = ref(0);
 const scale = ref(1);

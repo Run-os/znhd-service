@@ -4,6 +4,7 @@ import { Icon, type IconName } from '@vue/icons';
 import { addLog } from '@/lib/logger';
 import { downloadFileName } from '@/lib/gallery';
 import { copyImageToClipboard } from '@/lib/relay';
+import { useNativeDialog } from '@vue/composables/useNativeDialog';
 import {
     PHONE_SESSION_KEY,
     clearTransferSession,
@@ -23,7 +24,7 @@ import ChatBubble from './ChatBubble.vue';
 import ChatTurn from './ChatTurn.vue';
 import ChatComposer from './ChatComposer.vue';
 import FilesView from './FilesView.vue';
-import DarkDialog from './DarkDialog.vue';
+import AppDialog from '@vue/panel/AppDialog.vue';
 import PairDialog from './PairDialog.vue';
 import AboutDialog from './AboutDialog.vue';
 import { sepTimeText, sourceLabel } from './format';
@@ -62,8 +63,10 @@ const previewOpen = ref(false);
 const previewIndex = ref(0);
 /** 消息滚动容器（message-scroller 已按用户要求移除，改成普通 overflow 容器） */
 const scroller = ref<HTMLElement | null>(null);
-/** 原生 dialog（daisyUI modal） */
+/** 原生 dialog（daisyUI modal）；开/关同步收敛在 useNativeDialog（v26.10.25-v8） */
 const dlg = ref<HTMLDialogElement | null>(null);
+
+useNativeDialog(open, dlg);
 
 /** 两条消息间隔超过 5 分钟就插一条时间分隔条（微信同款，不逐条显示时间） */
 const TIME_GAP = 5 * 60 * 1000;
@@ -136,15 +139,7 @@ watch(
     { immediate: true }
 );
 
-function syncDialog(v: boolean): void {
-    const el = dlg.value;
-    if (!el) return;
-    if (v && !el.open) el.showModal();
-    else if (!v && el.open) el.close();
-}
-watch(open, (v) => syncDialog(v));
 onMounted(() => {
-    if (open.value) syncDialog(true);
     document.addEventListener('pointerdown', onDocPointerDown, true);
 });
 
@@ -466,13 +461,18 @@ const footerHint = computed(() => (sendable.value ? '' : '当前没有在线手�
         </form>
     </dialog>
 
-    <!-- 子窗口 -->
-    <DarkDialog v-model:open="filesOpen" title="文件" :width="780" description="本次会话的全部图片 / 文件 / 文本">
+    <!-- 子窗口（variant="plain"：原 DarkDialog 壳，v26.10.25-v8 并入 AppDialog） -->
+    <AppDialog
+        v-model:open="filesOpen"
+        variant="plain"
+        title="文件"
+        :width="780"
+        description="本次会话的全部图片 / 文件 / 文本">
         <!-- 固定窗口高度：文件多少不撑高弹窗，内容区自己滚 -->
         <div class="flex h-[520px] flex-col overflow-hidden">
             <FilesView :messages="messages" scope-label="全部文件" :clear-scope="clearAll" />
         </div>
-    </DarkDialog>
+    </AppDialog>
     <PairDialog v-model:open="pairOpen" :relay-server="store.settings.relayServer" :phones="store.phones" />
     <AboutDialog v-model:open="aboutOpen" />
 

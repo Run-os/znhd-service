@@ -42,8 +42,8 @@
 | `src/lib/feishu/` | 常用语快捷按钮（v26.10.23）：`oauth.ts`(应用动态注册+设备授权+换/刷新 token，HTTP 注入) `http.ts`(`GM_xmlhttpRequest` 适配，唯一碰宿主处) `credentials.ts`(GM 存储，含隐私表缓存 `scriptCat_PrivacyRules`) `tableLink.ts`(表格链接解析：wiki 节点换 obj_token) `rules.ts`(读多维表 v1，含「是否常显」列) `match.ts`(匹配引擎) `convText.ts`(读会话文本，最新 6 条；`readVueInstance()` 供 magicVars 复用) `magicVars.ts`(魔法变量 `${Active_Cnt}`=正在对话人数，点击时刻展开) `service.ts`(编排+token 自动刷新+规则 TTL+表链接读写+隐私表格) |
 | `src/lib/transfer/` | `store.ts` **模块级单例**（窗口不开也收件；已拆纯订阅 API，**不 import react/vue**——Vue 包装在 `src-vue/composables/useTransferStore.ts`）。`persist.ts` IndexedDB 持久化 7 天 TTL（`persistReady` 闸门防覆盖旧数据）。`settings.ts` `types.ts` |
 | `src/lib/ui/` | 只剩框架无关叶子：`panelIds.ts`(宿主/overlay id 常量) `sniffSelector.ts` `notify.ts` `transfer/deviceColors.ts`。**防 TDZ：被循环 import 引用的常量必须放叶子模块** |
-| `src-vue/` | UI 本体（Vue3 + **daisyUI 5 / Tailwind v4**，脚本端与 web 页共用底层件）。`transfer/` 三栏传输助手 + `markdown.ts`(手写渲染器，**行内正则必须工厂函数**——模块级 /g 正则递归会死循环)。弹窗壳统一原生 `<dialog class="modal">`（AppDialog/DarkDialog/ImagePreview），浮层靠 top layer 分层 |
-| `shared/` | 两端共用纯逻辑层。**硬约束**：零宿主依赖（禁 GM_*/单端模块）、按最严 tsconfig 写、依赖单向（只能被 import）、两端 typecheck + 三段 verify 全绿 |
+| `src-vue/` | UI 本体（Vue3 + **daisyUI 5 / Tailwind v4**，脚本端与 web 页共用底层件）。`transfer/` 三栏传输助手 + `markdown.ts`(手写渲染器，**行内正则必须工厂函数**——模块级 /g 正则递归会死循环)。弹窗壳统一原生 `<dialog class="modal">`（AppDialog 支撑全部场景：`variant="plain"` 档即原传输窗 DarkDialog 壳（v26.10.25-v8 并入已删）/ ImagePreview），开/关同步走 `composables/useNativeDialog.ts`，浮层靠 top layer 分层 |
+| `shared/` | 两端共用纯逻辑层。**硬约束**：零宿主依赖（禁 GM_*/单端模块）、按最严 tsconfig 写、依赖单向（只能被 import）、两端 typecheck + 三段 verify 全绿。`ui/theme.ts` = 品牌色单一事实源（`THEME` + `applyThemeVars()`，两端入口首帧前注入，CSS 只留 var() 使用点，v26.10.25-v8） |
 | `scripts/smoke/` | `vue-panel.js`(脚本产物冒烟) + `znhd-smoke.html`(夹具页) / `relay.js`(真实起 relay) / `phone-page.js`(手机页端到端)。`npm run verify` 三段串跑，已接入 CI |
 | `relay-server/` | `server.js`(本体，纯 Node 零依赖，PORT=5689) / `upload-page.js` / `public/`(**web/ 的构建产物，提交进仓库**) / `emoji-store.js` / `emoji-sources.json`(表情清单单一来源，两端 import) |
 | `web/` | 手机页源码（Vue3 + Tailwind v4 + **daisyUI 5**，v26.10.20-v1 起 business 暗色主题 + 微信绿 primary；独立子项目）。⚠️ 别搬进 relay-server/（部署 tar 会带上 node_modules） |
@@ -152,7 +152,7 @@
 
 ## 9. 传输助手 UI / 交互
 
-- 传输窗口 = **`ChatWindow.vue` 单个 daisyUI modal**（v26.10.20 daisyUI 5 迁移后没有三栏 NavRail 了——那是 React 时代结构）；「全部文件」= `FilesView.vue` 挂在 `DarkDialog` 子弹窗；配对 / 关于 = `PairDialog` / `AboutDialog`（设置 v26.10.25-v2 起在主设置弹窗「传输助手」页，本窗口的设置弹窗已删）。
+- 传输窗口 = **`ChatWindow.vue` 单个 daisyUI modal**（v26.10.20 daisyUI 5 迁移后没有三栏 NavRail 了——那是 React 时代结构）；「全部文件」= `FilesView.vue` 挂在 `<AppDialog variant="plain">` 子弹窗（原 `DarkDialog.vue` 于 v26.10.25-v8 并入 AppDialog 后删除）；配对 / 关于 = `PairDialog` / `AboutDialog`（设置 v26.10.25-v2 起在主设置弹窗「传输助手」页，本窗口的设置弹窗已删）。
 - 配色走 **daisyUI 5 主题 token**：脚本端 cupcake、客户端 business + `--color-primary:#07c160` 覆写（`web/src/style.css`）；弹窗容器是 daisyUI `.modal-box`（**不再是 antd Modal**，`.ant-modal-container` 那套判据已随迁移作废）。
 - **主题恒为日间 cupcake**（v26.10.21-v7 删掉夜间模式）：daisyUI `[data-theme]` 挂影子树内的 `#app`（属性选择器穿不透 shadow 边界，不能挂 host）；客户端 `web/` 固定 business 主题 + `--color-primary:#07c160` 覆写。⚠️ 组件配色**只走 token**（`bg-base-100` / `--color-base-300` 等），别写死 hex；`transferVars` / `TRANSFER_VARS` / `--tw-*` 那套色板已随迁移删除。
 - 冒烟里传输助手底色断言绑**日间基线**（harness 钉 `prefers-color-scheme=light`，恒定不变）；分界线断言走 `probeOf('--color-base-300')` 实时取 token 值（v26.10.22 起夜间反向守 `transferThemeFollowOk` 已随夜间模式删除）。

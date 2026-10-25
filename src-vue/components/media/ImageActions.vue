@@ -26,7 +26,7 @@ defineProps<{ actions: ImageAction[] }>();
                 :title="a.tooltip || a.label"
                 :disabled="a.loading"
                 class="inline-flex size-[22px] cursor-pointer items-center justify-center rounded border-0 bg-transparent p-0 outline-none hover:bg-white/15 disabled:cursor-default"
-                :class="a.danger ? 'text-[#ff7875]' : 'text-white'"
+                :class="a.danger ? 'text-(--znhd-danger)' : 'text-white'"
                 @click.stop="a.onClick()">
                 <Icon :name="a.icon" :size="13" />
             </button>

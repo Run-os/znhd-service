@@ -31,10 +31,11 @@
 }
 
 /* primary 覆写（与脚本端 v26.10.21-v8/v9 同款，选择器含 [data-theme] 防「元素自身
-   声明压过 :root 继承」的坑）：cupcake 官方 primary 是薄荷绿，统一换成品牌蓝。 */
+   声明压过 :root 继承」的坑）：cupcake 官方 primary 是薄荷绿，统一换成品牌蓝。
+   品牌色值（v26.10.25-v8 起单一事实源 = shared/ui/theme.ts）不在 CSS 里声明，
+   由 web/src/main.ts 首帧前 applyThemeVars() 注入 document.documentElement ——
+   改配色只动 THEME，这里只留 var() 使用点。 */
 :root {
-    --znhd-brand: rgb(66, 133, 244); /* 品牌蓝（脚本端 --znhd-brand 同值，v8 定版） */
-    --znhd-bubble-mine: rgb(53, 210, 141); /* 我方气泡绿（脚本端 --znhd-bubble-mine 同值，v11 定版） */
     --color-primary: var(--znhd-brand);
     --color-primary-content: #ffffff;
 }

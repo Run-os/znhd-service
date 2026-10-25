@@ -1,8 +1,16 @@
 import { createApp } from 'vue';
 import App from './App.vue';
 import { SHADOW_ROOT_KEY } from '@vue/lib/shadow';
+import { applyThemeVars } from '../../shared/ui/theme';
 import './style.css';
 import './app.css';
+
+/**
+ * 品牌色注入（v26.10.25-v8 单一事实源 = shared/ui/theme.ts）：挂在 documentElement
+ * 的内联 style 上，整页单树一次覆盖。必须在首帧前 —— 这里同步执行，先于 createApp
+ * 挂载任何 DOM，首屏 #boot 占位不用这些变量，不存在 FOUC。
+ */
+applyThemeVars(document.documentElement);
 
 /**
  * 手机上传页入口（v26.10.18-v7：React 19 + antd v6 → Vue 3）。

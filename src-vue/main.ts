@@ -3,6 +3,7 @@ import App from './App.vue';
 import css from './style.css?inline';
 import { SHADOW_ROOT_KEY, setShadowRoot } from './lib/shadow';
 import { initTheme } from './lib/theme';
+import { applyThemeVars } from '../shared/ui/theme';
 import { PANEL_HOST_ID } from '@/lib/ui/panelIds';
 
 /**
@@ -77,6 +78,11 @@ export function mountPanel(): HTMLElement {
         host.style.setProperty(k, v, 'important');
     }
     document.documentElement.appendChild(host);
+
+    // 品牌色（v26.10.25-v8 起单一事实源 = shared/ui/theme.ts）：挂在 shadow host 的内联
+    // style 上，经扁平树继承进整棵影子树（含 Teleport 到 shadowRoot 的 ImagePreview ——
+    // 它们是 #app 的兄弟节点，挂 #app 会漏）。必须在首帧前：这里先于样式注入与 mount。
+    applyThemeVars(host);
 
     const shadowRoot = host.attachShadow({ mode: 'open' });
     setShadowRoot(shadowRoot);

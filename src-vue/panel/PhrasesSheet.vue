@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, ref, watch } from 'vue';
+import { computed, nextTick, ref } from 'vue';
 import { addLog } from '@/lib/logger';
 import { appendToTinyMCE } from '@/lib/tinymce';
 import { safeCopyText } from '@/lib/clipboard';
 import type { ZnhdPhrases } from '@/lib/phrasesZnhd';
 import { Icon } from '@vue/icons';
 import { toast } from '@vue/lib/toast';
+import { useNativeDialog } from '@vue/composables/useNativeDialog';
 
 /**
  * 常用语侧边栏（Vue 版，对应 React 的 `PhrasesDrawer`）。
@@ -127,21 +128,15 @@ async function showTip(e: Event): Promise<void> {
     tipPos.value = { x: Math.round(x), y: Math.round(y) };
 }
 
-function sync(v: boolean): void {
-    const el = dlg.value;
-    if (!el) return;
-    if (v && !el.open) el.showModal();
-    else if (!v && el.open) el.close();
-    if (!v) hideTip();
-}
-
-watch(
-    () => props.open,
-    (v) => sync(v)
+// 开/关同步收敛在 useNativeDialog（v26.10.25-v8）；关闭时的副效应（收起长话术
+// 悬浮提示）走 onSync 钩子 —— 与原「sync(false) 里顺手 hideTip」逐行为等价。
+useNativeDialog(
+    computed(() => props.open),
+    dlg,
+    (v) => {
+        if (!v) hideTip();
+    }
 );
-onMounted(() => {
-    if (props.open) sync(true);
-});
 
 /** 点一条：复制 + 关抽屉 + 追加到 TinyMCE（与 React 版顺序一致） */
 function pick(text: string) {

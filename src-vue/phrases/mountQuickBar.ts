@@ -1,6 +1,7 @@
 import { createApp, h, ref, type App as VueApp } from 'vue';
 import css from '../style.css?inline';
 import { registerTailwindProperties } from '../main';
+import { applyThemeVars } from '../../shared/ui/theme';
 import QuickBar from './QuickBar.vue';
 import { addLog } from '@/lib/logger';
 import { replaceToTinyMCE } from '@/lib/tinymce';
@@ -195,6 +196,10 @@ function mountInto(anchorEl: HTMLElement): HTMLElement {
         'display:block;width:100%;box-sizing:border-box;margin:0;padding:0;' +
         'background:none;border:0;box-shadow:none;outline:none;border-radius:0;';
     anchorEl.parentElement!.insertBefore(host, anchorEl);
+
+    // 品牌色注入（v26.10.25-v8 单一事实源 = shared/ui/theme.ts）：与 main.ts / navBarMount
+    // 同理，独立 shadow 树各自注入一次，首帧前生效。
+    applyThemeVars(host);
 
     const shadowRoot = host.attachShadow({ mode: 'open' });
     const style = document.createElement('style');

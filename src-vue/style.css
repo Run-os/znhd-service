@@ -58,10 +58,11 @@
    （daisyUI 的 scrollbar 基础模块只给 `scrollbar-color`，不给 `scrollbar-width: thin`，
    也不给 ::-webkit-scrollbar 的圆角/内缩 —— 想要「细圆角条」只能自己写，保留。） */
 :host {
-  /* 品牌色（用户定版）：收敛成变量，组件覆写与模板类都引用这里，避免同一串
-     rgb() 散落在多处。改配色只动这两行。 */
-  --znhd-brand: rgb(66, 133, 244); /* 品牌蓝（v8 用户定版）：主题 primary / toggle 选中底 */
-  --znhd-bubble-mine: rgb(53, 210, 141); /* 我方气泡绿（日间，v11） */
+  /* 品牌色（v26.10.25-v8 起单一事实源 = shared/ui/theme.ts）：--znhd-brand /
+     --znhd-bubble-mine / --znhd-danger(+soft/line) 不再在这里声明色值，由入口 JS
+     （main.ts / navBarMount.ts / mountQuickBar.ts）在首帧前 applyThemeVars() 注入
+     shadow host 的内联 style —— 经扁平树继承进整棵影子树（含 Teleport 到
+     shadowRoot 的浮层）。改配色只动 THEME；这里只留 var() 使用点。 */
 
   --znhd-scrollbar-thumb: color-mix(in oklab, var(--color-base-content) 24%, transparent);
   --znhd-scrollbar-thumb-hover: color-mix(in oklab, var(--color-base-content) 40%, transparent);

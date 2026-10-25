@@ -1,6 +1,7 @@
 import { createApp, h, type App as VueApp } from 'vue';
 import css from '../style.css?inline';
 import { registerTailwindProperties } from '../main';
+import { applyThemeVars } from '../../shared/ui/theme';
 import NavBarControls from './NavBarControls.vue';
 
 /**
@@ -53,6 +54,10 @@ function mountInto(parent: Element): HTMLElement {
         'display:inline-flex;align-items:center;align-self:center;vertical-align:middle;' +
         'margin:0 0 0 10px;padding:0;background:none;border:0;box-shadow:none;outline:none;border-radius:0;';
     parent.appendChild(host);
+
+    // 品牌色注入（v26.10.25-v8 单一事实源 = shared/ui/theme.ts）：独立 shadow 树
+    // 也要有自己的变量来源（NavBarControls 的开关选中底 bg-(--znhd-brand) 靠它）。
+    applyThemeVars(host);
 
     const shadowRoot = host.attachShadow({ mode: 'open' });
     const style = document.createElement('style');
