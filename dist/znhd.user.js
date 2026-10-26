@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         征纳互动人数和在线监控v2
 // @namespace    https://scriptcat.org/
-// @version      26.10.26-v1
+// @version      26.10.26-v2
 // @author       runos
 // @description  实时监控征纳互动等待人数和在线状态，支持语音播报、自定义常用语
 // @license      MIT
@@ -3671,33 +3671,9 @@ expiresIn: num$1(body, "expire_in") || num$1(body, "expires_in") || 600,
   }
   const RECORDS_API = "https://open.feishu.cn/open-apis/bitable/v1/apps";
   const F_TAGS = "标签";
-  const F_EXCLUDE = "排除词";
+  const F_EXCLUDE = "剔除关键词";
+  const F_MUST = "必含关键词";
   const F_PINNED = "是否常显";
-  const TITLE_ALIASES = ["标题", "名称", "信息项", "项目", "事项", "条目", "字段", "键", "title", "name"];
-  const REPLY_ALIASES = ["内容", "文本", "正文", "详情", "话术", "值", "回复", "content", "text", "value"];
-  function normKey(k) {
-    return k.trim().toLowerCase().replace(/[\s_\-/]+/g, "");
-  }
-  function pickField(fields, aliases) {
-    const keys = Object.keys(fields);
-    for (const a of aliases) {
-      const want = normKey(a);
-      const k = keys.find((kk) => normKey(kk) === want);
-      if (k !== void 0) {
-        const raw = cellText(fields[k]);
-        if (raw.trim()) return raw;
-      }
-    }
-    for (const a of aliases.slice(0, 4)) {
-      const want = normKey(a);
-      const k = keys.find((kk) => normKey(kk).includes(want));
-      if (k !== void 0) {
-        const raw = cellText(fields[k]);
-        if (raw.trim()) return raw;
-      }
-    }
-    return "";
-  }
   function cellText(v) {
     if (typeof v === "string") return v;
     if (typeof v === "number") return String(v);
@@ -3730,13 +3706,14 @@ expiresIn: num$1(body, "expire_in") || num$1(body, "expires_in") || 600,
   }
   function toRule(rec) {
     const fields = rec["fields"] || {};
-    const title = pickField(fields, TITLE_ALIASES).trim();
-    const reply = pickField(fields, REPLY_ALIASES);
+    const title = cellText(fields["标题"]).trim();
+    const reply = cellText(fields["内容"]);
     if (!title && !reply.trim()) return null;
     return {
       id: str$1(rec, "record_id"),
       title: title || reply.trim().slice(0, 12),
       keywords: cellList(fields[F_TAGS]),
+      musts: cellList(fields[F_MUST]),
       excludes: cellList(fields[F_EXCLUDE]),
       reply,
       pinned: cellBool(fields[F_PINNED]),
@@ -3961,7 +3938,7 @@ titleFallback: !title
     const n = rules.filter((r) => r.titleFallback).length;
     if (!n) return;
     addLog(
-      tableLabel + "有 " + n + " 条记录没有可识别的标题列（支持：标题 / 名称 / 信息项 / 项目 / 事项 / 条目 / 字段），按钮暂用内容前 12 字显示：请在表里新增「标题」列，或把标题列改名为上述之一",
+      tableLabel + "有 " + n + " 条记录没有「标题」列，按钮暂用内容前 12 字显示：请在表里新增「标题」列（列名必须一字不差）",
       "warning"
     );
   }
@@ -4018,11 +3995,11 @@ titleFallback: !title
     key: 0,
     class: "tabular-nums"
   };
-  const _hoisted_12$8 = {
+  const _hoisted_12$9 = {
     key: 2,
     class: "mt-3 text-[12px] leading-5 text-base-content/50"
   };
-  const _hoisted_13$8 = {
+  const _hoisted_13$9 = {
     key: 3,
     class: "mt-2 text-center"
   };
@@ -4151,8 +4128,8 @@ titleFallback: !title
                   ])
                 ], 8, _hoisted_6$c);
               }), 128))
-            ])) : searched.value && !loading.value && !errorText2.value ? (vue.openBlock(), vue.createElementBlock("p", _hoisted_12$8, " 没有搜到多维表格。确认这个飞书账号里确实有表，或换个关键词再试。 ")) : vue.createCommentVNode("", true),
-            hasMore.value ? (vue.openBlock(), vue.createElementBlock("div", _hoisted_13$8, [
+            ])) : searched.value && !loading.value && !errorText2.value ? (vue.openBlock(), vue.createElementBlock("p", _hoisted_12$9, " 没有搜到多维表格。确认这个飞书账号里确实有表，或换个关键词再试。 ")) : vue.createCommentVNode("", true),
+            hasMore.value ? (vue.openBlock(), vue.createElementBlock("div", _hoisted_13$9, [
               vue.createElementVNode("button", {
                 class: "btn btn-ghost btn-sm",
                 disabled: loading.value,
@@ -4194,8 +4171,8 @@ titleFallback: !title
   const _hoisted_9$a = { class: "rounded-box bg-base-200 p-3" };
   const _hoisted_10$a = { class: "mb-2 text-[12px] text-base-content/70" };
   const _hoisted_11$a = { class: "mb-2 text-[13px]" };
-  const _hoisted_12$7 = { class: "font-mono text-[15px] font-semibold" };
-  const _hoisted_13$7 = { class: "flex items-center gap-3" };
+  const _hoisted_12$8 = { class: "font-mono text-[15px] font-semibold" };
+  const _hoisted_13$8 = { class: "flex items-center gap-3" };
   const _hoisted_14$7 = ["href"];
   const _hoisted_15$6 = { class: "text-[11px] leading-4 text-base-content/50" };
   const _hoisted_16$5 = {
@@ -4436,9 +4413,9 @@ titleFallback: !title
                 vue.createElementVNode("p", _hoisted_10$a, vue.toDisplayString(phaseText.value), 1),
                 vue.createElementVNode("p", _hoisted_11$a, [
                   _cache[6] || (_cache[6] = vue.createTextVNode(" 在飞书里确认授权码：")),
-                  vue.createElementVNode("span", _hoisted_12$7, vue.toDisplayString(challenge.value.userCode), 1)
+                  vue.createElementVNode("span", _hoisted_12$8, vue.toDisplayString(challenge.value.userCode), 1)
                 ]),
-                vue.createElementVNode("div", _hoisted_13$7, [
+                vue.createElementVNode("div", _hoisted_13$8, [
                   vue.createElementVNode("a", {
                     class: "btn btn-primary btn-sm rounded-full",
                     href: challenge.value.verificationUriComplete,
@@ -4578,8 +4555,8 @@ titleFallback: !title
   const _hoisted_9$9 = { class: "fieldset py-3" };
   const _hoisted_10$9 = { class: "fieldset-legend flex w-full items-center justify-between gap-3" };
   const _hoisted_11$9 = ["checked"];
-  const _hoisted_12$6 = { class: "py-3" };
-  const _hoisted_13$6 = {
+  const _hoisted_12$7 = { class: "py-3" };
+  const _hoisted_13$7 = {
     key: 1,
     role: "alert",
     class: "alert alert-error alert-soft alert-vertical"
@@ -4747,12 +4724,12 @@ titleFallback: !title
                     ]),
                     _cache[13] || (_cache[13] = vue.createElementVNode("p", { class: "label whitespace-normal" }, "关闭时仅累计未读角标，不打扰；窗口已开着则只累加，不强行切换会话。", -1))
                   ]),
-                  vue.createElementVNode("div", _hoisted_12$6, [
+                  vue.createElementVNode("div", _hoisted_12$7, [
                     !confirmClear.value ? (vue.openBlock(), vue.createElementBlock("button", {
                       key: 0,
                       class: "btn btn-error btn-sm rounded-full",
                       onClick: _cache[4] || (_cache[4] = ($event) => confirmClear.value = true)
-                    }, "清空全部传输记录")) : (vue.openBlock(), vue.createElementBlock("div", _hoisted_13$6, [
+                    }, "清空全部传输记录")) : (vue.openBlock(), vue.createElementBlock("div", _hoisted_13$7, [
                       _cache[14] || (_cache[14] = vue.createElementVNode("div", null, [
                         vue.createElementVNode("div", { class: "text-[13px]" }, "清空全部传输记录"),
                         vue.createElementVNode("div", { class: "text-xs" }, " 所有会话的图片与文本都会被移除（仅清理本机内存，不影响手机上的文件） ")
@@ -4992,8 +4969,8 @@ titleFallback: !title
     class: "hero"
   };
   const _hoisted_11$8 = { class: "hero-content" };
-  const _hoisted_12$5 = { class: "text-[13px] text-base-content/60" };
-  const _hoisted_13$5 = ["onClick"];
+  const _hoisted_12$6 = { class: "text-[13px] text-base-content/60" };
+  const _hoisted_13$6 = ["onClick"];
   const _hoisted_14$5 = { class: "flex items-start gap-2" };
   const _hoisted_15$4 = { class: "line-clamp-3 min-w-0 flex-1 break-words text-[13px] leading-5" };
   const _hoisted_16$3 = { class: "mt-0.5 shrink-0 opacity-40 transition-opacity group-hover:text-primary group-hover:opacity-100" };
@@ -5134,7 +5111,7 @@ titleFallback: !title
               vue.createElementVNode("span", { class: "text-center text-xs leading-5 text-base-content/60" }, " 正在抓取常用话术…（右侧栏会自动切 tab，请勿操作） ", -1)
             ]))) : !rows.value.length ? (vue.openBlock(), vue.createElementBlock("div", _hoisted_10$8, [
               vue.createElementVNode("div", _hoisted_11$8, [
-                vue.createElementVNode("p", _hoisted_12$5, vue.toDisplayString(emptyText.value), 1)
+                vue.createElementVNode("p", _hoisted_12$6, vue.toDisplayString(emptyText.value), 1)
               ])
             ])) : (vue.openBlock(), vue.createElementBlock("div", {
               key: 2,
@@ -5161,7 +5138,7 @@ titleFallback: !title
                       })
                     ])
                   ])
-                ], 40, _hoisted_13$5);
+                ], 40, _hoisted_13$6);
               }), 128))
             ], 32))
           ], 512),
@@ -5202,8 +5179,8 @@ titleFallback: !title
   const _hoisted_9$7 = { class: "mt-2 flex items-center justify-between gap-2 border-t border-base-300 pt-1.5 text-[11.5px] text-base-content/60" };
   const _hoisted_10$7 = { class: "text-base-content" };
   const _hoisted_11$7 = { class: "text-base-content" };
-  const _hoisted_12$4 = { class: "flex items-center gap-2.5" };
-  const _hoisted_13$4 = {
+  const _hoisted_12$5 = { class: "flex items-center gap-2.5" };
+  const _hoisted_13$5 = {
     class: "flex items-center gap-1.5",
     title: "开启后新日志持续刷新并自动滚到底部；关闭后列表冻结在当前快照，便于往上翻看历史"
   };
@@ -5322,8 +5299,8 @@ titleFallback: !title
                 vue.createElementVNode("b", _hoisted_11$7, vue.toDisplayString(shown.value.length), 1),
                 vue.createTextVNode(" 条 " + vue.toDisplayString(props.autoRefresh ? "" : " · 已冻结"), 1)
               ]),
-              vue.createElementVNode("span", _hoisted_12$4, [
-                vue.createElementVNode("label", _hoisted_13$4, [
+              vue.createElementVNode("span", _hoisted_12$5, [
+                vue.createElementVNode("label", _hoisted_13$5, [
                   vue.createElementVNode("input", {
                     type: "checkbox",
                     class: "toggle toggle-sm",
@@ -6025,11 +6002,11 @@ entries() {
     class: "flex h-[58vh] flex-col items-center justify-center"
   };
   const _hoisted_11$6 = { class: "mt-2 text-xs text-base-content/60" };
-  const _hoisted_12$3 = {
+  const _hoisted_12$4 = {
     key: 3,
     class: "hero h-[58vh]"
   };
-  const _hoisted_13$3 = { class: "hero-content flex-col text-center" };
+  const _hoisted_13$4 = { class: "hero-content flex-col text-center" };
   const _hoisted_14$3 = { class: "text-xs text-base-content/60" };
   const _hoisted_15$3 = {
     key: 4,
@@ -6421,8 +6398,8 @@ shouldStop: () => runId !== id
             phase.value === "measuring" && !probed.value.length ? (vue.openBlock(), vue.createElementBlock("div", _hoisted_10$6, [
               _cache[11] || (_cache[11] = vue.createElementVNode("span", { class: "loading loading-spinner text-primary" }, null, -1)),
               vue.createElementVNode("p", _hoisted_11$6, " 正在测量大小…（" + vue.toDisplayString(probed.value.length) + "/" + vue.toDisplayString(total.value) + "） ", 1)
-            ])) : !kept.value.length ? (vue.openBlock(), vue.createElementBlock("div", _hoisted_12$3, [
-              vue.createElementVNode("div", _hoisted_13$3, [
+            ])) : !kept.value.length ? (vue.openBlock(), vue.createElementBlock("div", _hoisted_12$4, [
+              vue.createElementVNode("div", _hoisted_13$4, [
                 vue.createVNode(vue.unref(Icon), {
                   name: "image",
                   size: 20
@@ -6947,11 +6924,11 @@ shouldStop: () => runId !== id
   const _hoisted_9$5 = ["title"];
   const _hoisted_10$5 = { class: "mt-px text-[11px] opacity-75" };
   const _hoisted_11$5 = ["disabled"];
-  const _hoisted_12$2 = {
+  const _hoisted_12$3 = {
     key: 0,
     class: "mt-1 flex items-center gap-1.5"
   };
-  const _hoisted_13$2 = ["value"];
+  const _hoisted_13$3 = ["value"];
   const _hoisted_14$2 = {
     key: 1,
     class: "mt-1 text-[11px]"
@@ -7078,13 +7055,13 @@ shouldStop: () => runId !== id
                 onClick: _cache[3] || (_cache[3] = ($event) => emit2("download"))
               }, vue.toDisplayString(_ctx.downloadLabel), 11, _hoisted_11$5)
             ], 4),
-            _ctx.progress !== null ? (vue.openBlock(), vue.createElementBlock("div", _hoisted_12$2, [
+            _ctx.progress !== null ? (vue.openBlock(), vue.createElementBlock("div", _hoisted_12$3, [
               _cache[6] || (_cache[6] = vue.createElementVNode("span", { class: "loading loading-spinner loading-sm shrink-0" }, null, -1)),
               vue.createElementVNode("progress", {
                 class: vue.normalizeClass(["progress min-w-0 flex-1", _ctx.mine ? "progress-neutral" : "progress-primary"]),
                 value: _ctx.progress,
                 max: "100"
-              }, null, 10, _hoisted_13$2)
+              }, null, 10, _hoisted_13$3)
             ])) : vue.createCommentVNode("", true),
             _ctx.error ? (vue.openBlock(), vue.createElementBlock("div", _hoisted_14$2, vue.toDisplayString(_ctx.error), 1)) : vue.createCommentVNode("", true)
           ], 2)) : (vue.openBlock(), vue.createElementBlock(vue.Fragment, { key: 3 }, [
@@ -7307,8 +7284,8 @@ shouldStop: () => runId !== id
   const _hoisted_9$4 = { class: "mt-0.5 truncate text-[11px] text-base-content/40" };
   const _hoisted_10$4 = { class: "mb-1.5 text-[13px] font-semibold text-base-content" };
   const _hoisted_11$4 = { class: "grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] content-start gap-2" };
-  const _hoisted_12$1 = { class: "inline-flex size-8 shrink-0 items-center justify-center rounded-[6px] bg-white/[0.08] text-base-content/60" };
-  const _hoisted_13$1 = { class: "min-w-0 flex-1" };
+  const _hoisted_12$2 = { class: "inline-flex size-8 shrink-0 items-center justify-center rounded-[6px] bg-white/[0.08] text-base-content/60" };
+  const _hoisted_13$2 = { class: "min-w-0 flex-1" };
   const _hoisted_14$1 = ["title"];
   const _hoisted_15$1 = { class: "mt-px truncate text-[11px] text-base-content/40" };
   const _hoisted_16$1 = { class: "flex shrink-0 items-center gap-1" };
@@ -7442,13 +7419,13 @@ shouldStop: () => runId !== id
                   "data-transfer-file-card": "1",
                   class: "flex min-w-0 items-center gap-2.5 rounded-[8px] border border-base-300 bg-white/[0.04] px-2.5 py-2"
                 }, [
-                  vue.createElementVNode("span", _hoisted_12$1, [
+                  vue.createElementVNode("span", _hoisted_12$2, [
                     vue.createVNode(vue.unref(Icon), {
                       name: "fileText",
                       size: 18
                     })
                   ]),
-                  vue.createElementVNode("div", _hoisted_13$1, [
+                  vue.createElementVNode("div", _hoisted_13$2, [
                     vue.createElementVNode("div", {
                       class: "truncate text-[13px] text-base-content",
                       title: msg.name || "file"
@@ -7791,8 +7768,8 @@ shouldStop: () => runId !== id
     "aria-label": "更多",
     title: "更多"
   };
-  const _hoisted_12 = { class: "menu dropdown-content z-1 w-52 rounded-box bg-base-100 p-2 shadow-sm" };
-  const _hoisted_13 = {
+  const _hoisted_12$1 = { class: "menu dropdown-content z-1 w-52 rounded-box bg-base-100 p-2 shadow-sm" };
+  const _hoisted_13$1 = {
     class: "tooltip tooltip-bottom",
     "data-tip": "关闭"
   };
@@ -8081,7 +8058,7 @@ shouldStop: () => runId !== id
                           size: 14
                         })
                       ]),
-                      vue.createElementVNode("ul", _hoisted_12, [
+                      vue.createElementVNode("ul", _hoisted_12$1, [
                         vue.createElementVNode("li", null, [
                           vue.createElementVNode("button", {
                             onClick: _cache[2] || (_cache[2] = ($event) => {
@@ -8099,7 +8076,7 @@ shouldStop: () => runId !== id
                       ])
                     ], 512)
                   ]),
-                  vue.createElementVNode("div", _hoisted_13, [
+                  vue.createElementVNode("div", _hoisted_13$1, [
                     vue.createElementVNode("form", _hoisted_14, [
                       vue.createElementVNode("button", _hoisted_15, [
                         vue.createVNode(vue.unref(Icon), {
@@ -8657,30 +8634,36 @@ syntax: ((_b = pick("syntax")) != null ? _b : "*").replace(/^["']+|["']+$/g, "")
   };
   const _hoisted_3 = { class: "flex shrink-0 items-center gap-1 text-[12px] text-warning" };
   const _hoisted_4 = {
-    class: "flex min-w-0 flex-1 gap-1.5 overflow-x-auto pb-0.5",
+    class: "flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto pb-0.5",
     style: { "scrollbar-width": "thin" }
   };
   const _hoisted_5 = ["title", "onClick"];
   const _hoisted_6 = {
-    key: 1,
-    class: "flex items-center gap-2"
-  };
-  const _hoisted_7 = { class: "flex shrink-0 items-center gap-1 text-[12px] text-base-content/50" };
-  const _hoisted_8 = {
-    class: "flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto pb-0.5",
-    style: { "scrollbar-width": "thin" }
-  };
-  const _hoisted_9 = ["title", "onClick"];
-  const _hoisted_10 = {
     key: 0,
     class: "h-4 w-px shrink-0 bg-base-content/20"
   };
+  const _hoisted_7 = ["title", "onClick"];
+  const _hoisted_8 = {
+    key: 1,
+    class: "flex items-center gap-2"
+  };
+  const _hoisted_9 = { class: "flex shrink-0 items-center gap-1 text-[12px] text-base-content/50" };
+  const _hoisted_10 = {
+    class: "flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto pb-0.5",
+    style: { "scrollbar-width": "thin" }
+  };
   const _hoisted_11 = ["title", "onClick"];
+  const _hoisted_12 = {
+    key: 0,
+    class: "h-4 w-px shrink-0 bg-base-content/20"
+  };
+  const _hoisted_13 = ["title", "onClick"];
   const _sfc_main = vue.defineComponent({
     __name: "QuickBar",
     props: {
       pinned: {},
       rules: {},
+      privacyPinned: {},
       privacy: {}
     },
     emits: ["pick"],
@@ -8691,8 +8674,8 @@ syntax: ((_b = pick("syntax")) != null ? _b : "*").replace(/^["']+|["']+$/g, "")
         emit2("pick", rule);
       }
       return (_ctx, _cache) => {
-        return props.pinned.length || props.rules.length || props.privacy.length ? (vue.openBlock(), vue.createElementBlock("div", _hoisted_1, [
-          props.privacy.length ? (vue.openBlock(), vue.createElementBlock("div", _hoisted_2, [
+        return props.pinned.length || props.rules.length || props.privacyPinned.length || props.privacy.length ? (vue.openBlock(), vue.createElementBlock("div", _hoisted_1, [
+          props.privacyPinned.length || props.privacy.length ? (vue.openBlock(), vue.createElementBlock("div", _hoisted_2, [
             vue.createElementVNode("span", _hoisted_3, [
               vue.createVNode(vue.unref(Icon), {
                 name: "lock",
@@ -8701,6 +8684,17 @@ syntax: ((_b = pick("syntax")) != null ? _b : "*").replace(/^["']+|["']+$/g, "")
               _cache[0] || (_cache[0] = vue.createTextVNode(" 隐私信息 "))
             ]),
             vue.createElementVNode("div", _hoisted_4, [
+              (vue.openBlock(true), vue.createElementBlock(vue.Fragment, null, vue.renderList(props.privacyPinned, (rule) => {
+                return vue.openBlock(), vue.createElementBlock("button", {
+                  key: rule.id,
+                  "data-znhd": "quick-reply-privacy-btn",
+                  type: "button",
+                  class: "btn btn-outline btn-xs shrink-0 rounded-full font-normal hover:border-warning hover:bg-warning/10 hover:text-warning",
+                  title: "（常显）" + rule.reply,
+                  onClick: ($event) => onClick(rule)
+                }, vue.toDisplayString(rule.title), 9, _hoisted_5);
+              }), 128)),
+              props.privacyPinned.length && props.privacy.length ? (vue.openBlock(), vue.createElementBlock("span", _hoisted_6)) : vue.createCommentVNode("", true),
               (vue.openBlock(true), vue.createElementBlock(vue.Fragment, null, vue.renderList(props.privacy, (rule) => {
                 return vue.openBlock(), vue.createElementBlock("button", {
                   key: rule.id,
@@ -8709,19 +8703,19 @@ syntax: ((_b = pick("syntax")) != null ? _b : "*").replace(/^["']+|["']+$/g, "")
                   class: "btn btn-outline btn-xs shrink-0 rounded-full font-normal hover:border-warning hover:bg-warning/10 hover:text-warning",
                   title: rule.reply,
                   onClick: ($event) => onClick(rule)
-                }, vue.toDisplayString(rule.title), 9, _hoisted_5);
+                }, vue.toDisplayString(rule.title), 9, _hoisted_7);
               }), 128))
             ])
           ])) : vue.createCommentVNode("", true),
-          props.pinned.length || props.rules.length ? (vue.openBlock(), vue.createElementBlock("div", _hoisted_6, [
-            vue.createElementVNode("span", _hoisted_7, [
+          props.pinned.length || props.rules.length ? (vue.openBlock(), vue.createElementBlock("div", _hoisted_8, [
+            vue.createElementVNode("span", _hoisted_9, [
               vue.createVNode(vue.unref(Icon), {
                 name: "phrases",
                 size: 13
               }),
               _cache[1] || (_cache[1] = vue.createTextVNode(" 快捷短语 "))
             ]),
-            vue.createElementVNode("div", _hoisted_8, [
+            vue.createElementVNode("div", _hoisted_10, [
               (vue.openBlock(true), vue.createElementBlock(vue.Fragment, null, vue.renderList(props.pinned, (rule) => {
                 return vue.openBlock(), vue.createElementBlock("button", {
                   key: rule.id,
@@ -8730,9 +8724,9 @@ syntax: ((_b = pick("syntax")) != null ? _b : "*").replace(/^["']+|["']+$/g, "")
                   class: "btn btn-outline btn-xs shrink-0 rounded-full font-normal hover:border-primary hover:bg-primary/10 hover:text-primary",
                   title: "（常显）" + rule.reply,
                   onClick: ($event) => onClick(rule)
-                }, vue.toDisplayString(rule.title), 9, _hoisted_9);
+                }, vue.toDisplayString(rule.title), 9, _hoisted_11);
               }), 128)),
-              props.pinned.length && props.rules.length ? (vue.openBlock(), vue.createElementBlock("span", _hoisted_10)) : vue.createCommentVNode("", true),
+              props.pinned.length && props.rules.length ? (vue.openBlock(), vue.createElementBlock("span", _hoisted_12)) : vue.createCommentVNode("", true),
               (vue.openBlock(true), vue.createElementBlock(vue.Fragment, null, vue.renderList(props.rules, (rule) => {
                 return vue.openBlock(), vue.createElementBlock("button", {
                   key: rule.id,
@@ -8741,7 +8735,7 @@ syntax: ((_b = pick("syntax")) != null ? _b : "*").replace(/^["']+|["']+$/g, "")
                   class: "btn btn-outline btn-xs shrink-0 rounded-full font-normal hover:border-primary hover:bg-primary/10 hover:text-primary",
                   title: rule.reply,
                   onClick: ($event) => onClick(rule)
-                }, vue.toDisplayString(rule.title), 9, _hoisted_11);
+                }, vue.toDisplayString(rule.title), 9, _hoisted_13);
               }), 128))
             ])
           ])) : vue.createCommentVNode("", true)
@@ -8771,19 +8765,31 @@ syntax: ((_b = pick("syntax")) != null ? _b : "*").replace(/^["']+|["']+$/g, "")
     }
     return false;
   }
+  function allHit(normalizedText, words) {
+    for (const w of words) {
+      const k = normalize(w);
+      if (!k) continue;
+      if (normalizedText.indexOf(k) < 0) return false;
+    }
+    return true;
+  }
   function matchRules(conversationText, rules) {
     const text = normalize(conversationText);
     if (!text) return [];
     const hits2 = [];
     for (const rule of rules) {
-      if (!rule.keywords.length) continue;
-      if (rule.excludes.length && anyHit(text, rule.excludes)) continue;
-      if (anyHit(text, rule.keywords)) hits2.push(rule);
+      const musts = rule.musts || [];
+      const excludes = rule.excludes || [];
+      const keywords = rule.keywords || [];
+      if (excludes.length && anyHit(text, excludes)) continue;
+      if (!allHit(text, musts)) continue;
+      if (!keywords.length) continue;
+      if (anyHit(text, keywords)) hits2.push(rule);
     }
     return hits2;
   }
   const MAX_MESSAGES = 6;
-  const EMPTY = { text: "", source: "none", count: 0 };
+  const EMPTY = { text: "", source: "none", count: 0, org: "" };
   function hostDoc() {
     try {
       if (typeof unsafeWindow !== "undefined" && (unsafeWindow == null ? void 0 : unsafeWindow.document)) return unsafeWindow.document;
@@ -8813,6 +8819,26 @@ syntax: ((_b = pick("syntax")) != null ? _b : "*").replace(/^["']+|["']+$/g, "")
     }
     return "";
   }
+  function readOrg() {
+    var _a;
+    try {
+      const vm = readVueInstance();
+      const st = (_a = vm == null ? void 0 : vm.$store) == null ? void 0 : _a.state;
+      if (!st) return "";
+      const chat = st["chat"];
+      const selectItem = chat ? chat["selectItem"] : void 0;
+      const guide = selectItem ? selectItem["taxguideRecord"] : void 0;
+      if (!guide || typeof guide !== "object") return "";
+      const rec = guide;
+      for (const key of ["swjgMc", "swjgmc"]) {
+        const v = rec[key];
+        if (typeof v === "string" && v.trim()) return v.trim();
+      }
+      return "";
+    } catch {
+      return "";
+    }
+  }
   function fromStore() {
     var _a;
     const vm = readVueInstance();
@@ -8827,7 +8853,7 @@ syntax: ((_b = pick("syntax")) != null ? _b : "*").replace(/^["']+|["']+$/g, "")
       if (t) parts.unshift(t);
     }
     if (!parts.length) return EMPTY;
-    return { text: parts.join("\n"), source: "vuex", count: parts.length };
+    return { text: parts.join("\n"), source: "vuex", count: parts.length, org: "" };
   }
   function fromSelector(selector) {
     if (!selector) return EMPTY;
@@ -8837,18 +8863,24 @@ syntax: ((_b = pick("syntax")) != null ? _b : "*").replace(/^["']+|["']+$/g, "")
       try {
         const el = d.querySelector(selector);
         const t = el && el.textContent ? el.textContent.trim() : "";
-        if (t) return { text: t, source: "dom", count: 1 };
+        if (t) return { text: t, source: "dom", count: 1, org: "" };
       } catch {
       }
     }
     return EMPTY;
   }
+  function joinOrg(text, org) {
+    if (!org) return text;
+    return text ? text + "\n" + org : org;
+  }
   function readConversation(selector = "") {
+    const org = readOrg();
     const store = fromStore();
-    if (store.text) return store;
-    const dom = fromSelector(selector);
-    if (dom.text) return dom;
-    return EMPTY;
+    const base = store.text ? store : fromSelector(selector);
+    const text = joinOrg(base.text, org);
+    if (!text) return EMPTY;
+    const source = base.text ? base.source : "org";
+    return { text, source, count: base.count, org };
   }
   const RESOLVERS = {
     Active_Cnt: resolveActiveCnt
@@ -8885,13 +8917,14 @@ syntax: ((_b = pick("syntax")) != null ? _b : "*").replace(/^["']+|["']+$/g, "")
   const MATCH_POLL_MS = 3e3;
   const hits = vue.ref([]);
   const pinnedHits = vue.ref([]);
+  const privacyPinnedHits = vue.ref([]);
   const privacyHits = vue.ref([]);
   let app$1 = null;
   let mountTimer = null;
   let matchTimer = null;
   let lastFingerprint = "";
   let pinnedFingerprint = "";
-  let privacyFingerprint = "";
+  let privacyPinnedFingerprint = "";
   let rulesCopy = [];
   let rulesStamp = 0;
   let rulesRetryAt = 0;
@@ -8919,7 +8952,8 @@ syntax: ((_b = pick("syntax")) != null ? _b : "*").replace(/^["']+|["']+$/g, "")
     if (stamp === privacyStamp) return;
     privacyStamp = stamp;
     privacyRulesCopy = (_a = cache == null ? void 0 : cache.rules) != null ? _a : [];
-    privacyFingerprint = "";
+    privacyPinnedFingerprint = "";
+    lastFingerprint = "";
   }
   async function ensureRules() {
     var _a, _b, _c;
@@ -8988,6 +9022,7 @@ syntax: ((_b = pick("syntax")) != null ? _b : "*").replace(/^["']+|["']+$/g, "")
       render: () => vue.h(_sfc_main, {
         pinned: pinnedHits.value,
         rules: hits.value,
+        privacyPinned: privacyPinnedHits.value,
         privacy: privacyHits.value,
         onPick
       })
@@ -9023,10 +9058,11 @@ syntax: ((_b = pick("syntax")) != null ? _b : "*").replace(/^["']+|["']+$/g, "")
       pinnedFingerprint = pinnedIds;
       pinnedHits.value = pinnedNow;
     }
-    const privacyIds = privacyRulesCopy.map((r) => r.id).join(",");
-    if (privacyIds !== privacyFingerprint) {
-      privacyFingerprint = privacyIds;
-      privacyHits.value = privacyRulesCopy;
+    const privacyPinnedNow = privacyRulesCopy.filter((r) => r.pinned);
+    const privacyPinnedIds = privacyPinnedNow.map((r) => r.id).join(",");
+    if (privacyPinnedIds !== privacyPinnedFingerprint) {
+      privacyPinnedFingerprint = privacyPinnedIds;
+      privacyPinnedHits.value = privacyPinnedNow;
     }
     let selector = "";
     try {
@@ -9037,22 +9073,28 @@ syntax: ((_b = pick("syntax")) != null ? _b : "*").replace(/^["']+|["']+$/g, "")
     if (!snap.text) {
       if (lastFingerprint) lastFingerprint = "";
       if (hits.value.length) hits.value = [];
+      if (privacyHits.value.length) privacyHits.value = [];
       return;
     }
-    const fp = fingerprint(snap.text);
+    const fp = fingerprint(snap.text) + "#" + privacyStamp;
     if (fp === lastFingerprint) return;
     lastFingerprint = fp;
     if (!rulesCopy.length) {
       if (hits.value.length) hits.value = [];
-      return;
+      lastFingerprint = "";
+    } else {
+      const matched = matchRules(snap.text, rulesCopy).filter((r) => !r.pinned);
+      const before = hits.value.map((r) => r.id).join(",");
+      const after = matched.map((r) => r.id).join(",");
+      if (before !== after) {
+        hits.value = matched;
+        if (matched.length) addLog("快捷短语命中：" + matched.map((r) => r.title).join("、"), "info");
+      }
     }
-    const matched = matchRules(snap.text, rulesCopy).filter((r) => !r.pinned);
-    const before = hits.value.map((r) => r.id).join(",");
-    const after = matched.map((r) => r.id).join(",");
-    if (before !== after) {
-      hits.value = matched;
-      if (matched.length) addLog("快捷短语命中：" + matched.map((r) => r.title).join("、"), "info");
-    }
+    const privacyMatched = privacyRulesCopy.length ? matchRules(snap.text, privacyRulesCopy).filter((r) => !r.pinned) : [];
+    const pBefore = privacyHits.value.map((r) => r.id).join(",");
+    const pAfter = privacyMatched.map((r) => r.id).join(",");
+    if (pBefore !== pAfter) privacyHits.value = privacyMatched;
   }
   function startQuickReplyBar() {
     if (mountTimer !== null) return;
@@ -9068,7 +9110,7 @@ syntax: ((_b = pick("syntax")) != null ? _b : "*").replace(/^["']+|["']+$/g, "")
     matchTimer = null;
     lastFingerprint = "";
     pinnedFingerprint = "";
-    privacyFingerprint = "";
+    privacyPinnedFingerprint = "";
     rulesCopy = [];
     rulesStamp = 0;
     rulesRetryAt = 0;
@@ -9077,6 +9119,7 @@ syntax: ((_b = pick("syntax")) != null ? _b : "*").replace(/^["']+|["']+$/g, "")
     privacyRetryAt = 0;
     hits.value = [];
     pinnedHits.value = [];
+    privacyPinnedHits.value = [];
     privacyHits.value = [];
     unmountHost();
   }

@@ -3,10 +3,13 @@ import type { QuickReplyRule } from './types';
 /**
  * 规则匹配引擎（纯函数，零依赖）。
  *
- * 规则（使用者 2026-10-23 定版）：
- *   · 标签列的值**命中任意一个**就显示该按钮 —— 不做打分、不设阈值；
- *   · 排除词列的值**命中任意一个**就整条不显示（排除优先于命中）；
- *   · 没有标签的规则永远不显示（否则每个空行都会在输入框上方挂一个按钮）。
+ * 规则（使用者 2026-10-26 定版，v26.10.26-v2）—— 顺序即优先级：
+ *   ① `剔除关键词` 命中任意一个 ⇒ **整条不显示**（一票否决，先于其它条件）；
+ *   ② `必含关键词` 必须**全部命中**才继续（为空 ⇒ 不约束）；
+ *   ③ `标签` 命中**任意一个**即显示（不做打分、不设阈值）；
+ *   ④ 没有标签的规则永远不显示（否则每个空行都会在输入框上方挂一个按钮）。
+ *
+ * 一句话：**必含全中 → 标签任一命中 → 剔除词一票否决**（剔除判断放在最前面）。
  *
  * ── 为什么要归一化 ────────────────────────────────────────────────────────────
  * 坐席看到的对话里混着全角标点、不同大小写、「解 非」这种中间夹空格的写法。
@@ -49,6 +52,22 @@ function anyHit(normalizedText: string, words: string[]): boolean {
 }
 
 /**
+ * 关键词数组是否**全部**出现在已归一化的文本里（「必含关键词」用）。
+ *
+ * - 空数组 ⇒ true（视作不约束，别把没填这一列的规则全挡掉）；
+ * - 归一化后为空的词（纯空格、纯标点）直接忽略，不参与判断；
+ * - 任何一个没命中 ⇒ false（AND 语义）。
+ */
+function allHit(normalizedText: string, words: string[]): boolean {
+    for (const w of words) {
+        const k = normalize(w);
+        if (!k) continue;
+        if (normalizedText.indexOf(k) < 0) return false;
+    }
+    return true;
+}
+
+/**
  * 在对话文本里匹配规则。
  *
  * @param conversationText 当前会话的双方对话文本（本机拼好的长字符串，绝不上传）
@@ -60,9 +79,18 @@ export function matchRules(conversationText: string, rules: QuickReplyRule[]): Q
     if (!text) return [];
     const hits: QuickReplyRule[] = [];
     for (const rule of rules) {
-        if (!rule.keywords.length) continue;
-        if (rule.excludes.length && anyHit(text, rule.excludes)) continue;
-        if (anyHit(text, rule.keywords)) hits.push(rule);
+        // 旧缓存里的规则对象可能没有 musts 字段（v26.10.26-v2 才加）⇒ 一律按空数组处理，禁止抛错
+        const musts = rule.musts || [];
+        const excludes = rule.excludes || [];
+        const keywords = rule.keywords || [];
+        // ① 剔除关键词一票否决（先于必含/标签判断）
+        if (excludes.length && anyHit(text, excludes)) continue;
+        // ② 必含关键词必须全部命中（空 = 不约束）
+        if (!allHit(text, musts)) continue;
+        // ③ 没有标签的规则永远不显示
+        if (!keywords.length) continue;
+        // ④ 标签任一命中即显示
+        if (anyHit(text, keywords)) hits.push(rule);
     }
     return hits;
 }

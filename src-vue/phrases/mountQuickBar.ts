@@ -46,11 +46,13 @@ import { toast } from '../lib/toast';
  *     不会出现「点了刷新但按钮条还是老规则，得等 5 分钟」；
  *   · 也不需要 `panel → phrases` 的 import（那会把 `main.ts` 拉进循环 import，见 AGENT.md 的 TDZ 坑）。
  *
- * ── 三段内容（v26.10.25-v1） ─────────────────────────────────────────────────
- *   · `pinned`：规则表「是否常显」= true 的条目 —— 不参与标签/排除词匹配、
- *     **对话文本为空也显示**，随规则副本（fetchedAt 戳）同步，指纹逻辑只服务普通匹配；
+ * ── 三段内容（v26.10.25-v1，v26.10.26-v2 起隐私表也参与匹配）─────────────────────
+ *   · `pinned`：规则表「是否常显」= true 的条目 —— 无视一切匹配条件（标签 / 必含关键词 /
+ *     剔除关键词）、**对话文本为空也显示**，随规则副本（fetchedAt 戳）同步；
  *   · `rules`：普通命中（matchRules 结果里按 id 去掉 pinned，避免与常显段重复显示）；
- *   · `privacy`：独立「隐私信息」表格的全量条目（速查表，不匹配、常显），未配置链接时为空。
+ *   · `privacyPinned` + `privacy`：独立「隐私信息」表格的条目，**与主表同一套匹配**
+ *     （标签 + 必含关键词 + 剔除关键词）；只有「是否常显」勾了的才常显 ——
+ *     速查项请勾「是否常显」，否则它会像主表一样只在命中时出现。
  */
 
 const HOST_ID = '__znhd_quick_reply_host__';
@@ -62,9 +64,11 @@ const MATCH_POLL_MS = 3000;
 
 /** 普通命中规则（响应式，供 Vue 渲染） */
 const hits = ref<QuickReplyRule[]>([]);
-/** 常显规则（pinned，不参与匹配） */
+/** 常显规则（pinned：无视一切匹配条件，对话为空也显示） */
 const pinnedHits = ref<QuickReplyRule[]>([]);
-/** 隐私信息条目（全量常显） */
+/** 隐私信息里「是否常显」勾了的条目（无视一切匹配条件，对话为空也显示） */
+const privacyPinnedHits = ref<QuickReplyRule[]>([]);
+/** 隐私信息里匹配命中的条目（已按 id 去掉 pinned） */
 const privacyHits = ref<QuickReplyRule[]>([]);
 
 let app: VueApp | null = null;
@@ -75,8 +79,8 @@ let matchTimer: ReturnType<typeof setInterval> | null = null;
 let lastFingerprint = '';
 /** 上次渲染的 pinned id 序列（pinned 不吃文本指纹，只随规则副本同步） */
 let pinnedFingerprint = '';
-/** 上次渲染的隐私条目 id 序列 */
-let privacyFingerprint = '';
+/** 上次渲染的隐私 pinned id 序列 */
+let privacyPinnedFingerprint = '';
 /** 规则的内存副本 + 它来自哪一份磁盘缓存（`RulesCache.fetchedAt`，0 = 从没读到过） */
 let rulesCopy: QuickReplyRule[] = [];
 let rulesStamp = 0;
@@ -119,7 +123,10 @@ function syncPrivacyFromCache(): void {
     if (stamp === privacyStamp) return;
     privacyStamp = stamp;
     privacyRulesCopy = cache?.rules ?? [];
-    privacyFingerprint = '';
+    privacyPinnedFingerprint = '';
+    // 隐私副本换了 ⇒ 命中结果要重算：指纹里带了 privacyStamp，值变了自然重算；
+    // 这里再清一次是为了「戳相同但副本被换」的极端情况也不留旧命中
+    lastFingerprint = '';
 }
 
 /**
@@ -218,6 +225,7 @@ function mountInto(anchorEl: HTMLElement): HTMLElement {
             h(QuickBar, {
                 pinned: pinnedHits.value,
                 rules: hits.value,
+                privacyPinned: privacyPinnedHits.value,
                 privacy: privacyHits.value,
                 onPick,
             }),
@@ -271,11 +279,12 @@ async function refreshMatches(): Promise<void> {
         pinnedHits.value = pinnedNow;
     }
 
-    // 隐私条目全量常显：随隐私缓存副本同步即可，与对话文本无关
-    const privacyIds = privacyRulesCopy.map((r) => r.id).join(',');
-    if (privacyIds !== privacyFingerprint) {
-        privacyFingerprint = privacyIds;
-        privacyHits.value = privacyRulesCopy;
+    // 隐私表的 pinned 同样只随隐私缓存副本同步（不吃文本指纹）
+    const privacyPinnedNow = privacyRulesCopy.filter((r) => r.pinned);
+    const privacyPinnedIds = privacyPinnedNow.map((r) => r.id).join(',');
+    if (privacyPinnedIds !== privacyPinnedFingerprint) {
+        privacyPinnedFingerprint = privacyPinnedIds;
+        privacyPinnedHits.value = privacyPinnedNow;
     }
 
     let selector = '';
@@ -287,32 +296,44 @@ async function refreshMatches(): Promise<void> {
 
     const snap = readConversation(typeof selector === 'string' ? selector : '');
     if (!snap.text) {
-        // 对话文本为空：只清普通命中 —— pinned / 隐私栏照常显示（v26.10.25-v1）
+        // 对话文本为空（且没取到税务机关）：只清普通命中 —— pinned 两段照常显示
         if (lastFingerprint) lastFingerprint = '';
         if (hits.value.length) hits.value = [];
+        if (privacyHits.value.length) privacyHits.value = [];
         return;
     }
 
-    const fp = fingerprint(snap.text);
+    // 指纹 = 文本指纹 + 隐私缓存戳：snap.text 已含主管税务机关，所以税务机关变化会重算；
+    // 隐私表是异步回源的，戳变了必须重算一次隐私命中（否则首次拉取成功也永远不显示）
+    const fp = fingerprint(snap.text) + '#' + privacyStamp;
     if (fp === lastFingerprint) return;
     lastFingerprint = fp;
 
+    // 主表普通命中里按 id 去掉 pinned：pinned 已单独显示，不能在这里再出现一遍
     if (!rulesCopy.length) {
         // 规则一条都没拿到（未授权 / 掉线且无缓存）：清空普通命中，且**不锁指纹**，
         // 冷却期一过还能自动重试（锁住指纹的话文本不变就永远不会再试）
         if (hits.value.length) hits.value = [];
-        return;
+        lastFingerprint = '';
+    } else {
+        const matched = matchRules(snap.text, rulesCopy).filter((r) => !r.pinned);
+        // 只有真正变化才写 ref，避免每 3 秒触发一次无意义的重渲染
+        const before = hits.value.map((r) => r.id).join(',');
+        const after = matched.map((r) => r.id).join(',');
+        if (before !== after) {
+            hits.value = matched;
+            // 日志只记命中的标题（不含对话正文），符合隐私约束
+            if (matched.length) addLog('快捷短语命中：' + matched.map((r) => r.title).join('、'), 'info');
+        }
     }
 
-    // 普通命中里按 id 去掉 pinned：pinned 已单独显示，不能在这里再出现一遍
-    const matched = matchRules(snap.text, rulesCopy).filter((r) => !r.pinned);
-    // 只有真正变化才写 ref，避免每 3 秒触发一次无意义的重渲染
-    const before = hits.value.map((r) => r.id).join(',');
-    const after = matched.map((r) => r.id).join(',');
-    if (before !== after) {
-        hits.value = matched;
-        if (matched.length) addLog('快捷短语命中：' + matched.map((r) => r.title).join('、'), 'info');
-    }
+    // 隐私表：与主表同一套匹配，按 id 去掉 pinned（pinned 已在上面单独显示）
+    const privacyMatched = privacyRulesCopy.length
+        ? matchRules(snap.text, privacyRulesCopy).filter((r) => !r.pinned)
+        : [];
+    const pBefore = privacyHits.value.map((r) => r.id).join(',');
+    const pAfter = privacyMatched.map((r) => r.id).join(',');
+    if (pBefore !== pAfter) privacyHits.value = privacyMatched;
 }
 
 export function startQuickReplyBar(): void {
@@ -331,7 +352,7 @@ export function stopQuickReplyBar(): void {
     matchTimer = null;
     lastFingerprint = '';
     pinnedFingerprint = '';
-    privacyFingerprint = '';
+    privacyPinnedFingerprint = '';
     rulesCopy = [];
     rulesStamp = 0;
     rulesRetryAt = 0;
@@ -340,6 +361,7 @@ export function stopQuickReplyBar(): void {
     privacyRetryAt = 0;
     hits.value = [];
     pinnedHits.value = [];
+    privacyPinnedHits.value = [];
     privacyHits.value = [];
     unmountHost();
 }

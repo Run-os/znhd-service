@@ -190,7 +190,9 @@ export async function getRules(force = false, http: HttpFn = gmHttp): Promise<Qu
 
 /* ════════════════ 隐私信息表格（v26.10.25-v1）════════════════
  * 第二张独立的多维表格（办公地点/办公电话等敏感速查条目）：
- *   · 列约定与主表相同（标题/内容），但**不参与标签匹配**，全部条目常显；
+ *   · 列约定与主表相同（标题/是否常显/标签/剔除关键词/必含关键词/内容）；
+ *   · v26.10.26-v2 起**与主表同一套匹配**（标签 + 必含关键词 + 剔除关键词），
+ *     「是否常显」勾了才常显（使用者定版 C）—— 速查项请在表里勾「是否常显」；
  *   · 链接配置独立（Allvalue `privacyTableUrl`），缓存独立（scriptCat_PrivacyRules），
  *     TTL 复用同一常量（RULES_TTL_MS）；fetchRules 走同一实现；
  *   · 未配置链接时 getPrivacyRules 抛错（面板静默处理），缓存读取不受影响。 */
@@ -261,9 +263,10 @@ export async function getPrivacyRules(force = false, http: HttpFn = gmHttp): Pro
 }
 
 /**
- * 标题列没认出来时提示一次（v26.10.26-v1）。
+ * 标题列没认出来时提示一次（v26.10.26-v1；v26.10.26-v2 起只提「标题」一列）。
  * 不报错：按钮仍会用「内容前 12 字」兜底显示 —— 但那不是标题，使用者会以为显示错了。
- * 因此这里明确告诉他缺哪一列、支持哪些列名，比事后猜「为什么显示的是文本」快得多。
+ * 因此这里明确指出缺「标题」列，比事后猜「为什么显示的是文本」快得多。
+ * ⚠️ 不再罗列旧列名（名称/信息项/文本…）：v26.10.26-v2 已删除别名机制，只认 `标题` / `内容`。
  */
 function warnIfNoTitle(rules: QuickReplyRule[], tableLabel: string): void {
     const n = rules.filter((r) => r.titleFallback).length;
@@ -272,8 +275,8 @@ function warnIfNoTitle(rules: QuickReplyRule[], tableLabel: string): void {
         tableLabel +
             '有 ' +
             n +
-            ' 条记录没有可识别的标题列（支持：标题 / 名称 / 信息项 / 项目 / 事项 / 条目 / 字段），' +
-            '按钮暂用内容前 12 字显示：请在表里新增「标题」列，或把标题列改名为上述之一',
+            ' 条记录没有「标题」列，' +
+            '按钮暂用内容前 12 字显示：请在表里新增「标题」列（列名必须一字不差）',
         'warning'
     );
 }

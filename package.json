@@ -1,6 +1,6 @@
 {
     "name": "znhd-service",
-    "version": "26.10.26-v1",
+    "version": "26.10.26-v2",
     "description": "征纳互动人数和在线监控：油猴脚本（人数/掉线监控、语音播报、常用语、设备互联图片互传）",
     "main": "./dist/znhd.user.js",
     "scripts": {
@@ -17,9 +17,10 @@
         "lint:fix": "npm run lint -- --fix",
         "typecheck": "tsc --noEmit",
         "check": "node --check dist/znhd.user.js && node --check relay-server/server.js && node --check relay-server/upload-page.js",
-        "verify": "npm run verify:feishu && npm run verify:rules && npm run verify:vue && npm run verify:relay && npm run verify:web",
+        "verify": "npm run verify:feishu && npm run verify:rules && npm run verify:match && npm run verify:vue && npm run verify:relay && npm run verify:web",
         "verify:feishu": "node scripts/smoke/feishu-search.js",
         "verify:rules": "node scripts/smoke/feishu-rules.js",
+        "verify:match": "node scripts/smoke/feishu-match.js",
         "verify:vue": "node scripts/smoke/vue-panel.js",
         "verify:relay": "node scripts/smoke/relay.js",
         "verify:web": "node scripts/smoke/phone-page.js"

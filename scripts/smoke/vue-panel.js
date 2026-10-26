@@ -89,14 +89,30 @@ window.GM_getValue = function (k, d) { return Object.prototype.hasOwnProperty.ca
 window.GM_setValue = function (k, v) { window.__store[k] = v; };
 // 预置一份**未过期**的规则缓存：lib/feishu/service.ts 的 getRules 见缓存新鲜就直接返回，
 // 于是匹配链路可以完全不联网地跑通（冒烟环境既没有授权也没有真实接口）。
-// 三条规则的用意：A 命中、B 被排除词拦掉、C 压根没命中 —— 一次点击同时验证「命中」与「排除优先」。
+// 四条规则的用意：A 命中、B 被剔除关键词拦掉、C 压根没命中、m1 必含关键词全部命中（v26.10.26-v2）。
 // 值必须是 JSON 字符串（credentials.ts 用 JSON.parse 读），否则测不到真实存储形态。
+// ⚠️ A/B/C 故意**不写 musts 字段**：旧缓存里的规则对象就是这样，顺带守住 match.ts 的 undefined 防御。
 window.__store['scriptCat_QuickReplyRules'] = JSON.stringify({
   fetchedAt: Date.now(),
   rules: [
     { id: 'rec-qr-A', title: '非正常户解除', keywords: ['解非', '非正常户'], excludes: [], reply: '教程链接：https://example.invalid/tutorial' },
     { id: 'rec-qr-B', title: '申报期提醒', keywords: ['申报'], excludes: ['已申报'], reply: '申报期提醒文案' },
-    { id: 'rec-qr-C', title: '注销流程', keywords: ['注销'], excludes: [], reply: '注销流程文案' }
+    { id: 'rec-qr-C', title: '注销流程', keywords: ['注销'], excludes: [], reply: '注销流程文案' },
+    // m1：必含关键词多值 AND（夹具窗口内同时含「申报」与「解非」）—— 端到端验证 rules.ts 解析出的
+    // musts 真的进了 match.ts（纯逻辑覆盖在 scripts/smoke/feishu-match.js）
+    { id: 'rec-qr-M1', title: '申报且解非（必含）', keywords: ['申报'], musts: ['申报', '解非'], excludes: [], reply: '必含命中文案' }
+  ]
+});
+// 隐私信息表缓存（v26.10.26-v2「隐私表参与匹配」的端到端覆盖）：
+//   p1 常显（pinned，无视一切匹配条件）／p2 只能靠**主管税务机关**文本命中（桩见 qr-fixtures.js）／
+//   p3 关键词永不出现 ⇒ 不该显示。⚠️ 不配 privacyTableUrl：ensurePrivacyRules 见内存副本非空就早退，
+//   不需要链接、也不会发网络请求。
+window.__store['scriptCat_PrivacyRules'] = JSON.stringify({
+  fetchedAt: Date.now(),
+  rules: [
+    { id: 'rec-privacy-p1', title: '办公电话', keywords: [], musts: [], excludes: [], reply: '0734-1234567（办公电话）', pinned: true },
+    { id: 'rec-privacy-p2', title: '税源管理股电话', keywords: ['税源管理股'], musts: [], excludes: [], reply: '0734-7654321（税源管理股）' },
+    { id: 'rec-privacy-p3', title: '不该出现', keywords: ['绝不出现的词XYZ'], musts: [], excludes: [], reply: '不该出现的内容' }
   ]
 });
 window.GM_setClipboard = function () {};
@@ -1534,15 +1550,38 @@ function serve() {
     await page.waitForFunction('window.__qrSnap != null', { timeout: 90000 }).catch(() => {});
     const qr = await page.evaluate(() => window.__qrSnap || null);
     report.quickReply = qr;
-    // 「只在命中时显示、且排除词优先」+「挂载位置在输入框之前」+「不越出容器」
+    // 「只在命中时显示、且剔除关键词优先」+「挂载位置在输入框之前」+「不越出容器」
+    // v26.10.26-v2：主栏多了 m1（必含关键词全部命中）⇒ 期望 2 个按钮。A 仍排第一，
+    //   所以下面 quickReplyReplaceOk 的「点第一个按钮」判据不受影响。
     report.checks.quickReplyBarOk = !!(
         qr &&
         qr.mounted &&
         qr.inComposer &&
         qr.beforeInput &&
         qr.barPresent &&
-        qr.labels.length === 1 &&
-        qr.labels[0] === '非正常户解除'
+        qr.labels.length === 2 &&
+        qr.labels[0] === '非正常户解除' &&
+        qr.labels[1] === '申报且解非（必含）'
+    );
+    // 必含关键词的端到端串联（rules.ts 解析出的 musts → match.ts 多值 AND）：m1 必须出现
+    report.checks.quickReplyMustOk = !!(qr && qr.labels.indexOf('申报且解非（必含）') >= 0);
+    // 隐私行（v26.10.26-v2 起隐私表参与匹配）：p1「办公电话」勾了常显、p2「税源管理股电话」
+    //   只能靠主管税务机关文本命中 ⇒ 两条都该在；p3 关键词永不出现 ⇒ 不该在。
+    //   一条断言同时证明「常显可见」+「标签匹配命中」+「不匹配的不显示」。
+    const privacyLabels = (qr && qr.privacyLabels) || [];
+    report.checks.quickReplyPrivacyOk = !!(
+        qr &&
+        qr.privacyRowPresent &&
+        privacyLabels.length === 2 &&
+        privacyLabels.indexOf('办公电话') >= 0 &&
+        privacyLabels.indexOf('税源管理股电话') >= 0 &&
+        privacyLabels.indexOf('不该出现') < 0
+    );
+    // 点隐私行的常显按钮：内容同样整体替换进输入框 + 同步进 Inputbox
+    report.checks.quickReplyPrivacyPickOk = !!(
+        qr &&
+        qr.privacyPickText === '0734-1234567（办公电话）' &&
+        qr.privacyPickSynced
     );
     // 点按钮后：输入框文本被**整体替换**（不是追加），且 setContent 之后同步进了 Inputbox
     report.checks.quickReplyReplaceOk = !!(

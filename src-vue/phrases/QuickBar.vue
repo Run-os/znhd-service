@@ -3,10 +3,12 @@ import type { QuickReplyRule } from '@/lib/feishu/types';
 import { Icon } from '@vue/icons';
 
 /**
- * 输入框上方的快捷回复按钮条（v26.10.23，v26.10.25-v1 起三段内容）。
+ * 输入框上方的快捷回复按钮条（v26.10.23；v26.10.25-v1 起分「隐私信息」+「快捷短语」两行；
+ * v26.10.26-v2 起隐私表也参与匹配）。
  *
  * 形态：最多两行可横向滚动的胶囊按钮 ——
- *   · 上行「隐私信息」（可选）：独立表格的全量速查条目，永远显示，不参与匹配；
+ *   · 上行「隐私信息」（可选）：隐私表里常显的条目 + 竖线 + 匹配命中的条目
+ *     （隐私表现在与主表**同一套匹配**，靠「是否常显」保住速查项）；
  *   · 下行「快捷短语」：常显规则（pinned，排最前）+ 竖向分割线 + 普通命中规则。
  * 点一下把该规则的 `内容` **整体替换**进会话输入框（不是追加 —— 使用者要求「替换」）。
  *
@@ -22,11 +24,13 @@ import { Icon } from '@vue/icons';
  *    站点主题被外层改写时才能跟着变。
  */
 const props = defineProps<{
-    /** 常显规则（规则表「是否常显」= true，排在快捷短语栏最前方，v26.10.25-v1） */
+    /** 常显规则（规则表「是否常显」= true，无视一切匹配条件，排在快捷短语栏最前方） */
     pinned: QuickReplyRule[];
     /** 普通命中规则（已按 id 去掉 pinned，避免重复显示） */
     rules: QuickReplyRule[];
-    /** 隐私信息条目（独立表格全量常显，v26.10.25-v1） */
+    /** 隐私信息里「是否常显」勾了的条目（无视一切匹配条件，v26.10.26-v2） */
+    privacyPinned: QuickReplyRule[];
+    /** 隐私信息里匹配命中的条目（已按 id 去掉 pinned） */
     privacy: QuickReplyRule[];
 }>();
 
@@ -43,17 +47,32 @@ function onClick(rule: QuickReplyRule): void {
 <template>
     <!-- 任一段有内容才渲染：全空时宿主页面上不应多出任何占位（高度必须为 0） -->
     <div
-        v-if="props.pinned.length || props.rules.length || props.privacy.length"
+        v-if="props.pinned.length || props.rules.length || props.privacyPinned.length || props.privacy.length"
         data-znhd="quick-reply-bar"
         class="flex flex-col gap-0.5 py-1">
-        <!-- 隐私信息栏（v26.10.25-v1）：主栏上方独立一行，自己的横向滚动容器 -->
-        <div v-if="props.privacy.length" class="flex items-center gap-2">
+        <!-- 隐私信息栏：常显条目在前 + 竖线 + 匹配命中，自己的横向滚动容器 -->
+        <div v-if="props.privacyPinned.length || props.privacy.length" class="flex items-center gap-2">
             <span class="flex shrink-0 items-center gap-1 text-[12px] text-warning">
                 <Icon name="lock" :size="13" />
                 隐私信息
             </span>
             <!-- 横向滚动区：min-w-0 必不可少，否则 flex 子项默认 min-width:auto 会把整条撑出容器 -->
-            <div class="flex min-w-0 flex-1 gap-1.5 overflow-x-auto pb-0.5" style="scrollbar-width: thin">
+            <div class="flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto pb-0.5" style="scrollbar-width: thin">
+                <!-- 隐私常显：无视标签/必含/剔除，始终显示（对话为空也在） -->
+                <button
+                    v-for="rule in props.privacyPinned"
+                    :key="rule.id"
+                    data-znhd="quick-reply-privacy-btn"
+                    type="button"
+                    class="btn btn-outline btn-xs shrink-0 rounded-full font-normal hover:border-warning hover:bg-warning/10 hover:text-warning"
+                    :title="'（常显）' + rule.reply"
+                    @click="onClick(rule)">
+                    {{ rule.title }}
+                </button>
+                <!-- 竖向分割线：仅在两边都有内容时渲染 -->
+                <span
+                    v-if="props.privacyPinned.length && props.privacy.length"
+                    class="h-4 w-px shrink-0 bg-base-content/20"></span>
                 <button
                     v-for="rule in props.privacy"
                     :key="rule.id"
@@ -74,7 +93,7 @@ function onClick(rule: QuickReplyRule): void {
                 快捷短语
             </span>
             <div class="flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto pb-0.5" style="scrollbar-width: thin">
-                <!-- 常显规则：忽略标签/排除词，始终显示（对话为空也在） -->
+                <!-- 常显规则：无视标签/必含/剔除，始终显示（对话为空也在） -->
                 <button
                     v-for="rule in props.pinned"
                     :key="rule.id"

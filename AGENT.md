@@ -131,7 +131,7 @@
 - **列表 = 卡片（方案 C1，v26.10.21-v2 定版）**：每条一张 `rounded-xl` 卡，卡面 `bg-base-200`（比 modal-box 的 base-100 亮一档）+ `border-base-content/10` 收边，文字 `line-clamp-3`（3 × `leading-5` = 60px），`min-h-[64px]` 保底两行，悬浮时 `hover:border-primary` + `hover:bg-base-300`。⚠️ **夜间不要用 `border-base-300` 分层**：business 的 base-300 与 base-200 明度几乎一致，描边整条融进深底（v26.10.21 用户在真机截图里发现），必须靠**明度差（卡面提亮）**或色相差。⚠️ v1 曾在卡左侧加 3px 竖条（方案 C2），用户看实机后否掉 ⇒ 不要再加回来（内容区必须是四边等距 `p-3`）。断言 = `phrasesClampOk`（clamp 3 + 高度 ≥ 44）+ `phrasesCardOk`（圆角 ≥ 8、四边内边距相等、无竖条元素、卡面底色 ≠ 弹层底色、hover 再抬一档）。卡片钩子：`[data-znhd="phrase-card"]`。
 
 ### 常用语快捷按钮（飞书规则表，v26.10.23）
-- 链路：`src-vue/phrases/mountQuickBar.ts`（host 插在 **Inputbox 根元素** `.input-tinymce.__vue__.$parent.$el` **之前** = 输入区含工具栏的外面上方；v1 曾直接插在 `.input-tinymce` 前、卡在工具栏和编辑器中间，像长在输入框里；找不到组件树时回退旧锚点；1s 自愈 / 3s 读对话，按指纹去重）→ `lib/feishu/convText.ts`（Vuex `state.chat.messageList` **从最新往回只取 6 条有文本的消息**，图片/无文本不占槽；设置项 `quickReplyConversationSelector` 走 DOM 兜底）→ `match.ts`（标签任一命中 + 排除词优先；全角/空格/大小写归一化）→ `QuickBar.vue` → `tinymce.ts` 新增的 `replaceToTinyMCE`（**替换**不是追加：setContent + updateText）。
+- 链路：`src-vue/phrases/mountQuickBar.ts`（host 插在 **Inputbox 根元素** `.input-tinymce.__vue__.$parent.$el` **之前** = 输入区含工具栏的外面上方；v1 曾直接插在 `.input-tinymce` 前、卡在工具栏和编辑器中间，像长在输入框里；找不到组件树时回退旧锚点；1s 自愈 / 3s 读对话，按指纹去重）→ `lib/feishu/convText.ts`（Vuex `state.chat.messageList` **从最新往回只取 6 条有文本的消息**，图片/无文本不占槽；**追加右侧栏主管税务机关全称**——`chat.selectItem.taxguideRecord.swjgMc`，空则 `swjgmc`，**不占 6 条配额**；设置项 `quickReplyConversationSelector` 走 DOM 兜底）→ `match.ts`（**剔除关键词一票否决 → 必含关键词全部命中 → 标签任一命中**；全角/空格/大小写归一化；`keywords`/`musts`/`excludes` 一律 `|| []` 防御）→ `QuickBar.vue` → `tinymce.ts` 新增的 `replaceToTinyMCE`（**替换**不是追加：setContent + updateText）。
 - 鉴权（`lib/feishu/oauth.ts`）：应用动态注册（`archetype=PersonalAgent`，**无凭证可发起**，飞书给这台机器动态签发 client_id/secret）+ 设备授权。实测：注册会话 3600s、**设备授权只有 600s**；token = `accounts.feishu.cn/oauth/v3/token`；**refresh 必须带 client_id+client_secret**（只传 refresh_token → 400）；`refresh_expires_in=604800` 每次刷新重算（7 天滑动）；**不强制 DPoP**（`token_type: Bearer`）。
 - ⚠️ **动态注册出的应用 = 「<注册人>的智能助手」，可用范围只有注册时那个账号**（v26.10.23-v3 实测）：换别的账号登录授权页 → 「你没有 XX 的智能助手的使用权限」；**个人版 / 豆包等第三方登录的账号无法给应用授云文档权限**（飞书统一报 `access_denied: restricted by your organization's security policy`，不是公司策略）。 ⇒ 授权页必须用第 1 步确认创建时的账号；账号选错只能面板「作废并重新注册」（`credentials.ts` 的 `forgetApp()` 清三键，`getStatus().hasCredential` 驱动按钮显隐）——只清 token 没用，凭证在就永远跳过第 1 步。飞书侧注册错的应用删不掉，无副作用。`access_denied` 已在 `pollDeviceToken` 里翻译成人话。
 - ⚠️ **走 bitable v1，别用 CLI 的 base 域**：v3 要 `base:field:read`/`base:record:read` 这种一列一个的细粒度 scope（报 99991672），v1 一个 `bitable:app:readonly` 全覆盖。
@@ -143,14 +143,30 @@
 - **从飞书直接选表**（v26.10.24-v6）：`lib/feishu/search.ts` + `panel/TablePickerDialog.vue`，复刻飞书官方 CLI（`larksuite/cli` 的 `shortcuts/drive/drive_search.go`）的 `POST /open-apis/search/v2/doc_wiki/search`。选它是因为这是**唯一能覆盖「别人分享给我、但不在我云空间里」**的表的接口（`drive/v1/files` 只能逐层翻文件夹）。请求必须 `doc_filter` 与 `wiki_filter` **各塞一份** `doc_types:['BITABLE']` —— 只给一边会漏掉知识库里的表。⚠️ **枚举是大写 `BITABLE`**（v26.10.25-v1 修正：曾发小写 `'bitable'`，服务端对所有请求一律 99992402 泛化参数错误，且被误映射成「关键词太长」；冒烟 `paramErrorOk` 守门，文案不再断言关键词长度）。`query` 可留空（= 按类型浏览全部）；长度按**码点**限 30，必须 `Array.from().slice()`（`slice()` 会切坏 emoji 且服务端报 99992402）；标题优先 `title_highlighted` 并用 `/<\/?hb?>/g` 清高亮；`result_meta.url` 直接喂现有的 `parseTableLink`（wiki 节点会走 get_node 换 obj_token，无需新链路）。弹窗用 `AppDialog`（原生 `showModal()` 进 top layer，嵌套在设置弹窗里也不靠 z-index）；v26.10.25-v1 起主表/隐私表**共用一个弹窗实例**，用 `pickerTarget` ref 区分回填目标（比挂两个实例少一份状态）。
 - ⚠️ scope 新增 `search:docs:read`（`oauth.ts` 的 `FEISHU_SCOPE` 与 `search.ts` 的 `SEARCH_SCOPE` **必须逐字一致**）⇒ **加权限前授权的 token 没有它**：`getStatus().searchScopeOk` 读 `token.scope` 本地判断，false 时面板藏按钮 + 提示重新授权（token 未记 scope 字段时按「可用」处理，别因缺字段把功能挡死）。重新授权走有凭证分支，只多一次确认，不必重新注册应用。
 - 冒烟 `scripts/smoke/feishu-search.js`（已进 `verify` **首位**，纯逻辑约 1s）：esbuild 现场把 `search.ts` 打成 CJS，用假 http 打**真实代码**，25 项覆盖请求体形态/码点截断/高亮清理/分页/错误码文案；不启 Puppeteer、不联网。反向验证实测：改回 `slice()` → `surrogateIntactOk` 红；删 `wiki_filter` → `wikiFilterOk` 红（断言必须写成 `body.wiki_filter || {}` 的容错形式，否则实现漏字段时脚本自己抛 TypeError）。
-- 冒烟：`scripts/smoke/qr-fixtures.js`（独立文件，见 §10 反引号坑；**同步部分**在 znhd.user.js 加载前造好输入区 DOM + `.input-tinymce.__vue__.$parent.$el` 桩 —— 挂载发生在脚本加载后的 1s 轮询里，桩晚了就按兜底锚点挂错位置；`#app.__vue__` 会话夹具在 33500ms 装）+ `vue-panel.js` 的 `quickReplyBarOk`（挂在 `#smoke-inputbox` 之前 + 窗外「注销」不显示/窗口内「解非」显示/排除词拦截 → **只**剩 1 条）/ `quickReplyReplaceOk`（点击后整体替换 + 同步进 Inputbox）。反引号坑的连带教训：夹具文本要与排除词**逐字对齐**（「已经申报」匹配不上「已申报」）。
-- **「是否常显」列**（v26.10.25-v1）：`rules.ts` 的 `F_PINNED='是否常显'`，布尔直用、字符串按 `true/是/1/√` 判。pinned 规则**不吃标签/排除词匹配、对话为空也显示**、排快捷短语栏最前（保持表内序），与普通命中之间竖线分隔；普通命中 `matchRules` 后要按 id **去掉 pinned** 防重复。实现要点：pinned 不吃文本指纹（指纹只服务普通匹配），随 `syncRulesFromCache` 的 fetchedAt 戳同步（清指纹连带清 pinned 序列）；`ensureRules` 移到指纹判断**之前**（否则对话为空的首个 tick 不会拉规则，pinned 就永远出不来）。
-- **列名别名**（v26.10.26-v1）：隐私表第一列常不叫「标题」（实测叫「名称」）⇒ 只认死列名时 `title`
-  落进「内容前 12 字」回退，按钮显示的是**截断正文**。`rules.ts` 的 `TITLE_ALIASES`/`REPLY_ALIASES` +
-  `pickField()`：列名归一化（忽略大小写/空格/下划线/斜杠）精确匹配 → 前 4 个主别名包含匹配
-  （吃下「标题（必填）」「内容/话术」）；仍无标题列则 `titleFallback = true`，`service.ts` 的
-  `warnIfNoTitle()` 记 warning 提示补列。冒烟 `scripts/smoke/feishu-rules.js`（`verify` 第二位）。
-- **隐私信息表格**（v26.10.25-v1）：第二张独立多维表格（速查表，全量常显不匹配）。链接 Allvalue `privacyTableUrl`（默认空 = 关闭，`DEFAULTS.privacyTableUrl`），缓存 GM `scriptCat_PrivacyRules`（`loadPrivacyRulesCache`/`savePrivacyRulesCache`；`clearAuth`/`forgetApp` **必须连带清**——token 没了它也读不了），TTL 复用主表常量，`fetchRules` 同一实现。`getPrivacyRules` 链接为空抛「尚未配置隐私信息表格链接」；「立即刷新规则」同时刷两表（未配置静默跳过、主表成功隐私失败只 toast 隐私）。QuickBar 三段 props：`privacy`/`pinned`/`rules`，隐私栏在主栏上方独立一行（标签 `text-warning` + lock 图标，**颜色只走语义类**）。
+- 冒烟：`scripts/smoke/qr-fixtures.js`（独立文件，见 §10 反引号坑；**同步部分**在 znhd.user.js 加载前造好输入区 DOM + `.input-tinymce.__vue__.$parent.$el` 桩 —— 挂载发生在脚本加载后的 1s 轮询里，桩晚了就按兜底锚点挂错位置；`#app.__vue__` 会话夹具在 33500ms 装）+ `vue-panel.js` 的 `quickReplyBarOk`（挂在 `#smoke-inputbox` 之前 + 窗外「注销」不显示/窗口内「解非」显示/剔除关键词拦截 → **只**剩 1 条）/ `quickReplyReplaceOk`（点击后整体替换 + 同步进 Inputbox）。反引号坑的连带教训：夹具文本要与剔除关键词**逐字对齐**（「已经申报」匹配不上「已申报」）。
+- **「是否常显」列**（v26.10.25-v1）：`rules.ts` 的 `F_PINNED='是否常显'`，布尔直用、字符串按 `true/是/1/√` 判。pinned 规则**不吃标签/必含/剔除匹配、对话为空也显示**、排快捷短语栏最前（保持表内序），与普通命中之间竖线分隔；普通命中 `matchRules` 后要按 id **去掉 pinned** 防重复。实现要点：pinned 不吃文本指纹（指纹只服务普通匹配），随 `syncRulesFromCache` 的 fetchedAt 戳同步（清指纹连带清 pinned 序列）；`ensureRules` 移到指纹判断**之前**（否则对话为空的首个 tick 不会拉规则，pinned 就永远出不来）。
+- **列名严格化**（v26.10.26-v2，使用者定版：不接受旧列名兼容）：表里**只认这 6 个列名** ——
+  `标题` / `是否常显` / `标签` / `剔除关键词` / `必含关键词` / `内容`。`排除词` / `名称` / `文本` /
+  `信息项` / `项目` / `事项` / `条目` / `字段` / `标题（必填）` / `内容/话术` 一律当「没有该列」。
+  v26.10.26-v1 的 `TITLE_ALIASES` / `REPLY_ALIASES` / `pickField()` / `normKey()` **已整体删除**，
+  不要再加回来（别名会让「改错列名」静默生效，使用者排障时更迷惑）。保留 `titleFallback` 兜底 +
+  `service.ts` 的 `warnIfNoTitle()`（文案只提「标题」一列）。冒烟 `scripts/smoke/feishu-rules.js`
+  （`verify` 第二位）：钉死「`名称`+`文本` 不当标题/内容」「`排除词` 列不生效（`excludes.length === 0`）」。
+- **匹配冒烟** `scripts/smoke/feishu-match.js`（`verify` 第三位，纯逻辑约 1s）：esbuild 现场打
+  `match.ts`，覆盖必含多值 AND / 必含为空只看标签 / 必含过但标签不中 / 剔除一票否决 / 无标签不显示 /
+  归一化（空格·全角·大小写）/ `musts` 缺失不抛错。⚠️ 造夹具时文本要含**逐字**「已申报」——
+  「已经申报」不含这三个连续字（第一版本断言就是这么打红的）。
+- **隐私信息表格**（v26.10.25-v1；v26.10.26-v2 起**参与匹配**）：第二张独立多维表格，列约定与主表相同。
+  使用者 2026-10-26 定版选 C：**与主表走同一套匹配**（标签 + 必含 + 剔除），**「是否常显」勾了才常显**。
+  ⇒ 速查类条目必须在表里勾「是否常显」，否则不勾又没有 `标签` 的行不会显示（与主表同一约定，是**行为变化**，
+  文档/面板注释都要写清）。链接 Allvalue `privacyTableUrl`（默认空 = 关闭，`DEFAULTS.privacyTableUrl`），
+  缓存 GM `scriptCat_PrivacyRules`（`loadPrivacyRulesCache`/`savePrivacyRulesCache`；`clearAuth`/`forgetApp`
+  **必须连带清**——token 没了它也读不了），TTL 复用主表常量，`fetchRules` 同一实现。
+  `getPrivacyRules` 链接为空抛「尚未配置隐私信息表格链接」；「立即刷新规则」同时刷两表（未配置静默跳过、
+  主表成功隐私失败只 toast 隐私）。QuickBar 四段 props：`privacyPinned` / `privacy` / `pinned` / `rules`，
+  隐私行 = 常显 + 竖线（两边都有才渲染）+ 匹配命中，样式与主行一致（`h-4 w-px bg-base-content/20`）。
+  `mountQuickBar` 里隐私 pinned 用 `privacyPinnedFingerprint`（随副本同步），隐私命中**跟文本指纹走**，
+  指纹里额外拼了 `privacyStamp` —— 隐私表是异步回源的，不加这一项首次拉取成功后永远不重算。
 - **魔法变量**（v26.10.25-v1）：`lib/feishu/magicVars.ts` 的 `expandMagicVars()`，`onPick` 写入输入框前在**点击时刻**展开（不能提前算——人数是实时变的）。`${Active_Cnt}` 取值链：`state.chat.groupInfoList` 数组 length → 兜底 `state.allChat.historyMsg` 键数 → 0；宿主读取复用 `convText.ts` 导出的 `readVueInstance()`（别复制第二份）。**未知变量名原样保留**。每次解析成功记一条日志（来源+人数，不记对话文本）。真机取值正确性待实机复核（字段来自 docs/tinymce-send-doc.md，v26.10.24 实测）。
 - **设置弹窗改版**（v26.10.25-v1）：680×560 左右两栏，左侧 daisyUI 5 `menu`（选中类 **`menu-active`**，默认「飞书快捷短语」页；v26.10.25-v2 起四项：飞书快捷短语 / 传输助手 / 其他设置 / 关于），右侧内容切换（固定高度、内容区内部滚动）；标题栏 `#title` 插槽放「脚本主页/更新脚本/运行日志」。**「更新日志」整个删除**（按钮 + `ChangelogDialog.vue` + `lib/changelog.ts` 一并删，grep 确认无残留引用）；冒烟同步删 `changelogDialogOk`、宽度断言 520→680、新增 `settingsNavOk`/`settingsTransferOk`/`settingsGeneralOk`/`settingsAboutOk`（弹窗开着时读快照）。
 - **传输设置迁入主设置弹窗**（v26.10.25-v2）：`transfer/SettingsDialog.vue` 已删除，其中继地址（草稿 + 失焦/回车提交）/ 自动打开开关 / 清空记录全部搬进 `panel/SettingsDialog.vue` 的「传输助手」页（store 逻辑原样内联，`useTransferStore` 是模块级单例、窗口不开也能用）；`ChatWindow.vue` 的「更多」菜单只剩「关于」，`PairPanel` 空态提示改为指向「设置菜单 → 传输助手」。冒烟 `transferSettingsOk` 改判「更多菜单无『设置』有『关于』」。

@@ -11,11 +11,17 @@
  *      1s 轮询里，__vue__ 桩必须在那之前就位，否则按钮条按兜底锚点挂错位置；
  *   ① 33500ms：会话文本 `#app.__vue__.$store.state.chat.messageList`
  *      （lib/feishu/convText.ts 从这里读对话；此时 sniff 的 Vuex 夹具已切换完毕、不会互相覆盖）；
+ *   ①b 33500ms：主管税务机关 `chat.selectItem.taxguideRecord.swjgMc`（v26.10.26-v2）——
+ *      convText.readOrg() 把它追加进匹配文本，隐私表 p2 只靠它命中；
  *   ② 33500ms：TinyMCE 桩 `window.tinymce.activeEditor` —— replaceToTinyMCE 走 setContent + getContent；
  *   ③ Inputbox 桩里的 `updateText` —— 只调 setContent 不同步的话发送按钮是灰的
  *      （docs/tinymce-send-doc.md 第 2 节），断言必须看到同步值非空。
  *
- * 采样：37500ms 采样 + 点一次按钮验证「整体替换」。结果挂 `window.__qrSnap`，由 vue-panel.js 读取。
+ * 规则缓存（主表 4 条 + 隐私表 3 条）不在这里：它必须早于 znhd.user.js 加载就位，
+ * 由 vue-panel.js 的 GM 桩（`window.__store`）预置，与 GM_getValue/GM_setValue 桩同一处。
+ *
+ * 采样：37500ms 采样 + 点两个按钮（主栏第一个 = 「整体替换」；隐私行「办公电话」= 隐私段可填），
+ * 结果挂 `window.__qrSnap`，由 vue-panel.js 读取。
  */
 (function () {
     'use strict';
@@ -68,8 +74,8 @@
         //    共 9 条，其中 1 条无文本、1 条图片 —— 都不占槽；文本共 7 条，窗口盖住后 6 条。
         //    · 「注销」在最老的 1 条 ⇒ 窗口外 ⇒ 规则 C 不显示（验证 6 条窗口）；
         //    · 「解非」在窗口内 ⇒ 规则 A 显示；
-        //    · 「申报 … 已申报」在窗口内 ⇒ B 命中关键词但被排除词拦掉（排除优先）。
-        //    ⚠️ 排除词必须是「已申报」这种**完整子串**：匹配是纯子串判断，
+        //    · 「申报 … 已申报」在窗口内 ⇒ B 命中关键词但被剔除关键词拦掉（剔除优先）。
+        //    ⚠️ 剔除关键词必须是「已申报」这种**完整子串**：匹配是纯子串判断，
         //       写成「已经申报」就匹配不上「已申报」（首版夹具就是这么写错的，断言如期打红）。
         app.__vue__.$store.state.chat.messageList = [
             { payload: { text: '之前聊的注销流程先放一放' } },
@@ -82,6 +88,15 @@
             { payload: { text: '你好，我这边解非了' } },
             { payload: { text: '申报也做过了，已申报' } },
         ];
+
+        // ①b 主管税务机关（v26.10.26-v2）：lib/feishu/convText.ts 的 readOrg() 读
+        //     chat.selectItem.taxguideRecord.swjgMc，并追加到匹配文本末尾（不占 6 条配额）。
+        //     隐私表 p2 只写了标签「税源管理股」⇒ 它能否出现，就是「org 并入匹配」的端到端证据
+        //     （readOrg 取不到时恒返回空串，p2 就一定不显示）。
+        //     ⚠️ 挂到已有的 state.chat 上，不要整体替换（否则 messageList 丢）。
+        app.__vue__.$store.state.chat.selectItem = {
+            taxguideRecord: { swjgMc: '国家税务总局衡阳市南岳区税务局税源管理股' },
+        };
 
         // ② TinyMCE 桩：只实现 replaceToTinyMCE 真正会用到的方法
         window.__tinymceText = '';
@@ -117,6 +132,13 @@
         var host = document.getElementById('__znhd_quick_reply_host__');
         var sr = host && host.shadowRoot;
         var btns = sr ? Array.prototype.slice.call(sr.querySelectorAll('[data-znhd="quick-reply-btn"]')) : [];
+        // 隐私行（v26.10.26-v2）：常显 + 匹配命中两类按钮共用这个钩子
+        var privacyBtns = sr
+            ? Array.prototype.slice.call(sr.querySelectorAll('[data-znhd="quick-reply-privacy-btn"]'))
+            : [];
+        var textOf = function (b) {
+            return (b.textContent || '').trim();
+        };
         var snap = {
             installed: !!window.__qrInstalled,
             mounted: !!host,
@@ -126,15 +148,26 @@
             beforeInput:
                 !!host && !!host.nextElementSibling && host.nextElementSibling.id === 'smoke-inputbox',
             barPresent: !!(sr && sr.querySelector('[data-znhd="quick-reply-bar"]')),
-            labels: btns.map(function (b) {
-                return (b.textContent || '').trim();
-            }),
+            labels: btns.map(textOf),
+            privacyLabels: privacyBtns.map(textOf),
+            // 隐私行是否真的渲染（有 privacyPinned 或 privacy 任一段有内容才出现）
+            privacyRowPresent: privacyBtns.length > 0,
         };
-        // 点第一个按钮：验证「整体替换输入框内容」+「setContent 之后同步进 Inputbox」两条链路
+        // 点第一个主栏按钮：验证「整体替换输入框内容」+「setContent 之后同步进 Inputbox」两条链路
         if (btns[0]) {
             btns[0].click();
             snap.afterClickText = window.__tinymceText || '';
             snap.synced = window.__tinymceSynced || '';
+        }
+        // 再点隐私行里标题为「办公电话」的常显按钮：验证隐私段同样能填入内容
+        // （放在主栏点击之后，免得覆盖 afterClickText 的判据）
+        for (var i = 0; i < privacyBtns.length; i++) {
+            if (textOf(privacyBtns[i]) === '办公电话') {
+                privacyBtns[i].click();
+                snap.privacyPickText = window.__tinymceText || '';
+                snap.privacyPickSynced = window.__tinymceSynced || '';
+                break;
+            }
         }
         window.__qrSnap = snap;
     }, 37500);
