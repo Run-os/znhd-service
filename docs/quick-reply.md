@@ -150,10 +150,11 @@ POST https://open.feishu.cn/open-apis/search/v2/doc_wiki/search
 优先级（`src/lib/feishu/convText.ts`）：
 
 1. **Vuex**：`#app.__vue__.$store.state.chat.messageList` —— 当前会话的消息列表，
-   从最新往回**只取 6 条有文本的消息**（`MAX_MESSAGES = 6`；图片/文件/撤回提示不占名额）。
+   从最新往回**只取 10 条有文本的消息**（`MAX_MESSAGES = 10`；图片/文件/撤回提示不占名额）。
    切会话自动跟着换，不受虚拟滚动影响。
-   只看 6 条是刻意定版：把整场对话拼进来会命中过时关键词（半小时前聊「注销」、现在聊
-   「解非」，不该同时出两个按钮）。
+   设上限是刻意定版：把整场对话拼进来会命中过时关键词（半小时前聊「注销」、现在聊
+   「解非」，不该同时出两个按钮）。10 条是 v26.10.26-v3 由 6 放宽后的值 —— 6 条常把客户
+   开头那句诉求挤出窗口；再往上（15+）又会开始把上一个大话题捞回来。
 2. **DOM 兜底**：`quickReplyConversationSelector`（Allvalue 里的设置项），取该容器
    `textContent`。宿主改版导致 Vuex 路径失效时用这个应急。
    ⚠️ **设置面板尚未暴露这个输入框**，目前只能手工写进 Allvalue 存储。
@@ -169,7 +170,7 @@ POST https://open.feishu.cn/open-apis/search/v2/doc_wiki/search
   `$store.state.chat.selectItem.taxguideRecord.swjgMc`，空则回退同值的全小写 `swjgmc`，结果 trim；
   实测值 `国家税务总局衡阳市南岳区税务局税源管理股`；
 - `ConvSnapshot.org` 保存该全称（已并入 `text`），取不到为空串；
-- **不占**「最近 6 条消息」的配额（它不是消息）；对话文本为空但取到税务机关时，`text` 仍非空 ——
+- **不占**「最近 10 条消息」的配额（它不是消息）；对话文本为空但取到税务机关时，`text` 仍非空 ——
   只靠税务机关关键词的规则在空对话里也能命中；
 - 取不到（未进会话 / 宿主改版）一律返回空串，**永不抛错**；
 - 隐私红线不变：仍只在本地内存匹配，日志只记 `source` / `count`，不记文本、不记税务机关内容。
@@ -204,7 +205,7 @@ POST https://open.feishu.cn/open-apis/search/v2/doc_wiki/search
 | `src/lib/feishu/rules.ts` | 读多维表记录并归一化成规则（v1 API，单 scope；只认 6 个字面列名） |
 | `src/lib/feishu/match.ts` | 匹配引擎（剔除一票否决 → 必含全部命中 → 标签任一命中） |
 | `src/lib/feishu/magicVars.ts` | 魔法变量展开（`${Active_Cnt}` = 正在对话人数，点击时刻展开，未知变量原样保留） |
-| `src/lib/feishu/convText.ts` | 读当前会话文本（Vuex 主、DOM 兜底；最新 6 条有文本的消息 + 主管税务机关另行追加；`readVueInstance()` / `readOrg()` 也供 magicVars 复用） |
+| `src/lib/feishu/convText.ts` | 读当前会话文本（Vuex 主、DOM 兜底；最新 10 条有文本的消息 + 主管税务机关另行追加；`readVueInstance()` / `readOrg()` 也供 magicVars 复用） |
 | `src/lib/feishu/service.ts` | 编排：授权流程 / token 自动刷新 / 规则 TTL 缓存 / 表链接读写 / 隐私表格（`getPrivacyTableUrl` / `getPrivacyRules` / `getPrivacyStatus`） |
 | `src/lib/tinymce.ts` | `replaceToTinyMCE()`：setContent + updateText 同步 |
 | `src-vue/phrases/QuickBar.vue` | 按钮条 UI（隐私行「常显 + 竖线 + 命中」+ 主行「常显 + 竖线 + 命中」，四段 props：`privacyPinned` / `privacy` / `pinned` / `rules`） |
@@ -216,7 +217,7 @@ POST https://open.feishu.cn/open-apis/search/v2/doc_wiki/search
 
 | 现象 | 可能原因 |
 |---|---|
-| 输入区上方一直没有按钮 | 未授权（设置里看状态）；或最近 6 条对话没命中任何标签；或规则缓存为空（点「立即刷新规则」） |
+| 输入区上方一直没有按钮 | 未授权（设置里看状态）；或最近 10 条对话没命中任何标签；或规则缓存为空（点「立即刷新规则」） |
 | 面板报「没有读取这张多维表格的权限」 | 看错误下方的黄色提示框：表不在当前授权账号名下（别人分享的要加协作者）/ scope 没勾全（重新授权全部勾选）/ 链接贴错 |
 | 授权页提示「你没有「XX的智能助手」的使用权限」 | 浏览器里登录的账号**不是注册应用时的那个账号** —— 动态注册出的应用是个人应用，只对创建者可用；点授权页里的「选择」切回原账号，或面板点「作废并重新注册」后用正确账号重走第 1 步 |
 | 报 `access_denied：restricted by your organization's security policy` | 账号类型不允许给应用授予云文档权限：个人版 / 豆包等第三方登录的账号不支持（不是公司策略）；换有企业身份的飞书账号重新授权；若确是企业账号仍被拒，则是企业管理员禁用了第三方应用授权 |

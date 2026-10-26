@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         征纳互动人数和在线监控v2
 // @namespace    https://scriptcat.org/
-// @version      26.10.26-v2
+// @version      26.10.26-v3
 // @author       runos
 // @description  实时监控征纳互动等待人数和在线状态，支持语音播报、自定义常用语
 // @license      MIT
@@ -8788,7 +8788,7 @@ syntax: ((_b = pick("syntax")) != null ? _b : "*").replace(/^["']+|["']+$/g, "")
     }
     return hits2;
   }
-  const MAX_MESSAGES = 6;
+  const MAX_MESSAGES = 10;
   const EMPTY = { text: "", source: "none", count: 0, org: "" };
   function hostDoc() {
     try {

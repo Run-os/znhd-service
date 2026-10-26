@@ -1551,17 +1551,20 @@ function serve() {
     const qr = await page.evaluate(() => window.__qrSnap || null);
     report.quickReply = qr;
     // 「只在命中时显示、且剔除关键词优先」+「挂载位置在输入框之前」+「不越出容器」
-    // v26.10.26-v2：主栏多了 m1（必含关键词全部命中）⇒ 期望 2 个按钮。A 仍排第一，
-    //   所以下面 quickReplyReplaceOk 的「点第一个按钮」判据不受影响。
+    // v26.10.26-v3：窗口 6 → 10 条 ⇒ 夹具把「注销」放在距最新第 10 条的位置，C 必须命中 ⇒ 期望 3 个按钮。
+    //   这条同时是**窗口大小的判据**：窗口退回 6 条时「注销流程」消失（剩 2 个）⇒ 这里如期打红。
+    //   顺序 = 规则表原序（A → C → M1）；A 仍排第一，所以下面 quickReplyReplaceOk 的
+    //   「点第一个按钮」判据不受影响。
     report.checks.quickReplyBarOk = !!(
         qr &&
         qr.mounted &&
         qr.inComposer &&
         qr.beforeInput &&
         qr.barPresent &&
-        qr.labels.length === 2 &&
+        qr.labels.length === 3 &&
         qr.labels[0] === '非正常户解除' &&
-        qr.labels[1] === '申报且解非（必含）'
+        qr.labels[1] === '注销流程' &&
+        qr.labels[2] === '申报且解非（必含）'
     );
     // 必含关键词的端到端串联（rules.ts 解析出的 musts → match.ts 多值 AND）：m1 必须出现
     report.checks.quickReplyMustOk = !!(qr && qr.labels.indexOf('申报且解非（必含）') >= 0);
