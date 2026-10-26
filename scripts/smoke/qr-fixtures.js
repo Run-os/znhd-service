@@ -236,15 +236,11 @@
         var btn = icon && icon.shadowRoot ? icon.shadowRoot.querySelector('button') : null;
         var snap = {
             present: !!icon,
-            // 必须紧贴「带标签的那个值」后面，而不是页面上另一处同名文本后面
-            afterValue: !!icon && !!valueEl && icon.previousElementSibling === valueEl,
-            afterCopy: !!icon && !!copyEl && icon.previousElementSibling === copyEl,
+            // v26.10.26-v5：图标放进值块内部、紧贴文本（appendChild），不再是插在值块后面
+            inValue: !!icon && !!valueEl && valueEl.contains(icon),
+            inCopy: !!icon && !!copyEl && copyEl.contains(icon),
             // 非税务机关字段（值 2 字，够短）不该挂
-            legalMarked: !!(
-                legalEl &&
-                legalEl.nextElementSibling &&
-                legalEl.nextElementSibling.hasAttribute('data-znhd-org-send')
-            ),
+            legalMarked: !!(legalEl && legalEl.contains(icon)),
             hasButton: !!btn,
             hasSvg: !!(btn && btn.querySelector('svg')),
             width: rect ? Math.round(rect.width) : 0,

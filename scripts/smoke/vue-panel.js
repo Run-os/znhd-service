@@ -1597,7 +1597,7 @@ function serve() {
 
     // ---------- 「主管税务机关」旁发送图标（v26.10.26-v4）----------
     // 夹具 = #fake-taxguide（见 qr-fixtures.js 的 ⓪b），隐私表 p4 的「必含关键词」= 该全称。
-    // 断言四件事：① 挂上了、② 紧贴**带标签的那个值**后面（不是页面上另一处同名文本后面）、
+    // 断言四件事：① 挂上了、② 在**带标签的那个值块内部**紧贴文本（不是页面上另一处同名文本）、
     // ③ 非税务机关字段不挂、④ 点一下把 p4 的「内容」写进输入框并同步进 Inputbox。
     await page.waitForFunction('window.__orgSendSnap != null', { timeout: 90000 }).catch(() => {});
     const orgSend = await page.evaluate(() => window.__orgSendSnap || null);
@@ -1605,8 +1605,8 @@ function serve() {
     report.checks.orgSendIconOk = !!(
         orgSend &&
         orgSend.present &&
-        orgSend.afterValue &&
-        !orgSend.afterCopy &&
+        orgSend.inValue &&
+        !orgSend.inCopy &&
         orgSend.hasButton &&
         orgSend.hasSvg &&
         orgSend.width >= 18 &&

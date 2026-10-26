@@ -137,6 +137,19 @@ function pickCandidate(list: HTMLElement[], target: string): HTMLElement | null 
 }
 
 /**
+ * 图标锚点：优先挂在**值**后面（视觉上就是「税务机关名称右边」）；
+ * 值定位失败时退化为挂在**标签**后面（v26.10.26-v5）。
+ *
+ * 为什么要有标签兜底：真机上出现过「标签在、值不在这块 DOM 里」（详情折叠 / 值渲染在
+ * 另一容器 / 值本身为空但别处有）的情况，原来的实现是「定位不到就宁可不挂」⇒ 使用者
+ * 看到的就是「为什么没有发送按钮」。兜底至少让匹配命中的功能可用，同时日志会标明退化。
+ */
+export interface OrgAnchor {
+    el: HTMLElement;
+    kind: 'value' | 'label';
+}
+
+/**
  * 找「主管税务机关」这一格值的容器。找不到返回 null（不报错、不阻塞）。
  *
  * 走 TreeWalker 扫文本节点（原生实现，比 JS 递归组件树便宜；只扫一层、不进 shadow）。
@@ -168,4 +181,39 @@ export function findOrgValueBlock(org: string): HTMLElement | null {
         if (bucket.indexOf(block) < 0) bucket.push(block);
     }
     return pickCandidate(strict, target) || pickCandidate(loose, target);
+}
+
+/** 图标锚点：值块优先，标签兜底（两者都没有 ⇒ null） */
+export function findOrgAnchor(org: string): OrgAnchor | null {
+    const block = findOrgValueBlock(org);
+    if (block) return { el: block, kind: 'value' };
+    const labels = findLabelEls();
+    return labels.length ? { el: labels[0], kind: 'label' } : null;
+}
+
+/**
+ * 从页面 DOM 反读税务机关全称（Vuex 拿不到时的兜底，v26.10.26-v5）。
+ *
+ * 场景：`state.chat.selectItem.taxguideRecord` 为空（详情没加载 / 字段改名），
+ * 但右侧栏已经把名称显示出来了。取法 = 标签所在行的文本去掉标签本身；
+ * 行太长（说明爬到了整块容器）或太短（不是名称）就退到「标签的下一个兄弟元素」。
+ *
+ * 安全性：返回的文本会再过一遍「与隐私表必含关键词严格相等」才可能有图标，
+ * 读错也只是不匹配，不会误发内容。
+ */
+export function readOrgFromDom(): string {
+    const LABEL_RE = /主管税务机关[：:]?/;
+    for (const label of findLabelEls()) {
+        const row = label.parentElement;
+        if (row) {
+            const t = normalize((row.textContent || '').replace(LABEL_RE, ''));
+            if (t.length >= 4 && t.length <= 60) return t;
+        }
+        const sib = label.nextElementSibling;
+        if (sib) {
+            const t = normalize(sib.textContent || '');
+            if (t.length >= 4 && t.length <= 60) return t;
+        }
+    }
+    return '';
 }

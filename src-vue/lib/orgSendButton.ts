@@ -5,7 +5,7 @@ import { loadPrivacyRulesCache } from '@/lib/feishu/credentials';
 import { matchByOrgText } from '@/lib/feishu/match';
 import { expandMagicVars } from '@/lib/feishu/magicVars';
 import type { QuickReplyRule } from '@/lib/feishu/types';
-import { MARK, findOrgValueBlock } from './orgFieldDom';
+import { MARK, findOrgAnchor, readOrgFromDom } from './orgFieldDom';
 import { toast } from './toast';
 
 /**
@@ -123,36 +123,66 @@ function clearIcon(): void {
     shownRuleId = '';
 }
 
+/** 上一轮记录的「为什么没图标」——同一原因只写一次日志（原因变化才写） */
+let lastWhy = '';
+
+/**
+ * 记录「本轮为什么没挂图标」。真机排障全靠这一行：使用者在「设置 → 运行日志」里
+ * 一眼看到卡在哪一步（读不到税务机关 / 隐私表没加载 / 必含词不一致 / 页面位置没识别）。
+ *
+ * 只记**原因**，不记税务机关文本、不记规则内容（隐私要求）。
+ */
+function note(why: string): void {
+    if (why === lastWhy) return;
+    lastWhy = why;
+    addLog('税务机关发送图标：' + why, 'info');
+}
+
 /** 一轮：读税务机关 → 匹配隐私表 → （必要时）定位并挂图标 */
 function tick(): void {
-    const org = readOrg();
+    // Vuex 拿不到就按 DOM 反读（详情未加载 / 字段改名时的兜底）
+    const org = readOrg() || readOrgFromDom();
     if (!org) {
         clearIcon();
+        note('未读到主管税务机关（页面上也没有可识别的该字段）');
         return;
     }
-    const matched = matchByOrgText(org, loadPrivacyRulesCache()?.rules || []);
+    const rules = loadPrivacyRulesCache()?.rules || [];
+    if (!rules.length) {
+        clearIcon();
+        note('隐私信息表规则还没加载（去设置里选表，或点「立即刷新规则」）');
+        return;
+    }
+    const matched = matchByOrgText(org, rules);
     if (!matched.length) {
         clearIcon();
+        note('隐私信息表里没有「必含关键词」与该税务机关完全一致的条目');
         return;
     }
     const rule = matched[0];
     // 稳态早退：图标还挂着 + 全称没变 + 命中的规则没变 ⇒ 一次 DOM 扫描都不做
     if (host && host.isConnected && shownOrg === org && shownRuleId === rule.id) return;
 
-    const block = findOrgValueBlock(org);
-    if (!block || !block.parentElement) {
+    const anchor = findOrgAnchor(org);
+    if (!anchor) {
         clearIcon();
+        note('页面上找不到该字段的位置（站点结构可能变了）');
         return;
     }
     clearIcon();
     host = buildIcon(rule);
-    block.insertAdjacentElement('afterend', host);
+    // v26.10.26-v5 定版：**放进值块内部、跟在文本末尾**，而不是插在值块后面。
+    // 真机实测：这一行是「左标签 + 右对齐值」布局，值块 div 占满整行宽度，
+    // 插在它后面图标会落在行首/行尾随布局漂移；放进去（inline）就永远紧挨着文字。
+    anchor.el.appendChild(host);
     shownOrg = org;
     shownRuleId = rule.id;
     if (host.isConnected) {
+        lastWhy = '';
         addLog(
             '主管税务机关旁已挂发送图标：' +
                 rule.title +
+                (anchor.kind === 'label' ? '（挂在标签右侧：没定位到值）' : '') +
                 (matched.length > 1 ? '（同词还有 ' + (matched.length - 1) + ' 条，取第一条）' : ''),
             'info'
         );

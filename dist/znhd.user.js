@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         征纳互动人数和在线监控v2
 // @namespace    https://scriptcat.org/
-// @version      26.10.26-v4
+// @version      26.10.26-v5
 // @author       runos
 // @description  实时监控征纳互动等待人数和在线状态，支持语音播报、自定义常用语
 // @license      MIT
@@ -2007,6 +2007,28 @@ logAutoRefresh: !!_initAllvalue.logAutoRefresh
     }
     return pickCandidate(strict, target) || pickCandidate(loose, target);
   }
+  function findOrgAnchor(org) {
+    const block = findOrgValueBlock(org);
+    if (block) return { el: block, kind: "value" };
+    const labels = findLabelEls();
+    return labels.length ? { el: labels[0], kind: "label" } : null;
+  }
+  function readOrgFromDom() {
+    const LABEL_RE = /主管税务机关[：:]?/;
+    for (const label of findLabelEls()) {
+      const row = label.parentElement;
+      if (row) {
+        const t = normalize$1((row.textContent || "").replace(LABEL_RE, ""));
+        if (t.length >= 4 && t.length <= 60) return t;
+      }
+      const sib = label.nextElementSibling;
+      if (sib) {
+        const t = normalize$1(sib.textContent || "");
+        if (t.length >= 4 && t.length <= 60) return t;
+      }
+    }
+    return "";
+  }
   const SHADOW_ROOT_KEY = Symbol("znhd-shadow-root");
   let currentShadowRoot = null;
   function setShadowRoot(root) {
@@ -2143,33 +2165,49 @@ logAutoRefresh: !!_initAllvalue.logAutoRefresh
     shownOrg = "";
     shownRuleId = "";
   }
+  let lastWhy = "";
+  function note(why) {
+    if (why === lastWhy) return;
+    lastWhy = why;
+    addLog("税务机关发送图标：" + why, "info");
+  }
   function tick() {
     var _a;
-    const org = readOrg();
+    const org = readOrg() || readOrgFromDom();
     if (!org) {
       clearIcon();
+      note("未读到主管税务机关（页面上也没有可识别的该字段）");
       return;
     }
-    const matched = matchByOrgText(org, ((_a = loadPrivacyRulesCache()) == null ? void 0 : _a.rules) || []);
+    const rules = ((_a = loadPrivacyRulesCache()) == null ? void 0 : _a.rules) || [];
+    if (!rules.length) {
+      clearIcon();
+      note("隐私信息表规则还没加载（去设置里选表，或点「立即刷新规则」）");
+      return;
+    }
+    const matched = matchByOrgText(org, rules);
     if (!matched.length) {
       clearIcon();
+      note("隐私信息表里没有「必含关键词」与该税务机关完全一致的条目");
       return;
     }
     const rule = matched[0];
     if (host && host.isConnected && shownOrg === org && shownRuleId === rule.id) return;
-    const block = findOrgValueBlock(org);
-    if (!block || !block.parentElement) {
+    const anchor = findOrgAnchor(org);
+    if (!anchor) {
       clearIcon();
+      note("页面上找不到该字段的位置（站点结构可能变了）");
       return;
     }
     clearIcon();
     host = buildIcon(rule);
-    block.insertAdjacentElement("afterend", host);
+    anchor.el.appendChild(host);
     shownOrg = org;
     shownRuleId = rule.id;
     if (host.isConnected) {
+      lastWhy = "";
       addLog(
-        "主管税务机关旁已挂发送图标：" + rule.title + (matched.length > 1 ? "（同词还有 " + (matched.length - 1) + " 条，取第一条）" : ""),
+        "主管税务机关旁已挂发送图标：" + rule.title + (anchor.kind === "label" ? "（挂在标签右侧：没定位到值）" : "") + (matched.length > 1 ? "（同词还有 " + (matched.length - 1) + " 条，取第一条）" : ""),
         "info"
       );
     }
