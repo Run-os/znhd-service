@@ -490,6 +490,43 @@ export function sessionSendable(sessionKey: string): boolean {
     return state.phones.some((p) => sessionKeyOf(p.id) === sessionKey);
 }
 
+/**
+ * 把**卡死的「发送中」**判为失败（v26.10.26-v10）。
+ *
+ * 为什么需要：`sendState === 'sending'` 只在 onOk / onFail 里被清掉。一旦宿主丢了回调
+ * （GM_xmlhttpRequest 的 ontimeout 在个别管理器上不触发、压缩 Promise 挂在解码里、
+ * 页面切走导致回调丢失），这条消息会**永远**停在 sending。它带来两个可见故障：
+ *   ① 气泡永远转圈、进度条不动；
+ *   ② `ChatWindow` 的 `sending` 恒为 true ⇒ 输入舱 + 菜单里的「图片 / 文件」被永久禁用，
+ *      使用者点任何一项都没反应（v26.10.26-v10 使用者反馈「选择窗口无法点击」的根因之一）。
+ *
+ * 判据用「开始时间 + 阈值」而不是「有没有进度」：单次请求的超时上限约 100s（见 relay.ts
+ * 的 timeout = 20s + 每 200B 1ms），3 分钟还挂着必然是死状态。
+ *
+ * @returns 被修正的条数（0 = 没有卡死的）
+ */
+export function healStaleSending(maxAgeMs = 3 * 60 * 1000): number {
+    const now = Date.now();
+    let fixed = 0;
+    const sessions = state.sessions.map((s) => {
+        let changed = false;
+        const messages = s.messages.map((m) => {
+            if (m.sendState !== 'sending') return m;
+            if (now - (m.ts || 0) <= maxAgeMs) return m;
+            changed = true;
+            fixed++;
+            return { ...m, sendState: 'failed' as const, sendError: '发送超时（未收到响应）', sendProgress: undefined };
+        });
+        return changed ? { ...s, messages } : s;
+    });
+    if (fixed) {
+        state = { ...state, sessions };
+        emit();
+        persistSoon();
+    }
+    return fixed;
+}
+
 /** 发送目标：具体手机 → 定向；聚合 / 未知设备 → 广播 */
 function sendTargets(sessionKey: string): 'all' | string[] {
     if (sessionKey === PHONE_SESSION_KEY) return 'all';

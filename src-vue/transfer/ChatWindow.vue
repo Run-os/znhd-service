@@ -8,15 +8,16 @@ import { useNativeDialog } from '@vue/composables/useNativeDialog';
 import {
     PHONE_SESSION_KEY,
     clearTransferSession,
+    healStaleSending,
     markSessionRead,
     removeTransferMessage,
     sendFilesToSession,
     sendImagesToSession,
     sendTextToSession,
-    sessionSendable,
     setActiveSession,
     setTransferWindowOpen,
 } from '@/lib/transfer/store';
+import { toast } from '@vue/lib/toast';
 import type { TransferMessage } from '@/lib/transfer/types';
 import { useTransferStore } from '@vue/composables/useTransferStore';
 import ImagePreview from '@vue/components/media/ImagePreview.vue';
@@ -78,7 +79,17 @@ const messages = computed<TransferMessage[]>(() =>
         .sort((a, b) => a.ts - b.ts)
 );
 
-const sendable = computed(() => sessionSendable(PHONE_SESSION_KEY));
+/**
+ * 能不能发（聚合会话 = 有任一手机在线）。
+ *
+ * ⚠️ **不要写回 `computed(() => sessionSendable(PHONE_SESSION_KEY))`**（v26.10.26-v10 修的就是它）：
+ * `sessionSendable` 读的是 store 的**模块级普通对象**，没有响应式依赖 ⇒ 这个 computed 只在
+ * 首次求值时算一次，之后永远返回同一个值。组件比手机先上线（弹窗是收到消息自动开的，
+ * 此刻 `phones` 还可能是空数组）时，它就被**永久缓存成 false**：菜单项一直 disabled、
+ * `pickImages` 一进来就早退 —— 使用者看到的现象就是「+ 弹出来的选择窗口点不动」。
+ * 现在从 `store.value.phones` 取值，`store` 是 shallowRef（每次变更整体换引用）⇒ 能跟着更新。
+ */
+const sendable = computed(() => store.value.phones.length > 0);
 const onlineCount = computed(() => store.value.phones.length);
 /** 有正在发的消息时禁掉附件按钮，避免叠着发 */
 const sending = computed(() => messages.value.some((m) => m.sendState === 'sending'));
@@ -141,6 +152,10 @@ watch(
 
 onMounted(() => {
     document.addEventListener('pointerdown', onDocPointerDown, true);
+    // v26.10.26-v10：开窗先把卡死的「发送中」清成失败 —— 否则 sending 恒 true，
+    // + 菜单里的图片/文件永远发不出去（详见 store.healStaleSending 的注释）。
+    const healed = healStaleSending();
+    if (healed) addLog('[传输助手] ' + healed + ' 条消息发送超时，已标记为失败', 'error');
 });
 
 /**
@@ -204,12 +219,29 @@ function pickFilesInto(accept: string, apply: (files: File[]) => void) {
     inp.click();
 }
 
+/**
+ * 附件入口的前置检查（v26.10.26-v10，使用者反馈「+ 菜单点不动」）。
+ *
+ * 旧实现把「没有在线设备」和「上一条还在发」直接落成菜单项的 `disabled`：
+ * daisyUI 的 `.menu` 会给禁用项加 `pointer-events: none`，于是点下去连事件都没有、
+ * **一点反馈都不给**，看起来就像按钮坏了。现在菜单项一律可点，拦下来时用 toast 说明原因。
+ */
+function canPickAttach(): boolean {
+    if (!sendable.value) {
+        toast.error('当前没有在线设备：先在手机上打开传输助手，再回来选文件');
+        addLog('[传输助手] 当前无在线设备，无法发送', 'error', true);
+        return false;
+    }
+    if (sending.value) {
+        toast.warning('上一条还在发送中，稍等一下再选');
+        return false;
+    }
+    return true;
+}
+
 /** 选完即发：store 会先把它们落成「发送中」气泡，再逐张压缩/上传 */
 function pickImages() {
-    if (!sendable.value) {
-        addLog('[传输助手] 当前无在线设备，无法发送', 'error', true);
-        return;
-    }
+    if (!canPickAttach()) return;
     pickFilesInto('image/*', (files) => {
         const list = files.map((f) => ({
             file: f,
@@ -222,10 +254,7 @@ function pickImages() {
 }
 
 function pickFiles() {
-    if (!sendable.value) {
-        addLog('[传输助手] 当前无在线设备，无法发送', 'error', true);
-        return;
-    }
+    if (!canPickAttach()) return;
     pickFilesInto('', (files) => {
         const list = files.map((f) => ({
             file: f,

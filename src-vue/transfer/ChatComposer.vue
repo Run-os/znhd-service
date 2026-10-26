@@ -139,7 +139,17 @@ function pickAttach(fn: () => void) {
             </summary>
             <ul class="menu dropdown-content z-1 w-44 rounded-box bg-base-100 p-2 shadow-sm">
                 <li v-for="a in attach" :key="a.key">
-                    <button :disabled="a.disabled || disabled" @click="pickAttach(a.onClick)">
+                    <!-- ⚠️ 不能把 a.disabled 落到 button 的 disabled 上（v26.10.26-v10，使用者反馈
+                         「+ 菜单点不动」）：daisyUI 的 .menu 给禁用项加 pointer-events: none，
+                         点下去连 click 事件都没有、也没有任何提示，看起来就是按钮坏了。
+                         现在只用透明度做「暂不可用」的视觉提示，真正的拦截交给 a.onClick 里的
+                         toast 说明原因；整个输入区被禁用（disabled prop）时才真的禁掉。
+                         type="button"：脚本端这个菜单在 <form> 里，默认 type=submit 会顺带提交表单。 -->
+                    <button
+                        type="button"
+                        :disabled="disabled"
+                        :class="a.disabled ? 'opacity-50' : ''"
+                        @click="pickAttach(a.onClick)">
                         <Icon :name="a.icon" :size="15" />
                         {{ a.label }}
                     </button>

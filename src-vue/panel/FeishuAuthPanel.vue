@@ -327,8 +327,11 @@ onUnmounted(() => {
         <div class="grid grid-cols-2 gap-4 py-3">
             <div class="rounded-2xl border border-base-300 bg-base-100 p-4 shadow-sm">
                 <div class="mb-3 flex items-center gap-2">
+                    <!-- ⚠️ 链接必须同时满足「已授权」+「选过表」（v26.10.26-v10，使用者反馈）：
+                         撤销授权后 Allvalue 里的表链接仍在，只看 URL 会出现「没授权也能点开飞书文档」，
+                         这与「授权后才赋予直达链接」的语义冲突。 -->
                     <a
-                        v-if="mainUrl"
+                        v-if="status.authorized && mainUrl"
                         :href="mainUrl"
                         target="_blank"
                         rel="noopener noreferrer"
@@ -359,8 +362,9 @@ onUnmounted(() => {
 
             <div class="rounded-2xl border border-base-300 bg-base-100 p-4 shadow-sm" data-znhd="privacy-table-block">
                 <div class="mb-3 flex items-center gap-2">
+                    <!-- 同上：未授权时即使存过链接也不渲成 <a>（v26.10.26-v10） -->
                     <a
-                        v-if="privacyUrl"
+                        v-if="status.authorized && privacyUrl"
                         :href="privacyUrl"
                         target="_blank"
                         rel="noopener noreferrer"
@@ -368,11 +372,14 @@ onUnmounted(() => {
                         data-znhd="privacy-table-link"
                         :title="'在新标签页打开隐私信息表：' + privacyUrl">隐私信息表</a>
                     <span v-else class="text-[14px] font-semibold">隐私信息表</span>
+                    <!-- 徽章：未授权时一律「未授权」（v26.10.26-v10）。
+                         旧版只看 configured，撤销授权后仍显示「已缓存 0 条」，与左侧「未授权」自相矛盾。 -->
                     <span
-                        v-if="privacyStatus.configured"
+                        v-if="status.authorized && privacyStatus.configured"
                         class="badge badge-ghost badge-sm tabular-nums"
                         :title="'上次拉取：' + privacyFetchedText">已缓存 {{ privacyStatus.ruleCount }} 条</span>
-                    <span v-else class="badge badge-outline badge-sm">未配置</span>
+                    <span v-else-if="status.authorized" class="badge badge-outline badge-sm">未配置</span>
+                    <span v-else class="badge badge-outline badge-sm">未授权</span>
                 </div>
                 <button
                     v-if="status.authorized && status.searchScopeOk"

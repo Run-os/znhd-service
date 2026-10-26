@@ -94,6 +94,19 @@ localStorage.setItem('scriptCat_Allvalue', JSON.stringify({
   quickReplyTableUrl: 'https://mi0cdkcaj1o.feishu.cn/wiki/SMOKEMAIN?table=tblSMOKEMAIN',
   privacyTableUrl: 'https://mi0cdkcaj1o.feishu.cn/wiki/SMOKEPRIVACY?table=tblSMOKEPRIVACY'
 }));
+// 飞书授权态夹具（v26.10.26-v10）：「卡片标题是不是超链接」「隐私徽章显示什么」这两条断言
+// 需要**已授权**这条正向分支，而真实授权要人去飞书点确认、冒烟里跑不通 ⇒ 直接预置凭证 + token。
+// 设置页那一步会再点一次「解除授权」把它清掉，正好反向验证「撤销后链接必须消失」。
+window.__store['scriptCat_FeishuApp'] = JSON.stringify({
+  clientId: 'cli_smoke',
+  clientSecret: 'secret_smoke',
+  openId: 'ou_smoke'
+});
+window.__store['scriptCat_FeishuToken'] = JSON.stringify({
+  accessToken: 'tok_smoke',
+  refreshToken: 'ref_smoke',
+  expiresAt: Date.now() + 3600 * 1000
+});
 // 预置一份**未过期**的规则缓存：lib/feishu/service.ts 的 getRules 见缓存新鲜就直接返回，
 // 于是匹配链路可以完全不联网地跑通（冒烟环境既没有授权也没有真实接口）。
 // 四条规则的用意：A 命中、B 被剔除关键词拦掉、C 压根没命中、m1 必含关键词全部命中（v26.10.26-v2）。
@@ -842,9 +855,9 @@ function serve() {
         if (btn) btn.click();
     });
     // 采样必须放在等待**之前**（toast 还活着），并且**一次读完**（分两次读会因为
-    // 中途动画推进而自相矛盾）。入场是 rAF + 200ms transition，这里留 260ms 让它走完，
+    // 中途动画推进而自相矛盾）。入场是 rAF + 200ms transition，这里留 380ms 让它走完，
     // 否则 opacity 读到过渡中间值（0.xx）会假红。
-    await new Promise((r) => setTimeout(r, 260));
+    await new Promise((r) => setTimeout(r, 380));
     const toastSnap = await page.evaluate(() => {
         const sr = document.getElementById('__znhd_panel_host__').shadowRoot;
         const box = sr.querySelector('[data-znhd="toast"]');
@@ -882,7 +895,9 @@ function serve() {
         // ③ 抓到的是 error 那条（抓取失败提示）
         toastSnap.kind === 'error' &&
         // ④ 入场动画已跑完（opacity 1）+ 边框真的被 border-0 压成 0
-        toastSnap.opacity === '1' &&
+        //    ⚠️ 用 >= 0.99 而不是严格等于 '1'：200ms 过渡在慢机器上可能差最后一帧
+        //    （v26.10.26-v10 实测读到 0.998568），仍能区分「动画卡在中间」（0.4 那种）。
+        parseFloat(toastSnap.opacity) >= 0.99 &&
         toastSnap.borderTopWidth === '0px';
     report.toast = toastSnap;
     // toast 恰好盖在 sheet 顶栏上，等它自己消失后再截图。
@@ -925,30 +940,40 @@ function serve() {
     report.settingsNav = settingsNav;
 
     // 卡片标题 = 飞书文档超链接（v26.10.26-v6，使用者要求）：点开新标签页直达那张表。
-    // 夹具（GM_STUB 里的 localStorage Allvalue）给了两张表的 URL，所以两个标题都该是 <a>。
-    const tableLinks = await page.evaluate(() => {
-        const sr = document.getElementById('__znhd_panel_host__').shadowRoot;
-        const dlg = sr.querySelector('dialog[open] .modal-box');
-        if (!dlg) return { found: false };
-        const pick = (sel) => {
-            const a = dlg.querySelector(sel);
-            if (!a) return null;
-            return {
-                text: (a.textContent || '').trim(),
-                href: a.getAttribute('href') || '',
-                target: a.getAttribute('target') || '',
-                rel: a.getAttribute('rel') || '',
-                // v26.10.26-v7：链接文字必须是主题蓝（走 daisyUI 的 text-info，不写死色值）
-                blue: (a.getAttribute('class') || '').split(/\s+/).indexOf('text-info') >= 0,
+    //
+    // v26.10.26-v10（使用者反馈 2/3）：链接与徽章都必须**授权门控**。
+    // 夹具预置了 app 凭证 + token（见 GM_STUB）⇒ 开机就是「已授权 + 两张表都已选」，
+    // 所以两个标题都该是 <a>、隐私徽章该显示缓存条数；随后点「解除授权」走**真实撤销路径**，
+    // 两个标题必须退化成纯文本、隐私徽章必须变「未授权」（旧版只看 configured，会留在「已缓存 0 条」）。
+    const readTableLinks = () =>
+        page.evaluate(() => {
+            const sr = document.getElementById('__znhd_panel_host__').shadowRoot;
+            const dlg = sr.querySelector('dialog[open] .modal-box');
+            if (!dlg) return { found: false };
+            const pick = (sel) => {
+                const a = dlg.querySelector(sel);
+                if (!a) return null;
+                return {
+                    text: (a.textContent || '').trim(),
+                    href: a.getAttribute('href') || '',
+                    target: a.getAttribute('target') || '',
+                    rel: a.getAttribute('rel') || '',
+                    // v26.10.26-v7：链接文字必须是主题蓝（走 daisyUI 的 text-info，不写死色值）
+                    blue: (a.getAttribute('class') || '').split(/\s+/).indexOf('text-info') >= 0,
+                };
             };
-        };
-        return {
-            found: true,
-            main: pick('[data-znhd="quick-reply-table-link"]'),
-            privacy: pick('[data-znhd="privacy-table-link"]'),
-        };
-    });
-    report.tableLinks = tableLinks;
+            const block = dlg.querySelector('[data-znhd="privacy-table-block"]');
+            const badge = block ? block.querySelector('.badge') : null;
+            return {
+                found: true,
+                main: pick('[data-znhd="quick-reply-table-link"]'),
+                privacy: pick('[data-znhd="privacy-table-link"]'),
+                // 卡片标题的可见文本（撤权后它应当退化成一个纯文本 span，标题本身不能消失）
+                privacyBlockText: block ? (block.textContent || '').replace(/\s+/g, '') : '',
+                privacyBadge: badge ? (badge.textContent || '').replace(/\s+/g, '') : '',
+            };
+        });
+
     const linkOk = (l, text, kw) =>
         !!l &&
         l.text === text &&
@@ -956,10 +981,50 @@ function serve() {
         l.target === '_blank' &&
         l.rel.indexOf('noopener') >= 0 &&
         l.blue;
+
+    // ① 已授权：两张表的标题都是可点链接，隐私徽章显示条数（夹具 4 条）
+    const tableLinks = await readTableLinks();
+    report.tableLinks = tableLinks;
     report.checks.tableLinkOk =
         !!tableLinks.found &&
         linkOk(tableLinks.main, '规则表', 'SMOKEMAIN') &&
-        linkOk(tableLinks.privacy, '隐私信息表', 'SMOKEPRIVACY');
+        linkOk(tableLinks.privacy, '隐私信息表', 'SMOKEPRIVACY') &&
+        tableLinks.privacyBadge === '已缓存4条';
+
+    // ② 解除授权：链接立刻收口（v26.10.26-v10 的核心断言）
+    const rulesCacheSnapshot = await page.evaluate(() => ({
+        rules: window.__store['scriptCat_QuickReplyRules'] || '',
+        privacy: window.__store['scriptCat_PrivacyRules'] || '',
+    }));
+    await page.evaluate(() => {
+        const sr = document.getElementById('__znhd_panel_host__').shadowRoot;
+        const dlg = sr.querySelector('dialog[open] .modal-box');
+        const btn = dlg
+            ? [...dlg.querySelectorAll('button')].find((b) => (b.textContent || '').replace(/\s+/g, '') === '解除授权')
+            : null;
+        if (btn) btn.click();
+    });
+    await new Promise((r) => setTimeout(r, 300));
+    const tableLinksRevoked = await readTableLinks();
+    report.tableLinksRevoked = tableLinksRevoked;
+    report.checks.tableLinkGatedOk =
+        !!tableLinksRevoked.found &&
+        tableLinksRevoked.main === null &&
+        tableLinksRevoked.privacy === null &&
+        // 标题本身不能消失，只是不再是链接
+        tableLinksRevoked.privacyBlockText.indexOf('隐私信息表') >= 0 &&
+        tableLinksRevoked.privacyBadge === '未授权';
+    // 撤销会把规则缓存一起清掉（clearAuth 的设计），补回夹具值 —— 否则后续 tick 以为
+    // 「盘上缓存没了」又去回源（冒烟环境没有真实飞书接口，会白弹错误 toast）。
+    await page.evaluate((snap) => {
+        if (snap.rules) window.__store['scriptCat_QuickReplyRules'] = snap.rules;
+        if (snap.privacy) window.__store['scriptCat_PrivacyRules'] = snap.privacy;
+    }, rulesCacheSnapshot);
+    // 假凭证用完即清，避免影响后续断言（尤其是「未授权」相关的文案）
+    await page.evaluate(() => {
+        delete window.__store['scriptCat_FeishuApp'];
+        delete window.__store['scriptCat_FeishuToken'];
+    });
 
     // 点「传输助手」→ 中继地址输入框 + 自动打开开关（v26.10.25-v2 自传输窗口迁入）。
     // ⚠️ 不能用 clickPanelText：导航条上有个同名「传输助手」按钮（title 精确命中优先），
@@ -1223,6 +1288,63 @@ function serve() {
     );
     report.transfer = transfer;
     await page.screenshot({ path: path.join(os.tmpdir(), 'znhd-vue-transfer.png') });
+
+    // ===== + 附件菜单必须**真的可点**（v26.10.26-v10，使用者反馈 1）=====
+    // 旧实现把「无在线设备 / 上一条还在发送」落成 menu 里 button 的 disabled，而 daisyUI 的
+    // .menu 会给禁用项加 pointer-events:none ⇒ 点下去连事件都没有、也没任何提示，
+    // 使用者看到的就是「+ 弹出来的选择窗口点不动」。
+    // 这里用**真实鼠标**点「图片」，并要求浏览器真的抛出 filechooser（= 系统选文件窗口被唤起）。
+    // ⚠️ 必须在下面的发送用例之前跑：那之后会有 sending 气泡，附件入口会被「等上一条发完」拦住。
+    const attachSnap = await page.evaluate(() => {
+        const sr = document.getElementById('__znhd_panel_host__').shadowRoot;
+        const dlg = [...sr.querySelectorAll('dialog[open]')].pop();
+        const sum = dlg ? dlg.querySelector('summary[aria-label="添加图片或文件"]') : null;
+        if (!sum) return { found: false };
+        // ⚠️ 必须限定在「输入舱那一个 details」里：标题栏的「更多」菜单也是
+        // .dropdown-content li button，全 dialog 扫会把「关于」混进来（v10 首跑踩到）。
+        const dd = sum.closest('details');
+        sum.click();
+        const items = [...dd.querySelectorAll('.dropdown-content li button')].map((b) => {
+            const r = b.getBoundingClientRect();
+            return {
+                label: (b.textContent || '').trim(),
+                disabled: !!b.disabled,
+                pointerEvents: getComputedStyle(b).pointerEvents,
+                cx: r.left + r.width / 2,
+                cy: r.top + r.height / 2,
+                h: r.height,
+            };
+        });
+        return { found: true, items };
+    });
+    report.attach = attachSnap;
+    const imgItem = (attachSnap.items || []).find((i) => i.label === '图片');
+    let chooserFired = false;
+    if (imgItem && imgItem.h > 10) {
+        try {
+            const [chooser] = await Promise.all([
+                page.waitForFileChooser({ timeout: 4000 }),
+                page.mouse.click(imgItem.cx, imgItem.cy),
+            ]);
+            chooserFired = !!chooser;
+            // 只验证「窗口被唤起」，不真的上传（否则会多出一条 POST，干扰后面的发送断言）
+            await chooser.cancel();
+        } catch (e) {
+            chooserFired = false;
+        }
+    }
+    report.attachChooser = chooserFired;
+    report.checks.attachPickOk =
+        !!attachSnap.found &&
+        (attachSnap.items || []).length === 2 &&
+        (attachSnap.items || []).every((i) => !i.disabled && i.pointerEvents !== 'none') &&
+        chooserFired;
+    // 收掉下拉（点空白处），免得截图/后续断言看到展开的菜单
+    await page.evaluate(() => {
+        const sr = document.getElementById('__znhd_panel_host__').shadowRoot;
+        const dd = [...sr.querySelectorAll('dialog[open] details.dropdown')].pop();
+        if (dd) dd.open = false;
+    });
 
     // 发送文本：输入 → 点「发送」→ store 走 POST /phone/send（stub 记录载荷）
     await page.evaluate(() => {

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         征纳互动人数和在线监控v2
 // @namespace    https://scriptcat.org/
-// @version      26.10.26-v9
+// @version      26.10.26-v10
 // @author       runos
 // @description  实时监控征纳互动等待人数和在线状态，支持语音播报、自定义常用语
 // @license      MIT
@@ -3378,6 +3378,27 @@ onFile: (f) => {
   function sessionSendable(sessionKey) {
     return state.phones.length > 0;
   }
+  function healStaleSending(maxAgeMs = 3 * 60 * 1e3) {
+    const now = Date.now();
+    let fixed = 0;
+    const sessions = state.sessions.map((s) => {
+      let changed = false;
+      const messages = s.messages.map((m) => {
+        if (m.sendState !== "sending") return m;
+        if (now - (m.ts || 0) <= maxAgeMs) return m;
+        changed = true;
+        fixed++;
+        return { ...m, sendState: "failed", sendError: "发送超时（未收到响应）", sendProgress: void 0 };
+      });
+      return changed ? { ...s, messages } : s;
+    });
+    if (fixed) {
+      state = { ...state, sessions };
+      emit();
+      persistSoon();
+    }
+    return fixed;
+  }
   function sendTargets(sessionKey) {
     if (sessionKey === PHONE_SESSION_KEY) return "all";
     return [sessionKey];
@@ -4947,21 +4968,25 @@ titleFallback: !title
     key: 3,
     class: "badge badge-outline badge-sm"
   };
-  const _hoisted_36$1 = ["disabled"];
-  const _hoisted_37$1 = {
+  const _hoisted_36$1 = {
+    key: 4,
+    class: "badge badge-outline badge-sm"
+  };
+  const _hoisted_37$1 = ["disabled"];
+  const _hoisted_38$1 = {
     key: 1,
     class: "text-[11px] leading-4 text-warning"
   };
-  const _hoisted_38$1 = {
+  const _hoisted_39$1 = {
     key: 2,
     class: "text-[11px] leading-4 text-base-content/50"
   };
-  const _hoisted_39$1 = { class: "flex flex-wrap items-center gap-2 py-3" };
-  const _hoisted_40 = ["disabled"];
+  const _hoisted_40 = { class: "flex flex-wrap items-center gap-2 py-3" };
   const _hoisted_41 = ["disabled"];
   const _hoisted_42 = ["disabled"];
   const _hoisted_43 = ["disabled"];
   const _hoisted_44 = ["disabled"];
+  const _hoisted_45 = ["disabled"];
   const EXAMPLE_URL = "https://mi0cdkcaj1o.feishu.cn/wiki/HImpwjCTeiPTIbkzIB0cHOKcnDd?from=from_copylink";
   const _sfc_main$i = vue.defineComponent({
     __name: "FeishuAuthPanel",
@@ -5180,7 +5205,7 @@ titleFallback: !title
             vue.createElementVNode("div", _hoisted_20$2, [
               vue.createElementVNode("div", _hoisted_21$2, [
                 vue.createElementVNode("div", _hoisted_22$2, [
-                  mainUrl.value ? (vue.openBlock(), vue.createElementBlock("a", {
+                  status.value.authorized && mainUrl.value ? (vue.openBlock(), vue.createElementBlock("a", {
                     key: 0,
                     href: mainUrl.value,
                     target: "_blank",
@@ -5211,7 +5236,7 @@ titleFallback: !title
               ]),
               vue.createElementVNode("div", _hoisted_30$1, [
                 vue.createElementVNode("div", _hoisted_31$1, [
-                  privacyUrl.value ? (vue.openBlock(), vue.createElementBlock("a", {
+                  status.value.authorized && privacyUrl.value ? (vue.openBlock(), vue.createElementBlock("a", {
                     key: 0,
                     href: privacyUrl.value,
                     target: "_blank",
@@ -5220,11 +5245,11 @@ titleFallback: !title
                     "data-znhd": "privacy-table-link",
                     title: "在新标签页打开隐私信息表：" + privacyUrl.value
                   }, "隐私信息表", 8, _hoisted_32$1)) : (vue.openBlock(), vue.createElementBlock("span", _hoisted_33$1, "隐私信息表")),
-                  privacyStatus.value.configured ? (vue.openBlock(), vue.createElementBlock("span", {
+                  status.value.authorized && privacyStatus.value.configured ? (vue.openBlock(), vue.createElementBlock("span", {
                     key: 2,
                     class: "badge badge-ghost badge-sm tabular-nums",
                     title: "上次拉取：" + privacyFetchedText.value
-                  }, "已缓存 " + vue.toDisplayString(privacyStatus.value.ruleCount) + " 条", 9, _hoisted_34$1)) : (vue.openBlock(), vue.createElementBlock("span", _hoisted_35$1, "未配置"))
+                  }, "已缓存 " + vue.toDisplayString(privacyStatus.value.ruleCount) + " 条", 9, _hoisted_34$1)) : status.value.authorized ? (vue.openBlock(), vue.createElementBlock("span", _hoisted_35$1, "未配置")) : (vue.openBlock(), vue.createElementBlock("span", _hoisted_36$1, "未授权"))
                 ]),
                 status.value.authorized && status.value.searchScopeOk ? (vue.openBlock(), vue.createElementBlock("button", {
                   key: 0,
@@ -5238,38 +5263,38 @@ titleFallback: !title
                     size: 13
                   }),
                   _cache[12] || (_cache[12] = vue.createTextVNode(" 从飞书选择表格 "))
-                ], 8, _hoisted_36$1)) : status.value.authorized ? (vue.openBlock(), vue.createElementBlock("p", _hoisted_37$1, " 授权不含搜索权限，重新授权后可配这张可选的速查表。 ")) : (vue.openBlock(), vue.createElementBlock("p", _hoisted_38$1, "可选；授权后从飞书选表。"))
+                ], 8, _hoisted_37$1)) : status.value.authorized ? (vue.openBlock(), vue.createElementBlock("p", _hoisted_38$1, " 授权不含搜索权限，重新授权后可配这张可选的速查表。 ")) : (vue.openBlock(), vue.createElementBlock("p", _hoisted_39$1, "可选；授权后从飞书选表。"))
               ])
             ]),
-            vue.createElementVNode("div", _hoisted_39$1, [
+            vue.createElementVNode("div", _hoisted_40, [
               !status.value.authorized ? (vue.openBlock(), vue.createElementBlock("button", {
                 key: 0,
                 class: "btn btn-primary btn-sm rounded-full",
                 disabled: busy.value,
                 onClick: startAuth
-              }, vue.toDisplayString(busy.value ? "等待确认…" : "授权飞书账号"), 9, _hoisted_40)) : (vue.openBlock(), vue.createElementBlock(vue.Fragment, { key: 1 }, [
+              }, vue.toDisplayString(busy.value ? "等待确认…" : "授权飞书账号"), 9, _hoisted_41)) : (vue.openBlock(), vue.createElementBlock(vue.Fragment, { key: 1 }, [
                 vue.createElementVNode("button", {
                   class: "btn btn-outline btn-sm rounded-full",
                   disabled: busy.value,
                   onClick: reloadRules
-                }, "立即刷新规则", 8, _hoisted_41),
+                }, "立即刷新规则", 8, _hoisted_42),
                 vue.createElementVNode("button", {
                   class: "btn btn-primary btn-sm rounded-full",
                   disabled: busy.value,
                   onClick: startAuth
-                }, "重新授权", 8, _hoisted_42),
+                }, "重新授权", 8, _hoisted_43),
                 vue.createElementVNode("button", {
                   class: "btn btn-error btn-sm rounded-full",
                   disabled: busy.value,
                   onClick: doRevoke
-                }, "解除授权", 8, _hoisted_43)
+                }, "解除授权", 8, _hoisted_44)
               ], 64)),
               status.value.hasCredential ? (vue.openBlock(), vue.createElementBlock("button", {
                 key: 2,
                 class: "btn btn-outline btn-warning btn-sm rounded-full",
                 disabled: busy.value,
                 onClick: doForget
-              }, " 作废并重新注册 ", 8, _hoisted_44)) : vue.createCommentVNode("", true),
+              }, " 作废并重新注册 ", 8, _hoisted_45)) : vue.createCommentVNode("", true),
               busy.value ? (vue.openBlock(), vue.createElementBlock("button", {
                 key: 3,
                 class: "btn btn-ghost btn-sm rounded-full",
@@ -7933,7 +7958,9 @@ shouldStop: () => runId !== id
                   key: a.key
                 }, [
                   vue.createElementVNode("button", {
-                    disabled: a.disabled || _ctx.disabled,
+                    type: "button",
+                    disabled: _ctx.disabled,
+                    class: vue.normalizeClass(a.disabled ? "opacity-50" : ""),
                     onClick: ($event) => pickAttach(a.onClick)
                   }, [
                     vue.createVNode(vue.unref(Icon), {
@@ -7941,7 +7968,7 @@ shouldStop: () => runId !== id
                       size: 15
                     }, null, 8, ["name"]),
                     vue.createTextVNode(" " + vue.toDisplayString(a.label), 1)
-                  ], 8, _hoisted_3$6)
+                  ], 10, _hoisted_3$6)
                 ]);
               }), 128))
             ])
@@ -8519,7 +8546,7 @@ shouldStop: () => runId !== id
       const messages = vue.computed(
         () => store.value.sessions.reduce((acc, s) => acc.concat(s.messages), []).sort((a, b) => a.ts - b.ts)
       );
-      const sendable = vue.computed(() => sessionSendable());
+      const sendable = vue.computed(() => store.value.phones.length > 0);
       const onlineCount = vue.computed(() => store.value.phones.length);
       const sending = vue.computed(() => messages.value.some((m) => m.sendState === "sending"));
       const imageMessages = vue.computed(() => messages.value.filter((m) => m.type === "image"));
@@ -8571,6 +8598,8 @@ shouldStop: () => runId !== id
       );
       vue.onMounted(() => {
         document.addEventListener("pointerdown", onDocPointerDown, true);
+        const healed = healStaleSending();
+        if (healed) addLog("[传输助手] " + healed + " 条消息发送超时，已标记为失败", "error");
       });
       const moreDd = vue.ref(null);
       function onDocPointerDown(e) {
@@ -8617,11 +8646,20 @@ shouldStop: () => runId !== id
         window.addEventListener("focus", cleanupFocus);
         inp.click();
       }
-      function pickImages() {
+      function canPickAttach() {
         if (!sendable.value) {
+          toast.error("当前没有在线设备：先在手机上打开传输助手，再回来选文件");
           addLog("[传输助手] 当前无在线设备，无法发送", "error", true);
-          return;
+          return false;
         }
+        if (sending.value) {
+          toast.warning("上一条还在发送中，稍等一下再选");
+          return false;
+        }
+        return true;
+      }
+      function pickImages() {
+        if (!canPickAttach()) return;
         pickFilesInto("image/*", (files) => {
           const list = files.map((f) => ({
             file: f,
@@ -8633,10 +8671,7 @@ shouldStop: () => runId !== id
         });
       }
       function pickFiles() {
-        if (!sendable.value) {
-          addLog("[传输助手] 当前无在线设备，无法发送", "error", true);
-          return;
-        }
+        if (!canPickAttach()) return;
         pickFilesInto("", (files) => {
           const list = files.map((f) => ({
             file: f,
