@@ -112,7 +112,11 @@ window.__store['scriptCat_PrivacyRules'] = JSON.stringify({
   rules: [
     { id: 'rec-privacy-p1', title: '办公电话', keywords: [], musts: [], excludes: [], reply: '0734-1234567（办公电话）', pinned: true },
     { id: 'rec-privacy-p2', title: '税源管理股电话', keywords: ['税源管理股'], musts: [], excludes: [], reply: '0734-7654321（税源管理股）' },
-    { id: 'rec-privacy-p3', title: '不该出现', keywords: ['绝不出现的词XYZ'], musts: [], excludes: [], reply: '不该出现的内容' }
+    { id: 'rec-privacy-p3', title: '不该出现', keywords: ['绝不出现的词XYZ'], musts: [], excludes: [], reply: '不该出现的内容' },
+    // p4（v26.10.26-v4）：「必含关键词」= 主管税务机关全称 ⇒ 页面该字段旁该挂发送图标。
+    // ⚠️ keywords 故意留空 ⇒ matchRules 的「没标签永不显示」把它挡在快捷短语栏外，
+    //    不会把 quickReplyPrivacyOk（期望恰好 2 个隐私按钮）顶成 3 个。
+    { id: 'rec-privacy-p4', title: '税源管理股直拨', keywords: [], musts: ['国家税务总局衡阳市南岳区税务局税源管理股'], excludes: [], reply: '0734-8888888（税源管理股直拨）' }
   ]
 });
 window.GM_setClipboard = function () {};
@@ -1589,6 +1593,30 @@ function serve() {
     // 点按钮后：输入框文本被**整体替换**（不是追加），且 setContent 之后同步进了 Inputbox
     report.checks.quickReplyReplaceOk = !!(
         qr && qr.afterClickText === '教程链接：https://example.invalid/tutorial' && qr.synced
+    );
+
+    // ---------- 「主管税务机关」旁发送图标（v26.10.26-v4）----------
+    // 夹具 = #fake-taxguide（见 qr-fixtures.js 的 ⓪b），隐私表 p4 的「必含关键词」= 该全称。
+    // 断言四件事：① 挂上了、② 紧贴**带标签的那个值**后面（不是页面上另一处同名文本后面）、
+    // ③ 非税务机关字段不挂、④ 点一下把 p4 的「内容」写进输入框并同步进 Inputbox。
+    await page.waitForFunction('window.__orgSendSnap != null', { timeout: 90000 }).catch(() => {});
+    const orgSend = await page.evaluate(() => window.__orgSendSnap || null);
+    report.orgSend = orgSend;
+    report.checks.orgSendIconOk = !!(
+        orgSend &&
+        orgSend.present &&
+        orgSend.afterValue &&
+        !orgSend.afterCopy &&
+        orgSend.hasButton &&
+        orgSend.hasSvg &&
+        orgSend.width >= 18 &&
+        orgSend.height >= 18
+    );
+    report.checks.orgSendScopeOk = !!(orgSend && !orgSend.legalMarked);
+    report.checks.orgSendPickOk = !!(
+        orgSend &&
+        orgSend.clickText === '0734-8888888（税源管理股直拨）' &&
+        orgSend.clickSynced
     );
 
     report.checks.noPageError = report.errors.length === 0;

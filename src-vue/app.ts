@@ -12,6 +12,7 @@ import { startPerfCollect } from '@/lib/snifferPerf';
 import { setPreMeasureEnabled } from '@/lib/snifferPre';
 import { startImageContextMenu, stopImageContextMenu } from './lib/imageContextMenu';
 import { startTodoBadge, stopTodoBadge } from './lib/todoBadge';
+import { startOrgSendButton, stopOrgSendButton } from './lib/orgSendButton';
 import { startNavBarAutoMount, stopNavBarAutoMount } from './panel/navBarMount';
 import { startQuickReplyBar, stopQuickReplyBar } from './phrases/mountQuickBar';
 import { mountPanel, unwatchPanelHost, watchPanelHost } from './main';
@@ -67,6 +68,9 @@ const app = () => {
     // 会话输出框上方的快捷短语按钮（v26.10.23）：按当前对话匹配飞书规则表。
     // 未授权 / 接口不可用时内部静默降级为不显示按钮，不连累主面板。
     boot('快捷短语', startQuickReplyBar);
+    // 「主管税务机关」文本右侧的发送图标（v26.10.26-v4）：隐私表某条的「必含关键词」与该文本
+    // 相同时挂一个图标，点击把那条的「内容」写进输入框。只读本地缓存，不发请求。
+    boot('税务机关快捷发送', startOrgSendButton);
 
     // 启动结果一行汇总（v26.10.24-v4）：面板里点开日志就能看出哪些模块真的跑起来了。
     // 「待办提醒没出现」这类问题不用再连真机翻 DOM —— 看这行缺谁即可：
@@ -83,6 +87,7 @@ const app = () => {
         stopImageContextMenu();
         stopTodoBadge();
         stopQuickReplyBar();
+        stopOrgSendButton();
     });
 
     if (document.readyState === 'loading') {

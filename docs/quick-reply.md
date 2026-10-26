@@ -175,6 +175,26 @@ POST https://open.feishu.cn/open-apis/search/v2/doc_wiki/search
 - 取不到（未进会话 / 宿主改版）一律返回空串，**永不抛错**；
 - 隐私红线不变：仍只在本地内存匹配，日志只记 `source` / `count`，不记文本、不记税务机关内容。
 
+### 税务机关旁的发送图标（v26.10.26-v4）
+
+隐私信息表某条的「必含关键词」与页面上的主管税务机关**文本相同**时，直接在**该文本右边**挂一个
+发送图标，点一下就填入那条的「内容」（不用再去快捷短语栏里找）。
+
+- 代码：`src-vue/lib/orgSendButton.ts`（注入 + 轮询 + 写入），匹配逻辑是 `match.ts` 的
+  `matchByOrgText()`（纯函数，可被 `verify:match` 直接覆盖）；
+- **匹配语义与快捷短语不同**，别合并：不看标签 / 剔除关键词 / 是否常显，比较的是**归一化后严格相等**
+  （表里写「南岳区税务局」而页面显示全称 ⇒ 不挂图标）；多条同词取**表序第一条**，日志注明还有几条；
+- **DOM 定位按文本，不按类名**：用全称在 DOM 里找「文本落在全称内」的节点，再向上扩展到
+  「整体仍被全称包含」的最外层元素（值块）→ 图标 `insertAdjacentElement('afterend')`；
+  多个候选优先「近 5 层内出现『主管税务机关』标签」的，再挑可见的；
+- **节奏**：2s 一次 tick；稳态（图标在 + 全称未变 + 命中规则 id 未变）**零 DOM 扫描**，
+  只读一次 Vuex 与本地缓存。规则表刷新（`fetchedAt` 变 → 命中 id 变）会重建图标；
+- **零网络请求**：只读 `scriptCat_PrivacyRules` 磁盘缓存；隐私表回源仍由
+  `mountQuickBar.ensurePrivacyRules` 负责（两边同时拉会撞 refresh_token 一次性）；
+- **图标**：内联 SVG（Heroicons `paper-airplane`）、shadow DOM 内 20×20、`currentColor` 跟随站点主题、
+  hover 只动透明度与位移（零硬编码色值）；**禁 emoji**（Win7 无 emoji 字体）；
+- 隐私红线不变：日志只记「挂了哪个标题 / 同词几条」，**不记税务机关文本、不记规则内容**。
+
 ## 6. 刷新节奏
 
 | 动作 | 间隔 | 说明 |
@@ -203,13 +223,14 @@ POST https://open.feishu.cn/open-apis/search/v2/doc_wiki/search
 | `src/lib/feishu/tableLink.ts` | 解析使用者粘贴的表格链接（wiki 节点换 obj_token、缺 table 时列第一个表） |
 | `src/lib/feishu/search.ts` | 搜索可访问的多维表格（`search/v2/doc_wiki/search`，只列 bitable） |
 | `src/lib/feishu/rules.ts` | 读多维表记录并归一化成规则（v1 API，单 scope；只认 6 个字面列名） |
-| `src/lib/feishu/match.ts` | 匹配引擎（剔除一票否决 → 必含全部命中 → 标签任一命中） |
+| `src/lib/feishu/match.ts` | 匹配引擎（剔除一票否决 → 必含全部命中 → 标签任一命中）+ `matchByOrgText()`（税务机关旁图标用：必含词归一化后**严格相等**） |
 | `src/lib/feishu/magicVars.ts` | 魔法变量展开（`${Active_Cnt}` = 正在对话人数，点击时刻展开，未知变量原样保留） |
 | `src/lib/feishu/convText.ts` | 读当前会话文本（Vuex 主、DOM 兜底；最新 10 条有文本的消息 + 主管税务机关另行追加；`readVueInstance()` / `readOrg()` 也供 magicVars 复用） |
 | `src/lib/feishu/service.ts` | 编排：授权流程 / token 自动刷新 / 规则 TTL 缓存 / 表链接读写 / 隐私表格（`getPrivacyTableUrl` / `getPrivacyRules` / `getPrivacyStatus`） |
 | `src/lib/tinymce.ts` | `replaceToTinyMCE()`：setContent + updateText 同步 |
 | `src-vue/phrases/QuickBar.vue` | 按钮条 UI（隐私行「常显 + 竖线 + 命中」+ 主行「常显 + 竖线 + 命中」，四段 props：`privacyPinned` / `privacy` / `pinned` / `rules`） |
 | `src-vue/phrases/mountQuickBar.ts` | 挂到 Inputbox 根元素之前（工具栏外面上方）+ 轮询自愈 + pinned/隐私副本同步 + 隐私匹配重算 |
+| `src-vue/lib/orgSendButton.ts` | 主管税务机关文本右侧的发送图标（按文本定位值块 + shadow 图标 + 2s tick + 点击写入） |
 | `src-vue/panel/FeishuAuthPanel.vue` | 设置里的授权区块 + 规则表链接配置 + 隐私信息表格区块（独立链接/选表/缓存条数）+ 无权限提示 + 作废凭证回退 |
 | `src-vue/panel/TablePickerDialog.vue` | 「从飞书选择多维表格」弹窗（搜索 / 分页 / 点选回填） |
 
@@ -218,6 +239,8 @@ POST https://open.feishu.cn/open-apis/search/v2/doc_wiki/search
 | 现象 | 可能原因 |
 |---|---|
 | 输入区上方一直没有按钮 | 未授权（设置里看状态）；或最近 10 条对话没命中任何标签；或规则缓存为空（点「立即刷新规则」） |
+| 主管税务机关右边没有发送图标 | ① 隐私表某条的「必含关键词」要和页面显示**一字不差**（是全称，写成短名不挂）；② 隐私缓存为空（设置里点「立即刷新规则」）；③ 字段行可能 `overflow:hidden` 把 20px 图标裁掉（真机看一眼）；④ 未进会话时 `readOrg()` 为空 ⇒ 本就不挂 |
+| 图标挂在了错的位置 / 页面别处 | 只在「近 5 层内出现『主管税务机关』标签」的候选上挂；若站点把该字段挪进浮动层且脱离标签，会退化到「文档序第一个可见候选」 |
 | 面板报「没有读取这张多维表格的权限」 | 看错误下方的黄色提示框：表不在当前授权账号名下（别人分享的要加协作者）/ scope 没勾全（重新授权全部勾选）/ 链接贴错 |
 | 授权页提示「你没有「XX的智能助手」的使用权限」 | 浏览器里登录的账号**不是注册应用时的那个账号** —— 动态注册出的应用是个人应用，只对创建者可用；点授权页里的「选择」切回原账号，或面板点「作废并重新注册」后用正确账号重走第 1 步 |
 | 报 `access_denied：restricted by your organization's security policy` | 账号类型不允许给应用授予云文档权限：个人版 / 豆包等第三方登录的账号不支持（不是公司策略）；换有企业身份的飞书账号重新授权；若确是企业账号仍被拒，则是企业管理员禁用了第三方应用授权 |

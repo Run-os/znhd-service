@@ -94,3 +94,34 @@ export function matchRules(conversationText: string, rules: QuickReplyRule[]): Q
     }
     return hits;
 }
+
+/**
+ * 「主管税务机关」旁发送图标用的匹配（v26.10.26-v4，使用者定版）：找**必含关键词里
+ * 存在与给定文本相同的一条**的规则。
+ *
+ * 与 `matchRules` 的三处刻意差别（别顺手合并成一套）：
+ *   ① **不看标签、不看剔除词、不看是否常显** —— 使用者的语义是「这个字段值在表里登记过」
+ *      就挂一个快捷入口，不是「当前对话命中了某条话术」；
+ *   ② 比较的是**相等**（归一化后），不是子串包含 —— 表里写「南岳区税务局」而页面显示全称时
+ *      **不该**挂图标（页面同一位置只能挂一个，靠包含匹配会挂错条）；
+ *   ③ 空文本一律返回空 —— 免得未进会话时在页面别处挂一个莫名其妙的图标。
+ *
+ * @param orgText 主管税务机关全称（页面取值，可能为空串）
+ * @param rules   隐私信息表格的规则
+ * @returns 命中的规则，保持规则表原顺序（调用方取第一条）
+ */
+export function matchByOrgText(orgText: string, rules: QuickReplyRule[]): QuickReplyRule[] {
+    const target = normalize(orgText);
+    if (!target) return [];
+    const hits: QuickReplyRule[] = [];
+    for (const rule of rules) {
+        const musts = rule.musts || [];
+        for (const m of musts) {
+            if (normalize(m) === target) {
+                hits.push(rule);
+                break;
+            }
+        }
+    }
+    return hits;
+}

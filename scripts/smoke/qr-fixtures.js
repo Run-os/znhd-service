@@ -58,6 +58,49 @@
         }
     }
 
+    // ---------- ⓪b 同步部分：「主管税务机关」字段行（v26.10.26-v4）----------
+    // 复刻右侧栏字段行的最小结构：一行 = 标签 + 值。**类名故意用站点常见的 info-*，
+    // 但被测实现不认类名**（它按文本定位），所以这里给不给类名都一样。
+    // 三个角色：
+    //   #fake-org-value  = 带标签的正主，发送图标必须挂它后面；
+    //   #fake-org-copy   = 页面上另一处显示同一全称（如会话列表/详情副标题），**没标签**，
+    //                      文档序还更靠前 —— 用来验证「优先挂到带『主管税务机关』标签的那处」；
+    //   #fake-legal-value= 另一个字段的值（2 字，够短，不参与匹配），必须不挂图标。
+    if (!document.getElementById('fake-taxguide')) {
+        var box = document.createElement('div');
+        box.id = 'fake-taxguide';
+        box.setAttribute('style', 'position:absolute;left:0;top:0;width:320px;font-size:12px;');
+        var copy = document.createElement('div');
+        copy.id = 'fake-org-copy';
+        copy.textContent = '国家税务总局衡阳市南岳区税务局税源管理股';
+        var rowOrg = document.createElement('div');
+        rowOrg.className = 'info-row';
+        var labelOrg = document.createElement('span');
+        labelOrg.className = 'info-label';
+        labelOrg.textContent = '主管税务机关';
+        var valueOrg = document.createElement('span');
+        valueOrg.className = 'info-value';
+        valueOrg.id = 'fake-org-value';
+        valueOrg.textContent = '国家税务总局衡阳市南岳区税务局税源管理股';
+        rowOrg.appendChild(labelOrg);
+        rowOrg.appendChild(valueOrg);
+        var rowLegal = document.createElement('div');
+        rowLegal.className = 'info-row';
+        var labelLegal = document.createElement('span');
+        labelLegal.className = 'info-label';
+        labelLegal.textContent = '法定代表人';
+        var valueLegal = document.createElement('span');
+        valueLegal.className = 'info-value';
+        valueLegal.id = 'fake-legal-value';
+        valueLegal.textContent = '张三';
+        rowLegal.appendChild(labelLegal);
+        rowLegal.appendChild(valueLegal);
+        box.appendChild(copy);
+        box.appendChild(rowOrg);
+        box.appendChild(rowLegal);
+        document.body.appendChild(box);
+    }
+
     window.__installQuickReplyFixtures = function () {
         // 本冒烟页没有 Vue 应用（不含 sniff 的会话分组夹具），#app 需要自己造：
         // lib/feishu/convText.ts 只认 `#app.__vue__.$store.state.chat.messageList` 这一个入口，
@@ -179,4 +222,41 @@
         }
         window.__qrSnap = snap;
     }, 37500);
+
+    // ---------- ②b 「主管税务机关」旁发送图标采样（v26.10.26-v4）----------
+    // 38000ms：晚于 __qrSnap 的两次点击（那两次会改写 __tinymceText），保证本用例的
+    // 「点图标 → 输入框内容」判据不被前一个用例的内容污染。
+    // 图标是 **shadow host**：按钮、SVG、尺寸都从 shadowRoot 里读。
+    setTimeout(function () {
+        var icon = document.querySelector('[data-znhd-org-send]');
+        var valueEl = document.getElementById('fake-org-value');
+        var copyEl = document.getElementById('fake-org-copy');
+        var legalEl = document.getElementById('fake-legal-value');
+        var rect = icon ? icon.getBoundingClientRect() : null;
+        var btn = icon && icon.shadowRoot ? icon.shadowRoot.querySelector('button') : null;
+        var snap = {
+            present: !!icon,
+            // 必须紧贴「带标签的那个值」后面，而不是页面上另一处同名文本后面
+            afterValue: !!icon && !!valueEl && icon.previousElementSibling === valueEl,
+            afterCopy: !!icon && !!copyEl && icon.previousElementSibling === copyEl,
+            // 非税务机关字段（值 2 字，够短）不该挂
+            legalMarked: !!(
+                legalEl &&
+                legalEl.nextElementSibling &&
+                legalEl.nextElementSibling.hasAttribute('data-znhd-org-send')
+            ),
+            hasButton: !!btn,
+            hasSvg: !!(btn && btn.querySelector('svg')),
+            width: rect ? Math.round(rect.width) : 0,
+            height: rect ? Math.round(rect.height) : 0,
+            clickText: '',
+            clickSynced: '',
+        };
+        if (btn) {
+            btn.click();
+            snap.clickText = window.__tinymceText || '';
+            snap.clickSynced = window.__tinymceSynced || '';
+        }
+        window.__orgSendSnap = snap;
+    }, 38000);
 })();

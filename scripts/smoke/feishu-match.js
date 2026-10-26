@@ -22,7 +22,7 @@ const built = esbuild.buildSync({
 const mod = { exports: {} };
 // eslint-disable-next-line no-new-func
 new Function('module', 'exports', 'require', built.outputFiles[0].text)(mod, mod.exports, require);
-const { matchRules } = mod.exports;
+const { matchRules, matchByOrgText } = mod.exports;
 
 const checks = {};
 
@@ -90,6 +90,24 @@ checks.legacyMustsHitOk = legacyHit;
 
 /* ⑧ 空对话一律不命中（省得空文本时满屏按钮） */
 checks.emptyTextOk = ids(matchRules('', andRules)) === '';
+
+/* ⑨ 「主管税务机关」旁发送图标用的匹配（v26.10.26-v4）：必含关键词**归一化后相等**才算 */
+const ORG = '国家税务总局衡阳市南岳区税务局税源管理股';
+const orgRules = [
+    rule('r-org-strict', [], [ORG]),
+    // 万一是全称的前缀（页面上常见的短名写法）⇒ 使用者定的是「相同文本」，**不该**命中，
+    // 否则同一位置会挂出另一条规则的图标
+    rule('r-org-prefix', [], ['国家税务总局衡阳市南岳区税务局']),
+    // 归一化仍生效：中间夹空格视为同一文本
+    rule('r-org-space', [], ['国家税务总局 衡阳市南岳区税务局税源管理股']),
+    // 必含为空 ⇒ 不参与
+    rule('r-org-empty', [], []),
+];
+checks.orgStrictOk = ids(matchByOrgText(ORG, orgRules)) === 'r-org-strict,r-org-space';
+checks.orgPrefixMissOk = ids(matchByOrgText(ORG, [orgRules[1]])) === '';
+checks.orgEmptyInputOk = ids(matchByOrgText('', orgRules)) === '';
+// 旧缓存里的规则对象没有 musts 字段 ⇒ 不许抛错，按空数组处理
+checks.orgLegacyNoThrowOk = ids(matchByOrgText(ORG, [{ id: 'r-legacy2', title: 'x', keywords: [], reply: '' }])) === '';
 
 const failed = Object.entries(checks).filter(([, v]) => !v).map(([k]) => k);
 console.log(JSON.stringify({ ok: failed.length === 0, checks, failed }, null, 1));
