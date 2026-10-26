@@ -15,9 +15,8 @@ import { printA4Image } from './print';
  *    `visible` 标记，历史消息实例实测点了也不显示；
  *  · 识别图片菜单不靠 Vue（沙箱里 `__vue__` 要走 unsafeWindow），靠菜单项文本：
  *    含「转存到内网」且 ≥3 项（文字菜单是「复制选中/复制全部」，置顶菜单只有一项）；
- *  · 原生项点击后由库自动收菜单，注入项没这层 —— 点击后自己走 unsafeWindow 侧的
- *    `hideAll()`（保持 visible 标记同步）；无 Vue 时（冒烟夹具）退化为直接置
- *    `display:none`；
+ *  · 原生项点击后由库自动收菜单，注入项没这层 —— 点击后自己收起（v26.10.26-v6：
+ *    `vm.hide()` + `vm.visible=false` + `display:none !important` 三层兜底，见 hideMenus）；
  *  · 作用域属性（`data-v-*`）**从原生项现拷、不写死 hash** —— 站点换版本 hash 会变，
  *    写死就丢样式（实测克隆后 padding/height/色/cursor 与原生项逐项一致）。
  */
@@ -65,30 +64,54 @@ function onContextMenuCapture(e: MouseEvent): void {
     lastImage = { src, name: img.alt || guessName(src) };
 }
 
-/** 收起所有站点右键菜单：优先走站点 Vue 的 hideAll（visible 标记同步），无 Vue 再降级 */
+/**
+ * 收起所有站点右键菜单（v26.10.26-v6 重写）。
+ *
+ * ⚠️ 上一版（v26.10.22-v6）的写法有个致命的短路：`hideAll()` 只要能调**就算成功**（置
+ * `hidden = true`），于是「display:none」这条兜底被跳过。真机反馈（2026-10-26）：点【打印】
+ * 后菜单不收起 —— 库的 `hideAll` 并不保证把**当前这个**实例置为不可见（它按注册表遍历，
+ * 当前实例可能还没登记 / 只清其它实例），而 `visible` 仍为 true ⇒ v-show 保持显示。
+ * 现在改成三层，全部执行、不短路：
+ *   ① `vm.hide()`（单实例收起；函数不存在就跳过）
+ *   ② `vm.visible = false`（v-show 的真正开关 —— 直接改响应式字段，库下一帧就会隐藏）
+ *   ③ 仍然可见（拿不到 vm / 站点改了实现）⇒ 行内 `display:none !important`
+ *      （用 important 是为了压过站点可能存在的 `!important` 显示规则；下次右键时 v-show
+ *       把它写回 `display:''`，所以不会把菜单永久弄坏）
+ */
 function hideMenus(): void {
-    let hidden = false;
+    let uls: NodeListOf<Element>;
     try {
-        pageDoc().querySelectorAll('ul.v-contextmenu').forEach((u) => {
-            const vm = (u as unknown as { __vue__?: { hideAll?: () => void } }).__vue__;
-            if (vm && typeof vm.hideAll === 'function') {
-                vm.hideAll();
-                hidden = true;
-            }
-        });
+        uls = pageDoc().querySelectorAll('ul.v-contextmenu');
     } catch {
-        /* 页面世界不可达就走降级 */
+        return;
     }
-    if (!hidden) {
-        document.querySelectorAll('ul.v-contextmenu').forEach((u) => {
-            (u as HTMLElement).style.display = 'none';
-        });
-    }
+    uls.forEach((u) => {
+        const vm = (u as unknown as { __vue__?: { visible?: boolean; hide?: () => void } }).__vue__;
+        if (!vm) return;
+        try {
+            if (typeof vm.hide === 'function') vm.hide();
+        } catch {
+            /* 站点内部实现变动：继续走下面的兜底 */
+        }
+        try {
+            vm.visible = false;
+        } catch {
+            /* 非响应式 / 只读：兜底 */
+        }
+    });
+    uls.forEach((u) => {
+        if (getComputedStyle(u).display === 'none') return;
+        (u as HTMLElement).style.setProperty('display', 'none', 'important');
+    });
 }
 
 function onPrintClick(): void {
     const ctx = lastImage;
     hideMenus();
+    // 站点自己的 document 点击委托会在我们之后跑，可能把菜单又置回可见（真机反馈的另一种成因）。
+    // 这里补两枪（微任务后 + 350ms 后），hideMenus 幂等，且不影响下次右键正常打开。
+    window.setTimeout(hideMenus, 0);
+    window.setTimeout(hideMenus, 350);
     if (!ctx?.src) return;
     printA4Image(ctx.src, ctx.name);
 }

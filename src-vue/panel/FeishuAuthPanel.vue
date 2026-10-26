@@ -7,6 +7,7 @@ import {
     getPrivacyTableUrl,
     getRules,
     getStatus,
+    getTableUrl,
     revoke,
     setPrivacyTableUrl,
     setTableUrl,
@@ -52,6 +53,9 @@ const pickerTarget = ref<'main' | 'privacy'>('main');
 /** 隐私信息表格（v26.10.25-v1）：独立状态展示（链接输入框 v26.10.25-v2 已删） */
 const privacyUrlBusy = ref(false);
 const privacyStatus = ref(getPrivacyStatus());
+/** 两张表的飞书链接（v26.10.26-v6）：卡片标题据此变成可点的新标签页链接 */
+const mainUrl = ref(getTableUrl());
+const privacyUrl = ref(getPrivacyTableUrl());
 let cancelled = false;
 
 /** 案例表链接（legend 里的「查看案例」，使用者定版：给一张示范表看列怎么填） */
@@ -120,10 +124,14 @@ const privacyFetchedText = computed(() => {
 
 function refreshStatus(): void {
     status.value = getStatus();
+    // 表格链接一并刷新（v26.10.26-v6）：卡片标题要按它决定能不能点。
+    // 单独存 ref 而不是每次渲染现读 Allvalue —— 那是个非响应式对象，选完表不会触发重渲染。
+    mainUrl.value = getTableUrl();
 }
 
 function refreshPrivacyStatus(): void {
     privacyStatus.value = getPrivacyStatus();
+    privacyUrl.value = getPrivacyTableUrl();
 }
 
 function cancel(): void {
@@ -319,7 +327,15 @@ onUnmounted(() => {
         <div class="grid grid-cols-2 gap-4 py-3">
             <div class="rounded-2xl border border-base-300 bg-base-100 p-4 shadow-sm">
                 <div class="mb-3 flex items-center gap-2">
-                    <span class="text-[14px] font-semibold">规则表</span>
+                    <a
+                        v-if="mainUrl"
+                        :href="mainUrl"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="link link-hover text-[14px] font-semibold"
+                        data-znhd="quick-reply-table-link"
+                        :title="'在新标签页打开规则表：' + mainUrl">规则表</a>
+                    <span v-else class="text-[14px] font-semibold">规则表</span>
                     <span
                         v-if="status.authorized"
                         class="badge badge-ghost badge-sm tabular-nums"
@@ -343,7 +359,15 @@ onUnmounted(() => {
 
             <div class="rounded-2xl border border-base-300 bg-base-100 p-4 shadow-sm" data-znhd="privacy-table-block">
                 <div class="mb-3 flex items-center gap-2">
-                    <span class="text-[14px] font-semibold">隐私信息表</span>
+                    <a
+                        v-if="privacyUrl"
+                        :href="privacyUrl"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="link link-hover text-[14px] font-semibold"
+                        data-znhd="privacy-table-link"
+                        :title="'在新标签页打开隐私信息表：' + privacyUrl">隐私信息表</a>
+                    <span v-else class="text-[14px] font-semibold">隐私信息表</span>
                     <span
                         v-if="privacyStatus.configured"
                         class="badge badge-ghost badge-sm tabular-nums"

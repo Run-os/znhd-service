@@ -87,6 +87,13 @@ window.GM_addStyle = function (css) {
 window.__store = {};
 window.GM_getValue = function (k, d) { return Object.prototype.hasOwnProperty.call(window.__store, k) ? window.__store[k] : d; };
 window.GM_setValue = function (k, v) { window.__store[k] = v; };
+// 设置面板里的「表格名 → 飞书文档」超链接（v26.10.26-v6）：Allvalue 存在 **localStorage**
+// （constants.ts 的 STORAGE_KEY），不是 GM 存储。必须在脚本启动前写好，否则面板挂载时
+// 读到的链接是空串、卡片标题退化成纯文本（测不到链接那一路）。
+localStorage.setItem('scriptCat_Allvalue', JSON.stringify({
+  quickReplyTableUrl: 'https://mi0cdkcaj1o.feishu.cn/wiki/SMOKEMAIN?table=tblSMOKEMAIN',
+  privacyTableUrl: 'https://mi0cdkcaj1o.feishu.cn/wiki/SMOKEPRIVACY?table=tblSMOKEPRIVACY'
+}));
 // 预置一份**未过期**的规则缓存：lib/feishu/service.ts 的 getRules 见缓存新鲜就直接返回，
 // 于是匹配链路可以完全不联网地跑通（冒烟环境既没有授权也没有真实接口）。
 // 四条规则的用意：A 命中、B 被剔除关键词拦掉、C 压根没命中、m1 必含关键词全部命中（v26.10.26-v2）。
@@ -859,6 +866,36 @@ function serve() {
         settingsNav.titleButtons.every((t) => !t.includes('更新日志'));
     report.settingsNav = settingsNav;
 
+    // 卡片标题 = 飞书文档超链接（v26.10.26-v6，使用者要求）：点开新标签页直达那张表。
+    // 夹具（GM_STUB 里的 localStorage Allvalue）给了两张表的 URL，所以两个标题都该是 <a>。
+    const tableLinks = await page.evaluate(() => {
+        const sr = document.getElementById('__znhd_panel_host__').shadowRoot;
+        const dlg = sr.querySelector('dialog[open] .modal-box');
+        if (!dlg) return { found: false };
+        const pick = (sel) => {
+            const a = dlg.querySelector(sel);
+            if (!a) return null;
+            return {
+                text: (a.textContent || '').trim(),
+                href: a.getAttribute('href') || '',
+                target: a.getAttribute('target') || '',
+                rel: a.getAttribute('rel') || '',
+            };
+        };
+        return {
+            found: true,
+            main: pick('[data-znhd="quick-reply-table-link"]'),
+            privacy: pick('[data-znhd="privacy-table-link"]'),
+        };
+    });
+    report.tableLinks = tableLinks;
+    const linkOk = (l, text, kw) =>
+        !!l && l.text === text && l.href.indexOf(kw) >= 0 && l.target === '_blank' && l.rel.indexOf('noopener') >= 0;
+    report.checks.tableLinkOk =
+        !!tableLinks.found &&
+        linkOk(tableLinks.main, '规则表', 'SMOKEMAIN') &&
+        linkOk(tableLinks.privacy, '隐私信息表', 'SMOKEPRIVACY');
+
     // 点「传输助手」→ 中继地址输入框 + 自动打开开关（v26.10.25-v2 自传输窗口迁入）。
     // ⚠️ 不能用 clickPanelText：导航条上有个同名「传输助手」按钮（title 精确命中优先），
     //    会把传输窗口打开而不是切设置页 —— 直接点侧边栏的 data-znhd 锚点。
@@ -1507,6 +1544,39 @@ function serve() {
         printMenu.atTail &&
         printMenu.clsOk &&
         printMenu.hoverOk;
+
+    // 点【打印】后菜单必须自动收起（v26.10.26-v6，真机反馈的 bug）。
+    // 做法：把夹具 ul 摆成可见 + 挂一个会记账的 __vue__ 桩，点完立刻把打印 iframe 摘掉
+    // （printA4Image 的 fire 是 +80ms 才跑，先行移除 ⇒ frame.contentWindow 为空 ⇒ 不会弹打印对话框）。
+    const printHide = await page.evaluate(() => {
+        const ul = document.getElementById('fake-img-menu');
+        if (!ul) return { err: 'no fixture' };
+        ul.style.display = 'block';
+        const spy = { hideCalls: 0, visible: true };
+        spy.hide = function () { this.hideCalls += 1; this.visible = false; };
+        // 复刻库的坑（v26.10.26-v6 真机根因）：hideAll 存在，但**不保证收起当前实例**
+        // —— 所以这里故意做成 no-op 桩。旧实现「调到 hideAll 就算成功」会短路掉 display 兜底
+        // ⇒ 菜单留在屏幕上；新实现三层全跑，靠 hide() / visible=false 兜住。
+        spy.hideAll = function () {};
+        ul.__vue__ = spy;
+        const li = ul.querySelector('li[data-znhd-print]');
+        if (li) li.click();
+        const frame = document.getElementById('printWindow');
+        if (frame) frame.remove();
+        const out = {
+            hideCalls: spy.hideCalls,
+            vmVisible: spy.visible,
+            display: getComputedStyle(ul).display,
+        };
+        // 复原夹具，后面的用例还要用
+        delete ul.__vue__;
+        ul.style.removeProperty('display');
+        ul.style.display = 'none';
+        return out;
+    });
+    report.printHide = printHide;
+    report.checks.printMenuHideOk =
+        !printHide.err && printHide.hideCalls >= 1 && printHide.vmVisible === false && printHide.display === 'none';
 
     // ---------- 待处理提醒（v26.10.24-v1） ----------
     // 夹具 = #fake-sidebar，结构照真机复刻：留言=3 该提醒、预约=0 不该提醒、

@@ -123,6 +123,42 @@ function num(v: unknown): number | null {
     return typeof v === 'number' && Number.isFinite(v) ? v : null;
 }
 
+/**
+ * 消息时间（v26.10.26-v6 修）：**站点把 `time` 字段去掉了**。
+ *
+ * 真机实测（2026-10-26，`state.chat.messageList` 11 条消息）：`typeof msg.time === 'undefined'`
+ * **11/11**，而每条都带 `systemTime` / `talkTime`（形如 `2026-10-26 14:56:39`）。
+ * 旧实现只认 `num(msg.time)` ⇒ 全部图片时间变成 null ⇒ 面板上**每张图都标红、组内退化成按体积排**，
+ * 使用者看到的就是「所有文件名都是红的、没有按时间排」。
+ *
+ * 取值顺序：`time`（秒或毫秒都见）→ `systemTime` → `talkTime` → `timestamp`。
+ * 字符串按**本地时间**解析（站点给的是本地时间文本，不带时区）。
+ */
+function msgTime(msg: Record<string, unknown>): number | null {
+    const raw = num(msg.time);
+    if (raw !== null && raw > 0) return raw < 1e11 ? raw * 1000 : raw;
+    for (const k of ['systemTime', 'talkTime', 'timestamp']) {
+        const v = msg[k];
+        const n = num(v);
+        if (n !== null && n > 0) return n < 1e11 ? n * 1000 : n;
+        const s = str(v);
+        if (!s) continue;
+        const m = /^(\d{4})-(\d{1,2})-(\d{1,2})[ T](\d{1,2}):(\d{1,2})(?::(\d{1,2}))?/.exec(s);
+        if (m) {
+            const t = new Date(
+                Number(m[1]),
+                Number(m[2]) - 1,
+                Number(m[3]),
+                Number(m[4]),
+                Number(m[5]),
+                Number(m[6] || 0)
+            ).getTime();
+            if (Number.isFinite(t)) return t;
+        }
+    }
+    return null;
+}
+
 /** ID 的短尾（给「取不到会话名」时的兜底显示用，如 `会话 aPKJKKK1`） */
 function shortId(id: string): string {
     return id.length > 8 ? id.slice(-8) : id;
@@ -414,7 +450,7 @@ function toConv(
         id: key,
         name: name || '会话 ' + shortId(key),
         sender: str(msg.sendUserName) || ctx.sender,
-        time: num(msg.time),
+        time: msgTime(msg),
     };
 }
 

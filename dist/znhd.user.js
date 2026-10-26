@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         征纳互动人数和在线监控v2
 // @namespace    https://scriptcat.org/
-// @version      26.10.26-v5
+// @version      26.10.26-v6
 // @author       runos
 // @description  实时监控征纳互动等待人数和在线状态，支持语音播报、自定义常用语
 // @license      MIT
@@ -1384,26 +1384,34 @@ logAutoRefresh: !!_initAllvalue.logAutoRefresh
     lastImage = { src, name: img.alt || guessName(src) };
   }
   function hideMenus() {
-    let hidden = false;
+    let uls;
     try {
-      pageDoc().querySelectorAll("ul.v-contextmenu").forEach((u) => {
-        const vm = u.__vue__;
-        if (vm && typeof vm.hideAll === "function") {
-          vm.hideAll();
-          hidden = true;
-        }
-      });
+      uls = pageDoc().querySelectorAll("ul.v-contextmenu");
     } catch {
+      return;
     }
-    if (!hidden) {
-      document.querySelectorAll("ul.v-contextmenu").forEach((u) => {
-        u.style.display = "none";
-      });
-    }
+    uls.forEach((u) => {
+      const vm = u.__vue__;
+      if (!vm) return;
+      try {
+        if (typeof vm.hide === "function") vm.hide();
+      } catch {
+      }
+      try {
+        vm.visible = false;
+      } catch {
+      }
+    });
+    uls.forEach((u) => {
+      if (getComputedStyle(u).display === "none") return;
+      u.style.setProperty("display", "none", "important");
+    });
   }
   function onPrintClick() {
     const ctx = lastImage;
     hideMenus();
+    window.setTimeout(hideMenus, 0);
+    window.setTimeout(hideMenus, 350);
     if (!(ctx == null ? void 0 : ctx.src)) return;
     printA4Image(ctx.src, ctx.name);
   }
@@ -4690,45 +4698,55 @@ titleFallback: !title
   const _hoisted_20$2 = { class: "grid grid-cols-2 gap-4 py-3" };
   const _hoisted_21$2 = { class: "rounded-2xl border border-base-300 bg-base-100 p-4 shadow-sm" };
   const _hoisted_22$2 = { class: "mb-3 flex items-center gap-2" };
-  const _hoisted_23$2 = ["title"];
+  const _hoisted_23$2 = ["href", "title"];
   const _hoisted_24$2 = {
     key: 1,
+    class: "text-[14px] font-semibold"
+  };
+  const _hoisted_25$2 = ["title"];
+  const _hoisted_26$2 = {
+    key: 3,
     class: "badge badge-outline badge-sm"
   };
-  const _hoisted_25$2 = ["disabled"];
-  const _hoisted_26$2 = {
+  const _hoisted_27$2 = ["disabled"];
+  const _hoisted_28$2 = {
     key: 1,
     class: "text-[11px] leading-4 text-warning"
   };
-  const _hoisted_27$2 = {
+  const _hoisted_29$2 = {
     key: 2,
     class: "text-[11px] leading-4 text-base-content/50"
   };
-  const _hoisted_28$2 = {
+  const _hoisted_30$1 = {
     class: "rounded-2xl border border-base-300 bg-base-100 p-4 shadow-sm",
     "data-znhd": "privacy-table-block"
   };
-  const _hoisted_29$2 = { class: "mb-3 flex items-center gap-2" };
-  const _hoisted_30$1 = ["title"];
-  const _hoisted_31$1 = {
+  const _hoisted_31$1 = { class: "mb-3 flex items-center gap-2" };
+  const _hoisted_32$1 = ["href", "title"];
+  const _hoisted_33$1 = {
     key: 1,
+    class: "text-[14px] font-semibold"
+  };
+  const _hoisted_34$1 = ["title"];
+  const _hoisted_35$1 = {
+    key: 3,
     class: "badge badge-outline badge-sm"
   };
-  const _hoisted_32$1 = ["disabled"];
-  const _hoisted_33$1 = {
+  const _hoisted_36$1 = ["disabled"];
+  const _hoisted_37$1 = {
     key: 1,
     class: "text-[11px] leading-4 text-warning"
   };
-  const _hoisted_34$1 = {
+  const _hoisted_38$1 = {
     key: 2,
     class: "text-[11px] leading-4 text-base-content/50"
   };
-  const _hoisted_35$1 = { class: "flex flex-wrap items-center gap-2 py-3" };
-  const _hoisted_36$1 = ["disabled"];
-  const _hoisted_37$1 = ["disabled"];
-  const _hoisted_38$1 = ["disabled"];
-  const _hoisted_39$1 = ["disabled"];
+  const _hoisted_39$1 = { class: "flex flex-wrap items-center gap-2 py-3" };
   const _hoisted_40 = ["disabled"];
+  const _hoisted_41 = ["disabled"];
+  const _hoisted_42 = ["disabled"];
+  const _hoisted_43 = ["disabled"];
+  const _hoisted_44 = ["disabled"];
   const EXAMPLE_URL = "https://mi0cdkcaj1o.feishu.cn/wiki/HImpwjCTeiPTIbkzIB0cHOKcnDd?from=from_copylink";
   const _sfc_main$i = vue.defineComponent({
     __name: "FeishuAuthPanel",
@@ -4743,6 +4761,8 @@ titleFallback: !title
       const pickerTarget = vue.ref("main");
       const privacyUrlBusy = vue.ref(false);
       const privacyStatus = vue.ref(getPrivacyStatus());
+      const mainUrl = vue.ref(getTableUrl());
+      const privacyUrl = vue.ref(getPrivacyTableUrl());
       let cancelled = false;
       const permissionError = vue.computed(
         () => /forbidden|permission|denied|无权|权限|scope|99991672|91403|1254/i.test(errorText2.value)
@@ -4790,9 +4810,11 @@ titleFallback: !title
       });
       function refreshStatus() {
         status.value = getStatus();
+        mainUrl.value = getTableUrl();
       }
       function refreshPrivacyStatus() {
         privacyStatus.value = getPrivacyStatus();
+        privacyUrl.value = getPrivacyTableUrl();
       }
       function cancel() {
         cancelled = true;
@@ -4943,12 +4965,20 @@ titleFallback: !title
             vue.createElementVNode("div", _hoisted_20$2, [
               vue.createElementVNode("div", _hoisted_21$2, [
                 vue.createElementVNode("div", _hoisted_22$2, [
-                  _cache[11] || (_cache[11] = vue.createElementVNode("span", { class: "text-[14px] font-semibold" }, "规则表", -1)),
-                  status.value.authorized ? (vue.openBlock(), vue.createElementBlock("span", {
+                  mainUrl.value ? (vue.openBlock(), vue.createElementBlock("a", {
                     key: 0,
+                    href: mainUrl.value,
+                    target: "_blank",
+                    rel: "noopener noreferrer",
+                    class: "link link-hover text-[14px] font-semibold",
+                    "data-znhd": "quick-reply-table-link",
+                    title: "在新标签页打开规则表：" + mainUrl.value
+                  }, "规则表", 8, _hoisted_23$2)) : (vue.openBlock(), vue.createElementBlock("span", _hoisted_24$2, "规则表")),
+                  status.value.authorized ? (vue.openBlock(), vue.createElementBlock("span", {
+                    key: 2,
                     class: "badge badge-ghost badge-sm tabular-nums",
                     title: "上次更新：" + fetchedText.value
-                  }, "已缓存 " + vue.toDisplayString(status.value.ruleCount) + " 条", 9, _hoisted_23$2)) : (vue.openBlock(), vue.createElementBlock("span", _hoisted_24$2, "未授权"))
+                  }, "已缓存 " + vue.toDisplayString(status.value.ruleCount) + " 条", 9, _hoisted_25$2)) : (vue.openBlock(), vue.createElementBlock("span", _hoisted_26$2, "未授权"))
                 ]),
                 status.value.authorized && status.value.searchScopeOk ? (vue.openBlock(), vue.createElementBlock("button", {
                   key: 0,
@@ -4961,17 +4991,25 @@ titleFallback: !title
                     name: "search",
                     size: 13
                   }),
-                  _cache[12] || (_cache[12] = vue.createTextVNode(" 从飞书选择表格 "))
-                ], 8, _hoisted_25$2)) : status.value.authorized ? (vue.openBlock(), vue.createElementBlock("p", _hoisted_26$2, " 当前授权不含「搜索云文档」权限，点下方「重新授权」后就能选表。 ")) : (vue.openBlock(), vue.createElementBlock("p", _hoisted_27$2, "授权后可从飞书直接选表。"))
+                  _cache[11] || (_cache[11] = vue.createTextVNode(" 从飞书选择表格 "))
+                ], 8, _hoisted_27$2)) : status.value.authorized ? (vue.openBlock(), vue.createElementBlock("p", _hoisted_28$2, " 当前授权不含「搜索云文档」权限，点下方「重新授权」后就能选表。 ")) : (vue.openBlock(), vue.createElementBlock("p", _hoisted_29$2, "授权后可从飞书直接选表。"))
               ]),
-              vue.createElementVNode("div", _hoisted_28$2, [
-                vue.createElementVNode("div", _hoisted_29$2, [
-                  _cache[13] || (_cache[13] = vue.createElementVNode("span", { class: "text-[14px] font-semibold" }, "隐私信息表", -1)),
-                  privacyStatus.value.configured ? (vue.openBlock(), vue.createElementBlock("span", {
+              vue.createElementVNode("div", _hoisted_30$1, [
+                vue.createElementVNode("div", _hoisted_31$1, [
+                  privacyUrl.value ? (vue.openBlock(), vue.createElementBlock("a", {
                     key: 0,
+                    href: privacyUrl.value,
+                    target: "_blank",
+                    rel: "noopener noreferrer",
+                    class: "link link-hover text-[14px] font-semibold",
+                    "data-znhd": "privacy-table-link",
+                    title: "在新标签页打开隐私信息表：" + privacyUrl.value
+                  }, "隐私信息表", 8, _hoisted_32$1)) : (vue.openBlock(), vue.createElementBlock("span", _hoisted_33$1, "隐私信息表")),
+                  privacyStatus.value.configured ? (vue.openBlock(), vue.createElementBlock("span", {
+                    key: 2,
                     class: "badge badge-ghost badge-sm tabular-nums",
                     title: "上次拉取：" + privacyFetchedText.value
-                  }, "已缓存 " + vue.toDisplayString(privacyStatus.value.ruleCount) + " 条", 9, _hoisted_30$1)) : (vue.openBlock(), vue.createElementBlock("span", _hoisted_31$1, "未配置"))
+                  }, "已缓存 " + vue.toDisplayString(privacyStatus.value.ruleCount) + " 条", 9, _hoisted_34$1)) : (vue.openBlock(), vue.createElementBlock("span", _hoisted_35$1, "未配置"))
                 ]),
                 status.value.authorized && status.value.searchScopeOk ? (vue.openBlock(), vue.createElementBlock("button", {
                   key: 0,
@@ -4984,39 +5022,39 @@ titleFallback: !title
                     name: "search",
                     size: 13
                   }),
-                  _cache[14] || (_cache[14] = vue.createTextVNode(" 从飞书选择表格 "))
-                ], 8, _hoisted_32$1)) : status.value.authorized ? (vue.openBlock(), vue.createElementBlock("p", _hoisted_33$1, " 授权不含搜索权限，重新授权后可配这张可选的速查表。 ")) : (vue.openBlock(), vue.createElementBlock("p", _hoisted_34$1, "可选；授权后从飞书选表。"))
+                  _cache[12] || (_cache[12] = vue.createTextVNode(" 从飞书选择表格 "))
+                ], 8, _hoisted_36$1)) : status.value.authorized ? (vue.openBlock(), vue.createElementBlock("p", _hoisted_37$1, " 授权不含搜索权限，重新授权后可配这张可选的速查表。 ")) : (vue.openBlock(), vue.createElementBlock("p", _hoisted_38$1, "可选；授权后从飞书选表。"))
               ])
             ]),
-            vue.createElementVNode("div", _hoisted_35$1, [
+            vue.createElementVNode("div", _hoisted_39$1, [
               !status.value.authorized ? (vue.openBlock(), vue.createElementBlock("button", {
                 key: 0,
                 class: "btn btn-primary btn-sm rounded-full",
                 disabled: busy.value,
                 onClick: startAuth
-              }, vue.toDisplayString(busy.value ? "等待确认…" : "授权飞书账号"), 9, _hoisted_36$1)) : (vue.openBlock(), vue.createElementBlock(vue.Fragment, { key: 1 }, [
+              }, vue.toDisplayString(busy.value ? "等待确认…" : "授权飞书账号"), 9, _hoisted_40)) : (vue.openBlock(), vue.createElementBlock(vue.Fragment, { key: 1 }, [
                 vue.createElementVNode("button", {
                   class: "btn btn-outline btn-sm rounded-full",
                   disabled: busy.value,
                   onClick: reloadRules
-                }, "立即刷新规则", 8, _hoisted_37$1),
+                }, "立即刷新规则", 8, _hoisted_41),
                 vue.createElementVNode("button", {
                   class: "btn btn-primary btn-sm rounded-full",
                   disabled: busy.value,
                   onClick: startAuth
-                }, "重新授权", 8, _hoisted_38$1),
+                }, "重新授权", 8, _hoisted_42),
                 vue.createElementVNode("button", {
                   class: "btn btn-error btn-sm rounded-full",
                   disabled: busy.value,
                   onClick: doRevoke
-                }, "解除授权", 8, _hoisted_39$1)
+                }, "解除授权", 8, _hoisted_43)
               ], 64)),
               status.value.hasCredential ? (vue.openBlock(), vue.createElementBlock("button", {
                 key: 2,
                 class: "btn btn-outline btn-warning btn-sm rounded-full",
                 disabled: busy.value,
                 onClick: doForget
-              }, " 作废并重新注册 ", 8, _hoisted_40)) : vue.createCommentVNode("", true),
+              }, " 作废并重新注册 ", 8, _hoisted_44)) : vue.createCommentVNode("", true),
               busy.value ? (vue.openBlock(), vue.createElementBlock("button", {
                 key: 3,
                 class: "btn btn-ghost btn-sm rounded-full",
@@ -5766,6 +5804,30 @@ titleFallback: !title
   function num(v) {
     return typeof v === "number" && Number.isFinite(v) ? v : null;
   }
+  function msgTime(msg) {
+    const raw = num(msg.time);
+    if (raw !== null && raw > 0) return raw < 1e11 ? raw * 1e3 : raw;
+    for (const k of ["systemTime", "talkTime", "timestamp"]) {
+      const v = msg[k];
+      const n = num(v);
+      if (n !== null && n > 0) return n < 1e11 ? n * 1e3 : n;
+      const s = str(v);
+      if (!s) continue;
+      const m = /^(\d{4})-(\d{1,2})-(\d{1,2})[ T](\d{1,2}):(\d{1,2})(?::(\d{1,2}))?/.exec(s);
+      if (m) {
+        const t = new Date(
+          Number(m[1]),
+          Number(m[2]) - 1,
+          Number(m[3]),
+          Number(m[4]),
+          Number(m[5]),
+          Number(m[6] || 0)
+        ).getTime();
+        if (Number.isFinite(t)) return t;
+      }
+    }
+    return null;
+  }
   function shortId(id) {
     return id.length > 8 ? id.slice(-8) : id;
   }
@@ -5955,7 +6017,7 @@ entries() {
       id: key,
       name: name || "会话 " + shortId(key),
       sender: str(msg.sendUserName) || ctx.sender,
-      time: num(msg.time)
+      time: msgTime(msg)
     };
   }
   function readBucket() {
