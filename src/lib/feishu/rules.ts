@@ -36,12 +36,61 @@ export interface RulesTableConfig {
     viewId?: string;
 }
 
-const F_TITLE = '标题';
 const F_TAGS = '标签';
-const F_REPLY = '内容';
 const F_EXCLUDE = '排除词';
 /** 「是否常显」列（v26.10.25-v1）：复选框列，true = 永远显示、排最前、不参与匹配 */
 const F_PINNED = '是否常显';
+
+/**
+ * 标题 / 内容列的候选名（v26.10.26-v1）。
+ *
+ * ── 为什么需要别名 ────────────────────────────────────────────────────────────
+ * 隐私信息表是使用者另建的，列名常常不是「标题 / 内容」而是「名称 / 信息项 / 文本」等。
+ * 只认死列名时 `title` 会落进「内容前 12 字」的回退 ⇒ 快捷短语栏/隐私栏的按钮显示的是
+ * **被截断的正文**而不是标题（2026-10-26 实际发生：隐私表第一列不是「标题」）。
+ *
+ * 匹配策略（`pickField`）：先忽略大小写/空格/下划线/斜杠做**精确**匹配；
+ * 再对前 4 个主别名做**包含**匹配（表头常带后缀，如「标题（必填）」「内容/话术」），
+ * 「值 / 键 / text」这类短别名只参与精确匹配，避免误伤别的列。
+ * 一条都没匹配到 ⇒ `titleFallback = true`，由上层记日志提示补列，而不是静默显示正文。
+ */
+const TITLE_ALIASES = ['标题', '名称', '信息项', '项目', '事项', '条目', '字段', '键', 'title', 'name'];
+const REPLY_ALIASES = ['内容', '文本', '正文', '详情', '话术', '值', '回复', 'content', 'text', 'value'];
+
+/** 列名归一化：去空格/下划线/斜杠、转小写（「标题 Title」「内容/话术」都能对上） */
+function normKey(k: string): string {
+    return k
+        .trim()
+        .toLowerCase()
+        .replace(/[\s_\-/]+/g, '');
+}
+
+/**
+ * 按候选名从一个 record 的 fields 里取值（空值视为没找到，继续找下一个候选）。
+ * 返回**原样**文本，是否 trim 由调用方决定。
+ */
+function pickField(fields: Record<string, unknown>, aliases: string[]): string {
+    const keys = Object.keys(fields);
+    // ① 精确匹配
+    for (const a of aliases) {
+        const want = normKey(a);
+        const k = keys.find((kk) => normKey(kk) === want);
+        if (k !== undefined) {
+            const raw = cellText(fields[k]);
+            if (raw.trim()) return raw;
+        }
+    }
+    // ② 包含匹配（只对主别名，避免「值」「键」这类短词误伤）
+    for (const a of aliases.slice(0, 4)) {
+        const want = normKey(a);
+        const k = keys.find((kk) => normKey(kk).includes(want));
+        if (k !== undefined) {
+            const raw = cellText(fields[k]);
+            if (raw.trim()) return raw;
+        }
+    }
+    return '';
+}
 
 /** 把一个单元格值压成纯文本（兼容富文本分段数组） */
 function cellText(v: unknown): string {
@@ -89,19 +138,21 @@ function cellBool(v: unknown): boolean {
     return t === 'true' || t === '是' || t === '1' || t === '√';
 }
 
-/** 把一行记录映射成规则；标题与内容都空的空行直接丢弃 */
+/** 把一行记录映射成规则；标题与内容都空的空行直接丢弃（标题/内容列支持别名，见 TITLE_ALIASES） */
 function toRule(rec: Record<string, unknown>): QuickReplyRule | null {
     const fields = (rec['fields'] || {}) as Record<string, unknown>;
-    const title = cellText(fields[F_TITLE]).trim();
-    const reply = cellText(fields[F_REPLY]);
-    if (!title && !reply) return null;
+    const title = pickField(fields, TITLE_ALIASES).trim();
+    const reply = pickField(fields, REPLY_ALIASES);
+    if (!title && !reply.trim()) return null;
     return {
         id: str(rec, 'record_id'),
-        title: title || reply.slice(0, 12),
+        title: title || reply.trim().slice(0, 12),
         keywords: cellList(fields[F_TAGS]),
         excludes: cellList(fields[F_EXCLUDE]),
         reply,
         pinned: cellBool(fields[F_PINNED]),
+        /** 没有可识别的标题列 ⇒ 按钮文字是内容截断（上层据此记日志提示补列） */
+        titleFallback: !title,
     };
 }
 

@@ -184,6 +184,7 @@ export async function getRules(force = false, http: HttpFn = gmHttp): Promise<Qu
     const rules = await fetchRules(http, token, cfg);
     saveRulesCache({ fetchedAt: Date.now(), rules });
     addLog('飞书快捷回复规则已更新：' + rules.length + ' 条', 'success');
+    warnIfNoTitle(rules, '快捷短语规则表');
     return rules;
 }
 
@@ -255,7 +256,26 @@ export async function getPrivacyRules(force = false, http: HttpFn = gmHttp): Pro
     const rules = await fetchRules(http, token, cfg);
     savePrivacyRulesCache({ fetchedAt: Date.now(), rules });
     addLog('隐私信息已更新：' + rules.length + ' 条', 'success');
+    warnIfNoTitle(rules, '隐私信息表');
     return rules;
+}
+
+/**
+ * 标题列没认出来时提示一次（v26.10.26-v1）。
+ * 不报错：按钮仍会用「内容前 12 字」兜底显示 —— 但那不是标题，使用者会以为显示错了。
+ * 因此这里明确告诉他缺哪一列、支持哪些列名，比事后猜「为什么显示的是文本」快得多。
+ */
+function warnIfNoTitle(rules: QuickReplyRule[], tableLabel: string): void {
+    const n = rules.filter((r) => r.titleFallback).length;
+    if (!n) return;
+    addLog(
+        tableLabel +
+            '有 ' +
+            n +
+            ' 条记录没有可识别的标题列（支持：标题 / 名称 / 信息项 / 项目 / 事项 / 条目 / 字段），' +
+            '按钮暂用内容前 12 字显示：请在表里新增「标题」列，或把标题列改名为上述之一',
+        'warning'
+    );
 }
 
 /**

@@ -27,6 +27,12 @@ export interface QuickReplyRule {
      * false / undefined = 普通规则（走标签匹配）。
      */
     pinned?: boolean;
+    /**
+     * 标题是否来自「内容前 12 字」的回退（v26.10.26-v1）。
+     * true = 表里没有可识别的标题列（列名不在 标题/名称/信息项/项目… 之列）——
+     * 按钮能显示，但文字是内容截断；上层据此记日志提示补列。
+     */
+    titleFallback?: boolean;
 }
 
 /** 飞书为该使用者动态签发的应用凭证（archetype=PersonalAgent） */
