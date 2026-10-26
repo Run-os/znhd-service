@@ -880,6 +880,8 @@ function serve() {
                 href: a.getAttribute('href') || '',
                 target: a.getAttribute('target') || '',
                 rel: a.getAttribute('rel') || '',
+                // v26.10.26-v7：链接文字必须是主题蓝（走 daisyUI 的 text-info，不写死色值）
+                blue: (a.getAttribute('class') || '').split(/\s+/).indexOf('text-info') >= 0,
             };
         };
         return {
@@ -890,7 +892,12 @@ function serve() {
     });
     report.tableLinks = tableLinks;
     const linkOk = (l, text, kw) =>
-        !!l && l.text === text && l.href.indexOf(kw) >= 0 && l.target === '_blank' && l.rel.indexOf('noopener') >= 0;
+        !!l &&
+        l.text === text &&
+        l.href.indexOf(kw) >= 0 &&
+        l.target === '_blank' &&
+        l.rel.indexOf('noopener') >= 0 &&
+        l.blue;
     report.checks.tableLinkOk =
         !!tableLinks.found &&
         linkOk(tableLinks.main, '规则表', 'SMOKEMAIN') &&
@@ -1338,6 +1345,8 @@ function serve() {
             // 旧的红圈是 inline style 的 box-shadow，必须确认它彻底消失
             rings: cards.map((c) => c.style.boxShadow || ''),
             excluded: bar ? bar.getAttribute('data-sniff-excluded') : null,
+            // 底部提示里要说明排序方向（v26.10.26-v7 使用者要求）
+            hasSortHint: (el.textContent || '').includes('从新到旧'),
             hasRescan: !![...el.querySelectorAll('button')].find((b) => b.textContent.includes('重新扫描')),
         };
     });
@@ -1347,6 +1356,7 @@ function serve() {
         !!sniff.inShadow &&
         sniff.width === 828 &&
         sniff.hasRescan &&
+        sniff.hasSortHint &&
         sniff.text.includes('显示 2 张') &&
         sniff.cardCount === 2 &&
         sniff.alts.includes('photo-a.jpg') &&
@@ -1667,15 +1677,18 @@ function serve() {
 
     // ---------- 「主管税务机关」旁发送图标（v26.10.26-v4）----------
     // 夹具 = #fake-taxguide（见 qr-fixtures.js 的 ⓪b），隐私表 p4 的「必含关键词」= 该全称。
-    // 断言四件事：① 挂上了、② 在**带标签的那个值块内部**紧贴文本（不是页面上另一处同名文本）、
-    // ③ 非税务机关字段不挂、④ 点一下把 p4 的「内容」写进输入框并同步进 Inputbox。
+    // 断言四件事：① 挂上了、② 在**标签（键）元素内部、且是最后一个子节点**（紧跟「主管税务机关」文字，
+    // 不是跟值，也不是页面上另一处同名文本）、③ 非税务机关字段不挂、④ 点一下把 p4 的「内容」
+    // 写进输入框并同步进 Inputbox。
     await page.waitForFunction('window.__orgSendSnap != null', { timeout: 90000 }).catch(() => {});
     const orgSend = await page.evaluate(() => window.__orgSendSnap || null);
     report.orgSend = orgSend;
     report.checks.orgSendIconOk = !!(
         orgSend &&
         orgSend.present &&
-        orgSend.inValue &&
+        orgSend.inLabel &&
+        orgSend.labelTail &&
+        !orgSend.inValue &&
         !orgSend.inCopy &&
         orgSend.hasButton &&
         orgSend.hasSvg &&

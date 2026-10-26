@@ -630,6 +630,7 @@ const emptyText = computed(() => {
         <p class="mt-2 text-xs leading-5 text-base-content/60" :class="kept.length ? '' : 'invisible'">
             提示：
             <template v-if="groupedView">图片已按会话（纳税人）分组，组头可直接「全选本组」；</template>
+            每个会话内按消息时间从新到旧排列（顶部最新、底部最旧），未取到时间的排在最后并标红；
             单击缩略图可放大 / 多图切换，放大后工具栏上的「打印」按 A4 打印原图（横图自动旋转 90 度）；
             勾选后可批量下载。视频已在扫描阶段排除，动图（gif）按图片保留。
         </p>

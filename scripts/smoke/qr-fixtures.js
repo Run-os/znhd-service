@@ -77,6 +77,7 @@
         rowOrg.className = 'info-row';
         var labelOrg = document.createElement('span');
         labelOrg.className = 'info-label';
+        labelOrg.id = 'fake-org-label';
         labelOrg.textContent = '主管税务机关';
         var valueOrg = document.createElement('span');
         valueOrg.className = 'info-value';
@@ -229,6 +230,7 @@
     // 图标是 **shadow host**：按钮、SVG、尺寸都从 shadowRoot 里读。
     setTimeout(function () {
         var icon = document.querySelector('[data-znhd-org-send]');
+        var labelEl = document.getElementById('fake-org-label');
         var valueEl = document.getElementById('fake-org-value');
         var copyEl = document.getElementById('fake-org-copy');
         var legalEl = document.getElementById('fake-legal-value');
@@ -236,7 +238,10 @@
         var btn = icon && icon.shadowRoot ? icon.shadowRoot.querySelector('button') : null;
         var snap = {
             present: !!icon,
-            // v26.10.26-v5：图标放进值块内部、紧贴文本（appendChild），不再是插在值块后面
+            // v26.10.26-v7：图标挂在**标签**（「主管税务机关」）文本末尾（appendChild 进标签元素）
+            inLabel: !!icon && !!labelEl && labelEl.contains(icon),
+            // 且必须是标签里的**最后一个**子节点（紧跟文字，不插到文字前面）
+            labelTail: !!icon && !!labelEl && labelEl.lastElementChild === icon,
             inValue: !!icon && !!valueEl && valueEl.contains(icon),
             inCopy: !!icon && !!copyEl && copyEl.contains(icon),
             // 非税务机关字段（值 2 字，够短）不该挂

@@ -168,7 +168,7 @@
   隐私行 = 常显 + 竖线（两边都有才渲染）+ 匹配命中，样式与主行一致（`h-4 w-px bg-base-content/20`）。
   `mountQuickBar` 里隐私 pinned 用 `privacyPinnedFingerprint`（随副本同步），隐私命中**跟文本指纹走**，
   指纹里额外拼了 `privacyStamp` —— 隐私表是异步回源的，不加这一项首次拉取成功后永远不重算。
-- **主管税务机关旁的发送图标**（v26.10.26-v4）：`src-vue/lib/orgSendButton.ts`（`app.ts` 里 `boot('税务机关快捷发送')`）+ `orgFieldDom.ts`。判据 = 隐私表某条 `musts` 里存在与 `readOrg()` **归一化后严格相等**的项（`match.ts` 的 `matchByOrgText()`，**不看**标签/剔除/是否常显；多条取表序第一条，日志注明还有几条）→ 在全称文本右侧 `insertAdjacentElement('afterend')` 插 20×20 shadow 图标（内联 SVG `paper-airplane`、`currentColor` 跟随主题、hover 只动 opacity，**禁 emoji**）→ 点击 `replaceToTinyMCE(expandMagicVars(reply))`。
+- **主管税务机关旁的发送图标**（v26.10.26-v4）：`src-vue/lib/orgSendButton.ts`（`app.ts` 里 `boot('税务机关快捷发送')`）+ `orgFieldDom.ts`。判据 = 隐私表某条 `musts` 里存在与 `readOrg()` **归一化后严格相等**的项（`match.ts` 的 `matchByOrgText()`，**不看**标签/剔除/是否常显；多条取表序第一条，日志注明还有几条）→ 在**「主管税务机关」标签文本末尾**（`anchor.el.appendChild(host)`，锚点 = 与值同一行的标签）插 20×20 shadow 图标（内联 SVG `paper-airplane`、`currentColor` 跟随主题、hover 只动 opacity，**禁 emoji**）→ 点击 `replaceToTinyMCE(expandMagicVars(reply))`。v5 曾挂在值末尾、v7 按使用者要求改贴标签（该行是「左标签+右对齐值」，贴值会离标签半行远）。
   - ⚠️ **DOM 定位不许用「向上 N 层找标签」**（v4 首版就这么写，冒烟 `orgSendIconOk` 直接打红：`afterCopy=true` 而 `afterValue=false`）：面板根容器也含「主管税务机关」字样，页面上另一处同名文本（会话列表/详情副标题）会被误判成值。定版判据 = 值必须在标签**之后**（`compareDocumentPosition` 含 `DOCUMENT_POSITION_FOLLOWING`）+ 两者最低公共祖先文本 ≤ 全称 + 标签 + 40 字 + 取祖先最短者；有标签但无合格候选则**宁可不挂**（只有完全找不到标签才退化到第一个可见候选）。
   - 稳态（图标 `isConnected` + 全称未变 + 命中规则 id 未变）**零 DOM 扫描**；**绝不回源隐私表** —— 回源归 `mountQuickBar.ensurePrivacyRules`，两边并发会撞 refresh_token 一次性互相踢掉。
   - 冒烟：`orgSendIconOk`（挂位 / 20×20 / shadow 内有 button+svg）、`orgSendScopeOk`（非税务机关字段不挂）、`orgSendPickOk`（点一下填入 p4 内容并同步 Inputbox）；`verify:match` 另有 4 项（严格相等 / 全称前缀不命中 / 空文本 / 旧缓存无 `musts`）。

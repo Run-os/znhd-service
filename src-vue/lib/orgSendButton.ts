@@ -171,9 +171,10 @@ function tick(): void {
     }
     clearIcon();
     host = buildIcon(rule);
-    // v26.10.26-v5 定版：**放进值块内部、跟在文本末尾**，而不是插在值块后面。
-    // 真机实测：这一行是「左标签 + 右对齐值」布局，值块 div 占满整行宽度，
-    // 插在它后面图标会落在行首/行尾随布局漂移；放进去（inline）就永远紧挨着文字。
+    // v26.10.26-v7 定版（使用者要求）：**挂在标签（「主管税务机关」）文本末尾**。
+    // 做法与 v5 相同 —— `appendChild` 进锚点元素内部（inline 跟在文字后面），
+    // 只是锚点从「值块」换成了「与值同一行的那个标签」：真机这一行是「左标签 + 右对齐值」，
+    // 图标跟值走会离标签半行远，看着不像这个字段的动作按钮。
     anchor.el.appendChild(host);
     shownOrg = org;
     shownRuleId = rule.id;
@@ -182,7 +183,7 @@ function tick(): void {
         addLog(
             '主管税务机关旁已挂发送图标：' +
                 rule.title +
-                (anchor.kind === 'label' ? '（挂在标签右侧：没定位到值）' : '') +
+                (anchor.kind === 'value' ? '（挂在值的右侧：没定位到标签）' : '') +
                 (matched.length > 1 ? '（同词还有 ' + (matched.length - 1) + ' 条，取第一条）' : ''),
             'info'
         );

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         征纳互动人数和在线监控v2
 // @namespace    https://scriptcat.org/
-// @version      26.10.26-v6
+// @version      26.10.26-v7
 // @author       runos
 // @description  实时监控征纳互动等待人数和在线状态，支持语音播报、自定义常用语
 // @license      MIT
@@ -1989,6 +1989,20 @@ logAutoRefresh: !!_initAllvalue.logAutoRefresh
     const seen2 = list.filter(isVisible);
     return seen2[0] || list[0] || null;
   }
+  function pickLabel(block) {
+    const labels = findLabelEls();
+    if (!labels.length) return null;
+    if (!block) return labels[0];
+    let best = null;
+    for (const label of labels) {
+      if (!(label.compareDocumentPosition(block) & Node.DOCUMENT_POSITION_FOLLOWING)) continue;
+      const box = lca(label, block);
+      if (!box) continue;
+      const len = normalize$1(box.textContent || "").length;
+      if (!best || len < best.len) best = { el: label, len };
+    }
+    return best ? best.el : labels[0];
+  }
   function findOrgValueBlock(org) {
     const d = doc();
     const root = d == null ? void 0 : d.body;
@@ -2017,9 +2031,9 @@ logAutoRefresh: !!_initAllvalue.logAutoRefresh
   }
   function findOrgAnchor(org) {
     const block = findOrgValueBlock(org);
-    if (block) return { el: block, kind: "value" };
-    const labels = findLabelEls();
-    return labels.length ? { el: labels[0], kind: "label" } : null;
+    const label = pickLabel(block);
+    if (label) return { el: label, kind: "label" };
+    return block ? { el: block, kind: "value" } : null;
   }
   function readOrgFromDom() {
     const LABEL_RE = /主管税务机关[：:]?/;
@@ -2215,7 +2229,7 @@ logAutoRefresh: !!_initAllvalue.logAutoRefresh
     if (host.isConnected) {
       lastWhy = "";
       addLog(
-        "主管税务机关旁已挂发送图标：" + rule.title + (anchor.kind === "label" ? "（挂在标签右侧：没定位到值）" : "") + (matched.length > 1 ? "（同词还有 " + (matched.length - 1) + " 条，取第一条）" : ""),
+        "主管税务机关旁已挂发送图标：" + rule.title + (anchor.kind === "value" ? "（挂在值的右侧：没定位到标签）" : "") + (matched.length > 1 ? "（同词还有 " + (matched.length - 1) + " 条，取第一条）" : ""),
         "info"
       );
     }
@@ -4970,7 +4984,7 @@ titleFallback: !title
                     href: mainUrl.value,
                     target: "_blank",
                     rel: "noopener noreferrer",
-                    class: "link link-hover text-[14px] font-semibold",
+                    class: "link link-hover text-info text-[14px] font-semibold",
                     "data-znhd": "quick-reply-table-link",
                     title: "在新标签页打开规则表：" + mainUrl.value
                   }, "规则表", 8, _hoisted_23$2)) : (vue.openBlock(), vue.createElementBlock("span", _hoisted_24$2, "规则表")),
@@ -5001,7 +5015,7 @@ titleFallback: !title
                     href: privacyUrl.value,
                     target: "_blank",
                     rel: "noopener noreferrer",
-                    class: "link link-hover text-[14px] font-semibold",
+                    class: "link link-hover text-info text-[14px] font-semibold",
                     "data-znhd": "privacy-table-link",
                     title: "在新标签页打开隐私信息表：" + privacyUrl.value
                   }, "隐私信息表", 8, _hoisted_32$1)) : (vue.openBlock(), vue.createElementBlock("span", _hoisted_33$1, "隐私信息表")),
@@ -7034,7 +7048,7 @@ shouldStop: () => runId !== id
               groupedView.value ? (vue.openBlock(), vue.createElementBlock(vue.Fragment, { key: 0 }, [
                 vue.createTextVNode("图片已按会话（纳税人）分组，组头可直接「全选本组」；")
               ], 64)) : vue.createCommentVNode("", true),
-              _cache[14] || (_cache[14] = vue.createTextVNode(" 单击缩略图可放大 / 多图切换，放大后工具栏上的「打印」按 A4 打印原图（横图自动旋转 90 度）； 勾选后可批量下载。视频已在扫描阶段排除，动图（gif）按图片保留。 "))
+              _cache[14] || (_cache[14] = vue.createTextVNode(" 每个会话内按消息时间从新到旧排列（顶部最新、底部最旧），未取到时间的排在最后并标红； 单击缩略图可放大 / 多图切换，放大后工具栏上的「打印」按 A4 打印原图（横图自动旋转 90 度）； 勾选后可批量下载。视频已在扫描阶段排除，动图（gif）按图片保留。 "))
             ], 2),
             vue.createVNode(_sfc_main$d, {
               open: previewOpen.value,

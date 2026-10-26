@@ -9,7 +9,7 @@ import { normalize } from '@/lib/feishu/match';
  * 改版就崩（todoBadge 的经验：`title` / `count` 这种语义类名稳，结构类名不稳）。
  * 而税务机关全称（实测 `国家税务总局衡阳市南岳区税务局税源管理股`）在页面上几乎唯一，
  * 所以做法是：拿全称在 DOM 里找**文本落在全称内**的节点 → 向上扩展到「整体仍被全称包含」
- * 的最外层元素（值块）→ 图标插在它后面。全程不依赖任何类名。
+ * 的最外层元素（值块）→ 由值块反查**同一行的标签**，图标挂在标签文本末尾。全程不依赖任何类名。
  *
  * 两层匹配（严格优先，宽松兜底）：
  *   ① 严格：某个文本节点归一化后**就是**全称 ⇒ 值块 = 这一格值；
@@ -137,16 +137,36 @@ function pickCandidate(list: HTMLElement[], target: string): HTMLElement | null 
 }
 
 /**
- * 图标锚点：优先挂在**值**后面（视觉上就是「税务机关名称右边」）；
- * 值定位失败时退化为挂在**标签**后面（v26.10.26-v5）。
+ * 图标锚点（v26.10.26-v7 定版：挂在**标签**末尾）。
  *
- * 为什么要有标签兜底：真机上出现过「标签在、值不在这块 DOM 里」（详情折叠 / 值渲染在
- * 另一容器 / 值本身为空但别处有）的情况，原来的实现是「定位不到就宁可不挂」⇒ 使用者
- * 看到的就是「为什么没有发送按钮」。兜底至少让匹配命中的功能可用，同时日志会标明退化。
+ * 使用者的原话是「放到键的文本末尾，而不是值的文本末尾」—— 真机这一行是
+ * 「左标签 + 右对齐值」，图标跟在值后面会离标签很远（大屏上隔了半行），
+ * 视觉上不像「给这个字段加的动作」。所以现在优先取**与值同一行的那个标签**。
+ *
+ * 标签的挑选不能直接拿 `findLabelEls()[0]`：页面上可能有多处「主管税务机关」
+ * （详情折叠副本、搜索建议等），取错就挂到别的行去了。判据 = 与值块的**最低公共
+ * 祖先最短**的那个标签（同一行的两块，LCA 就是这一行；跨行必然是整块容器）。
  */
 export interface OrgAnchor {
     el: HTMLElement;
-    kind: 'value' | 'label';
+    kind: 'label' | 'value';
+}
+
+/** 在与 `block` 同一行（LCA 文本最短）的标签里挑一个；没有更优的就用第一个可见标签 */
+function pickLabel(block: HTMLElement | null): HTMLElement | null {
+    const labels = findLabelEls();
+    if (!labels.length) return null;
+    if (!block) return labels[0];
+    let best: { el: HTMLElement; len: number } | null = null;
+    for (const label of labels) {
+        // 标签必须在值之前（文档序）：值之后出现的同名文本不是这个字段的键
+        if (!(label.compareDocumentPosition(block) & Node.DOCUMENT_POSITION_FOLLOWING)) continue;
+        const box = lca(label, block);
+        if (!box) continue;
+        const len = normalize(box.textContent || '').length;
+        if (!best || len < best.len) best = { el: label, len };
+    }
+    return best ? best.el : labels[0];
 }
 
 /**
@@ -183,12 +203,12 @@ export function findOrgValueBlock(org: string): HTMLElement | null {
     return pickCandidate(strict, target) || pickCandidate(loose, target);
 }
 
-/** 图标锚点：值块优先，标签兜底（两者都没有 ⇒ null） */
+/** 图标锚点：**标签**优先（键文本末尾），标签找不到才退到值块 */
 export function findOrgAnchor(org: string): OrgAnchor | null {
     const block = findOrgValueBlock(org);
-    if (block) return { el: block, kind: 'value' };
-    const labels = findLabelEls();
-    return labels.length ? { el: labels[0], kind: 'label' } : null;
+    const label = pickLabel(block);
+    if (label) return { el: label, kind: 'label' };
+    return block ? { el: block, kind: 'value' } : null;
 }
 
 /**
