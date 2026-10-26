@@ -15,6 +15,12 @@
 @source '../src';
 @source '../../src-vue/components';
 @source '../../src-vue/transfer';
+/**
+ * v26.10.26-v9：toast 的实现收敛到仓库根 `shared/ui/toast.ts`（两端共用一份）。
+ * `source(none)` 关掉了自动探测，**不登记这里的话**卡片上的 `bg-base-100` / `shadow-lg` /
+ * `rounded-lg` / `w-72` / `z-[9999]` 一个都不会生成 —— 网页端的提示会退化成裸文字。
+ */
+@source '../../shared';
 
 /**
  * daisyUI 主题（v26.10.21-v1 客户端样式同步脚本端）：与脚本端 `src-vue/style.css`

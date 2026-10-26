@@ -829,8 +829,66 @@ function serve() {
                 .getElementById('__znhd_panel_host__')
                 .shadowRoot.querySelector('[data-znhd="phrase-tip"]')
     );
-    // toast（抓取失败的提示）恰好盖在 sheet 顶栏上，等它 3 秒自动消失后再截图
-    await new Promise((r) => setTimeout(r, 3400));
+    // ── 卡片式 toast（v26.10.26-v9）──────────────────────────────────────────
+    // ⚠️ 为什么这里要先点一下「重新加载常用语」：夹具给了 PhrasesCache，打开侧边栏走的是
+    //    「有缓存就直接用」分支，**根本不会发起抓取、也就不会有任何 toast**
+    //    （v8 及以前那句「等 toast 消失再截图」是缓存夹具存在之前留下的，实际什么也没等）。
+    //    冒烟页没有真实的右侧栏「常用话术」，强制抓取必然失败 ⇒ 弹的正是 error 那条
+    //    （`常用语抓取失败：右侧栏没有「常用话术」tab…，仍显示上次内容`）。
+    //    用 JS `.click()` 而不是真鼠标：真鼠标会触发 v9 的「悬停暂停」，把计时按在那里。
+    await page.evaluate(() => {
+        const sr = document.getElementById('__znhd_panel_host__').shadowRoot;
+        const btn = sr.querySelector('button[aria-label="重新加载常用语"]');
+        if (btn) btn.click();
+    });
+    // 采样必须放在等待**之前**（toast 还活着），并且**一次读完**（分两次读会因为
+    // 中途动画推进而自相矛盾）。入场是 rAF + 200ms transition，这里留 260ms 让它走完，
+    // 否则 opacity 读到过渡中间值（0.xx）会假红。
+    await new Promise((r) => setTimeout(r, 260));
+    const toastSnap = await page.evaluate(() => {
+        const sr = document.getElementById('__znhd_panel_host__').shadowRoot;
+        const box = sr.querySelector('[data-znhd="toast"]');
+        if (!box) return { found: false };
+        const items = [...box.querySelectorAll('.alert')];
+        // 取 error 那条（抓取失败提示）；没有 error 就取最后一条，报告里能看出是谁
+        const item =
+            items.find((i) => i.getAttribute('data-znhd-kind') === 'error') ||
+            items[items.length - 1] ||
+            null;
+        const cs = item ? getComputedStyle(item) : null;
+        return {
+            found: true,
+            containerClasses: [...box.classList],
+            count: items.length,
+            kinds: items.map((i) => i.getAttribute('data-znhd-kind')),
+            classes: item ? [...item.classList] : [],
+            kind: item ? item.getAttribute('data-znhd-kind') : '',
+            text: item ? (item.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 60) : '',
+            opacity: cs ? cs.opacity : '',
+            borderTopWidth: cs ? cs.borderTopWidth : '',
+        };
+    });
+    const toastCls = toastSnap.classes || [];
+    const toastBoxCls = toastSnap.containerClasses || [];
+    report.checks.toastOk =
+        !!toastSnap.found &&
+        // ① 容器还是官方 toast 结构：顶部居中
+        ['toast', 'toast-top', 'toast-center'].every((c) => toastBoxCls.includes(c)) &&
+        // ② 卡片身份：素色卡面 + 阴影 + 小圆角 + 无边框 + 有过渡（缺一个都会退化成裸色块）
+        toastSnap.count >= 1 &&
+        ['bg-base-100', 'shadow-lg', 'rounded-lg', 'border-0', 'transition-all'].every((c) =>
+            toastCls.includes(c)
+        ) &&
+        // ③ 抓到的是 error 那条（抓取失败提示）
+        toastSnap.kind === 'error' &&
+        // ④ 入场动画已跑完（opacity 1）+ 边框真的被 border-0 压成 0
+        toastSnap.opacity === '1' &&
+        toastSnap.borderTopWidth === '0px';
+    report.toast = toastSnap;
+    // toast 恰好盖在 sheet 顶栏上，等它自己消失后再截图。
+    // v26.10.26-v9：error 由 3200 变 4200（+ 220 退场）⇒ 3400 改成 4800。
+    // ⚠️ 这不是放宽断言，只是截图等待时长；判定在上面已经读完。
+    await new Promise((r) => setTimeout(r, 4800));
     await page.screenshot({ path: path.join(os.tmpdir(), 'znhd-vue-phrases.png') });
 
     await closeTopLayer();
