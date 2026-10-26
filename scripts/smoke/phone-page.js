@@ -443,6 +443,30 @@ async function main() {
         }
         check('刷新后聊天记录仍在：自己发的两张图（Blob 重建）与文本都回来了', persisted);
 
+        // ③b 自己发的图也能点开预览（v26.10.27-v1 对齐脚本端；此前 clickable 只给收到的图，
+        //     out 图点了没反应 —— 使用者 2026-10-27 报障的根因）
+        let outPreviewOk = false;
+        try {
+            await page.evaluate(() => {
+                const img = document.querySelector('.chat-end .chat-bubble img');
+                if (img) img.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+            });
+            await page.waitForSelector('[data-znhd="image-preview"]', { timeout: 10000 });
+            await sleep(300);
+            outPreviewOk = await page.evaluate(() => {
+                const d = document.querySelector('[data-znhd="image-preview"]');
+                return !!(d && d.open);
+            });
+            await page.keyboard.press('Escape');
+            await page.waitForFunction(() => {
+                const d = document.querySelector('[data-znhd="image-preview"]');
+                return !d || !d.open;
+            }, { timeout: 5000 });
+        } catch {
+            outPreviewOk = false;
+        }
+        check('刷新后自己发的图也能点开预览（out 图与脚本端对齐）', outPreviewOk);
+
         // ④ 电脑端 → 手机端：真从中继投递一张图，等长轮询收到 → 左侧灰气泡
         const b64 = fs.readFileSync(png).toString('base64');
         const sent = await fetch(`http://127.0.0.1:${port}/phone/send/test-device-0001`, {

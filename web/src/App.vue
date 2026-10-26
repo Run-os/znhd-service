@@ -137,13 +137,13 @@ watch(
 // ===== 预览层 =====
 const previewOpen = ref(false);
 const previewIndex = ref(0);
-/** 预览只针对「电脑发来的图片」（本地发出的不预览，避免和上传态混淆） */
-const inImages = computed(() => msgs.value.filter((m) => m.type === 'image' && m.side === 'in' && !!m.url));
-const previewItems = computed(() => inImages.value.map((m) => m.url as string));
-const previewNames = computed(() => inImages.value.map((m) => m.name || 'image.jpg'));
+/** 预览集合 = 全部图片（含本地发出的，与脚本端 ChatWindow 对齐：v26.10.27-v1 前 out 图不可点开预览） */
+const previewImages = computed(() => msgs.value.filter((m) => m.type === 'image' && !!m.url));
+const previewItems = computed(() => previewImages.value.map((m) => m.url as string));
+const previewNames = computed(() => previewImages.value.map((m) => m.name || 'image.jpg'));
 
 function openPreview(m: ChatMsg) {
-    const i = inImages.value.findIndex((x) => x.id === m.id);
+    const i = previewImages.value.findIndex((x) => x.id === m.id);
     previewIndex.value = i < 0 ? 0 : i;
     previewOpen.value = true;
 }
@@ -516,7 +516,7 @@ const footerHint = computed(() => {
                                 :meta-danger="row.msg.state === 'failed'"
                                 :progress="row.msg.state === 'sending' ? (row.msg.progress ?? null) : null"
                                 :error="row.msg.state === 'failed' ? row.msg.err || '' : ''"
-                                :clickable="row.msg.type === 'image' && row.msg.side === 'in'"
+                                :clickable="row.msg.type === 'image'"
                                 :can-download="row.msg.type === 'file'"
                                 :copy-label="row.msg.side === 'in' && row.msg.type === 'text' ? '复制' : ''"
                                 @preview="openPreview(row.msg)"
