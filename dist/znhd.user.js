@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         征纳互动人数和在线监控v2
 // @namespace    https://scriptcat.org/
-// @version      26.10.27-v1
+// @version      26.10.27-v2
 // @author       runos
 // @description  实时监控征纳互动等待人数和在线状态，支持语音播报、自定义常用语
 // @license      MIT
@@ -5359,6 +5359,7 @@ titleFallback: !title
   const _hoisted_28$1 = { class: "py-3 text-[13px]" };
   const _hoisted_29$1 = { class: "font-mono" };
   const HOMEPAGE_URL = "https://github.com/Run-os/znhd-service";
+  const TUTORIAL_URL = "https://mi0cdkcaj1o.feishu.cn/wiki/L3eCwdv7WiZPockZhVicxFrfnyb";
   const _sfc_main$h = vue.defineComponent({
     __name: "SettingsDialog",
     props: {
@@ -5436,6 +5437,13 @@ titleFallback: !title
           title: vue.withCtx(() => [
             _cache[9] || (_cache[9] = vue.createElementVNode("span", null, "设置菜单", -1)),
             vue.createElementVNode("span", _hoisted_1$e, [
+              vue.createElementVNode("a", {
+                class: "btn btn-outline btn-sm rounded-full",
+                "data-znhd": "tutorial-btn",
+                href: TUTORIAL_URL,
+                target: "_blank",
+                rel: "noreferrer"
+              }, "使用教程"),
               vue.createElementVNode("a", {
                 class: "btn btn-outline btn-sm rounded-full",
                 href: HOMEPAGE_URL,

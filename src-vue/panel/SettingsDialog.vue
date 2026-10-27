@@ -120,6 +120,9 @@ const timeFields = [
 /** 脚本主页（外链，交给 <a target="_blank"> 原生开新标签，不写 window.open） */
 const HOMEPAGE_URL = 'https://github.com/Run-os/znhd-service';
 
+/** 使用教程（飞书 wiki 外链，v26.10.27-v2 起置于设置菜单标题栏最左侧） */
+const TUTORIAL_URL = 'https://mi0cdkcaj1o.feishu.cn/wiki/L3eCwdv7WiZPockZhVicxFrfnyb';
+
 /** 更新脚本地址：优先用脚本管理器给出的更新地址，回退到 @updateURL */
 const UPDATE_URL = (GM_info.scriptUpdateURL || GM_info.script.updateURL) as string;
 
@@ -140,6 +143,12 @@ const VERSION = (GM_info.script.version || '?') as string;
         <template #title>
             <span>设置菜单</span>
             <span class="ml-auto flex items-center gap-1.5">
+                <a
+                    class="btn btn-outline btn-sm rounded-full"
+                    data-znhd="tutorial-btn"
+                    :href="TUTORIAL_URL"
+                    target="_blank"
+                    rel="noreferrer">使用教程</a>
                 <a class="btn btn-outline btn-sm rounded-full" :href="HOMEPAGE_URL" target="_blank" rel="noreferrer">脚本主页</a>
                 <a class="btn btn-outline btn-sm rounded-full" :href="UPDATE_URL" target="_blank" rel="noreferrer">更新脚本</a>
                 <button class="btn btn-outline btn-sm rounded-full" data-znhd="open-log-btn" @click="emit('openLog')">运行日志</button>

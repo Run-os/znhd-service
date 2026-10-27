@@ -466,6 +466,31 @@ function serve() {
         !!dialog.hasCard && dialog.background === base100Light && dialog.boxWidth === 680;
     report.dialog = dialog;
 
+    // v26.10.27-v2：设置菜单标题栏最左侧新增「使用教程」外链（飞书 wiki，新标签页打开）
+    const tutorial = await page.evaluate(() => {
+        const sr = document.getElementById('__znhd_panel_host__').shadowRoot;
+        const el = sr && sr.querySelector('dialog[open] [data-znhd="tutorial-btn"]');
+        if (!el) return { found: false };
+        const kids = el.parentElement ? [...el.parentElement.children] : [];
+        return {
+            found: true,
+            href: el.getAttribute('href') || '',
+            target: el.getAttribute('target') || '',
+            text: (el.textContent || '').trim(),
+            // 排在按钮组第一个 = 标题栏最左侧（「最上方」在横排里的落点）
+            first: kids[0] === el,
+            isAnchor: el.tagName === 'A',
+        };
+    });
+    report.checks.tutorialBtnOk =
+        tutorial.found &&
+        tutorial.isAnchor &&
+        tutorial.first &&
+        tutorial.target === '_blank' &&
+        tutorial.text === '使用教程' &&
+        tutorial.href === 'https://mi0cdkcaj1o.feishu.cn/wiki/L3eCwdv7WiZPockZhVicxFrfnyb';
+    report.tutorial = tutorial;
+
     await page.screenshot({ path: path.join(os.tmpdir(), 'znhd-vue-dialog.png') });
 
     // ---------- 阶段 2：日志 / 常用语 / 设置改版 ----------
