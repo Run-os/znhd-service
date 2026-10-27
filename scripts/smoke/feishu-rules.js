@@ -68,14 +68,19 @@ function rec(id, fields) {
     checks.stdPinnedOk = std[0].pinned === true;
     checks.stdNoFallback = std[0].titleFallback === false;
 
-    /* ② 不认别名：只有「名称」+「文本」两列 ⇒ 标题/内容都没认出来，
-          该行被当成空行丢弃（连按钮都不会有） */
-    const aliasOnly = await fetchRules(
-        httpOf([rec('r2', { 名称: '办税服务厅地址', 文本: '湖南省长沙市岳麓区某某路一百二十三号' })]),
+    /* ② 旧 / 错列名一律不认（审计合并：原 ② 与 ④ 是同一代码路径的两次采样，合成一次 fetch）：
+          · r2 = 「名称」+「文本」两个诱饵，没有「标题」「内容」
+          · r4 = 「标题（必填）」+「内容/话术」，同样没有正规列名
+          两行都该被当成空行丢弃（连按钮都不会有） */
+    const legacyCols = await fetchRules(
+        httpOf([
+            rec('r2', { 名称: '办税服务厅地址', 文本: '湖南省长沙市岳麓区某某路一百二十三号' }),
+            rec('r4', { '标题（必填）': '办公电话', '内容/话术': '0731-12345678' }),
+        ]),
         TOKEN,
         CFG
     );
-    checks.aliasOnlyRowDropped = aliasOnly.length === 0;
+    checks.legacyColsDroppedOk = legacyCols.length === 0;
 
     /* ②b 「名称」「文本」是诱饵：另有正规「内容」列时必须忽略它们 ——
           标题回退 = 内容前 12 字，且 titleFallback = true（上层据此记日志提示补「标题」列） */
@@ -103,20 +108,12 @@ function rec(id, fields) {
     checks.legacyExcludeIgnored = legacyExclude[0].excludes.length === 0;
     checks.legacyExcludeTagsKept = JSON.stringify(legacyExclude[0].keywords) === JSON.stringify(['测试']);
 
-    /* ④ 旧列名「标题（必填）」「内容/话术」同样不认 ⇒ 两者都空 ⇒ 整行丢弃 */
-    const suffix = await fetchRules(
-        httpOf([rec('r4', { '标题（必填）': '办公电话', '内容/话术': '0731-12345678' })]),
-        TOKEN,
-        CFG
-    );
-    checks.suffixColsDropped = suffix.length === 0;
-
-    /* ⑤ 完全没有标题列：回退 = 内容前 12 字，且 titleFallback = true（上层据此记日志提示补列） */
+    /* ④ 完全没有标题列：回退 = 内容前 12 字，且 titleFallback = true（上层据此记日志提示补列） */
     const noTitle = await fetchRules(httpOf([rec('r5', { 内容: '这是一段很长的隐私信息正文内容超过十二个字' })]), TOKEN, CFG);
     checks.fallbackTitleOk = noTitle[0].title === '这是一段很长的隐私信息正';
     checks.fallbackFlagOk = noTitle[0].titleFallback === true;
 
-    /* ⑥ 空行丢弃 + 富文本分段数组（[{type:'text',text:'…'}]）压平 */
+    /* ⑤ 空行丢弃 + 富文本分段数组（[{type:'text',text:'…'}]）压平 */
     const mixed = await fetchRules(
         httpOf([
             rec('r6', {}),
@@ -132,7 +129,7 @@ function rec(id, fields) {
     checks.multiSelectMustsOk = JSON.stringify(mixed[1].musts) === JSON.stringify(['南岳', '税务']);
     checks.emptyMustsOk = JSON.stringify(mixed[0].musts) === JSON.stringify([]);
 
-    /* ⑦ 非 0 code 必须抛错（不静默吞掉） */
+    /* ⑥ 非 0 code 必须抛错（不静默吞掉） */
     let threw = false;
     try {
         await fetchRules(

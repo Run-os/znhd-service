@@ -122,7 +122,7 @@
 
 - 数据源 = 右侧栏「常用话术」（`lib/phrasesZnhd.ts`，纯程序化触发：合成 MouseEvent 点 TDesign tab → 循环展开文件夹 → 读 `.auxiliary-item`，零请求）；抓完切回「会话人信息」。`phrasesDoc.ts`（腾讯文档源）已整体删除，设置里无数据地址输入框。
 - ⚠️ **展开热点 = 文件夹图标 `span.t-folder-icon`（`trigger="expand"`），点 `.t-tree__label` 无效**；叶子 = `.t-tree__item.custom-rich-node`；展开态 = `.t-tree__item--open`（svg class 不可当判据）；**叶子也有空占位图标，不能拿它判文件夹**。
-- ⚠️ **合成事件绝不能传 `view: window`**（沙箱里 window 非原生 ⇒ 构造即抛；冒烟无沙箱 ⇒ 这类异常永假绿，靠 `phrasesClickNoViewOk` 断言 `ev.view === null` 兜）。
+- ⚠️ **合成事件绝不能传 `view: window`**（沙箱里 window 非原生 ⇒ 构造即抛；冒烟无沙箱 ⇒ 这类异常**永远复现不出来**，只能靠实现里 `try/catch` + 不传 view 兜住）。~~靠 `phrasesClickNoViewOk` 断言~~ —— **该断言在已废弃的 `znhd-smoke.html` 里，早就不跑了**（2026-10-27 断言审计发现），现在唯一的保障是 `lib/phrasesZnhd.ts` 的 `clickEl()`（构造参数只有 `{bubbles, cancelable}`，且 `MouseEvent` 构造失败时退通用 `Event`）。
 - 低配实机：每步 300~500ms 轮询等待，**绝不做组件树递归扫描**（曾压崩页面）；探 Vue 组件用 `el.__vue__` 向上回溯。远程调试该页走 browser-use + **本地浏览器**（`bsk browsers` 看实例 = 日常使用；`bsk tab borrow <tab_id>` 借用户标签页；远程 Tailscale 那台才是 `BU_CDP_URL=http://100.100.60.60:9222`，curl 探测加 `--noproxy '*'`）。
 - **写输入框（`lib/tinymce.ts`，v26.10.22-v5 重写为纯 JS API，无任何 DOM 兜底）**：`tinymce.activeEditor` → 选区 `select(body,true)+collapse(false)` 折到末尾 → `insertContent()` → 再显式 `updateText()` 同步 Vue。三条实测铁律（详见 `docs/tinymce-send-doc.md`）：
   ① **`setContent()` 不触发 Vue 同步**（`insertContent`/`execCommand` 会）⇒ 只 setContent 时按钮是灰的、或发出的是旧 `msg`；
@@ -204,7 +204,7 @@
 | 流式回调 TDZ | `await f(cb)` 的 cb 早于返回值可用，增量累加用调用前建好的独立对象 |
 | 渲染崩溃爆炸半径 | 宿主读回的数据形状先归一（对象进 JSX = 整棵面板树卸载且不自愈，无错误边界） |
 | 模板字符串里的反引号 | `scripts/smoke/vue-panel.js` 的内联 HTML 是**模板字符串**：注释/属性值里写 `` ` `` 会提前截断字符串（报成 `xxx is not defined`，指向的行号完全无关）。夹具逻辑一律放独立 `.js` 文件 |
-| 冒烟夹具页归属 | `verify:vue` 跑的是 `vue-panel.js` **内联的 HTML 模板**；`scripts/smoke/znhd-smoke.html` 已无任何脚本引用，改它不生效（v26.10.23 踩过，白跑两轮） |
+| 冒烟夹具页归属 | `verify:vue` 跑的是 `vue-panel.js` **内联的 HTML 模板**；`scripts/smoke/znhd-smoke.html`（3300 行 React 版遗留、62 条旧断言）**已无任何脚本引用，改它不生效**（v26.10.23 踩过，白跑两轮）。⚠️ 它里面的断言**一条都不在跑**——别把守门职责挂在那儿（2026-10-27 审计：`phrasesClickNoViewOk` 就这么被误当成活的了）。文件本身等一次专项清理再删，届时同步删掉本条。 |
 | 构建失败留旧产物 | 构建失败 dist 不更新，verify 静默测旧 bundle；判据 `dist/.build-stamp`（内容哈希，勿用 mtime） |
 | 模板串反引号 | `uiReset.ts`/`getBanner` 注释里**不能出现反引号**（截断模板，报错行还指错位置） |
 | CRLF | 关压缩后本机 CRLF 会进产物（CSS 模板串内，无功能影响、git add 会归一）；漂移判据比 blob 哈希 |

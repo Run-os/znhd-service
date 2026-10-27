@@ -46,7 +46,7 @@ const { spawn } = require('child_process');
 
 const ROOT = path.resolve(__dirname, '..', '..');
 /**
- * 浏览器可执行文件探测：与 `scripts/smoke/run.js` **用同一份清单**。
+ * 浏览器可执行文件探测：与 `scripts/smoke/vue-panel.js` **用同一份清单**（旧注释写的 `run.js` 已随 React 版删除）。
  * （CI 上 PUPPETEER_SKIP_DOWNLOAD=true 依赖 runner 预装的 Chrome，清单必须全平台，见 v26.10.08-v13。）
  */
 const BROWSERS = [
@@ -609,7 +609,8 @@ async function main() {
             '桌面版：弹窗在屏幕正中心（左右/上下间隙差 ≤2px）',
             Math.abs(win.x - (win.vw - win.w - win.x)) <= 2 && Math.abs(win.y - (win.vh - win.h - win.y)) <= 2
         );
-        check('桌面版：弹窗不占满视口（宽高均小于视口）', win.w < win.vw && win.h < win.vh);
+        // 「不占满视口」整条已删（审计合并）：视口恒定 1280×800，上一行已断 420×680
+        // ⇒ 420 < 1280 且 680 < 800 是它的逻辑子集，永远不会独立失败。
         await page.screenshot({ path: path.join(os.tmpdir(), 'znhd-phone-desktop.png') });
 
         // ===== P4 降级路径（v26.10.15-v2）=====

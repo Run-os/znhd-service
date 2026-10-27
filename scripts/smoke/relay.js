@@ -310,8 +310,13 @@ async function main() {
     // 3) 状态接口返回手机列表（online 字段保留给老脚本）
     const st = await req('GET', `/phone/status/${DEVICE}`);
     const phones = (st.json && st.json.phones) || [];
-    check('status.online = true', !!(st.json && st.json.online === true));
-    check('status 返回 2 台手机', phones.length === 2, JSON.stringify(phones.map((p) => p.id)));
+    // 审计合并：online 是 legacy 派生字段（= phones.length > 0），单列一条与「2 台手机」重叠，
+    // 合成一条同时守住「派生值正确」与「名单长度正确」
+    check(
+        'status 返回 2 台手机且 online=true（legacy 字段派生自名单）',
+        !!(st.json && st.json.online === true) && phones.length === 2,
+        JSON.stringify(phones.map((p) => p.id))
+    );
     check('status 手机列表含 A 与 B', phones.some((p) => p.id === PHONE_A) && phones.some((p) => p.id === PHONE_B));
 
     // 4) recv 缺 phoneId 回 400

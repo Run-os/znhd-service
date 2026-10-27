@@ -134,21 +134,26 @@ function okPage(units, extra) {
     const scopeMsg = await catchMessage(() =>
         searchBitableDocs(mockHttp({ status: 403, text: JSON.stringify({ code: 99991672, msg: 'app_scope_not_applied' }) }), 'T', '')
     );
-    checks.scopeErrorOk = !!scopeMsg && scopeMsg.indexOf('重新授权') >= 0;
+    // 审计合并：原来单列的 scopeTextOk 只测了「同分支另一个码值」，这里并进同一条
+    checks.scopeErrorOk =
+        !!scopeMsg &&
+        scopeMsg.indexOf('重新授权') >= 0 &&
+        // 99991679 也是 SCOPE_CODES 成员，必须走同一段文案（防止只映射了一个码）
+        searchErrorText(99991679, '').indexOf('重新授权') >= 0;
 
     const paramMsg = await catchMessage(() =>
         searchBitableDocs(mockHttp({ status: 400, text: JSON.stringify({ code: 99992402, msg: 'field validation failed' }) }), 'T', '')
     );
     // v26.10.25-v1：99992402 是泛化「参数不合法」（doc_types 大小写错、query 超长都触发），
-    // 文案不得再断言「关键词太长」；必须保留码值与「参数不合法」提示
+    // 文案不得再断言「关键词太长」；必须保留码值与「参数不合法」提示。
+    // 审计合并：原来单列的 paramTextOk（直调 searchErrorText）已被下面这几条完全覆盖 ——
+    // 抛出的 message 就是 searchErrorText(code, msg) 的返回值，服务端 msg 透传也在这里断。
     checks.paramErrorOk =
         !!paramMsg &&
         paramMsg.indexOf('99992402') >= 0 &&
         paramMsg.indexOf('参数不合法') >= 0 &&
-        paramMsg.indexOf('关键词太长') < 0;
-    checks.paramTextOk =
-        searchErrorText(99992402, '').indexOf('99992402') >= 0 &&
-        searchErrorText(99992402, 'field validation failed').indexOf('field validation failed') >= 0;
+        paramMsg.indexOf('关键词太长') < 0 &&
+        paramMsg.indexOf('field validation failed') >= 0;
 
     // 非 JSON / 缺 code：都必须抛错，不能当「空列表」静默吞掉
     const htmlMsg = await catchMessage(() =>
@@ -163,7 +168,6 @@ function okPage(units, extra) {
 
     // 未知错误码也要带上码值，否则线上只能看到「搜索失败」
     checks.unknownCodeTextOk = searchErrorText(123, 'oops').indexOf('123') >= 0;
-    checks.scopeTextOk = searchErrorText(99991679, '').indexOf('重新授权') >= 0;
     // scope 常量必须与 oauth.ts 申请的那一项一致（拼错会导致永远判定为「没权限」）
     checks.scopeConstOk = SEARCH_SCOPE === 'search:docs:read';
 

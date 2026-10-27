@@ -1,7 +1,8 @@
 /**
  * 脚本端（Vue 版）的端到端冒烟，产物 = dist/znhd.user.js（v26.10.18-v7 起这是唯一产物，React 版已删）。
  *
- * 与 React 版冒烟（scripts/smoke/run.js）分开的原因：这一套只验证迁移期的三件事——
+ * 与已废弃的 React 版夹具页（`scripts/smoke/znhd-smoke.html` + 早已删除的 `run.js`）分开的原因：
+ * 这一套只验证迁移期的三件事——
  *  ① 影子树挂载成功、面板文本可读；
  *  ② DialogPortal 确实把弹窗留在 shadowRoot 里（没漏到 document.body）；
  *  ③ Tailwind 样式在影子树内生效（弹窗有白底/宽度/层级，不是无样式裸 DOM）。
@@ -434,10 +435,14 @@ function serve() {
     const panel = await page.evaluate(() => {
         const host = document.getElementById('__znhd_panel_host__');
         const sr = host && host.shadowRoot;
+        // #app 可能在挂载失败时缺席：旧写法直接 sr.querySelector('#app').innerText，
+        // 要么抛 TypeError 把整份 report 吞掉，要么在下面的断言里拿到 '' 假绿
+        const app = sr && sr.querySelector('#app');
         return {
             host: !!host,
             shadow: !!sr,
-            text: sr ? sr.querySelector('#app').innerText.replace(/\s+/g, ' ').trim() : '',
+            hasApp: !!app,
+            text: app ? app.innerText.replace(/\s+/g, ' ').trim() : '',
             styleInjected: sr ? !!sr.querySelector('style') : false,
             rect: host ? host.getBoundingClientRect().toJSON() : null,
         };
@@ -446,7 +451,9 @@ function serve() {
     report.checks.panelMounted = panel.host && panel.shadow && panel.styleInjected;
     // v26.10.21-v5：主面板已删 —— 面板宿主常态无可见文本（只剩关闭态弹窗）；
     // 版本徽标迁到导航条（见下方 nav.versionText）。
-    report.checks.panelTextOk = panel.text.trim() === '';
+    // ⚠️ 必须带 hasApp（审计修正）：之前只比较 text === ''，而 #app 缺席时 text 兜底也是 ''，
+    //    于是「面板整棵树没渲染」这种最严重的故障反而判绿。
+    report.checks.panelTextOk = panel.hasApp && panel.text === '';
     report.panel = panel;
 
     await page.screenshot({ path: path.join(os.tmpdir(), 'znhd-vue-panel.png') });
@@ -537,7 +544,8 @@ function serve() {
             overlay: !!sr.querySelector('.dropdown-content'),
         };
     });
-    report.checks.dialogFound = dialog.found;
+    // dialogFound 已删除（审计合并）：dialog.inShadow 只在 found 为真时才有值，
+    // 单独的 dialogFound 是严格子集，留着只会让失败信息多一行同样的红。
     report.checks.dialogInShadow = !!dialog.inShadow && !dialog.bodyHasDialog;
     // v26.10.25-v1：设置弹窗加宽到 680（左右两栏布局）
     report.checks.dialogStyled =
@@ -886,23 +894,30 @@ function serve() {
         phraseLayout.cardBg !== phraseLayout.boxBg;
     // 悬停抬色（v26.10.22-v3，环境无关）：真实环境里 hover 后 btns[0] 底色应抬到
     // base-300；CI 无头里 `:hover` 不生效（见 phrasesCardOk 注释），退而验证
-    // 「`.hover\:bg-base-300:hover` 规则真的在样式表里 + 卡片类名没丢」——
-    // 这两样丢了，任何环境都该红；规则在但伪类不生效只是无头环境限制，不红。
+    // 「`.hover\:bg-base-300:hover` 规则真的在样式表里 + 卡片类名没丢」。
+    // ⚠️ 审计加固：原来只判「选择器存在」，那就退化成「Tailwind 生成过这个类」，近乎恒真；
+    //    现在把该规则的 `background-color` 声明也读出来，要求它落到 base-300 这个 token 上
+    //    （丢声明 / 换成 base-200 / 写死别的色都能红）。
     const hoverApplied = phraseLayout.hoverBg !== phraseLayout.cardBg;
-    const hoverRuleOk = await page.evaluate(() => {
+    const hoverRule = await page.evaluate(() => {
         const sr = document.getElementById('__znhd_panel_host__').shadowRoot;
         const btn = sr.querySelector('[data-znhd="phrase-card"]');
-        if (!btn) return false;
+        if (!btn) return { hasClass: false, sel: '', decl: '' };
         const hasClass = [...btn.classList].some((c) => c.replace(/[^a-z0-9-]/gi, '') === 'hoverbg-base-300');
         const found = (rules) => {
             for (const r of rules) {
                 // CSSOM 对转义符的序列化可能带反斜杠（.hover\:bg-…）也可能换写法，
                 // 统一剥掉反斜杠再比，宽松匹配
                 const sel = r.selectorText ? r.selectorText.replace(/\\/g, '') : '';
-                if (sel.includes('hover:bg-base-300:hover')) return true;
-                if (r.cssRules && found(r.cssRules)) return true;
+                if (sel.includes('hover:bg-base-300:hover')) {
+                    return { sel: sel, decl: r.style ? r.style.getPropertyValue('background-color') : '' };
+                }
+                if (r.cssRules && r.cssRules.length) {
+                    const hit = found(r.cssRules);
+                    if (hit) return hit;
+                }
             }
-            return false;
+            return null;
         };
         const sheets = [
             ...(sr.adoptedStyleSheets || []),
@@ -911,16 +926,23 @@ function serve() {
             //    不在 adoptedStyleSheets / document.styleSheets 里，要从元素拿 sheet
             ...[...sr.querySelectorAll('style')].map((s) => s.sheet).filter(Boolean),
         ];
-        return hasClass && sheets.some((s) => {
+        for (const s of sheets) {
             try {
-                return found(s.cssRules);
+                const hit = found(s.cssRules);
+                if (hit) return { hasClass: hasClass, sel: hit.sel, decl: hit.decl };
             } catch {
-                return false;
+                /* 跨域 sheet 读 cssRules 会抛，跳过 */
             }
-        });
+        }
+        return { hasClass: hasClass, sel: '', decl: '' };
     });
-    report.checks.phrasesHoverOk = hoverApplied || hoverRuleOk;
-    report.hover = { applied: hoverApplied, ruleOk: hoverRuleOk };
+    const base300Light = await probeOf('--color-base-300');
+    const hoverDeclOk =
+        !!hoverRule.decl &&
+        (hoverRule.decl.indexOf('base-300') >= 0 || hoverRule.decl.replace(/\s+/g, '') === base300Light.replace(/\s+/g, ''));
+    report.checks.phrasesHoverOk =
+        hoverApplied || (hoverRule.hasClass && !!hoverRule.sel && hoverDeclOk);
+    report.hover = { applied: hoverApplied, rule: hoverRule, declOk: hoverDeclOk };
     report.checks.phrasesTipOk =
         !!phraseLayout.tipRect &&
         phraseLayout.tipInBox === false &&
@@ -1364,8 +1386,7 @@ function serve() {
         ['清空聊天记录', '全部文件', '扫码连接手机', '更多', '关闭'].every((l) =>
             (transfer.headButtons || []).includes(l)
         );
-    // 分界线 = 1px + 主题 base-300
-    const base300Light = await probeOf('--color-base-300');
+    // 分界线 = 1px + 主题 base-300（base300Light 已在常用语悬停断言处取过，不再重复 probe）
     report.checks.transferDividerOk = transfer.headerBorder === '1px ' + base300Light;
     // 标题栏 5 个（清空 / 全部文件 / 扫码连接手机 / 更多 / 关闭）+ 输入框 2 个（附件 / 发送）：全是圆形
     // 滚动到底浮钮已随 message-scroller 一起移除（用户决策 #2）
@@ -1382,7 +1403,8 @@ function serve() {
     report.checks.transferChatOk =
         transfer.text.includes('已连接 1 台设备') &&
         transfer.theirBubbles >= 2 &&
-        transfer.headerCount >= 2 &&
+        // headerCount 已从判定里去掉（审计合并）：它和 theirBubbles 数的是同一批 2 条消息，
+        // 真正独立的判据是「chat-header 里带 <time>」
         transfer.headerHasTime &&
         transfer.boldText &&
         String(transfer.chatImgSrc).startsWith('blob:');
@@ -1887,7 +1909,10 @@ function serve() {
         const sr = document.getElementById('__znhd_panel_host__').shadowRoot;
         return {
             previewClosed: !sr.querySelector('dialog[data-znhd="image-preview"][open]'),
-            sniffStillOpen: !!sr.querySelector('[data-sniff-card]'),
+            // ⚠️ 必须带 `dialog[open]` 前缀（审计修正）：卡片是常驻 DOM 的（见上面 1853 行那段注释），
+            //    关窗只切 [open]、不卸载 [data-sniff-card] ⇒ 旧写法 `[data-sniff-card]` 恒为 true，
+            //    「Esc 连坐把嗅探窗也关了」这个它本该抓的回归反而永远抓不到。
+            sniffStillOpen: !!sr.querySelector('dialog[open] [data-sniff-card]'),
         };
     });
     report.checks.sniffEscOnlyPreviewOk = afterEsc.previewClosed && afterEsc.sniffStillOpen;
@@ -1907,7 +1932,8 @@ function serve() {
         const sr = document.getElementById('__znhd_panel_host__').shadowRoot;
         return {
             previewClosed: !sr.querySelector('dialog[data-znhd="image-preview"][open]'),
-            sniffStillOpen: !!sr.querySelector('[data-sniff-card]'),
+            // 同上：必须限定在 `dialog[open]` 里，否则恒 true（卡片常驻 DOM）
+            sniffStillOpen: !!sr.querySelector('dialog[open] [data-sniff-card]'),
         };
     });
     report.checks.sniffBlankClickOnlyPreviewOk = afterBlankClick.previewClosed && afterBlankClick.sniffStillOpen;
@@ -2077,8 +2103,9 @@ function serve() {
         qr.labels[1] === '注销流程' &&
         qr.labels[2] === '申报且解非（必含）'
     );
-    // 必含关键词的端到端串联（rules.ts 解析出的 musts → match.ts 多值 AND）：m1 必须出现
-    report.checks.quickReplyMustOk = !!(qr && qr.labels.indexOf('申报且解非（必含）') >= 0);
+    // 必含关键词的端到端串联（rules.ts 解析出的 musts → match.ts 多值 AND）：
+    // ⚠️ 原来单列一条 quickReplyMustOk，审计时删掉了 —— 上面 quickReplyBarOk 已经钉死
+    //    `labels.length === 3 && labels[2] === '申报且解非（必含）'`，是它的严格超集。
     // 隐私行（v26.10.26-v2 起隐私表参与匹配）：p1「办公电话」勾了常显、p2「税源管理股电话」
     //   只能靠主管税务机关文本命中 ⇒ 两条都该在；p3 关键词永不出现 ⇒ 不该在。
     //   一条断言同时证明「常显可见」+「标签匹配命中」+「不匹配的不显示」。

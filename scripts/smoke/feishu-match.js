@@ -77,6 +77,8 @@ checks.normCaseOk = ids(matchRules('请留下 Email 地址', normRules)) === 'r-
 checks.normFullWidthOk = ids(matchRules('请留下ＥＭＡＩＬ地址', normRules)) === 'r-norm-3';
 
 /* ⑦ musts 缺失（旧缓存里的规则对象没有该字段）不许抛错，按「不约束」处理 */
+// 审计合并：原来拆成 legacyMustsNoThrowOk + legacyMustsHitOk 两个布尔（同一个 try 块），
+// 合成一条 —— 不抛错但也没命中，和不抛错且命中是两件事，合起来才是本用例要的「安全降级」。
 const legacy = [{ id: 'r-legacy', title: '旧规则', keywords: ['解非'], excludes: [], reply: '' }];
 let legacyThrew = false;
 let legacyHit = false;
@@ -85,8 +87,7 @@ try {
 } catch {
     legacyThrew = true;
 }
-checks.legacyMustsNoThrowOk = !legacyThrew;
-checks.legacyMustsHitOk = legacyHit;
+checks.legacyMustsOk = !legacyThrew && legacyHit;
 
 /* ⑧ 空对话一律不命中（省得空文本时满屏按钮） */
 checks.emptyTextOk = ids(matchRules('', andRules)) === '';
