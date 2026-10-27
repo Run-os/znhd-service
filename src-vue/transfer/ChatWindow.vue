@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { Icon, type IconName } from '@vue/icons';
 import { addLog } from '@/lib/logger';
 import { downloadFileName } from '@/lib/gallery';
@@ -146,8 +146,21 @@ watch(
         if (!v) return;
         setActiveSession(PHONE_SESSION_KEY);
         store.value.sessions.forEach((s) => markSessionRead(s.key));
+        // v26.10.27-v1：开窗即到底 —— store 是模块级单例，窗口没开也在收消息，
+        // 开窗时历史已整段渲染、scrollTop 停在 0（最旧的消息），必须显式拉到底
+        //（客户端 App.vue 同款行为）。与客户端对齐：无脑到底，不做「贴底才跟随」。
+        nextTick(scrollToEnd);
     },
     { immediate: true }
+);
+
+// v26.10.27-v1：收到新消息也自动见底（此前只有「自己发送」才滚，手机发来的不滚）。
+// 窗口关着时也会进来：scroller 若未挂载 scrollToEnd 是空操作，无副作用。
+watch(
+    () => messages.value.length,
+    () => {
+        if (open.value) nextTick(scrollToEnd);
+    }
 );
 
 onMounted(() => {
