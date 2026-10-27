@@ -1,6 +1,6 @@
 {
     "name": "znhd-service",
-    "version": "26.10.27-v2",
+    "version": "26.10.27-v3",
     "description": "征纳互动人数和在线监控：油猴脚本（人数/掉线监控、语音播报、常用语、设备互联图片互传）",
     "main": "./dist/znhd.user.js",
     "scripts": {
@@ -27,7 +27,7 @@
     },
     "repository": {
         "type": "git",
-        "url": "git+https://github.com/Run-os/znhd-service.git"
+        "url": "git+https://cnb.cool/bbbbaa/znhd-service.git"
     },
     "keywords": [
         "znhd",
@@ -38,7 +38,7 @@
     "author": "runos",
     "license": "MIT",
     "bugs": {
-        "url": "https://github.com/Run-os/znhd-service/issues"
+        "url": "https://cnb.cool/bbbbaa/znhd-service/-/issues"
     },
     "homepage": "https://scriptcat.org/zh-CN/script-show-page/3650",
     "devDependencies": {

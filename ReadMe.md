@@ -85,5 +85,5 @@ npm run typecheck  # 类型检查（src 层）
 ## 联系方式
 
 - **作者**：runos
-- **项目地址**：https://github.com/Run-os/znhd-service
+- **项目地址**：https://cnb.cool/bbbbaa/znhd-service
 - **脚本主页**：https://scriptcat.org/zh-CN/script-show-page/3650

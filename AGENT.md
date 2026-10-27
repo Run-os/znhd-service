@@ -6,12 +6,12 @@
 
 - `ReadMe.md` = 对外文档（功能/配置/FAQ）；`changelogs/<YYYY-MM>.md` = 更新日志**唯一来源**（新条目追加当月文件**顶部**，格式 `### <名> v<版本>` + 无序列表，解析按 `### ` 行切分**不能变**）；仓库根 `CHANGELOG.md` = 冻结档案（含版本号规范），不再追加。
 - 发现 ReadMe 与代码不符 → **直接修 ReadMe**，不在本文件存对照表。
-- 读取顺序：本文件 → ReadMe 对应章节 → changelogs → 源码；部署机制以 `.github/workflows/deploy.yml` 注释为唯一真源。
+- 读取顺序：本文件 → ReadMe 对应章节 → changelogs → 源码；部署机制以 `.cnb.yml` 注释为唯一真源（2026-10-27 起从 GitHub Actions 迁到 CNB）。
 
 ## 1. 硬规矩（违反即返工）
 
 1. **版本号 `YY.MM.DD-vN`**（零填充；N = 当天第 N 次，跨午夜跟提交时刻）。⚠️ 同一天只递增 `-vN`，**日期部分绝不动**（误改日期会让油猴版本比较把新版判旧）。改脚本 → `config/common.meta.json` 的 `version` + 根 `package.json`/`package-lock.json`（**三写**）；改 relay → `relay-server/package.json`（web 页面显示版本由构建期 `__APP_VERSION__` 注入自它）。每次改动在 changelogs 当月文件顶部补条目。
-2. **未经用户明确许可绝不 `git push`**（push 即部署：deploy.yml SSH 重启容器 + CI 门禁）。本地提交即可跨会话保留。git push 需 `GIT_CONFIG_NOSYSTEM=1 GIT_TERMINAL_PROMPT=0` 并绕沙箱。
+2. **未经用户明确许可绝不 `git push`**（push 即部署：`.cnb.yml` 的部署流水线 SSH 重启容器 + 构建门禁）。本地提交即可跨会话保留。git push 需 `GIT_CONFIG_NOSYSTEM=1 GIT_TERMINAL_PROMPT=0` 并绕沙箱；**远端已从 GitHub 切到 CNB**（remote 名 `cnb`，`github` 仅作历史遗留，不再推送）。
 3. **门禁**：`typecheck` + `lint` + `build` + `verify`（verify = 脚本冒烟 `vue-panel` + 中继 `relay` + 手机页 `phone-page`；各约 1~2 分钟，**必须后台跑**）。改 `web/` 另跑 `typecheck:web` + `build:web` + `verify:web`，并提交 `relay-server/public` 产物（CI 有漂移检查）。
    ⚠️ **`typecheck:web` 只能走 `npm --prefix web run typecheck`**，不许拿仓库根的 `vue-tsc` 代跑：根目录是 TypeScript **6.0**、`web/node_modules` 是 **5.9**，两版对**无泛型 `querySelector`** 的推断不同（6.0 推断为 `HTMLElement`、5.9 推断为 `Element`），用错二进制会「本地绿、门禁红」或反过来假绿。v26.10.26-v9 的 toast 收敛就栽在这（`src-vue/lib/toast.ts` 的 `querySelector('#app')` 必须显式写 `<HTMLElement>`）。
    ⚠️ **本机每个外部进程启动约 8 秒**（实测 `cmd /c echo hi` 7.8s、`node --version` 7.7s，与 node 版本、WorkBuddy shim 都无关）⇒ 总耗时几乎只取决于**进程数**。因此：直接调 `./node_modules/.bin/*`（别用 `npm run`，多一层 spawn，且本机会偶发 SIGTERM 空输出）；**输出重定向到文件，不要 `| tail`**（管道再加约 3.5s，还会把判据截掉导致重跑）；一次工具调用里串行做完多件事；**同一批改动改完再 build，一轮任务只 build 一次**。
@@ -50,7 +50,7 @@
 | `relay-server/` | `server.js`(本体，纯 Node 零依赖，PORT=5689) / `upload-page.js` / `public/`(**web/ 的构建产物，提交进仓库**) / `emoji-store.js` / `emoji-sources.json`(表情清单单一来源，两端 import) |
 | `web/` | 手机页源码（Vue3 + Tailwind v4 + **daisyUI 5**，**cupcake 浅色主题 + 品牌蓝 primary**（v26.10.21-v1 起由 business 暗色改为 cupcake）；独立子项目）。⚠️ 别搬进 relay-server/（部署 tar 会带上 node_modules） |
 | `config/common.meta.json` | 脚本元信息唯一来源（版本号改这里） |
-| `.github/workflows/deploy.yml` | 部署真源（appleboy/ssh-action 不注入顶层 env，脚本内变量硬编码） |
+| `.cnb.yml` | 部署 + 门禁真源（CNB 流水线；2026-10-27 起取代 `.github/workflows/*`。部署脚本内变量硬编码；SSH 凭据由**密钥仓库** `bbbbaa/keys` 的 `env.prod.yml` 经 `imports` 注入，**只有部署流水线引用**） |
 
 ## 4. 构建与 Vue 栈要点
 
@@ -211,7 +211,8 @@
 | 冒烟假红六件套 | ① `checkPass` 是 `!!report[key]`，带比较符的要页面产出布尔字段 ② 找文本取最深节点 ③ 爬祖先别 `querySelector('input')` 一把抓 ④ 读容器 textContent 别读 body.innerText（受遮罩影响） ⑤ Tooltip 正文不在 DOM，点按钮走桩 ⑥ 断言读取时机不能晚于元素消失，开着时记快照 |
 | 单页冒烟时序 | 「未点击/首帧」类证据在污染前记快照；等报告认 `document.title` 的 `znhd-smoke:` 前缀，别等初始就在 DOM 的 `#smoke-result` |
 | 合成事件采样 | 派发 mouseover 后 setState 异步，分两拍（≥150ms）再采样 |
-| CI 偶发假红 | 「表情面板自动收起」等时序类断言在 CI 偶发抖动，先 `gh run rerun --failed` 再下结论，别改代码 |
+| CI 偶发假红 | 「表情面板自动收起」等时序类断言在 CI 偶发抖动，先在 CNB 构建页「重新构建」再下结论，别改代码 |
+| CNB 脚本是 dash | `.cnb.yml` 的 `script` 由 `sh`(dash) 执行：`set -o pipefail` 会 `sh: 1: set: Illegal option` 秒红（用 `set -eu`）；无 pipefail 时管道/解码要自己校验产物非空 |
 | 真实鼠标断言 | 点击前先清场（关掉其它 Modal/Drawer 的关闭按钮），`elementFromPoint` 会被上层弹窗截胡；坐标类断言加「被测元素真的渲染出方盒子」前提 |
 | 正则取数 | 界面元素从「全页唯一」变「每组一份」时，回查所有按正则取它的断言（改 matchAll 求和） |
 | 排序断言 | 验排序要造「三种实现两两不同序」的夹具 + 断言要求所有卡都在（防只渲染一张的假绿） |

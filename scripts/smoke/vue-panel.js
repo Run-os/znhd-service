@@ -12,6 +12,7 @@ const http = require('node:http');
 const fs = require('node:fs');
 const path = require('node:path');
 const os = require('node:os');
+const zlib = require('node:zlib');
 const puppeteer = require('puppeteer');
 
 const ROOT = path.resolve(__dirname, '../..');
@@ -47,13 +48,78 @@ const SCRIPT_VERSION = (() => {
     return m[1];
 })();
 
-/** 图片嗅探夹具的响应体大小（与 GM 桩的 __imgBytes 保持一致） */
-const IMG_SIZES = {
-    '/img/photo-a.jpg': 61440,
-    '/img/photo-b.jpg': 40960,
-    '/img/tiny.jpg': 2048,
-    '/img/icon-set.svg': 1024,
+/**
+ * 图片嗅探夹具：**必须是能真正解码的合法 PNG**（噪点图，字节数由尺寸决定）。
+ *
+ * 以前这里返回「指定长度的随机字节 + content-type: image/jpeg」——浏览器解码失败后
+ * 会**提前中止下载**，于是资源表里的 `encodedBodySize` 只是已收到的片段，且中止点取决于
+ * 解码器在哪一字节判定非法 ⇒ **非确定**。本机 CPU 快、通常已读满所以一直绿；CI 上实测
+ * photo-b 只记到 3919/40960 字节，被当成 <20KB 的小图过滤，`sniffDialogOk` /
+ * `sniffUnknownExpandOk` 双红（v26.10.27 事故）。换成合法 PNG 后文件能解码、下载不中断，
+ * perf 字节数 = 真实长度，确定可复现。
+ */
+const CRC_TABLE = (() => {
+    const t = new Uint32Array(256);
+    for (let n = 0; n < 256; n++) {
+        let c = n;
+        for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+        t[n] = c >>> 0;
+    }
+    return t;
+})();
+const crc32 = (buf) => {
+    let c = 0xffffffff;
+    for (let i = 0; i < buf.length; i++) c = CRC_TABLE[(c ^ buf[i]) & 0xff] ^ (c >>> 8);
+    return (c ^ 0xffffffff) >>> 0;
 };
+const pngChunk = (type, data) => {
+    const len = Buffer.alloc(4);
+    len.writeUInt32BE(data.length, 0);
+    const body = Buffer.concat([Buffer.from(type, 'ascii'), data]);
+    const crc = Buffer.alloc(4);
+    crc.writeUInt32BE(crc32(body), 0);
+    return Buffer.concat([len, body, crc]);
+};
+/** 生成 w×h 的 RGB 噪点 PNG（噪点几乎不可压缩 ⇒ 体积 ≈ w*h*3，便于按尺寸控制大小） */
+const makePng = (w, h, seed0) => {
+    const ihdr = Buffer.alloc(13);
+    ihdr.writeUInt32BE(w, 0);
+    ihdr.writeUInt32BE(h, 4);
+    ihdr[8] = 8; // bit depth
+    ihdr[9] = 2; // color type: truecolor
+    const raw = Buffer.alloc((w * 3 + 1) * h);
+    let seed = seed0 >>> 0;
+    let p = 0;
+    for (let y = 0; y < h; y++) {
+        raw[p++] = 0; // filter: none
+        for (let x = 0; x < w * 3; x++) {
+            seed = (seed * 1664525 + 1013904223) >>> 0;
+            // ⚠️ 必须取**高位**：LCG 的低 k 位周期只有 2^k，`seed & 0xff` 会形成 256 字节的循环，
+            //    deflate 能压到 1KB 以内 ⇒ 夹具图全都小于 20KB 阈值（实测 240×160 只剩 1212 字节）
+            raw[p++] = (seed >>> 24) & 0xff;
+        }
+    }
+    return Buffer.concat([
+        Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+        pngChunk('IHDR', ihdr),
+        pngChunk('IDAT', zlib.deflateSync(raw, { level: 6 })),
+        pngChunk('IEND', Buffer.alloc(0)),
+    ]);
+};
+
+/** 夹具图片实体：photo-a ≈115KB、photo-b ≈39KB（都 > 20KB 阈值），tiny ≈1.3KB（应被阈值挡下） */
+const IMG_BUFS = {
+    '/img/photo-a.png': makePng(240, 160, 1234567),
+    '/img/photo-b.png': makePng(120, 110, 7654321),
+    '/img/tiny.png': makePng(20, 20, 24680),
+    // .svg 走后缀规则被排除，内容无所谓；给个真 svg 避免无效字节干扰
+    '/img/icon-set.svg': Buffer.from(
+        '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"><rect width="24" height="24" fill="#c00"/></svg>'
+    ),
+};
+
+/** 夹具图片的响应体大小（服务端与 GM 桩共用，保证 HEAD 的 content-length 与实体一致） */
+const IMG_SIZES = Object.fromEntries(Object.entries(IMG_BUFS).map(([k, v]) => [k, v.length]));
 
 const PNG_1X1 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
 
@@ -67,13 +133,9 @@ const PNG_1X1 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8B
  */
 const GM_STUB = `
 window.PHONE_ID = 'smoke-phone-8f3a21';
-// 图片嗅探夹具：三张大图（> 默认 20KB 阈值）+ 一张小图 + 一张 .svg（应被后缀规则排除）
-window.__imgBytes = {
-  '/img/photo-a.jpg': 61440,
-  '/img/photo-b.jpg': 40960,
-  '/img/tiny.jpg': 2048,
-  '/img/icon-set.svg': 1024,
-};
+// 图片嗅探夹具：两张 > 20KB 阈值的大图 + 一张小图（应被阈值挡下）+ 一张 .svg（应被后缀规则排除）
+// 大小从 IMG_SIZES 注入，保证与真实响应体一致（⚠️ 模板字符串里禁反引号 / 正则反斜杠）
+window.__imgBytes = ${JSON.stringify(IMG_SIZES)};
 window.__recvQueue = [];
 window.__sent = [];
 window.GM_info = { script: { version: '${SCRIPT_VERSION}', updateURL: 'https://example.com/znhd.user.js' } };
@@ -148,7 +210,14 @@ window.GM_xmlhttpRequest = function (o) {
   };
   // 图片嗅探用：HEAD 要给 content-length（perf 档没命中时的第二阶梯），GET 给 Range 响应
   if (url.indexOf('/img/') >= 0) {
-    const bytes = window.__imgBytes[url] || 2048;
+    // ⚠️ __imgBytes 的键是**相对路径**（/img/photo-b.png），而这里拿到的是绝对 URL
+    //    （http://127.0.0.1:PORT/img/photo-b.png）⇒ 必须先去 origin 再查表。
+    //    以前直接拿绝对 URL 查，永远落空、静默走「|| 2048」兜底：本机因为 perf 资源表已给出
+    //    真实字节数、根本走不到 HEAD 分支而看不出来；CI 里图片加载被中断（无 perf 条目）就会
+    //    走 HEAD 拿到假的 2KB ⇒ 40KB 的 photo-b 被当小图过滤，sniffDialogOk / sniffUnknownExpandOk 双红。
+    const sep = url.indexOf('://');
+    const path = sep >= 0 ? url.slice(sep + 3).replace(/^[^/]*/, '') : url;
+    const bytes = window.__imgBytes[path] || window.__imgBytes[url] || 2048;
     const mime = url.slice(-4) === '.svg' ? 'image/svg+xml' : 'image/jpeg';
     const headers = 'content-type: ' + mime + String.fromCharCode(10) + 'content-length: ' + bytes;
     if ((o.method || 'GET').toUpperCase() === 'HEAD') {
@@ -216,13 +285,13 @@ localStorage.setItem('scriptCat_PhrasesCache', JSON.stringify({
     <a style="color:#fff;padding:0 12px;">业务管理</a>
   </div>
 </div>
-<!-- 图片嗅探夹具：两张 > 20KB（应出现在结果里）、一张 2KB（应被阈值过滤）、一张 .svg（应被后缀规则排除）
-     + 一张跨域图（perf 档拿不到跨域字节数 + GM 桩 HEAD 失败 ⇒ 落「大小未知」档；
-     v26.10.21-v5 前这个角色由主面板标题栏的品牌图 favicon.ico 扮演，面板删除后改为夹具直供） -->
+<!-- 图片嗅探夹具：两张 > 20KB（应出现在结果里）、一张小图（应被阈值过滤）、一张 .svg（应被后缀规则排除）
+     + 一张跨域图（perf 档拿不到跨域字节数 + GM 桩 HEAD 失败 ⇒ 落「大小未知」档）
+     ⚠️ 必须是真能解码的合法 PNG（见 IMG_BUFS 注释：随机字节假图会被浏览器中止下载，字节数非确定） -->
 <div id="host-images">
-  <img src="/img/photo-a.jpg" alt="photo-a.jpg" width="240" height="160">
-  <img src="/img/photo-b.jpg" alt="photo-b.jpg" width="240" height="160">
-  <img src="/img/tiny.jpg" alt="tiny.jpg" width="60" height="60">
+  <img src="/img/photo-a.png" alt="photo-a.png" width="240" height="160">
+  <img src="/img/photo-b.png" alt="photo-b.png" width="240" height="160">
+  <img src="/img/tiny.png" alt="tiny.png" width="60" height="60">
   <img src="/img/icon-set.svg" alt="icon-set.svg" width="24" height="24">
   <img src="https://znhd.hunan.chinatax.gov.cn:8443/favicon.ico" alt="favicon.ico" width="16" height="16">
 </div>
@@ -270,18 +339,17 @@ function serve() {
             return;
         }
         if (req.url.startsWith('/img/')) {
-            // 返回指定长度的随机字节：浏览器会解码失败（页面上是破图，无所谓），
-            // 但响应体长度真实存在 ⇒ 资源表里 encodedBodySize 可读，嗅探的 perf 档能命中。
-            const size = IMG_SIZES[req.url] || 2048;
-            const buf = Buffer.alloc(size);
-            let seed = 1234567;
-            for (let i = 0; i < size; i++) {
-                seed = (seed * 1664525 + 1013904223) >>> 0;
-                buf[i] = seed & 0xff;
+            // 返回**合法 PNG**（见 IMG_BUFS 注释）：解码成功 ⇒ 浏览器不会中途 abort ⇒
+            // 资源表里的 encodedBodySize 就是真实长度，嗅探的大小判定才可复现
+            const buf = IMG_BUFS[req.url];
+            if (!buf) {
+                res.writeHead(404, { 'content-type': 'text/plain' });
+                res.end('not found');
+                return;
             }
             res.writeHead(200, {
-                'content-type': req.url.endsWith('.svg') ? 'image/svg+xml' : 'image/jpeg',
-                'content-length': String(size),
+                'content-type': req.url.endsWith('.svg') ? 'image/svg+xml' : 'image/png',
+                'content-length': String(buf.length),
                 'cache-control': 'no-store',
             });
             res.end(buf);
@@ -303,7 +371,11 @@ function serve() {
     const port = server.address().port;
     const browser = await puppeteer.launch({
         headless: true,
-        args: ['--no-sandbox'],
+        // ⚠️ --disable-dev-shm-usage 是在容器里跑 Chromium 的必需项（2026-10-27 迁 CNB 后暴露）：
+        //   GitHub Actions 是整台 VM，/dev/shm 有数 GB；CNB 的流水线跑在容器里，/dev/shm 默认只有 64MB。
+        //   共享内存写满时渲染进程会**静默停摆**——表现为异步测图尺寸迟迟不落地、filechooser 不出现、
+        //   getBoundingClientRect 拿到旧值，即「同一份代码 GitHub 一直绿、CNB 一半红」的真因。
+        args: ['--no-sandbox', '--disable-dev-shm-usage'],
         ...(BROWSERS[0] ? { executablePath: BROWSERS[0] } : {}),
     });
     const page = await browser.newPage();
@@ -410,14 +482,18 @@ function serve() {
     report.checks.navButtonsOk =
         JSON.stringify(nav.btnTitles) === JSON.stringify(['设置', '常用语', '传输助手', '图片嗅探']) &&
         nav.hasVoiceBox;
-    report.checks.versionOk = nav.versionText.includes('v' + SCRIPT_VERSION);
+    // 用 String() 兜一下：nav 未挂载时 versionText 是 undefined，直接 .includes 会抛异常，
+    // 把整份 report（含 nav 现场与页面错误）都吞掉，反而更难查
+    report.checks.versionOk = String(nav.versionText || '').includes('v' + SCRIPT_VERSION);
     report.checks.navDividersOk = nav.dividers === 3;
 
     // 语音开关接力：标题栏点开关 → 总线回调 toggleVoice → allvalue → 状态回流勾选框。
     // 默认 voiceEnabled=true ⇒ 首次点击 = 关；断言「勾选态翻转后能点回原态」。
     report.checks.navVoiceOk = await page.evaluate(() => {
-        const sr = document.getElementById('__znhd_nav_host__').shadowRoot;
-        const box = sr && sr.querySelector('input[type="checkbox"]');
+        const host = document.getElementById('__znhd_nav_host__');
+        const sr = host && host.shadowRoot;
+        if (!sr) return false;
+        const box = sr.querySelector('input[type="checkbox"]');
         if (!box) return false;
         const before = box.checked;
         box.click();
@@ -432,7 +508,9 @@ function serve() {
 
     // 点导航条上的「设置」→ 弹窗仍应出现在**主面板**的 shadowRoot 里（跨实例总线）
     await page.evaluate(() => {
-        const sr = document.getElementById('__znhd_nav_host__').shadowRoot;
+        const host = document.getElementById('__znhd_nav_host__');
+        const sr = host && host.shadowRoot;
+        if (!sr) return;
         const btn = [...sr.querySelectorAll('button[title]')].find((b) => b.title === '设置');
         if (btn) btn.click();
     });
@@ -1320,6 +1398,13 @@ function serve() {
     // 使用者看到的就是「+ 弹出来的选择窗口点不动」。
     // 这里用**真实鼠标**点「图片」，并要求浏览器真的抛出 filechooser（= 系统选文件窗口被唤起）。
     // ⚠️ 必须在下面的发送用例之前跑：那之后会有 sending 气泡，附件入口会被「等上一条发完」拦住。
+    // 先清掉前序断言残留的 toast 容器（z-9999）并让出一帧：CI 上没有本机那么快，
+    // 残留的浮层 + 未落定的重排都会让这一击打空（同一份代码一次绿一次红就出在这）。
+    await page.evaluate(() => {
+        const sr = document.getElementById('__znhd_panel_host__').shadowRoot;
+        sr.querySelectorAll('.toast').forEach((n) => n.remove());
+    });
+    await new Promise((r) => setTimeout(r, 200));
     const attachSnap = await page.evaluate(() => {
         const sr = document.getElementById('__znhd_panel_host__').shadowRoot;
         const dlg = [...sr.querySelectorAll('dialog[open]')].pop();
@@ -1328,7 +1413,8 @@ function serve() {
         // ⚠️ 必须限定在「输入舱那一个 details」里：标题栏的「更多」菜单也是
         // .dropdown-content li button，全 dialog 扫会把「关于」混进来（v10 首跑踩到）。
         const dd = sum.closest('details');
-        sum.click();
+        // 只在收起状态点开：重试时若无脑 click 会把已展开的菜单点回去（CI 偶发红的坑之一）
+        if (!dd.open) sum.click();
         const items = [...dd.querySelectorAll('.dropdown-content li button')].map((b) => {
             const r = b.getBoundingClientRect();
             return {
@@ -1343,21 +1429,71 @@ function serve() {
         return { found: true, items };
     });
     report.attach = attachSnap;
-    const imgItem = (attachSnap.items || []).find((i) => i.label === '图片');
+    // ⚠️ 同一份代码在 CNB 上「一次绿一次红」的偶发根因：下拉刚展开就量坐标 + 直接点一次，
+    //    没给重排/上一条断言的残留节点留时间。改成「最多 3 次重试 + 每轮重新量 + 命中诊断」，
+    //    机制不变（仍是真实鼠标 → 必须让浏览器真的抛 filechooser），只是把竞态吃掉。
     let chooserFired = false;
-    if (imgItem && imgItem.h > 10) {
+    const attachAttempts = [];
+    for (let attempt = 1; attempt <= 3 && !chooserFired; attempt++) {
+        let items = attempt === 1 ? (attachSnap.items || []) : [];
+        if (attempt > 1) {
+            const again = await page.evaluate(() => {
+                const sr = document.getElementById('__znhd_panel_host__').shadowRoot;
+                const dlg = [...sr.querySelectorAll('dialog[open]')].pop();
+                const sum = dlg ? dlg.querySelector('summary[aria-label="添加图片或文件"]') : null;
+                if (!sum) return [];
+                const dd = sum.closest('details');
+                if (!dd.open) sum.click();
+                return [...dd.querySelectorAll('.dropdown-content li button')].map((b) => {
+                    const r = b.getBoundingClientRect();
+                    return {
+                        label: (b.textContent || '').trim(),
+                        disabled: !!b.disabled,
+                        pointerEvents: getComputedStyle(b).pointerEvents,
+                        cx: r.left + r.width / 2,
+                        cy: r.top + r.height / 2,
+                        h: r.height,
+                    };
+                });
+            });
+            items = again;
+            if (again.length) report.attach = { found: true, items: again };
+        }
+        const imgItem = items.find((i) => i.label === '图片');
+        if (!imgItem || imgItem.h <= 10) {
+            attachAttempts.push({ attempt, fired: false, why: 'no-item' });
+            await new Promise((r) => setTimeout(r, 250));
+            continue;
+        }
         try {
             const [chooser] = await Promise.all([
-                page.waitForFileChooser({ timeout: 4000 }),
+                page.waitForFileChooser({ timeout: 3500 }),
                 page.mouse.click(imgItem.cx, imgItem.cy),
             ]);
             chooserFired = !!chooser;
+            attachAttempts.push({ attempt, fired: chooserFired });
             // 只验证「窗口被唤起」，不真的上传（否则会多出一条 POST，干扰后面的发送断言）
-            await chooser.cancel();
+            if (chooser) await chooser.cancel();
         } catch (e) {
-            chooserFired = false;
+            // 点下去那一刻「谁在最上层」——影子树内的命中测试，下次再红能直接看出被什么截胡
+            const top = await page.evaluate(
+                ({ x, y }) => {
+                    const sr = document.getElementById('__znhd_panel_host__').shadowRoot;
+                    const el = sr.elementFromPoint ? sr.elementFromPoint(x, y) : null;
+                    if (!el) return null;
+                    return {
+                        tag: el.tagName,
+                        cls: String(el.className || '').slice(0, 60),
+                        text: (el.textContent || '').trim().slice(0, 20),
+                    };
+                },
+                { x: imgItem.cx, y: imgItem.cy }
+            );
+            attachAttempts.push({ attempt, fired: false, top });
+            await new Promise((r) => setTimeout(r, 350));
         }
     }
+    report.attachAttempts = attachAttempts;
     report.attachChooser = chooserFired;
     report.checks.attachPickOk =
         !!attachSnap.found &&
@@ -1520,8 +1656,60 @@ function serve() {
         const btn = [...(sr?.querySelectorAll('button[title]') || [])].find((b) => b.title === '图片嗅探');
         if (btn) btn.click();
     });
-    // 扫描是同步收集 + 异步测大小（150ms 合批），给足时间让所有测量落地
-    await new Promise((r) => setTimeout(r, 2200));
+    // 诊断夹具自身：CI 上出现过「photo-b 根本没进候选」的现象，先记录每张 <img> 的真实加载状态
+    // 与资源表字节数（本地/CI 对比用，不影响任何断言）
+    report.sniffEnv = await page.evaluate(() => {
+        const imgs = [...document.querySelectorAll('#host-images img')].map((i) => ({
+            src: i.getAttribute('src'),
+            complete: i.complete,
+            nw: i.naturalWidth,
+            nh: i.naturalHeight,
+        }));
+        const perf = performance
+            .getEntriesByType('resource')
+            .filter((e) => /\/img\//.test(e.name))
+            .map((e) => ({ n: e.name.split('/').pop(), enc: e.encodedBodySize, tr: e.transferSize }));
+        return { imgs, perf };
+    });
+    // 扫描是同步收集 + 异步测大小（150ms 合批）。
+    // ⚠️ 死等固定毫秒在 CI 上会读到中间态：图片还没量完 ⇒ 被归进「大小未知」⇒
+    //    主列表少一张，sniffDialogOk 与 sniffUnknownExpandOk 双双假红（本机永远量得完，只有 CI 红）。
+    // ⇒ 轮询「显示张数 / 未知数」，连续 3 次不变且已达预期（≥2 张且未知 ≤1）再继续，最多等 12s。
+    const sniffWait = { polls: 0, last: null, settled: false };
+    {
+        const t0 = Date.now();
+        let same = 0;
+        while (Date.now() - t0 < 12000) {
+            const s = await page.evaluate(() => {
+                const sr = document.getElementById('__znhd_panel_host__').shadowRoot;
+                const dialogs = [...sr.querySelectorAll('dialog[open]')];
+                const el = dialogs[dialogs.length - 1];
+                if (!el) return null;
+                const txt = (el.innerText || '').replace(/\s+/g, ' ');
+                const m = txt.match(/显示 (\d+) 张/);
+                const u = txt.match(/大小未知（(\d+)）/);
+                return { shown: m ? Number(m[1]) : -1, unknown: u ? Number(u[1]) : -1 };
+            });
+            sniffWait.polls++;
+            if (
+                s &&
+                sniffWait.last &&
+                s.shown === sniffWait.last.shown &&
+                s.unknown === sniffWait.last.unknown
+            ) {
+                same++;
+            } else {
+                same = 0;
+            }
+            sniffWait.last = s;
+            if (same >= 3 && s && s.shown >= 2 && s.unknown <= 1) {
+                sniffWait.settled = true;
+                break;
+            }
+            await new Promise((r) => setTimeout(r, 200));
+        }
+    }
+    report.sniffWait = sniffWait;
 
     const sniff = await page.evaluate(() => {
         const sr = document.getElementById('__znhd_panel_host__').shadowRoot;
@@ -1538,6 +1726,8 @@ function serve() {
             width: card ? Math.round(card.getBoundingClientRect().width) : 0,
             background: card ? getComputedStyle(card).backgroundColor : '',
             text: text.slice(0, 200),
+            // 200 字只够看第一组，红了要看全量（CI 组标题里带张数）
+            textLong: text.slice(0, 900),
             cardCount: cards.length,
             alts: cards.map((c) => (c.querySelector('img') || {}).alt || ''),
             sizes: cards.map((c) => c.innerText.replace(/\s+/g, ' ').trim()),
@@ -1564,9 +1754,9 @@ function serve() {
         sniff.hasSortHint &&
         sniff.text.includes('显示 2 张') &&
         sniff.cardCount === 2 &&
-        sniff.alts.includes('photo-a.jpg') &&
-        sniff.alts.includes('photo-b.jpg') &&
-        !sniff.alts.includes('tiny.jpg') &&
+        sniff.alts.includes('photo-a.png') &&
+        sniff.alts.includes('photo-b.png') &&
+        !sniff.alts.includes('tiny.png') &&
         sniff.excluded === '1';
     // 冒烟页没有会话上下文 ⇒ 每张图都取不到消息时间 ⇒ 文件名必须全标红（text-error）、且一个红圈都不许有
     const errorLight = await probeOf('--color-error');
@@ -1577,6 +1767,38 @@ function serve() {
         sniff.nameColors.every((c) => c === errorLight) &&
         sniff.rings.every((r) => r === '');
     report.sniff = sniff;
+
+    // 夹具自检：HEAD 桩必须按夹具表回**真实字节数**，与「perf 资源表有没有这张图」无关。
+    // 事故背景（2026-10-27）：桩用绝对 URL 去查相对键的 __imgBytes、静默兜底 2KB，
+    // 本机因 perf 条目存在而不走 HEAD 所以一直绿；CI 里图片加载被中断（无 perf 条目）⇒
+    // 40KB 的 photo-b 被当 2KB 小图过滤 ⇒ sniffDialogOk / sniffUnknownExpandOk 双红。
+    // 这条断言直接量一次绝对 URL，把「桩的兜底值」这个隐形变量钉死。
+    const stubBytes = await page.evaluate(async () => {
+        const head = (u) =>
+            new Promise((res) => {
+                try {
+                    window.GM_xmlhttpRequest({
+                        method: 'HEAD',
+                        url: u,
+                        onload: (r) => res(r.responseHeaders || ''),
+                        onerror: () => res(''),
+                    });
+                } catch (e) {
+                    res('');
+                }
+            });
+        const out = {};
+        for (const p of ['/img/photo-a.png', '/img/photo-b.png']) {
+            const h = await head(location.origin + p);
+            const m = /content-length:\s*(\d+)/i.exec(String(h));
+            out[p] = m ? Number(m[1]) : null;
+        }
+        return out;
+    });
+    report.sniffStub = stubBytes;
+    report.checks.sniffStubBytesOk =
+        stubBytes['/img/photo-a.png'] === IMG_SIZES['/img/photo-a.png'] &&
+        stubBytes['/img/photo-b.png'] === IMG_SIZES['/img/photo-b.png'];
 
     // 展开「大小未知」档：里面应当只剩测不出字节数的那张（夹具里是 .ico / 非图片资源之类），
     // 顺便验证折叠交互与「未知也不丢」这条红线

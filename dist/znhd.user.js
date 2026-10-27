@@ -1,17 +1,17 @@
 // ==UserScript==
 // @name         征纳互动人数和在线监控v2
 // @namespace    https://scriptcat.org/
-// @version      26.10.27-v2
+// @version      26.10.27-v3
 // @author       runos
 // @description  实时监控征纳互动等待人数和在线状态，支持语音播报、自定义常用语
 // @license      MIT
 // @icon         https://znhd.hunan.chinatax.gov.cn:8443/favicon.ico
 // @homepage     https://scriptcat.org/zh-CN/script-show-page/3650
-// @homepageURL  https://github.com/Run-os/znhd-service
-// @source       https://github.com/Run-os/znhd-service.git
-// @supportURL   https://github.com/Run-os/znhd-service/issues
-// @downloadURL  https://raw.githubusercontent.com/Run-os/znhd-service/refs/heads/main/dist/znhd.user.js
-// @updateURL    https://raw.githubusercontent.com/Run-os/znhd-service/refs/heads/main/dist/znhd.user.js
+// @homepageURL  https://cnb.cool/bbbbaa/znhd-service
+// @source       https://cnb.cool/bbbbaa/znhd-service.git
+// @supportURL   https://cnb.cool/bbbbaa/znhd-service/-/issues
+// @downloadURL  https://cnb.cool/bbbbaa/znhd-service/-/git/raw/main/dist/znhd.user.js
+// @updateURL    https://cnb.cool/bbbbaa/znhd-service/-/git/raw/main/dist/znhd.user.js
 // @match        https://znhd.hunan.chinatax.gov.cn:8443/*
 // @match        https://example.com/*
 // @match        https://www.appinn.com/*

@@ -136,7 +136,8 @@ async function main() {
 
     const browser = await puppeteer.launch({
         headless: true,
-        args: ['--no-sandbox', '--disable-setuid-sandbox'],
+        // --disable-dev-shm-usage：容器内 /dev/shm 只有 64MB，写满会让渲染进程静默停摆（迁 CNB 后加的）
+        args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
         ...(BROWSERS[0] ? { executablePath: BROWSERS[0] } : {}),
     });
     try {
