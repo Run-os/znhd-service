@@ -15,3 +15,8 @@
 # 故只需把这个源模板钉成 LF，即可根治（不改构建流程、不依赖各机器的 autocrlf 设置）。
 # 若日后 web/ 下新增 HTML 入口，请照此补一行。
 web/index.html text eol=lf
+
+# CI 脚本必须 LF：CNB runner 是 Linux，CRLF 会让 sh 报 `$'\r': command not found`、
+# dash heredoc 比对失配。钉死后无论提交方的 autocrlf 为何，入库一律 LF。
+ci/*.sh text eol=lf
+ci/*.js text eol=lf
