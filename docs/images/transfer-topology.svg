@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="316" viewBox="0 0 760 316" role="img" aria-label="传输助手三端拓扑示意">
+  <rect width="760" height="316" fill="#ffffff"/>
+  <text x="20" y="20" font-size="12" font-family="'Noto Sans SC','Microsoft YaHei',system-ui,sans-serif" fill="#6e7781">手机和电脑之间隔着一台中继服务器，两端都不需要公网 IP</text>
+
+  <!-- 手机 -->
+  <rect x="30" y="78" width="140" height="172" rx="18" fill="#f6f8fa" stroke="#d0d7de"/>
+  <rect x="38" y="86" width="124" height="156" rx="12" fill="#ffffff"/>
+  <text x="100" y="110" font-size="13" font-weight="600" text-anchor="middle" font-family="'Noto Sans SC','Microsoft YaHei',system-ui,sans-serif" fill="#1f2328">手机</text>
+  <g font-size="11" font-family="'Noto Sans SC','Microsoft YaHei',system-ui,sans-serif" fill="#4b5563" text-anchor="middle">
+    <text x="100" y="136">选图 / 拍照</text>
+    <text x="100" y="160">选任意文件</text>
+    <text x="100" y="184">打字发文本</text>
+    <text x="100" y="212" fill="#185FA5">扫码或打开链接</text>
+    <text x="100" y="230" fill="#185FA5">/u/&lt;设备ID&gt;</text>
+  </g>
+  <text x="30" y="66" font-size="11.5" font-family="'Noto Sans SC','Microsoft YaHei',system-ui,sans-serif" fill="#6e7781">手机浏览器</text>
+
+  <!-- 中继 -->
+  <rect x="290" y="78" width="180" height="172" rx="10" fill="#eef4fb" stroke="#185FA5"/>
+  <text x="380" y="106" font-size="13" font-weight="600" text-anchor="middle" font-family="'Noto Sans SC','Microsoft YaHei',system-ui,sans-serif" fill="#1f2328">中继服务器</text>
+  <text x="380" y="124" font-size="10.5" text-anchor="middle" font-family="'Noto Sans SC','Microsoft YaHei',system-ui,sans-serif" fill="#4b5563">relay-server · Node 零依赖</text>
+  <g font-size="10.5" font-family="'Noto Sans SC','Microsoft YaHei',system-ui,sans-serif" fill="#4b5563" text-anchor="middle">
+    <text x="380" y="150">/upload 收手机发来的内容</text>
+    <text x="380" y="172">/phone/poll 手机报活 + 取件</text>
+    <text x="380" y="194">/recv/&lt;设备ID&gt; 电脑长轮询</text>
+    <text x="380" y="216">消息暂存 · 表情包缓存</text>
+  </g>
+  <text x="290" y="66" font-size="11.5" font-family="'Noto Sans SC','Microsoft YaHei',system-ui,sans-serif" fill="#6e7781">公网可达（1panel / Docker 都行）</text>
+
+  <!-- 电脑 -->
+  <rect x="560" y="78" width="170" height="172" rx="10" fill="#f6f8fa" stroke="#d0d7de"/>
+  <text x="645" y="106" font-size="13" font-weight="600" text-anchor="middle" font-family="'Noto Sans SC','Microsoft YaHei',system-ui,sans-serif" fill="#1f2328">电脑</text>
+  <text x="645" y="124" font-size="10.5" text-anchor="middle" font-family="'Noto Sans SC','Microsoft YaHei',system-ui,sans-serif" fill="#4b5563">征纳互动页 + 油猴脚本</text>
+  <g font-size="11" font-family="'Noto Sans SC','Microsoft YaHei',system-ui,sans-serif" fill="#4b5563" text-anchor="middle">
+    <text x="645" y="152">传输助手窗口</text>
+    <text x="645" y="176">图片 → 剪贴板</text>
+    <text x="645" y="200">聊天记录只在本地</text>
+    <text x="645" y="224" fill="#6e7781">IndexedDB 留 7 天</text>
+  </g>
+  <text x="560" y="66" font-size="11.5" font-family="'Noto Sans SC','Microsoft YaHei',system-ui,sans-serif" fill="#6e7781">不需要公网 IP</text>
+
+  <!-- 箭头 -->
+  <g stroke="#185FA5" stroke-width="1.6" fill="none">
+    <path d="M176 118 l104 0 M272 114 l8 4 -8 4"/>
+    <path d="M476 152 l74 0 M542 148 l8 4 -8 4"/>
+    <path d="M554 196 l-74 0 M488 192 l-8 4 8 4"/>
+    <path d="M284 236 l-104 0 M188 232 l-8 4 8 4"/>
+  </g>
+  <g font-size="10.5" font-family="'Noto Sans SC','Microsoft YaHei',system-ui,sans-serif" fill="#185FA5" text-anchor="middle">
+    <text x="228" y="110">上传</text>
+    <text x="513" y="144">长轮询取回（秒级）</text>
+    <text x="513" y="188">发给手机</text>
+    <text x="228" y="228">手机页取件</text>
+  </g>
+
+  <line x1="20" y1="266" x2="740" y2="266" stroke="#e4e7eb"/>
+  <g font-size="12" font-family="'Noto Sans SC','Microsoft YaHei',system-ui,sans-serif" fill="#4b5563">
+    <text x="24" y="286">· 第一次用：设置 → 传输助手 → 填中继地址；然后点会话列表的「+」拿到上传链接和二维码发给手机（或直接扫码）。</text>
+    <text x="24" y="308">· 图片自动压到最大边 1600px / JPEG 0.75（SVG 原样直传、HEIC 转 JPEG）；任意文件 ≤ 100MB 不压缩。</text>
+  </g>
+</svg>

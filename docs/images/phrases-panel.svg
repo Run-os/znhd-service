@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="424" viewBox="0 0 760 424" role="img" aria-label="常用语弹窗结构示意">
+  <rect width="760" height="424" fill="#ffffff"/>
+  <text x="20" y="20" font-size="12" font-family="'Noto Sans SC','Microsoft YaHei',system-ui,sans-serif" fill="#6e7781">点标题栏「常用语」后从右侧滑出，一条话术一张卡片</text>
+
+  <!-- 右侧抽屉 -->
+  <rect x="396" y="36" width="352" height="316" rx="12" fill="#ffffff" stroke="#d0d7de"/>
+  <text x="416" y="64" font-size="15" font-weight="600" font-family="'Noto Sans SC','Microsoft YaHei',system-ui,sans-serif" fill="#1f2328">常用语</text>
+
+  <!-- 刷新 -->
+  <g stroke="#4b5563" stroke-width="1.6" fill="none" stroke-linecap="round">
+    <path d="M716 58 a7 7 0 1 1 -2 -5"/>
+    <path d="M714 50 l1 4 -4 1"/>
+  </g>
+
+  <!-- 搜索框 -->
+  <rect x="412" y="78" width="300" height="28" rx="8" fill="#f1f2f4"/>
+  <g stroke="#8b949e" stroke-width="1.5" fill="none">
+    <circle cx="428" cy="91" r="5"/>
+    <line x1="432" y1="95" x2="436" y2="99"/>
+  </g>
+  <text x="444" y="96" font-size="11.5" font-family="'Noto Sans SC','Microsoft YaHei',system-ui,sans-serif" fill="#8b949e">搜索常用语（按内容）</text>
+
+  <!-- tabs -->
+  <rect x="412" y="116" width="300" height="30" rx="15" fill="#eceef1"/>
+  <rect x="412" y="116" width="150" height="30" rx="15" fill="#ffffff" stroke="#d0d7de"/>
+  <text x="487" y="136" font-size="12" text-anchor="middle" font-family="'Noto Sans SC','Microsoft YaHei',system-ui,sans-serif" fill="#1f2328">全部话术</text>
+  <text x="637" y="136" font-size="12" text-anchor="middle" font-family="'Noto Sans SC','Microsoft YaHei',system-ui,sans-serif" fill="#6e7781">我的话术</text>
+
+  <!-- 卡片 -->
+  <g font-family="'Noto Sans SC','Microsoft YaHei',system-ui,sans-serif">
+    <rect x="412" y="158" width="300" height="52" rx="10" fill="#f6f8fa" stroke="#d8dee4"/>
+    <text x="428" y="180" font-size="12" fill="#1f2328">您好，非正常户解除需要先到电子税务局</text>
+    <text x="428" y="198" font-size="12" fill="#1f2328">提交申请，我们这边审核通过后…</text>
+
+    <rect x="412" y="216" width="300" height="52" rx="10" fill="#f6f8fa" stroke="#d8dee4"/>
+    <text x="428" y="238" font-size="12" fill="#1f2328">您好，本月的申报期限是 10 月 15 日，</text>
+    <text x="428" y="256" font-size="12" fill="#1f2328">请在此之前完成申报…</text>
+
+    <rect x="412" y="274" width="300" height="52" rx="10" fill="#f6f8fa" stroke="#d8dee4"/>
+    <text x="428" y="296" font-size="12" fill="#1f2328">您好，南岳区税务局办税服务厅电话是</text>
+    <text x="428" y="314" font-size="12" fill="#1f2328">0734-12345678…</text>
+  </g>
+
+  <!-- 悬停提示浮层 -->
+  <rect x="60" y="196" width="306" height="78" rx="10" fill="#262629"/>
+  <g font-size="11.5" font-family="'Noto Sans SC','Microsoft YaHei',system-ui,sans-serif" fill="#f0f0f0">
+    <text x="76" y="220">您好，本月的申报期限是 10 月 15 日，</text>
+    <text x="76" y="240">请在此之前完成申报，逾期会产生滞纳金。</text>
+    <text x="76" y="262" fill="#a8b0ba">悬停任意卡片即可看全文，不用点开</text>
+  </g>
+  <line x1="368" y1="234" x2="404" y2="240" stroke="#8b949e" stroke-dasharray="4 3"/>
+
+  <!-- 序号 -->
+  <g font-size="10" font-family="'Noto Sans SC','Microsoft YaHei',system-ui,sans-serif" text-anchor="middle">
+    <circle cx="734" cy="58" r="8" fill="#185FA5"/><text x="734" y="61.5" fill="#ffffff">1</text>
+    <circle cx="734" cy="92" r="8" fill="#185FA5"/><text x="734" y="95.5" fill="#ffffff">2</text>
+    <circle cx="734" cy="131" r="8" fill="#185FA5"/><text x="734" y="134.5" fill="#ffffff">3</text>
+    <circle cx="734" cy="184" r="8" fill="#185FA5"/><text x="734" y="187.5" fill="#ffffff">4</text>
+    <circle cx="76" cy="182" r="8" fill="#185FA5"/><text x="76" y="185.5" fill="#ffffff">5</text>
+  </g>
+
+  <line x1="20" y1="372" x2="740" y2="372" stroke="#e4e7eb"/>
+  <g font-size="12" font-family="'Noto Sans SC','Microsoft YaHei',system-ui,sans-serif" fill="#4b5563">
+    <text x="24" y="392">① 刷新：无视缓存重新抓一次（右侧栏会自己切 tab，抓完自动切回，别动手）</text>
+    <text x="24" y="412">② 搜索（按内容，不区分大小写）　③ 全部话术 / 我的话术　④ 点一下＝复制＋追加到输入框　⑤ 悬停看全文</text>
+  </g>
+</svg>

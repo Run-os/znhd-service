@@ -6,6 +6,7 @@
 
 - `ReadMe.md` = 对外文档（功能/配置/FAQ）；`changelogs/<YYYY-MM>.md` = 更新日志**唯一来源**（新条目追加当月文件**顶部**，格式 `### <名> v<版本>` + 无序列表，解析按 `### ` 行切分**不能变**）；仓库根 `CHANGELOG.md` = 冻结档案（含版本号规范），不再追加。
 - 发现 ReadMe 与代码不符 → **直接修 ReadMe**，不在本文件存对照表。
+- **功能文档成对存在（2026-10-28 起）**：`docs/<功能>-guide.md` = **使用手册**（面向坐席：怎么开、怎么用、常见问题，配 `docs/images/*.svg` 示意图，允许口语化）；`docs/<功能>.md` = **技术说明**（面向 AI/开发者：职责边界 / 模块地图 / 数据流 / 关键常量与选择器 / 存储键 / 失败模式 / 改动须知 / 冒烟覆盖）。**ReadMe 功能一览只链使用手册**，技术说明不出现在 ReadMe 里。现有七对：monitor / phrases / quick-reply / todo / sniffer / transfer / log。
 - 读取顺序：本文件 → ReadMe 对应章节 → changelogs → 源码；部署机制以 `.cnb.yml` 注释为唯一真源（2026-10-27 起从 GitHub Actions 迁到 CNB）。
 
 ## 1. 硬规矩（违反即返工）
@@ -19,7 +20,7 @@
 4. **禁止手改 `dist/znhd.user.js`**（构建产物，提交进仓库）。产物头部：`==UserScript==` 第一行、元数据块之后 `// @ts-nocheck`（VS Code 对大产物误报 TS2451，勿关全局校验、勿改业务代码）。
 5. **relay-server 禁止加 npm 依赖/构建步骤**（部署无 npm install）。全仓依赖面极窄，**新增依赖默认不批**；新依赖必须同步 ReadMe 技术栈/项目结构。
 6. **不得无理由重构可运行逻辑**（弹窗布局、长轮询/广播、shared 层、`uiReset` 隔离）；「诡异写法」多是真实实测结论，先查 changelogs 对应条目。
-7. **文档三处同步**：ReadMe / AGENT.md / changelogs 当月文件；改代码后回查 ReadMe。
+7. **文档三处同步**：ReadMe / AGENT.md / changelogs 当月文件；改代码后回查 ReadMe，并**同时回查该功能的使用手册 + 技术说明**（行为变了却不改手册 = 用户按旧手册操作踩坑；只改手册不改技术说明 = 下一个 AI 按旧实现改代码）。
 8. **加冒烟断言只改一处**（`scripts/smoke/vue-panel.js` 里 `report.checks.<name> = …`，`checks` 全 true + 进程 exit 0 即通过；`znhd-smoke.html` 是 React 版遗留，别动）+ **必须做一次反向验证**（故意破坏 → 变红 → 恢复）。⚠️ **分层兜底的代码，反向验证要把所有兜底层一起关**——只关一层必假绿（sniffConv 三层、pollAlive 两层都实测踩过）。
 9. **任务收尾必写记忆**：`.workbuddy/memory/YYYY-MM-DD.md`（追加式）；30 天以上蒸馏进 `MEMORY.md`。先写记忆再一次性 git add 提交（用户约定）。
 10. 加文件前先 `git status`，别裸 `git add -A`。

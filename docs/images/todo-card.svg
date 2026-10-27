@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="248" viewBox="0 0 760 248" role="img" aria-label="待办卡片红色呼吸提醒示意">
+  <rect width="760" height="248" fill="#ffffff"/>
+  <text x="20" y="20" font-size="12" font-family="'Noto Sans SC','Microsoft YaHei',system-ui,sans-serif" fill="#6e7781">工作台左侧的待办卡片：数量大于 0 才变红，归零就自己撤</text>
+
+  <!-- 数量为 0：原样 -->
+  <rect x="36" y="48" width="200" height="70" rx="10" fill="#ffffff" stroke="#e4e7eb"/>
+  <text x="58" y="94" font-size="24" font-weight="700" font-family="'Noto Sans SC','Microsoft YaHei',system-ui,sans-serif" fill="#9aa4ae">0</text>
+  <text x="100" y="90" font-size="12.5" font-family="'Noto Sans SC','Microsoft YaHei',system-ui,sans-serif" fill="#6e7781">待处理留言</text>
+
+  <!-- 数量 > 0：红色呼吸 -->
+  <rect x="26" y="130" width="220" height="90" rx="16" fill="none" stroke="#e5484d" stroke-opacity="0.08"/>
+  <rect x="30" y="134" width="212" height="82" rx="13" fill="none" stroke="#e5484d" stroke-opacity="0.2"/>
+  <rect x="36" y="140" width="200" height="70" rx="8" fill="#ffe6e6" stroke="#e5484d" stroke-width="2"/>
+  <text x="58" y="186" font-size="24" font-weight="700" font-family="'Noto Sans SC','Microsoft YaHei',system-ui,sans-serif" fill="#e5484d">3</text>
+  <text x="100" y="182" font-size="12.5" font-family="'Noto Sans SC','Microsoft YaHei',system-ui,sans-serif" fill="#1f2328">待处理预约</text>
+  <text x="100" y="198" font-size="11" font-family="'Noto Sans SC','Microsoft YaHei',system-ui,sans-serif" fill="#c13538">光晕 3.2 秒一轮，像在呼吸</text>
+
+  <!-- 说明 -->
+  <g font-size="12.5" font-family="'Noto Sans SC','Microsoft YaHei',system-ui,sans-serif" fill="#1f2328">
+    <text x="276" y="70">① 数量为 0：卡片保持原样，不打扰。</text>
+    <text x="276" y="98">② 数量 &gt; 0：整张卡片浅红底 + 红边 + 呼吸光晕；首次出现还会</text>
+    <text x="288" y="118">扩散一圈描边（只跑一次，不闪眼睛）。</text>
+    <text x="276" y="146">③ 处理完数量归零：红框在下一个页面变化后自动撤掉，不用手动关。</text>
+    <text x="276" y="174">④ 只认「待处理留言」「待处理预约」这两张卡片，其它卡片不受影响。</text>
+    <text x="276" y="202">⑤ 没有开关，也不需要配置；纯展示层，不会挡住卡片本身的点击。</text>
+  </g>
+
+  <line x1="20" y1="232" x2="740" y2="232" stroke="#e4e7eb"/>
+  <text x="24" y="246" font-size="11.5" font-family="'Noto Sans SC','Microsoft YaHei',system-ui,sans-serif" fill="#6e7781">看不到红卡时：先确认待办数量确实大于 0，再刷新页面（脚本是按整页 DOM 变化触发的）。</text>
+</svg>
